@@ -1,0 +1,24 @@
+{
+  "schema": "source-refusal-notice-browser/1",
+  "scope": "Production refusal component rendered on a dedicated qualification page with a saved real WASM worker denial. Retry validates UI event delivery only; no user model mutation or new native computation on this page.",
+  "sourceArtifact": "multispan-root-worker-2026-10-10.json",
+  "nativeReason": "mapped-source-endpoints-unproven",
+  "pairIndex": 5,
+  "faceIndices": [
+    0,
+    1
+  ],
+  "locales": [
+    "ru",
+    "en"
+  ],
+  "mouseRetryEvents": 1,
+  "keyboardEnterRetryEvents": 1,
+  "finalRetryEvents": 2,
+  "detailsVisible": true,
+  "consoleErrors": [],
+  "screenshots": [
+    "source-refusal-notice-ru-2026-10-10.png",
+    "source-refusal-notice-en-2026-10-10.png"
+  ]
+}

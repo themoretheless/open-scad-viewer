@@ -1,0 +1,26 @@
+{
+  "schema": "profile-chord-cache-owner-correction/1",
+  "regressionFailedBeforeFix": true,
+  "regressionPassedAfterFix": true,
+  "testsPassed": 15,
+  "beforeLog": "/tmp/profile-cache-owner-before-20261010.log",
+  "afterLog": "/tmp/profile-cache-owner-fixed-20261010.log",
+  "productionChange": "Profile identity added to derivative, position and direction cache keys; immutable bridge owns both profiles throughout cache lifetime.",
+  "sourceSha256": "7c1daf5659894d55592c61c9946fb068e59eb0819ee3a6a2a82463b28446dce4",
+  "supersedes": "Retracts the earlier blanket invalidation: prior finite reports retain their original scope. Fresh rerun pending. Independent-profile bridge admission remains unsupported.",
+  "newNativeStandard": {
+    "passed": true,
+    "seconds": 341.51,
+    "comparison": "byte-identical report",
+    "sha256": "02e7a4779241f8d03b4cdc750d2546737ecde17d13173578aef4ecad3dcea5d5",
+    "pendingRegions": 4085,
+    "spans": 38179
+  },
+  "newWasm": "pending",
+  "publicReachability": "Current constrain_original_rails requires ptr::eq of the two WeightProfile owners and equal section axes. RailConstrainedBridge has private fields and only this constructor. Distinct-owner cache misuse is not reachable in the current public workspace.",
+  "publicRegression": "Same cache alternates low/high sides four rounds, preserves actual normal diameter; distinct owners, including equal source geometry, refused by corrected bridge constructor.",
+  "publicRegressionPassed": true,
+  "publicRegressionLog": "/tmp/profile-cache-public-owner-20261010.log",
+  "publicSuiteTestsPassed": 15,
+  "publicSuiteSeconds": 2.34
+}

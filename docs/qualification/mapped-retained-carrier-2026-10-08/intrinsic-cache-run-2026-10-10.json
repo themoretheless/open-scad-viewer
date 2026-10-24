@@ -1,0 +1,52 @@
+{
+  "sourceSha256": {
+    "crates/nurbs-core/src/profile_expression_radius.rs": "b96230726224be508020d599613100df2beb34af44e83ed3a6cd81cb921a0edc",
+    "crates/brep-core/src/source_profile_shell_wall.rs": "0ed1b62baad09a7f08bde7e26187cb1646c34ee779ab0d1f4e2a606973e0feee",
+    "crates/brep-core/src/source_support_shell.rs": "bea2b38a340c1f67deeac88773258c8aec94fc0d1dbadbbda251a79f50c718b0"
+  },
+  "native": {
+    "session": 15650,
+    "status": "running",
+    "cellsBudget": 100000,
+    "spansBudget": 1000000,
+    "trimCellsBudget": 1000000,
+    "log": "/tmp/expression-wall-intrinsic-extended-20261010.log",
+    "report": "/tmp/expression-wall-intrinsic-extended-20261010.json"
+  },
+  "wasm": {
+    "session": 58459,
+    "status": "complete",
+    "log": "/tmp/shared-intrinsic-wasm-build-20261010.log",
+    "sha256": "7c77219ae1ee8e8899ef563a8124b67c93f896784c2fd6fbd00848055164183d",
+    "bytes": 12971681,
+    "includesIntrinsicCache": true
+  },
+  "geometryQualified": false,
+  "worker": {
+    "session": 41063,
+    "status": "complete",
+    "log": "/tmp/intrinsic-cache-worker-bounded-20261010.log",
+    "passed": true,
+    "workersStarted": 2,
+    "workersJoined": 2,
+    "timingsMs": {
+      "refusal": 1016.245625,
+      "dispatchCancellation": 29.045041999999967,
+      "retry": 13139.425084
+    },
+    "spans": 48488,
+    "pendingRegions": 4085
+  },
+  "nativeExtendedFinal": {
+    "state": "passed",
+    "seconds": 1394.1,
+    "cells": 92368,
+    "spans": 1000000,
+    "domainCells": 1000000,
+    "pendingRegions": 40791,
+    "pendingFacePairs": 45,
+    "complete": false,
+    "report": "expression-wall-intrinsic-extended-2026-10-10.json",
+    "includesFirstPathShortCircuit": false
+  }
+}

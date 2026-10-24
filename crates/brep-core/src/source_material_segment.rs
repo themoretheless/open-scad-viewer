@@ -11,8 +11,8 @@ fn disjoint(t: [f64; 2]) -> bool {
     t[1] < 0. || t[0] > 1.
 }
 /// Audit every original trimmed face, retaining uncertainty and endpoint bands.
-pub fn inspect_boundary(
-    body: &Body,
+pub fn inspect_boundary<E: crate::source_seam_tangency::Carrier>(
+    body: &Body<E>,
     origin: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,

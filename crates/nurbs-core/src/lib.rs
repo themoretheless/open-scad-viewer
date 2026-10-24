@@ -293,6 +293,8 @@ pub mod moving_radius;
 pub mod moving_envelope;
 
 pub mod surface_projection_jacobian;
+pub mod profile_projection_jacobian;
+pub mod profile_projected_jordan;
 
 pub mod curve_quadratic_separator;
 
@@ -301,6 +303,24 @@ pub mod surface_projected_jordan;
 pub mod surface_self_chord;
 
 pub mod surface_self_chord_coverage;
+
+pub mod factored_surface_normals;
+
+pub mod polar_surface_differential;
+
+pub mod profile_expression_radius;
+
+pub mod profile_expression_bernstein;
+
+pub mod bernstein_interpolation;
+
+pub mod rational_pole_differential;
+
+pub mod profile_section_bridge;
+
+pub mod surface_boundary_secant;
+
+pub mod surface_weight_profile;
 pub use crate::join::surface_blend;
 pub use crate::join::radius_transition;
 #[path = "join/corner_blend.rs"]
@@ -332,3 +352,4 @@ pub use crate::construct::surfaces::optical_shapes;
 pub use crate::construct::surfaces::wing_loft;
 pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
+pub mod synchronized_boundary_normals;

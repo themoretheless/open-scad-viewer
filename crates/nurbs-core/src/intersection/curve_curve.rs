@@ -287,6 +287,15 @@ fn admit_coincidence(
         ha[0][1] / ha[0][3],
         ha[0][2] / ha[0][3],
     ];
+    // Parallel directions do not imply a common supporting line. Require
+    // every second-curve control to lie on the first supporting line before
+    // projecting intervals; otherwise subdivision must establish separation.
+    if hb.iter().any(|h| {
+        let delta = [h[0]/h[3]-origin[0], h[1]/h[3]-origin[1], h[2]/h[3]-origin[2]];
+        norm3(cross3(da, delta)) > floor.max(1e-12)
+    }) {
+        return Ok(false);
+    }
     let dir = da;
     let mut a_params = ta.map(|t| {
         let p = point3(&first.evaluate(t).unwrap().point).unwrap();

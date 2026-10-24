@@ -1,0 +1,269 @@
+{
+  "passed": true,
+  "wasmSha256": "a3902e6ed3541b67463f1839f278668be4de9b9085cf2e09da6cd6e281555be8",
+  "workerReport": "docs/qualification/query-order-aligned-profile-worker-2026-10-10/expression-inspection-worker-report.json",
+  "nativeReport": "docs/qualification/mapped-retained-carrier-2026-10-08/profile-chord-query-order-wall-2026-10-10.json",
+  "exactReportParity": true,
+  "workerBudgets": {
+    "cells": 10000,
+    "spans": 100000,
+    "domainCells": 100000
+  },
+  "nativeSpanBudget": 1000000,
+  "budgetNote": "Budgets differ; complete resulting reports are exactly equal. This is result parity, not identical request parity.",
+  "pending": 4081,
+  "timingsMs": {
+    "refusal": 7670.333208,
+    "dispatchCancellation": 386.1222080000007,
+    "retry": 35102.460083
+  },
+  "profiles": [
+    {
+      "path": "/tmp/cad-wall-cpu-20261010/CPU.20261010.230017.49268.0.001.cpuprofile",
+      "sha256": "70dddb47f700d2d5b94197bfa361d76cc8e4435184da974c9ada07f8e5fb9d11",
+      "sampledSeconds": 44.964021,
+      "topSelfFrames": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "seconds": 42.325909
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/src/services/expressionShell.ts",
+          "seconds": 0.396858
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "seconds": 0.374827
+        },
+        {
+          "function": "identity",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/src/services/expressionShell.ts",
+          "seconds": 0.324461
+        },
+        {
+          "function": "processChunkSync",
+          "url": "node:zlib",
+          "seconds": 0.296329
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/node_modules/tsx/dist/index-DCefr8NP.mjs",
+          "seconds": 0.24881
+        },
+        {
+          "function": "compileSourceTextModule",
+          "url": "node:internal/modules/esm/utils",
+          "seconds": 0.14758
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/scripts/check-expression-inspection-worker.mts",
+          "seconds": 0.137045
+        },
+        {
+          "function": "decodeBase91",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/scripts/wasm-base91.mjs",
+          "seconds": 0.135504
+        },
+        {
+          "function": "update",
+          "url": "node:internal/crypto/hash",
+          "seconds": 0.109895
+        },
+        {
+          "function": "RegExp: ([\"'`])(b85:[^\"'`\\\\\\r\\n]+|b(?:91|9v):[^'`\\\\\\r\\n]+|b(?:9[2345]|Ax):[^'\\\\\\r\\n]+|[A-Za-z0-9+/]{64,}={0,2})\\1",
+          "url": "",
+          "seconds": 0.069871
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "seconds": 0.062328
+        },
+        {
+          "function": "readFileUtf8",
+          "url": "",
+          "seconds": 0.039715
+        },
+        {
+          "function": "Module",
+          "url": "",
+          "seconds": 0.026283
+        },
+        {
+          "function": "read",
+          "url": "",
+          "seconds": 0.024499
+        }
+      ]
+    },
+    {
+      "path": "/tmp/cad-wall-cpu-20261010/CPU.20261010.230019.49268.1.002.cpuprofile",
+      "sha256": "bced358559d7ffe924bdb01fbbec718d6bd5f48a7f5717f660746640e05bcef0",
+      "sampledSeconds": 7.986443,
+      "topSelfFrames": [
+        {
+          "function": "wasm-function[531]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 1.283048
+        },
+        {
+          "function": "(idle)",
+          "url": "",
+          "seconds": 0.600609
+        },
+        {
+          "function": "wasm-function[555]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.399546
+        },
+        {
+          "function": "wasm-function[37]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.332551
+        },
+        {
+          "function": "wasm-function[4526]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.321207
+        },
+        {
+          "function": "wasm-function[554]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.288134
+        },
+        {
+          "function": "wasm-function[18]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.271607
+        },
+        {
+          "function": "wasm-function[532]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.217432
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/node_modules/tsx/dist/index-DCefr8NP.mjs",
+          "seconds": 0.18584
+        },
+        {
+          "function": "readFileUtf8",
+          "url": "",
+          "seconds": 0.160653
+        },
+        {
+          "function": "compileSourceTextModule",
+          "url": "node:internal/modules/esm/utils",
+          "seconds": 0.147801
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/src/services/valueBinaryCodec.ts",
+          "seconds": 0.141451
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/scripts/check-cad-whole-wall-worker-entry.mjs",
+          "seconds": 0.136865
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "seconds": 0.133443
+        },
+        {
+          "function": "_RINvNtCskV1xRBXznUK_19brotli_decompressor6decode23ProcessCommandsInternalNtNtCsixVoWUDE7d5_12alloc_stdlib9std_alloc13StandardAllocB19_B19_ECsjSXNLX9omw0_11wasm_brotli",
+          "url": "wasm://wasm/wasm_brotli.wasm-000cd1da",
+          "seconds": 0.122103
+        }
+      ]
+    },
+    {
+      "path": "/tmp/cad-wall-cpu-20261010/CPU.20261010.230027.49268.2.003.cpuprofile",
+      "sha256": "1223468c54a7e44711662c11ead93a2e3ca22802ef3b69b2216abc8d5fbd0800",
+      "sampledSeconds": 35.06191,
+      "topSelfFrames": [
+        {
+          "function": "wasm-function[531]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 10.962787
+        },
+        {
+          "function": "wasm-function[554]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 3.142482
+        },
+        {
+          "function": "wasm-function[4526]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 2.963053
+        },
+        {
+          "function": "wasm-function[532]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 2.0284
+        },
+        {
+          "function": "wasm-function[5026]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 1.873668
+        },
+        {
+          "function": "wasm-function[555]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 1.669932
+        },
+        {
+          "function": "wasm-function[18]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 1.262717
+        },
+        {
+          "function": "wasm-function[37]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.780756
+        },
+        {
+          "function": "wasm-function[530]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.616244
+        },
+        {
+          "function": "wasm-function[19]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.471273
+        },
+        {
+          "function": "wasm-function[105]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.459352
+        },
+        {
+          "function": "",
+          "url": "file:///Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/node_modules/tsx/dist/index-DCefr8NP.mjs",
+          "seconds": 0.441362
+        },
+        {
+          "function": "wasm-function[103]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.367474
+        },
+        {
+          "function": "_RINvNtCskV1xRBXznUK_19brotli_decompressor6decode23ProcessCommandsInternalNtNtCsixVoWUDE7d5_12alloc_stdlib9std_alloc13StandardAllocB19_B19_ECsjSXNLX9omw0_11wasm_brotli",
+          "url": "wasm://wasm/wasm_brotli.wasm-000cd1da",
+          "seconds": 0.357257
+        },
+        {
+          "function": "wasm-function[6626]",
+          "url": "wasm://wasm/031f5daa",
+          "seconds": 0.317963
+        }
+      ]
+    }
+  ],
+  "limits": "Prior unprofiled run timed out at 120 seconds. No latency guarantee or whole-wall thickness admission. Numeric optimized WASM frames have no verified Rust symbol mapping."
+}

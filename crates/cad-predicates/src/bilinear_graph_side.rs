@@ -94,6 +94,8 @@ pub fn rational_bilinear_graph_side(
     };
     Ok(Decision {
         signs,
+        coefficient_bounds: None,
+        coefficient_scale: None,
         reason,
         work_used: ctx.work_used(),
         context: ctx.identity(),

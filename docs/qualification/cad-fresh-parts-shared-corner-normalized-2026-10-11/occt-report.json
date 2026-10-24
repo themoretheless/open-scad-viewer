@@ -1,0 +1,159 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket-source",
+      "stepSha256": "effeb0fa7d62cf58f082144b6235b7a18d91caee753503f17095206aad8308fe",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 6500.0,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 0.0,
+      "volumeIntegrationRelativeError": 1.860330071808262e-16,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "bracket-edited-rounded",
+      "stepSha256": "943d1749699aad04c95be55ef67993b7b64da3d83dea23a60d81b8decc45c694",
+      "valid": true,
+      "solids": 1,
+      "faces": 9,
+      "boundsMm": [
+        [
+          2.9999998999999997,
+          -2.0000001,
+          0.9999999
+        ],
+        [
+          43.0000001,
+          28.0000001,
+          21.0000001
+        ]
+      ],
+      "volumeMm3": 6495.707963778792,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 5.108431651024148e-07,
+      "volumeIntegrationRelativeError": 2.8195463312883015e-14,
+      "passed": true,
+      "previewTriangles": 96
+    },
+    {
+      "name": "flange-source",
+      "stepSha256": "2831a600c9522878f4f430b40bb7a4ad6a5238aa9481d792ffe76afc7c38348f",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -20.000000100000005,
+          -20.000000100000005,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          20.000000100000005,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 7068.583471680891,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 1.1038564480259083e-06,
+      "volumeIntegrationRelativeError": 1.1087894236733686e-13,
+      "passed": true,
+      "previewTriangles": 608
+    },
+    {
+      "name": "flange-edited-rounded",
+      "stepSha256": "ca5a75b8cdeda831e9acf196cb620c65b81bfc9aa96d7642516080c27f582dd7",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -17.00000010000001,
+          -22.00000010000001,
+          0.9999999
+        ],
+        [
+          23.000000100000012,
+          18.00000010000001,
+          7.000000100000003
+        ]
+      ],
+      "volumeMm3": 7041.916995649315,
+      "maxBoundsErrorMm": 1.0000001182675078e-07,
+      "volumeErrorMm3": 1.6495405361638404e-06,
+      "volumeIntegrationRelativeError": 2.485415135115788e-16,
+      "passed": true,
+      "previewTriangles": 7408
+    },
+    {
+      "name": "enclosure-source",
+      "stepSha256": "e04cf2a8da6ea08993f01f9ed2c2305d94df3d13fc8b3173927fae0ec80df8e3",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 7151.999999999999,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.094947017729282e-13,
+      "volumeIntegrationRelativeError": 2.368475785867001e-16,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "enclosure-edited-rounded",
+      "stepSha256": "6ee2638110051c3c235009a86997032ea752f3e73a6c050535d1042cf242d1ab",
+      "valid": true,
+      "solids": 1,
+      "faces": 34,
+      "boundsMm": [
+        [
+          2.9999998999999997,
+          -2.0000001,
+          0.9999999
+        ],
+        [
+          43.0000001,
+          28.0000001,
+          21.0000001
+        ]
+      ],
+      "volumeMm3": 7147.707964014922,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 7.469734555343166e-07,
+      "volumeIntegrationRelativeError": 4.670826993982356e-14,
+      "passed": true,
+      "previewTriangles": 206
+    }
+  ]
+}

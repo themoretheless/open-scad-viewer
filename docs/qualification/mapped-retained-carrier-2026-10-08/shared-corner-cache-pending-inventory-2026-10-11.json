@@ -1,0 +1,749 @@
+{
+  "schema": "expression-wall-pending-inventory/1",
+  "source": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-corner-cache-dispatch-native-2026-10-11.json",
+  "sourceSha256": "fa5b27a31c126fe32ed760d3270bdd8e98350af7fa53b998161ed5bc00bbe6db",
+  "requestSha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+  "totalPending": 4081,
+  "groups": [
+    {
+      "category": "different-faces",
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "reason": "budget",
+      "count": 532
+    },
+    {
+      "category": "different-faces",
+      "kinds": [
+        "original",
+        "retained"
+      ],
+      "reason": "budget",
+      "count": 172
+    },
+    {
+      "category": "different-faces",
+      "kinds": [
+        "original",
+        "transition"
+      ],
+      "reason": "budget",
+      "count": 340
+    },
+    {
+      "category": "different-faces",
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "reason": "budget",
+      "count": 204
+    },
+    {
+      "category": "different-faces",
+      "kinds": [
+        "retained",
+        "transition"
+      ],
+      "reason": "budget",
+      "count": 784
+    },
+    {
+      "category": "same-face-overlapping-domains",
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "reason": "budget",
+      "count": 759
+    },
+    {
+      "category": "same-face-overlapping-domains",
+      "kinds": [
+        "retained",
+        "retained"
+      ],
+      "reason": "budget",
+      "count": 213
+    },
+    {
+      "category": "same-face-overlapping-domains",
+      "kinds": [
+        "transition",
+        "transition"
+      ],
+      "reason": "budget",
+      "count": 86
+    },
+    {
+      "category": "same-face-separated-domains",
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "reason": "budget",
+      "count": 444
+    },
+    {
+      "category": "same-face-separated-domains",
+      "kinds": [
+        "retained",
+        "retained"
+      ],
+      "reason": "budget",
+      "count": 361
+    },
+    {
+      "category": "same-face-separated-domains",
+      "kinds": [
+        "transition",
+        "transition"
+      ],
+      "reason": "budget",
+      "count": 186
+    }
+  ],
+  "pairs": [
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "kinds": [
+        "retained",
+        "transition"
+      ],
+      "count": 448
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "kinds": [
+        "retained",
+        "retained"
+      ],
+      "count": 374
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "kinds": [
+        "retained",
+        "transition"
+      ],
+      "count": 336
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "kinds": [
+        "transition",
+        "transition"
+      ],
+      "count": 272
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 266
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 248
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "kinds": [
+        "retained",
+        "retained"
+      ],
+      "count": 200
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "kinds": [
+        "original",
+        "transition"
+      ],
+      "count": 142
+    },
+    {
+      "faces": [
+        17,
+        17
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 128
+    },
+    {
+      "faces": [
+        21,
+        21
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 128
+    },
+    {
+      "faces": [
+        16,
+        16
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 116
+    },
+    {
+      "faces": [
+        20,
+        20
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 116
+    },
+    {
+      "faces": [
+        24,
+        24
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 101
+    },
+    {
+      "faces": [
+        25,
+        25
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 100
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "count": 84
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "kinds": [
+        "original",
+        "transition"
+      ],
+      "count": 64
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "count": 56
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "kinds": [
+        "original",
+        "transition"
+      ],
+      "count": 56
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 46
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "kinds": [
+        "original",
+        "retained"
+      ],
+      "count": 44
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "kinds": [
+        "original",
+        "retained"
+      ],
+      "count": 44
+    },
+    {
+      "faces": [
+        24,
+        28
+      ],
+      "kinds": [
+        "original",
+        "transition"
+      ],
+      "count": 42
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 40
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 40
+    },
+    {
+      "faces": [
+        6,
+        28
+      ],
+      "kinds": [
+        "original",
+        "transition"
+      ],
+      "count": 36
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "kinds": [
+        "original",
+        "retained"
+      ],
+      "count": 34
+    },
+    {
+      "faces": [
+        10,
+        23
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 32
+    },
+    {
+      "faces": [
+        6,
+        27
+      ],
+      "kinds": [
+        "original",
+        "retained"
+      ],
+      "count": 30
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 28
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 24
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 24
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "kinds": [
+        "original",
+        "retained"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 20
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "count": 18
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 8
+    },
+    {
+      "faces": [
+        10,
+        19
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 8
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "kinds": [
+        "retained",
+        "original"
+      ],
+      "count": 6
+    },
+    {
+      "faces": [
+        5,
+        23
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 6
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 4
+    },
+    {
+      "faces": [
+        5,
+        15
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 4
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 2
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 2
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 2
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "kinds": [
+        "original",
+        "original"
+      ],
+      "count": 2
+    }
+  ],
+  "scope": "Inventory of unresolved parameter rectangles only. Counts are neither defects nor geometric area; overlapping domains do not prove self-intersection. No coverage or minimum thickness certificate follows."
+}

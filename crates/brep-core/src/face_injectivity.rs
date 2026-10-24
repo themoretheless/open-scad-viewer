@@ -183,6 +183,24 @@ pub(crate) fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize,
 mod tests {
     use super::*;
     #[test]
+    fn unequal_annular_radii_cover_regular_middle_and_owned_pole_quotients() {
+        for radii in [[0.5,1.25],[1.25,0.5]] {
+            let model=crate::circular_blend::partial_annular_variable_arc(20.,5.,6.,radii,[0.3,0.7,0.4],1e-7).unwrap();
+            let before=value_codec::to_string(&model).unwrap();
+            let r=inspect(&model,10000).unwrap();
+            assert!(r.all_faces_injective);
+            assert_eq!(r.faces.len(),31);
+            assert!(r.faces.iter().all(Face::absence_proven));
+            for face in [0,10] {assert!(r.faces[face].quotient.as_ref().unwrap().result.proven);}
+            let middle=r.faces[5].result.as_ref().unwrap();
+            assert_eq!(middle.reason,"global-polar-p-matrix");
+            assert!(middle.polar_p_matrix.as_ref().unwrap().determinant_lower>0.);
+            let short=inspect(&model,1).unwrap();assert!(!short.all_faces_injective);
+            assert!(short.faces.iter().any(|f|!f.absence_proven()));
+            assert_eq!(value_codec::to_string(&model).unwrap(),before);
+        }
+    }
+    #[test]
     #[cfg(feature = "codec")]
     #[ignore = "requires an explicitly supplied retained-model diagnostic fixture"]
     fn diagnose_retained_model_shared_injectivity_work() {

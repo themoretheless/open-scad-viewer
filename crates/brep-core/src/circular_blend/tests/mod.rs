@@ -618,6 +618,48 @@ fn different_partial_arc_angles_close_with_shared_endpoints() {
 }
 
 #[test]
+fn unequal_radius_annular_transitions_close_with_exact_shared_seams() {
+    for radii in [[0.5, 1.25], [1.25, 0.5], [1., 1.]] {
+        for sign in [-1., 1.] {
+            let model = partial_annular_variable_arc(
+                20., 5., 6., radii, [sign * 0.3, sign * 0.7, sign * 0.4], 1e-7,
+            ).unwrap();
+            let report = model.validate().unwrap();
+            assert_eq!(report.body_count, 1);
+            assert_eq!(report.boundary_edge_count, 0);
+            assert_eq!(model.edges.iter().filter(|e| e.degenerate).count(), 2);
+            // Every non-pole edge has exactly two oppositely oriented uses.
+            for (edge_index, edge) in model.edges.iter().enumerate() {
+                if edge.degenerate { continue; }
+                let mut uses = Vec::new();
+                for face_use in &model.shells[0].faces {
+                    let face = &model.faces[face_use.face];
+                    for coedge in &model.loops[face.outer].coedges {
+                        if coedge.edge == edge_index {
+                            uses.push(coedge.reversed ^ face_use.reversed);
+                        }
+                    }
+                }
+                assert_eq!(uses.len(), 2, "edge {edge_index}");
+                assert_ne!(uses[0], uses[1], "edge {edge_index}");
+            }
+        }
+    }
+}
+
+#[test]
+fn variable_annular_transition_refuses_invalid_radii_and_spans() {
+    for radii in [[0., 1.], [-1., 1.], [f64::NAN, 1.], [1., 6.], [1., 16.]] {
+        assert!(partial_annular_variable_arc(20., 5., 6., radii, [0.3, 0.7, 0.4], 1e-7).is_err());
+    }
+    for sweeps in [[0., 0.7, 0.4], [0.3, -0.7, 0.4], [0.3, f64::NAN, 0.4], [0.3, 2., 0.4]] {
+        assert!(partial_annular_variable_arc(20., 5., 6., [0.5, 1.25], sweeps, 1e-7).is_err());
+    }
+    // A fitting blend must also retain strictly positive inner wall clearance.
+    assert!(partial_annular_variable_arc(20., 19., 6., [0.5, 1.25], [0.3, 0.7, 0.4], 1e-7).is_err());
+}
+
+#[test]
 fn impossible_and_nonfinite_support_refuses() {
     for radius in [0., -1., 20., f64::NAN] {
         assert!(plane_cylinder_rim(20., 6., radius, 0., 1.).is_err());

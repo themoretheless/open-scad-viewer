@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "geometryQualified": false,
+  "pendingContainedInPrevious": true,
+  "changes": [
+    {
+      "faces": [
+        24,
+        24
+      ],
+      "beforeRegions": 101,
+      "afterRegions": 101,
+      "beforeRawParameterVolume": {
+        "numerator": 639,
+        "denominator": 512,
+        "value": 1.248046875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 621,
+        "denominator": 512,
+        "value": 1.212890625
+      }
+    }
+  ],
+  "scope": "Exact endpoint containment, allowing same-face endpoint exchange. Raw parameter volume sums are not physical volume or thickness.",
+  "sha256": {
+    "docs/qualification/mapped-retained-carrier-2026-10-08/side-remainder-cache-trimmed-wall-2026-10-10.json": "14ccfeabb897ebe7555743bdd65b67ef7b80384576c56db4bfca2426ce29731c",
+    "docs/qualification/mapped-retained-carrier-2026-10-08/fixed-shear-trimmed-wall-2026-10-10.json": "5d5f596867fc016a83ea2081253650b6e2a0ad7639477e5e9867d416ff5b1b71"
+  }
+}

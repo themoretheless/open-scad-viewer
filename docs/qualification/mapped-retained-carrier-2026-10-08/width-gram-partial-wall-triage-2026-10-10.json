@@ -1,0 +1,328 @@
+{
+  "sourceReport": "width-gram-partial-wall-max-2026-10-10.json",
+  "totalPending": 46287,
+  "pendingReasons": {
+    "budget": 46287
+  },
+  "sameFacePending": 38891,
+  "differentFacePending": 7396,
+  "sameFacePercent": 84.0214315034459,
+  "pairCounts": [
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "pending": 19690
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "pending": 7307
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "pending": 6636
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "pending": 3180
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "pending": 2614
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "pending": 2210
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "pending": 2078
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "pending": 266
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "pending": 248
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "pending": 208
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "pending": 152
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "pending": 118
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "pending": 116
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "pending": 106
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "pending": 92
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "pending": 86
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "pending": 86
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "pending": 60
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "pending": 48
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "pending": 44
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "pending": 44
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "pending": 32
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "pending": 28
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "pending": 24
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "pending": 22
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "pending": 22
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "pending": 16
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "pending": 14
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "pending": 10
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "pending": 4
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "pending": 2
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "pending": 2
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "pending": 2
+    }
+  ],
+  "interpretation": "All remaining products are budget-limited, not confirmed defects. Prioritize same-face interval exclusion before increasing budgets. This is normal-aligned chord coverage, not general self-intersection diagnosis."
+}

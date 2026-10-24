@@ -1,0 +1,49 @@
+{
+  "scope": "Matched assembled complete-carrier wall diagnostic; endpoint-normal-aligned chords only",
+  "limits": {
+    "cells": 10000,
+    "spans": 1000000,
+    "trimDomainCells": 100000
+  },
+  "changedFields": {
+    "intrinsic_spans": {
+      "before": 1893,
+      "after": 1801
+    },
+    "profile_transition_spans": {
+      "before": 951,
+      "after": 943
+    },
+    "span_stages": {
+      "before": {
+        "corrected_pair": 2684,
+        "normal": 3098,
+        "original_pair": 5415,
+        "position": 1904,
+        "retained_pair": 12341,
+        "shared_corner": 6952
+      },
+      "after": {
+        "corrected_pair": 2508,
+        "normal": 2978,
+        "original_pair": 5415,
+        "position": 1904,
+        "retained_pair": 12341,
+        "shared_corner": 6952
+      }
+    },
+    "spans": {
+      "before": 35238,
+      "after": 34842
+    }
+  },
+  "pendingExactlyEqual": true,
+  "savedSpans": 396,
+  "savedPercent": 1.1237868210454622,
+  "complete": false,
+  "log": "/tmp/side-remainder-cache-trimmed-wall-20261010.log",
+  "nativeTestPassed": true,
+  "runtimeSeconds": 579.06,
+  "runtimeIsBenchmark": false,
+  "sourceNote": "Run compiled before removal of zero-budget boundary shortcut; positive-budget calculation is unchanged by that contract repair"
+}

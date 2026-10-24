@@ -1,6 +1,28 @@
 use super::*;
 use nurbs_core::surface::Surface;
 #[test]
+fn global_oblique_plane_uses_signed_derivative_without_constant_coordinates() {
+    let mut world=Curve{degree:2,knots:vec![2.,2.,2.,8.,8.,8.],
+        control_points:vec![vec![0.,0.,0.],vec![1.,0.5,0.],vec![1.,0.,0.]],
+        weights:vec![1.;3],periodic:false};
+    let plane=[[0.,0.,0.],[1.,1.,0.],[0.,0.,1.]];
+    // x-y=q: both coordinates vary and y reverses direction.
+    let fresh=||Report{edge:None,work_used:0,root_checks:0,driver_cells:0,reason:"test"};
+    let mut report=fresh();
+    assert!(unique_world_plane(&world,plane,&mut report,1000000,1000).unwrap());
+    assert!(report.driver_cells>0 && report.driver_cells<=1000);
+    let mut stopped=fresh();
+    assert!(!unique_world_plane(&world,plane,&mut stopped,1000000,0).unwrap());
+    assert_eq!(stopped.driver_cells,0);
+    world.control_points[2]=vec![0.,0.,0.];
+    let mut turning=fresh();
+    assert!(!unique_world_plane(&world,plane,&mut turning,1000000,128).unwrap());
+    assert!(turning.driver_cells<=128);
+    let mut degenerate=fresh();
+    assert!(!unique_world_plane(&world,[[0.;3];3],&mut degenerate,1000000,128).unwrap());
+}
+
+#[test]
 fn mixed_root_and_fixed_endpoints_need_exact_point_membership_and_unique_world_root() {
     use crate::source_boundary_fragment::{Endpoint, Role};
     use nurbs_core::surface::Surface;
@@ -109,6 +131,8 @@ fn mixed_root_and_fixed_endpoints_need_exact_point_membership_and_unique_world_r
     let restored = restore(e.definition(),100_000_000).edge.unwrap();
     assert_eq!(restored.definition(),e.definition());
     assert_eq!(restored.reversed(),e.reversed());
+    assert!(!e.covers_complete_canonical_source());
+    assert!(!restored.covers_complete_canonical_source());
     assert!(restore(e.definition(),1).edge.is_none());
     let mut missing_plane=e.definition();
     missing_plane["recipe"]["planes"][1]=value_codec::Value::Null;
@@ -1104,6 +1128,47 @@ fn curved_support_charts_share_original_root_ended_world_edge() {
     let world=Curve{control_points:vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,0.,1.]],weights:vec![1.,middle_weight,1.],..main.clone()};
     let r=qualify(&world,[&a,&b],[false,true],1_000_000).unwrap();
     let edge=r.edge.expect(r.reason);assert!(r.root_checks>0);
+    assert!(!edge.covers_complete_canonical_source());
+    let sample=edge.sample_interior(0.5,3).unwrap().sample.expect("shared curved interior sample");
+    let bounds=sample.world_bounds();
+    for (axis,value) in [0.5,0.,0.5/(1.+middle_weight)].into_iter().enumerate() {
+        assert!(bounds[axis][0]<=value && value<=bounds[axis][1]);
+    }
+    assert!(edge.sample_interior(0.8,3).unwrap().sample.is_none());
+    let endpoint=edge.sample_endpoint(1,3).unwrap().endpoint.expect("exact paired curved root endpoint");
+    let canonical=endpoint.canonical_bounds();
+    assert!(canonical[0]<std::f64::consts::FRAC_1_SQRT_2 && canonical[1]>std::f64::consts::FRAC_1_SQRT_2);
+    assert_eq!(endpoint.parameter_bounds(),[a.parameter_bounds()[1],b.parameter_bounds()[0]]);
+    assert!(endpoint.canonical_bounds()[0]<endpoint.canonical_bounds()[1]);
+    for end in [0,1] {
+        let refused=edge.sample_endpoint(end,0).unwrap();
+        assert!(refused.endpoint.is_none());
+        assert_eq!(refused.spans,0);
+        assert_eq!(refused.reason,"boundary-endpoint-work-limit");
+    }
+    let restored=crate::source_shared_edge_restore::restore(edge.definition(),
+        crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100_000_000,driver_cells:10000}).unwrap();
+    let restored=restored.edge.expect("root-ended curved edge replay");
+    assert_eq!(restored.definition(),edge.definition());
+    assert!(!restored.covers_complete_canonical_source());
+    let replayed=restored.sample_endpoint(1,3).unwrap().endpoint.expect("replayed curved root endpoint");
+    let replayed_canonical=replayed.canonical_bounds();
+    assert!(replayed_canonical[0]<std::f64::consts::FRAC_1_SQRT_2 && replayed_canonical[1]>std::f64::consts::FRAC_1_SQRT_2);
+    assert_eq!(replayed.parameter_bounds(),endpoint.parameter_bounds());
+    let mesh=edge.prepare_boundary_mesh(BoundaryMeshLimits {max_deviation_mm:0.01,cells:4096,spans:100000,max_depth:24}).unwrap();
+    assert!(mesh.pending.is_empty(), "{} pending leaves",mesh.pending.len());
+    assert!(mesh.segments.len()>1);
+    assert_eq!(mesh.vertices[1].canonical,canonical);
+    let mut incidence=vec![0usize;mesh.vertices.len()];
+    for segment in &mesh.segments {
+        assert!(segment.deviation_upper_mm<=0.01);
+        for id in segment.vertices {incidence[id]+=1;}
+    }
+    assert_eq!(incidence[0],1);assert_eq!(incidence[1],1);
+    assert!(incidence[2..].iter().all(|n|*n==2));
+    let limited=edge.prepare_boundary_mesh(BoundaryMeshLimits {max_deviation_mm:0.000001,cells:1,spans:100000,max_depth:24}).unwrap();
+    assert!(!limited.pending.is_empty());
+    assert_eq!(limited.cells,1);
     let range=edge.uses()[0].parameter_bounds()[1];
     assert!(range[0]<std::f64::consts::FRAC_1_SQRT_2&&range[1]>std::f64::consts::FRAC_1_SQRT_2);
     assert_eq!(edge.uses()[0].definition(),a.definition());assert_eq!(edge.uses()[1].definition(),b.definition());

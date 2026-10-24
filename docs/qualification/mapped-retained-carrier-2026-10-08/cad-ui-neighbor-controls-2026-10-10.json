@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "tests": 321,
+  "seconds": 117.68,
+  "suite": "tests/directModelerUi.test.ts",
+  "wasmSha256": "3caaa4ad6559488d4544e22473d5d3551b4f1882f0714a1eaee42d93c76e2fa9",
+  "scope": "Existing CAD UI regression after neighboring-face controls were added. The published WASM predates the new native neighbor gate; this does not qualify that gate in the browser or the complete 95-command manual matrix."
+}

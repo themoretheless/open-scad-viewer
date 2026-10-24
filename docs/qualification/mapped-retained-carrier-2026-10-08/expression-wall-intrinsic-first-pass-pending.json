@@ -1,0 +1,17 @@
+{
+  "fixture": "restricted_profile_seams_match_owned_neighbor_supports",
+  "minimum_mm": 1.0,
+  "max_sine_squared": 0.0001,
+  "tolerance_uv": 0.05,
+  "complete": false,
+  "initial_pairs_checked": 435,
+  "total_pairs": 435,
+  "pending_domains": 486,
+  "cells": 435,
+  "spans": 189,
+  "distance_excluded": 148,
+  "angle_excluded": 0,
+  "test_passed": true,
+  "duration_seconds": 316.73,
+  "scope": "One annular expression fixture; unresolved domains retained. No whole-wall minimum certificate."
+}

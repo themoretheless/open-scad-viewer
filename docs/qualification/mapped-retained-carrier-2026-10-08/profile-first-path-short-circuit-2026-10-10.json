@@ -1,0 +1,45 @@
+{
+  "schema": "profile-chord-first-path/1",
+  "change": "Check the complete first path chord before computing reverse path on an exact retained profile. Unresolved first paths retain reverse-path intersection and position refinement.",
+  "sourceSha256": "d719f38a4346edf67353b4d40c74906d360e27a207f6d3f45af6ff6ec01c77b5",
+  "nativeRegression": {
+    "passed": 13,
+    "failed": 0,
+    "seconds": 2.32,
+    "log": "/tmp/profile-first-path-native-20261010.log",
+    "negativeControls": [
+      "retained half-cylinder exact diameter candidate remains unresolved",
+      "cross-profile exact normal diameter remains unresolved"
+    ]
+  },
+  "precedingStandardRun": {
+    "session": 4523,
+    "pid": 78652,
+    "state": "passed",
+    "includesProfileShortCircuit": false,
+    "includesCorrectedShortCircuit": true
+  },
+  "wholeBodyComparison": "pending",
+  "performanceImprovementMeasured": false,
+  "wasmIncludesThisChange": false,
+  "wholeWallQualified": false,
+  "combinedStandardRun": {
+    "state": "passed",
+    "seconds": 315.04,
+    "report": "expression-wall-both-paths-standard-2026-10-10.json",
+    "exactReportUnchanged": true,
+    "spansSaved": 0
+  },
+  "wasmBuild": {
+    "state": "passed",
+    "sha256": "bc8bb52d0e1ea23a5614d7989628d0e83590235b9a55928f25fb2405a3f7ab98",
+    "bytes": 12971897,
+    "includesOriginalChordWorkspace": false,
+    "log": "/tmp/first-path-wasm-build-20261010.log"
+  },
+  "combinedExtendedRun": {
+    "state": "running",
+    "log": "/tmp/expression-wall-both-paths-extended-20261010.log",
+    "report": "/tmp/expression-wall-both-paths-extended-20261010.json"
+  }
+}

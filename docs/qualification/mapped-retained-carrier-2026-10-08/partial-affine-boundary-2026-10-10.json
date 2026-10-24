@@ -1,0 +1,15 @@
+{
+  "scope": "native partial affine shared-edge sampling and boundary partition; no closed-solid or deployed WASM claim",
+  "sourceSha256": {
+    "crates/brep-core/src/source_shared_edge_sample.rs": "72377f715c37867d3f2b9c7d858a1be52459ca840a50f81f0ee5bec06a72b9ad",
+    "crates/brep-core/src/source_shared_edge_endpoint.rs": "8751ccef889e4c49bbc0715bd7ad8cf2fc3db1d5c0ff60977704d2bdbeff8bf2",
+    "crates/brep-core/src/source_mapped_edge.rs": "f4f839b437d3485ff53e1e3c1aca791b33c229aa99d5dbb1a403595d1ddb171f"
+  },
+  "mappedTests": 5,
+  "sharedEdgeTests": 11,
+  "partialChartInterior": true,
+  "outsideChartRefusal": true,
+  "zeroCellPending": true,
+  "chainBudgetPreservesQueries": true,
+  "definitionReplayEqualIntervals": true
+}

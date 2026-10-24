@@ -1,0 +1,21 @@
+{
+  "schema": "query-order-public-worker-gates/1",
+  "wasm": {
+    "sha256": "a3902e6ed3541b67463f1839f278668be4de9b9085cf2e09da6cd6e281555be8",
+    "byteLength": 13096810
+  },
+  "native": {
+    "brepPassed": 1035,
+    "brepIgnored": 3,
+    "nurbsPassed": 850,
+    "nurbsIgnored": 2
+  },
+  "worker": {
+    "realBoundaryPassed": 35,
+    "rootStepPassed": 2,
+    "rootStepSkipped": 28,
+    "profileReport": "query-order-public-profile-worker-2026-10-10.json"
+  },
+  "wholeWallQualified": false,
+  "fullCommandMatrixQualified": false
+}

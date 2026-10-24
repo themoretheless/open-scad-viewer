@@ -1,0 +1,20 @@
+{
+  "schema": "expression-wall-exact-regression/1",
+  "passed": true,
+  "before": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/exact-rational-boundary-dispatch-wall-2026-10-11.json",
+    "sha256": "6942d035782ede0dc61bf5f945b99d7b1d3d1eac5385f7cb5ffba8713f64dfee"
+  },
+  "after": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-corner-cache-dispatch-wall-2026-10-11.json",
+    "sha256": "41d4e686c87d20d1bfcef6f32a92d84475355463743a89161d426ef194e8313b"
+  },
+  "transitionOutcomeSchemaExtension": false,
+  "pendingRegions": 4081,
+  "cells": 10000,
+  "spans": 11821,
+  "comparison": "exact-coverage-with-nonincreasing-span-work",
+  "spanWorkSaved": 5938,
+  "geometryQualified": false,
+  "scope": "Regression comparison only; unresolved geometry remains unresolved"
+}

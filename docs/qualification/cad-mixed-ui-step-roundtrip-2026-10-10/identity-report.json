@@ -1,0 +1,94 @@
+{
+  "schema": "cad-ui-step-identity-bindings/1",
+  "passed": false,
+  "scope": "Identity sets and exact representation bindings for actual UI roundtrips. Equal identity sets do not prove orientation or surface reparameterization equivalence. Document body UUID and history lineage are separate.",
+  "parts": [
+    {
+      "part": "bracket",
+      "topologyIdentitySets": {
+        "vertices": true,
+        "edges": true,
+        "loops": true,
+        "faces": true,
+        "shells": true,
+        "bodies": true
+      },
+      "exactRepresentationBindings": {
+        "vertices": true,
+        "edges": true,
+        "loops": false,
+        "faces": false,
+        "shells": false,
+        "bodies": true
+      },
+      "identitiesPreserved": true,
+      "passed": false,
+      "arrayOrderEqual": {
+        "vertices": false,
+        "edges": false,
+        "loops": true,
+        "faces": true,
+        "shells": true,
+        "bodies": true
+      }
+    },
+    {
+      "part": "flange",
+      "topologyIdentitySets": {
+        "vertices": true,
+        "edges": true,
+        "loops": true,
+        "faces": true,
+        "shells": true,
+        "bodies": true
+      },
+      "exactRepresentationBindings": {
+        "vertices": true,
+        "edges": true,
+        "loops": false,
+        "faces": false,
+        "shells": true,
+        "bodies": true
+      },
+      "identitiesPreserved": true,
+      "passed": false,
+      "arrayOrderEqual": {
+        "vertices": false,
+        "edges": true,
+        "loops": true,
+        "faces": true,
+        "shells": true,
+        "bodies": true
+      }
+    },
+    {
+      "part": "enclosure",
+      "topologyIdentitySets": {
+        "vertices": true,
+        "edges": true,
+        "loops": true,
+        "faces": true,
+        "shells": true,
+        "bodies": true
+      },
+      "exactRepresentationBindings": {
+        "vertices": true,
+        "edges": true,
+        "loops": false,
+        "faces": false,
+        "shells": false,
+        "bodies": true
+      },
+      "identitiesPreserved": true,
+      "passed": false,
+      "arrayOrderEqual": {
+        "vertices": false,
+        "edges": false,
+        "loops": true,
+        "faces": true,
+        "shells": true,
+        "bodies": true
+      }
+    }
+  ]
+}

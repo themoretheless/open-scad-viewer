@@ -1,0 +1,16 @@
+{
+  "schema": "cad-p0-bounded-regression/1",
+  "passed": true,
+  "vitest": {
+    "files": 6,
+    "tests": 121,
+    "durationSeconds": 22.06,
+    "log": "/tmp/expression-current-p0-20261010.log"
+  },
+  "packageTests": {
+    "passed": 6,
+    "log": "/tmp/geometry-package-current-20261010.log"
+  },
+  "scope": "Controller and worker regression suites plus package publication failure preservation. Does not prove full browser command matrix or arbitrary geometry.",
+  "newWasmBuild": "running; not qualified"
+}

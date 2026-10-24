@@ -1,0 +1,1711 @@
+{
+  "fixture_test_passed": true,
+  "duration_seconds": 331.3,
+  "pending_domains": 486,
+  "pending_source_pairs": 243,
+  "transition_pending_domains": 58,
+  "same_face_pending_domains": 30,
+  "pairs": [
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        11
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        2
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        3
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        8
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        10
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        13
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        2
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        4
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        6
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        9
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        11
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        14
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        4
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        6
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        9
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        11
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        14
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        3,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        7
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        8
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        13
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        4,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        5,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        8
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        13
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        6,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        7
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        9
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        14
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        7,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        8
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        9
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        11
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        14
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        8,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        13
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        9,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        10,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        13
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        11,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        12
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        14
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        12,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        14
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        15
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        13,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        14,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        15,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        16
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        16,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        17
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        18
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        19
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        17,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        18,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        18,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        18,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        18,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        18,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        19,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        19,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        19,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        19,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        19,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        19,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        20
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        20,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        21
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        22
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        23
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        21,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        22,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        22,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        22,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        23,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        23,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        24,
+        24
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        24,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        24,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        24,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        25,
+        25
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        25,
+        26
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        25,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        26,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "pending_domains": 2
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "pending_domains": 2
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "wasmSha256": "007976afec4c2b4edea1c940067d2941fa20ac4fb6e2d8a6d0cee6351a346995",
+  "wasmBytes": 12017290,
+  "uncompressedSha256": {
+    "worker-report": "d216fd7b79b66d655e304b41071c077fb42a6420422f15b6a54344527a640b46",
+    "worker-tests": "1319f1f4a38de6ad9681ee1d73eab63b96894e3ad8841844cbf666d67e3d898a",
+    "wasm-build": "b96fb1b274763478bebad09e1ea78bd13055e237d551c72ae03f39c2bead5786"
+  },
+  "measurements": 36,
+  "selectedTestsPassed": 2,
+  "otherTestsSkipped": 29,
+  "typecheck": "passed",
+  "scope": "Real packaged worker: twelve rotated cuboid edges, three constant radii, body identity, analytic volume, Undo/Redo, document serialization and cancellation of a captured successful real reply. Does not qualify general NURBS edges or browser interaction."
+}

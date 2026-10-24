@@ -1,0 +1,206 @@
+{
+  "cases": [
+    {
+      "bodyCount": 1,
+      "boundaryEdgeCount": 0,
+      "faces": 31,
+      "name": "case-0",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0
+      ],
+      "radii": [
+        0.5,
+        1.25
+      ],
+      "radiusChecks": [
+        {
+          "errorUpperMm": 5.061869284050449e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 1.584700718875821e-12,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-09,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 5.770167643206195e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        }
+      ],
+      "sweeps": [
+        -0.3,
+        -0.7,
+        -0.4
+      ],
+      "artifacts": {
+        "json": {
+          "sha256": "649bb0abee1b2b93ab859c03f9240cfddabf79867da0ae6cf82a6cdaaae6f9d7",
+          "bytes": 118657
+        },
+        "step": {
+          "sha256": "d16ff6634cb2e8f8e0422f86997e3f9c06e570638e523099548a9f586cb700a6",
+          "bytes": 161896
+        }
+      }
+    },
+    {
+      "bodyCount": 1,
+      "boundaryEdgeCount": 0,
+      "faces": 31,
+      "name": "case-1",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0
+      ],
+      "radii": [
+        0.5,
+        1.25
+      ],
+      "radiusChecks": [
+        {
+          "errorUpperMm": 5.061869284050449e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 1.584700718875821e-12,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-09,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 5.770167643206195e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        }
+      ],
+      "sweeps": [
+        0.3,
+        0.7,
+        0.4
+      ],
+      "artifacts": {
+        "json": {
+          "sha256": "3ab3865b5d2bdb705fc382237e4456717b0108341b61c4045c251fbd54bd01af",
+          "bytes": 118373
+        },
+        "step": {
+          "sha256": "bfb9929ec92cb115814e2c990102f4b0ec298135f7d423f0af19a092076d2b61",
+          "bytes": 161609
+        }
+      }
+    },
+    {
+      "bodyCount": 1,
+      "boundaryEdgeCount": 0,
+      "faces": 31,
+      "name": "case-2",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0
+      ],
+      "radii": [
+        1.25,
+        0.5
+      ],
+      "radiusChecks": [
+        {
+          "errorUpperMm": 8.24417943427623e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 7.699955800995344e-13,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-09,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 3.554389539751224e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        }
+      ],
+      "sweeps": [
+        -0.3,
+        -0.7,
+        -0.4
+      ],
+      "artifacts": {
+        "json": {
+          "sha256": "792063da29e6b45910e26bb58d4c9e801af4a9a50bd4b40c2296641b16e2ada6",
+          "bytes": 118722
+        },
+        "step": {
+          "sha256": "497daa49df370fc00f4ae3fa52da7ec72e816c96c983a2fbb86753597f026af1",
+          "bytes": 161896
+        }
+      }
+    },
+    {
+      "bodyCount": 1,
+      "boundaryEdgeCount": 0,
+      "faces": 31,
+      "name": "case-3",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0
+      ],
+      "radii": [
+        1.25,
+        0.5
+      ],
+      "radiusChecks": [
+        {
+          "errorUpperMm": 8.24417943427623e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 7.699955800995344e-13,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-09,
+          "work": 10236
+        },
+        {
+          "errorUpperMm": 3.554389539751224e-07,
+          "reason": "moving-radius-qualified",
+          "toleranceMm": 1e-06,
+          "work": 10236
+        }
+      ],
+      "sweeps": [
+        0.3,
+        0.7,
+        0.4
+      ],
+      "artifacts": {
+        "json": {
+          "sha256": "b139b897df1d365638175a13c76733731154f61cb5753a65fb38f997069e447c",
+          "bytes": 118438
+        },
+        "step": {
+          "sha256": "c60dcb24a5810de99e036f301e9af95cc7b83b9985a54ada98ea964527ba04bc",
+          "bytes": 161609
+        }
+      }
+    }
+  ],
+  "schema": "cad-variable-annular-transitions/1",
+  "scope": "Native combinatorial closure, original whole-patch section radius bounds and STEP export. No independent STEP measurements, pole G1, global thickness, self-intersection or general rolling-ball envelope certificate."
+}

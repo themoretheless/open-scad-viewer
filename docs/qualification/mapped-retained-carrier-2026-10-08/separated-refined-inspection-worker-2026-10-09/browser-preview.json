@@ -1,0 +1,14 @@
+{
+  "initial": {
+    "error": 0,
+    "pending": 2554,
+    "qualified": 10
+  },
+  "retry": {
+    "error": 0,
+    "pending": 2554,
+    "qualified": 10
+  },
+  "escCancel": true,
+  "afterCancel": 0
+}

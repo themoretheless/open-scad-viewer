@@ -1,0 +1,19 @@
+{
+  "edits": 20,
+  "command": "numeric translation +0.1mm X each",
+  "undo": "20 Meta+Z",
+  "redo": "20 Meta+Shift+Z",
+  "undo_matches_start": true,
+  "reload_matches_final": true,
+  "topology_ids_preserved": true,
+  "max_vertex_translation_error_mm": 2.842170943040401e-14,
+  "files": {
+    "bracket-20-ui.json": "33926177f4eddd08aa716d2d2d86b15488161261fc73340b2ff31bb5b800bbe6",
+    "bracket-20-undo-ui.json": "2116022605a508cdac1743ad4b6b40adc1280a635616047c6d1ac523bbdb31e9",
+    "bracket-20-reloaded-ui.json": "33926177f4eddd08aa716d2d2d86b15488161261fc73340b2ff31bb5b800bbe6"
+  },
+  "limits": [
+    "single operation class",
+    "cancel and other parts remain open"
+  ]
+}

@@ -68,6 +68,7 @@ pub fn inspect(f: &Fragment, fiber: &Certificate, max_driver: usize) -> Result<R
             let mut ends = [false; 2];
             for i in 0..2 {
                 let bounds = match &f.endpoints()[i] {
+                    Endpoint::Carrier { point, side } => point.uv_bounds()[*side][axis],
                     Endpoint::Crossing { point, .. } => point.uv_box()[axis],
                     Endpoint::Parameter(t) => {
                         let v = interval_eval::evaluate_interval(c, Interval::point(*t))?[axis];

@@ -1,0 +1,425 @@
+//! Transfer a fresh projected-region proof to an exact owned ruled neighbor.
+use super::*;
+use crate::source_ruled_projection_contact::exact_trace;
+use nurbs_core::curve::Curve;
+fn single_bezier(c: &Curve) -> bool {
+    let n = c.control_points.len();
+    !c.periodic
+        && c.degree > 0
+        && n == c.degree + 1
+        && c.knots.len() == 2 * n
+        && c.knots[..n].iter().all(|k| *k == c.knots[0])
+        && c.knots[n..].iter().all(|k| *k == c.knots[n])
+        && c.knots[0] < c.knots[n]
+}
+fn identical_trace(a: &Curve, b: &Curve, used: &mut u64, max_work: u64) -> Result<bool> {
+    if !single_bezier(a)
+        || !single_bezier(b)
+        || a.degree != b.degree
+        || a.validate().is_err()
+        || b.validate().is_err()
+        || a.weights.iter().chain(&b.weights).any(|w| *w <= 0.)
+    {
+        return Ok(false);
+    }
+    let n = a.control_points.len();
+    for reverse in 0..2 {
+        let index = |i| if reverse == 0 { i } else { n - 1 - i };
+        if !(0..n).all(|i| a.control_points[i] == b.control_points[index(i)]) {
+            continue;
+        }
+        if (0..n).all(|i| a.weights[i] == b.weights[index(i)]) {
+            return Ok(true);
+        }
+        let mut identical = true;
+        for i in 0..n {
+            // Exact homogeneous weight identity; never compare rounded ratios.
+            let points = [
+                [0., 0., 0.],
+                [a.weights[i], b.weights[index(i)], 0.],
+                [a.weights[0], b.weights[index(0)], 0.],
+            ];
+            if crate::source_allowed_contact::orient(&points, Some([0, 1]), used, max_work)?
+                != Some(cad_predicates::Sign::Zero)
+            {
+                identical = false;
+                break;
+            }
+        }
+        if identical {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+pub struct TransitionRuledContact<'x> {
+    owners: [&'x ShellFace; 2],
+    rail: usize,
+    trace: exact_trace::Certificate<'x>,
+    edge: crate::source_shared_edge::SharedEdge,
+}
+impl TransitionRuledContact<'_> {
+    pub fn owners(&self) -> [&ShellFace; 2] {
+        self.owners
+    }
+    pub fn rail(&self) -> usize {
+        self.rail
+    }
+    pub fn edge(&self) -> &crate::source_shared_edge::SharedEdge {
+        &self.edge
+    }
+    pub fn trace(&self) -> &Curve {
+        self.trace.curve()
+    }
+}
+pub struct TransitionRuledReport<'x> {
+    pub certificate: Option<TransitionRuledContact<'x>>,
+    pub exact_work: u64,
+    pub driver_cells: usize,
+    pub reason: &'static str,
+}
+impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn qualify_transition_ruled_contact<'x>(
+        &'x self,
+        rail: usize,
+        region: &OriginalProjectedRegion<'_, '_, '_, '_, '_>,
+        max_controls: usize,
+        max_work: u64,
+        max_drivers: usize,
+    ) -> Result<TransitionRuledReport<'x>> {
+        if rail > 1 || max_controls > 1000000 || max_work > 100000000 || max_drivers > 100000 {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound original ruled transition contact work",
+            ));
+        }
+        let mut out = TransitionRuledReport {
+            certificate: None,
+            exact_work: 0,
+            driver_cells: 0,
+            reason: "profile-transition-ruled-contact-unproven",
+        };
+        let boundary = self.assembly.patch.rails.face.boundary;
+        if !std::ptr::eq(region.face().boundary(), boundary) || max_work == 0 || max_drivers == 0 {
+            return Ok(out);
+        }
+        let Some(pair) = self
+            .pairs
+            .iter()
+            .find(|p| p.kind == ShellPairKind::Rail(rail))
+        else {
+            return Ok(out);
+        };
+        let owners = pair.uses.map(|a| &self.faces[a.face]);
+        let [ShellFaceKind::Transition, ShellFaceKind::Original(index)] = owners.map(|f| f.kind)
+        else {
+            return Ok(out);
+        };
+        let root = boundary.rooted[rail];
+        let neighbor =
+            root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
+        let Some(trace) = exact_trace::certify(neighbor, [0, 1], 1 - root.axis, max_controls)?
+        else {
+            return Ok(out);
+        };
+        let natural = match (root.axis, rail) {
+            (0, 0) => 0,
+            (0, 1) => 2,
+            (1, 0) => 3,
+            _ => 1,
+        };
+        let original = region.original();
+        let Some(curve) = original
+            .boundary()
+            .iter()
+            .zip(original.boundary_indices())
+            .find_map(|(c, &i)| (i == natural).then_some(c))
+        else {
+            return Ok(out);
+        };
+        if original.axes() != [0, 1]
+            || !identical_trace(curve, trace.curve(), &mut out.exact_work, max_work)?
+        {
+            return Ok(out);
+        }
+        // The whole wall projects onto this original Jordan boundary. The
+        // source subregion (and the transition with the same planar image)
+        // can meet it only on the selected natural rail. Fresh carrier proof
+        // supplies its full 3D contact ownership, including both cut roots.
+        let edge = root.qualify_incident_edge(max_work - out.exact_work, max_drivers)?;
+        out.exact_work += edge.work_used;
+        out.driver_cells = edge.driver_cells;
+        let Some(edge) = edge.edge else {
+            out.reason = edge.reason;
+            return Ok(out);
+        };
+        out.certificate = Some(TransitionRuledContact {
+            owners,
+            rail,
+            trace,
+            edge,
+        });
+        out.reason = "profile-transition-ruled-contact-qualified";
+        Ok(out)
+    }
+    pub fn qualify_transition_profile_ruled_contact<'x>(
+        &'x self,
+        rail: usize,
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+        max_controls: usize,
+        max_work: u64,
+        max_drivers: usize,
+    ) -> Result<TransitionRuledReport<'x>> {
+        if rail > 1 || max_controls > 1000000 || max_work > 100000000 || max_drivers > 100000 {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound original ruled transition contact work",
+            ));
+        }
+        let mut out = TransitionRuledReport {
+            certificate: None,
+            exact_work: 0,
+            driver_cells: 0,
+            reason: "profile-transition-ruled-contact-unproven",
+        };
+        let boundary = self.assembly.patch.rails.face.boundary;
+        if !std::ptr::eq(region.face().boundary(), boundary) || max_work == 0 || max_drivers == 0 {
+            return Ok(out);
+        }
+        let Some(pair) = self
+            .pairs
+            .iter()
+            .find(|p| p.kind == ShellPairKind::Rail(rail))
+        else {
+            return Ok(out);
+        };
+        let owners = pair.uses.map(|a| &self.faces[a.face]);
+        let [ShellFaceKind::Transition, ShellFaceKind::Original(index)] = owners.map(|f| f.kind)
+        else {
+            return Ok(out);
+        };
+        let root = boundary.rooted[rail];
+        let neighbor =
+            root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
+        let Some(trace) = exact_trace::certify(neighbor, [0, 1], 1 - root.axis, max_controls)?
+        else {
+            return Ok(out);
+        };
+        let natural = match (root.axis, rail) {
+            (0, 0) => 0,
+            (0, 1) => 2,
+            (1, 0) => 3,
+            _ => 1,
+        };
+        let original = region.profile();
+        let Some(curve) = original
+            .boundary()
+            .iter()
+            .zip(original.boundary_indices())
+            .find_map(|(c, &i)| (i == natural).then_some(c))
+        else {
+            return Ok(out);
+        };
+        if original.axes() != [0, 1]
+            || !identical_trace(curve, trace.curve(), &mut out.exact_work, max_work)?
+        {
+            return Ok(out);
+        }
+        // The whole wall projects onto this original Jordan boundary. The
+        // source subregion (and the transition with the same planar image)
+        // can meet it only on the selected natural rail. Fresh carrier proof
+        // supplies its full 3D contact ownership, including both cut roots.
+        let edge = root.qualify_incident_edge(max_work - out.exact_work, max_drivers)?;
+        out.exact_work += edge.work_used;
+        out.driver_cells = edge.driver_cells;
+        let Some(edge) = edge.edge else {
+            out.reason = edge.reason;
+            return Ok(out);
+        };
+        out.certificate = Some(TransitionRuledContact {
+            owners,
+            rail,
+            trace,
+            edge,
+        });
+        out.reason = "profile-transition-ruled-contact-qualified";
+        Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn exact_boundary_trace_identity_preserves_domain_and_refuses_residuals() {
+        let a = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 2.], vec![3., 4.]],
+            weights: vec![1., 0.75, 1.25],
+            periodic: false,
+        };
+        let matches = |a: &Curve, b: &Curve| identical_trace(a, b, &mut 0, 100000).unwrap();
+        let mut b = a.clone();
+        b.knots = vec![2., 2., 2., 5., 5., 5.];
+        b.control_points.reverse();
+        b.weights.reverse();
+        assert!(matches(&a, &b));
+        b.control_points[1][0] = f64::from_bits(b.control_points[1][0].to_bits() + 1);
+        assert!(!matches(&a, &b));
+        b = a.clone();
+        b.weights[1] = f64::from_bits(b.weights[1].to_bits() + 1);
+        assert!(!matches(&a, &b));
+        b = a.clone();
+        for weight in &mut b.weights {
+            *weight *= 2.;
+        }
+        assert!(matches(&a, &b));
+        let mut used = 0;
+        assert!(!identical_trace(&a, &b, &mut used, 0).unwrap());
+        assert!(used == 0);
+        b.weights[1] = f64::from_bits(b.weights[1].to_bits() + 1);
+        assert!(!matches(&a, &b));
+        b = a.clone();
+        b.periodic = true;
+        assert!(!matches(&a, &b));
+    }
+}
+
+/// Full positive-profile projection meets the whole ruled wall projection only
+/// on this natural boundary (and collapsed boundary endpoints). This is an
+/// image statement; retained edge/vertex ownership is qualified separately.
+pub struct ProfileRuledImage<'x, 'b> {
+    owners: [&'x ShellFace; 2],
+    profile: nurbs_core::profile_projected_jordan::Certificate<'x, 'b>,
+    wall: exact_trace::Certificate<'x>,
+    natural: usize,
+}
+impl ProfileRuledImage<'_, '_> {
+    pub fn owners(&self) -> [&ShellFace; 2] { self.owners }
+    pub fn profile(&self) -> &nurbs_core::profile_projected_jordan::Certificate<'_, '_> { &self.profile }
+    pub fn wall(&self) -> &Curve { self.wall.curve() }
+    pub fn natural(&self) -> usize { self.natural }
+}
+pub struct ProfileRuledImageReport<'x, 'b> {
+    pub certificate: Option<ProfileRuledImage<'x, 'b>>,
+    pub exact_work: u64,
+    pub boundary_cells: usize,
+    pub reason: &'static str,
+}
+impl<'x,'o,'i,'f,'a,'s,'p,'b> ExpressionShell<'x,'o,'i,'f,'a,'s,'p,'b> {
+    pub fn qualify_profile_ruled_image(
+        &self, faces: [usize;2], tolerance:f64, max_controls:usize, max_work:u64, max_cells:usize,
+    ) -> Result<ProfileRuledImageReport<'_, 'b>> {
+        if faces[0]==faces[1] || faces.iter().any(|&i|i>=self.faces.len()) || max_controls>1000000 || max_work>100000000 || max_cells>100000 || !tolerance.is_finite() || tolerance<=0. {
+            return Err(Error::new("BREP_PROFILE_CONTACTS","Bound profile ruled image owners and native work"));
+        }
+        let mut out=ProfileRuledImageReport {certificate:None,exact_work:0,boundary_cells:0,reason:"profile-ruled-image-face-kind-unproven"};
+        let (original,side)=match faces.map(|i|self.faces[i].kind()) {
+            [ShellFaceKind::Retained(_),ShellFaceKind::Original(a)] => (a,0),
+            [ShellFaceKind::Original(a),ShellFaceKind::Retained(_)] => (a,1),
+            _ => return Ok(out),
+        };
+        if self.equivalent_original_face(faces[1-side])!=Some(original) {out.reason="profile-ruled-image-original-contour-unproven";return Ok(out);}
+        let Some(rail)=self.pairs.iter().find_map(|p| {
+            if p.uses.iter().all(|a|faces.contains(&a.face)) {
+                if let ShellPairKind::Outer(k)=p.kind {return Some(k/2);}
+            }
+            None
+        }) else {out.reason="profile-ruled-image-current-outer-edge-unproven";return Ok(out);};
+        if max_controls==0 || max_work==0 || max_cells==0 {out.reason="profile-ruled-image-work-limit";return Ok(out);}
+        let root=self.assembly.patch.rails.face.boundary.rooted[rail];
+        let shell=root.restricted.proposal.body.geometry().shell();
+        let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let neighbor=shell.regions().unwrap()[original].loops()[0][0].surface();
+        let Some(wall)=exact_trace::certify(neighbor,[0,1],1-root.axis,max_controls)? else {out.reason="profile-ruled-image-wall-trace-unproven";return Ok(out);};
+        let report=nurbs_core::profile_projected_jordan::certify(profile,[0,1],tolerance,max_work,max_cells)?;
+        out.exact_work=report.exact_work;out.boundary_cells=report.boundary_cells;out.reason=report.reason;
+        let Some(projected)=report.certificate else {return Ok(out);};
+        let natural=match (root.axis,rail) {(0,0)=>0,(0,1)=>2,(1,0)=>3,_=>1};
+        let Some(curve)=projected.boundary().iter().zip(projected.boundary_indices()).find_map(|(c,&i)|(i==natural).then_some(c)) else {out.reason="profile-ruled-image-natural-boundary-unproven";return Ok(out);};
+        if !identical_trace(curve,wall.curve(),&mut out.exact_work,max_work)? {out.reason="profile-ruled-image-boundary-identity-unproven";return Ok(out);}
+        out.certificate=Some(ProfileRuledImage {owners:faces.map(|i|&self.faces[i]),profile:projected,wall,natural});
+        out.reason="profile-ruled-boundary-image-qualified";
+        Ok(out)
+    }
+}
+
+pub struct ProfileRuledContact<'x, 'b> {
+    image: ProfileRuledImage<'x, 'b>,
+    boundary: crate::source_profile_boundary_identity::Certificate<'x, 'b>,
+    shared: Vec<[crate::source_shell_incidence::Address;2]>,
+}
+impl ProfileRuledContact<'_, '_> {
+    pub fn image(&self) -> &ProfileRuledImage<'_, '_> { &self.image }
+    pub fn boundary(&self) -> &crate::source_profile_boundary_identity::Certificate<'_, '_> { &self.boundary }
+    pub fn shared(&self) -> &[[crate::source_shell_incidence::Address;2]] { &self.shared }
+}
+pub struct ProfileRuledContactReport<'x, 'b> {
+    pub certificate: Option<ProfileRuledContact<'x, 'b>>,
+    pub exact_work: u64,
+    pub driver_cells: usize,
+    pub boundary_cells: usize,
+    pub reason: &'static str,
+}
+impl<'x,'o,'i,'f,'a,'s,'p,'b> ExpressionShell<'x,'o,'i,'f,'a,'s,'p,'b> {
+    pub fn qualify_profile_ruled_contact(
+        &self, faces:[usize;2], tolerance:f64, max_controls:usize, max_work:u64, max_cells:usize, max_driver:usize,
+    ) -> Result<ProfileRuledContactReport<'_, 'b>> {
+        use crate::{source_fiber_boundary::Locus,source_shell_incidence::Address};
+        if max_driver>100000 {return Err(Error::new("BREP_PROFILE_CONTACTS","Bound profile ruled driver work"));}
+        let report=self.qualify_profile_ruled_image(faces,tolerance,max_controls,max_work,max_cells)?;
+        let mut out=ProfileRuledContactReport {certificate:None,exact_work:report.exact_work,driver_cells:0,boundary_cells:report.boundary_cells,reason:report.reason};
+        let Some(image)=report.certificate else {return Ok(out);};
+        if max_driver==0 || out.exact_work==max_work {out.reason="profile-ruled-contact-work-limit";return Ok(out);}
+        let side=if matches!(self.faces[faces[0]].kind(),ShellFaceKind::Retained(_)) {0} else {1};
+        let shared=self.pairs.iter().filter(|p|p.uses.iter().all(|a|faces.contains(&a.face))).map(|p|p.uses).collect::<Vec<_>>();
+        let (axis,upper)=match image.natural {0=>(1,false),1=>(0,true),2=>(1,true),_=>(0,false)};
+        let profile=image.profile.profile();
+        let report=crate::source_profile_boundary_identity::certify(profile,axis,upper,max_work-out.exact_work)?;
+        out.exact_work+=report.exact_work;out.reason=report.reason;
+        let Some(boundary)=report.certificate else {return Ok(out);};
+        let retained=&self.faces[faces[side]];
+        for (wire,loop_) in retained.loops.iter().enumerate() {
+            let mut loci=Vec::new();let mut owned=Vec::new();
+            for (edge,use_) in loop_.iter().enumerate() {
+                let ShellUse::Source(fragment)=use_ else {out.reason="profile-ruled-contact-source-contour-unproven";return Ok(out);};
+                if out.driver_cells==max_driver {out.reason="profile-ruled-contact-driver-limit";return Ok(out);}
+                let report=crate::source_fiber_boundary::inspect_natural(fragment,profile.source(),(axis,upper),max_driver-out.driver_cells)?;
+                out.driver_cells+=report.driver_cells;loci.push(report.locus);
+                owned.push(shared.iter().flatten().any(|a|*a==Address {face:faces[side],wire,edge}));
+            }
+            if !super::profile_boundary_contact::boundary_owned(&loci,&owned) {
+                out.reason="profile-ruled-contact-retained-fiber-ownership-unproven";return Ok(out);
+            }
+            // Unresolved loops can never acquire authority via graph incidence.
+            debug_assert!(loci.iter().all(|l|*l!=Locus::Unresolved));
+        }
+        let source=profile.source();let domain=self.support_domain(faces[side])?;
+        let counts=[source.control_points.len(),source.control_points[0].len()];
+        let degrees=[source.degree_u,source.degree_v];let knots=[&source.knots_u,&source.knots_v];
+        // A collapsed XY boundary alone does not imply a collapsed world
+        // boundary. Recheck the original full 3D control row/column exactly.
+        for &natural in image.profile.collapsed_boundaries() {
+            let (a,high)=match natural {0=>(1,false),1=>(0,true),2=>(1,true),3=>(0,false),_=>{out.reason="profile-ruled-contact-collapsed-index-unproven";return Ok(out);}};
+            let fixed=if high {counts[a]-1} else {0};
+            let controls=(0..counts[1-a]).map(|free|if a==0 {&source.control_points[fixed][free]} else {&source.control_points[free][fixed]}).collect::<Vec<_>>();
+            if controls.iter().any(|p|*p!=controls[0]) {out.reason="profile-ruled-contact-world-pole-unproven";return Ok(out);}
+            let t=knots[a][if high {counts[a]} else {degrees[a]}];
+            if t<domain[a][0] || t>domain[a][1] {continue;}
+            let point=[controls[0][0],controls[0][1],controls[0][2]];
+            let owns=shared.iter().flatten().filter(|a|a.face==faces[side]).any(|a|match &retained.loops[a.wire][a.edge] {
+                ShellUse::Source(f)=>(0..2).any(|end|crate::source_vertex_contact::corner(f,end)==Some(point)),_=>false,
+            });
+            if !owns {out.reason="profile-ruled-contact-retained-pole-ownership-unproven";return Ok(out);}
+        }
+        // Jordan interior injectivity and the complete wall projection confine
+        // all contacts to the owned natural trace and qualified world poles.
+        // Native boundary identity transfers the shared edge's full 3D source
+        // agreement, including its independently qualified root-ended caps.
+        out.certificate=Some(ProfileRuledContact {image,boundary,shared});
+        out.reason="profile-owned-ruled-boundary-contact-qualified";
+        Ok(out)
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "schema": "geometry-pack-publication/1",
+  "observedFailure": "During active packaging, new public WASM and identity were visible before Brotli bytes were ready; worker package verifier refused decoded size mismatch.",
+  "change": "Compute and validate compressed bytes and identity before publishing any new artifact files.",
+  "regression": "Valid oversized custom-section WASM is refused while four previous published artifacts remain unchanged.",
+  "testsPassed": 6,
+  "log": "/tmp/geometry-package-suite-20261010.log",
+  "limits": "Does not provide filesystem-wide atomic publication or identify the cause of the earlier browser crash.",
+  "currentBuildUsedPreviousPackingOrder": true
+}

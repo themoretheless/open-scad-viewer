@@ -1,0 +1,536 @@
+{
+  "schema": "cad-step-chart-maps/1",
+  "passed": true,
+  "scope": "Exact surface coefficient equality after supported chart maps over the full owned unit domain; positive-rational trim UV error bound over every parameter. No general NURBS chart matching, whole-wall or tangency certification.",
+  "trimUvTolerance": 1e-14,
+  "parts": [
+    {
+      "part": "bracket",
+      "inputSha256": "2f9cd326530cd4b96a4ac976f60ef70cd9640d931032ad6e9aca97ed5d9af090",
+      "faces": [
+        {
+          "faceIdentity": "f:bec134f17d9904722c4d93871e4c0777",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:bfbc71cf174bce43006696472a3ce449",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:3e91d4af59819dfd99bd14d80a749afc",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:d9011c43f2eda9fc589640495d96b5d6",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:4b7b9f234e400c6feea66a23b0d91f46",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:e0171dbf4c261f4168dd85bc4422a7ca",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:26b31a385ddcb0e4275e58b53ea1cc54",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:64f9c87743f51df082d25114851fb01e",
+          "surfaceProof": "exact-U-reflection",
+          "uSign": -1,
+          "uOffset": 1,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:bcbc33144e0a647a812e64213fc406e8",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        }
+      ],
+      "surfaceMutationRejected": true,
+      "trimMutationRejected": true
+    },
+    {
+      "part": "flange",
+      "inputSha256": "4bccecc5468214924c26fc11b588cb9fe5eba70f7dc3b9543c0587cd03ae4967",
+      "faces": [
+        {
+          "faceIdentity": "f:b0f2a8982462b045f1996d3c5776a1d7",
+          "surfaceProof": "exact-owned-Bezier-span",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:9b8606371beacbd0297dbe411b99df32",
+          "surfaceProof": "exact-owned-Bezier-span",
+          "uSign": 1,
+          "uOffset": 1,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:57b8591eb4b018ed50a0cb8bb558e376",
+          "surfaceProof": "exact-owned-Bezier-span",
+          "uSign": 1,
+          "uOffset": 2,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:74141cdda6e1ff5131b255db7dcb682e",
+          "surfaceProof": "exact-owned-Bezier-span",
+          "uSign": 1,
+          "uOffset": 3,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:e15f8d0e96bd1068bbd9a7d1f9eb113c",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:de1aee7cdd2dffe53538ae72377bfb0a",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:d853d05a92354d61e4c9944b91edaad9",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:1481a537239e71ae8654d9f6bfdfcfa5",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:47406a217711171a9eae543b19b4c2bc",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:64509658bb0c192e271e2e6b99545a2c",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:26bd53680f0cc17d2d43748b69e4b38e",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:941565d27ef539bcecfbad833ff81e79",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:4bbc821aae1cd61d3c62f3920247d800",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:422083c29aa45d047be6718c26dab2e1",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:8dfcc76ba6364619402579259fac193a",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:503f286a359e7531c97426e2748717ef",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:8865323b78c50a32d33da9584171e054",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:9d178f2b200c0c0de669a84615b4b1f2",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:ba64a0abd1e9d866aa290dd3ffcc5b72",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:ce3b05fb3056d1fdd436e6352cfc4e46",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        }
+      ],
+      "surfaceMutationRejected": true,
+      "trimMutationRejected": true
+    },
+    {
+      "part": "enclosure",
+      "inputSha256": "c470ae758c068c988ae5e5445879cefe0192c37babc7c67184f7f813ea8f3839",
+      "faces": [
+        {
+          "faceIdentity": "f:839b32df317ac5f16014a5a89c172f6e",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:656ffacc48ea74292e06c5f145ae395f",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:2b7b24b57dc61d267d964f9b1c18fe54",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:16a2c907cab60c454fdbe39cf7ab45ec",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:8455095b0d7ef8b32cf961b74a15b9ae",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:8e91b8a94f84cd60f8f183fe9f4d6fc3",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:2c2180ea3a379c4db8f1a18179d81062",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:33305ff750a97b5ccc1079265c1ac3b7",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:cc77c3d2ab2620c5c9eb169a8e7bea08",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:b1e37c0673442515647c797e266b7c5a",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:8523a3b882b37efa698daa2c5ca16aa5",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:7581801cab55c0e611f4e55425224589",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:47bfb841f2eebdd46c61988d7ccef847",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:8fe829c6ef70dd159f4be4ed4eb1042f",
+          "surfaceProof": "exact-U-reflection",
+          "uSign": -1,
+          "uOffset": 1,
+          "maxTrimUvDeviationUpperBound": 4.1633363423443376e-17,
+          "exactUvDeviationFraction": "3/72057594037927936"
+        },
+        {
+          "faceIdentity": "f:a6b0691799ccdbc5e1bfe70e22889c88",
+          "surfaceProof": "exact-U-reflection",
+          "uSign": -1,
+          "uOffset": 1,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:4fc19bc736cca633f81662a94ecef5b4",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:7ca7dddb9cf7da57f54fcbeafaac4d13",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:31535c04983fa89349495f1cc0850896",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:27c4864ba19413b1f4e1d597ed88f7f0",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:e9cdc1f9a7ca6805a926168c995bd8da",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:b8e92c1dcdaa4b9df79d3d574779d5e7",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:7ec5a1864a563675f949b5602c0001d4",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:5e5c06118c748733aefc4a98e18efca2",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:6cb60967cb6cfeaf2ac41e6317b1616d",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:eff2a0501a1ca97d1e387a0009e7519f",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:528054c8085d6e75b48443bda0dc48a5",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:5158be540002b4cd90925122464955e5",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:a19d2aeec3f4e5bd21d2b2e9b867557e",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:d71dffe4f781d02357d808e28c537d9e",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:3b8b5f4679eacf8e245112f774bd7b79",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:1cd5183b983cef42c10148bb8862cb26",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:946b73b78ac286fc8d0285356f5496b1",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:08f6cc40940ca25289ab2e8d0b5d6227",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        },
+        {
+          "faceIdentity": "f:578c87aba4d8764d138c379171dd1f0b",
+          "surfaceProof": "identity",
+          "uSign": 1,
+          "uOffset": 0,
+          "maxTrimUvDeviationUpperBound": 0,
+          "exactUvDeviationFraction": "0"
+        }
+      ],
+      "surfaceMutationRejected": true,
+      "trimMutationRejected": true
+    }
+  ]
+}

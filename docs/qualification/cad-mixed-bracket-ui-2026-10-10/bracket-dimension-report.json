@@ -1,0 +1,50 @@
+{
+  "schema": "cad-single-ui-step-dimensions/1",
+  "part": "bracket",
+  "source": "actual browser export after 20 mixed operations and reload",
+  "sha256": "2899c6c8a4b8c3c195f4b38ad5ae9de0c2fff1a45ad81429693560ba610c6019",
+  "oracle": "OpenCascade exact line intersections",
+  "scope": "Three declared section gauges only; flange and enclosure UI acceptance and whole-body thickness remain open",
+  "gauges": [
+    {
+      "gauge": "horizontal web 5 mm",
+      "expectedParametersMm": [
+        10,
+        15
+      ],
+      "actualParametersMm": [
+        10.0,
+        15.0
+      ],
+      "maxErrorMm": 0.0,
+      "passed": true
+    },
+    {
+      "gauge": "upright web 5 mm",
+      "expectedParametersMm": [
+        17,
+        22
+      ],
+      "actualParametersMm": [
+        17.0,
+        22.0
+      ],
+      "maxErrorMm": 0.0,
+      "passed": true
+    },
+    {
+      "gauge": "corner radius 1 mm",
+      "expectedParametersMm": [
+        17.133974596215563,
+        63
+      ],
+      "actualParametersMm": [
+        17.133974596215563,
+        63.0
+      ],
+      "maxErrorMm": 0.0,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

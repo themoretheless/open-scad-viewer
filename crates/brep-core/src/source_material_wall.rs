@@ -6,37 +6,37 @@ pub struct Limits {
     pub gap: source_face_gap::Limits,
     pub chord: source_material_chord::Limits,
 }
-pub struct Certificate<'a> {
-    gap: source_face_gap::Certificate<'a>,
-    chord: source_material_chord::Certificate<'a>,
+pub struct Certificate<'a,E = crate::source_shared_edge::SharedEdge> {
+    gap: source_face_gap::Certificate<'a,E>,
+    chord: source_material_chord::Certificate<'a,E>,
     interval_mm: [f64; 2],
 }
-impl<'a> Certificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E:crate::source_seam_tangency::Carrier> Certificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.gap.body()
     }
     pub fn faces(&self) -> [&[usize]; 2] {
         self.gap.faces()
     }
-    pub fn chord(&self) -> &source_material_chord::Certificate<'a> {
+    pub fn chord(&self) -> &source_material_chord::Certificate<'a,E> {
         &self.chord
     }
     pub fn interval_mm(&self) -> [f64; 2] {
         self.interval_mm
     }
 }
-pub struct Report<'a> {
-    pub certificate: Option<Certificate<'a>>,
+pub struct Report<'a,E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<'a,E>>,
     pub converged: bool,
     pub reason: &'static str,
-    pub clearance: source_face_gap::Report<'a>,
-    pub candidate: source_material_chord::Report<'a>,
+    pub clearance: source_face_gap::Report<'a,E>,
+    pub candidate: source_material_chord::Report<'a,E>,
 }
 /// Fresh full pair coverage supplies a lower bound. A normal material chord
 /// connecting the selected unions supplies an upper witness. Positive evidence
 /// for both gates is mandatory, including matching immutable Body identities.
-pub fn qualify<'a>(
-    body: &'a Body,
+pub fn qualify<'a,E:crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     groups: [&[usize]; 2],
     minimum_mm: f64,
     tolerance_mm: f64,
@@ -44,7 +44,7 @@ pub fn qualify<'a>(
     direction: [f64; 3],
     tolerance_uv: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
         return Err(Error::new(
             "BREP_SOURCE_WALL_TOLERANCE",
@@ -93,18 +93,18 @@ pub fn qualify<'a>(
     })
 }
 
-pub struct SearchReport<'a> {
-    pub certificate: Option<Certificate<'a>>,
+pub struct SearchReport<'a,E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<'a,E>>,
     pub converged: bool,
     pub reason: &'static str,
-    pub clearance: source_face_gap::Report<'a>,
-    pub search: crate::source_wall_search::Report<'a>,
+    pub clearance: source_face_gap::Report<'a,E>,
+    pub search: crate::source_wall_search::Report<'a,E>,
 }
 /// Automatic upper witness search plus complete lower coverage of the supplied
 /// unions. Exhausting a finite search does not itself prove a global minimum;
 /// only the full source pair bound supplies the lower certificate.
-pub fn search_and_qualify<'a>(
-    body: &'a Body,
+pub fn search_and_qualify<'a,E:crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     groups: [&[usize]; 2],
     minimum_mm: f64,
     tolerance_mm: f64,
@@ -112,7 +112,7 @@ pub fn search_and_qualify<'a>(
     grid: usize,
     max_attempts: usize,
     limits: Limits,
-) -> Result<SearchReport<'a>> {
+) -> Result<SearchReport<'a,E>> {
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
         return Err(Error::new(
             "BREP_SOURCE_WALL_TOLERANCE",
@@ -170,17 +170,17 @@ pub fn search_and_qualify<'a>(
     })
 }
 
-pub struct RefinedReport<'a> {
-    pub result: SearchReport<'a>,
-    pub refinement: Option<source_face_gap::Report<'a>>,
+pub struct RefinedReport<'a,E = crate::source_shared_edge::SharedEdge> {
+    pub result: SearchReport<'a,E>,
+    pub refinement: Option<source_face_gap::Report<'a,E>>,
     pub cells: usize,
     pub spans: usize,
 }
 /// Tighten the lower certificate toward a searched material upper witness.
 /// Initial and refinement full-pair visits share one gap budget. Refusal keeps
 /// the original valid interval and exposes the failed refinement separately.
-pub fn search_and_refine<'a>(
-    body: &'a Body,
+pub fn search_and_refine<'a,E:crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     groups: [&[usize]; 2],
     minimum_mm: f64,
     tolerance_mm: f64,
@@ -188,7 +188,7 @@ pub fn search_and_refine<'a>(
     grid: usize,
     max_attempts: usize,
     limits: Limits,
-) -> Result<RefinedReport<'a>> {
+) -> Result<RefinedReport<'a,E>> {
     let budget = [limits.gap.cells, limits.gap.spans];
     let result = search_and_qualify(
         body,

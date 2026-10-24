@@ -1,0 +1,840 @@
+{
+  "passed": true,
+  "geometryQualified": false,
+  "pendingContainedInPrevious": true,
+  "changes": [
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "beforeRegions": 4172,
+      "afterRegions": 6436,
+      "beforeRawParameterVolume": {
+        "numerator": 9387,
+        "denominator": 131072,
+        "value": 0.07161712646484375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 14481,
+        "denominator": 262144,
+        "value": 0.055240631103515625
+      }
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "beforeRegions": 36,
+      "afterRegions": 48,
+      "beforeRawParameterVolume": {
+        "numerator": 675,
+        "denominator": 512,
+        "value": 1.318359375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 225,
+        "denominator": 256,
+        "value": 0.87890625
+      }
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "beforeRegions": 154,
+      "afterRegions": 208,
+      "beforeRawParameterVolume": {
+        "numerator": 693,
+        "denominator": 65536,
+        "value": 0.0105743408203125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 117,
+        "denominator": 16384,
+        "value": 0.00714111328125
+      }
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "beforeRegions": 168,
+      "afterRegions": 152,
+      "beforeRawParameterVolume": {
+        "numerator": 63,
+        "denominator": 16384,
+        "value": 0.00384521484375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 57,
+        "denominator": 32768,
+        "value": 0.001739501953125
+      }
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "beforeRegions": 16,
+      "afterRegions": 28,
+      "beforeRawParameterVolume": {
+        "numerator": 75,
+        "denominator": 128,
+        "value": 0.5859375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 525,
+        "denominator": 1024,
+        "value": 0.5126953125
+      }
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "beforeRegions": 4,
+      "afterRegions": 4,
+      "beforeRawParameterVolume": {
+        "numerator": 9,
+        "denominator": 32768,
+        "value": 0.000274658203125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 9,
+        "denominator": 65536,
+        "value": 0.0001373291015625
+      }
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "beforeRegions": 28,
+      "afterRegions": 24,
+      "beforeRawParameterVolume": {
+        "numerator": 591097451092377705,
+        "denominator": 576460752303423488,
+        "value": 1.0253906250000002
+      },
+      "afterRawParameterVolume": {
+        "numerator": 253327479039590445,
+        "denominator": 576460752303423488,
+        "value": 0.43945312500000006
+      }
+    },
+    {
+      "faces": [
+        0,
+        27
+      ],
+      "beforeRegions": 2,
+      "afterRegions": 0,
+      "beforeRawParameterVolume": {
+        "numerator": 168884986026393,
+        "denominator": 36893488147419103232,
+        "value": 4.577636718749984e-06
+      },
+      "afterRawParameterVolume": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0
+      }
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "beforeRegions": 1754,
+      "afterRegions": 2210,
+      "beforeRawParameterVolume": {
+        "numerator": 2631,
+        "denominator": 65536,
+        "value": 0.0401458740234375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3315,
+        "denominator": 131072,
+        "value": 0.02529144287109375
+      }
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "beforeRegions": 10,
+      "afterRegions": 14,
+      "beforeRawParameterVolume": {
+        "numerator": 125,
+        "denominator": 256,
+        "value": 0.48828125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 175,
+        "denominator": 512,
+        "value": 0.341796875
+      }
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "beforeRegions": 54,
+      "afterRegions": 86,
+      "beforeRawParameterVolume": {
+        "numerator": 37999121855938525,
+        "denominator": 144115188075855872,
+        "value": 0.2636718749999998
+      },
+      "afterRawParameterVolume": {
+        "numerator": 60517119992790925,
+        "denominator": 288230376151711744,
+        "value": 0.2099609374999996
+      }
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 22,
+      "beforeRawParameterVolume": {
+        "numerator": 375,
+        "denominator": 128,
+        "value": 2.9296875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 275,
+        "denominator": 512,
+        "value": 0.537109375
+      }
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "beforeRegions": 2,
+      "afterRegions": 2,
+      "beforeRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 16384,
+        "value": 0.00018310546875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 32768,
+        "value": 9.1552734375e-05
+      }
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "beforeRegions": 100,
+      "afterRegions": 116,
+      "beforeRawParameterVolume": {
+        "numerator": 4222124650659837,
+        "denominator": 4611686018427387904,
+        "value": 0.0009155273437499993
+      },
+      "afterRawParameterVolume": {
+        "numerator": 9795329189530827,
+        "denominator": 18446744073709551616,
+        "value": 0.000531005859375
+      }
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "beforeRegions": 768,
+      "afterRegions": 266,
+      "beforeRawParameterVolume": {
+        "numerator": 9,
+        "denominator": 128,
+        "value": 0.0703125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 399,
+        "denominator": 32768,
+        "value": 0.012176513671875
+      }
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "beforeRegions": 1874,
+      "afterRegions": 2078,
+      "beforeRawParameterVolume": {
+        "numerator": 937,
+        "denominator": 16384,
+        "value": 0.05718994140625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 1039,
+        "denominator": 32768,
+        "value": 0.031707763671875
+      }
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "beforeRegions": 40,
+      "afterRegions": 44,
+      "beforeRawParameterVolume": {
+        "numerator": 125,
+        "denominator": 64,
+        "value": 1.953125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 275,
+        "denominator": 256,
+        "value": 1.07421875
+      }
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 92,
+      "beforeRawParameterVolume": {
+        "numerator": 45,
+        "denominator": 8192,
+        "value": 0.0054931640625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 69,
+        "denominator": 16384,
+        "value": 0.00421142578125
+      }
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "beforeRegions": 62,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 31,
+        "denominator": 16384,
+        "value": 0.00189208984375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 15,
+        "denominator": 16384,
+        "value": 0.00091552734375
+      }
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "beforeRegions": 8,
+      "afterRegions": 10,
+      "beforeRawParameterVolume": {
+        "numerator": 25,
+        "denominator": 64,
+        "value": 0.390625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 125,
+        "denominator": 512,
+        "value": 0.244140625
+      }
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "beforeRegions": 2,
+      "afterRegions": 2,
+      "beforeRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 16384,
+        "value": 0.00018310546875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 32768,
+        "value": 9.1552734375e-05
+      }
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "beforeRegions": 8,
+      "afterRegions": 16,
+      "beforeRawParameterVolume": {
+        "numerator": 25,
+        "denominator": 64,
+        "value": 0.390625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 25,
+        "denominator": 64,
+        "value": 0.390625
+      }
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "beforeRegions": 2,
+      "afterRegions": 2,
+      "beforeRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 16384,
+        "value": 0.00018310546875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 32768,
+        "value": 9.1552734375e-05
+      }
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "beforeRegions": 2438,
+      "afterRegions": 3184,
+      "beforeRawParameterVolume": {
+        "numerator": 1219,
+        "denominator": 16384,
+        "value": 0.07440185546875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 199,
+        "denominator": 4096,
+        "value": 0.048583984375
+      }
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "beforeRegions": 116,
+      "afterRegions": 118,
+      "beforeRawParameterVolume": {
+        "numerator": 725,
+        "denominator": 128,
+        "value": 5.6640625
+      },
+      "afterRawParameterVolume": {
+        "numerator": 1475,
+        "denominator": 512,
+        "value": 2.880859375
+      }
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "beforeRegions": 172,
+      "afterRegions": 248,
+      "beforeRawParameterVolume": {
+        "numerator": 129,
+        "denominator": 8192,
+        "value": 0.0157470703125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 93,
+        "denominator": 8192,
+        "value": 0.0113525390625
+      }
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "beforeRegions": 104,
+      "afterRegions": 106,
+      "beforeRawParameterVolume": {
+        "numerator": 325,
+        "denominator": 64,
+        "value": 5.078125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 1325,
+        "denominator": 512,
+        "value": 2.587890625
+      }
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "beforeRegions": 32,
+      "afterRegions": 32,
+      "beforeRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 1024,
+        "value": 0.0029296875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3,
+        "denominator": 2048,
+        "value": 0.00146484375
+      }
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 60,
+      "beforeRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 8192,
+        "value": 0.0164794921875
+      },
+      "afterRawParameterVolume": {
+        "numerator": 135,
+        "denominator": 16384,
+        "value": 0.00823974609375
+      }
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "beforeRegions": 54,
+      "afterRegions": 86,
+      "beforeRawParameterVolume": {
+        "numerator": 42783207757702710493841364877305,
+        "denominator": 162259276829213363391578010288128,
+        "value": 0.2636718749999998
+      },
+      "afterRawParameterVolume": {
+        "numerator": 68136219762267212955382508945385,
+        "denominator": 324518553658426726783156020576256,
+        "value": 0.20996093749999964
+      }
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "beforeRegions": 60,
+      "afterRegions": 22,
+      "beforeRawParameterVolume": {
+        "numerator": 422212465065984075,
+        "denominator": 144115188075855872,
+        "value": 2.9296875000000004
+      },
+      "afterRawParameterVolume": {
+        "numerator": 309622474381721655,
+        "denominator": 576460752303423488,
+        "value": 0.5371093750000001
+      }
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "beforeRegions": 30,
+      "afterRegions": 44,
+      "beforeRawParameterVolume": {
+        "numerator": 2533274790395907,
+        "denominator": 9223372036854775808,
+        "value": 0.0002746582031250003
+      },
+      "afterRawParameterVolume": {
+        "numerator": 3715469692580661,
+        "denominator": 18446744073709551616,
+        "value": 0.0002014160156250001
+      }
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "beforeRegions": 4142,
+      "afterRegions": 6636,
+      "beforeRawParameterVolume": {
+        "numerator": 6563260982681652468296615890817,
+        "denominator": 5192296858534827628530496329220096,
+        "value": 0.001264038085937499
+      },
+      "afterRawParameterVolume": {
+        "numerator": 10515161728893166533330851258741,
+        "denominator": 10384593717069655257060992658440192,
+        "value": 0.0010125732421875004
+      }
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "beforeRegions": 2886,
+      "afterRegions": 2614,
+      "beforeRawParameterVolume": {
+        "numerator": 81233678278695347,
+        "denominator": 9223372036854775808,
+        "value": 0.008807373046875002
+      },
+      "afterRawParameterVolume": {
+        "numerator": 73577558912165647,
+        "denominator": 18446744073709551616,
+        "value": 0.003988647460937509
+      }
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "beforeRegions": 10814,
+      "afterRegions": 15061,
+      "beforeRawParameterVolume": {
+        "numerator": 2803,
+        "denominator": 8192,
+        "value": 0.3421630859375
+      },
+      "afterRawParameterVolume": {
+        "numerator": 5301,
+        "denominator": 16384,
+        "value": 0.32354736328125
+      }
+    }
+  ],
+  "scope": "Exact endpoint containment, allowing same-face endpoint exchange. Raw parameter volume sums are not physical volume or thickness.",
+  "sha256": {
+    "/tmp/expression-wall-shared-extended-20261010.json": "1d8db83854714569237ed440510ce46520dea34ec62c2044d375062c2f79ab8f",
+    "/tmp/expression-wall-intrinsic-extended-20261010.json": "9d5ed074f77d33aaa45ba594bc4fd3f50b060769bde93380cc5e3ddae64c1a4d"
+  }
+}

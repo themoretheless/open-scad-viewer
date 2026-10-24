@@ -1,0 +1,69 @@
+{
+  "schema": "expression-inspection-error-guidance/1",
+  "passed": true,
+  "scope": "Inspection panel only; full command matrix remains open",
+  "testFiles": 3,
+  "testsPassed": 52,
+  "typecheckPassed": true,
+  "controllerFocusedTests": 14,
+  "codes": [
+    "CAD_REQUEST",
+    "CAD_TIMEOUT",
+    "CAD_CRASH",
+    "CAD_STARTUP",
+    "CAD_DISPOSED",
+    "CAD_PROTOCOL",
+    "CAD_TRANSPORT",
+    "CAD_OPERATION"
+  ],
+  "locales": [
+    "ru",
+    "en"
+  ],
+  "browser": {
+    "url": "http://127.0.0.1:5198/",
+    "invalidMinimumMm": 0,
+    "localizedRequestHint": true,
+    "correctedMinimumMm": 1,
+    "errorClearedOnCorrection": true,
+    "correctedRunCompleted": true,
+    "pendingRegions": 4085,
+    "spans": 57471,
+    "screenshot": "expression-invalid-parameters-ui-2026-10-10.png"
+  },
+  "fullP0MatrixQualified": false,
+  "browserCrashTimeoutProtocolFaultsQualified": false,
+  "sources": {
+    "src/services/useExpressionInspection.ts": "570c244687b671ddc65d1538e2d6efaf4efd3fdcda4e52f8e031244bd93748f6",
+    "src/components/ExpressionShellCheck.vue": "743412d717b697a7ec554d207a750518687f64e4254fab19d245bc1531b8e600",
+    "tests/expressionInspectionController.test.ts": "37ecc3672c06283b8527b39929b4ab3425d5711bb707e2b521d903493cd48537",
+    "tests/expressionRadiusPanel.test.ts": "add3dd1eb3a60854432b159ac58e300aad7da2cb02e8d1d2782722ee46bb0aca",
+    "src/services/expressionAlignedChords.ts": "5358464959123c0f5915337ea823ed6a9737f4337124ac8336493f1379b10b08",
+    "tests/expressionAlignedChordsTransport.test.ts": "d8568818401932a58d6fe8da8951a8d43296dfee5e2e5b9c78b6f34f539d3cd5"
+  },
+  "fieldValidation": {
+    "passed": true,
+    "testsPassed": 66,
+    "testFiles": 4,
+    "typecheckPassed": true,
+    "fields": [
+      "minimumMm",
+      "toleranceUv",
+      "maxSineSquared"
+    ],
+    "sameRulesAsTransportAdmission": true,
+    "browserInvalidValues": [
+      0,
+      0,
+      1
+    ],
+    "browserValidValues": [
+      1,
+      0.05,
+      0.0001
+    ],
+    "ariaInvalidAndDescriptionVerified": true,
+    "hintsClearedAfterCorrection": true,
+    "screenshot": "expression-field-errors-ui-2026-10-10.png"
+  }
+}

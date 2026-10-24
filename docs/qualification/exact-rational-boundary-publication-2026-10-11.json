@@ -1,0 +1,14 @@
+{
+  "sha256": "5584980642278d1f2f414885899cfc22fed49e7aa701c38ed6cad0f1fc228232",
+  "bytes": 13103192,
+  "publicAndGeneratedWasmMatch": true,
+  "generatedIdentityMatches": true,
+  "workerQualified": true,
+  "scope": "Published exact-boundary generation; excludes later shared-corner cache.",
+  "realBoundaryTestsPassed": 35,
+  "workerQualification": "passed-with-previous-timeout-retained",
+  "failureReport": "exact-boundary-matched-worker-2026-10-11/expression-worker-failure.json",
+  "profileWholeCoverageWorkerPassed": true,
+  "stepRootWorkerTestsPassed": 2,
+  "fullResponseParityReport": "exact-boundary-observed-worker-2026-10-11/expression-inspection-worker-report.json"
+}

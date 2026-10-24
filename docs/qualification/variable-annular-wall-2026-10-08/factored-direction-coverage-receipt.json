@@ -1,0 +1,12 @@
+{
+  "scope": "Source-owned factored direction nonzero over two closed charts only; no wall or unique tangent plane certificate",
+  "bookkeepingGridPointsPerChart": 4225,
+  "factored-direction-coverage-audit.json.gz": {
+    "uncompressedSha256": "e2b490001c700e7f1c6f062a3d229cbf14d85f99ae3758d73996fc3fbfd4edbe",
+    "bytes": 96318
+  },
+  "factored-direction-coverage-tests.log.gz": {
+    "uncompressedSha256": "de199cd499206bafd30f5cb15983de24b6617aabc54fdcc40eedbf806d0dd2f2",
+    "bytes": 7225
+  }
+}

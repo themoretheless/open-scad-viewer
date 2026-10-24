@@ -1,0 +1,240 @@
+{
+  "schema": "projective-editor-integration/1",
+  "date": "2026-10-13",
+  "transport": {
+    "passed": 3,
+    "log": "output/projective-integration-20261013/transport.log",
+    "scope": "Definition discriminator identity, explicit unproven endpoint result, and opaque original-input archive roundtrip"
+  },
+  "vueTypecheck": {
+    "exitCode": 0,
+    "log": "output/projective-integration-20261013/types.log"
+  },
+  "bridge": {
+    "status": "passed",
+    "passed": 2,
+    "seconds": 45.04,
+    "log": "output/projective-integration-20261013/bridge.log"
+  },
+  "sourceHashes": {
+    "src/services/sourceBody.ts": "a11ed03587178228c26b918761b39cdd041ed5cdd9ae8b788d1bfb1dd608e2a6",
+    "tests/sourceProjectiveTransport.test.ts": "1bf8aa6c8c896ca0d5b4e61fa12064fbb3226759f141557a90d1ae1491cb1636",
+    "crates/geometry-bridge/src/cad_source_body.rs": "af21c420ea10fec8e3b110333a1bb01b36eca1ec738499c146122c157445b751",
+    "crates/brep-core/src/source_boundary_network.rs": "899d70a78f214212b2805213150a38cec94c5eb5006d1fc6412d669bb53df571",
+    "crates/brep-core/src/source_boundary_display.rs": "0c30ba3db58d371f2d149cce31ddc1a99e5f6a771ddb0b6e9d0d34bebcfb781b"
+  },
+  "wasmAtObservation": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "limitations": [
+    "Optimized candidate qualified in a separate runtime; live publication still pending",
+    "Control is a planar projective cuboid, not arbitrary curved fillet acceptance",
+    "General fillets and full roadmap remain incomplete"
+  ],
+  "fixtureExport": {
+    "status": "passed",
+    "passed": 1,
+    "seconds": 0.24,
+    "log": "output/projective-integration-20261013/fixture-export.log",
+    "files": {
+      "request.json": "9b42f0e3a65e54584298ca11ae5360b181fb2444084e3c47cd9d749dcc3abce0",
+      "native-response.json": "0b4c14caa527420ca02f16cf44f3f4b636578dedbd77a360fe1b92b1eccc87d6"
+    }
+  },
+  "wasmBuild": {
+    "status": "passed",
+    "session": 45220,
+    "log": "output/projective-integration-20261013/wasm-build.log",
+    "exitCode": 0,
+    "seconds": 256,
+    "rawSha256": "4d952d1f88299508475d6b8a75a1ce8417e16fe497e17f9ba153ee1518e57244"
+  },
+  "workerChecker": {
+    "source": "scripts/check-projective-body-worker.mts",
+    "status": "awaiting-candidate-wasm",
+    "checks": [
+      "Native response parity",
+      "Source transport validation",
+      "Cancel after dispatch",
+      "Worker termination and join",
+      "Fresh worker Retry",
+      "Worker publication identity",
+      "Insufficient native budget refuses geometry",
+      "Forged original map refuses geometry",
+      "Client/worker/native-adapter elapsed-time measurements"
+    ]
+  },
+  "cancelLateTransport": {
+    "passed": 2,
+    "skipped": 28,
+    "log": "output/projective-integration-20261013/cancel-late.log",
+    "scope": "Production client with controlled test ports; actual worker cancellation pending"
+  },
+  "optimization": {
+    "status": "passed",
+    "session": 62076,
+    "log": "output/projective-integration-20261013/optimize.log",
+    "exitCode": 0,
+    "bytes": 13402928,
+    "sha256": "5f6ee10c1469f86629584c9d0373b7a38059b400909117b2c4b6da0b225cf36e"
+  },
+  "nativeResponseTransport": {
+    "status": "passed",
+    "scope": "Saved response emitted by freshly passed native projective cuboid test is accepted by production sourceBodyExpectation/validSourceBody"
+  },
+  "fullBrepRegression": {
+    "status": "passed",
+    "session": 45097,
+    "log": "docs/qualification/projective-editor-2026-10-13/brep-full.log",
+    "passedAtObservation": 1045,
+    "failedAtObservation": 0,
+    "passed": 1046,
+    "failed": 0,
+    "ignored": 4,
+    "seconds": 1535.81
+  },
+  "displayErrors": {
+    "passed": 4,
+    "log": "output/projective-integration-20261013/display-errors.log",
+    "scope": "Native refusal edge/face address, localization, invalid-address refusal and stale preview suppression; no rendered browser claim"
+  },
+  "independentStep": {
+    "status": "passed",
+    "installationSession": 35000,
+    "verifier": "scripts/verify-projective-cuboid-step.py",
+    "step": "output/projective-integration-20261013/fixture/native.step",
+    "report": "output/projective-integration-20261013/occt.json",
+    "volumeErrorMm3": 4.547473508864641e-12,
+    "boundsErrorMm": 1.0000000116860974e-07,
+    "occtValid": true
+  },
+  "rootPreview": {
+    "status": "passed",
+    "session": 11980,
+    "log": "output/projective-integration-20261013/root-preview.log",
+    "scope": "Shared display anchor at certified source root on original split tetrahedron edge; identical native source definition and budget refusal",
+    "passed": 1,
+    "seconds": 5.94
+  },
+  "preservedEvidence": {
+    "docs/qualification/projective-editor-2026-10-13/cancel-late.log": "f65b887f8536770ffc86b70a0f9ea0395f49e1fdedcccfee7ec0122065fae107",
+    "docs/qualification/projective-editor-2026-10-13/occt.json": "1b66fa821b967a9df3c4142e3022ade0b3dab7299918a416702fe949902e5b1c",
+    "docs/qualification/projective-editor-2026-10-13/transport.log": "81c811d84ea21a25a38f05ad53338e439c965b213e423c0ef959b6391c510e40",
+    "docs/qualification/projective-editor-2026-10-13/bridge.log": "eff6992253ac29dff81ea920d79c56b6a5487336d8f0259c7ec18327461c20cc",
+    "docs/qualification/projective-editor-2026-10-13/native.step": "a864978ad1645e147c8407bed5c60b8b870ed1dc094ff73b8070bc68c922b141",
+    "docs/qualification/projective-editor-2026-10-13/display-errors.log": "48a1919fb4e94bf858542a8cddaf2881802eb19ca5789eaebb0a012faa20f138",
+    "docs/qualification/projective-editor-2026-10-13/root-preview.log": "e6bf97b6642f35446ecabea09bb18bc556e742b9d076389ad9a174e3dae7ba19",
+    "docs/qualification/projective-editor-2026-10-13/request.json": "9b42f0e3a65e54584298ca11ae5360b181fb2444084e3c47cd9d749dcc3abce0",
+    "docs/qualification/projective-editor-2026-10-13/native-response.json": "0b4c14caa527420ca02f16cf44f3f4b636578dedbd77a360fe1b92b1eccc87d6",
+    "docs/qualification/projective-editor-2026-10-13/raw-worker-report.json": "a92eafa289508caf159f8392020d115565b0ae2fe520a6c1493748ba065d6cc4",
+    "docs/qualification/projective-editor-2026-10-13/optimized-worker-report.json": "057bea5f85c9ff73e349d1d137af84856b9fdf236e008060d2be5939198282b2",
+    "docs/qualification/projective-editor-2026-10-13/brep-full.log": "d03e95f8630cfca65630f80f3723253f18824b1bda23616a18ce737339b213e6",
+    "docs/qualification/projective-editor-2026-10-13/optimized-browser-report.json": "e217ac90a6e302ee532f687a70d83e411090a8986fac94128937dbf9f209a4d2",
+    "docs/qualification/projective-editor-2026-10-13/optimized-staging.log": "722284e874de5cd6d4d4ec7c32409fd229e3d88f6906852600f9c8652c71c707",
+    "docs/qualification/projective-editor-2026-10-13/optimized-browser-keyboard-report.json": "7e6fb155396e87b9dd9188deb361e694a4ae5f0ef4922f702cb0aaf681dc0ecf",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/flange-source.step": "2831a600c9522878f4f430b40bb7a4ad6a5238aa9481d792ffe76afc7c38348f",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/enclosure-edited-rounded.step": "6ee2638110051c3c235009a86997032ea752f3e73a6c050535d1042cf242d1ab",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/enclosure-restored.json": "9f88041c5fbb6fe9efb0f452569dbf48054de8923a2355bf8fe9eb7f80123170",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/bracket-edited-rounded.step": "943d1749699aad04c95be55ef67993b7b64da3d83dea23a60d81b8decc45c694",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/dimension-report.json": "45a142b8767fbbdfff0a33e86c3def51d3224381fe0d5ceb35cc69bc5605d1b7",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/manifest.json": "cf2183c945926a0c331c3cbae33ce3437cd0b7deb99bd4da01b64408e2e9f768",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/bracket-source.step": "effeb0fa7d62cf58f082144b6235b7a18d91caee753503f17095206aad8308fe",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/bracket-restored.json": "206d539754bb7b453bcfc322daac72ca677350ca153b3a1d3e37c44bd16077b0",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/flange-edited-rounded.step": "ca5a75b8cdeda831e9acf196cb620c65b81bfc9aa96d7642516080c27f582dd7",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/enclosure-source.step": "e04cf2a8da6ea08993f01f9ed2c2305d94df3d13fc8b3173927fae0ec80df8e3",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/flange-restored.json": "b68ae56c6c3741949c5494ae6182dbf663e9e14ad178eb7ed5b8ac76cff117f0",
+    "docs/qualification/projective-editor-2026-10-13/fresh-parts/metrics-report.json": "f5d47ec984b8876168c8531ed2df8560d6ead79f540771a56dcdb4778298ea92",
+    "docs/qualification/projective-editor-2026-10-13/annular-baseline-native.json": "47b9047e11751da3d7957be624c6ef85f1cb1a4003cbd67d0d15fca210989f74",
+    "docs/qualification/projective-editor-2026-10-13/annular-one-product-native.json": "52bf12bb236cf8d14defb3d382a91189663698d23bce06137592bdd9e62cd442",
+    "docs/qualification/projective-editor-2026-10-13/annular-mixed-native.json": "319d04f5a6fa52dea42a95df0ef5055a14f13c3a5961d1ae7da4e41af77afab0",
+    "docs/qualification/projective-editor-2026-10-13/profiled-coverage-regression.log": "0aec0cfb7beb715f27cbf597cd6a588dfeec82ee460f86de0aa9a1bd1a678a74",
+    "docs/qualification/projective-editor-2026-10-13/updated-mixed-regression.log": "d16a6736e744d4ff694dca63ffbadd491100f6cb8611a2ef6ae4cb4a19693614",
+    "docs/qualification/projective-editor-2026-10-13/coverage-cases.jsonl": "be5d2282a2cc08adedfc878a680395c0c4ac28fe90bcb4fd1f81812dd4719300"
+  },
+  "rawWorkerStage": {
+    "status": "passed",
+    "session": 81255,
+    "log": "output/projective-integration-20261013/raw-staging.log",
+    "path": "/Users/themoretheless/.codex/tmp/projective-editor-raw-worker-20261013",
+    "scope": "Preliminary raw-WASM parity; optimized candidate qualification still required"
+  },
+  "rawWorkerQualification": {
+    "status": "passed",
+    "wasmSha256": "4d952d1f88299508475d6b8a75a1ce8417e16fe497e17f9ba153ee1518e57244",
+    "workersStarted": 2,
+    "workersJoined": 2,
+    "report": "docs/qualification/projective-editor-2026-10-13/raw-worker-report.json",
+    "scope": "Raw source WASM only; optimized artifact and rendered browser remain unqualified"
+  },
+  "optimizedWorkerQualification": {
+    "status": "passed",
+    "report": "docs/qualification/projective-editor-2026-10-13/optimized-worker-report.json",
+    "wasmSha256": "5f6ee10c1469f86629584c9d0373b7a38059b400909117b2c4b6da0b225cf36e",
+    "workersStarted": 2,
+    "workersJoined": 2
+  },
+  "browserQualification": {
+    "status": "passed",
+    "report": "docs/qualification/projective-editor-2026-10-13/optimized-browser-report.json",
+    "wasmSha256": "5f6ee10c1469f86629584c9d0373b7a38059b400909117b2c4b6da0b225cf36e",
+    "mouse": true,
+    "keyboard": "passed",
+    "keyboardSession": 93611,
+    "scope": "Projective cuboid through actual staged optimized production UI: import, whole-wall check, cancel, obsolete callback, localized failure, Retry and reload",
+    "keyboardReport": "docs/qualification/projective-editor-2026-10-13/optimized-browser-keyboard-report.json"
+  },
+  "candidateRegression": {
+    "status": "failed",
+    "session": 28268,
+    "log": "output/projective-integration-20261013/optimized-regression.log",
+    "passed": 72,
+    "failed": 2,
+    "seconds": 234.3,
+    "failures": [
+      "Old pending-pair count 257 vs current 255",
+      "Old factoredExactWork 55479571 vs current 38576923"
+    ]
+  },
+  "freshParts": {
+    "status": "passed",
+    "manifest": "docs/qualification/projective-editor-2026-10-13/fresh-parts/manifest.json",
+    "independentDimensions": "docs/qualification/projective-editor-2026-10-13/fresh-parts/dimension-report.json",
+    "parts": 3,
+    "stepFiles": 6,
+    "gauges": 24,
+    "scope": "Controlled construction/edit/fillet/STEP and document Undo/Redo/reparse on optimized candidate; not fresh UI construction or general fillet qualification",
+    "independentMetrics": "docs/qualification/projective-editor-2026-10-13/fresh-parts/metrics-report.json",
+    "metricsPassed": true
+  },
+  "nativeRegressionReplay": {
+    "baselinePending": 255,
+    "mixedStatus": "passed",
+    "mixedSession": 86581,
+    "oneProductPending": 255,
+    "factoredExactWork": 38576923,
+    "factoredQueries": 4797,
+    "pairProofsAndCellsUnchanged": true
+  },
+  "coverageRegression": {
+    "status": "failed-timeout",
+    "seconds": 180,
+    "log": "output/projective-integration-20261013/updated-coverage-regression.log",
+    "next": "Instrument unchanged 180s gate to identify expensive cases"
+  },
+  "correctedRegressions": {
+    "coverage": {
+      "passed": 1,
+      "seconds": 113.02,
+      "timeoutSeconds": 180
+    },
+    "mixed": {
+      "passed": 1,
+      "seconds": 102.5
+    },
+    "scope": "Both previously failing cases pass after native-confirmed baseline updates; earlier full run had 72 passing cases"
+  },
+  "localPublication": {
+    "status": "packaged-build-budget-failed",
+    "wasmSha256": "5f6ee10c1469f86629584c9d0373b7a38059b400909117b2c4b6da0b225cf36e",
+    "error": "DirectModeler 511234 bytes exceeds 445772",
+    "remotePush": false
+  }
+}

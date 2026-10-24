@@ -1,0 +1,27 @@
+{
+  "schema": "expression-worker-qualification-failure/1",
+  "passed": false,
+  "phase": "fresh-worker-retry",
+  "elapsedMs": 129561.916875,
+  "timeoutMs": 120000,
+  "wasmSha256": "5584980642278d1f2f414885899cfc22fed49e7aa701c38ed6cad0f1fc228232",
+  "wasmUnchanged": true,
+  "workersStarted": 2,
+  "timingsMs": {
+    "refusal": 8944.598166,
+    "dispatchCancellation": 138.40504200000032,
+    "retry": 0
+  },
+  "requestIdentity": {
+    "path": "/Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/docs/qualification/mapped-retained-carrier-2026-10-08/rail-position-cache-dispatch-request-2026-10-10.json",
+    "sha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+    "byteLength": 504950
+  },
+  "error": {
+    "name": "MainSolidWorkerError",
+    "message": "CAD operation exceeded its time limit",
+    "code": "CAD_TIMEOUT"
+  },
+  "scope": "Failed qualification only; no geometry or latency admission",
+  "workersJoined": 2
+}

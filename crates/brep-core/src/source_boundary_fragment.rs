@@ -1,8 +1,8 @@
 //! Exact source-expression restrictions with root-valued endpoints.
 //! No rounded Curve::trim, Cartesian vertex welding or Model admission.
 use crate::source_contact_point::{self, SourcePoint};
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
-use value_codec::{json, Deserialize, Serialize, Value};
+use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
     Boundary,
@@ -11,7 +11,14 @@ pub enum Role {
 #[derive(Clone)]
 pub enum Endpoint {
     Parameter(f64),
-    Crossing { point: SourcePoint, role: Role },
+    Carrier {
+        point: Box<crate::source_carrier_point::Point>,
+        side: usize,
+    },
+    Crossing {
+        point: SourcePoint,
+        role: Role,
+    },
 }
 #[derive(Clone)]
 pub struct Fragment {
@@ -37,6 +44,15 @@ fn parameter(surface: &Surface, curve: &Curve, end: &Endpoint) -> Result<[f64; 2
                 return Err(error("Endpoint parameter is outside the original curve"));
             }
             Ok([*t, *t])
+        }
+        Endpoint::Carrier { point, side } => {
+            if *side > 1
+                || point.edge().uses()[*side].surface() != surface
+                || point.edge().uses()[*side].curve() != curve
+            {
+                return Err(error("Carrier endpoint must own this original source use"));
+            }
+            Ok(point.parameter_bounds()[*side])
         }
         Endpoint::Crossing { point, role } => {
             let (source, index) = match role {
@@ -125,6 +141,10 @@ impl Fragment {
                 && curve.knots[2..].iter().all(|&k| k == d[1]);
             let endpoint_inside = |end: &Endpoint| -> Result<bool> {
                 match end {
+                    Endpoint::Carrier { point, side } => Ok((0..2).all(|i| {
+                        point.uv_bounds()[*side][i][0] >= chart[i][0]
+                            && point.uv_bounds()[*side][i][1] <= chart[i][1]
+                    })),
                     Endpoint::Crossing { point, .. } => Ok((0..2).all(|i| {
                         point.uv_box()[i][0] >= chart[i][0] && point.uv_box()[i][1] <= chart[i][1]
                     })),
@@ -297,6 +317,16 @@ impl Fragment {
     pub fn split_at_parameter(&self, t: f64) -> Result<[Self; 2]> {
         self.split_at_endpoint(Endpoint::Parameter(t))
     }
+    pub fn split_at_carrier(
+        &self,
+        point: &crate::source_carrier_point::Point,
+        side: usize,
+    ) -> Result<[Self; 2]> {
+        self.split_at_endpoint(Endpoint::Carrier {
+            point: Box::new(point.clone()),
+            side,
+        })
+    }
     fn split_at_endpoint(&self, end: Endpoint) -> Result<[Self; 2]> {
         let bounds = parameter(&self.surface, &self.curve, &end)?;
         let [a, b] = self.parameter_bounds;
@@ -326,6 +356,10 @@ impl Fragment {
             return false;
         }
         match (&self.endpoints[1], &next.endpoints[0]) {
+            (
+                Endpoint::Carrier { point: a, side: sa },
+                Endpoint::Carrier { point: b, side: sb },
+            ) => sa == sb && a.definition() == b.definition(),
             (Endpoint::Crossing { point: a, .. }, Endpoint::Crossing { point: b, .. }) => {
                 a.definition() == b.definition()
             }
@@ -358,6 +392,9 @@ impl Fragment {
     }
     pub fn definition(&self) -> Value {
         let encode = |end: &Endpoint| match end {
+            Endpoint::Carrier { point, side } => {
+                json!({"kind":"carrier","point":point.definition(),"side":side})
+            }
             Endpoint::Parameter(t) => json!({"kind":"parameter","value":t}),
             Endpoint::Crossing { point, role } => {
                 json!({"kind":"crossing","point":point.definition(),
@@ -382,6 +419,8 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
         .filter(|a| a.len() == 2)
         .ok_or_else(|| error("Fragment needs two endpoints"))?;
     let mut remaining = max_mapping_cells;
+    let mut carrier_left=ends.iter().filter(|end|end["kind"].as_str()==Some("carrier")).count();
+    let carrier_count=carrier_left.max(1);
     let mut endpoints = vec![];
     for end in ends {
         let endpoint = match end["kind"].as_str() {
@@ -390,6 +429,40 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
                     .as_f64()
                     .ok_or_else(|| error("Missing original parameter"))?,
             ),
+            Some("carrier") => {
+                let allowance=remaining/carrier_left;
+                if allowance == 0 {
+                    return Err(error("Carrier restoration work exhausted"));
+                }
+                let side = end["side"]
+                    .as_u64()
+                    .filter(|s| *s <= 1)
+                    .ok_or_else(|| error("Require an incident carrier side"))?
+                    as usize;
+                let report = crate::source_carrier_point::restore(
+                    end["point"].clone(),
+                    crate::source_carrier_point::RestoreLimits {
+                        edge: crate::source_shared_edge_restore::Limits {
+                            mapping_cells_per_use: allowance,
+                            exact_work: 100_000_000/carrier_count as u64,
+                            driver_cells: 100000/carrier_count,
+                        },
+                        root_mapping_cells: allowance,
+                        spans: 100000/carrier_count,
+                    },
+                )?;
+                // Reserve disjoint budgets for the bounded two original
+                // carrier definitions; unused work never funds a second copy.
+                remaining -= allowance;
+                carrier_left -= 1;
+                let point = report
+                    .point
+                    .ok_or_else(|| error("Imported carrier endpoint is unqualified"))?;
+                Endpoint::Carrier {
+                    point: Box::new(point),
+                    side,
+                }
+            }
             Some("crossing") => {
                 if remaining == 0 {
                     return Err(error("Source endpoint mapping work exhausted"));

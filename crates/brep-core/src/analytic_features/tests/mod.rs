@@ -576,6 +576,35 @@ fn variable_radius_frame_does_not_admit_non_cuboids_or_invalid_laws() {
 }
 
 #[test]
+fn constant_radius_fillet_all_cuboid_edges_under_rigid_placement() {
+    let source = cuboid([-7.,3.,-2.],[3.,11.,4.]).unwrap();
+    let a=0.37_f64;let b=-0.61_f64;
+    let placed=crate::transform::affine(&source,[
+        [a.cos()*b.cos(),-a.sin(),a.cos()*b.sin(),17.],
+        [a.sin()*b.cos(),a.cos(),a.sin()*b.sin(),-9.],
+        [-b.sin(),0.,b.cos(),23.],[0.,0.,0.,1.],
+    ]).unwrap();
+    let before=value_codec::to_value(&placed).unwrap();
+    for edge in 0..source.edges.len() {
+        let [v0,v1]=source.edges[edge].vertices;
+        let p=source.vertices[v0].point;let q=source.vertices[v1].point;
+        let length=(p[0]-q[0]).hypot(p[1]-q[1]).hypot(p[2]-q[2]);
+        for radius in [0.1,1.,2.] {
+            for model in [&source,&placed] {
+                let out=exact_convex_prism_fillet(model,&[edge],radius)
+                    .unwrap_or_else(|error|panic!("edge {edge}, radius {radius}: {error:?}"));
+                assert!(out.audit.ok && out.naming_complete);
+                assert_eq!(out.model.validate().unwrap().boundary_edge_count,0);
+                let volume=crate::analysis::mass_properties(&out.model,1e-9,300_000).unwrap().signed_volume_mm3;
+                let expected=480.-(1.-std::f64::consts::PI/4.)*length*radius*radius;
+                assert!((volume-expected).abs()<2e-5,"edge {edge}: {volume} != {expected}");
+            }
+        }
+    }
+    assert_eq!(value_codec::to_value(&placed).unwrap(),before);
+}
+
+#[test]
 fn variable_radius_fillet_all_cuboid_edges_under_rigid_placement() {
     let source = cuboid([-7.,3.,-2.],[3.,11.,4.]).unwrap();
     let a=0.37_f64;let b=-0.61_f64;

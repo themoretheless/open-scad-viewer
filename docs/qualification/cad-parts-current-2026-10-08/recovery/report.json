@@ -1,0 +1,45 @@
+{
+  "browser": "151.0.7922.34",
+  "browserRestart": true,
+  "key": "scad-solid-modeler-v1",
+  "simultaneousWriters": true,
+  "thirdStaleWriterEditsAndReload": true,
+  "conflictPreservesBoth": true,
+  "adoptUndo": true,
+  "sharedLoadWorkerCancellation": true,
+  "closedWaitingWriter": true,
+  "abortedSnapshotRetainsPrevious": true,
+  "rendererCrashAtPublication": [
+    "before",
+    "after"
+  ],
+  "missingAndCorruptCacheRecovered": true,
+  "startupWorkerCancellationAndReload": true,
+  "corruptHeadPreservedAndRetry": true,
+  "realQuotaRefusalAndRetry": true,
+  "largeSnapshotQuotaRefusalAndRetry": true,
+  "quotaEvidence": {
+    "usage": 20619615,
+    "quota": 1,
+    "overrideActive": true,
+    "usageBreakdown": [
+      {
+        "storageType": "file_systems",
+        "usage": 0
+      },
+      {
+        "storageType": "indexeddb",
+        "usage": 1503436
+      },
+      {
+        "storageType": "cache_storage",
+        "usage": 19111424
+      },
+      {
+        "storageType": "service_workers",
+        "usage": 4755
+      }
+    ]
+  },
+  "wasmSha256": "d00b9f1dd638fcb6fe1477d849735a8b7230bbce066ddcbd8214f4db1d23e2b7"
+}

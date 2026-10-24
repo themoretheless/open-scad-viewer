@@ -1,0 +1,16 @@
+{
+  "schema": "cad-ui-regression/1",
+  "passed": true,
+  "tests": 321,
+  "durationSeconds": 75.76,
+  "testFile": "tests/directModelerUi.test.ts",
+  "artifact": {
+    "sha256": "3caaa4ad6559488d4544e22473d5d3551b4f1882f0714a1eaee42d93c76e2fa9",
+    "byteLength": 12880978
+  },
+  "limits": [
+    "Component harness; not the complete 95-command browser matrix",
+    "Source-edge pointer disambiguation remains unqualified",
+    "Crash and multi-tab recovery require separate browser acceptance"
+  ]
+}

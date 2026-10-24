@@ -1,0 +1,34 @@
+{
+  "scope": "Exact rational parameter candidates on original positive single Bezier UV curves, degree 1..32",
+  "authority": "Homogeneous de Casteljau with common input normalization explicitly balanced by an exact unit; private original crossing selector and uniqueness remain mandatory",
+  "evidence": {
+    "predicate_suite": {
+      "passed": 45,
+      "log": "/tmp/source-fraction-point-predicates-20261011.log"
+    },
+    "original_nonlinear_root_replay": {
+      "passed": 1,
+      "log": "/tmp/source-nonlinear-rational-root-qualified-20261011.log",
+      "boundary_parameter": "1/3",
+      "contact_parameter": "1/9",
+      "controls": [
+        "rounded binary64 pair refused",
+        "wrong rational candidate within selector refused",
+        "outside selector refused",
+        "zero denominator refused",
+        "one-less-than-required exact work refused",
+        "fresh binary definition replay"
+      ]
+    },
+    "existing_curve_point_identity": {
+      "passed": 2,
+      "log": "/tmp/source-fraction-point-nurbs-regression-20261011.log"
+    }
+  },
+  "limitations": [
+    "This candidate verifier alone does not admit a shared edge",
+    "Piecewise rational UV candidates are not implemented by this new path",
+    "Irrational roots require other source identity methods",
+    "WASM and UI publication unchanged"
+  ]
+}

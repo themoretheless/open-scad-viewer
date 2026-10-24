@@ -1,0 +1,15 @@
+{
+  "schema": "canonical-wasm-build-recipe/1",
+  "recipeScripts": {
+    "scripts/build-geometry-kernels.mjs": "e9dbb2c6ef027c027b36ae20554e288d931c5dc70ab247dc744385a7a7fc1d82",
+    "scripts/reproducible-cargo.mjs": "0bb43e36ce5029401aab0751987849560bb512811d9fc1d212ee4c08d1f0065b"
+  },
+  "cargoLocked": true,
+  "strip": "symbols",
+  "pathRemapping": true,
+  "target": "wasm32-unknown-unknown",
+  "profile": "release",
+  "status": "running",
+  "log": "/tmp/source-fixed-point-cache-canonical-wasm-build-20261011.log",
+  "publicUpdated": false
+}

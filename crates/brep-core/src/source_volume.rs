@@ -11,22 +11,14 @@ pub struct Limits {
     pub spans: usize,
     pub domain_cells: usize,
 }
-pub struct Body {
-    geometry: Geometry,
+pub struct Body<E = crate::source_shared_edge::SharedEdge> {
+    geometry: Geometry<E>,
     signed_volume: [f64; 2],
     volume: [f64; 2],
     reverse_orientation: bool,
 }
-impl Body {
-    /// Persist original definitions; admission is recomputed during restoration.
-    pub fn definition(&self) -> Result<value_codec::Value> {
-        let mut value=value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?});
-        if let Some(proof)=self.geometry.inverse_shear() {
-            value["inverseShear"]=value_codec::json!({"axes":proof.axes(),"coefficient":proof.coefficient()});
-        }
-        Ok(value)
-    }
-    pub fn geometry(&self) -> &Geometry {
+impl<E:crate::source_seam_tangency::Carrier> Body<E> {
+    pub fn geometry(&self) -> &Geometry<E> {
         &self.geometry
     }
     pub fn signed_volume(&self) -> [f64; 2] {
@@ -61,21 +53,13 @@ impl Body {
             max_work,
         )
     }
-    /// Select an exact root-valued canonical restriction from this body.
-    /// The original carrier and endpoint expressions are retained unchanged.
-    pub fn edge_restriction(&self, edge: usize) -> Result<crate::source_edge_restriction::Restriction> {
-        let edge = self.geometry.shell().edges().get(edge).ok_or_else(|| {
-            Error::new("BREP_SOURCE_SEAM_INDEX", "Selected source edge does not belong to this body")
-        })?;
-        Ok(crate::source_edge_restriction::Restriction::from_edge(edge))
-    }
     /// Inspect a selected original seam of this admitted body. A failed angular
     /// check does not invalidate an intentionally sharp body edge.
     pub fn qualify_edge_tangency(
         &self,
         edge: usize,
         limits: crate::source_seam_tangency::Limits,
-    ) -> Result<crate::source_seam_tangency::Report> {
+    ) -> Result<crate::source_seam_tangency::Report<E>> {
         let source = self.geometry.shell().edges().get(edge).ok_or_else(|| {
             Error::new(
                 "BREP_SOURCE_SEAM_INDEX",
@@ -84,12 +68,48 @@ impl Body {
         })?;
         crate::source_seam_tangency::qualify(source, limits)
     }
+    /// Bound tangent planes in one common source parameter when supported.
+    /// Unsupported maps retain the conservative interval qualification path.
+    pub fn qualify_edge_tangency_synchronized(
+        &self,
+        edge: usize,
+        limits: crate::source_seam_tangency::Limits,
+        polynomial_work: usize,
+    ) -> Result<crate::source_seam_tangency::SynchronizedReport<E>>
+    where E: crate::source_seam_tangency::SynchronizedCarrier {
+        let source = self.geometry.shell().edges().get(edge).ok_or_else(|| {
+            Error::new("BREP_SOURCE_SEAM_INDEX", "Selected source edge does not belong to this body")
+        })?;
+        crate::source_seam_tangency::qualify_with_synchronized_boundaries(source, limits, polynomial_work)
+    }
+    /// Retain original root expressions and parameter correspondence for an edge.
+    pub fn edge_restriction(&self,edge:usize)->Result<crate::source_edge_restriction::Restriction<E>>
+        where E:crate::source_edge_restriction::RestrictionCarrier {
+        let source=self.geometry.shell().edges().get(edge).ok_or_else(||Error::new("BREP_SOURCE_SEAM_INDEX","Selected source edge does not belong to this body"))?;
+        Ok(crate::source_edge_restriction::Restriction::from_edge(source))
+    }
     pub fn reverse_orientation(&self) -> bool {
         self.reverse_orientation
     }
 }
-pub struct Report {
-    pub body: Option<Body>,
+impl Body {
+    /// Persist original definitions; admission is recomputed during restoration.
+    pub fn definition(&self) -> Result<value_codec::Value> {
+        let mut value=value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?});
+        if let Some(proof)=self.geometry.inverse_shear() {
+            value["inverseShear"]=value_codec::json!({"axes":proof.axes(),"coefficient":proof.coefficient()});
+        }
+        Ok(value)
+    }
+
+}
+impl Body<crate::source_projective_edge::Edge> {
+    pub fn definition(&self)->Result<value_codec::Value> {
+        Ok(value_codec::json!({"version":1,"kind":"projective-body","shell":self.geometry.shell().definition()?}))
+    }
+}
+pub struct Report<E = crate::source_shared_edge::SharedEdge> {
+    pub body: Option<Body<E>>,
     pub signed_bounds: Option<[f64; 2]>,
     pub cells: usize,
     pub spans: usize,
@@ -128,12 +148,12 @@ impl Ord for Priority {
             .then(self.index.cmp(&b.index))
     }
 }
-fn evaluate(
-    geometry: &Geometry,
+fn evaluate<E>(
+    geometry: &Geometry<E>,
     face: usize,
     rectangle: [[f64; 2]; 2],
     limits: &Limits,
-    out: &mut Report,
+    out: &mut Report<E>,
 ) -> Result<Option<I>> {
     out.uncertain_face = Some(face);
     out.uncertain_uv = Some(rectangle);
@@ -205,7 +225,7 @@ fn evaluate(
 /// root-valued trims use original winding classification. Unknown rectangles
 /// keep a complete [0,1] material-mask enclosure; no area is silently omitted.
 /// Only a requested-width interval excluding zero authorizes this native body.
-pub fn qualify(geometry: Geometry, limits: Limits) -> Result<Report> {
+pub fn qualify<E:crate::source_planar_flux::FluxSupport>(geometry: Geometry<E>, limits: Limits) -> Result<Report<E>> {
     if limits.axis >= 3
         || !limits.origin.is_finite()
         || !limits.absolute_error.is_finite()

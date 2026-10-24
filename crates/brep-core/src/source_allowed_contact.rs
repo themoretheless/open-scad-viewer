@@ -10,31 +10,44 @@ use cad_predicates::{
     AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
 use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
     plane: [[f64; 3]; 3],
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
     pub fn regions(&self) -> &[SourceRegion; 2] {
         &self.regions
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
     pub fn plane(&self) -> [[f64; 3]; 3] {
         self.plane
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub spans: usize,
     pub reason: &'static str,
+}
+/// Native edge authority required by the exact shared support-hull proof.
+pub trait Support: crate::source_seam_tangency::Carrier {
+    fn maps_complete_source(&self)->bool;
+}
+impl Support for SharedEdge {
+    fn maps_complete_source(&self)->bool {self.maps_complete_canonical_source()}
+}
+impl Support for crate::source_projective_edge::Edge {
+    fn maps_complete_source(&self)->bool {
+        self.uses().iter().all(|u|{let r=u.range();
+            (r[0][0]==0. && r[1][0]==r[1][1]) || (r[1][0]==0. && r[0][0]==r[0][1])})
+    }
 }
 pub(crate) fn orient(
     points: &[[f64; 3]],
@@ -113,8 +126,32 @@ pub(crate) fn plane(s: &Surface, used: &mut u64, budget: u64) -> Result<Option<[
     }
     Ok(None)
 }
-fn complete(shell: &Shell, indices: &[usize], face: usize) -> bool {
-    if indices.iter().any(|&i|!shell.edges()[i].covers_complete_canonical_source()) {return false;}
+/// Exact literal source corners, with no evaluated or rounded endpoint weld.
+/// Restricted to a clamped natural-boundary line on an admitted affine map.
+fn partial_support_segment<E:Support>(edge:&E)->Option<[[f64;3];2]> {
+    if !linear(edge.world()) {return None;}
+    let use_=edge.fragment(0);let c=use_.curve();let s=use_.surface();
+    if c.degree!=1 || c.control_points.len()!=2 || c.weights[0]!=c.weights[1] || c.periodic {return None;}
+    let counts=[s.control_points.len(),s.control_points[0].len()];
+    let degree=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
+    let natural=std::array::from_fn::<_,2,_>(|axis|[knots[axis][degree[axis]],knots[axis][counts[axis]]]);
+    for axis in 0..2 {
+        if degree[axis]==0 || knots[axis][..=degree[axis]].iter().any(|&t|t!=natural[axis][0])
+            || knots[axis][counts[axis]..].iter().any(|&t|t!=natural[axis][1]) {return None;}
+    }
+    let mut indices=[[0;2];2];
+    for end in 0..2 {for axis in 0..2 {
+        let value=*c.control_points[end].get(axis)?;
+        indices[end][axis]=if value==natural[axis][0] {0}
+            else if value==natural[axis][1] {counts[axis]-1}else{return None;};
+    }}
+    // Opposite corners are not a natural boundary segment.
+    if (indices[0][0]!=indices[1][0]) == (indices[0][1]!=indices[1][1]) {return None;}
+    Some(indices.map(|[u,v]|std::array::from_fn(|k|s.control_points[u][v][k])))
+}
+pub(crate) fn complete_shared_chain<E>(shell: &Shell<E>, indices: &[usize], face: usize) -> bool {
+    // Coverage here concerns the unchanged original pcurve. The contact
+    // certificate separately chooses its owned geometric support segment.
     let mut addresses = indices
         .iter()
         .filter_map(|&i| shell.uses()[i].iter().find(|a| a.face == face).copied())
@@ -154,12 +191,12 @@ fn linear(c: &Curve) -> bool {
 }
 /// Fresh chart injectivity, exact source planarity and original boundary hulls.
 /// Both faces must cover the complete shared line, including root partitions.
-pub fn certify(
-    shell: &Shell,
+pub fn certify<E:Support>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_spans: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     if faces[0] == faces[1]
         || faces.iter().any(|&i| i >= shell.faces().len())
         || !(1..=100_000_000).contains(&max_work)
@@ -223,11 +260,12 @@ pub fn certify(
                     && shell.uses()[i].iter().all(|a| faces.contains(&a.face))
             })
             .collect::<Vec<_>>();
-        if indices[0] != index || !faces.iter().all(|&f| complete(shell, &indices, f)) {
+        if indices[0] != index || !faces.iter().all(|&f| complete_shared_chain(shell, &indices, f)) {
             continue;
         }
-        let endpoints: [[_; 3]; 2] =
-            std::array::from_fn(|i| std::array::from_fn(|k| edge.world().control_points[i][k]));
+        let endpoints: [[_;3];2]=if edge.maps_complete_source() {
+            std::array::from_fn(|i|std::array::from_fn(|k|edge.world().control_points[i][k]))
+        }else{let Some(segment)=partial_support_segment(edge) else {continue;};segment};
         let [a, b] = endpoints;
         // Coplanar material charts need a separator transverse to their plane.
         // These finite coordinates only propose a plane: exact original
@@ -249,7 +287,11 @@ pub fn certify(
                     if !shell.uses()[i].iter().any(|a| a.face == face) {
                         continue;
                     }
-                    for p in &e.world().control_points {
+                    let support;
+                    let points=if e.maps_complete_source() {&e.world().control_points}
+                        else {let Some(segment)=partial_support_segment(e) else {valid=false;break;};
+                            support=segment.map(|p|p.to_vec()).to_vec();&support};
+                    for p in points {
                         let p = [p[0], p[1], p[2]];
                         match orient(&[a, b, c, p], None, &mut out.exact_work, max_work)? {
                             Some(Sign::Zero) => {

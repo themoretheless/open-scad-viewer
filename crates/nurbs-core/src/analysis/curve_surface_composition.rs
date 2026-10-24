@@ -203,13 +203,18 @@ fn surface_homogeneous_controls(s:&Surface,span:[usize;2])->Result<(Vec<Vec<[Int
     surface_homogeneous_controls_with_origin(s,span,None)
 }
 fn surface_homogeneous_controls_with_origin(s: &Surface, span: [usize;2], origin:Option<[f64;3]>) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
+    surface_homogeneous_controls_weighted(s,span,origin,|i,j|Ok(Interval::point(s.weights[i][j])))
+}
+/// Extract from an original chart with an explicitly supplied homogeneous
+/// weight expression. Callers own validation and weight/source correspondence.
+fn surface_homogeneous_controls_weighted(s: &Surface, span: [usize;2], origin:Option<[f64;3]>, weight:impl Fn(usize,usize)->Result<Interval>) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
     let [iu, iv] = span; let (p,q) = (s.degree_u,s.degree_v);
     let mut controls = Vec::new();
     let mut weights = [f64::INFINITY, 0_f64];
     for i in iu - p..=iu {
         let mut row = Vec::new();
         for j in iv - q..=iv {
-            let w = Interval::point(s.weights[i][j]);
+            let w = weight(i,j)?;
             weights[0] = weights[0].min(w.lo);
             weights[1] = weights[1].max(w.hi);
             let cp = &s.control_points[i][j];
@@ -270,9 +275,28 @@ pub(crate) fn surface_net_on_centered(s:&Surface,span:[usize;2],domain:[[f64;2];
     }
 }
 fn surface_net_on_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Vec<Vec<[Interval;4]>>> {
+    surface_net_on_weighted(s,span,domain,origin,|i,j|Ok(Interval::point(s.weights[i][j])))
+}
+/// Extract from an original chart with an explicitly supplied homogeneous
+/// weight expression. Callers own validation and weight/source correspondence.
+pub(crate) fn surface_net_on_with_weights(
+    s:&Surface,span:[usize;2],domain:[[f64;2];2],
+    weight:impl Fn(usize,usize)->Result<Interval>,
+)->Result<Vec<Vec<[Interval;4]>>> {
+    surface_net_on_weighted(s,span,domain,None,weight)
+}
+/// Center original positions before homogeneous multiplication and extraction.
+/// The interval subtraction encloses the exact translated control coordinates.
+pub(crate) fn surface_net_on_with_weights_centered(
+    s:&Surface,span:[usize;2],domain:[[f64;2];2],
+    weight:impl Fn(usize,usize)->Result<Interval>,origin:[f64;3],
+)->Result<Vec<Vec<[Interval;4]>>> {
+    surface_net_on_weighted(s,span,domain,Some(origin),weight)
+}
+fn surface_net_on_weighted(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>,weight:impl Fn(usize,usize)->Result<Interval>)->Result<Vec<Vec<[Interval;4]>>> {
     let [iu, iv] = span;
     let (p, q) = (s.degree_u, s.degree_v);
-    let (controls, weights) = surface_homogeneous_controls_with_origin(s, span, origin)?;
+    let (controls, weights) = surface_homogeneous_controls_weighted(s, span, origin, weight)?;
     let mut out = vec![vec![[Interval::point(0.); 4]; q + 1]; p + 1];
     let u_plans = (0..=p).map(|u| {
         let us = (0..p).map(|k| domain[0][usize::from(k >= p - u)]).collect::<Vec<_>>();

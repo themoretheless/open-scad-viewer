@@ -33,7 +33,7 @@ export interface SourceDisplayOptions {
 export function useSourceDisplay(options: SourceDisplayOptions) {
   const { camera, cancelCommandState, document, edgeIndex, edgeIndexes, extraSelection, faceIndex, hovered, kernelReady, mode, objectInView, objectSelectable, openingFaces, project, props, selection, tool } = options
 const sourceDisplayWorker=createSolidPreviewWorker(),sourceDisplay=new SourceBodyDisplay(sourceDisplayWorker)
-const sourceDisplayResults=shallowRef<Record<string,SourceBodyResult>>({}),sourceDisplayErrors=shallowRef<Record<string,string>>({})
+const sourceDisplayResults=shallowRef<Record<string,SourceBodyResult>>({}),sourceDisplayErrors=shallowRef<Record<string,Error>>({})
 const sourceDisplayPending=ref(false),sourceEdgeSelection=ref(''),sourceEdgeHover=ref('')
 let sourceDisplayGeneration=0
 function cancelSourceDisplay(){sourceDisplayGeneration++;sourceDisplay.cancel();sourceDisplayPending.value=false}
@@ -45,7 +45,7 @@ async function refreshSourceDisplay(){
  await sourceDisplay.prepare(source.sourceBodies??[],(id,result)=>{
   if(generation===sourceDisplayGeneration&&document.value===source)sourceDisplayResults.value={...sourceDisplayResults.value,[id]:result}
  },(id,e)=>{
-  if(generation===sourceDisplayGeneration&&document.value===source)sourceDisplayErrors.value={...sourceDisplayErrors.value,[id]:e instanceof Error?e.message:String(e)}
+  if(generation===sourceDisplayGeneration&&document.value===source)sourceDisplayErrors.value={...sourceDisplayErrors.value,[id]:e instanceof Error?e:new Error(String(e))}
  })
  if(generation===sourceDisplayGeneration)sourceDisplayPending.value=false
 }

@@ -1,0 +1,32 @@
+{
+  "distinct-cache-wasm-worker-wall.json.gz": {
+    "uncompressedSha256": "36feda578e0091283b21e85ba676f9b4983bfa7bf52053b5e03addf166baec42",
+    "bytes": 740501
+  },
+  "distinct-cache-wasm-worker-cuboid.json.gz": {
+    "uncompressedSha256": "f624478362b66302cb840af84931745003e039084b30bde0a0ccd350077bd5bf",
+    "bytes": 31248
+  },
+  "distinct-cache-wasm-worker-tests.log.gz": {
+    "uncompressedSha256": "c6bbbeb3061dca65d0888768d0e12c8325e4ce271f64f44f8aa0b620ab59c2e6",
+    "bytes": 267
+  },
+  "distinct-cache-wasm-build.log.gz": {
+    "uncompressedSha256": "c0abf30fa38a446be71f18d6ab81b2a7e4ce8d7ce1e994cb7f45138bacbf9ff6",
+    "bytes": 7599
+  },
+  "distinct-cache-wasm-dist.log.gz": {
+    "uncompressedSha256": "cd0edc11f045a217757fc778e5927e9091b516a027f1af30c2e3c96f59068b6d",
+    "bytes": 99
+  },
+  "wasmSha256": "82fd669fbb6d980e44f9d27af48757906caee8f9c826176b130f0107c238a0c9",
+  "wasmBytes": 11995165,
+  "distinct-cache-source-ui-mouse.json.gz": {
+    "uncompressedSha256": "5b804e75705c961951c67ee762dff23d0e2ee490e8b7dbd850d56a03adb5cf7e",
+    "bytes": 622669
+  },
+  "distinct-cache-source-ui-keyboard.json.gz": {
+    "uncompressedSha256": "92c94b43aee017018ed9a6d344557c21c49226ae481ff3cd234ae68b5244ed16",
+    "bytes": 622670
+  }
+}

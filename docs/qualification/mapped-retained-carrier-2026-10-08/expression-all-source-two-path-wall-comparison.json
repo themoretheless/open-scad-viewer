@@ -1,0 +1,50 @@
+{
+  "before": {
+    "spans": 42019,
+    "budget_pending": 4167,
+    "profile_transition_excluded": 87
+  },
+  "after": {
+    "spans": 57479,
+    "budget_pending": 4085,
+    "profile_transition_excluded": 87
+  },
+  "pending_pairs": 59,
+  "largest_pending_pairs": [
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "domains": 448
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "domains": 374
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "domains": 336
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "domains": 272
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "domains": 266
+    }
+  ]
+}

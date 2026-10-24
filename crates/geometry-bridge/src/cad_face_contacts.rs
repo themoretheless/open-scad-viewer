@@ -265,6 +265,10 @@ pub fn diagnose(v: Value) -> Result<Value> {
 pub fn diagnose_self_intersection(v: Value) -> Result<Value> {
     diagnose_inner(v, true)
 }
+fn polar_evidence(p:&nurbs_core::surface_injectivity::PolarPMatrix)->Value {
+    json!({"coordinates":p.coordinates,"jacobian":p.jacobian,"rowSigns":p.row_signs,
+        "diagonalLower":p.diagonal_lower,"determinantLower":p.determinant_lower})
+}
 fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
     let tolerance_uv: f64 = field(&v, "toleranceUv")?;
@@ -343,6 +347,10 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             brep_core::face_contacts::SharedBoundary::OwnedVertex(c)=>json!({"kind":"owned-vertex","faces":c.faces,"vertex":c.vertex}),
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,
+                "polarJoin":c.polar_join.as_ref().map(polar_evidence),
+                "sourceJoin":c.source_join.as_ref().map(|j|json!({"blendFace":j.blend_face,"wallFace":j.wall_face,"collapsedEnd":j.collapsed_end,
+                    "sourceFrame":j.report.source_frame,"proven":j.report.proven,"reason":j.report.reason,"cells":j.report.cells,
+                    "weightedBounds":j.report.weighted_bounds,"dominanceMarginLower":j.report.dominance_margin_lower})),
                 "joinedProof":c.joined_proof.as_ref().map(|j|json!({"blendFace":j.blend_face,"wallFace":j.wall_face,
                     "collapsedEnd":j.collapsed_end,"projection":j.projection,"proven":j.report.proven,
                     "reason":j.report.reason,"cells":j.report.cells,"weightedBounds":j.report.weighted_bounds,
@@ -378,6 +386,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),
                 "projectiveProjection":r.projective_projection,
                 "polarProjection":r.polar_projection,
+                "polarPMatrix":r.polar_p_matrix.as_ref().map(|p|{let mut v=polar_evidence(p);v["sourceSurface"]=json!(model.faces[face.face].surface);v}),
                 "contractionUpper":r.contraction_upper,"spans":r.spans,"reason":r.reason}))
         })).collect::<Vec<_>>());
     }

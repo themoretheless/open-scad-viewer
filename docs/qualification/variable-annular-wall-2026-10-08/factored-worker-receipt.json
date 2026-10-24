@@ -1,0 +1,18 @@
+{
+  "wasmSha256": "c4325b4934e9e0c2fc686413b09eb525e07b14c43153f81e3d9ee8378527c7f1",
+  "reportsUncompressedSha256": {
+    "factored-worker-wall.json.gz": "27c937a6f4649cdca6f9988a7fdb7d3e8a7a8ce6f717dd069e9f36b9e4b88c5a",
+    "factored-worker-cuboid.json.gz": "3b272438802349af733de0dc9c452b4bc980d2698693b6194058ffb1f7aba902"
+  },
+  "tests": {
+    "files": 2,
+    "passed": 28
+  },
+  "typecheck": "vue-tsc --noEmit passed",
+  "unprovenPairs": 169,
+  "wholeWallQualified": false,
+  "factoredExactWork": 37683566,
+  "factoredQueries": 484,
+  "factoredProductCells": 3575,
+  "scope": "Real packaged WASM through worker; UI request enabled, browser interaction not requalified."
+}

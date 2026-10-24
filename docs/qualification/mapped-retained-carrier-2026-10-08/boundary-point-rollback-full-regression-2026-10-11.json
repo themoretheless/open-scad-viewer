@@ -1,0 +1,21 @@
+{
+  "schema": "expression-wall-exact-regression/1",
+  "passed": true,
+  "before": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/alternate-owned-path-dispatch-native-2026-10-11.json",
+    "sha256": "642307338270b65d3df027b7cc7eb3b7945b5e8da3e372120f34ed754d520e51"
+  },
+  "after": {
+    "path": "docs/qualification/mapped-retained-carrier-2026-10-08/boundary-point-rollback-dispatch-native-2026-10-11.json",
+    "sha256": "948efa6499c0be24bdc0c5decdca155142ba0beedac0fe4a32003b4636a83893"
+  },
+  "fullInspectionResponseExact": true,
+  "transitionOutcomeSchemaExtension": false,
+  "pendingRegions": 4081,
+  "cells": 10000,
+  "spans": 11821,
+  "comparison": "exact-report",
+  "spanWorkSaved": 0,
+  "geometryQualified": false,
+  "scope": "Regression comparison only; unresolved geometry remains unresolved"
+}

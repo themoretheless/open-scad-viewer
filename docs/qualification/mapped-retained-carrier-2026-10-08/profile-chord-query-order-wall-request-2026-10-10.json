@@ -1,0 +1,10 @@
+{
+  "test": "restricted_profile_seams_match_owned_neighbor_supports",
+  "cells": 10000,
+  "spans": 1000000,
+  "trimCells": 100000,
+  "sourceManifest": "profile-chord-query-order-native-inputs-2026-10-10.json",
+  "sourceManifestSha256": "2b472672eb66b8c6c0c3b487c726aae4ae8083f060c707d9e8495cb144313d72",
+  "report": "profile-chord-query-order-wall-2026-10-10.json",
+  "comparisonBaseline": "profile-transition-outcomes-wall-2026-10-10.json"
+}

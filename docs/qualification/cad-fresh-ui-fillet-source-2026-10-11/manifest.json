@@ -1,0 +1,19 @@
+{
+  "schema": "fresh-cad-ui-source-fixtures/1",
+  "source": "benchmarks/cad-roadmap-fixtures.ts cadRoadmapParts(), serialized with production directModeling serializer",
+  "construction": "native; no UI construction claim",
+  "files": [
+    {
+      "file": "bracket-source.json",
+      "sha256": "3a3f0d1abe63492bf522c530e26feeac8b72329adf1a5483124ed85fbd5b04c2"
+    },
+    {
+      "file": "enclosure-source.json",
+      "sha256": "9ba9d1e9e3110fd2361550334c9f86fcb6db67df68fd3b8c6834a7ce6bf39b16"
+    },
+    {
+      "file": "flange-source.json",
+      "sha256": "a277524534ddd9158af4fbdc4e3f4c9f46a5a7a12dd7382624ef6f109d24a8ef"
+    }
+  ]
+}

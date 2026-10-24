@@ -1,0 +1,43 @@
+{
+  "scope": "Whole original face-pair wall lower thresholds and selected material thickness intervals on privately admitted projective bodies",
+  "implementation": [
+    "Body-owned certificates, self-face coverage, retained gaps, mixed pair proofs and anchor preparation accept native carrier types",
+    "Complete face enumeration and all original work budgets retained",
+    "Affine shared-chord adapter accepts only equal projective weights; nonaffine maps leave this optional proof unavailable",
+    "Selected-wall normal material upper witness combines with complete lower coverage; automatic refinement shares the original gap budget"
+  ],
+  "evidence": {
+    "projective_cuboid": {
+      "passed": 1,
+      "seconds": 0.4,
+      "log": "/tmp/source-projective-wall-intervals-20261011.log",
+      "checks": [
+        "All 21 unordered face/self pairs at 9.99 mm",
+        "10.01 mm lower threshold refuses",
+        "20 of 21 pair budget refuses",
+        "Insufficient normal work refuses",
+        "Six original self facts retained",
+        "Stale threshold or broader normal angle refuses source facts",
+        "Selected wall bounds contain 10 mm",
+        "Automatic selected-wall interval width <= 1e-4 mm",
+        "Identical immutable Body ownership and original definition"
+      ]
+    },
+    "full_brep_regression": {
+      "status": "running_at_last_observation",
+      "log": "/tmp/source-projective-whole-wall-full-brep-20261011.log",
+      "session_id": 72415,
+      "passed_at_last_observation": 937
+    }
+  },
+  "limitations": [
+    "The new whole-wall positive control is a cuboid with unit projective weights",
+    "General curved and root-clipped minimum thickness remains incompletely qualified",
+    "The shared affine chord proof does not support nonaffine projective weights",
+    "WASM and UI remain unchanged"
+  ],
+  "integration_gap": {
+    "source": "crates/geometry-bridge/src/cad_source_body.rs",
+    "observed": "Native handler now dispatches original projective-body definitions through fresh native restore and generic diagnostics; bridge regression is compiling (session 18048), WASM publication and browser validation remain pending."
+  }
+}

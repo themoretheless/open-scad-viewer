@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "origin": "http://127.0.0.1:5199/",
+  "parallelCommandDispatch": [
+    "Cylinder",
+    "Sphere"
+  ],
+  "conflictVisible": true,
+  "localVersionRetained": true,
+  "winnerLoadedWholeDocumentEquality": true,
+  "undoRestoresWholeLocalDocument": true,
+  "redoAndReloadEqualWinner": true,
+  "indexedDbTransactionOverlapInstrumented": false,
+  "fullP0Qualified": false,
+  "documents": {
+    "local-sphere": {
+      "sha256": "7618283b2571ac5c8299808a429799c3684bee14a8e10a7e7602b26fdaa5f8e6",
+      "bodyIds": [
+        "solid-1-muq20usv",
+        "372df380-2f3a-4e67-9cee-1f39598314af",
+        "3b847b9d-a9f0-4d6e-a2f8-40150f88525b"
+      ]
+    },
+    "winner-cylinder": {
+      "sha256": "a18ea83c54ef3a581e6cc17020beaa9baa58650aac9c70700df6d8e38990b019",
+      "bodyIds": [
+        "solid-1-muq20usv",
+        "372df380-2f3a-4e67-9cee-1f39598314af",
+        "2750fe2d-50cb-4c78-936f-259f61cd496e"
+      ]
+    },
+    "loaded": {
+      "sha256": "a18ea83c54ef3a581e6cc17020beaa9baa58650aac9c70700df6d8e38990b019",
+      "bodyIds": [
+        "solid-1-muq20usv",
+        "372df380-2f3a-4e67-9cee-1f39598314af",
+        "2750fe2d-50cb-4c78-936f-259f61cd496e"
+      ]
+    },
+    "undo": {
+      "sha256": "7618283b2571ac5c8299808a429799c3684bee14a8e10a7e7602b26fdaa5f8e6",
+      "bodyIds": [
+        "solid-1-muq20usv",
+        "372df380-2f3a-4e67-9cee-1f39598314af",
+        "3b847b9d-a9f0-4d6e-a2f8-40150f88525b"
+      ]
+    },
+    "redo": {
+      "sha256": "a18ea83c54ef3a581e6cc17020beaa9baa58650aac9c70700df6d8e38990b019",
+      "bodyIds": [
+        "solid-1-muq20usv",
+        "372df380-2f3a-4e67-9cee-1f39598314af",
+        "2750fe2d-50cb-4c78-936f-259f61cd496e"
+      ]
+    },
+    "reloaded": {
+      "sha256": "a18ea83c54ef3a581e6cc17020beaa9baa58650aac9c70700df6d8e38990b019",
+      "bodyIds": [
+        "solid-1-muq20usv",
+        "372df380-2f3a-4e67-9cee-1f39598314af",
+        "2750fe2d-50cb-4c78-936f-259f61cd496e"
+      ]
+    }
+  }
+}

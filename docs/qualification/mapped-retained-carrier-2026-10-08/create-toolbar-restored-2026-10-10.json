@@ -1,0 +1,33 @@
+{
+  "bug": "Compact CSS unconditionally hid the primitive bar despite Create being expanded",
+  "fixed": true,
+  "mouseOpenClosePassed": true,
+  "keyboardEnterOpenClosePassed": true,
+  "visibleCommands": [
+    "box",
+    "wedge",
+    "cylinder",
+    "frustum",
+    "tube",
+    "cone",
+    "sphere",
+    "torus",
+    "nurbs-curve",
+    "nurbs-surface"
+  ],
+  "typecheckPassed": true,
+  "fullCommandMatrixQualified": false,
+  "sourceSha256": "cf7fb13f27ce98794094860c78142f898306861c8f876b8a15cac0523f1fee9c",
+  "sketchActionsRestored": [
+    "rectangle",
+    "circle",
+    "polyline",
+    "on-face",
+    "extrude"
+  ],
+  "browserRectangleEntryAndEscapePassed": true,
+  "contextDisabledActionsObserved": [
+    "on-face without editable body",
+    "extrude without closed profile"
+  ]
+}

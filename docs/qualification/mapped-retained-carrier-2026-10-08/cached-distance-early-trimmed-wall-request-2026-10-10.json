@@ -1,0 +1,9 @@
+{
+  "test": "restricted_profile_seams_match_owned_neighbor_supports",
+  "cells": 10000,
+  "spans": 1000000,
+  "trimCells": 100000,
+  "sourceManifest": "cached-distance-early-native-inputs-2026-10-10.json",
+  "report": "cached-distance-early-trimmed-wall-2026-10-10.json",
+  "comparisonBaseline": "original-endpoint-normal-sharing-trimmed-wall-2026-10-10.json"
+}

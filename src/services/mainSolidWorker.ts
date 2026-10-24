@@ -60,3 +60,11 @@ export function computeBondedSolid(inputJson:string,options:MainSolidRunOptions=
 export function computeSourceBodyRestoration(options:import('./sourceBody').SourceBodyOptions,runOptions:MainSolidRunOptions={}) {
  return shared.run({kind:'sourceBodyRestore',options},runOptions)
 }
+
+export function computeExpressionShellRestoration(options:import('./expressionShell').ExpressionShellOptions,runOptions:MainSolidRunOptions={}) {
+ return shared.run({kind:'expressionShellRestore',options},runOptions)
+}
+
+export function computeExpressionShellInspection(options:import('./expressionShellInspection').ExpressionInspectionOptions,runOptions:MainSolidRunOptions={}) {
+ return shared.run({kind:'expressionShellInspect',options},runOptions)
+}

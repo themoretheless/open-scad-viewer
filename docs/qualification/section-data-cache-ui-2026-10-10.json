@@ -1,0 +1,44 @@
+{
+  "wasmSha256": "499506fdcb58168d991597288619e5cc90e11394cbc481d40f5f03f6b3b25da1",
+  "fixture": "tests/fixtures/profile-coverage-browser.html",
+  "surface": "production ProfileBridgeCheck with real production worker on isolated origin 5297",
+  "planar": {
+    "wholeNormalChordCoverage": true,
+    "cells": 22
+  },
+  "curved": {
+    "cancelled": true,
+    "retryCompleted": true,
+    "pendingProducts": 15,
+    "cells": 2564,
+    "firstPendingA": [
+      [
+        0.09375,
+        0.109375
+      ],
+      [
+        0.15625,
+        0.171875
+      ]
+    ],
+    "firstPendingB": [
+      [
+        0.109375,
+        0.125
+      ],
+      [
+        0.171875,
+        0.1875
+      ]
+    ],
+    "guidanceVisible": true
+  },
+  "consoleErrors": [],
+  "screenshot": "/tmp/section-cache-ui-retry-20261010.png",
+  "limits": [
+    "No saved model or draft writes",
+    "No full modeler edge-selection/preview qualification",
+    "No whole thickness, general self-intersection or closed fillet qualification",
+    "Late replies separately covered by pinned real-worker tests"
+  ]
+}

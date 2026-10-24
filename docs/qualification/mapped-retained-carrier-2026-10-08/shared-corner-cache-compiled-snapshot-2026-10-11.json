@@ -1,0 +1,19 @@
+{
+  "schema": "compiled-wasm-snapshot/1",
+  "sourceManifest": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-corner-cache-native-inputs-2026-10-11.json",
+  "sourceManifestSha256": "bae2ca7fa2869b654811ed4e7855526ef5bf5fa746e4ca28269468ab8cdd9ea2",
+  "allInputHashesMatch": true,
+  "inputFiles": 1812,
+  "rawPath": "/Users/themoretheless/.codex/tmp/shared-corner-cache-wasm-stage-2026-10-11/geometry-kernel.raw.wasm",
+  "rawSha256": "8a653c0fc553561f58fee3e04d385ba0b9adb72d7279fffc5d52d5440913d00f",
+  "rawBytes": 14786487,
+  "workerQualified": false,
+  "scope": "Shared-corner cache raw compile, not optimized or published.",
+  "fullNativeBrepTests": {
+    "passed": 1035,
+    "failed": 0,
+    "ignored": 3,
+    "seconds": 3181.56,
+    "log": "/tmp/shared-corner-cache-brep-all-20261011.log"
+  }
+}

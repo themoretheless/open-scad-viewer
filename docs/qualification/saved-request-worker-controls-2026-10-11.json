@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "requestIdentityPreservedOnTimeout": true,
+  "workersJoined": 1,
+  "requestOverrideRejectedBeforeWorker": true,
+  "scope": "Saved controlled inspection input handling; full new-WASM success remains pending."
+}

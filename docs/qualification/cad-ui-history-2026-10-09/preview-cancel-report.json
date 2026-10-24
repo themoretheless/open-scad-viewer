@@ -1,0 +1,10 @@
+{
+  "cancel_restores_unchanged_document": true,
+  "reopened_preview_applied_with_enter": true,
+  "max_vertex_translation_error_mm": 0,
+  "limits": [
+    "One transform scenario, no controlled late worker delivery",
+    "Apply button clicks did not close card in observed run; keyboard Enter succeeded, mouse path needs investigation",
+    "Existing hidden Rush surface and WebGPU alerts remain"
+  ]
+}

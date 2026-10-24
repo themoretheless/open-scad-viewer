@@ -1,0 +1,50 @@
+{
+  "schema": "cad-step-oriented-incidence/1",
+  "passed": true,
+  "scope": "Exact vertex/edge bindings and oriented face-loop-edge incidence modulo cyclic start and shell orientation. Surface interiors and UV pullbacks are not certified.",
+  "surfaceChartEquivalenceQualified": false,
+  "parts": [
+    {
+      "part": "bracket",
+      "inputSha256": "2f9cd326530cd4b96a4ac976f60ef70cd9640d931032ad6e9aca97ed5d9af090",
+      "checks": {
+        "identitySets": true,
+        "exactVertices": true,
+        "exactEdges": true,
+        "bodyShellBindings": true,
+        "orientedFaceLoopEdgeBindings": true
+      },
+      "passed": true,
+      "orientationMutationRejected": true,
+      "coedgeMutationRejected": true
+    },
+    {
+      "part": "flange",
+      "inputSha256": "4bccecc5468214924c26fc11b588cb9fe5eba70f7dc3b9543c0587cd03ae4967",
+      "checks": {
+        "identitySets": true,
+        "exactVertices": true,
+        "exactEdges": true,
+        "bodyShellBindings": true,
+        "orientedFaceLoopEdgeBindings": true
+      },
+      "passed": true,
+      "orientationMutationRejected": true,
+      "coedgeMutationRejected": true
+    },
+    {
+      "part": "enclosure",
+      "inputSha256": "c470ae758c068c988ae5e5445879cefe0192c37babc7c67184f7f813ea8f3839",
+      "checks": {
+        "identitySets": true,
+        "exactVertices": true,
+        "exactEdges": true,
+        "bodyShellBindings": true,
+        "orientedFaceLoopEdgeBindings": true
+      },
+      "passed": true,
+      "orientationMutationRejected": true,
+      "coedgeMutationRejected": true
+    }
+  ]
+}

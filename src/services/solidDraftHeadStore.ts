@@ -18,7 +18,7 @@ export async function readSolidDraftHead(key:string):Promise<SolidDraftHead|null
  try{return await new Promise((resolve,reject)=>{
   const tx=db.transaction(store,'readonly'),r=tx.objectStore(store).get(key)
   let row:SolidDraftHead|null=null
-  r.onsuccess=()=>{if(r.result!==undefined&&!valid(r.result)){tx.abort();return}row=r.result??null}
+  r.onsuccess=()=>{if(r.result!==undefined&&(!valid(r.result)||r.result.key!==key)){tx.abort();return}row=r.result??null}
   tx.oncomplete=()=>resolve(row);tx.onabort=tx.onerror=()=>reject(tx.error??Error('Saved draft head is invalid. Import a JSON backup.'))
  })}finally{db.close()}
 }

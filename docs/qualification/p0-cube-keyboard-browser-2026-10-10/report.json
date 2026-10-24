@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "origin": "http://127.0.0.1:5298/",
+  "wasmSha256": "690aa37afa8b0d5866d4524c710c79203fa31502f899a306c2c45be6fe21cb67",
+  "records": {
+    "keyboard": {
+      "sha256": "3a93ebe67d8ea516a86d940faa7810bfe8f5e2d57a298c6924f134d71801e1be",
+      "bodyIds": [
+        "2840cee9-7e7c-4c08-b928-127c3b2eed0c"
+      ]
+    },
+    "undo": {
+      "sha256": "9189124bea11057da45ba823267f0e585d7b0c64c3cd646eaeb01a46d3102f4f",
+      "bodyIds": []
+    },
+    "redo": {
+      "sha256": "3a93ebe67d8ea516a86d940faa7810bfe8f5e2d57a298c6924f134d71801e1be",
+      "bodyIds": [
+        "2840cee9-7e7c-4c08-b928-127c3b2eed0c"
+      ]
+    },
+    "reload": {
+      "sha256": "3a93ebe67d8ea516a86d940faa7810bfe8f5e2d57a298c6924f134d71801e1be",
+      "bodyIds": [
+        "2840cee9-7e7c-4c08-b928-127c3b2eed0c"
+      ]
+    },
+    "mouse": {
+      "sha256": "4d70ce77d2a90d084bf0c3f73edb529fc731c39a1b61f01f9258f8eceaf6e0f5",
+      "bodyIds": [
+        "2840cee9-7e7c-4c08-b928-127c3b2eed0c",
+        "c2954f59-4e13-499e-ab35-906804087473"
+      ]
+    }
+  },
+  "redoAndReloadByteExact": true,
+  "keyboardAndMouseGeometryEqual": true,
+  "dimensions": [
+    {
+      "id": "2840cee9-7e7c-4c08-b928-127c3b2eed0c",
+      "boundsMm": [
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "dimensionsMm": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "id": "c2954f59-4e13-499e-ab35-906804087473",
+      "boundsMm": [
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "dimensionsMm": [
+        20,
+        20,
+        20
+      ]
+    }
+  ],
+  "consoleErrors": [],
+  "scope": "One 20 mm cube created by Ctrl+K/query/Enter, Ctrl+Z, Ctrl+Shift+Z, reload; second cube via button. Not all commands, 20 edits, general fillets or process crash recovery."
+}

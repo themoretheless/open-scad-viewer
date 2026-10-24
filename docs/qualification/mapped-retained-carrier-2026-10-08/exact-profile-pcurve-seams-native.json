@@ -1,0 +1,31 @@
+{
+  "scope": "owned native corrected seam angles via original pcurves",
+  "proposedFaces": [
+    0,
+    5
+  ],
+  "thresholdSineSquared": 1e-06,
+  "edges": [
+    {
+      "edge": 0,
+      "aligned": null,
+      "reason": "profile-seam-endpoint-normal-unresolved",
+      "cells": 1,
+      "combinedCurveNormalSpans": 4,
+      "acceptedIntervals": 0,
+      "pendingIntervals": 3
+    },
+    {
+      "edge": 6,
+      "aligned": true,
+      "reason": "profile-path-tangent-planes-qualified",
+      "cells": 291,
+      "combinedCurveNormalSpans": 1164,
+      "acceptedIntervals": 147,
+      "pendingIntervals": 0,
+      "upperSineSquared": 9.837155135567825e-07
+    }
+  ],
+  "wholeBodyQualified": false,
+  "includedInWasm": false
+}

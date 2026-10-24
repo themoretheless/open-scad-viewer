@@ -1,0 +1,26 @@
+{
+  "scope": "Current packaged kernel diagnostic; geometric cause remains unresolved",
+  "fixtureSha256": "d7f5172b74080103422b738f54a9b421009b29c9a8f47703db6862780e0404a4",
+  "kernelSha256": "8f28d264385d707057b73f5c303f0842fb5799e43d46f9401b14f97c28d0bfee",
+  "sourceUnchanged": true,
+  "cases": [
+    {
+      "radius": 0.1,
+      "ok": false,
+      "code": "BREP_EXACT_FILLET_REFUSED",
+      "message": "Exact prism fillet feasibility refused: Fillet boundary collides with a nonadjacent span or separation is unresolved"
+    },
+    {
+      "radius": 1,
+      "ok": false,
+      "code": "BREP_EXACT_FILLET_REFUSED",
+      "message": "Exact prism fillet feasibility refused: Fillet boundary collides with a nonadjacent span or separation is unresolved"
+    },
+    {
+      "radius": 2,
+      "ok": false,
+      "code": "BREP_EXACT_FILLET_REFUSED",
+      "message": "Exact prism fillet feasibility refused: Fillet boundary collides with a nonadjacent span or separation is unresolved"
+    }
+  ]
+}

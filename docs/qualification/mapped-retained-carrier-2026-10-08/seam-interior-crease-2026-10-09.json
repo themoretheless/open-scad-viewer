@@ -1,0 +1,18 @@
+{
+  "schema": "whole-seam-interior-crease-control/1",
+  "passed": true,
+  "test": "source_seam_tangency::tests::matching_endpoint_planes_do_not_admit_an_interior_crease",
+  "surfaceLaw": "z=2*amplitude*u*(1-u)*v",
+  "amplitudes": [
+    0.1,
+    1,
+    10
+  ],
+  "endpointPlanesAligned": true,
+  "midpointPlanesOblique": true,
+  "wholeSeamAdmissionRefused": true,
+  "suitePassed": 7,
+  "suiteSeconds": 0.05,
+  "productionChanged": false,
+  "limits": "Controlled polynomial seam; does not qualify all assembled fillet seams"
+}

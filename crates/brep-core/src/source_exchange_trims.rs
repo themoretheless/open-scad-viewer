@@ -56,16 +56,16 @@ fn distance(point: [f64; 3], bounds: &[I]) -> Result<f64> {
 /// All carriers and vertex identities come from the same privately admitted Body.
 /// Work bounds original control counts used by interval evaluations, with no
 /// reliance on caller supplied or persisted approximation certificates.
-pub fn prepare(
-    body: &crate::source_volume::Body,
-    endpoints: &Prepared,
+pub fn prepare<E: crate::source_exchange_endpoints::ExchangeCarrier>(
+    body: &crate::source_volume::Body<E>,
+    endpoints: &Prepared<E>,
     tolerance_mm: f64,
     max_work: usize,
 ) -> Result<Option<Trims>> {
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. || !(1..=10_000_000).contains(&max_work) {
         return Err(invalid("Choose positive tolerance and bounded trim work"));
     }
-    if endpoints.original() != &body.definition()? {
+    if endpoints.original() != &E::body_definition(body)? {
         return Err(invalid("Endpoint preparation belongs to another Body"));
     }
     let shell = body.geometry().shell();
@@ -77,9 +77,8 @@ pub fn prepare(
     for (index, restriction) in endpoints.restrictions().iter().enumerate() {
         let shared = restriction.edge();
         let cost = 2 * shared.world().control_points.len()
-            + shared
-                .uses()
-                .iter()
+            + (0..2)
+                .map(|side| shared.fragment(side))
                 .map(|f| {
                     2 * (f.curve().control_points.len()
                         + f.surface()
@@ -97,7 +96,7 @@ pub fn prepare(
         }
         let address = shell.uses()[index][0];
         let mut ids = shell.vertices()[address.face][address.wire][address.edge];
-        if shared.reversed()[0] {
+        if shared.restriction_reversed(0) {
             ids.reverse();
         }
         let mut points = [[0.; 3]; 2];
@@ -121,7 +120,8 @@ pub fn prepare(
             )?;
         }
         let mut uses = [[0.; 2]; 2];
-        for (slot, fragment) in shared.uses().iter().enumerate() {
+        for slot in 0..2 {
+            let fragment=shared.fragment(slot);
             uses[slot] = fragment.parameter_bounds().map(midpoint);
             if uses[slot][0] == uses[slot][1]
                 || ((uses[slot][0] > uses[slot][1]) != fragment.reversed())
@@ -129,7 +129,7 @@ pub fn prepare(
                 return Ok(None);
             }
             for local in 0..2 {
-                let end = if shared.reversed()[slot] {
+                let end = if shared.restriction_reversed(slot) {
                     1 - local
                 } else {
                     local

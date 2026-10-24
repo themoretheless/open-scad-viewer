@@ -1,0 +1,21 @@
+{
+  "scope": "original and parameter-exchanged chart preparation only; exchanged certificates are not rebound to Body",
+  "inputJsonSha256": "b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea",
+  "outputJsonSha256": "2367ee67d8f463e70619143090c053c455464f6c3146e9158a0d0d6bcc6597c8",
+  "preparations": 108,
+  "qualified": [
+    [
+      0,
+      0,
+      true
+    ],
+    [
+      10,
+      0,
+      false
+    ]
+  ],
+  "refused": 106,
+  "exactWork": 41674603,
+  "sourceSurfacesUnchanged": true
+}

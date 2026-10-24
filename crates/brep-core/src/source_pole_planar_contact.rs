@@ -7,13 +7,13 @@ use crate::{
     source_shell_incidence::{Address, Shell},
 };
 use nurbs_core::{Error, Result};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
     fiber: source_pole_plane_image::Certificate,
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
@@ -23,23 +23,23 @@ impl Certificate {
     pub fn fiber(&self) -> &source_pole_plane_image::Certificate {
         &self.fiber
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub driver_cells: usize,
     pub reason: &'static str,
 }
 /// This owns only cross-face contacts; shell chart injectivity is a separate gate.
-pub fn certify(
-    shell: &Shell,
+pub fn certify<E:crate::source_seam_tangency::Carrier>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_driver: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     let regions = shell
         .regions()
         .ok_or_else(|| Error::new("BREP_SOURCE_POLE_PLANAR", "Original regions required"))?;

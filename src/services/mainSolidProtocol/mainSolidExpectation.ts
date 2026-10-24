@@ -9,6 +9,9 @@ import { materialExpectation } from '../solidMaterialVolume'
 import { materialWallExpectation } from '../solidMaterialWall'
 import { parseBondedSolidInput } from '../bondedSolidProtocol'
 import { selfIntersectionExpectation } from '../solidSelfIntersection'
+import { profileBridgeChordExpectation } from '../nurbsProfileBridgeChords'
+import { expressionInspectionExpectation } from '../expressionShellInspection'
+import { expressionShellExpectation } from '../expressionShell'
 import { solidDistanceExpectation } from '../solidDistance'
 import { sourceBodyExpectation } from '../sourceBody'
 import { wholeWallExpectation } from '../solidWholeWall'
@@ -40,6 +43,9 @@ if(job.kind==='surfaceBuild')return {kind:job.kind,...job.options.kind==='nurbs-
 if(job.kind==='g2RunoutSurface')return {kind:job.kind,maxCells:job.options.maxCells??100000,maxExactWork:job.options.maxExactWork??1000000,maxPatches:job.options.maxPatches??256,tolerances:job.options.tolerances??[1e-7,1e-5,1e-4]}
 
   if(job.kind==='sourceBodyRestore')return {kind:job.kind,...sourceBodyExpectation(job.options)}
+  if(job.kind==='profileBridgeChords')return {kind:job.kind,...profileBridgeChordExpectation(job.options)}
+  if(job.kind==='expressionShellInspect')return {kind:job.kind,...expressionInspectionExpectation(job.options)}
+  if(job.kind==='expressionShellRestore')return {kind:job.kind,...expressionShellExpectation(job.options)}
   if(job.kind==='partialAnnularPreview')return {kind:job.kind,id:job.body.id,bodyIdentity:job.body.brep?.topologyIds?.bodies[0]}
   if(job.kind==='profileIntersections')return {kind:job.kind,loops:structuredClone(job.loops),options:{...job.options}}
   if(job.kind==='profilePrepare')return {kind:job.kind,chainSegments:job.ids.map(id=>{if(job.document.curves?.some(c=>c.id===id))return 1;const s=job.document.sketches.find(s=>s.id===id);return s?.analytic?.kind==='arc'?Math.ceil(Math.abs(s.analytic.sweep)/90):Math.max(0,(s?.points.length??0)-1)})}

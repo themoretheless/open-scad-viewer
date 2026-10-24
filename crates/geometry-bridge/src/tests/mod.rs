@@ -1275,6 +1275,280 @@ fn layered_fillet_bridge_checks_chain_and_cavity() {
 }
 
 #[test]
+fn expression_shell_dispatch_rebuilds_closed_incidence_without_solid_admission() {
+    let request: Value = value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    fn js_integer_transport(value: &mut Value) {
+        match value {
+            Value::Number(value_codec::Number::Float(f)) if f.is_finite() && f.fract()==0. && f.abs()<=9_007_199_254_740_991. && f.to_bits()!=(-0_f64).to_bits() => {
+                let n=*f;*value=if n>=0. {json!(n as u64)}else{json!(n as i64)};
+            }
+            Value::Array(rows)=>rows.iter_mut().for_each(js_integer_transport),
+            Value::Object(rows)=>rows.values_mut().for_each(js_integer_transport),
+            _=>{}
+        }
+    }
+    let mut request=request;js_integer_transport(&mut request);
+    let result = dispatch(request.clone()).unwrap();
+    assert_eq!(result["incidenceQualified"].as_bool(), Some(true), "{}", result["reason"]);
+    assert_eq!(result["shell"]["faceCount"].as_u64(), Some(29));
+    assert_eq!(result["request"]["profileLimits"], request["profileLimits"]);
+    assert_eq!(result["request"]["shellLimits"], request["shellLimits"]);
+    assert_eq!(result["request"]["sourceLimits"], request["sourceLimits"]);
+    assert_eq!(result["shell"]["components"].as_u64(), Some(1));
+    assert_eq!(result["embeddingQualified"].as_bool(), Some(false));
+    assert_eq!(result["materialQualified"].as_bool(), Some(false));
+    let mut display_request = request.clone();
+    display_request["displayLimits"] = json!({"divisions":2,"cells":116,"controlsPerEnclosure":1000,"spans":100000,"toleranceUv":1e-8,"domainCells":100000,"domainCellsPerCell":512});
+    let displayed = dispatch(display_request.clone()).unwrap();
+    let display = &displayed["shell"]["supportEnclosures"];
+    assert_eq!(display["trimQualified"].as_bool(), Some(false));
+    assert_eq!(display["cells"].as_array().unwrap().len(), 116);
+    assert_eq!(display["enclosed"].as_u64(), Some(116));
+    assert_eq!(display["pending"].as_u64(), Some(0));
+    assert!(display["inside"].as_u64().unwrap() >= 4, "The admitted transition owns its full chart");
+    assert!(display["unresolvedTrim"].as_u64().unwrap() > 0, "Cells touching root-ended boundaries remain unresolved");
+    assert!(display["domainCells"].as_u64().unwrap() > 0);
+    assert!(display["domainCells"].as_u64().unwrap() <= 100000);
+    assert_eq!(display["inside"].as_u64().unwrap()+display["outside"].as_u64().unwrap()
+        +display["unresolvedTrim"].as_u64().unwrap(),116);
+    for cell in display["cells"].as_array().unwrap() {
+        assert!(["inside","outside","unresolved"].contains(&cell["location"].as_str().unwrap()));
+        let bounds = cell["bounds"].as_array().unwrap();
+        for axis in bounds {
+            let axis = axis.as_array().unwrap();
+            let lo = axis[0].as_f64().unwrap(); let hi = axis[1].as_f64().unwrap();
+            assert!(lo.is_finite() && hi.is_finite() && lo <= hi);
+        }
+    }
+    assert_eq!(displayed["embeddingQualified"].as_bool(), Some(false));
+    assert_eq!(displayed["request"]["displayLimits"], display_request["displayLimits"]);
+    display_request["displayLimits"]["cells"] = json!(0);
+    let exhausted_display = dispatch(display_request.clone()).unwrap();
+    let cells = exhausted_display["shell"]["supportEnclosures"]["cells"].as_array().unwrap();
+    assert_eq!(cells.len(), 29);
+    for (face, cell) in cells.iter().enumerate() {
+        assert_eq!(cell["face"].as_u64(), Some(face as u64));
+        assert!(cell["bounds"].is_null());
+        assert_eq!(cell["location"].as_str(),Some("unresolved"));
+    }
+    assert_eq!(exhausted_display["shell"]["supportEnclosures"]["pending"].as_u64(), Some(29));
+    display_request["displayLimits"]["divisions"] = json!(65);
+    assert!(dispatch(display_request).is_err());
+    let mut mismatched = request.clone();
+    mismatched["boundaryDefinition"]["sides"][0]["proposal"]["positionTolerance"] = json!(0.001);
+    assert!(dispatch(mismatched).is_err(), "A boundary from another proposal cannot be restored");
+    let mut exhausted = request.clone();
+    exhausted["shellLimits"]["boundary"]["controls"] = json!(0);
+    let exhausted = dispatch(exhausted).unwrap();
+    assert_eq!(exhausted["incidenceQualified"].as_bool(), Some(false));
+    assert!(exhausted["shell"].is_null());
+    let mut refused = request;
+    refused["profileLimits"]["controls"] = json!(0);
+    refused["incidenceQualified"] = json!(true);
+    refused["embeddingQualified"] = json!(true);
+    refused["materialQualified"] = json!(true);
+    let result = dispatch(refused).unwrap();
+    assert_eq!(result["incidenceQualified"].as_bool(), Some(false));
+    assert!(result["shell"].is_null());
+    assert_eq!(result["embeddingQualified"].as_bool(), Some(false));
+    assert_eq!(result["materialQualified"].as_bool(), Some(false));
+}
+
+#[test]
+fn expression_mesh_replays_native_trim_and_deviation() {
+    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    request["meshLimits"]=json!({"maxDeviationMm":0.05,"cells":8192,"controlsPerEnclosure":1000,
+        "spans":100000,"toleranceUv":1e-8,"domainCells":30000,"domainCellsPerCell":256,"maxDepth":14});
+    let result=dispatch(request.clone()).unwrap();
+    assert_eq!(result["incidenceQualified"].as_bool(),Some(true));
+    assert_eq!(result["embeddingQualified"].as_bool(),Some(false));
+    assert_eq!(result["materialQualified"].as_bool(),Some(false));
+    assert_eq!(result["request"]["meshLimits"],request["meshLimits"]);
+    let mesh=&result["shell"]["displayMesh"];
+    assert_eq!(mesh["watertightQualified"].as_bool(),Some(false));
+    assert_eq!(mesh["complete"].as_bool(),Some(false));
+    assert!(mesh["maxDeviationUpperMm"].as_f64().unwrap()<=0.05);
+    assert!(mesh["cells"].as_u64().unwrap()<=8192);
+    assert!(mesh["spans"].as_u64().unwrap()<=100000);
+    assert!(mesh["domainCells"].as_u64().unwrap()<=30000);
+    assert_eq!(mesh["version"].as_u64(),Some(1));
+    let leaves=mesh["tiles"].as_array().unwrap().len()+mesh["outside"].as_array().unwrap().len()+mesh["pending"].as_array().unwrap().len();
+    assert_eq!(mesh["leafCount"].as_u64(),Some(leaves as u64));
+    assert_eq!(leaves as u64,29+mesh["splitCells"].as_u64().unwrap());
+    let tiles=mesh["tiles"].as_array().unwrap();
+    assert!(!tiles.is_empty());
+    let mut covered=std::collections::BTreeSet::new();
+    for tile in tiles {
+        covered.insert(tile["face"].as_u64().unwrap());
+        assert!(tile["deviationUpperMm"].as_f64().unwrap()>0.);
+        assert!(tile["deviationUpperMm"].as_f64().unwrap()<=0.05);
+        let corners=tile["corners"].as_array().unwrap();assert_eq!(corners.len(),4);
+        assert!(corners.iter().all(|p|p.as_array().unwrap().len()==3&&p.as_array().unwrap().iter().all(|x|x.as_f64().unwrap().is_finite())));
+    }
+    assert!(tiles.iter().any(|tile|result["shell"]["faces"][tile["face"].as_u64().unwrap() as usize]["kind"].as_str()==Some("transition")),"The actual transition must have bounded display triangles");
+    for key in ["outside","pending"] {
+        for cell in mesh[key].as_array().unwrap() {covered.insert(cell["face"].as_u64().unwrap());}
+    }
+    assert_eq!(covered.len(),29,"Every face retains coverage even when mesh work is incomplete");
+    if let Ok(path)=std::env::var("EXPRESSION_MESH_FIXTURE") {
+        std::fs::write(path,value_codec::to_string_pretty(&json!({"request":request,"result":result})).unwrap()).unwrap();
+    }
+    request["meshLimits"]["cells"]=json!(0);
+    request["meshQualified"]=json!(true);
+    let refused=dispatch(request).unwrap();
+    let mesh=&refused["shell"]["displayMesh"];
+    assert!(mesh["tiles"].as_array().unwrap().is_empty());
+    assert_eq!(mesh["pending"].as_array().unwrap().len(),29);
+    assert_eq!(mesh["complete"].as_bool(),Some(false));
+    assert_eq!(mesh["watertightQualified"].as_bool(),Some(false));
+}
+
+#[test]
+fn expression_shell_inspection_recomputes_contacts_and_volume() {
+    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    request["op"]=json!("cad_expression_shell_inspect");
+    request["inspectionLimits"]=json!({
+        "projectedRegion":{"toleranceUv":1e-8,"exactWork":20000000,"driverCells":10000},
+        "contacts":{"cells":16384,"cellsPerPair":8,"controlsPerEnclosure":1000,"spans":100000,
+            "domainCells":100000,"domainCellsPerPair":256,"exactWork":100000000,"driverCells":100000,"toleranceUv":1e-8},
+        "linearCells":10000,"linearCellsPerPair":256,"refinementCellsPerPair":32,
+        "volume":{"axis":2,"origin":0,"absoluteError":20,"toleranceUv":1e-8,"controlsPerEnclosure":1000,
+            "cells":32768,"spans":200000,"domainCells":100000,"domainCellsPerRectangle":256}
+    });
+    request["alignedChordCheck"]=json!({"minimumMm":1.,"maxSineSquared":1e-4,
+        "toleranceUv":0.05,"controls":1000,"cells":0,"spans":0,"domainCells":0});
+    let result=dispatch(request.clone()).unwrap();
+    assert_eq!(result["incidenceQualified"].as_bool(),Some(true));
+    assert_eq!(result["embeddingQualified"].as_bool(),Some(true));
+    assert_eq!(result["materialQualified"].as_bool(),Some(false));
+    let chords=&result["shell"]["alignedChordCheck"];
+    assert_eq!(chords["qualified"].as_bool(),Some(false));
+    assert_eq!(chords["wholeThicknessQualified"].as_bool(),Some(false));
+    assert_eq!(chords["solidQualified"].as_bool(),Some(false));
+    assert_eq!(chords["report"]["total_pairs"].as_u64(),Some(435));
+    assert_eq!(chords["report"]["pending"].as_array().unwrap().len(),435);
+    assert_eq!(chords["report"]["intrinsic_spans"].as_u64(),Some(0));
+    let inspection=&result["shell"]["inspection"];
+    assert_eq!(inspection["contacts"]["pendingPairs"].as_u64(),Some(0));
+    assert_eq!(inspection["contacts"]["pairs"].as_array().unwrap().len(),406);
+    assert_eq!(inspection["volumeQualified"].as_bool(),Some(true),"{}",inspection["reason"]);
+    let bounds=inspection["volume"]["positiveBounds"].as_array().unwrap();
+    let lo=bounds[0].as_f64().unwrap();let hi=bounds[1].as_f64().unwrap();
+    assert!(lo>0.&&hi>=lo&&hi-lo<=20.);
+    assert_eq!(result["request"]["inspectionLimits"],request["inspectionLimits"]);
+    let mut exhausted=request.clone();
+    exhausted["inspectionLimits"]["projectedRegion"]["exactWork"]=json!(0);
+    exhausted["embeddingQualified"]=json!(true);
+    let refused=dispatch(exhausted).unwrap();
+    assert_eq!(refused["embeddingQualified"].as_bool(),Some(false));
+    assert_eq!(refused["shell"]["inspection"]["volumeQualified"].as_bool(),Some(false));
+    let mut pending_request=request.clone();
+    pending_request["inspectionLimits"]["contacts"]["cells"]=json!(0);
+    pending_request["inspectionLimits"]["contacts"]["exactWork"]=json!(0);
+    let pending=dispatch(pending_request).unwrap();
+    assert_eq!(pending["incidenceQualified"].as_bool(),Some(true));
+    assert_eq!(pending["embeddingQualified"].as_bool(),Some(false));
+    assert!(pending["shell"]["inspection"]["contacts"]["pendingPairs"].as_u64().unwrap()>0);
+    assert!(pending["shell"]["inspection"]["volume"].is_null());
+    if let Ok(path)=std::env::var("EXPRESSION_INSPECTION_FIXTURE") {
+        std::fs::write(path,json!({"request":request,"result":result,"refusal":refused,"pending":pending}).to_string()).unwrap();
+    }
+}
+
+#[test]
+fn expression_triangle_refinement_dispatch_preserves_pending_coverage() {
+    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    request["boundaryMeshLimits"]=json!({"maxDeviationMm":0.05,"cells":4096,"spans":100000,"maxDepth":24,
+        "refinement":{"maxDeviationMm":0.05,"cells":64,"spans":8192,"spansPerQuery":64,"controls":1000,
+            "domainCells":10000,"domainCellsPerTriangle":128,"toleranceUv":1e-8,"maxDepth":4,"regionalSpans":2048}});
+    let result=dispatch(request.clone()).unwrap();
+    let mesh=&result["shell"]["boundaryMesh"];
+    let refined=&mesh["refinement"];
+    assert_eq!(refined["limits"],request["boundaryMeshLimits"]["refinement"]);
+    assert_eq!(refined["solidQualified"].as_bool(),Some(false));
+    assert_eq!(mesh["materialQualified"].as_bool(),Some(false));
+    assert_eq!(mesh["surfaceToleranceQualified"].as_bool(),Some(false));
+    let initial=mesh["candidateTriangles"].as_array().unwrap().len();
+    assert_eq!(refined["initialTriangles"].as_u64(),Some(initial as u64));
+    let accepted=refined["accepted"].as_array().unwrap();
+    let pending=refined["pending"].as_array().unwrap();
+    assert_eq!(accepted.len()+pending.len(),initial+2*refined["splitTriangles"].as_u64().unwrap() as usize);
+    assert!(!pending.is_empty());
+    for triangle in accepted {
+        assert!(triangle["deviationUpperMm"].as_f64().unwrap()<=0.05);
+    }
+    for key in ["accepted","pending"] {
+        for triangle in refined[key].as_array().unwrap() {
+            for vertex in triangle["vertices"].as_array().unwrap() {
+                assert!(!mesh["vertices"][vertex.as_u64().unwrap() as usize]["point"].is_null());
+            }
+        }
+    }
+    assert!(refined["cells"].as_u64().unwrap()<=64);
+    assert!(refined["spans"].as_u64().unwrap()<=8192);
+    assert!(refined["regional"]["spans"].as_u64().unwrap()<=2048);
+    assert_eq!(refined["closedOrientedIncidence"].as_bool(),Some(true));
+    if let Ok(path)=std::env::var("EXPRESSION_TRIANGLE_REFINEMENT_FIXTURE") {
+        std::fs::write(path,value_codec::to_string_pretty(&json!({"request":request,"result":result})).unwrap()).unwrap();
+    }
+    for key in ["cells","spans","domainCells","regionalSpans"] {
+        request["boundaryMeshLimits"]["refinement"][key]=json!(0);
+    }
+    let disabled=dispatch(request).unwrap();
+    let refined=&disabled["shell"]["boundaryMesh"]["refinement"];
+    assert!(refined["accepted"].as_array().unwrap().is_empty());
+    assert_eq!(refined["pending"].as_array().unwrap().len(),initial);
+    assert_eq!(refined["splitTriangles"].as_u64(),Some(0));
+    assert_eq!(refined["regional"]["spans"].as_u64(),Some(0));
+}
+
+#[test]
+fn expression_radius_dispatch_distinguishes_admission_violation_and_unproven() {
+    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    request["op"]=json!("cad_expression_shell_restore");
+    let authored=brep_core::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
+    let centers=authored.centers.reverse().unwrap();
+    let radius=authored.radius_curve().reverse().unwrap();
+    request["radiusCheck"]=json!({"centers":encode(centers).unwrap(),"radius":encode(radius.clone()).unwrap(),
+        "lawDomains":[[0.75,0.9],[0.75,0.9]],"toleranceMm":1e-4,
+        "controls":1000,"spans":100000,"coefficientWork":100000000});
+    request["supportTangencyCheck"]=json!({"controls":1000,"cells":10000,"spans":100000});
+    request["neighborTangencyCheck"]=json!({"controls":1000,"cells":10000,"spans":100000,"maxSineSquared":1e-6});
+    let admitted=dispatch(request.clone()).unwrap();
+    assert_eq!(admitted["request"]["supportTangencyCheck"],request["supportTangencyCheck"]);
+    assert_eq!(admitted["request"]["neighborTangencyCheck"],request["neighborTangencyCheck"]);
+    assert_eq!(admitted["shell"]["neighborTangencyCheck"]["qualified"],json!(true));
+    assert_eq!(admitted["shell"]["neighborTangencyCheck"]["solidQualified"],json!(false));
+    assert_eq!(admitted["shell"]["neighborTangencyCheck"]["upperSineSquared"].as_array().unwrap().len(),4);
+
+    assert_eq!(admitted["shell"]["supportTangencyCheck"]["qualified"],json!(true));
+    assert_eq!(admitted["shell"]["supportTangencyCheck"]["neighborBodyQualified"],json!(false));
+    assert_eq!(admitted["shell"]["supportTangencyCheck"]["boundaries"].as_array().unwrap().len(),4);
+    assert_eq!(admitted["request"]["radiusCheck"],request["radiusCheck"]);
+    assert_eq!(admitted["shell"]["radiusCheck"]["qualified"],json!(true));
+    assert_eq!(admitted["shell"]["radiusCheck"]["violationQualified"],json!(false));
+    assert_eq!(admitted["materialQualified"],json!(false));
+    let mut changed=radius;
+    for p in &mut changed.control_points {p[0]+=0.25;}
+    request["radiusCheck"]["radius"]=encode(changed).unwrap();
+    let violation=dispatch(request.clone()).unwrap();
+    assert_eq!(violation["shell"]["radiusCheck"]["qualified"],json!(false));
+    assert_eq!(violation["shell"]["radiusCheck"]["violationQualified"],json!(true));
+    assert!(violation["shell"]["radiusCheck"]["errorLowerMm"].as_f64().unwrap()>1e-4);
+    request["radiusCheck"]["spans"]=json!(0);
+    request["supportTangencyCheck"]["spans"]=json!(0);
+    request["neighborTangencyCheck"]["spans"]=json!(0);
+    let unproven=dispatch(request).unwrap();
+    assert_eq!(unproven["shell"]["radiusCheck"]["qualified"],json!(false));
+    assert_eq!(unproven["shell"]["radiusCheck"]["violationQualified"],json!(false));
+    assert!(unproven["shell"]["radiusCheck"]["errorLowerMm"].is_null());
+    assert_eq!(unproven["shell"]["supportTangencyCheck"]["qualified"],json!(false));
+    assert_eq!(unproven["shell"]["neighborTangencyCheck"]["qualified"],json!(false));
+    assert_eq!(unproven["shell"]["neighborTangencyCheck"]["upperSineSquared"],Value::Null);
+    assert_eq!(unproven["shell"]["supportTangencyCheck"]["spans"],json!(0));
+    if let Ok(path)=std::env::var("EXPRESSION_RADIUS_DISPATCH_FIXTURE") {
+        std::fs::write(path,value_codec::to_string_pretty(&json!({"admitted":admitted,"violation":violation,"unproven":unproven})).unwrap()).unwrap();
+    #[test]
 fn native_section_preserves_legacy_input_error_code() {
     let error = dispatch(
         json!({"op":"mesh_section","mesh":{"positions":[0.,0.,0.],"indices":[0,1,2]},"z":0.}),

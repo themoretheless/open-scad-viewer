@@ -1,0 +1,144 @@
+{
+  "schema": "cad-history-current-step/1",
+  "passed": true,
+  "wasmIdentity": {
+    "sha256": "ffb7c3ba14d85c5e5872f2b5bebe17dba49da81bef48c27b26ec27ab69983eaf",
+    "byteLength": 13089068
+  },
+  "historyArchiveSha256": "23e97dbc848d0141b106bca6d958a942c2e700c5cb205a118c67157b49dbe846",
+  "checks": [
+    {
+      "interaction": "mouse",
+      "name": "bracket",
+      "sourceDocumentSha256": "3e3a69440db14af703130c23ecac889531ef8b03e77d5a5d5b4b3dccddf85aa3",
+      "sourceUnchanged": true,
+      "stepIdentity": {
+        "createdCount": 0,
+        "lostCount": 0,
+        "preserved": true,
+        "preservedCount": 167,
+        "source": "internal-metadata"
+      },
+      "topologyIdentitySetsEqual": true,
+      "historyReplay": {
+        "commits": 20,
+        "undo": 20,
+        "redo": 20,
+        "canceledLoads": 7,
+        "reloadedExact": true,
+        "scope": "Current parser/history replay of archived geometry states; commands and browser input are not re-executed."
+      }
+    },
+    {
+      "interaction": "mouse",
+      "name": "flange",
+      "sourceDocumentSha256": "85d93acaca296fd24c07caf1b20e9fc48223d41fe72ada809615f17b1e016e13",
+      "sourceUnchanged": true,
+      "stepIdentity": {
+        "createdCount": 0,
+        "lostCount": 0,
+        "preserved": true,
+        "preservedCount": 102,
+        "source": "internal-metadata"
+      },
+      "topologyIdentitySetsEqual": true,
+      "historyReplay": {
+        "commits": 20,
+        "undo": 20,
+        "redo": 20,
+        "canceledLoads": 7,
+        "reloadedExact": true,
+        "scope": "Current parser/history replay of archived geometry states; commands and browser input are not re-executed."
+      }
+    },
+    {
+      "interaction": "mouse",
+      "name": "enclosure",
+      "sourceDocumentSha256": "75a421f2a049511e65daeff954fc735e25e1bdd920e2a9cf96f218136517f857",
+      "sourceUnchanged": true,
+      "stepIdentity": {
+        "createdCount": 0,
+        "lostCount": 0,
+        "preserved": true,
+        "preservedCount": 708,
+        "source": "internal-metadata"
+      },
+      "topologyIdentitySetsEqual": true,
+      "historyReplay": {
+        "commits": 20,
+        "undo": 20,
+        "redo": 20,
+        "canceledLoads": 7,
+        "reloadedExact": true,
+        "scope": "Current parser/history replay of archived geometry states; commands and browser input are not re-executed."
+      }
+    },
+    {
+      "interaction": "keyboard",
+      "name": "bracket",
+      "sourceDocumentSha256": "75d0bee7fc5abbb2095981fdbb993ab4f729dde791b5964e97c5fd8e96d5da6f",
+      "sourceUnchanged": true,
+      "stepIdentity": {
+        "createdCount": 0,
+        "lostCount": 0,
+        "preserved": true,
+        "preservedCount": 167,
+        "source": "internal-metadata"
+      },
+      "topologyIdentitySetsEqual": true,
+      "historyReplay": {
+        "commits": 20,
+        "undo": 20,
+        "redo": 20,
+        "canceledLoads": 7,
+        "reloadedExact": true,
+        "scope": "Current parser/history replay of archived geometry states; commands and browser input are not re-executed."
+      }
+    },
+    {
+      "interaction": "keyboard",
+      "name": "flange",
+      "sourceDocumentSha256": "30efa6118e55ac349d3ecea61ee4b0c5ec60e2a03c5dafbed0be16210f0df382",
+      "sourceUnchanged": true,
+      "stepIdentity": {
+        "createdCount": 0,
+        "lostCount": 0,
+        "preserved": true,
+        "preservedCount": 102,
+        "source": "internal-metadata"
+      },
+      "topologyIdentitySetsEqual": true,
+      "historyReplay": {
+        "commits": 20,
+        "undo": 20,
+        "redo": 20,
+        "canceledLoads": 7,
+        "reloadedExact": true,
+        "scope": "Current parser/history replay of archived geometry states; commands and browser input are not re-executed."
+      }
+    },
+    {
+      "interaction": "keyboard",
+      "name": "enclosure",
+      "sourceDocumentSha256": "4c835f76bfa236324403c85c6db81dccad381a5dba79502478b9bc766f04b161",
+      "sourceUnchanged": true,
+      "stepIdentity": {
+        "createdCount": 0,
+        "lostCount": 0,
+        "preserved": true,
+        "preservedCount": 708,
+        "source": "internal-metadata"
+      },
+      "topologyIdentitySetsEqual": true,
+      "historyReplay": {
+        "commits": 20,
+        "undo": 20,
+        "redo": 20,
+        "canceledLoads": 7,
+        "reloadedExact": true,
+        "scope": "Current parser/history replay of archived geometry states; commands and browser input are not re-executed."
+      }
+    }
+  ],
+  "scope": "Fresh Rust WASM STEP export/import/re-export plus current document/history replay of archived geometry states. Current browser commands and general fillets are unproven."
+}

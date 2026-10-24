@@ -1,0 +1,41 @@
+{
+  "scope": "native proposed-profile/original-surface tangent-plane angle",
+  "faces": [
+    0,
+    5
+  ],
+  "anchor": [
+    5,
+    0
+  ],
+  "uvLines": [
+    [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    [
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  ],
+  "thresholdSineSquared": 1e-06,
+  "cells": 14697,
+  "normalSpans": 29394,
+  "acceptedIntervals": 7349,
+  "pendingIntervals": 0,
+  "upperSineSquared": 9.996374481646285e-07,
+  "wholeBodyQualified": false,
+  "includedInWasm": false
+}

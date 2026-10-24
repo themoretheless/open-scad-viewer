@@ -1,0 +1,74 @@
+{
+  "schema": "expression-worker-qualification-failure/1",
+  "passed": false,
+  "phase": "fresh-worker-retry",
+  "elapsedMs": 123694.591208,
+  "timeoutMs": 120000,
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "wasmUnchanged": true,
+  "workersStarted": 2,
+  "timingsMs": {
+    "refusal": 3376.6264579999997,
+    "dispatchCancellation": 105.09649999999965,
+    "retry": 0
+  },
+  "requestIdentity": {
+    "path": "/Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/docs/qualification/mapped-retained-carrier-2026-10-08/rail-position-cache-dispatch-request-2026-10-10.json",
+    "sha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+    "byteLength": 504950
+  },
+  "workerArtifacts": [
+    {
+      "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+      "byteLength": 13108282
+    },
+    {
+      "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+      "byteLength": 13108282
+    }
+  ],
+  "workerObservations": [
+    {
+      "realm": 0,
+      "id": 1,
+      "kind": "expressionShellInspect",
+      "postedAt": 1631.021417,
+      "enteredAfterMs": 794.8820409999998,
+      "responseAfterMs": 3191.9234159999996,
+      "timing": {
+        "warmupMs": 388.78454200000033,
+        "executeMs": 1988.8966250000003,
+        "prepareMs": 0.12341699999979028
+      }
+    },
+    {
+      "realm": 0,
+      "id": 2,
+      "kind": "expressionShellInspect",
+      "postedAt": 5120.385125,
+      "enteredAfterMs": 12.774833000000399
+    },
+    {
+      "realm": 1,
+      "id": 3,
+      "kind": "expressionShellInspect",
+      "postedAt": 5227.766792,
+      "enteredAfterMs": 457.8574579999995
+    }
+  ],
+  "clientTimings": [
+    {
+      "warmupMs": 388.78454200000033,
+      "executeMs": 1988.8966250000003,
+      "prepareMs": 0.12341699999979028,
+      "clientElapsedMs": 3376.436541
+    }
+  ],
+  "error": {
+    "name": "MainSolidWorkerError",
+    "message": "CAD operation exceeded its time limit",
+    "code": "CAD_TIMEOUT"
+  },
+  "scope": "Failed qualification only; no geometry or latency admission",
+  "workersJoined": 2
+}

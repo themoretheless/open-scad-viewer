@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "unrelatedOperationRefused": true,
+  "refusalCreatedNoOutput": true,
+  "existingOutputRefused": true,
+  "existingOutputUnchanged": true,
+  "scope": "Native replay driver input and output safety controls only; actual geometry dispatch remains separately running."
+}

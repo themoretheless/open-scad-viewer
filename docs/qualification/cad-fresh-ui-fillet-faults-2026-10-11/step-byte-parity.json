@@ -1,0 +1,32 @@
+{
+  "schema": "ui-fillet-fault-step-parity/1",
+  "passed": true,
+  "scope": "Exact STEP byte parity to independently measured pre-fault controlled UI run; no additional OCCT execution claimed.",
+  "referenceManifestSha256": "474dfabd3c95c047f84b99979811f7a699d28c260481726bde282a3a3be569b3",
+  "parts": [
+    {
+      "name": "bracket-ui-edited",
+      "sha256": "8c75bae2861b8b3afbf46baeb4ea54a60a9bdd2eb536290bb249bf1996736eec"
+    },
+    {
+      "name": "bracket-ui-reloaded",
+      "sha256": "8c75bae2861b8b3afbf46baeb4ea54a60a9bdd2eb536290bb249bf1996736eec"
+    },
+    {
+      "name": "flange-ui-edited",
+      "sha256": "76838c0ab7141cde0eb6d417b7f50d19bd713c207533a34d83ef4a731f50f6c7"
+    },
+    {
+      "name": "flange-ui-reloaded",
+      "sha256": "76838c0ab7141cde0eb6d417b7f50d19bd713c207533a34d83ef4a731f50f6c7"
+    },
+    {
+      "name": "enclosure-ui-edited",
+      "sha256": "844a4d3cdd3c8e66db41e953f8a08ebd6896e6e2c82d137368e109fdcc8c87b4"
+    },
+    {
+      "name": "enclosure-ui-reloaded",
+      "sha256": "844a4d3cdd3c8e66db41e953f8a08ebd6896e6e2c82d137368e109fdcc8c87b4"
+    }
+  ]
+}

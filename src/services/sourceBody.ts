@@ -4,6 +4,8 @@ import {wallExpectation,validWall,type SourceWallOptions,type SourceWallResult} 
 import {callGeometryRust} from './geometry/kernel'
 /** Original native recipes only; display intervals never authorize geometry. */
 export interface SourceBodyDefinition {
+ /** Native restore selects the original projective carrier when present. */
+ kind?:'projective-body'
  version:1
  inverseShear?:{axes:[number,number];coefficient:number}
  shell:{version:1;regions:unknown[];pairs:{uses:[number[],number[]];edge:unknown}[];poles:unknown[]}
@@ -16,11 +18,18 @@ export type SourceStepResult = {prepared:false;request:SourceStepOptions;text:nu
  | {prepared:true;request:SourceStepOptions;text:string;endpointErrorUpper:number;vertices:number;edges:number;faces:number}
 export interface SourceSeamOptions {
  edge:number
+ endpointLimitsExactWork?:number
  limits:{maxSineSquared:number;cells:number;curveSpans:number;normalSpans:number}
 }
 export interface SourceSeamResult {
+ endpointLimits?:SourceSeamEndpointLimits|null
  request:SourceSeamOptions;qualified:boolean;sineSquaredBounds:Interval|null
  reason:string;cells:number;curveSpans:number;normalSpans:number;acceptedCells:number;uncertainCanonical:Interval|null
+}
+export interface SourceSeamEndpointLimits {
+ canonical:number;exactWork:number;reason:string
+ sides:{side:number;boundaryEnd:boolean;collapsedPoint:[number,number,number]|null;
+  components:[[Interval,Interval,Interval],[Interval,Interval,Interval]];sineSquaredBounds:Interval|null;distinctTangentLimits:boolean}[]
 }
 export interface SourceBodyOptions {
  wallCoverage?:SourceWallCoverageOptions
@@ -84,9 +93,34 @@ function key(value:unknown):string {
 }
 const integer=(n:unknown,max:number)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0&&n<=max
 const interval=(v:unknown):v is Interval=>Array.isArray(v)&&v.length===2&&v.every(n=>typeof n==='number'&&Number.isFinite(n))&&v[0]<=v[1]
+export function validSeamEndpointLimits(seam:SourceSeamResult,budget:number|undefined,angle:number):boolean {
+ const d=seam.endpointLimits
+ if(d==null)return !(budget!==undefined&&!seam.qualified&&seam.reason==='source-seam-endpoint-normal-unresolved'
+  &&seam.uncertainCanonical?.[0]===seam.uncertainCanonical?.[1]&&[0,1].includes(seam.uncertainCanonical?.[0]??-1))
+ if(budget===undefined||seam.qualified||seam.reason!=='source-seam-endpoint-normal-unresolved'
+  ||!seam.uncertainCanonical||seam.uncertainCanonical[0]!==seam.uncertainCanonical[1]
+  ||d.canonical!==seam.uncertainCanonical[0]||![0,1].includes(d.canonical)||!integer(d.exactWork,budget)
+  ||!['source-seam-endpoint-limits-unresolved','source-seam-endpoint-limits-identity-required','source-seam-endpoint-limits-work-limit','source-seam-endpoint-limits-unsupported','projective-endpoint-limits-unproven','source-seam-endpoint-distinct-tangent-limits'].includes(d.reason)
+  ||!Array.isArray(d.sides)||d.sides.length>4)return false
+ const seen=new Set<string>()
+ for(const s of d.sides){
+  if(!s||!integer(s.side,1)||typeof s.boundaryEnd!=='boolean'||typeof s.distinctTangentLimits!=='boolean'
+   ||!Array.isArray(s.components)||s.components.length!==2||!s.components.every(n=>Array.isArray(n)&&n.length===3&&n.every(interval))
+   ||(s.collapsedPoint!==null&&(!Array.isArray(s.collapsedPoint)||s.collapsedPoint.length!==3||!s.collapsedPoint.every(Number.isFinite)))
+   ||(s.sineSquaredBounds!==null&&(!interval(s.sineSquaredBounds)||s.sineSquaredBounds[0]<0||s.sineSquaredBounds[1]>1)))return false
+  const k=`${s.side}:${s.boundaryEnd}`;if(seen.has(k))return false;seen.add(k)
+  if(s.distinctTangentLimits!==(s.collapsedPoint!==null&&s.sineSquaredBounds!==null&&s.sineSquaredBounds[0]>angle))return false
+  if(s.sineSquaredBounds!==null&&s.components.some(n=>n.every(x=>x[0]<=0&&x[1]>=0)))return false
+ }
+ if(d.sides.length>0&&d.exactWork===0)return false
+ if(d.reason==='source-seam-endpoint-limits-unresolved'&&d.sides.some(s=>s.distinctTangentLimits))return false
+ if(d.reason==='source-seam-endpoint-distinct-tangent-limits'&&!d.sides.some(s=>s.distinctTangentLimits))return false
+ if(['source-seam-endpoint-limits-identity-required','projective-endpoint-limits-unproven'].includes(d.reason)&&(d.exactWork!==0||d.sides.length!==0))return false
+ return true
+}
 export function sourceBodyExpectation(options:SourceBodyOptions) {
  const d=options.definition,s=d?.shell
- if(d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
+ if((d?.kind!==undefined&&d.kind!=='projective-body')||(d?.kind==='projective-body'&&d.inverseShear!==undefined)||d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
   ||!Array.isArray(s.pairs)||s.pairs.length>524288||!Array.isArray(s.poles)||s.poles.length>1000000
   ||!integer(options.endpointSpans,100000)||options.endpointSpans<1)throw new Error('Invalid source Body request')
  const coverage=options.wallCoverage?coverageExpectation(options.wallCoverage):undefined
@@ -94,6 +128,7 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
  const wall=options.wallQualification?wallExpectation(options.wallQualification,s.regions.length):undefined
  const seam=options.seamQualification
  if(seam&&(!integer(seam.edge,s.pairs.length-1)||!seam.limits
+  ||(seam.endpointLimitsExactWork!==undefined&&(!integer(seam.endpointLimitsExactWork,100000000)||seam.endpointLimitsExactWork<1))
   ||!Number.isFinite(seam.limits.maxSineSquared)||seam.limits.maxSineSquared<0||seam.limits.maxSineSquared>=1
   ||!['cells','curveSpans','normalSpans'].every(k=>integer(seam.limits[k as 'cells'],100000)&&seam.limits[k as 'cells']>=1)))throw new Error('Invalid source seam qualification limits')
  const step=options.stepExchange
@@ -116,14 +151,14 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
- return {wallCoverage:coverage,wallScan:scan,wallQualification:wall,seamQualification:seam?key(seam):null,seamLimits:seam?{...seam.limits}:undefined,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
+ return {wallCoverage:coverage,wallScan:scan,wallQualification:wall,seamQualification:seam?key(seam):null,seamEndpointWork:seam?.endpointLimitsExactWork,seamLimits:seam?{...seam.limits}:undefined,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,...(d.kind?{kind:d.kind}:{}),shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
   absoluteError:options.limits.volume.absoluteError,segments,faceDisplay:face?{...face}:null}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {
  try {
   const r=value as SourceBodyResult
   if(!r||typeof r.admitted!=='boolean'||!Array.isArray(r.edges)||typeof r.diagnostics?.reason!=='string')return false
-  if(!r.admitted)return r.wallCoverage==null&&r.wallScan==null&&r.wallQualification==null&&r.seamQualification==null&&r.stepExchange==null&&r.sourceBody===null&&r.edges.length===0&&r.diagnostics.reason.startsWith('source-')&&r.diagnostics.reason!=='source-volume-and-orientation-qualified'
+  if(!r.admitted)return r.wallCoverage==null&&r.wallScan==null&&r.wallQualification==null&&r.seamQualification==null&&r.stepExchange==null&&r.sourceBody===null&&r.edges.length===0&&(r.diagnostics.reason.startsWith('source-')||['mapped-source-endpoints-unproven','mapped-source-composition-unproven','mapped-source-uses-not-opposite'].includes(r.diagnostics.reason))&&r.diagnostics.reason!=='source-volume-and-orientation-qualified'
   if(r.diagnostics.reason!=='source-volume-and-orientation-qualified'||!r.sourceBody||key(r.sourceBody)!==e.definition
    ||r.faceCount!==e.faces||r.poleCount!==e.poles||typeof r.reverseOrientation!=='boolean'
    ||!interval(r.volume)||r.volume[0]<=0||!Number.isFinite(e.absoluteError)||e.absoluteError<=0||r.volume[1]-r.volume[0]>e.absoluteError
@@ -140,6 +175,7 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
      ||!interval(seam.sineSquaredBounds)||seam.sineSquaredBounds[0]<0||seam.sineSquaredBounds[1]>limits.maxSineSquared)return false
    }else if(seam.sineSquaredBounds!==null||!['source-seam-work-limit','source-seam-angular-envelope-oblique','source-seam-resolution-limit','source-seam-endpoint-normal-unresolved'].includes(seam.reason)
     ||!interval(seam.uncertainCanonical)||seam.uncertainCanonical[0]<0||seam.uncertainCanonical[1]>1)return false
+   if(!validSeamEndpointLimits(seam,e.seamEndpointWork,limits.maxSineSquared))return false
   }else if(seam!=null)return false
   const step=r.stepExchange
   if(e.stepExchange){
@@ -176,6 +212,15 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
    &&Array.isArray(edge.parameterBounds)&&edge.parameterBounds.length===2&&edge.parameterBounds.every(interval)
    &&Array.isArray(edge.endpointBoxes)&&edge.endpointBoxes.length===2&&edge.endpointBoxes.every(box=>Array.isArray(box)&&box.length===3&&box.every(interval))&&displayValid(edge))
   if(!edgesValid)return false
+  if(seam?.endpointLimits){
+   const d=seam.endpointLimits,edge=r.edges[seam.request.edge]
+   if(!edge)return false
+   const box=edge.endpointBoxes[d.canonical as 0|1]
+   for(const side of d.sides){
+    const point=side.collapsedPoint
+    if(point&&!point.every((n,a)=>n>=box[a]![0]&&n<=box[a]![1]))return false
+   }
+  }
   const anchors=new Map<number,number[]>()
   for(const edge of r.edges){
    if(e.segments===0)continue

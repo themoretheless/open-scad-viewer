@@ -33,6 +33,7 @@ pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod circular_blend;
 pub mod feature_family;
+pub mod edge_tangency;
 pub mod analytic_ss;
 mod boolean_support;
 mod box_sphere_boolean;
@@ -1467,6 +1468,7 @@ pub mod trimmed_face_recipe;
 
 pub mod source_contact_point;
 
+pub mod source_carrier_point;
 pub mod source_boundary_fragment;
 
 pub mod source_contour_proposal;
@@ -1507,6 +1509,7 @@ pub mod source_plane_fiber;
 
 pub mod source_pole_plane_image;
 
+pub mod source_profile_boundary_identity;
 pub mod source_pole_paired_contact;
 
 pub mod source_paired_fiber_contact;
@@ -1517,6 +1520,10 @@ pub mod source_fiber_contact;
 
 pub mod source_affine_use;
 
+pub mod source_projective_use;
+pub mod source_projective_edge;
+pub mod source_projective_shell_restore;
+pub mod source_projective_body_restore;
 pub mod source_mapped_edge;
 
 pub mod trimmed_shell_recipe;
@@ -1575,6 +1582,13 @@ pub mod source_corner_plane_image;
 
 pub mod source_face_gap;
 
+pub mod source_planar_flux;
+
+pub mod source_retained_face_gap;
+pub mod source_wall_pair;
+pub mod source_wall_anchor;
+pub mod source_shared_chord_map;
+pub mod source_profile_body;
 pub mod source_material_segment;
 
 pub mod source_material_chord;
@@ -1587,8 +1601,6 @@ pub mod source_wall_scan;
 pub mod source_wall_coverage;
 
 pub mod source_wall_self_coverage;
-
-pub(crate) mod source_planar_flux;
 
 pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
 

@@ -3783,8 +3783,10 @@ fn import_step_direct(
         }
         (model, map)
     };
-    let identity = if capability == STEP_INTERCHANGE_V9_CAPABILITY
-        || allow_degenerate && occurrence_count > 1
+    // One occurrence can restore its original topology metadata. Repeated
+    // definitions require occurrence-specific identities to avoid collisions.
+    let identity = if occurrence_count > 1
+        && (capability == STEP_INTERCHANGE_V9_CAPABILITY || allow_degenerate)
     {
         crate::step_interchange::StepIdentityReport {
             preserved: false,

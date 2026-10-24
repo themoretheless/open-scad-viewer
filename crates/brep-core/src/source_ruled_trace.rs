@@ -1,0 +1,488 @@
+//! Exact projection of a ruled source support onto one unchanged NURBS curve.
+//! This reduction alone does not prove contact ownership or exclusion.
+use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+pub(crate) struct Certificate<'a> {
+    source: &'a Surface,
+    axes: [usize; 2],
+    linear: usize,
+    curve: Curve,
+}
+impl Certificate<'_> {
+    pub(crate) fn source(&self) -> &Surface {
+        self.source
+    }
+    pub(crate) fn axes(&self) -> [usize; 2] {
+        self.axes
+    }
+    pub(crate) fn linear_axis(&self) -> usize {
+        self.linear
+    }
+    pub(crate) fn curve(&self) -> &Curve {
+        &self.curve
+    }
+}
+pub(crate) fn certify(
+    source: &Surface,
+    axes: [usize; 2],
+    linear: usize,
+    max_controls: usize,
+) -> Result<Option<Certificate<'_>>> {
+    if linear > 1 || axes.iter().any(|&a| a > 2) || axes[0] == axes[1] || max_controls > 1000000 {
+        return Err(Error::new(
+            "BREP_RULED_TRACE",
+            "Choose distinct projection axes and bounded source work",
+        ));
+    }
+    let counts = [
+        source.control_points.len(),
+        source.control_points.first().map_or(0, Vec::len),
+    ];
+    if counts.iter().any(|&n| n == 0)
+        || counts[0]
+            .checked_mul(counts[1])
+            .is_none_or(|n| n > max_controls)
+    {
+        return Ok(None);
+    }
+    let degrees = [source.degree_u, source.degree_v];
+    let knots = [&source.knots_u, &source.knots_v];
+    if source
+        .control_points
+        .iter()
+        .any(|row| row.len() != counts[1] || row.iter().any(|p| p.len() != 3))
+        || source.weights.len() != counts[0]
+        || source.weights.iter().any(|row| row.len() != counts[1])
+        || (0..2).any(|axis| {
+            degrees[axis] >= counts[axis] || knots[axis].len() != counts[axis] + degrees[axis] + 1
+        })
+    {
+        return Ok(None);
+    }
+    source.validate()?;
+    let periodic = [source.periodic_u, source.periodic_v];
+    let k = knots[linear];
+    if degrees[linear] != 1
+        || counts[linear] != 2
+        || periodic[linear]
+        || k.len() != 4
+        || k[0] != k[1]
+        || k[2] != k[3]
+        || k[1] >= k[2]
+    {
+        return Ok(None);
+    }
+    let mut controls = Vec::new();
+    let mut weights = Vec::new();
+    for i in 0..counts[1 - linear] {
+        let (a, b) = if linear == 1 {
+            ([i, 0], [i, 1])
+        } else {
+            ([0, i], [1, i])
+        };
+        let p = &source.control_points[a[0]][a[1]];
+        let q = &source.control_points[b[0]][b[1]];
+        let w = source.weights[a[0]][a[1]];
+        if w <= 0. || w != source.weights[b[0]][b[1]] || axes.iter().any(|&axis| p[axis] != q[axis])
+        {
+            return Ok(None);
+        }
+        controls.push(axes.map(|axis| p[axis]).to_vec());
+        weights.push(w);
+    }
+    // Tensor-product partition of unity removes only the linear basis. The
+    // remaining basis, coordinates, weights, and domain are copied exactly.
+    let curve = Curve {
+        degree: degrees[1 - linear],
+        knots: knots[1 - linear].clone(),
+        control_points: controls,
+        weights,
+        periodic: periodic[1 - linear],
+    };
+    curve.validate()?;
+    Ok(Some(Certificate {
+        source,
+        axes,
+        linear,
+        curve,
+    }))
+}
+/// A positive-weight rational Bezier curve with strictly ordered scalar
+/// controls is strictly monotone on its complete original parameter domain.
+/// This certifies a simple trace, not ownership of any transition contact.
+pub(crate) struct MonotoneCoordinate<'t, 's> {
+    trace: &'t Certificate<'s>,
+    coordinate: usize,
+    increasing: bool,
+}
+impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    pub(crate) fn trace(&self) -> &'t Certificate<'s> {
+        self.trace
+    }
+    pub(crate) fn coordinate(&self) -> usize {
+        self.coordinate
+    }
+    pub(crate) fn increasing(&self) -> bool {
+        self.increasing
+    }
+    /// Exact coordinate image of the complete original trace. Clamping
+    /// preserves endpoint coordinates even with unequal positive weights.
+    pub(crate) fn coordinate_range(&self) -> [f64; 2] {
+        let c = self.trace.curve();
+        let a = c.control_points[0][self.coordinate];
+        let b = c.control_points[c.control_points.len() - 1][self.coordinate];
+        [a.min(b), a.max(b)]
+    }
+    pub(crate) fn parameter_domain(&self) -> [f64; 2] {
+        self.trace.curve().domain()
+    }
+    /// Monotonicity lifts certified endpoint evaluations to an enclosure of
+    /// every point on the requested subinterval, including both endpoints.
+    pub(crate) fn coordinate_enclosure(
+        &self,
+        domain: [f64; 2],
+        max_evaluations: usize,
+    ) -> Result<Option<[f64; 2]>> {
+        let full = self.parameter_domain();
+        if !domain.iter().all(|t| t.is_finite())
+            || domain[0] < full[0]
+            || domain[1] > full[1]
+            || domain[0] > domain[1]
+            || max_evaluations > 2
+        {
+            return Err(Error::new(
+                "BREP_RULED_TRACE",
+                "Bound a complete trace subinterval and endpoint work",
+            ));
+        }
+        let needed = if domain[0] == domain[1] { 1 } else { 2 };
+        if max_evaluations < needed {
+            return Ok(None);
+        }
+        let mut bounds = [f64::INFINITY, f64::NEG_INFINITY];
+        for t in if needed == 1 {
+            &domain[..1]
+        } else {
+            &domain[..]
+        } {
+            let v = nurbs_core::interval_eval::evaluate_interval(
+                self.trace.curve(),
+                nurbs_core::interval_eval::Interval::point(*t),
+            )?[self.coordinate];
+            bounds[0] = bounds[0].min(v.lo);
+            bounds[1] = bounds[1].max(v.hi);
+        }
+        Ok(Some(bounds))
+    }
+}
+/// Conservative parameter cover of all points whose certified coordinate
+/// can enter a target interval. Empty cover is a strict exclusion witness.
+pub(crate) struct CoordinatePreimage<'p, 't, 's> {
+    owner: &'p MonotoneCoordinate<'t, 's>,
+    target: [f64; 2],
+    pub(crate) domains: Vec<[f64; 2]>,
+    pub(crate) cells: usize,
+}
+impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
+    pub(crate) fn owner(&self) -> &'p MonotoneCoordinate<'t, 's> {
+        self.owner
+    }
+    pub(crate) fn target(&self) -> [f64; 2] {
+        self.target
+    }
+    /// Retain all candidates outside the definitely interior interval between
+    /// two uncertain endpoints. This split alone proves no contact ownership.
+    pub(crate) fn exterior_domains(&self, roots: [[f64; 2]; 2]) -> Result<Vec<[f64; 2]>> {
+        let full = self.owner.parameter_domain();
+        if roots.iter().any(|r| {
+            !r.iter().all(|v| v.is_finite()) || r[0] > r[1] || r[0] < full[0] || r[1] > full[1]
+        }) {
+            return Err(Error::new(
+                "BREP_RULED_TRACE",
+                "Bound both endpoint intervals in the original trace chart",
+            ));
+        }
+        let inner = [roots[0][1].min(roots[1][1]), roots[0][0].max(roots[1][0])];
+        if inner[0] >= inner[1] {
+            return Ok(self.domains.clone());
+        }
+        let mut out = Vec::new();
+        for d in &self.domains {
+            if d[0] <= inner[0] {
+                out.push([d[0], d[1].min(inner[0])]);
+            }
+            if d[1] >= inner[1] {
+                out.push([d[0].max(inner[1]), d[1]]);
+            }
+        }
+        Ok(out)
+    }
+}
+impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    pub(crate) fn coordinate_preimage<'p>(
+        &'p self,
+        target: [f64; 2],
+        max_cells: usize,
+    ) -> Result<CoordinatePreimage<'p, 't, 's>> {
+        if !target.iter().all(|v| v.is_finite()) || target[0] > target[1] || max_cells > 100000 {
+            return Err(Error::new(
+                "BREP_RULED_TRACE",
+                "Bound coordinate target and cover work",
+            ));
+        }
+        let mut out = CoordinatePreimage {
+            owner: self,
+            target,
+            domains: Vec::new(),
+            cells: 0,
+        };
+        let mut queue = std::collections::VecDeque::from([self.parameter_domain()]);
+        while let Some(domain) = queue.pop_front() {
+            if out.cells == max_cells {
+                out.domains.push(domain);
+                out.domains.extend(queue);
+                break;
+            }
+            out.cells += 1;
+            let bound = self
+                .coordinate_enclosure(domain, 2)?
+                .expect("complete endpoint work");
+            if bound[1] < target[0] || bound[0] > target[1] {
+                continue;
+            }
+            if bound[0] >= target[0] && bound[1] <= target[1] {
+                out.domains.push(domain);
+                continue;
+            }
+            let mid = domain[0] * 0.5 + domain[1] * 0.5;
+            if mid <= domain[0] || mid >= domain[1] {
+                out.domains.push(domain);
+                continue;
+            }
+            queue.push_back([domain[0], mid]);
+            queue.push_back([mid, domain[1]]);
+        }
+        Ok(out)
+    }
+}
+pub(crate) fn certify_monotone_coordinate<'t, 's>(
+    trace: &'t Certificate<'s>,
+    coordinate: usize,
+    max_edges: usize,
+) -> Result<Option<MonotoneCoordinate<'t, 's>>> {
+    if coordinate > 1 || max_edges > 1000000 {
+        return Err(Error::new(
+            "BREP_RULED_TRACE",
+            "Choose projected coordinate and bounded monotonicity work",
+        ));
+    }
+    let c = trace.curve();
+    let n = c.control_points.len();
+    if c.periodic
+        || c.degree == 0
+        || n != c.degree + 1
+        || n - 1 > max_edges
+        || c.knots.len() != 2 * n
+        || !c.knots[..n].iter().all(|k| *k == c.knots[0])
+        || !c.knots[n..].iter().all(|k| *k == c.knots[n])
+        || c.knots[0] >= c.knots[n]
+        || c.weights.iter().any(|w| *w <= 0.)
+    {
+        return Ok(None);
+    }
+    let increasing = c.control_points[1][coordinate] > c.control_points[0][coordinate];
+    if c.control_points.windows(2).any(|pair| {
+        let a = pair[0][coordinate];
+        let b = pair[1][coordinate];
+        if increasing { b <= a } else { b >= a }
+    }) {
+        return Ok(None);
+    }
+    // The rational derivative numerator is a positive sum over ordered
+    // control pairs: wi*wj*(xj-xi)*(j-i)*Bi*Bj/[t*(1-t)].
+    // Endpoint derivatives inherit the strict adjacent-control order.
+    Ok(Some(MonotoneCoordinate {
+        trace,
+        coordinate,
+        increasing,
+    }))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn monotone_trace_covers_nonunit_domain_and_refuses_folds_and_work_limits() {
+        let s = source(1);
+        let trace = certify(&s, [0, 1], 1, 6).unwrap().unwrap();
+        let proof = certify_monotone_coordinate(&trace, 1, 2).unwrap().unwrap();
+        assert!(std::ptr::eq(proof.trace(), &trace));
+        assert_eq!(proof.coordinate(), 1);
+        assert!(proof.increasing());
+        assert_eq!(proof.coordinate_range(), [0., 4.]);
+        assert_eq!(proof.parameter_domain(), [2., 5.]);
+        let interval = proof
+            .coordinate_enclosure([2.75, 4.25], 2)
+            .unwrap()
+            .unwrap();
+        for i in 0..=16 {
+            let t = 2.75 + 1.5 * i as f64 / 16.;
+            let point = trace.curve().evaluate(t).unwrap().point[1];
+            assert!(point >= interval[0] - 1e-12 && point <= interval[1] + 1e-12);
+        }
+        assert!(
+            proof
+                .coordinate_enclosure([2.75, 4.25], 1)
+                .unwrap()
+                .is_none()
+        );
+        assert!(proof.coordinate_enclosure([3., 3.], 0).unwrap().is_none());
+        assert!(proof.coordinate_enclosure([3., 3.], 1).unwrap().is_some());
+        assert!(proof.coordinate_enclosure([1., 4.], 2).is_err());
+        assert!(
+            proof
+                .coordinate_preimage([5., 6.], 1)
+                .unwrap()
+                .domains
+                .is_empty()
+        );
+        assert_eq!(
+            proof.coordinate_preimage([1., 2.], 0).unwrap().domains,
+            vec![[2., 5.]]
+        );
+        let cover = proof.coordinate_preimage([1., 2.], 31).unwrap();
+        assert!(cover.cells <= 31 && !cover.domains.is_empty());
+        assert!(std::ptr::eq(cover.owner(), &proof));
+        assert_eq!(cover.target(), [1., 2.]);
+        let full = proof.coordinate_preimage([0., 4.], 0).unwrap();
+        let roots = [[3., 3.1], [4., 4.1]];
+        assert_eq!(
+            full.exterior_domains(roots).unwrap(),
+            vec![[2., 3.1], [4., 5.]]
+        );
+        assert_eq!(
+            full.exterior_domains([roots[1], roots[0]]).unwrap(),
+            vec![[2., 3.1], [4., 5.]]
+        );
+        assert_eq!(
+            full.exterior_domains([[3., 4.], [3.5, 4.5]]).unwrap(),
+            vec![[2., 5.]]
+        );
+        assert!(full.exterior_domains([[1., 3.], [4., 4.1]]).is_err());
+        let endpoint = proof.coordinate_preimage([0., 0.], 31).unwrap();
+        assert!(endpoint.domains.iter().any(|d| d[0] <= 2. && d[1] >= 2.));
+        for i in 0..=100 {
+            let t = 2. + 3. * i as f64 / 100.;
+            let y = trace.curve().evaluate(t).unwrap().point[1];
+            if y >= 1. && y <= 2. {
+                assert!(cover.domains.iter().any(|d| t >= d[0] && t <= d[1]));
+            }
+        }
+        assert_eq!(proof.trace().curve().knots, vec![2., 2., 2., 5., 5., 5.]);
+        assert!(certify_monotone_coordinate(&trace, 1, 1).unwrap().is_none());
+        assert!(certify_monotone_coordinate(&trace, 2, 2).is_err());
+        let mut reversed = s.clone();
+        reversed.control_points.reverse();
+        reversed.weights.reverse();
+        let reverse = certify(&reversed, [0, 1], 1, 6).unwrap().unwrap();
+        assert!(
+            !certify_monotone_coordinate(&reverse, 1, 2)
+                .unwrap()
+                .unwrap()
+                .increasing()
+        );
+        let mut folded = s.clone();
+        for p in &mut folded.control_points[1] {
+            p[1] = 10.;
+        }
+        let fold = certify(&folded, [0, 1], 1, 6).unwrap().unwrap();
+        assert!(certify_monotone_coordinate(&fold, 1, 2).unwrap().is_none());
+    }
+    fn source(linear: usize) -> Surface {
+        let mut s = Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![2., 2., 2., 5., 5., 5.],
+            knots_v: vec![7., 7., 9., 9.],
+            control_points: (0..3)
+                .map(|i| {
+                    (0..2)
+                        .map(|j| vec![i as f64, (i * i) as f64, (i + j) as f64])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2], vec![0.75; 2], vec![1.25; 2]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        if linear == 0 {
+            s.control_points = (0..2)
+                .map(|j| (0..3).map(|i| s.control_points[i][j].clone()).collect())
+                .collect();
+            s.weights = (0..2)
+                .map(|j| (0..3).map(|i| s.weights[i][j]).collect())
+                .collect();
+            std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+            std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+        }
+        s
+    }
+    #[test]
+    fn ruled_trace_preserves_original_basis_and_borrowed_owner() {
+        for linear in [0, 1] {
+            let s = source(linear);
+            let proof = certify(&s, [0, 1], linear, 6).unwrap().unwrap();
+            assert!(std::ptr::eq(proof.source(), &s));
+            assert_eq!(proof.axes(), [0, 1]);
+            assert_eq!(proof.linear_axis(), linear);
+            assert_eq!(proof.curve().degree, 2);
+            assert_eq!(proof.curve().knots, vec![2., 2., 2., 5., 5., 5.]);
+            assert_eq!(proof.curve().weights, vec![1., 0.75, 1.25]);
+            assert_eq!(
+                proof.curve().control_points,
+                vec![vec![0., 0.], vec![1., 1.], vec![2., 4.]]
+            );
+            for parameter in [2., 2.75, 3.5, 4.25, 5.] {
+                let projected = proof.curve().evaluate(parameter).unwrap().point;
+                for along in [7., 7.5, 8., 8.5, 9.] {
+                    let uv = if linear == 1 {
+                        [parameter, along]
+                    } else {
+                        [along, parameter]
+                    };
+                    let original = s.evaluate(uv[0], uv[1]).unwrap().point;
+                    for axis in 0..2 {
+                        assert!((original[axis] - projected[axis]).abs() < 1e-12);
+                    }
+                }
+            }
+            let reversed = certify(&s, [1, 0], linear, 6).unwrap().unwrap();
+            assert_eq!(
+                reversed.curve().control_points,
+                proof
+                    .curve()
+                    .control_points
+                    .iter()
+                    .map(|p| vec![p[1], p[0]])
+                    .collect::<Vec<_>>()
+            );
+            assert!(certify(&s, [0, 1], linear, 5).unwrap().is_none());
+            assert!(certify(&s, [0, 1], linear, 0).unwrap().is_none());
+            assert!(certify(&s, [0, 0], linear, 6).is_err());
+        }
+    }
+    #[test]
+    fn ruled_trace_refuses_projection_and_weight_changes() {
+        let s = source(1);
+        let mut changed = s.clone();
+        changed.control_points[1][1][0] = f64::from_bits(1f64.to_bits() + 1);
+        assert!(certify(&changed, [0, 1], 1, 6).unwrap().is_none());
+        changed = s.clone();
+        changed.weights[1][1] = f64::from_bits(0.75f64.to_bits() + 1);
+        assert!(certify(&changed, [0, 1], 1, 6).unwrap().is_none());
+        changed = s.clone();
+        changed.control_points[1][1][2] += 100.;
+        assert!(certify(&changed, [0, 1], 1, 6).unwrap().is_some());
+        changed = s;
+        changed.weights[1].fill(-0.75);
+        assert!(certify(&changed, [0, 1], 1, 6).map_or(true, |proof| proof.is_none()));
+    }
+}

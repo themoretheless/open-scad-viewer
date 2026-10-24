@@ -42,7 +42,12 @@ pub fn inspect_sweep_with_projections(model:&Model,tolerance_uv:f64,limits:Limit
 }
 /// Generic authored carriers, including nonplanar caps, may request a bounded
 /// linear projection proof. No planar cap specialization is inferred.
+/// Explicit whole-chart injectivity work, including supported collapsed charts.
+/// Boundary proof still precedes nesting and independent shell orientation.
 pub fn inspect_with_linear(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize)->Result<Report> {
+    if !(1..=100000).contains(&max_linear_cells) {
+        return Err(Error::new("BREP_INVALID_INPUT", "Volume injectivity work must be in 1..100000"));
+    }
     inspect_impl(model,tolerance_uv,limits,max_linear_cells,None,&[])
 }
 fn inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
@@ -240,6 +245,17 @@ fn frozen_inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_ce
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_injectivity_budget_preserves_volume_requirements() {
+        let model=crate::cuboid([0.;3],[1.;3]).unwrap();
+        let before=model.clone();
+        for work in [0,100001] { assert!(inspect_with_linear(&model,1e-8,limits(),work).is_err()); }
+        let report=inspect_with_linear(&model,1e-8,limits(),1000).unwrap();
+        assert!(report.proven && report.boundary.proven);
+        assert!(report.nesting.as_ref().unwrap().roles_consistent==Some(true));
+        assert!(report.orientations.iter().all(|r|r.outward==Some(r.expected_outward)));
+        assert_eq!(model,before);
+    }
     #[test]
     fn orientation_rejects_invalid_limits_before_admitting_geometry() {
         let m=crate::cuboid([0.;3],[1.;3]).unwrap();

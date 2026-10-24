@@ -1,0 +1,55 @@
+{
+  "scope": "Bounded proposals for original certified rational UV roots, shared projective edges and material shell assembly",
+  "authority": "Original unique SourcePoint selector and fresh homogeneous exact curve equality; no rounded midpoint supplies evidence",
+  "limits": {
+    "denominator": 4096,
+    "candidates_per_axis": 64,
+    "candidate_pairs_per_root": 4096,
+    "integer_numerator_magnitude": 1099511627776,
+    "exact_work": "Shared caller budget including discovery, composition and endpoint re-verification"
+  },
+  "transport": "Accepted fractions are stored in the existing optional edge definition and replayed from original sources",
+  "evidence": {
+    "root_discovery": {
+      "passed": 1,
+      "log": "/tmp/source-rational-root-discovery-20261011.log"
+    },
+    "edge_discovery": {
+      "passed": 1,
+      "log": "/tmp/source-rational-root-discovery-edge-20261011.log"
+    },
+    "shell_discovery": {
+      "initial": {
+        "passed": 12,
+        "failed": 1,
+        "reason": "Two non-root edges emitted empty optional fraction metadata; corrected",
+        "log": "/tmp/source-rational-root-discovery-shell-20261011.log"
+      },
+      "corrected_control_passed": true,
+      "final_suite_log": "/tmp/source-rational-root-discovery-shell-final-20261011.log",
+      "status": "passed",
+      "passed": 13,
+      "failed": 0,
+      "seconds": 77.25
+    },
+    "final_fraction_regressions": {
+      "passed": 5,
+      "failed": 0,
+      "seconds": 0.94,
+      "log": "/tmp/source-rational-root-discovery-final-20261011.log",
+      "includes": [
+        "original root discovery and binary replay",
+        "irrational root refusal",
+        "automatic shared edge equals manual edge",
+        "automatic material shell equals manual shell",
+        "one-less exact work refusal"
+      ]
+    }
+  },
+  "limitations": [
+    "Midpoint-nearest numerator proposals are incomplete; failure means unproven",
+    "Irrational roots and general multispan root identity are not solved by rational discovery",
+    "This does not establish an embedded fillet solid, wall thickness or general self-intersection completeness",
+    "WASM publication unchanged"
+  ]
+}

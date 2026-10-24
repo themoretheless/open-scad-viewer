@@ -1,0 +1,46 @@
+// Partition D x D into L x L, L x R and R x R modulo endpoint
+// exchange on the same immutable face. This skips intermediate half-products,
+// not geometric candidates; unresolved children remain explicit queue entries.
+fn diagonal_children(cell:&ExpressionWallCell,axis:usize,midpoint:f64)->Option<[ExpressionWallCell;3]> {
+    if axis>=2 || cell.faces[0]!=cell.faces[1]
+        || cell.domains[0].map(|d|d.map(f64::to_bits))!=cell.domains[1].map(|d|d.map(f64::to_bits))
+        || !midpoint.is_finite() || midpoint<=cell.domains[0][axis][0] || midpoint>=cell.domains[0][axis][1] {
+        return None;
+    }
+    let mut left=cell.domains[0];let mut right=left;
+    left[axis][1]=midpoint;right[axis][0]=midpoint;
+    Some([[left,left],[left,right],[right,right]].map(|domains|
+        ExpressionWallCell{faces:cell.faces,domains,pending_reason:None}))
+}
+
+    #[test]
+    fn diagonal_partition_covers_all_endpoint_pairs_without_admission() {
+        let domain=[[-2.,2.],[3.,5.]];
+        let parent=ExpressionWallCell{faces:[7,7],domains:[domain;2],pending_reason:Some(ExpressionWallPendingReason::Budget)};
+        for axis in [0,1] {
+            let mid=if axis==0 {0.}else{4.};
+            let children=diagonal_children(&parent,axis,mid).unwrap();
+            assert!(children.iter().all(|c|c.faces==[7,7]&&c.pending_reason.is_none()));
+            let keys:std::collections::HashSet<_>=children.iter().map(product_key).collect();assert_eq!(keys.len(),3);
+            for u in [-2.,-1.,0.,1.,2.] {for v in [3.,3.5,4.,4.5,5.] {
+                for x in [-2.,-1.,0.,1.,2.] {for y in [3.,3.5,4.,4.5,5.] {
+                    let a=[[u,u],[v,v]];let b=[[x,x],[y,y]];
+                    assert!(children.iter().any(|c|
+                        (rectangle_contains(c.domains[0],a)&&rectangle_contains(c.domains[1],b))
+                        || (rectangle_contains(c.domains[0],b)&&rectangle_contains(c.domains[1],a))));
+                }}
+            }}
+            assert!(diagonal_children(&parent,axis,domain[axis][0]).is_none());
+            assert!(diagonal_children(&parent,axis,f64::NAN).is_none());
+        }
+        let different=ExpressionWallCell{faces:[7,8],domains:[domain;2],pending_reason:None};
+        assert!(diagonal_children(&different,0,0.).is_none());
+        let unequal=ExpressionWallCell{faces:[7,7],domains:[domain,[[-2.,1.],[3.,5.]]],pending_reason:None};
+        assert!(diagonal_children(&unequal,0,0.).is_none());
+        assert!(diagonal_children(&parent,2,0.).is_none());
+    }
+
+            if let Some(children)=diagonal_children(&cell,axis,midpoint) {
+                stack.extend(children);
+                continue;
+            }

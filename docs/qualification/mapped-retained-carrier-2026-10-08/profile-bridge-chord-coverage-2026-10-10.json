@@ -1,0 +1,26 @@
+{
+  "scope": "owned independent-profile Hermite normal-chord endpoint coverage",
+  "nativeRegression": {
+    "tests": 103,
+    "passed": true,
+    "seconds": 1.98
+  },
+  "checks": [
+    "zero budget retains full product",
+    "symmetric diagonal subdivision preserves parameter-product mass",
+    "complete planar endpoint coverage",
+    "genuine rational normal diameter remains in unresolved products",
+    "non-unit source charts u=[10,12], v=[-2,6] preserve complete planar exclusion",
+    "five increasing cell budgets retain unresolved products inside prior obligations",
+    "invalid domains, angles and excessive budgets reject even at zero work"
+  ],
+  "sources": {
+    "crates/nurbs-core/src/profile_bridge_chord_coverage.rs": "c9710d67e7e6aacf55ec5a7a6688acf914405505bd6b1fe46f7ad89cc05af077",
+    "crates/nurbs-core/src/profile_section_bridge.rs": "e0d9e8b41d613f75d58170aec337c01f0c9f6784e20678d940a5b7da5c79e3c2"
+  },
+  "limits": [
+    "normal chords only; no self-intersection or thickness admission",
+    "no closed B-rep assembly",
+    "not yet exposed in UI"
+  ]
+}

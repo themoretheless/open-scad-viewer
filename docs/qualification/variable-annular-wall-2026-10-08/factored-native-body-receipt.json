@@ -1,0 +1,48 @@
+{
+  "scope": "Native Body/bridge and TS transport only; packaged kernel still excludes factored normals",
+  "files": {
+    "factored-native-body.json.gz": {
+      "sha256": "a9fe3df075de939a781cd0dd0029765f4c99aee9d088f86fa35bacb9f543fffe",
+      "bytes": 448898
+    },
+    "factored-native-body.log.gz": {
+      "sha256": "8c6bfa6cd6dd0bddd992fc78c99743945d82bb0cc2752222f1cbe82085ebcf68",
+      "bytes": 6583
+    },
+    "factored-native-cuboid-tests.log.gz": {
+      "sha256": "288fd271c6318e8363eac619f09fb3846c3b600a16766884552ac871d9e207df",
+      "bytes": 5780
+    },
+    "factored-transport-tests.log.gz": {
+      "sha256": "231a66440b3b1354b9f017b9b96acb6e031c93f90d9ae0fe39de20c0a644521c",
+      "bytes": 260
+    },
+    "factored-transport-typecheck.log.gz": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "addedPairsZeroBased": [
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      2,
+      10
+    ],
+    [
+      3,
+      10
+    ]
+  ],
+  "remainingPairs": 169,
+  "wholeWallQualified": false,
+  "exactWork": 37683566,
+  "queries": 484,
+  "cells": 3575
+}

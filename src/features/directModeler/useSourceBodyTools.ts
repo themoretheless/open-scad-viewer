@@ -21,10 +21,11 @@ export interface SourceBodyToolsOptions {
   selectedBody: ComputedRef<DirectBody | undefined>
   sourceDisplayResults: ShallowRef<Record<string, SourceBodyResult>>
   sourceEdgeSelection: Ref<string>
+  isExpressionFaceHighlighted: (body: string, face: number) => boolean
 }
 
 export function useSourceBodyTools(options: SourceBodyToolsOptions) {
-  const { document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection } = options
+  const { document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection, isExpressionFaceHighlighted } = options
 const sourceStepWorker=createSolidPreviewWorker(),sourceStepPending=ref(false),sourceStepError=ref(''),sourceStepTolerance=ref(1e-7)
 const selectedSourceBody=computed(()=>(document.value.sourceBodies??[]).find(record=>sourceEdgeSelection.value.startsWith(record.id+':')))
 const sourceSeamWorker=createSolidPreviewWorker(),sourceSeamPending=ref(false),sourceSeamError=ref('')
@@ -39,6 +40,7 @@ const sourceSeamMessage=computed(()=>{
  const result=sourceSeamResult.value
  if(!result)return ''
  if(result.qualified)return label('Касательность подтверждена на всём ребре.','Tangency is qualified over the whole edge.')
+ if(result.endpointLimits?.sides.some(s=>s.distinctTangentLimits))return label('В концевой точке сходятся разные касательные плоскости: радиус выходит на острую кромку. Для гладкого конца измените переход или обработайте соседние рёбра.','The endpoint has distinct tangent planes: the radius returns to a sharp rim. For a smooth end, change the transition or blend adjacent edges.')
  if(result.reason==='source-seam-endpoint-normal-unresolved')return label('Нормаль на конце ребра не подтверждена. Проверьте концевой переход; повтор с тем же бюджетом не устраняет вырождение.','The endpoint normal is unresolved. Inspect the end transition; repeating the same budget does not resolve a singularity.')
  if(result.reason==='source-seam-angular-envelope-oblique')return label('Касательность в выбранном допуске не подтверждена. Проверьте сопряжение соседних граней.','Tangency within tolerance is unproven. Inspect the adjacent face transition.')
  return label('Проверка участка не завершена. Повторите расчёт или уточните геометрию и лимиты.','The interval check is incomplete. Retry or inspect the geometry and work limits.')
@@ -52,7 +54,7 @@ async function qualifySourceSeam(){
  try{
   const result=await sourceSeamWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
-   seamQualification:{edge:selected.index,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
+   seamQualification:{edge:selected.index,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
   if(generation!==sourceSeamGeneration||document.value!==source||sourceEdgeSelection.value!==selection||selectedSourceBody.value!==record||!props.open||isRestoreDisposed())return
   if(!result.admitted||!result.seamQualification)throw Error(result.diagnostics.reason)
   sourceSeamResult.value=result.seamQualification
@@ -97,6 +99,7 @@ function sourceWallFaceUncertain(body:string,face:number){
   ||!!(sourceWallScanResult.value?.thinFound&&sourceWallScanResult.value.witness?.endpoints.some(e=>e.face===face)))
 }
 function sourceWallFaceFill(body:string,face:number){
+ if(isExpressionFaceHighlighted(body,face))return '#ff825e'
  if(!sourceWallOpen.value||body!==selectedSourceBody.value?.id)return '#77b8b0'
  if(sourceWallFaceUncertain(body,face))return '#ff9977'
  return sourceWallGroups.value[0].includes(face)?'#58c4f2':sourceWallGroups.value[1].includes(face)?'#dfacff':'#77b8b0'
@@ -135,7 +138,7 @@ async function qualifySourceWall(scan=false,coverage=false){
  try{
   const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
-   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,adaptiveSelf:{planeControls:1000000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:100000,planeControls:1000000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,mixedProducts:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:1024,spansPerPair:4096,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000},retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},adaptiveSelf:{planeControls:1000000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:100000,planeControls:1000000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
     toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}})}})

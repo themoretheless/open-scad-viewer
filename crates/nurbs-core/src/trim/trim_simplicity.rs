@@ -331,6 +331,45 @@ fn adjacent_separated(a: &Curve, b: &Curve, join: &[f64]) -> bool {
         }
 }
 
+// Positive rational Bernstein coefficients prove a strict open-curve side
+// even when additional endpoint controls lie on the supporting line.
+fn adjacent_supported(a:&Curve,b:&Curve,join:&[f64],second_join:bool,cells:&mut usize,max_cells:usize)->bool {
+    use cad_predicates::{AuthoredScalar,Limits,Outcome,PredicateContext,Sign,SourceArena,ToleranceContext};
+    if [a,b].iter().any(|c|!bezier(c) || c.degree==0 || c.degree>32 || c.weights.iter().any(|w|*w<=0.)) {return false;}
+    let side=|anchor:&[f64],point:&[f64],cells:&mut usize|->Option<Sign> {
+        if point==join {return Some(Sign::Zero);}
+        if *cells==max_cells {return None;}*cells+=1;
+        let raw=[join[0],join[1],anchor[0],anchor[1],point[0],point[1]];
+        let arena=SourceArena::authored("original-adjacent-support-line",1,raw.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).ok()?;
+        let tolerance=ToleranceContext::default_valid();
+        // One charged cell permits at most 256 exact predicate work units.
+        let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:256,..Limits::default()},None);
+        match cad_predicates::orient2d(&mut ctx,[arena.leaf(0).ok()?,arena.leaf(1).ok()?],
+            [arena.leaf(2).ok()?,arena.leaf(3).ok()?],[arena.leaf(4).ok()?,arena.leaf(5).ok()?]).ok()?.outcome {
+            Outcome::Sign(s)=>Some(s),Outcome::Indeterminate(_)=>None,
+        }
+    };
+    for (strict,closed) in [(a,b),(b,a)] {
+        let endpoint=if strict.control_points[0].as_slice()==join {strict.control_points.last().unwrap()}
+            else if strict.control_points.last().unwrap().as_slice()==join {&strict.control_points[0]}else{return false;};
+        for anchor in closed.control_points.iter().filter(|p|p.as_slice()!=join) {
+            let Some(sa)=strict.control_points.iter().map(|p|side(anchor,p,cells)).collect::<Option<Vec<_>>>() else {return false;};
+            let Some(sb)=closed.control_points.iter().map(|p|side(anchor,p,cells)).collect::<Option<Vec<_>>>() else {return false;};
+            for sign in [Sign::Positive,Sign::Negative] {
+                let opposite=if sign==Sign::Positive {Sign::Negative}else{Sign::Positive};
+                if !sa.iter().all(|s|*s==Sign::Zero || *s==sign) || !sa.contains(&sign)
+                    || !sb.iter().all(|s|*s==Sign::Zero || *s==opposite) {continue;}
+                let index=if strict.control_points[0].as_slice()==join {sa.len()-1}else{0};
+                let far_is_shared=second_join && [closed.control_points.first().unwrap(),closed.control_points.last().unwrap()].contains(&endpoint);
+                let far_is_separated=(0..2).any(|axis|closed.control_points.iter().all(|p|endpoint[axis]<p[axis])
+                    || closed.control_points.iter().all(|p|endpoint[axis]>p[axis]));
+                if sa[index]==sign || far_is_shared || far_is_separated {return true;}
+            }
+        }
+    }
+    false
+}
+
 /// Sufficient whole-curve proof that two authored planar Bezier curves meet
 /// only at their exactly shared clamped endpoints. False means unproven.
 pub fn prove_endpoint_contacts_only(a: &Curve, b: &Curve) -> Result<bool> {
@@ -401,14 +440,17 @@ pub fn inspect(
             }
             let adjacent = b == a + 1 || (a == 0 && b == n - 1);
             let proven = if n == 2 {
-                bezier(&curves[a]) && bezier(&curves[b]) && lens_separated(&curves[a], &curves[b])
+                let join = curves[b].control_points[0].as_slice();
+                (bezier(&curves[a]) && bezier(&curves[b]) && lens_separated(&curves[a], &curves[b]))
+                    || adjacent_supported(&curves[a], &curves[b], join, true, &mut out.cells, max_cells)
             } else if adjacent {
                 let join = if b == a + 1 {
                     curves[b].control_points[0].as_slice()
                 } else {
                     curves[0].control_points[0].as_slice()
                 };
-                n > 2 && adjacent_separated(&curves[a], &curves[b], join)
+                (n > 2 && adjacent_separated(&curves[a], &curves[b], join))
+                    || adjacent_supported(&curves[a], &curves[b], join, false, &mut out.cells, max_cells)
             } else if out.cells < max_cells && control_boxes_separated(&curves[a], &curves[b]) {
                 out.cells += 1;
                 true

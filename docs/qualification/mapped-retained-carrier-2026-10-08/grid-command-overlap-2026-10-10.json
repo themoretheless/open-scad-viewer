@@ -1,0 +1,57 @@
+{
+  "fixed": true,
+  "bug": "Grid units select intercepted center click of Create rectangle button",
+  "fix": "Grid controls are positioned inside canvas viewport, outside command card",
+  "realBrowser": {
+    "port": 5199,
+    "rectangleCreated": [
+      24,
+      12
+    ],
+    "origin": [
+      30,
+      0
+    ],
+    "previewCancelledWithEscape": true,
+    "previewRetriedAndApplied": true,
+    "heightMm": 8,
+    "exportedMeshBounds": [
+      [
+        30,
+        54
+      ],
+      [
+        0,
+        12
+      ],
+      [
+        0,
+        8
+      ]
+    ],
+    "containsBrep": true,
+    "createButtonCenterHitsButtonAfterFix": true,
+    "gridUnitsControlCenterHitsControlAfterFix": true
+  },
+  "independentBrepDimensionsQualified": true,
+  "typecheckPassed": true,
+  "fullP0Qualified": false,
+  "sourceSha256": "b6968562b6afff3716b43552a36a70bebd2a9582e4f0c6da2ced3f0a07f99411",
+  "independentStep": {
+    "exportPath": "service export from actual browser document",
+    "uiStepButtonQualified": false,
+    "report": "restored-profile-step/occt-report.json",
+    "scope": "One declared rectangular extrusion; exact bounds, volume, validity and solid count"
+  },
+  "authoringTests": {
+    "passed": 10,
+    "command": "npx vitest run tests/directModelerUi.test.ts -t 'rectangle|slot|extrud|grid|workplane'"
+  },
+  "gridPopupContainedInViewport": {
+    "passed": true,
+    "viewportWidth": 318.234375,
+    "panelLeft": 51.9453125,
+    "panelRight": 281.9453125,
+    "panelHeight": 196
+  }
+}

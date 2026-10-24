@@ -1,0 +1,10 @@
+{
+  "test": "partial_rational_multispan_carrier_transfers_owned_transition_contact",
+  "cells": 100000,
+  "spans": 1000000,
+  "trimCells": 1000000,
+  "sourceManifest": "width-gram-chart-test-inputs-2026-10-10.json",
+  "report": "width-gram-partial-wall-max-2026-10-10.json",
+  "comparisonBaseline": "retained-intrinsic-cache-partial-wall-max-2026-10-10.json",
+  "scope": "Matched partial rational carrier request after interval inequality change; no geometry admission from budgets."
+}

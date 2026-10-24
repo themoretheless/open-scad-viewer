@@ -55,3 +55,12 @@ it('validates original endpoint witnesses and rejects foreign faces or malformed
  }
  r.qualified=false;expect(validWall(e,r,key)).toBe(false)
 })
+
+it('keeps chart-close refusal separate from material thickness qualification',()=>{
+ const e=option(),r=reply(e)
+ r.qualified=false;r.converged=false;r.intervalMm=null;r.reason='source-wall-clearance-unproven'
+ r.clearance={reason:'source-face-gap-chart-close',cells:2,spans:4,uncertainFaces:[0,1],uncertainUv:[[[0.5,0.5],[0.5,0.5]],[[0.5,0.5],[0.5,0.5]]]}
+ expect(validWall(e,r,key)).toBe(true)
+ r.qualified=true;r.intervalMm=[5.99,6.01]
+ expect(validWall(e,r,key)).toBe(false)
+})

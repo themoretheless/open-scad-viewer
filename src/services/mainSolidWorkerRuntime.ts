@@ -1,5 +1,8 @@
 import {createG2RunoutSurface} from './geometricG2'
 import {executeDirectTransaction} from './directTransactions'
+import {inspectProfileBridgeChords} from './nurbsProfileBridgeChords'
+import {inspectExpressionShell} from './expressionShellInspection'
+import {restoreExpressionShell} from './expressionShell'
 import {restoreSourceBody} from './sourceBody'
 import {qualifyNurbsOffsetContacts} from './nurbsOffsetContactQualification'
 import {fitNurbsOffsetEnvelope} from './nurbsOffsetEnvelopeFit'
@@ -67,6 +70,9 @@ case 'drawingPdf':return (await import('./drawingSheets')).vectorDrawingPdf(job.
 case 'drawingSheets':return (await import('./drawingSheets')).createDrawingSheets(job.bodies,job.options)
 case 'transaction':return executeDirectTransaction(job.document,job.script)
 
+    case 'profileBridgeChords':return inspectProfileBridgeChords(job.options)
+    case 'expressionShellInspect':return inspectExpressionShell(job.options)
+    case 'expressionShellRestore':return restoreExpressionShell(job.options)
     case 'sourceBodyRestore':return restoreSourceBody(job.options)
     case 'sketchSnaps':return sketchSnapGeometry([job.sketch])
     case 'bodySnaps':return bodySnapGeometry(job.body)

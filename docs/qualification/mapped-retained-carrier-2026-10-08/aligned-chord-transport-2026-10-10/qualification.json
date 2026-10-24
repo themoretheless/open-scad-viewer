@@ -1,0 +1,59 @@
+{
+  "scope": "optional endpoint-normal-aligned chord coverage after native embedding qualification; not unconstrained minimum thickness, material or solid admission",
+  "validation": {
+    "transportTests": 21,
+    "vueTypecheck": "passed",
+    "nativeBridgeCheck": "passed",
+    "nativeDispatchTest": {
+      "status": "passed",
+      "tests": 1,
+      "durationSeconds": 204.23,
+      "scope": "embedding/volume native recomputation plus zero-budget aligned-chord refusal for all 435 pairs"
+    },
+    "workerAndControllerTests": 26,
+    "perFaceControlsRegression": "passed",
+    "diffCheck": "passed",
+    "uiAndControllerTests": 22,
+    "staleThresholdAndBudgetTests": "2 passed with accepted initial/current responses and refused stale replies",
+    "combinedPanelControllerTransportTests": 29,
+    "workInvariantTransportAndControllerTests": 25,
+    "workInvariants": [
+      "initial_pairs_checked <= cells",
+      "mutually exclusive exclusions <= cells",
+      "zero-work complete claim refused"
+    ],
+    "archiveTests": 6,
+    "pendingRegionPanelTests": 12,
+    "largeFrontierRendering": "30557 regions use one numeric selector; SSR output growth below 100 characters versus 435 regions; browser rendering not yet qualified",
+    "pendingReasonPanelTests": 18
+  },
+  "sourceSHA256": {
+    "crates/geometry-bridge/src/cad_expression_shell.rs": "758ad210a5837275f374d7aee467acc20cdb2b0722bde093d9b152ed24a62b4d",
+    "src/services/expressionAlignedChords.ts": "7b02f416ed3aacef434b754869d1091d9b7dc449df05bbaa07236b8859a6346c",
+    "src/services/expressionShell.ts": "d6df2afbce7798acf2f74490a17975aabb211cd1f625828926f9e0c2f67a3326",
+    "src/services/expressionShellInspection.ts": "0e92a93a6943c0bc4cea1c53fa4d07a629c2cb0c40851da435be59502fd37105",
+    "src/components/ExpressionShellCheck.vue": "bc3eeeafbd147c7ed92d867e0c0c76dc5c0f0751344b6ce055dc595665937781"
+  },
+  "pending": [
+    "native dispatch test result",
+    "updated WASM build",
+    "actual worker/browser acceptance",
+    "whole-wall certificate"
+  ],
+  "uiImplementation": [
+    "distance threshold",
+    "saved/standard/extended work",
+    "explicit incomplete coverage and whole-thickness limitation",
+    "source-face candidate selection",
+    "existing cancel/retry/late-result controller"
+  ],
+  "wasmBuild": {
+    "session": 51104,
+    "status": "running",
+    "log": "/tmp/aligned-chord-wasm-build-20261010.log"
+  },
+  "uiFixtures": [
+    "ui-zero.json",
+    "ui-bounded.json"
+  ]
+}

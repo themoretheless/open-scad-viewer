@@ -5,12 +5,32 @@ use crate::{
     source_shell_incidence::Address,
 };
 use nurbs_core::{Result, curve::Curve, interval_eval::Interval as I};
+/// Only privately qualified native edges can supply complete Green carriers.
+pub trait FluxSupport:crate::source_seam_tangency::Carrier {
+    fn green_source(&self,side:usize)->Option<(&Curve,bool)>;
+}
+impl FluxSupport for crate::source_shared_edge::SharedEdge {
+    fn green_source(&self,side:usize)->Option<(&Curve,bool)> {
+        if self.ranges().is_some() || !self.covers_complete_canonical_source() {return None;}
+        Some((self.world(),self.reversed()[side]^self.uses()[side].reversed()))
+    }
+}
+impl FluxSupport for crate::source_projective_edge::Edge {
+    fn green_source(&self,side:usize)->Option<(&Curve,bool)> {
+        use crate::source_allowed_contact::Support;
+        if !self.maps_complete_source() || self.uses().iter().any(|u| {
+            let f=u.fragment();let d=f.curve().domain();
+            f.reversed() || !f.endpoints().iter().zip(d).all(|(end,t)|matches!(end,Endpoint::Parameter(p) if *p==t))
+        }) {return None;}
+        Some((self.world(),self.uses()[side].reversed()))
+    }
+}
 pub(crate) struct Report {
     pub bound: Option<I>,
     pub cells: usize,
 }
-pub(crate) fn bound(
-    geometry: &Geometry,
+pub(crate) fn bound<E:FluxSupport>(
+    geometry: &Geometry<E>,
     face: usize,
     axis: usize,
     origin: f64,
@@ -55,19 +75,16 @@ pub(crate) fn bound(
             let shared = &shell.edges()[i];
             let d = fragment.curve().domain();
             let ends = if fragment.reversed() { [d[1], d[0]] } else { d };
-            if shared.ranges().is_some()
-                || !shared.covers_complete_canonical_source()
-                || !(0..2)
+            let Some((source,reverse))=shared.green_source(slot) else {return Ok(out);};
+            if !(0..2)
                     .all(|e| matches!(fragment.endpoints()[e],Endpoint::Parameter(t) if t==ends[e]))
-                || shared
-                    .world()
+                || source
                     .control_points
                     .iter()
                     .any(|p| p[axis] != fixed)
             {
                 return Ok(out);
             }
-            let source = shared.world();
             let d = source.domain();
             let n = source.control_points.len();
             if source.periodic
@@ -88,7 +105,7 @@ pub(crate) fn bound(
                     .collect(),
                 ..source.clone()
             };
-            if shared.reversed()[slot] ^ fragment.reversed() {
+            if reverse {
                 c.control_points.reverse();
                 c.weights.reverse();
             }

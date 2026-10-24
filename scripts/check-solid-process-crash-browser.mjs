@@ -1,4 +1,5 @@
 import {isDeepStrictEqual} from 'node:util'
+import {createHash} from 'node:crypto'
 import {spawn} from 'node:child_process'
 import {once} from 'node:events'
 import {setTimeout as delay} from 'node:timers/promises'
@@ -21,7 +22,8 @@ const server=createServer(async(req,res)=>{
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page,child,exit
-const profile=await mkdtemp('/tmp/cad-crash-profile-'),origin=`http://127.0.0.1:${server.address().port}`
+const profile=await mkdtemp('/tmp/cad-crash-profile-'),origin=process.env.CAD_QUALIFICATION_URL??`http://127.0.0.1:${server.address().port}`
+assert.ok(['127.0.0.1','localhost'].includes(new URL(origin).hostname),'Crash test must target a local application')
 try{
  const {playwright}=await loadQualificationPlaywrightPackage()
  async function launch(){
@@ -46,7 +48,9 @@ try{
  async function saved(){await region().getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});await region().getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'});await region().getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.waitForFunction(()=>!document.body.innerText.includes('Восстанавливаю геометрию'))}
  async function exportDoc(file){if(await menu().evaluate(e=>!e.parentElement.open))await menu().click();const pending=page.waitForEvent('download');await region().getByRole('button',{name:'Скачать проект JSON',exact:true}).click();const item=await pending;await item.saveAs(path.join(directory,file));return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
  let context=await launch()
- const fixture=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/async-scene-edit/mouse/before.json','utf8'))
+ const fixturePath=process.env.CAD_CRASH_FIXTURE??'docs/qualification/cad-roadmap-2026-09-28/async-scene-edit/mouse/before.json'
+ const fixtureBytes=await readFile(fixturePath)
+ const fixture=JSON.parse(fixtureBytes.toString('utf8'))
  await page.evaluate(text=>localStorage.setItem('scad-solid-modeler-v1',text),JSON.stringify(fixture));await page.reload();await saved()
  const before=await exportDoc('before.json')
  const large={...before,groups:Array.from({length:60},(_,i)=>({name:`Group ${i}`,source:' '.repeat(70000)}))}
@@ -70,6 +74,8 @@ try{
  }
  if(await menu().evaluate(e=>e.parentElement.open))await menu().click()
  await page.screenshot({path:path.join(directory,'recovered-after-process-crash.png')})
- const report={browser:browser.version(),profile,phases,persistentProfileReopened:true,legacyDraftMigrated:true}
+ const wasm=await context.request.get(new URL('/wasm/geometry-kernel.wasm',origin).href)
+ assert.ok(wasm.ok())
+ const report={passed:true,browser:browser.version(),profile,origin,fixturePath,fixtureSha256:createHash('sha256').update(fixtureBytes).digest('hex'),wasmSha256:createHash('sha256').update(await wasm.body()).digest('hex'),phases,persistentProfileReopened:true,legacyDraftMigrated:true,scope:'Owned Chromium process SIGKILL before/after IndexedDB head publication, reopened persistent test profile and exact document recovery. No user browser process is killed.'}
  await writeFile(path.join(directory,'process-crash-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page&&!page.isClosed()){await page.screenshot({path:path.join(directory,'failure.png'),timeout:3000}).catch(()=>{})}throw error}finally{if(child&&child.exitCode===null&&!child.signalCode){child.kill('SIGKILL');await exit}await new Promise(resolve=>server.close(resolve))}

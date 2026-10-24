@@ -1,0 +1,25 @@
+{
+  "schema": "aligned-chord-parameter-invalidation/1",
+  "parameters": [
+    "minimumMm",
+    "maxSineSquared",
+    "toleranceUv",
+    "controls",
+    "cells",
+    "spans",
+    "domainCells"
+  ],
+  "assertions": [
+    "A parameter change clears the preceding diagnostics",
+    "The late previous response cannot populate the current result or clear current pending state",
+    "Retry accepts diagnostics for the entire current parameter set"
+  ],
+  "environment": "Vue controller harness with controlled response delivery; transport validators run on native-shaped replies",
+  "tests": {
+    "files": 2,
+    "passed": 29,
+    "failed": 0,
+    "log": "/tmp/aligned-chord-all-parameters-20261010.log"
+  },
+  "fullCommandMatrixQualified": false
+}

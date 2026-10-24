@@ -1,0 +1,38 @@
+{
+  "scope": "Local source-bound material chords and automatic thin witnesses on admitted projective bodies",
+  "implementation": [
+    "Original retained-face segment audit accepts native projective carriers",
+    "Normal chord certificates retain the identical immutable Body reference",
+    "Automatic per-face proposals use fresh boundary and normal qualification",
+    "Existing shared-edge callers retain default types"
+  ],
+  "evidence": {
+    "projective_cuboid": {
+      "passed": 1,
+      "seconds": 0.11,
+      "log": "/tmp/source-projective-thin-witness-20261011.log",
+      "checks": [
+        "10 mm normal chord on a 10 x 20 x 30 mm cuboid",
+        "Source Body pointer ownership retained",
+        "All six proposal faces visited",
+        "Threshold 11 mm produces thin witness",
+        "Threshold 9 mm produces no thin witness",
+        "Attempt-limited search reports incomplete proposals",
+        "Insufficient boundary/normal work refuses a certificate",
+        "Original Body definition unchanged"
+      ]
+    },
+    "material_regression": {
+      "passed": 35,
+      "failed": 0,
+      "seconds": 109.76,
+      "log": "/tmp/source-projective-material-regression-20261011.log"
+    }
+  },
+  "limitations": [
+    "A local witness does not establish a whole-wall minimum",
+    "General projective whole-wall lower coverage is still pending",
+    "The diagnostic control is a cuboid; general curved/root-clipped thickness qualification remains pending",
+    "WASM and UI integration unchanged"
+  ]
+}

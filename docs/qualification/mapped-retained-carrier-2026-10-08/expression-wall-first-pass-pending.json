@@ -1,0 +1,14 @@
+{
+  "initialPairsChecked": 435,
+  "totalPairs": 435,
+  "pendingDomains": 490,
+  "cells": 435,
+  "spans": 175,
+  "distanceExcluded": 148,
+  "angleExcluded": 0,
+  "complete": false,
+  "minimumMm": 1.0,
+  "maxSineSquared": 0.0001,
+  "toleranceUv": 0.05,
+  "fixtureSeconds": 318.68
+}

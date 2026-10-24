@@ -11,6 +11,9 @@
 use crate::curve::Curve;
 use crate::surface::Surface;
 use crate::{Result, check, numeric_err};
+#[path = "../curve_chord_error.rs"]
+mod chord_error;
+pub use chord_error::curve_affine_error_upper;
 
 /// Outward-rounded binary64 interval, promoted from the shared distance
 /// machinery for public use.

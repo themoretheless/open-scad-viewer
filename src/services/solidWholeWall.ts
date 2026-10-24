@@ -4,7 +4,7 @@ export interface WholeWallOptions extends MaterialOptions {
  normalAudit:NormalAudit;toleranceMm:number;maxDistanceCells:number;maxDistanceDomainCells:number
  coverageLimits:{maxFacePairs:number;maxPlaneControls:number;maxNormalSpans:number}
 }
-export interface WholeWallPair {faces:[number,number];lowerBoundMm:number|null;reason:'planar-self-excluded'|'coplanar-chord-excluded'|'endpoint-normal-excluded'|'self-pair-unresolved'|'distance-work-limit'|'complete-face-distance-bound'}
+export interface WholeWallPair {faces:[number,number];lowerBoundMm:number|null;reason:'planar-self-excluded'|'coplanar-chord-excluded'|'endpoint-normal-excluded'|'self-pair-unresolved'|'distance-work-limit'|'complete-face-distance-bound'|'control-hull-distance-bound'}
 export interface WholeWallResult {
  method:'bounded-whole-material-wall';scope:'aligned-material-chords-over-all-original-face-pairs'
  toleranceMm:number;maxDistanceCells:number;maxDistanceDomainCells:number;coverageLimits:WholeWallOptions['coverageLimits']
@@ -37,7 +37,7 @@ export function validWholeWall(e:ReturnType<typeof wholeWallExpectation>,value:u
   else if(p.reason==='coplanar-chord-excluded'||p.reason==='endpoint-normal-excluded'){if(a===b||p.lowerBoundMm!==null)return false}
   else if(p.reason==='self-pair-unresolved'){if(a!==b||p.lowerBoundMm!==0)return false}
   else if(p.reason==='distance-work-limit'){if(a===b||p.lowerBoundMm!==0)return false}
-  else if(p.reason==='complete-face-distance-bound'){if(a===b||p.lowerBoundMm===null||!Number.isFinite(p.lowerBoundMm)||p.lowerBoundMm<0)return false}
+  else if(p.reason==='complete-face-distance-bound'||p.reason==='control-hull-distance-bound'){if(a===b||p.lowerBoundMm===null||!Number.isFinite(p.lowerBoundMm)||p.lowerBoundMm<0)return false}
   else return false
   if(p.lowerBoundMm!==null)lower=Math.min(lower,p.lowerBoundMm)
   if(++b===e.faces){a++;b=a}

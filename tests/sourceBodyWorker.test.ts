@@ -1,10 +1,14 @@
-import {createSourceBodyRecord} from '../src/services/sourceBodyArchive'
+import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
-import {readFileSync,writeFileSync} from 'node:fs'
+import {readFileSync,writeFileSync,appendFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {gunzipSync} from 'node:zlib'
+import artifactIdentity from '../src/generated/geometry-kernels/identity'
+const wasmSha256=createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex')
+expect(artifactIdentity.sha256).toBe(wasmSha256)
+if(process.env.CAD_EXPECTED_WASM_SHA256)expect(wasmSha256).toBe(process.env.CAD_EXPECTED_WASM_SHA256)
 import {Worker} from 'node:worker_threads'
 import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
@@ -21,7 +25,7 @@ const timings:unknown[]=[]
 class NodePort implements MainSolidPort {
  onmessage:MainSolidPort['onmessage']=null;onerror:MainSolidPort['onerror']=null;onmessageerror:MainSolidPort['onmessageerror']=null
  constructor(readonly worker:Worker){
-  worker.on('message',data=>{if(data.kind==='sourceBodyRestore'&&data.timing)timings.push({id:data.id,ok:data.ok,admitted:data.result?.admitted,...data.timing});this.onmessage?.({data} as MessageEvent)})
+  worker.on('message',data=>{if(data?.__webWorkerHarness==='artifact'){expect(data.identity).toEqual(artifactIdentity);return}if(data.kind==='sourceBodyRestore'&&process.env.CAD_SOURCE_WORKER_RAW)writeFileSync(process.env.CAD_SOURCE_WORKER_RAW,JSON.stringify(data,null,2)+'\n');if(data.kind==='sourceBodyRestore'&&data.timing)timings.push({id:data.id,ok:data.ok,admitted:data.result?.admitted,...data.timing});this.onmessage?.({data} as MessageEvent)})
   worker.on('error',e=>this.onerror?.({message:e.message} as ErrorEvent))
   worker.on('messageerror',()=>this.onmessageerror?.({} as MessageEvent))
  }
@@ -33,12 +37,25 @@ afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(
 function realClient(){
  const client=new MainSolidWorkerClient(()=>{
   const worker=new Worker(new URL('./fixtures/web-worker-node-harness.mjs',import.meta.url),{
-   workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false}})
+   workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false,expectedArtifact:artifactIdentity}})
   workers.push(worker);return new NodePort(worker)
  });clients.push(client);return client
 }
 const denied:SourceBodyResult={admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'source-volume-initial-work-limit',incidence:{},embedding:{},volume:{}}}
 function reply(port:Port,result:SourceBodyResult){port.onmessage?.({data:{version:1,id:port.requests.at(-1)!.id,kind:'sourceBodyRestore',ok:true,result}} as MessageEvent)}
+it('accepts native mapped-edge refusals without accepting geometry or success labels',()=>{
+ const expected=sourceBodyExpectation(options())
+ for(const reason of ['mapped-source-endpoints-unproven','mapped-source-composition-unproven','mapped-source-uses-not-opposite']){
+  const result={...structuredClone(denied),diagnostics:{...denied.diagnostics,reason}}
+  expect(validSourceBody(expected,result)).toBe(true)
+  expect(validSourceBody(expected,{...result,sourceBody:options().definition})).toBe(false)
+  expect(validSourceBody(expected,{...result,stepExchange:{prepared:true}})).toBe(false)
+ }
+ for(const reason of ['mapped-source-shared-edge-qualified','source-volume-and-orientation-qualified','unexpected']){
+  expect(validSourceBody(expected,{...structuredClone(denied),diagnostics:{...denied.diagnostics,reason}})).toBe(false)
+ }
+})
+
 it('restores original source definitions through the real WASM CAD worker',async()=>{
  const o={...options(),displaySegments:8,faceDisplay:{divisions:4,toleranceUv:1e-8,domainCellsPerFace:10000}},before=JSON.stringify(o),client=realClient()
  const start=performance.now()
@@ -110,9 +127,9 @@ it('restores original source definitions through the real WASM CAD worker',async
 },120000)
 it('supersedes a source restore and ignores its late response',async()=>{
  const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const first=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:0,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}}).catch(e=>e.code)
+ const first=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:0,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}}).catch(e=>e.code)
  const late=ports[0]!.onmessage!
- const second=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:1,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}})
+ const second=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:1,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}})
  expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
  late({data:{version:1,id:1,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
  reply(ports[1]!,denied);expect(await second).toEqual(denied)
@@ -206,7 +223,7 @@ it.each([
  expect(parseDirectDocument(serializeDirectDocument(history.document)).sourceBodies![0]!.source).toEqual(record.source)
  const documentOutput=process.env[documentEnv],reportOutput=process.env[reportEnv]
  if(documentOutput)writeFileSync(documentOutput,serializeDirectDocument(document))
- if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
+ if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:wasmSha256,restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
 },120000)
 
 it('exchanges original curved root carriers through real WASM and worker STEP gates',async()=>{
@@ -309,7 +326,7 @@ it('certifies automatically searched annular wall thickness through real WASM wo
   results.push(wall)
  }
  if(process.env.CAD_SOURCE_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Selected annular flat face groups only; no full body wall coverage or UI proof.'},null,2)+'\n')
 },120000)
 
@@ -358,7 +375,7 @@ it('qualifies curved annular cavity walls through original WASM worker',async()=
  expect(validSourceBody(sourceBodyExpectation(tooThick),staleWitness)).toBe(false)
  expect(refused.wallQualification!.search.attempts).toBe(54);expect(refused.wallQualification!.search.refused).toBe(0)
  if(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,wall,refusedWall:refused.wallQualification,scope:'Original selected outer/inner cylinder unions with cavity, not whole body wall coverage.'},null,2)+'\n')
 },120000)
 
@@ -382,7 +399,7 @@ it('discovers an original thin wall without selected groups through real WASM wo
   results.push(scan)
  }
  if(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Finite all-face original normal proposals; discovered local thin wall, no whole-wall safety certificate.'},null,2)+'\n')
 },180000)
 
@@ -405,27 +422,89 @@ it('cancels automatic scan when its threshold changes and ignores the late reply
 it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const [pairs,adaptive] of [[1,false],[378,false],[378,true]] as const){
+ for(const [pairs,adaptive,products,factored,pole,expanded,refinement] of [[1,false,0,false,false,false,false],[378,false,0,false,false,false,false],[378,true,0,false,false,false,false],[378,false,1,false,false,false,false],[378,false,50000,false,false,false,false],[378,true,50000,false,false,false,false],[378,true,50000,true,false,false,false],[378,true,50000,true,true,false,false],[378,true,50000,true,true,true,false],[378,true,50000,true,true,true,true]] as const){
   const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
-   ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096}}:{}),
-   limits:{pairs,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
-  const r=await client.run({kind:'sourceBodyRestore',options})
+   ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:expanded?50000:10000,spans:100000,cellsPerFace:expanded?8192:512,spansPerFace:expanded?10000:4096,...(refinement?{refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}}:{}),...(pole?{pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}}:{})}}:{}),
+   ...(factored?{factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128}}:{}),
+   ...(products?{normalProducts:{cells:products,cellsPerPair:128}}:{}),
+   limits:{pairs,planeControls:10000,normalSpans:products?20000:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
+  const caseStarted=performance.now(),caseIndex=results.length
+  const trace=(event:unknown)=>{if(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT)appendFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_CASE_REPORT,JSON.stringify(event)+'\n')}
+  trace({phase:'started',caseIndex,options:options.wallCoverage,wasmSha256})
+  const r=await client.run({kind:'sourceBodyRestore',options},{onTiming:timing=>trace({phase:'timing',caseIndex,timing})})
+  trace({phase:'completed',caseIndex,elapsedMs:performance.now()-caseStarted,pending:r.wallCoverage?.pairs.filter(p=>!p.proven).length})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
   const coverage=r.wallCoverage!;expect(coverage.request).toEqual(options.wallCoverage)
   expect(coverage.totalPairs).toBe(378);expect(coverage.pairs).toHaveLength(pairs)
   expect(coverage.enumerationComplete).toBe(pairs===378)
   expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
   if(pairs===378){
-   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(adaptive?255:257)
-   expect(coverage.cells).toBe(1000);expect(coverage.normalSpans).toBe(adaptive?653:657)
-   expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
+   if(products){
+    if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(refinement?160:expanded?161:pole?167:factored?169:adaptive?173:177)
+    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(255)
+    expect(coverage.normalProductCells).toBeGreaterThan(0)
+    expect(coverage.normalProductCells).toBeLessThanOrEqual(products)
+    const missing=structuredClone(r);delete missing.wallCoverage!.normalProductCells
+    expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
+    const over=structuredClone(r);over.wallCoverage!.normalProductCells=products+1
+    expect(validSourceBody(sourceBodyExpectation(options),over)).toBe(false)
+    const prior=results[1]!
+    for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
+   }else if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
+   else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(255)
+   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(factored?20000:products===50000?(adaptive?3916:3922):adaptive?36:42)
+   expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(!refinement)
+  }
+  if(factored){
+   expect(coverage.factoredExactWork).toBeGreaterThan(0);expect(coverage.factoredExactWork).toBeLessThanOrEqual(100000000)
+   expect(coverage.factoredQueries).toBeGreaterThan(0);expect(coverage.factoredQueries).toBeLessThanOrEqual(10000)
+   expect(coverage.factoredProductCells).toBeGreaterThan(0);expect(coverage.factoredProductCells).toBeLessThanOrEqual(10000)
+   const prior=results.at(-1)!
+   for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
+   expect(coverage.pairs.filter(p=>p.reason==='source-wall-factored-normal-pair-excluded').map(p=>p.faces)).toEqual([[0,12],[0,13],[2,10],[3,10]])
+   for(const field of ['factoredExactWork','factoredQueries','factoredProductCells'] as const){
+    const missing=structuredClone(r);delete missing.wallCoverage![field]
+    expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
+   }
   }
   if(adaptive){
    const a=coverage.adaptiveSelf!;expect(a.faces).toHaveLength(27)
-   expect(a.faces.filter(f=>f.qualified)).toHaveLength(16)
-   expect(a.cells).toBe(5760);expect(a.spans).toBe(21010)
-   expect(a.allSelfPairsQualified).toBe(false)
-   expect(coverage.pairs.filter(p=>p.reason==='source-wall-self-certified')).toHaveLength(16)
+   const qualifiedFaces=a.faces.filter(f=>f.qualified).map(f=>f.face)
+   // Previously certified original face identities must survive stronger bounds.
+   for(const face of [1,2,3,4,6,9,11,12,13,14,15,18,19,22,23,26])expect(qualifiedFaces).toContain(face)
+   expect(a.cells).toBeLessThanOrEqual((expanded?50000:10000)+(pole?100000:0)+(refinement?100000:0));expect(a.spans).toBeLessThanOrEqual((pole?200000:100000)+(refinement?100000:0))
+   if(pole){
+    for(const face of [0,10])expect(qualifiedFaces).toContain(face)
+    const prior=results.at(-1)!
+    for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
+    for(const [counter,max] of [['poleExactWork',100000000],['poleCells',100000],['poleSpans',100000]] as const){
+     expect(a[counter]).toBeGreaterThan(0);expect(a[counter]).toBeLessThanOrEqual(max)
+     const missing=structuredClone(r);delete missing.wallCoverage!.adaptiveSelf![counter]
+     expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
+    }
+   }
+   if(expanded&&!refinement){expect(qualifiedFaces).toHaveLength(26);expect(a.faces.filter(f=>!f.qualified).map(f=>f.face)).toEqual([5])}
+   expect(a.allSelfPairsQualified).toBe(refinement)
+   expect(coverage.pairs.filter(p=>p.reason==='source-wall-self-certified').map(p=>p.faces[0])).toEqual(qualifiedFaces)
+   for(const face of a.faces){
+    expect(face.endpointExchangeSymmetric).toBe(true)
+    expect(face.unresolvedPairs).toHaveLength(face.pending)
+    expect(face.uncertain).toEqual(face.unresolvedPairs!.at(-1)??null)
+   }
+   if(!refinement){
+   const pendingFace=a.faces.find(f=>!f.qualified)!
+   expect(pendingFace.unresolvedPairs!.length).toBeGreaterThan(0)
+   const missing=structuredClone(r);missing.wallCoverage!.adaptiveSelf!.faces[pendingFace.face].unresolvedPairs=[]
+   expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
+   }
+   if(refinement){
+    expect(qualifiedFaces).toHaveLength(27)
+    for(const counter of ['refinementCells','refinementSpans'] as const){
+     expect(a[counter]).toBeGreaterThan(0);expect(a[counter]).toBeLessThanOrEqual(100000)
+     const missing=structuredClone(r);delete missing.wallCoverage!.adaptiveSelf![counter]
+     expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
+    }
+   }
    const wrong=structuredClone(r);wrong.wallCoverage!.adaptiveSelf!.faces[0].face=99
    expect(validSourceBody(sourceBodyExpectation(options),wrong)).toBe(false)
   }
@@ -436,13 +515,13 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   results.push(coverage)
  }
  if(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Continuous original all-pair coverage with explicit curved self-pair refusals.'},null,2)+'\n')
 },180000)
 
 it('cancels continuous coverage on threshold changes and ignores its late reply',async()=>{
  const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const wallCoverage={minimumMm:5.99,adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
+ const wallCoverage={minimumMm:5.99,retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
  const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}}).catch(e=>e.code)
  const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
  const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage:{...wallCoverage,minimumMm:6.01}}})
@@ -459,9 +538,9 @@ it('cancels continuous coverage on threshold changes and ignores its late reply'
 it('qualifies the original cuboid whole-wall threshold through real WASM worker',async()=>{
  const definition=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-wall-cuboid-body.json.gz',import.meta.url))).toString())
  const client=realClient(),results=[],started=performance.now()
- for(const [minimumMm,pairs,qualified] of [[9.99,21,true],[10.01,21,false],[9.99,20,false]] as const){
+ for(const [minimumMm,pairs,normalSpans,qualified] of [[9.99,21,10000,true],[10.01,21,10000,false],[9.99,20,10000,false],[9.99,21,6,true],[9.99,21,1,false]] as const){
   const o:SourceBodyOptions={...options(),definition,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm,adaptiveSelf:{planeControls:10000,cells:1,spans:1,cellsPerFace:1,spansPerFace:1},
-   limits:{pairs,planeControls:10000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
+   limits:{pairs,planeControls:10000,normalSpans,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
   const r=await client.run({kind:'sourceBodyRestore',options:o})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
   expect(r.wallCoverage!.adaptiveSelf!.allSelfPairsQualified).toBe(true)
@@ -469,10 +548,267 @@ it('qualifies the original cuboid whole-wall threshold through real WASM worker'
   expect(coverage.totalPairs).toBe(21);expect(coverage.pairs).toHaveLength(pairs)
   expect(coverage.lowerMm).toBe(qualified?minimumMm:null)
   expect(coverage.enumerationComplete).toBe(pairs===21)
+  expect(coverage.normalSpans).toBeLessThanOrEqual(Math.min(normalSpans,6))
   if(qualified){expect(coverage.pairs.every(p=>p.proven)).toBe(true);expect(coverage.cells).toBe(3)}
   results.push(coverage)
  }
  if(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT,JSON.stringify({
-  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  wasmSha256:wasmSha256,
   elapsedMs:performance.now()-started,results,scope:'Original admitted 10 x 20 x 30 mm cuboid, complete aligned wall lower threshold.'},null,2)+'\n')
 },120000)
+
+it('preserves original pair proofs when close-chart refusals release gap work through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ for(const expanded of [false,true]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
+   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
+    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
+    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
+   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:expanded?100000:1000,gapSpans:expanded?100000:2000,maxSineSquared:1e-6}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const coverage=r.wallCoverage!;expect(coverage.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+  expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
+  if(expanded){
+   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(61)
+   expect(coverage.pairs.some(p=>p.reason==='source-face-gap-chart-close'&&!p.proven)).toBe(true)
+   for(const prior of results[0]!.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===prior.faces[0]&&p.faces[1]===prior.faces[1])?.proven).toBe(true)
+  }
+  results.push(coverage)
+ }
+ if(process.env.CAD_SOURCE_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_GAP_WORKER_REPORT,JSON.stringify({
+  wasmSha256:wasmSha256,
+  results,scope:'Real-worker near-normal wall coverage; close chart points are refusals, not material witnesses.'},null,2)+'\n')
+},180000)
+
+it('qualifies bounded retained face products without losing prior proofs through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[],elapsedMs:number[]=[]
+ for(const retained of [false,true]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
+   ...(retained?{retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8}}:{}),
+   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
+    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
+    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
+   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
+  const started=performance.now()
+  const r=await client.run({kind:'sourceBodyRestore',options:o});elapsedMs.push(performance.now()-started);expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull();expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+  expect(c.pairs.filter(p=>!p.proven)).toHaveLength(retained?45:61)
+  if(retained){
+   const d=c.retainedGap!;expect(d.pairs).toHaveLength(61);expect(d.pairs.filter(p=>p.qualified)).toHaveLength(16)
+   for(const old of results[0]!.pairs.filter(p=>p.proven))expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
+   for(const mutate of [
+    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.domainCells++,
+    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.pairs[0].faces=[0,0],
+    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.pairs.find(p=>!p.qualified)!.unresolvedProducts=[],
+    (r:SourceBodyResult)=>r.wallCoverage!.wholeWallQualified=true,
+   ]){const changed=structuredClone(r);mutate(changed);expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)}
+  }
+  results.push(c)
+ }
+ if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,results,elapsedMs,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
+},180000)
+
+it('qualifies mixed retained wall products through real WASM and preserves every earlier proof',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ if(process.env.CAD_MIXED_WALL_UI_DOCUMENT){
+  await warmGeometryKernel()
+  const record=createSourceBodyRecord('annular-mixed-wall','Кольцевая деталь — контроль толщины',{...base,displaySegments:8})
+  writeFileSync(process.env.CAD_MIXED_WALL_UI_DOCUMENT,serializeDirectDocument({...emptyDirectDocument(),sourceBodies:[record]}))
+ }
+ try{for(const mixed of [false,true]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
+   ...{retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8}},
+   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
+    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
+    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
+   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
+  if(mixed)o.wallCoverage!.mixedProducts={cells:100000,spans:100000,domainCells:1000000,cellsPerPair:1024,spansPerPair:4096,
+   domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000}
+  const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options:o})
+  results.push({elapsedMs:performance.now()-started,result:r})
+  if(process.env.CAD_MIXED_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_MIXED_WALL_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,results},null,2)+'\n')
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull()
+  expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+  expect(c.pairs.filter(p=>!p.proven)).toHaveLength(mixed?28:45)
+  if(mixed){
+   expect(c.mixedProducts!.pairs).toHaveLength(45)
+   expect(c.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(17)
+   // Compare continuous UV/direction qualification against the native original-body replay.
+   const native=JSON.parse(readFileSync(new URL('../docs/qualification/projective-editor-2026-10-13/mixed-wall-native-baseline.json',import.meta.url),'utf8')).automatic
+   expect(c.factoredQueries).toBe(native.factoredQueries)
+   expect(c.factoredExactWork).toBe(native.factoredExactWork)
+   expect(c.mixedProducts!.cells).toBe(native.cells)
+   expect(c.mixedProducts!.spans).toBe(native.spans)
+   expect(c.mixedProducts!.normalSpans).toBe(native.normalSpans)
+   expect(c.mixedProducts!.domainCells).toBe(native.domainCells)
+   expect(c.mixedProducts!.pairs.map(p=>[p.faces,p.qualified,p.cells,p.unresolvedProducts.length]))
+    .toEqual(native.pairs.map((p:{faces:number[];qualified:boolean;cells:number;unresolvedProducts:number})=>[p.faces,p.qualified,p.cells,p.unresolvedProducts]))
+
+   for(const old of results[0]!.result.wallCoverage!.pairs.filter(p=>p.proven))
+    expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
+   for(const mutate of [
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.normalSpans++,
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.pairs.find(p=>!p.qualified)!.unresolvedProducts=[],
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.pairs.find(p=>p.qualified)!.faces=[0,0],
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts=null,
+    (r:SourceBodyResult)=>r.wallCoverage!.wholeWallQualified=true,
+   ]){const forged=structuredClone(r);mutate(forged);expect(validSourceBody(sourceBodyExpectation(o),forged)).toBe(false)}
+  }
+ }}finally{client.dispose()}
+},180000)
+
+it('admits an exact mapped root chain without promoting its separate retained halves through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...o}=request,client=realClient(),r=await client.run({kind:'sourceBodyRestore',options:o})
+ if(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT)writeFileSync(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,result:r,scope:'Closed mapped root chain admission, original definitions and native endpoint ownership.'},null,2)+'\n')
+ expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+ expect(r.faceCount).toBe(4);expect(r.edges).toHaveLength(7)
+ expect(r.sourceBody).toEqual(o.definition)
+ expect(r.volume![0]).toBeLessThanOrEqual(1/6);expect(r.volume![1]).toBeGreaterThanOrEqual(1/6)
+ const counts=new Map<number,number>();r.edges.flatMap(e=>e.vertices).forEach(v=>counts.set(v,(counts.get(v)??0)+1))
+ expect(counts.size).toBe(5)
+ const root=[...counts].find(([,count])=>count===2)![0]
+ const halves=r.edges.filter(e=>e.vertices.includes(root));expect(halves).toHaveLength(2)
+ for(let axis=0;axis<3;axis++){
+  const a=halves[0]!.endpointBoxes[halves[0]!.vertices.indexOf(root)]![axis]!,b=halves[1]!.endpointBoxes[halves[1]!.vertices.indexOf(root)]![axis]!
+  expect(Math.max(a[0],b[0])).toBeLessThanOrEqual(Math.min(a[1],b[1]))
+ }
+ client.dispose()
+},180000)
+
+it('restores independently partitioned knot-root curves through STEP, refusal and history',async()=>{
+ const request=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json',import.meta.url),'utf8'))
+ const native=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-native-2026-10-10.json',import.meta.url),'utf8')).result
+ const {op:_op,...options}=request,client=realClient()
+ try{
+  const result=await client.run({kind:'sourceBodyRestore',options})
+  expect(result.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),result)).toBe(true)
+  expect(result).toEqual(native)
+  expect(result.sourceBody).toEqual(options.definition)
+  expect(result.stepExchange?.prepared).toBe(true)
+  const record=createSourceBodyRecord('knot-root-chain','Knot root chain',options)
+  const history=new DirectHistory({...emptyDirectDocument(),sourceBodies:[record]})
+  const changed=history.document;changed.sourceBodies![0]!.name='Renamed knot root chain';history.commit(changed)
+  expect(history.undo().sourceBodies).toEqual([record]);history.redo()
+  const reloaded=parseDirectDocument(serializeDirectDocument(history.document))
+  const replay=await client.run({kind:'sourceBodyRestore',options:sourceBodyRecordOptions(reloaded.sourceBodies![0]!)})
+  expect(replay.admitted).toBe(true);expect(replay.sourceBody).toEqual(result.sourceBody)
+  expect(replay.edges.map(e=>e.vertices)).toEqual(result.edges.map(e=>e.vertices))
+  const wrong=structuredClone(options)
+  wrong.definition.shell.pairs[5].edge.recipe.candidates[0][1][0]+=1e-12
+  const refused=await client.run({kind:'sourceBodyRestore',options:wrong})
+  expect(refused.admitted).toBe(false);expect(validSourceBody(sourceBodyExpectation(wrong),refused)).toBe(true)
+  const pending=client.run({kind:'sourceBodyRestore',options})
+  const canceled=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED',name:'AbortError'})
+  client.cancel();await canceled
+  const retry=await client.run({kind:'sourceBodyRestore',options})
+  expect(retry).toEqual(native)
+  if(process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT)writeFileSync(process.env.CAD_MULTISPAN_ROOT_WORKER_REPORT,
+   JSON.stringify({wasmSha256,result,replay,refused,retry,cancellationObserved:true,scope:'One complete independently partitioned knot-root body, native parity, STEP, history, altered-candidate refusal and replacement-worker Retry.'},null,2)+'\n')
+ }finally{client.dispose()}
+},180000)
+
+it('preserves mapped root carriers through STEP preparation and document history',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...source}=request
+ const options:SourceBodyOptions={...source,displaySegments:0,stepExchange:{toleranceMm:1e-7,trimWork:100000,
+  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:14,endpoints:14}}}
+ const client=realClient()
+ try{
+  const result=await client.run({kind:'sourceBodyRestore',options})
+  expect(result.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),result)).toBe(true)
+  expect(result.stepExchange?.prepared).toBe(true)
+  const step=result.stepExchange!
+  expect([step.vertices,step.edges,step.faces]).toEqual([5,7,4])
+  expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
+  expect(step.text).toContain('MANIFOLD_SOLID_BREP')
+  if(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT)writeFileSync(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT,step.text)
+  const record=createSourceBodyRecord('mapped-root-chain','Mapped root chain',source)
+  const document={...emptyDirectDocument(),sourceBodies:[record]}
+  const restored=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
+  expect(restored.sourceBodies).toEqual([record])
+  await warmGeometryKernel()
+  const history=new DirectHistory(document),renamed=history.document
+  renamed.sourceBodies![0]!.name='Renamed mapped root chain';history.commit(renamed)
+  expect(history.undo().sourceBodies).toEqual([record])
+  expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
+  const reloaded=parseDirectDocument(serializeDirectDocument(history.document))
+  const replay=await client.run({kind:'sourceBodyRestore',options:sourceBodyRecordOptions(reloaded.sourceBodies![0]!)})
+  expect(replay.admitted).toBe(true);expect(replay.sourceBody).toEqual(source.definition)
+  expect(replay.edges.map(e=>e.vertices)).toEqual(result.edges.map(e=>e.vertices))
+ }finally{client.dispose()}
+},180000)
+
+it('diagnoses owned sharp endpoints while preserving regular seam refusals through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ const limited:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge:0,endpointLimitsExactWork:1,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
+ const stopped=await client.run({kind:'sourceBodyRestore',options:limited})
+ expect(validSourceBody(sourceBodyExpectation(limited),stopped)).toBe(true)
+ expect(stopped.seamQualification!.qualified).toBe(false)
+ expect(stopped.seamQualification!.endpointLimits!.reason).toBe('source-seam-endpoint-limits-work-limit')
+ expect(stopped.seamQualification!.endpointLimits!.exactWork).toBeLessThanOrEqual(1)
+ expect(stopped.seamQualification!.endpointLimits!.sides).toEqual([])
+ for(const edge of [0,1,16,18]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const seam=r.seamQualification!,d=seam.endpointLimits!
+  expect(seam.qualified).toBe(false);expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved')
+  expect(d.reason).toBe('source-seam-endpoint-distinct-tangent-limits')
+  expect(d.exactWork).toBeLessThanOrEqual(100000000)
+  const pole=d.sides.find(s=>s.distinctTangentLimits)!
+  expect(pole.collapsedPoint).toEqual(edge<2?[20,0,6]:[0,20,6])
+  expect(pole.sineSquaredBounds![0]).toBeGreaterThan(0.999999999999)
+  for(const mutate of [
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits=null},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.canonical=1-d.canonical},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.exactWork=100000001},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint=null},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint![0]+=1000},
+  ]){const x=structuredClone(r);mutate(x);expect(validSourceBody(sourceBodyExpectation(o),x)).toBe(false)}
+  results.push({edge,seam})
+ }
+ client.dispose()
+ if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,limited:stopped.seamQualification,results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
+},180000)
+
+it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[],started=performance.now()
+ for(const edge of [0,1,5,9,43,10,48,6,8,15,19,20,16,18,27,28,35,36,45,46]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o});expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const seam=r.seamQualification!,regular=[5,9,43,10,48,6,8,15,19,20,27,28,35,36,45,46].includes(edge)
+  expect(seam.qualified).toBe(regular)
+  if(regular){expect(seam.reason).toBe('source-seam-tangent-planes-qualified');expect(seam.sineSquaredBounds![1]).toBeLessThanOrEqual(1e-6);expect(seam.uncertainCanonical).toBeNull()}
+  else{expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved');expect(seam.sineSquaredBounds).toBeNull();expect(seam.uncertainCanonical).not.toBeNull()}
+  const rebound=structuredClone(r);rebound.seamQualification!.request.edge=(edge+1)%r.edges.length;expect(validSourceBody(sourceBodyExpectation(o),rebound)).toBe(false)
+  results.push(seam)
+ }
+ if(process.env.CAD_REFINED_SEAM_WORKER_REPORT)writeFileSync(process.env.CAD_REFINED_SEAM_WORKER_REPORT,JSON.stringify({wasmSha256:wasmSha256,elapsedMs:performance.now()-started,results,scope:'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.'},null,2)+'\n')
+},180000)
+
+it('cancels a changed mixed request, ignores its late proof and retries the original snapshot',async()=>{
+ const {op:_op,...o}=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-request.json.gz',import.meta.url))).toString()) as {op:string}&SourceBodyOptions
+ const native=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-native.json.gz',import.meta.url))).toString()).result as SourceBodyResult
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
+ const first=client.run({kind:'sourceBodyRestore',options:o}).catch(e=>e.code),late=ports[0]!.onmessage!
+ const changed=structuredClone(o);changed.wallCoverage!.mixedProducts!.normalSpans=99999
+ const second=client.run({kind:'sourceBodyRestore',options:changed}).catch(e=>e.code)
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ late({data:{version:1,id:ports[0]!.requests[0]!.id,kind:'sourceBodyRestore',ok:true,result:native}} as MessageEvent)
+ client.cancel();expect(await second).toBe('CAD_CANCELLED')
+ const retry=client.run({kind:'sourceBodyRestore',options:o})
+ o.wallCoverage!.mixedProducts!.normalSpans=1
+ expect((ports[2]!.requests[0]!.job as {options:SourceBodyOptions}).options.wallCoverage!.mixedProducts!.normalSpans).toBe(100000)
+ reply(ports[2]!,native);expect((await retry).wallCoverage!.pairs.filter(p=>!p.proven)).toHaveLength(32)
+})

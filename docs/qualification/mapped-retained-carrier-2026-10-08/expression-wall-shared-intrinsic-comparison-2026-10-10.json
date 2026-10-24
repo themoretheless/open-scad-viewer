@@ -1,0 +1,19 @@
+{
+  "schema": "expression-wall-exact-regression/1",
+  "passed": true,
+  "before": {
+    "path": "/tmp/expression-wall-shared-standard-20261010.json",
+    "sha256": "290d61aa98aa3f8ce72eb06fb7888348bdbf4c2b56fd6ce10a8aa06f325678f1"
+  },
+  "after": {
+    "path": "/tmp/expression-wall-shared-intrinsic-standard-20261010.json",
+    "sha256": "92577a29040f4482b43334d9ec535584cc4e5b1cb7a4368d01338195803f2515"
+  },
+  "pendingRegions": 4085,
+  "cells": 10000,
+  "spans": 48488,
+  "comparison": "exact-coverage-with-nonincreasing-span-work",
+  "spanWorkSaved": 6100,
+  "geometryQualified": false,
+  "scope": "Regression comparison only; unresolved geometry remains unresolved"
+}

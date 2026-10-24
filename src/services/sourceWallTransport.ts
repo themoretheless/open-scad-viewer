@@ -39,7 +39,7 @@ export function validWall(e:SourceWallOptions|undefined,r:SourceWallResult|null|
  if(c.reason==='source-face-gap-qualified'){
   if(c.uncertainFaces!==null||c.uncertainUv!==null)return false
  }else{
-  if(!['source-face-gap-work-limit','source-face-gap-resolution-limit'].includes(c.reason)
+  if(!['source-face-gap-work-limit','source-face-gap-resolution-limit','source-face-gap-chart-close'].includes(c.reason)
    ||!Array.isArray(c.uncertainFaces)||c.uncertainFaces.length!==2
    ||!e.groups.every((g,i)=>g.includes(c.uncertainFaces![i]!))
    ||!Array.isArray(c.uncertainUv)||c.uncertainUv.length!==2||!c.uncertainUv.every(q=>Array.isArray(q)&&q.length===2&&q.every(interval)))return false

@@ -1,0 +1,12 @@
+{
+  "schema": "native-brep-suite/1",
+  "passed": true,
+  "testsPassed": 1035,
+  "failed": 0,
+  "ignored": 3,
+  "elapsedSeconds": 1827.83,
+  "terminalExitCode": 0,
+  "log": "/tmp/source-fixed-point-cache-brep-all-20261011.log",
+  "logSha256": "fc61738af74b9cd1a720f35b6f9c78598a6c5a580bdc0892f87a98448a4234f3",
+  "scope": "Point-cache production generation; compiled before later ignored benchmark test-only addition. No WASM or universal geometry qualification."
+}

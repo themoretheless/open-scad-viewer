@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "mismatchedInputHashRejected": true,
+  "mismatchedBudgetRejected": true,
+  "noWorkerArtifactsCreated": true,
+  "scope": "Pre-dispatch input identity controls; current new-WASM response parity remains pending."
+}

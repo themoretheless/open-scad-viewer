@@ -1,0 +1,26 @@
+{
+  "sameRequest": true,
+  "outsideWallExact": false,
+  "pendingExact": false,
+  "beforePending": 4081,
+  "afterPending": 4035,
+  "beforeSpans": 11821,
+  "afterSpans": 11868,
+  "beforeDomainCells": 100000,
+  "afterDomainCells": 64359,
+  "elapsedMs": 536933.6859589999,
+  "changedReportFields": [
+    "angle_excluded",
+    "budget_pending",
+    "cache_hits",
+    "distance_excluded",
+    "domain_cells",
+    "intrinsic_checked",
+    "intrinsic_spans",
+    "pending",
+    "span_stages",
+    "spans",
+    "trim_excluded"
+  ],
+  "scope": "Same request. Pending counts are neither defects nor area; changed coverage requires a separate containment check."
+}

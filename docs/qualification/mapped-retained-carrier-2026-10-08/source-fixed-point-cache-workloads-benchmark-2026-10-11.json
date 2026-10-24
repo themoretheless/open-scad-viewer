@@ -1,0 +1,48 @@
+{
+  "scope": "Debug rational-arc source station microbenchmark under concurrent workload; five alternating-order rounds per workload; not application latency qualification",
+  "calls": 20000,
+  "workloads": [
+    {
+      "unique": 128,
+      "directMs": [
+        928.1517500000001,
+        1223.016417,
+        1350.572459,
+        1472.777583,
+        1172.6905000000002
+      ],
+      "cachedMs": [
+        12.111875,
+        10.577583,
+        89.045292,
+        115.73691699999999,
+        127.72025000000001
+      ],
+      "directMedianMs": 1223.016417,
+      "cachedMedianMs": 89.045292
+    },
+    {
+      "unique": 20000,
+      "directMs": [
+        1035.047083,
+        1115.122375,
+        898.159833,
+        771.5375829999999,
+        615.366542
+      ],
+      "cachedMs": [
+        1200.308875,
+        1051.037625,
+        1094.324042,
+        694.631166,
+        1396.3762499999998
+      ],
+      "directMedianMs": 898.159833,
+      "cachedMedianMs": 1094.324042
+    }
+  ],
+  "checksumsBitwiseExact": true,
+  "logicalQueryCountsExact": true,
+  "cargoExit": 0,
+  "latencyQualified": false
+}

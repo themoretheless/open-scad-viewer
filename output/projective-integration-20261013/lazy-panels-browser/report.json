@@ -1,0 +1,391 @@
+{
+  "passed": true,
+  "keyboard": false,
+  "tabs": 0,
+  "timings": [
+    {
+      "id": 1,
+      "dispatchAt": 858.4000000003725,
+      "postMessageMs": 0.09999999962747097,
+      "receivedAt": 911.0999999996275,
+      "roundTripMs": 52.69999999925494,
+      "nativeOperationTiming": {
+        "warmupMs": 22.09999999962747,
+        "executeMs": 10.900000000372529,
+        "prepareMs": 0
+      },
+      "renderedAt": 913.1999999992549,
+      "replyToDomMs": 2.099999999627471
+    },
+    {
+      "id": 4,
+      "dispatchAt": 1092.699999999255,
+      "postMessageMs": 0.10000000149011612,
+      "receivedAt": 1163,
+      "roundTripMs": 70.30000000074506,
+      "nativeOperationTiming": {
+        "warmupMs": 24.300000000745058,
+        "executeMs": 44.59999999962747,
+        "prepareMs": 0.10000000149011612
+      },
+      "renderedAt": 1165.4000000003725,
+      "replyToDomMs": 2.400000000372529
+    }
+  ],
+  "timingScope": "Real request post through reply and DOM publication; worker warmup/whole native operation/response preparation, not Rust-only computation or final paint.",
+  "externalFontStylesheetSubstituted": true,
+  "coverage": {
+    "adaptiveSelf": {
+      "allSelfPairsQualified": true,
+      "cells": 0,
+      "faces": [
+        {
+          "cells": 0,
+          "endpointExchangeSymmetric": true,
+          "face": 0,
+          "pending": 0,
+          "qualified": true,
+          "reason": "source-self-wall-planar-excluded",
+          "spans": 0,
+          "uncertain": null,
+          "unresolvedPairs": []
+        },
+        {
+          "cells": 0,
+          "endpointExchangeSymmetric": true,
+          "face": 1,
+          "pending": 0,
+          "qualified": true,
+          "reason": "source-self-wall-planar-excluded",
+          "spans": 0,
+          "uncertain": null,
+          "unresolvedPairs": []
+        },
+        {
+          "cells": 0,
+          "endpointExchangeSymmetric": true,
+          "face": 2,
+          "pending": 0,
+          "qualified": true,
+          "reason": "source-self-wall-planar-excluded",
+          "spans": 0,
+          "uncertain": null,
+          "unresolvedPairs": []
+        },
+        {
+          "cells": 0,
+          "endpointExchangeSymmetric": true,
+          "face": 3,
+          "pending": 0,
+          "qualified": true,
+          "reason": "source-self-wall-planar-excluded",
+          "spans": 0,
+          "uncertain": null,
+          "unresolvedPairs": []
+        },
+        {
+          "cells": 0,
+          "endpointExchangeSymmetric": true,
+          "face": 4,
+          "pending": 0,
+          "qualified": true,
+          "reason": "source-self-wall-planar-excluded",
+          "spans": 0,
+          "uncertain": null,
+          "unresolvedPairs": []
+        },
+        {
+          "cells": 0,
+          "endpointExchangeSymmetric": true,
+          "face": 5,
+          "pending": 0,
+          "qualified": true,
+          "reason": "source-self-wall-planar-excluded",
+          "spans": 0,
+          "uncertain": null,
+          "unresolvedPairs": []
+        }
+      ],
+      "planeControls": 24,
+      "poleCells": 0,
+      "poleExactWork": 0,
+      "poleSpans": 0,
+      "refinementCells": 0,
+      "refinementSpans": 0,
+      "spans": 0
+    },
+    "cells": 3,
+    "enumerationComplete": true,
+    "factoredExactWork": 23760,
+    "factoredProductCells": 0,
+    "factoredQueries": 0,
+    "lowerMm": 9.99,
+    "mixedProducts": {
+      "cells": 0,
+      "domainCells": 0,
+      "domainQueries": 0,
+      "endpointQueries": 0,
+      "normalProducts": 0,
+      "normalSpans": 0,
+      "pairs": [],
+      "spans": 0
+    },
+    "normalProductCells": 3,
+    "normalSpans": 6,
+    "pairs": [
+      {
+        "faces": [
+          0,
+          0
+        ],
+        "proven": true,
+        "reason": "source-wall-self-certified"
+      },
+      {
+        "faces": [
+          0,
+          1
+        ],
+        "proven": true,
+        "reason": "source-face-gap-qualified"
+      },
+      {
+        "faces": [
+          0,
+          2
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          0,
+          3
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          0,
+          4
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          0,
+          5
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          1,
+          1
+        ],
+        "proven": true,
+        "reason": "source-wall-self-certified"
+      },
+      {
+        "faces": [
+          1,
+          2
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          1,
+          3
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          1,
+          4
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          1,
+          5
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          2,
+          2
+        ],
+        "proven": true,
+        "reason": "source-wall-self-certified"
+      },
+      {
+        "faces": [
+          2,
+          3
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          2,
+          4
+        ],
+        "proven": true,
+        "reason": "source-face-gap-qualified"
+      },
+      {
+        "faces": [
+          2,
+          5
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          3,
+          3
+        ],
+        "proven": true,
+        "reason": "source-wall-self-certified"
+      },
+      {
+        "faces": [
+          3,
+          4
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          3,
+          5
+        ],
+        "proven": true,
+        "reason": "source-face-gap-qualified"
+      },
+      {
+        "faces": [
+          4,
+          4
+        ],
+        "proven": true,
+        "reason": "source-wall-self-certified"
+      },
+      {
+        "faces": [
+          4,
+          5
+        ],
+        "proven": true,
+        "reason": "source-wall-normal-pair-excluded"
+      },
+      {
+        "faces": [
+          5,
+          5
+        ],
+        "proven": true,
+        "reason": "source-wall-self-certified"
+      }
+    ],
+    "planeControls": 24,
+    "reason": "source-whole-wall-lower-qualified",
+    "request": {
+      "adaptiveSelf": {
+        "cells": 50000,
+        "cellsPerFace": 8192,
+        "planeControls": 1000000,
+        "pole": {
+          "cells": 100000,
+          "cellsPerFace": 4096,
+          "exactWork": 100000000,
+          "spans": 100000,
+          "spansPerFace": 100000
+        },
+        "refinement": {
+          "cells": 100000,
+          "cellsPerFace": 100000,
+          "spans": 100000,
+          "spansPerFace": 100000
+        },
+        "spans": 100000,
+        "spansPerFace": 10000
+      },
+      "factoredNormals": {
+        "cells": 10000,
+        "cellsPerPair": 128,
+        "exactWork": 100000000,
+        "queries": 10000
+      },
+      "limits": {
+        "gapCells": 100000,
+        "gapSpans": 100000,
+        "maxSineSquared": 0.000001,
+        "normalSpans": 20000,
+        "pairs": 100000,
+        "planeControls": 1000000
+      },
+      "minimumMm": 9.99,
+      "mixedProducts": {
+        "cells": 100000,
+        "cellsPerPair": 1024,
+        "domainCells": 1000000,
+        "domainCellsPerPair": 10000,
+        "domainCellsPerQuery": 256,
+        "normalSpans": 100000,
+        "normalSpansPerPair": 10000,
+        "spans": 100000,
+        "spansPerPair": 4096,
+        "toleranceUv": 1e-8
+      },
+      "normalProducts": {
+        "cells": 50000,
+        "cellsPerPair": 128
+      },
+      "retainedGap": {
+        "cells": 100000,
+        "cellsPerPair": 256,
+        "domainCells": 1000000,
+        "domainCellsPerPair": 10000,
+        "domainCellsPerQuery": 256,
+        "spans": 100000,
+        "spansPerPair": 512,
+        "toleranceUv": 1e-8
+      }
+    },
+    "retainedGap": {
+      "cells": 0,
+      "domainCells": 0,
+      "domainQueries": 0,
+      "endpointQueries": 0,
+      "pairs": [],
+      "spans": 0
+    },
+    "spans": 6,
+    "totalPairs": 21,
+    "wholeWallQualified": true
+  },
+  "cancelledHeldRequest": true,
+  "obsoleteCallbackIgnored": true,
+  "localizedTransportFailure": true,
+  "retry": true,
+  "qualifiedProjectiveCuboid": true,
+  "documentUnchanged": true,
+  "reloadExact": true,
+  "errors": [],
+  "wasmSha256": "5f6ee10c1469f86629584c9d0373b7a38059b400909117b2c4b6da0b225cf36e"
+}

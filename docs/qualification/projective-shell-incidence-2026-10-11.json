@@ -1,0 +1,21 @@
+{
+  "scope": "Closed oriented source incidence and manifold vertex-link cycles for a rationally reparameterized tetrahedron; not embedded/material/volume admission",
+  "publishedWasmChanged": false,
+  "sourceSha256": {
+    "source_shell_incidence.rs": "c4d62e454b77d359fbd115bde10ad6f22f474c7d8918cfc9460f3da25545728b",
+    "source_vertex_links.rs": "4395be79ffefeac36b2b6b9768cb0e214cad3cbc1773d0c62bcec35d40b11ff4",
+    "source_projective_edge.rs": "e0238d9ed5706cdb580c0dd7cdedd46e967a6eb6f9fbd917d9e8aa3e1ea9bac9"
+  },
+  "logs": [
+    "/tmp/source-projective-shell-incidence-20261011.log",
+    "/tmp/source-projective-shell-incidence-regression-20261011.log",
+    "/tmp/source-projective-cross-layer-20261011.log"
+  ],
+  "incidenceRegressionPassed": 11,
+  "limitations": [
+    "projective shell persistence not yet implemented",
+    "new projective control uses full fixed-ended linear edges; root-ended curved edge verified separately",
+    "projective shell material/self-intersection/volume admission not yet implemented",
+    "no generic fillet body completion"
+  ]
+}

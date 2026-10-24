@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "scope": "Expected timeout control; no geometry qualification",
+  "expectedProcessExit": 1,
+  "failureArtifact": {
+    "schema": "expression-worker-qualification-failure/1",
+    "passed": false,
+    "phase": "budget-refusal",
+    "elapsedMs": 51.82633399999986,
+    "timeoutMs": 1,
+    "wasmSha256": "dded25909e53fca0021abbc78b00a89e28be5869ff51a8517f9d0b6a98031adf",
+    "wasmUnchanged": true,
+    "workersStarted": 1,
+    "error": {
+      "name": "MainSolidWorkerError",
+      "message": "CAD operation exceeded its time limit",
+      "code": "CAD_TIMEOUT"
+    },
+    "scope": "Failed qualification only; no geometry or latency admission"
+  }
+}

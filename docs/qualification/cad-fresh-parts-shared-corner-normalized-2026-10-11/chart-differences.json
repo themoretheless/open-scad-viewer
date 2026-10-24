@@ -1,0 +1,111 @@
+{
+  "schema": "fresh-step-chart-differences/1",
+  "scope": "Diagnostic only: exact raw representation changed under STEP normalization. Identity sets and vertices/edges pass; geometric chart/orientation equivalence still requires proof.",
+  "parts": [
+    {
+      "part": "bracket",
+      "changedFaceRepresentations": [
+        {
+          "identity": "f:64f9c87743f51df082d25114851fb01e",
+          "sourceControlNet": [
+            2,
+            2
+          ],
+          "importedControlNet": [
+            2,
+            2
+          ],
+          "sameLoopIdentities": true
+        }
+      ],
+      "allFaceLoopBindingsPreserved": true,
+      "chartEquivalenceQualified": false
+    },
+    {
+      "part": "flange",
+      "changedFaceRepresentations": [
+        {
+          "identity": "f:b0f2a8982462b045f1996d3c5776a1d7",
+          "sourceControlNet": [
+            3,
+            2
+          ],
+          "importedControlNet": [
+            9,
+            2
+          ],
+          "sameLoopIdentities": true
+        },
+        {
+          "identity": "f:9b8606371beacbd0297dbe411b99df32",
+          "sourceControlNet": [
+            3,
+            2
+          ],
+          "importedControlNet": [
+            9,
+            2
+          ],
+          "sameLoopIdentities": true
+        },
+        {
+          "identity": "f:57b8591eb4b018ed50a0cb8bb558e376",
+          "sourceControlNet": [
+            3,
+            2
+          ],
+          "importedControlNet": [
+            9,
+            2
+          ],
+          "sameLoopIdentities": true
+        },
+        {
+          "identity": "f:74141cdda6e1ff5131b255db7dcb682e",
+          "sourceControlNet": [
+            3,
+            2
+          ],
+          "importedControlNet": [
+            9,
+            2
+          ],
+          "sameLoopIdentities": true
+        }
+      ],
+      "allFaceLoopBindingsPreserved": true,
+      "chartEquivalenceQualified": false
+    },
+    {
+      "part": "enclosure",
+      "changedFaceRepresentations": [
+        {
+          "identity": "f:8fe829c6ef70dd159f4be4ed4eb1042f",
+          "sourceControlNet": [
+            2,
+            2
+          ],
+          "importedControlNet": [
+            2,
+            2
+          ],
+          "sameLoopIdentities": true
+        },
+        {
+          "identity": "f:a6b0691799ccdbc5e1bfe70e22889c88",
+          "sourceControlNet": [
+            2,
+            2
+          ],
+          "importedControlNet": [
+            2,
+            2
+          ],
+          "sameLoopIdentities": true
+        }
+      ],
+      "allFaceLoopBindingsPreserved": true,
+      "chartEquivalenceQualified": false
+    }
+  ]
+}

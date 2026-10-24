@@ -1,0 +1,55 @@
+{
+  "schema": "cad-oriented-step-native-status/1",
+  "status": "passed",
+  "test": "actual_ui_step_roundtrip_classifies_oriented_identity_bindings",
+  "allDeclaredGeometryBindingsQualified": true,
+  "parts": [
+    {
+      "exactCanonicalBindings": true,
+      "identitySetsPreserved": true,
+      "negativeControls": 0,
+      "orientedBindingsQualified": true,
+      "part": "bracket",
+      "planarFacesQualified": [],
+      "representationChanges": [],
+      "scope": "exact canonical bindings or exact coplanar supports with identical oriented 3D edge cycles and independently qualified whole pcurve-edge coupling"
+    },
+    {
+      "exactCanonicalBindings": false,
+      "identitySetsPreserved": true,
+      "negativeControls": 4,
+      "orientedBindingsQualified": true,
+      "part": "flange",
+      "planarFacesQualified": [
+        "f:0d837c6275008c186e09ce31d14b7cf2",
+        "f:3de6b11fd5b764858a1fba241632629f",
+        "f:ba3351c6843318f8a0507f56a7a8e4bf",
+        "f:c2f8e496df1bb4edc16f26e2e23080fb"
+      ],
+      "representationChanges": [
+        "f:0d837c6275008c186e09ce31d14b7cf2",
+        "f:3de6b11fd5b764858a1fba241632629f",
+        "f:ba3351c6843318f8a0507f56a7a8e4bf",
+        "f:c2f8e496df1bb4edc16f26e2e23080fb",
+        "l:63d99a2cb427e7155f59bb429fed7872",
+        "l:6f74b8a06fb05f5891456200b21b7b30",
+        "l:92ac44f23fa57b7d3154e047e493e49c"
+      ],
+      "scope": "exact canonical bindings or exact coplanar supports with identical oriented 3D edge cycles and independently qualified whole pcurve-edge coupling"
+    },
+    {
+      "exactCanonicalBindings": true,
+      "identitySetsPreserved": true,
+      "negativeControls": 0,
+      "orientedBindingsQualified": true,
+      "part": "enclosure",
+      "planarFacesQualified": [],
+      "representationChanges": [],
+      "scope": "exact canonical bindings or exact coplanar supports with identical oriented 3D edge cycles and independently qualified whole pcurve-edge coupling"
+    }
+  ],
+  "testSeconds": 0.95,
+  "sourceSha256": "c000aeabfc8fbd6fd98c5c182aee344d5a7a3cbf871937b3d46cc78a30d1b947",
+  "scope": "Three actual UI-exported specimen roundtrips. Canonical exact representations, or exact coplanar supports with identical oriented edge cycles and independent whole pcurve-edge coupling. General curved reparameterizations remain outside this check.",
+  "negativeControlsPassed": 4
+}

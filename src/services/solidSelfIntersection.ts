@@ -1,9 +1,10 @@
+import {axisPolarFrames,sameFrame,validPolarProofEvidence,type PolarProofEvidence} from './polarProofProtocol'
 import type {NurbsBrep} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
 import {faceContactExpectation,validFaceContacts,type FaceContacts,type FaceContactLimits} from './solidFaceContacts'
 export interface FaceInjectivity {
- proven:boolean;projection:[number,number]|null;linearProjection?:[[number,number,number],[number,number,number]]|null;projectiveProjection?:number[][]|null;polarProjection?:number[][]|null;contractionUpper:number|null;spans:number
- reason:'global-projection-contraction'|'global-linear-projection-contraction'|'global-projective-projection-contraction'|'global-polar-projection-contraction'|'collapsed-boundary-requires-quotient-proof'|'projection-not-proven'|'work-limit'|'periodic-domain'
+ polarPMatrix?: (PolarProofEvidence&{sourceSurface:NurbsBrep['faces'][number]['surface']})|null;proven:boolean;projection:[number,number]|null;linearProjection?:[[number,number,number],[number,number,number]]|null;projectiveProjection?:number[][]|null;polarProjection?:number[][]|null;contractionUpper:number|null;spans:number
+ reason:'global-polar-p-matrix'|'global-projection-contraction'|'global-linear-projection-contraction'|'global-projective-projection-contraction'|'global-polar-projection-contraction'|'collapsed-boundary-requires-quotient-proof'|'projection-not-proven'|'work-limit'|'periodic-domain'
 }
 export interface BoundaryAuditLimits {exactWork:number;trimPairs:number;trimCells:number;trimDomainCells:number}
 export interface BoundaryEmbeddingEvidence {proven:boolean;exactAgreement:boolean;exactJoins:boolean;exactWork:number;trimValid:boolean;positiveTrimWinding:boolean;trimPairs:number;trimCells:number;trimDomainCells:number;limits:BoundaryAuditLimits;sourceModel:NurbsBrep}
@@ -32,7 +33,7 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
    return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
   })
  })
- return {boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {pMatrixSupported:model.faces.map(f=>f.surface.degreeU<=8&&f.surface.degreeV<=8),faceEvidence:model.faces.map(f=>surfaceEvidence(f.surface)),boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
 }
 function quotientExpectation(model:NurbsBrep,face:number){
  const f=model.faces[face],s=f.surface,p=s.controlPoints,u=[s.knotsU[s.degreeU],s.knotsU[p.length]],v=[s.knotsV[s.degreeV],s.knotsV[p[0].length]]
@@ -102,6 +103,15 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
   if(x.spans<base||x.spans>remaining)return false
   used+=x.spans
   if(x.proven){
+   if(x.reason==='global-polar-p-matrix'){
+    const p=x.polarPMatrix
+    if(periodic||pole||x.contractionUpper!==null||x.projection!==null||x.linearProjection!=null||x.projectiveProjection!=null||!validPolarProofEvidence(p)||!x.polarProjection||!sameFrame(p.coordinates,x.polarProjection))return false
+    const evidence=surfaceEvidence(p.sourceSurface),expected=e.faceEvidence[i]
+    if(!evidence||!expected||evidence.length!==expected.length||!evidence.every((n,k)=>n===expected[k]))return false
+    const candidate=axisPolarFrames.findIndex(c=>sameFrame(c,p.coordinates))
+    if(candidate<0||x.spans!==e.faceSpans[i]*(193+256*(e.polarCandidates[i].length+candidate+1)))return false
+   }else{
+   if(x.polarPMatrix!=null)return false
    if(periodic||pole||typeof x.contractionUpper!=='number'||!Number.isFinite(x.contractionUpper)||x.contractionUpper<0||x.contractionUpper>=1)return false
    if(x.reason!=='global-polar-projection-contraction'&&x.polarProjection!=null)return false
    if(x.reason==='global-projection-contraction'){
@@ -124,7 +134,9 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
     const candidate=e.polarCandidates[i].findIndex(c=>c.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
     if(candidate<0||x.spans!==e.faceSpans[i]*(193+256*(candidate+1)))return false
    }else return false
+   }
   }else{
+   if(x.polarPMatrix!=null)return false
    if(x.projection!==null||x.linearProjection!=null||x.projectiveProjection!=null||x.polarProjection!=null||x.contractionUpper!==null)return false
    if(periodic){if(x.spans!==0||x.reason!=='periodic-domain')return false}
    else if(pole){if(x.spans!==0||x.reason!=='collapsed-boundary-requires-quotient-proof')return false}
@@ -132,7 +144,9 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
    else if(x.reason==='projection-not-proven'){
     const previous=e.faceSpans[i]*(x.projectiveProjection!==undefined?193:x.linearProjection===undefined?1:97)
     const polar=x.polarProjection===undefined?0:Math.min(e.polarCandidates[i].length,Math.max(0,Math.floor((remaining-previous)/(e.faceSpans[i]*256))))
-    const expected=previous+polar*e.faceSpans[i]*256
+    const afterPolar=previous+polar*e.faceSpans[i]*256
+    const pMatrix=x.polarPMatrix===undefined||!e.pMatrixSupported[i]?0:Math.min(12,Math.max(0,Math.floor((remaining-afterPolar)/(e.faceSpans[i]*256))))
+    const expected=afterPolar+pMatrix*e.faceSpans[i]*256
     if(x.spans!==expected)return false
    }else return false
   }
@@ -144,6 +158,10 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
  }
  for(const pair of r.pairs){
   const c=pair.sharedBoundary
+  if(c?.kind==='exact-hull'&&c.sourceJoin){
+   const j=c.sourceJoin,q=e.quotients[j.blendFace]
+   if(!q||q.collapsedEnd!==j.collapsedEnd||!q.sourceFrame||!sameFrame(q.sourceFrame,j.sourceFrame)||!r.faces[j.blendFace].quotientProof?.proven)return false
+  }
   if(c?.kind==='exact-hull'&&c.joinedProof){
    const j=c.joinedProof,q=e.quotients[j.blendFace]
    if(!q||q.collapsedEnd!==j.collapsedEnd||!r.faces[j.blendFace].quotientProof?.proven)return false

@@ -1,0 +1,8 @@
+{
+  "scope": "Real request post through reply and DOM publication; worker warmup/whole native operation/response preparation, not Rust-only computation or final paint.",
+  "kernelSha256": "8f28d264385d707057b73f5c303f0842fb5799e43d46f9401b14f97c28d0bfee",
+  "scriptSha256": "2b218324deb91c03eb4ef8e0e239ead6a2e6d9a478999d8aee92f505982582d3",
+  "uncompressedReportSha256": "c278f74d0ffce087a17765f1b6f5956069902cf62ee9c2f87c7726a152cd9025",
+  "samples": 2,
+  "note": "Two observed source-wall requests during concurrent work, not a representative performance benchmark; factored normals are absent from this kernel."
+}

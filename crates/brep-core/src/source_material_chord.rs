@@ -20,15 +20,15 @@ pub struct Endpoint {
     pub uv: [[f64; 2]; 2],
     pub world_mm: [[f64; 2]; 3],
 }
-pub struct Certificate<'a> {
-    body: &'a Body,
+pub struct Certificate<'a, E = crate::source_shared_edge::SharedEdge> {
+    body: &'a Body<E>,
     faces: [usize; 2],
     length_mm: [f64; 2],
     line: [[f64; 3]; 2],
     endpoints: [Endpoint; 2],
 }
-impl<'a> Certificate<'a> {
-    pub fn body(&self) -> &'a Body {
+impl<'a,E> Certificate<'a,E> {
+    pub fn body(&self) -> &'a Body<E> {
         self.body
     }
     pub fn faces(&self) -> [usize; 2] {
@@ -45,8 +45,8 @@ impl<'a> Certificate<'a> {
         self.length_mm
     }
 }
-pub struct Report<'a> {
-    pub certificate: Option<Certificate<'a>>,
+pub struct Report<'a, E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<'a,E>>,
     pub boundary: SegmentReport,
     pub normals: [Option<normal_alignment::Report>; 2],
     pub reason: &'static str,
@@ -54,26 +54,26 @@ pub struct Report<'a> {
 /// Recompute all evidence. A strict exterior source-chart hull seed and exactly
 /// two isolated transverse roots on an embedded closed Body prove material
 /// between the roots. Both original endpoint rectangles must align with line.
-pub fn qualify<'a>(
-    body: &'a Body,
+pub fn qualify<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     origin: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     qualify_impl(body, origin, direction, tolerance_uv, limits, None)
 }
 /// Complete outside-seeded crossing parity permits multiple material intervals
 /// separated by cavities. Only an entering/exiting pair in the requested groups
 /// can supply a certificate; every crossing remains in the fresh boundary audit.
-pub fn qualify_between<'a>(
-    body: &'a Body,
+pub fn qualify_between<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     groups: [&[usize]; 2],
     origin: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     let count = body.geometry().shell().faces().len();
     if groups.iter().any(|g| {
         g.is_empty()
@@ -89,14 +89,14 @@ pub fn qualify_between<'a>(
     }
     qualify_impl(body, origin, direction, tolerance_uv, limits, Some(groups))
 }
-fn qualify_impl<'a>(
-    body: &'a Body,
+fn qualify_impl<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     origin: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,
     limits: Limits,
     groups: Option<[&[usize]; 2]>,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     if !(1..=100000).contains(&limits.normal_spans)
         || !limits.max_sine_squared.is_finite()
         || !(0. ..1.).contains(&limits.max_sine_squared)
