@@ -47,6 +47,7 @@ const OPS: &[&str] = &[
     "brep_g2_annular_cylinder",
 
     "brep_session",
+    "brep_boundary_certificate",
     "brep_graph",
     "brep_graph_report",
     "brep_scene_plan",
@@ -73,6 +74,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_boundary_certificate" => cad_boundary_certificate::inspect(v),
         "brep_nurbs_bezier_profiles_extrude"=>extrude_profiles(v),
         "minkowski_3d_certify" | "minkowski_3d_verify" | "minkowski_nurbs_certify" | "minkowski_nurbs_verify" | "nurbs_source_atlas_certify" | "nurbs_source_atlas_verify" => cad_minkowski3d::dispatch(v),
         "brep_closed_patch_network" => cad_geometric_g2::create_closed_patch_network(v),

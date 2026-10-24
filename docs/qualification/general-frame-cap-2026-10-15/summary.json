@@ -1,0 +1,99 @@
+{
+  "schema": "native-general-boundary-finite-evidence/1",
+  "status": "passed",
+  "sourceCommit": "a90a7f33bfd0ba5db92b547a9b4fe7127e50dde2",
+  "scope": "finite native original-law and authored rational boundary validation; no universal acceptance, ideal-body embedding, G1/G2 or approval",
+  "wasm": {
+    "sha256": "e5d85b502ae6071f37f4d693a557ae853bbdea75d8b9bac3d6416f86b2327760",
+    "byteLength": 12076702
+  },
+  "native": {
+    "brepPassed": 1108,
+    "brepIgnored": 3,
+    "nurbsPassed": 1545,
+    "correspondencePassed": 7,
+    "sourceOwnedPassed": 4,
+    "sourceModeCombinations": 16,
+    "bridgePassed": 4,
+    "spatialRegressionPassed": 2,
+    "noCodec": "passed"
+  },
+  "protocolChecks": {
+    "node": 11,
+    "chromium": 11
+  },
+  "occt": "passed",
+  "g1CreditImported": 0,
+  "logs": [
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-brep.log",
+      "sha256": "612be12d94336a14bb27fe7841659b80807869e0db2149034fbbe326f957cbc8",
+      "byteLength": 116663
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-nurbs.log",
+      "sha256": "1b09a705006101de5d20c4941152d39bc4a29b65faef7d29b59997bc4d9dde48",
+      "byteLength": 170500
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-correspondence.log",
+      "sha256": "f8a9b85db201f36ed2c018e50bba981275b0a24bb561e23b06e09e262c3cf193",
+      "byteLength": 9489
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-source-owned.log",
+      "sha256": "5211e0f6316ef06ee9a761d6bcc0425f274e32546d3d6b4cd3ac2f4c94007dfd",
+      "byteLength": 11143
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-protocol-step.log",
+      "sha256": "d6196b844b8138499de6c1c28b8396f5fd5adc64c89e76f10c1a521aabb85620",
+      "byteLength": 13065
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-spatial-regressions.log",
+      "sha256": "b5d0607393c86d66ae05f2d86ffc09770e7616a626b247abaf82245eb7ad16f7",
+      "byteLength": 7920
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/native-no-codec.log",
+      "sha256": "c15d32fc8feee085fea37a46c129684d7cc3e75cba7e11f88a7c4b3d0aa0b5c0",
+      "byteLength": 15651
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/wasm-build.log",
+      "sha256": "a869f1fb46e0ee42c394dd13160b3f0d539fa660f802eb8ce3ba3ebe0ad1f415",
+      "byteLength": 14028
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/build-inputs.json",
+      "sha256": "5095cf412c8b0e590a53f13a54187b3298e946afe025cbdbc9bd83d8948a8d05",
+      "byteLength": 624348
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/node.json",
+      "sha256": "a29e2c2843ad97986d528eadbdc3ac951e8948e46621a0274fc4cde6a2816c35",
+      "byteLength": 2362
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/browser.json",
+      "sha256": "ba1b78cc64224f2ce31f05d3a8804e338da7c314ef054f6adb57a6daaba629c2",
+      "byteLength": 2367
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/previous-matrix-node.json",
+      "sha256": "445d0f51069285bc34867444b7a0bf1d5683f6c2f4112696f72c329f70b766ed",
+      "byteLength": 613660
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/occt.json",
+      "sha256": "2bda3f33648640b1ffeea67eb00680a618a7181832b2e84f58e16831194f7afd",
+      "byteLength": 717
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-2026-10-15/nonplanar-frame-body.step",
+      "sha256": "1f5917ee3af552ba417be6d2e3c6ce76095a8484d5cd81fb48afc18e85041925",
+      "byteLength": 28919
+    }
+  ]
+}

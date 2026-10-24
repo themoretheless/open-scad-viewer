@@ -259,12 +259,17 @@ mod tests {
 }
 /// Rebind unchanged UV definitions to the exact accepted inverse chart.
 /// Each root selector is replayed; cached world boxes are never transported.
+#[cfg(feature = "codec")]
 pub struct FragmentReport {
     pub fragment: Option<crate::source_boundary_fragment::Fragment>,
     pub mapping_cells: usize,
     pub root_checks: usize,
     pub reason: &'static str,
 }
+#[cfg(feature = "codec")]
+mod replay;
+#[cfg(feature = "codec")]
+pub use replay::*;
 pub fn transport_fragment(
     certificate: &Certificate,
     original: &crate::source_boundary_fragment::Fragment,

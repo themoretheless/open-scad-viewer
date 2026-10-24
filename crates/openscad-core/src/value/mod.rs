@@ -10,6 +10,11 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+
+pub use formatting::{locale, js_number_to_string, js_to_precision, js_to_exponential, format_number, json_stringify, format_value, compact_diagnostic_text};
+
+mod formatting;
+
 mod shape_descriptor;
 mod binary;
 pub use shape_descriptor::*;

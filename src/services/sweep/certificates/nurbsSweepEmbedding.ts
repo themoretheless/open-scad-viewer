@@ -60,6 +60,8 @@ export interface SweepVolumeAudit {
  totalPairs?:number
  regularBoundarySolidCertified?:boolean
  boundaryRegularity?:{allFacesRegular:boolean;allFacesRegularModuloPoles:boolean;cells:number;maxCells:number;unresolvedFaces:number[];poleQuotients:unknown[]}
+ individualPairs?:number
+ groupedPairs?:number
  solidGeometryCertified:boolean
  boundaryEmbeddingCertified:boolean
  allFacesInjective:boolean

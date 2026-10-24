@@ -8,10 +8,10 @@ pub(super) struct BoundAssert<'a> {
 
 pub(super) fn descriptor(name: &str, dimension: u8) -> ShapeDescriptor {
     ShapeDescriptor {
-        geometry: None,
-        profile: None,
         name: name.to_string(),
         dimension,
+        geometry: None,
+        profile: None,
     }
 }
 

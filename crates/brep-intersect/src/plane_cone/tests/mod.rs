@@ -2,7 +2,9 @@ use super::super::plane_sphere::plane_patch;
 use super::super::test_utils::rotated_translated;
 use super::*;
 
-
+fn point_of(jet: &[f64]) -> [f64; 3] {
+    [jet[0], jet[1], jet[2]]
+}
 
 /// Worst residual of the UV lifts evaluated through their own surfaces
 /// against the cone side and plane equations.

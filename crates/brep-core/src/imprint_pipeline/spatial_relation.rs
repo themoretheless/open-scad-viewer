@@ -98,7 +98,7 @@ pub(crate) fn assemble_imprint_components(
     sources: &[&Model],
 ) -> Result<Model> {
     let mut parent: Vec<usize> = (0..shell_faces.len()).collect();
-    fn find(parent: &mut [usize], i: usize) -> usize {
+    pub(super) fn find(parent: &mut [usize], i: usize) -> usize {
         let mut i = i;
         while parent[i] != i {
             parent[i] = parent[parent[i]];
@@ -246,7 +246,7 @@ pub(super) struct CircleArc {
     pub(super) sweep: f64,
 }
 
-fn arc_point(arc: CircleArc, t: f64, z: f64) -> [f64; 3] {
+pub(super) fn arc_point(arc: CircleArc, t: f64, z: f64) -> [f64; 3] {
     let angle = arc.start + arc.sweep * t;
     [
         arc.center[0] + arc.radius * angle.cos(),
@@ -277,7 +277,7 @@ pub(super) fn arc_curve(arc: CircleArc, z: f64) -> Curve {
     }
 }
 
-fn split_arc(arc: CircleArc) -> Vec<CircleArc> {
+pub(super) fn split_arc(arc: CircleArc) -> Vec<CircleArc> {
     let count = (arc.sweep.abs() / std::f64::consts::FRAC_PI_2)
         .ceil()
         .max(1.) as usize;
@@ -291,7 +291,7 @@ fn split_arc(arc: CircleArc) -> Vec<CircleArc> {
         .collect()
 }
 
-fn select_circle_arc(
+pub(super) fn select_circle_arc(
     center: [f64; 2],
     radius: f64,
     first: [f64; 2],
@@ -322,7 +322,7 @@ fn select_circle_arc(
     Err(refuse("Could not classify a circle Boolean boundary arc"))
 }
 
-fn order_arc_loop(mut arcs: Vec<CircleArc>) -> Result<Vec<CircleArc>> {
+pub(super) fn order_arc_loop(mut arcs: Vec<CircleArc>) -> Result<Vec<CircleArc>> {
     if arcs.is_empty() {
         return Err(refuse("Circle Boolean boundary is empty"));
     }

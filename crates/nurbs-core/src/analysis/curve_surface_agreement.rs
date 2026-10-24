@@ -385,9 +385,10 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
 // A clamped tensor endpoint restricts exactly to its original control row.
 // Matching the complete univariate knot basis and authored controls/weights
 // proves a multi-span trace, without rounded knot insertion or composition.
-// The subsequent predicate sees identical coefficient sequences: its Bezier
-// identity is used only to mint the immutable source/context and charge exact
-// work, never to equate different NURBS coefficient sequences.
+// The subsequent predicate sees identical coefficients or constant-weight
+// polynomial rows. Global constant weights cancel in every NURBS basis. Its
+// Bezier identity binds the immutable source/context and charges exact work;
+// arbitrary different NURBS coefficient sequences are never equated.
 fn exact_natural_nurbs_boundary(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64)
     -> Result<Option<cad_predicates::BezierIdentityDecision>> {
     use cad_predicates::{AuthoredScalar,Limits,PredicateContext,SourceArena,ToleranceContext};
@@ -429,9 +430,11 @@ fn exact_natural_nurbs_boundary(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_w
         if !same_basis {continue;}
         let row=if end==0{0}else{sizes[fixed]-1};
         let indices=|i|if fixed==0{(row,i)}else{(i,row)};
+        let polynomial=c.weights.iter().all(|&w|w==c.weights[0])
+            &&(0..sizes[free]).all(|i|{let(u,v)=indices(i);let(a,b)=indices(0);s.weights[u][v]==s.weights[a][b]});
         let same_controls=(0..sizes[free]).all(|i|{
             let ci=if mirror{sizes[free]-1-i}else{i};let(u,v)=indices(i);
-            c.control_points[ci]==s.control_points[u][v]&&c.weights[ci]==s.weights[u][v]
+            c.control_points[ci]==s.control_points[u][v]&&(c.weights[ci]==s.weights[u][v]||polynomial)
         });
         if !same_controls {continue;}
         let mut values=Vec::new();

@@ -13,13 +13,20 @@ use std::collections::BTreeSet;
 
 pub const CLOSE_TOPOLOGY_CAPABILITY: &str = "close-topology/1";
 pub const TOLERANT_COMPLEX_HEAL_CAPABILITY: &str = "tolerant-complex-heal/1";
+pub const CLOSE_TOPOLOGY_STEP_CAPABILITY: &str = "close-topology-step/1";
+pub const CLOSE_TOPOLOGY_IGES_CAPABILITY: &str = "close-topology-iges/1";
 const MAX_PARTS: usize = 64;
 const MAX_RELATIONS: usize = 4096;
 const MAX_RADIAL_USES: usize = 16;
 
+
+pub use interchange::{encode_complex, decode_complex, interchange_certificate, export_complex_step, import_complex_step, export_complex_iges, import_complex_iges};
+
+mod interchange;
+
 mod body_role;
-mod correspondence_kind;
+mod complex_heal_certificate;
 #[cfg(test)]
 mod tests;
 pub use body_role::*;
-pub use correspondence_kind::*;
+pub use complex_heal_certificate::*;

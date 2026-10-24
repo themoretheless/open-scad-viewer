@@ -2,6 +2,7 @@
 //! actual retained section hull. Closed Bishop correction still uses the
 //! original arc-length phase; sampled chord correction is never assumed exact.
 use super::*;
+mod path_chord;
 
 // A single immutable XYZ source snapshot owns all scalar spans once. Queries
 // then charge every actual original restriction, including point contacts at
@@ -191,6 +192,9 @@ pub(super) fn section_interpolation(
     let mut error = 0_f64;
     let mut endpoint = 0_f64;
     let mut caps = [0_f64; 2];
+    let mut path_values = Vec::with_capacity(count);
+    let mut path_points = Vec::with_capacity(count);
+    let path_continuous = path_chord::continuous(sweep.path);
     for i in 0..count {
         let at = station(i)?;
         let source = if let Some(pose) = shared_pose.as_deref_mut() {
@@ -202,7 +206,9 @@ pub(super) fn section_interpolation(
         let Some(source) = source.value else {
             return Ok(out);
         };
-        let relative = if let Some(pose) = shared_pose.as_deref_mut() {
+        path_values.push(source);
+        path_points.push(source.map(|v| crate::distance_bounds::midpoint(v[0], v[1])));
+                let relative = if let Some(pose) = shared_pose.as_deref_mut() {
             pose.rmf_values(transport, sweep, &qs, at, at, max_cells - out.cells)?
         } else {
             super::super::rmf_transport::relative_values(
@@ -241,22 +247,36 @@ pub(super) fn section_interpolation(
         if i + 1 == count {
             caps[1] = displacement;
         }
-        if i + 1 == count {
-            continue;
-        }
-        let interval = [at[0], station(i + 1)?[1]];
-        let source = if let Some(pose) = shared_pose.as_deref_mut() {
-            pose.source_values(interval, || {
-                source_values.values(interval, max_cells - out.cells)
-            })?
-        } else {
-            source_values.values(interval, max_cells - out.cells)?
-        };
+    }
+    for i in 0..count - 1 {
+        // Retained V knots are the stored binary64 station fractions. These
+        // intervals cover [0,1] exactly; endpoint value boxes above also enclose
+        // the mathematical station ratios and constructor mapping roundoff.
+        let interval = [
+            i as f64 / (count - 1) as f64,
+            (i + 1) as f64 / (count - 1) as f64,
+        ];
+        let source = vector_certificate::certify_traversal(
+            sweep.path,
+            interval,
+            max_cells - out.cells,
+            false,
+        )?;
         out.cells += source.cells;
-        let Some(source) = source.value else {
+        let Some(source_values) = source.value else {
+            out.reason = source.reason;
             return Ok(out);
         };
-        let relative = if let Some(pose) = shared_pose.as_deref_mut() {
+        let path_error = path_chord::upper(
+            sweep.path,
+            &source,
+            interval,
+            [path_points[i], path_points[i + 1]],
+            [path_values[i], path_values[i + 1]],
+            path_continuous,
+        )
+        .unwrap_or(None);
+                let relative = if let Some(pose) = shared_pose.as_deref_mut() {
             pose.rmf_values(
                 transport,
                 sweep,
@@ -286,15 +306,25 @@ pub(super) fn section_interpolation(
             return Ok(out);
         };
         for (j, value) in values.iter().enumerate() {
-            let mut delta = [I::point(0.); 3];
+            let mut direct = [I::point(0.); 3];
+            let mut relative_delta = direct;
             for k in 0..3 {
                 let a = sections[i].control_points[j][k];
                 let b = sections[i + 1].control_points[j][k];
-                delta[k] = I::new(source[k][0], source[k][1])?
-                    .add(I::new(value[k][0], value[k][1])?)?
+                let original = I::new(value[k][0], value[k][1])?;
+                direct[k] = I::new(source_values[k][0], source_values[k][1])?
+                    .add(original)?
                     .sub(I::new(a.min(b), a.max(b))?)?;
+                // The exact stored line decomposes into the path proposal line
+                // plus this relative line. Subtractions remain interval-valued.
+                let qa = I::point(a).sub(I::point(path_points[i][k]))?;
+                let qb = I::point(b).sub(I::point(path_points[i + 1][k]))?;
+                relative_delta[k] = original.sub(I::new(qa.lo.min(qb.lo), qa.hi.max(qb.hi))?)?;
             }
-            error = error.max(crate::numerics::interval_vec3::norm(delta)?.hi);
+            let direct = crate::numerics::interval_vec3::norm(direct)?.hi;
+            let relative = crate::numerics::interval_vec3::norm(relative_delta)?.hi;
+            let separated = path_error.and_then(|p| crate::numerics::error_upper::add(p, relative));
+            error = error.max(separated.map_or(direct, |bound| bound.min(direct)));
         }
     }
     out.status = Status::Certified;

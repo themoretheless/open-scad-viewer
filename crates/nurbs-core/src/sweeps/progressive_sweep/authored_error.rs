@@ -32,7 +32,6 @@ pub struct InitialCoordinatesReport {
 
 
 
-
 #[derive(Clone, Debug)]
 pub struct SectionInterpolationReport {
     pub status: Status,

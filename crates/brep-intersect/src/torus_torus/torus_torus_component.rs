@@ -22,7 +22,7 @@ pub enum TorusTorusComponent {
 /// Exact circle component at height `z` (along the first torus's axis from
 /// its center plane) with radius `rho`, with UV lifts on both tori and a
 /// 16-sample residual bound against both implicit equations.
-fn circle_component(
+pub(super) fn circle_component(
     first: &CanonicalTorus,
     second: &CanonicalTorus,
     z: f64,
@@ -209,22 +209,4 @@ pub fn intersect_torus_torus(
             .push(circle_component(&first, &second, z, rho)?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for TorusTorusComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                first_uv,
-                second_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"firstUv":first_uv,"secondUv":second_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }

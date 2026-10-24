@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "ownRustSourceBundle": "b4cd83af77f12d054ba36547758d15b5d1226bdd5fdeeb3245b5ab7f1cedad41",
+  "runtimeRustSourceChanged": false,
+  "wasmChanged": false,
+  "nativeGoldenMacos": {
+    "status": "passed",
+    "scope": "All 43 cases execute; existing test compares exact golden hashes only on x86_64 Linux."
+  },
+  "linuxSameHostGoldenAudit": {
+    "status": "passed",
+    "run": 38591445273,
+    "baselineCasesReproduced": 43,
+    "exactChangedHashesReconciled": 6
+  },
+  "architecture": {
+    "status": "passed",
+    "tests": 4
+  },
+  "fingerprintsV100": {
+    "status": "timeout",
+    "passed": 27,
+    "timedOut": 4,
+    "assertionFailures": 0,
+    "testTimeoutMs": 30000,
+    "scope": "Local shared compilation/IO load; full isolated hosted test suite remains a required delivery gate."
+  },
+  "g1V98": {
+    "status": "passed",
+    "run": 38583819692,
+    "units": 4740,
+    "fragments": 132,
+    "successorCredit": 0
+  }
+}

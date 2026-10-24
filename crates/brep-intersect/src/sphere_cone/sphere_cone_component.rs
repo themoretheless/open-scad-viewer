@@ -21,7 +21,7 @@ pub enum SphereConeComponent {
 
 /// Where a resolved circle sits on the cone boundary.
 #[derive(Clone, Copy)]
-enum CircleSite {
+pub(super) enum CircleSite {
     /// On the side wall: radius is the linearly interpolated rho(axial).
     Side,
     /// On a ring cap disk (slot 0 bottom, slot 1 top) with the circle radius.
@@ -32,7 +32,7 @@ enum CircleSite {
 /// Exact circle component at axial position `axial` relative to the bottom
 /// ring center, with UV lifts on both surfaces and a 16-sample residual
 /// bound.
-fn circle_component(
+pub(super) fn circle_component(
     sphere: &CanonicalSphere,
     cone: &CanonicalCone,
     axial: f64,
@@ -256,22 +256,4 @@ pub fn intersect_sphere_cone(
             .push(circle_component(&sphere, &cone, axial, site)?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for SphereConeComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                sphere_uv,
-                cone_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"sphereUv":sphere_uv,"coneUv":cone_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }

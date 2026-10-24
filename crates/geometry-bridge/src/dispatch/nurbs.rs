@@ -2,7 +2,6 @@
 use crate::*;
 
 const OPS: &[&str] = &[
-    "brep_nurbs_constant_fillet_family",
     "brep_nurbs_sketch_extrude",
     "brep_nurbs_section_loft_source_audit",
     "brep_nurbs_affine_lattice",
@@ -30,14 +29,15 @@ const OPS: &[&str] = &[
     "brep_nurbs_tube",
     "brep_nurbs_extrude_curves",
     "brep_nurbs_extrude_polygon",
+    "brep_nurbs_capped_loft_with_caps",
+    "brep_nurbs_natural_section_loft",
     "brep_nurbs_section_loft_surfaces",
     "brep_nurbs_smooth_polygon_station_body",
     "brep_nurbs_smooth_station_walls",
-    "brep_nurbs_natural_section_loft",
-    "brep_nurbs_capped_loft_with_caps",
     "brep_nurbs_capped_loft_surfaces",
     "brep_nurbs_periodic_section_loft",
     "brep_nurbs_rational_section_loft",
+    "brep_nurbs_progressive_profile_body",
     "brep_nurbs_ruled_loft",
     "brep_nurbs_faceted_loft",
     "brep_nurbs_faceted_sweep",
@@ -59,22 +59,7 @@ const OPS: &[&str] = &[
     "brep_nurbs_fillet_edges",
     "brep_nurbs_audited_multi_edge_fillet",
     "brep_nurbs_exact_convex_chamfer",
-    "brep_nurbs_exact_convex_prism_fillet",
-    "brep_nurbs_exact_simple_prism_fillet",
-    "brep_nurbs_exact_annular_fillet",
-    "brep_nurbs_exact_layered_prism_fillet",
-    "brep_nurbs_partial_annular_preview",
-    "brep_nurbs_exact_variable_radius_fillet",
-    "brep_nurbs_exact_valence3_corner_blend",
-    "brep_nurbs_audited_parallel_frame_sweep",
-    "brep_nurbs_audited_multi_section_loft_v2",
-    "brep_nurbs_audited_bent_rmf_sweep_v2",
-    "brep_nurbs_inspect",
-    "brep_nurbs_tessellate",
-    "brep_nurbs_certified_tessellate",
-    "brep_nurbs_certified_freeform_tessellate",
-    "brep_nurbs_display",
-    "brep_nurbs_to_polygon",
+    "brep_nurbs_constant_fillet_family",
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
@@ -84,13 +69,8 @@ pub(crate) fn route(v: Value) -> Routed {
     Routed::Handled(handle(v))
 }
 
-fn handle(mut v: Value) -> Result<Value> {
+fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
-        "brep_nurbs_constant_fillet_family" => encode(
-            brep_core::feature_family::constant_fillet_family(
-                &field(&v, "model")?, &field::<Vec<usize>>(&v, "edges")?,
-            )?.name(),
-        ),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = if let Some(path)=sketch.get("editablePath").filter(|p|!p.is_null()) {
@@ -123,12 +103,23 @@ fn handle(mut v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_section_loft_source_audit" => {
-            let exact=brep_core::analytic::section_loft_source_matches(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,field(&v,"closed")?)?;
+            let exact = brep_core::analytic::section_loft_source_matches(
+                &field(&v, "model")?,
+                &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
+                field(&v, "closed")?,
+            )?;
             Ok(json!({"geometryAndTopologyIdentical":exact,"globalEmbeddingCertified":false}))
         }
         "brep_nurbs_affine_lattice" => {
-            let report=brep_core::affine_lattice::place(&field(&v,"model")?,field(&v,"matrix")?,field(&v,"quantum")?,field(&v,"maxWork")?)?;
-            Ok(json!({"model":report.model,"operatorNormUpper":report.operator_norm_upper,"arithmeticErrorUpper":report.arithmetic_error_upper,"work":report.work,"reason":report.reason}))
+            let report = brep_core::affine_lattice::place(
+                &field(&v, "model")?,
+                field(&v, "matrix")?,
+                field(&v, "quantum")?,
+                field(&v, "maxWork")?,
+            )?;
+            Ok(
+                json!({"model":report.model,"operatorNormUpper":report.operator_norm_upper,"arithmeticErrorUpper":report.arithmetic_error_upper,"work":report.work,"reason":report.reason}),
+            )
         }
         "brep_nurbs_transform" => encode(brep_core::transform::affine(
             &field(&v, "model")?,
@@ -142,11 +133,11 @@ fn handle(mut v: Value) -> Result<Value> {
             field(&v, "offset")?,
         )?),
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
-        "brep_nurbs_freeform_cuboid" => encode(cad_step::freeform_cuboid_solid(
+        "brep_nurbs_freeform_cuboid" => encode(brep_core::freeform_cuboid_solid(
             field(&v, "min")?,
             field(&v, "max")?,
         )?),
-        "brep_nurbs_freeform_cuboid_bump" => encode(cad_step::freeform_cuboid_with_bump_face(
+        "brep_nurbs_freeform_cuboid_bump" => encode(brep_core::freeform_cuboid_with_bump_face(
             field(&v, "min")?,
             field(&v, "max")?,
         )?),
@@ -156,8 +147,7 @@ fn handle(mut v: Value) -> Result<Value> {
                 .and_then(Value::as_f64)
                 .unwrap_or(360.),
         )?),
-        "brep_nurbs_sphere" => encode(brep_core::sphere(field(&v, "radius")?)?),
-        "brep_nurbs_sphere_exact" => cad_face_contacts::sphere(v),
+        "brep_nurbs_sphere" | "brep_nurbs_sphere_exact" => cad_face_contacts::sphere(v),
         "brep_nurbs_gear" => {
             let number = |name: &str, default: f64| -> f64 {
                 v.get(name).and_then(Value::as_f64).unwrap_or(default)
@@ -299,43 +289,236 @@ fn handle(mut v: Value) -> Result<Value> {
                 field(&v, "zMax")?,
             )?)
         }
+        "brep_nurbs_capped_loft_with_caps" => {
+            let definitions: Vec<Value> = field(&v, "caps")?;
+            if definitions.len() != 2 {
+                return Err(input("Loft requires two authored caps"));
+            }
+            let caps = definitions
+                .iter()
+                .map(|c| {
+                    Ok(brep_core::LoftCap {
+                        surface: field(c, "surface")?,
+                        trims: field(c, "trims")?,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let l: Value = field(&v, "embeddingLimits")?;
+            let limits = brep_core::boundary_embedding::Limits {
+                exact_work: field(&l, "exactWork")?,
+                trim_pairs: field(&l, "trimPairs")?,
+                trim_cells: field(&l, "trimCells")?,
+                trim_domain_cells: field(&l, "trimDomainCells")?,
+                spans: field(&l, "spans")?,
+                contacts: brep_core::face_contacts::Limits {
+                    pairs: field(&l, "facePairs")?,
+                    cells: field(&l, "faceCells")?,
+                    domain_cells: field(&l, "faceDomainCells")?,
+                    cells_per_pair: field(&l, "faceCellsPerPair")?,
+                    domain_cells_per_pair: field(&l, "faceDomainCellsPerPair")?,
+                },
+            };
+            encode(brep_core::capped_loft_with_caps_checked(
+                &field::<Vec<Vec<Curve>>>(&v, "start")?,
+                &field::<Vec<Vec<Curve>>>(&v, "end")?,
+                &field::<Vec<Vec<Surface>>>(&v, "sides")?,
+                [&caps[0], &caps[1]],
+                field(&v, "toleranceUv")?,
+                limits,
+            )?)
+        }
+        "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(
+            &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
+            &field::<Vec<f64>>(&v, "parameters")?,
+        )?),
         operation @ ("brep_nurbs_smooth_polygon_station_body" | "brep_nurbs_section_loft_surfaces" | "brep_nurbs_rational_section_loft") => crate::polygon_station_body::dispatch(operation,&v),
         "brep_nurbs_smooth_station_walls" => {
             let report = brep_core::analytic::smooth_station_walls(
                 &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
                 &field::<Vec<usize>>(&v, "sharp")?,
-                field(&v, "closed")?, field(&v, "quantum")?,
-                field(&v, "tolerance")?, field(&v, "maxWork")?,
+                field(&v, "closed")?,
+                field(&v, "quantum")?,
+                field(&v, "tolerance")?,
+                field(&v, "maxWork")?,
             )?;
             encode(json!({"sides": report.sides,
                 "wallDisplacementUpper": report.wall_displacement_upper,
                 "work": report.work, "reason": report.reason}))
-        },
-        "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?, &field::<Vec<f64>>(&v,"parameters")?)?),
-        "brep_nurbs_capped_loft_with_caps" => {
-            let definitions: Vec<Value> = field(&v,"caps")?;
-            if definitions.len()!=2 { return Err(input("Loft requires two authored caps")); }
-            let caps = definitions.iter().map(|c| Ok(brep_core::LoftCap {
-                surface:field(c,"surface")?,trims:field(c,"trims")?,
-            })).collect::<Result<Vec<_>>>()?;
-            let l:Value=field(&v,"embeddingLimits")?;
-            let limits=brep_core::boundary_embedding::Limits {
-                exact_work:field(&l,"exactWork")?,trim_pairs:field(&l,"trimPairs")?,
-                trim_cells:field(&l,"trimCells")?,trim_domain_cells:field(&l,"trimDomainCells")?,
-                spans:field(&l,"spans")?,contacts:brep_core::face_contacts::Limits {
-                    pairs:field(&l,"facePairs")?,cells:field(&l,"faceCells")?,
-                    domain_cells:field(&l,"faceDomainCells")?,cells_per_pair:field(&l,"faceCellsPerPair")?,
-                    domain_cells_per_pair:field(&l,"faceDomainCellsPerPair")?,
-                },
-            };
-            encode(brep_core::capped_loft_with_caps_checked(
-                &field::<Vec<Vec<Curve>>>(&v,"start")?, &field::<Vec<Vec<Curve>>>(&v,"end")?,
-                &field::<Vec<Vec<Surface>>>(&v,"sides")?, [&caps[0],&caps[1]],
-                field(&v,"toleranceUv")?, limits)?)
         }
-        "brep_nurbs_capped_loft_surfaces" => encode(brep_core::capped_loft_surfaces(&field::<Vec<Vec<Curve>>>(&v,"start")?, &field::<Vec<Vec<Curve>>>(&v,"end")?, &field::<Vec<Vec<Surface>>>(&v,"sides")?)?),
-        "brep_nurbs_periodic_section_loft" => encode(brep_core::periodic_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),
-
+        "brep_nurbs_capped_loft_surfaces" => encode(brep_core::capped_loft_surfaces(
+            &field::<Vec<Vec<Curve>>>(&v, "start")?,
+            &field::<Vec<Vec<Curve>>>(&v, "end")?,
+            &field::<Vec<Vec<Surface>>>(&v, "sides")?,
+        )?),
+        "brep_nurbs_periodic_section_loft" => encode(brep_core::periodic_section_loft(&field::<
+            Vec<Vec<Vec<Curve>>>,
+        >(
+            &v, "sections",
+        )?)?),
+        "brep_nurbs_progressive_profile_body" => {
+            use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+            let orientation = match field::<String>(&v, "orientation")?.as_str() {
+                "rmf" => Orientation::RotationMinimizing,
+                "fixed" | "authored" => Orientation::Fixed,
+                "fixed_normal" => Orientation::FixedNormal,
+                "frenet" => Orientation::Frenet,
+                "corrected_frenet" => Orientation::CorrectedFrenet,
+                _ => {
+                    return Err(Error::new(
+                        "BREP_RATIONAL_SWEEP_REFUSED",
+                        "Unknown orientation",
+                    ));
+                }
+            };
+            let spacing = match field::<String>(&v, "spacing")?.as_str() {
+                "parameter" => Spacing::Parameter,
+                "arc_length" => Spacing::ArcLength {
+                    tolerance: field(&v, "length_tolerance")?,
+                    max_cells: field(&v, "length_max_cells")?,
+                },
+                _ => return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED", "Unknown spacing")),
+            };
+            let options = Options {
+                normal: field(&v, "normal")?,
+                orientation,
+                spacing,
+                initial_sections: field(&v, "initial_sections")?,
+                max_sections: field(&v, "max_sections")?,
+                max_deviation: field(&v, "max_deviation")?,
+            };
+            let loops = field::<Vec<Vec<Curve>>>(&v, "loops")?;
+            let path = field::<Curve>(&v, "path")?;
+            let scale = field::<Curve>(&v, "scale")?;
+            let twist = field::<Curve>(&v, "twist")?;
+            let axes = optional_field::<Curve>(&v, "axis_scale")?;
+            let center = optional_field::<Curve>(&v, "center_law")?;
+            let guide = optional_field::<Curve>(&v, "orientation_guide")?;
+            let contact = optional_field::<f64>(&v, "contact_parameter")?;
+            let contact_profile = optional_field::<usize>(&v, "contact_profile")?;
+            if contact.is_some() && guide.is_none()
+                || contact_profile.is_some() && contact.is_none()
+            {
+                return Err(Error::new(
+                    "BREP_RATIONAL_SWEEP_REFUSED",
+                    "Contact anchor requires orientation guide and parameter",
+                ));
+            }
+            let authored = field::<String>(&v, "orientation")? == "authored";
+            if authored && guide.is_some() {
+                return Err(Error::new(
+                    "BREP_RATIONAL_SWEEP_REFUSED",
+                    "Orientation guide cannot be combined with authored frames",
+                ));
+            }
+            let frame_axis = if authored {
+                Some(field::<Curve>(&v, "frame_axis")?)
+            } else {
+                None
+            };
+            let frame_normal = if authored {
+                Some(field::<Curve>(&v, "frame_normal")?)
+            } else {
+                None
+            };
+            let default_axes = nurbs_core::progressive_sweep::constant_vector_law([1.; 3])?;
+            let default_center = nurbs_core::progressive_sweep::constant_vector_law([0.; 3])?;
+            let affine = if authored || guide.is_some() || axes.is_some() || center.is_some() {
+                Some((
+                    axes.as_ref().unwrap_or(&default_axes),
+                    center.as_ref().unwrap_or(&default_center),
+                ))
+            } else {
+                None
+            };
+            let options = if authored {
+                Options {
+                    orientation: Orientation::Fixed,
+                    ..options
+                }
+            } else {
+                options
+            };
+            let tolerance = optional_field::<f64>(&v, "cap_correction_tolerance")?;
+            let quantum = optional_field::<f64>(&v, "cap_correction_quantum")?;
+            let max_work = optional_field::<u64>(&v, "cap_correction_max_work")?;
+            if tolerance.is_none() && (quantum.is_some() || max_work.is_some()) {
+                return Err(Error::new(
+                    "BREP_RATIONAL_SWEEP_REFUSED",
+                    "Cap correction requires a displacement tolerance",
+                ));
+            }
+            let correction =
+                tolerance.map(|tolerance| brep_core::analytic::EndpointCapCorrection {
+                    tolerance,
+                    quantum: quantum.unwrap_or(2_f64.powi(-40)),
+                    max_work: max_work.unwrap_or(1000000),
+                });
+            let rmf_steps = optional_field::<usize>(&v, "rmf_transport_steps")?;
+            let rmf_cells = optional_field::<usize>(&v, "error_max_cells")?;
+            let rmf_products = optional_field::<usize>(&v, "error_max_products")?;
+            let rmf_policy = match (rmf_steps, rmf_cells, rmf_products) {
+                (None, None, None) => None,
+                (Some(steps), Some(cells), Some(products))
+                    if field::<String>(&v, "orientation")? == "rmf" =>
+                {
+                    Some((steps, cells, products))
+                }
+                _ => {
+                    return Err(Error::new(
+                        "BREP_RATIONAL_SWEEP_REFUSED",
+                        "Spatial RMF policy requires unguided RMF and three proof budgets",
+                    ));
+                }
+            };
+            let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(
+                &loops,
+                &path,
+                &scale,
+                &twist,
+                affine,
+                frame_axis.as_ref().zip(frame_normal.as_ref()),
+                guide
+                    .as_ref()
+                    .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))),
+                options,
+                correction,
+                rmf_policy,
+            )?;
+            let retained_caps=result.retained_caps.as_ref().map(|r|json!({"exact":r.exact,
+                "capErrorUpper":if r.exact {Some(0.)}else{None},"exactWork":r.exact_work,"inspectedEdges":r.inspected_edges,"reason":r.reason,
+                "scope":"constructor-owned-retained-endpoint-regions","continuousBound":false,"globalEmbeddingCertified":false}));
+            let cap_projection = result.cap_projection.as_ref().map(|r| {
+                json!({
+                "idealCapDomainsCertified":r.original.domains.ideal_endpoint_domains_certified,
+                "normalDots":r.normal_dots,"reversesOrientation":r.reverses_orientation,
+                "cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
+                "scope":"constructor-owned-endpoint-plane-projection"})
+            });
+            let mut output = encode(
+                json!({"model":result.model,"approximation":result.approximation,"retainedCaps":retained_caps,
+                "capProjection":cap_projection,"filledCapErrorUpper":result.filled_cap_error_upper,
+                "capCorrectionErrorUpper":result.cap_correction_error_upper,
+                "bodyDecompositionErrorUpper":result.body_decomposition_error_upper,
+                "bodyDecompositionProducts":result.body_decomposition_products,
+                "retainedWalls":{"certified":result.retained_walls.certified,"faceCoverageCertified":result.retained_walls.face_coverage_certified,
+                    "coefficientFamilyCertified":result.retained_walls.coefficient_family_certified,"inspectedFaces":result.retained_walls.inspected_faces,
+                    "exactWork":result.retained_walls.exact_work,"reason":result.retained_walls.reason},
+                "boundaryErrorUpper":result.boundary_error_upper,"boundaryContinuousBound":result.boundary_error_upper.is_some(),
+                "boundaryErrorWithinBudget":result.boundary_error_within_budget,
+                "boundaryErrorScope":"constructor-owned-retained-wall-and-cap-union","globalEmbeddingCertified":false}),
+            )?;
+            if let Some((_, cells, products)) = rmf_policy {
+                output["approximation"]["report"]["errorCertificateMaxCells"] = json!(cells);
+                output["approximation"]["report"]["decompositionMaxProducts"] = json!(products);
+                if let Some(levels) = output["approximation"]["levels"].as_array_mut() {
+                    for level in levels {
+                        level["errorCertificateMaxCells"] = json!(cells);
+                        level["decompositionMaxProducts"] = json!(products);
+                    }
+                }
+            }
+            Ok(output)
+        }
         "brep_nurbs_ruled_loft" => encode(brep_core::ruled_loft(&field::<Vec<Vec<[f64; 3]>>>(
             &v, "sections",
         )?)?),
@@ -502,120 +685,13 @@ fn handle(mut v: Value) -> Result<Value> {
                 field(&v, "distance")?,
             )?)
         }
-        "brep_nurbs_exact_convex_prism_fillet" | "brep_nurbs_exact_simple_prism_fillet" | "brep_nurbs_exact_annular_fillet" | "brep_nurbs_exact_layered_prism_fillet" => {
-            require_exact_fields(
-                &v,
-                &["op", "model", "edges", "radius"],
-                "exact fillet request",
-            )?;
-            let author = match v["op"].as_str() {
-                Some("brep_nurbs_exact_simple_prism_fillet") => brep_core::exact_simple_prism_fillet,
-                Some("brep_nurbs_exact_annular_fillet") => brep_core::exact_annular_fillet,
-                Some("brep_nurbs_exact_layered_prism_fillet") => brep_core::exact_layered_prism_fillet,
-                _ => brep_core::exact_convex_prism_fillet,
-            };
-            encode(author(
+        "brep_nurbs_constant_fillet_family" => encode(
+            brep_core::feature_family::constant_fillet_family(
                 &field(&v, "model")?,
                 &field::<Vec<usize>>(&v, "edges")?,
-                field(&v, "radius")?,
-            )?)
-        }
-        "brep_nurbs_partial_annular_preview" => {
-            require_exact_fields(&v,&["op","model","edge","radius"],"partial annular preview request")?;
-            let model=brep_core::analytic_features::build_partial_annular_preview(
-                &field(&v,"model")?,field(&v,"edge")?,field(&v,"radius")?)?;
-            Ok(json!({
-                "model":model,
-                "changeSet":model.1.change_set,
-                "qualification":{
-                    "status":"preview-only", "commitAllowed":false,
-                    "boundaryIntersectionProof":"unqualified",
-                    "transitionContinuityProof":"unqualified"
-                }
-            }))
-        }
-        "brep_nurbs_exact_variable_radius_fillet" => {
-            require_exact_fields(
-                &v,
-                &["op", "model", "edges", "radii"],
-                "variable-radius fillet request",
-            )?;
-            encode(brep_core::exact_variable_radius_fillet(
-                &field(&v, "model")?,
-                &field::<Vec<usize>>(&v, "edges")?,
-                &field::<Vec<[f64; 2]>>(&v, "radii")?,
-            )?)
-        }
-        "brep_nurbs_exact_valence3_corner_blend" => {
-            require_exact_fields(
-                &v,
-                &["op", "model", "edges", "radius"],
-                "valence-3 corner blend request",
-            )?;
-            encode(brep_core::exact_valence3_corner_blend(
-                &field(&v, "model")?,
-                &field::<Vec<usize>>(&v, "edges")?,
-                field::<f64>(&v, "radius")?,
-            )?)
-        }
-        "brep_nurbs_audited_parallel_frame_sweep" => {
-            let frame_law: String = field(&v, "frameLaw")?;
-            encode(brep_core::audited_parallel_frame_sweep(
-                &field::<Vec<[f64; 2]>>(&v, "profile")?,
-                &field::<Vec<[f64; 3]>>(&v, "path")?,
-                &frame_law,
-            )?)
-        }
-        "brep_nurbs_audited_multi_section_loft_v2" => {
-            require_exact_fields(&v, &["op", "sections"], "multi-section loft request")?;
-            encode(brep_core::audited_multi_section_loft(&field::<
-                Vec<Vec<[f64; 3]>>,
-            >(
-                &v, "sections"
-            )?)?)
-        }
-        "brep_nurbs_audited_bent_rmf_sweep_v2" => {
-            require_exact_fields(
-                &v,
-                &["op", "profile", "path", "twistRadians", "scales"],
-                "bent RMF sweep request",
-            )?;
-            encode(brep_core::audited_bent_rmf_sweep(
-                &field::<Vec<[f64; 2]>>(&v, "profile")?,
-                &field::<Vec<[f64; 3]>>(&v, "path")?,
-                &field::<Vec<f64>>(&v, "twistRadians")?,
-                &field::<Vec<f64>>(&v, "scales")?,
-            )?)
-        }
-        "brep_nurbs_inspect" => {
-            encode(take_field::<brep_core::Model>(&mut v, "model")?.validate()?)
-        }
-        "brep_nurbs_tessellate" => encode(brep::nurbs(
-            &take_field(&mut v, "model")?,
-            field(&v, "segments")?,
-        )?),
-        "brep_nurbs_certified_tessellate" => encode(brep::certified_nurbs(
-            &take_field(&mut v, "model")?,
-            field(&v, "chordToleranceMm")?,
-            v.get("maxTriangles")
-                .and_then(Value::as_u64)
-                .unwrap_or(20_000) as usize,
-        )?),
-        "brep_nurbs_certified_freeform_tessellate" => encode(brep::certified_freeform_nurbs(
-            &take_field(&mut v, "model")?,
-            field(&v, "chordToleranceMm")?,
-            v.get("maxTriangles")
-                .and_then(Value::as_u64)
-                .unwrap_or(20_000) as usize,
-        )?),
-        "brep_nurbs_display" => brep_display::dispatch(v),
-        "brep_nurbs_to_polygon" => {
-            let t = brep::nurbs(&take_field(&mut v, "model")?, field(&v, "segments")?)?;
-            encode(polygon_core::solid::brep::from_mesh(
-                &t.built.mesh,
-                Some(&t.face_ids),
-            )?)
-        }
+            )?
+            .name(),
+        ),
         _ => unreachable!("route admits only OPS"),
     }
 }

@@ -88,7 +88,7 @@ pub(super) fn principal_initial_coordinates(sweep:&Sweep<'_>,phase:f64,max_cells
     Ok(out)
 }
 
-pub(super) fn coordinates_in_basis(
+pub(in crate::sweeps::progressive_sweep) fn coordinates_in_basis(
     profile: &Curve,
     start: [[f64; 2]; 3],
     frame: authored_frame_certificate::ValuesReport,

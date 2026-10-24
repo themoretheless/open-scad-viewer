@@ -132,9 +132,8 @@ const jsChunkBudgets = [
   [/^assets\/renderer-[^/]+\.js$/, 138_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
-  // Splitting the ModelGraph emitter match into per-kind methods adds 4 kB of
-  // raw WASM; measured: 470,803 bytes.
-  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 474_000],
+  // Rational-surface and transform-plan language kernels: measured 516,458 bytes.
+  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 517_000],
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
   [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
   // Sweep preview and boundary proof status app shell, measured: 241,848 bytes.

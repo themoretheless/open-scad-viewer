@@ -384,7 +384,7 @@ fn intersecting_cylinders_intersection_exact_volume() {
 
 #[test]
 fn parallel_wall_ss_publishes_complete_generator_lines() {
-    let report = nurbs_intersect::analytic_ss::cylinder_cylinder(
+    let report = crate::analytic_ss::cylinder_cylinder(
         FiniteCylinder {
             origin: [0., 0., 0.],
             direction: [0., 0., 1.],
@@ -404,6 +404,6 @@ fn parallel_wall_ss_publishes_complete_generator_lines() {
     assert_eq!(report.components.len(), 2);
     assert!(matches!(
         report.components[0],
-        nurbs_intersect::analytic_ss::AnalyticSsComponent::Line { .. }
+        crate::analytic_ss::AnalyticSsComponent::Line { .. }
     ));
 }

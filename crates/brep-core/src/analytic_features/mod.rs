@@ -2,13 +2,15 @@
 //!
 //! Faceted blends in `operations` remain available but must not be relabeled analytic.
 //! Each capability publishes a `FeatureCertificate` only on the frozen positive matrix.
-//! STEP AP214/AP242 topology roundtrip lives in `cad_step::step_interchange`.
+//! STEP AP214/AP242 topology roundtrip lives in `crate::step_interchange`.
 
+#[cfg(feature = "codec")]
+mod serialization;
 use crate::analytic::ruled_loft;
 #[cfg(test)]
 use crate::cylinder;
 use crate::operations::{boolean, extrude_polygon};
-use nurbs_intersect::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
+use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
 use crate::solid_audit::{SolidAuditCertificate, audit_solid};
 use crate::{ChangeSet, Model, cuboid, tube};
 use cad_predicates::ToleranceSpecIdentity;
@@ -44,18 +46,25 @@ pub const EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY: &str = "exact-variable-radius
 /// Exact equal-radius sphere/cylinder valence-3 corner on an audited AA cuboid.
 pub const EXACT_VALENCE3_CORNER_BLEND_CAPABILITY: &str = "exact-valence3-corner-blend/1";
 
+
+#[cfg(test)]
+#[path = "../tests/analytic_features.rs"]
+mod tests;
+
 mod audited_feature_result;
 mod exact_variable_radius_fillet;
-mod analytic_fillet_chain;
-mod audited_multi_section_loft;
+mod analytic_fillet;
+mod frame_law_ruled_sweep;
+mod audited_bent_rmf_sweep;
 mod exact_analytic_shell;
-#[cfg(test)]
-mod tests;
+mod import_iges;
 pub use audited_feature_result::*;
 pub use exact_variable_radius_fillet::*;
-pub use analytic_fillet_chain::*;
-pub use audited_multi_section_loft::*;
+pub use analytic_fillet::*;
+pub use frame_law_ruled_sweep::*;
+pub use audited_bent_rmf_sweep::*;
 pub use exact_analytic_shell::*;
 
 mod independent_corners;
 pub use independent_corners::*;
+pub use import_iges::*;

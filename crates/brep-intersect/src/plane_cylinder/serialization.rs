@@ -1,3 +1,4 @@
+//! Wire encoding for native geometry results.
 use super::*;
 
 impl value_codec::Serialize for PlaneCylinderComponent {

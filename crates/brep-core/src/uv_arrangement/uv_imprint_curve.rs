@@ -147,7 +147,7 @@ pub(super) fn cross(a: [f64; 2], b: [f64; 2]) -> f64 {
     a[0] * b[1] - a[1] * b[0]
 }
 
-fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+pub(super) fn sub(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     [a[0] - b[0], a[1] - b[1]]
 }
 
@@ -191,7 +191,7 @@ pub(super) fn segment_intersection(
     }
 }
 
-fn interval_contains(outer: [f64; 2], inner: [f64; 2]) -> bool {
+pub(super) fn interval_contains(outer: [f64; 2], inner: [f64; 2]) -> bool {
     outer[0] <= inner[0] + 1e-15
         && inner[1] <= outer[1] + 1e-15
         && (inner[0] - outer[0]).abs() + (outer[1] - inner[1]).abs() > 1e-12

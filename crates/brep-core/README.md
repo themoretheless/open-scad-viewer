@@ -324,3 +324,8 @@ Aggregate admission and retained section construction use the same guide,
 anchor and affine laws; open/periodic topology and face budgets are retained.
 JSON/TS/Rush body APIs expose these optional fields. Contact remains sampled;
 continuous contact and global embedding are uncertified.
+
+Canonical source-definition restore/replay and exchange snapshots require the
+`codec` feature because their API accepts retained structured definitions. Raw
+`Model` construction, boundary agreement, regularity and interval intersection
+kernels remain usable without JSON serialization.

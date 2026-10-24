@@ -149,11 +149,6 @@ pub fn member<'a>(
     Ok(Value::Undef)
 }
 
-#[path = "formatting.rs"]
-mod formatting;
-pub use formatting::{locale, js_number_to_string, js_to_precision, js_to_exponential, format_number, json_stringify, format_value, compact_diagnostic_text};
-
-
 /// Shared mutable variable environment (the TS `Map<string, Value>`; clones of
 /// the `Rc` share the map exactly like spreading `{...ctx, env}` shares it).
 pub type Env<'a> = Rc<RefCell<HashMap<String, Value<'a>>>>;
@@ -168,14 +163,14 @@ pub fn env_of(map: HashMap<String, Value<'_>>) -> Env<'_> {
 /// but its RHS sees only bindings already present when the target was first
 /// introduced.
 pub struct StableScope<'a> {
-    variables: Vec<(String, usize, &'a Expr)>,
-    variable_index: HashMap<String, usize>,
-    functions: HashMap<String, &'a FunctionNode>,
-    modules: HashMap<String, &'a ModuleNode>,
+    pub(super) variables: Vec<(String, usize, &'a Expr)>,
+    pub(super) variable_index: HashMap<String, usize>,
+    pub(super) functions: HashMap<String, &'a FunctionNode>,
+    pub(super) modules: HashMap<String, &'a ModuleNode>,
     pub parent: Option<Rc<StableScope<'a>>>,
     pub env: Env<'a>,
-    values: RefCell<HashMap<String, Value<'a>>>,
-    resolving: RefCell<HashSet<String>>,
+    pub(super) values: RefCell<HashMap<String, Value<'a>>>,
+    pub(super) resolving: RefCell<HashSet<String>>,
 }
 
 /// Evaluation site handed to the lazy variable evaluator.

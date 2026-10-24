@@ -14,11 +14,11 @@
     "crates/brep-core/src/intersections/sphere_cone.rs": 880,
     "crates/brep-core/src/intersections/sphere_cylinder.rs": 1083,
     "crates/brep-core/src/intersections/torus_torus.rs": 926,
-    "crates/brep-core/src/lib.rs": 1603,
+    "crates/brep-core/src/lib.rs": 1642,
     "crates/brep-core/src/nurbs_step_shared.rs": 1202,
     "crates/brep-core/src/step_interchange_v3.rs": 5274,
     "crates/brep-core/src/step_interchange.rs": 2208,
-    "crates/brep-topology/src/lib.rs": 1017,
+    "crates/brep-topology/src/lib.rs": 1039,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1128,
     "crates/modelgraph-runtime/src/eval/evaluator.rs": 1018,
     "crates/modelgraph-text/src/lower/compiler.rs": 1856,
@@ -30,7 +30,7 @@
     "crates/rush-runtime/src/eval.rs": 1212,
     "crates/rush-runtime/src/nurbs.rs": 891,
     "crates/rush-runtime/src/schema.rs": 1245,
-    "crates/sdf-core/src/lib.rs": 1510,
+    "crates/sdf-core/src/lib.rs": 1541,
     "crates/value-codec/src/lib.rs": 967,
     "scripts/check-sweep-miter-matrix-browser-source-matrix.mjs": 804,
     "scripts/export-sweep-step-oracle-source-matrix.mts": 1051,
@@ -59,13 +59,12 @@
     "src/services/geometry/brepCapability.ts": 517,
     "src/services/geometryBuildEngine.ts": 662,
     "src/services/manifoldPlanBackend.ts": 551,
-    "src/services/modelGraphNurbsKernel/buildOwnNurbsResolved.ts": 589,
     "src/services/openscadCompiler.ts": 911,
     "src/services/openscadParser.ts": 3542,
     "src/services/openscadSemanticLowerer.ts": 691,
     "src/services/openscadSemanticLowerer/evalNode.ts": 551,
     "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
-    "src/services/webgpuRenderer.ts": 2900
+    "src/services/webgpuRenderer.ts": 2880
   },
   "layers": []
 }

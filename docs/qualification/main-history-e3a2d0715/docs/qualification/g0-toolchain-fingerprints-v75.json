@@ -1,0 +1,5049 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v75",
+  "recordedAt": "2026-10-13",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v74",
+  "purpose": "Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line",
+      "Exact SHA-256 of the Geometry Closure V3 own-Rust source bundle and rebuilt WASM",
+      "Exact SHA-256 of the V34 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V35 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V36 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V37 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V38 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V39 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V40 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V41 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V42 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V43 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V44 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V45 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V46 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V47 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V48 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V49 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V50 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V51 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V52 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V53 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1-v74 or G1 v1 through v91",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-16",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "1b63d612d266c4c8984f875834b8e7018c103fc8e7b2a2392c27d1f25cb79adf",
+      "byteLength": 8477
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+      "byteLength": 86657
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+      "byteLength": 7475
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a",
+      "byteLength": 191
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "4455dcfa2cc0d2a1da0a2b11321af0cc0fbb8a2262cbbccda89f8961b6587953",
+      "byteLength": 2699
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "d29d942b59796c4f6579467456956a6480dd9d1640696dc6dc8a25c3646c1beb",
+      "byteLength": 79264
+    },
+    {
+      "id": "own-rust-cad-v2-evidence",
+      "path": "docs/qualification/own-rust-cad-v2.json",
+      "sha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395",
+      "byteLength": 1874
+    },
+    {
+      "id": "geometry-v3-source-01",
+      "path": "crates/brep-core/src/lib.rs",
+      "sha256": "0513f49d2b2072c7c0d162cfb90d0e3dc7052ffd5b203751a2ff83dfa4ffb352",
+      "byteLength": 71202
+    },
+    {
+      "id": "geometry-v3-source-04",
+      "path": "crates/brep-core/src/solid_audit.rs",
+      "sha256": "2cfa5248675be3ff0a0b2e96f37584649c734f5f5ed6c0ae96bc6fad8ca0864c",
+      "byteLength": 29375
+    },
+    {
+      "id": "geometry-v3-source-06",
+      "path": "crates/brep-core/src/transactions.rs",
+      "sha256": "74664d71c003743ffcc6b1709cc1543fcd720a2ff83a4611774ae497a594c618",
+      "byteLength": 17081
+    },
+    {
+      "id": "geometry-v3-source-09",
+      "path": "crates/brep-topology/src/lib.rs",
+      "sha256": "54dd03e08faa2efa12df1da5e98453eb8f4aaf30876aa4539a38183148a3f359",
+      "byteLength": 55342
+    },
+    {
+      "id": "geometry-v3-source-10",
+      "path": "crates/geometry-bridge/src/lib.rs",
+      "sha256": "80eb6ec18c2f689848b4ec72025704abb04f05d88ba69d4d7b4154e4572cc171",
+      "byteLength": 21744
+    },
+    {
+      "id": "geometry-v3-source-11",
+      "path": "src/core/ownRustCadEvidence.ts",
+      "sha256": "6c39984fb1bf2f61d31cceebec2fa14fdb1b7569733d9b8d7435e5029fc48ce7",
+      "byteLength": 1216
+    },
+    {
+      "id": "geometry-v3-source-12",
+      "path": "src/services/cadNurbsStep.ts",
+      "sha256": "b0d44be60adf9630e26c98129a8e85a7144147341b0e1e8b1b00d2655f373b10",
+      "byteLength": 12061
+    },
+    {
+      "id": "geometry-v3-source-13",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "fe9d9c8a86b81dffb2ef186f343aede1bd1cdfe562d7c15652ae16e3f7fd966c",
+      "byteLength": 149
+    },
+    {
+      "id": "geometry-v3-source-14",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "5f7276357892f9cd6ffbfe92e2207d139b886c7157341ec3b571c53ffdfa2bb9",
+      "byteLength": 26459
+    },
+    {
+      "id": "own-rust-cad-v3-evidence",
+      "path": "docs/qualification/own-rust-cad-v3.json",
+      "sha256": "6ca6e8ea8a5b54be7711dc49a179b232a671ce17613d079ff12a087b12a12f7b",
+      "byteLength": 1894
+    },
+    {
+      "id": "own-rust-cad-v4-evidence",
+      "path": "docs/qualification/own-rust-cad-v4.json",
+      "sha256": "fa09bf87b3cd821b489475c19469646fa0e841f89f76251bd959d74c6e9842c6",
+      "byteLength": 2020
+    },
+    {
+      "id": "geometry-v3-source-15",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "fe9d9c8a86b81dffb2ef186f343aede1bd1cdfe562d7c15652ae16e3f7fd966c",
+      "byteLength": 149
+    },
+    {
+      "id": "geometry-v3-source-16",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "5f7276357892f9cd6ffbfe92e2207d139b886c7157341ec3b571c53ffdfa2bb9",
+      "byteLength": 26459
+    },
+    {
+      "id": "own-rust-cad-v5-evidence",
+      "path": "docs/qualification/own-rust-cad-v5.json",
+      "sha256": "c6100705c560fc3008e379e20a48ff737ecbb8bbf280f2f1204c370f6c5fc504",
+      "byteLength": 2066
+    },
+    {
+      "id": "geometry-v3-source-17",
+      "path": "tests/brepQualificationV8.test.ts",
+      "sha256": "4c7c3e7dac22b6c0f013cdd84f391d4965f3567e7a00cd193727376687433ccb",
+      "byteLength": 3290
+    },
+    {
+      "id": "own-rust-cad-v6-evidence",
+      "path": "docs/qualification/own-rust-cad-v6.json",
+      "sha256": "c08740e378a28d8794bb1d7237a6b696d89b4ca6dfb1725f52c4b39321dbe94d",
+      "byteLength": 2272
+    },
+    {
+      "id": "geometry-v3-source-19",
+      "path": "crates/brep-core/src/analytic/loft.rs",
+      "sha256": "a39fcdeafd9f58f8b9985d02bdb1074593ccd7c34ab4c7cfa933fd47e77c479b",
+      "byteLength": 15252
+    },
+    {
+      "id": "geometry-v3-source-22",
+      "path": "crates/geometry-bridge/src/tests.rs",
+      "sha256": "516df9e6848d6075d582babdca9a4b9758d374ffd1c274f6c5fc2c64a45eea0e",
+      "byteLength": 42491
+    },
+    {
+      "id": "geometry-v3-source-23",
+      "path": "tests/brepQualificationV9.test.ts",
+      "sha256": "28c88bbb87c0cab45cbb2fa13e4b397e4064d4b7bd9981dcfe1cbbc1c90d82f2",
+      "byteLength": 5064
+    },
+    {
+      "id": "own-rust-cad-v7-evidence",
+      "path": "docs/qualification/own-rust-cad-v7.json",
+      "sha256": "9733e8d4b7f6be5634fd173aad2a4eb71d8e57d620b98234e3672d0851cff232",
+      "byteLength": 2553
+    },
+    {
+      "id": "geometry-v3-source-25",
+      "path": "crates/brep-core/src/intersections.rs",
+      "sha256": "c46e7f5c10a541005bd9a7086dbd451e61b38905fe9dffbf6ef147ee757f626c",
+      "byteLength": 1791
+    },
+    {
+      "id": "geometry-v3-source-27",
+      "path": "tests/brepQualificationV10.test.ts",
+      "sha256": "5d90fda128991f58bf46d5188c93eb790f012ea5325726d250eae95707041406",
+      "byteLength": 4792
+    },
+    {
+      "id": "own-rust-cad-v8-evidence",
+      "path": "docs/qualification/own-rust-cad-v8.json",
+      "sha256": "d3e6a09e69da39a1270a85c2aebd0f622ed058f92cdae776a0ce26ac7f14dc30",
+      "byteLength": 2631
+    },
+    {
+      "id": "geometry-v3-source-29",
+      "path": "src/services/cadIges.ts",
+      "sha256": "903e14ff2af3389f004699bb870ae8b10f15bcb8c873804bab147f0489cf4f6b",
+      "byteLength": 1087
+    },
+    {
+      "id": "geometry-v3-source-30",
+      "path": "tests/brepInterchangeV11.test.ts",
+      "sha256": "1e48fd8dd56e87887de90c8a294748cb436004d230ec6b3530f39e4a06c25324",
+      "byteLength": 1579
+    },
+    {
+      "id": "geometry-v3-source-31",
+      "path": "tests/brepQualificationV11.test.ts",
+      "sha256": "064dc7d0c6b4e3aabc915d41a3ba3fd02121b6ba864abf092d0dd020b30e8b3f",
+      "byteLength": 2030
+    },
+    {
+      "id": "own-rust-cad-v9-evidence",
+      "path": "docs/qualification/own-rust-cad-v9.json",
+      "sha256": "6da773063cf79d1027ece338d408a6593072e188b47d053b0965a5df9d473af0",
+      "byteLength": 2753
+    },
+    {
+      "id": "geometry-v3-source-33",
+      "path": "tests/brepQualificationV12.test.ts",
+      "sha256": "69e4728d2674845e340f1e0670c5232dd7aad58f86c460aa466b2694f69ca008",
+      "byteLength": 2784
+    },
+    {
+      "id": "g1-v34-github-workflow",
+      "path": ".github/workflows/g1-qualification-clean.yml",
+      "sha256": "25b1787cfd03b0a3a80989e9cf57350d2c2d38e1b41945a513a66f1dd1e70f14",
+      "byteLength": 19099
+    },
+    {
+      "id": "g1-v34-github-harness",
+      "path": "scripts/g1-github-actions.mjs",
+      "sha256": "d6901ecb9d0b5a9e0617a8319471b2503adf930dc46a7cefc528d52c740b5a2a",
+      "byteLength": 32803
+    },
+    {
+      "id": "g1-v34-clean-fragment-selector",
+      "path": "scripts/run-g1-candidate-clean-fragment.mjs",
+      "sha256": "fa2302525662854cb5d95b6028679770650fa422d8b51f02666df8c2424cfda7",
+      "byteLength": 11403
+    },
+    {
+      "id": "g1-v34-ubuntu-selector",
+      "path": "scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "sha256": "c67ed2c1879c2baf061b944804e1ca0442c2413826a764b43cd2a36a009e7a30",
+      "byteLength": 7667
+    },
+    {
+      "id": "g1-v34-github-environment",
+      "path": "docs/qualification/environment-freeze/g1-github-actions-v34.json",
+      "sha256": "c4896e1dab35ce3169770949220bed92501ea0c7d526840a93814b6e60afb2b7",
+      "byteLength": 3366
+    },
+    {
+      "id": "own-rust-cad-v10-evidence",
+      "path": "docs/qualification/own-rust-cad-v10.json",
+      "sha256": "0281cdf28d2ab1d6873140c76ec606d95bf3650fd29594fad978b4b4488b91cd",
+      "byteLength": 2886
+    },
+    {
+      "id": "own-rust-cad-v11-evidence",
+      "path": "docs/qualification/own-rust-cad-v11.json",
+      "sha256": "ba0158fd85641edd77286f5c4627ddaae934d9308f975ff53ef1a4aabdf919e4",
+      "byteLength": 2868
+    },
+    {
+      "id": "own-rust-cad-v12-evidence",
+      "path": "docs/qualification/own-rust-cad-v12.json",
+      "sha256": "a38f806ab5e09523b1267b32bd9798d9f909084815cf292bcf8390515c506957",
+      "byteLength": 2988
+    },
+    {
+      "id": "own-rust-cad-v13-evidence",
+      "path": "docs/qualification/own-rust-cad-v13.json",
+      "sha256": "e68e18d86e59c71227b89775aedc9ec736d1e111ea60e9542a59f529be94f5ae",
+      "byteLength": 2930
+    },
+    {
+      "id": "own-rust-cad-v14-evidence",
+      "path": "docs/qualification/own-rust-cad-v14.json",
+      "sha256": "fe7896e45d2a520498aee4f4da0b7b0bfaa302c6dde5150c860bcc8d4967dd24",
+      "byteLength": 2914
+    },
+    {
+      "id": "own-rust-cad-v15-evidence",
+      "path": "docs/qualification/own-rust-cad-v15.json",
+      "sha256": "cff11d63fe2d111c9c3cf5180c0a7a059815244d1780167fe5ad8fd49c4fb8e0",
+      "byteLength": 2928
+    },
+    {
+      "id": "own-rust-cad-v16-evidence",
+      "path": "docs/qualification/own-rust-cad-v16.json",
+      "sha256": "fd4147855f6e8c899ab61eef90edbeb592510ab569f03ecd6a6f4e1d975c7c84",
+      "byteLength": 3015
+    },
+    {
+      "id": "own-rust-cad-v17-evidence",
+      "path": "docs/qualification/own-rust-cad-v17.json",
+      "sha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
+      "byteLength": 3465
+    },
+    {
+      "id": "own-rust-cad-v18-evidence",
+      "path": "docs/qualification/own-rust-cad-v18.json",
+      "sha256": "9614a7a3cfdfdcc867ca20484d41bde1e251e4aa5da049d7eabc6e76c7bac365",
+      "byteLength": 3457
+    },
+    {
+      "id": "own-rust-cad-v19-evidence",
+      "path": "docs/qualification/own-rust-cad-v19.json",
+      "sha256": "fef877d39c4f1a4047662073e1ff5297c32c560777a9ef2bc09f4d89875c0283",
+      "byteLength": 3503
+    },
+    {
+      "id": "own-rust-cad-v20-evidence",
+      "path": "docs/qualification/own-rust-cad-v20.json",
+      "sha256": "c38cce506c68e260f811f71eb7cdbbc7b9b8eb965d96af2bd9e8c4e1843efe4a",
+      "byteLength": 3179
+    },
+    {
+      "id": "own-rust-cad-v21-evidence",
+      "path": "docs/qualification/own-rust-cad-v21.json",
+      "sha256": "e309d0b9381d396536926bb3446ad95549c7ebb7cd091e5af81be45b744a270c",
+      "byteLength": 3422
+    },
+    {
+      "id": "own-rust-cad-v22-evidence",
+      "path": "docs/qualification/own-rust-cad-v22.json",
+      "sha256": "35df7d03e21877f77186a6ca2aa2848fcca0a233a3630599f1d547c57e26fa73",
+      "byteLength": 3316
+    },
+    {
+      "id": "own-rust-cad-v23-evidence",
+      "path": "docs/qualification/own-rust-cad-v23.json",
+      "sha256": "3c189bdaa302e4bff4f407f772c31983a2a5bf6b25873f38775b29f0939d9dc5",
+      "byteLength": 3143
+    },
+    {
+      "id": "own-rust-cad-v24-evidence",
+      "path": "docs/qualification/own-rust-cad-v24.json",
+      "sha256": "0dd47ee4f238a0e2e4b3c1547c14711bbebba8b4d16ca16f26c9258077175a7c",
+      "byteLength": 3216
+    },
+    {
+      "id": "own-rust-cad-v25-evidence",
+      "path": "docs/qualification/own-rust-cad-v25.json",
+      "sha256": "acd8ab94479c640308960a1272762924477fdb9439dc453801673f451d3ae9c1",
+      "byteLength": 3190
+    },
+    {
+      "id": "own-rust-cad-v26-evidence",
+      "path": "docs/qualification/own-rust-cad-v26.json",
+      "sha256": "2a0c9b20aaac4e4eb7d753a667fbe88c0124ced5b20df7147ae4a576f038f483",
+      "byteLength": 3289
+    },
+    {
+      "id": "own-rust-cad-v27-evidence",
+      "path": "docs/qualification/own-rust-cad-v27.json",
+      "sha256": "9646c6c3eea8e1137bf3c437299e705252f20f4cd2818f893fff548e61a4b6be",
+      "byteLength": 2856
+    },
+    {
+      "id": "own-rust-cad-v28-evidence",
+      "path": "docs/qualification/own-rust-cad-v28.json",
+      "sha256": "df39564596e4a68b6bcec6b7fd0d1a369eb9e07def2bb1e78fd6f6223bb75b0b",
+      "byteLength": 4058
+    },
+    {
+      "id": "geometry-v3-source-34",
+      "path": "crates/nurbs-core/src/gordon.rs",
+      "sha256": "80fe9a52796b96955b96033f150a85a2bc6b641a84a49ba4b00d43ce0cd62404",
+      "byteLength": 15152
+    },
+    {
+      "id": "geometry-v3-source-35",
+      "path": "crates/nurbs-core/src/guided_loft.rs",
+      "sha256": "c43474aa90c4cb3a495df3e9cbdcee72261d37f927ffa725c481c9ea13408066",
+      "byteLength": 25176
+    },
+    {
+      "id": "geometry-v3-source-36",
+      "path": "crates/nurbs-core/src/loft_alignment.rs",
+      "sha256": "d1371b333096599bf36a9ee147cdcba40ec5309d6c615a25ce51af0818358b45",
+      "byteLength": 18476
+    },
+    {
+      "id": "geometry-v3-source-37",
+      "path": "crates/nurbs-core/src/loft_continuity.rs",
+      "sha256": "58d4af1c6e57465f55b4f4ee574ec88e9f4b05a3f87072629d8465ba755c62b6",
+      "byteLength": 14001
+    },
+    {
+      "id": "geometry-v3-source-38",
+      "path": "crates/nurbs-core/src/natural_loft.rs",
+      "sha256": "3ada74324ed317bbe1d751c009925dcf4415113213b1212a4587364ce20bb2dc",
+      "byteLength": 19502
+    },
+    {
+      "id": "own-rust-cad-v29-evidence",
+      "path": "docs/qualification/own-rust-cad-v29.json",
+      "sha256": "ed39ed3c55b33c3a6b9ef734d2813f83b6fbc6b73672d2134f43284db60ba32c",
+      "byteLength": 4086
+    },
+    {
+      "id": "geometry-v3-source-41",
+      "path": "crates/nurbs-core/src/gordon_tangent_audit.rs",
+      "sha256": "1e4b9b8740134b0baf5bf0c137e1112fcc8101512bc6cee7fbf28d3dafafd8c7",
+      "byteLength": 9995
+    },
+    {
+      "id": "geometry-v3-source-42",
+      "path": "crates/nurbs-core/src/gordon_tangent_fields.rs",
+      "sha256": "2306e2409611b60216dffa9a3d64c2df65f48038bed9478109b33361a5a6f556",
+      "byteLength": 7401
+    },
+    {
+      "id": "geometry-v3-source-43",
+      "path": "crates/nurbs-core/src/loft_reparameterization.rs",
+      "sha256": "e13ff6f29fa1366ad03115d7769c8cdedc4fe5c1a036430a7e81c5fd72272903",
+      "byteLength": 21586
+    },
+    {
+      "id": "geometry-v3-source-44",
+      "path": "crates/nurbs-core/src/reparameterization_residual.rs",
+      "sha256": "73acd115149b0757f01485694aec5f9aa6a40c386c0b52fb12f69eaa73af3863",
+      "byteLength": 15409
+    },
+    {
+      "id": "geometry-v3-source-45",
+      "path": "crates/nurbs-core/src/reparameterization_retention.rs",
+      "sha256": "61e9a1bd559993395cd2ab80d583ee35b46d682086a2c498eaff3d1b1b4f52dd",
+      "byteLength": 15789
+    },
+    {
+      "id": "geometry-v3-source-47",
+      "path": "docs/languages/modelgraph-nurbs-1.schema.json",
+      "sha256": "f61077d7dce3a1c3be981565f4ee620687dab60644444307523722c3b0edd612",
+      "byteLength": 1322074
+    },
+    {
+      "id": "geometry-v3-source-48",
+      "path": "src/services/modelGraphNurbsKernel.ts",
+      "sha256": "c7707568143e06a15be83be1eceda0be2c596f19b525f304f40e090381b05f2b",
+      "byteLength": 7377
+    },
+    {
+      "id": "geometry-v3-source-49",
+      "path": "src/services/nurbsConstructors.ts",
+      "sha256": "cdebd140f226a2ee53f3fed1c9cbbb98c129a71880927f054b378170bab174cb",
+      "byteLength": 43890
+    },
+    {
+      "id": "geometry-v3-source-50",
+      "path": "src/services/nurbsFoundation.ts",
+      "sha256": "ddd5006a09f05b8cd41c5795f279ed4ac095fd5b788c970ba9b721af1c87191a",
+      "byteLength": 23664
+    },
+    {
+      "id": "own-rust-cad-v30-evidence",
+      "path": "docs/qualification/own-rust-cad-v30.json",
+      "sha256": "2ad3734f556c01825ba1da90fff0dd2790ffd89249e19ed49a3424e4e4aec353",
+      "byteLength": 4478
+    },
+    {
+      "id": "own-rust-cad-v31-evidence",
+      "path": "docs/qualification/own-rust-cad-v31.json",
+      "sha256": "a9e1f9f37666825f5c28dced976b7f923912354d3779e7deccdb0e772b2da4e2",
+      "byteLength": 4663
+    },
+    {
+      "id": "geometry-v3-source-51",
+      "path": "crates/cad-predicates/src/arithmetic.rs",
+      "sha256": "51370cb08b405146be0ed52a23a5f3efcaf0986b85e3eb6920fe351f3497a6f1",
+      "byteLength": 17940
+    },
+    {
+      "id": "geometry-v3-source-52",
+      "path": "crates/cad-predicates/src/bezier_identity.rs",
+      "sha256": "f271c0eb4668fe4e3a733c2db5007411b72633cbda671d2e250a0d0a70751e69",
+      "byteLength": 7709
+    },
+    {
+      "id": "geometry-v3-source-53",
+      "path": "crates/cad-predicates/src/bezier_strip_jets.rs",
+      "sha256": "c8fe442af50fdb72eba23cc7945bee0a7a6c924c61382f2ffecfe304f933e063",
+      "byteLength": 10005
+    },
+    {
+      "id": "geometry-v3-source-54",
+      "path": "crates/cad-predicates/src/lib.rs",
+      "sha256": "480db48a155ca1db78d2d0fc28c0c75eda8795b33bd2af4293458a7771c27cfe",
+      "byteLength": 12903
+    },
+    {
+      "id": "geometry-v3-source-55",
+      "path": "crates/cad-predicates/src/projective_strip_jets.rs",
+      "sha256": "a1c4abc04b216df46676692d414bae0a4b58a7abbad782d580824dca3a419f85",
+      "byteLength": 14956
+    },
+    {
+      "id": "geometry-v3-source-56",
+      "path": "crates/nurbs-core/src/continuity.rs",
+      "sha256": "ee63f1eec52a78040b64d1ffcac4c574baf548c4f09c647cd1dbbe423ab0afdc",
+      "byteLength": 21420
+    },
+    {
+      "id": "geometry-v3-source-57",
+      "path": "crates/nurbs-core/src/continuity/exact_strip.rs",
+      "sha256": "e484a5a50ca3e1fbaffa2f4207186e735d2c5dbcbcc7b3a3256476acaba3d7fb",
+      "byteLength": 15304
+    },
+    {
+      "id": "geometry-v3-source-58",
+      "path": "crates/nurbs-core/src/continuity/regularity.rs",
+      "sha256": "082336ebfa645473e7a9a6aa3cd2cd8558bdc3e92174a5dc7440ede53895c9f6",
+      "byteLength": 6319
+    },
+    {
+      "id": "geometry-v3-source-59",
+      "path": "crates/nurbs-core/src/continuity/station_scale.rs",
+      "sha256": "79f751f285bd2895469a195409be3c1a35c48e19f0189461f96932e3de5a9a6a",
+      "byteLength": 3350
+    },
+    {
+      "id": "geometry-v3-source-60",
+      "path": "crates/nurbs-core/src/lib.rs",
+      "sha256": "4762dc6ddf251aa3e45cbf1717246cae0f71250d92190edb2c23de1ea737101b",
+      "byteLength": 4423
+    },
+    {
+      "id": "geometry-v3-source-61",
+      "path": "crates/nurbs-core/src/retained_wall_coefficients.rs",
+      "sha256": "a8214d0bf7c2163b60704c212b0b5efd036ae265219141abde216b5c30479ddb",
+      "byteLength": 14104
+    },
+    {
+      "id": "own-rust-cad-v32-evidence",
+      "path": "docs/qualification/own-rust-cad-v32.json",
+      "sha256": "f5c43e2f928da16f785a4c01c7a8d59fa0e3864406f4330a80f4f1e709689d1c",
+      "byteLength": 5088
+    },
+    {
+      "id": "own-rust-cad-v33-evidence",
+      "path": "docs/qualification/own-rust-cad-v33.json",
+      "sha256": "845016868c5ea27f2aedb8f016d5d43980619765cbf5cfc454b3a97bdb296150",
+      "byteLength": 10491
+    },
+    {
+      "id": "geometry-v3-source-62",
+      "path": "crates/brep-core/src/affine_lattice.rs",
+      "sha256": "380799885cd759a71c29560f3a2cc1279d64e3c4bde4e978a5d3d74dc5fc35fb",
+      "byteLength": 5819
+    },
+    {
+      "id": "geometry-v3-source-63",
+      "path": "crates/brep-core/src/analytic/rational_loft.rs",
+      "sha256": "7932dc085249fe10be3a94edcad8f67c82a6d4379e1c5ce657d0d3c4a81b39bf",
+      "byteLength": 29651
+    },
+    {
+      "id": "geometry-v3-source-64",
+      "path": "crates/brep-core/src/analytic/rational_loft/smooth_stations.rs",
+      "sha256": "0f9530d8be07673054591af2a7fdfc1b04821a005a9cb3c3da89a71e751abac4",
+      "byteLength": 14980
+    },
+    {
+      "id": "geometry-v3-source-65",
+      "path": "crates/brep-core/src/analytic/rational_loft_legacy.rs",
+      "sha256": "f4964816f7a93cc4ee4e16e89feb874d288c65403662692fe885206354de1633",
+      "byteLength": 18009
+    },
+    {
+      "id": "geometry-v3-source-66",
+      "path": "crates/brep-core/src/boundary_agreement.rs",
+      "sha256": "406b150c0274b0e094554da6eb2a87f4775fd9f76a02bab8c92fd2404e6fcf00",
+      "byteLength": 15894
+    },
+    {
+      "id": "geometry-v3-source-67",
+      "path": "crates/brep-core/src/boundary_embedding.rs",
+      "sha256": "3ffb5bb0ec9067b655c3c93d4fee4f0f09e8802f07881f286969bfb5e18ed4b3",
+      "byteLength": 12646
+    },
+    {
+      "id": "geometry-v3-source-68",
+      "path": "crates/brep-core/src/boundary_hull_contact.rs",
+      "sha256": "51ad1cfd450141bc1f82fc0c5f320ace06aa38b2a98bd6e06d53d499a604aafe",
+      "byteLength": 36465
+    },
+    {
+      "id": "geometry-v3-source-69",
+      "path": "crates/brep-core/src/control_hull_separation.rs",
+      "sha256": "f5fecf2c7a2d54426e07641ec87e810c956eca7476a8d93bd8b7bf0e971eb41a",
+      "byteLength": 3244
+    },
+    {
+      "id": "geometry-v3-source-70",
+      "path": "crates/brep-core/src/face_contacts.rs",
+      "sha256": "d742292dc5ec7f0602d878f30e36fc1e540f93d2808b7d529c6f870d2a418e53",
+      "byteLength": 11824
+    },
+    {
+      "id": "geometry-v3-source-71",
+      "path": "crates/brep-core/src/face_injectivity.rs",
+      "sha256": "a46f680982aa884a39b132897b17856b366b0e5c21214bd29c5f458158f9b746",
+      "byteLength": 12329
+    },
+    {
+      "id": "geometry-v3-source-73",
+      "path": "crates/brep-core/src/shared_boundary/monotone_coordinate.rs",
+      "sha256": "53098a110131d840fe87a596b1154e0d3a9e6f7c6d2a5c39981b91d72cd3bbff",
+      "byteLength": 5264
+    },
+    {
+      "id": "geometry-v3-source-74",
+      "path": "crates/brep-core/src/shell_nesting.rs",
+      "sha256": "cef11ebc5c6b0ff36ef411abb169e0bd048ef2f7692078e4f7971965cf749ca9",
+      "byteLength": 7644
+    },
+    {
+      "id": "geometry-v3-source-75",
+      "path": "crates/brep-core/src/shell_relation.rs",
+      "sha256": "4045c494a5898708df66da745007827d8498ac95830de35ea397ca390c45751b",
+      "byteLength": 9143
+    },
+    {
+      "id": "geometry-v3-source-76",
+      "path": "crates/brep-core/src/sweep_cap_contacts.rs",
+      "sha256": "83a903d33c002a38256e51e96f2f4a2b9f2ed6ecaf57ef68b1685dbc137db1c1",
+      "byteLength": 22334
+    },
+    {
+      "id": "geometry-v3-source-77",
+      "path": "crates/brep-core/src/sweep_retained.rs",
+      "sha256": "a44220905375af004e5257d907bc4fc686538e9d52de2cbc5fc2051ff742e838",
+      "byteLength": 16535
+    },
+    {
+      "id": "geometry-v3-source-78",
+      "path": "crates/brep-core/src/volume_validity.rs",
+      "sha256": "9bb521877113ab26ba806fe8e91871199633aa1996942df7033dac07b95f3ec5",
+      "byteLength": 24858
+    },
+    {
+      "id": "geometry-v3-source-79",
+      "path": "crates/cad-predicates/src/bezier_composition_identity.rs",
+      "sha256": "2b1a4e162290f0eabdcbb359dc4a8a15bba77b3c61641c6681c225da49c9f187",
+      "byteLength": 24208
+    },
+    {
+      "id": "geometry-v3-source-80",
+      "path": "crates/geometry-bridge/src/cad_face_contacts.rs",
+      "sha256": "a24a0b8de50969e9b8373b7e79e5aba9b06c003830cdd081f4221783ce6a0770",
+      "byteLength": 22418
+    },
+    {
+      "id": "geometry-v3-source-81",
+      "path": "crates/geometry-bridge/src/reconstruction.rs",
+      "sha256": "f93fbc7cbfb16ba4ab7180b77cf2817ff2e355970f881d6a0855a1a447dbd414",
+      "byteLength": 22238
+    },
+    {
+      "id": "geometry-v3-source-82",
+      "path": "crates/languages-bridge/src/lib.rs",
+      "sha256": "3ab2ebbe1057672dbb7f104fb52c19bf507bf3c5ad8098de4c47a5db13c65c05",
+      "byteLength": 10664
+    },
+    {
+      "id": "geometry-v3-source-83",
+      "path": "crates/nurbs-core/Cargo.toml",
+      "sha256": "377b117dd83e387dfd04915250d8a3e586f53994230ad6d91533bac2e1f924d2",
+      "byteLength": 484
+    },
+    {
+      "id": "geometry-v3-source-84",
+      "path": "crates/nurbs-core/src/affine.rs",
+      "sha256": "b4d560ead7dc5192ed2c5823250784bf07ffd0b215ddf92c7e2a0b3ef9714da6",
+      "byteLength": 4665
+    },
+    {
+      "id": "geometry-v3-source-85",
+      "path": "crates/nurbs-core/src/continuity/bounds.rs",
+      "sha256": "bb1790f13697383e54769cc8d0b2951f665cfa4c73bed30b7683d2ce51477e28",
+      "byteLength": 8680
+    },
+    {
+      "id": "geometry-v3-source-86",
+      "path": "crates/nurbs-core/src/curve_decomposition_certificate.rs",
+      "sha256": "aab60ea78bd5368b072a81776c313a5970fa172bd637811e1fb96df326b9134b",
+      "byteLength": 12175
+    },
+    {
+      "id": "geometry-v3-source-87",
+      "path": "crates/nurbs-core/src/curve_measure.rs",
+      "sha256": "2111818e975d9ced6e88f3439f4174c4475dbd9eef2a7cd0a8def3e9970bbce1",
+      "byteLength": 15125
+    },
+    {
+      "id": "geometry-v3-source-88",
+      "path": "crates/nurbs-core/src/curve_regularity.rs",
+      "sha256": "7932be58e1254a0434f80f21f9e110f9410f10f0185b36bd6bd3bf3ef5f97472",
+      "byteLength": 3454
+    },
+    {
+      "id": "geometry-v3-source-89",
+      "path": "crates/nurbs-core/src/curve_surface_agreement.rs",
+      "sha256": "d451809c1d254fea82a3d50895aec8ee85c72d9c7b8eed18834bf22c9faadb8c",
+      "byteLength": 22134
+    },
+    {
+      "id": "geometry-v3-source-90",
+      "path": "crates/nurbs-core/src/distance_bounds.rs",
+      "sha256": "eec8c73d876b94b894b723198abd08e0d85309a0365783fd8770f9c3a92870fa",
+      "byteLength": 3994
+    },
+    {
+      "id": "geometry-v3-source-91",
+      "path": "crates/nurbs-core/src/distance_bounds/serialization.rs",
+      "sha256": "7a4b1002a4016db9b8ab139189c60b0994e3b1e6c86a7237ec36113ba6630010",
+      "byteLength": 512
+    },
+    {
+      "id": "geometry-v3-source-92",
+      "path": "crates/nurbs-core/src/interval_eval.rs",
+      "sha256": "59dddf6dc30fe7fa7184d96f3a093ade5a43224afbf35b36c5d3b531862d0796",
+      "byteLength": 10297
+    },
+    {
+      "id": "geometry-v3-source-93",
+      "path": "crates/nurbs-core/src/paths.rs",
+      "sha256": "aa4437db95ae114b83f844cde28f45abfde542aedd2192ba424e0804e80d9f78",
+      "byteLength": 8538
+    },
+    {
+      "id": "geometry-v3-source-94",
+      "path": "crates/nurbs-core/src/paths/miter_sections.rs",
+      "sha256": "5921ad3887dce889aa216eecd4b5ae8189cc05cf2324fb5f2b9b11492e2b9ffc",
+      "byteLength": 11354
+    },
+    {
+      "id": "geometry-v3-source-95",
+      "path": "crates/nurbs-core/src/paths/round_polyline.rs",
+      "sha256": "fc00605cdf2000759c4bd2fe310c25086bc9e0deae2d6d8808d8768dbb30a095",
+      "byteLength": 14832
+    },
+    {
+      "id": "geometry-v3-source-96",
+      "path": "crates/nurbs-core/src/polynomial.rs",
+      "sha256": "ff753a3b0b320dc7513aed876b29b5374efe778807143d463d812c398a34b020",
+      "byteLength": 15923
+    },
+    {
+      "id": "geometry-v3-source-97",
+      "path": "crates/nurbs-core/src/retained_body_coverage.rs",
+      "sha256": "606928e6c11a157b77e1d4919e2a3e485b3d245d16c9a78783025432708794f0",
+      "byteLength": 3896
+    },
+    {
+      "id": "geometry-v3-source-98",
+      "path": "crates/nurbs-core/src/retained_wall_domain.rs",
+      "sha256": "d233ee6edec292664e84ea77f6e8da4f04f976d22a6b81ff194fa7e076a0f245",
+      "byteLength": 5934
+    },
+    {
+      "id": "geometry-v3-source-99",
+      "path": "crates/nurbs-core/src/section_circle_repair.rs",
+      "sha256": "dc5b3b4eba8046d8758c4ff21abe940acb2ddf7a59ab7df2683174814e3eeb01",
+      "byteLength": 6513
+    },
+    {
+      "id": "geometry-v3-source-100",
+      "path": "crates/nurbs-core/src/section_projection.rs",
+      "sha256": "8233df0140e6da5bed065fc011f18991dc55daf52a06bb81946f4f2fcc30651d",
+      "byteLength": 5089
+    },
+    {
+      "id": "geometry-v3-source-102",
+      "path": "crates/nurbs-core/src/surface_distance.rs",
+      "sha256": "fb73ecec58df733c54e297914e869788839530214a45322594ab13df8e238f4d",
+      "byteLength": 24058
+    },
+    {
+      "id": "geometry-v3-source-103",
+      "path": "crates/nurbs-core/src/surface_injectivity.rs",
+      "sha256": "3e6759a449b24c09c6e85779e8c496ef0b8dbe46e253f7c35cd44577d71e99ec",
+      "byteLength": 37347
+    },
+    {
+      "id": "geometry-v3-source-104",
+      "path": "crates/nurbs-core/src/surface_linear_monotonicity.rs",
+      "sha256": "bf1c923e93873cc66d4b748a88746e20a4048fd26c3498bd65b9a003c45a3200",
+      "byteLength": 12272
+    },
+    {
+      "id": "geometry-v3-source-105",
+      "path": "crates/nurbs-core/src/surface_measure.rs",
+      "sha256": "377f1ea233b770c2687060db8d3ca6950f40109fa43b860f9e7fedd79bf4906b",
+      "byteLength": 7537
+    },
+    {
+      "id": "geometry-v3-source-106",
+      "path": "crates/nurbs-core/src/surface_measure/jets.rs",
+      "sha256": "9391945bb41fa6f96e88ef245e8f6d8e0a767f694294603426005c26529a75db",
+      "byteLength": 11214
+    },
+    {
+      "id": "geometry-v3-source-107",
+      "path": "crates/nurbs-core/src/surface_monotonicity.rs",
+      "sha256": "d87657e784d81a2dd387cb6aba1fd919be296670064c3d06a88b124c6be6237a",
+      "byteLength": 9740
+    },
+    {
+      "id": "geometry-v3-source-108",
+      "path": "crates/nurbs-core/src/surface_regularity.rs",
+      "sha256": "4cb32781a2f3bda8263d82be567356f1fe7a9a5309a1b329f7ea7f3ecfe1d819",
+      "byteLength": 3573
+    },
+    {
+      "id": "geometry-v3-source-109",
+      "path": "crates/nurbs-core/src/sweep_support.rs",
+      "sha256": "98f90fc563785099a91ed9116e7be6ba004b3a3a7efa6e401bdb4ba3a257e335",
+      "byteLength": 107
+    },
+    {
+      "id": "geometry-v3-source-110",
+      "path": "crates/nurbs-core/src/sweep_support/audit.rs",
+      "sha256": "cf588f1f20f7d77fd57d07aa5f114319843cc94d4c131da17efbc9b2a911320d",
+      "byteLength": 1942
+    },
+    {
+      "id": "geometry-v3-source-111",
+      "path": "crates/nurbs-core/src/sweep_support/error_upper.rs",
+      "sha256": "92b358be083ee58565fde09a850434838796673664f4f7a18f2adf91b7eae7c3",
+      "byteLength": 3869
+    },
+    {
+      "id": "geometry-v3-source-112",
+      "path": "crates/nurbs-core/src/sweep_support/exact_curve_segments.rs",
+      "sha256": "fb3f22738fc8e16f85bc79683586b9a72defa3752dd3805179f9d55af7632b5f",
+      "byteLength": 15090
+    },
+    {
+      "id": "geometry-v3-source-113",
+      "path": "crates/nurbs-core/src/sweep_support/interval_vec3.rs",
+      "sha256": "8737040f01c0fb5cb68aa74f2b1cb77365638ba623266109bca916c0faed537a",
+      "byteLength": 2333
+    },
+    {
+      "id": "geometry-v3-source-114",
+      "path": "crates/nurbs-core/src/sweep_support/vec3_ext.rs",
+      "sha256": "2231b983b1d5f105c421dfd8f194ef0bd5cd5d7eddd52920e49b340e7913251c",
+      "byteLength": 758
+    },
+    {
+      "id": "geometry-v3-source-115",
+      "path": "crates/nurbs-core/src/sweeps.rs",
+      "sha256": "f1c643557f55b908c53fdc2a94051ed7bbd40caa4bce6278c698f4a017c0539d",
+      "byteLength": 540
+    },
+    {
+      "id": "geometry-v3-source-116",
+      "path": "crates/nurbs-core/src/sweeps/audit/cap_boundary.rs",
+      "sha256": "bf545037e2d603b6e2e2dbfcdf23b256bc9f45938ad226ac755b08f67d2591a1",
+      "byteLength": 8217
+    },
+    {
+      "id": "geometry-v3-source-117",
+      "path": "crates/nurbs-core/src/sweeps/audit/cap_wall.rs",
+      "sha256": "143ef03c0155d6b3c49cf278bf3b5da7527b4686f516dd268d59a9018976bb86",
+      "byteLength": 11276
+    },
+    {
+      "id": "geometry-v3-source-118",
+      "path": "crates/nurbs-core/src/sweeps/audit/contour.rs",
+      "sha256": "1440c11a49ee745965a7aad477963f10a5493704e0747c646cba7083b7c0dd5b",
+      "byteLength": 12623
+    },
+    {
+      "id": "geometry-v3-source-119",
+      "path": "crates/nurbs-core/src/sweeps/audit/pair.rs",
+      "sha256": "e1d739d764533e3bd185c8ea7802f2b247b10c09a81ca060729e5f1886b2a88b",
+      "byteLength": 28435
+    },
+    {
+      "id": "geometry-v3-source-120",
+      "path": "crates/nurbs-core/src/sweeps/audit/seam.rs",
+      "sha256": "12e5dcb09615ad461507552ea0c6c738e8c47af8e7118abadf412f722e86aa4a",
+      "byteLength": 13061
+    },
+    {
+      "id": "geometry-v3-source-121",
+      "path": "crates/nurbs-core/src/sweeps/audit/wall.rs",
+      "sha256": "3070ba336c63c3aaef0172a942302d5cdf59788bda1259d39ca497a704f89624",
+      "byteLength": 11808
+    },
+    {
+      "id": "geometry-v3-source-122",
+      "path": "crates/nurbs-core/src/sweeps/filled_cap_error.rs",
+      "sha256": "737e4a1eafddb823b7e6e8814283531207f741ae7828065691ddc722fecbbb32",
+      "byteLength": 4759
+    },
+    {
+      "id": "geometry-v3-source-123",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter.rs",
+      "sha256": "6fdcd2c6b3b334d36bb205bf9371ef4ea7afbd53a16ae508d9df0c71038f6a53",
+      "byteLength": 26182
+    },
+    {
+      "id": "geometry-v3-source-124",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs",
+      "sha256": "7e2eef0a1ef4f2be58160240572427d185cd6459dacd0e24703fcd5279a886ab",
+      "byteLength": 23431
+    },
+    {
+      "id": "geometry-v3-source-125",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/guided_axis.rs",
+      "sha256": "e4f5eb303eccb7a48aedf2a6e4f01640bacdec75aeecd8f33d7d32547f1f5dd7",
+      "byteLength": 7242
+    },
+    {
+      "id": "geometry-v3-source-126",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/cap_endpoint_certificate.rs",
+      "sha256": "a20b05eede6026bf8a965dfcf92c6e023fc8a9289667384739a09f098a85b733",
+      "byteLength": 18050
+    },
+    {
+      "id": "geometry-v3-source-127",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/cap_projection_certificate.rs",
+      "sha256": "0dee6f61ffc40830e5320d30a02e10c8f41aafce74226af4481d25f66398d8f5",
+      "byteLength": 3309
+    },
+    {
+      "id": "geometry-v3-source-128",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/cap_retained_plane_certificate.rs",
+      "sha256": "523022b09970fe09b990e427736be3ab371f4d2218080e1bbbf45adc37c1f877",
+      "byteLength": 9345
+    },
+    {
+      "id": "geometry-v3-source-130",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/law.rs",
+      "sha256": "64b5bc4a551393493489f4fd3235430cd20f30082bd93b5fef4f764e75a97333",
+      "byteLength": 2395
+    },
+    {
+      "id": "geometry-v3-source-131",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/level_certificate.rs",
+      "sha256": "aa87b8c4a97e434fc569d82e9a83d70dfb487351c51da6eb2da7e293b0ab245e",
+      "byteLength": 18794
+    },
+    {
+      "id": "geometry-v3-source-132",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/profile_domain_certificate.rs",
+      "sha256": "74e8d8b07817df96987afccbc69f91ce0650de406694d4586a233b83910852d1",
+      "byteLength": 15222
+    },
+    {
+      "id": "geometry-v3-source-133",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/scalar_certificate.rs",
+      "sha256": "3edfe4b5f97343156b53513e9f3985e6524e6eddf049b54aa3e3076d193cc031",
+      "byteLength": 11854
+    },
+    {
+      "id": "geometry-v3-source-134",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/trigonometric_certificate.rs",
+      "sha256": "4e91be523c874e430a27ef82152d9a457599c3105f8ab6f569af6cbc457c3705",
+      "byteLength": 9485
+    },
+    {
+      "id": "geometry-v3-source-135",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/vector_certificate.rs",
+      "sha256": "76def3388cae623c1948cedfaea0bfc1437982171d27d1f5d54038b30d915a1a",
+      "byteLength": 6086
+    },
+    {
+      "id": "geometry-v3-source-137",
+      "path": "crates/nurbs-core/src/sweeps/progressive_sweep/serialization.rs",
+      "sha256": "f82aa070b1157e8e6430dc8277a4918e1a87c8bbcb93dce9f6c975d2b4a844ae",
+      "byteLength": 1514
+    },
+    {
+      "id": "geometry-v3-source-138",
+      "path": "crates/nurbs-core/src/sweeps/progressive_sweep/tests.rs",
+      "sha256": "bcfd6a3a389d0d9dbfedd0bbf746a5cd6302ea729bb50fa9661680db8c00bc52",
+      "byteLength": 40214
+    },
+    {
+      "id": "geometry-v3-source-139",
+      "path": "crates/nurbs-core/src/trim_domain.rs",
+      "sha256": "778fe0168778fd583f1bdf40033966008c4e49d457cfc7a9731348933ade1cf2",
+      "byteLength": 23302
+    },
+    {
+      "id": "geometry-v3-source-140",
+      "path": "crates/nurbs-core/src/trim_simplicity.rs",
+      "sha256": "1cb19e1a3239511fe265be67c8492b797f07cbd6027f173123e5777bc3937ae3",
+      "byteLength": 13542
+    },
+    {
+      "id": "geometry-v3-source-141",
+      "path": "src/App.vue",
+      "sha256": "964c647d4b29b93bc565b5e9d9f1aaf1b9fe4b17395ca02db5b311f585c31ff0",
+      "byteLength": 153363
+    },
+    {
+      "id": "geometry-v3-source-142",
+      "path": "src/services/buildCoordinator.ts",
+      "sha256": "3c1387c92130b358f9928142d7ff5e19961abab3f03b62c33354098c941bd138",
+      "byteLength": 34611
+    },
+    {
+      "id": "geometry-v3-source-143",
+      "path": "src/services/geometry/reconstruction.ts",
+      "sha256": "e558da5450dcc05097298d04abacd6c2775514bb74afbff40fded11aca3a097d",
+      "byteLength": 1743
+    },
+    {
+      "id": "geometry-v3-source-144",
+      "path": "src/services/geometryBuildEngine.ts",
+      "sha256": "f08cf4ab8425f87b36627574c94eeb353bde1628e6f51329149da0d5e3e0a710",
+      "byteLength": 25142
+    },
+    {
+      "id": "geometry-v3-source-145",
+      "path": "src/services/geometryWorkerProtocol.ts",
+      "sha256": "46597a8f75de3ef392bc85f3052948ee9b20867c8bd6546d14b2f810f63e66fd",
+      "byteLength": 5834
+    },
+    {
+      "id": "geometry-v3-source-146",
+      "path": "src/services/miterProfileSmoothness.ts",
+      "sha256": "c89f0ac8af3c4ed53a849259677099a86c2107f20318be138f92689dd600beed",
+      "byteLength": 94
+    },
+    {
+      "id": "geometry-v3-source-147",
+      "path": "src/services/miterStationSmoothness.ts",
+      "sha256": "583a3539e52afa73ee131537821a8a87cfd974e158c7a5a3e2851a41c40580ed",
+      "byteLength": 94
+    },
+    {
+      "id": "geometry-v3-source-148",
+      "path": "src/services/modelGraphNurbs.ts",
+      "sha256": "bddad1a9d16e206eaee35f7552454f8b1be2f3c63ef4065eafa284a0acb09274",
+      "byteLength": 70179
+    },
+    {
+      "id": "geometry-v3-source-149",
+      "path": "src/services/modelGraphTextScene.ts",
+      "sha256": "a5cb482973c9254e342a1d2cde9aa6deac9a6754c2035809afbec5f0c50cbb92",
+      "byteLength": 5360
+    },
+    {
+      "id": "geometry-v3-source-150",
+      "path": "src/services/nurbsCircleSectionRepair.ts",
+      "sha256": "0d6d4e74407971fdf9ec518fa59f1f9bc76db54b320f18c43b8d349d32616e15",
+      "byteLength": 96
+    },
+    {
+      "id": "geometry-v3-source-151",
+      "path": "src/services/nurbsCurve.ts",
+      "sha256": "7f56624e0de5eb70e0698499c44cef5a882821fca80af2fe3772228a337ef49f",
+      "byteLength": 5680
+    },
+    {
+      "id": "geometry-v3-source-152",
+      "path": "src/services/nurbsErrorComposition.ts",
+      "sha256": "3c850cc808c74ba6a11d51fbcdb174fcbbaead7700468edb138b25772a736361",
+      "byteLength": 93
+    },
+    {
+      "id": "geometry-v3-source-153",
+      "path": "src/services/nurbsFilledCapError.ts",
+      "sha256": "09d33f9368b182a37445e391a75f0eda03e5a32a091cb1198be7cdf7dc5bc9f3",
+      "byteLength": 91
+    },
+    {
+      "id": "geometry-v3-source-154",
+      "path": "src/services/nurbsSectionProjection.ts",
+      "sha256": "778044c67856b01fbca992bc6e62c770c98e4f2e7b2a1c231449332f24b7db4c",
+      "byteLength": 94
+    },
+    {
+      "id": "geometry-v3-source-155",
+      "path": "src/services/nurbsSurface.ts",
+      "sha256": "854d11848733b4ab2af4d2fd4c3a20f89260a74429b102c0affb7146048d0d2e",
+      "byteLength": 4445
+    },
+    {
+      "id": "geometry-v3-source-156",
+      "path": "src/services/nurbsSweepAudit.ts",
+      "sha256": "11723d6b645feefe32092b1669a0ceb2cefa23c7905a6348a00fbc757354d0aa",
+      "byteLength": 87
+    },
+    {
+      "id": "geometry-v3-source-157",
+      "path": "src/services/nurbsSweepCapContacts.ts",
+      "sha256": "bbe523a9d817af5bf9023189b661d5ea82e8be3e6c6587f46b66e26b61d8193c",
+      "byteLength": 93
+    },
+    {
+      "id": "geometry-v3-source-158",
+      "path": "src/services/nurbsSweepEmbedding.ts",
+      "sha256": "9c7b2060998f0726675c276449d6a8e283f6f56b5d1633d03409b114be55b166",
+      "byteLength": 91
+    },
+    {
+      "id": "geometry-v3-source-159",
+      "path": "src/services/nurbsSweepRetainedCharts.ts",
+      "sha256": "874017d33244a3ffaf03cdab4f64238e2dd5665a4186d9c49a43446536eb86b4",
+      "byteLength": 96
+    },
+    {
+      "id": "geometry-v3-source-160",
+      "path": "src/services/openscadParser.ts",
+      "sha256": "ee9258db5d222b42e4a763cd75e02e32249d600661515e9442717b4131ae2b2b",
+      "byteLength": 141918
+    },
+    {
+      "id": "geometry-v3-source-161",
+      "path": "src/services/solidBridge.ts",
+      "sha256": "0b5f211c3cf3dcf940c2c8d09ef30694b2f7c6bd59b5f3b8fbad4c3aa7662ffc",
+      "byteLength": 5480
+    },
+    {
+      "id": "geometry-v3-source-162",
+      "path": "src/services/sweepBoundaryCertificate.ts",
+      "sha256": "925435546a8239471a97b6cc7825e68ff3317d417051780659f65e975736fb76",
+      "byteLength": 96
+    },
+    {
+      "id": "geometry-v3-source-163",
+      "path": "src/services/sweepRetainedCorrespondence.ts",
+      "sha256": "a31669d53ed842fabd1cd64cdc421cb0bdf9eaf5805310f3022ee83442b1da79",
+      "byteLength": 99
+    },
+    {
+      "id": "geometry-v3-source-164",
+      "path": "src/services/sweepSolidAdmission.ts",
+      "sha256": "1fccbb088d5a975dc705bd99aadbf770fa53beae736f78373047919382adae17",
+      "byteLength": 88
+    },
+    {
+      "id": "geometry-v3-source-165",
+      "path": "src/services/sweepViewportEvidence.ts",
+      "sha256": "3a9449840f0a0bf2330ea292febc0b466b3a34bb075d074c69e8b129072ad0ba",
+      "byteLength": 89
+    },
+    {
+      "id": "geometry-v3-source-166",
+      "path": "src/workers/geometry.worker.ts",
+      "sha256": "f71676c2a1abbb3b29fd1a455a6fad94d4795aae6fff598b3694382949c74175",
+      "byteLength": 17203
+    },
+    {
+      "id": "own-rust-cad-v34-evidence",
+      "path": "docs/qualification/own-rust-cad-v34.json",
+      "sha256": "fe1975613e4789fb532f2e881cfd98ae384e0457b6436e3227110d22d12ea207",
+      "byteLength": 10586
+    },
+    {
+      "id": "geometry-v3-source-167",
+      "path": "crates/nurbs-core/src/primitives.rs",
+      "sha256": "b2cb125404522a26f482c9191834e184967379642a98c56ddff4c90bfe269bb3",
+      "byteLength": 7965
+    },
+    {
+      "id": "own-rust-cad-v35-evidence",
+      "path": "docs/qualification/own-rust-cad-v35.json",
+      "sha256": "485b57af2bb6e7cf35cd65fd4173c22a45196d4913184e030a5f68e401a0ec54",
+      "byteLength": 10635
+    },
+    {
+      "id": "own-rust-cad-v36-evidence",
+      "path": "docs/qualification/own-rust-cad-v36.json",
+      "sha256": "bdeff108b6da2719abbba90c32dc3646f8acaf453e3046717da8842d17308c4e",
+      "byteLength": 11030
+    },
+    {
+      "id": "geometry-v3-source-168",
+      "path": "crates/brep-core/src/miter_seams.rs",
+      "sha256": "631bd1b2c908a135afd593358ed9d0f9fe36c445139be1f4e0c807728d90a4dd",
+      "byteLength": 9516
+    },
+    {
+      "id": "geometry-v3-source-170",
+      "path": "crates/geometry-bridge/src/miter_smoothness.rs",
+      "sha256": "5a699b98b5529dfdfbfddca0c2fce847c32b866a159197e3bbba6bbea3f640d8",
+      "byteLength": 2250
+    },
+    {
+      "id": "geometry-v3-source-171",
+      "path": "crates/geometry-bridge/src/sweep_cap_evidence.rs",
+      "sha256": "545cb18557292130bcb3b0c548a23b69c823a058d5f0284b7058905bc0707649",
+      "byteLength": 11273
+    },
+    {
+      "id": "geometry-v3-source-172",
+      "path": "crates/nurbs-core/src/sweep_seam_set.rs",
+      "sha256": "01073dc4a428ac1747f77e34d66c4ed890abb5b75cd6370b4f79be4716241ab5",
+      "byteLength": 4009
+    },
+    {
+      "id": "geometry-v3-source-173",
+      "path": "crates/nurbs-core/src/sweep_section_correction.rs",
+      "sha256": "ec9f5c6a4144d3626d231f1cdaad2e66a10e49a2a1f962bbacc7b5b45d090eb6",
+      "byteLength": 5532
+    },
+    {
+      "id": "own-rust-cad-v37-evidence",
+      "path": "docs/qualification/own-rust-cad-v37.json",
+      "sha256": "dfc32bcdf1de82a85737a36f067b212f5e9a828aa62a9cd46b69868ef0da3a53",
+      "byteLength": 11343
+    },
+    {
+      "id": "own-rust-cad-v38-evidence",
+      "path": "docs/qualification/own-rust-cad-v38.json",
+      "sha256": "0da3b5369643f983870cc108a07ba74a47bff49bf991554cd1b5ec72e833e4cb",
+      "byteLength": 26252
+    },
+    {
+      "id": "geometry-v3-source-176",
+      "path": "crates/brep-core/src/body_edit.rs",
+      "sha256": "178d46538ba79df40fe3bdacbeb1d47d81702db0811145cfdf28bd673f8bab57",
+      "byteLength": 15206
+    },
+    {
+      "id": "geometry-v3-source-177",
+      "path": "crates/brep-core/src/boolean_support.rs",
+      "sha256": "71333a933064321c9fc18e1fe2cc5eca5e80e9ff3317867b8d4a77a0b556c5cb",
+      "byteLength": 6300
+    },
+    {
+      "id": "geometry-v3-source-181",
+      "path": "crates/brep-core/src/cylinder_sphere_boolean.rs",
+      "sha256": "a945c04f65d9e61ccd9e3c0080964fa57ac377e50ab7618d9bfcd3c1efb6ea5b",
+      "byteLength": 18677
+    },
+    {
+      "id": "geometry-v3-source-182",
+      "path": "crates/brep-core/src/face_contact.rs",
+      "sha256": "39e793383b5a312736745c165f3ac976f2d8d1b130518865eee6f442a096a006",
+      "byteLength": 9198
+    },
+    {
+      "id": "geometry-v3-source-183",
+      "path": "crates/brep-core/src/face_domain.rs",
+      "sha256": "ee3c0029a66657e4e7074d01331ce8b55bc597f856d053446190c847f4dd7361",
+      "byteLength": 7894
+    },
+    {
+      "id": "geometry-v3-source-185",
+      "path": "crates/brep-core/src/imprint_assembly.rs",
+      "sha256": "94419538684e4c940f4815685fc81d8f2276b1483854f010457914e859301d05",
+      "byteLength": 18660
+    },
+    {
+      "id": "geometry-v3-source-194",
+      "path": "crates/brep-core/src/intersections/recognize.rs",
+      "sha256": "7f633217eee2e798994a2bd219829f403bc5880ddd71b3d911a7124c9da31f34",
+      "byteLength": 3256
+    },
+    {
+      "id": "geometry-v3-source-199",
+      "path": "crates/brep-core/src/intersections/test_utils.rs",
+      "sha256": "b58b3af2742f7c3cd0c3d0de516207b22dff206d513d6afd8064da3876898c32",
+      "byteLength": 846
+    },
+    {
+      "id": "geometry-v3-source-201",
+      "path": "crates/brep-core/src/linear_canal.rs",
+      "sha256": "74dd0cfc9e76427be5db3594670667443171c0abaf8ad6b4cf3a39f7bfcd625d",
+      "byteLength": 28702
+    },
+    {
+      "id": "geometry-v3-source-202",
+      "path": "crates/brep-core/src/linear_canal_body.rs",
+      "sha256": "2c6b0a8693549a9481567d51f9c9839d885f06d9c0d617838e0d9925eb118a20",
+      "byteLength": 9050
+    },
+    {
+      "id": "geometry-v3-source-203",
+      "path": "crates/brep-core/src/material_chord.rs",
+      "sha256": "97fe8f83a6633d14421fe289cebd1d15992222fba15702985d2f25cd41bb21c1",
+      "byteLength": 9896
+    },
+    {
+      "id": "geometry-v3-source-204",
+      "path": "crates/brep-core/src/material_segment.rs",
+      "sha256": "1025d3c1599f2ffad2d9787c12d69237e790d705209017a4713f90a8fdbabd5f",
+      "byteLength": 12898
+    },
+    {
+      "id": "geometry-v3-source-205",
+      "path": "crates/brep-core/src/material_wall.rs",
+      "sha256": "8dd2668e8fb0ae2a1bf663870e33ddea131a1d622caca00ca5b658cc234e56cd",
+      "byteLength": 9564
+    },
+    {
+      "id": "geometry-v3-source-206",
+      "path": "crates/brep-core/src/material_wall_coverage.rs",
+      "sha256": "5de62093ec577d351a94369f369e0a397c1f4a9a2e31cdd2166aa112b5c339a3",
+      "byteLength": 17350
+    },
+    {
+      "id": "geometry-v3-source-207",
+      "path": "crates/brep-core/src/nurbs_ss_general.rs",
+      "sha256": "e837096df9ce61a60d39d656ee3c25fdf410a7c1bc8109068023af646b6fdc75",
+      "byteLength": 9964
+    },
+    {
+      "id": "geometry-v3-source-213",
+      "path": "crates/brep-core/src/offset_end_boundary.rs",
+      "sha256": "44ed24c0fab2b4a5e6db94e8222c881ad7194738ff96e10c34a9115c9500b286",
+      "byteLength": 16864
+    },
+    {
+      "id": "geometry-v3-source-217",
+      "path": "crates/brep-core/src/prism_frame.rs",
+      "sha256": "b214863267df190de4e0e692bdd82d50724f751f960774ffb6e97882fa21a461",
+      "byteLength": 16675
+    },
+    {
+      "id": "geometry-v3-source-218",
+      "path": "crates/brep-core/src/prismatic_boolean.rs",
+      "sha256": "029fc0892b33e1e892248e7b1f549cd65af95ff6aa8c1cb81c777b980f2661e2",
+      "byteLength": 5199
+    },
+    {
+      "id": "geometry-v3-source-219",
+      "path": "crates/brep-core/src/profile_imprint.rs",
+      "sha256": "d264e7a770f12b45f45522ace59b8db6e54c2932fcf3852c2bc97e4d3b1fd846",
+      "byteLength": 6431
+    },
+    {
+      "id": "geometry-v3-source-220",
+      "path": "crates/brep-core/src/profile_intersections.rs",
+      "sha256": "57bcc33a4135f21b64791173bb673584faab2660d55622be86a8c050138d8432",
+      "byteLength": 5346
+    },
+    {
+      "id": "geometry-v3-source-221",
+      "path": "crates/brep-core/src/profile_region.rs",
+      "sha256": "6efd260004484087047fd06bc8f93ee3bc5fe89ee25aed08a0293bb3d67ca256",
+      "byteLength": 10813
+    },
+    {
+      "id": "geometry-v3-source-222",
+      "path": "crates/brep-core/src/ray_parity.rs",
+      "sha256": "2d927d69b8e858e4783a5d0c3c5b36d487755783223475e2bf1ca27603ed2a96",
+      "byteLength": 13067
+    },
+    {
+      "id": "geometry-v3-source-223",
+      "path": "crates/brep-core/src/self_intersection.rs",
+      "sha256": "edba61e1493c105ba1f2f36b6a77c640b1f8e06ebbbcf41e1645c60f1baa6549",
+      "byteLength": 3513
+    },
+    {
+      "id": "geometry-v3-source-224",
+      "path": "crates/brep-core/src/shell_distance.rs",
+      "sha256": "41ca762268c3fb7424877120f36fe0a4c00dd7539a4a2cab2e048d6a3452c3b7",
+      "byteLength": 24294
+    },
+    {
+      "id": "geometry-v3-source-225",
+      "path": "crates/brep-core/src/shell_orientation.rs",
+      "sha256": "c408390679315ec1c26c7626fe293000bd66e31c057cb7f321a56803d4fafd72",
+      "byteLength": 6798
+    },
+    {
+      "id": "geometry-v3-source-226",
+      "path": "crates/brep-core/src/sketch.rs",
+      "sha256": "2661317ef5a32a3cd5b4ff53306f11ec1f5c13ac4808fe3a71df33d44138aab7",
+      "byteLength": 5513
+    },
+    {
+      "id": "geometry-v3-source-227",
+      "path": "crates/brep-core/src/solid_distance.rs",
+      "sha256": "9630bbadeafe140dee9c2d31ebbe85382c8d4589d380f438424aa6a5b0d83d9b",
+      "byteLength": 17218
+    },
+    {
+      "id": "geometry-v3-source-228",
+      "path": "crates/brep-core/src/source_affine_use.rs",
+      "sha256": "c535d779fef9a094efaa84524dc784d37ea714a5947347eb912a669cab6a32c6",
+      "byteLength": 9065
+    },
+    {
+      "id": "geometry-v3-source-229",
+      "path": "crates/brep-core/src/source_allowed_contact.rs",
+      "sha256": "358dfd7bd6f4e93695fa27820538339f72296a08251a92578453290e53788fde",
+      "byteLength": 11620
+    },
+    {
+      "id": "geometry-v3-source-230",
+      "path": "crates/brep-core/src/source_body_model.rs",
+      "sha256": "0e1d23ceb9f959bbe4426ac32e8726e6de9569c7caa64c0a8012af5f6834f047",
+      "byteLength": 9654
+    },
+    {
+      "id": "geometry-v3-source-231",
+      "path": "crates/brep-core/src/source_body_restore.rs",
+      "sha256": "785a65ccfa1a2a7835105c0391d794c4588a7a37494ac1390031711cdb1858b3",
+      "byteLength": 1843
+    },
+    {
+      "id": "geometry-v3-source-232",
+      "path": "crates/brep-core/src/source_body_topology.rs",
+      "sha256": "7ce301bb857da83b072493135cabf0d0961c802759b0ebf59a079fbd158b80f2",
+      "byteLength": 5998
+    },
+    {
+      "id": "geometry-v3-source-233",
+      "path": "crates/brep-core/src/source_boundary_display.rs",
+      "sha256": "7be25c87a8773501e1efb0be4c1d35e1e73ef580dc1193feaccc7f60ef16a140",
+      "byteLength": 3223
+    },
+    {
+      "id": "geometry-v3-source-234",
+      "path": "crates/brep-core/src/source_boundary_fragment.rs",
+      "sha256": "fe00fa4350314d19ff88f998374db31aa6361682d3f7f774182475c0ce114245",
+      "byteLength": 21639
+    },
+    {
+      "id": "geometry-v3-source-235",
+      "path": "crates/brep-core/src/source_boundary_network.rs",
+      "sha256": "b8f3b60ebd960686580d806a475846a313ff557730227426c88dc436ce8a2486",
+      "byteLength": 4890
+    },
+    {
+      "id": "geometry-v3-source-236",
+      "path": "crates/brep-core/src/source_collapsed_boundary.rs",
+      "sha256": "fd576b59e7411169964d683dfa62ece50250b6c9d9eecf4dde5564aef70356cb",
+      "byteLength": 4557
+    },
+    {
+      "id": "geometry-v3-source-237",
+      "path": "crates/brep-core/src/source_contact_point.rs",
+      "sha256": "7041d9489b5577992ac91a082a1f2679cf8c2fecc077e6c9024f360feba8de8b",
+      "byteLength": 7977
+    },
+    {
+      "id": "geometry-v3-source-239",
+      "path": "crates/brep-core/src/source_contour_winding.rs",
+      "sha256": "72935eeb97d963a05bd286e3a68b68755a7ce5de0eb802f0f255c9b112edb140",
+      "byteLength": 10731
+    },
+    {
+      "id": "geometry-v3-source-240",
+      "path": "crates/brep-core/src/source_corner_plane_image.rs",
+      "sha256": "801759f57e955a67b5911da013f68c71556ad2b787c3a80dfd7edff6df5bc0e7",
+      "byteLength": 5546
+    },
+    {
+      "id": "geometry-v3-source-241",
+      "path": "crates/brep-core/src/source_edge_restriction.rs",
+      "sha256": "f357486cabdaaf5dbdd26c81a97d3e032ba194f4ad6cd774cebd0bc011581eaf",
+      "byteLength": 8252
+    },
+    {
+      "id": "geometry-v3-source-242",
+      "path": "crates/brep-core/src/source_exchange_endpoints.rs",
+      "sha256": "d74bef81252f17ed87d28cbb9170be3dbda5dfacae7230d23c98e1f1e91fe22f",
+      "byteLength": 9086
+    },
+    {
+      "id": "geometry-v3-source-244",
+      "path": "crates/brep-core/src/source_exchange_trims.rs",
+      "sha256": "f17e2b465647fc4eecb6d9b32a680c33b2e02f9d36d15ff9448197d78ab62638",
+      "byteLength": 5448
+    },
+    {
+      "id": "geometry-v3-source-245",
+      "path": "crates/brep-core/src/source_face_contacts.rs",
+      "sha256": "c654b83432d1b2dc71fed44ec290855a43e61d1e53a12f718fd4f87623d318cf",
+      "byteLength": 23755
+    },
+    {
+      "id": "geometry-v3-source-246",
+      "path": "crates/brep-core/src/source_face_gap.rs",
+      "sha256": "bef30c3272547e03665ddab584befb9da2a677d9964382f98a338e173dbeb8df",
+      "byteLength": 7926
+    },
+    {
+      "id": "geometry-v3-source-247",
+      "path": "crates/brep-core/src/source_fiber_boundary.rs",
+      "sha256": "ec8368971bd2ff657431b23f1f18f06ff9b47a02f8053d9ebd7f597978d26d3f",
+      "byteLength": 6995
+    },
+    {
+      "id": "geometry-v3-source-249",
+      "path": "crates/brep-core/src/source_halfplane_side.rs",
+      "sha256": "8b93e771035a0ea5c4b49abd38e5303a6625c03e0febc1c52ed6cccf1efbe16c",
+      "byteLength": 2329
+    },
+    {
+      "id": "geometry-v3-source-250",
+      "path": "crates/brep-core/src/source_hull_separation.rs",
+      "sha256": "8b4b0ab1adcb94a019f2ee3b5044092c500e6d88e162bf7290267c785218c5b6",
+      "byteLength": 12056
+    },
+    {
+      "id": "geometry-v3-source-251",
+      "path": "crates/brep-core/src/source_interior_boundary.rs",
+      "sha256": "ed674bfe531e1a169dff316d2446f2e36b22a1fce85260f4389cc4ae52f03f62",
+      "byteLength": 8259
+    },
+    {
+      "id": "geometry-v3-source-252",
+      "path": "crates/brep-core/src/source_interior_contact.rs",
+      "sha256": "09ce57aad9649acb597fcfa1bbc8773a38c8a5ae4f67963338437f86463d2d8a",
+      "byteLength": 7330
+    },
+    {
+      "id": "geometry-v3-source-253",
+      "path": "crates/brep-core/src/source_interior_fiber.rs",
+      "sha256": "68f209c54d9920540e48fe631cb74d08730830e7c4c657c69bcfcebfdde6bfcc",
+      "byteLength": 9032
+    },
+    {
+      "id": "geometry-v3-source-254",
+      "path": "crates/brep-core/src/source_inverse_shear.rs",
+      "sha256": "fbceb6532968ed33d5fafb3a9f6f5ed94ff6d0b6579798cc10f67abb931a4800",
+      "byteLength": 19514
+    },
+    {
+      "id": "geometry-v3-source-255",
+      "path": "crates/brep-core/src/source_line_chart_root.rs",
+      "sha256": "397306764bb8cc769e2872273367e85c193e180753d6bc9a1e56cff205c02ae5",
+      "byteLength": 9383
+    },
+    {
+      "id": "geometry-v3-source-256",
+      "path": "crates/brep-core/src/source_mapped_edge.rs",
+      "sha256": "c56864d4928711cfc78cb0564c85ede60526783d9a9e7a035e0459c8b8626140",
+      "byteLength": 22326
+    },
+    {
+      "id": "geometry-v3-source-257",
+      "path": "crates/brep-core/src/source_material_chord.rs",
+      "sha256": "73659c58fe9987650a122787bf48c53912c40380e7da8831aa3a25540f731524",
+      "byteLength": 7772
+    },
+    {
+      "id": "geometry-v3-source-258",
+      "path": "crates/brep-core/src/source_material_segment.rs",
+      "sha256": "829e5dbfe324ce63146d0aedaef0e133a42bbd6c5bda612d89c0ae5473d43b62",
+      "byteLength": 4890
+    },
+    {
+      "id": "geometry-v3-source-259",
+      "path": "crates/brep-core/src/source_material_wall.rs",
+      "sha256": "54d66dbe39a0e3d14d582d3e8624eba21bb8db6800a7442a8c93c307021889af",
+      "byteLength": 8841
+    },
+    {
+      "id": "geometry-v3-source-260",
+      "path": "crates/brep-core/src/source_paired_fiber_contact.rs",
+      "sha256": "488fae7dbb560d125cb78b813f96ffd1005d5b82f1920fe147383f4117b2ec7c",
+      "byteLength": 13938
+    },
+    {
+      "id": "geometry-v3-source-261",
+      "path": "crates/brep-core/src/source_planar_flux.rs",
+      "sha256": "a3fe08952fbb374597f7a12cea25d93662bfc8827b42d52099b7e1ba131d0291",
+      "byteLength": 4450
+    },
+    {
+      "id": "geometry-v3-source-262",
+      "path": "crates/brep-core/src/source_planar_material_hull.rs",
+      "sha256": "7cd248ecb17545319e84c793bff63a4fd2bb9f6a7eeb186dbfdc7cad61296c22",
+      "byteLength": 4355
+    },
+    {
+      "id": "geometry-v3-source-263",
+      "path": "crates/brep-core/src/source_plane_fiber.rs",
+      "sha256": "a250619c8e0b007ea53b89308ffdbbb3e5efdd52a408e6f3af896b0f3189f9f1",
+      "byteLength": 8130
+    },
+    {
+      "id": "geometry-v3-source-264",
+      "path": "crates/brep-core/src/source_pole_paired_contact.rs",
+      "sha256": "8a9d5b1354fdb7586c42bb8b80068710c92661436b7af47f30c5658ca7d962eb",
+      "byteLength": 10756
+    },
+    {
+      "id": "geometry-v3-source-265",
+      "path": "crates/brep-core/src/source_pole_planar_contact.rs",
+      "sha256": "09958a5793517508391530c4e847632551bb1b333eb43d400e0c7553dfdb0a16",
+      "byteLength": 6344
+    },
+    {
+      "id": "geometry-v3-source-266",
+      "path": "crates/brep-core/src/source_pole_plane_image.rs",
+      "sha256": "3923586b183ec750767aba83caf121cb7d70738dbd86bfe6087bc0110e0129a2",
+      "byteLength": 11481
+    },
+    {
+      "id": "geometry-v3-source-267",
+      "path": "crates/brep-core/src/source_region_display.rs",
+      "sha256": "1232c4505c1b24189ab3ac976a492aec8dacb8f396c1e98eadf5977092bff6b7",
+      "byteLength": 3371
+    },
+    {
+      "id": "geometry-v3-source-268",
+      "path": "crates/brep-core/src/source_region_restore.rs",
+      "sha256": "3abd1c2c16f405080f82006e41c1b786de25de5c65b27cf315411e2bcc832f27",
+      "byteLength": 8877
+    },
+    {
+      "id": "geometry-v3-source-269",
+      "path": "crates/brep-core/src/source_root_parameter.rs",
+      "sha256": "6768e8cd3ebd759205e35171bdc54b1e125ad6945682e8b666469fdc7c964fb0",
+      "byteLength": 1610
+    },
+    {
+      "id": "geometry-v3-source-270",
+      "path": "crates/brep-core/src/source_root_refinement.rs",
+      "sha256": "14731e9e85527432022ccb8b645e95e6bf56323f76e547e7fbb26070ff8ab5af",
+      "byteLength": 5659
+    },
+    {
+      "id": "geometry-v3-source-271",
+      "path": "crates/brep-core/src/source_ruled_projection_contact.rs",
+      "sha256": "f5c46388b454e3e81b1cc52ed8429fbb1e8c668aebb4c2c0a629981c51a04d1b",
+      "byteLength": 13222
+    },
+    {
+      "id": "geometry-v3-source-272",
+      "path": "crates/brep-core/src/source_seam_tangency.rs",
+      "sha256": "1b67e2a1d1daae06f0b46289871b00f2a799cbfde16ff0be622ae8b0aa0da9b1",
+      "byteLength": 16107
+    },
+    {
+      "id": "geometry-v3-source-274",
+      "path": "crates/brep-core/src/source_shared_edge_restore.rs",
+      "sha256": "b01d63224edc7e5f694f05886fd90fabd16dded191be53267f229b9c0ba62a16",
+      "byteLength": 2558
+    },
+    {
+      "id": "geometry-v3-source-275",
+      "path": "crates/brep-core/src/source_shell_geometry.rs",
+      "sha256": "5d4b367e32d9ecc45a50c89e000d130e923ef89038de38dc3fc8baf227bef49b",
+      "byteLength": 8786
+    },
+    {
+      "id": "geometry-v3-source-277",
+      "path": "crates/brep-core/src/source_shell_restore.rs",
+      "sha256": "679b3153938bb98e21944229d03d66bfe76b1cd1d59b77997c87d5eb7b165156",
+      "byteLength": 7871
+    },
+    {
+      "id": "geometry-v3-source-278",
+      "path": "crates/brep-core/src/source_support_shell.rs",
+      "sha256": "5e90dee62b0e58c1401f12014c11c0339524dc4d6da27c71369bdf98292f13e7",
+      "byteLength": 50933
+    },
+    {
+      "id": "geometry-v3-source-279",
+      "path": "crates/brep-core/src/source_vertex_contact.rs",
+      "sha256": "43569fe82d4c3f72e391f1ee391fae8205077c014da27a9aba8e8a52c87f164d",
+      "byteLength": 14042
+    },
+    {
+      "id": "geometry-v3-source-280",
+      "path": "crates/brep-core/src/source_vertex_links.rs",
+      "sha256": "f2b0d8529d8f3e4dd3263fae54c1a8e8c9b4a9195d21b5f2a6461421737d28f4",
+      "byteLength": 6477
+    },
+    {
+      "id": "geometry-v3-source-281",
+      "path": "crates/brep-core/src/source_volume.rs",
+      "sha256": "102b88e1848ab4116665f9e66e2a288d293237b14d68cfd252e9a5a1c58d4959",
+      "byteLength": 13229
+    },
+    {
+      "id": "geometry-v3-source-282",
+      "path": "crates/brep-core/src/source_wall_coverage.rs",
+      "sha256": "3257a1e649ed5037947bf5435de69e086688d8109e590f97c6e583abf0eb1c59",
+      "byteLength": 9647
+    },
+    {
+      "id": "geometry-v3-source-283",
+      "path": "crates/brep-core/src/source_wall_scan.rs",
+      "sha256": "abc1f5cea5a6ade61874f7ed079024520ef005c6c1851629ac462431d23a8c42",
+      "byteLength": 2903
+    },
+    {
+      "id": "geometry-v3-source-284",
+      "path": "crates/brep-core/src/source_wall_search.rs",
+      "sha256": "9a637ed250e9ff7a1e4b3468687403523a77a6c8286c00e6404c7dd7dd29740d",
+      "byteLength": 4903
+    },
+    {
+      "id": "geometry-v3-source-285",
+      "path": "crates/brep-core/src/source_wall_self_coverage.rs",
+      "sha256": "37c310e7e9df8206078131b0b13c38d3d3c24021eb363d53776bfc7490f60749",
+      "byteLength": 5692
+    },
+    {
+      "id": "geometry-v3-source-286",
+      "path": "crates/brep-core/src/source_world_wire.rs",
+      "sha256": "c1f54006a12fe47236f355babeceb30013b76a2fd852acce4d5bcc50ad1d33fd",
+      "byteLength": 4282
+    },
+    {
+      "id": "geometry-v3-source-287",
+      "path": "crates/brep-core/src/sphere_boolean.rs",
+      "sha256": "a478f5a7f3ec6d403349bd41bc69b009f13fe486b080a1cf23f6d6b57fe99d69",
+      "byteLength": 14488
+    },
+    {
+      "id": "geometry-v3-source-292",
+      "path": "crates/brep-core/src/transform.rs",
+      "sha256": "ccd5aa1130f186f6902d354283fa7de11494bab1b7fe4abd716650afd1335c6b",
+      "byteLength": 11626
+    },
+    {
+      "id": "geometry-v3-source-293",
+      "path": "crates/brep-core/src/transform_plane_charts.rs",
+      "sha256": "e7c8656e27d37dc1dd9fef988a1099588517f5d3f5ec7cc922eb7a8ac234a1ca",
+      "byteLength": 10988
+    },
+    {
+      "id": "geometry-v3-source-295",
+      "path": "crates/brep-core/src/trimmed_shell_recipe.rs",
+      "sha256": "62977e1bf8a510195dbeb028a40374442f79bb03f136f6ef5a0ba4d35b14fa37",
+      "byteLength": 27429
+    },
+    {
+      "id": "geometry-v3-source-296",
+      "path": "crates/brep-core/src/uv_regions.rs",
+      "sha256": "4b65cbbe996ad4fe2038f75826edf0e0f798ecfd24353dcc47a073a23a55d87f",
+      "byteLength": 10312
+    },
+    {
+      "id": "geometry-v3-source-297",
+      "path": "crates/geometry-bridge/src/abi.rs",
+      "sha256": "1496799d6ab0b50bac44ddca0ccbc51a83d1011c151734da989bd4da67f76f8e",
+      "byteLength": 20895
+    },
+    {
+      "id": "geometry-v3-source-300",
+      "path": "crates/geometry-bridge/src/brep_display.rs",
+      "sha256": "311f3252ec7b1684cdbe064947c692098213076e9eac92380cc07535a9f1c3f7",
+      "byteLength": 4593
+    },
+    {
+      "id": "geometry-v3-source-301",
+      "path": "crates/geometry-bridge/src/brep_envelope.rs",
+      "sha256": "cc6d5055ac12cce76394065395896e38a11a915b82cdf7adaa2dbc981f86cde7",
+      "byteLength": 31916
+    },
+    {
+      "id": "geometry-v3-source-302",
+      "path": "crates/geometry-bridge/src/brep_execution_plan.rs",
+      "sha256": "873d671099a3d5d63d7317ac74d638b01d22c19c0757a92ffc3269b391b5e063",
+      "byteLength": 2919
+    },
+    {
+      "id": "geometry-v3-source-303",
+      "path": "crates/geometry-bridge/src/brep_graph.rs",
+      "sha256": "0c3a620d16c70bfc7008fc2adb6f5d04e2ba16fda62d05bced5bb7f75f31a2c7",
+      "byteLength": 9593
+    },
+    {
+      "id": "geometry-v3-source-304",
+      "path": "crates/geometry-bridge/src/brep_graph_runner.rs",
+      "sha256": "e07566e85e814ce9d3d8dadf7a64e44961e73879661d7f31ef0583ee98df4fe9",
+      "byteLength": 8368
+    },
+    {
+      "id": "geometry-v3-source-306",
+      "path": "crates/geometry-bridge/src/brep_identity/tests.rs",
+      "sha256": "6b65f63f466ec70ef51e72a20195ce197c440e918447d0e79e933af200f0daeb",
+      "byteLength": 20905
+    },
+    {
+      "id": "geometry-v3-source-307",
+      "path": "crates/geometry-bridge/src/brep_json_size.rs",
+      "sha256": "f0cd9493c7f15d80ae67272998b7c8b6f6975505083d6fbe8a8dbb51d4201ccc",
+      "byteLength": 2720
+    },
+    {
+      "id": "geometry-v3-source-308",
+      "path": "crates/geometry-bridge/src/brep_production/mod.rs",
+      "sha256": "80cfbcf807210424b99a065cc1e4ea7ed523c7473a567b954c4889079a6b9111",
+      "byteLength": 47330
+    },
+    {
+      "id": "geometry-v3-source-309",
+      "path": "crates/geometry-bridge/src/brep_production/tests.rs",
+      "sha256": "320ab4a81c339981e0a26b4c388d0ef522ef5aa67368d5c53432f60c1afa7262",
+      "byteLength": 14557
+    },
+    {
+      "id": "geometry-v3-source-310",
+      "path": "crates/geometry-bridge/src/brep_profile.rs",
+      "sha256": "ff015602f255e6e7a7c8074485a72b4727b9ff6ff5d0e1766e8382499623ca83",
+      "byteLength": 10319
+    },
+    {
+      "id": "geometry-v3-source-311",
+      "path": "crates/geometry-bridge/src/brep_provenance.rs",
+      "sha256": "2bc49047fa904d822a9f62eb5a8feeb750bf9ce196f773e279192886593bad41",
+      "byteLength": 25670
+    },
+    {
+      "id": "geometry-v3-source-312",
+      "path": "crates/geometry-bridge/src/brep_result.rs",
+      "sha256": "47ad3cf619b45036c006a266f452275e702c1d258fc192e03a458f238fe24c1c",
+      "byteLength": 9415
+    },
+    {
+      "id": "geometry-v3-source-313",
+      "path": "crates/geometry-bridge/src/brep_scene_plan.rs",
+      "sha256": "f3ff534d8f0a043031e1356a4f8b3f5b71e92aecf5ee8e1af85803bba264557f",
+      "byteLength": 2841
+    },
+    {
+      "id": "geometry-v3-source-314",
+      "path": "crates/geometry-bridge/src/brep_semantic.rs",
+      "sha256": "0616fbdc31815848d131d738af1bd2734131c89754be136b288e33d1619271db",
+      "byteLength": 16838
+    },
+    {
+      "id": "geometry-v3-source-315",
+      "path": "crates/geometry-bridge/src/brep_session.rs",
+      "sha256": "c43131c52501988e2185e0b2bfdcde33221004774da8ba0aad73c874cf61a5e5",
+      "byteLength": 24680
+    },
+    {
+      "id": "geometry-v3-source-316",
+      "path": "crates/geometry-bridge/src/brep_session_abi.rs",
+      "sha256": "655248b839a27597f94989e9c90646ffc59a16a74b10b25495b8e20c8a490369",
+      "byteLength": 14709
+    },
+    {
+      "id": "geometry-v3-source-317",
+      "path": "crates/geometry-bridge/src/cad_body_affine.rs",
+      "sha256": "a7e395ffce2164c82fd48b5dac4616c98337479a1cb85b686b7f72f6e045a11a",
+      "byteLength": 13016
+    },
+    {
+      "id": "geometry-v3-source-318",
+      "path": "crates/geometry-bridge/src/cad_boolean.rs",
+      "sha256": "726244f58666fc47b2c72d633babc338f05eafc2a9d721e5419c55c821418501",
+      "byteLength": 3364
+    },
+    {
+      "id": "geometry-v3-source-319",
+      "path": "crates/geometry-bridge/src/cad_boundary_agreement.rs",
+      "sha256": "3605205378adc24e6959e73dc4c38ec43ff40fad9c4112a6a17a7e248be6433b",
+      "byteLength": 3508
+    },
+    {
+      "id": "geometry-v3-source-320",
+      "path": "crates/geometry-bridge/src/cad_bridge_curve.rs",
+      "sha256": "628f7b259c553922fb4f71fa9b12cd4a51286428189221811730eff7cd318173",
+      "byteLength": 3540
+    },
+    {
+      "id": "geometry-v3-source-321",
+      "path": "crates/geometry-bridge/src/cad_centered_lattice.rs",
+      "sha256": "c084473d510aab7a528bfad91bd8773cb897916f710dd9f4735a46fd22091884",
+      "byteLength": 6371
+    },
+    {
+      "id": "geometry-v3-source-322",
+      "path": "crates/geometry-bridge/src/cad_clearance.rs",
+      "sha256": "4a561dee567569541ce9dfc65677f98d8577917eed0cb9bf4419233edbf770ec",
+      "byteLength": 8264
+    },
+    {
+      "id": "geometry-v3-source-323",
+      "path": "crates/geometry-bridge/src/cad_diagnostics.rs",
+      "sha256": "59a2d2e206973d1a9a8dcee583a27147669bde39b1f9738a63170eb9af879089",
+      "byteLength": 7599
+    },
+    {
+      "id": "geometry-v3-source-324",
+      "path": "crates/geometry-bridge/src/cad_dimensions.rs",
+      "sha256": "f66769012d87821552b6ea866da33c974ef6719e789de32000778c2031bbcbdd",
+      "byteLength": 5927
+    },
+    {
+      "id": "geometry-v3-source-325",
+      "path": "crates/geometry-bridge/src/cad_display.rs",
+      "sha256": "34a198b725561acbc8dba808857624e97d3fc3bfacd77acb2f0d0a224e3bf443",
+      "byteLength": 12569
+    },
+    {
+      "id": "geometry-v3-source-326",
+      "path": "crates/geometry-bridge/src/cad_draft.rs",
+      "sha256": "2498f5b9df079e40c16dde1684317b4fd8ffb5de6b6723721e2efcbae60fd3f9",
+      "byteLength": 3205
+    },
+    {
+      "id": "geometry-v3-source-327",
+      "path": "crates/geometry-bridge/src/cad_edge_edit.rs",
+      "sha256": "ac19b2883406f5a17739d2b678df01c59c69d5f598d799bb0a1c2a2fc2fe0ec8",
+      "byteLength": 1862
+    },
+    {
+      "id": "geometry-v3-source-328",
+      "path": "crates/geometry-bridge/src/cad_face_distance.rs",
+      "sha256": "307582e2f7f21a5b5e881a27a11fd9fefe7eb26abc1124869a9f258fd38e4f43",
+      "byteLength": 684
+    },
+    {
+      "id": "geometry-v3-source-329",
+      "path": "crates/geometry-bridge/src/cad_face_selection.rs",
+      "sha256": "c124135ade76eb9e366d63061d4ef99d9136ce69558946cf45713a4464aa4c75",
+      "byteLength": 5328
+    },
+    {
+      "id": "geometry-v3-source-330",
+      "path": "crates/geometry-bridge/src/cad_hole.rs",
+      "sha256": "b5f750708bd9e7a3f2785955993e3d10252afc4f5b7f9ec932d2b2c0f7553fb8",
+      "byteLength": 6126
+    },
+    {
+      "id": "geometry-v3-source-332",
+      "path": "crates/geometry-bridge/src/cad_material_chord.rs",
+      "sha256": "96644ece5c612ade67dc618c0c38965740055b539be7a59c8aca1b5a67b9e84b",
+      "byteLength": 7408
+    },
+    {
+      "id": "geometry-v3-source-333",
+      "path": "crates/geometry-bridge/src/cad_material_segment.rs",
+      "sha256": "8467e6afdc4b385e25bd1a2c410307a883a4f94a3e936bc18584b1a74ed5c3e7",
+      "byteLength": 5907
+    },
+    {
+      "id": "geometry-v3-source-334",
+      "path": "crates/geometry-bridge/src/cad_material_wall.rs",
+      "sha256": "cbf24a1303bd7a74582c0853093c4b6aba978e95f46ee007610a420b7e7174f6",
+      "byteLength": 4430
+    },
+    {
+      "id": "geometry-v3-source-335",
+      "path": "crates/geometry-bridge/src/cad_mesh_planes.rs",
+      "sha256": "333f6e71708e7913aa81d8a198a1e9c313fe2f470a5a725163e9bbf7c7e87b69",
+      "byteLength": 10637
+    },
+    {
+      "id": "geometry-v3-source-336",
+      "path": "crates/geometry-bridge/src/cad_mesh_topology.rs",
+      "sha256": "d588e6665df99af0392f3ec277aadb3cec3d0e9ef384815b0ebd23c8bc41d901",
+      "byteLength": 9256
+    },
+    {
+      "id": "geometry-v3-source-337",
+      "path": "crates/geometry-bridge/src/cad_path.rs",
+      "sha256": "5dfe21fde3c592ed6105f951ec380398888450d0869132ab13e6e8cca26f38c1",
+      "byteLength": 1965
+    },
+    {
+      "id": "geometry-v3-source-338",
+      "path": "crates/geometry-bridge/src/cad_pattern.rs",
+      "sha256": "3859f78c9f3d6062592dddcc0067e879e3da2f2f74ba5e8b3cc29a9a6565cfd2",
+      "byteLength": 5973
+    },
+    {
+      "id": "geometry-v3-source-339",
+      "path": "crates/geometry-bridge/src/cad_planar_edit.rs",
+      "sha256": "988f3a520f580798b26f0dc5f4aaf80bcf26d118749680a1c3857a046e3458c4",
+      "byteLength": 4610
+    },
+    {
+      "id": "geometry-v3-source-340",
+      "path": "crates/geometry-bridge/src/cad_profile_prepare.rs",
+      "sha256": "1ad45958e457e488cd67d3760c8428287cd8aece1b083babd60baee21d11603a",
+      "byteLength": 18594
+    },
+    {
+      "id": "geometry-v3-source-341",
+      "path": "crates/geometry-bridge/src/cad_quantity.rs",
+      "sha256": "295a7a9d58c4ab6bb3b8c9cd39d0717055cead3fd0d3d885c79bcf3591b2f14a",
+      "byteLength": 2369
+    },
+    {
+      "id": "geometry-v3-source-342",
+      "path": "crates/geometry-bridge/src/cad_sections.rs",
+      "sha256": "b2610754ca7f5a13bf7c1cd40bf8bfb424757530606cd8e09953fb60c1390803",
+      "byteLength": 10523
+    },
+    {
+      "id": "geometry-v3-source-343",
+      "path": "crates/geometry-bridge/src/cad_selection.rs",
+      "sha256": "6d84c055f21015d1bdcc42415ad35c0d5d6a07a3c4b2f2d59bff030156006cd8",
+      "byteLength": 7423
+    },
+    {
+      "id": "geometry-v3-source-344",
+      "path": "crates/geometry-bridge/src/cad_shell_distance.rs",
+      "sha256": "06868863ee2c27e691c1fc5590a887cffad4ccc62f0bee908920e43847f469f4",
+      "byteLength": 2891
+    },
+    {
+      "id": "geometry-v3-source-345",
+      "path": "crates/geometry-bridge/src/cad_sketch.rs",
+      "sha256": "5356d31f53edd82affa86df45512aa46639f9248ef02681d0d6b60d2c9e21713",
+      "byteLength": 8310
+    },
+    {
+      "id": "geometry-v3-source-346",
+      "path": "crates/geometry-bridge/src/cad_sketch_offset.rs",
+      "sha256": "190f94ce2a0ca8dea28083d56e70abb5fa950b0f4e2fe1fb8a118dd2a775d466",
+      "byteLength": 4454
+    },
+    {
+      "id": "geometry-v3-source-347",
+      "path": "crates/geometry-bridge/src/cad_sketch_trim.rs",
+      "sha256": "05d92dec10b5ee91c31fdeb64bd1f59b0f195af25eb2ba8e80eabb47f6a89cce",
+      "byteLength": 5762
+    },
+    {
+      "id": "geometry-v3-source-348",
+      "path": "crates/geometry-bridge/src/cad_solid_distance.rs",
+      "sha256": "30da20b951c5161811085733f166d7f8f7585b04920e07f2b096101853ab5dde",
+      "byteLength": 7431
+    },
+    {
+      "id": "geometry-v3-source-349",
+      "path": "crates/geometry-bridge/src/cad_source_body.rs",
+      "sha256": "65cc9aed697b22e11ffe59bdaff2c4f98f08658da5f4c7555945795769632211",
+      "byteLength": 33994
+    },
+    {
+      "id": "geometry-v3-source-350",
+      "path": "crates/geometry-bridge/src/cad_split.rs",
+      "sha256": "53360f0b5b6c23058f05f8a99ee9e9943675456c12c30dd16fe6fe37a699a534",
+      "byteLength": 4270
+    },
+    {
+      "id": "geometry-v3-source-351",
+      "path": "crates/geometry-bridge/src/cad_surface_diagnostics.rs",
+      "sha256": "ebfd880a828bbddcc036cecf31c3c3a9886dcac97ef189270980ee36721218ac",
+      "byteLength": 3988
+    },
+    {
+      "id": "geometry-v3-source-352",
+      "path": "crates/geometry-bridge/src/cad_texture.rs",
+      "sha256": "d0cd3a854875dfe2ff5895214c54dd3630c44a90be545ab9db22c9a68c350943",
+      "byteLength": 11569
+    },
+    {
+      "id": "geometry-v3-source-353",
+      "path": "crates/geometry-bridge/src/cad_thread.rs",
+      "sha256": "7d30c0acdd8826901291084a3734e61a035733559d34179f1fc557d9bba52420",
+      "byteLength": 2263
+    },
+    {
+      "id": "geometry-v3-source-354",
+      "path": "crates/geometry-bridge/src/cad_whole_wall.rs",
+      "sha256": "5cdbf42dc90ffa2f8a60a1396d09dd559eae16c7d6331f195d678ebf3aa4e456",
+      "byteLength": 3971
+    },
+    {
+      "id": "geometry-v3-source-355",
+      "path": "crates/geometry-bridge/src/camera_gestures.rs",
+      "sha256": "7b2b45e9262c3a2c2e0c685e9afe6b1f4b2cdca0e264b741f97f64e3f39fba14",
+      "byteLength": 1936
+    },
+    {
+      "id": "geometry-v3-source-359",
+      "path": "crates/geometry-bridge/src/lattice_cuda.rs",
+      "sha256": "2d366f56940099fd974e7c3b6cc8f9504997dcc0e694d0818b1ab3292ab86320",
+      "byteLength": 8612
+    },
+    {
+      "id": "geometry-v3-source-360",
+      "path": "crates/geometry-bridge/src/lattice_gpu.rs",
+      "sha256": "7a47ea9ffd928d343ebd76f8da5ec310e293b730d83735571d244a72449714db",
+      "byteLength": 11044
+    },
+    {
+      "id": "geometry-v3-source-361",
+      "path": "crates/geometry-bridge/src/mesh.rs",
+      "sha256": "b2328b2fa7c3ff3465cc7cc8330d9ee39c197d5a54bc17c1638ca4336a7c3cbf",
+      "byteLength": 26055
+    },
+    {
+      "id": "geometry-v3-source-362",
+      "path": "crates/geometry-bridge/src/mesh_analysis.rs",
+      "sha256": "206254b82f7e8bd35deaacc65efac5453e74acfb9ed363018fc2f344aaf78bf9",
+      "byteLength": 15219
+    },
+    {
+      "id": "geometry-v3-source-363",
+      "path": "crates/geometry-bridge/src/mesh_export_file.rs",
+      "sha256": "795fcc9d89d8df47c2eac17bb51cfcab8c47f6e4a0de0484c3ea413bf800b9e0",
+      "byteLength": 3532
+    },
+    {
+      "id": "geometry-v3-source-364",
+      "path": "crates/geometry-bridge/src/mesh_picking.rs",
+      "sha256": "1f4a69cd0ae7823119bf31e49a255759aea1f2bb77001f39ed69d62a6b8d6033",
+      "byteLength": 8888
+    },
+    {
+      "id": "geometry-v3-source-365",
+      "path": "crates/geometry-bridge/src/mesh_render.rs",
+      "sha256": "ca34c1940b964b1880e38e6d7e979889ef0a60747c9005b1b21c6289511bfbdf",
+      "byteLength": 16063
+    },
+    {
+      "id": "geometry-v3-source-367",
+      "path": "crates/geometry-bridge/src/mesh_surface_groups.rs",
+      "sha256": "cc6c28335688bdab14a48b5b4980177537350a934e460be408445bb0bb911fc2",
+      "byteLength": 8537
+    },
+    {
+      "id": "geometry-v3-source-368",
+      "path": "crates/geometry-bridge/src/path2d.rs",
+      "sha256": "63d3077b4abf2a9622a7eb3b6203f32756ae16a4d0a502e9b40efb05975676be",
+      "byteLength": 10640
+    },
+    {
+      "id": "geometry-v3-source-369",
+      "path": "crates/geometry-bridge/src/path2d/appearance.rs",
+      "sha256": "1d186d3b63290ec39b75925e5df0645aecd9d43c8fd55c8d6e64082d0a4c545b",
+      "byteLength": 1756
+    },
+    {
+      "id": "geometry-v3-source-370",
+      "path": "crates/geometry-bridge/src/path2d/codec.rs",
+      "sha256": "6e60c39c5f8c7197f8910524169c549710868750d6859e1d999b30251c3b9351",
+      "byteLength": 9410
+    },
+    {
+      "id": "geometry-v3-source-371",
+      "path": "crates/geometry-bridge/src/path2d/editing.rs",
+      "sha256": "57637b6947f308f9c4c111090781b70456a19ba7a38ecd73023d1f721974c6c8",
+      "byteLength": 11996
+    },
+    {
+      "id": "geometry-v3-source-372",
+      "path": "crates/geometry-bridge/src/path2d/effects.rs",
+      "sha256": "ca16f861af5a1b8866d364d8ffbcdcab3f6afa9e1a81e5dc6e0cf56b3a7600d9",
+      "byteLength": 8337
+    },
+    {
+      "id": "geometry-v3-source-373",
+      "path": "crates/geometry-bridge/src/path2d/paths.rs",
+      "sha256": "ef812e01db57ee5c72990d9077da223c68d3b4983b9e778fcabfa977ad18a226",
+      "byteLength": 11881
+    },
+    {
+      "id": "geometry-v3-source-374",
+      "path": "crates/geometry-bridge/src/print_geometry.rs",
+      "sha256": "2ad2488e446464ce6126cf7d8fd06f891b637708ce58b80865f264c17470fe75",
+      "byteLength": 9710
+    },
+    {
+      "id": "geometry-v3-source-376",
+      "path": "crates/geometry-bridge/src/scene_picking.rs",
+      "sha256": "c5552233d4ec2a2f271ece3c846f77f578c06c3ebc42148b9bb0c6549a8f6bc6",
+      "byteLength": 3580
+    },
+    {
+      "id": "geometry-v3-source-377",
+      "path": "crates/geometry-bridge/src/sdf_gpu.rs",
+      "sha256": "32b08f8f8c64aa50ee0b5b9d052b0210771c0aec50385dd1ecd744694d9567f6",
+      "byteLength": 10316
+    },
+    {
+      "id": "geometry-v3-source-383",
+      "path": "crates/geometry-bridge/src/sweep_pipeline.rs",
+      "sha256": "0eaff5f66c50c2b40041b7464cd759c20d63c7bd363d1c5eb7d55aa15399612f",
+      "byteLength": 14506
+    },
+    {
+      "id": "geometry-v3-source-384",
+      "path": "crates/geometry-bridge/src/sweep_viewport.rs",
+      "sha256": "7c62b38786aa7a27c65ae016912071d539ff51b3068804ededef79e198753609",
+      "byteLength": 7455
+    },
+    {
+      "id": "geometry-v3-source-386",
+      "path": "crates/geometry-bridge/src/viewport.rs",
+      "sha256": "ccb3fbe4f908dbac71e1adf0816fba39bc3a974b4eac75b479027b6ba6eb37d9",
+      "byteLength": 3125
+    },
+    {
+      "id": "geometry-v3-source-387",
+      "path": "crates/nurbs-core/src/boundary_partition.rs",
+      "sha256": "5f32ff245a51be34591955874888e9aac87264ed500aabc51524157e2b6281e4",
+      "byteLength": 6054
+    },
+    {
+      "id": "geometry-v3-source-388",
+      "path": "crates/nurbs-core/src/chord_arrangement.rs",
+      "sha256": "6efd3aafd187055f5e2cf8e4eb28a8a65436487bcce3d422665e8d2e3e869ca5",
+      "byteLength": 17788
+    },
+    {
+      "id": "geometry-v3-source-389",
+      "path": "crates/nurbs-core/src/chord_embedding.rs",
+      "sha256": "f4f972864fff7569edaeb76f1b2701ce88c7fcb7f15a31f49462b9ed196f1d60",
+      "byteLength": 4578
+    },
+    {
+      "id": "geometry-v3-source-390",
+      "path": "crates/nurbs-core/src/chord_faces.rs",
+      "sha256": "e1ea067ea52aaef5aa07dcd532ed8e124b55c5b5d11482fd4bc773daf2a4aa68",
+      "byteLength": 7886
+    },
+    {
+      "id": "geometry-v3-source-391",
+      "path": "crates/nurbs-core/src/chord_fill_selection.rs",
+      "sha256": "1b988d684da17ded5979482f852ec17cd20ca4ebf7da60bb0691cb5b75ce0312",
+      "byteLength": 16472
+    },
+    {
+      "id": "geometry-v3-source-392",
+      "path": "crates/nurbs-core/src/chord_intersection.rs",
+      "sha256": "38f4259e2a046e0f2187ac14f6b73f9181f87156f7d022771c660dce95b2cf3b",
+      "byteLength": 4177
+    },
+    {
+      "id": "geometry-v3-source-393",
+      "path": "crates/nurbs-core/src/chord_winding.rs",
+      "sha256": "345c5a897d06b7e5f0db0d18261210b54b886593b5c7b48872d1c14b234cbce8",
+      "byteLength": 5553
+    },
+    {
+      "id": "geometry-v3-source-394",
+      "path": "crates/nurbs-core/src/chord_witness.rs",
+      "sha256": "e0a5bc976cd1e36921befbf8920edae72f84f6ec0781b7ba7b4e59acef1f4c43",
+      "byteLength": 6533
+    },
+    {
+      "id": "geometry-v3-source-395",
+      "path": "crates/nurbs-core/src/closed_spline.rs",
+      "sha256": "88b41c65202bcbcda57449098ab6ac4befba9bfb926e8388e51504fe96fc3e9b",
+      "byteLength": 6836
+    },
+    {
+      "id": "geometry-v3-source-396",
+      "path": "crates/nurbs-core/src/contact_normal_agreement.rs",
+      "sha256": "74fd70d0d342239a2175b88cd099aaacc967feaeda5d4ac4a4093a834f6e07db",
+      "byteLength": 10775
+    },
+    {
+      "id": "geometry-v3-source-397",
+      "path": "crates/nurbs-core/src/continuity/curve_match.rs",
+      "sha256": "389387c9ffe927150c0b2eb2541896fb138ef4a36cd2f15eedcdac54ef8cd15c",
+      "byteLength": 6474
+    },
+    {
+      "id": "geometry-v3-source-398",
+      "path": "crates/nurbs-core/src/continuity/deviation.rs",
+      "sha256": "5508d7c1cc582e840826c3fe2bf21541a8412a593ada1e06fb919dc5f873fbee",
+      "byteLength": 4771
+    },
+    {
+      "id": "geometry-v3-source-399",
+      "path": "crates/nurbs-core/src/continuity/preparation.rs",
+      "sha256": "b1f14397b27fce926278005e16dfd7b8a75951c96218b81affc7c46d739b50cb",
+      "byteLength": 14421
+    },
+    {
+      "id": "geometry-v3-source-400",
+      "path": "crates/nurbs-core/src/coons.rs",
+      "sha256": "adfc773573f5287c759fc3654d9dd292fb3aba66599e399c2bcb90f27e431d73",
+      "byteLength": 18322
+    },
+    {
+      "id": "geometry-v3-source-401",
+      "path": "crates/nurbs-core/src/curve.rs",
+      "sha256": "4acb38050f2ed0a91af6fa29594ae20791b636f8f8f63d8570d8f8b44df45e08",
+      "byteLength": 24162
+    },
+    {
+      "id": "geometry-v3-source-402",
+      "path": "crates/nurbs-core/src/curve_axis_driver.rs",
+      "sha256": "b6517f2eac2158def5243a6ecd4bf15f0b087f3de3c1fcab931c423d2cd26c3d",
+      "byteLength": 6209
+    },
+    {
+      "id": "geometry-v3-source-403",
+      "path": "crates/nurbs-core/src/curve_distance.rs",
+      "sha256": "426a2a6e70ae99a0bfaccb6bccda8ba7295641637be050b991c91992bdede3c1",
+      "byteLength": 21436
+    },
+    {
+      "id": "geometry-v3-source-404",
+      "path": "crates/nurbs-core/src/curve_jets.rs",
+      "sha256": "48994f8badc118900db93cbf3e169b8611d14b355fa6c5f8312515a4f9b5719d",
+      "byteLength": 6353
+    },
+    {
+      "id": "geometry-v3-source-405",
+      "path": "crates/nurbs-core/src/curve_offset.rs",
+      "sha256": "cb6b8e7547366ea47adbb241fb63407be27551c730db6925d337a334183b2271",
+      "byteLength": 21045
+    },
+    {
+      "id": "geometry-v3-source-406",
+      "path": "crates/nurbs-core/src/curve_offset_diagnostics.rs",
+      "sha256": "df61a3007c6c7406be60c76e780f42217871e1b853101da6548fa9f43c837c1a",
+      "byteLength": 12934
+    },
+    {
+      "id": "geometry-v3-source-407",
+      "path": "crates/nurbs-core/src/curve_offset_join.rs",
+      "sha256": "83a165e3b0618dbfb5c7b571ffa50cd4079275978ae9bd5d9de27c200abddf8d",
+      "byteLength": 8314
+    },
+    {
+      "id": "geometry-v3-source-408",
+      "path": "crates/nurbs-core/src/curve_offset_wire.rs",
+      "sha256": "2290271e78108d4f0d51a7f005701ec8b2c89c8b78e9baf1d2bd7203dedc61a6",
+      "byteLength": 9949
+    },
+    {
+      "id": "geometry-v3-source-409",
+      "path": "crates/nurbs-core/src/curve_partition_agreement.rs",
+      "sha256": "9ee48a84caf920b0a5accd33b98bb84b0d7f42f7d345bc22f63b400e8346dc8d",
+      "byteLength": 11565
+    },
+    {
+      "id": "geometry-v3-source-410",
+      "path": "crates/nurbs-core/src/curve_point_identity.rs",
+      "sha256": "8d60436d94ddefd2215812667bb20eb89ef61de54bbc853f41a5d9e338817f9a",
+      "byteLength": 4811
+    },
+    {
+      "id": "geometry-v3-source-411",
+      "path": "crates/nurbs-core/src/curve_quadratic_separator.rs",
+      "sha256": "314dc5d21c91d96dfa0a2c49e3cddcc332b367d11884cb3e962b9c09ebf19cd4",
+      "byteLength": 7240
+    },
+    {
+      "id": "geometry-v3-source-412",
+      "path": "crates/nurbs-core/src/curve_surface_affine.rs",
+      "sha256": "3113acec9c7b4147fbf9913cc37b6cd0ca63c0ec85ad7d83bfd6c66fce38d75b",
+      "byteLength": 9249
+    },
+    {
+      "id": "geometry-v3-source-413",
+      "path": "crates/nurbs-core/src/curve_surface_composition.rs",
+      "sha256": "6ff6c7a047c2aae01f5b6f774df751c6abdb7b6da1cdb54105a8ea397ac2b880",
+      "byteLength": 14270
+    },
+    {
+      "id": "geometry-v3-source-414",
+      "path": "crates/nurbs-core/src/curve_surface_lift.rs",
+      "sha256": "29b64ee0cbca33356b4a8b446c7fe1c4d4e5f38af73705d8a2ea8795111ee69e",
+      "byteLength": 13230
+    },
+    {
+      "id": "geometry-v3-source-415",
+      "path": "crates/nurbs-core/src/curve_surface_plane.rs",
+      "sha256": "6845a150b83141ee5e756bfaf1f3120d7c85810a7c30b5e550cea1004c26db20",
+      "byteLength": 13050
+    },
+    {
+      "id": "geometry-v3-source-416",
+      "path": "crates/nurbs-core/src/edit.rs",
+      "sha256": "0ef47b5bfd7a8791c0ae324e9fa29dc13bc1e02b4bb7f75d622e7e80497411db",
+      "byteLength": 5665
+    },
+    {
+      "id": "geometry-v3-source-418",
+      "path": "crates/nurbs-core/src/framed_sweep.rs",
+      "sha256": "bf6cb50d230186092efbcb7ee24bd6f596eac4c74e6d602a35989ec3142c040e",
+      "byteLength": 11517
+    },
+    {
+      "id": "geometry-v3-source-419",
+      "path": "crates/nurbs-core/src/gordon_cartesian.rs",
+      "sha256": "e13aaab5e95188754ee854204e7cf678f1939ccfea8c6e6fbd55dd22af7c8da7",
+      "byteLength": 28367
+    },
+    {
+      "id": "geometry-v3-source-420",
+      "path": "crates/nurbs-core/src/gordon_denominators.rs",
+      "sha256": "30fffce382e942decf0ccc52270617585eeec7f91f36195835e5cfbfd99304c3",
+      "byteLength": 6483
+    },
+    {
+      "id": "geometry-v3-source-421",
+      "path": "crates/nurbs-core/src/grid_spline.rs",
+      "sha256": "7c3dbdcf26213cd33f6f284708abc70cd86141e5d34dd9730cc12514f1a5fede",
+      "byteLength": 5925
+    },
+    {
+      "id": "geometry-v3-source-422",
+      "path": "crates/nurbs-core/src/hermite.rs",
+      "sha256": "d9e11397fbeb62f26ff30e120bd5d2488f33700c0764eac456a647bad3727283",
+      "byteLength": 7858
+    },
+    {
+      "id": "geometry-v3-source-424",
+      "path": "crates/nurbs-core/src/moving_envelope.rs",
+      "sha256": "2f2eccb7cb149dcdfd8c239b5bcf126b33683edcdf13478526681eebee8115da",
+      "byteLength": 11029
+    },
+    {
+      "id": "geometry-v3-source-425",
+      "path": "crates/nurbs-core/src/moving_radius.rs",
+      "sha256": "f6a4d4b00b3828bcaf4562d9f75ba4dc91a3edc780634e780a9dcfbfcb2c7b46",
+      "byteLength": 16262
+    },
+    {
+      "id": "geometry-v3-source-426",
+      "path": "crates/nurbs-core/src/natural_spline.rs",
+      "sha256": "e60df800445f5874489dfd49708accc52f783a223ff5221a21db5f32824e0fe1",
+      "byteLength": 11918
+    },
+    {
+      "id": "geometry-v3-source-427",
+      "path": "crates/nurbs-core/src/normal_alignment.rs",
+      "sha256": "fbe012f49f5ead33a0ebecc10eb9bdc7dc9642501a305d5010c93d359c93d89a",
+      "byteLength": 24625
+    },
+    {
+      "id": "geometry-v3-source-428",
+      "path": "crates/nurbs-core/src/offset_contact_path.rs",
+      "sha256": "53e782e152abf491057721ff379772b79dad0c3631c3b0049edc9941a798ed9d",
+      "byteLength": 11819
+    },
+    {
+      "id": "geometry-v3-source-429",
+      "path": "crates/nurbs-core/src/offset_contact_pcurve.rs",
+      "sha256": "29f827a867cc898c60e4e20c3fe002bdbc95143a2e007caccfd18165742e4199",
+      "byteLength": 12387
+    },
+    {
+      "id": "geometry-v3-source-430",
+      "path": "crates/nurbs-core/src/offset_contact_predictor.rs",
+      "sha256": "2b5bb44e5662460871af2cac2d8b4ffcbef71358e73633d22ef7aa04d9b2bbc0",
+      "byteLength": 8625
+    },
+    {
+      "id": "geometry-v3-source-431",
+      "path": "crates/nurbs-core/src/offset_contact_tangent.rs",
+      "sha256": "09293e8604ae6bd8836d69d8bf9df71baa7f8b1b085cc21528e73fc709cb94ba",
+      "byteLength": 15155
+    },
+    {
+      "id": "geometry-v3-source-432",
+      "path": "crates/nurbs-core/src/offset_contact_trims.rs",
+      "sha256": "b9def38b15211aa2e1399f7d7dafbaab727d6e187021aca12cf6379fcb632d7b",
+      "byteLength": 25103
+    },
+    {
+      "id": "geometry-v3-source-433",
+      "path": "crates/nurbs-core/src/offset_envelope.rs",
+      "sha256": "c6434f90828f1a51f1c5f19461238d050d1f50181265fc81aeba101750185511",
+      "byteLength": 21335
+    },
+    {
+      "id": "geometry-v3-source-434",
+      "path": "crates/nurbs-core/src/offset_envelope_fit.rs",
+      "sha256": "cbd549bd6328d8d5de7a511cb89e4d5e5f0532a588edf94a1124739a08421d6b",
+      "byteLength": 22734
+    },
+    {
+      "id": "geometry-v3-source-435",
+      "path": "crates/nurbs-core/src/offset_face_loops.rs",
+      "sha256": "e660cccfcb4d3f6c9f621b0621d84531b08cbbcfedf8913a62eb5ef6053c3ad1",
+      "byteLength": 24653
+    },
+    {
+      "id": "geometry-v3-source-436",
+      "path": "crates/nurbs-core/src/offset_patch_boundary.rs",
+      "sha256": "2fd07b5dd219cabbff5e18503729bbeb0e21910870f0514f56e65942b19a69e4",
+      "byteLength": 5149
+    },
+    {
+      "id": "geometry-v3-source-437",
+      "path": "crates/nurbs-core/src/offset_path_pcurves.rs",
+      "sha256": "4cb9e9802dace8bdb9d5a965df28d0a47d2011ff06511f0ff9f7900d318ccbe5",
+      "byteLength": 18223
+    },
+    {
+      "id": "geometry-v3-source-438",
+      "path": "crates/nurbs-core/src/offset_path_trims.rs",
+      "sha256": "a15b812a5bac762730616b1dd42dc5bef13ac4149121fd34e5ac0c086b38d8d4",
+      "byteLength": 11721
+    },
+    {
+      "id": "geometry-v3-source-439",
+      "path": "crates/nurbs-core/src/offset_source_boundary.rs",
+      "sha256": "3a5c1d40548a515fdba100033e6fd96429acb7434e1bd095b519ffd650ace485",
+      "byteLength": 14755
+    },
+    {
+      "id": "geometry-v3-source-440",
+      "path": "crates/nurbs-core/src/periodic_chart.rs",
+      "sha256": "45c87c77248cbbcaee25ef38ff66a29a7676c46d8dc52f4d48688705cedd9e04",
+      "byteLength": 2187
+    },
+    {
+      "id": "geometry-v3-source-441",
+      "path": "crates/nurbs-core/src/planar_area.rs",
+      "sha256": "83862ddb00eac287dc1c8a3d9338cc972a1f63fc342f08315b7d04217fb8c534",
+      "byteLength": 10452
+    },
+    {
+      "id": "geometry-v3-source-442",
+      "path": "crates/nurbs-core/src/radial_bounds.rs",
+      "sha256": "34c3e982d063f350c56c76e6e256d12e3bcbc5ed9b1238a15a7716e72a90bb51",
+      "byteLength": 8401
+    },
+    {
+      "id": "geometry-v3-source-443",
+      "path": "crates/nurbs-core/src/ray_surface.rs",
+      "sha256": "1658dbd539d03cf288837b2eb45960651f5ba2449b06780c8dcbfb8170878b7a",
+      "byteLength": 19812
+    },
+    {
+      "id": "geometry-v3-source-444",
+      "path": "crates/nurbs-core/src/reparameterization_materialization.rs",
+      "sha256": "7491fe9526d10ef1bea3a2bcc693c69c4c57cc11328f5b98ec5184fc540c8e70",
+      "byteLength": 17107
+    },
+    {
+      "id": "geometry-v3-source-445",
+      "path": "crates/nurbs-core/src/reparameterization_preimages.rs",
+      "sha256": "7d025e55c658ae43e5b6bd9acec8528db1c206e79e8bec7cd0d3287f01e622a6",
+      "byteLength": 15948
+    },
+    {
+      "id": "geometry-v3-source-447",
+      "path": "crates/nurbs-core/src/surface_contact.rs",
+      "sha256": "295143d2f6dd14a0a2193440f414ebb1d580f6b6085531bae3a3e8e1a33031bb",
+      "byteLength": 11256
+    },
+    {
+      "id": "geometry-v3-source-448",
+      "path": "crates/nurbs-core/src/surface_contact_search.rs",
+      "sha256": "113a05b4c3c522fb5d8bc8a2a7ded95ae02094e8e85fc51c85e9b2f997d22e8c",
+      "byteLength": 11829
+    },
+    {
+      "id": "geometry-v3-source-449",
+      "path": "crates/nurbs-core/src/surface_flux.rs",
+      "sha256": "1305b05a37c9cc7660f98e98a8b6f95b6ab45194eb9c24057b6e95eb8ed26baa",
+      "byteLength": 11933
+    },
+    {
+      "id": "geometry-v3-source-451",
+      "path": "crates/nurbs-core/src/surface_offset_transport_tests.rs",
+      "sha256": "1a7827fe50a43e26d28fb85cfcc77a56899174be6a122c2e5ddb9a49bb5e1f15",
+      "byteLength": 13784
+    },
+    {
+      "id": "geometry-v3-source-452",
+      "path": "crates/nurbs-core/src/surface_projected_jordan.rs",
+      "sha256": "f7d61f85f9f0c9e61d555777065075389ff8be76593d447d22d9e9e4e2d32fd0",
+      "byteLength": 7669
+    },
+    {
+      "id": "geometry-v3-source-453",
+      "path": "crates/nurbs-core/src/surface_projection_jacobian.rs",
+      "sha256": "a0b8abbf6891060d71ffec8161d78335f58834277e7964cfa592eafd660df179",
+      "byteLength": 9169
+    },
+    {
+      "id": "geometry-v3-source-455",
+      "path": "crates/nurbs-core/src/surface_self_chord.rs",
+      "sha256": "99ea18c31f52db5e33c1e7568cbfc15cbe33e03b67f158ff9f9617e728664809",
+      "byteLength": 12232
+    },
+    {
+      "id": "geometry-v3-source-456",
+      "path": "crates/nurbs-core/src/surface_self_chord_coverage.rs",
+      "sha256": "5cc018cd0234a763c8821aa9179910da1b5f8a2564fcefb00e6d8ccf351d0cbf",
+      "byteLength": 10164
+    },
+    {
+      "id": "geometry-v3-source-457",
+      "path": "crates/nurbs-core/src/sweeps/scalar.rs",
+      "sha256": "7cf6b4908277db512976b09412d9e44fee1a6b6fc90b81c426022941d0a12bca",
+      "byteLength": 21365
+    },
+    {
+      "id": "geometry-v3-source-458",
+      "path": "crates/nurbs-core/src/tests.rs",
+      "sha256": "bcdaadd9da8acb508dd4e55e4ca29c032ecaeed3ab2e8527cacb9becc262b50c",
+      "byteLength": 37193
+    },
+    {
+      "id": "geometry-v3-source-459",
+      "path": "crates/nurbs-core/src/trim_point.rs",
+      "sha256": "9e580c1227cc936ccbd19ac2ca0a8ae0437b5c8357790d1391aea08ba877920c",
+      "byteLength": 11082
+    },
+    {
+      "id": "geometry-v3-source-460",
+      "path": "crates/nurbs-core/src/trim_region_audit.rs",
+      "sha256": "a65bef4b54b2f4b642a61255479784405b96e047057db05a877644d43e151233",
+      "byteLength": 7310
+    },
+    {
+      "id": "geometry-v3-source-461",
+      "path": "crates/nurbs-core/src/trimmed_offset_contact.rs",
+      "sha256": "4395a8d311a10d0c74d6f24822cac023c40c7e3c26bf59525c59964afd98f00a",
+      "byteLength": 10085
+    },
+    {
+      "id": "geometry-v3-source-462",
+      "path": "crates/nurbs-core/src/trimmed_surface_distance.rs",
+      "sha256": "7c19d13b38116b09bb6a864e4cf2b3ce5f2f45ca1062991e31b48c1eb3c7c869",
+      "byteLength": 21168
+    },
+    {
+      "id": "geometry-v3-source-463",
+      "path": "crates/nurbs-core/src/uv_curve_crossings.rs",
+      "sha256": "3e203fec3e5ce43f69fef4d50c71306fdb98dfc50062fb2c0c5984584b7e87c1",
+      "byteLength": 14248
+    },
+    {
+      "id": "own-rust-cad-v39-evidence",
+      "path": "docs/qualification/own-rust-cad-v39.json",
+      "sha256": "fc89ddb9e35eb1af6d8fb82189c0a87f69dc2527e9f878f8d250165f04d832c0",
+      "byteLength": 26531
+    },
+    {
+      "id": "geometry-v3-source-464",
+      "path": "crates/compute-mlx/src/ffi.rs",
+      "sha256": "659eebea1315bdf58db5a7e02f138e448ca96de9a9cd6348fa6ddd53423d11ca",
+      "byteLength": 15003
+    },
+    {
+      "id": "geometry-v3-source-465",
+      "path": "crates/compute-mlx/src/ffi/attention.rs",
+      "sha256": "dd36d96106123f6acaac69b3969f65cc07c9ddbab9fb7e98ea5994c572588458",
+      "byteLength": 3554
+    },
+    {
+      "id": "geometry-v3-source-466",
+      "path": "crates/compute-mlx/src/ffi/cumsum.rs",
+      "sha256": "4c253eeebf29ab2fe300b6c41a21e10a80fe7771c5a01c5f090067b31052c203",
+      "byteLength": 3030
+    },
+    {
+      "id": "geometry-v3-source-467",
+      "path": "crates/compute-mlx/src/native/lowering/raw.rs",
+      "sha256": "8bfe56a799f9a815c3e32925364d326f2b2fa47b8dece220fd31d4539f864733",
+      "byteLength": 6920
+    },
+    {
+      "id": "own-rust-cad-v40-evidence",
+      "path": "docs/qualification/own-rust-cad-v40.json",
+      "sha256": "eed919d3f6ff97cbfaf34ab571f2733b8aedc71f144950a6b69493c0715483b2",
+      "byteLength": 26663
+    },
+    {
+      "id": "own-rust-cad-v41-evidence",
+      "path": "docs/qualification/own-rust-cad-v41.json",
+      "sha256": "095aaaa8b3ce0bdb8b9b0d8c2e51460bd7f2d3ccfaac63d76876d10ba1466a19",
+      "byteLength": 26644
+    },
+    {
+      "id": "geometry-v3-source-468",
+      "path": "crates/nurbs-core/src/sweeps/profile_certificate.rs",
+      "sha256": "7cf63e27cf6c986eed6d4b52bb7074c11bfb09270add27db80bc8030bcf7ccbb",
+      "byteLength": 28027
+    },
+    {
+      "id": "geometry-v3-source-469",
+      "path": "crates/nurbs-core/src/sweeps/profile_seam.rs",
+      "sha256": "61b6a08a95de38a540be37a8d424e773e6b216f2b5a50bbea04924f46531a6f4",
+      "byteLength": 9489
+    },
+    {
+      "id": "geometry-v3-source-470",
+      "path": "src/services/mainSolidProtocol.ts",
+      "sha256": "d4468a04932ea47671b4c8ac2e552e3ec62ec385ef176eda5de75c59b0df432d",
+      "byteLength": 18493
+    },
+    {
+      "id": "g1-v51-github-environment",
+      "path": "docs/qualification/environment-freeze/g1-github-actions-v35.json",
+      "sha256": "659c3eb3215fea1555fea3e12b495a2d5dd1907a49c98ac2663c9c76ef5b90d9",
+      "byteLength": 3689
+    },
+    {
+      "id": "g1-v54-github-environment",
+      "path": "docs/qualification/environment-freeze/g1-github-actions-v36.json",
+      "sha256": "7e1e0c837b44047b5e7965a1b17769cdefc7b888fa77515ed71ce8963669ab73",
+      "byteLength": 4891
+    },
+    {
+      "id": "own-rust-cad-v44-evidence",
+      "path": "docs/qualification/own-rust-cad-v44.json",
+      "sha256": "be64357f220d014a2e16a749dd3cb258c7f4cfc27ca3abdb58eac60ae11bafe2",
+      "byteLength": 27194
+    },
+    {
+      "id": "geometry-v3-source-471",
+      "path": "crates/nurbs-core/src/sweeps/profile_geometry.rs",
+      "sha256": "1abfadd3b6aff48916bf15616a4307a0bd9870c80e61c9e4cbe6ce82f24e54e8",
+      "byteLength": 17154
+    },
+    {
+      "id": "geometry-v3-source-472",
+      "path": "scripts/qualificationKernelModuleDelivery.mjs",
+      "sha256": "3c873f3a5d18eb6667afe0e31cfb8c9080d79bbe31fbf7ed2b3d1382ffc6a4c9",
+      "byteLength": 771
+    },
+    {
+      "id": "geometry-v3-source-473",
+      "path": "src/services/geometry/kernel.ts",
+      "sha256": "c676ce7887c206dca23a878483b2856efa8e3c4144f886735e5f9c7b120d0bba",
+      "byteLength": 11242
+    },
+    {
+      "id": "geometry-v3-source-474",
+      "path": "src/services/geometry/kernelCompilation.ts",
+      "sha256": "2922431718895ea95846dd534ea57beb8530c737b60c51a00646aab63fcff78c",
+      "byteLength": 1029
+    },
+    {
+      "id": "geometry-v3-source-475",
+      "path": "src/services/geometry/kernelCompilationRequired.ts",
+      "sha256": "d13b9ed1167ae58347e77c037471e4d48eacca83bc3895b46c9e3a1a181a6ba1",
+      "byteLength": 472
+    },
+    {
+      "id": "geometry-v3-source-476",
+      "path": "src/services/manifoldPlanQualificationWorkerLane.ts",
+      "sha256": "1b4edca354e76e128cf61edc6165928d795e0b763712911fef09a0835a5f51fe",
+      "byteLength": 14511
+    },
+    {
+      "id": "geometry-v3-source-477",
+      "path": "src/workers/manifoldPlanQualification.worker.ts",
+      "sha256": "7b0610f75e3c17a4508401549f25f7d563c1d580256a8c8c1b5f67a169439182",
+      "byteLength": 1809
+    },
+    {
+      "id": "geometry-v3-source-478",
+      "path": "vite.config.ts",
+      "sha256": "fb5a7d2647ce7b7a53fcf36c0b732212f001e9d3a28c1c5f601b76f423a8535a",
+      "byteLength": 4516
+    },
+    {
+      "id": "geometry-v3-source-479",
+      "path": "vite.qualification.config.ts",
+      "sha256": "98662d5a9533fb6ace134546415ae923ac98861ec89dc0535e9954acd14059ca",
+      "byteLength": 1070
+    },
+    {
+      "id": "own-rust-cad-v45-evidence",
+      "path": "docs/qualification/own-rust-cad-v45.json",
+      "sha256": "35412578e5be58373cd5a91cf30cb3b7c61e34f68d4999f85a5adf143d36828f",
+      "byteLength": 28078
+    },
+    {
+      "id": "geometry-v3-source-480",
+      "path": "crates/brep-core/src/analytic/tests/rational_loft_cap_certificate_tests.rs",
+      "sha256": "ea3e3ba27ec17e885acc2dff70ad8ae24820403016dbe36987689ec8aaeffc45",
+      "byteLength": 4154
+    },
+    {
+      "id": "geometry-v3-source-481",
+      "path": "crates/brep-core/src/analytic/tests/rational_loft_nonuniform_wall_regression.rs",
+      "sha256": "0500640134f08e4763904b74771ca0e8b97cfb6a676f0f6d4401658b104aa9b6",
+      "byteLength": 2614
+    },
+    {
+      "id": "geometry-v3-source-482",
+      "path": "crates/brep-core/src/analytic/tests/rational_loft_retained_tests.rs",
+      "sha256": "37adb3c8f284ccb85781866d72a17f5bb36ec59e7d8423caf4925969806e128b",
+      "byteLength": 3484
+    },
+    {
+      "id": "geometry-v3-source-483",
+      "path": "crates/brep-core/src/analytic/tests/rational_loft_supplied_multispan_tests.rs",
+      "sha256": "b5eb8f1907e3a7a35a3619e366d6dadc017c2228bf154d758d5a8adb9bc93d83",
+      "byteLength": 1503
+    },
+    {
+      "id": "geometry-v3-source-484",
+      "path": "crates/brep-core/src/tests/analytic_tests.rs",
+      "sha256": "228c4fb66204598d5115da35c72f69432e9c3760f1243101449f5b21cb9d735b",
+      "byteLength": 22324
+    },
+    {
+      "id": "geometry-v3-source-485",
+      "path": "crates/bridge-analysis/src/bonded_solid.rs",
+      "sha256": "279fbbb0650da6df2a890b867886be2f169a13203820ae5fff2669deec801df0",
+      "byteLength": 3975
+    },
+    {
+      "id": "geometry-v3-source-486",
+      "path": "crates/bridge-analysis/src/lib.rs",
+      "sha256": "a5e204c488533bc77743de810bba20564c92a42bea88a69f2702fbcd522a5c40",
+      "byteLength": 1175
+    },
+    {
+      "id": "geometry-v3-source-487",
+      "path": "crates/bridge-analysis/src/print_strength.rs",
+      "sha256": "3f4cde673a1740dbc1535f461ff80c96af21f252c6b050435f8958d28dcfb140",
+      "byteLength": 6417
+    },
+    {
+      "id": "geometry-v3-source-488",
+      "path": "crates/bridge-analysis/src/structural_sections.rs",
+      "sha256": "cea741b576d15bb8d1a57a4f452c78a75fcf83cd32fbf4870e48a3a157203773",
+      "byteLength": 14181
+    },
+    {
+      "id": "geometry-v3-source-489",
+      "path": "crates/bridge-analysis/src/truss.rs",
+      "sha256": "a2ca1df51caf5a6c3e9ae861c7be1b8fcd978b1686e7f6b3900d5107787dd5e1",
+      "byteLength": 8539
+    },
+    {
+      "id": "geometry-v3-source-490",
+      "path": "crates/bridge-cam/src/gcode.rs",
+      "sha256": "4391665f0b59e582d8fbfcf4437cb241342ab39d5c173fc087d2936f8da14e95",
+      "byteLength": 14091
+    },
+    {
+      "id": "geometry-v3-source-491",
+      "path": "crates/bridge-cam/src/laser.rs",
+      "sha256": "8c960600affd1157e005d98164e9eaf1f366e8a7676dd2dcd38bd86ef6d961a6",
+      "byteLength": 10922
+    },
+    {
+      "id": "geometry-v3-source-492",
+      "path": "crates/bridge-cam/src/lib.rs",
+      "sha256": "92edfd0637334850d39cae2b47a6343e61c70fdbf9954a1ab810c9fecf838972",
+      "byteLength": 893
+    },
+    {
+      "id": "geometry-v3-source-493",
+      "path": "crates/bridge-svg/src/lib.rs",
+      "sha256": "77346efb73695d63a5a26d52cc20faad51a0dbc8d9de5e7b4d3220c30d370036",
+      "byteLength": 517
+    },
+    {
+      "id": "geometry-v3-source-495",
+      "path": "crates/bridge-svg/src/svg/non_scaling_tests.rs",
+      "sha256": "a0561df66ad0c228821fd708970a570db6bf2271da76543a34d29bf13414ff47",
+      "byteLength": 23562
+    },
+    {
+      "id": "geometry-v3-source-496",
+      "path": "crates/bridge-svg/src/svg_css.rs",
+      "sha256": "810381593df832571f1b4090309290d1627583ad0260dc8dec7ad321e49c2251",
+      "byteLength": 30789
+    },
+    {
+      "id": "geometry-v3-source-497",
+      "path": "crates/bridge-svg/src/svg_silhouette.rs",
+      "sha256": "803e0c88913dfbd8847f6acb5a6aa3ddda2f0c24a44a21ab217d2a3a58943a59",
+      "byteLength": 23713
+    },
+    {
+      "id": "geometry-v3-source-498",
+      "path": "crates/geometry-bridge/src/sweep_pipeline/miter.rs",
+      "sha256": "6e3c7193833ac0c8be4bcfed7d4fb0a9fab0fb91dcff1ee3871cc954046f3b58",
+      "byteLength": 23663
+    },
+    {
+      "id": "geometry-v3-source-499",
+      "path": "crates/geometry-bridge/src/sweep_pipeline/profile.rs",
+      "sha256": "f11d013746457cb15e16258b1937dd3f135a0ac65a9455d9239d413507f6ace8",
+      "byteLength": 19232
+    },
+    {
+      "id": "geometry-v3-source-500",
+      "path": "crates/nurbs-core/src/sweeps/tests/profile_certificate_tests.rs",
+      "sha256": "6324df2ac3708962514c2a989094a9a282eff00d49f6cffbaedfb3d5ebc9ee94",
+      "byteLength": 15118
+    },
+    {
+      "id": "geometry-v3-source-501",
+      "path": "crates/nurbs-core/src/sweeps/tests/progressive_miter_tests.rs",
+      "sha256": "99e2673248172d48e4779c9742f828160b8c6c9545bb39112d3d704488bf0a6b",
+      "byteLength": 39098
+    },
+    {
+      "id": "geometry-v3-source-502",
+      "path": "crates/nurbs-core/src/tests/curve_surface_agreement_tests.rs",
+      "sha256": "0341d3a643a6649018245aad88b0f6d1a1feee2ef48c822c51f64320bbe7e365",
+      "byteLength": 29115
+    },
+    {
+      "id": "geometry-v3-source-503",
+      "path": "crates/nurbs-core/src/transport_sweep.rs",
+      "sha256": "bc8c3f024d9428792f790c7e5aa2ae1c90bcb550cd6e31187f3a7e3280409144",
+      "byteLength": 1614
+    },
+    {
+      "id": "geometry-v3-source-504",
+      "path": "src/services/structuralSectionsValidation.ts",
+      "sha256": "9eb7c9ffe31d524c0dbd56b544fe15bb7142f71cac6bc1de6c7ef107abcc994a",
+      "byteLength": 3166
+    },
+    {
+      "id": "own-rust-cad-v46-evidence",
+      "path": "docs/qualification/own-rust-cad-v46.json",
+      "sha256": "a98d0f2c152e7781874516fee4e1995cfe51b287d3fc5a700250d1adae9dce7c",
+      "byteLength": 28262
+    },
+    {
+      "id": "geometry-v3-source-505",
+      "path": "crates/geometry-bridge/src/tests/sweep_profile_admission.rs",
+      "sha256": "f00e887f670042d15c147fe898c420bb0330bb001e0022a0139251de0bb8a40b",
+      "byteLength": 9091
+    },
+    {
+      "id": "own-rust-cad-v47-evidence",
+      "path": "docs/qualification/own-rust-cad-v47.json",
+      "sha256": "a196bbd6c5732fd00f7d0daf718ad82c63f1b5beb810f085b47f335f7c220f08",
+      "byteLength": 28168
+    },
+    {
+      "id": "own-rust-cad-v48-evidence",
+      "path": "docs/qualification/own-rust-cad-v48.json",
+      "sha256": "e2fbaf74469aa064ae2073cf3072ce39015faed52d554875a2a54ac6006e47ad",
+      "byteLength": 28322
+    },
+    {
+      "id": "geometry-v3-source-506",
+      "path": "crates/nurbs-core/src/sweeps/profile_frame_premises.rs",
+      "sha256": "3632eec835563e8fbf013e4d7ad3c067c3787d7f9c89ac1c208be8ba699b9078",
+      "byteLength": 5922
+    },
+    {
+      "id": "own-rust-cad-v49-evidence",
+      "path": "docs/qualification/own-rust-cad-v49.json",
+      "sha256": "42bf6c58bc16580d2a690741dad5712350fe4e5dad4dd69b723329e20d3f61f3",
+      "byteLength": 28441
+    },
+    {
+      "id": "geometry-v3-source-507",
+      "path": "crates/nurbs-core/src/sweeps/profile_spatial_frame.rs",
+      "sha256": "ebf6d70a9dc99afc3a93efa23b9e7861e65499147de5d1583f5d30133b2bf739",
+      "byteLength": 8409
+    },
+    {
+      "id": "own-rust-cad-v50-evidence",
+      "path": "docs/qualification/own-rust-cad-v50.json",
+      "sha256": "745e0c0478fe2e0ff24ee3966df426b6b1f40ed1a709c5567f7a153d56562075",
+      "byteLength": 28561
+    },
+    {
+      "id": "geometry-v3-source-508",
+      "path": "crates/brep-core/src/face_senses.rs",
+      "sha256": "9f32e24fee1f27d83324d3223fb78f2c4b8df3a72ca48a32aaefcfd129a1cd4b",
+      "byteLength": 1775
+    },
+    {
+      "id": "geometry-v3-source-509",
+      "path": "crates/cad-step/src/close_topology_interchange.rs",
+      "sha256": "47372dd5056a0c81e3554f26e5669f6f670efc7bf70733d9ff3331021cf4b452",
+      "byteLength": 1951
+    },
+    {
+      "id": "geometry-v3-source-510",
+      "path": "crates/cad-step/src/iges_interchange_v1.rs",
+      "sha256": "62a75deaa7fa773dfcf6cd7978aefecc78991118d62d864902a085d44f422467",
+      "byteLength": 8999
+    },
+    {
+      "id": "geometry-v3-source-512",
+      "path": "crates/cad-step/src/lib.rs",
+      "sha256": "dae403db5c76b5a3749630414b2d262a49bbe011ed8c01d1a0021a953891bedc",
+      "byteLength": 2520
+    },
+    {
+      "id": "geometry-v3-source-513",
+      "path": "crates/cad-step/src/nurbs_step_interchange.rs",
+      "sha256": "1218ff8a913b23967f2018ff75caef941256f170aec4818b697d41f2599643ef",
+      "byteLength": 12522
+    },
+    {
+      "id": "geometry-v3-source-515",
+      "path": "crates/cad-step/src/nurbs_step_solid.rs",
+      "sha256": "a736d4ea974f1c8ed06364b34b8cdb1966e59c0c204df54f4636f755ee3a9ad8",
+      "byteLength": 26750
+    },
+    {
+      "id": "geometry-v3-source-516",
+      "path": "crates/cad-step/src/nurbs_step_trimmed.rs",
+      "sha256": "fc720b36b5968c00d74c6341aabca80b9439ac1d5adbadb5155ef9497921d971",
+      "byteLength": 16715
+    },
+    {
+      "id": "geometry-v3-source-517",
+      "path": "crates/cad-step/src/source_exchange_step.rs",
+      "sha256": "58bfd613914bb3986c780f527380a8ac9b9542c627904e0bdc9257805779f745",
+      "byteLength": 10003
+    },
+    {
+      "id": "own-rust-cad-v51-evidence",
+      "path": "docs/qualification/own-rust-cad-v51.json",
+      "sha256": "46fe7ea1471ed5c9bc4932c0feb68b5312b20101d14023b7d86a1d54b5cf4588",
+      "byteLength": 29155
+    },
+    {
+      "id": "geometry-v3-source-520",
+      "path": "crates/brep-core/src/intersections/cone.rs",
+      "sha256": "15d6787f6caeaa014b1e0081f34a32608f76c4769928ac87b25b51ef6f5387ca",
+      "byteLength": 11918
+    },
+    {
+      "id": "geometry-v3-source-521",
+      "path": "crates/brep-core/src/intersections/cylinder.rs",
+      "sha256": "814896086e979d6eebee6b1380533f26560b23204b83a5207acb42023fbcecba",
+      "byteLength": 9757
+    },
+    {
+      "id": "geometry-v3-source-522",
+      "path": "crates/brep-core/src/intersections/plane.rs",
+      "sha256": "197bf8c2b6468a2baf1dc1ea25322df81d7320254e081758027c1dedf55bc89e",
+      "byteLength": 4820
+    },
+    {
+      "id": "geometry-v3-source-523",
+      "path": "crates/brep-core/src/intersections/torus.rs",
+      "sha256": "d3a1d96dbb1fcff610e634a0293d4fab744975596c539c21410f0e91f49bb065",
+      "byteLength": 9781
+    },
+    {
+      "id": "geometry-v3-source-524",
+      "path": "crates/brep-core/src/uv_coverage.rs",
+      "sha256": "3672be98593114c5195653cc359e31eed2daccbffea022120d90b0a479a26590",
+      "byteLength": 2135
+    },
+    {
+      "id": "geometry-v3-source-529",
+      "path": "crates/brep-intersect/src/lib.rs",
+      "sha256": "465dae205c7cc330f497d7956b5c2663cce466fc13e7fe347f8b61da589108de",
+      "byteLength": 1812
+    },
+    {
+      "id": "geometry-v3-source-536",
+      "path": "crates/brep-intersect/src/sphere_torus.rs",
+      "sha256": "6acfa7f0627497756b47263e72d0b43f305f74f95996e6f0c71d8e33c9e19839",
+      "byteLength": 33461
+    },
+    {
+      "id": "geometry-v3-source-537",
+      "path": "crates/brep-intersect/src/test_utils.rs",
+      "sha256": "f4e4e43ca6b63d45d6ee4fead6a85349b946d806cdb83252da66f1d8c2ad3013",
+      "byteLength": 902
+    },
+    {
+      "id": "geometry-v3-source-540",
+      "path": "crates/nurbs-intersect/src/coverage_verifier.rs",
+      "sha256": "77e30c9c7cf69cfd0a9badef0ab3d397628f6a5c8bce7b497a6a9de8f3e584d0",
+      "byteLength": 10660
+    },
+    {
+      "id": "geometry-v3-source-541",
+      "path": "crates/nurbs-intersect/src/lib.rs",
+      "sha256": "9aafeddd188fee0f1e99d16c0209b9a6c8e079453c05221833831c638ebaeb4a",
+      "byteLength": 529
+    },
+    {
+      "id": "geometry-v3-source-543",
+      "path": "crates/nurbs-intersect/src/predicate_evidence.rs",
+      "sha256": "1633865f8d25e8745d354b0bbd23fbf525555393445f69f745f2ebf5881e9a02",
+      "byteLength": 16809
+    },
+    {
+      "id": "geometry-v3-source-545",
+      "path": "crates/nurbs-intersect/src/rational_curve.rs",
+      "sha256": "3ce234cd0e0bac6a1e914ee5a5399b30a367434a33c87d9c67fd5f3b2caf6ed5",
+      "byteLength": 973
+    },
+    {
+      "id": "own-rust-cad-v52-evidence",
+      "path": "docs/qualification/own-rust-cad-v52.json",
+      "sha256": "c9385e2d89e01b7b0bb987c8060eb14e421276cae2cca6794a9ae2b78bdbde46",
+      "byteLength": 28935
+    },
+    {
+      "id": "geometry-v3-source-546",
+      "path": "crates/brep-intersect/src/plane_bounds.rs",
+      "sha256": "3b7cef795b67bdb3fa137a0732e208dbea2ce115799a69dfa7df2e6af8e4e5c7",
+      "byteLength": 900
+    },
+    {
+      "id": "geometry-v3-source-547",
+      "path": "crates/nurbs-intersect/src/vec3.rs",
+      "sha256": "1bb69bc34ab84da376a7037947fba60164fa2e3be45db6333844acad4a7d368a",
+      "byteLength": 977
+    },
+    {
+      "id": "own-rust-cad-v53-evidence",
+      "path": "docs/qualification/own-rust-cad-v53.json",
+      "sha256": "de7a1bafd42b93b2ed1bb829469f4815e5d1ebf88ded02388a06c7721fc20633",
+      "byteLength": 30193
+    },
+    {
+      "id": "geometry-v3-source-548",
+      "path": "crates/brep-core/src/operations/boolean.rs",
+      "sha256": "e7e5ff7e703b9d54576c7a4073291dc0321039156024084084e6295ec0b15d11",
+      "byteLength": 8927
+    },
+    {
+      "id": "geometry-v3-source-549",
+      "path": "crates/brep-core/src/operations/edge_features.rs",
+      "sha256": "a0eded633fa583f13f52935d4e4344ea69a509f46eae5f01bab89f63ab9becc1",
+      "byteLength": 7714
+    },
+    {
+      "id": "geometry-v3-source-550",
+      "path": "crates/brep-core/src/operations/mod.rs",
+      "sha256": "85b009c649fc32d86639cab8358d5e456760f8a01d127ed67c1004789ae1f3f1",
+      "byteLength": 2211
+    },
+    {
+      "id": "geometry-v3-source-551",
+      "path": "crates/brep-core/src/operations/planar_boolean.rs",
+      "sha256": "d313ec1af283927a04c832766f93024bd265985ccc94b36c2ca8b1c84e111aa1",
+      "byteLength": 19340
+    },
+    {
+      "id": "geometry-v3-source-552",
+      "path": "crates/brep-core/src/operations/planar_edit.rs",
+      "sha256": "71cf100ea8f61c52f432ff767dbc73921e6f7350b9238b3dfc5f5f8a1067e5e9",
+      "byteLength": 18233
+    },
+    {
+      "id": "geometry-v3-source-553",
+      "path": "crates/brep-core/src/operations/planar_model.rs",
+      "sha256": "786817b1b2ba0b7c257861c6a5b00277149f1aed2de3a759dcc489c70c452514",
+      "byteLength": 16720
+    },
+    {
+      "id": "geometry-v3-source-554",
+      "path": "crates/brep-core/src/operations/primitives.rs",
+      "sha256": "0c68aed2da188fea77084172945c5dae4878cd71d932b73c7aae1bc1dcf32cf6",
+      "byteLength": 16774
+    },
+    {
+      "id": "geometry-v3-source-555",
+      "path": "crates/brep-core/src/operations/tests.rs",
+      "sha256": "11f1f0d6f5d2524661fed2bf116db452c4b678f27c91c1014cf17cf1a2a336f2",
+      "byteLength": 23126
+    },
+    {
+      "id": "geometry-v3-source-556",
+      "path": "crates/nurbs-intersect/src/queries/codec.rs",
+      "sha256": "91c4160f67dfe3891577e10d4845cc334eb305978cb3e0faa48bd74c1ecec014",
+      "byteLength": 12004
+    },
+    {
+      "id": "geometry-v3-source-557",
+      "path": "crates/nurbs-intersect/src/queries/curve_coincidence.rs",
+      "sha256": "7f6f6bc1b879bf642a27c4c3ac1052d682d9450bd66f1a49a28ada7b14b4690b",
+      "byteLength": 8590
+    },
+    {
+      "id": "geometry-v3-source-558",
+      "path": "crates/nurbs-intersect/src/queries/curve_curve.rs",
+      "sha256": "81070e4349e3da36a3d30fc0b3a8eca8b913a2c8f93df9e76c3cfdf8394baef3",
+      "byteLength": 21424
+    },
+    {
+      "id": "geometry-v3-source-559",
+      "path": "crates/nurbs-intersect/src/queries/curve_plane.rs",
+      "sha256": "fa2d17db074d790a2919d252b9090414b59f7014522fc7b2d64931a48de280ad",
+      "byteLength": 15512
+    },
+    {
+      "id": "geometry-v3-source-560",
+      "path": "crates/nurbs-intersect/src/queries/curve_ruled_surface.rs",
+      "sha256": "37cda1c930491e262bcb78ef698d49c9f2e7ac6d0b4857941266efbd8261b960",
+      "byteLength": 19562
+    },
+    {
+      "id": "geometry-v3-source-561",
+      "path": "crates/nurbs-intersect/src/queries/curve_segment.rs",
+      "sha256": "7d900013ed83c311e37ff0d425d10e4d4bea932c3e7c68bb054c74fb5b087059",
+      "byteLength": 16092
+    },
+    {
+      "id": "geometry-v3-source-562",
+      "path": "crates/nurbs-intersect/src/queries/curve_surface.rs",
+      "sha256": "ed0a7c216c2ffd3792906f3aad4f61bf7b49b92a60b479f3db21f332de8c7ed9",
+      "byteLength": 12241
+    },
+    {
+      "id": "geometry-v3-source-563",
+      "path": "crates/nurbs-intersect/src/queries/mod.rs",
+      "sha256": "72b452b26b76cb10caf0e4eb9c872e0dab494fc50d78c612932de2ae43dd77b7",
+      "byteLength": 6296
+    },
+    {
+      "id": "geometry-v3-source-564",
+      "path": "crates/nurbs-intersect/src/queries/ruled_coincidence.rs",
+      "sha256": "825cd8b2c6d24757dc9f29ed43dc106b564e8db924ae399b576e4a078da26e09",
+      "byteLength": 20289
+    },
+    {
+      "id": "geometry-v3-source-565",
+      "path": "crates/nurbs-intersect/src/queries/ruled_points.rs",
+      "sha256": "03dd757110887c63ab85f5346de48a9d5cce1a803647a537d152af02441a9025",
+      "byteLength": 15368
+    },
+    {
+      "id": "geometry-v3-source-566",
+      "path": "crates/nurbs-intersect/src/queries/support.rs",
+      "sha256": "b149aa5f2e63833e57b565ef9562775bd2d22e50288f052b3974dbddc97f9b5c",
+      "byteLength": 3811
+    },
+    {
+      "id": "geometry-v3-source-567",
+      "path": "crates/nurbs-intersect/src/queries/surface_plane.rs",
+      "sha256": "f58d330b801deb13dd0b8bd9ba2ba3de99eabf3ad4d929d22f928b108646d2f9",
+      "byteLength": 26084
+    },
+    {
+      "id": "geometry-v3-source-568",
+      "path": "crates/nurbs-intersect/src/queries/surface_surface.rs",
+      "sha256": "5693a05aaab5f176ba8e144de3c38acf76720a8dce3501959a12571d92ffbec4",
+      "byteLength": 13662
+    },
+    {
+      "id": "geometry-v3-source-569",
+      "path": "crates/nurbs-intersect/src/queries/surface_trace.rs",
+      "sha256": "d2abecfe8ecd809ebbfe167ddd93043965fba1658dbb6790b4d06ea6b646bd4e",
+      "byteLength": 18634
+    },
+    {
+      "id": "geometry-v3-source-570",
+      "path": "crates/nurbs-intersect/src/queries/tangents.rs",
+      "sha256": "0e1ec71bae98c568421d65ebecfd79abf58252f23a833618a86012e2cf16ed0a",
+      "byteLength": 6069
+    },
+    {
+      "id": "geometry-v3-source-571",
+      "path": "crates/nurbs-intersect/src/queries/tests/mod.rs",
+      "sha256": "24d92a7112751d2bced1203e16a71440d6c5a50cca5a966f8fbb400542373e23",
+      "byteLength": 88391
+    },
+    {
+      "id": "own-rust-cad-v54-evidence",
+      "path": "docs/qualification/own-rust-cad-v54.json",
+      "sha256": "75c5eaa9402a76df508a221fe501d800bc9099ba0954ad1816468972b2753068",
+      "byteLength": 30978
+    },
+    {
+      "id": "geometry-v3-source-572",
+      "path": "crates/cad-step/src/step_interchange_v3/direct_builder.rs",
+      "sha256": "96693d51f8b042f9135eec3c19dfbe04b17b384a8c6270928b4692b9e5c0b07b",
+      "byteLength": 20392
+    },
+    {
+      "id": "geometry-v3-source-573",
+      "path": "crates/cad-step/src/step_interchange_v3/exchange.rs",
+      "sha256": "1a782d74687fc5c38ca748f0d1447d7cf80d3506a35dd7fefbfff83e2c4b9488",
+      "byteLength": 9776
+    },
+    {
+      "id": "geometry-v3-source-574",
+      "path": "crates/cad-step/src/step_interchange_v3/export.rs",
+      "sha256": "624a8af2d82c99d9d2202157d7d15f86a69263413bf43ed8b1935fadb2c44d72",
+      "byteLength": 19327
+    },
+    {
+      "id": "geometry-v3-source-575",
+      "path": "crates/cad-step/src/step_interchange_v3/identity.rs",
+      "sha256": "ba4995d42e93a24db21db210afb733ad9ea64253adbeb92795e320421721b61e",
+      "byteLength": 7645
+    },
+    {
+      "id": "geometry-v3-source-576",
+      "path": "crates/cad-step/src/step_interchange_v3/import.rs",
+      "sha256": "ad423b2d77a5ff2712c97129b6e470c9e8af89965accc3a4d62df37cd735b1e3",
+      "byteLength": 20524
+    },
+    {
+      "id": "geometry-v3-source-577",
+      "path": "crates/cad-step/src/step_interchange_v3/mod.rs",
+      "sha256": "a4792670d349f7f9b6cc07d5c958c4ad1fc6f5cb94aafc5c0e088e576a6137dd",
+      "byteLength": 4451
+    },
+    {
+      "id": "geometry-v3-source-578",
+      "path": "crates/cad-step/src/step_interchange_v3/occurrences.rs",
+      "sha256": "af5de680864575ec3ba6e60486969772ca933c9a33a28145ee5fec9d2ef5927e",
+      "byteLength": 14885
+    },
+    {
+      "id": "geometry-v3-source-579",
+      "path": "crates/cad-step/src/step_interchange_v3/part21.rs",
+      "sha256": "706bee97b7533d2a99acb81687e8222583e93a1acf5a5d9b2b40a1de8aeb1321",
+      "byteLength": 15270
+    },
+    {
+      "id": "geometry-v3-source-580",
+      "path": "crates/cad-step/src/step_interchange_v3/periodic.rs",
+      "sha256": "3f56e6d7a550a6b6e16d9c4cff7850e05b5e4fe0808576eb7ed86f3f3c14d562",
+      "byteLength": 20488
+    },
+    {
+      "id": "geometry-v3-source-581",
+      "path": "crates/cad-step/src/step_interchange_v3/placement.rs",
+      "sha256": "a2c1b4747046c51ea63864705e2d28dffc2bc912eb694a00312de33aa492a048",
+      "byteLength": 13895
+    },
+    {
+      "id": "geometry-v3-source-582",
+      "path": "crates/cad-step/src/step_interchange_v3/read_curve.rs",
+      "sha256": "faf4af48ec511967f2141ee36e5641e9c1e507e102e5b8d72755c87ee162b132",
+      "byteLength": 19349
+    },
+    {
+      "id": "geometry-v3-source-583",
+      "path": "crates/cad-step/src/step_interchange_v3/read_surface.rs",
+      "sha256": "dfae67ad2434deeff94b74957205c8571e4e145d8403dac808cfce97a33eecb7",
+      "byteLength": 12507
+    },
+    {
+      "id": "geometry-v3-source-584",
+      "path": "crates/cad-step/src/step_interchange_v3/tests/mod.rs",
+      "sha256": "de383f4704382f122fc69b91c127babe1d1d4a4a0d42c12455220af5d9bf5a14",
+      "byteLength": 61705
+    },
+    {
+      "id": "geometry-v3-source-585",
+      "path": "crates/cad-step/src/step_interchange_v3/writer.rs",
+      "sha256": "2f80eb1a3120d739bbf02486c247b555866301c28f857ee6c188a335a6478586",
+      "byteLength": 6645
+    },
+    {
+      "id": "own-rust-cad-v55-evidence",
+      "path": "docs/qualification/own-rust-cad-v55.json",
+      "sha256": "e4723994b18b96328ca3929e4ac0444ff68c577b20fc700d68ff847fbccd0cac",
+      "byteLength": 41453
+    },
+    {
+      "id": "geometry-v3-source-586",
+      "path": "crates/brep-core/src/analysis/certified_cylinder_radius.rs",
+      "sha256": "e26ce163e04702e73defd251df0d4973c2c296108ed8c39dbd0fd74c5fe5a5da",
+      "byteLength": 21513
+    },
+    {
+      "id": "geometry-v3-source-587",
+      "path": "crates/brep-core/src/analysis/certified_mass_properties.rs",
+      "sha256": "f98cfc8cfdf7688d48669c1d8ea5e3bc28449fce13363661b1adcf8ea11c28d6",
+      "byteLength": 16751
+    },
+    {
+      "id": "geometry-v3-source-588",
+      "path": "crates/brep-core/src/analysis/mass_properties.rs",
+      "sha256": "747ba46d215c742e3de49b78b71eb7d21ae9eb2eb7a0743e181db80d5a7e4802",
+      "byteLength": 20553
+    },
+    {
+      "id": "geometry-v3-source-589",
+      "path": "crates/brep-core/src/analysis/mod.rs",
+      "sha256": "308d1fbeb41a1638ac844979e8192e6648e8220c7d74ae7b7c5b710d3fb43299",
+      "byteLength": 761
+    },
+    {
+      "id": "geometry-v3-source-590",
+      "path": "crates/brep-core/src/analysis/tests/mod.rs",
+      "sha256": "ff589190e1b79f593d26402f85a1a5b0b49ed4b18330590dca50974628d8c0ba",
+      "byteLength": 7670
+    },
+    {
+      "id": "geometry-v3-source-591",
+      "path": "crates/brep-core/src/analytic_boolean/analytic_boolean.rs",
+      "sha256": "5de503379cb69a4a291a4631e59c14dbe32febf0b8793316fe7a5c653f3ca894",
+      "byteLength": 9956
+    },
+    {
+      "id": "geometry-v3-source-592",
+      "path": "crates/brep-core/src/analytic_boolean/boolean_certificate.rs",
+      "sha256": "bf22dcf63a5d68e9c7a2b5a6fe1b8ecb65bb8538bc584396425e93899d2e8c63",
+      "byteLength": 17288
+    },
+    {
+      "id": "geometry-v3-source-593",
+      "path": "crates/brep-core/src/analytic_boolean/mod.rs",
+      "sha256": "ddc366c436cd0d3ab6b10a95266874360b6368818fff2d9b147bb17ecd572e15",
+      "byteLength": 1256
+    },
+    {
+      "id": "geometry-v3-source-594",
+      "path": "crates/brep-core/src/analytic_boolean/tests/mod.rs",
+      "sha256": "1ef2c7bc1b391c43b4d1a5a516a54cc9b223cf46343b50b5dec1732c16483949",
+      "byteLength": 12592
+    },
+    {
+      "id": "geometry-v3-source-595",
+      "path": "crates/brep-core/src/analytic_features/analytic_fillet_chain.rs",
+      "sha256": "a3711d294832936db48dfc7b5875762f521b60a1a6d8c858d74a3f60a571882a",
+      "byteLength": 20239
+    },
+    {
+      "id": "geometry-v3-source-596",
+      "path": "crates/brep-core/src/analytic_features/audited_feature_result.rs",
+      "sha256": "f5a0e2b38521ab1768b387ff1475f68ef2628fdeadbb2680b4fa54a6f41fcf85",
+      "byteLength": 23031
+    },
+    {
+      "id": "geometry-v3-source-597",
+      "path": "crates/brep-core/src/analytic_features/audited_multi_section_loft.rs",
+      "sha256": "4618b68eac89faade2997c034ccc7ca10b94b15a2a4e10caf0c495c9986a181b",
+      "byteLength": 22853
+    },
+    {
+      "id": "geometry-v3-source-598",
+      "path": "crates/brep-core/src/analytic_features/exact_analytic_shell.rs",
+      "sha256": "79d60089b7ab2dd4264003949a0e565733bf2909c8b38b10731aced1c0ada854",
+      "byteLength": 16026
+    },
+    {
+      "id": "geometry-v3-source-599",
+      "path": "crates/brep-core/src/analytic_features/exact_variable_radius_fillet.rs",
+      "sha256": "891f9cbd87a53656045094e1ae02ba1f16438d9e49f1c8ba732374deaee39b74",
+      "byteLength": 19924
+    },
+    {
+      "id": "geometry-v3-source-600",
+      "path": "crates/brep-core/src/analytic_features/mod.rs",
+      "sha256": "ec73976028443225dfdb4b265b1b14ef29504dc198711221124087952fb96f30",
+      "byteLength": 3364
+    },
+    {
+      "id": "geometry-v3-source-601",
+      "path": "crates/brep-core/src/analytic_features/tests/mod.rs",
+      "sha256": "6e1f451bd78eb70cd79e7eecbccf2e62ba8729f0f64d2544f704d47d52290f4b",
+      "byteLength": 45860
+    },
+    {
+      "id": "geometry-v3-source-602",
+      "path": "crates/brep-core/src/circular_blend/circular_blend_span.rs",
+      "sha256": "95165e8208f803a94cf5b33b22bdfa967fb41618463ee97cea9e7db27d08b0a6",
+      "byteLength": 19899
+    },
+    {
+      "id": "geometry-v3-source-603",
+      "path": "crates/brep-core/src/circular_blend/mod.rs",
+      "sha256": "646cf54eafc1dfb6169f737f359387082dd2ef3a930e8621c17b385c995b81f8",
+      "byteLength": 366
+    },
+    {
+      "id": "geometry-v3-source-604",
+      "path": "crates/brep-core/src/circular_blend/plane_cylinder_rim.rs",
+      "sha256": "d24b2b53266ae1c7d747850fb9035b46b6f1331c87faf782cc5b90fda034d325",
+      "byteLength": 18301
+    },
+    {
+      "id": "geometry-v3-source-605",
+      "path": "crates/brep-core/src/circular_blend/tests/mod.rs",
+      "sha256": "dd39656f72b49f41607a442a76a683760affa4e4662fe538b4e0e5db014bdc91",
+      "byteLength": 37392
+    },
+    {
+      "id": "geometry-v3-source-606",
+      "path": "crates/brep-core/src/close_topology/body_role.rs",
+      "sha256": "eca6eb6dce723fe836b6ecbe4bc964bb9e0ff16901cfdba34b2a7dd32d255c39",
+      "byteLength": 17246
+    },
+    {
+      "id": "geometry-v3-source-607",
+      "path": "crates/brep-core/src/close_topology/correspondence_kind.rs",
+      "sha256": "5321b2ab8e058fbd0354cc1102d686372039b5ec05cccd164b3ca8bb25fb791a",
+      "byteLength": 17082
+    },
+    {
+      "id": "geometry-v3-source-608",
+      "path": "crates/brep-core/src/close_topology/mod.rs",
+      "sha256": "dc2acb04ab34c45acaced259c5ae0b51ea4c1eadea397a83141f59b52d03080a",
+      "byteLength": 1016
+    },
+    {
+      "id": "geometry-v3-source-609",
+      "path": "crates/brep-core/src/close_topology/tests/mod.rs",
+      "sha256": "6ef7c429722ed3b3def798c1038578f1cc37efc1f8a81a625de8231c3489a1d6",
+      "byteLength": 6225
+    },
+    {
+      "id": "geometry-v3-source-610",
+      "path": "crates/brep-core/src/gear/gear_spec.rs",
+      "sha256": "d52586e0a8d1f4931dd03f78f7d18af1c6f855a3bdb953d630a516bf24a0a1fe",
+      "byteLength": 17312
+    },
+    {
+      "id": "geometry-v3-source-611",
+      "path": "crates/brep-core/src/gear/gear_with_report.rs",
+      "sha256": "6c91eb6a3e45526198914f4cf92cf47d125faccae07ebb2985081478a92e4dc7",
+      "byteLength": 7039
+    },
+    {
+      "id": "geometry-v3-source-612",
+      "path": "crates/brep-core/src/gear/mod.rs",
+      "sha256": "c73cfef07549bd5283881742f6d32271c772eb39bac687696754a30fc291429d",
+      "byteLength": 1709
+    },
+    {
+      "id": "geometry-v3-source-613",
+      "path": "crates/brep-core/src/gear/tests/mod.rs",
+      "sha256": "e6b06b882d61c12d1ebaa0cba95387599ed2e1ca18467286f6d54f14bb45aa22",
+      "byteLength": 3788
+    },
+    {
+      "id": "geometry-v3-source-614",
+      "path": "crates/brep-core/src/imprint_pipeline/cylinder_envelope.rs",
+      "sha256": "1de31aa6d1cee0de0bffea8c7f29a6bcf25ba489ecdc5c56f5781d37b1369e75",
+      "byteLength": 6161
+    },
+    {
+      "id": "geometry-v3-source-615",
+      "path": "crates/brep-core/src/imprint_pipeline/loft_curve_loops.rs",
+      "sha256": "ea5b67f59d4f5453c7a814e3c0520b4b645d6f8d2db756d124c72b2c0b758812",
+      "byteLength": 10835
+    },
+    {
+      "id": "geometry-v3-source-616",
+      "path": "crates/brep-core/src/imprint_pipeline/mod.rs",
+      "sha256": "48ae0eacea13ac530dd89c33973b89bed4c857534f3d06d6b273574d5dde0e84",
+      "byteLength": 925
+    },
+    {
+      "id": "geometry-v3-source-617",
+      "path": "crates/brep-core/src/imprint_pipeline/spatial_relation.rs",
+      "sha256": "4f8f466d3faaac34f6cd0d3ce17cd31a4b2754ec37c0e7b2812daee0fed73020",
+      "byteLength": 13087
+    },
+    {
+      "id": "geometry-v3-source-618",
+      "path": "crates/brep-core/src/imprint_pipeline/tests/mod.rs",
+      "sha256": "cdcadc33964aac1b1001e43baa6b73a54eeae76c864dca60b14d45a1eba4536f",
+      "byteLength": 5602
+    },
+    {
+      "id": "geometry-v3-source-619",
+      "path": "crates/brep-core/src/imprint_pipeline/valence3_cuboid_max_corner.rs",
+      "sha256": "535809c050eae266934f9f6f58d04400aca51a478bf6dd2b3cdeb5cc9f356b88",
+      "byteLength": 19342
+    },
+    {
+      "id": "geometry-v3-source-620",
+      "path": "crates/brep-core/src/intersections/sphere_sphere/intersect_sphere_sphere.rs",
+      "sha256": "93270c3ad27997761b2572ff592618e75d28de3367d8dbad1bd5b2b7d3d5ffaa",
+      "byteLength": 10407
+    },
+    {
+      "id": "geometry-v3-source-621",
+      "path": "crates/brep-core/src/intersections/sphere_sphere/mod.rs",
+      "sha256": "7fa3f5a75e83a126b1b589285b553993b92f6a56603195f68a3540d76644f102",
+      "byteLength": 2066
+    },
+    {
+      "id": "geometry-v3-source-622",
+      "path": "crates/brep-core/src/intersections/sphere_sphere/sphere_patch_circle.rs",
+      "sha256": "ab2a89d9ea2ccd7f66717f7051dccd04639c92a6c838ad8761ddd0275fd786c9",
+      "byteLength": 21020
+    },
+    {
+      "id": "geometry-v3-source-623",
+      "path": "crates/brep-core/src/intersections/sphere_sphere/tests/mod.rs",
+      "sha256": "0a944fb963733ec694f9146bf9c31f10e865c7f981b65e87501a654d608d9974",
+      "byteLength": 14438
+    },
+    {
+      "id": "geometry-v3-source-624",
+      "path": "crates/brep-core/src/nurbs_ss_g6/author_general_nurbs_boolean.rs",
+      "sha256": "6ae93d249df7d9e7b78772c2116611da4dc4dcd583e734cd4103a3fa541c2e55",
+      "byteLength": 19851
+    },
+    {
+      "id": "geometry-v3-source-625",
+      "path": "crates/brep-core/src/nurbs_ss_g6/author_general_operation_naming.rs",
+      "sha256": "6d0c29c80dcb746bb1bf479cc9da2b87a12bc469802764dfe26fec927eea5435",
+      "byteLength": 5573
+    },
+    {
+      "id": "geometry-v3-source-626",
+      "path": "crates/brep-core/src/nurbs_ss_g6/mod.rs",
+      "sha256": "2c979097fc7c37818637833937420731a7567a3c143417f1b78966af96f40c27",
+      "byteLength": 2403
+    },
+    {
+      "id": "geometry-v3-source-627",
+      "path": "crates/brep-core/src/nurbs_ss_g6/nurbs_boolean_graph_containment_v4.rs",
+      "sha256": "ae83d1c42a15e952cdba096e447a33eeb5d9cc9dd66db84a111ebfc7e3b45c33",
+      "byteLength": 4708
+    },
+    {
+      "id": "geometry-v3-source-628",
+      "path": "crates/brep-core/src/nurbs_ss_g6/nurbs_boolean_graph_patch_v3.rs",
+      "sha256": "b440b6eb203440011dace5dc393217e1fe1ab8559e7fdc32d04dd05afd3b969e",
+      "byteLength": 18621
+    },
+    {
+      "id": "geometry-v3-source-629",
+      "path": "crates/brep-core/src/nurbs_ss_g6/nurbs_boolean_imprint_certificate.rs",
+      "sha256": "a9d26ec304ed13b21c2195e3a6563a5f80405cd89fb2207c3d01596fa214783a",
+      "byteLength": 20101
+    },
+    {
+      "id": "geometry-v3-source-630",
+      "path": "crates/brep-core/src/nurbs_ss_g6/tests/mod.rs",
+      "sha256": "74a86f55e952aa894c5e723bfde51dd47841d8bbd31f477e0566a9020619c8e9",
+      "byteLength": 24637
+    },
+    {
+      "id": "geometry-v3-source-631",
+      "path": "crates/brep-core/src/offset_edge_supports/mod.rs",
+      "sha256": "aea8baedcb606e4bfb902f11b90296d9ae509519b9c9c6947ba46a40350010c1",
+      "byteLength": 453
+    },
+    {
+      "id": "geometry-v3-source-632",
+      "path": "crates/brep-core/src/offset_edge_supports/propose_world_contacts.rs",
+      "sha256": "23060f9cabedb64c04dd7199280ac6df9bc0b5ba8526bf579069f1a8bcf9691f",
+      "byteLength": 4110
+    },
+    {
+      "id": "geometry-v3-source-633",
+      "path": "crates/brep-core/src/offset_edge_supports/support.rs",
+      "sha256": "1dba96300a9f1515cf9319e2f7eff2bb4f4f67099e2963b42266228363c8c160",
+      "byteLength": 16079
+    },
+    {
+      "id": "geometry-v3-source-634",
+      "path": "crates/brep-core/src/offset_edge_supports/tests/mod.rs",
+      "sha256": "89ad98016bd27a02266c8b4b4e4e9257bde8b027e238746666bca489b7aac370",
+      "byteLength": 14147
+    },
+    {
+      "id": "geometry-v3-source-635",
+      "path": "crates/brep-core/src/planar_trim/locate_point.rs",
+      "sha256": "3b5cd07ad94850f9ca7038a35fbae20190f2fcdf9b09edc979023cb5f9f8077e",
+      "byteLength": 19582
+    },
+    {
+      "id": "geometry-v3-source-636",
+      "path": "crates/brep-core/src/planar_trim/mod.rs",
+      "sha256": "5d3a0a052ef75c333c10ca54e3198dcfc0dcc0d6fd738f84b1376b2d151b6188",
+      "byteLength": 783
+    },
+    {
+      "id": "geometry-v3-source-637",
+      "path": "crates/brep-core/src/planar_trim/point_location.rs",
+      "sha256": "111eaa8d03dd3d8a3f28c2638c7a1401da7837eaf7fb09ccbf759d521cbd9f2d",
+      "byteLength": 11524
+    },
+    {
+      "id": "geometry-v3-source-638",
+      "path": "crates/brep-core/src/planar_trim/tests/mod.rs",
+      "sha256": "7b145d04a1bee73f74cd1e851e18d7d2390dd2fb135f3c6f7bc9100a8f666064",
+      "byteLength": 12213
+    },
+    {
+      "id": "geometry-v3-source-639",
+      "path": "crates/brep-core/src/planar_trim/validate.rs",
+      "sha256": "d15df4462c9d3429b4e94f5601b318801b204f6a9587f19a935c62860e72591a",
+      "byteLength": 25750
+    },
+    {
+      "id": "geometry-v3-source-640",
+      "path": "crates/brep-core/src/source_contour_proposal/mod.rs",
+      "sha256": "429b4f1e7d230aef5cdaf889715cd81495f7d4b965ce59892a529d5df1e74a2c",
+      "byteLength": 514
+    },
+    {
+      "id": "geometry-v3-source-641",
+      "path": "crates/brep-core/src/source_contour_proposal/proposal.rs",
+      "sha256": "5630117b1327a98fc5a40b1a3f682e5868825a91a1ce1736c399521b849166ff",
+      "byteLength": 15315
+    },
+    {
+      "id": "geometry-v3-source-642",
+      "path": "crates/brep-core/src/source_contour_proposal/qualify_linear_region.rs",
+      "sha256": "231fdc24f2cd5a03cdc862979c608a8382b67b4b197e092f370e1b06eca388dd",
+      "byteLength": 14845
+    },
+    {
+      "id": "geometry-v3-source-643",
+      "path": "crates/brep-core/src/source_contour_proposal/tests/mod.rs",
+      "sha256": "7ce7c1954dae98e422dbef347614d6d27b196d76ed31d05b3e23d4c98d81f557",
+      "byteLength": 12753
+    },
+    {
+      "id": "geometry-v3-source-644",
+      "path": "crates/brep-core/src/source_fiber_contact/certificate.rs",
+      "sha256": "9ab768215b3dd97af074f53ed997a68819702110d2c63e66aecb118364422eae",
+      "byteLength": 6342
+    },
+    {
+      "id": "geometry-v3-source-645",
+      "path": "crates/brep-core/src/source_fiber_contact/mod.rs",
+      "sha256": "156ce580746b823f18ce44ec44be120dded5200b8f4f211bf2dce9c95920734d",
+      "byteLength": 456
+    },
+    {
+      "id": "geometry-v3-source-646",
+      "path": "crates/brep-core/src/source_fiber_contact/tests/mod.rs",
+      "sha256": "e6607f580ffcbf9406119fb04af3bf971d7ee45b5bcddb9f0f3f92e799964ca0",
+      "byteLength": 51285
+    },
+    {
+      "id": "geometry-v3-source-647",
+      "path": "crates/brep-core/src/source_shared_edge/mod.rs",
+      "sha256": "74a6a2cee48adda5b043062387658593d412e34cd99a52c05524e34646b53dc4",
+      "byteLength": 387
+    },
+    {
+      "id": "geometry-v3-source-648",
+      "path": "crates/brep-core/src/source_shared_edge/same_linear_parameter.rs",
+      "sha256": "bed5649b307e00a5ef5fe91f46961fe19f9a564efe9b00c3e6c792215d1c3008",
+      "byteLength": 5531
+    },
+    {
+      "id": "geometry-v3-source-649",
+      "path": "crates/brep-core/src/source_shared_edge/shared_edge.rs",
+      "sha256": "e618b975d227e1f39007bd1ca149f64ef9ed197333d7a1a7310d052e26b55c89",
+      "byteLength": 19310
+    },
+    {
+      "id": "geometry-v3-source-650",
+      "path": "crates/brep-core/src/source_shared_edge/tests/mod.rs",
+      "sha256": "0b9f825ce38fd37181e4adf36ac78f9d1a418de00fa17f631a3fa14ac218f94d",
+      "byteLength": 35760
+    },
+    {
+      "id": "geometry-v3-source-651",
+      "path": "crates/brep-core/src/source_shell_incidence/address.rs",
+      "sha256": "dc30b02f0fdecc2b3fa34d6c6bc272b3b649c28b1b6fcc5e19d9bb9733bcf963",
+      "byteLength": 14011
+    },
+    {
+      "id": "geometry-v3-source-652",
+      "path": "crates/brep-core/src/source_shell_incidence/assemble_with_pole_inputs.rs",
+      "sha256": "afab7448275fc86673a2d82d80aea62ee3be45932ce64b732434a4c0925c1a65",
+      "byteLength": 8730
+    },
+    {
+      "id": "geometry-v3-source-653",
+      "path": "crates/brep-core/src/source_shell_incidence/mod.rs",
+      "sha256": "54264721b97902714ebc2317c2422e6d7a4da8da4904e4bd9bd77a81b94bca24",
+      "byteLength": 442
+    },
+    {
+      "id": "geometry-v3-source-654",
+      "path": "crates/brep-core/src/source_shell_incidence/tests/mod.rs",
+      "sha256": "843babe3cd754d67e74a7b33be91096bf973a614e696d6c4209a5baf32e68dc0",
+      "byteLength": 57091
+    },
+    {
+      "id": "geometry-v3-source-655",
+      "path": "crates/brep-core/src/sphere_mate/imprint.rs",
+      "sha256": "15c1def746dcb4b96b3ca49704a4deaa54563ec5efc5cade4c5e305630d78d94",
+      "byteLength": 32826
+    },
+    {
+      "id": "geometry-v3-source-656",
+      "path": "crates/brep-core/src/sphere_mate/mod.rs",
+      "sha256": "d58c32f69ff739da10b4cf1369bdd017e28826fcd55ea53246d64227d65e2d1c",
+      "byteLength": 2435
+    },
+    {
+      "id": "geometry-v3-source-657",
+      "path": "crates/brep-core/src/sphere_mate/parameter_tests/mod.rs",
+      "sha256": "5a1ad9c620574cbca50a2b37a7a98302becdc427c2d1aaa1bfe48d9fcce1e7a5",
+      "byteLength": 667
+    },
+    {
+      "id": "geometry-v3-source-658",
+      "path": "crates/brep-core/src/sphere_mate/sphere_inside.rs",
+      "sha256": "0d6c236bf7e8916894fa731920facc437d9616325791faf66e89666439871c58",
+      "byteLength": 4280
+    },
+    {
+      "id": "geometry-v3-source-659",
+      "path": "crates/brep-core/src/sphere_mate/unsupported.rs",
+      "sha256": "04d353a58e56d4d345e5513903529a3547f6ec4576a936d7bfdeade1ac8b80b5",
+      "byteLength": 10318
+    },
+    {
+      "id": "geometry-v3-source-660",
+      "path": "crates/brep-core/src/tolerant_boolean/boolean.rs",
+      "sha256": "b4406ffb0ff52edb7eb5d1f1d3843abd5e2543d4f335bfb64c891f64a8b54ef9",
+      "byteLength": 16200
+    },
+    {
+      "id": "geometry-v3-source-661",
+      "path": "crates/brep-core/src/tolerant_boolean/mod.rs",
+      "sha256": "8f2b3c93d2773a9c33eba63076ced2be9e51428242a8191331bf1382d98d5deb",
+      "byteLength": 2202
+    },
+    {
+      "id": "geometry-v3-source-662",
+      "path": "crates/brep-core/src/tolerant_boolean/tests/mod.rs",
+      "sha256": "a2680e570b53de3edf74185e07b4f28be3d336eccc647e1dabc07d6ba759e0db",
+      "byteLength": 13300
+    },
+    {
+      "id": "geometry-v3-source-663",
+      "path": "crates/brep-core/src/tolerant_boolean/tracer.rs",
+      "sha256": "bd787f4c67e5a40fc37ad81e020d249af6edbec0a1bdd291903098b388a0ebce",
+      "byteLength": 21433
+    },
+    {
+      "id": "geometry-v3-source-664",
+      "path": "crates/brep-core/src/tolerant_boolean/unsupported.rs",
+      "sha256": "c946439aeaaf6b7fbba86e42405047febee9d39f368e7ec2f16eb6404858251d",
+      "byteLength": 9147
+    },
+    {
+      "id": "geometry-v3-source-665",
+      "path": "crates/brep-core/src/trim_sew/authorized_heal_plan.rs",
+      "sha256": "85bee9ca1db92537a71989ee3da84f38d0a8fdde73e73f718486778aef086705",
+      "byteLength": 20904
+    },
+    {
+      "id": "geometry-v3-source-666",
+      "path": "crates/brep-core/src/trim_sew/chart_kind.rs",
+      "sha256": "ddcbda4d5d39290a5fbd41b1939fc723e69378edcab2a34198ce1fc977566105",
+      "byteLength": 12981
+    },
+    {
+      "id": "geometry-v3-source-667",
+      "path": "crates/brep-core/src/trim_sew/classify_imprint_circle_events.rs",
+      "sha256": "2d4ef7be2b2948bfc55d7bed4d7c98334ecd518ad51e34c678aad565084e3f11",
+      "byteLength": 7941
+    },
+    {
+      "id": "geometry-v3-source-668",
+      "path": "crates/brep-core/src/trim_sew/mod.rs",
+      "sha256": "d93e7818b0148d7fd1f07b08ae4bf1b3b556196288e7d4025dd937edf25a6fda",
+      "byteLength": 1050
+    },
+    {
+      "id": "geometry-v3-source-669",
+      "path": "crates/brep-core/src/trim_sew/prove_curve_pcurve_correspondence.rs",
+      "sha256": "3d76456953d2f0c83b0da021f96b126ce8786175a375de7a8eb8b43c40af1638",
+      "byteLength": 21422
+    },
+    {
+      "id": "geometry-v3-source-670",
+      "path": "crates/brep-core/src/trim_sew/tests/mod.rs",
+      "sha256": "3ce0447527536c76b41ce35178f1e2a35b07993ebb851d070964cdfbb065f2df",
+      "byteLength": 25269
+    },
+    {
+      "id": "geometry-v3-source-671",
+      "path": "crates/brep-core/src/trimmed_face_recipe/boundary.rs",
+      "sha256": "31ec92ebc315ac5e235084abd037f07b91fd084501b8f7021921f5888e39d943",
+      "byteLength": 18381
+    },
+    {
+      "id": "geometry-v3-source-672",
+      "path": "crates/brep-core/src/trimmed_face_recipe/locate_source_contact_points.rs",
+      "sha256": "4b67f324499646f79e4cb72175252c5f5d1fd9e347af901522e832a173bc12f5",
+      "byteLength": 2395
+    },
+    {
+      "id": "geometry-v3-source-673",
+      "path": "crates/brep-core/src/trimmed_face_recipe/mod.rs",
+      "sha256": "f9b6067e878db4f683ef1aaaf86c2c95837a4955d2b308d06bfec347033cdab3",
+      "byteLength": 534
+    },
+    {
+      "id": "geometry-v3-source-674",
+      "path": "crates/brep-core/src/trimmed_face_recipe/tests/mod.rs",
+      "sha256": "897bac1b67d98e18e49d32f9419c3057e5ae20e906e114a1396931e4aa1c1dd3",
+      "byteLength": 13107
+    },
+    {
+      "id": "geometry-v3-source-675",
+      "path": "crates/brep-core/src/uv_arrangement/arrange_lifted_uv.rs",
+      "sha256": "cae998499b33748d1f4afbc7d15cc7b756dc682403aca61c5169ee1c2aa94018",
+      "byteLength": 21972
+    },
+    {
+      "id": "geometry-v3-source-676",
+      "path": "crates/brep-core/src/uv_arrangement/arrange_multispan_branch_graph_uv.rs",
+      "sha256": "15e0be0fd5ff648fbed0a45e6fd89be470d370502235bf93f8de05e7d0650659",
+      "byteLength": 12543
+    },
+    {
+      "id": "geometry-v3-source-677",
+      "path": "crates/brep-core/src/uv_arrangement/mod.rs",
+      "sha256": "f34fa0c39be1827f502da835f1217cae05407dac23403c2dbdf88a4ec67fbed6",
+      "byteLength": 938
+    },
+    {
+      "id": "geometry-v3-source-678",
+      "path": "crates/brep-core/src/uv_arrangement/tests/mod.rs",
+      "sha256": "7839047c4f84c16dee3abe1c064fd35837a6466a0c13a982612195f635184272",
+      "byteLength": 14086
+    },
+    {
+      "id": "geometry-v3-source-679",
+      "path": "crates/brep-core/src/uv_arrangement/uv_imprint_curve.rs",
+      "sha256": "f755d9413b206f505a2fbc7150e7a9dd4f1fd5f6cf5060231128f94b5f0ffd71",
+      "byteLength": 9516
+    },
+    {
+      "id": "geometry-v3-source-680",
+      "path": "crates/brep-intersect/src/cone_cone/cone_cone_component.rs",
+      "sha256": "017f9871494439f77375adfbbe0cf6ab2f5f9e2d51cc55e9516392f28f250a27",
+      "byteLength": 12248
+    },
+    {
+      "id": "geometry-v3-source-681",
+      "path": "crates/brep-intersect/src/cone_cone/mod.rs",
+      "sha256": "09ddf158ae00000752fb62ac3d8b4528baa1471707289333a4d0d08c549207c0",
+      "byteLength": 2990
+    },
+    {
+      "id": "geometry-v3-source-682",
+      "path": "crates/brep-intersect/src/cone_cone/tests/mod.rs",
+      "sha256": "bdd367e6d9cfd2f38ffd153c7183fba6dd1b0e692b81130fab11f3082f3c70e5",
+      "byteLength": 18488
+    },
+    {
+      "id": "geometry-v3-source-683",
+      "path": "crates/brep-intersect/src/cone_torus/cone_torus_component.rs",
+      "sha256": "a45782a936664ba63485d1ad42c1afb589a7101ef77e32c134c61ffba31e5f5e",
+      "byteLength": 14113
+    },
+    {
+      "id": "geometry-v3-source-684",
+      "path": "crates/brep-intersect/src/cone_torus/mod.rs",
+      "sha256": "a2c532d59c9290dcb3525dc52e6d7158de80bb7ad87110c6d2fcdb9c52702080",
+      "byteLength": 5643
+    },
+    {
+      "id": "geometry-v3-source-685",
+      "path": "crates/brep-intersect/src/cone_torus/tests/mod.rs",
+      "sha256": "668db4249b14ea61ad1df5713af3384e3d34c9b96444889b33f478892298fc9b",
+      "byteLength": 29494
+    },
+    {
+      "id": "geometry-v3-source-686",
+      "path": "crates/brep-intersect/src/cylinder_cylinder/cylinder_cylinder_component.rs",
+      "sha256": "5915a0d558fcd4f6c251ec281cc2fa4a109b3537c967ad9ace621b4f393cd2d1",
+      "byteLength": 13228
+    },
+    {
+      "id": "geometry-v3-source-687",
+      "path": "crates/brep-intersect/src/cylinder_cylinder/mod.rs",
+      "sha256": "c8971cd7f63ce5760e771e7b35996fd7239718a2ae3267314489b129aaec7ad2",
+      "byteLength": 2500
+    },
+    {
+      "id": "geometry-v3-source-688",
+      "path": "crates/brep-intersect/src/cylinder_cylinder/tests/mod.rs",
+      "sha256": "e178667bcf6e583ef62384a390fd37acb1233ae567893feb2025f05c302e47de",
+      "byteLength": 21194
+    },
+    {
+      "id": "geometry-v3-source-689",
+      "path": "crates/brep-intersect/src/cylinder_torus/cylinder_torus_component.rs",
+      "sha256": "9a7b0e46fe5ea2e84ff90b0772d2dfca272185b9f9b5b760497e96e3a9721ee0",
+      "byteLength": 12201
+    },
+    {
+      "id": "geometry-v3-source-690",
+      "path": "crates/brep-intersect/src/cylinder_torus/mod.rs",
+      "sha256": "a43b492dbe524e38f0b374480d921a0b3e54cdb523bf0d6283b0c8ae0c492dca",
+      "byteLength": 4538
+    },
+    {
+      "id": "geometry-v3-source-691",
+      "path": "crates/brep-intersect/src/cylinder_torus/tests/mod.rs",
+      "sha256": "889c73714f906ae6bfcfd5cc698f04588eab1d70e99cf965a9e972e88fb70442",
+      "byteLength": 23700
+    },
+    {
+      "id": "geometry-v3-source-692",
+      "path": "crates/brep-intersect/src/plane_cone/conic_num_uv.rs",
+      "sha256": "28bc44acf2976f46c60d6d482c20e8b8662bef7b3cb63b242ff39d6930e5d441",
+      "byteLength": 3852
+    },
+    {
+      "id": "geometry-v3-source-693",
+      "path": "crates/brep-intersect/src/plane_cone/intersect_plane_cone.rs",
+      "sha256": "da0ac192b764758d0ecd0fcd3af1fc743305956c27e0d6ba629f36b5133a2941",
+      "byteLength": 24174
+    },
+    {
+      "id": "geometry-v3-source-694",
+      "path": "crates/brep-intersect/src/plane_cone/mod.rs",
+      "sha256": "6ce9458e6d63591d9a2debe4e10c4f2cb3f0cb002bedbc3c0c3ba80165153ec0",
+      "byteLength": 5472
+    },
+    {
+      "id": "geometry-v3-source-695",
+      "path": "crates/brep-intersect/src/plane_cone/plane_cone_component.rs",
+      "sha256": "0a644ac1795fd618ea647ae9277d7cf659223d8432b60ac0cdd1254ea4f5d190",
+      "byteLength": 17761
+    },
+    {
+      "id": "geometry-v3-source-696",
+      "path": "crates/brep-intersect/src/plane_cone/tests/mod.rs",
+      "sha256": "66b19be221106bed99fb65a71f0605027da3154a64331f573e0a4df2c50bd5f7",
+      "byteLength": 29850
+    },
+    {
+      "id": "geometry-v3-source-697",
+      "path": "crates/brep-intersect/src/plane_sphere/mod.rs",
+      "sha256": "7363927f74934bfc4875dd02fb8e368d2e126713e948371ba5b51443993c647e",
+      "byteLength": 2254
+    },
+    {
+      "id": "geometry-v3-source-698",
+      "path": "crates/brep-intersect/src/plane_sphere/plane_patch_curve.rs",
+      "sha256": "fcf4073cc9da5954af64f0458733fad8dd2b9b27cf1def9ad632e73ef9a1de1c",
+      "byteLength": 18425
+    },
+    {
+      "id": "geometry-v3-source-699",
+      "path": "crates/brep-intersect/src/plane_sphere/tests/mod.rs",
+      "sha256": "127e699d0efa0863bd77b4201c3cf6b6d1d4dafd5284a887404011a045149122",
+      "byteLength": 15619
+    },
+    {
+      "id": "geometry-v3-source-700",
+      "path": "crates/brep-intersect/src/plane_torus/mod.rs",
+      "sha256": "dfd6d1ebdac4ccb0e6afc893aa05a03837715e9cbb641c3185c449099ad2e3b1",
+      "byteLength": 4437
+    },
+    {
+      "id": "geometry-v3-source-701",
+      "path": "crates/brep-intersect/src/plane_torus/tests/mod.rs",
+      "sha256": "e551b89f9a39abd5bff156326e876322d8e886f3adda6670aee9f5a2157294fc",
+      "byteLength": 23299
+    },
+    {
+      "id": "geometry-v3-source-702",
+      "path": "crates/brep-intersect/src/plane_torus/torus_patch_curve.rs",
+      "sha256": "0ad0b8c8f5f3fa446478979d6a8f7d39adb2b2696d5aeb09cc6a5290acdb7a0a",
+      "byteLength": 17378
+    },
+    {
+      "id": "geometry-v3-source-703",
+      "path": "crates/brep-intersect/src/sphere_cone/mod.rs",
+      "sha256": "c53a9eae308f6f805416e8e0b02cd69eaf5c0ac0341715159286f611a7772d8b",
+      "byteLength": 3583
+    },
+    {
+      "id": "geometry-v3-source-704",
+      "path": "crates/brep-intersect/src/sphere_cone/sphere_cone_component.rs",
+      "sha256": "4d7d39856cfff553fd449c5917e32feb13bca0d82c2c964f801ae3c77fbfc40e",
+      "byteLength": 10513
+    },
+    {
+      "id": "geometry-v3-source-705",
+      "path": "crates/brep-intersect/src/sphere_cone/tests/mod.rs",
+      "sha256": "cc18e000e3bea77a7f83a275062e5b4f199d5f637d1b267826f1d5eac8fc06c3",
+      "byteLength": 22683
+    },
+    {
+      "id": "geometry-v3-source-706",
+      "path": "crates/brep-intersect/src/sphere_cylinder/cylinder_patch_curve.rs",
+      "sha256": "84a992af06ffa482e8d9458a64e3d13f1f37a402f816cfef2f3656b1c6bad27f",
+      "byteLength": 10669
+    },
+    {
+      "id": "geometry-v3-source-707",
+      "path": "crates/brep-intersect/src/sphere_cylinder/mod.rs",
+      "sha256": "018c3ee06b6c103af1c11578d20016fb24b4300e0821683b671e12c7e11a2ba9",
+      "byteLength": 2006
+    },
+    {
+      "id": "geometry-v3-source-708",
+      "path": "crates/brep-intersect/src/sphere_cylinder/tests/mod.rs",
+      "sha256": "97eeac9a1e889fa62012d0e58e9039626a2c3f9009ddc6ae2acfc9068f4fdb52",
+      "byteLength": 20044
+    },
+    {
+      "id": "geometry-v3-source-709",
+      "path": "crates/brep-intersect/src/torus_torus/mod.rs",
+      "sha256": "cfe7a9ffb2040dab65017e41b68b1ae69d52a9e8a09bd594a19016fb086053b9",
+      "byteLength": 3776
+    },
+    {
+      "id": "geometry-v3-source-710",
+      "path": "crates/brep-intersect/src/torus_torus/tests/mod.rs",
+      "sha256": "1bd68088208ed0a2bcc95130c9fcfaf53624772578e30341957535b7a01099e9",
+      "byteLength": 25180
+    },
+    {
+      "id": "geometry-v3-source-711",
+      "path": "crates/brep-intersect/src/torus_torus/torus_torus_component.rs",
+      "sha256": "21984ea552ab44faec530577281c3d7bd32220ed2576868a4a00e29ea7d41280",
+      "byteLength": 9525
+    },
+    {
+      "id": "geometry-v3-source-712",
+      "path": "crates/cad-step/src/iges_interchange_v2/export_iges_v2.rs",
+      "sha256": "d33cd7e48973e182553bd76b3fdcd4193f28b85645933d95da297314d1830fd1",
+      "byteLength": 8192
+    },
+    {
+      "id": "geometry-v3-source-713",
+      "path": "crates/cad-step/src/iges_interchange_v2/iges_v2_report.rs",
+      "sha256": "a9c9efdcf71155dfe6053071e0d44f2e5b5725140dd6eae832c362dcbadcd581",
+      "byteLength": 15401
+    },
+    {
+      "id": "geometry-v3-source-714",
+      "path": "crates/cad-step/src/iges_interchange_v2/import_iges_v2.rs",
+      "sha256": "7631cf578eb7d95fe695629e796540b1168e0679f6e5f1ca44b1535b5a1b73dc",
+      "byteLength": 18825
+    },
+    {
+      "id": "geometry-v3-source-715",
+      "path": "crates/cad-step/src/iges_interchange_v2/mod.rs",
+      "sha256": "85af618825eef8e057b3902fdc4e212debbf6531ee56a22a2b985391c784e992",
+      "byteLength": 1090
+    },
+    {
+      "id": "geometry-v3-source-716",
+      "path": "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+      "sha256": "a86a2dd30608ecaea6019065e4c3d25fdc2e0e404335a893c07195886c4bde6a",
+      "byteLength": 4345
+    },
+    {
+      "id": "geometry-v3-source-717",
+      "path": "crates/cad-step/src/nurbs_step_shared/invert_uv.rs",
+      "sha256": "4cc81030e1935255bb8e3a538c7833da0c7465a8f9e1645d60d72bbae322eea7",
+      "byteLength": 2394
+    },
+    {
+      "id": "geometry-v3-source-718",
+      "path": "crates/cad-step/src/nurbs_step_shared/mod.rs",
+      "sha256": "473693685fd935f5dfc5c5ff18a5adc28a8d79aa43777aad00a676a4b2de8f85",
+      "byteLength": 425
+    },
+    {
+      "id": "geometry-v3-source-719",
+      "path": "crates/cad-step/src/nurbs_step_shared/refuse.rs",
+      "sha256": "643faefa9d626908dc9cf6c6f3253d52427aca6ff6a1ccd2dc078b80e246cac8",
+      "byteLength": 17396
+    },
+    {
+      "id": "geometry-v3-source-720",
+      "path": "crates/cad-step/src/nurbs_step_shared/validate_curve_pcurve_correspondence.rs",
+      "sha256": "83b940b7db798818dcffbe676122e34da4a690f24b1939c1dc60b4eeb7d43d1b",
+      "byteLength": 20657
+    },
+    {
+      "id": "geometry-v3-source-721",
+      "path": "crates/cad-step/src/step_interchange/export_step.rs",
+      "sha256": "4b26aa88d3220ccf26bb716cfee5ac0b280b46525bc1492ad4194b4ae1021f1c",
+      "byteLength": 21049
+    },
+    {
+      "id": "geometry-v3-source-722",
+      "path": "crates/cad-step/src/step_interchange/import_step_v2.rs",
+      "sha256": "e232d2eb08f32aaf0b0037ffd3554712b87b3db1bfeabf3af8e1cfdeb9823e59",
+      "byteLength": 1213
+    },
+    {
+      "id": "geometry-v3-source-723",
+      "path": "crates/cad-step/src/step_interchange/mod.rs",
+      "sha256": "9b0c1a972c7ff39e4be49d8404cf4e1e9f5f65fea182d7ef5802da51cd00a5c3",
+      "byteLength": 1029
+    },
+    {
+      "id": "geometry-v3-source-724",
+      "path": "crates/cad-step/src/step_interchange/step_identity_report.rs",
+      "sha256": "b1cd1472a2448fe874b671801af4097455fdfe1d9fe28089191309b152be66f6",
+      "byteLength": 18574
+    },
+    {
+      "id": "geometry-v3-source-725",
+      "path": "crates/cad-step/src/step_interchange/step_writer.rs",
+      "sha256": "3dba2631c6721c8fb9f1842b76a682695a78d5c4383d7b9fb6667fa476116676",
+      "byteLength": 21048
+    },
+    {
+      "id": "geometry-v3-source-726",
+      "path": "crates/cad-step/src/step_interchange/tests/mod.rs",
+      "sha256": "82d0f343bd2f1c3a4ce0646c18abe2f129ff88186598e6709f5678d9584f026c",
+      "byteLength": 12509
+    },
+    {
+      "id": "geometry-v3-source-727",
+      "path": "crates/geometry-bridge/src/brep/certified_nurbs.rs",
+      "sha256": "7c317a9e9dfea0968ea5ecbb23cfc90021eb33cdadb31a390b597a6590cb1761",
+      "byteLength": 20781
+    },
+    {
+      "id": "geometry-v3-source-728",
+      "path": "crates/geometry-bridge/src/brep/mod.rs",
+      "sha256": "4668daa25953530f44580eaa64ba726e4f141ed2c36d6ef92ae39164ec2abcb3",
+      "byteLength": 276
+    },
+    {
+      "id": "geometry-v3-source-729",
+      "path": "crates/geometry-bridge/src/brep/polygons.rs",
+      "sha256": "37931c175c3aba8732c094610c843717c2c98d873d89ca182181da064e620ae6",
+      "byteLength": 3626
+    },
+    {
+      "id": "geometry-v3-source-730",
+      "path": "crates/geometry-bridge/src/brep/registry_tests/mod.rs",
+      "sha256": "9ea542066802820478dd6af10bde2067eaff54cace53a205ffca1f862ba4ed6a",
+      "byteLength": 14136
+    },
+    {
+      "id": "geometry-v3-source-731",
+      "path": "crates/geometry-bridge/src/brep/tessellation.rs",
+      "sha256": "a46f8f00064e0a3d0b640e9f9e6e580a55f54073784fbfff12985e46d87955c9",
+      "byteLength": 22129
+    },
+    {
+      "id": "geometry-v3-source-732",
+      "path": "crates/geometry-bridge/src/cad_lattice/cell_tests/mod.rs",
+      "sha256": "cd9c033ed5a7d9926be6dc3432394aebf1e08ce23455ac33304a13281fadff8c",
+      "byteLength": 879
+    },
+    {
+      "id": "geometry-v3-source-733",
+      "path": "crates/geometry-bridge/src/cad_lattice/components.rs",
+      "sha256": "71f8dc05210dcfbaa19e25e63a7e2d56dd9b50b533d4a1f3fb0002faea159fe1",
+      "byteLength": 13825
+    },
+    {
+      "id": "geometry-v3-source-734",
+      "path": "crates/geometry-bridge/src/cad_lattice/graph.rs",
+      "sha256": "f3aad5c0b2993498d2ce1ed81757cdd3559b1b812b37700424bdf4d898aa70c4",
+      "byteLength": 20496
+    },
+    {
+      "id": "geometry-v3-source-735",
+      "path": "crates/geometry-bridge/src/cad_lattice/mod.rs",
+      "sha256": "2113689345f292035fc4cf42f78bd131725b492865cf1e9104af2db947989cc0",
+      "byteLength": 429
+    },
+    {
+      "id": "geometry-v3-source-736",
+      "path": "crates/geometry-bridge/src/cad_lattice/print_fit.rs",
+      "sha256": "304e6370d0a9a0cd3a05a777962805c0fda0949c5b7509b0ad79c4e58cb5aa90",
+      "byteLength": 4579
+    },
+    {
+      "id": "geometry-v3-source-737",
+      "path": "crates/geometry-bridge/src/cad_lattice/print_tests/mod.rs",
+      "sha256": "42efa507d3903abe018cae68ca04f4cddc55b80b08a8dce490b45be66387f025",
+      "byteLength": 2475
+    },
+    {
+      "id": "geometry-v3-source-738",
+      "path": "crates/geometry-bridge/src/dispatch/brep.rs",
+      "sha256": "ef60774adc56b6bc5c4829843488a39efe59e7fcb8a9d66769e880386eb5c85d",
+      "byteLength": 1968
+    },
+    {
+      "id": "geometry-v3-source-739",
+      "path": "crates/geometry-bridge/src/dispatch/cad.rs",
+      "sha256": "81a9b7e123d6ab14d0f652dfce0a37c6c370bbe631eed17ef19f0875674817b6",
+      "byteLength": 6672
+    },
+    {
+      "id": "geometry-v3-source-740",
+      "path": "crates/geometry-bridge/src/dispatch/fallback.rs",
+      "sha256": "7512fffd3c8ae5495abff09f9e9f3df0f8c61c3f9430aff65de8e2342531b6a5",
+      "byteLength": 221
+    },
+    {
+      "id": "geometry-v3-source-741",
+      "path": "crates/geometry-bridge/src/dispatch/general.rs",
+      "sha256": "081b725230c2129be18c5c7dae73bf0799a5f2e74015a1ea2faaffa0253f20cb",
+      "byteLength": 7017
+    },
+    {
+      "id": "geometry-v3-source-742",
+      "path": "crates/geometry-bridge/src/dispatch/interchange.rs",
+      "sha256": "518793c191a20b3778d7bf683bf817b0fbe6518d4758cf90d4112cc65aab6e01",
+      "byteLength": 26772
+    },
+    {
+      "id": "geometry-v3-source-743",
+      "path": "crates/geometry-bridge/src/dispatch/intersections.rs",
+      "sha256": "1e6ca71008739925396dbadda52846718664d190a9c2dfc43847d99478e68f3d",
+      "byteLength": 2231
+    },
+    {
+      "id": "geometry-v3-source-744",
+      "path": "crates/geometry-bridge/src/dispatch/mesh.rs",
+      "sha256": "41c2a07328b168debce611bb9faa9841ca874764949eae27b37eda1bf572ff5f",
+      "byteLength": 5577
+    },
+    {
+      "id": "geometry-v3-source-745",
+      "path": "crates/geometry-bridge/src/dispatch/mod.rs",
+      "sha256": "d9dee50d3b8c4890ad5b99f1ead13b180ae3d8b9cb4dc3623c73bedfd4af0c32",
+      "byteLength": 587
+    },
+    {
+      "id": "geometry-v3-source-746",
+      "path": "crates/geometry-bridge/src/dispatch/nurbs.rs",
+      "sha256": "f18299faee6c5be5d560b894d7dd4915797acbd4a8952d2db0c7b9419610b357",
+      "byteLength": 26329
+    },
+    {
+      "id": "geometry-v3-source-747",
+      "path": "crates/geometry-bridge/src/dispatch/sweep.rs",
+      "sha256": "c89e9fe2fb806c393fd47ac34c96aca1ef613b9150d8ca8a0da7292473170906",
+      "byteLength": 8005
+    },
+    {
+      "id": "geometry-v3-source-748",
+      "path": "crates/geometry-bridge/src/intersections/dispatch.rs",
+      "sha256": "abb7bf55a41f768efe1c810645321cd08e138b43cd5ace83d7e13ebf548c1a4b",
+      "byteLength": 4859
+    },
+    {
+      "id": "geometry-v3-source-749",
+      "path": "crates/geometry-bridge/src/intersections/mod.rs",
+      "sha256": "a0f7172820b8337e1814f315a2d01060ccd5a07d759631df61d52476b7ff6a63",
+      "byteLength": 256
+    },
+    {
+      "id": "geometry-v3-source-750",
+      "path": "crates/geometry-bridge/src/intersections/tests/mod.rs",
+      "sha256": "e8975e5b390f97608b7d71b9293d6b7659cee5319ffe4bfc6cf1c9386a974c90",
+      "byteLength": 67185
+    },
+    {
+      "id": "geometry-v3-source-751",
+      "path": "crates/nurbs-core/src/intersection/intersect_curve_curve.rs",
+      "sha256": "98c228131a6e88b2bd7f64dcf2814b05ca8f500cd2db2fab0cf6fe9b5fe13927",
+      "byteLength": 21047
+    },
+    {
+      "id": "geometry-v3-source-752",
+      "path": "crates/nurbs-core/src/intersection/intersect_curve_surface.rs",
+      "sha256": "53f6246dfbcb0f8606b0411f37c67200e47f308459beaf56d3ac8b4f59f8a68e",
+      "byteLength": 22001
+    },
+    {
+      "id": "geometry-v3-source-753",
+      "path": "crates/nurbs-core/src/intersection/mod.rs",
+      "sha256": "e6dfcb89e8310827a9a5dcb33513f805e0278c2b83b6b0799f90533bc582277e",
+      "byteLength": 988
+    },
+    {
+      "id": "geometry-v3-source-754",
+      "path": "crates/nurbs-core/src/intersection/next_down.rs",
+      "sha256": "79b178e9bbd04434df195452d9920b22905651fc92e8941a48b66b60496094a7",
+      "byteLength": 14566
+    },
+    {
+      "id": "geometry-v3-source-755",
+      "path": "crates/nurbs-core/src/intersection/split_grid_v.rs",
+      "sha256": "1f1b4421082151ffea85705f5b000b9a96cdcee666f6091b3302abc8781bb9fe",
+      "byteLength": 3942
+    },
+    {
+      "id": "geometry-v3-source-756",
+      "path": "crates/nurbs-core/src/ss_intersection/grids_excluded_ss.rs",
+      "sha256": "e2a591f0429eccee44be83fdea9a8f5009fefb9f36b8b1ecaf946924c17b57b2",
+      "byteLength": 20245
+    },
+    {
+      "id": "geometry-v3-source-757",
+      "path": "crates/nurbs-core/src/ss_intersection/intersect_surface_surface.rs",
+      "sha256": "9a873502f5d7b2736de249ed1e3e8efe0f64e1c79920bc607b3a4a78e5568b4b",
+      "byteLength": 20889
+    },
+    {
+      "id": "geometry-v3-source-758",
+      "path": "crates/nurbs-core/src/ss_intersection/mod.rs",
+      "sha256": "d3146a7b230cf01b1f5b3f0806f80be755c2146f4aad29ff50a316e9c56404e2",
+      "byteLength": 1186
+    },
+    {
+      "id": "geometry-v3-source-759",
+      "path": "crates/nurbs-core/src/ss_intersection/refine_seed.rs",
+      "sha256": "22eac360ed6335cedf2475f519de185efd946bd13c6b304817e487a2e419e24d",
+      "byteLength": 13976
+    },
+    {
+      "id": "geometry-v3-source-760",
+      "path": "crates/nurbs-core/src/surface/construction_tests/mod.rs",
+      "sha256": "71bbde1ec56e8167ec5641aceec3d581e5106b8e7ef7c45ae8580ac41f037c98",
+      "byteLength": 2059
+    },
+    {
+      "id": "geometry-v3-source-761",
+      "path": "crates/nurbs-core/src/surface/mod.rs",
+      "sha256": "028b4204e7229224320f16ad8c6c0334f5a23fdc3ed386b2ee598734ba580774",
+      "byteLength": 218
+    },
+    {
+      "id": "geometry-v3-source-762",
+      "path": "crates/nurbs-core/src/surface/revolve.rs",
+      "sha256": "15001e09bbfb4eac99601751360c75e0821b6cb15add474c71aced4117cf2b31",
+      "byteLength": 5803
+    },
+    {
+      "id": "geometry-v3-source-763",
+      "path": "crates/nurbs-core/src/surface/surface.rs",
+      "sha256": "27342fa1b183c831ad95ea4cfe5998610cbd763be7c300eafa46c707c211cd98",
+      "byteLength": 21286
+    },
+    {
+      "id": "geometry-v3-source-764",
+      "path": "crates/nurbs-core/src/surface_offset/bounds.rs",
+      "sha256": "3ed9a7318c7f7b8111a8a1ab67ce9e7b0bc801613894d048539c9eae4c41c033",
+      "byteLength": 20115
+    },
+    {
+      "id": "geometry-v3-source-765",
+      "path": "crates/nurbs-core/src/surface_offset/intersection_candidates.rs",
+      "sha256": "38cc8bed830d6bfb1b90f72aea3357087a7abcc315897989a350f68ab2a208aa",
+      "byteLength": 3840
+    },
+    {
+      "id": "geometry-v3-source-766",
+      "path": "crates/nurbs-core/src/surface_offset/mod.rs",
+      "sha256": "da2d278566e9d989fe83a61a9e94146f8fcf57a14020843058d798cc55f94dd8",
+      "byteLength": 527
+    },
+    {
+      "id": "geometry-v3-source-767",
+      "path": "crates/nurbs-core/src/surface_offset/tests/mod.rs",
+      "sha256": "b3b7dcfbb78881d4d6235915ef427ea1b829c0aeea115e47ffa455e45458ef02",
+      "byteLength": 18675
+    },
+    {
+      "id": "geometry-v3-source-768",
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/certify_ruled_join.rs",
+      "sha256": "f374e37cbfc65a9ceddd6424c8661ab4b5b61e7a48a66553bd7a1107749c50ab",
+      "byteLength": 11548
+    },
+    {
+      "id": "geometry-v3-source-769",
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/mod.rs",
+      "sha256": "c06e774109d9e747e4cf7d5b22b5c84ae4860c90e13bf44a1aaa43c9d7b5b977",
+      "byteLength": 368
+    },
+    {
+      "id": "geometry-v3-source-770",
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/report.rs",
+      "sha256": "78bad93b56bc64d6787da9f7ec3738688fb62a2381f610e01adb6deb35fe2415",
+      "byteLength": 21299
+    },
+    {
+      "id": "geometry-v3-source-771",
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/tests/mod.rs",
+      "sha256": "be13863c4c2fc4403633662f42930350599baa9de1cb8e52b3c14e8c41c40d6c",
+      "byteLength": 5995
+    },
+    {
+      "id": "geometry-v3-source-772",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/frame_certificate/certify.rs",
+      "sha256": "2591a78af751181d033b3d4c9bf21e1c00c1138833effa03a5e6599a374b527c",
+      "byteLength": 3956
+    },
+    {
+      "id": "geometry-v3-source-773",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/frame_certificate/mod.rs",
+      "sha256": "c55f2bd9d843a0e3e9b8f28d9fa7896d7fef061963798e42ac6d0c19538f1215",
+      "byteLength": 612
+    },
+    {
+      "id": "geometry-v3-source-774",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/frame_certificate/report.rs",
+      "sha256": "7853fd0f97bd1a960e97a7406de44090c6d2a47603d4b6a9c171e18d6550503a",
+      "byteLength": 30935
+    },
+    {
+      "id": "geometry-v3-source-775",
+      "path": "crates/nurbs-core/src/sweeps/progressive_miter/frame_certificate/tests/mod.rs",
+      "sha256": "097466091298e111e5fd206897ac4d8bb446bc577281434cbe25248d6ad3b84a",
+      "byteLength": 14971
+    },
+    {
+      "id": "geometry-v3-source-776",
+      "path": "crates/nurbs-core/src/transport/dispatch.rs",
+      "sha256": "a5a63c874de932c9367fbca654de240c2449730d67ebc7d84fc8d4011201544a",
+      "byteLength": 77306
+    },
+    {
+      "id": "geometry-v3-source-777",
+      "path": "crates/nurbs-core/src/transport/execute.rs",
+      "sha256": "5ea63b7d492491ae8d89fa4216dee2f400a0e40b641ea6977338df8772f4f518",
+      "byteLength": 700
+    },
+    {
+      "id": "geometry-v3-source-778",
+      "path": "crates/nurbs-core/src/transport/field.rs",
+      "sha256": "335b05dcd643e220739cbee944d89ded1833891d72a29141fac4668dfaaf183d",
+      "byteLength": 1228
+    },
+    {
+      "id": "geometry-v3-source-779",
+      "path": "crates/nurbs-core/src/transport/mod.rs",
+      "sha256": "7d858d476c01764db23a002c588f8e4cf9251456fc5c527da22c04b87b188bec",
+      "byteLength": 514
+    },
+    {
+      "id": "geometry-v3-source-780",
+      "path": "crates/nurbs-intersect/src/analytic_ss/analytic_ss_component.rs",
+      "sha256": "5ca7b7dba483214e3ec5cfe340b0148842b413880da3c191012cacdaf9bc7a30",
+      "byteLength": 19308
+    },
+    {
+      "id": "geometry-v3-source-781",
+      "path": "crates/nurbs-intersect/src/analytic_ss/cylinder_sphere.rs",
+      "sha256": "2c3ca7503edeb9b41e0257cebcd240a0aa49cba89efccc08204d4cd817504d40",
+      "byteLength": 6496
+    },
+    {
+      "id": "geometry-v3-source-782",
+      "path": "crates/nurbs-intersect/src/analytic_ss/mod.rs",
+      "sha256": "7160902d5a4bc196d6331cbaef4ce873a1fa8f86f99de98e885e612167ec3339",
+      "byteLength": 632
+    },
+    {
+      "id": "geometry-v3-source-783",
+      "path": "crates/nurbs-intersect/src/analytic_ss/tests/mod.rs",
+      "sha256": "50110476f62396822f1e3529f640a0516243442763a7c8dc09b0652b60f22a02",
+      "byteLength": 4004
+    },
+    {
+      "id": "geometry-v3-source-784",
+      "path": "crates/nurbs-intersect/src/nurbs_ss/as_uniform_bicubic.rs",
+      "sha256": "3c585a552c2358a9330c94b10a1f6338ad259c3f3ea4541ef4bea6bf6eca9844",
+      "byteLength": 1968
+    },
+    {
+      "id": "geometry-v3-source-785",
+      "path": "crates/nurbs-intersect/src/nurbs_ss/certify_exact_planar_iso_intersection.rs",
+      "sha256": "00155feb2ceda3ca23e230bf923e9fbc6b9adffa0e8c274622ae5ad833a637cd",
+      "byteLength": 21084
+    },
+    {
+      "id": "geometry-v3-source-786",
+      "path": "crates/nurbs-intersect/src/nurbs_ss/join_certified_multispan_fragments.rs",
+      "sha256": "920b485cd25afca01585f61fb38342cb37cd61767699e03c1f2853df0b5d3720",
+      "byteLength": 22174
+    },
+    {
+      "id": "geometry-v3-source-787",
+      "path": "crates/nurbs-intersect/src/nurbs_ss/mod.rs",
+      "sha256": "e84f6e9902e5815f88f493ce87a6ae9a6580a14ee7bcb5909f6d817c4c1f2162",
+      "byteLength": 1387
+    },
+    {
+      "id": "geometry-v3-source-788",
+      "path": "crates/nurbs-intersect/src/nurbs_ss/refuse.rs",
+      "sha256": "bb156b2be8644b9ac124a0140eb4b042f70ead7a012b1806c9d975e845b9fd75",
+      "byteLength": 15225
+    },
+    {
+      "id": "geometry-v3-source-789",
+      "path": "crates/nurbs-intersect/src/nurbs_ss/tests/mod.rs",
+      "sha256": "024e0f6b72f7601e7f2f260ebd07d665848285d2dcfab503f8aad8372b824d4a",
+      "byteLength": 24860
+    },
+    {
+      "id": "own-rust-cad-v56-evidence",
+      "path": "docs/qualification/own-rust-cad-v56.json",
+      "sha256": "7345d6bf28a1238217959158436bc098389f6a192021736d7ee1d0ae597ac1ee",
+      "byteLength": 44054
+    },
+    {
+      "id": "geometry-v3-source-790",
+      "path": "crates/brep-core/src/analytic/cylinder.rs",
+      "sha256": "87749f49048cb46e32556c86c90691ececdfea43ab49f261884f9fba046b2a02",
+      "byteLength": 18050
+    },
+    {
+      "id": "geometry-v3-source-791",
+      "path": "crates/brep-core/src/analytic/mod.rs",
+      "sha256": "25101a0375b50ea1c31509c7e1ca7c137b5afb36df988fc2ca42be4f33179dc0",
+      "byteLength": 937
+    },
+    {
+      "id": "geometry-v3-source-792",
+      "path": "crates/brep-core/src/analytic/revolve_region_angle.rs",
+      "sha256": "0186380966965d2beddf6094a7bff5308c60d38b031c2833ad42129fb5de1b63",
+      "byteLength": 13160
+    },
+    {
+      "id": "geometry-v3-source-793",
+      "path": "crates/brep-core/src/box_sphere_boolean/box_face.rs",
+      "sha256": "7d99609f2381efedd352ec4596ce72f05dcec7c611d0d07a2a723ba3b19243cd",
+      "byteLength": 5554
+    },
+    {
+      "id": "geometry-v3-source-794",
+      "path": "crates/brep-core/src/box_sphere_boolean/dispatch.rs",
+      "sha256": "1179c4671ef980a382f42646d0e4001eb4ce682cc7291e8f07927c9a5dac8a8e",
+      "byteLength": 1277
+    },
+    {
+      "id": "geometry-v3-source-795",
+      "path": "crates/brep-core/src/box_sphere_boolean/mate.rs",
+      "sha256": "b9f5393c34ee0ce647fc1c6e0c89d7e9c88c78ff77107a4b763503f3586f65b1",
+      "byteLength": 9085
+    },
+    {
+      "id": "geometry-v3-source-796",
+      "path": "crates/brep-core/src/box_sphere_boolean/mod.rs",
+      "sha256": "465655899543322380597accb797064d2695d4d780d0ab9f13e751a62d7ba441",
+      "byteLength": 1032
+    },
+    {
+      "id": "geometry-v3-source-797",
+      "path": "crates/brep-core/src/box_sphere_boolean/tests/mod.rs",
+      "sha256": "00d62087de2068b9e95b07a39fe97c75a3e648d31e33b52e00f6611a66634eee",
+      "byteLength": 12358
+    },
+    {
+      "id": "geometry-v3-source-798",
+      "path": "crates/brep-core/src/prism/imported_cap_tests/mod.rs",
+      "sha256": "eb3b62f08ec2f561f707f1294c5ff95169e9c78237f96877f127170c6ccb3ac4",
+      "byteLength": 2623
+    },
+    {
+      "id": "geometry-v3-source-799",
+      "path": "crates/brep-core/src/prism/mod.rs",
+      "sha256": "1f35a42ec086309f41cfd474773deaba19fadedc7e7f6c08ab622e1e1a99dcc3",
+      "byteLength": 446
+    },
+    {
+      "id": "geometry-v3-source-800",
+      "path": "crates/brep-core/src/prism/profile_prism.rs",
+      "sha256": "d0206042308826304dfd1557b7fce04e98f57037265a33ba4b6ca095abe3b6c8",
+      "byteLength": 17960
+    },
+    {
+      "id": "geometry-v3-source-801",
+      "path": "crates/brep-core/src/prism/recognize.rs",
+      "sha256": "b2b372a1194eb8d90fdaf1d1631c2330c20ff7491fcdca2f0e9a0067824b374b",
+      "byteLength": 8753
+    },
+    {
+      "id": "geometry-v3-source-802",
+      "path": "crates/brep-core/src/shared_boundary/certificate.rs",
+      "sha256": "4a284508b96bfd74898ffd0d4abc1117f1a459250d2655fe056ba0141ddea44e",
+      "byteLength": 11967
+    },
+    {
+      "id": "geometry-v3-source-803",
+      "path": "crates/brep-core/src/shared_boundary/mod.rs",
+      "sha256": "389d538cc178b9a60271300b23bb6ad7386750148811d1066f18d1f46b2382f8",
+      "byteLength": 711
+    },
+    {
+      "id": "geometry-v3-source-804",
+      "path": "crates/brep-core/src/shared_boundary/separates_surfaces.rs",
+      "sha256": "dac1cda8b760a9ed9db579410c1ceb11ad4b6e3f519408378ea4315c14517271",
+      "byteLength": 10381
+    },
+    {
+      "id": "geometry-v3-source-805",
+      "path": "crates/brep-core/src/shared_boundary/tests/mod.rs",
+      "sha256": "72bdbd55939369c11017526681e93b9f36aeb4770623c0b2d3b6b34c940b4f36",
+      "byteLength": 15459
+    },
+    {
+      "id": "geometry-v3-source-806",
+      "path": "crates/brep-core/src/stepped_prism/assemble.rs",
+      "sha256": "3adc30496f33349ba7cf3c6b466c6fdd36066189b452ad72c4ffe105f1916c39",
+      "byteLength": 10037
+    },
+    {
+      "id": "geometry-v3-source-807",
+      "path": "crates/brep-core/src/stepped_prism/layer.rs",
+      "sha256": "f962984914a63698916063791e87558dff93f97c67695ce7617fefe0c7a64b6d",
+      "byteLength": 17881
+    },
+    {
+      "id": "geometry-v3-source-808",
+      "path": "crates/brep-core/src/stepped_prism/mod.rs",
+      "sha256": "6d570c1399169e1c89a80626b824ac08c341a177e6825c9288088124fed04e4b",
+      "byteLength": 488
+    },
+    {
+      "id": "geometry-v3-source-809",
+      "path": "crates/brep-intersect/src/plane_cylinder/mod.rs",
+      "sha256": "ea30e41a853bc4e6fdde8ea73c1ad7bbbe7ea1d7b1ae1463f188c69e20beffa8",
+      "byteLength": 3843
+    },
+    {
+      "id": "geometry-v3-source-810",
+      "path": "crates/brep-intersect/src/plane_cylinder/plane_cylinder_component.rs",
+      "sha256": "982c18b1e34d1e46a816546cd8b982f071443b26a0495c573e2e2011cc113010",
+      "byteLength": 21471
+    },
+    {
+      "id": "geometry-v3-source-811",
+      "path": "crates/brep-intersect/src/plane_cylinder/serialization.rs",
+      "sha256": "f514b4c0d52d1906034bd1190a175348e3d65d34a19064e5097f00177d248423",
+      "byteLength": 1981
+    },
+    {
+      "id": "geometry-v3-source-812",
+      "path": "crates/brep-intersect/src/plane_cylinder/tests/mod.rs",
+      "sha256": "690e853af2eb1976f2d86eb94923af3f1617fe491a7763d0d86bdb62cbb3ef03",
+      "byteLength": 25509
+    },
+    {
+      "id": "geometry-v3-source-813",
+      "path": "crates/bridge-svg/src/svg/invalid.rs",
+      "sha256": "fbb9166df23021b2ad4aacabca3aaea03b0ba828cfaf525b22008b9c2d4e3702",
+      "byteLength": 7999
+    },
+    {
+      "id": "geometry-v3-source-814",
+      "path": "crates/bridge-svg/src/svg/legacy_source.rs",
+      "sha256": "8fa2f086c11ecba39137b60fb0f19de1fb8d46136d0fbaa88828eb71b24443fc",
+      "byteLength": 22992
+    },
+    {
+      "id": "geometry-v3-source-815",
+      "path": "crates/bridge-svg/src/svg/mod.rs",
+      "sha256": "b0614ced21248378a6b973e573d8cb7b78af00bfb1c987ff3f4726c345722d82",
+      "byteLength": 914
+    },
+    {
+      "id": "geometry-v3-source-816",
+      "path": "crates/bridge-svg/src/svg/preflight_inner.rs",
+      "sha256": "9b27fbdc6a0356cccde61a437b6bd0c966c5f9e84d09a31bb0173c0be4343f16",
+      "byteLength": 22892
+    },
+    {
+      "id": "geometry-v3-source-817",
+      "path": "crates/bridge-svg/src/svg/region.rs",
+      "sha256": "2aaeca428b30568ac0fd80a7758498f2e00f8b42a31d12da538d092f0d12c07c",
+      "byteLength": 17594
+    },
+    {
+      "id": "geometry-v3-source-818",
+      "path": "crates/bridge-svg/src/svg/tests/mod.rs",
+      "sha256": "ac102d8f3f131befcc437a5a367fbeeafc6562a27393856041ce86129a3e2fbf",
+      "byteLength": 25837
+    },
+    {
+      "id": "geometry-v3-source-819",
+      "path": "crates/geometry-bridge/src/brep_attestation/admit_envelope_object.rs",
+      "sha256": "63263bda6df9d343d2268b83bae32dce6c8efff3b5f2adbb668e8a248e60fa2c",
+      "byteLength": 7682
+    },
+    {
+      "id": "geometry-v3-source-820",
+      "path": "crates/geometry-bridge/src/brep_attestation/attest_source.rs",
+      "sha256": "fcd53bd08dfa64cb52b009de7fb507d6cf586b21116d18e722d29b0d7ae9eea2",
+      "byteLength": 8531
+    },
+    {
+      "id": "geometry-v3-source-821",
+      "path": "crates/geometry-bridge/src/brep_attestation/mod.rs",
+      "sha256": "c8eebf3dae59b6627bac91bd430892c867a447499e8473abed626308e7dc0b4c",
+      "byteLength": 1123
+    },
+    {
+      "id": "geometry-v3-source-822",
+      "path": "crates/geometry-bridge/src/brep_attestation/tests/mod.rs",
+      "sha256": "c3abd318509e974574644b7ad946f676846ee74c98dff0b84e801ba66093d107",
+      "byteLength": 14134
+    },
+    {
+      "id": "geometry-v3-source-823",
+      "path": "crates/geometry-bridge/src/brep_identity/identity_digest.rs",
+      "sha256": "d56bf6429b618ead1e2a01240bd6282e733119041276d2ace1aa66b90b005d76",
+      "byteLength": 15322
+    },
+    {
+      "id": "geometry-v3-source-824",
+      "path": "crates/geometry-bridge/src/brep_identity/mod.rs",
+      "sha256": "d5d8ae4de7fc500da74f3f0b467e984e782de56963f3c70d084d4a0eaaef482a",
+      "byteLength": 1003
+    },
+    {
+      "id": "geometry-v3-source-825",
+      "path": "crates/geometry-bridge/src/brep_identity/validate_occurrence_identity.rs",
+      "sha256": "254cd015438917a596457299d266ad0a4267e76be38303a25832cc4f3413b0fa",
+      "byteLength": 14983
+    },
+    {
+      "id": "geometry-v3-source-826",
+      "path": "crates/geometry-bridge/src/brep_identity/validate_operations.rs",
+      "sha256": "95771fb9685ab5325028b53a93b76536fad6f60ab660942194fa808b353f9d57",
+      "byteLength": 23714
+    },
+    {
+      "id": "geometry-v3-source-827",
+      "path": "crates/geometry-bridge/src/mesh_shell/lattice.rs",
+      "sha256": "ce93b041574d39f6f5c96ecbb28f3dd343cca661b67b9ddd8cfe8cbecd009c7e",
+      "byteLength": 16824
+    },
+    {
+      "id": "geometry-v3-source-828",
+      "path": "crates/geometry-bridge/src/mesh_shell/mod.rs",
+      "sha256": "172024e1762743cd5fb8043508c0d49f65a38d9690c8fc58cfba3c28b09496d6",
+      "byteLength": 320
+    },
+    {
+      "id": "geometry-v3-source-829",
+      "path": "crates/geometry-bridge/src/mesh_shell/shell.rs",
+      "sha256": "ebb3aef3d7da80c11988f08cc7de896dcd2f6ba82085cd093fb000c2ff404b52",
+      "byteLength": 12702
+    },
+    {
+      "id": "geometry-v3-source-830",
+      "path": "crates/geometry-bridge/src/mesh_shell/tests/mod.rs",
+      "sha256": "9398c8693f072a37b22fd6a51ac52aadb97c8fa4ad89fa30d914c46fb90ab75c",
+      "byteLength": 5131
+    },
+    {
+      "id": "geometry-v3-source-831",
+      "path": "crates/nurbs-core/src/foundation/certify.rs",
+      "sha256": "98c382b9be5146cc8413043e7f30d40b58d66d9e8ba5f3ba1a62f731905304d0",
+      "byteLength": 21397
+    },
+    {
+      "id": "geometry-v3-source-832",
+      "path": "crates/nurbs-core/src/foundation/cloud_fit.rs",
+      "sha256": "0039187fd46807f7c4dcba791edc0ad445a9f38e73f7d34ef319bc34512e1055",
+      "byteLength": 12329
+    },
+    {
+      "id": "geometry-v3-source-833",
+      "path": "crates/nurbs-core/src/foundation/edit.rs",
+      "sha256": "89ac49c68eec2557e51e42a7a94069a39afe43220200e5b7bd2e9b5d14d0676a",
+      "byteLength": 16935
+    },
+    {
+      "id": "geometry-v3-source-834",
+      "path": "crates/nurbs-core/src/foundation/fitting.rs",
+      "sha256": "3d26937fa18761d59aee602b6bbad96730396857b32f936109e4d9e873b10a7d",
+      "byteLength": 4979
+    },
+    {
+      "id": "geometry-v3-source-835",
+      "path": "crates/nurbs-core/src/foundation/interval_root.rs",
+      "sha256": "30ce56b6eadabdc45f1e28f23d42502b36871e8f9d209e385d9c8f94eb8e3eb6",
+      "byteLength": 12229
+    },
+    {
+      "id": "geometry-v3-source-836",
+      "path": "crates/nurbs-core/src/foundation/materialize.rs",
+      "sha256": "0614144b42b31c231a89c0e84bdac319bc51c14edea9841187f91ab66b8be3f7",
+      "byteLength": 9646
+    },
+    {
+      "id": "geometry-v3-source-837",
+      "path": "crates/nurbs-core/src/foundation/mod.rs",
+      "sha256": "9dc93e0f5e5c6cd4f4784171e5fb4221f375064959630cc9299205c76dc308b8",
+      "byteLength": 18827
+    },
+    {
+      "id": "geometry-v3-source-838",
+      "path": "crates/nurbs-core/src/foundation/periodic.rs",
+      "sha256": "ebb1fba69320752241b862942e3e688f5d46ab52fdcd6d0751df94ed2ead8f54",
+      "byteLength": 15673
+    },
+    {
+      "id": "geometry-v3-source-839",
+      "path": "crates/nurbs-core/src/foundation/projection.rs",
+      "sha256": "b422e29245f4cab28d23c81fde983a2ae54720a113be27eae03384dceb77b5dc",
+      "byteLength": 13534
+    },
+    {
+      "id": "geometry-v3-source-840",
+      "path": "crates/nurbs-core/src/foundation/reparameterization.rs",
+      "sha256": "18a85d4e87aa7051486fdfaab906c400012212d86031fb8e5253d23499f9c044",
+      "byteLength": 6816
+    },
+    {
+      "id": "geometry-v3-source-841",
+      "path": "crates/nurbs-core/src/sweeps/progressive_sweep/approximate.rs",
+      "sha256": "2f3d58b95a80e9f9551dbfb47d5a9f229f2f7c61bb9af55e0437070f64373126",
+      "byteLength": 11400
+    },
+    {
+      "id": "geometry-v3-source-842",
+      "path": "crates/nurbs-core/src/sweeps/progressive_sweep/mod.rs",
+      "sha256": "608d86b6ac828f2971cea058fa9ae28b47a993f8be6f2eee417b0050c0418d0c",
+      "byteLength": 657
+    },
+    {
+      "id": "geometry-v3-source-843",
+      "path": "crates/nurbs-core/src/sweeps/progressive_sweep/orientation.rs",
+      "sha256": "71e39900baa2364eb6bb97a7d6106120c439e64f619ffea51f43a2a281c17f09",
+      "byteLength": 6068
+    },
+    {
+      "id": "geometry-v3-source-844",
+      "path": "crates/nurbs-core/src/sweeps/progressive_sweep/sweep.rs",
+      "sha256": "35e45e8542ed407fa818fe76565a645b6ac6562b96e765212fdb6f850751a0b6",
+      "byteLength": 24740
+    },
+    {
+      "id": "own-rust-cad-v57-evidence",
+      "path": "docs/qualification/own-rust-cad-v57.json",
+      "sha256": "c12e6ef04646c38ef5ebc5e4aada90f31e1aaa7dd537921ba5a5bc0c24a183d1",
+      "byteLength": 44062
+    },
+    {
+      "id": "own-rust-cad-v58-evidence",
+      "path": "docs/qualification/own-rust-cad-v58.json",
+      "sha256": "b2d34f09f5768c7933185b19df420f5f342a24624c3eb23e3bc69aea646a330c",
+      "byteLength": 44077
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-11",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "g1-v34-github-workflow",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "g1-v34-github-harness",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "g1-v34-clean-fragment-selector",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "g1-v34-ubuntu-selector",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-90",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-95",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-102",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-139",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-330",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-336",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-353",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-403",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-443",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-462",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-733",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-754",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-764",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "bindingId": "geometry-v3-source-837",
+      "note": "Current bytes are newly bound in v75; v74 remains archived. Append-only DRY pass: bit-identical helper merges guarded by a golden numeric test, emitter split into per-kind methods guarded by an exact snapshot; no new capability; preserve ownRust57."
+    }
+  ],
+  "previousFingerprintSha256": "ddc95fdac64ee12e35d0246506fc67e3f98e57f980c788fba38de58226edcf87"
+}

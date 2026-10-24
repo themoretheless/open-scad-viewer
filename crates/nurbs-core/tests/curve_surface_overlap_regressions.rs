@@ -161,3 +161,20 @@ fn residual_candidates_are_not_an_existence_certificate() {
     assert_eq!(r.krawczyk_isolated, 0);
 }
 
+#[test]
+#[cfg(feature = "codec")]
+fn host_report_separates_search_coverage_from_proof() {
+    let c = line([0.3, 0.4, -1.], [0.3, 0.4, 1.]);
+    let r = intersect_curve_surface_report(&c, &plane(), None).unwrap();
+    let encoded = value_codec::Serialize::to_value(&r);
+    assert_eq!(
+        encoded["coverage"]["searchComplete"],
+        value_codec::json!(true)
+    );
+    assert_eq!(encoded["coverage"]["complete"], value_codec::json!(false));
+    assert_eq!(encoded["coverage"]["certified"], value_codec::json!(false));
+    assert_eq!(
+        encoded["rounding"],
+        value_codec::json!("uncertified-binary64")
+    );
+}

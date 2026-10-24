@@ -1,0 +1,253 @@
+{
+  "schema": "native-general-boundary-finite-evidence/2",
+  "status": "passed",
+  "sourceCommit": "9a1cf77a1312104e8e7d3c6dea3e3d8caaee2881",
+  "scope": "Resolved main integration; finite whole-domain native certificate qualification. No universal acceptance, ideal-body embedding, G1/G2, imported semantic units or approval.",
+  "wasm": {
+    "sha256": "7558b8d8069a8951b555c6fb91f94f40d0b4771c5a734692e3d4075d80194146",
+    "byteLength": 12221846
+  },
+  "native": {
+    "workspacePartitionExitCodes": [
+      0,
+      0
+    ],
+    "workspaceCatalog": {
+      "schema": "native-test-partition/1",
+      "complete": true,
+      "disjoint": true,
+      "full": {
+        "cases": 5799,
+        "sha256": "f7ef351dc2ecb123df997f46348b62fbecd4c26cd2bd28ada489160a86417dcf"
+      },
+      "serial": {
+        "cases": 44,
+        "sha256": "ad34329795ab5212c023871dcced19c155431428d7b97eb192db447ab8642ee8"
+      },
+      "parallel": {
+        "cases": 5755,
+        "sha256": "7326aae1e41cbb108aed5fd9b8e091217153c310671d766fc2dd1e11dbbe0c49"
+      },
+      "selector": "aag",
+      "qualificationClaim": "none",
+      "logs": [
+        {
+          "path": "/tmp/osv-general-merged-catalog-full-v1.log",
+          "sha256": "1ba7c412fc2b9d2808d8186376dbc2a820a25cfcf76c092a46329f54732a6753",
+          "byteLength": 553160
+        },
+        {
+          "path": "/tmp/osv-general-merged-catalog-serial-v1.log",
+          "sha256": "8c4761eeabf2c964185378a3c6ef593ab724d7377cfb586841f1affc434096cd",
+          "byteLength": 74026
+        },
+        {
+          "path": "/tmp/osv-general-merged-catalog-parallel-v1.log",
+          "sha256": "662d4b1e497bd15344a2c969d546a7aee049766485aa0a329e5dfcfbb60c1071",
+          "byteLength": 550535
+        }
+      ]
+    },
+    "workspaceCommands": [
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "--workspace",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "--workspace",
+        "--",
+        "--skip",
+        "aag"
+      ]
+    ],
+    "workspacePassed": 5794,
+    "workspaceFailed": 0,
+    "workspaceIgnored": 5,
+    "workspaceSummaries": 673,
+    "brepPassed": 1108,
+    "brepIgnored": 3,
+    "nurbsPassed": 1559,
+    "nurbsIgnored": 0,
+    "bridgePassed": 4,
+    "latticePassed": 12,
+    "sourceModeCombinations": 16,
+    "noCodec": "passed",
+    "strictClippy": "passed"
+  },
+  "protocolChecks": {
+    "node": 11,
+    "chromium": 11
+  },
+  "occt": "passed",
+  "g1CreditImported": 0,
+  "diagnostics": "Initial sandbox workspace stopped at fusion after 1725 passing tests; raw partial log preserved, no credit. Focused Metal rerun passed all6 The overloaded host retry had four explicit wall-clock-budget failures, preserved with all four successful original-budget rechecks. A four-thread retry was also preserved. The complete serial-recognition plus parallel-rest partition then passed, with all 5799 catalog entries covered exactly once. No individual deadlines or proof budgets changed.",
+  "logs": [
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-workspace.log",
+      "sha256": "020b0df88882559027ee83b33cfb4d877012291b8d47ba636bd2910eec7f4ac7",
+      "byteLength": 726102
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-serial.log",
+      "sha256": "3d54e419b3e0a52a7ad5b7c1bf54dd4aa90a0af1db2c69d7e0b88e574ebbf341",
+      "byteLength": 102753
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-parallel.log",
+      "sha256": "311d970fc44f2891c2ec513aa84e886aaeac8586ecdd14be39bb95ea1051a7d7",
+      "byteLength": 623348
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-test-partition.json",
+      "sha256": "58d23ca908585e348409518f0d2d8fb24d91a95b4f7b53602dbc209551a5f955",
+      "byteLength": 1066
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-catalog-full.log",
+      "sha256": "1ba7c412fc2b9d2808d8186376dbc2a820a25cfcf76c092a46329f54732a6753",
+      "byteLength": 553160
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-catalog-serial.log",
+      "sha256": "8c4761eeabf2c964185378a3c6ef593ab724d7377cfb586841f1affc434096cd",
+      "byteLength": 74026
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-catalog-parallel.log",
+      "sha256": "662d4b1e497bd15344a2c969d546a7aee049766485aa0a329e5dfcfbb60c1071",
+      "byteLength": 550535
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-four-thread-overloaded.log",
+      "sha256": "76975a6e3970da164562bed499fff43bbea0e47f34b867f07d68f4607feb62c9",
+      "byteLength": 75437
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-workspace-overloaded.log",
+      "sha256": "3652e867b477ed2c928f46c9107e632aa677113444507bb21d8c0ba32a2211c5",
+      "byteLength": 140886
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-recognition-sphere-recheck.log",
+      "sha256": "af79dc68bc6576c802562bf2d32d5effc91f64e1765407bd0ae9093b49f0250d",
+      "byteLength": 174
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-recognition-recheck.log",
+      "sha256": "4184ea3a49c5f2dcb0307cde3f716b5a9c3b501fd82aeceb8b63ddbdf72ea829",
+      "byteLength": 361
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-pocket-corpus-recheck.log",
+      "sha256": "77a4a2c1732186929b5bc1bded489ab17c0ae5b6c4b6aba8abe938ba1c342ffa",
+      "byteLength": 184
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-workspace-aborted-sandbox.log",
+      "sha256": "d97b0cbbda7eb5c551ec785ef66c047c4147e94b81bbef0acc2a44effc7a4528",
+      "byteLength": 204780
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-fusion-metal.log",
+      "sha256": "2053d3f1f1f48fc9b24ed23539560ee8adbd4e5bfbce9732db82bbd92515037f",
+      "byteLength": 555
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-fusion-sandbox-recheck.log",
+      "sha256": "8411a0c8a8d3b8deff6697af3e56297a234e87f5e675d4ed2992b1fae340ca94",
+      "byteLength": 3173
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-protocol-step.log",
+      "sha256": "1cd07737c644996119f4f4d3720238de85aa232c34cb11c5f4141b04a427eec6",
+      "byteLength": 13278
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-lattice.log",
+      "sha256": "f24fbcb016f4a2d85f631f423035fab8457e403971a1a97ceedd9abefd22996d",
+      "byteLength": 18006
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-no-codec.log",
+      "sha256": "6a3843cedf23304d0365408668a5a97228113ba2b1eb84ff5930215933ffb0f8",
+      "byteLength": 15671
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/native-clippy.log",
+      "sha256": "a5080c6963f0e8569c9f31d14c47ab4c5319a9498a322006afbfd86d63e9f97b",
+      "byteLength": 7787
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/wasm-build.log",
+      "sha256": "b4d6698cb88b46d1a087a84fb96a00a4fd20992b42f1fa9adde6a3826bd63e5f",
+      "byteLength": 18725
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/build-inputs.json",
+      "sha256": "01be83823798921de31bc72bc00b0326e1f3f9a1d4db32d7f65654b4e893b190",
+      "byteLength": 633980
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/node.json",
+      "sha256": "33e1c8c404eea304d9ba78938650353d5841e9b71af5fb7461bc8559ca16dc19",
+      "byteLength": 2362
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/browser.json",
+      "sha256": "6871750258fa2fd4a8b619ceba6e60277a0729e208d25d5a0b23e4d4f2d565cd",
+      "byteLength": 2367
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/previous-matrix-node.json",
+      "sha256": "f989c7a0e6fd2c036bfb04d1a8bbd0522b73c03a7f2f1d4fab7809a19c34fb4f",
+      "byteLength": 613660
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/occt.json",
+      "sha256": "2bda3f33648640b1ffeea67eb00680a618a7181832b2e84f58e16831194f7afd",
+      "byteLength": 717
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/nonplanar-frame-body.step",
+      "sha256": "1f5917ee3af552ba417be6d2e3c6ce76095a8484d5cd81fb48afc18e85041925",
+      "byteLength": 28919
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/library-structure.log",
+      "sha256": "6cdbd475ee9028eccd2c00fd2f74e94c545c4c039eed6011ed67ca57d9a86404",
+      "byteLength": 80
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/default-feature-equivalence.json",
+      "sha256": "cea2b640c03d43f86cd382d849d001261c7ea31617cf4e13e5d2d4cfdb508647",
+      "byteLength": 49392
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/architecture.log",
+      "sha256": "a83b8e31e4b72d258147717a519b2678f347eca68e768b270c56dc82c5ccbb8a",
+      "byteLength": 70
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/ownership.log",
+      "sha256": "547ee5d44b210ae82386358e2567a4e1f9f2cb80c43d36f7d9ed5182d3959b5b",
+      "byteLength": 83
+    },
+    {
+      "path": "docs/qualification/general-frame-cap-main-2026-10-15/build-gates.log",
+      "sha256": "7c359940ca7e89cd8ff4ac4f50d3c3a9a3b4efacd7208582cd7a4876c5861d3f",
+      "byteLength": 3809
+    }
+  ]
+}

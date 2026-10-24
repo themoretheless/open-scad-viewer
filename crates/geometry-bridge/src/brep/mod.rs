@@ -2,11 +2,14 @@
 use super::*;
 use std::collections::BTreeMap;
 
-mod tessellation;
-mod certified_nurbs;
-mod polygons;
+
 #[cfg(test)]
+#[path = "../tests/brep_registry.rs"]
 mod registry_tests;
+
+mod tessellation;
+mod nurbs;
+mod polygons;
 pub use tessellation::*;
-pub use certified_nurbs::*;
+pub use nurbs::*;
 pub use polygons::*;

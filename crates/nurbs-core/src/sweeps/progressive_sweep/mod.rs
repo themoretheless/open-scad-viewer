@@ -26,6 +26,8 @@ mod rmf_transport;
 pub use rmf_transport::{OriginalRmfTransportReport,OriginalRmfSectionImagesReport,RmfNormalCell,certify_original_rmf_transport,certify_original_rmf_section_images};
 pub use original_smoothness::{OriginalFrameSmoothnessReport,ClosedAuthoredFrameSmoothnessReport,ClosedPathFrameSmoothnessReport};
 pub use retained_smoothness::{RetainedSeamReport,RetainedSmoothnessReport,RetainedDecompositionReport,RetainedDecompositionSmoothnessReport};
+mod endpoint_surface;
+pub use endpoint_surface::EndpointSurfaceReport;
 mod profile_domain;
 pub use profile_domain::{IdealEndpointDomainsReport,IdealEndpointPlanesReport,EndpointCapProjectionReport};
 pub use retained_regularity::{RetainedRegularityReport, inspect as inspect_retained_regularity};

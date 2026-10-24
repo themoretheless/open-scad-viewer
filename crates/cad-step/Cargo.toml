@@ -8,7 +8,7 @@ publish.workspace = true
 [dependencies]
 brep-core = { workspace = true, features = ["codec"] }
 brep-topology = { workspace = true, features = ["codec"] }
-nurbs-core = { workspace = true, features = ["transport"] }
+nurbs-core = { workspace = true, features = ["transport", "codec"] }
 sha2 = "0.11"
 
 [dev-dependencies]

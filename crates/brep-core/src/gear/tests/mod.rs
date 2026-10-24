@@ -10,6 +10,35 @@ fn volume(model: &Model) -> f64 {
 }
 
 #[test]
+fn involute_flanks_follow_analytic_geometry_and_never_relax_remainder() {
+    for base in [2., 20., 100.] {
+        let half = |r: f64| {
+            let t = ((r / base).powi(2) - 1.).max(0.).sqrt();
+            0.18 - (t - t.atan())
+        };
+        for sign in [-1., 1.] {
+            for (start, end) in [(0., 0.7), (0.7, 0.), (0.2, 0.7)] {
+                let (curve, bound) = involute(base, start, end, 0.4, sign, &half).unwrap();
+                assert!(bound > 0. && bound <= FLANK_FIT);
+                for i in 0..=200 {
+                    let s = i as f64 / 200.;
+                    let t = start + (end - start) * s;
+                    // Independent roll-radius/polar-angle definition.
+                    let radius = base * t.hypot(1.);
+                    let angle = 0.4 + sign * (0.18 - t + t.atan());
+                    let point = curve.evaluate(s).unwrap().point;
+                    let distance = (point[0] - radius * angle.cos())
+                        .hypot(point[1] - radius * angle.sin());
+                    assert!(distance <= bound + 1e-11, "{distance} > {bound}");
+                }
+            }
+        }
+    }
+    let half = |_: f64| 0.;
+    assert!(involute(2., 0., 100., 0., 1., &half).is_err());
+}
+
+#[test]
 fn spur_gear_is_a_closed_exact_solid_with_the_expected_volume() {
     let spec = GearSpec {
         module: 2.,
@@ -23,6 +52,7 @@ fn spur_gear_is_a_closed_exact_solid_with_the_expected_volume() {
     assert!(geometry.flank_deviation <= FLANK_FIT);
     // Even straight extrusion retains the outward floating-point rounding bound.
     assert!(geometry.sweep_deviation >= 0. && geometry.sweep_deviation <= SWEEP_FIT);
+    assert!(!geometry.flank_rounding_certified);
     // The volume lies between the root and tip cylinders and close to
     // the pitch cylinder (teeth fill about half the band).
     let v = volume(&model);
@@ -48,6 +78,7 @@ fn helical_and_herringbone_gears_match_the_sweep_within_tolerance() {
         let (model, geometry) = gear_with_report(&spec).unwrap();
         assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
         assert!(geometry.sweep_deviation > 0. && geometry.sweep_deviation <= SWEEP_FIT);
+        assert!(!geometry.sweep_rounding_certified);
         let expected_faces = (16 * 6 + 8) * if herringbone { 2 } else { 1 } + 2;
         assert_eq!(geometry.face_count, expected_faces);
         let spur = gear(&GearSpec {

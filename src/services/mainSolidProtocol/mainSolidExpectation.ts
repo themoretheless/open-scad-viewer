@@ -2,6 +2,7 @@
 import { isNumericSequence } from '../mainSolidProtocol'
 import type { MainSolidExpectation, MainSolidJob } from '../mainSolidProtocol'
 import { boundaryExpectation } from '../solidBoundaryAgreement'
+import { callGeometryRust } from '../geometry/kernel'
 import { contactQualificationExpectation } from '../nurbsOffsetContactQualification'
 import { envelopeFitExpectation } from '../nurbsOffsetEnvelopeFit'
 import { faceContactExpectation } from '../solidFaceContacts'
@@ -29,12 +30,7 @@ export function numericSequenceOf(value:unknown, length:number, check:(v:unknown
 }
 
 export function distanceWitnessConsistent(points:number[][],bounds:number[][][],lo:number,hi:number):boolean {
- const scale=Math.max(1,...points.flat().map(Math.abs),...bounds.flat(2).map(Math.abs),hi)
- const roundoff=Number.EPSILON*scale*32
- for(let side=0;side<2;side++)for(let k=0;k<3;k++)if(points[side][k]<bounds[side][k][0]-roundoff||points[side][k]>bounds[side][k][1]+roundoff)return false
- const gap=Math.hypot(...points[0].map((x,k)=>x-points[1][k]))
- const enclosureUpper=Math.hypot(...bounds[0].map((a,k)=>Math.max(Math.abs(a[0]-bounds[1][k][1]),Math.abs(a[1]-bounds[1][k][0]))))
- return Number.isFinite(gap)&&Number.isFinite(enclosureUpper)&&gap>=lo-roundoff&&gap<=hi+roundoff&&enclosureUpper<=hi+roundoff
+ return callGeometryRust<boolean>('cad_client_geometry',{operation:'distanceWitness',points,bounds,lo,hi,strictUpper:true})
 }
 
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {

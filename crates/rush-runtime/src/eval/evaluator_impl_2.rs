@@ -1,0 +1,578 @@
+use super::*;
+
+impl<'a> Evaluator<'a> {
+    pub fn resolve(
+        &mut self,
+        expr: &'a Json,
+        scope: &Scope<'a>,
+        path: &str,
+        depth: usize,
+    ) -> Result<Value<'a>> {
+        self.tick(depth, path)?;
+        if let Some(value) = expr.as_f64() {
+            if !value.is_finite() || value.abs() > 1_000_000.0 {
+                return Err(Error::new(
+                    "invalid_number",
+                    path,
+                    "Expression must produce a finite number within +/-1000000.",
+                ));
+            }
+            return Ok(value.into());
+        }
+        if let Some(key) = expr.get("param") {
+            let key = string(key);
+            return self
+                .parameters
+                .get(key)
+                .copied()
+                .map(Value::Numeric)
+                .ok_or_else(|| {
+                    Error::new(
+                        "unknown_parameter",
+                        path,
+                        format!("Unknown parameter {key}."),
+                    )
+                });
+        }
+        if let Some(key) = expr.get("local") {
+            let key = string(key);
+            return scope
+                .get(key)
+                .cloned()
+                .ok_or_else(|| Error::new("unknown_local", path, format!("Unknown local {key}.")));
+        }
+        let op = string(&expr["op"]);
+        match op {
+            "quantity" => {
+                return Ok(
+                    units::quantity(number(&expr["value"]), string(&expr["unit"]), path)?.into(),
+                );
+            }
+            "geometry" => {
+                let name = string(&expr["function"]);
+                let bound = self.bind(name, &expr["args"], scope, path, depth)?;
+                if bound.function["kind"] != "geometry" {
+                    return Err(Error::new(
+                        "type_error",
+                        path,
+                        "Expected a geometry function.",
+                    ));
+                }
+                return Ok(Value::Geometry {
+                    function: name,
+                    scope: bound.scope,
+                });
+            }
+            "lambda" => {
+                let parameters = array(&expr["parameters"]);
+                if !unique(parameters) {
+                    return Err(Error::new(
+                        "duplicate_id",
+                        path,
+                        "Lambda parameters must be unique.",
+                    ));
+                }
+                return Ok(Value::Closure {
+                    parameters,
+                    body: &expr["body"],
+                    scope: scope.clone(),
+                });
+            }
+            "apply" => {
+                let function = self.resolve(
+                    &expr["function"],
+                    scope,
+                    &format!("{path}/function"),
+                    depth + 1,
+                )?;
+                let mut args = Vec::with_capacity(array(&expr["args"]).len());
+                for (i, arg) in array(&expr["args"]).iter().enumerate() {
+                    args.push(self.resolve(arg, scope, &format!("{path}/args/{i}"), depth + 1)?);
+                }
+                return self.invoke(&function, args, path, depth + 1);
+            }
+            "list" => {
+                let items = array(&expr["items"]);
+                self.allocate(items.len(), path)?;
+                let mut values = Vec::with_capacity(items.len());
+                for (i, item) in items.iter().enumerate() {
+                    values.push(self.resolve(
+                        item,
+                        scope,
+                        &format!("{path}/items/{i}"),
+                        depth + 1,
+                    )?);
+                }
+                return Ok(Value::List(values.into()));
+            }
+            "interval" => {
+                let start = numeric_value(
+                    &self.resolve(&expr["start"], scope, &format!("{path}/start"), depth + 1)?,
+                    path,
+                )?;
+                let end = numeric_value(
+                    &self.resolve(&expr["end"], scope, &format!("{path}/end"), depth + 1)?,
+                    path,
+                )?;
+                let count = if let Some(value) = expr.get("count") {
+                    Some(numeric_value(
+                        &self.resolve(value, scope, &format!("{path}/count"), depth + 1)?,
+                        path,
+                    )?)
+                } else {
+                    None
+                };
+                let step = if let Some(value) = expr.get("step") {
+                    Some(numeric_value(
+                        &self.resolve(value, scope, &format!("{path}/step"), depth + 1)?,
+                        path,
+                    )?)
+                } else {
+                    None
+                };
+                let values =
+                    resolve_interval(start, end, expr["inclusive"] == true, count, step, path)?;
+                self.allocate(values.len(), path)?;
+                return Ok(Value::List(
+                    values.into_iter().map(Value::Numeric).collect(),
+                ));
+            }
+            "zip" => {
+                let mut lists = Vec::with_capacity(array(&expr["inputs"]).len());
+                for (i, input) in array(&expr["inputs"]).iter().enumerate() {
+                    let value =
+                        self.resolve(input, scope, &format!("{path}/inputs/{i}"), depth + 1)?;
+                    sequence(&value, path)?;
+                    lists.push(value);
+                }
+                let count = lists
+                    .first()
+                    .map(|value| sequence(value, path).map(<[_]>::len))
+                    .transpose()?
+                    .unwrap_or(0);
+                if lists
+                    .iter()
+                    .any(|value| matches!(value, Value::List(values) if values.len() != count))
+                {
+                    return Err(Error::new(
+                        "length_mismatch",
+                        path,
+                        "zip requires equal length sequences.",
+                    ));
+                }
+                self.allocate(count * (lists.len() + 1), path)?;
+                let mut output = Vec::with_capacity(count);
+                for i in 0..count {
+                    output.push(Value::List(
+                        lists
+                            .iter()
+                            .map(|value| sequence(value, path).map(|items| items[i].clone()))
+                            .collect::<Result<Vec<_>>>()?
+                            .into(),
+                    ));
+                }
+                return Ok(Value::List(output.into()));
+            }
+            "eq" => {
+                let a = self.resolve(&expr["args"][0], scope, path, depth + 1)?;
+                let b = self.resolve(&expr["args"][1], scope, path, depth + 1)?;
+                return Ok((query_compare(&a, &b, path)?.is_eq() as u8 as f64).into());
+            }
+            "text" => return Ok(Value::Text(string(&expr["value"]))),
+            "record" => {
+                let fields = expr["fields"]
+                    .as_object()
+                    .ok_or_else(|| Error::new("type_error", path, "Expected record fields"))?;
+                self.allocate(fields.len(), path)?;
+                let mut values = HashMap::new();
+                for (name, value) in fields {
+                    values.insert(name.clone(), self.resolve(value, scope, path, depth + 1)?);
+                }
+                return Ok(Value::Record(Rc::new(values)));
+            }
+            "field" => {
+                let value = self.resolve(&expr["input"], scope, path, depth + 1)?;
+                let Value::Record(fields) = value else {
+                    return Err(Error::new("type_error", path, "Expected a record"));
+                };
+                return fields.get(string(&expr["name"])).cloned().ok_or_else(|| {
+                    Error::new(
+                        "unknown_field",
+                        path,
+                        format!("Unknown field {}", string(&expr["name"])),
+                    )
+                });
+            }
+            "query" => return self.query(expr, scope, path, depth),
+            "enumerate" => {
+                let value =
+                    self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                let items = sequence(&value, path)?;
+                self.allocate(items.len() * 3, path)?;
+                return Ok(Value::List(
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(i, value)| {
+                            Value::List(vec![(i as f64).into(), value.clone()].into())
+                        })
+                        .collect(),
+                ));
+            }
+            "range" => {
+                let count = numeric(
+                    &self.resolve(&expr["count"], scope, &format!("{path}/count"), depth + 1)?,
+                    path,
+                )?;
+                let start = numeric_value(
+                    &self.resolve(&expr["start"], scope, &format!("{path}/start"), depth + 1)?,
+                    path,
+                )?;
+                let step = numeric_value(
+                    &self.resolve(&expr["step"], scope, &format!("{path}/step"), depth + 1)?,
+                    path,
+                )?;
+                units::equal(start, step, path)?;
+                if count.fract() != 0.0 || !(0.0..=256.0).contains(&count) {
+                    return Err(Error::new(
+                        "invalid_count",
+                        path,
+                        "Range count must be an integer from 0 to 256.",
+                    ));
+                }
+                self.allocate(count as usize, path)?;
+                let mut output = Vec::with_capacity(count as usize);
+                for i in 0..count as usize {
+                    output.push(
+                        units::binary(
+                            "add",
+                            start,
+                            units::binary("multiply", (i as f64).into(), step, path)?,
+                            path,
+                        )?
+                        .into(),
+                    );
+                }
+                return Ok(Value::List(output.into()));
+            }
+            "length" => {
+                let value =
+                    self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                return Ok((sequence(&value, path)?.len() as f64).into());
+            }
+            "at" => {
+                let value =
+                    self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                let items = sequence(&value, path)?;
+                let index = numeric(
+                    &self.resolve(&expr["index"], scope, &format!("{path}/index"), depth + 1)?,
+                    path,
+                )?;
+                if index.fract() != 0.0 || index < 0.0 || index >= items.len() as f64 {
+                    return Err(Error::new(
+                        "invalid_index",
+                        path,
+                        "List index is out of bounds.",
+                    ));
+                }
+                return Ok(items[index as usize].clone());
+            }
+            "guarded" => {
+                let input =
+                    self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                let items = sequence(&input, path)?;
+                self.allocate(items.len(), path)?;
+                let mut output = Vec::with_capacity(items.len());
+                'items: for (index, item) in items.iter().enumerate() {
+                    let mut bindings = (**scope).clone();
+                    bindings.insert(string(&expr["binding"]).to_owned(), item.clone());
+                    let bound = Rc::new(bindings);
+                    for (step, guard) in array(&expr["steps"]).iter().enumerate() {
+                        let current = format!("{path}[{index}]/steps/{step}");
+                        let value = self.resolve(&guard["value"], &bound, &current, depth + 1)?;
+                        match string(&guard["kind"]) {
+                            "assert" => (),
+                            "where" => {
+                                if numeric(&value, &current)? == 0.0 {
+                                    continue 'items;
+                                }
+                            }
+                            "while" => {
+                                if numeric(&value, &current)? == 0.0 {
+                                    break 'items;
+                                }
+                            }
+                            _ => {
+                                return Err(Error::new(
+                                    "type_error",
+                                    &current,
+                                    "Unknown guarded sequence step.",
+                                ));
+                            }
+                        }
+                    }
+                    output.push(item.clone());
+                }
+                return Ok(Value::List(output.into()));
+            }
+            "map" | "filter" | "flatmap" | "reduce" => {
+                let value =
+                    self.resolve(&expr["input"], scope, &format!("{path}/input"), depth + 1)?;
+                let items = sequence(&value, path)?;
+                let function = self.resolve(
+                    &expr["function"],
+                    scope,
+                    &format!("{path}/function"),
+                    depth + 1,
+                )?;
+                self.allocate(items.len(), path)?;
+                if op == "reduce" {
+                    let initial = expr.get("initial").ok_or_else(|| {
+                        Error::new("type_error", path, "Expected reduce initial value.")
+                    })?;
+                    let mut accumulator =
+                        self.resolve(initial, scope, &format!("{path}/initial"), depth + 1)?;
+                    for (i, item) in items.iter().enumerate() {
+                        accumulator = self.invoke(
+                            &function,
+                            vec![accumulator, item.clone()],
+                            &format!("{path}[{i}]"),
+                            depth + 1,
+                        )?;
+                    }
+                    return Ok(accumulator);
+                }
+                let mut output = Vec::with_capacity(items.len());
+                for (i, item) in items.iter().enumerate() {
+                    let value = self.invoke_indexed(
+                        &function,
+                        item.clone(),
+                        i,
+                        &format!("{path}[{i}]"),
+                        depth + 1,
+                    )?;
+                    match op {
+                        "map" => output.push(value),
+                        "filter" => {
+                            if numeric(&value, path)? != 0.0 {
+                                output.push(item.clone());
+                            }
+                        }
+                        _ => {
+                            let batch = sequence(&value, path)?;
+                            self.allocate(batch.len(), path)?;
+                            if output.len() + batch.len() > 256 {
+                                return Err(Error::new(
+                                    "invalid_count",
+                                    path,
+                                    "Generated sequence exceeds 256 values.",
+                                ));
+                            }
+                            output.extend_from_slice(batch);
+                        }
+                    }
+                }
+                return Ok(Value::List(output.into()));
+            }
+            "memo" => {
+                let id = string(&expr["id"]);
+                let key = (id, Rc::as_ptr(scope) as usize);
+                if let Some(entry) = self.memo.get(&key) {
+                    if entry.expression != &expr["value"] {
+                        return Err(Error::new(
+                            "memo_id_conflict",
+                            path,
+                            format!("Memo ID {id} has different expressions in the same scope."),
+                        ));
+                    }
+                    return entry.result.clone();
+                }
+                if self.memo.len() + self.active_memo.len() >= 4096 {
+                    return Err(Error::new("memo_limit", path, "Maximum 4096 memo entries."));
+                }
+                if !self.active_memo.insert(key) {
+                    return Err(Error::new(
+                        "memo_cycle",
+                        path,
+                        format!("Cycle through memo {id}."),
+                    ));
+                }
+                let result =
+                    self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+                self.active_memo.remove(&key);
+                self.memo.insert(
+                    key,
+                    MemoEntry {
+                        _scope: scope.clone(),
+                        expression: &expr["value"],
+                        result: result.clone(),
+                    },
+                );
+                return result;
+            }
+            "geometry_effects" => {
+                if !self.suppress_checks {
+                    self.geometry_effect_count += 1;
+                    if self.geometry_effect_count > 4096 {
+                        return Err(Error::new(
+                            "assertion_limit",
+                            path,
+                            "Maximum 4096 geometry effect evaluations.",
+                        ));
+                    }
+                    self.pending_geometry_checks.push(PendingGeometryCheck {
+                        check: json!({"target":expr["input"],"check":"__effects","instance_path":path}),
+                        scope: scope.clone(),
+                    });
+                }
+                return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+            }
+            "assert_value" => {
+                self.scoped_checks(expr, scope, path)?;
+                return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+            }
+            "checked" => {
+                let mut failures = Vec::new();
+                let mut failure_paths = HashSet::new();
+                let mut messages = Vec::new();
+                for (i, check) in array(&expr["checks"]).iter().enumerate() {
+                    if let Err(error) =
+                        self.resolve(check, scope, &format!("{path}/checks/{i}"), depth + 1)
+                    {
+                        if error.code != "constraint_failed" {
+                            return Err(error);
+                        }
+                        if !messages.contains(&error.message) {
+                            messages.push(error.message);
+                        }
+                        if let Some(Json::Array(report)) = error.details {
+                            for row in report {
+                                let key = (
+                                    string(&row["id"]).to_owned(),
+                                    string(&row["path"]).to_owned(),
+                                );
+                                if failure_paths.insert(key) {
+                                    failures.push(row);
+                                }
+                            }
+                        }
+                    }
+                }
+                if !messages.is_empty() {
+                    return Err(Error::new("constraint_failed", path, messages.join("; "))
+                        .with_details(Json::Array(failures)));
+                }
+                return self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1);
+            }
+            "typed_value" => {
+                let value =
+                    self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1)?;
+                return self.check_value_type(value, &expr["type"], path, depth + 1);
+            }
+            "typed" => {
+                return Ok(units::check_type(
+                    numeric_value(
+                        &self.resolve(
+                            &expr["value"],
+                            scope,
+                            &format!("{path}/value"),
+                            depth + 1,
+                        )?,
+                        path,
+                    )?,
+                    string(&expr["type"]),
+                    path,
+                )?
+                .into());
+            }
+            "match" => {
+                let (arm, bound) = self.select_match_arm(
+                    &expr["input"],
+                    array(&expr["arms"]),
+                    scope,
+                    path,
+                    depth,
+                )?;
+                return self.resolve(
+                    &expr["arms"][arm]["body"],
+                    &bound,
+                    &format!("{path}/arms/{arm}/body"),
+                    depth + 1,
+                );
+            }
+            "if" => {
+                let field = if self.evaluate(
+                    &expr["condition"],
+                    scope,
+                    &format!("{path}/condition"),
+                    depth + 1,
+                )? != 0.0
+                {
+                    "then"
+                } else {
+                    "else"
+                };
+                return self.resolve(&expr[field], scope, path, depth + 1);
+            }
+            "let" => {
+                let value =
+                    self.resolve(&expr["value"], scope, &format!("{path}/value"), depth + 1)?;
+                let mut bound = (**scope).clone();
+                bound.insert(string(&expr["name"]).to_owned(), value);
+                return self.resolve(
+                    &expr["body"],
+                    &Rc::new(bound),
+                    &format!("{path}/body"),
+                    depth + 1,
+                );
+            }
+            "call" => {
+                let name = string(&expr["function"]);
+                let bound = self.bind(name, &expr["args"], scope, path, depth)?;
+                if bound.function["kind"] == "geometry" {
+                    return Err(Error::new(
+                        "type_error",
+                        path,
+                        "Expected a scalar function.",
+                    ));
+                }
+                let value = self.resolve(
+                    &bound.function["body"],
+                    &bound.scope,
+                    &format!("{path}/call:{name}"),
+                    depth + 1,
+                )?;
+                if bound.function["kind"] == "scalar" {
+                    return Ok(numeric_value(&value, path)?.into());
+                }
+                return Ok(value);
+            }
+            _ => (),
+        }
+        if let Some(args) = expr.get("args") {
+            let a = numeric_value(
+                &self.resolve(&args[0], scope, &format!("{path}/args/0"), depth + 1)?,
+                path,
+            )?;
+            if op == "and" && units::scalar(a, path)? == 0.0 {
+                return Ok(0.0.into());
+            }
+            if op == "or" && units::scalar(a, path)? != 0.0 {
+                return Ok(1.0.into());
+            }
+            let b = numeric_value(
+                &self.resolve(&args[1], scope, &format!("{path}/args/1"), depth + 1)?,
+                path,
+            )?;
+            return Ok(units::binary(op, a, b, path)?.into());
+        }
+        if let Some(value) = expr.get("value") {
+            let value = numeric_value(
+                &self.resolve(value, scope, &format!("{path}/value"), depth + 1)?,
+                path,
+            )?;
+            return Ok(units::unary(op, value, path, self.strict)?.into());
+        }
+        Err(Error::new("type_error", path, "Invalid expression."))
+    }
+}

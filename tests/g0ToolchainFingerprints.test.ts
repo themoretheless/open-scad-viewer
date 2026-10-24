@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { constants as filesystemConstants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   FROZEN_ARCHIVES, REFRESH_EXECUTORS, REFRESH_OUTPUTS,
   prepareQualificationRefresh, publishQualificationRefresh, refreshBinaryInputPaths,
-  refreshInputPaths,
+  refreshInputPaths, artifactBindingChanges,
 } from '../scripts/refresh-qualification-fingerprints.mjs'
 import {
   G1_AMENDMENTS, g1RefreshInputPaths, prepareG1PlanRefresh,
@@ -87,7 +87,7 @@ describe('G0 toolchain fingerprints', () => {
     expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v8.json'))))
       .toBe('8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62')
     expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v9.json'))))
-      .toBe('e7476156b67f5e0b00ee98ff5f60740d64e17796067a2d018f9c7f63c856b60c')
+      .toBe('e701eca5a6a2ce9ba4bd408943a2ce5c0efa1617c8b422f5bbdaae71e4ec7251')
     expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v10.json'))))
       .toBe('cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3')
     expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v11.json'))))
@@ -120,7 +120,7 @@ describe('G0/G1 re-freeze generator', () => {
       ...refreshBinaryInputPaths(repositoryRoot),
     ]) {
       mkdirSync(dirname(resolve(root, path)), { recursive: true })
-      copyFileSync(resolve(repositoryRoot, path), resolve(root, path))
+      copyFileSync(resolve(repositoryRoot, path), resolve(root, path), filesystemConstants.COPYFILE_FICLONE)
     }
     return root
   }
@@ -174,6 +174,16 @@ describe('G0/G1 re-freeze generator', () => {
     expect(existsSync(resolve(root, 'output/qualification'))).toBe(false)
   })
 
+  it('records removed bindings by identity without shifting the remaining artifacts', () => {
+    const before=[{id:'left',sha256:'left-old'},{id:'removed',sha256:'removed-old'},{id:'right',sha256:{value:'right-old'}}]
+    const after=[{id:'right',sha256:{value:'right-new'}},{id:'left',sha256:'left-old'},{id:'added',sha256:'added-new'}]
+    expect(artifactBindingChanges('g0-artifact',before,after)).toEqual([
+      {kind:'g0-artifact',id:'removed',previousSha256:'removed-old',currentSha256:null},
+      {kind:'g0-artifact',id:'right',previousSha256:'right-old',currentSha256:'right-new'},
+      {kind:'g0-artifact',id:'added',previousSha256:null,currentSha256:'added-new'},
+    ])
+  })
+
   it('publishes exclusively, preserves every archive, and never carries forward results', () => {
     const root = fixture()
     const prepared = prepare(root)
@@ -192,9 +202,11 @@ describe('G0/G1 re-freeze generator', () => {
     const root = fixture()
     const prepared = prepare(root)
     const candidatePath = resolve(root, 'src/services/openscadSemanticLowerer.ts')
-    writeFileSync(candidatePath, `${readFileSync(candidatePath, 'utf8')}\n`)
+    const originalCandidate = readFileSync(candidatePath)
+    writeFileSync(candidatePath, `${originalCandidate.toString('utf8')}\n`)
     expect(() => publishQualificationRefresh(prepared)).toThrow(/changed during re-freeze/u)
     for (const path of Object.values(REFRESH_OUTPUTS)) expect(existsSync(resolve(root, path))).toBe(false)
+    writeFileSync(candidatePath, originalCandidate)
     const refreshed = prepare(root)
     const existing = resolve(root, REFRESH_OUTPUTS.plan)
     writeFileSync(existing, 'existing destination must survive\n')
@@ -231,6 +243,7 @@ describe('G0/G1 re-freeze generator', () => {
 
   it('historical v24 executors retain run-index admission without executing or creating evidence', () => {
     const root = fixture()
+    publishQualificationRefresh(prepare(root))
     const historicalStatus = JSON.parse(readFileSync(resolve(repositoryRoot,
       'docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json'), 'utf8')) as {
         inputSnapshot: { files: { path: string; sha256: string }[] }
@@ -246,7 +259,6 @@ describe('G0/G1 re-freeze generator', () => {
         .toBe(historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256)
       writeFileSync(resolve(root, path), historical)
     }
-    publishQualificationRefresh(prepare(root))
     // Removing v23 proves the archived executors select v24 directly.
     rmSync(resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v23.json'))
     for (const path of REFRESH_EXECUTORS.slice(-2)) {
@@ -270,7 +282,7 @@ describe('historical G1 v20-only re-freeze generator', () => {
     temporaryRoots.push(root)
     for (const path of g1RefreshInputPaths(20, repositoryRoot)) {
       mkdirSync(dirname(resolve(root, path)), { recursive: true })
-      copyFileSync(resolve(repositoryRoot, path), resolve(root, path))
+      copyFileSync(resolve(repositoryRoot, path), resolve(root, path), filesystemConstants.COPYFILE_FICLONE)
     }
     return root
   }

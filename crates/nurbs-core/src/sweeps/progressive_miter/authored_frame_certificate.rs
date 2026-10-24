@@ -14,7 +14,7 @@ pub use fixed_normal_path::{certify_fixed_normal_path,certify_fixed_normal_path_
 pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control_values,certify_fixed_path,certify_fixed_path_control_trajectories};
 pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory,certify_fixed_relative_values,certify_fixed_relative_trajectories};
 pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
-pub(crate) use trajectory::{translated_constant_values,translated_constant_jets};
+pub(crate) use trajectory::{translated_constant_values,translated_constant_jets,control_values_with_fit};
 pub(crate) use trajectory::{translated_constant_values_with_source,translated_constant_jets_with_source};
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;

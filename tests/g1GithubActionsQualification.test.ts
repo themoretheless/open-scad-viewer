@@ -13,7 +13,7 @@ const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
 ), 'utf8'))
 const githubFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-github-actions-v36.json',
+  root, 'docs/qualification/environment-freeze/g1-github-actions-v38.json',
 ), 'utf8'))
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -231,6 +231,28 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     const result=aggregate(artifacts,'observed-image')
     expect(result.process.status,result.process.stderr).toBe(0)
     expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+  })
+
+  it.each(['observed', 'unobserved'])('checks %s Windows rollout image without loosening host admission', kind => {
+    const {artifacts}=fixture()
+    const row=plan.matrix.find((item:any)=>item.executionEnvironmentIds.includes('windows-node20'))
+    const target=resolve(artifacts,`${row.id}--windows-node20--run-1`)
+    const fragment=JSON.parse(readFileSync(resolve(target,'fragment.json'),'utf8'))
+    const preflight=JSON.parse(readFileSync(resolve(target,'preflight.json'),'utf8'))
+    const variant=githubFreeze.runnerImages['windows-2025'].observedVariants[0]
+    for(const value of [fragment,preflight]) {
+      value.host.runnerImage=variant.imageOS
+      value.host.runnerImageVersion=kind==='observed'?variant.imageVersion:'19000101.0.0'
+    }
+    writeEvidence(target,fragment,preflight)
+    const result=aggregate(artifacts,`windows-${kind}`)
+    if(kind==='observed') {
+      expect(result.process.status,result.process.stderr).toBe(0)
+      expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+    } else {
+      expect(result.process.status).toBe(1)
+      expect(JSON.parse(readFileSync(result.output,'utf8')).errors.join('\n')).toMatch(/hosted runner identity mismatch/u)
+    }
   })
 
   it.each(['missing', 'duplicate', 'environment mismatch', 'discovery-only'])('rejects %s artifacts', kind => {

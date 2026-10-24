@@ -1,8 +1,7 @@
 use super::*;
 
-/// Stage-2 shape descriptor: geometry modules contribute accounted stubs
-/// (real kernels arrive with migration stage 3); counts and dimensions follow
-/// the TS evaluator's shape-list semantics exactly.
+/// Accounted shape identity with an optional recorded solid-program node.
+/// Diagnostics can run without constructing or executing geometric expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapeDescriptor {
     pub geometry: Option<usize>,
@@ -124,7 +123,7 @@ pub fn truthy(value: &Value) -> bool {
     }
 }
 
-const MAX_UINT32: f64 = 0xffff_ffffu64 as f64;
+pub(super) const MAX_UINT32: f64 = 0xffff_ffffu64 as f64;
 
 /// IEEE-754 `nextUp` port (TS DataView bit manipulation).
 pub fn next_up(value: f64) -> f64 {
@@ -274,7 +273,7 @@ pub(super) fn token(operator: TT) -> &'static str {
 
 /// Host callbacks required by the pure value operators (warnings and the
 /// vector-allocation budget accounting of the evaluator).
-type RegisterArray<'h, 'a> =
+pub(super) type RegisterArray<'h, 'a> =
     Box<dyn FnMut(Vec<Value<'a>>, &str) -> EvalResult<Vec<Value<'a>>> + 'h>;
 
 pub struct SemanticsContext<'h, 'a> {
@@ -367,14 +366,14 @@ pub fn unary<'a>(
     }
 }
 
-fn numeric_vector<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>> {
+pub(super) fn numeric_vector<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>> {
     match value {
         Value::Vector(items) if items.iter().all(|i| matches!(i, Value::Number(_))) => Some(items),
         _ => None,
     }
 }
 
-fn numeric_matrix<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>> {
+pub(super) fn numeric_matrix<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>> {
     match value {
         Value::Vector(rows)
             if !rows.is_empty() && rows.iter().all(|r| numeric_vector(r).is_some()) =>
@@ -385,7 +384,7 @@ fn numeric_matrix<'v, 'a>(value: &'v Value<'a>) -> Option<&'v Rc<Vec<Value<'a>>>
     }
 }
 
-fn scale_vector<'a>(
+pub(super) fn scale_vector<'a>(
     value: &[Value<'a>],
     scalar: f64,
     ctx: &mut SemanticsContext<'_, 'a>,
@@ -404,7 +403,7 @@ fn scale_vector<'a>(
     Ok(out)
 }
 
-fn dot(left: &[Value], right: &[Value]) -> Option<f64> {
+pub(super) fn dot(left: &[Value], right: &[Value]) -> Option<f64> {
     if left.len() != right.len() {
         return None;
     }
@@ -415,7 +414,7 @@ fn dot(left: &[Value], right: &[Value]) -> Option<f64> {
     Some(result)
 }
 
-fn matrix_columns_rows<'a>(matrix: &[Value<'a>]) -> Vec<Vec<f64>> {
+pub(super) fn matrix_columns_rows<'a>(matrix: &[Value<'a>]) -> Vec<Vec<f64>> {
     matrix
         .iter()
         .map(|row| {
