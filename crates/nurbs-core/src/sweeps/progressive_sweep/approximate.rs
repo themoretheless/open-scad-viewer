@@ -163,11 +163,11 @@ impl MultiSweep<'_> {
         if let Some(level) = key.as_ref().and_then(|k| original_level_cache::get(k)) {
             return Ok(level);
         }
-        let level = self.preview_uncached(count)?;
+        let level = self.preview_uncached(count, cell_limit, product_limit)?;
         if let Some(key) = key { original_level_cache::put(key, &level); }
         Ok(level)
     }
-    pub(super) fn preview_uncached(&self, count: usize) -> Result<MultiLevel> {
+    pub(super) fn preview_uncached(&self, count: usize, cell_limit: usize, product_limit: usize) -> Result<MultiLevel> {
         let mut patches = Vec::new();
         let mut ranges = Vec::new();
         let mut report: Option<LevelReport> = None;

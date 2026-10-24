@@ -159,7 +159,7 @@ fn prepare_closed_source(
             return Err(fail("Original material trims require UV controls"));
         }
     }
-    let profiles = sweep.source_profiles().collect::<Vec<_>>();
+    let profiles = sweep.source_profiles();
     if loop_sizes.is_empty()
         || loop_sizes.len() > 16
         || loop_sizes.contains(&0)

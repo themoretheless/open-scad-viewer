@@ -170,7 +170,6 @@ pub fn certify_original_rmf_transport(
         max_exact_work,
         closed,
         None,
-        false,
     )
 }
 
@@ -191,7 +190,6 @@ pub(crate) fn certify_original_rmf_transport_shared(
         max_work as u64,
         closed,
         Some(max_work),
-        false,
     )
 }
 

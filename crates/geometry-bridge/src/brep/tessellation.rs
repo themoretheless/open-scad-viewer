@@ -653,9 +653,6 @@ fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
         mesh.triangles.extend(replacement);
     }
 }
-pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
-    nurbs_with_freeform_note(model, segments, FreeformTessNote::SampledUncertified)
-}
 
 fn rectangular_parallel_edges(model: &brep_core::Model, face: &brep_core::Face)
     -> Result<Vec<[usize;2]>> {

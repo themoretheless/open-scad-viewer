@@ -477,7 +477,11 @@ mod tests {
         for id in ids {
             assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));
             assert!(step_sweep_volume(json!({"session":id,"maxUnits":1})).is_err());
-
+        }
+        let id=field::<String>(&begin_sweep_volume(request).unwrap(),"session").unwrap();
+        assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));
+    }
+    #[test]
     fn sphere_face_proofs_include_projective_basis_and_complete_work_counts() {
         let model = brep_core::analytic::sphere(3.).unwrap();
         let before = value_codec::to_value(&model).unwrap();

@@ -43,6 +43,9 @@ pub fn transport_fragment(
                     role: *role,
                 }
             }
+            // Carrier endpoints belong to a shared edge of the original chart;
+            // inverse-shear replay does not re-own that edge. Decline.
+            Endpoint::Carrier { .. } => return Ok(out),
         };
         endpoints.push(endpoint);
     }

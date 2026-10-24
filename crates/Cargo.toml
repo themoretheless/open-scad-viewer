@@ -67,14 +67,6 @@ rust-version = "1.98"
 publish = false
 
 [workspace.dependencies]
-nurbs-intersect = { version = "0.1.0", path = "nurbs-intersect", default-features = false }
-brep-intersect = { version = "0.1.0", path = "brep-intersect", default-features = false }
-cad-step = { version = "0.1.0", path = "cad-step" }
-bridge-codec = { version = "0.1.0", path = "bridge-codec" }
-bridge-cam = { version = "0.1.0", path = "bridge-cam" }
-bridge-analysis = { version = "0.1.0", path = "bridge-analysis" }
-bridge-svg = { version = "0.1.0", path = "bridge-svg" }
-math-compute = { package = "osv-math-compute", version = "0.1.0", path = "math-compute" }
 laser-core = { version = "0.1.0", path = "laser-core" }
 brep-core = { version = "0.1.0", path = "brep-core", default-features = false }
 cad-predicates = { version = "0.1.0", path = "cad-predicates", default-features = false }

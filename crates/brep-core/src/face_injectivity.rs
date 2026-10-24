@@ -539,9 +539,10 @@ impl Inspector {
             .is_some_and(|r| r.reason == "collapsed-boundary-requires-quotient-proof")
             && self.max_spans - self.report.spans >= 256
         {
-            if let Some((end, edge, vertex)) = declared_pole(self.model.as_ref(), face) {
+            if let Some((axis, end, edge, vertex)) = declared_pole_chart(self.model.as_ref(), face) {
+                let canonical = canonical_pole_surface(&f.surface,axis);
                 let proof = surface_quotient_injectivity::certify_source_frame(
-                    &f.surface,
+                    &canonical,
                     end,
                     16,
                     self.max_spans - self.report.spans,
@@ -549,11 +550,12 @@ impl Inspector {
                 self.report.spans += proof.cells;
                 let polar = if !proof.proven && self.max_spans-self.report.spans >= 64 {
                     let r=surface_quotient_injectivity::certify_polar_source_frame(
-                        &f.surface,end,8,self.max_spans-self.report.spans)?;
+                        &canonical,end,8,self.max_spans-self.report.spans)?;
                     self.report.spans+=r.cells;
                     Some(r)
                 } else { None };
                 Some(Quotient {
+                    collapsed_axis: axis,
                     collapsed_end: end,
                     pole_edge: edge,
                     pole_vertex: vertex,

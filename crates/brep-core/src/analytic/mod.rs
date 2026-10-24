@@ -25,9 +25,15 @@ mod rational_loft_legacy;
 mod cylinder;
 mod revolve_region_angle;
 mod sphere_poles;
+mod sphere_regular;
+mod parametric_edges;
+mod fibered_body;
 pub use cylinder::*;
 pub use sphere_poles::{sphere_exact, sphere_pole_charts};
 pub use revolve_region_angle::*;
+pub use fibered_body::{FiberedBodyLimits,FiberedBodyReport,FiberedBody,FiberedBodyAttempt,construct_fibered_body,verify_fibered_body};
+pub use rational_loft::{AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls};
+pub(crate) use rational_loft::{periodic_material_section_loft, periodic_material_loft_surfaces, retained_section_partition};
 
 pub use rational_loft::{progressive_guided_profile_body,progressive_authored_profile_body,progressive_affine_profile_body,progressive_profile_body};
 

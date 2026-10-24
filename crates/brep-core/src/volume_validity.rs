@@ -30,11 +30,6 @@ pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Repor
     let boundary=boundary_embedding::inspect(model,tolerance_uv,limits.boundary)?;
     complete_after_boundary(model,tolerance_uv,limits,boundary)
 }
-/// Generic authored carriers, including nonplanar caps, may request a bounded
-/// linear projection proof. No planar cap specialization is inferred.
-pub fn inspect_with_linear(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize)->Result<Report> {
-    inspect_impl(model,tolerance_uv,limits,max_linear_cells,None,&[])
-}
 /// Joint sweep boundary evidence precedes nesting and material orientation.
 /// Empty cap selection is the closed no-cap case; no artificial caps are inferred.
 pub fn inspect_sweep(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
@@ -44,6 +39,25 @@ pub fn inspect_sweep(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cell
 pub fn inspect_sweep_with_projections(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
     caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)),proposals)
+}
+pub fn inspect_sweep_with_projections_and_charts(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
+    caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])
+    ->Result<(Report,crate::sweep_retained_charts::Report)> {
+    let volume=inspect_sweep_with_projections(model,tolerance_uv,limits,max_linear_cells,caps,cap_limits,proposals)?;
+    let charts=crate::sweep_retained_charts::inspect_with_face_proofs(model,caps,max_linear_cells,proposals,&volume.boundary.intersections.faces)?;
+    Ok((volume,charts))
+}
+
+fn validate_limits(limits: Limits)->Result<()> {
+    if !(1..=1000000).contains(&limits.orientation_cells)
+        || !(1..=8000000).contains(&limits.orientation_domain_cells)
+        || !(1..=100000).contains(&limits.orientation_spans)
+        || !(1..=100000).contains(&limits.nesting_pairs)
+        || !(2..=1000000).contains(&limits.nesting_cells)
+        || !(2..=8000000).contains(&limits.nesting_domain_cells) {
+        return Err(Error::new("BREP_INVALID_INPUT", "Volume audit requires bounded positive stage budgets"));
+    }
+    Ok(())
 }
 /// Generic authored carriers, including nonplanar caps, may request a bounded
 /// linear projection proof. No planar cap specialization is inferred.

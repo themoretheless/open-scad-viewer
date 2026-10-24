@@ -92,7 +92,7 @@ pub fn construct(
             }
         }
     }
-    let profiles = sweep.source_profiles().collect::<Vec<_>>();
+    let profiles = sweep.source_profiles();
     if loop_sizes.is_empty()
         || loop_sizes.len() > 16
         || loop_sizes.contains(&0)

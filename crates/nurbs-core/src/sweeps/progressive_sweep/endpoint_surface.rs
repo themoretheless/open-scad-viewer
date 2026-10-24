@@ -17,10 +17,6 @@ pub struct EndpointSurfaceReport {
     pub reason: Option<&'static str>,
 }
 impl MultiSweep<'_> {
-    /// Read-only source ownership for exact cap/contour binding in the BRep owner.
-    pub fn source_profiles(&self) -> impl Iterator<Item = &Curve> {
-        self.sweeps.iter().map(|s| s.profile)
-    }
     pub fn source_is_closed(&self) -> Result<bool> {
         path_is_closed(self.sweeps[0].path)
     }

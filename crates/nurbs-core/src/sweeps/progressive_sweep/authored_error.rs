@@ -31,7 +31,9 @@ pub struct InitialCoordinatesReport {
 
 
 
-pub(super) use transport::arc_chord::{GlobalChord,global as shared_global_chord};
+#[path = "authored_error/transport/arc_chord.rs"]
+mod arc_chord;
+pub(super) use arc_chord::{GlobalChord,global as shared_global_chord};
 
 #[derive(Clone, Debug)]
 pub struct SectionInterpolationReport {
@@ -68,6 +70,7 @@ fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usiz
         status: Status::Unresolved,
         cells: 0,
         error_upper: None,
+        refinement_error_upper: None,
         endpoint_displacement_upper: None,
         cap_endpoint_displacement_upper: None,
         reason: Some("mode-not-authored"),
@@ -181,7 +184,7 @@ fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_ce
 }
 fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<SectionInterpolationReport>{
     let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,
-        endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
+        refinement_error_upper:None,endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
     if shared_chord.is_some_and(|c|c.budget_stopped) {out.reason=Some("arc-chord-work-limit");return Ok(out);}
     let path=sweep.path;
     let domain=path.domain();
@@ -1021,7 +1024,7 @@ pub(super) use initial_coordinates_owned::fixed_normal_initial_coordinates;
 use initial_coordinates_owned::seed_initial_coordinates;
 use initial_coordinates_owned::seed_initial_coordinates_as;
 use initial_coordinates_owned::principal_initial_coordinates;
-use initial_coordinates_owned::coordinates_in_basis;
+pub(super) use initial_coordinates_owned::coordinates_in_basis;
 pub(super) use initial_coordinates_owned::guided_initial_coordinates;
 pub(super) use initial_coordinates_owned::control_trajectory;
 
