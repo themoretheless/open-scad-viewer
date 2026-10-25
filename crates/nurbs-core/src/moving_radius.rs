@@ -2,6 +2,49 @@
 //! All original knot cells participate; no fitted surface or sample admission.
 use crate::{check, curve::Curve, interval_eval::Interval as I, surface::Surface, Result};
 type Poly = Vec<Vec<I>>;
+/// Conservative radius relation for caller-owned native expression enclosures.
+/// This is a local bound, never a Surface or whole-domain certificate.
+pub struct ExpressionBound {
+    pub squared_residual:[f64;2],
+    pub error_lower:f64,
+    pub error_upper:f64,
+}
+pub(crate) fn refine_expression_bound(mut direct:ExpressionBound,residual:[f64;2],radius:[f64;2])->Result<ExpressionBound> {
+    let residual=I::new(direct.squared_residual[0].max(residual[0]),direct.squared_residual[1].min(residual[1]))?;
+    let maximum=residual.lo.abs().max(residual.hi.abs());
+    let mut upper=maximum.sqrt().next_up();
+    if radius[0]>0. {upper=upper.min(I::point(maximum).div(I::point(radius[0]))?.hi);}
+    let minimum=if residual.lo>0. {residual.lo}else if residual.hi<0. {-residual.hi}else{0.};
+    // |S-C| <= r_upper + direct error, hence this bounds |S-C|+r.
+    let denominator=I::point(2.).mul(I::point(radius[1]))?.add(I::point(direct.error_upper))?.hi;
+    if minimum>0. && denominator>0. {
+        direct.error_lower=direct.error_lower.max(I::point(minimum).div(I::point(denominator))?.lo.max(0.));
+    }
+    direct.error_upper=direct.error_upper.min(upper);
+    direct.squared_residual=[residual.lo,residual.hi];Ok(direct)
+}
+pub fn bound_expression(position:[[f64;2];3],centers:[[f64;2];3],radius:[f64;2])
+->Result<ExpressionBound> {
+    check(position.iter().chain(centers.iter()).chain(std::iter::once(&radius))
+        .all(|r|r.iter().all(|x|x.is_finite()) && r[0]<=r[1]) && radius[0]>=0.,
+        "Finite expression and center enclosures with nonnegative radius")?;
+    let mut distance_squared=I::point(0.);
+    for axis in 0..3 {
+        let delta=I::new(position[axis][0],position[axis][1])?
+            .sub(I::new(centers[axis][0],centers[axis][1])?)?;
+        let square=delta.mul(delta)?;
+        distance_squared=distance_squared.add(I::new(square.lo.max(0.),square.hi)?)?;
+    }
+    let r=I::new(radius[0],radius[1])?;
+    let residual=distance_squared.sub(r.mul(r)?)?;
+    let maximum=residual.lo.abs().max(residual.hi.abs());
+    let mut error=maximum.sqrt().next_up();
+    if radius[0]>0. {error=error.min(I::point(maximum).div(I::point(radius[0]))?.hi);}
+    let minimum=if residual.lo>0. {residual.lo}else if residual.hi<0. {-residual.hi}else{0.};
+    let denominator=I::point(distance_squared.hi.sqrt().next_up()).add(I::point(radius[1]))?.hi;
+    let lower=if minimum>0. && denominator>0. {I::point(minimum).div(I::point(denominator))?.lo.max(0.)}else{0.};
+    Ok(ExpressionBound{squared_residual:[residual.lo,residual.hi],error_lower:lower,error_upper:error})
+}
 pub struct Certificate {
     surface: Surface,
     centers: Curve,
@@ -124,13 +167,33 @@ fn cell(
     }
     let centers = curve_net(c, cs, uv[0], origin)?;
     let radius = curve_net(r, rs, uv[0], &[0., 0.])?;
+    let rlo = r.control_points.iter().map(|p|p[0]).fold(f64::INFINITY,f64::min);
+    bound_coefficient_nets(&net,&centers,&radius,0,rlo,work,max,reason)
+}
+/// Correlated homogeneous polynomial residual. Caller-owned interval nets
+/// carry no geometry admission. Both law nets vary along the selected axis.
+pub(crate) fn bound_coefficient_nets(
+    net:&[Vec<[I;4]>],centers:&[Vec<I>],radius:&[Vec<I>],axis:usize,rlo:f64,
+    work:&mut u64,max:u64,reason:&mut &'static str,
+)->Result<Option<([f64;2],f64)>> {
+    check(axis<2 && !net.is_empty() && !net[0].is_empty()
+        && net.iter().all(|r|r.len()==net[0].len()) && !centers.is_empty() && !radius.is_empty()
+        && centers.iter().all(|h|h.len()==4) && radius.iter().all(|h|h.len()==3)
+        && rlo.is_finite() && rlo>=0. && *work<=max,
+        "Match homogeneous radius coefficient nets and work")?;
+    let degrees=[net.len()-1,net[0].len()-1];
+    if (0..2).any(|a|2*(degrees[a]+if a==axis {centers.len()+radius.len()-2}else{0})>48) {
+        *reason="moving-radius-degree-unproven";return Ok(None);
+    }
     let sp = |k| {
         net.iter()
             .map(|row| row.iter().map(|h| h[k]).collect())
             .collect::<Poly>()
     };
-    let cp = |k| centers.iter().map(|h| vec![h[k]]).collect::<Poly>();
-    let rp = |k| radius.iter().map(|h| vec![h[k]]).collect::<Poly>();
+    let cp = |k| if axis==0 {centers.iter().map(|h|vec![h[k]]).collect::<Poly>()}
+        else {vec![centers.iter().map(|h|h[k]).collect()]};
+    let rp = |k| if axis==0 {radius.iter().map(|h|vec![h[k]]).collect::<Poly>()}
+        else {vec![radius.iter().map(|h|h[k]).collect()]};
     macro_rules! product {
         ($a:expr,$b:expr) => {
             match mul(&$a, &$b, work, max)? {
@@ -171,11 +234,6 @@ fn cell(
         }
     }
     let max_residual = bounds[0].abs().max(bounds[1].abs());
-    let rlo = r
-        .control_points
-        .iter()
-        .map(|p| p[0])
-        .fold(f64::INFINITY, f64::min);
     let mut error = max_residual.sqrt().next_up();
     if rlo > 0. {
         error = error.min(I::point(max_residual).div(I::point(rlo))?.hi);
@@ -373,6 +431,23 @@ pub(crate) fn radial_box(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn expression_radius_encloses_independent_distances_and_zero_law() {
+        let bound=super::bound_expression([[3.,3.],[4.,4.],[0.,0.]],[[0.;2];3],[5.,5.]).unwrap();
+        assert!(bound.squared_residual[0]<=0. && bound.squared_residual[1]>=0.);
+        assert!(bound.error_upper<1e-10);
+        let box_bound=super::bound_expression([[-3.,3.],[4.,4.],[0.,0.]],[[0.;2];3],[4.,5.]).unwrap();
+        for x in [-3_f64,-1.,0.,1.,3.] {for radius in [4.,4.5,5.] {
+            let error=((x*x+16.).sqrt()-radius).abs();
+            assert!(error<=box_bound.error_upper);
+        }}
+        let zero=super::bound_expression([[3.,3.],[4.,4.],[0.,0.]],[[0.;2];3],[0.,0.]).unwrap();
+        assert!(zero.error_upper>=5.);
+        assert!(zero.error_lower<=5. && zero.error_lower>4.9);
+        let wrong=super::bound_expression([[3.,3.],[4.,4.],[0.,0.]],[[0.;2];3],[6.,6.]).unwrap();
+        assert!(wrong.error_lower<=1. && wrong.error_lower>0.9 && wrong.error_upper>=1.);
+        assert!(super::bound_expression([[0.;2];3],[[0.;2];3],[-1.,0.]).is_err());
+    }
     use super::*;
     fn tube() -> (Surface, Curve, Curve) {
         let weight = 0.5_f64.sqrt();

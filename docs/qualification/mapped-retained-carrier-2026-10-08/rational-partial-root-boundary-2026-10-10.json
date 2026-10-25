@@ -1,0 +1,23 @@
+{
+  "scope": "native quadratic polynomial and rational partial-map fixtures only",
+  "sourceSha256": "c83298dab201c37e0f15d4fdc3c14aeec2fcbb16ad7c6fd938223693d316414b",
+  "mappedTests": 6,
+  "weightsTested": [
+    [
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      0.5,
+      1
+    ]
+  ],
+  "maxDeviationMm": 0.001,
+  "fixedAndMixedRootEnds": true,
+  "adaptiveSegmentsMoreThanOne": true,
+  "depthZeroRetainsWholeSegment": true,
+  "generalNurbsQualified": false,
+  "closedSolidQualified": false
+}

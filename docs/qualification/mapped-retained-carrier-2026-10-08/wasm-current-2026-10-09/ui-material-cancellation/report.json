@@ -1,0 +1,46 @@
+{
+  "artifactSha256": "b19235bbd01860c519c18054e462e229ce31caf3e5959ceb867c909fdec280aa",
+  "origin": "http://127.0.0.1:5196/",
+  "driver": "CUA in-app browser",
+  "cases": [
+    {
+      "case": "native cube primitive",
+      "intervalMm": [
+        20,
+        20
+      ],
+      "facePairs": [
+        21,
+        21
+      ],
+      "converged": true
+    },
+    {
+      "case": "native sphere primitive",
+      "facePairs": [
+        36,
+        36
+      ],
+      "converged": false,
+      "reason": "volume-unproven",
+      "uncheckedFaces": 8
+    },
+    {
+      "case": "cancel extended sphere search",
+      "resultCleared": true,
+      "pendingCleared": true
+    },
+    {
+      "case": "retry after cancel",
+      "completed": true,
+      "converged": false,
+      "reason": "volume-unproven"
+    },
+    {
+      "case": "Escape closes panel",
+      "remainingPanelCount": 0
+    }
+  ],
+  "consoleErrors": [],
+  "scope": "Current ordinary original-face wholeWall UI. General corrected expression shells and full P0 command matrix remain unqualified."
+}

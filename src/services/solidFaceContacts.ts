@@ -1,3 +1,4 @@
+import {validPolarProofEvidence,sameFrame,type PolarProofEvidence} from './polarProofProtocol'
 import type {NurbsBrep} from './geometry/brep'
 import type {NurbsProfileParameterization} from './sweep/certificates/nurbsSweepAudit'
 import {callGeometryRust} from './geometry/kernel'
@@ -6,11 +7,16 @@ type UV=[Interval,Interval]
 type Cell=[UV,UV]
 export interface FaceContactLimits {maxPairs:number;maxCells:number;maxDomainCells:number;cellsPerPair:number;domainCellsPerPair:number;maxBoxes:number}
 export interface FaceContactWitness {firstUv:UV;secondUv:UV;pointIntervalMm:[Interval,Interval,Interval];contractionUpper:number}
-export type SharedBoundaryCertificate={kind:'planar-face';edge:number;planarFace:number;sidedFace:number}|{kind:'opposite-sides';edge:number;faces:[number,number]}|{kind:'exact-hull';faces:[number,number];edges:number[];vertex:number|null;contactEnclosure:[Interval,Interval,Interval];joinedProof:JoinedContactProof|null}|JoinedSourceChartProof|SourceVolumeBoundary
+export type SharedBoundaryCertificate={kind:'planar-face';edge:number;planarFace:number;sidedFace:number}|{kind:'opposite-sides';edge:number;faces:[number,number]}|{kind:'exact-hull';faces:[number,number];edges:number[];vertex:number|null;contactEnclosure:[Interval,Interval,Interval];joinedProof:JoinedContactProof|null;polarJoin?:PolarProofEvidence|null;sourceJoin?:SourceJoinedContactProof|null}|JoinedSourceChartProof|SourceVolumeBoundary
 export interface JoinedSourceChartProof {kind:'joined-source-charts';certified:true;faces:[number,number];edge:number;contactEnclosure:[Interval,Interval,Interval];projection:number[][];rowWeights:[number,number];profileParameterization:NurbsProfileParameterization|null;cells:number}
 export interface SourceVolumeBoundary extends SourceVolumeSeparation {kind:'source-volume-boundary';edge:number}
 export interface SourceVolumeSeparation {certified:true;faces:[number,number];sourceFaces:number[];projection:number[][];cells:number;principalMinorLower:[number,number,number]}
 export interface JoinedContactProof {blendFace:number;wallFace:number;collapsedEnd:number;projection:number[][];proven:boolean;reason:string;cells:number;weightedBounds:number[]|null;dominanceMarginLower:number|null}
+export interface SourceJoinedContactProof extends Omit<JoinedContactProof,'projection'> {sourceFrame:number[][]}
+const joinedProjectionFrames=[[[0,1,0],[1,0,-1]],[[1,0,0],[0,1,-1]],
+ ...[0,1,2].flatMap(axis=>[-1,1].flatMap(sign=>[-1,1].flatMap(a=>[-1,1].map(b=>{
+  const first=[0,0,0],second=[0,0,0],other=[0,1,2].filter(k=>k!==axis);first[axis]=sign;second[other[0]]=a;second[other[1]]=b;return [first,second]
+ }))))]
 export interface FaceContactPair {faces:[number,number];status:'shared-boundary'|'pair-disjoint'|'interior-contact'|'pair-unresolved'|'periodic-trim-not-supported';sharedBoundary:SharedBoundaryCertificate|null;volumeSeparation?:SourceVolumeSeparation|null;witness:FaceContactWitness|null;cells:number;hullCells?:number;sourceChartCells?:number;domainCells:number;unresolvedBoxes:Cell[];unresolvedBoxCount:number}
 export interface FaceContacts {
  method:'interval-trimmed-face-contacts';scope:'distinct-face-pairs';solidGeometryStatus:'not-certified'
@@ -48,9 +54,18 @@ export function validFaceContacts(e:ReturnType<typeof faceContactExpectation>,va
     if(!exactBoundaryAdmitted||!Array.isArray(c.faces)||c.faces.length!==2||c.faces[0]!==a||c.faces[1]!==b||!Array.isArray(c.edges)||new Set(c.edges).size!==c.edges.length||!c.edges.every(edge=>integer(edge)&&e.domains[a].edges.includes(edge)&&e.domains[b].edges.includes(edge))||!Array.isArray(c.contactEnclosure)||c.contactEnclosure.length!==3||!c.contactEnclosure.every(interval))return false
     if(c.vertex!==null&&(!integer(c.vertex)||!e.domains[a].vertices.includes(c.vertex)||!e.domains[b].vertices.includes(c.vertex)))return false
     if(c.edges.length===0&&c.vertex===null)return false
+    if([c.joinedProof,c.polarJoin,c.sourceJoin].filter(v=>v!=null).length>1)return false
+    if(c.polarJoin!=null){
+     const j=c.polarJoin
+     if(c.edges.length===0||!validPolarProofEvidence(j)||![-1,1].some(z=>sameFrame(j.coordinates,[[1,0,0,0],[0,1,0,0],[0,0,z,0]])))return false
+    }
+    if(c.sourceJoin!=null){
+     const j=c.sourceJoin
+     if(c.edges.length===0||!p.faces.includes(j.blendFace)||!p.faces.includes(j.wallFace)||j.blendFace===j.wallFace||![0,1].includes(j.collapsedEnd)||j.proven!==true||j.reason!=='global-joined-weighted-dominance'||j.cells!==512||!Array.isArray(j.sourceFrame)||j.sourceFrame.length!==4||!j.sourceFrame.every(r=>Array.isArray(r)&&r.length===3&&r.every(Number.isFinite))||!Array.isArray(j.weightedBounds)||j.weightedBounds.length!==4||!j.weightedBounds.every(Number.isFinite)||j.weightedBounds[0]<=0||j.weightedBounds[1]<=0||j.weightedBounds[2]<0||j.weightedBounds[3]<0||typeof j.dominanceMarginLower!=='number'||!Number.isFinite(j.dominanceMarginLower)||j.dominanceMarginLower<=0||j.dominanceMarginLower>j.weightedBounds[0]*j.weightedBounds[1]-j.weightedBounds[2]*j.weightedBounds[3])return false
+    }
     if(c.joinedProof!==null){
      const j=c.joinedProof
-     if(!j||c.edges.length===0||!p.faces.includes(j.blendFace)||!p.faces.includes(j.wallFace)||j.blendFace===j.wallFace||![0,1].includes(j.collapsedEnd)||j.proven!==true||j.reason!=='global-joined-weighted-dominance'||j.cells!==512||!Array.isArray(j.projection)||j.projection.length!==2||!j.projection.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite))||!Array.isArray(j.weightedBounds)||j.weightedBounds.length!==4||!j.weightedBounds.every(Number.isFinite)||j.weightedBounds[0]<=0||j.weightedBounds[1]<=0||j.weightedBounds[2]<0||j.weightedBounds[3]<0||typeof j.dominanceMarginLower!=='number'||!Number.isFinite(j.dominanceMarginLower)||j.dominanceMarginLower<=0||j.dominanceMarginLower>j.weightedBounds[0]*j.weightedBounds[1]-j.weightedBounds[2]*j.weightedBounds[3]||![[[0,1,0],[1,0,-1]],[[1,0,0],[0,1,-1]]].some(basis=>basis.every((row,i)=>row.every((n,k)=>n===j.projection[i][k]))))return false
+     if(!j||c.edges.length===0||!p.faces.includes(j.blendFace)||!p.faces.includes(j.wallFace)||j.blendFace===j.wallFace||![0,1].includes(j.collapsedEnd)||j.proven!==true||j.reason!=='global-joined-weighted-dominance'||j.cells!==512||!Array.isArray(j.projection)||j.projection.length!==2||!j.projection.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite))||!Array.isArray(j.weightedBounds)||j.weightedBounds.length!==4||!j.weightedBounds.every(Number.isFinite)||j.weightedBounds[0]<=0||j.weightedBounds[1]<=0||j.weightedBounds[2]<0||j.weightedBounds[3]<0||typeof j.dominanceMarginLower!=='number'||!Number.isFinite(j.dominanceMarginLower)||j.dominanceMarginLower<=0||j.dominanceMarginLower>j.weightedBounds[0]*j.weightedBounds[1]-j.weightedBounds[2]*j.weightedBounds[3]||!joinedProjectionFrames.some(basis=>sameFrame(basis,j.projection)))return false
     }
    }else if(!integer(c.edge)||!e.domains[a].edges.includes(c.edge)||!e.domains[b].edges.includes(c.edge))return false
    else if(c.kind==='planar-face'){

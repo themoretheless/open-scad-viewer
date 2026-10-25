@@ -1,0 +1,201 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-affine-physical-tubes-target-20261016/.../wgsl_export
+  |                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-affine-physical-tubes-20261016/crates/nurbs-core)
+warning: unnecessary parentheses around function argument
+   --> nurbs-core/src/numerics/robust_solvers/rrqr.rs:334:38
+    |
+334 |         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+    |                                      ^                 ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+334 -         assert!(approx_eq(norm2(&x), (0.6f64.hypot(1.2)), 1e-9), "{x:?}");
+334 +         assert!(approx_eq(norm2(&x), 0.6f64.hypot(1.2), 1e-9), "{x:?}");
+    |
+
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:31:16
+   |
+31 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:36:16
+   |
+36 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `i`
+   --> nurbs-core/src/numerics/simd_kernels.rs:271:13
+    |
+271 |         for i in 0..interior {
+    |             ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cell`
+   --> nurbs-core/src/distance/subdivision.rs:244:29
+    |
+244 |         fn split(&mut self, cell: ()) -> Result<Split<()>> {
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_cell`
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `du`
+   --> nurbs-core/src/offset/tests/fillet_surfaces.rs:228:10
+    |
+228 |     let (du, dv) = domain(surface);
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_du`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `patch_error_with_length` is never used
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:317:15
+    |
+317 | pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `material` is never used
+  --> nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic/../../../../../tests/support/arc_bishop_source.rs:33:8
+   |
+33 | pub fn material() -> (Vec<Curve>, nurbs::surface::Surface, Vec<Vec<Curve>>) {
+   |        ^^^^^^^^
+
+warning: function `miter_constant_vector_law` is never used
+  --> nurbs-core/src/transport/execute.rs:51:15
+   |
+51 | pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+  --> nurbs-core/src/join/continuity/preparation/tests.rs:29:4
+   |
+29 | fn aligns_degrees_domains_and_knots_without_introducing_C0_seams() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+   |
+   = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 26 warnings (1 duplicate) (run `cargo fix --lib -p nurbs-core --tests` to apply 10 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.81s
+     Running unittests src/lib.rs (/private/tmp/osv-affine-physical-tubes-target-20261016/debug/build/nurbs-core/731c12dedd15e6be/out/nurbs_core-731c12dedd15e6be)
+
+running 6 tests
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_guided_and_contact_retained_bounds_include_copied_seam ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::circular_closed_guided_arc_length_bound_charges_copied_seam_and_shared_budget ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_guided_contact_transport_preserves_tight_budget_and_refinement ... ok
+test sweeps::progressive_sweep::original_smoothness::closed_authored_tests::closed_guided_frame_transport_preserves_scope_and_partial_budget_refusal ... ok
+test sweeps::progressive_sweep::authored_error::regression_tests::closed_guided_arc_length_bound_charges_copied_seam_and_shared_budget ... ok
+test sweeps::progressive_sweep::original_smoothness::closed_authored_tests::closed_guided_frames_own_both_seams_independent_speed_and_joint_cover ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1632 filtered out; finished in 29.61s
+

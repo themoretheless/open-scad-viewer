@@ -1,0 +1,127 @@
+[
+  {
+    "file": "logs/osv-bishop-brep-aag-final.log",
+    "bytes": 13528,
+    "sha256": "871d19360bbc584e6244cbb0d96feda422e9b71fec7c99ab6a92e359b98800cc"
+  },
+  {
+    "file": "logs/osv-bishop-brep-full-final.log",
+    "bytes": 114257,
+    "sha256": "320b78f7b8bcdf6e6d446e794d469c5a79e75d92fa86b8263c9927f10c4996a3"
+  },
+  {
+    "file": "logs/osv-bishop-bridge-full-final.log",
+    "bytes": 43112,
+    "sha256": "06eff1df2591cf9e5bfe8d46626b5f0a39b83da390951c85ce5256d97367c48d"
+  },
+  {
+    "file": "logs/osv-bishop-frame-jets-oracle.log",
+    "bytes": 7558,
+    "sha256": "5438b28a8f2e63acaa0ff3aff367b37125532022caab2a0a408db8713e705555"
+  },
+  {
+    "file": "logs/osv-bishop-json-full-final.log",
+    "bytes": 12808,
+    "sha256": "10023908aa105888b3d24a81a65ee15ecd39e80f8d9dc12aeede0cf127835d57"
+  },
+  {
+    "file": "logs/osv-bishop-nurbs-full-final.log",
+    "bytes": 173087,
+    "sha256": "94890b48fe5aa62f26c7822ea5dbc001296cfe04944682b32e712af2719d558a"
+  },
+  {
+    "file": "logs/osv-bishop-owned-json-protocol.log",
+    "bytes": 13276,
+    "sha256": "a60dec9a007836016106890993fb2721c4114d1f8f8785cd95a704ae699eda48"
+  },
+  {
+    "file": "logs/osv-bishop-owned-source-bodies.log",
+    "bytes": 11473,
+    "sha256": "55781a04f621a3fe50590b44f1ad772595fbbd3fc3ff03c16cf918ede9dd166f"
+  },
+  {
+    "file": "logs/osv-bishop-typed-final.log",
+    "bytes": 14797,
+    "sha256": "53bacdd4f92cc161e729efaa4e5dc0162f4c0f082ce3d35ab4e93c919fb7cf7a"
+  },
+  {
+    "file": "logs/osv-bishop-volume-arc-build.log",
+    "bytes": 9762,
+    "sha256": "d3c6d4bf19d51e22a20324ef1bc9b1f20f5b7787773b479a64151ee0493c5826"
+  },
+  {
+    "file": "logs/osv-bishop-volume-arc-cancelled.log",
+    "bytes": 9231,
+    "sha256": "d44df6537c43000091c9170f2076a699ad2ca90a4ec58b40a142957bcdc07962"
+  },
+  {
+    "file": "logs/osv-bishop-volume-arc-matrix-v1.log",
+    "bytes": 10057,
+    "sha256": "dafd58be4bf911c71ebb2f7cff56146e89b21499f43ea5f36c153c0f2c9a400b"
+  },
+  {
+    "file": "logs/osv-bishop-volume-arc-matrix-v2.log",
+    "bytes": 9149,
+    "sha256": "7b91fc614f4a691a6c6798c63e0f9330a50492e4c91de4bebed4ed2b42290d80"
+  },
+  {
+    "file": "logs/osv-bishop-volume-arc-spatial-v1.log",
+    "bytes": 9173,
+    "sha256": "5ef0141965df6318704178f7593c7daeee8acc0b41ce77262e2df9fcab162205"
+  },
+  {
+    "file": "logs/osv-bishop-volume-arc-tight.log",
+    "bytes": 9232,
+    "sha256": "b630673fe37f08d61838239f39052a88919f66cedc8d3a71229b19570060e68d"
+  },
+  {
+    "file": "logs/osv-bishop-volume-diagnostic-v2.log",
+    "bytes": 18179,
+    "sha256": "a0df5366c4549526d283e77c8f17c78e02beaf61dc96a61b8ec56f298a596ae7"
+  },
+  {
+    "file": "logs/osv-bishop-volume-diagnostic.log",
+    "bytes": 18808,
+    "sha256": "50aa1cad598a07d1118753aa02250d47bddb6961d0fa96fe71dc45727afa88cc"
+  },
+  {
+    "file": "logs/osv-bishop-volume-independent-guides.log",
+    "bytes": 8568,
+    "sha256": "84a36b1880d5473bc0a17a1514b7be2bdd0765ad7e4e0cce9a4feaa6c829aa1d"
+  },
+  {
+    "file": "logs/osv-bishop-volume-integration-v1.log",
+    "bytes": 8524,
+    "sha256": "47e976ca5ca0dbed86ef182cc3a7901a7c928d9ef59fbf4e1577cdaa203b644e"
+  },
+  {
+    "file": "logs/osv-bishop-volume-lookahead-v2.log",
+    "bytes": 8294,
+    "sha256": "214fc373501146432484ca457e91f34367a75822f80cc2f17be2bb0554e8aeb5"
+  },
+  {
+    "file": "logs/osv-bishop-volume-lookahead.log",
+    "bytes": 9876,
+    "sha256": "53b81a888083cda95ab6a3b1de98e70b88a4d6458216541755f6a47e206ea73f"
+  },
+  {
+    "file": "logs/osv-bishop-volume-matrix-final.log",
+    "bytes": 9241,
+    "sha256": "0724ae694e7b6e5971728620516c75c4a26f979a2d0600b97e8fb0fe082b5db2"
+  },
+  {
+    "file": "logs/osv-bishop-volume-spatial-v1.log",
+    "bytes": 9173,
+    "sha256": "6576f7b530ae5ea5c12fd07421404e5b9612fc5da834d3b67e40163c46926d08"
+  },
+  {
+    "file": "logs/osv-bishop-volume-spatial-v2.log",
+    "bytes": 9173,
+    "sha256": "517f71b19c9c0a47332f7e1e2a049284a22ca865570524c6d6d1b45d970c0efb"
+  },
+  {
+    "file": "logs/osv-original-arc-inverse-oracles.log",
+    "bytes": 7660,
+    "sha256": "3d80050faeec19b2012ccbacd0df63434ba07a69160fc04b69324091393ada52"
+  }
+]

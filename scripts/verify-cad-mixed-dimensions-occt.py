@@ -35,16 +35,22 @@ def gauges(name):
     raise ValueError('Unsupported acceptance specimen: ' + name)
 
 
-def main(directory, service=False):
+def main(directory, service=False, current_history=False):
+    if service and current_history:
+        raise ValueError("Choose service or archived-history acceptance")
     manifest = json.loads((directory / 'manifest.json').read_text())
     marker = '-mixed20-' if service else '-ui20-'
     expected_names = {name + marker + str(cycle) for name in ['bracket', 'flange', 'enclosure'] for cycle in range(2)}
-    if len(manifest['parts']) != 6 or {part['name'] for part in manifest['parts']} != expected_names:
+    if current_history:
+        marker = '-current-'
+        expected_names = {f'{interaction}-{name}{marker}{cycle}' for interaction in ['mouse', 'keyboard']
+                          for name in ['bracket', 'flange', 'enclosure'] for cycle in range(2)}
+    if len(manifest['parts']) != len(expected_names) or {part['name'] for part in manifest['parts']} != expected_names:
         raise ValueError('Expected all three declared specimens and both STEP cycles')
     results = []
     for part in manifest['parts']:
         if marker not in part['name']:
-            raise ValueError('Expected the actual UI 20-edit exports')
+            raise ValueError('Expected the declared STEP cycle names')
         file = directory / part['file']
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
         if digest != part['sha256']:
@@ -54,7 +60,10 @@ def main(directory, service=False):
             raise ValueError('Independent STEP import failed')
         shape = reader.OneShape()
         rows = []
-        for label, origin, direction, expected in gauges(part['name'].split(marker)[0]):
+        specimen = part['name'].split(marker)[0]
+        if current_history:
+            specimen = specimen.split('-', 1)[1]
+        for label, origin, direction, expected in gauges(specimen):
             query = IntCurvesFace_ShapeIntersector()
             query.Load(shape, 1e-8)
             query.Perform(gp_Lin(gp_Pnt(*origin), gp_Dir(*direction)), 0, 100)
@@ -72,8 +81,8 @@ def main(directory, service=False):
                              maxErrorMm=error, passed=passed))
         results.append(dict(name=part['name'], stepSha256=digest, gauges=rows,
                             passed=all(row['passed'] for row in rows)))
-    report = dict(schema='cad-mixed-service-independent-dimensions/1' if service else 'cad-mixed-ui-independent-dimensions/1',
-                  source='20-edit service exports' if service else '20-edit browser exports',
+    report = dict(schema='cad-current-history-independent-dimensions/1' if current_history else 'cad-mixed-service-independent-dimensions/1' if service else 'cad-mixed-ui-independent-dimensions/1',
+                  source='Current WASM re-exports of archived mouse/keyboard final documents' if current_history else '20-edit service exports' if service else '20-edit browser exports',
                   oracle='OpenCascade original STEP faces and exact line intersections',
                   scope='Specified walls, bore and radius-1 corner/fillet sections of the declared 20-edit specimens; not whole-body thickness coverage',
                   passed=all(row['passed'] for row in results), parts=results)
@@ -84,4 +93,4 @@ def main(directory, service=False):
 
 
 if __name__ == '__main__':
-    sys.exit(main(Path(sys.argv[1]).resolve(), '--service' in sys.argv[2:]))
+    sys.exit(main(Path(sys.argv[1]).resolve(), '--service' in sys.argv[2:], '--current-history' in sys.argv[2:]))

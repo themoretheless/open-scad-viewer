@@ -7,13 +7,13 @@ publish.workspace = true
 
 [features]
 default = ["codec"]
-codec = []
+codec = ["dep:value-codec", "brep-core/codec", "nurbs-intersect/codec", "nurbs-core/codec"]
 
 [dependencies]
-brep-core = { workspace = true, features = ["codec"] }
-nurbs-intersect = { workspace = true, features = ["codec"] }
+brep-core = { workspace = true }
+nurbs-intersect = { workspace = true }
 nurbs-core = { workspace = true, features = ["transport"] }
-value-codec = { workspace = true }
+value-codec = { workspace = true, optional = true }
 
 [dev-dependencies]
 brep-topology = { workspace = true, features = ["codec"] }

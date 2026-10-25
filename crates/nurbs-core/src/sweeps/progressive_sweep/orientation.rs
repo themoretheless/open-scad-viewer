@@ -515,11 +515,11 @@ impl<'a> Sweep<'a> {
         self.level_with_error_budget(count,cells,products)
     }
     pub(super) fn level_with_error_budget(&self, count: usize, max_cells: usize, max_products: usize) -> Result<Level> {
-        self.level_with_error_budget_and_length(count,max_cells,max_products,None,None,None,None)
+        self.level_with_error_budget_and_length(count,max_cells,max_products,None,None,None,None,None)
     }
     pub(super) fn level_with_error_budget_and_length(&self,count:usize,max_cells:usize,max_products:usize,
         shared_length:Option<&crate::curve_measure::DivisionReport>,shared_guide:Option<&crate::curve_measure::DivisionReport>,
-        shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut authored_error::SharedArcPose>)->Result<Level>{
+        shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut authored_error::SharedArcPose>,shared_chord:Option<&authored_error::GlobalChord>)->Result<Level>{
         let (coarse, closed, coarse_residual) = self.sections(count)?;
         let (fine, _, fine_residual) = self.sections(4 * (count - 1) + 1)?;
         let mut error = 0_f64;
@@ -541,13 +541,13 @@ impl<'a> Sweep<'a> {
         let certificate = if let Some([steps,_,_])=self.spatial_rmf_error_limits {
             Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,shared_length,shared_rmf,shared_pose)?)
         }else if self.frame_laws.is_some() {
-            Some(authored_error::patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+            Some(authored_error::patch_error_with_path_evidence(self,count,max_cells,max_products,shared_length,shared_chord)?)
         } else if self.contact_source.is_some() {
             Some(authored_error::contact_patch_error_with_lengths(self,count,max_cells,max_products,shared_length,shared_guide)?)
         } else if self.orientation_guide.is_some() {
             Some(authored_error::guided_patch_error_with_lengths(self,count,max_cells,max_products,shared_length,shared_guide)?)
         } else if self.options.orientation==Orientation::Fixed {
-            Some(authored_error::fixed_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+            Some(authored_error::fixed_patch_error_with_path_evidence(self,count,max_cells,max_products,shared_length,shared_chord)?)
         } else if self.options.orientation==Orientation::FixedNormal {
             Some(authored_error::fixed_normal_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
         } else if self.options.orientation==Orientation::Frenet {

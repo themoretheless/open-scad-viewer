@@ -48,7 +48,7 @@ fn homogeneous<const N:usize>(points:&[[Expansion;N]],ctx:&mut PredicateContext<
 }
 // Exact affine pullback of the complete canonical curve. All common
 // denominator factors remain homogeneous and cancel only by cross products.
-fn affine_homogeneous(points:&[[Expansion;4]],range:&[Expansion],ctx:&mut PredicateContext<'_>)
+fn affine_homogeneous<const N:usize>(points:&[[Expansion;N]],range:&[Expansion],ctx:&mut PredicateContext<'_>)
     ->Result<Option<Vec<Poly>>,Reason> {
     for i in 0..2 {
         if range[2*i+1].sign()!=Sign::Positive || range[2*i].sign()==Sign::Negative
@@ -65,16 +65,206 @@ fn affine_homogeneous(points:&[[Expansion;4]],range:&[Expansion],ctx:&mut Predic
     let mut lows=vec![vec![Expansion::scalar(1.)]];
     let mut highs=vec![vec![Expansion::scalar(1.)]];
     for i in 1..=degree {lows.push(mul(&lows[i-1],&low,ctx)?);highs.push(mul(&highs[i-1],&high,ctx)?);}
-    let mut out:Vec<Poly>=(0..4).map(|_|Vec::new()).collect();
+    let mut out:Vec<Poly>=(0..N).map(|_|Vec::new()).collect();
     for (i,point) in points.iter().enumerate() {
         let basis=mul(&lows[i],&highs[degree-i],ctx)?;
         let scale=Expansion::integer(choose(degree,i),ctx)?;
-        for axis in 0..4 {
-            let control=if axis==3 {point[3].clone()} else {point[axis].mul(&point[3],ctx)?};
+        for axis in 0..N {
+            let control=if axis==N-1 {point[N-1].clone()} else {point[axis].mul(&point[N-1],ctx)?};
             add_scaled(&mut out[axis],&basis,&control.mul(&scale,ctx)?,ctx)?;
         }
     }
     Ok(Some(out))
+}
+// Positive map weights keep the projective denominator nonzero on [0,1].
+fn projective_homogeneous<const N:usize>(points:&[[Expansion;N]],range:&[Expansion],weights:&[Expansion],ctx:&mut PredicateContext<'_>)
+    ->Result<Option<Vec<Poly>>,Reason> {
+    for i in 0..2 {
+        if range[2*i+1].sign()!=Sign::Positive || range[2*i].sign()==Sign::Negative
+            || range[2*i+1].sub(&range[2*i],ctx)?.sign()==Sign::Negative {return Ok(None);}
+    }
+    if weights.iter().any(|w|w.sign()!=Sign::Positive) {return Ok(None);}
+    let denominator=range[1].mul(&range[3],ctx)?;
+    let a0=range[0].mul(&range[3],ctx)?;
+    let b0=range[2].mul(&range[1],ctx)?;
+    if b0.sub(&a0,ctx)?.sign()==Sign::Zero {return Ok(None);}
+    let a=a0.mul(&weights[0],ctx)?;
+    let b=b0.mul(&weights[1],ctx)?;
+    let span=b.sub(&a,ctx)?;
+    let low=vec![a.clone(),span.clone()];
+    let d0=denominator.mul(&weights[0],ctx)?;
+    let ds=denominator.mul(&weights[1].sub(&weights[0],ctx)?,ctx)?;
+    let high=vec![d0.sub(&a,ctx)?,ds.sub(&span,ctx)?];
+    let degree=points.len()-1;
+    let mut lows=vec![vec![Expansion::scalar(1.)]];
+    let mut highs=vec![vec![Expansion::scalar(1.)]];
+    for i in 1..=degree {lows.push(mul(&lows[i-1],&low,ctx)?);highs.push(mul(&highs[i-1],&high,ctx)?);}
+    let mut out:Vec<Poly>=(0..N).map(|_|Vec::new()).collect();
+    for (i,point) in points.iter().enumerate() {
+        let basis=mul(&lows[i],&highs[degree-i],ctx)?;
+        let scale=Expansion::integer(choose(degree,i),ctx)?;
+        for axis in 0..N {
+            let control=if axis==N-1 {point[N-1].clone()} else {point[axis].mul(&point[N-1],ctx)?};
+            add_scaled(&mut out[axis],&basis,&control.mul(&scale,ctx)?,ctx)?;
+        }
+    }
+    Ok(Some(out))
+}
+// Exact de Boor pullback on one knot span. Numerators retain a common
+// scalar denominator at every stage; no constructed control is rounded.
+fn spline_homogeneous<const N:usize>(points:&[[Expansion;N]],knots:&[Expansion],degree:usize,span:usize,
+    range:&[Expansion],ctx:&mut PredicateContext<'_>)->Result<Option<Vec<Poly>>,Reason> {
+    for i in 0..2 {
+        if range[2*i+1].sign()!=Sign::Positive || range[2*i].sign()==Sign::Negative
+            || range[2*i+1].sub(&range[2*i],ctx)?.sign()==Sign::Negative {return Ok(None);}
+    }
+    let denominator=range[1].mul(&range[3],ctx)?;
+    let a=range[0].mul(&range[3],ctx)?;
+    let b=range[2].mul(&range[1],ctx)?;
+    let delta=b.sub(&a,ctx)?;
+    if delta.sign()==Sign::Zero {return Ok(None);}
+    let width=knots[points.len()].sub(&knots[degree],ctx)?;
+    let start=knots[degree].mul(&denominator,ctx)?.add(&width.mul(&a,ctx)?,ctx)?;
+    let finish=knots[degree].mul(&denominator,ctx)?.add(&width.mul(&b,ctx)?,ctx)?;
+    if knots[span+1].sub(&knots[span],ctx)?.sign()!=Sign::Positive {return Ok(None);}
+    for endpoint in [&start,&finish] {
+        if endpoint.sub(&knots[span].mul(&denominator,ctx)?,ctx)?.sign()==Sign::Negative
+            || knots[span+1].mul(&denominator,ctx)?.sub(endpoint,ctx)?.sign()==Sign::Negative {return Ok(None);}
+    }
+    let parameter=vec![start,width.mul(&delta,ctx)?];
+    let mut rows:Vec<(Vec<Poly>,Expansion)>=points[span-degree..=span].iter().map(|point| {
+        let values=(0..N).map(|axis|Ok(vec![if axis==N-1 {point[N-1].clone()} else {point[axis].mul(&point[N-1],ctx)?}])).collect::<Result<Vec<_>,Reason>>()?;
+        Ok((values,Expansion::scalar(1.)))
+    }).collect::<Result<_,Reason>>()?;
+    for r in 1..=degree {for j in (r..=degree).rev() {
+        let i=span-degree+j;
+        let gap=knots[i+degree-r+1].sub(&knots[i],ctx)?;
+        if gap.sign()!=Sign::Positive {return Ok(None);}
+        let mut low=parameter.clone();low[0]=low[0].sub(&knots[i].mul(&denominator,ctx)?,ctx)?;
+        let high=vec![knots[i+degree-r+1].mul(&denominator,ctx)?.sub(&parameter[0],ctx)?,Expansion::scalar(0.).sub(&parameter[1],ctx)?];
+        let (left,dl)=&rows[j-1];let (right,dr)=&rows[j];
+        let mut values=Vec::new();
+        for axis in 0..N {
+            let mut value=Vec::new();
+            add_scaled(&mut value,&mul(&left[axis],&high,ctx)?,dr,ctx)?;
+            add_scaled(&mut value,&mul(&right[axis],&low,ctx)?,dl,ctx)?;
+            values.push(value);
+        }
+        let scale=dl.mul(dr,ctx)?.mul(&gap,ctx)?.mul(&denominator,ctx)?;
+        rows[j]=(values,scale);
+    }}
+    // The shared denominator cancels in Euclidean cross products.
+    Ok(Some(rows.pop().unwrap().0))
+}
+// Exact fraction comparison and source-parameter pullback by cross products.
+fn fraction_cmp(a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)->Result<Sign,Reason>{
+    Ok(a[0].mul(&b[1],ctx)?.sub(&b[0].mul(&a[1],ctx)?,ctx)?.sign())
+}
+fn piecewise_composition(c:&[[Expansion;4]],knots:&[Expansion],degree:usize,mapping:&[Expansion],
+    p:&[[Expansion;3]],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,constant_axes:[bool;3],
+    ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason>{
+    let a=[mapping[0].clone(),mapping[1].clone()];let b=[mapping[2].clone(),mapping[3].clone()];
+    for endpoint in [&a,&b] {
+        if endpoint[1].sign()!=Sign::Positive || endpoint[0].sign()==Sign::Negative
+            || endpoint[1].sub(&endpoint[0],ctx)?.sign()==Sign::Negative {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));}
+    }
+    let direction=fraction_cmp(&b,&a,ctx)?;
+    if direction==Sign::Zero {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));}
+    let (low,high)=if direction==Sign::Positive {(&a,&b)}else{(&b,&a)};
+    let width=knots[c.len()].sub(&knots[degree],ctx)?;
+    if width.sign()!=Sign::Positive {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));}
+    let difference=b[0].mul(&a[1],ctx)?.sub(&a[0].mul(&b[1],ctx)?,ctx)?;
+    let mut covered=false;
+    for span in degree..c.len() {
+        ctx.charge(1)?;
+        if knots[span+1].sub(&knots[span],ctx)?.sign()!=Sign::Positive {continue;}
+        let left=[knots[span].sub(&knots[degree],ctx)?,width.clone()];
+        let right=[knots[span+1].sub(&knots[degree],ctx)?,width.clone()];
+        let left=if fraction_cmp(&left,low,ctx)?==Sign::Negative {low.clone()}else{left};
+        let right=if fraction_cmp(&right,high,ctx)?==Sign::Positive {high.clone()}else{right};
+        if fraction_cmp(&right,&left,ctx)?!=Sign::Positive {continue;}
+        covered=true;
+        let ends=if direction==Sign::Positive {[left,right]}else{[right,left]};
+        let mut local=Vec::new();
+        for q in &ends {
+            // (q-a)/(b-a); all denominator factors stay exact.
+            let mut numerator=q[0].mul(&a[1],ctx)?.sub(&a[0].mul(&q[1],ctx)?,ctx)?.mul(&b[1],ctx)?;
+            let mut denominator=q[1].mul(&difference,ctx)?;
+            if denominator.sign()==Sign::Negative {
+                numerator=Expansion::scalar(0.).sub(&numerator,ctx)?;
+                denominator=Expansion::scalar(0.).sub(&denominator,ctx)?;
+            }
+            local.extend([numerator,denominator]);
+        }
+        let pullback=ends.into_iter().flatten().collect::<Vec<_>>();
+        let Some(curve)=spline_homogeneous(c,knots,degree,span,&pullback,ctx)? else {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));};
+        let Some(pcurve)=affine_homogeneous(p,&local,ctx)? else {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));};
+        match compare_composition(&curve,&pcurve,s,d,nu,nv,constant_axes,ctx)? {
+            BezierIdentity::Equal=>{},other=>return Ok(other),
+        }
+    }
+    Ok(if covered {BezierIdentity::Equal}else{BezierIdentity::Indeterminate(Reason::MissingProof)})
+}
+fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+    constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
+        let mut basis=Vec::new();
+        for axis in 0..2 {
+            let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
+            let mut high=Vec::new();add_scaled(&mut high,&p[2],&d[2*axis+1],ctx)?;add_scaled(&mut high,&p[axis],&Expansion::scalar(-1.),ctx)?;
+            let degree=if axis==0 {nu-1}else{nv-1};
+            // Reuse exact powers across Bernstein basis terms. Recomputing
+            // each prefix spends the shared proof budget on identical work.
+            let mut lows=vec![vec![Expansion::scalar(1.)]];
+            let mut highs=vec![vec![Expansion::scalar(1.)]];
+            for exponent in 1..=degree {
+                lows.push(mul(&lows[exponent-1],&low,ctx)?);
+                highs.push(mul(&highs[exponent-1],&high,ctx)?);
+            }
+            let mut parts=Vec::new();
+            for i in 0..=degree {
+                let product=mul(&lows[i],&highs[degree-i],ctx)?;let factor=Expansion::integer(choose(degree,i),ctx)?;
+                let mut part=Vec::new();add_scaled(&mut part,&product,&factor,ctx)?;parts.push(part);
+            }
+            basis.push(parts);
+        }
+        let mut composed:Vec<Poly>=(0..4).map(|_|Vec::new()).collect();
+        for i in 0..nu {for j in 0..nv {
+            let basis=mul(&basis[0][i],&basis[1][j],ctx)?;let control=&s[i*nv+j];
+            for axis in 0..4 {
+                if axis<3 && constant_axes[axis] {continue;}
+                let factor=if axis==3 {control[3].clone()}else{control[axis].mul(&control[3],ctx)?};
+                add_scaled(&mut composed[axis],&basis,&factor,ctx)?;
+            }
+        }}
+        for axis in 0..3 {
+            if constant_axes[axis] {continue;}
+            let a=mul(&c[axis],&composed[3],ctx)?;let b=mul(&composed[axis],&c[3],ctx)?;
+            let zero=Expansion::scalar(0.);
+            for i in 0..a.len().max(b.len()) {
+                if a.get(i).unwrap_or(&zero).sub(b.get(i).unwrap_or(&zero),ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}
+            }
+        }
+        Ok(BezierIdentity::Equal)
+}
+/// Exact affine pullback of a canonical B-spline on one selected knot span.
+/// The predicate verifies both mapped endpoints are in that span exactly.
+pub fn rational_bspline_composition_affine_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,span:usize,
+    pcurve:&[[LeafRef;3]],surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+)->Result<BezierIdentityDecision,InputError>{
+    if !(1..=32).contains(&degree) || curve.len()<=degree || knots.len()!=curve.len()+degree+1
+        || span<degree || span>=curve.len() {return Err(InputError::InvalidInput("Invalid spline span layout"));}
+    composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range),Some((knots,degree,Some(span))))
+}
+/// Exact piecewise affine composition across all intersected canonical spans.
+pub fn rational_bspline_composition_piecewise_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,
+    pcurve:&[[LeafRef;3]],surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+)->Result<BezierIdentityDecision,InputError>{
+    if !(1..=32).contains(&degree) || curve.len()<=degree || knots.len()!=curve.len()+degree+1 {
+        return Err(InputError::InvalidInput("Invalid piecewise spline layout"));
+    }
+    composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range),Some((knots,degree,None)))
 }
 /// Euclidean XYZ+weight for C and S, UV+weight for P. Surface domain bounds
 /// are authored leaves. Degrees: C 1..32; P and each surface axis 1..8.
@@ -83,7 +273,7 @@ pub fn rational_bezier_composition_identity(
     ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
     surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],
 )->Result<BezierIdentityDecision,InputError>{
-    composition_identity_impl(ctx,curve,pcurve,surface,domain,None)
+    composition_identity_impl(ctx,curve,pcurve,surface,domain,None,None)
 }
 /// Formal identity C(a+(b-a)t)=S(P(t)); a and b are exact authored
 /// numerator/positive-denominator pairs in normalized canonical traversal.
@@ -91,11 +281,15 @@ pub fn rational_bezier_composition_affine_identity(
     ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
     surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
 )->Result<BezierIdentityDecision,InputError>{
-    composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range))
+    composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range),None)
 }
-fn composition_identity_impl(
+/// Exact identity C(m(t)) = S(P(t)), where m interpolates the two range
+/// fractions with positive rational linear weights. Chart membership remains
+/// the caller's responsibility. No sampled correspondence is accepted.
+pub fn rational_bezier_composition_projective_identity(
     ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
-    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:Option<[[LeafRef;2];2]>,
+    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+    weights:[LeafRef;2],
 )->Result<BezierIdentityDecision,InputError>{
     if !(2..=33).contains(&curve.len()) || !(2..=9).contains(&pcurve.len())
         || !(2..=9).contains(&surface.len()) || surface.first().is_none_or(|r|!(2..=9).contains(&r.len()))
@@ -104,7 +298,43 @@ fn composition_identity_impl(
     }
     let refs:Vec<_>=curve.iter().flatten().chain(pcurve.iter().flatten())
         .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten())
-        .chain(range.iter().flatten().flatten()).copied().collect();
+        .chain(range.iter().flatten()).chain(weights.iter()).copied().collect();
+    let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    let result=(||->Result<BezierIdentity,Reason>{
+        ctx.charge(values.len() as u64)?;
+        let values=exact_inputs(&values,ctx)?;
+        let (nc,np,nu,nv)=(curve.len(),pcurve.len(),surface.len(),surface[0].len());
+        let c:Vec<[Expansion;4]>=values[..4*nc].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+        let p:Vec<[Expansion;3]>=values[4*nc..4*nc+3*np].chunks_exact(3).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+        let start=4*nc+3*np;
+        let s:Vec<[Expansion;4]>=values[start..start+4*nu*nv].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+        let end=start+4*nu*nv;
+        let d=&values[end..end+4];
+        if c.iter().chain(&s).any(|x|x[3].sign()!=Sign::Positive) || p.iter().any(|x|x[2].sign()!=Sign::Positive)
+            || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let Some(c)=projective_homogeneous(&c,&values[end+4..end+8],&values[end+8..end+10],ctx)? else {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        };
+        let p=homogeneous(&p,ctx)?;
+        compare_composition(&c,&p,&s,d,nu,nv,[false;3],ctx)
+    })().and_then(|v|ctx.charge(0).map(|_|v));
+    Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
+}
+fn composition_identity_impl(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
+    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:Option<[[LeafRef;2];2]>,
+    spline:Option<(&[LeafRef],usize,Option<usize>)>,
+)->Result<BezierIdentityDecision,InputError>{
+    if (spline.is_none() && !(2..=33).contains(&curve.len())) || curve.len()>4096 || !(2..=9).contains(&pcurve.len())
+        || !(2..=9).contains(&surface.len()) || surface.first().is_none_or(|r|!(2..=9).contains(&r.len()))
+        || surface.iter().any(|r|r.len()!=surface[0].len()) {
+        return Err(InputError::InvalidInput("Bezier composition dimensions exceed the supported degree bounds"));
+    }
+    let refs:Vec<_>=curve.iter().flatten().chain(pcurve.iter().flatten())
+        .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten())
+        .chain(range.iter().flatten().flatten()).chain(spline.iter().flat_map(|(knots,_,_)|knots.iter())).copied().collect();
     let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
     let result=(||->Result<BezierIdentity,Reason>{
         ctx.charge(values.len() as u64)?;
@@ -115,7 +345,8 @@ fn composition_identity_impl(
         let start=4*nc+3*np;
         let s:Vec<[Expansion;4]>=values[start..start+4*nu*nv].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
         let d=&values[start+4*nu*nv..start+4*nu*nv+4];
-        let mapping=range.map(|_|&values[start+4*nu*nv+4..]);
+        let end=start+4*nu*nv+4;
+        let mapping=range.map(|_|&values[end..end+4]);
         if c.iter().chain(&s).any(|x|x[3].sign()!=Sign::Positive) || p.iter().any(|x|x[2].sign()!=Sign::Positive)
             || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
@@ -166,51 +397,28 @@ fn composition_identity_impl(
             }
             constant_axes[axis]=same;
         }
-        let c=if let Some(mapping)=mapping {
+        let c=if let Some((_,degree,span))=spline {
+            let knots=&values[end+4..];
+            for pair in knots.windows(2) {
+                if pair[1].sub(&pair[0],ctx)?.sign()==Sign::Negative {
+                    return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+                }
+            }
+            let mapping=mapping.unwrap();
+            if span.is_none() {
+                return piecewise_composition(&c,knots,degree,mapping,&p,&s,d,nu,nv,constant_axes,ctx);
+            }
+            match spline_homogeneous(&c,knots,degree,span.unwrap(),mapping,ctx)? {
+                Some(c)=>c,None=>return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)),
+            }
+        } else if let Some(mapping)=mapping {
             match affine_homogeneous(&c,mapping,ctx)? {
                 Some(c)=>c,
                 None=>return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)),
             }
         } else {homogeneous(&c,ctx)?};
         let p=homogeneous(&p,ctx)?;
-        let mut basis=Vec::new();
-        for axis in 0..2 {
-            let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
-            let mut high=Vec::new();add_scaled(&mut high,&p[2],&d[2*axis+1],ctx)?;add_scaled(&mut high,&p[axis],&Expansion::scalar(-1.),ctx)?;
-            let degree=if axis==0 {nu-1}else{nv-1};
-            // Reuse exact powers across Bernstein basis terms. Recomputing
-            // each prefix spends the shared proof budget on identical work.
-            let mut lows=vec![vec![Expansion::scalar(1.)]];
-            let mut highs=vec![vec![Expansion::scalar(1.)]];
-            for exponent in 1..=degree {
-                lows.push(mul(&lows[exponent-1],&low,ctx)?);
-                highs.push(mul(&highs[exponent-1],&high,ctx)?);
-            }
-            let mut parts=Vec::new();
-            for i in 0..=degree {
-                let product=mul(&lows[i],&highs[degree-i],ctx)?;let factor=Expansion::integer(choose(degree,i),ctx)?;
-                let mut part=Vec::new();add_scaled(&mut part,&product,&factor,ctx)?;parts.push(part);
-            }
-            basis.push(parts);
-        }
-        let mut composed:Vec<Poly>=(0..4).map(|_|Vec::new()).collect();
-        for i in 0..nu {for j in 0..nv {
-            let basis=mul(&basis[0][i],&basis[1][j],ctx)?;let control=&s[i*nv+j];
-            for axis in 0..4 {
-                if axis<3 && constant_axes[axis] {continue;}
-                let factor=if axis==3 {control[3].clone()}else{control[axis].mul(&control[3],ctx)?};
-                add_scaled(&mut composed[axis],&basis,&factor,ctx)?;
-            }
-        }}
-        for axis in 0..3 {
-            if constant_axes[axis] {continue;}
-            let a=mul(&c[axis],&composed[3],ctx)?;let b=mul(&composed[axis],&c[3],ctx)?;
-            let zero=Expansion::scalar(0.);
-            for i in 0..a.len().max(b.len()) {
-                if a.get(i).unwrap_or(&zero).sub(b.get(i).unwrap_or(&zero),ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}
-            }
-        }
-        Ok(BezierIdentity::Equal)
+        compare_composition(&c,&p,&s,d,nu,nv,constant_axes,ctx)
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
@@ -219,6 +427,47 @@ fn composition_identity_impl(
 mod tests {
     use super::*;
     use crate::{Limits,SourceArena,ToleranceContext};
+    fn projective_test(p:&[[f64;3]],range:[[f64;2];2],weights:[f64;2],limits:Limits)->BezierIdentityDecision {
+        let c=[[0.,0.,0.,1.],[0.5,0.,0.,1.],[1.,1.,0.,1.]];
+        let surface=[[[0.,0.,0.,1.],[0.,1.,0.,1.]],[[1.,0.,0.,1.],[1.,1.,0.,1.]]];
+        let domain=[[0.,1.],[0.,1.]];
+        let source=SourceArena::authored("projective-test",1,c.iter().flatten().chain(p.iter().flatten())
+            .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten())
+            .chain(range.iter().flatten()).chain(weights.iter())
+            .map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect()).unwrap();
+        let mut next=0;
+        let mut leaf=||{let r=source.leaf(next).unwrap();next+=1;r};
+        let cc:Vec<[LeafRef;4]>=(0..3).map(|_|std::array::from_fn(|_|leaf())).collect();
+        let pp:Vec<[LeafRef;3]>=(0..p.len()).map(|_|std::array::from_fn(|_|leaf())).collect();
+        let ss:Vec<Vec<[LeafRef;4]>>=(0..2).map(|_|(0..2).map(|_|std::array::from_fn(|_|leaf())).collect()).collect();
+        let dd=std::array::from_fn(|_|std::array::from_fn(|_|leaf()));
+        let rr=std::array::from_fn(|_|std::array::from_fn(|_|leaf()));
+        let ww=std::array::from_fn(|_|leaf());
+        let tolerance=ToleranceContext::default_valid();
+        let mut ctx=PredicateContext::new(&source,&tolerance,limits,None);
+        rational_bezier_composition_projective_identity(&mut ctx,&cc,&pp,&ss,dd,rr,ww).unwrap()
+    }
+    #[test]
+    fn projective_correspondence_is_exact_forward_reverse_and_partial() {
+        let p=[[0.,0.,1.],[0.5,0.,2.],[1.,1.,4.]];
+        assert_eq!(projective_test(&p,[[0.,1.],[1.,1.]],[1.,2.],Limits::default()).outcome,BezierIdentity::Equal);
+        let full=projective_test(&p,[[0.,1.],[1.,1.]],[1.,2.],Limits::default());
+        for max_work in [0,full.work_used-1] {
+            let limited=projective_test(&p,[[0.,1.],[1.,1.]],[1.,2.],Limits{max_work,..Limits::default()});
+            assert_eq!(limited.outcome,BezierIdentity::Indeterminate(Reason::ResourceLimit));
+            assert!(limited.work_used<=max_work);
+        }
+        let reversed=[p[2],p[1],p[0]];
+        assert_eq!(projective_test(&reversed,[[1.,1.],[0.,1.]],[2.,1.],Limits::default()).outcome,BezierIdentity::Equal);
+        let partial=[[0.25,0.0625,1.],[0.5,0.1875,2.],[0.75,0.5625,4.]];
+        assert_eq!(projective_test(&partial,[[1.,4.],[3.,4.]],[1.,2.],Limits::default()).outcome,BezierIdentity::Equal);
+        assert_eq!(projective_test(&p,[[0.,1.],[1.,1.]],[1.,1.],Limits::default()).outcome,BezierIdentity::Different);
+        let mut wrong=p;wrong[1][1]=f64::EPSILON;
+        assert_eq!(projective_test(&wrong,[[0.,1.],[1.,1.]],[1.,2.],Limits::default()).outcome,BezierIdentity::Different);
+        for weights in [[0.,2.],[-1.,2.]] {
+            assert_eq!(projective_test(&p,[[0.,1.],[1.,1.]],weights,Limits::default()).outcome,BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+    }
     fn run(c:&[[f64;4]],p:&[[f64;3]],domain:[[f64;2];2],limits:Limits)->BezierIdentity {
         run_weighted(c,p,domain,limits,1.)
     }
@@ -412,4 +661,97 @@ fn plane_point_impl(
         Ok(if total.sign()==Sign::Zero {BezierIdentity::Equal} else {BezierIdentity::Different})
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision {outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
+}
+
+fn affine_fraction(q:&[Expansion;2],a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)
+    ->Result<[Expansion;2],Reason> {
+    let delta=b[0].mul(&a[1],ctx)?.sub(&a[0].mul(&b[1],ctx)?,ctx)?;
+    Ok([a[0].mul(&b[1],ctx)?.mul(&q[1],ctx)?.add(&delta.mul(&q[0],ctx)?,ctx)?,
+        a[1].mul(&b[1],ctx)?.mul(&q[1],ctx)?])
+}
+fn inverse_fraction(q:&[Expansion;2],a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)
+    ->Result<[Expansion;2],Reason> {
+    let delta=b[0].mul(&a[1],ctx)?.sub(&a[0].mul(&b[1],ctx)?,ctx)?;
+    let mut n=q[0].mul(&a[1],ctx)?.sub(&a[0].mul(&q[1],ctx)?,ctx)?.mul(&b[1],ctx)?;
+    let mut d=q[1].mul(&delta,ctx)?;
+    if d.sign()==Sign::Negative {n=Expansion::scalar(0.).sub(&n,ctx)?;d=Expansion::scalar(0.).sub(&d,ctx)?;}
+    Ok([n,d])
+}
+/// Exact composition of an affine canonical restriction and a piecewise UV
+/// B-spline. Every intersected span pair must agree under one work budget.
+pub fn rational_bspline_pair_composition_piecewise_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,
+    pcurve:&[[LeafRef;3]],pknots:&[LeafRef],pdegree:usize,
+    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+)->Result<BezierIdentityDecision,InputError> {
+    if !(1..=32).contains(&degree) || !(1..=8).contains(&pdegree)
+        || curve.len()<=degree || curve.len()>4096 || knots.len()!=curve.len()+degree+1
+        || pcurve.len()<=pdegree || pcurve.len()>4096 || pknots.len()!=pcurve.len()+pdegree+1
+        || !(2..=9).contains(&surface.len()) || surface.first().is_none_or(|row|!(2..=9).contains(&row.len()))
+        || surface.iter().any(|row|row.len()!=surface[0].len()) {
+        return Err(InputError::InvalidInput("Invalid piecewise spline composition layout"));
+    }
+    let refs:Vec<_>=curve.iter().flatten().chain(pcurve.iter().flatten())
+        .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten())
+        .chain(range.iter().flatten()).chain(knots).chain(pknots).copied().collect();
+    let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    let result=(||->Result<BezierIdentity,Reason>{
+        ctx.charge(values.len() as u64)?;
+        let values=exact_inputs(&values,ctx)?;
+        let (nc,np,nu,nv)=(curve.len(),pcurve.len(),surface.len(),surface[0].len());
+        let c:Vec<[Expansion;4]>=values[..4*nc].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+        let p:Vec<[Expansion;3]>=values[4*nc..4*nc+3*np].chunks_exact(3).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+        let offset=4*nc+3*np;
+        let s:Vec<[Expansion;4]>=values[offset..offset+4*nu*nv].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
+        let offset=offset+4*nu*nv;let d=&values[offset..offset+4];
+        let a=[values[offset+4].clone(),values[offset+5].clone()];
+        let b=[values[offset+6].clone(),values[offset+7].clone()];
+        let ck=&values[offset+8..offset+8+knots.len()];let pk=&values[offset+8+knots.len()..];
+        let missing=BezierIdentity::Indeterminate(Reason::MissingProof);
+        if c.iter().chain(&s).any(|x|x[3].sign()!=Sign::Positive) || p.iter().any(|x|x[2].sign()!=Sign::Positive)
+            || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {return Ok(missing);}
+        for k in [ck,pk] {for pair in k.windows(2) {
+            if pair[1].sub(&pair[0],ctx)?.sign()==Sign::Negative {return Ok(missing);}
+        }}
+        for q in [&a,&b] {if q[1].sign()!=Sign::Positive || q[0].sign()==Sign::Negative
+            || q[1].sub(&q[0],ctx)?.sign()==Sign::Negative {return Ok(missing);}}
+        let direction=fraction_cmp(&b,&a,ctx)?;
+        if direction==Sign::Zero {return Ok(missing);}
+        let (lo,hi)=if direction==Sign::Positive {(&a,&b)}else{(&b,&a)};
+        let cw=ck[nc].sub(&ck[degree],ctx)?;let pw=pk[np].sub(&pk[pdegree],ctx)?;
+        if cw.sign()!=Sign::Positive || pw.sign()!=Sign::Positive {return Ok(missing);}
+        let mut covered=false;
+        for cs in degree..nc {
+            ctx.charge(1)?;
+            if ck[cs+1].sub(&ck[cs],ctx)?.sign()!=Sign::Positive {continue;}
+            let l=[ck[cs].sub(&ck[degree],ctx)?,cw.clone()];
+            let r=[ck[cs+1].sub(&ck[degree],ctx)?,cw.clone()];
+            let l=if fraction_cmp(&l,lo,ctx)?==Sign::Negative {lo.clone()}else{l};
+            let r=if fraction_cmp(&r,hi,ctx)?==Sign::Positive {hi.clone()}else{r};
+            if fraction_cmp(&r,&l,ctx)?!=Sign::Positive {continue;}
+            let ends=if direction==Sign::Positive {[l,r]}else{[r,l]};
+            let low=inverse_fraction(&ends[0],&a,&b,ctx)?;
+            let high=inverse_fraction(&ends[1],&a,&b,ctx)?;
+            for ps in pdegree..np {
+                ctx.charge(1)?;
+                if pk[ps+1].sub(&pk[ps],ctx)?.sign()!=Sign::Positive {continue;}
+                let l=[pk[ps].sub(&pk[pdegree],ctx)?,pw.clone()];
+                let r=[pk[ps+1].sub(&pk[pdegree],ctx)?,pw.clone()];
+                let l=if fraction_cmp(&l,&low,ctx)?==Sign::Negative {low.clone()}else{l};
+                let r=if fraction_cmp(&r,&high,ctx)?==Sign::Positive {high.clone()}else{r};
+                if fraction_cmp(&r,&l,ctx)?!=Sign::Positive {continue;}
+                covered=true;
+                let canonical=[affine_fraction(&l,&a,&b,ctx)?,affine_fraction(&r,&a,&b,ctx)?];
+                let cr=canonical.into_iter().flatten().collect::<Vec<_>>();
+                let pr=[l,r].into_iter().flatten().collect::<Vec<_>>();
+                let Some(cc)=spline_homogeneous(&c,ck,degree,cs,&cr,ctx)? else {return Ok(missing);};
+                let Some(pp)=spline_homogeneous(&p,pk,pdegree,ps,&pr,ctx)? else {return Ok(missing);};
+                match compare_composition(&cc,&pp,&s,d,nu,nv,[false;3],ctx)? {
+                    BezierIdentity::Equal=>{},other=>return Ok(other),
+                }
+            }
+        }
+        Ok(if covered {BezierIdentity::Equal}else{missing})
+    })().and_then(|value|ctx.charge(0).map(|_|value));
+    Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }

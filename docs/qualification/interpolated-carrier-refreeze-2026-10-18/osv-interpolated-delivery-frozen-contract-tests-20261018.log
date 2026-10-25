@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /private/tmp/osv-interpolated-carrier-delivery-20261018
+
+
+ Test Files  4 passed (4)
+      Tests  44 passed (44)
+   Start at  15:45:45
+   Duration  35.95s (transform 817ms, setup 0ms, import 173ms, tests 39.63s, environment 1ms)
+

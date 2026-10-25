@@ -1,0 +1,35 @@
+{
+  "nativeTest": "independent_profile_injectivity_distinguishes_plane_from_fold",
+  "passed": true,
+  "seconds": 0.06,
+  "sourceSha256": "1d0e9350352cff1caeb634f214ddd2c27a97afe6717c8781523b160bdf24e3b7",
+  "independentProfilePlaneQualified": true,
+  "foldedPatch": {
+    "xPolynomial": [
+      0,
+      4,
+      -9,
+      6
+    ],
+    "coincidentParameters": "1/2, 1/2 - sqrt(3)/6, 1/2 + sqrt(3)/6",
+    "cells": [
+      0,
+      1,
+      7,
+      100
+    ],
+    "spans": [
+      0,
+      1,
+      100,
+      10000
+    ],
+    "checks": [
+      "never complete",
+      "central fold remains pending",
+      "full parameter area conserved",
+      "budgets respected"
+    ]
+  },
+  "scope": "fixed projection on complete owned Hermite expression; not arbitrary B-rep self-intersection or solid admission"
+}

@@ -24,6 +24,9 @@ pub mod trim;
 pub mod tessellation;
 pub mod certificates;
 pub use crate::core::affine;
+pub use crate::analysis::affine_volume;
+pub use crate::analysis::fibered_volume;
+pub use crate::analysis::implicit_quadric;
 pub use crate::tessellation::shared_tessellation;
 pub use crate::intersection::self_curve as curve_self_intersection;
 pub use crate::intersection::self_surface as surface_self_intersection;
@@ -151,6 +154,7 @@ pub use crate::analysis::curve_regularity;
 pub use crate::sweeps::audit::pair as sweep_pair_audit;
 pub use crate::analysis::surface_injectivity;
 pub use crate::analysis::surface_regularity;
+pub use crate::analysis::surface_correspondence;
 pub use crate::join::surface_join;
 pub use crate::join::surface_g1;
 pub use crate::join::surface_g2;
@@ -295,6 +299,8 @@ pub mod moving_radius;
 pub mod moving_envelope;
 
 pub mod surface_projection_jacobian;
+pub mod profile_projection_jacobian;
+pub mod profile_projected_jordan;
 
 pub mod curve_quadratic_separator;
 
@@ -303,6 +309,24 @@ pub mod surface_projected_jordan;
 pub mod surface_self_chord;
 
 pub mod surface_self_chord_coverage;
+
+pub mod factored_surface_normals;
+
+pub mod polar_surface_differential;
+
+pub mod profile_expression_radius;
+
+pub mod profile_expression_bernstein;
+
+pub mod bernstein_interpolation;
+
+pub mod rational_pole_differential;
+
+pub mod profile_section_bridge;
+
+pub mod surface_boundary_secant;
+
+pub mod surface_weight_profile;
 pub use crate::join::surface_blend;
 pub use crate::join::radius_transition;
 #[path = "join/corner_blend.rs"]
@@ -334,3 +358,4 @@ pub use crate::construct::surfaces::optical_shapes;
 pub use crate::construct::surfaces::wing_loft;
 pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
+pub mod synchronized_boundary_normals;

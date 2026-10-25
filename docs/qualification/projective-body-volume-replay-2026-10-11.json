@@ -1,0 +1,27 @@
+{
+  "scope": "native-projective-body-volume-and-replay",
+  "date": "2026-10-11",
+  "tests": {
+    "log": "/tmp/source-projective-body-replay-20261011.log",
+    "passed": 2,
+    "failed": 0
+  },
+  "verified": [
+    "positive volume interval contains independent tetrahedron volume 1/6 with width <= 0.01",
+    "binary replay repeats original region, incidence, embedding, contact and volume gates",
+    "original vertex owners and body definition retained",
+    "forged certificate and volume fields cannot bypass incomplete contact checks",
+    "modified source correspondence weights refuse body admission"
+  ],
+  "limitations": [
+    "planar tetrahedron fixture only",
+    "general curved fillet bodies remain unqualified",
+    "WASM worker UI and STEP deployment unchanged"
+  ],
+  "sha256": {
+    "crates/brep-core/src/source_volume.rs": "2b15a16dd23941aabad1bc1e8f34b6806a41bed9b4c7b0e25160e768a7b1e13b",
+    "crates/brep-core/src/source_planar_flux.rs": "9476de1a3014b414f6442eacc5fc562c24bec7e3a93e833c5a099c2fc71102d4",
+    "crates/brep-core/src/source_projective_body_restore.rs": "730002a7d32b71b3a7b08f7363381517fe5c0fe83fc99f90e761834d4733ef7e",
+    "crates/brep-core/src/source_shell_incidence.rs": "1f2236ae5ff8de3a4232f2598ecf2ab548398bae32a7504cecd5bedeeff1aa14"
+  }
+}

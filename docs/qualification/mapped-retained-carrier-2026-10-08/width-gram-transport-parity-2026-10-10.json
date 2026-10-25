@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "comparison": "Exact six-case native report equality, including work and unresolved UV products.",
+  "baselineSha256": "c2504990aff98834c310137d2dec0ad03fb9fe75d6dd5fa0f3095d6b8e577669",
+  "currentSha256": "c2504990aff98834c310137d2dec0ad03fb9fe75d6dd5fa0f3095d6b8e577669",
+  "geometryQualified": false
+}

@@ -1,0 +1,2043 @@
+{
+  "scope": "Classification of existing archived annular worker obligations using original shell incidence; no new geometric proof",
+  "wasmSha256": "d00b9f1dd638fcb6fe1477d849735a8b7230bbce066ddcbd8214f4db1d23e2b7",
+  "requestArchiveSha256": "d14e93ea393cb3064277a178e47383eda74bbfebe0690631fed19f4a9fe855a5",
+  "workerArchiveSha256": "0f3d08a0ff9c184e04690945ac98ea4e1044d00cce876c49290cc27dff45befb",
+  "groups": {
+    "same-face": [
+      {
+        "faces": [
+          0,
+          0
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          5,
+          5
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          10,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          16,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          17,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          20,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          21,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          24,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      },
+      {
+        "faces": [
+          25,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-curved-self-unproven"
+      }
+    ],
+    "shared-edge": [
+      {
+        "faces": [
+          0,
+          1
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          2
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          5
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          7
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          8
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          6
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          7
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          12
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          13
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          11
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          12
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          13,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          19,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          19,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          20,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          20,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          21,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          21,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          23,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          23,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          24,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          25,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      }
+    ],
+    "distinct-no-shared-edge": [
+      {
+        "faces": [
+          0,
+          4
+        ],
+        "proven": false,
+        "reason": "source-face-gap-resolution-limit"
+      },
+      {
+        "faces": [
+          0,
+          6
+        ],
+        "proven": false,
+        "reason": "source-face-gap-work-limit"
+      },
+      {
+        "faces": [
+          0,
+          7
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          8
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          9
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          11
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          12
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          13
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          14
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          15
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          0,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          4
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          5
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          9
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          14
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          1,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          3
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          5
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          8
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          2,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          5
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          7
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          3,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          5
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          6
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          11
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          15
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          4,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          8
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          9
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          11
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          12
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          13
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          14
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          15
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          5,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          9
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          14
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          6,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          8
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          13
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          7,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          12
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          8,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          10
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          11
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          15
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          9,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          13
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          14
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          15
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          10,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          14
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          11,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          13
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          12,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          13,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          13,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          13,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          13,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          13,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          15
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          16
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          14,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          18
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          15,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          17
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          16,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          17,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          18,
+          19
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          18,
+          20
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          18,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          18,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          18,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          18,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          19,
+          22
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          19,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          19,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          19,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          20,
+          21
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          20,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          20,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          20,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          21,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          21,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          21,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          22,
+          23
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          22,
+          24
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          22,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          23,
+          26
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      },
+      {
+        "faces": [
+          24,
+          25
+        ],
+        "proven": false,
+        "reason": "source-wall-pair-unproven"
+      }
+    ]
+  },
+  "counts": {
+    "same-face": 9,
+    "shared-edge": 32,
+    "distinct-no-shared-edge": 212
+  }
+}

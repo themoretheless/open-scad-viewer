@@ -1,0 +1,25 @@
+{
+  "schema": "pr58-archive-registry-split/1",
+  "predecessor": "32748233845c1f00b853ed4e1f5fabddad1185a8",
+  "rustWasmAndRuntimeSourceUnchanged": true,
+  "sourceBundleVerified": true,
+  "predecessorArchivesVerified": 801,
+  "commonRegistryLines": 500,
+  "architectureLimit": 500,
+  "architectureAuditPassed": true,
+  "ownershipAuditPassed": true,
+  "sourceGuardTestsPassed": 10,
+  "node20TestsPassed": 35,
+  "node22TestsPassed": 35,
+  "vueTypesPassed": true,
+  "mcpTypesPassed": true,
+  "distVerified": true,
+  "versions": {
+    "ownRust": 78,
+    "g0": 92,
+    "g1": 109
+  },
+  "completedSemanticWorkUnits": 0,
+  "plannedSemanticWorkUnits": 4740,
+  "qualificationClaim": "none"
+}

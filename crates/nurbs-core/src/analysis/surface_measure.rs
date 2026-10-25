@@ -8,6 +8,7 @@ use crate::{
     surface::Surface,
 };
 pub(crate) mod jets;
+pub(crate) mod first_jets;
 use std::{cmp::Ordering, collections::BinaryHeap};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StopReason {

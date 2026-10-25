@@ -1,0 +1,11 @@
+{
+  "nativeCommit": "d39aab137",
+  "logsUncompressedSha256": {
+    "before": "465daf2bab4862eea621ccacf6d553af40defb0ecc1ad723b78a9b92e3205761",
+    "cuboid": "4e44c501b4706bad372b40b520cb435c84d2cc26e757817d8f805bfb55a1edcf",
+    "parallel-lines": "21f486c0816ce69a72c255dc3eede07d6ad6111d604497680168f98f282a3b81",
+    "intersections": "5c90e054531c50f117c7685fb0c01dbfbf5244ff725b042946bb96bea4cd53ae",
+    "concave-profile": "efd8e01a84a5ffe0207da43f9e9936c1bf70a4fb97264ed24e9e50db3989e684"
+  },
+  "scope": "Native all twelve cuboid edges, radii 0.1/1/2 mm, source and rigid placement, volume and closure. Packaged WASM and UI not yet requalified."
+}

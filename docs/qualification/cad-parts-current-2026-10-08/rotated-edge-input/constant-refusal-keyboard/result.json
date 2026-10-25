@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "mode": "constant",
+  "inputMode": "keyboard",
+  "scope": "Unconfirmed separation refusal only; no constant-fillet success",
+  "localizedUncertainty": true,
+  "highlightedEdges": true,
+  "commitBlocked": true,
+  "retry": true,
+  "cancel": true,
+  "documentUnchanged": true,
+  "reload": true,
+  "errors": []
+}

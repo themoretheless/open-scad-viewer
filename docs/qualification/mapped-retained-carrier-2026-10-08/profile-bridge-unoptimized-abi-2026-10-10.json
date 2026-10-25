@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "scope": "direct binary ABI; no packaged-worker or UI claim",
+  "wasm": {
+    "source": "crates/target/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+    "sha256": "506509c0df54c8fc8f9e70f17d16115e49872dcdaf7b793d24026307c4b98fa0",
+    "byteLength": 14654750
+  },
+  "cases": [
+    "plane",
+    "rationalProposed",
+    "normalDiameter"
+  ],
+  "zeroBudgetRefusal": true,
+  "invalidDomainRefusal": true,
+  "recovery": true
+}

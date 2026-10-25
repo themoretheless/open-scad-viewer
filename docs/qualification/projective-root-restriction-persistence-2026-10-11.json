@@ -1,0 +1,29 @@
+{
+  "scope": "native-projective-root-restriction-persistence",
+  "validation": {
+    "focused_passed": 1,
+    "incidence_regression_passed": 12,
+    "failed": 0,
+    "logs": [
+      "/tmp/source-projective-root-restriction-20261011.log",
+      "/tmp/source-projective-restriction-incidence-regression-20261011.log"
+    ]
+  },
+  "verified": [
+    "projective Body exposes original exact edge restrictions",
+    "binary replay preserves root expressions and original source definitions",
+    "canonical endpoint intervals and XYZ enclosures agree after replay",
+    "display intervals retain original carriers without authoritative rounded endpoints",
+    "existing affine root-partition and curved-shell replay regressions retained"
+  ],
+  "limitations": [
+    "display enclosures are not STEP geometry or chord-error admission",
+    "root/partial Model and STEP transport remains open",
+    "whole seam tangent qualification for generated caps not covered by this record"
+  ],
+  "sha256": {
+    "source_edge_restriction.rs": "cd117d9b04e378cb6b3bdac850ceaa9a3377c4a4b4bb3670bf6466dd1da2d5ec",
+    "source_volume.rs": "c974a3a2c7ceef5d56b70d5ee4e593cdd93eb7430c723838f7867c803f5dc3fc",
+    "source_projective_use.rs": "05abe11126cd2eef8f462d334b7b3756e89046d888d01f014810696d0ddf941b"
+  }
+}

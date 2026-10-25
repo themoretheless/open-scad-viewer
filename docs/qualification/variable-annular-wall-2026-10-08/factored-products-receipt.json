@@ -1,0 +1,13 @@
+{
+  "scope": "Exploratory composition only; four prospective exclusions not integrated into Body wall qualification",
+  "requestSha256": "b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea",
+  "classificationSha256": "e33b5c1706c9b0edc058551a085cc6a1ac69e9fedc3e66d62078e750090db33c",
+  "factored-products-audit.json.gz": {
+    "uncompressedSha256": "3c9f1bbb4f22014125e172ae0467a59817dc0359191b8d9de2462605ed94eb8a",
+    "bytes": 165177
+  },
+  "factored-products-tests.log.gz": {
+    "uncompressedSha256": "a62ceca13ff6cf6c88421467c9003d13f62b9c5d3465ac2c70213851fd0698b5",
+    "bytes": 5806
+  }
+}

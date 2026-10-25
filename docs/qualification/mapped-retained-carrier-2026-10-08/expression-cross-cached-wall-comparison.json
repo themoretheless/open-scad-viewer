@@ -1,0 +1,13 @@
+{
+  "scope": "original-retained-transition-support-products",
+  "pending_domains_identical": true,
+  "pending_domains": 4287,
+  "pending_pairs": 59,
+  "before_spans": 266321,
+  "after_spans": 129039,
+  "before_cross_spans": 140661,
+  "after_cross_spans": 3379,
+  "cross_attempts": 1090,
+  "cross_exclusions": 20,
+  "interpretation": "Same immutable fixture and request; span-work savings preserve all pending domains. Wall-clock timings are not controlled performance measurements."
+}

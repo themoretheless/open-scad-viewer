@@ -1,0 +1,218 @@
+//! Adaptive outward flux integration of admitted expression geometry.
+//! Reports enclosures and work limits; this does not construct a solid Body.
+use super::*;
+use nurbs_core::interval_eval::Interval as I;
+use std::{cmp::Ordering, collections::BinaryHeap};
+
+pub struct ExpressionVolumeLimits {
+    pub axis: usize,
+    pub origin: f64,
+    pub absolute_error: f64,
+    pub tolerance_uv: f64,
+    pub controls_per_enclosure: usize,
+    pub cells: usize,
+    pub spans: usize,
+    pub domain_cells: usize,
+    pub domain_cells_per_rectangle: usize,
+}
+pub struct ExpressionVolumeReport {
+    pub signed_bounds: Option<[f64; 2]>,
+    pub complete: bool,
+    pub cells: usize,
+    pub spans: usize,
+    pub domain_cells: usize,
+    pub uncertain_face: Option<usize>,
+    pub planar_faces: usize,
+    pub uncertain_domain: Option<[[f64; 2]; 2]>,
+    pub reason: &'static str,
+}
+/// Native volume and orientation tied to the actual embedded expression.
+/// Radius, thickness and component containment remain separate qualifications.
+pub struct OrientedExpressionVolume<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+    geometry: &'v EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>,
+    signed_bounds: [f64; 2],
+    positive_bounds: [f64; 2],
+    reverse_orientation: bool,
+}
+impl OrientedExpressionVolume<'_, '_, '_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn geometry(&self) -> &EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> { self.geometry }
+    pub fn signed_bounds(&self) -> [f64; 2] { self.signed_bounds }
+    pub fn positive_bounds(&self) -> [f64; 2] { self.positive_bounds }
+    pub fn reverse_orientation(&self) -> bool { self.reverse_orientation }
+}
+pub struct ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+    pub report: ExpressionVolumeReport,
+    pub certificate: Option<OrientedExpressionVolume<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>>,
+}
+fn admitted_volume_bounds(bounds: Option<[f64; 2]>, complete: bool, error: f64) -> Result<Option<([f64; 2], bool)>> {
+    if !complete { return Ok(None); }
+    let Some([lo, hi]) = bounds else { return Ok(None); };
+    let value = I::new(lo, hi)?;
+    if I::point(value.hi).sub(I::point(value.lo))?.hi > error || (lo <= 0. && hi >= 0.) { return Ok(None); }
+    if hi < 0. { Ok(Some(([-hi, -lo], true))) } else { Ok(Some(([lo, hi], false))) }
+}
+impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+    /// Recompute all volume work from immutable geometry. Caller diagnostics
+    /// and previously serialized intervals never construct this certificate.
+    pub fn qualify_volume<'v>(&'v self, limits: ExpressionVolumeLimits) -> Result<ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
+        let error = limits.absolute_error;
+        let report = self.inspect_volume(limits)?;
+        let certificate = admitted_volume_bounds(report.signed_bounds, report.complete, error)?.map(|(positive_bounds, reverse_orientation)| {
+            OrientedExpressionVolume { geometry: self, signed_bounds: report.signed_bounds.unwrap(), positive_bounds, reverse_orientation }
+        });
+        Ok(ExpressionVolumeQualification { report, certificate })
+    }
+}
+struct Node {
+    face: usize,
+    domain: [[f64; 2]; 2],
+    bound: I,
+    parent: Option<usize>,
+    children: Option<[usize; 2]>,
+}
+struct Priority(usize, f64);
+impl PartialEq for Priority { fn eq(&self, b: &Self) -> bool { self.cmp(b) == Ordering::Equal } }
+impl Eq for Priority {}
+impl PartialOrd for Priority { fn partial_cmp(&self, b: &Self) -> Option<Ordering> { Some(self.cmp(b)) } }
+impl Ord for Priority { fn cmp(&self, b: &Self) -> Ordering { self.1.total_cmp(&b.1).then(self.0.cmp(&b.0)) } }
+
+fn refine_sum(previous: I, left: I, right: I) -> Result<I> {
+    let sum = left.add(right)?;
+    // Both enclose the integral of the same complete material rectangle.
+    // Retain the tighter old enclosure if child dependency bounds are wider.
+    I::new(previous.lo.max(sum.lo), previous.hi.min(sum.hi))
+}
+fn planar_allowance(cells: usize, spans: usize, remaining_faces: usize) -> usize {
+    if remaining_faces == 0 { return 0; }
+    (cells.saturating_sub(remaining_faces) / remaining_faces).min(spans / remaining_faces)
+}
+
+impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn inspect_volume(&self, limits: ExpressionVolumeLimits) -> Result<ExpressionVolumeReport> {
+        if limits.axis >= 3 || !limits.origin.is_finite()
+            || !limits.absolute_error.is_finite() || limits.absolute_error <= 0.
+            || !limits.tolerance_uv.is_finite() || limits.tolerance_uv <= 0.
+            || limits.controls_per_enclosure > 1000000
+            || limits.cells > 1000000 || limits.spans > 1000000 || limits.domain_cells > 8000000
+            || limits.domain_cells_per_rectangle > 100000
+        {
+            return Err(Error::new("BREP_EXPRESSION_VOLUME", "Choose finite volume inputs and bounded work"));
+        }
+        let shell = self.shell();
+        let mut out = ExpressionVolumeReport { signed_bounds: None, complete: false, cells: 0, spans: 0,
+            domain_cells: 0, planar_faces: 0, uncertain_face: None, uncertain_domain: None, reason: "expression-volume-initial-work-limit" };
+        let evaluate = |face, domain, out: &mut ExpressionVolumeReport| -> Result<Option<I>> {
+            out.uncertain_face = Some(face); out.uncertain_domain = Some(domain);
+            if out.cells == limits.cells || out.spans == limits.spans { return Ok(None); }
+            out.cells += 1;
+            let report = shell.enclose_material_flux(face, domain, limits.axis, limits.origin,
+                limits.tolerance_uv, limits.controls_per_enclosure,
+                (limits.spans - out.spans).min(100000), (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_rectangle))?;
+            out.spans += report.spans; out.domain_cells += report.domain_cells;
+            report.bound.map(|b| I::new(b[0], b[1])).transpose()
+        };
+        let mut nodes: Vec<Node> = Vec::new();
+        let mut roots = Vec::new();
+        let mut queue = BinaryHeap::new();
+        for face in 0..shell.faces().len() {
+            let domain = shell.support_domain(face)?;
+            let mut planar = None;
+            let error_share = limits.absolute_error / (8. * shell.faces().len() as f64);
+            if let Some(original) = shell.equivalent_original_face(face) {
+                let root = shell.assembly.patch.rails.face.boundary.rooted[0];
+                let source_geometry = root.restricted.proposal.body.geometry();
+                let remaining_faces = shell.faces().len() - face;
+                let allowance = planar_allowance(limits.cells - out.cells, limits.spans - out.spans, remaining_faces);
+                let report = crate::source_planar_flux::bound(source_geometry, original, limits.axis, limits.origin,
+                    error_share, allowance)?;
+                out.cells += report.cells; out.spans += report.cells;
+                planar = report.bound;
+            }
+            let fixed = planar.is_some_and(|b| I::point(b.hi).sub(I::point(b.lo)).is_ok_and(|w| w.hi <= error_share));
+            if fixed { out.planar_faces += 1; }
+            let bound = if let Some(bound) = planar { bound } else {
+                let Some(bound) = evaluate(face, domain, &mut out)? else { return Ok(out); };
+                bound
+            };
+            let index = nodes.len(); roots.push(index);
+            if !fixed { queue.push(Priority(index, bound.hi - bound.lo)); }
+            nodes.push(Node { face, domain, bound, parent: None, children: None });
+        }
+        loop {
+            let mut total = I::point(0.);
+            for &index in &roots { total = total.add(nodes[index].bound)?; }
+            out.signed_bounds = Some([total.lo, total.hi]);
+            if I::point(total.hi).sub(I::point(total.lo))?.hi <= limits.absolute_error {
+                out.complete = true; out.uncertain_face = None; out.uncertain_domain = None;
+                out.reason = if total.lo > 0. || total.hi < 0. { "expression-volume-sign-and-error-enclosed" } else { "expression-volume-sign-unresolved" };
+                return Ok(out);
+            }
+            if let Some(next) = queue.peek() {
+                out.uncertain_face = Some(nodes[next.0].face);
+                out.uncertain_domain = Some(nodes[next.0].domain);
+            }
+            if out.cells.saturating_add(2) > limits.cells || out.spans == limits.spans {
+                out.reason = "expression-volume-work-limit"; return Ok(out);
+            }
+            let Some(Priority(index, _)) = queue.pop() else { out.reason = "expression-volume-resolution-limit"; return Ok(out); };
+            let node = &nodes[index]; let domain = node.domain; let face = node.face;
+            let axis = usize::from(domain[1][1] - domain[1][0] > domain[0][1] - domain[0][0]);
+            let midpoint = domain[axis][0] * 0.5 + domain[axis][1] * 0.5;
+            if !(domain[axis][0] < midpoint && midpoint < domain[axis][1]) { continue; }
+            let mut left = domain; let mut right = domain;
+            left[axis][1] = midpoint; right[axis][0] = midpoint;
+            let Some(a) = evaluate(face, left, &mut out)? else { out.reason = "expression-volume-work-limit"; return Ok(out); };
+            let Some(b) = evaluate(face, right, &mut out)? else { out.reason = "expression-volume-work-limit"; return Ok(out); };
+            let children = [nodes.len(), nodes.len() + 1];
+            nodes[index].children = Some(children); nodes[index].bound = refine_sum(nodes[index].bound, a, b)?;
+            for (domain, bound, child) in [(left, a, children[0]), (right, b, children[1])] {
+                nodes.push(Node { face, domain, bound, parent: Some(index), children: None });
+                queue.push(Priority(child, bound.hi - bound.lo));
+            }
+            let mut current = index;
+            while let Some(parent) = nodes[current].parent {
+                let [a, b] = nodes[parent].children.unwrap();
+                nodes[parent].bound = refine_sum(nodes[parent].bound, nodes[a].bound, nodes[b].bound)?; current = parent;
+            }
+        }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn subdivision_preserves_complete_old_bounds_and_refuses_contradiction() {
+        let old = I::new(10., 20.).unwrap();
+        let wide = refine_sum(old, I::new(-100., 100.).unwrap(), I::new(-100., 100.).unwrap()).unwrap();
+        assert_eq!([wide.lo, wide.hi], [10., 20.]);
+        let tight = refine_sum(old, I::new(5., 6.).unwrap(), I::new(6., 7.).unwrap()).unwrap();
+        assert!(tight.lo <= 11. && tight.hi >= 13. && tight.lo > old.lo && tight.hi < old.hi);
+        assert!(refine_sum(old, I::point(-5.), I::point(-5.)).is_err());
+    }
+    #[test]
+    fn greedy_planar_queries_cannot_starve_remaining_initial_face_cells() {
+        // Reproduce the old failure: each planar query consumes its whole
+        // allowance, refuses, then needs one fallback face evaluation.
+        for budget in [29, 30, 512, 8192] {
+            let mut cells = budget; let mut spans = 1000000;
+            for remaining in (1..=29).rev() {
+                let allowance = planar_allowance(cells, spans, remaining);
+                cells -= allowance; spans -= allowance;
+                assert!(cells >= remaining);
+                cells -= 1;
+            }
+        }
+        assert_eq!(planar_allowance(512, 0, 29), 0);
+        assert_eq!(planar_allowance(0, 1000, 29), 0);
+        assert_eq!(planar_allowance(512, 1000, 0), 0);
+    }
+    #[test]
+    fn volume_admission_refuses_pending_zero_sign_and_excess_error() {
+        assert!(admitted_volume_bounds(Some([7000., 7001.]), false, 20.).unwrap().is_none());
+        assert!(admitted_volume_bounds(None, true, 20.).unwrap().is_none());
+        assert!(admitted_volume_bounds(Some([-1., 1.]), true, 20.).unwrap().is_none());
+        assert!(admitted_volume_bounds(Some([7000., 7030.]), true, 20.).unwrap().is_none());
+        assert_eq!(admitted_volume_bounds(Some([7000., 7001.]), true, 20.).unwrap(), Some(([7000., 7001.], false)));
+        assert_eq!(admitted_volume_bounds(Some([-7001., -7000.]), true, 20.).unwrap(), Some(([7000., 7001.], true)));
+    }
+}

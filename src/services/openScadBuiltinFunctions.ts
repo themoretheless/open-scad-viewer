@@ -16,10 +16,8 @@ import {
   type ExpressionArgument,
   type FunctionValue,
 } from './openscadCompiler'
-import { isWellFormedUnicode } from '../core/unicode'
-import { nextUp } from '../core/float'
-import { acosDegrees, arrayValue, asinDegrees, atan2Degrees, atanDegrees, binaryNumber, cosDegrees, equalValues, expectCount, fail, finiteNumberValue, formatValue, numberValue, registerArray, registerString, roundAwayFromZero, sinDegrees, tanDegrees, unaryNumber, warn } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
-import { characterString, minMax, predicate, returnMatches, searchNeedles, searchStringRows, seededRandom, unsignedSearchParameter } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
+import { arrayValue, binaryNumber, equalValues, expectCount, fail, finiteNumberValue, formatValue, minMax, numberValue, registerArray, registerString, roundAwayFromZero, seededRandom, unaryNumber, warn } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
+import { characterString, isWellFormedUnicode, predicate, returnMatches, searchNeedles, searchStringRows, unsignedSearchParameter } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
 export { createDeferredOpenScadBuiltinArguments } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
 export { isOpenScadBuiltinFunctionName, evaluateOpenScadBuiltinFunction } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
 
@@ -83,19 +81,13 @@ export type BuiltinHandler = (
   context: OpenScadBuiltinFunctionContext,
 ) => OpenScadBuiltinValue
 
-// OpenSCAD's public 2021.01 behavior requires exact results at common degree
-// angles. Normalize once, solve a first-quadrant pair, and restore the signs
-// by quadrant so those values also remain exact after full rotations.
-export const DEG_TO_RAD = 0.017453292519943295769
-export const RAD_TO_DEG = 57.2957795130823208767
-export const SQRT_THREE_QUARTERS = 0.86602540378443859659
-export const SQRT_ONE_THIRD = 0.57735026918962573106
-export const TRIG_HUGE_VALUE = 360 * 2 ** 52
-
-export interface ReducedDegrees {
-  readonly angle: number
-  readonly cycles: number
-}
+const sinDegrees=(value:number)=>nativeDegreeMath('sin',[value])
+const cosDegrees=(value:number)=>nativeDegreeMath('cos',[value])
+const tanDegrees=(value:number)=>nativeDegreeMath('tan',[value])
+const asinDegrees=(value:number)=>nativeDegreeMath('asin',[value])
+const acosDegrees=(value:number)=>nativeDegreeMath('acos',[value])
+const atanDegrees=(value:number)=>nativeDegreeMath('atan',[value])
+const atan2Degrees=(y:number,x:number)=>nativeDegreeMath('atan2',[y,x])
 
 export class Mt19937 {
   private readonly state = new Uint32Array(624)
@@ -157,7 +149,7 @@ const rands: BuiltinHandler = (args, context) => {
   }
   const count = Math.trunc(requestedCount)
   if (!Number.isSafeInteger(count) || count > MAX_GENERATED_ITEMS) {
-    return fail(context, 'rands', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString()} items`)
+    return fail(context, 'rands', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString('en-US')} items`)
   }
   let random = context.random
   if (args.length === 4) {
@@ -219,7 +211,7 @@ const concat: BuiltinHandler = (args, context) => {
   for (const value of args) {
     const addition = Array.isArray(value) ? value.length : 1
     if (result.length + addition > MAX_GENERATED_ITEMS) {
-      return fail(context, 'concat', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString()} items`)
+      return fail(context, 'concat', `result exceeds ${MAX_GENERATED_ITEMS.toLocaleString('en-US')} items`)
     }
     if (Array.isArray(value)) {
       // Avoid Function#apply/spread argument limits for large, otherwise valid

@@ -37,8 +37,8 @@
   "processAmendment": {
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v86",
-    "previousPlanSha256": "e850ea166074a5b34473aafd928536c8c5fda9e79ceb9334cc34bb5b179ab11a",
-    "reason": "Append-only module split: nurbs-intersect queries.rs and brep-core operations.rs become directory modules with identical bodies and public paths; no new capability; preserve ownRust52.",
+    "previousPlanSha256": "c701708da5c3b183168ebdaf9ee62bc7eff80b5fa86a113171cf7e5932e8b611",
+    "reason": "Preserve all predecessor snapshots and the native d883 artifact; deterministic identity-based removal regression preflight and 41 metadata tests passed; finite STEP/UI evidence retained with all clean semantic work incomplete.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -248,8 +248,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "ba426e478db071b825d2fb96d69881131e1017b68bc34fd20b079d3b4b1a62ad",
-          "byteLength": 8419,
+          "value": "46edfa1d46e15645ce210e34cf8faec8a249cdcf4973afe7a60ee4f6e01d9474",
+          "byteLength": 8652,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
         }
       },
@@ -284,8 +284,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "8e5792a0c9195f2d92033ff8357a77b655b011415cd01bc20c2bb76f4ba517d0",
-          "byteLength": 1027,
+          "value": "0ae46e510054f2640373da19ae7a53644e6de80451f6c9bef1caf1b6fd7aad06",
+          "byteLength": 1089,
           "verifiedBy": "qualification artifact validator recomputes exact file bytes"
         }
       },
@@ -467,7 +467,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "47c27e6f7a11d18a5fe85b25369b98da8162c2b39e91c19d6d9e1281c3b8f9d4",
+          "value": "d5215a559375f3ca152dc067bcb65055db82072fde3a72c779bd29d464ca4b94",
           "byteLength": 3560,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -508,8 +508,10 @@
           "scripts/build-vr.mjs",
           "scripts/build-wasm-brotli.mjs",
           "scripts/check-profile-solid-browser.mjs",
+          "scripts/check-sweep-miter-matrix-browser.mjs",
           "scripts/diagnose-g1-webkit-memory.mjs",
           "scripts/export-profile-solid-step.mts",
+          "scripts/export-sweep-step-oracle.mts",
           "scripts/g1-github-actions.mjs",
           "scripts/g1RuntimeIdentity.mjs",
           "scripts/materialize-qualification-kernels.mjs",
@@ -525,6 +527,10 @@
           "scripts/run-g1-candidate-clean-fragment.mjs",
           "scripts/run-g1-ubuntu-docker-fragment.mjs",
           "scripts/run-manifold-g1-memory-qualification.mjs",
+          "scripts/sweep-browser-surface-evidence.mjs",
+          "scripts/sweep-browser-worker-probe.mjs",
+          "scripts/sweep-step-miter-fixtures.mts",
+          "scripts/sweep-step-profile-fixtures.mts",
           "scripts/verify-profile-solid-step.py",
           "tests/browserMemoryQualificationRunner.test.ts",
           "tests/browserQualificationRunner.test.ts",
@@ -558,8 +564,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "1dd4a35ee6eac3e82493b7690eced9dca86d400aae6b870fb4855bca068100b7",
-          "byteLength": 5786,
+          "value": "93c1aa36bbe9b4ab11249b7925bdcfde170ffc333a43fab49f5e2ac5277f06d9",
+          "byteLength": 6418,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },
@@ -601,7 +607,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6110b72f6e76eb045100f32a14ecb31f0f5105ea0017564d656dac6c9149c1f6",
+          "value": "d45c6483e2ad6a5e25cf272a4a1b7c08884898f9e536992a1d88e45e9ae79d75",
           "byteLength": 858,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }

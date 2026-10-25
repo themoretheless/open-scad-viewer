@@ -1,0 +1,193 @@
+{
+  "schema": "expression-wall-pending-face-classes/1",
+  "source": "docs/qualification/mapped-retained-carrier-2026-10-08/transverse-cone-dispatch-native-2026-10-11.json",
+  "sourceSha256": "25caaa35313e5cbd45ec4f5e1a6ea90d8b4150d1e8b7343328cd5a89fc5061e3",
+  "geometryQualified": false,
+  "pendingRegions": 4081,
+  "classes": {
+    "same-face:original:original": 1203,
+    "distinct-faces:original:retained": 376,
+    "distinct-faces:original:transition": 340,
+    "same-face:retained:retained": 574,
+    "distinct-faces:retained:transition": 784,
+    "same-face:transition:transition": 272,
+    "distinct-faces:original:original": 532
+  },
+  "limits": {
+    "cells": 10000,
+    "spans": 17759,
+    "domain_cells": 100000
+  },
+  "largestPairs": [
+    {
+      "faces": [
+        {
+          "id": 27,
+          "kind": "retained",
+          "loops": 1,
+          "source": 1
+        },
+        {
+          "id": 28,
+          "kind": "transition",
+          "loops": 1,
+          "source": null
+        }
+      ],
+      "pendingRegions": 448
+    },
+    {
+      "faces": [
+        {
+          "id": 0,
+          "kind": "retained",
+          "loops": 1,
+          "source": 0
+        },
+        {
+          "id": 0,
+          "kind": "retained",
+          "loops": 1,
+          "source": 0
+        }
+      ],
+      "pendingRegions": 374
+    },
+    {
+      "faces": [
+        {
+          "id": 0,
+          "kind": "retained",
+          "loops": 1,
+          "source": 0
+        },
+        {
+          "id": 28,
+          "kind": "transition",
+          "loops": 1,
+          "source": null
+        }
+      ],
+      "pendingRegions": 336
+    },
+    {
+      "faces": [
+        {
+          "id": 28,
+          "kind": "transition",
+          "loops": 1,
+          "source": null
+        },
+        {
+          "id": 28,
+          "kind": "transition",
+          "loops": 1,
+          "source": null
+        }
+      ],
+      "pendingRegions": 272
+    },
+    {
+      "faces": [
+        {
+          "id": 10,
+          "kind": "original",
+          "loops": 1,
+          "source": 10
+        },
+        {
+          "id": 10,
+          "kind": "original",
+          "loops": 1,
+          "source": 10
+        }
+      ],
+      "pendingRegions": 266
+    },
+    {
+      "faces": [
+        {
+          "id": 5,
+          "kind": "original",
+          "loops": 1,
+          "source": 5
+        },
+        {
+          "id": 5,
+          "kind": "original",
+          "loops": 1,
+          "source": 5
+        }
+      ],
+      "pendingRegions": 248
+    },
+    {
+      "faces": [
+        {
+          "id": 27,
+          "kind": "retained",
+          "loops": 1,
+          "source": 1
+        },
+        {
+          "id": 27,
+          "kind": "retained",
+          "loops": 1,
+          "source": 1
+        }
+      ],
+      "pendingRegions": 200
+    },
+    {
+      "faces": [
+        {
+          "id": 2,
+          "kind": "original",
+          "loops": 1,
+          "source": 2
+        },
+        {
+          "id": 28,
+          "kind": "transition",
+          "loops": 1,
+          "source": null
+        }
+      ],
+      "pendingRegions": 142
+    },
+    {
+      "faces": [
+        {
+          "id": 17,
+          "kind": "original",
+          "loops": 1,
+          "source": 17
+        },
+        {
+          "id": 17,
+          "kind": "original",
+          "loops": 1,
+          "source": 17
+        }
+      ],
+      "pendingRegions": 128
+    },
+    {
+      "faces": [
+        {
+          "id": 21,
+          "kind": "original",
+          "loops": 1,
+          "source": 21
+        },
+        {
+          "id": 21,
+          "kind": "original",
+          "loops": 1,
+          "source": 21
+        }
+      ],
+      "pendingRegions": 128
+    }
+  ]
+}

@@ -12,6 +12,15 @@ pub struct Certificate {
     pub edges: Vec<usize>,
     pub vertex: Option<usize>,
     pub joined_proof:Option<JoinedProof>,
+    pub polar_join:Option<nurbs_core::surface_injectivity::PolarPMatrix>,
+    pub source_join:Option<SourceJoinedProof>,
+}
+#[derive(Clone,Debug)]
+pub struct SourceJoinedProof {
+    pub blend_face:usize,
+    pub wall_face:usize,
+    pub collapsed_end:usize,
+    pub report:nurbs_core::surface_quotient_injectivity::JoinedReport,
 }
 #[derive(Clone,Debug)]
 pub struct JoinedProof {
@@ -78,11 +87,11 @@ fn contact_controls(model:&Model,face:usize)->Vec<&[f64]>{
 mod extended_support;
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
     certify_original(model,faces).or_else(|| extended_support::certify(model,faces).map(|c|Certificate {
-        faces:c.faces,contact_enclosure:c.hull_intersection,edges:c.edges,vertex:c.vertex,joined_proof:None
+        faces:c.faces,contact_enclosure:c.hull_intersection,edges:c.edges,vertex:c.vertex,joined_proof:None,polar_join:None,source_join:None
     }))
 }
 fn certify_original(model:&Model, faces:[usize;2])->Option<Certificate>{
-    certify_axis(model,faces).or_else(||certify_edge_plane(model,faces)).or_else(||certify_vertex_plane(model,faces)).or_else(||certify_joined_charts(model,faces))
+    certify_axis(model,faces).or_else(||certify_edge_plane(model,faces)).or_else(||certify_vertex_plane(model,faces)).or_else(||certify_joined_charts(model,faces)).or_else(||certify_polar_charts(model,faces))
 }
 fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     let edges=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
@@ -148,7 +157,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
                     });
                     if matches!(sides,[Some(cad_predicates::Sign::Positive),Some(cad_predicates::Sign::Negative)]
                         |[Some(cad_predicates::Sign::Negative),Some(cad_predicates::Sign::Positive)]) {
-                        return Some(Certificate{faces,contact_enclosure:point.map(|x|[x,x]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None});
+                        return Some(Certificate{faces,contact_enclosure:point.map(|x|[x,x]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None,source_join:None,polar_join:None});
                     }
                 }}
             }
@@ -219,7 +228,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
                     // Each face must actually own an exact endpoint here.
                     if edges.iter().all(|set|set.iter().any(|&e|edge_ends(model,e)
                         .is_some_and(|ends|(0..2).any(|i|model.edges[e].vertices[i]==vertex&&ends[i]==point)))) {
-                        return Some(Certificate{faces,contact_enclosure:point.map(|x|[x,x]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None});
+                        return Some(Certificate{faces,contact_enclosure:point.map(|x|[x,x]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None,source_join:None,polar_join:None});
                     }
                 }
             }
@@ -227,7 +236,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
         }
     }
     if free.len()>1{return None;}
-    let mut out=Certificate{faces,contact_enclosure:intersection,edges:Vec::new(),vertex:None,joined_proof:None};
+    let mut out=Certificate{faces,contact_enclosure:intersection,edges:Vec::new(),vertex:None,joined_proof:None,source_join:None,polar_join:None};
     if free.is_empty(){
         let point=intersection.map(|r|r[0]);
         // Require the same topological vertex and an exact curve endpoint on
@@ -262,6 +271,62 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
 // The normalized chart union is globally injective under the projected
 // weighted bounds. Exact shared natural-boundary lifts bind that union to
 // the authored edge, including its owned collapsed endpoint.
+fn certify_polar_charts(model: &Model, faces: [usize; 2]) -> Option<Certificate> {
+    let uses = faces.map(|f| {
+        std::iter::once(model.faces[f].outer)
+            .chain(model.faces[f].holes.iter().copied())
+            .flat_map(|l| model.loops[l].coedges.iter())
+            .collect::<Vec<_>>()
+    });
+    let surfaces = faces.map(|f| &model.faces[f].surface);
+    for ca in &uses[0] {
+        for cb in &uses[1] {
+            if ca.edge != cb.edge {
+                continue;
+            }
+            let edge = &model.edges[ca.edge].curve;
+            if crate::shared_boundary::boundary(surfaces[0], &ca.pcurve, edge)
+                != Some((1, surfaces[0].degree_v))
+                || crate::shared_boundary::boundary(surfaces[1], &cb.pcurve, edge)
+                    != Some((1, surfaces[1].degree_v))
+            {
+                continue;
+            }
+            for z in [-1., 1.] {
+                let coordinates = [[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., z, 0.]];
+                let Some(proof) = nurbs_core::surface_injectivity::certify_polar_join(
+                    surfaces[0],
+                    surfaces[1],
+                    coordinates,
+                    16,
+                    512,
+                )
+                .ok()
+                .flatten() else {
+                    continue;
+                };
+                let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+                for p in &edge.control_points {
+                    for k in 0..3 {
+                        enclosure[k][0] = enclosure[k][0].min(p[k]);
+                        enclosure[k][1] = enclosure[k][1].max(p[k]);
+                    }
+                }
+                return Some(Certificate {
+                    faces,
+                    contact_enclosure: enclosure,
+                    edges: vec![ca.edge],
+                    vertex: None,
+                    joined_proof: None,
+                    source_join: None,
+                    polar_join: Some(proof),
+                });
+            }
+        }
+    }
+    None
+}
+
 fn certify_joined_charts(model:&Model,faces:[usize;2])->Option<Certificate>{
     let uses=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
         .flat_map(|l|model.loops[l].coedges.iter()).collect::<Vec<_>>());
@@ -299,7 +364,14 @@ fn certify_joined_charts(model:&Model,faces:[usize;2])->Option<Certificate>{
                     let mut enclosure=[[f64::INFINITY,f64::NEG_INFINITY];3];
                     for p in &edge.control_points {for k in 0..3{enclosure[k][0]=enclosure[k][0].min(p[k]);enclosure[k][1]=enclosure[k][1].max(p[k]);}}
                     return Some(Certificate{faces,contact_enclosure:enclosure,edges:vec![ca.edge],vertex:None,
-                        joined_proof:Some(JoinedProof{blend_face,wall_face,collapsed_end:end,projection,report})});
+                        source_join:None,polar_join:None,joined_proof:Some(JoinedProof{blend_face,wall_face,collapsed_end:end,projection,report})});
+                }
+                let source=nurbs_core::surface_quotient_injectivity::certify_ruled_join_source_frame(blend,wall,end,16,512).ok()?;
+                if source.proven {
+                    let mut enclosure=[[f64::INFINITY,f64::NEG_INFINITY];3];
+                    for p in &edge.control_points {for k in 0..3{enclosure[k][0]=enclosure[k][0].min(p[k]);enclosure[k][1]=enclosure[k][1].max(p[k]);}}
+                    return Some(Certificate{faces,contact_enclosure:enclosure,edges:vec![ca.edge],vertex:None,
+                        joined_proof:None,polar_join:None,source_join:Some(SourceJoinedProof{blend_face,wall_face,collapsed_end:end,report:source})});
                 }
             }}
         }
@@ -341,7 +413,7 @@ fn certify_edge_plane(model:&Model,faces:[usize;2])->Option<Certificate>{
             if valid&&(segment_only[0]||segment_only[1])&&signs.iter().any(Option::is_some)
                 && !(signs[0].is_some()&&signs[0]==signs[1]) {
                 return Some(Certificate{faces,contact_enclosure:std::array::from_fn(|k|[a[k].min(b[k]),a[k].max(b[k])]),
-                    edges:vec![edge],vertex:None,joined_proof:None});
+                    edges:vec![edge],vertex:None,joined_proof:None,source_join:None,polar_join:None});
             }
         }
     }
@@ -393,13 +465,35 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
         }).collect::<BTreeSet<_>>());
     for &vertex in vertices[0].intersection(&vertices[1]) {
         let point=model.vertices[vertex].point;
+        // Owned straight-edge endpoints supply an exact radial/vertical line.
+        // Tilted finite anchors can separate a cap from the neighboring wall
+        // while exposing only their common vertex on one of the two charts.
+        // Proposals have no authority until every original control passes.
+        let mut owned_candidates=Vec::<Vec<f64>>::new();
+        for face in faces {
+            for loop_index in std::iter::once(model.faces[face].outer).chain(model.faces[face].holes.iter().copied()) {
+                for coedge in &model.loops[loop_index].coedges {
+                    let edge=&model.edges[coedge.edge];
+                    if edge.curve.degree!=1 || !edge.vertices.contains(&vertex) {continue;}
+                    for v in edge.vertices {
+                        let p=model.vertices[v].point;
+                        if p!=point && !owned_candidates.iter().any(|q|q.as_slice()==p.as_slice()) {owned_candidates.push(p.to_vec());}
+                    }
+                }
+            }
+        }
+        for axis in 0..2 {for sign in [-1.,1.] {
+            let mut anchor=point.to_vec();anchor[axis]+=1.;anchor[2]+=sign;
+            if anchor.iter().all(|v|v.is_finite()) {owned_candidates.push(anchor);}
+        }}
+        owned_candidates.truncate(8);
+        let mut candidates=owned_candidates.iter().map(|p|p.as_slice()).collect::<Vec<_>>();
         let proposal_controls=nets.each_ref().map(|ps|ps.iter().map(|p|p.to_vec()).collect::<Vec<_>>());
         let proposal_poles=proposal_controls.each_ref().map(|ps|ps.iter().collect::<Vec<_>>());
         let proposed=propose_vertex_plane(point,&proposal_poles);
-        let mut candidates=Vec::<&[f64]>::new();
         for p in nets.iter().flatten().copied(){
             if p!=point && !candidates.contains(&p){candidates.push(p);}
-            if candidates.len()==16{break;}
+            if candidates.len()==24{break;}
         }
         // Floating proposals only choose anchors; every original enclosure
         // control still passes the exact half-space and owned-stratum tests.
@@ -418,7 +512,7 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
             }}
             if valid && (vertex_only[0]||vertex_only[1]) && signs.iter().any(Option::is_some)
                 && !(signs[0].is_some()&&signs[0]==signs[1]) {
-                return Some(Certificate{faces,contact_enclosure:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None});
+                return Some(Certificate{faces,contact_enclosure:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None,source_join:None,polar_join:None});
             }
         }}
     }
@@ -428,6 +522,33 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn variable_annular_contacts_require_whole_original_chart_proofs() {
+        for radii in [[0.5,1.25],[1.25,0.5]] {
+            let model=crate::circular_blend::partial_annular_variable_arc(20.,5.,6.,radii,[0.3,0.7,0.4],1e-7).unwrap();
+            for faces in [[13,15],[13,18],[17,19],[17,22],[23,29],[26,29]] {
+                assert!(certify_vertex_plane(&model,faces).is_some(),"vertex {faces:?}");
+            }
+            let middle=certify_polar_charts(&model,[5,7]).expect("regular middle join");
+            assert!(middle.polar_join.unwrap().determinant_lower>0.);
+            let exit=certify_joined_charts(&model,[10,12]).expect("collapsed exit join");
+            assert!(exit.source_join.unwrap().report.proven);
+            let a=&model.faces[5].surface;let b=&model.faces[7].surface;
+            let frame=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+            assert!(nurbs_core::surface_injectivity::certify_polar_join(a,b,frame,16,512).unwrap().is_some());
+            assert!(nurbs_core::surface_injectivity::certify_polar_join(a,b,frame,16,511).unwrap().is_none());
+            let mut broken=b.clone();broken.control_points[0][1][0]+=1e-12;
+            assert!(nurbs_core::surface_injectivity::certify_polar_join(a,&broken,frame,16,512).unwrap().is_none());
+            let mut reversed=b.clone();for row in &mut reversed.control_points {row[0][2]=12.;}
+            assert!(nurbs_core::surface_injectivity::certify_polar_join(a,&reversed,frame,16,512).unwrap().is_none());
+            let a=&model.faces[10].surface;let b=&model.faces[12].surface;
+            let run=|b:&nurbs_core::surface::Surface,budget|nurbs_core::surface_quotient_injectivity::certify_ruled_join_source_frame(a,b,1,16,budget).unwrap();
+            assert!(!run(b,511).proven);
+            let mut broken=b.clone();broken.control_points[0][1][0]+=1e-12;assert!(!run(&broken,512).proven);
+            let mut reversed=b.clone();for row in &mut reversed.control_points {row[0][2]=12.;}assert!(!run(&reversed,512).proven);
+            let mut order=b.clone();let n=order.control_points.len();order.control_points[n-2][0][2]+=1e-12;assert!(!run(&order,512).proven);
+        }
+    }
     #[test]
     fn skewed_station_hulls_meet_only_at_owned_vertex() {
         let section=|z:f64,t:f64|vec![[

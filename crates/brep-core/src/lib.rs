@@ -10,6 +10,7 @@
 )]
 #![allow(unused_features)]
 mod rational_identity;
+mod exact_affine_source;
 #[cfg(feature = "codec")]
 mod serialization;
 use nurbs_core::{
@@ -33,6 +34,7 @@ pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod circular_blend;
 pub mod feature_family;
+pub mod edge_tangency;
 pub mod analytic_ss;
 mod boolean_support;
 mod box_sphere_boolean;
@@ -50,6 +52,10 @@ pub mod watertight;
 /// Authored trimmed patch networks with continuous admission audits.
 pub mod trimmed_shell;
 pub mod boundary_embedding;
+pub mod boundary_certificate;
+pub mod sweep_boundary_owned;
+#[cfg(test)]
+mod sweep_boundary_owned_tests;
 pub mod boundary_hull_contact;
 pub mod close_topology;
 pub mod coverage_verifier;
@@ -84,6 +90,7 @@ pub mod nurbs_step_trimmed;
 pub mod operations;
 pub mod planar_trim;
 pub mod profile_region;
+#[cfg(feature = "codec")]
 pub mod profile_intersections;
 pub mod shared_boundary;
 pub mod self_intersection;
@@ -117,6 +124,7 @@ pub mod rounded_patch_network;
 pub mod shell_thickness;
 pub mod wall_clearance;
 pub mod wall_opposition;
+pub mod source_implicit_body;
 pub mod sweep_miter_layout;
 pub mod sweep_station_reconstruction;
 pub mod sweep_affine_boundary;
@@ -137,28 +145,33 @@ pub mod uv_coverage;
 mod uv_regions;
 pub mod volume_validity;
 pub use analytic::{
+    LoftCap, capped_loft_with_caps, capped_loft_with_caps_checked, FiberedBodyLimits, FiberedBodyReport, FiberedBody, FiberedBodyAttempt, construct_fibered_body, verify_fibered_body,
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
+    AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls,
     revolve_wire_angle, ruled_loft, periodic_section_loft, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, smooth_station_walls, SmoothStationWalls, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, progressive_profile_body, sphere, torus, tube,
 };
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};
 pub use analytic_features::{
     AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult, EXACT_ANALYTIC_SHELL_CAPABILITY,
-    EXACT_BENT_RMF_SWEEP_CAPABILITY, EXACT_CONVEX_CHAMFER_CAPABILITY,
-    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
-    EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+    EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_BENT_RMF_SWEEP_CAPABILITY,
+    EXACT_CONVEX_CHAMFER_CAPABILITY, EXACT_CONVEX_PRISM_FILLET_CAPABILITY,
+    EXACT_MULTI_SECTION_LOFT_CAPABILITY, EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY,
+    EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
     EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_bent_rmf_sweep,
     audited_multi_edge_fillet, audited_multi_section_loft, audited_parallel_frame_sweep,
-    exact_analytic_shell, exact_annular_fillet, exact_layered_prism_fillet, exact_convex_chamfer, exact_convex_prism_fillet, exact_simple_prism_fillet,
-    exact_valence3_corner_blend, exact_variable_radius_fillet, frame_law_ruled_sweep,
+    exact_analytic_shell, exact_annular_fillet, exact_convex_chamfer, exact_convex_prism_fillet,
+    exact_layered_prism_fillet, exact_simple_prism_fillet, exact_valence3_corner_blend,
+    exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep, import_iges,
 };
 pub use close_topology::{
-    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, ComplexHealCertificate,
-    ComplexHealPlan, ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind,
-    EdgeRadialRing, EdgeUseRef, ExactParameterPartition, FaceRef, LocalCorrespondence,
-    MixedDimensionalBrep, SharedFace, TOLERANT_COMPLEX_HEAL_CAPABILITY,
-    TopologyComplexCertificate, VertexFan, VertexUseRef, certify_complex_heal,
-    complex_relation_id,
+    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, CLOSE_TOPOLOGY_IGES_CAPABILITY,
+    CLOSE_TOPOLOGY_STEP_CAPABILITY, ComplexHealCertificate, ComplexHealPlan,
+    ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind, EdgeRadialRing, EdgeUseRef,
+    ExactParameterPartition, FaceRef, LocalCorrespondence, MixedDimensionalBrep, SharedFace,
+    TOLERANT_COMPLEX_HEAL_CAPABILITY, TopologyComplexCertificate, VertexFan, VertexUseRef,
+    certify_complex_heal, complex_relation_id, export_complex_iges, export_complex_step,
+    import_complex_iges, import_complex_step,
 };
 pub use iges_interchange_v2::{
     IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
@@ -1467,6 +1480,7 @@ pub mod trimmed_face_recipe;
 
 pub mod source_contact_point;
 
+pub mod source_carrier_point;
 pub mod source_boundary_fragment;
 
 pub mod source_contour_proposal;
@@ -1507,6 +1521,7 @@ pub mod source_plane_fiber;
 
 pub mod source_pole_plane_image;
 
+pub mod source_profile_boundary_identity;
 pub mod source_pole_paired_contact;
 
 pub mod source_paired_fiber_contact;
@@ -1517,11 +1532,20 @@ pub mod source_fiber_contact;
 
 pub mod source_affine_use;
 
+pub mod source_projective_use;
+pub mod source_projective_edge;
+pub mod source_projective_shell_restore;
+pub mod source_projective_body_restore;
 pub mod source_mapped_edge;
 
 pub mod trimmed_shell_recipe;
 
 pub mod offset_edge_supports;
+
+pub mod linear_canal;
+
+#[cfg(feature = "codec")]
+pub mod linear_canal_body;
 
 pub mod source_root_parameter;
 
@@ -1549,10 +1573,6 @@ pub mod source_body_topology;
 
 pub mod source_seam_tangency;
 
-pub mod linear_canal;
-
-pub mod linear_canal_body;
-
 pub mod source_inverse_shear;
 
 pub mod source_root_refinement;
@@ -1575,6 +1595,13 @@ pub mod source_corner_plane_image;
 
 pub mod source_face_gap;
 
+pub mod source_planar_flux;
+
+pub mod source_retained_face_gap;
+pub mod source_wall_pair;
+pub mod source_wall_anchor;
+pub mod source_shared_chord_map;
+pub mod source_profile_body;
 pub mod source_material_segment;
 
 pub mod source_material_chord;
@@ -1588,9 +1615,6 @@ pub mod source_wall_coverage;
 
 pub mod source_wall_self_coverage;
 
-pub(crate) mod source_planar_flux;
-
-pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
 
 pub mod wall_search;
 

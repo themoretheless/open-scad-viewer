@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "qualificationClaim": "none",
+  "scope": "Complete local execution plus focused unchanged-budget retries; hosted CI and fresh G1 remain separate mandatory gates.",
+  "geometryWasmSha256": "12241a08fbb3bd749d90f6ff9955d7157601b1e433cb6ac33f7e0b4784872b47",
+  "nativeWorkspace": {
+    "initialPassed": 5727,
+    "initialFailed": 6,
+    "ignored": 5,
+    "allSixFailedCasesRetestedSuccessfully": true,
+    "changesToLimits": false,
+    "retryConditions": "MLX runs outside filesystem/GPU sandbox; AAG runs after broad shared-host workload."
+  },
+  "hostSuite": {
+    "initialPassed": 5844,
+    "initialFailed": 29,
+    "skipped": 9,
+    "fiveDiagnosticFixtureExpectationsUpdatedAndPassed": true,
+    "timeoutAndRelatedRetriesPassed": 27,
+    "changesToLimits": false
+  },
+  "fingerprintChecks": {
+    "passed": 31,
+    "g0": 81,
+    "g1": 98,
+    "ownRust": 66
+  },
+  "hostedGates": {
+    "ci": "pending-new-source",
+    "g1": "pending-new-source",
+    "requiredWorkUnits": 4740,
+    "requiredFragments": 132,
+    "priorFragmentsImported": 0
+  },
+  "logs": {
+    "native-workspace": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/native-workspace.log.gz",
+      "sha256": "1bd5281327289c5946ebb07e158931311e69ed57555aaaadf81ea2d82418029d",
+      "originalSha256": "565b60b7f21dd9beaa8d6b6b2f107fb5baa46ffeace84d57e8175c399f594447"
+    },
+    "mlx-retry": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/mlx-retry.log.gz",
+      "sha256": "67f839e411ea82bba1258e375a4eed73c3b6e9ab2c7a0914b35765144d716ca1",
+      "originalSha256": "ea7c8ddb5f78585150da4ea24ea35a23204fee9ad4ca2ab48e7a5ebfa53f41ff"
+    },
+    "pocket-retry": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/pocket-retry.log.gz",
+      "sha256": "ea3024c0e48769d474153c06f1b9b2e661bf5ddc5ac44c3407df959d880dabe2",
+      "originalSha256": "c02bbb283a819361d6b46943b4569278e3ee32c63f887adbbfbe471bbfdfa9e3"
+    },
+    "host-suite": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/host-suite.log.gz",
+      "sha256": "fd0ccb82c57ed72a62fd3e73aa1ad5ac92183d7ccbb372b60cb8d1c1c4641d02",
+      "originalSha256": "8236e2cbd54eb250ee680a5e870b7bd78a214b89f3781f4dc0cf62fa479ae461"
+    },
+    "host-timeout-retry": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/host-timeout-retry.log.gz",
+      "sha256": "7e13faa69904e5079ad96aa34b67419a1210dc03db42bb31593932fba7ce40b9",
+      "originalSha256": "cd07ecd359c26a35ae47edeab7ce1911cf92364ce5118a7721fdfe995b90d4be"
+    },
+    "closed-periodic-fixture-retry": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/closed-periodic-fixture-retry.log.gz",
+      "sha256": "311830aa02170da5afcdb7414d5cb25d7fbb20fca74fb3f7c1d11a856b9706b1",
+      "originalSha256": "e46a7b210a47c1ed105b1182a7c2b2a3287492e0c3f51c729f3512bcd67a27c6"
+    },
+    "closed-authored-fixture-retry": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/closed-authored-fixture-retry.log.gz",
+      "sha256": "6f044b3c589f47a8f149f7b811139927cec1a3777bbe344f6fc7ec42c9807a72",
+      "originalSha256": "1e9e4f5fde62d8bd311112b620600622f9d82402629b95f54260e593845428f8"
+    },
+    "diagnostic-fixture-retry": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/diagnostic-fixture-retry.log.gz",
+      "sha256": "6cc933ba7e17c29a6eb8b7f637d37b1344f42db40039b18cae1d223ce10a2b4d",
+      "originalSha256": "0479c66b6107a6d6fba2573e9ceed50097ca8cfb159451dd70a4b7de9560ae51"
+    },
+    "fingerprints-v98": {
+      "path": "docs/qualification/global-geometry-validation-2026-10-14/fingerprints-v98.log.gz",
+      "sha256": "2f9dc08e0de07b7e0e5ff0cddea825b2e6e84992183a3a031665fd8a2166025a",
+      "originalSha256": "16fdd351da78a8f531ad258cd17e507a9aea0fdb68069de04d25d700567480a1"
+    }
+  }
+}

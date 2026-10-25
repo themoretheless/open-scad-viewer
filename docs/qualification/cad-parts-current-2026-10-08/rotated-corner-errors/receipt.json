@@ -1,0 +1,80 @@
+{
+  "command": "edge-fillet",
+  "scope": "Three-edge common-radius rotated cuboid only; mouse and keyboard interaction, not full P0 matrix",
+  "wasmSha256": "82fd669fbb6d980e44f9d27af48757906caee8f9c826176b130f0107c238a0c9",
+  "files": {
+    "mouse/before.json.gz": {
+      "uncompressedSha256": "a565f00cd71cf50d900f343690396d10d7ea4dd39e447707282201ab8b713c96",
+      "bytes": 22867
+    },
+    "mouse/cancelled.json.gz": {
+      "uncompressedSha256": "a565f00cd71cf50d900f343690396d10d7ea4dd39e447707282201ab8b713c96",
+      "bytes": 22867
+    },
+    "mouse/late-reopened.json.gz": {
+      "uncompressedSha256": "a565f00cd71cf50d900f343690396d10d7ea4dd39e447707282201ab8b713c96",
+      "bytes": 22867
+    },
+    "mouse/late-cancelled.json.gz": {
+      "uncompressedSha256": "a565f00cd71cf50d900f343690396d10d7ea4dd39e447707282201ab8b713c96",
+      "bytes": 22867
+    },
+    "mouse/after.json.gz": {
+      "uncompressedSha256": "473958d5fcbf31295c3ad2873c2c5b6c8184832988f2959159c17ebeef76ca64",
+      "bytes": 146135
+    },
+    "mouse/failed.json.gz": {
+      "uncompressedSha256": "a565f00cd71cf50d900f343690396d10d7ea4dd39e447707282201ab8b713c96",
+      "bytes": 22867
+    },
+    "mouse/undo.json.gz": {
+      "uncompressedSha256": "a565f00cd71cf50d900f343690396d10d7ea4dd39e447707282201ab8b713c96",
+      "bytes": 22867
+    },
+    "mouse/reloaded.json.gz": {
+      "uncompressedSha256": "473958d5fcbf31295c3ad2873c2c5b6c8184832988f2959159c17ebeef76ca64",
+      "bytes": 146135
+    },
+    "mouse/redo.json.gz": {
+      "uncompressedSha256": "473958d5fcbf31295c3ad2873c2c5b6c8184832988f2959159c17ebeef76ca64",
+      "bytes": 146135
+    },
+    "keyboard/before.json.gz": {
+      "uncompressedSha256": "c36136c70a9320ffe030707290dc95560226b8effe5f00892c3a37c920e307b2",
+      "bytes": 22867
+    },
+    "keyboard/cancelled.json.gz": {
+      "uncompressedSha256": "c36136c70a9320ffe030707290dc95560226b8effe5f00892c3a37c920e307b2",
+      "bytes": 22867
+    },
+    "keyboard/late-reopened.json.gz": {
+      "uncompressedSha256": "c36136c70a9320ffe030707290dc95560226b8effe5f00892c3a37c920e307b2",
+      "bytes": 22867
+    },
+    "keyboard/late-cancelled.json.gz": {
+      "uncompressedSha256": "c36136c70a9320ffe030707290dc95560226b8effe5f00892c3a37c920e307b2",
+      "bytes": 22867
+    },
+    "keyboard/after.json.gz": {
+      "uncompressedSha256": "be138edca1bffc95a838f6eb8a15a07c10463d7e6c3d140f71f9acbe71507422",
+      "bytes": 146135
+    },
+    "keyboard/failed.json.gz": {
+      "uncompressedSha256": "c36136c70a9320ffe030707290dc95560226b8effe5f00892c3a37c920e307b2",
+      "bytes": 22867
+    },
+    "keyboard/undo.json.gz": {
+      "uncompressedSha256": "c36136c70a9320ffe030707290dc95560226b8effe5f00892c3a37c920e307b2",
+      "bytes": 22867
+    },
+    "keyboard/reloaded.json.gz": {
+      "uncompressedSha256": "be138edca1bffc95a838f6eb8a15a07c10463d7e6c3d140f71f9acbe71507422",
+      "bytes": 146135
+    },
+    "keyboard/redo.json.gz": {
+      "uncompressedSha256": "be138edca1bffc95a838f6eb8a15a07c10463d7e6c3d140f71f9acbe71507422",
+      "bytes": 146135
+    }
+  },
+  "fixtureSha256": "d7f5172b74080103422b738f54a9b421009b29c9a8f47703db6862780e0404a4"
+}

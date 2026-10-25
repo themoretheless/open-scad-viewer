@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "geometryQualified": false,
+  "pendingContainedInPrevious": true,
+  "changes": [],
+  "scope": "Exact endpoint containment, allowing same-face endpoint exchange. Raw parameter volume sums are not physical volume or thickness.",
+  "matchedRequestSidecars": {
+    "docs/qualification/mapped-retained-carrier-2026-10-08/section-position-reuse-trimmed-wall-request-2026-10-10.json": {
+      "sha256": "2c20bf4ae4eb21063f39f58b795f29ea0f0406607c84196be95432f799668fd6",
+      "sourceManifest": "docs/qualification/mapped-retained-carrier-2026-10-08/section-position-reuse-native-inputs-2026-10-10.json",
+      "sourceManifestSha256": "4c47f23df7440fe6a9157441259af54893530d9de4f2629443df46946219d5ba"
+    },
+    "docs/qualification/mapped-retained-carrier-2026-10-08/profile-transition-outcomes-wall-request-2026-10-10.json": {
+      "sha256": "23cfbef5642424d70ff32faef3b5a037856ee4a5e717c013eabda7327f83ce26",
+      "sourceManifest": "docs/qualification/mapped-retained-carrier-2026-10-08/profile-transition-outcomes-native-inputs-2026-10-10.json",
+      "sourceManifestSha256": "f85f001d02a265b7f332d22d50aa4971c89301a4d5b067c167e9005addf103b8"
+    }
+  },
+  "sha256": {
+    "docs/qualification/mapped-retained-carrier-2026-10-08/section-position-reuse-trimmed-wall-2026-10-10.json": "6418b1174c3f698d39db8bda358bfa5d800ca8f49bf737520979c3ebcd93c731",
+    "docs/qualification/mapped-retained-carrier-2026-10-08/profile-transition-outcomes-wall-2026-10-10.json": "02148f99fa8e601d696d88274d5a447f4aaf32e5a875d490bdee12e46566161c"
+  }
+}

@@ -3,12 +3,20 @@ import {useBooleanOperations} from './directModeler/useBooleanOperations'
 import {prepareDocumentCommit} from './directModeler/prepareDocumentCommit'
 import {primitiveCreationError} from '../services/primitiveCreationError'
 import RoundSolidOptions from '../components/RoundSolidOptions.vue'
+import {sourceBodyRecordInspectionOptions} from '../services/sourceBodyArchive'
+const ExpressionShellCheck=defineAsyncComponent(()=>import('../components/ExpressionShellCheck.vue'))
+const ProfileBridgeCheck=defineAsyncComponent(()=>import('../components/ProfileBridgeCheck.vue'))
+const SourceBodyFailureNotice=defineAsyncComponent(()=>import('../components/SourceBodyFailureNotice.vue'))
+import type {ExpressionDisplayReport} from '../services/expressionDisplay'
+import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
+import type {ExpressionMeshReport} from '../services/expressionMesh'
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
+const CadDimensionOverlay=defineAsyncComponent(()=>import('../components/CadDimensionOverlay.vue'))
 import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
 const SolidGcodePanel=defineAsyncComponent(()=>import('./GcodePanel.vue'))
 const SolidLaserPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
-import VrControls from '../components/VrControls.vue'
+const VrControls=defineAsyncComponent(()=>import('../components/VrControls.vue'))
 import { prepareVrPolygons } from '../services/vrScene'
 import {faceAbsenceProven } from '../services/solidSelfIntersection'
 import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
@@ -17,12 +25,12 @@ import {readSolidDraftHead,writeSolidDraftHead} from '../services/solidDraftHead
 import type {MainSolidJob} from '../services/mainSolidProtocol'
 import {collectSolidDraftSnapshots,withSolidDraftLock,solidDraftSnapshotId,readSolidDraftSnapshot,writeSolidDraftSnapshot,removeSolidDraftSnapshot} from '../services/solidDraftStore'
 import SceneObjectControls from '../components/SceneObjectControls.vue'
-import SceneVirtualList from '../components/SceneVirtualList.vue'
+const SceneVirtualList=defineAsyncComponent(()=>import('../components/SceneVirtualList.vue'))
 import { connectedEdgeChain } from '../services/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.vue'
 import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
-import SketchDimensionPanel from '../components/SketchDimensionPanel.vue'
+const SketchDimensionPanel=defineAsyncComponent(()=>import('../components/SketchDimensionPanel.vue'))
 import { defineAsyncComponent, computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
 import {solidVertexCount} from '../services/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../services/solidProfileEdit'
@@ -50,7 +58,6 @@ import {SolidDisplayCache,type DisplayMesh} from '../services/solidDisplayCache'
 import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, MAX_DOCUMENT_CHARACTERS, MAX_DRAFT_CHARACTERS, parseDirectDocument, serializeDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from '../services/directModeling'
 import type {SolidSketchEditOptions} from '../services/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
-import { transformSelection } from '../services/directSolidTools'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { exportPolygonStl, type PolygonMesh } from '../services/geometry/polygon'
 import type {SolidBooleanOptions} from '../services/solidBoolean'
@@ -296,17 +303,17 @@ const movingBody = ref(false), showHelp = ref(false), floorVisible = ref(true)
 let fitNextPreview = false
 let previewTimer: ReturnType<typeof setTimeout> | undefined
 const previewWorker=createSolidPreviewWorker()
-let previewGeneration=0
+let previewGeneration=0,previewIdentity=''
 const solidPreviewResult=shallowRef<DirectDocument|null>(null), previewPending=ref(false)
-function invalidateSolidPreview() {
- clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel()
- solidPreviewResult.value=null;previewPending.value=false
- previewBody.value=null;previewEmpty.value=false;previewError.value=''
+// keepPreview: a parameter edit of the same operation leaves the last preview on screen until its replacement arrives (no blinking).
+function invalidateSolidPreview(keepPreview=false) {
+ clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel();previewPending.value=false
+ if(!keepPreview){solidPreviewResult.value=null;previewBody.value=null;previewEmpty.value=false;previewError.value=''}
 }
 onUnmounted(() => { invalidateSolidPreview();previewWorker.dispose() })
 let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: number; svg: SVGSVGElement } | null = null
-// While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
-const cameraDragging = ref(false)
+// While the camera (or an extrusion height, for its preview) is dragged the view keeps the working mesh: responsive, no faceted/refined swaps.
+const cameraDragging = ref(false), heightDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
 let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
@@ -364,6 +371,12 @@ const advanced=ref({runoutPosition:90,runoutTangentLength:.1,runoutFlip:false,of
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function setPickedEdge(index:number){edgeIndex.value=index;edgeIndexes.value=index>=0?[index]:[];advancedOp.value=null}
+const additionalEdgeIndex=ref(-1)
+function addPickedEdge(){
+ const index=additionalEdgeIndex.value
+ if(!featureEdges.value.some(edge=>edge.i===index))return
+ edgeIndexes.value=[...new Set([...edgeIndexes.value,index])];edgeIndex.value=index;advancedOp.value=null;additionalEdgeIndex.value=-1
+}
 function edgeSelectionKey(e:KeyboardEvent){
  const indices=[-1,...featureEdges.value.map(edge=>edge.i)]
  const index=selectIndexKey(e,Math.max(0,indices.indexOf(edgeIndex.value)),indices.length-1)
@@ -526,11 +539,13 @@ const selectedBrepBodies = computed(() => selectedIds.value.map(id=>document.val
 const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
+const profileBridgePanel=ref<InstanceType<typeof ProfileBridgeCheck>|null>(null)
+const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../services/nurbsSurface').NurbsSurface,import('../services/nurbsSurface').NurbsSurface]:null)
 type SolidTopology=import('../services/mainSolidProtocol').MainSolidResults['topology']
-const topology=shallowRef<SolidTopology>({faces:[],edges:[]}),topologyPending=ref(false)
+const topology=shallowRef<SolidTopology>({faces:[],edges:[]}),topologyPending=ref(false),topologyRetryVisible=ref(false)
 const topologyWorker=createSolidPreviewWorker()
 let topologyPick=0,topologyGeneration=0,topologyBody:DirectBody|undefined,topologyRequest:Promise<SolidTopology|null>|null=null
-function cancelTopology(clear=false){topologyPick++;topologyGeneration++;topologyWorker.cancel();if(clear||topologyPending.value){topologyBody=undefined;topologyRequest=null;topology.value={faces:[],edges:[]}}topologyPending.value=false}
+function cancelTopology(clear=false){topologyRetryVisible.value=false;topologyPick++;topologyGeneration++;topologyWorker.cancel();if(clear||topologyPending.value){topologyBody=undefined;topologyRequest=null;topology.value={faces:[],edges:[]}}topologyPending.value=false}
 function prepareTopology(body:DirectBody):Promise<SolidTopology|null>{
  if(topologyBody===body&&topologyRequest)return topologyRequest
  cancelTopology(true);const generation=topologyGeneration,source=document.value
@@ -538,7 +553,10 @@ function prepareTopology(body:DirectBody):Promise<SolidTopology|null>{
  topologyRequest=topologyWorker.run({kind:'topology',mesh:body.mesh}).then(result=>{
   if(generation!==topologyGeneration||document.value!==source||selectedBody.value!==body)return null
   topology.value=result;return result
- }).catch(e=>{if(generation===topologyGeneration)error.value=e instanceof Error?e.message:String(e);return null}).finally(()=>{if(generation===topologyGeneration)topologyPending.value=false})
+ }).catch(()=>{if(generation===topologyGeneration&&document.value===source&&selectedBody.value===body){
+  topologyBody=undefined;topologyRequest=null;topologyRetryVisible.value=true
+  error.value=body.name+': '+label('Не удалось подготовить выбор граней. Нажмите «Повторить выбор граней».','Could not prepare face selection. Choose Retry face selection.')
+ };return null}).finally(()=>{if(generation===topologyGeneration)topologyPending.value=false})
  return topologyRequest
 }
 onUnmounted(()=>{cancelTopology();topologyWorker.dispose()})
@@ -918,7 +936,7 @@ function persist() {
  void withSolidDraftLock(key,async()=>{
   await durableReady
   if(generation!==saveGeneration||restoreDisposed)return
-  if(storageGet(key)!==previous){draftConflict.value=true;throw Error(draftConflictMessage())}
+  if(storageGet(key)!==previous){draftConflict.value=true;throw Error('DRAFT_CONFLICT')}
   let marker:string|undefined
   try{
    if(text.length>MAX_DRAFT_CHARACTERS)marker=await writeSolidDraftSnapshot(text)
@@ -927,7 +945,8 @@ function persist() {
    persistedRevision=head.revision
    if(generation!==saveGeneration||restoreDisposed){if(marker)await removeSolidDraftSnapshot(marker);return}
    const reference=marker??text
-   if(storageSet(key,reference))stored=persistedReference=reference
+   if(!storageSet(key,reference))throw Error('DRAFT_REFERENCE_FAILED')
+   stored=persistedReference=reference
    saveError.value=false;draftConflict.value=false
    await removeSolidDraftSnapshot(previous).catch(()=>{})
   }catch(e){
@@ -936,6 +955,7 @@ function persist() {
   }
  }).catch(e=>{
   if(generation===saveGeneration&&!restoreDisposed){saveError.value=true;const detail=e instanceof Error?e.message:String(e);if(detail==='DRAFT_CONFLICT'){draftConflict.value=true;error.value=draftConflictMessage()}else if(e instanceof Error&&e.name==='QuotaExceededError')error.value=label('Хранилище заполнено. Скачайте JSON, освободите место и повторите сохранение.','Storage is full. Download JSON, free space and retry saving.')
+  else if(detail==='DRAFT_REFERENCE_FAILED')error.value=label('Документ записан в IndexedDB, но не удалось обновить указатель и уведомить другие вкладки. Скачайте JSON и повторите сохранение.','Document saved to IndexedDB, but its reference and other tabs could not be updated. Download JSON and retry saving.')
   else if(detail==='DRAFT_CORRUPT')error.value=label('Сохранённая версия повреждена. Скачайте локальный JSON через меню «Файл».','Saved version is corrupt. Download local JSON from File.')
   else error.value=label('Не удалось сохранить черновик: ','Could not save draft: ')+detail}
  }).finally(()=>{if(generation===saveGeneration)savePending.value=false})
@@ -1093,16 +1113,28 @@ watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup
 },{flush:'sync'})
 const copyPreview = computed(() => operation.value==='array'?sketchEditResult.value?.sketches.filter(s=>!document.value.sketches.some(source=>source.id===s.id))??[]:[])
 function applyCopies(){applySketchEdit()}
-function duplicate() { run(() => {
- const d=history.document,moved=transformSelection(d,selectedIds.value,[10,10,0],[0,0,1],0,1),ids:string[]=[],copies=new Map(selectedIds.value.map(id=>[id,crypto.randomUUID()]))
- for(const s of moved.sketches)if(copies.has(s.id)){s.id=copies.get(s.id)!;s.name=(s.name+' · copy').slice(0,100);ids.push(s.id);d.sketches.push(s)}
- for(const b of moved.bodies)if(copies.has(b.id)){b.id=copies.get(b.id)!;if(b.instance&&copies.has(b.instance.sourceId))b.instance.sourceId=copies.get(b.instance.sourceId)!;b.name=(b.name+' · copy').slice(0,100);ids.push(b.id);d.bodies.push(b)}
- if(!ids.length)return
- commit(d);pickObject(ids[0],mode.value);extraSelection.value=ids.slice(1)
-}) }
+const canDuplicate=computed(()=>selectedIds.value.length>0&&selectedIds.value.every(id=>document.value.bodies.some(body=>body.id===id)||document.value.sketches.some(sketch=>sketch.id===id)))
+async function duplicate() {
+ if(directTransformPending.value)return
+ if(commandActive.value){error.value=label('Завершите текущую команду','Finish the current command');return}
+ if(!canDuplicate.value){error.value=label('Для копирования выберите только тела или эскизы','Select only bodies or sketches to duplicate');return}
+ cancelDirectTransform()
+ const generation=directTransformGeneration,before=history.document,ids=[...selectedIds.value],copyIds=ids.map(()=>crypto.randomUUID())
+ directTransformPending.value=true;directTransformOperation.value='duplicate';error.value=''
+ try{
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?serializeDirectDocument(before):before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}})
+  if(generation!==directTransformGeneration)return
+  const {validateLocked,added}=prepareCommit(result)
+  const applied=await history.commitAsync(async()=>result,validateLocked)
+  if(generation!==directTransformGeneration||!applied)return
+  directTransformPending.value=false;finishCommit(added,result);pickObject(copyIds[0],mode.value);extraSelection.value=copyIds.slice(1)
+ }catch(e){if(generation===directTransformGeneration)error.value=bodyCalculationFailure(e,false)}
+ finally{if(generation===directTransformGeneration)directTransformPending.value=false}
+}
+
 watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, solidPreviewRevision, invalidQuantitiesKey], () => {
-  invalidateSolidPreview()
-  if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) return
+  if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) {invalidateSolidPreview();previewIdentity='';return}
+  const identity=[operation.value,selectedSketch.value.id,profileIds.value.join(','),activeGroup.value,extrusionMode.value,targetBody.value,revolveGeometry.value].join('\n');invalidateSolidPreview(identity===previewIdentity&&!!previewBody.value);previewIdentity=identity
   const generation=previewGeneration
   previewPending.value=true
   previewTimer = setTimeout(async () => {
@@ -1118,7 +1150,7 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
       previewEmpty.value=!previewBody.value
       if(fitNextPreview){fit('3d');fitNextPreview=false}
     }
-    catch (e) { if(generation===previewGeneration){previewError.value=bodyCalculationFailure(e);solidPreviewRetryVisible.value=true} }
+    catch (e) { if(generation===previewGeneration){solidPreviewResult.value=null;previewBody.value=null;previewError.value=bodyCalculationFailure(e);solidPreviewRetryVisible.value=true} }
     finally {if(generation===previewGeneration)previewPending.value=false}
   }, 60)
 }, {flush:'sync'})
@@ -1210,7 +1242,7 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
   directTransformPending.value=false;finishCommit(added,result);settleAfterDrag()
   if(resetFields){dx.value=dy.value=dz.value=angle.value=0;scale.value=1}
   return true
- }catch(e){if(generation===directTransformGeneration){error.value=e instanceof Error?e.message:String(e);clearDragPreview()}}
+ }catch(e){if(generation===directTransformGeneration){error.value=bodyCalculationFailure(e,false);clearDragPreview()}}
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}
 }
 watch(()=>[props.open,document.value,selectedIdsKey.value,dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
@@ -1285,6 +1317,8 @@ async function importFile(event: Event) {
    historyPending.value=false;finishCommit(added);selection.value='';extraSelection.value=[]
   }
   fit('2d');fit('3d')
+  const menu=input.closest?.('details') as HTMLDetailsElement|null
+  if(menu)menu.open=false
  }catch(e){
   const {solidImportErrorMessage}=await import('../services/solidImportErrorMessage')
   if(generation===historyGeneration)error.value=solidImportErrorMessage(e,ru.value?'ru':'en')
@@ -1412,7 +1446,59 @@ async function exportBodySvg() {
   } catch(e){if(!controller.signal.aborted)error.value=e instanceof Error?e.message:String(e)}
   finally{worker?.dispose();if(svgController===controller)svgController=undefined}
 }
-const { sourceStepPending, sourceStepError, sourceStepTolerance, selectedSourceBody, sourceSeamPending, sourceSeamError, sourceSeamResult, cancelSourceSeam, sourceSeamMessage, qualifySourceSeam, sourceWallPending, sourceWallError, sourceWallResult, sourceWallOpen, sourceWallMenuOpen, sourceWallCoverageResult, sourceWallCoverageMode, sourceWallScanResult, sourceWallScanMode, sourceWallGroups, sourceWallSide, sourceWallMinimum, sourceWallTolerance, cancelSourceWall, sourceWallFaces, sourceWallFileMenuToggle, toggleSourceWallFace, sourceWallFaceUncertain, sourceWallFaceFill, sourceWallMeasurement, sourceWallMessage, sourceWallInputError, qualifySourceWall, cancelSourceStep, exportSourceStep, exportStepCurrent, exportStepAssembly, exportStepOriginal } = useSourceBodyTools({ document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed: () => restoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection })
+const { sourceStepPending, sourceStepError, sourceStepTolerance, selectedSourceBody, sourceSeamPending, sourceSeamError, sourceSeamResult, cancelSourceSeam, sourceSeamMessage, qualifySourceSeam, sourceWallPending, sourceWallError, sourceWallResult, sourceWallOpen, sourceWallMenuOpen, sourceWallCoverageResult, sourceWallCoverageMode, sourceWallScanResult, sourceWallScanMode, sourceWallGroups, sourceWallSide, sourceWallMinimum, sourceWallTolerance, cancelSourceWall, sourceWallFaces, sourceWallFileMenuToggle, toggleSourceWallFace, sourceWallFaceUncertain, sourceWallFaceFill, sourceWallMeasurement, sourceWallMessage, sourceWallInputError, qualifySourceWall, cancelSourceStep, exportSourceStep, exportStepCurrent, exportStepAssembly, exportStepOriginal } = useSourceBodyTools({ document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed: () => restoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection, isExpressionFaceHighlighted: sourceExpressionFaceHighlighted })
+const selectedExpressionOptions=computed(()=>selectedSourceBody.value?sourceBodyRecordInspectionOptions(selectedSourceBody.value):undefined)
+const sourceExpressionFaces=ref<number[]>([])
+const sourceExpressionRadiusFaces=ref<number[]>([])
+const sourceExpressionDisplay=shallowRef<ExpressionDisplayReport|null>(null)
+const sourceExpressionBoundaryMesh=shallowRef<BoundaryMeshReport|null>(null)
+const sourceExpressionMesh=shallowRef<ExpressionMeshReport|null>(null)
+const sourceExpressionMeshRegion=shallowRef<ExpressionMeshReport['pending'][number]|null>(null)
+watch(selectedSourceBody,()=>{sourceExpressionRadiusFaces.value=[];sourceExpressionFaces.value=[];sourceExpressionDisplay.value=null;sourceExpressionBoundaryMesh.value=null;sourceExpressionMesh.value=null;sourceExpressionMeshRegion.value=null},{flush:'sync'})
+const sourceExpressionMeshRegionBox=computed(()=>{
+ const region=sourceExpressionMeshRegion.value,box=region?.bounds
+ if(!box||!selectedSourceBody.value||!objectInView(selectedSourceBody.value.id))return null
+ const points=Array.from({length:8},(_,k)=>project([box[0][k&1],box[1][(k>>1)&1],box[2][(k>>2)&1]],'3d'))
+ const x=Math.min(...points.map(p=>p[0])),y=Math.min(...points.map(p=>p[1]))
+ return {x,y,width:Math.max(...points.map(p=>p[0]))-x,height:Math.max(...points.map(p=>p[1]))-y,face:region!.face,reason:region!.reason}
+})
+const sourceExpressionTriangles=computed(()=>!selectedSourceBody.value||!objectInView(selectedSourceBody.value.id)?[]:
+ (sourceExpressionMesh.value?.tiles??[]).flatMap((tile,index)=>{
+  const points=tile.corners.map(point=>project(point,'3d'))
+  return sourceExpressionMesh.value!.trianglesPerTile.map((triangle,part)=>({key:index+':'+part,face:tile.face,
+   points:triangle.map(vertex=>points[vertex].join(',')).join(' '),error:tile.deviationUpperMm}))
+ }))
+const sourceBoundaryTriangles=computed(()=>{
+ if(!selectedSourceBody.value||!objectInView(selectedSourceBody.value.id))return []
+ const mesh=sourceExpressionBoundaryMesh.value
+ if(!mesh)return []
+ const failed=new Set(mesh.refinement?.numericFailures.map(t=>JSON.stringify([t.face,t.vertices,t.uv]))??[])
+ const triangles=mesh.refinement?[...mesh.refinement.accepted.map(t=>({...t,state:'qualified'})),...mesh.refinement.pending.map(t=>({...t,state:failed.has(JSON.stringify([t.face,t.vertices,t.uv]))?'error':'pending'}))]:mesh.candidateTriangles.map(t=>({...t,state:'candidate'}))
+ return triangles.flatMap((t,index)=>{
+  const vertices=t.vertices.map(id=>mesh.vertices[id].point)
+  if(vertices.some(v=>!v))return []
+  return [{key:index,face:t.face,state:t.state,points:vertices.map(v=>project(v!,'3d').join(',')).join(' ')}]
+ })
+})
+const sourceExpressionBoxes=computed(()=>!selectedSourceBody.value||!objectInView(selectedSourceBody.value.id)?[]:
+ (sourceExpressionDisplay.value?.cells??[]).flatMap((cell,index)=>{
+  const box=cell.bounds
+  if(!box||cell.location==='outside')return []
+  const points=Array.from({length:8},(_,k)=>project([box[0][k&1],box[1][(k>>1)&1],box[2][(k>>2)&1]],'3d'))
+  const x=Math.min(...points.map(p=>p[0])),y=Math.min(...points.map(p=>p[1]))
+  return [{key:index,face:cell.face,location:cell.location,domain:cell.domain,x,y,
+   width:Math.max(...points.map(p=>p[0]))-x,height:Math.max(...points.map(p=>p[1]))-y}]
+ }))
+const sourceSeamEndpointMarkers=computed(()=>{
+ const body=selectedSourceBody.value
+ if(!props.open || !body || !objectInView(body.id) || sourceSeamResult.value?.qualified)return []
+ return (sourceSeamResult.value?.endpointLimits?.sides??[]).flatMap(side=>{
+  const point=side.collapsedPoint
+  if(!side.distinctTangentLimits || !point || !point.every(Number.isFinite))return []
+  return [{key:`${side.side}:${side.boundaryEnd}`,body:body.id,point,screen:project(point,'3d')}]
+ })
+})
+function sourceExpressionFaceHighlighted(body:string,face:number){return body===selectedSourceBody.value?.id&&sourceExpressionFaces.value.includes(face)}
 function project(p: ArrayLike<number>, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint([p[0],p[1],p[2]??0], camera.value).slice(0,2) as Point2 }
 function viewBox(pane: Pane) { const size = views.value[pane], center = centers.value[pane]; return `${center[0] - size / 2} ${center[1] - size / 2} ${size} ${size}` }
 function zoom(pane: Pane, factor: number) { views.value[pane] = Math.max(.1, Math.min(2e6, views.value[pane] * factor)) }
@@ -1456,10 +1542,18 @@ function splitKey(e: KeyboardEvent) {
 // Chrome refuses a synchronous WebAssembly.Module over 8 MB on the main thread, so the display
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
 const kernelReady = ref(isGeometryKernelReady())
+const kernelLoadError = ref(''), kernelLoading = ref(false)
+const initialRecoveryWanted = restoringDraft.value
+function retryKernelLoad() {
+  if (kernelLoading.value || restoreDisposed) return
+  restoringDraft.value = initialRecoveryWanted
+  void restoreInitialDraft()
+}
 const draftRecoveryWorker = createSolidPreviewWorker()
 let draftRecoveryGeneration = 0
 function stopDraftRecovery() {
   draftRecoveryGeneration++
+  kernelLoading.value = false
   draftRecoveryWorker.cancel()
   history.cancelRestore()
   restoringDraft.value = false
@@ -1475,8 +1569,15 @@ async function restoreInitialDraft() {
   const reference = stored, expectedReference = persistedReference, expectedGeneration = saveGeneration
   const current = () => !restoreDisposed && generation === draftRecoveryGeneration && target === history
     && saveGeneration === expectedGeneration && !history.canUndo && storageGet(key) === expectedReference
+  kernelLoading.value = true
+  kernelLoadError.value = ''
   try {
-    await warmGeometryKernel()
+    try { await warmGeometryKernel() } catch (e) {
+      if (!restoreDisposed && generation === draftRecoveryGeneration) {
+        kernelLoadError.value = e instanceof Error ? e.message : String(e)
+      }
+      return
+    }
     if (restoreDisposed) return
     kernelReady.value = true
     if (!restoringDraft.value || !current()) return
@@ -1510,7 +1611,7 @@ async function restoreInitialDraft() {
       : detail === 'Saved draft snapshot is missing or invalid. Import a JSON backup.' ? label('Сохранённый снимок отсутствует или повреждён. Импортируйте резервный JSON через меню «Файл».',detail)
       : label('Не удалось восстановить сохранённый документ: ','Could not restore the saved document: ') + detail
   } finally {
-    if (generation === draftRecoveryGeneration) restoringDraft.value = false
+    if (generation === draftRecoveryGeneration) { restoringDraft.value = false; kernelLoading.value = false }
   }
 }
 if (!kernelReady.value || restoringDraft.value) void restoreInitialDraft()
@@ -1545,7 +1646,7 @@ onUnmounted(() => { cancelDisplayPreparation(); displayWorker.dispose() })
 function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
   void displayVersion.value
   const transforming = previewingTransform.value && (selectedIds.value.includes(b.id) || !!b.instance && selectedIds.value.includes(b.instance.sourceId))
-  if (!transforming && smoothDisplay.value && b.brep && kernelReady.value) {
+  if (!transforming && !(heightDragging.value && b === previewBody.value) && smoothDisplay.value && b.brep && kernelReady.value) {
     const cached = displayQueue.get(b)
     if (cached) return cached
   }
@@ -1643,7 +1744,7 @@ const commandHint = computed(() => {
   if(nativeNurbsPending.value&&nativeBrepMode.value)return label('Вычисляется B-rep. Esc — отменить.', 'Computing B-rep. Esc cancels.')
   if(nativeNurbsPending.value)return label('Вычисляется NURBS-команда. Esc — отменить.', 'Computing NURBS command. Esc cancels.')
   if(gizmoPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
-  if(directTransformPending.value)return directTransformOperation.value.startsWith('group-')?label('Изменяется группа. Esc — отменить.','Updating group. Esc cancels.'):directTransformOperation.value==='instance-detach'?label('Создаётся независимое тело. Esc — отменить.','Making body independent. Esc cancels.'):label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
+  if(directTransformPending.value)return directTransformOperation.value==='duplicate'?label('Создаётся копия. Esc — отменить.','Creating copy. Esc cancels.'):directTransformOperation.value.startsWith('group-')?label('Изменяется группа. Esc — отменить.','Updating group. Esc cancels.'):directTransformOperation.value==='instance-detach'?label('Создаётся независимое тело. Esc — отменить.','Making body independent. Esc cancels.'):label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
   if(sketchEditPending.value)return label('Вычисляется предпросмотр. Esc — отменить.', 'Computing preview. Esc cancels.')
   if(booleanPending.value)return booleanKind.value==='minkowski3d'?label('Вычисляется сумма Минковского. Esc — отменить.','Computing Minkowski sum. Esc cancels.'):label('Вычисляется Boolean. Esc — отменить.', 'Computing Boolean. Esc cancels.')
   if (commandFailure.value) return label('Измените параметры или выбор. Исходная модель сохранена.', 'Change parameters or selection. The original model is preserved.')
@@ -1918,7 +2019,7 @@ const extrusionHandle = computed(() => {
 })
 function dragHeight(e: PointerEvent) {
   e.preventDefault(); const svg = (e.target as SVGElement).ownerSVGElement!
-  heightDrag = { y: e.clientY, height: height.value, pointer: e.pointerId, svg }; svg.setPointerCapture(e.pointerId)
+  heightDrag = { y: e.clientY, height: height.value, pointer: e.pointerId, svg }; heightDragging.value = true; svg.setPointerCapture(e.pointerId)
 }
 function snapProjection(svg: SVGSVGElement, pane: Pane): (p: Vec3) => Point2 {
   const matrix = svg.getScreenCTM()
@@ -2040,7 +2141,7 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { cancelFaceSketch(); cancelNativeNurbs();cancelGizmoWorker();dragConstraint.value=''; draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { if(!gesture.pan)document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
+function cancelGesture() { cancelFaceSketch(); cancelNativeNurbs();cancelGizmoWorker();dragConstraint.value=''; draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { if(!gesture.pan)document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; heightDragging.value = false; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
  cancelNativeNurbs();cancelGizmoWorker()
  if(directTransformPending.value)cancelDirectTransform()
@@ -2228,7 +2329,7 @@ function up(e: PointerEvent) {
     if(g.kind==='move'){if(g.delta)void commitDirectTransform(g.before,selectedIds.value,g.delta);return}
     if(g.kind!=='split')gizmoApplyRevision=gizmoRevision;return}
 
-  if (heightDrag) { heightDrag = null; return }
+  if (heightDrag) { heightDrag = null; heightDragging.value = false; return }
   if (orbitDrag) { orbitDrag = null; return }
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
@@ -2250,7 +2351,7 @@ function up(e: PointerEvent) {
   if (error.value && stringifyMeshJson(history.document) === stringifyMeshJson(before)) document.value = before
 }
 
-const { paletteOpen, notice, createOpen, dockOpen, dockTab, exactCardOpen, captureCommand, lastCommand, repeatEntry, repeatReason, repeatCommand, solidCommands, executeSolidCommand } = useCommandPalette({ applyMinkowski, addNurbs: kind => addNurbs(kind), addPrimitive: kind => addPrimitive(kind), advanced, advancedOp, appendBodies, applyBrepBoolean, baseZ, beginAdvanced, beginCorner, beginExtrude, beginSketch, beginSubtract, boxSelect, brepSegments, camera, canExtrudeSketch, cancelCommand, clearanceOpen, commandActive, commitDirectTransform, copyCount, copySweep, copyX, copyY, cornerRadius, diagnosticPanel, diagnosticsOpen, document, downloadProject, duplicate, edgeIndex, exportBlender, exportBodySvg, extraSelection, extrusionMode, faceSketch, filletSegments, fit, floorVisible, gizmoMode, height, kernelReady, label, measureSelectedBrep, measureTarget, measurementOpen, mode, movingBody, operation, pickMode, pickObject, pointTrimCut, pointTrimPick, primitiveLabel: kind => primitiveLabel(kind), props, redoable, remove, restoringDraft, retessellateSelectedBrep, revolveAngle, revolveAxis, revolveGeometry, revolveOffset, revolveSegments, run, selectEdgeChain, selectedBody, selectedBrepBodies, selectedCurvePair, selectedFace, selectedIds, selectedNurbs, selectedNurbsCurve, selectedNurbsSurface, selectedSketch, selectedSurfacePair, selection, sendToMesh, showHelp, sketchPaneOpen, smoothDisplay, snapDocument, subtract, surfaceInputs, surfaceReversed, toggleSketchPane, tool, twoSelectedBodies, undo, undoable, workspace })
+const { paletteOpen, notice, createOpen, dockOpen, dockTab, exactCardOpen, captureCommand, lastCommand, repeatEntry, repeatReason, repeatCommand, solidCommands, executeSolidCommand } = useCommandPalette({ applyMinkowski, addNurbs: kind => addNurbs(kind), addPrimitive: kind => addPrimitive(kind), advanced, advancedOp, appendBodies, applyBrepBoolean, baseZ, beginAdvanced, beginCorner, beginExtrude, beginSketch, beginSubtract, boxSelect, brepSegments, camera, canExtrudeSketch, cancelCommand, clearanceOpen, commandActive, commitDirectTransform, copyCount, copySweep, copyX, copyY, cornerRadius, diagnosticPanel, diagnosticsOpen, document, downloadProject, duplicate, edgeIndex, exportBlender, exportBodySvg, extraSelection, extrusionMode, faceSketch, filletSegments, fit, floorVisible, gizmoMode, height, kernelReady, kernelLoadError, profileBridgePanel, label, measureSelectedBrep, measureTarget, measurementOpen, mode, movingBody, operation, pickMode, pickObject, pointTrimCut, pointTrimPick, primitiveLabel: kind => primitiveLabel(kind), props, redoable, remove, restoringDraft, retessellateSelectedBrep, revolveAngle, revolveAxis, revolveGeometry, revolveOffset, revolveSegments, run, selectEdgeChain, selectedBody, selectedBrepBodies, selectedCurvePair, selectedFace, selectedIds, selectedNurbs, selectedNurbsCurve, selectedNurbsSurface, selectedSketch, selectedSurfacePair, selection, sendToMesh, showHelp, sketchPaneOpen, smoothDisplay, snapDocument, subtract, surfaceInputs, surfaceReversed, toggleSketchPane, tool, twoSelectedBodies, undo, undoable, workspace })
 // Tests and the App shell drive the workspace through the same command list the palette shows.
 defineExpose({ solidCommands, executeSolidCommand })
 
@@ -2332,7 +2433,7 @@ function bakeNurbs(){void runNativeNurbs({kind:'bake',id:selection.value,created
 // watcher after setup state is initialized, and consume each seed once so a
 // later open does not overwrite edits or an Undo of the import.
 const appliedSeeds = new WeakSet<DirectDocument>()
-const { bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commit, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
+const { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commit, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
 
 /** A rebuild replaces the group of the same name, so repeated builds do not pile up. */
 watch(() => props.appendBodies, request => {
@@ -2492,6 +2593,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 </script>
 <template>
   <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded, 'touch-mode': inputMode === 'touch', 'compact-workspace': compactWorkspace }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown" @dragstart.prevent>
+    <div v-if="kernelLoadError" class="restore-loading" role="alert" aria-label="kernel-load-error">{{ label('Не удалось загрузить геометрическое ядро: ', 'Could not load geometry kernel: ') + kernelLoadError }} <button :disabled="kernelLoading" @click="retryKernelLoad">{{ label('Повторить загрузку ядра', 'Retry kernel loading') }}</button></div>
     <div v-if="restoringDraft" class="restore-loading" role="status" aria-label="draft-recovery">{{ label('Восстанавливаю геометрию…', 'Restoring geometry…') }} <button @click="cancelDraftRecovery">{{ label('Отмена · Esc','Cancel · Esc') }}</button></div>
     <header class="workspace-bar">
       <button v-if="embedded" class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
@@ -2514,11 +2616,12 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span v-if="faceSketchPending" role="status" aria-label="face-sketch-preparation">{{ label('Готовлю плоскость эскиза…','Preparing sketch plane…') }} <button @click="cancelFaceSketch">Esc</button></span>
       <span v-if="sourceDisplayPending" role="status">{{ label('Готовлю исходные рёбра…','Preparing source edges…') }} <button @click="cancelSourceDisplay">{{ label('Отмена','Cancel') }}</button></span>
       <button v-if="document.sourceBodies?.length && !sourceDisplayPending" @click="refreshSourceDisplay">{{ label('Обновить исходные рёбра','Retry source edges') }}</button>
-      <span v-for="(message,id) in sourceDisplayErrors" :key="id" role="alert">{{ (document.sourceBodies??[]).find(body=>body.id===id)?.name??id }}: {{ label('Подготовка рёбер не завершена. Повторите расчёт; если отказ повторяется, проверьте исходную геометрию и лимиты.','Edge preparation is incomplete. Retry; if it fails again, inspect the source geometry and work limits.') }} <details><summary>{{ label('Подробности','Details') }}</summary>{{ id }}: {{ message }}</details></span>
+      <SourceBodyFailureNotice v-for="(message,id) in sourceDisplayErrors" :key="id" :id="String(id)" :name="(document.sourceBodies??[]).find(body=>body.id===id)?.name??String(id)" :error="message" :locale="locale" :pending="sourceDisplayPending" @retry="refreshSourceDisplay"/>
       <span v-if="sourceUnresolvedCount" role="status">{{ label('Не проверены участки граней: ','Unresolved face cells: ')+sourceUnresolvedCount }} · {{ label('Выделены оранжевым.','Shown in orange.') }}</span>
       <span v-if="sourceEdgeSelection" role="status">{{ label('Исходное ребро','Source edge') }}: {{ sourceEdgeSelection }} · {{ label('Предпросмотр исходных поверхностей. Концы заданы интервалами.','Source surface preview. Endpoints are enclosed by intervals.') }}</span>
       <span v-if="bodyEdgesPending" role="status" aria-label="body-edges">{{ label('Готовлю рёбра…','Preparing edges…') }} <button @click="cancelBodyEdges">Esc</button></span>
       <button v-if="pickMode==='edge' && selectedBody && !bodyEdgesPending && !authoredEdges.length" @click="refreshBodyEdges">{{ label('Обновить рёбра','Refresh edges') }}</button>
+      <button v-if="topologyRetryVisible && selectedBody" :disabled="topologyPending" @click="error='';prepareTopology(selectedBody)">{{ label('Повторить выбор граней','Retry face selection') }}</button>
       <span v-if="topologyPending" role="status" aria-label="topology-preparation">{{ label('Готовлю выбор граней…','Preparing face selection…') }} <button @click="cancelTopology()">Esc</button></span>
       <span v-if="curveDisplayPending" role="status" aria-label="curve-display">{{ label('Строю отображение кривых…','Preparing curve display…') }} <button @click="cancelCurveDisplay">Esc</button></span>
       <button v-if="curveDisplayNeedsRetry" @click="refreshCurveDisplay">{{ label('Обновить кривые','Refresh curves') }}</button>
@@ -2538,7 +2641,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
       </span>
       <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
-        <button type="button" @click="openGroupDialog(null)">{{ label('Новая группа из кода', 'New group from source') }}</button>
+        <button type="button" @click="openNewGroupFromMenu">{{ label('Новая группа из кода', 'New group from source') }}</button>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
@@ -2552,9 +2655,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button type="button" :disabled="restoringDraft || !selectedBody" @click="exportBodySvg">{{ label('SVG выбранного тела · проекция XY', 'Selected body SVG · XY projection') }}</button>
         <button type="button" :disabled="restoringDraft || !document.bodies.length" @click="exportBlender">{{ label('Экспорт для Blender', 'Export for Blender') }}</button>
         <template v-if="document.sourceBodies?.length">
+          <ExpressionShellCheck v-if="selectedExpressionOptions" :key="selectedSourceBody?.id" :options="selectedExpressionOptions" :active="props.open" :ru="ru" @radius-faces="sourceExpressionRadiusFaces=$event" @faces="sourceExpressionFaces=$event" @display="sourceExpressionDisplay=$event" @boundary-mesh="sourceExpressionBoundaryMesh=$event" @mesh="sourceExpressionMesh=$event" @mesh-region="sourceExpressionMeshRegion=$event" />
           <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceSeamPending" @click="qualifySourceSeam">{{ label('Проверить касательность ребра','Check source edge tangency') }}</button>
           <span v-if="sourceSeamPending" role="status">{{ label('Проверяю касательность…','Checking tangency…') }} <button type="button" @click="cancelSourceSeam">{{ label('Отмена','Cancel tangency') }}</button></span>
-          <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
+          <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-for="side in sourceSeamResult.endpointLimits?.sides.filter(s=>s.distinctTangentLimits) ?? []" :key="`${side.side}:${side.boundaryEnd}`" data-source-seam-endpoint>{{ label('Концевая точка','Endpoint') }}: {{ side.collapsedPoint?.join(', ') }} {{ label('мм','mm') }}</span> <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
           <span v-if="sourceSeamError" role="alert">{{ label('Проверка ребра не завершена. Повторите расчёт.','Edge qualification failed. Retry the calculation.') }} <button type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamError }}</details></span>
           <details class="source-wall-panel" :open="sourceWallOpen" @toggle="sourceWallOpen=($event.target as HTMLDetailsElement).open">
             <summary>{{ label('Толщина исходного тела','Source body wall thickness') }}</summary>
@@ -2566,8 +2670,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 :style="{borderColor:sourceWallFaceFill(selectedSourceBody?.id??'',face)}" @click="toggleSourceWallFace(face)">{{ label('Грань ','Face ') }}{{ face+1 }}</button>
             </div>
             <p>{{ label('Первая сторона','First side') }}: {{ sourceWallGroups[0].map(f=>f+1).join(', ') || '—' }} · {{ label('Вторая сторона','Second side') }}: {{ sourceWallGroups[1].map(f=>f+1).join(', ') || '—' }}</p>
-            <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" aria-label="Minimum source wall thickness, mm" :aria-invalid="sourceWallError && (!Number.isFinite(sourceWallMinimum) || sourceWallMinimum<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
-            <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" aria-label="Source wall thickness tolerance, mm" :aria-invalid="sourceWallError && !sourceWallScanMode && !sourceWallCoverageMode && (!Number.isFinite(sourceWallTolerance) || sourceWallTolerance<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
+            <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" :aria-label="label('Минимальная толщина, мм','Minimum source wall thickness, mm')" :aria-invalid="sourceWallError && (!Number.isFinite(sourceWallMinimum) || sourceWallMinimum<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
+            <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" :aria-label="label('Допуск толщины, мм','Source wall thickness tolerance, mm')" :aria-invalid="sourceWallError && !sourceWallScanMode && !sourceWallCoverageMode && (!Number.isFinite(sourceWallTolerance) || sourceWallTolerance<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
             <button type="button" :disabled="sourceWallPending || !selectedSourceBody || sourceWallGroups.some(g=>!g.length)" @click="qualifySourceWall(false)">{{ label('Проверить толщину','Check source wall thickness') }}</button>
             <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(true)">{{ label('Найти тонкие участки','Find thin regions') }}</button>
             <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(false,true)">{{ label('Проверить всю стенку','Check whole wall') }}</button>
@@ -2575,11 +2679,31 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               {{ sourceWallCoverageResult.wholeWallQualified?label('По всем граням подтверждён нижний порог толщины для отрезков, почти перпендикулярных граням.','The lower thickness threshold for near-normal chords is qualified across all faces.'):label('Толщина всей стенки не подтверждена. Проверьте выделенные грани; часть пар требует дополнительной диагностики.','Whole-wall thickness is unproven. Inspect highlighted faces; some pairs need further diagnostics.') }}
               {{ sourceWallCoverageResult.lowerMm }} {{ sourceWallCoverageResult.lowerMm!==null?label('мм','mm'):'' }} · {{ sourceWallCoverageResult.pairs.length }}/{{ sourceWallCoverageResult.totalPairs }}
               <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(false,true)">{{ label('Повторить проверку всей стенки','Retry whole wall') }}</button>
-              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallCoverageResult.reason }} · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('непроверенных пар','unproven pairs') }}
+              <details><summary>{{ label('Подробности','Details') }}</summary>
+                {{ !sourceWallCoverageResult.enumerationComplete?label('Проверены не все пары граней: достигнут лимит расчёта. Выберите оставшиеся грани для отдельной проверки.','Not all face pairs were checked: the calculation limit was reached. Select the remaining faces for a separate check.'):
+                  sourceWallCoverageResult.wholeWallQualified?label('Проверены все пары граней в заданной области проверки.','All face pairs are qualified within the stated checking scope.'):
+                  label('Все пары рассмотрены, но часть участков остаётся неопределённой. Проверьте выделенные грани.','All pairs were considered, but some regions remain unresolved. Inspect the highlighted faces.') }}
+                · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('неподтверждённых пар','unproven pairs') }}
+                <span v-if="sourceWallCoverageResult.retainedGap" data-source-wall-retained-result="true">
+                  · {{ label('Расстояние между обрезанными гранями подтверждено:','Retained face separation qualified:') }}
+                  {{ sourceWallCoverageResult.retainedGap.pairs.filter(p=>p.qualified).length }}/{{ sourceWallCoverageResult.retainedGap.pairs.length }}
+                  · {{ sourceWallCoverageResult.retainedGap.pairs.reduce((n,p)=>n+p.unresolvedProducts.length,0) }} {{ label('пар участков требуют проверки','region pairs require checking') }}
+                </span>
+                <span v-if="sourceWallCoverageResult.mixedProducts" data-source-wall-mixed-result="true">
+                  · {{ label('Дополнительно подтверждено пар граней:','Additional face pairs qualified:') }}
+                  {{ sourceWallCoverageResult.mixedProducts.pairs.filter(p=>p.qualified).length }}/{{ sourceWallCoverageResult.mixedProducts.pairs.length }}
+                  · {{ sourceWallCoverageResult.mixedProducts.pairs.reduce((n,p)=>n+p.unresolvedProducts.length,0) }} {{ label('пар участков требуют проверки','region pairs require checking') }}
+                  <span v-if="sourceWallCoverageResult.mixedProducts.pairs.some(p=>p.reason==='source-wall-pair-numeric-limit')">
+                    · {{ label('Достигнут численный предел. Проверьте выделенные грани отдельно.','A numerical limit was reached. Check the highlighted faces separately.') }}
+                  </span>
+                </span>
                 <span v-if="sourceWallCoverageResult.adaptiveSelf" data-source-wall-self-result="true">
                   · {{ label('Проверка внутри граней','Within-face coverage') }}:
                   {{ sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>f.qualified).length }}/{{ sourceWallCoverageResult.adaptiveSelf.faces.length }}
-                  · {{ sourceWallCoverageResult.adaptiveSelf.faces.reduce((n,f)=>n+f.pending,0) }} {{ label('областей требуют проверки','regions require checking') }}
+                  · {{ sourceWallCoverageResult.adaptiveSelf.faces.reduce((n,f)=>n+f.pending,0) }} {{ label('пар участков требуют проверки','region pairs require checking') }}
+                  <span v-for="face in sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>!f.qualified)" :key="face.face" class="source-wall-face-pending" :data-source-wall-pending-face="face.face">
+                    · {{ label('Грань','Face') }} {{ face.face+1 }}: {{ face.pending }} {{ label('пар участков требуют проверки','region pairs require checking') }}
+                  </span>
                 </span>
               </details>
             </span>
@@ -2647,6 +2771,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span v-if="subtract">{{ label('A — основа · B — вырез', 'A — target · B — cutter') }}</span>
       <label v-if="pickMode==='edge' && selectedBody">{{ label('Ребро','Edge') }} <select :value="edgeIndex" :aria-label="label('Выбрать ребро','Select edge')" @change="setPickedEdge(Number(($event.target as HTMLSelectElement).value))" @keydown="edgeSelectionKey"><option :value="-1">—</option><option v-for="edge in featureEdges" :key="edge.i" :value="edge.i">{{ edge.i+1 }}</option></select></label>
       <span v-if="edgeIndexes.length">{{ label('Рёбра','Edges') }}: {{ edgeIndexes.length }}</span>
+      <template v-if="pickMode==='edge' && selectedBody">
+        <select v-model.number="additionalEdgeIndex" :aria-label="label('Дополнительное ребро','Additional edge')"><option :value="-1">—</option><option v-for="edge in featureEdges" :key="edge.i" :value="edge.i">{{ edge.i+1 }}</option></select>
+        <button :disabled="additionalEdgeIndex<0 || !featureEdges.some(edge=>edge.i===additionalEdgeIndex)" @click="addPickedEdge">{{ label('Добавить ребро','Add edge') }}</button>
+      </template>
       <span v-if="dragConstraint">{{ label('Ограничение','Constraint') }}: {{ dragConstraint }} · Esc {{ label('отмена','cancel') }}</span>
       <span v-else-if="advancedOp==='split' || advancedOp==='transform'">{{ label('Ось','Axis') }}: {{ advanced.axis.toUpperCase() }}</span>
       <span v-else-if="operation==='revolve'">{{ label('Ось эскиза','Sketch axis') }}: {{ revolveAxis.toUpperCase() }}</span>
@@ -2713,7 +2841,6 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <select v-model="bodyExportFormat" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select>
               <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
           </div>
-          <ModelingGridControls :locale="locale" snapping />
           <WorkspaceActionBar v-if="pane === '3d' && selectedBody && !commandActive" :label="label('Действия над телом', 'Body actions')">
             <span class="ws-name">{{ selectedBody.name || label('Тело', 'Body') }}</span>
             <span class="ws-sep" aria-hidden="true"></span>
@@ -2725,6 +2852,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           </WorkspaceActionBar>
           <div class="canvas-wrap" :class="{'profile-preparation-pane':pane==='2d' && (isProfileCommand(advancedOp)||advancedOp==='offset')}">
             <div class="canvas-viewport">
+            <ModelingGridControls :locale="locale" snapping />
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" :style="{visibility:gpuActive?'visible':'hidden'}" aria-hidden="true"></canvas>
             <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && (gesture || manipulatorDrag || heightDrag || orbitDrag || curveDrag || cvDrag || vertexDrag || selectionBox) && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
               <defs><pattern :id="'direct-grid-' + pane" :width="sketchGridStep" :height="sketchGridStep" patternUnits="userSpaceOnUse"><path :d="`M ${sketchGridStep} 0 L 0 0 0 ${sketchGridStep}`" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
@@ -2773,8 +2901,12 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d'" data-source-face-preview="true" :pointer-events="sourceWallOpen && sourceWallMenuOpen?'auto':'none'">
+                <rect v-if="sourceExpressionMeshRegionBox" :x="sourceExpressionMeshRegionBox.x" :y="sourceExpressionMeshRegionBox.y" :width="sourceExpressionMeshRegionBox.width" :height="sourceExpressionMeshRegionBox.height" data-expression-mesh-pending="true" fill="none" stroke="#e88733" stroke-width="3" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none"><title>{{ sourceExpressionMeshRegionBox.face }} · {{ sourceExpressionMeshRegionBox.reason }}</title></rect>
+                <polygon v-for="triangle in sourceBoundaryTriangles" :key="'boundary-mesh:'+triangle.key" :points="triangle.points" :data-boundary-mesh-face="triangle.face" :data-boundary-mesh-state="triangle.state" :fill="triangle.state==='qualified'?'#4eaa87':triangle.state==='error'?'#d96565':triangle.state==='pending'?'#d99842':'#657d99'" fill-opacity="0.18" :stroke="triangle.state==='qualified'?'#4eaa87':triangle.state==='error'?'#d96565':triangle.state==='pending'?'#d99842':'#657d99'" stroke-width="0.5" vector-effect="non-scaling-stroke" pointer-events="none"><title>{{ triangle.state==='qualified'?label('Допуск поверхности подтверждён · грань','Surface tolerance qualified · face'):label('Допуск не подтверждён · грань','Tolerance unproven · face') }} {{ triangle.face }}</title></polygon>
+                <polygon v-for="triangle in sourceExpressionTriangles" :key="'expression-mesh:'+triangle.key" :points="triangle.points" :data-expression-mesh-face="triangle.face" fill="#079b99" fill-opacity="0.3" stroke="#079b99" stroke-width="0.5" vector-effect="non-scaling-stroke" pointer-events="none"><title>{{ label('Preview · грань','Preview · face') }} {{ triangle.face }} · ≤ {{ triangle.error }} mm</title></polygon>
+                <rect v-for="box in sourceExpressionBoxes" :key="'expression:'+box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-expression-shell-face="box.face" :data-expression-trim="box.location" :data-radius-violation="sourceExpressionRadiusFaces.includes(box.face)?true:undefined" fill="none" :stroke="sourceExpressionRadiusFaces.includes(box.face)?'#d96565':box.location==='inside'?'#079b99':'#e88733'" stroke-width="1" :stroke-dasharray="box.location==='unresolved'?'3 3':undefined" vector-effect="non-scaling-stroke" pointer-events="none"><title>{{ label('Предложенная оболочка · грань','Proposed shell · face') }} {{ box.face }} · {{ box.location }} · UV {{ box.domain }}</title></rect>
                 <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" :data-source-body="face.body" :data-source-face="face.face" :fill="sourceWallFaceFill(face.body,face.face)" fill-opacity=".25" stroke="none" @pointerdown.stop @click.stop="face.body===selectedSourceBody?.id && toggleSourceWallFace(face.face)" />
-                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" :data-source-wall-error="sourceWallFaceUncertain(box.body,box.face)?'true':undefined" fill="none" :stroke="sourceWallFaceUncertain(box.body,box.face)?'#ff4c4c':'#ff9977'" :stroke-width="sourceWallFaceUncertain(box.body,box.face)?3:1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
+                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" :data-source-wall-error="sourceWallFaceUncertain(box.body,box.face)?'true':undefined" fill="none" :data-source-expression-face="sourceExpressionFaceHighlighted(box.body,box.face)?box.face:undefined" :stroke="sourceExpressionFaceHighlighted(box.body,box.face)?'#ff825e':sourceWallFaceUncertain(box.body,box.face)?'#ff4c4c':'#ff9977'" :stroke-width="sourceExpressionFaceHighlighted(box.body,box.face)||sourceWallFaceUncertain(box.body,box.face)?3:1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
               </g>
               <g v-if="pane==='3d' && sourceWallMeasurement" data-source-wall-measurement="true" pointer-events="none">
                 <polyline :points="sourceWallMeasurement.points" fill="none" stroke="#ffe875" stroke-width="3" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"><title>{{ label('Измерение толщины: линия между центрами координатных интервалов. ','Thickness measurement: line between enclosure centers. ')+sourceWallMeasurement.interval+' mm' }}</title></polyline>
@@ -2788,6 +2920,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <g v-if="pane==='3d'" data-source-body-preview="edges">
                 <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?(sourceSeamResult&&!sourceSeamResult.qualified?'#ff9977':'#ffc977'):sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
+              </g>
+              <g v-if="pane==='3d'" data-source-seam-errors="endpoints" pointer-events="none">
+                <circle v-for="marker in sourceSeamEndpointMarkers" :key="marker.key" :data-source-body="marker.body" :data-source-seam-error-point="marker.point.join(',')" :cx="marker.screen[0]" :cy="marker.screen[1]" :r="views['3d']/100" fill="#ff647c" stroke="white" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ label('Разные касательные плоскости в конце: ','Distinct endpoint tangent planes: ')+marker.point.join(', ')+' mm' }}</title></circle>
               </g>
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
@@ -2913,10 +3048,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <circle :cx="snapMarker[0]" :cy="pane==='2d'?-snapMarker[1]:snapMarker[1]" :r="views[pane]/100" vector-effect="non-scaling-stroke" />
                 <text :x="snapMarker[0]+views[pane]/60" :y="(pane==='2d'?-snapMarker[1]:snapMarker[1])-views[pane]/60" :font-size="views[pane]/50" fill="#77eac5" stroke="none">{{ snapLabel }}</text>
               </g>
-              <foreignObject v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :x="commandAnchor[0]+views['3d']/30" :y="commandAnchor[1]-views['3d']/24" :width="views['3d']/4" :height="views['3d']/12" @pointerdown.stop @wheel.stop>
-                <label class="gizmo-dimension" :class="{ failed: commandFailure }" :style="{ fontSize: views['3d']/36+'px' }"><CadQuantityInput v-model="inlineDimension" :locale="locale" @validity="quantityValidity('inline', $event)" step="0.5" :aria-label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" /> mm</label>
-              </foreignObject>
+
             </svg>
+            <CadDimensionOverlay v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :anchor="commandAnchor" :center="centers['3d']" :size="views['3d']" v-model="inlineDimension" :locale="locale" :failed="!!commandFailure" :label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" @validity="quantityValidity('inline',$event)" />
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
@@ -3093,6 +3227,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div v-if="pane==='3d' && selectedNurbs && (!commandActive || pointEditActive || nativeNurbsPending)" class="operation-card nurbs-card">
               <CurveOffsetConstructionInfo :value="selectedNurbsCurve?.offsetConstruction" :locale="locale" :curves="document.curves??[]" :ids="selectedIds" @result="currentChain=$event" />
               <button v-if="selectedCurvePair || selectedSurfacePair" class="primary" @click="matchSelectedG1">{{ selectedSurfacePair?label('G1/G2: A → B','G1/G2: A → B'):label('G1: вторую к первой','G1: match second to first') }}</button>
+              <ProfileBridgeCheck :ref="el => profileBridgePanel = el as InstanceType<typeof ProfileBridgeCheck> | null" v-if="profileBridgeSurfaces" :surfaces="profileBridgeSurfaces" :active="props.open&&!commandActive" :ru="ru" />
               <section v-if="selectedSurfacePair" aria-label="surface-distance" class="body-diagnostics">
                 <button @click="surfaceDistanceOpen=!surfaceDistanceOpen" :aria-pressed="surfaceDistanceOpen">{{ label('Расстояние между поверхностями','Distance between surfaces') }}</button>
                 <template v-if="surfaceDistanceOpen">
@@ -3266,11 +3401,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 >×</button>
               </li>
             <li v-else-if="row.kind==='source' && row.item" :data-scene-key="row.key" :style="style" :aria-posinset="position" :aria-setsize="total" class="object-row" :class="{muted:!objectVisible(row.item.id),locked:lockedIds.includes(row.item.id)}">
-              <button type="button" :disabled="!objectSelectable(row.item.id)||!sourceDisplayResults[row.item.id]?.edges.length" :aria-label="row.item.name" :aria-pressed="sourceEdgeSelection.startsWith(row.item.id+':')" @click="pickSourceBody(row.item.id)"><span class="dot nurbs"></span>{{ row.item.name }}<small>preview</small></button>
+              <button type="button" :disabled="!objectSelectable(row.item.id)||!sourceDisplayResults[row.item.id]?.edges.length" :aria-label="row.item.name" :aria-pressed="sourceEdgeSelection.startsWith(row.item.id+':')" @click="pickSourceBody(row.item.id)"><span class="dot nurbs"></span><span class="object-name" :title="row.item.name">{{ row.item.name }}</span><small>preview</small></button>
               <button :aria-label="label('Изолировать: ','Isolate: ')+row.item.name" :aria-pressed="isolatedBodyIds.length===1&&isolatedBodyIds[0]===row.item.id" @click="isolatedBodyIds=isolatedBodyIds.length===1&&isolatedBodyIds[0]===row.item.id?[]:[row.item.id]">◎</button>
               <SceneObjectControls :name="row.item.name" :locale="locale" :hidden="!objectVisible(row.item.id)" :locked="lockedIds.includes(row.item.id)" @visibility="toggleObjectState(row.item.id,'hidden')" @lock="toggleObjectState(row.item.id,'locked')" />
             </li>
-            <li v-else-if="row.kind==='object' && row.item" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="object-row" :class="{muted:!objectVisible(row.item.id),locked:lockedIds.includes(row.item.id)}"><button type="button" :disabled="!objectSelectable(row.item.id)" :aria-label="row.item.name" :aria-pressed="selectedIds.includes(row.item.id)" @click="pickObject(row.item.id,row.pane!,$event.shiftKey)"><span class="dot" :class="row.dot" :style="row.item.material?{background:row.item.material.color}:undefined"></span>{{row.item.name}}<small v-if="row.item.instance">{{label('Экземпляр','Instance')}}</small><small v-if="row.item.brep">B-rep</small><small v-if="row.dot!=='body' && row.item.group">{{row.item.group}}</small></button><SceneObjectControls :name="row.item.name" :locale="locale" :hidden="!objectVisible(row.item.id)" :locked="lockedIds.includes(row.item.id)" @visibility="toggleObjectState(row.item.id,'hidden')" @lock="toggleObjectState(row.item.id,'locked')" /></li>
+            <li v-else-if="row.kind==='object' && row.item" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="object-row" :class="{muted:!objectVisible(row.item.id),locked:lockedIds.includes(row.item.id)}"><button type="button" :disabled="!objectSelectable(row.item.id)" :aria-label="row.item.name" :aria-pressed="selectedIds.includes(row.item.id)" @click="pickObject(row.item.id,row.pane!,$event.shiftKey)"><span class="dot" :class="row.dot" :style="row.item.material?{background:row.item.material.color}:undefined"></span><span class="object-name" :title="row.item.name">{{row.item.name}}</span><small v-if="row.item.instance">{{label('Экземпляр','Instance')}}</small><small v-if="row.item.brep">B-rep</small><small v-if="row.dot!=='body' && row.item.group">{{row.item.group}}</small></button><SceneObjectControls :name="row.item.name" :locale="locale" :hidden="!objectVisible(row.item.id)" :locked="lockedIds.includes(row.item.id)" @visibility="toggleObjectState(row.item.id,'hidden')" @lock="toggleObjectState(row.item.id,'locked')" /></li>
             <li v-else-if="row.kind==='label'" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-group">{{row.title}}</li>
             <li v-else :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-empty">{{label('Сцена пуста. Добавьте примитив или нарисуйте эскиз.','The scene is empty. Add a primitive or draw a sketch.')}}</li>
           </SceneVirtualList>
@@ -3488,4 +3623,4 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <button @click="downloadMinkowskiProof">{{ label('Скачать сертификат','Download certificate') }}</button>
     </div>
 </template>
-<style scoped src="./DirectModeler.scoped.css"></style>
+<style scoped src="./styles/direct-modeler.css"></style>

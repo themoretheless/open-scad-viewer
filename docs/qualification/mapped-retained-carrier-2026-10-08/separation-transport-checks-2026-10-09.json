@@ -1,0 +1,46 @@
+{
+  "scope": "strict triangle separation transport",
+  "nativeBridge": {
+    "passed": true,
+    "durationSeconds": 41.23,
+    "accepted": 1,
+    "pending": 2563,
+    "uiValidatorPassed": true
+  },
+  "transportTests": {
+    "files": 3,
+    "passed": 19
+  },
+  "vueTypecheckPassed": true,
+  "packagedRuntimeVerified": true,
+  "solidQualified": false,
+  "nativeTriangleErrorTests": {
+    "passed": 10,
+    "failed": 0,
+    "durationSeconds": 0.02
+  },
+  "sourceSeamTangencyTests": {
+    "passed": 6,
+    "failed": 0,
+    "durationSeconds": 0.06,
+    "scope": "authored curved seam and refusal controls; not assembled fillet admission"
+  },
+  "annularCoefficientRadiusTest": {
+    "passed": 1,
+    "durationSeconds": 4.51,
+    "scope": "single coefficient radius fixture"
+  },
+  "wasmSha256": "aa42d375984159f2da456eb5c4606468a32a9b4b1ac8787763c653622b8d15fd",
+  "browserPreview": {
+    "accepted": 10,
+    "pending": 2554,
+    "numericErrors": 0,
+    "escCancelClearsPreview": true,
+    "rerunRestoresCounts": true
+  },
+  "nativePartitionTests": {
+    "passed": 4,
+    "failed": 0,
+    "scope": "strict interval separation; ULP contact, tiny scales and overflow refusal"
+  }
+}

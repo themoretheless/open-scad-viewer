@@ -1,0 +1,39 @@
+{
+  "face": 0,
+  "profileAnchor": [
+    5,
+    0
+  ],
+  "endpoints": [
+    [
+      1.0,
+      1.0
+    ],
+    [
+      0.5,
+      0.5
+    ]
+  ],
+  "axis": 1,
+  "boundary": 1.0,
+  "normalizedFreeFactor": {
+    "highEnd": true,
+    "power": 2
+  },
+  "components": [
+    [
+      2.1966991411013588,
+      2.1966991411013996
+    ],
+    [
+      5.818466262050285e-14,
+      5.81846626205039e-14
+    ],
+    [
+      -5.3033008588991475,
+      -5.303300858899055
+    ]
+  ],
+  "spans": 1,
+  "scope": "Native interval direction for the exact separable proposal. Physical secant equals these components times the nonnegative normalized free factor. Original Body and its wall qualification are unchanged."
+}

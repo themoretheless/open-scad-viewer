@@ -1,0 +1,262 @@
+//! Inspect original chart obligations; no material or whole-wall certificate.
+use value_codec::{Deserialize, Value, json};
+type Result<T> = std::result::Result<T, String>;
+fn field<T: for<'a> Deserialize<'a>>(v: &Value, key: &str) -> Result<T> {
+    T::from_value(v[key].clone()).map_err(|e| e.to_string())
+}
+fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
+    let shell = &v["shell"];
+    let regions = &shell["regions"];
+    let region = &regions["region"];
+    let embedding = &v["embedding"];
+    let pairs = &embedding["pairs"];
+    let volume = &v["volume"];
+    Ok(brep_core::source_body_restore::Limits {
+        shell: brep_core::source_shell_restore::Limits {
+            exact_work: field(shell, "exactWork")?,
+            driver_cells: field(shell, "driverCells")?,
+            regions: brep_core::source_region_restore::Limits {
+                region: brep_core::trimmed_face_recipe::Limits {
+                    pairs: field(region, "pairs")?,
+                    region_cells: field(region, "regionCells")?,
+                    domain_cells: field(region, "domainCells")?,
+                    agreement_cells: field(region, "agreementCells")?,
+                },
+                search_cells: field(regions, "searchCells")?,
+                point_checks: field(regions, "pointChecks")?,
+                mapping_cells: field(regions, "mappingCells")?,
+                driver_cells: field(regions, "driverCells")?,
+                membership_cells: field(regions, "membershipCells")?,
+                controls: field(regions, "controls")?,
+                winding_cells: field(regions, "windingCells")?,
+                steps: field(regions, "steps")?,
+            },
+        },
+        embedding: brep_core::source_shell_geometry::Limits {
+            tolerance_uv: field(embedding, "toleranceUv")?,
+            corners: field(embedding, "corners")?,
+            spans: field(embedding, "spans")?,
+            linear_cells: field(embedding, "linearCells")?,
+            exact_work: field(embedding, "exactWork")?,
+            driver_cells: field(embedding, "driverCells")?,
+            pairs: brep_core::face_contacts::Limits {
+                pairs: field(pairs, "pairs")?,
+                cells: field(pairs, "cells")?,
+                domain_cells: field(pairs, "domainCells")?,
+                cells_per_pair: field(pairs, "cellsPerPair")?,
+                domain_cells_per_pair: field(pairs, "domainCellsPerPair")?,
+            },
+        },
+        volume: brep_core::source_volume::Limits {
+            axis: field(volume, "axis")?,
+            origin: field(volume, "origin")?,
+            absolute_error: field(volume, "absoluteError")?,
+            tolerance_uv: field(volume, "toleranceUv")?,
+            cells: field(volume, "cells")?,
+            spans: field(volume, "spans")?,
+            domain_cells: field(volume, "domainCells")?,
+        },
+    })
+}
+fn main() {
+    let args: Vec<_> = std::env::args().collect();
+    let request: Value =
+        value_codec::from_str(&std::fs::read_to_string(&args[1]).unwrap()).unwrap();
+    let restored = brep_core::source_body_restore::restore(
+        request["definition"].clone(),
+        limits(&request["limits"]).unwrap(),
+    )
+    .unwrap();
+    let body = restored.body().expect("original body admission");
+    let pairs: Vec<[usize; 2]> = Vec::from_value(
+        value_codec::from_str(&std::fs::read_to_string(&args[2]).unwrap()).unwrap(),
+    )
+    .unwrap();
+    let cells=args.get(5).map(|v|v.parse::<usize>().expect("product cell limit")).unwrap_or(4096);
+    let mut results = Vec::new();
+    for faces in pairs {
+        let r = brep_core::source_wall_pair::qualify(
+            body,
+            faces,
+            5.99,
+            brep_core::source_wall_pair::Limits {
+                normal_spans: 10000,
+                max_sine_squared: 1e-6,
+                cells,
+                spans: 10000,
+                domain_cells: 10000,
+                domain_cells_per_query: 256,
+                tolerance_uv: 1e-8,
+            },
+        )
+        .unwrap();
+        let regions=body.geometry().shell().regions().expect("original retained regions");
+        let surfaces=faces.map(|f|regions[f].loops()[0][0].surface());
+        let world_products:Vec<_>=r.unresolved_products.iter().take(32).enumerate().map(|(product_index,uv)|{
+            let bounds=[nurbs_core::surface_distance::rectangle_bounds(surfaces[0],uv[0]).unwrap(),
+                nurbs_core::surface_distance::rectangle_bounds(surfaces[1],uv[1]).unwrap()];
+            let distance=nurbs_core::surface_distance::enclosure_distance(&bounds[0],&bounds[1]).unwrap();
+            let corners=std::array::from_fn(|side|std::array::from_fn(|axis|{
+                let s=surfaces[side];let (k,p,n)=if axis==0{(&s.knots_u,s.degree_u,s.control_points.len())}
+                    else{(&s.knots_v,s.degree_v,s.control_points[0].len())};
+                k[n]-uv[side][axis][1]<uv[side][axis][0]-k[p]
+            }));
+            let mut attempts=Vec::new();let mut corner_spans=0;
+            let mut polar=Vec::new();
+            if product_index==0&&args.get(6).is_some_and(|a|a=="polar") {
+                for side in 0..2 {
+                    let end=corners[side][0];
+                    match nurbs_core::rational_pole_differential::prepare(surfaces[side],end,100000000) {
+                        Ok(report)=>{
+                            let mut value=json!({"side":side,"end":end,"exactWork":report.work,"reason":report.reason,"prepared":report.certificate.is_some()});
+                            if let Some(proof)=report.certificate {
+                                let (matrix,work)=proof.coordinate_path_report(uv[side]).unwrap();
+                                value["anchorAxis"]=json!(proof.anchor());value["pathRestrictions"]=json!(work);
+                                value["matrix"]=json!(matrix.map(|m|m.map(|row|row.map(|x|[x.lo,x.hi]))));
+                            }
+                            polar.push(value);
+                        }
+                        Err(e)=>polar.push(json!({"side":side,"error":e.to_string()})),
+                    }
+                    match nurbs_core::factored_surface_normals::prepare(surfaces[side],end,100000000) {
+                        Ok(report)=>{
+                            let mut value=json!({"normalSide":side,"exactWork":report.work,"reason":report.reason,"prepared":report.certificate.is_some()});
+                            if let Some(proof)=report.certificate {value["normalBounds"]=json!(proof.bounds(uv[side]).unwrap());}
+                            polar.push(value);
+                        }
+                        Err(e)=>polar.push(json!({"normalSide":side,"error":e.to_string()})),
+                    }
+                }
+            }
+            'proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                if x==0&&y==0&&z==0 {continue;}
+                let projection=[x as f64,y as f64,z as f64];
+                match nurbs_core::surface_self_chord::qualify_corner_chords(surfaces,corners,*uv,projection,1e-6,64) {
+                    Ok((cert,used))=>{corner_spans+=used;let excluded=cert.is_some();
+                        attempts.push(json!({"projection":projection,"spans":used,"excluded":excluded}));
+                        if excluded {break 'proposals;}
+                    }
+                    Err(e)=>{attempts.push(json!({"error":e.to_string()}));break 'proposals;}
+                }
+            }}}
+            // Nearest authored pcurve endpoint is a proposal only. Both
+            // original surfaces must prove the same world anchor exactly.
+            let proposed_uv:Vec<_>=(0..2).map(|side|{
+                regions[faces[side]].loops().iter().flatten().flat_map(|f|{
+                    let c=f.curve();[c.control_points.first(),c.control_points.last()]
+                }).flatten().filter(|p|p.len()==2).min_by(|a,b|{
+                    let score=|p:&Vec<f64>|(0..2).map(|k|{
+                        let mid=uv[side][k][0]*0.5+uv[side][k][1]*0.5;(p[k]-mid).abs()
+                    }).sum::<f64>();score(a).total_cmp(&score(b))
+                }).map(|p|[p[0],p[1]])
+            }).collect();
+            let mut anchored=Vec::new();
+            if let [Some(a),Some(b)]=proposed_uv.as_slice() {
+                let image=surfaces[0].evaluate(a[0],a[1]).unwrap().point;
+                let world=[image[0],image[1],image[2]];
+                let first=nurbs_core::surface_self_chord::qualify_surface_anchor(surfaces[0],*a,world,100000).unwrap();
+                let second=nurbs_core::surface_self_chord::qualify_surface_anchor(surfaces[1],*b,world,100000).unwrap();
+                anchored.push(json!({"uv":[a,b],"worldProposal":world,"exactAnchors":[first.0.is_some(),second.0.is_some()],"exactWork":[first.1,second.1]}));
+                if let (Some(first),Some(second))=(first.0,second.0) {
+                    'anchor_proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                        if x==0&&y==0&&z==0 {continue;}
+                        let projection=[x as f64,y as f64,z as f64];
+                        let (cert,used)=nurbs_core::surface_self_chord::qualify_anchored_chords([&first,&second],*uv,projection,1e-6,64).unwrap();
+                        let excluded=cert.is_some();anchored.push(json!({"projection":projection,"spans":used,"excluded":excluded}));
+                        if excluded {break 'anchor_proposals;}
+                    }}}
+                    if product_index==0&&args.get(6).is_some_and(|a|a=="polar") {
+                        let differentials:[_;2]=std::array::from_fn(|side|nurbs_core::rational_pole_differential::prepare(surfaces[side],corners[side][0],100000000));
+                        let normal_factors:[_;2]=std::array::from_fn(|side|nurbs_core::factored_surface_normals::prepare(surfaces[side],corners[side][0],100000000));
+                        for side in 0..2 {
+                            polar.push(json!({"pairedPreparationSide":side,
+                                "differentialWork":differentials[side].as_ref().ok().map(|r|r.work),
+                                "normalWork":normal_factors[side].as_ref().ok().map(|r|r.work)}));
+                        }
+                        let ds=differentials.each_ref().map(|r|r.as_ref().ok().and_then(|r|r.certificate.as_ref()));
+                        let ns=normal_factors.each_ref().map(|r|r.as_ref().ok().and_then(|r|r.certificate.as_ref()));
+                        'polar_proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                            if x==0&&y==0&&z==0 {continue;}
+                            let projection=[x as f64,y as f64,z as f64];
+                            match nurbs_core::surface_self_chord::qualify_polar_anchored_chords([&first,&second],*uv,ds,ns,projection,1e-6,64) {
+                                Ok((cert,used))=>{let excluded=cert.is_some();polar.push(json!({"pairedProjection":projection,"spans":used,"excluded":excluded}));
+                                    if excluded {break 'polar_proposals;}}
+                                Err(e)=>{polar.push(json!({"pairedError":e.to_string()}));break 'polar_proposals;}
+                            }
+                        }}}
+                    }
+                }
+            }
+            json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1],
+                "cornerSides":corners,"cornerAttempts":attempts,"cornerSpans":corner_spans,"anchorAttempts":anchored,"polar":polar})
+        }).collect();
+        results.push(json!({"faces":faces,"qualified":r.certificate.is_some(),"cells":r.cells,
+            "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,
+            "domainCells":r.domain_cells,"unresolvedProducts":r.unresolved_products.len(),
+            "unresolvedWorldProducts":world_products,"worldProductsTruncated":r.unresolved_products.len()>32,
+            "unresolvedUvProducts":r.unresolved_products,"reason":r.reason}));
+    }
+    let automatic = if args.get(4).is_some_and(|v| v == "pass") {
+        use brep_core::source_wall_coverage as w;
+        let domains = w::RetainedGapLimits {
+            cells: 100000,
+            spans: 100000,
+            domain_cells: 1000000,
+            cells_per_pair: 256,
+            spans_per_pair: 512,
+            domain_cells_per_pair: 10000,
+            domain_cells_per_query: 256,
+            tolerance_uv: 1e-8,
+        };
+        let mut mixed_domains = domains;
+        mixed_domains.cells_per_pair = args.get(6).map(|v|v.parse::<usize>().expect("automatic product cell limit")).unwrap_or(1024);
+        mixed_domains.spans_per_pair = 4096;
+        let r = w::qualify_with_mixed_pair_pass(
+            body,
+            5.99,
+            w::Limits {
+                pairs: 378,
+                plane_controls: 10000,
+                normal_spans: 20000,
+                gap: brep_core::source_face_gap::Limits {
+                    cells: 100000,
+                    spans: 100000,
+                },
+                max_sine_squared: 1e-6,
+            },
+            Vec::new(),
+            w::NormalProductLimits {
+                cells: 50000,
+                cells_per_pair: 128,
+            },
+            w::FactoredNormalLimits {
+                exact_work: 100000000,
+                queries: 10000,
+                cells: 10000,
+                cells_per_pair: 128,
+            },
+            Vec::new(),
+            Some(domains),
+            Vec::new(),
+            Some(w::MixedPairLimits {
+                domains: mixed_domains,
+                normal_spans: 100000,
+                normal_spans_per_pair: 10000,
+            }),
+        )
+        .unwrap();
+        let d = r.mixed.unwrap();
+        json!({"factoredQueries":r.factored_queries,"factoredExactWork":r.factored_exact_work,"wholeWallQualified":r.certificate.is_some(),"cells":d.cells,"spans":d.spans,
+            "normalSpans":d.normal_spans,"domainCells":d.domain_cells,
+            "pairs":d.pairs.iter().map(|p|json!({"faces":p.retained.faces,"qualified":p.retained.qualified,
+                "reason":p.retained.reason,"cells":p.retained.cells,"normalProducts":p.normal_products,
+                "unresolvedProducts":p.retained.unresolved_products.len()})).collect::<Vec<_>>()})
+    } else {
+        Value::Null
+    };
+    std::fs::write(
+        &args[3],
+        value_codec::to_string(&json!({"results":results,"automatic":automatic})).unwrap(),
+    )
+    .unwrap();
+}

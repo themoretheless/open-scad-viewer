@@ -1,0 +1,9 @@
+{
+  "schema": "native-inspection-exact-comparison/1",
+  "baseline": "transverse-cone-dispatch-native-2026-10-11.json",
+  "candidate": "exact-rational-boundary-dispatch-native-2026-10-11.json",
+  "sameRequest": true,
+  "sameCompleteResponse": true,
+  "pending": 4081,
+  "scope": "Exact saved-request response comparison; no universal geometry or latency claim"
+}

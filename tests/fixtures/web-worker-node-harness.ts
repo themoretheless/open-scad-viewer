@@ -57,6 +57,14 @@ parentPort.on('message', data => {
 })
 
 await import((workerData as { entryUrl: string }).entryUrl)
+if (workerData.expectedArtifact) {
+  const { default: identity } = await import('../../src/generated/geometry-kernels/identity')
+  const expected = workerData.expectedArtifact
+  if (identity.sha256 !== expected.sha256 || identity.byteLength !== expected.byteLength) {
+    throw new Error('Worker loaded a different WASM publication')
+  }
+  parentPort.postMessage({ __webWorkerHarness: 'artifact', identity })
+}
 imported = true
 if ((workerData as { announceReady?: unknown }).announceReady !== false) {
   parentPort.postMessage({ __webWorkerHarness: 'ready' })

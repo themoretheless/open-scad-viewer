@@ -115,7 +115,7 @@ const jsChunkBudgets = [
   // Runtime v6 retained-source replay and native boundary diagnostics: measured 110,536 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 111_000],
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 167_427], // Adaptive original transport: measured 167304 bytes; retain 123-byte margin. // Continuous wall coverage measured 165863 bytes; retain 123-byte margin. Automatic scan transport: measured 163831 bytes; retain 123-byte margin. Source wall transport: measured 161534 bytes; retain 123-byte margin. Selected source seam: measured 158944 bytes; retain 123-byte margin. Source STEP transport: measured 157735 bytes (+998); retain 123-byte margin. Inverse shear request binding: measured 156737 bytes, +260; retained 123-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 177_338], // Mixed wall transport measured 177,215; retain 123-byte margin. Owned pole transport measured 174,559; retain 123-byte margin.  Retained gap transport: measured 172,262 bytes; retain 123-byte margin. Previously regular refinement counters: measured 169,974 bytes; retain 123-byte margin.  Pole proof counters: measured 169,389 bytes; retain 123-byte margin. Previously: Factored-normal transport: measured 168817 bytes; retain 123-byte margin.
   // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 580_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -132,9 +132,8 @@ const jsChunkBudgets = [
   [/^assets\/renderer-[^/]+\.js$/, 138_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
-  // Splitting the ModelGraph emitter match into per-kind methods adds 4 kB of
-  // raw WASM; measured: 470,803 bytes.
-  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 474_000],
+  // Rational-surface and transform-plan language kernels: measured 516,458 bytes.
+  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 517_000],
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
   [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
   // Sweep preview and boundary proof status app shell, measured: 241,848 bytes.

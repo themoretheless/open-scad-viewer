@@ -33,20 +33,48 @@ fn directed(fragment: &Fragment) -> crate::Result<nurbs_core::curve::Curve> {
     }
     Ok(c)
 }
-fn canonical_vertex_ids(
-    shared: &crate::source_shared_edge::SharedEdge,
-    slot: usize,
-    mut ids: [usize; 2],
-) -> [usize; 2] {
-    if shared.reversed()[slot] {
-        ids.reverse();
+/// Transfer operations are implemented only by privately admitted native edges.
+pub trait Transfer:crate::source_seam_tangency::Carrier {
+    fn complete(&self)->bool;
+    fn traversal_reversed(&self,side:usize)->bool;
+    fn directed_pcurve(&self,side:usize)->crate::Result<nurbs_core::curve::Curve>;
+}
+impl Transfer for crate::source_shared_edge::SharedEdge {
+    fn complete(&self)->bool {self.covers_complete_canonical_source()}
+    fn traversal_reversed(&self,side:usize)->bool {self.reversed()[side]}
+    fn directed_pcurve(&self,side:usize)->crate::Result<nurbs_core::curve::Curve> {directed(&self.uses()[side])}
+}
+impl Transfer for crate::source_projective_edge::Edge {
+    fn complete(&self)->bool {
+        crate::source_allowed_contact::Support::maps_complete_source(self)
     }
-    ids
+    fn traversal_reversed(&self,side:usize)->bool {self.uses()[side].reversed()}
+    fn directed_pcurve(&self,side:usize)->crate::Result<nurbs_core::curve::Curve> {
+        let source=&self.uses()[side];let fragment=source.fragment();
+        let mut candidate=directed(fragment)?;
+        let mut map=source.weights();if fragment.reversed() {map.reverse();}
+        // Invert the positive projective parameter map in homogeneous Bezier
+        // coefficients. Rounded proposals require fresh whole-curve identity.
+        if map[0]!=map[1] {
+            if candidate.control_points.len()!=candidate.degree+1 {return Err(unsupported("Projective multispan transport requires exact partitioned composition"));}
+            for (i,w) in candidate.weights.iter_mut().enumerate() {
+                *w*=map[1].powi((candidate.degree-i) as i32)*map[0].powi(i as i32);
+                if !w.is_finite() || *w<=0. {return Err(unsupported("Projective UV transport exceeds finite positive coefficient range"));}
+            }
+        }
+        let range=if source.reversed() {[[1.,1.],[0.,1.]]}else{[[0.,1.],[1.,1.]]};
+        let proof=nurbs_core::curve_surface_affine::verify_algebraic(self.world(),&candidate,fragment.surface(),range,cad_predicates::MAX_WORK)?;
+        if !proof.is_some_and(|p|p.outcome==cad_predicates::BezierIdentity::Equal) {return Err(unsupported("Exact projective UV transport is unproved"));}
+        Ok(candidate)
+    }
+}
+fn canonical_vertex_ids<E:Transfer>(shared:&E,side:usize,mut ids:[usize;2])->[usize;2] {
+    if shared.traversal_reversed(side) {ids.reverse();}ids
 }
 /// Only a private native Body can authorize conversion. Entity addresses and
 /// shell vertex identities are preserved; coordinates never merge vertices.
-pub fn convert(
-    body: &crate::source_volume::Body,
+pub fn convert<E:Transfer>(
+    body: &crate::source_volume::Body<E>,
     tolerance_mm: f64,
 ) -> crate::Result<crate::Model> {
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
@@ -66,7 +94,7 @@ pub fn convert(
         Ok(())
     };
     for (index, shared) in shell.edges().iter().enumerate() {
-        if !shared.covers_complete_canonical_source() {
+        if !shared.complete() {
             return Err(unsupported(
                 "Partial canonical carriers need exact root restriction storage",
             ));
@@ -84,19 +112,15 @@ pub fn convert(
         for (slot, address) in shell.uses()[index].iter().enumerate() {
             let fragment = &shell.faces()[address.face][address.wire].edges()[address.edge];
             full(fragment)?;
-            let reversed = shared.reversed()[slot];
-            let ids = canonical_vertex_ids(
-                shared,
-                slot,
-                shell.vertices()[address.face][address.wire][address.edge],
-            );
+            let reversed = shared.traversal_reversed(slot);
+            let ids=canonical_vertex_ids(shared,slot,shell.vertices()[address.face][address.wire][address.edge]);
             if canonical.is_some_and(|v| v != ids) {
                 return Err(unsupported("Shared canonical endpoint ownership conflicts"));
             }
             canonical = Some(ids);
             uses.insert(
                 (address.face, address.wire, address.edge),
-                (index, reversed),
+                (index, reversed, shared.directed_pcurve(slot)?),
             );
         }
         let ids = canonical.unwrap();
@@ -124,7 +148,7 @@ pub fn convert(
             .map_err(|e| crate::Error::new(e.code, e.message))?;
         uses.insert(
             (address.face, address.wire, address.edge),
-            (edges.len(), false),
+            (edges.len(), false, directed(pole.source())?),
         );
         edges.push(crate::Edge {
             vertices: ids,
@@ -146,12 +170,12 @@ pub fn convert(
         let first = loops.len();
         for (wire, source) in wires.iter().enumerate() {
             let mut coedges = Vec::new();
-            for (edge, fragment) in source.edges().iter().enumerate() {
-                let (index, reversed) = uses[&(face, wire, edge)];
+            for (edge, _fragment) in source.edges().iter().enumerate() {
+                let (index, reversed, pcurve) = &uses[&(face, wire, edge)];
                 coedges.push(crate::Coedge {
-                    edge: index,
-                    reversed,
-                    pcurve: directed(fragment)?,
+                    edge: *index,
+                    reversed: *reversed,
+                    pcurve: pcurve.clone(),
                 });
             }
             loops.push(crate::Loop { coedges });

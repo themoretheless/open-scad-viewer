@@ -1,0 +1,20 @@
+{
+  "schema": "expression-worker-staging/1",
+  "stage": "/Users/themoretheless/.codex/tmp/expression-worker-staging-smoke-2026-10-11",
+  "input": "/Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/public/wasm/geometry-kernel.wasm",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "byteLength": 13108282,
+  "liveWasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "liveWasmUnchanged": true,
+  "workerQualified": true,
+  "scope": "Staging mechanism qualified with the already published shared-corner package and bounded control; does not qualify the new fixed-point candidate or full browser workflow.",
+  "pathGuardsVerified": [
+    "live checkout",
+    "symlink alias to live checkout",
+    "existing staging directory"
+  ],
+  "runtimeWorkerGate": "passed",
+  "helperSha256": "8d0c05c6b88a286f2a4acdb784e87bb145aab51d6d5f5e3f8c79bbc396384478",
+  "runtimeReport": "docs/qualification/expression-worker-staging-runtime-2026-10-11.json",
+  "runtimeReportSha256": "3056bad692f8d39013f52c785d7f943322aad1f78d5e7aab0548cfd90ac923f1"
+}

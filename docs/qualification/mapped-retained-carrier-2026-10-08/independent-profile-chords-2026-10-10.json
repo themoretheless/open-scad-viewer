@@ -1,0 +1,35 @@
+{
+  "schema": "independent-profile-bridge-local-chords/1",
+  "passed": true,
+  "method": "ProfileSectionBridge::inspect_self_chords",
+  "sourceSha256": "d4db8579d9ccc076a0cb0e7ee1cd96df14385354365361a0d7b9659ab40286af",
+  "nativeSuiteTests": 12,
+  "nativeSuiteSeconds": 2.72,
+  "log": "/tmp/independent-profile-chords-suite-20261010.log",
+  "checks": {
+    "independentPlanarProfilesLocalRectangles": 256,
+    "rationalNormalDiameterPreservedAtBudgets": [
+      0,
+      1,
+      8,
+      64,
+      256
+    ],
+    "foldedCandidateNotExcluded": true,
+    "zeroBudgetUnresolved": true,
+    "invalidDomainsAnglesBudgetsRefused": true,
+    "endpointPairBothOrders": true,
+    "C1DiscontinuityRefused": true,
+    "invalidPairDomainsAnglesBudgetsRefused": true
+  },
+  "scope": "Source-owned interval derivative mean-path theorem on each full requested local rectangle, with conservative C1 knot admission. Does not cover cross-rectangle chords, radius, rail matching, boundary trimming, shell assembly, self-intersection or global solid/thickness admission. Native API only; current in-flight WASM build predates this unused API and does not expose it.",
+  "endpointPairMethod": "ProfileSectionBridge::inspect_self_chord_pair",
+  "pairScope": "Own complete mean-Jacobian and endpoint normals, followed by two exact coordinate paths. False means insufficient exclusion, never collision witness; None means incomplete/unsupported coverage. No foreign owner inputs accepted.",
+  "pairRegression": "12 bridge tests passed in 2.41 seconds before final C1/invalid-input additions. Final chord suite pending.",
+  "finalChordSuite": {
+    "passed": true,
+    "tests": 102,
+    "seconds": 1.33,
+    "log": "/tmp/general-bridge-chord-regression-20261010.log"
+  }
+}

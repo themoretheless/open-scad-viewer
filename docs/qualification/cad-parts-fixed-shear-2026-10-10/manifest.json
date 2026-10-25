@@ -1,0 +1,248 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "mouse-bracket-current-0",
+      "file": "mouse-bracket-current-0.step",
+      "sha256": "2899c6c8a4b8c3c195f4b38ad5ae9de0c2fff1a45ad81429693560ba610c6019",
+      "expected": {
+        "volumeMm3": 9224.420352247613,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            53,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mouse-bracket-current-1",
+      "file": "mouse-bracket-current-1.step",
+      "sha256": "c35a80b2f30b23b296dcd1464834f57b7680c7eb09d4710128a1c46aa81d43ae",
+      "expected": {
+        "volumeMm3": 9224.420352247613,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            53,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mouse-flange-current-0",
+      "file": "mouse-flange-current-0.step",
+      "sha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mouse-flange-current-1",
+      "file": "mouse-flange-current-1.step",
+      "sha256": "a4fd65ccd5527b608a60f1c0c80ea2fe5cc8a2fe69844b64f3f359aa6bdd2c17",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mouse-enclosure-current-0",
+      "file": "mouse-enclosure-current-0.step",
+      "sha256": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+      "expected": {
+        "volumeMm3": 7981.620352259761,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            47,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mouse-enclosure-current-1",
+      "file": "mouse-enclosure-current-1.step",
+      "sha256": "510c13dab52b26521465a6299796d85488ce34cd0bb6822f1d0b66a7a24943bf",
+      "expected": {
+        "volumeMm3": 7981.620352259761,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            47,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "keyboard-bracket-current-0",
+      "file": "keyboard-bracket-current-0.step",
+      "sha256": "2899c6c8a4b8c3c195f4b38ad5ae9de0c2fff1a45ad81429693560ba610c6019",
+      "expected": {
+        "volumeMm3": 9224.420352247613,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            53,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "keyboard-bracket-current-1",
+      "file": "keyboard-bracket-current-1.step",
+      "sha256": "c35a80b2f30b23b296dcd1464834f57b7680c7eb09d4710128a1c46aa81d43ae",
+      "expected": {
+        "volumeMm3": 9224.420352247613,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            53,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "keyboard-flange-current-0",
+      "file": "keyboard-flange-current-0.step",
+      "sha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "keyboard-flange-current-1",
+      "file": "keyboard-flange-current-1.step",
+      "sha256": "a4fd65ccd5527b608a60f1c0c80ea2fe5cc8a2fe69844b64f3f359aa6bdd2c17",
+      "expected": {
+        "volumeMm3": 13460.190785283748,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "keyboard-enclosure-current-0",
+      "file": "keyboard-enclosure-current-0.step",
+      "sha256": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+      "expected": {
+        "volumeMm3": 7981.620352259761,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            47,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "keyboard-enclosure-current-1",
+      "file": "keyboard-enclosure-current-1.step",
+      "sha256": "510c13dab52b26521465a6299796d85488ce34cd0bb6822f1d0b66a7a24943bf",
+      "expected": {
+        "volumeMm3": 7981.620352259761,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            47,
+            30,
+            26
+          ]
+        ]
+      }
+    }
+  ]
+}

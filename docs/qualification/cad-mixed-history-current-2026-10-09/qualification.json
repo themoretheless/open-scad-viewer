@@ -1,0 +1,8 @@
+{
+  "wasmSha256": "3afcab4a6f41e5db19fecd9ce108245372c1595e1dbfdc6e2d8a14a5a1b4c4b7",
+  "mixedHistoryTestsPassed": 3,
+  "operationsPerPart": 20,
+  "occtFilesPassed": 6,
+  "maxBoundsErrorMm": 1.000000082740371e-07,
+  "scope": "Current service/WASM operations and history, not browser mixed-operation replay"
+}

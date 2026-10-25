@@ -34,7 +34,7 @@ pub struct CertifiedTessellation {
     pub surface_to_mesh_deviation_mm: f64,
     pub mesh_to_surface_deviation_mm: f64,
     pub audit: brep_core::solid_audit::SolidAuditCertificate,
-    pub evidence: nurbs_intersect::predicate_evidence::ComposedEvidence,
+    pub evidence: brep_core::predicate_evidence::ComposedEvidence,
     pub change_set: brep_core::ChangeSet,
     pub naming_complete: bool,
     pub max_triangles: usize,
@@ -153,7 +153,7 @@ pub(super) fn finish(
         false,
     )
 }
-fn finish_indexed(
+pub(super) fn finish_indexed(
     mesh: Mesh,
     face_ids: Vec<usize>,
     topology_face_ids: Option<Vec<String>>,
@@ -250,9 +250,9 @@ pub(super) fn is_affine_plane(surface: &Surface, tolerance: f64) -> bool {
 pub(super) struct BoundarySample {
     /// Authored edges this sample lies on: its own coedge's edge, and for
     /// the coedge's start vertex also the previous coedge's edge.
-    edges: [usize; 2],
-    uv: [f64; 2],
-    position: usize,
+    pub(super) edges: [usize; 2],
+    pub(super) uv: [f64; 2],
+    pub(super) position: usize,
 }
 /// Geometric positions belong to authored vertices and edges, never to a
 /// tolerance bucket. Two nearby disconnected shells keep disjoint indices.
@@ -514,7 +514,11 @@ impl EdgeSamplingRegistry {
             face_ids.push(use_.face);
         }
         if face_ids.len() > 20000 {
-            return Err(input("B-rep tessellation exceeds 20000 triangles"));
+            return Err(input(format!(
+                "B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",
+                use_.face,
+                face_ids.len()
+            )));
         }
         Ok(())
     }
@@ -524,7 +528,7 @@ pub(super) struct FaceMesh {
     pub(super) shared: Vec<Option<usize>>,
     pub(super) triangles: Vec<[usize; 3]>,
 }
-fn uv_key(point: [f64; 2]) -> [u64; 2] {
+pub(super) fn uv_key(point: [f64; 2]) -> [u64; 2] {
     point.map(|x| if x == 0. { 0 } else { x.to_bits() })
 }
 pub(super) fn triangulate_boundary(
@@ -548,7 +552,18 @@ pub(super) fn triangulate_boundary(
             .iter()
             .map(|wire| wire.iter().map(|p| p.uv).collect())
             .collect::<Vec<_>>(),
-    )?;
+    )
+    .inspect_err(|_error| {
+        #[cfg(test)]
+        eprintln!(
+            "triangulation boundary outer={:?} holes={:?}",
+            outer.iter().map(|p| p.uv).collect::<Vec<_>>(),
+            holes
+                .iter()
+                .map(|w| w.iter().map(|p| p.uv).collect::<Vec<_>>())
+                .collect::<Vec<_>>()
+        );
+    })?;
     let mut out = FaceMesh {
         uv: vec![],
         shared: vec![],
@@ -637,9 +652,6 @@ fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
         mesh.triangles.swap_remove(first);
         mesh.triangles.extend(replacement);
     }
-}
-pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
-    nurbs_with_freeform_note(model, segments, FreeformTessNote::SampledUncertified)
 }
 
 fn rectangular_parallel_edges(model: &brep_core::Model, face: &brep_core::Face)

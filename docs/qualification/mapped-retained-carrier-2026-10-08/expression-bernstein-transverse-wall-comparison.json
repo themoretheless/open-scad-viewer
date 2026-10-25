@@ -1,0 +1,85 @@
+{
+  "before": {
+    "spans": 41796,
+    "budget_pending": 4257,
+    "profile_transition_excluded": 35
+  },
+  "after": {
+    "spans": 42019,
+    "budget_pending": 4165,
+    "profile_transition_excluded": 87
+  },
+  "pending_pairs": 59,
+  "largest_pending_pairs": [
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "domains": 448
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "domains": 402
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "domains": 336
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "domains": 272
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "domains": 266
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "domains": 256
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "domains": 248
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "domains": 144
+    },
+    {
+      "faces": [
+        17,
+        17
+      ],
+      "domains": 128
+    },
+    {
+      "faces": [
+        21,
+        21
+      ],
+      "domains": 128
+    }
+  ]
+}

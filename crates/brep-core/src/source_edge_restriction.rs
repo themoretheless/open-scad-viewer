@@ -6,55 +6,46 @@ use nurbs_core::{
     interval_eval::{self, Interval as I},
 };
 use value_codec::Value;
-#[derive(Clone)]
-pub struct Restriction {
-    edge: SharedEdge,
+/// Only native admitted carriers retain exact source endpoint ownership.
+pub trait RestrictionCarrier:crate::source_seam_tangency::Carrier {
+    fn restriction_definition(&self)->Value;
+    fn restriction_reversed(&self,side:usize)->bool;
 }
-impl Restriction {
-    pub fn from_edge(edge: &SharedEdge) -> Self {
+impl RestrictionCarrier for SharedEdge {
+    fn restriction_definition(&self)->Value {self.definition()}
+    fn restriction_reversed(&self,side:usize)->bool {self.reversed()[side]}
+}
+impl RestrictionCarrier for crate::source_projective_edge::Edge {
+    fn restriction_definition(&self)->Value {self.definition()}
+    fn restriction_reversed(&self,side:usize)->bool {self.uses()[side].reversed()}
+}
+#[derive(Clone)]
+pub struct Restriction<E = SharedEdge> {
+    edge: E,
+}
+impl<E:RestrictionCarrier> Restriction<E> {
+    pub fn from_edge(edge: &E) -> Self {
         Self { edge: edge.clone() }
     }
-    pub fn edge(&self) -> &SharedEdge {
+    pub fn edge(&self) -> &E {
         &self.edge
     }
     /// Persistence contains original carriers, roots and mapping proposals.
     /// It contains no rounded parameter, vertex or cached admission authority.
     pub fn definition(&self) -> Value {
-        self.edge.definition()
+        self.edge.restriction_definition()
     }
     /// Both directed source uses are transported into increasing canonical
     /// parameter order. Their intersection encloses the proven common ends.
     pub fn parameter_bounds(&self) -> Result<[[f64; 2]; 2]> {
         let target = self.edge.world().domain();
         let mut bounds = [[[0.; 2]; 2]; 2];
-        for (slot, fragment) in self.edge.uses().iter().enumerate() {
-            let source = fragment.curve().domain();
-            let flip = self.edge.reversed()[slot] ^ fragment.reversed();
-            let range = self.edge.ranges().map(|r| r[slot]).unwrap_or(if flip {
-                [[1., 1.], [0., 1.]]
-            } else {
-                [[0., 1.], [1., 1.]]
-            });
-            let first = I::point(range[0][0]).div(I::point(range[0][1]))?;
-            let last = I::point(range[1][0]).div(I::point(range[1][1]))?;
-            for (end, r) in fragment.parameter_bounds().iter().enumerate() {
-                let q = I::new(r[0], r[1])?
-                    .sub(I::point(source[0]))?
-                    .div(I::point(source[1]).sub(I::point(source[0]))?)?
-                    .intersect(0., 1.)?;
-                let t = I::point(target[0])
-                    .add(
-                        first
-                            .add(q.mul(last.sub(first)?)?)?
-                            .intersect(0., 1.)?
-                            .mul(I::point(target[1]).sub(I::point(target[0]))?)?,
-                    )?
-                    .intersect(target[0], target[1])?;
-                bounds[slot][if self.edge.reversed()[slot] {
-                    1 - end
-                } else {
-                    end
-                }] = [t.lo, t.hi];
+        for slot in 0..2 {
+            let fragment=self.edge.fragment(slot);
+            for (end,r) in fragment.parameter_bounds().iter().enumerate() {
+                let q=self.edge.map_parameter(slot,I::new(r[0],r[1])?)?.intersect(0.,1.)?;
+                let t=I::point(target[0]).add(q.mul(I::point(target[1]).sub(I::point(target[0]))?)?)?.intersect(target[0],target[1])?;
+                bounds[slot][if self.edge.restriction_reversed(slot) {1-end}else{end}]=[t.lo,t.hi];
             }
         }
         let common = std::array::from_fn(|i| {
@@ -158,6 +149,11 @@ pub fn restore(
     Ok(source_shared_edge_restore::restore(value, limits)?
         .edge
         .map(|edge| Restriction { edge }))
+}
+/// Projective restoration replays both source compositions and root identities.
+pub fn restore_projective(value:Value,limits:source_shared_edge_restore::Limits)
+    ->Result<Option<Restriction<crate::source_projective_edge::Edge>>> {
+    Ok(crate::source_projective_edge::restore(value,limits.mapping_cells_per_use,limits.exact_work,limits.driver_cells)?.edge.map(|edge|Restriction{edge}))
 }
 #[cfg(test)]
 pub(crate) fn assert_replay(edge: &SharedEdge) {

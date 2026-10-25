@@ -1,0 +1,30 @@
+{
+  "scope": "Finite retained-body lifecycle scenarios. Held dispatch checks cancellation, not interruption latency or GPU qualification.",
+  "geometryWasmSha256": "21e5ca1473fc9d7094784bc2b3369e7a4b97d874fe9fe55d0d2e4203a64925f7",
+  "cases": 4,
+  "checks": 36,
+  "visuallyInspected": [
+    "1440-closed-profile-planar-10.r.png",
+    "600-closed-profile-spatial-6.r.png"
+  ],
+  "reportSha256": "2871343002e100aaf14bc004e8366c0e3d1b5ead326fa91eeeede68caa0615fa",
+  "screenshots": [
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/profile-solid-ui/1440-closed-profile-planar-10.r.png",
+      "sha256": "ce34f3a070a2306602bd061b4f518c6794c068fee1624d45c4227a5ef4ecb987"
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/profile-solid-ui/1440-closed-profile-spatial-6.r.png",
+      "sha256": "2f4f22dc6e8e8979b49a981476cb349f62b164333e85c70bec322f4996a78c99"
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/profile-solid-ui/600-closed-profile-planar-10.r.png",
+      "sha256": "0386eb3cfe03da388c713542cb9c03d16fe2fb454cc1ae0a31ec81ec216835ba"
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/profile-solid-ui/600-closed-profile-spatial-6.r.png",
+      "sha256": "d4af412f7fed7418edcf943e8b8828d89756f79e787da115ed194cde707c8634"
+    }
+  ],
+  "g1QualificationCredit": 0
+}

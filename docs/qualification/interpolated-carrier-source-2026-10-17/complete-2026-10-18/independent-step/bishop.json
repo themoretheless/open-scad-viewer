@@ -1,0 +1,22 @@
+{
+  "schema": "arc-bishop-independent-occt/1",
+  "passed": true,
+  "ocpVersion": "7.7.2.0",
+  "scope": "One specified native STEP body: independent validity, full retained NURBS bases, topology, orientation and converged numerical retained-volume flux. Original embedding/Gk remain separate native proofs.",
+  "stepSha256": "514484d4c6c551a28a4d29915dde2e47c0d9b61697920e65b397f0c3e93abcba",
+  "nativeBodySha256": "c5223ccdf89e7364e01a790b78ab66bb1d40da899b190939591a0ce3dfc66175",
+  "verifierSha256": "e3aa16b830e5d518431c999f7383a1051cfe21619aafd67f3c3f2287bf6f06bb",
+  "solids": 1,
+  "faces": 256,
+  "edges": 512,
+  "vertices": 256,
+  "twoFaceEdges": 512,
+  "maxPoleErrorMm": 0.0,
+  "volumeMm3": 0.001954113053151492,
+  "independentFluxVolumeMm3": [
+    0.0019541130531506813,
+    0.001954113053151382
+  ],
+  "volumeErrorMm3": 1.0972125985553305e-16,
+  "fullGoalComplete": false
+}

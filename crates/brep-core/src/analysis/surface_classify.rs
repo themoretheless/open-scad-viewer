@@ -764,3 +764,4 @@ pub use area::{face_area};
 #[cfg(test)]
 #[path = "tests/surface_classify.rs"]
 mod tests;
+

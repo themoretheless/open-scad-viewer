@@ -1,0 +1,30 @@
+{
+  "scope": "native-projective-vertex-contact-and-embedded-octahedron",
+  "validation": {
+    "focused_vertex_regression_passed": 2,
+    "integration_passed": 4,
+    "failed": 0,
+    "logs": [
+      "/tmp/source-projective-vertex-20261011.log",
+      "/tmp/source-projective-vertex-integration-20261011.log"
+    ]
+  },
+  "verified": [
+    "six manifold vertices with four incident edges each",
+    "independently weighted rational UV edge maps",
+    "12 vertex-only face pairs qualify in both orders and refuse exhausted work",
+    "all 28 original octahedron face pairs qualify through fresh shell embedding",
+    "root/shared-boundary and body replay regression retained"
+  ],
+  "limitations": [
+    "no general root-valued vertex-point proof",
+    "no generated four-edge fillet corner",
+    "no complete general NURBS fillet or WASM deployment"
+  ],
+  "sha256": {
+    "source_vertex_contact.rs": "c045d97b5c65e8f917a8c0d79d853b57d939e461b4f3e11ac6fafff22ceb4b49",
+    "source_planar_material_hull.rs": "a904ef7e0db318efeb94d04eb08687e8176fd0694ca30eaba4dae2c38ede25cd",
+    "source_face_contacts.rs": "c809b91fd99332bfc973f6e1dce84271e64fa9f7f237654c9847f62612ee99a0",
+    "source_shell_incidence.rs": "96ce13c8086570755fe84846eb84a5c23799ed1a0639d5b5ca9f7aba5e7e29f2"
+  }
+}

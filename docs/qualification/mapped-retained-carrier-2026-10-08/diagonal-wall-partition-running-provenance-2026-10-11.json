@@ -1,0 +1,12 @@
+{
+  "schema": "native-inspection-running-provenance/1",
+  "inputFiles": 1812,
+  "allInputHashesMatch": true,
+  "manifestSha256": "e82d5bfb6e9a4a985886842497eb192391b3f6e4bd9fe956128d1b8438beb0b5",
+  "binarySha256": "39d24b46a5251036eeacb35f23607233c25fc5bf4848679d87f624856616d559",
+  "requestSha256": "bc675ce7e69c50feb54dd30fc6d5db63d9f2fc39e8a34da285971fd59356b80d",
+  "session": 66748,
+  "pid": 7369,
+  "resultQualified": false,
+  "scope": "Input and binary binding while replay is live; no terminal result or geometry qualification."
+}

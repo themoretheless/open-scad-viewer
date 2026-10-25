@@ -10,7 +10,7 @@ import { REFREEZE_CORE, digest, jsonBytes, shaRecord, bundleBytes, ordinaryBytes
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v68-g1-v85-refreeze-review.md'
-const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v51.json'
+export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v51.json'
 const MODULE_DELIVERY_PATHS = [
   'src/services/geometry/kernel.ts',
   'src/services/geometry/kernelCompilation.ts',
@@ -22,6 +22,12 @@ export const REFRESH_EXECUTORS = Object.freeze([
   '.gitattributes',
   'scripts/qualificationFrozenArchives.mjs',
   'scripts/browserMemoryErrors.mjs',
+  'scripts/check-sweep-miter-matrix-browser.mjs',
+  'scripts/sweep-browser-surface-evidence.mjs',
+  'scripts/sweep-browser-worker-probe.mjs',
+  'scripts/export-sweep-step-oracle.mts',
+  'scripts/sweep-step-miter-fixtures.mts',
+  'scripts/sweep-step-profile-fixtures.mts',
   '.github/workflows/g1-qualification-clean.yml',
   'scripts/materialize-qualification-kernels.mjs',
   'scripts/pack-geometry-kernel.mjs',
@@ -54,10 +60,10 @@ export const REFRESH_OUTPUTS = Object.freeze({
   plan: 'docs/qualification/semantic-manifold-g1-plan-v85.json',
   status: 'docs/qualification/g0-v68-g1-v85-refreeze-status-v1.json',
 })
-const oldFingerprint = 'docs/qualification/g0-toolchain-fingerprints-v67.json'
-const oldPlan = 'docs/qualification/semantic-manifold-g1-plan-v84.json'
-const oldStatus = 'docs/qualification/g0-v67-g1-v84-refreeze-status-v1.json'
-const oldReview = 'docs/qualification/g0-v67-g1-v84-refreeze-review.md'
+const oldFingerprint = 'docs/qualification/g0-toolchain-fingerprints-v66.json'
+const oldPlan = 'docs/qualification/semantic-manifold-g1-plan-v83.json'
+const oldStatus = 'docs/qualification/g0-v66-g1-v83-refreeze-status-v1.json'
+const oldReview = 'docs/qualification/g0-v66-g1-v83-refreeze-review.md'
 const githubEnvironment = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
 import {FROZEN_ARCHIVES} from './qualificationFrozenArchives.mjs'
 export {FROZEN_ARCHIVES}
@@ -140,7 +146,7 @@ export function prepareQualificationRefresh({
   fingerprint.purpose = reason.trim()
   fingerprint.claimBoundary.excludes = [
     'Full SPDX SBOM', 'Playwright qualification locks',
-    'Any rewrite of G0 v1-v67 or G1 v1 through v84',
+    'Any rewrite of G0 v1-v66 or G1 v1 through v83',
     'G0 closure, G1 qualification, completed clean work, or production cutover',
   ]
   fingerprint.claimBoundary.includes = [
@@ -200,7 +206,7 @@ export function prepareQualificationRefresh({
   fingerprint.knownDrift = previousFingerprint.artifacts
     .filter(item => item.sha256 !== snapshot.get(item.path)?.sha256)
     .map(item => ({ relativeTo: oldFingerprint, bindingId: item.id,
-      note: `Current bytes are newly bound in v68; v67 remains archived. ${reason.trim()}` }))
+      note: `Current bytes are newly bound in v68; v66 remains archived. ${reason.trim()}` }))
 
   const plan = structuredClone(previousPlan)
   plan.planId = 'semantic-manifold-g1-plan-v85'
@@ -211,7 +217,7 @@ export function prepareQualificationRefresh({
       'Recompute artifact and canonical bundle digests from current source bytes.',
       'Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.',
       'Start semantic-manifold-g1-candidate-run-v85 with zero completed clean runs and zero completed work units; no prior result is imported.',
-      'Retain G0 v1-v67 and G1 v1 through v84 byte-for-byte; G0 toolchain fingerprints advance separately to v68.',
+      'Retain G0 v1-v66 and G1 v1 through v83 byte-for-byte; G0 toolchain fingerprints advance separately to v68.',
     ],
     preserved: [
       'All 65 oracle cases, 18 comparator mutations, boundary cases, matrix rows, environment IDs, seeds, budgets, required clean runs and all 4740 work units.',
@@ -271,7 +277,7 @@ export function prepareQualificationRefresh({
   plan.executionProtocol.candidateRunId = 'semantic-manifold-g1-candidate-run-v85'
   plan.executionProtocol.resultPath = 'output/qualification/semantic-manifold-g1-candidate-run-v85/result.json'
   plan.executionProtocol.cleanRunDefinition[0] = previousPlan.executionProtocol.cleanRunDefinition[0]
-    .replace('exact v84 frozen artifact', 'exact v85 frozen artifact')
+    .replace('exact v83 frozen artifact', 'exact v85 frozen artifact')
   assert.equal(plan.executionProtocol.priorResultsMayBeImported, false)
   assert.equal(plan.approvals.qualificationApproval, 'not-approved')
   assert(plan.matrix.every(row => row.evidenceState === 'not-executed-clean-post-freeze'))
@@ -283,27 +289,18 @@ export function prepareQualificationRefresh({
     ['g1-artifact', previousPlan.bindings.artifacts, plan.bindings.artifacts],
     ['g1-bundle', previousPlan.bindings.bundles, plan.bindings.bundles],
   ]) {
-    before.forEach((item, index) => {
+    const nextById = new Map(after.map(item => [item.id, item]))
+    for (const item of before) {
+      const next = nextById.get(item.id)
       const oldHash = typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value
-      const nextHash = typeof after[index].sha256 === 'string' ? after[index].sha256 : after[index].sha256.value
+      const nextHash = next ? typeof next.sha256 === 'string' ? next.sha256 : next.sha256.value : null
       if (oldHash !== nextHash) changes.push({ kind, id: item.id, previousSha256: oldHash, currentSha256: nextHash })
-    })
-  }
-  for (const artifact of fingerprint.artifacts.slice(previousFingerprint.artifacts.length)) {
-    changes.push({
-      kind: 'g0-artifact',
-      id: artifact.id,
-      previousSha256: null,
-      currentSha256: artifact.sha256,
-    })
-  }
-  for (const artifact of plan.bindings.artifacts.slice(previousPlan.bindings.artifacts.length)) {
-    changes.push({
-      kind: 'g1-artifact',
-      id: artifact.id,
-      previousSha256: null,
-      currentSha256: artifact.sha256.value,
-    })
+    }
+    const previousIds = new Set(before.map(item => item.id))
+    for (const item of after.filter(item => !previousIds.has(item.id))) {
+      changes.push({kind, id:item.id, previousSha256:null,
+        currentSha256:typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value})
+    }
   }
   const status = {
     schema: 'open-scad-viewer/qualification-refreeze-status', schemaVersion: 1,

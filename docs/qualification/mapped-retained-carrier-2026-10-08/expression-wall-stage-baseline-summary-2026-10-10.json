@@ -1,0 +1,357 @@
+{
+  "schema": "expression-wall-work-summary/1",
+  "source": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-wall-unresolved-cache-2026-10-10.json",
+  "geometryQualified": false,
+  "scope": "Work accounting and pending-region counts only; no whole-body thickness admission",
+  "complete": false,
+  "cells": 66202,
+  "spans": 1000000,
+  "domainCells": 1000000,
+  "initialPairsChecked": 435,
+  "totalPairs": 435,
+  "pendingRegions": 30557,
+  "pendingFacePairs": 46,
+  "pendingReasons": {
+    "budget": 30557,
+    "enclosure": 0,
+    "resolution": 0
+  },
+  "detailedStages": false,
+  "unattributedSpans": 723963,
+  "stages": [
+    {
+      "stage": "intrinsic",
+      "spans": 269769,
+      "fractionOfSpanWork": 0.269769
+    },
+    {
+      "stage": "profile_transition",
+      "spans": 6268,
+      "fractionOfSpanWork": 0.006268
+    }
+  ],
+  "pendingPairs": [
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "regions": 10419
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "regions": 4172
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "regions": 4142
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "regions": 2886
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "regions": 2438
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "regions": 1874
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "regions": 1754
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "regions": 768
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "regions": 172
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "regions": 168
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "regions": 154
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "regions": 116
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "regions": 104
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "regions": 100
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "regions": 62
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "regions": 54
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "regions": 54
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "regions": 40
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "regions": 36
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "regions": 32
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "regions": 30
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "regions": 28
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "regions": 16
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "regions": 10
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "regions": 8
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "regions": 8
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "regions": 4
+    },
+    {
+      "faces": [
+        0,
+        27
+      ],
+      "regions": 2
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "regions": 2
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "regions": 2
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "regions": 2
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "scope": "native-projective-boundary-fiber-contacts",
+  "verified": {
+    "combined_tests_passed": 3,
+    "failed": 0,
+    "log": "/tmp/source-projective-fiber-integration-20261011.log",
+    "canal_volume_regression_passed": 1,
+    "canal_log": "/tmp/source-projective-volume-canal-regression-20261011.log",
+    "paired_fiber_regression": {
+      "passed": 3,
+      "failed": 0,
+      "log": "/tmp/source-projective-paired-fiber-regression-20261011.log"
+    }
+  },
+  "coverage": [
+    "rational nonlinear wedge rim ownership",
+    "global exact/span/driver/linear budgets",
+    "root-end correspondence and projective body replay retained"
+  ],
+  "limitations": [
+    "not general nonlinear interior-contact proof",
+    "not complete mixed-radius or complex-corner fillet qualification",
+    "published WASM unchanged"
+  ],
+  "source_sha256": {
+    "source_fiber_contact.rs": "f768aced1571fb26e2df91283df0061292acc27b1def43ea67a1a22bb0c6d1b5",
+    "source_paired_fiber_contact.rs": "04cd50c621f3b534ab229a70e6607aaa6ffbf96263776c65a55a734f7784221f",
+    "source_face_contacts.rs": "4f31ba58e3e1c5e9a9200e037264353c2db1d0be2059f3d5ba49ab1885d2b820",
+    "source_shell_geometry.rs": "553fff8d255f7e5a808f13a544532ce0735dbb70dded518b020a4cefdead90c0"
+  }
+}

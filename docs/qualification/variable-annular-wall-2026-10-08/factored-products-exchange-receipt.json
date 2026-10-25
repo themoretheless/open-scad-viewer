@@ -1,0 +1,12 @@
+{
+  "scope": "Exploratory endpoint exchange: confirmed exclusion sets match; no Body certificate",
+  "canonicalAuditSha256": "3c9f1bbb4f22014125e172ae0467a59817dc0359191b8d9de2462605ed94eb8a",
+  "factored-products-exchange-audit.json.gz": {
+    "uncompressedSha256": "75d2f7b502f5b089da90ef777a124fb94fbc93a8b0c05ac2cebbae7d716d26e6",
+    "bytes": 167870
+  },
+  "factored-products-exchange-tests.log.gz": {
+    "uncompressedSha256": "c23cd6720c19d103de0f216888db7083274acdedf64ee8d6370e6123874ff1df",
+    "bytes": 5806
+  }
+}

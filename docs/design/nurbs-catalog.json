@@ -2843,6 +2843,7 @@
       "status": "native",
       "evidence": [
         "crates/nurbs-core/src/offset/fillet_surfaces.rs",
+        "crates/nurbs-core/src/offset/fillet_surfaces/fillet_construction.rs",
         "crates/nurbs-core/tests/fillet_surfaces.rs",
         "docs/design/nurbs-fillet-surfaces.md"
       ],
@@ -2859,6 +2860,7 @@
       "status": "native",
       "evidence": [
         "crates/nurbs-core/src/offset/fillet_surfaces.rs",
+        "crates/nurbs-core/src/offset/fillet_surfaces/fillet_construction.rs",
         "crates/nurbs-core/tests/fillet_surfaces.rs",
         "docs/design/nurbs-fillet-surfaces.md"
       ],

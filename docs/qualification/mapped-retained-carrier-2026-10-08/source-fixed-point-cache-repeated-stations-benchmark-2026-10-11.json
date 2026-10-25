@@ -1,0 +1,26 @@
+{
+  "scope": "Debug native microbenchmark, rational quadratic arc, repeated source stations; concurrent host workload; no end-to-end latency claim",
+  "calls": 20000,
+  "unique": 128,
+  "rounds": 5,
+  "directMs": [
+    495.575209,
+    823.782,
+    865.007,
+    927.531667,
+    785.129667
+  ],
+  "cachedMs": [
+    23.626542,
+    29.937125,
+    42.816042,
+    47.758708,
+    12.197
+  ],
+  "checksumsBitwiseExact": true,
+  "logicalQueryCountsExact": true,
+  "cargoExit": 0,
+  "directMedianMs": 823.782,
+  "cachedMedianMs": 29.937125,
+  "endToEndLatencyQualified": false
+}

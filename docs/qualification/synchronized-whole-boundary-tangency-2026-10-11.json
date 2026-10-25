@@ -1,0 +1,41 @@
+{
+  "stage": "synchronized-whole-boundary-tangency",
+  "date": "2026-10-11",
+  "scope": "Original positive rational single Bezier charts, degree 1..4, full linear natural-boundary UV maps with synchronized orientation",
+  "evidence": {
+    "generated_spherical_end_junctions": {
+      "passed": 1,
+      "seams": 8,
+      "max_sine_squared": 1e-10,
+      "cells_per_seam": 1,
+      "polynomial_work_limit": 100000,
+      "log": "/tmp/source-synchronized-end-junctions-20261011.log"
+    },
+    "existing_seam_regression": {
+      "passed": 7,
+      "log": "/tmp/source-synchronized-seam-regression-20261011.log"
+    },
+    "normal_direction_translation_refusal": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-normal-directions-20261011.log"
+    },
+    "projective_root_fallback": {
+      "passed": 1,
+      "log": "/tmp/source-synchronized-root-fallback-20261011.log"
+    },
+    "body_step_replay_tangency": {
+      "passed": 1,
+      "seconds": 76.11,
+      "seams_before": 8,
+      "seams_after": 8,
+      "log": "/tmp/source-synchronized-body-replay-20261011.log"
+    }
+  },
+  "limitations": [
+    "General nonunit projective correspondence uses the existing interval fallback",
+    "General trimmed STEP storage remains incomplete",
+    "No general radius, wall thickness or self-intersection qualification follows from this angle proof",
+    "Published WASM and UI have not been updated by this stage"
+  ],
+  "integration": "Body.qualify_edge_tangency_synchronized accepts only owned native edge indices and preserves original root/map definitions"
+}

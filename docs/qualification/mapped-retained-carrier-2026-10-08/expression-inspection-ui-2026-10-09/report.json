@@ -1,0 +1,19 @@
+{
+  "schema": "expression-inspection-browser/1",
+  "passed": true,
+  "wasmSha256": "24ea250aac4203ee070e2a58e8bec3beac6b2afd58d3db81700a80b725d941d7",
+  "origin": "http://127.0.0.1:5197/",
+  "checks": [
+    "native source/expression archive import",
+    "keyboard source edge selection",
+    "manual cancellation",
+    "Retry qualified 406 pairs with zero pending and native volume interval",
+    "zero contact budget: 391 pending, no volume",
+    "compact pair selector",
+    "both original faces 0 and 1 highlighted via polygons and unresolved boxes",
+    "Esc cancellation",
+    "reload restores expression recipe; fresh native diagnostic rerun",
+    "no browser console errors in inspection tab"
+  ],
+  "scope": "One annular native recipe. The viewport shows the original body; expression-shell rendering, general fillets, radius/tangency/global thickness and solid Body admission remain open. Underlying unrelated code editor build was not qualified. Main user document at 5195 was preserved."
+}

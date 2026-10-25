@@ -1,0 +1,12 @@
+{
+  "sameRequest": true,
+  "outsideWallExact": true,
+  "pendingExact": true,
+  "beforePending": 4081,
+  "afterPending": 4081,
+  "beforeSpans": 11821,
+  "afterSpans": 11821,
+  "elapsedMs": 238140.83583300002,
+  "changedReportFields": [],
+  "scope": "Same saved request; interval work counts are not latency benchmarks or confirmed defects."
+}

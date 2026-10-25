@@ -1,0 +1,12 @@
+{
+  "schema": "expression-trim-domain-budget-ui/1",
+  "passed": true,
+  "testsPassed": 67,
+  "vueTscExitCode": 0,
+  "logs": [
+    "/tmp/expression-trim-domain-budget-ui-20261011.log",
+    "/tmp/expression-trim-domain-budget-types-20261011.log"
+  ],
+  "componentSha256": "5022e73f6deae428cf505e2b698e9e51f32bd2ac69375038136bf152e3a2a289",
+  "scope": "At the maximum native trim-domain budget, UI explains unverified regions instead of recommending unsupported budget growth. No change to geometric work or qualification."
+}

@@ -389,9 +389,55 @@ pub fn partial_annular_arc(
             "Partial annular sweep must be finite, nonzero and at most pi",
         ));
     }
-    let direction = sweep.signum();
     let q = sweep;
     let spans = circular_strip_spans(outer_radius, height, radius, 0., q / 4., q / 2., q / 4.)?;
+    close_annular_spans(outer_radius, inner_radius, height, q, spans, tolerance_mm)
+}
+
+/// Closed annular prototype with independently sized entry/exit transitions
+/// and two positive section radii. The middle span interpolates the radii by
+/// cubic smoothstep in rational arc parameter. This does not certify a general
+/// rolling-ball envelope, pole G1 continuity, or an edit of an existing body.
+pub fn partial_annular_variable_arc(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    radii: [f64; 2],
+    sweeps: [f64; 3],
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    if radii.iter().any(|r| !r.is_finite() || *r <= 0.)
+        || sweeps.iter().any(|s| {
+            !s.is_finite()
+                || s.abs() < 1e-12
+                || s.abs() > std::f64::consts::FRAC_PI_2
+                || s.signum() != sweeps[0].signum()
+        })
+    {
+        return Err(invalid("Variable annular blend requires two positive radii and three consistently directed nonzero spans of at most pi/2"));
+    }
+    let middle_start = sweeps[0];
+    let exit_start = middle_start + sweeps[1];
+    let sweep = exit_start + sweeps[2];
+    let entry = plane_cylinder_transition(outer_radius, height, 0., radii[0], 0., sweeps[0])?;
+    let middle = if radii[0] == radii[1] {
+        plane_cylinder_rim(outer_radius, height, radii[0], middle_start, sweeps[1])?.remove(0)
+    } else {
+        plane_cylinder_transition(outer_radius, height, radii[0], radii[1], middle_start, sweeps[1])?
+    };
+    let exit = plane_cylinder_transition(outer_radius, height, radii[1], 0., exit_start, sweeps[2])?;
+    close_annular_spans(outer_radius, inner_radius, height, sweep, [entry, middle, exit], tolerance_mm)
+}
+
+fn close_annular_spans(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    q: f64,
+    spans: [CircularBlendSpan; 3],
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let direction = q.signum();
     let mut endpoint = spans[2]
         .cylinder_contact
         .control_points

@@ -5,10 +5,19 @@ import {transformSelection} from './directSolidTools'
 import {createSolidInstance,transformSolidInstance,resolveSolidInstances,detachSolidInstances} from './solidInstances'
 import {createRuledSketchLoft} from './geometry/brep'
 import {stringifyMeshJson} from './meshJson'
-export type SolidSceneEditOperation='sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'group-create'|'group-move'|'loft'
-export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z';angle:number;scale:number;group?:string}
-export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','group-create','group-move','loft'].includes(String(operation))}
+export type SolidSceneEditOperation='duplicate'|'sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'group-create'|'group-move'|'loft'
+export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z';angle:number;scale:number;group?:string;copyIds?:string[]}
+export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['duplicate','sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','group-create','group-move','loft'].includes(String(operation))}
 export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOptions,instanceCache?:SolidInstanceBatchCache):DirectDocument {
+ if(p.operation==='duplicate'){
+  const originals=[...document.bodies,...document.sketches],selected=originals.filter(object=>p.ids.includes(object.id))
+  if(!selected.length||selected.length!==p.ids.length||new Set(p.ids).size!==p.ids.length||!p.copyIds||p.copyIds.length!==p.ids.length||new Set(p.copyIds).size!==p.copyIds.length||p.copyIds.some(id=>!id||[...originals,...document.curves??[],...document.surfaces??[],...document.sourceBodies??[]].some(object=>object.id===id)))throw Error('Invalid duplicate identities.')
+  const copies=new Map(p.ids.map((id,index)=>[id,p.copyIds![index]]))
+  const moved=transformSelection(document,p.ids,[p.x,p.y,p.z],[0,0,1],0,1),next=structuredClone(document)
+  for(const sketch of moved.sketches)if(copies.has(sketch.id)){sketch.id=copies.get(sketch.id)!;sketch.name=(sketch.name+' · copy').slice(0,100);next.sketches.push(sketch)}
+  for(const body of moved.bodies)if(copies.has(body.id)){body.id=copies.get(body.id)!;if(body.instance&&copies.has(body.instance.sourceId))body.instance.sourceId=copies.get(body.instance.sourceId)!;body.name=(body.name+' · copy').slice(0,100);next.bodies.push(body)}
+  return resolveSolidInstances(next,instanceCache)
+ }
  if(p.operation==='instance-detach')return detachSolidInstances(document,p.ids,instanceCache)
  const axis=p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as const:[0,0,1] as const
  if(p.operation==='transform')return resolveSolidInstances(transformSelection(document,p.ids,[p.x,p.y,p.z],[...axis],p.angle,p.scale),instanceCache)

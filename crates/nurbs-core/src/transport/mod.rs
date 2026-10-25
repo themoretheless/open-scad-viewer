@@ -6,6 +6,8 @@ use super::*;
 use crate::surface::Surface;
 #[path="../retained_body_coverage.rs"]
 mod retained_body_coverage;
+#[path="../profile_bridge_chord_transport.rs"]
+mod profile_bridge_chord_transport;
 use crate::retained_wall_domain;
 use value_codec::{Deserialize, Serialize, Value, json};
 

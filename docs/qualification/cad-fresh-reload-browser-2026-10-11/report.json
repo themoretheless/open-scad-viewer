@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "url": "http://127.0.0.1:5195/",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "parts": [
+    {
+      "part": "bracket",
+      "uiTranslation": true,
+      "undoExact": true,
+      "redoExact": true,
+      "reloadExact": true,
+      "topologyIdsPreserved": true
+    },
+    {
+      "part": "flange",
+      "uiTranslation": true,
+      "undoExact": true,
+      "redoExact": true,
+      "reloadExact": true,
+      "topologyIdsPreserved": true
+    },
+    {
+      "part": "enclosure",
+      "uiTranslation": true,
+      "undoExact": true,
+      "redoExact": true,
+      "reloadExact": true,
+      "topologyIdsPreserved": true
+    }
+  ],
+  "errors": [],
+  "scope": "Isolated browser storage; fresh native edited/rounded fixtures imported through UI, one additional UI translation, exact Undo/Redo and browser reload. Native construction and fillet are not claimed as UI actions.",
+  "visualInspection": {
+    "enclosureScreenshotViewed": true,
+    "observedRenderer": "CPU/SVG fallback",
+    "webGpuQualified": false,
+    "pendingDisplayAndTopologyHintsVisible": true,
+    "scope": "Exact document recovery is proven; settled display refinement and WebGPU rendering are not qualified by this run."
+  }
+}

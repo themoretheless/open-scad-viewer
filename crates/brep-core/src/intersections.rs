@@ -2056,16 +2056,16 @@ pub fn surface_surface(
     let domain = [surface_domain(first), surface_domain(second)].concat();
     let (Some(a), Some(b)) = (affine_frame(first), affine_frame(second)) else {
         // G6 narrow bicubic path (Complete-empty or Incomplete); never topology change.
-        match crate::nurbs_ss_g6::narrow_transverse_bicubic(first, second, nurbs_intersect::Options { distance_tolerance:options.distance_tolerance,parameter_tolerance:options.parameter_tolerance,max_depth:options.max_depth,max_boxes:options.max_boxes }) {
+        match crate::nurbs_ss_g6::narrow_transverse_bicubic(first, second, options) {
             Ok(g6) => {
                 let mut report = Report {
-                    coverage: match g6.coverage {nurbs_intersect::Coverage::Complete=>Coverage::Complete,nurbs_intersect::Coverage::NumericallyResolved=>Coverage::NumericallyResolved,nurbs_intersect::Coverage::Incomplete=>Coverage::Incomplete},
+                    coverage: g6.coverage,
                     boxes_visited: g6.boxes_visited,
                     bernstein_excluded: g6.bernstein_excluded,
                     ..Report::default()
                 };
                 for pending in g6.unresolved {
-                    report.unresolved(pending.parameter_box, match pending.reason {nurbs_intersect::UnresolvedReason::BudgetExceeded=>UnresolvedReason::BudgetExceeded,nurbs_intersect::UnresolvedReason::TangencyOrMultipleRoot=>UnresolvedReason::TangencyOrMultipleRoot,nurbs_intersect::UnresolvedReason::NearCoincidence=>UnresolvedReason::NearCoincidence,nurbs_intersect::UnresolvedReason::BoundaryCrossing=>UnresolvedReason::BoundaryCrossing,nurbs_intersect::UnresolvedReason::UnsupportedSurface=>UnresolvedReason::UnsupportedSurface,nurbs_intersect::UnresolvedReason::CoincidentTrim=>UnresolvedReason::CoincidentTrim});
+                    report.unresolved(pending.parameter_box, pending.reason);
                 }
                 // Curve Complete stays inside nurbs_ss_g6; surface_surface only
                 // forwards empty Complete / typed Incomplete without fake UV traces.

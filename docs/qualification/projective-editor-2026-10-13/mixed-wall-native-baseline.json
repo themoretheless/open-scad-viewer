@@ -1,0 +1,780 @@
+{
+  "automatic": {
+    "factoredQueries": 4797,
+    "factoredExactWork": 38576923,
+    "wholeWallQualified": false,
+    "cells": 30461,
+    "spans": 62406,
+    "normalSpans": 12406,
+    "domainCells": 314744,
+    "pairs": [
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 358,
+        "endpointQueries": 22216,
+        "faces": [
+          0,
+          1
+        ],
+        "normalProducts": 340,
+        "normalSpans": 128,
+        "outsideProducts": 158,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1956,
+        "unresolvedProducts": 27
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 432,
+        "endpointQueries": 26032,
+        "faces": [
+          0,
+          2
+        ],
+        "normalProducts": 510,
+        "normalSpans": 197,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1951,
+        "unresolvedProducts": 5
+      },
+      {
+        "cells": 119,
+        "domainCells": 1461,
+        "domainQueries": 58,
+        "endpointQueries": 3314,
+        "faces": [
+          0,
+          4
+        ],
+        "normalProducts": 21,
+        "normalSpans": 33,
+        "outsideProducts": 6,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 190,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 308,
+        "endpointQueries": 21956,
+        "faces": [
+          0,
+          5
+        ],
+        "normalProducts": 474,
+        "normalSpans": 328,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2303,
+        "unresolvedProducts": 75
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 405,
+        "endpointQueries": 23840,
+        "faces": [
+          0,
+          6
+        ],
+        "normalProducts": 188,
+        "normalSpans": 226,
+        "outsideProducts": 245,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1558,
+        "unresolvedProducts": 119
+      },
+      {
+        "cells": 221,
+        "domainCells": 5974,
+        "domainQueries": 213,
+        "endpointQueries": 13076,
+        "faces": [
+          0,
+          7
+        ],
+        "normalProducts": 110,
+        "normalSpans": 113,
+        "outsideProducts": 0,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 439,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 71,
+        "domainCells": 939,
+        "domainQueries": 38,
+        "endpointQueries": 2078,
+        "faces": [
+          0,
+          9
+        ],
+        "normalProducts": 12,
+        "normalSpans": 19,
+        "outsideProducts": 5,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 114,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 333,
+        "endpointQueries": 21456,
+        "faces": [
+          0,
+          23
+        ],
+        "normalProducts": 496,
+        "normalSpans": 128,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2272,
+        "unresolvedProducts": 27
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 279,
+        "endpointQueries": 21444,
+        "faces": [
+          0,
+          24
+        ],
+        "normalProducts": 447,
+        "normalSpans": 115,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2495,
+        "unresolvedProducts": 70
+      },
+      {
+        "cells": 75,
+        "domainCells": 812,
+        "domainQueries": 42,
+        "endpointQueries": 1856,
+        "faces": [
+          0,
+          26
+        ],
+        "normalProducts": 10,
+        "normalSpans": 25,
+        "outsideProducts": 10,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 112,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 402,
+        "endpointQueries": 24024,
+        "faces": [
+          1,
+          5
+        ],
+        "normalProducts": 227,
+        "normalSpans": 535,
+        "outsideProducts": 156,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1730,
+        "unresolvedProducts": 153
+      },
+      {
+        "cells": 233,
+        "domainCells": 6294,
+        "domainQueries": 226,
+        "endpointQueries": 13432,
+        "faces": [
+          2,
+          5
+        ],
+        "normalProducts": 115,
+        "normalSpans": 226,
+        "outsideProducts": 0,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 489,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 344,
+        "endpointQueries": 22520,
+        "faces": [
+          2,
+          7
+        ],
+        "normalProducts": 477,
+        "normalSpans": 519,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2190,
+        "unresolvedProducts": 71
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 348,
+        "endpointQueries": 22680,
+        "faces": [
+          2,
+          24
+        ],
+        "normalProducts": 478,
+        "normalSpans": 520,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2174,
+        "unresolvedProducts": 69
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 346,
+        "endpointQueries": 22460,
+        "faces": [
+          3,
+          8
+        ],
+        "normalProducts": 478,
+        "normalSpans": 520,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2180,
+        "unresolvedProducts": 69
+      },
+      {
+        "cells": 7,
+        "domainCells": 11,
+        "domainQueries": 6,
+        "endpointQueries": 22,
+        "faces": [
+          3,
+          17
+        ],
+        "normalProducts": 2,
+        "normalSpans": 8,
+        "outsideProducts": 0,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 10,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 347,
+        "endpointQueries": 22448,
+        "faces": [
+          3,
+          25
+        ],
+        "normalProducts": 477,
+        "normalSpans": 519,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2178,
+        "unresolvedProducts": 71
+      },
+      {
+        "cells": 49,
+        "domainCells": 396,
+        "domainQueries": 29,
+        "endpointQueries": 900,
+        "faces": [
+          4,
+          5
+        ],
+        "normalProducts": 8,
+        "normalSpans": 36,
+        "outsideProducts": 6,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 72,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 244,
+        "endpointQueries": 21972,
+        "faces": [
+          5,
+          6
+        ],
+        "normalProducts": 214,
+        "normalSpans": 458,
+        "outsideProducts": 9,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2030,
+        "unresolvedProducts": 320
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 214,
+        "endpointQueries": 22320,
+        "faces": [
+          5,
+          7
+        ],
+        "normalProducts": 508,
+        "normalSpans": 1015,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2063,
+        "unresolvedProducts": 9
+      },
+      {
+        "cells": 189,
+        "domainCells": 2678,
+        "domainQueries": 82,
+        "endpointQueries": 6096,
+        "faces": [
+          5,
+          9
+        ],
+        "normalProducts": 42,
+        "normalSpans": 98,
+        "outsideProducts": 9,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 292,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 308,
+        "endpointQueries": 21956,
+        "faces": [
+          5,
+          10
+        ],
+        "normalProducts": 475,
+        "normalSpans": 306,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2303,
+        "unresolvedProducts": 75
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 340,
+        "endpointQueries": 22648,
+        "faces": [
+          5,
+          11
+        ],
+        "normalProducts": 247,
+        "normalSpans": 629,
+        "outsideProducts": 97,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1854,
+        "unresolvedProducts": 207
+      },
+      {
+        "cells": 221,
+        "domainCells": 6477,
+        "domainQueries": 222,
+        "endpointQueries": 14178,
+        "faces": [
+          5,
+          12
+        ],
+        "normalProducts": 110,
+        "normalSpans": 222,
+        "outsideProducts": 0,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 445,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 49,
+        "domainCells": 436,
+        "domainQueries": 33,
+        "endpointQueries": 984,
+        "faces": [
+          5,
+          14
+        ],
+        "normalProducts": 9,
+        "normalSpans": 38,
+        "outsideProducts": 6,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 72,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 29,
+        "domainCells": 197,
+        "domainQueries": 23,
+        "endpointQueries": 474,
+        "faces": [
+          5,
+          15
+        ],
+        "normalProducts": 9,
+        "normalSpans": 26,
+        "outsideProducts": 4,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 44,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 23,
+        "domainCells": 125,
+        "domainQueries": 19,
+        "endpointQueries": 314,
+        "faces": [
+          5,
+          23
+        ],
+        "normalProducts": 7,
+        "normalSpans": 22,
+        "outsideProducts": 4,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 32,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 343,
+        "endpointQueries": 24332,
+        "faces": [
+          6,
+          10
+        ],
+        "normalProducts": 311,
+        "normalSpans": 182,
+        "outsideProducts": 138,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1736,
+        "unresolvedProducts": 84
+      },
+      {
+        "cells": 221,
+        "domainCells": 5691,
+        "domainQueries": 213,
+        "endpointQueries": 12174,
+        "faces": [
+          7,
+          10
+        ],
+        "normalProducts": 110,
+        "normalSpans": 113,
+        "outsideProducts": 0,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 435,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 348,
+        "endpointQueries": 22636,
+        "faces": [
+          7,
+          12
+        ],
+        "normalProducts": 477,
+        "normalSpans": 519,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2180,
+        "unresolvedProducts": 71
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 342,
+        "endpointQueries": 22428,
+        "faces": [
+          8,
+          13
+        ],
+        "normalProducts": 478,
+        "normalSpans": 520,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2192,
+        "unresolvedProducts": 69
+      },
+      {
+        "cells": 77,
+        "domainCells": 938,
+        "domainQueries": 36,
+        "endpointQueries": 2128,
+        "faces": [
+          9,
+          10
+        ],
+        "normalProducts": 10,
+        "normalSpans": 13,
+        "outsideProducts": 9,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 116,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 321,
+        "endpointQueries": 22424,
+        "faces": [
+          10,
+          11
+        ],
+        "normalProducts": 307,
+        "normalSpans": 128,
+        "outsideProducts": 149,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2020,
+        "unresolvedProducts": 81
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 206,
+        "endpointQueries": 22216,
+        "faces": [
+          10,
+          12
+        ],
+        "normalProducts": 508,
+        "normalSpans": 511,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 1987,
+        "unresolvedProducts": 9
+      },
+      {
+        "cells": 117,
+        "domainCells": 1394,
+        "domainQueries": 56,
+        "endpointQueries": 3132,
+        "faces": [
+          10,
+          14
+        ],
+        "normalProducts": 21,
+        "normalSpans": 31,
+        "outsideProducts": 6,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 186,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 287,
+        "endpointQueries": 21848,
+        "faces": [
+          10,
+          15
+        ],
+        "normalProducts": 454,
+        "normalSpans": 128,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2318,
+        "unresolvedProducts": 81
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 288,
+        "endpointQueries": 22680,
+        "faces": [
+          10,
+          16
+        ],
+        "normalProducts": 479,
+        "normalSpans": 96,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2508,
+        "unresolvedProducts": 65
+      },
+      {
+        "cells": 81,
+        "domainCells": 910,
+        "domainQueries": 42,
+        "endpointQueries": 2040,
+        "faces": [
+          10,
+          18
+        ],
+        "normalProducts": 10,
+        "normalSpans": 25,
+        "outsideProducts": 9,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 126,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 348,
+        "endpointQueries": 22640,
+        "faces": [
+          12,
+          16
+        ],
+        "normalProducts": 477,
+        "normalSpans": 519,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2178,
+        "unresolvedProducts": 71
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 347,
+        "endpointQueries": 22452,
+        "faces": [
+          13,
+          17
+        ],
+        "normalProducts": 478,
+        "normalSpans": 520,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2174,
+        "unresolvedProducts": 69
+      },
+      {
+        "cells": 7,
+        "domainCells": 11,
+        "domainQueries": 6,
+        "endpointQueries": 22,
+        "faces": [
+          13,
+          25
+        ],
+        "normalProducts": 2,
+        "normalSpans": 8,
+        "outsideProducts": 0,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "spans": 10,
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 351,
+        "endpointQueries": 22688,
+        "faces": [
+          16,
+          20
+        ],
+        "normalProducts": 477,
+        "normalSpans": 519,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2174,
+        "unresolvedProducts": 71
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 350,
+        "endpointQueries": 22440,
+        "faces": [
+          17,
+          21
+        ],
+        "normalProducts": 476,
+        "normalSpans": 523,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2172,
+        "unresolvedProducts": 69
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 351,
+        "endpointQueries": 22688,
+        "faces": [
+          20,
+          24
+        ],
+        "normalProducts": 477,
+        "normalSpans": 519,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2174,
+        "unresolvedProducts": 71
+      },
+      {
+        "cells": 1024,
+        "domainCells": 10000,
+        "domainQueries": 350,
+        "endpointQueries": 22440,
+        "faces": [
+          21,
+          25
+        ],
+        "normalProducts": 476,
+        "normalSpans": 523,
+        "outsideProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "spans": 2172,
+        "unresolvedProducts": 69
+      }
+    ]
+  },
+  "requestSha256": "380d36fe98125cf7b254ea3352a7359655f1444ad437161da81c4b9ee553c40a",
+  "nativeElapsedMs": 476648.791458
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "native-proof-candidate/1",
+  "files": [
+    {
+      "path": "crates/brep-core/src/source_contour_winding.rs",
+      "sha256": "498df76fe7e66a73523a2137441edb6d667899f2cb0453b178ed5741a4ae0659"
+    },
+    {
+      "path": "crates/nurbs-core/src/profile_expression_radius.rs",
+      "sha256": "62f77757dfecc69b878a0ef427b738ca63aa4323578eeb30e117f9d2daf0ae18"
+    },
+    {
+      "path": "crates/nurbs-core/src/surface_self_chord.rs",
+      "sha256": "d392494f207827dea70b0ef964745506d9f619afbe99e553b0b6b88b19964ace"
+    }
+  ],
+  "focusedContourTests": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 0.03
+  },
+  "scope": "Early unresolved stop only when a complete owned core-station enclosure is contained in padded rectangle. Triangle queries excluded. No coverage gain or WASM qualification yet."
+}

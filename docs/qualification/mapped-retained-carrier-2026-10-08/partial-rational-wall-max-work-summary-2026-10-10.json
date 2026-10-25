@@ -1,0 +1,380 @@
+{
+  "schema": "expression-wall-work-summary/1",
+  "source": "docs/qualification/mapped-retained-carrier-2026-10-08/partial-rational-wall-max-work-2026-10-10.json",
+  "geometryQualified": false,
+  "scope": "Work accounting and pending-region counts only; no whole-body thickness admission",
+  "complete": false,
+  "cells": 94606,
+  "spans": 1000000,
+  "domainCells": 1000000,
+  "initialPairsChecked": 435,
+  "totalPairs": 435,
+  "pendingRegions": 42787,
+  "pendingFacePairs": 45,
+  "pendingReasons": {
+    "budget": 42787,
+    "enclosure": 0,
+    "resolution": 0
+  },
+  "detailedStages": true,
+  "unattributedSpans": 0,
+  "stages": [
+    {
+      "stage": "intrinsic",
+      "spans": 370121,
+      "fractionOfSpanWork": 0.370121
+    },
+    {
+      "stage": "corrected_pair",
+      "spans": 267790,
+      "fractionOfSpanWork": 0.26779
+    },
+    {
+      "stage": "retained_pair",
+      "spans": 218236,
+      "fractionOfSpanWork": 0.218236
+    },
+    {
+      "stage": "original_pair",
+      "spans": 52734,
+      "fractionOfSpanWork": 0.052734
+    },
+    {
+      "stage": "normal",
+      "spans": 35828,
+      "fractionOfSpanWork": 0.035828
+    },
+    {
+      "stage": "shared_corner",
+      "spans": 27312,
+      "fractionOfSpanWork": 0.027312
+    },
+    {
+      "stage": "position",
+      "spans": 20538,
+      "fractionOfSpanWork": 0.020538
+    },
+    {
+      "stage": "profile_transition",
+      "spans": 7441,
+      "fractionOfSpanWork": 0.007441
+    }
+  ],
+  "pendingPairs": [
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "regions": 17057
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "regions": 6636
+    },
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "regions": 6436
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "regions": 3184
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "regions": 2614
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "regions": 2210
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "regions": 2078
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "regions": 266
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "regions": 248
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "regions": 208
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "regions": 152
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "regions": 118
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "regions": 116
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "regions": 106
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "regions": 92
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "regions": 86
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "regions": 86
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "regions": 60
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "regions": 48
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "regions": 44
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "regions": 44
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "regions": 32
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "regions": 28
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "regions": 24
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "regions": 22
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "regions": 22
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "regions": 16
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "regions": 14
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "regions": 10
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "regions": 4
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "regions": 2
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "regions": 2
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "regions": 2
+    }
+  ]
+}

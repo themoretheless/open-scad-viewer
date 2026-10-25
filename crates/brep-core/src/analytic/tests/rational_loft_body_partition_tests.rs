@@ -279,12 +279,6 @@
                     pairs:10000,cells:100000,domain_cells:1000000,cells_per_pair:1000,domain_cells_per_pair:10000}},
             nesting_pairs:10000,nesting_cells:100000,nesting_domain_cells:1000000,
             orientation_cells:100000,orientation_domain_cells:1000000,orientation_spans:1000};
-        if std::env::var_os("OSV_TRACE_HOLLOW_BOUNDARY").is_some() {
-            let faces=crate::face_injectivity::inspect_with_linear(&result.model,limits.boundary.spans,20000).unwrap();
-            let agreement=crate::boundary_agreement::verify_exact(&result.model,limits.boundary.exact_work).unwrap();
-            let trim=crate::face_domain::audit_trim_regions(&result.model,1e-8,10000,100000,1000000).unwrap();
-            eprintln!("hollow prerequisites: faces={}, spans={}, linearCells={}, agreement={}/{}, trim={}; unproved={:?}",faces.all_faces_injective,faces.spans,faces.linear_cells,agreement.all_equal,agreement.all_joins_exact,trim.all_valid,faces.faces.iter().filter(|f|!f.absence_proven()).collect::<Vec<_>>());
-        }
         let volume=crate::volume_validity::inspect_sweep(&result.model,1e-8,limits,20000,&[],
             crate::sweep_cap_contacts::Budgets {max_walls:1000,max_exact_work:1000000,max_chart_cells:100000,
                 max_trim_pairs:10000,max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();

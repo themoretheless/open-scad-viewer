@@ -1,0 +1,8 @@
+{
+  "scope": "Native complete section-jet position reuse; publication and specimen benefit not yet qualified",
+  "sources": {
+    "crates/nurbs-core/src/profile_section_bridge.rs": "81ddd8b71bab668bd98a01758aa8f05b8af752c990e55f7770f61d4c1ba46be7",
+    "crates/nurbs-core/src/profile_expression_radius.rs": "374119584de85badc45fe8c09d9459d142c8171fa6889dc8aa0e2e53a387c464"
+  },
+  "publishedWasmIncludesChange": false
+}

@@ -7,13 +7,13 @@ use crate::{
     source_shell_incidence::{Address, Shell},
 };
 use nurbs_core::{Error, Result};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
     fibers: [source_pole_plane_image::Certificate; 2],
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
@@ -23,22 +23,22 @@ impl Certificate {
     pub fn fibers(&self) -> &[source_pole_plane_image::Certificate; 2] {
         &self.fibers
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub driver_cells: usize,
     pub reason: &'static str,
 }
-pub fn certify(
-    shell: &Shell,
+pub fn certify<E:crate::source_seam_tangency::Carrier>(
+    shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
     max_driver_cells: usize,
-) -> Result<Report> {
+) -> Result<Report<E>> {
     let regions = shell
         .regions()
         .ok_or_else(|| Error::new("BREP_SOURCE_CONTACT", "Qualified original regions required"))?;

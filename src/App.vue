@@ -2272,7 +2272,10 @@ function executeCommand(id: string) {
       break
     case 'sidebar': dockOpen.value = !dockOpen.value; break
     case 'theme': toggleTheme(); break
-    case 'command-palette': paletteOpen.value = !paletteWasOpen; break
+    case 'command-palette':
+      if (paletteWasOpen) paletteOpen.value = false
+      else openCommandPalette()
+      break
     case 'cancel-measure': cancelMeasure(); break
     case 'flip-section': setSectionFlip(!sectionFlip.value); break
     case 'hide-selected':
@@ -3092,6 +3095,6 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
   </div>
 </template>
 
-<style src="./App.global.css"></style>
+<style src="./styles/app-shell-global.css"></style>
 
-<style scoped src="./App.scoped.css"></style>
+<style scoped src="./styles/app-shell.css"></style>

@@ -12,6 +12,14 @@ fn plane(v: &Value) -> Result<Plane> {
 fn plane_json(p: Plane) -> Value {
     json!({"origin":p.origin,"u":p.u,"v":p.v})
 }
+fn same_witness(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(_), Value::Number(_)) => a.as_f64() == b.as_f64(),
+        (Value::Array(a), Value::Array(b)) => a.len() == b.len() && a.iter().zip(b).all(|(a,b)| same_witness(a,b)),
+        (Value::Object(a), Value::Object(b)) => a.len() == b.len() && a.iter().all(|(k,a)| b.get(k).is_some_and(|b| same_witness(a,b))),
+        _ => a == b,
+    }
+}
 pub fn run(v: Value) -> Result<Value> {
     let operation: String = field(&v, "operation")?;
     match operation.as_str() {
@@ -38,6 +46,19 @@ pub fn run(v: Value) -> Result<Value> {
                     .map(nurbs_core::surface_injectivity::projective_projection_candidates)
                     .collect::<Result<Vec<_>>>()?
             ))
+        }
+        "faceInjectivityWitness" => {
+            let surface: nurbs_core::surface::Surface = field(&v, "surface")?;
+            let max_spans: usize = field(&v, "maxSpans")?;
+            let actual = nurbs_core::surface_injectivity::certify(&surface, max_spans)?;
+            let expected = json!({"proven":actual.proven,"projection":actual.projection,
+                "linearProjection":actual.linear_projection,"projectiveProjection":actual.projective_projection,
+                "polarProjection":actual.polar_projection,"contractionUpper":actual.contraction_upper,
+                "spans":actual.spans,"reason":actual.reason});
+            // Re-run the complete source proof under the original remaining
+            // budget. A new proposal order cannot be validated by old client
+            // formulas, and caller counters alone never establish coverage.
+            Ok(json!(v.get("report").is_some_and(|r| same_witness(r, &expected))))
         }
         "quotientWitness" => {
             let bounds: [f64; 4] = field(&v, "bounds")?;
@@ -188,6 +209,34 @@ pub fn run(v: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn injectivity_witness_replays_the_original_source_and_remaining_budget() {
+        let model = brep_core::sphere(3.).unwrap();
+        let report = brep_core::face_injectivity::inspect(&model, 1000).unwrap();
+        let proof = report.faces[0].result.as_ref().unwrap();
+        assert_eq!(proof.spans, 17);
+        let mut request = json!({"operation":"faceInjectivityWitness", "surface":model.faces[0].surface,
+            "maxSpans":1000, "report":{"proven":proof.proven,"projection":proof.projection,
+            "linearProjection":proof.linear_projection,"projectiveProjection":proof.projective_projection,
+            "polarProjection":proof.polar_projection,"contractionUpper":proof.contraction_upper,
+            "spans":proof.spans,"reason":proof.reason}});
+        assert_eq!(run(request.clone()).unwrap(), true);
+        // JSON.stringify emits integral binary64 coefficients as integers.
+        request["report"]["projectiveProjection"] = json!([[1,0,0,0],[0,1,0,0],[0,0,1,3]]);
+        assert_eq!(run(request.clone()).unwrap(), true);
+        let original = request.clone();
+        request["report"]["spans"] = json!(18);
+        assert_eq!(run(request.clone()).unwrap(), false);
+        request = original.clone();
+        request["report"]["contractionUpper"] = json!(0.);
+        assert_eq!(run(request.clone()).unwrap(), false);
+        request = original.clone();
+        request["maxSpans"] = json!(16);
+        assert_eq!(run(request.clone()).unwrap(), false);
+        request = original;
+        request["surface"]["controlPoints"][1][1][0] = json!(100.);
+        assert_eq!(run(request).unwrap(), false);
+    }
     #[test]
     fn numeric_shapes_preserve_bounds() {
         assert_eq!(

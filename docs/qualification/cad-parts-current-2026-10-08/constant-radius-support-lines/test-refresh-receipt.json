@@ -1,0 +1,24 @@
+{
+  "logsUncompressedSha256": {
+    "brep-full-before-test-refresh": "ff833486c96b6fcb41b8e196a6cd701f6b7f5fc835605512652befef29fb0598",
+    "source-fiber-before": "49c7bf3c0cd0d63589d7e0b9fc77370605c8d1fdca84b341050bfdbda53b1ec3",
+    "source-fiber-diagnostics": "f9aa2f27d9bc8b08dca415d72480c9540eace1f8c61b33c923037edca1e623de",
+    "source-fiber-after": "bf4047424150436c92229622c902b3a14c26ec02c7e9eb9ab28160250310c18e",
+    "brep-full-after-test-refresh": "44c4d3b0e782934a6ed4e695ca31ea68717d31621ce49cac03ba01c25fe2be54"
+  },
+  "before": {
+    "passed": 934,
+    "failed": 4,
+    "ignored": 3
+  },
+  "focusedAfter": {
+    "passed": 9,
+    "failed": 0
+  },
+  "limitations": "Native full brep-core library suite; packaged worker and browser qualification remain pending.",
+  "fullAfter": {
+    "passed": 938,
+    "failed": 0,
+    "ignored": 3
+  }
+}

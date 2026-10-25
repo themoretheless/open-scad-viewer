@@ -1,0 +1,25 @@
+{
+  "schema": "durable-reference-reopen/1",
+  "scenario": [
+    "Commit complete document to IndexedDB",
+    "Inject failed localStorage reference publication",
+    "Unmount editor",
+    "Remount editor with old localStorage reference and retained IndexedDB",
+    "Add one body",
+    "Undo"
+  ],
+  "assertions": [
+    "Restore canonical head instead of stale reference",
+    "All three prior body identities and geometry preserved exactly",
+    "Subsequent edit persists four bodies",
+    "Undo persists exactly the recovered three bodies"
+  ],
+  "environment": "Vue component harness with fake-indexeddb and actual draft head storage implementation; not a physical browser process crash",
+  "passed": true,
+  "suite": {
+    "files": 3,
+    "passed": 19,
+    "log": "/tmp/cad-durable-recovery-suite-20261010.log"
+  },
+  "wholeP0Qualified": false
+}

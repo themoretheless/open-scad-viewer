@@ -16,10 +16,25 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     # A cold workspace build plus whole-shell proofs exceeded 40 minutes on hosted Linux.
-    # Match native-smoke execution time; proof work budgets and test coverage stay fixed.
+    # Optimize test proof loops while retaining debug assertions and overflow checks.
     timeout-minutes: 90
+    # Debug info in the workspace's test binaries exhausts the hosted disk
+    # ("No space left on device"; ld dies with SIGBUS). Tests do not need it.
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
     steps:
+      # The debug test binaries of the whole workspace plus the restored target
+      # cache exhaust the hosted disk; ld then dies with SIGBUS while linking.
+      - name: Free hosted runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-09-16
@@ -30,7 +45,16 @@ jobs:
             ~/.cargo/registry
             crates/target
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      - name: Check typed geometry without wire codecs
+        run: cargo check --locked --manifest-path crates/Cargo.toml -p brep-core -p nurbs-intersect -p brep-intersect --no-default-features
+      - name: Verify complete native test partition
+        run: node scripts/verify-native-test-partition.mjs
+      # Partition by the same name substring: every test runs in exactly one step.
+      # Recognition keeps its original wall budget and runs without competing tests.
+      - name: Test recognition serially
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
+      - name: Test remaining native workspace cases
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
       - run: python3 scripts/check-gpu-architecture.py
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
@@ -38,7 +62,9 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # The merged kernel rebuild measured 14m40 and the complete Node suite 28m49.
+    # Allow cold builds and packaging; individual test deadlines/proof budgets stay fixed.
+    timeout-minutes: 60
     # Bound glibc's retained allocator arenas across disposable Node workers.
     # The memory probe keeps its original 4+24 jobs and byte/slope limits.
     env:
@@ -79,6 +105,8 @@ jobs:
             src/generated/geometry-kernels/kernel_bg.wasm
             src/generated/geometry-kernels/identity.ts
           if-no-files-found: error
+      - name: Qualify current WASM graph caps and pole queries
+        run: node --import tsx scripts/qualify-global-geometry.mts docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz global-geometry-wasm.json
       - run: cargo check --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-mlx --target wasm32-unknown-unknown
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json
@@ -111,9 +139,13 @@ jobs:
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    # Hosted Windows exceeded 90 minutes during the full proof workspace.
-    # Keep every test and numerical/work limit; allow the job to complete.
-    timeout-minutes: 120
+    # Windows previously exhausted 90 minutes before the last workspace packages.
+    # Fresh native geometry matrices alone took 733 + 717 seconds on the audit host.
+    # Preserve every test, individual deadline and mathematical work budget.
+    timeout-minutes: 150
+    env:
+      # Test-only optimization; release/WASM profiles and all cases stay fixed.
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -121,9 +153,12 @@ jobs:
     steps:
       # Generated artifacts and frozen source digests compare repository bytes.
       # Git for Windows must not rewrite Rust/WGSL sources during checkout.
-      - name: Preserve repository line endings on Windows
+      - name: Preserve repository bytes and long paths on Windows
         if: runner.os == 'Windows'
-        run: git config --global core.autocrlf false
+        run: |
+          git config --global core.autocrlf false
+          # Qualification evidence paths exceed the 260-character Windows limit.
+          git config --global core.longpaths true
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
@@ -147,7 +182,14 @@ jobs:
       # Hosted Windows smoke does not qualify the software DX12 adapter. An
       # unavailable Vulkan adapter exercises the existing optional-GPU skip;
       # COMPUTE_REQUIRE_GPU keeps required GPU runs fail-closed.
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      - name: Verify complete native test partition
+        run: node scripts/verify-native-test-partition.mjs
+      # Partition by the same name substring: every test runs in exactly one step.
+      # Recognition keeps its original wall budget and runs without competing tests.
+      - name: Test recognition serially
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
+      - name: Test remaining native workspace cases
+        run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
         env:
           WGPU_BACKEND: ${{ runner.os == 'Windows' && 'vulkan' || 'metal' }}
       - run: node node_modules/vitest/vitest.mjs run tests/duckdbModelStore.test.ts tests/mcpCli.test.ts
@@ -164,6 +206,56 @@ jobs:
             ~/.cargo/registry
             crates/target
           key: ${{ steps.native-rust-cache.outputs.cache-primary-key }}
+
+  # The Node/TypeScript suite of the Linux `check` job on the other hosted
+  # platforms: path separators, timer granularity, locales, symlink privileges,
+  # child processes and the official runtime differ there. The Linux-only
+  # allocator memory probe stays in `check`.
+  node-check:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      # Generated artifacts and frozen source digests compare repository bytes.
+      - name: Preserve repository line endings on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20.19'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - run: npm ci
+      - run: npm run test:architecture
+      - run: npm run audit:architecture
+      - run: npm run test:qualification-drift
+      - run: npm run build:geometry
+      - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
+      - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
+      # Hosted Windows runs the heaviest native sweep/NURBS cases in 31-36 s,
+      # past the 30 s config default; explicit per-test timeouts still apply.
+      - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2 --testTimeout 90000
+        env:
+          VITEST_MAX_WORKERS: '2'
+      # verify-dist stays in `check`: its byte budgets are calibrated on the
+      # linux-x86_64 reference kernels, and host rustc builds differ slightly.
+      - run: node node_modules/vite/bin/vite.js build
+      - run: npm run setup:openscad
+      - run: npm run test:official
 
   official-openscad-mcp:
     runs-on: ubuntu-latest

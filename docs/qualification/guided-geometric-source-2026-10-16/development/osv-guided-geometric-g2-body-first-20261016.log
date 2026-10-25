@@ -1,0 +1,346 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-guided-geometric-seams-target-20261016/.../wgsl_export
+  |                                                             ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling syn v3.0.5
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-guided-geometric-seams-20261016/crates/nurbs-core)
+   Compiling rbench v0.1.0 (https://github.com/themoretheless/rbench?branch=release#5574db15)
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:31:16
+   |
+31 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:36:16
+   |
+36 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling planar-geometry v0.1.0 (/private/tmp/osv-guided-geometric-seams-20261016/crates/planar-geometry)
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: function `horner` is never used
+   --> nurbs-core/src/numerics/dual.rs:410:15
+    |
+410 | pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+    |               ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `patch_error_with_length` is never used
+   --> nurbs-core/src/sweeps/progressive_sweep/authored_error.rs:317:15
+    |
+317 | pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
+    |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `tube_bound` is never used
+   --> nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic.rs:226:4
+    |
+226 | fn tube_bound(width: I, radius: I, length: I, curvature: I, angular: I) -> Result<bool> {
+    |    ^^^^^^^^^^
+
+warning: function `certify` is never used
+ --> nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic/plane.rs:6:15
+  |
+6 | pub(super) fn certify(path: &Curve, cap: &Surface, spent: &mut u64, max: u64) -> Result<bool> {
+  |               ^^^^^^^
+
+warning: function `inspect_curves` is never used
+  --> nurbs-core/src/offset/diagnostics.rs:35:8
+   |
+35 | pub fn inspect_curves(curves: &[crate::curve::Curve], max_pairs: usize) -> Result<Diagnostics> {
+   |        ^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:461:15
+    |
+461 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+ --> nurbs-core/src/intersection/ss_intersection/branches.rs:4:5
+  |
+3 | pub(super) enum BranchKind {
+  |                 ---------- variant in this enum
+4 |     Empty,
+  |     ^^^^^
+  |
+  = note: `BranchKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: function `valid` is never used
+ --> nurbs-core/src/sweep_support/error_upper.rs:3:4
+  |
+3 | fn valid(x:f64)->bool{x.is_finite()&&x>=0.}
+  |    ^^^^^
+
+warning: function `successor` is never used
+ --> nurbs-core/src/sweep_support/error_upper.rs:4:4
+  |
+4 | fn successor(x:f64)->Option<f64>{
+  |    ^^^^^^^^^
+
+warning: function `add` is never used
+  --> nurbs-core/src/sweep_support/error_upper.rs:10:8
+   |
+10 | pub fn add(a:f64,b:f64)->Option<f64>{
+   |        ^^^
+
+warning: function `multiply` is never used
+  --> nurbs-core/src/sweep_support/error_upper.rs:16:8
+   |
+16 | pub fn multiply(a:f64,b:f64)->Option<f64>{
+   |        ^^^^^^^^
+
+warning: function `sqrt_two` is never used
+  --> nurbs-core/src/sweep_support/error_upper.rs:22:8
+   |
+22 | pub fn sqrt_two(value:f64)->Option<f64>{multiply(value,1.4142135623730951)}
+   |        ^^^^^^^^
+
+   Compiling nurbs-intersect v0.1.0 (/private/tmp/osv-guided-geometric-seams-20261016/crates/nurbs-intersect)
+warning: `nurbs-core` (lib) generated 38 warnings (run `cargo fix --lib -p nurbs-core` to apply 6 suggestions)
+   Compiling brep-core v0.1.0 (/private/tmp/osv-guided-geometric-seams-20261016/crates/brep-core)
+warning: type `CanonicalPolygon` is more private than the item `canonical_polygons`
+   --> brep-core/src/direct_edit/movement.rs:337:1
+    |
+337 | / pub(super) fn canonical_polygons(
+338 | |     model: &Model,
+339 | |     substitute: &BTreeMap<usize, [f64; 3]>,
+340 | |     guard: &mut BudgetGuard,
+341 | | ) -> Result<Vec<CanonicalPolygon>> {
+    | |__________________________________^ function `canonical_polygons` is reachable at visibility `pub(in crate::direct_edit)`
+    |
+note: but type `CanonicalPolygon` is only usable at visibility `pub(self)`
+   --> brep-core/src/direct_edit/movement.rs:318:1
+    |
+318 | struct CanonicalPolygon {
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:174:8
+    |
+174 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:180:8
+    |
+180 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:191:8
+    |
+191 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:230:8
+    |
+230 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `material` is never used
+  --> brep-core/src/sweep_boundary_owned/closed/smooth/../../../../../nurbs-core/tests/support/arc_bishop_source.rs:33:8
+   |
+33 | pub fn material() -> (Vec<Curve>, nurbs::surface::Surface, Vec<Vec<Curve>>) {
+   |        ^^^^^^^^
+
+warning: `brep-core` (lib test) generated 6 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 59.46s
+     Running unittests src/lib.rs (/private/tmp/osv-guided-geometric-seams-target-20261016/debug/build/brep-core/31e431246f361552/out/brep_core-31e431246f361552)
+
+running 1 test
+test sweep_boundary_owned::closed::smooth::tests::guided_geometric_clock_has_complete_original_and_actual_g2_solid has been running for over 60 seconds
+guided source=Some("original-periodic-wall-bound-unproved") wall=Some(LevelReport { accepted: true, sections: 65, stations: 257, sampled_control_deviation: 0.00423482300525234, budget: 0.05, closed_path: true, length_residual_upper: Some(0.000996077558062858), continuous_error_upper: None, original_section_endpoint_error_upper: None, endpoint_contour_error_upper: None, known_profile_error_upper: None, error_certificate_cells: 14460, decomposition_products: 0, error_certificate_reason: Some("frame-value-unresolved"), continuous_bound: false }) volume=Some(IdealVolumeReport { embedding_certified: true, regularity_certified: true, parameter_topology_preserved: true, cells: 280675, exact_work: 20697, boxes: 1427, monotonicity_lower: None, projection: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], reason: None }) smooth=None
+
+thread 'sweep_boundary_owned::closed::smooth::tests::guided_geometric_clock_has_complete_original_and_actual_g2_solid' (13772541) panicked at brep-core/src/sweep_boundary_owned/closed/smooth/tests.rs:408:44:
+owned smooth refusal Some("original-periodic-wall-bound-unproved") source=Some("original-periodic-wall-bound-unproved") E=None binding=None smooth=None volume=None
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test sweep_boundary_owned::closed::smooth::tests::guided_geometric_clock_has_complete_original_and_actual_g2_solid ... FAILED
+
+failures:
+
+failures:
+    sweep_boundary_owned::closed::smooth::tests::guided_geometric_clock_has_complete_original_and_actual_g2_solid
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1169 filtered out; finished in 306.31s
+
+error: test failed, to rerun pass `-p brep-core --lib`

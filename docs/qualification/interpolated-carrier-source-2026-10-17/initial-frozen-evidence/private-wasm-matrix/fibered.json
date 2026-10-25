@@ -1,0 +1,43 @@
+{
+  "schema": "original-fibered-source-wasm-runtime/1",
+  "wasmSha256": "4099324d9c2484e7361fd60bfb8c97d060bfbba2deef80c5f661e3f03c75428f",
+  "wasmBytes": 18272161,
+  "cases": [
+    {
+      "name": "basic",
+      "passed": true,
+      "faces": 6,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongModelRefused": true
+    },
+    {
+      "name": "oblique-ascending",
+      "passed": true,
+      "faces": 6,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongModelRefused": true
+    },
+    {
+      "name": "oblique-descending",
+      "passed": true,
+      "faces": 6,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongModelRefused": true
+    },
+    {
+      "name": "three-pieces",
+      "passed": true,
+      "faces": 14,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true,
+      "wrongModelRefused": true
+    }
+  ],
+  "strictG2RefusedTrueG1": true,
+  "explicitC0Preserved": true,
+  "passed": true,
+  "scope": "Four specified original rational affine fiber fixtures through private release WASM ABI; no public package, browser/UI or arbitrary frame/cap qualification"
+}

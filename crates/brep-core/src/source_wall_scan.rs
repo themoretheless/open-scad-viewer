@@ -6,8 +6,8 @@ use crate::{
     source_wall_search,
 };
 use nurbs_core::{Error, Result};
-pub struct Report<'a> {
-    best: Option<Certificate<'a>>,
+pub struct Report<'a, E = crate::source_shared_edge::SharedEdge> {
+    best: Option<Certificate<'a,E>>,
     minimum_mm: f64,
     pub attempts: usize,
     pub refused: usize,
@@ -15,25 +15,25 @@ pub struct Report<'a> {
     pub faces_total: usize,
     pub proposals_exhausted: bool,
 }
-impl<'a> Report<'a> {
-    pub fn best(&self) -> Option<&Certificate<'a>> {
+impl<'a,E> Report<'a,E> {
+    pub fn best(&self) -> Option<&Certificate<'a,E>> {
         self.best.as_ref()
     }
     /// Strict upper witness below the threshold proves this local thin chord.
-    pub fn thin_witness(&self) -> Option<&Certificate<'a>> {
+    pub fn thin_witness(&self) -> Option<&Certificate<'a,E>> {
         self.best
             .as_ref()
             .filter(|c| c.length_mm()[1] < self.minimum_mm)
     }
 }
-pub fn search<'a>(
-    body: &'a Body,
+pub fn search<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     minimum_mm: f64,
     grid: usize,
     max_attempts: usize,
     tolerance_uv: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     if !minimum_mm.is_finite()
         || minimum_mm <= 0.
         || !(1..=8).contains(&grid)

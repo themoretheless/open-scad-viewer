@@ -1,0 +1,58 @@
+{
+  "schema": "original-rational-cap-wasm-runtime/1",
+  "wasmSha256": "66e74ad3a2d0741134ddf2c99ee033e42e74fe596fa7d732ea4f8fbb18aade1e",
+  "wasmBytes": 17768915,
+  "cases": [
+    {
+      "name": "planar-caps",
+      "passed": true,
+      "faces": 32,
+      "physicalCaps": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true
+    },
+    {
+      "name": "nonplanar-caps",
+      "passed": true,
+      "faces": 32,
+      "physicalCaps": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true
+    },
+    {
+      "name": "moving-affine-caps",
+      "passed": true,
+      "faces": 32,
+      "physicalCaps": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true
+    },
+    {
+      "name": "reflected-caps",
+      "passed": true,
+      "faces": 32,
+      "physicalCaps": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true
+    },
+    {
+      "name": "rational-profile-caps",
+      "passed": true,
+      "faces": 32,
+      "physicalCaps": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true
+    },
+    {
+      "name": "rational-profile-affine-caps",
+      "passed": true,
+      "faces": 32,
+      "physicalCaps": 2,
+      "wasmStepReaudited": true,
+      "shortBudgetRefused": true
+    }
+  ],
+  "sharpC0Passed": true,
+  "passed": true,
+  "scope": "Six specified original rational annular-cap WASM ABI fixtures; no public package, browser/UI or all-cap-law qualification"
+}

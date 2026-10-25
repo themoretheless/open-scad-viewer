@@ -1,0 +1,16 @@
+{
+  "wasmSha256": "007976afec4c2b4edea1c940067d2941fa20ac4fb6e2d8a6d0cee6351a346995",
+  "logsUncompressedSha256": {
+    "dist-verification": "597da3887372b81cd1126b6c559e68b305de60efbaa16e9882f53a9ba719f8a8",
+    "wall-worker-tests": "f1f50bdfd6815c585cf7f6aeca657ff7af48200c968fce35f328e42f777c6886",
+    "wall-worker-report": "c1c309224af94b89b354ba3be037578aab701e4fccc5f8a0b07e7d3747946389"
+  },
+  "workerTestsPassed": 28,
+  "unprovenPairs": 169,
+  "wholeWallQualified": false,
+  "distArtifacts": 152,
+  "assetBytes": 8352169,
+  "rawWasmBytes": 15313682,
+  "totalBytes": 23665851,
+  "scope": "Built distribution identity and size checks, plus real worker diagnostics. Browser interaction not requalified."
+}

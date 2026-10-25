@@ -1,0 +1,461 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/osv-source-fibered-caps-target-20261016/.../wgsl_export
+  |                                                          ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: unused import: `exact_strip::inspect_station_projective_strip_jets`
+  --> nurbs-core/src/join/continuity.rs:31:16
+   |
+31 | pub(crate) use exact_strip::inspect_station_projective_strip_jets;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `station_scale::propose_station_scale_scalar`
+  --> nurbs-core/src/join/continuity.rs:36:16
+   |
+36 | pub(crate) use station_scale::propose_station_scale_scalar;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs:324:9
+    |
+324 |     let mut out = ValuesReport {
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> nurbs-core/src/offset/surface_offset.rs:581:21
+    |
+581 |                 let mut candidate = offset_net(surface, distance, &mut degenerate)?;
+    |                     ----^^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `wa`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:268:18
+    |
+268 |         let (ca, wa) = euclidean_controls(a, cur_a)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wa`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `wb`
+   --> nurbs-core/src/intersection/../intersection/bezier_clip.rs:277:18
+    |
+277 |         let (cb, wb) = euclidean_controls(b, cur_b)?;
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_wb`
+
+warning: function `horner` is never used
+   --> nurbs-core/src/numerics/dual.rs:410:15
+    |
+410 | pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+    |               ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `w_lo` is never read
+   --> nurbs-core/src/numerics/normal_cone.rs:301:5
+    |
+294 | struct BoxBounds {
+    |        --------- field in this struct
+...
+301 |     w_lo: f64,
+    |     ^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/analysis/higher_derivative_map.rs:67:4
+   |
+67 | fn unit(v: [f64; 3]) -> Option<[f64; 3]> {
+   |    ^^^^
+
+warning: function `rebuild_add` is never used
+   --> nurbs-core/src/foundation/common.rs:623:15
+    |
+623 | pub(super) fn rebuild_add(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_mul` is never used
+   --> nurbs-core/src/foundation/common.rs:627:15
+    |
+627 | pub(super) fn rebuild_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+    |               ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+   --> nurbs-core/src/foundation/common.rs:635:15
+    |
+635 | pub(super) fn rebuild_binomial(n: usize, k: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+   --> nurbs-core/src/foundation/common.rs:648:15
+    |
+648 | pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> [f64; 2] {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `inspect_curves` is never used
+  --> nurbs-core/src/offset/diagnostics.rs:35:8
+   |
+35 | pub fn inspect_curves(curves: &[crate::curve::Curve], max_pairs: usize) -> Result<Diagnostics> {
+   |        ^^^^^^^^^^^^^^
+
+warning: function `intersect_curve_curve_report_with_clip` is never used
+   --> nurbs-core/src/intersection/../intersection/curve_curve.rs:461:15
+    |
+461 | pub(crate) fn intersect_curve_curve_report_with_clip(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `Empty` is never constructed
+ --> nurbs-core/src/intersection/ss_intersection/branches.rs:4:5
+  |
+3 | pub(super) enum BranchKind {
+  |                 ---------- variant in this enum
+4 |     Empty,
+  |     ^^^^^
+  |
+  = note: `BranchKind` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `norm` is never used
+ --> nurbs-core/src/sweep_support/vec3_ext.rs:9:15
+  |
+9 | pub(crate) fn norm(v: [f64; 3]) -> f64 {
+  |               ^^^^
+
+warning: function `unit` is never used
+  --> nurbs-core/src/sweep_support/vec3_ext.rs:14:15
+   |
+14 | pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
+   |               ^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: function `dyadic` is never used
+ --> nurbs-core/src/sweep_support/exact_curve_segments.rs:4:4
+  |
+4 | fn dyadic(x: f64) -> Option<(i128, i32)> {
+  |    ^^^^^^
+
+warning: function `normalized` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:29:4
+   |
+29 | fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
+   |    ^^^^^^^^^^
+
+warning: function `exact_add` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:39:4
+   |
+39 | fn exact_add(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_mul` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:60:4
+   |
+60 | fn exact_mul(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `exact_div` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:66:4
+   |
+66 | fn exact_div(a: f64, b: f64) -> Option<f64> {
+   |    ^^^^^^^^^
+
+warning: function `inspect` is never used
+  --> nurbs-core/src/sweep_support/exact_curve_segments.rs:75:15
+   |
+75 | pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
+   |               ^^^^^^^
+
+warning: function `exact_blossom_segments` is never used
+   --> nurbs-core/src/sweep_support/exact_curve_segments.rs:178:4
+    |
+178 | fn exact_blossom_segments(c: &Curve) -> Option<Vec<Curve>> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_domain` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:22:15
+   |
+22 | pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
+   |               ^^^^^^^^^^^^^^
+
+warning: function `surface_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:27:15
+   |
+27 | pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `curve_span_domains` is never used
+  --> nurbs-core/src/sweep_support/audit.rs:35:15
+   |
+35 | pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: function `valid` is never used
+ --> nurbs-core/src/sweep_support/error_upper.rs:3:4
+  |
+3 | fn valid(x:f64)->bool{x.is_finite()&&x>=0.}
+  |    ^^^^^
+
+warning: function `successor` is never used
+ --> nurbs-core/src/sweep_support/error_upper.rs:4:4
+  |
+4 | fn successor(x:f64)->Option<f64>{
+  |    ^^^^^^^^^
+
+warning: function `add` is never used
+  --> nurbs-core/src/sweep_support/error_upper.rs:10:8
+   |
+10 | pub fn add(a:f64,b:f64)->Option<f64>{
+   |        ^^^
+
+warning: function `multiply` is never used
+  --> nurbs-core/src/sweep_support/error_upper.rs:16:8
+   |
+16 | pub fn multiply(a:f64,b:f64)->Option<f64>{
+   |        ^^^^^^^^
+
+warning: function `sqrt_two` is never used
+  --> nurbs-core/src/sweep_support/error_upper.rs:22:8
+   |
+22 | pub fn sqrt_two(value:f64)->Option<f64>{multiply(value,1.4142135623730951)}
+   |        ^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 35 warnings (run `cargo fix --lib -p nurbs-core` to apply 6 suggestions)
+   Compiling brep-core v0.1.0 (/private/tmp/osv-source-fibered-caps-20261016/crates/brep-core)
+warning: type `CanonicalPolygon` is more private than the item `canonical_polygons`
+   --> brep-core/src/direct_edit/movement.rs:337:1
+    |
+337 | / pub(super) fn canonical_polygons(
+338 | |     model: &Model,
+339 | |     substitute: &BTreeMap<usize, [f64; 3]>,
+340 | |     guard: &mut BudgetGuard,
+341 | | ) -> Result<Vec<CanonicalPolygon>> {
+    | |__________________________________^ function `canonical_polygons` is reachable at visibility `pub(in crate::direct_edit)`
+    |
+note: but type `CanonicalPolygon` is only usable at visibility `pub(self)`
+   --> brep-core/src/direct_edit/movement.rs:318:1
+    |
+318 | struct CanonicalPolygon {
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:174:8
+    |
+174 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:180:8
+    |
+180 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:191:8
+    |
+191 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:230:8
+    |
+230 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling cad-step v0.1.0 (/private/tmp/osv-source-fibered-caps-20261016/crates/cad-step)
+warning: `brep-core` (lib) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 29.44s
+     Running unittests src/lib.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/644b43023fd79978/out/cad_step-644b43023fd79978)
+
+running 71 tests
+test iges_interchange_v1::tests::iges_refuses_stl_payload ... ok
+test nurbs_step_interchange::tests::refuses_rational_surface ... ok
+test nurbs_step_interchange::tests::refuses_faceted ... ok
+test nurbs_step_interchange::tests::refuses_oversized_payload ... ok
+test nurbs_step_interchange::tests::refuses_manifold_solid_import ... ok
+test nurbs_step_interchange::tests::refuses_orphan_surface_and_wrong_type_edge_reference ... ok
+test nurbs_step_interchange::tests::refuses_constructor_solid_export ... ok
+test nurbs_step_interchange::tests::roundtrip_bicubic_open_face ... ok
+test iges_interchange_v2::tests::malformed_records_units_unknown_and_resources_refuse ... ok
+test nurbs_step_trimmed::tests::refuses_broken_independent_pcurve_correspondence ... ok
+test source_exchange_step::tests::source_serialization_preserves_near_unit_weights_and_distinct_knots ... ok
+test iges_interchange_v1::tests::iges_roundtrip_entity_subset ... ok
+test nurbs_step_trimmed::tests::refuses_solid_export_and_import ... ok
+test iges_interchange_v2::tests::metadata_free_reports_loss_and_mutation_refuses ... ok
+test nurbs_step_trimmed::tests::refuses_orphan_vertex_and_broken_hole_loop_type ... ok
+test nurbs_step_solid::tests::a4_contained_boolean_difference_refuses_v2 ... ok
+test nurbs_step_solid::tests::refuses_unlinked_freeform_solid_graph ... ok
+test step_interchange::tests::refuse_broken_refs ... ok
+test step_interchange::tests::refuse_cone_without_plane_span ... ok
+test step_interchange::tests::refuse_curved_without_circle ... ok
+test step_interchange::tests::refuse_cylinder_without_plane_span ... ok
+test step_interchange::tests::refuse_faceted_stl_obj_missing_manifold ... ok
+test nurbs_step_solid::tests::refuses_missing_surface_and_out_of_matrix_face ... ok
+test iges_interchange_v2::tests::direct_roundtrip_is_80_column_and_preserves_graph_identity ... ok
+test nurbs_step_solid::tests::freeform_cuboid_topology_roundtrip ... ok
+test step_interchange::tests::orphan_or_comment_circle_cannot_satisfy_curved_graph_gate ... ok
+test step_interchange::tests::roundtrip_sphere ... ok
+test nurbs_step_solid::tests::freeform_cuboid_bump_roundtrip ... ok
+test step_interchange::tests::roundtrip_cuboid ... ok
+test step_interchange::tests::roundtrip_frustum ... ok
+test step_interchange::tests::successor_refuses_arbitrary_graph_entities ... ok
+test step_interchange::tests::roundtrip_apex_frustum ... ok
+test step_interchange::tests::roundtrip_cylinder_not_aabb ... ok
+test step_interchange_v3::tests::direct_roundtrip_preserves_topology_and_identity ... ok
+test step_interchange_v3::tests::imports_product_assembly_containers_with_mixed_leaf_units ... ok
+test step_interchange::tests::successor_identity_units_and_metadata_loss ... ok
+test step_interchange_v3::tests::parses_self_authored_analytic_and_conversion_fixtures ... ok
+test step_interchange_v3::tests::periodic_analytic_surfaces_have_specific_typed_refusals ... ok
+test iges_interchange_v2::tests::multiple_bodies_and_cavities_roundtrip_without_topology_reconstruction ... ok
+test step_interchange::tests::roundtrip_tube ... ok
+test step_interchange_v3::tests::product_assembly_rejects_cycles_mismatched_products_and_geometry_containers ... ok
+test step_interchange::tests::successor_reordered_entities_duplicate_identity_and_nested_placement ... ok
+test step_interchange_v3::tests::v4_maps_finite_analytic_carriers_and_endpoint_point_selectors ... ok
+test step_interchange::tests::roundtrip_oriented_tube ... ok
+test step_interchange::tests::roundtrip_torus ... ok
+test step_interchange_v3::tests::product_assembly_frames_use_their_own_units ... ok
+test step_interchange_v3::tests::entity_reorder_preserves_digest_bound_identity ... ok
+test step_interchange_v3::tests::refuses_duplicate_missing_cycle_depth_and_unknown_reachable_geometry ... ok
+test nurbs_step_solid::tests::successor_roundtrips_multi_body_and_one_cavity_rows ... ok
+test step_interchange_v3::tests::lexer_accepts_comments_case_escapes_d_exponents_and_forward_refs ... ok
+test step_interchange_v3::tests::orphan_transform_does_not_move_direct_geometry ... ok
+test step_interchange_v3::tests::only_representation_reachable_rigid_transform_moves_geometry ... ok
+test step_interchange_v3::tests::v5_orders_distinct_occurrence_transforms_and_refuses_cycle_or_ambiguity ... ok
+test step_interchange_v3::tests::partial_holed_revolution_is_not_mistaken_for_a_periodic_band ... ok
+test step_interchange_v3::tests::v9_certifies_interior_point_inverse_and_ambiguity ... ok
+test step_interchange_v3::tests::v9_roundtrips_retained_open_shell ... ok
+test nurbs_step_trimmed::tests::roundtrip_trimmed_hole_count ... ok
+test step_interchange_v3::tests::v5_uses_rational_complexes_and_oriented_void_shells ... ok
+test step_interchange_v3::tests::aggregate_parser_and_graph_budgets_refuse ... ok
+test step_interchange_v3::tests::v5_emits_selected_ap242_context_and_roundtrips ... ok
+test step_interchange_v3::tests::multiple_cavities_shared_edges_senses_and_metadata_mutation ... ok
+test step_interchange_v3::tests::v5_roundtrips_rational_analytic_bodies_and_sense_combinations ... ok
+test step_interchange_v3::tests::v6_applies_nonuniform_occurrence_affine_and_refuses_singular ... ok
+test step_interchange_v3::tests::v10_retains_affine_occurrence_graph_and_detects_mutation ... ok
+test step_interchange_v3::tests::v6_exact_and_plus_one_resource_boundaries ... ok
+test step_interchange_v3::tests::v7_requires_whole_domain_boundary_identities_for_periodic_carriers ... ok
+test step_interchange_v3::tests::v8_carries_whole_domain_regularity_in_the_topology_certificate ... ok
+test step_interchange_v3::tests::v6_roundtrips_certified_pole_boundaries ... ok
+test step_interchange_v3::tests::direct_more_than_32_bodies_and_metadata_free_identity ... ok
+test step_interchange_v3::tests::v6_exhausts_valid_edge_oriented_bound_face_and_void_senses ... ok
+test step_interchange_v3::tests::v8_exhausts_all_coupled_sense_masks_with_equivalence_or_refusal ... ok
+
+test result: ok. 71 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.02s
+
+     Running tests/analysis_freeform.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/835368dad229516a/out/analysis_freeform-835368dad229516a)
+
+running 2 tests
+test freeform_tessellation_bounds_planar_cuboid_and_bump ... ok
+test freeform_mass_encloses_planar_cuboid_and_refuses_bump ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/close_topology_interchange.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/61193e7a34ab0860/out/close_topology_interchange-61193e7a34ab0860)
+
+running 2 tests
+test malformed_step_envelope_is_refused ... ok
+test shared_face_complex_round_trips_through_step_and_iges ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests/guided_loft_step.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/2578491a3009fa6a/out/guided_loft_step-2578491a3009fa6a)
+
+running 3 tests
+test guided_loft_retains_curved_boundaries_and_jets_through_step_v9 ... ok
+test closed_loft_step_retains_shared_seam_and_cyclic_jets ... ok
+test rational_and_multiple_guide_step_matrix ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/nonplanar_loft_caps.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/ee122420bd63f8bd/out/nonplanar_loft_caps-ee122420bd63f8bd)
+
+running 3 tests
+test nonplanar_caps_retain_world_boundaries_and_step_carriers ... ok
+test whole_loft_embedding_checks_faces_and_all_pairs_and_preserves_budget_refusal ... ok
+test globally_crossing_side_with_retained_seams_cannot_pass_embedding ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.44s
+
+     Running tests/prism_step.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/b3b5abf9f6143946/out/prism_step-b3b5abf9f6143946)
+
+running 1 test
+test scaled_retained_loft_round_trips_through_step_v9 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/rational_section_loft.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/8adb9dd41e34d785/out/rational_section_loft-8adb9dd41e34d785)
+
+running 20 tests
+test cap_projection_certifies_within_existing_coordinate_limits ... ok
+test invalid_holes_joins_correspondence_and_nonplanar_caps_refuse ... ok
+test natural_capped_loft_interpolates_middle_section_and_curved_shared_seams ... ok
+test rational_hollow_loft_keeps_curved_walls_caps_and_shared_edges ... ok
+test capped_supplied_loft_patches_share_full_curved_seams ... ok
+test reverse_travel_keeps_consistent_outward_shell_senses ... ok
+test differing_section_weights_retain_rational_sections_and_closed_topology ... ok
+test natural_capped_loft_step_roundtrip_and_independent_fixture ... ok
+test retained_hollow_rational_loft_step_roundtrip_preserves_topology_and_surfaces ... ok
+test rational_topology_supports_more_than_sixteen_sections_without_refit ... ok
+test affine_progressive_body_retains_elliptical_holes_and_authored_endpoint_laws ... ok
+test progressive_rational_hollow_body_caps_only_accepted_transport ... ok
+test authored_frames_keep_hollow_body_manifold_caps ... ok
+test bent_path_preserves_rational_hollow_section_and_nonparallel_caps ... ok
+test fixed_original_transport_bound_reaches_hollow_brep_and_step_without_global_promotion ... ok
+test fixed_normal_original_transport_bound_reaches_hollow_brep_and_step_without_global_promotion ... ok
+test frenet_curved_hollow_body_retains_original_error_and_native_step_topology ... ok
+test periodic_wall_budget_uses_faces_without_reserving_caps ... ok
+test common_contact_anchor_retains_rational_outer_and_hole_body ... ok
+test closed_progressive_hollow_body_owns_periodic_seam_and_inner_shell ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.84s
+
+     Running tests/source_body_step.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/869bf71cf456fa51/out/source_body_step-869bf71cf456fa51)
+
+running 1 test
+test capped_canal_body_keeps_identities_through_step_v6 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/source_exchange_step.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/b7cc9da962090bb2/out/source_exchange_step-b7cc9da962090bb2)
+
+running 2 tests
+test curved_tetrahedron_body_exports_a_bounded_candidate ... ok
+test original_annular_poles_are_preserved_in_step_exchange ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.55s
+
+     Running tests/step_v1.rs (/private/tmp/osv-source-fibered-caps-target-20261016/debug/build/cad-step/9f42fd95d9511f15/out/step_v1-9f42fd95d9511f15)
+
+running 1 test
+test step_roundtrip_not_faceted ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests cad_step
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -3,7 +3,9 @@ use super::*;
 
 impl value_codec::Serialize for SpherePatchCircle {
     fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
+        let mut value=value_codec::json!({"patch":self.patch,"arcs":self.arcs});
+        if let Some(section)=&self.implicit {value["implicitContour"]=section.to_value();}
+        value
     }
 }
 

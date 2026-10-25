@@ -275,7 +275,7 @@ export class Parser {
   }
   private countNode() {
     this.nodes++
-    if (this.nodes > MAX_AST_NODES) this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString()} syntax node limit`)
+    if (this.nodes > MAX_AST_NODES) this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString('en-US')} syntax node limit`)
   }
   private expressionNode<T extends Expr>(node: T): T {
     this.countNode()

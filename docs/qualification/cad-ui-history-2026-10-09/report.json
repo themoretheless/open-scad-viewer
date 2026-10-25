@@ -1,0 +1,22 @@
+{
+  "part": "bracket",
+  "ui_origin": "http://127.0.0.1:5198",
+  "command": "\u0422\u043e\u0447\u043d\u044b\u0435 \u043f\u0440\u0435\u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u044f",
+  "delta_x_mm": 2,
+  "undo_matches_baseline": true,
+  "redo_reload_matches_applied": true,
+  "sha256": {
+    "bracket.json": "3e3a69440db14af703130c23ecac889531ef8b03e77d5a5d5b4b3dccddf85aa3",
+    "bracket-moved-ui.json": "2116022605a508cdac1743ad4b6b40adc1280a635616047c6d1ac523bbdb31e9",
+    "bracket-undo-ui.json": "a652cb7bfa465ede099a3a03e1ec07bfa8921906ea272583545276e05be555bb",
+    "bracket-reloaded-ui.json": "2116022605a508cdac1743ad4b6b40adc1280a635616047c6d1ac523bbdb31e9"
+  },
+  "limits": [
+    "One numeric translation, mouse Undo/Redo; not 20 edits or keyboard acceptance",
+    "Flange/enclosure and STEP export from current UI remain unchecked",
+    "Browser renderer crash cause remains unresolved"
+  ],
+  "topology_ids_preserved": true,
+  "all_vertices_translate_exactly_2_mm": true,
+  "current_ui_step_occt_passed": true
+}

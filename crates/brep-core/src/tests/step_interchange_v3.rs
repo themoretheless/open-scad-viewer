@@ -1704,3 +1704,137 @@
                 .replacen("2.00000000000000000E0", "2.50000000000000000E0", 1);
         assert!(export_step_v10(&mutation).is_err());
     }
+
+    #[test]
+    fn v9_preserves_single_occurrence_topology_metadata() {
+        let model = freeform_cuboid_solid([0.,0.,0.],[2.,3.,4.]).unwrap();
+        let (text,_,_) = export_step_v9(&model).unwrap();
+        let (back,_,report) = import_step_v9(&text).unwrap();
+        assert!(report.identity.preserved);
+        assert_eq!(report.identity.created_count,0);
+        assert_eq!(report.identity.lost_count,0);
+        let source=value_codec::to_value(&model).unwrap();
+        let restored=value_codec::to_value(&back).unwrap();
+        for kind in ["vertices","edges","loops","faces","shells","bodies"] {
+            let mut original_ids=source["topologyIds"][kind].as_array().unwrap().iter().map(|v|v.as_str().unwrap()).collect::<Vec<_>>();
+            let mut restored_ids=restored["topologyIds"][kind].as_array().unwrap().iter().map(|v|v.as_str().unwrap()).collect::<Vec<_>>();
+            original_ids.sort(); restored_ids.sort();
+            assert_eq!(original_ids,restored_ids);
+        }
+        for (i,id) in source["topologyIds"]["vertices"].as_array().unwrap().iter().enumerate() {
+            let j=restored["topologyIds"]["vertices"].as_array().unwrap().iter().position(|v|v==id).unwrap();
+            assert_eq!(source["vertices"][i]["point"],restored["vertices"][j]["point"]);
+        }
+    }
+
+    #[test]
+    fn actual_ui_step_roundtrip_classifies_oriented_identity_bindings() {
+        fn identity_bindings(model: &Model) -> BTreeMap<String, value_codec::Value> {
+            let canonical = canonical_face_senses(model).unwrap();
+            let value = value_codec::to_value(&canonical).unwrap();
+            let mut result = BTreeMap::new();
+            for kind in ["vertices", "edges", "loops", "faces", "shells", "bodies"] {
+                let ids = value["topologyIds"][kind].as_array().unwrap().clone();
+                let mut entities = value[kind].as_array().unwrap().clone();
+                let resolve = |kind: &str, index: &value_codec::Value| {
+                    let i: usize = value_codec::from_value(index.clone()).unwrap();
+                    value["topologyIds"][kind][i].clone()
+                };
+                for entity in &mut entities {
+                    match kind {
+                        "edges" => for index in entity["vertices"].as_array_mut().unwrap() { *index = resolve("vertices", index); },
+                        "loops" => for usage in entity["coedges"].as_array_mut().unwrap() { usage["edge"] = resolve("edges", &usage["edge"]); },
+                        "faces" => {
+                            entity["outer"] = resolve("loops", &entity["outer"]);
+                            for index in entity["holes"].as_array_mut().unwrap() { *index = resolve("loops", index); }
+                        },
+                        "shells" => for usage in entity["faces"].as_array_mut().unwrap() { usage["face"] = resolve("faces", &usage["face"]); },
+                        "bodies" => {
+                            entity["outerShell"] = resolve("shells", &entity["outerShell"]);
+                            for index in entity["innerShells"].as_array_mut().unwrap() { *index = resolve("shells", index); }
+                        },
+                        _ => {},
+                    }
+                }
+                assert_eq!(ids.len(), entities.len());
+                for (id, entity) in ids.iter().zip(entities) {
+                    assert!(result.insert(id.as_str().unwrap().to_string(), entity).is_none());
+                }
+            }
+            result
+        }
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/qualification/cad-mixed-ui-step-roundtrip-2026-10-10");
+        for name in ["bracket", "flange", "enclosure"] {
+            let text = std::fs::read_to_string(root.join(format!("{name}-step-roundtrip.json"))).unwrap();
+            let doc: value_codec::Value = value_codec::from_str(&text).unwrap();
+            let bodies = doc["bodies"].as_array().unwrap();
+            let source: Model = value_codec::from_value(bodies.iter().find(|b| b["id"].as_str() == Some(name)).unwrap()["brep"].clone()).unwrap();
+            let imported: Model = value_codec::from_value(bodies.iter().find(|b| b["name"].as_str() == Some("Retained AP242 STEP")).unwrap()["brep"].clone()).unwrap();
+            let a = identity_bindings(&source);
+            let b = identity_bindings(&imported);
+            assert_eq!(a.keys().collect::<Vec<_>>(), b.keys().collect::<Vec<_>>(), "{name}: identity sets");
+            let mismatches = a.iter().filter(|(id, entity)| **entity != b[*id]).map(|(id, _)| id.clone()).collect::<Vec<_>>();
+            let exact = mismatches.is_empty();
+            eprintln!("oriented identity bindings {name}: exact={exact} unsupported={mismatches:?}");
+            let source_canonical = canonical_face_senses(&source).unwrap();
+            let imported_canonical = canonical_face_senses(&imported).unwrap();
+            let mut planar_faces = BTreeSet::new();
+            for (id, entity) in &a {
+                if entity == &b[id] || !id.starts_with("f:") { continue; }
+                let surface_a: Surface = value_codec::from_value(entity["surface"].clone()).unwrap();
+                let surface_b: Surface = value_codec::from_value(b[id]["surface"].clone()).unwrap();
+                let (pa, _) = crate::material_wall_coverage::plane(&surface_a, 100000);
+                let (pb, _) = crate::material_wall_coverage::plane(&surface_b, 100000);
+                assert!(pa.zip(pb).is_some_and(|(pa,pb)| crate::material_wall_coverage::same_plane(pa,pb)), "{name}: unmatched nonplanar support {id}");
+                assert_eq!(entity["outer"], b[id]["outer"]);
+                assert_eq!(entity["holes"], b[id]["holes"]);
+                planar_faces.insert(id.clone());
+            }
+            fn cycle(value: &value_codec::Value) -> Vec<(String, bool)> {
+                let mut edges = value["coedges"].as_array().unwrap().iter().map(|c|
+                    (c["edge"].as_str().unwrap().to_string(), c["reversed"].as_bool().unwrap())).collect::<Vec<_>>();
+                let best = (0..edges.len()).min_by_key(|&i| (0..edges.len()).map(|j| edges[(i+j)%edges.len()].clone()).collect::<Vec<_>>()).unwrap();
+                edges.rotate_left(best); edges
+            }
+            for id in &mismatches {
+                if id.starts_with("l:") {
+                    assert!(planar_faces.iter().any(|face| a[face]["outer"].as_str() == Some(id.as_str()) || a[face]["holes"].as_array().unwrap().iter().any(|hole| hole.as_str()==Some(id.as_str()))), "loop mismatch outside qualified plane");
+                    assert_eq!(cycle(&a[id]),cycle(&b[id]), "{name}: oriented edge cycle {id}");
+                } else { assert!(planar_faces.contains(id), "unqualified binding {id}"); }
+            }
+            // Both trim graphs must independently bind their entire pcurves
+            // to the same exact 3D edges before planar winding can identify the
+            // retained region. This is not a sampled UV comparison.
+            certify_step_v8_topology(&source_canonical).unwrap();
+            certify_step_v8_topology(&imported_canonical).unwrap();
+            if name == "flange" {
+                let face_id = planar_faces.iter().next().unwrap();
+                let face_index = imported_canonical.1.faces.iter().position(|id| id.to_string() == *face_id).unwrap();
+                let surface = &imported_canonical.faces[face_index].surface;
+                let mut warped = surface.clone();
+                warped.control_points[0][0][2] += 0.25;
+                assert!(crate::material_wall_coverage::plane(&warped, 100000).0.is_none(), "warped support must not inherit a plane proof");
+                let mut shifted = surface.clone();
+                for row in &mut shifted.control_points { for point in row { point[2] += 0.25; } }
+                let (pa, _) = crate::material_wall_coverage::plane(surface, 100000);
+                let (pb, _) = crate::material_wall_coverage::plane(&shifted, 100000);
+                assert!(!crate::material_wall_coverage::same_plane(pa.unwrap(), pb.unwrap()), "different planes must refuse");
+                let loop_id = a[face_id]["outer"].as_str().unwrap();
+                let mut wrong_cycle = b[loop_id].clone();
+                let old = wrong_cycle["coedges"][0]["reversed"].as_bool().unwrap();
+                wrong_cycle["coedges"][0]["reversed"] = value_codec::json!(!old);
+                assert_ne!(cycle(&a[loop_id]), cycle(&wrong_cycle), "same edges with altered winding must refuse");
+                let mut wrong_trim = imported_canonical.clone();
+                let outer = wrong_trim.faces[face_index].outer;
+                wrong_trim.0.loops[outer].coedges[0].pcurve.control_points[0][0] += 0.125;
+                assert!(certify_step_v8_topology(&wrong_trim).is_err(), "altered pcurve must not inherit whole boundary coupling");
+            }
+            if let Ok(path) = std::env::var("CAD_ORIENTED_IDENTITY_REPORT") {
+                let file = std::path::Path::new(&path).join(format!("{name}.json"));
+                let report = value_codec::json!({"part":name,"identitySetsPreserved":true,"exactCanonicalBindings":exact,"representationChanges":mismatches,"planarFacesQualified":planar_faces.into_iter().collect::<Vec<_>>(),"orientedBindingsQualified":true,"negativeControls":if name=="flange" {4} else {0},"scope":"exact canonical bindings or exact coplanar supports with identical oriented 3D edge cycles and independently qualified whole pcurve-edge coupling"});
+                std::fs::write(file, value_codec::to_string(&report).unwrap()).unwrap();
+            }
+        }
+    }
+

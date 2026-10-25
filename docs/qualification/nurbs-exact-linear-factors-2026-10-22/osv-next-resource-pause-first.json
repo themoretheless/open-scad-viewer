@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "threadId": "01a0f40b-fb11-7f82-b80d-36886109b167",
+  "recordedAtUtc": "2026-10-21T20:58:37.812684+00:00",
+  "state": "resumed_after_terminal_window",
+  "controllerPid": 26366,
+  "processes": [
+    {
+      "pid": 26366,
+      "ppid": 8947,
+      "stat": "Ss",
+      "started": "Thu Oct 22 00:57:06 2026",
+      "command": "/Users/themoretheless/.rustup/toolchains/nightly-2026-09-16-aarch64-apple-darwin/bin/cargo test --manifest-path crates/Cargo.toml -p nurbs-core -p cad-predicates -p nurbs-intersect --no-fail-fast --offline --locked"
+    },
+    {
+      "pid": 26571,
+      "ppid": 26366,
+      "stat": "R",
+      "started": "Thu Oct 22 00:57:14 2026",
+      "command": "/Users/themoretheless/.rustup/toolchains/nightly-2026-09-16-aarch64-apple-darwin/bin/rustc --crate-name nurbs_core --edition=2024 nurbs-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent --crate-type lib --emit=dep-info,metadata,link -Z embed-metadata=no -C opt-level=1 -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked -C debug-assertions=on --cfg feature=\"codec\" --cfg feature=\"default\" --cfg feature=\"transport\" --check-cfg cfg(docsrs,test) --check-cfg cfg(feature, values(\"codec\", \"default\", \"transport\")) -C metadata=2d5a69816dcfbeea -C extra-filename=-40d6264a8f7c0d57 --out-dir /private/tmp/osv-nurbs-next-target/debug/build/nurbs-core/40d6264a8f7c0d57/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/block-buffer/1d36580969060f04/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/cad-predicates/6cc1c7eb58ecd9be/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/cfg-if/7a02cb7ac0c1e116/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/const-oid/0451f58c7867ee10/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/cpufeatures/9bccabfa6cb0d5dd/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/crypto-common/09313dc9b72e982c/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/digest/924468a9ee882f1c/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/hybrid-array/44edfdc103ec80f1/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/libc/18e6ad6fb30c73e2/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/osv-math/48389d911c9bca23/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/rustc-hash/3f708db207577197/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/sha2/b4aa6dabd93b8acb/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/typenum/a71d2c53e9fd5110/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/value-codec/97e4f28d608706ae/out --extern brep_topology=/private/tmp/osv-nurbs-next-target/debug/build/brep-topology/fef685cba7fd2ed3/out/libbrep_topology-fef685cba7fd2ed3.rmeta --extern cad_predicates=/private/tmp/osv-nurbs-next-target/debug/build/cad-predicates/6cc1c7eb58ecd9be/out/libcad_predicates-6cc1c7eb58ecd9be.rmeta --extern geometry_ops=/private/tmp/osv-nurbs-next-target/debug/build/geometry-ops/c2b44e21e67d96e5/out/libgeometry_ops-c2b44e21e67d96e5.rmeta --extern math_core=/private/tmp/osv-nurbs-next-target/debug/build/osv-math/48389d911c9bca23/out/libmath_core-48389d911c9bca23.rmeta --extern value_codec=/private/tmp/osv-nurbs-next-target/debug/build/value-codec/97e4f28d608706ae/out/libvalue_codec-97e4f28d608706ae.rmeta --force-warn=unused_crate_dependencies"
+    },
+    {
+      "pid": 27193,
+      "ppid": 26366,
+      "stat": "R",
+      "started": "Thu Oct 22 00:57:29 2026",
+      "command": "/Users/themoretheless/.rustup/toolchains/nightly-2026-09-16-aarch64-apple-darwin/bin/rustc --crate-name nurbs_core --edition=2024 nurbs-core/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent --emit=dep-info,link -C opt-level=1 -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked -C debug-assertions=on --test --cfg feature=\"codec\" --cfg feature=\"default\" --cfg feature=\"transport\" --check-cfg cfg(docsrs,test) --check-cfg cfg(feature, values(\"codec\", \"default\", \"transport\")) -C metadata=0043584024f82194 -C extra-filename=-7006b694af1106b9 --out-dir /private/tmp/osv-nurbs-next-target/debug/build/nurbs-core/7006b694af1106b9/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/block-buffer/1d36580969060f04/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/cad-predicates/6cc1c7eb58ecd9be/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/cfg-if/7a02cb7ac0c1e116/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/const-oid/0451f58c7867ee10/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/cpufeatures/9bccabfa6cb0d5dd/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/crypto-common/09313dc9b72e982c/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/digest/924468a9ee882f1c/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/hybrid-array/44edfdc103ec80f1/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/libc/18e6ad6fb30c73e2/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/osv-math/48389d911c9bca23/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/rustc-hash/3f708db207577197/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/sha2/b4aa6dabd93b8acb/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/typenum/a71d2c53e9fd5110/out -L dependency=/private/tmp/osv-nurbs-next-target/debug/build/value-codec/97e4f28d608706ae/out --extern brep_topology=/private/tmp/osv-nurbs-next-target/debug/build/brep-topology/fef685cba7fd2ed3/out/libbrep_topology-fef685cba7fd2ed3.rlib --extern brep_topology=/private/tmp/osv-nurbs-next-target/debug/build/brep-topology/fef685cba7fd2ed3/out/libbrep_topology-fef685cba7fd2ed3.rmeta --extern cad_predicates=/private/tmp/osv-nurbs-next-target/debug/build/cad-predicates/6cc1c7eb58ecd9be/out/libcad_predicates-6cc1c7eb58ecd9be.rlib --extern cad_predicates=/private/tmp/osv-nurbs-next-target/debug/build/cad-predicates/6cc1c7eb58ecd9be/out/libcad_predicates-6cc1c7eb58ecd9be.rmeta --extern geometry_ops=/private/tmp/osv-nurbs-next-target/debug/build/geometry-ops/c2b44e21e67d96e5/out/libgeometry_ops-c2b44e21e67d96e5.rlib --extern geometry_ops=/private/tmp/osv-nurbs-next-target/debug/build/geometry-ops/c2b44e21e67d96e5/out/libgeometry_ops-c2b44e21e67d96e5.rmeta --extern math_core=/private/tmp/osv-nurbs-next-target/debug/build/osv-math/48389d911c9bca23/out/libmath_core-48389d911c9bca23.rlib --extern math_core=/private/tmp/osv-nurbs-next-target/debug/build/osv-math/48389d911c9bca23/out/libmath_core-48389d911c9bca23.rmeta --extern value_codec=/private/tmp/osv-nurbs-next-target/debug/build/value-codec/97e4f28d608706ae/out/libvalue_codec-97e4f28d608706ae.rlib --extern value_codec=/private/tmp/osv-nurbs-next-target/debug/build/value-codec/97e4f28d608706ae/out/libvalue_codec-97e4f28d608706ae.rmeta --force-warn=unused_crate_dependencies"
+    }
+  ],
+  "method": "SIGSTOP controller first, then its descendants; no process killed",
+  "signalProvenance": "This Codex thread issued SIGSTOP in response to coordinated idle-window request from thread 01a155fb-7cde-7dc3-8f0a-ff049037a551, reporting explicit user authorization.",
+  "resumeRequired": "Verify PID/start/command identity, SIGCONT descendants then controller after window completion. Do not edit Rust sources while this frozen build exists.",
+  "correctnessResultsPreserved": true,
+  "elapsedAndPerformanceMeasurementsUsable": false,
+  "performanceContaminationReason": "Controller and compiler process tree paused for coordinated CPU/GPU benchmark window.",
+  "log": "/tmp/osv-next-native-full.log",
+  "newHeavyJobsWillStart": true,
+  "resumedAtUtc": "2026-10-21T21:07:24.382535+00:00",
+  "resumeProvenance": "This owning task issued identity-verified SIGCONT to compilers then Cargo after coordinator session-2 terminal incomplete status; requested approximate five-minute pause exceeded.",
+  "coordinatorTerminalStatus": {
+    "status": "incomplete",
+    "reason": "no uncontended GPU admission window"
+  }
+}

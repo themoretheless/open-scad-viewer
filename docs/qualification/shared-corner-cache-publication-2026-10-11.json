@@ -1,0 +1,42 @@
+{
+  "schema": "wasm-snapshot-publication/1",
+  "sha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "byteLength": 13108282,
+  "previousSha256": "5584980642278d1f2f414885899cfc22fed49e7aa701c38ed6cad0f1fc228232",
+  "backup": "/Users/themoretheless/.codex/tmp/shared-corner-cache-wasm-stage-2026-10-11/previous-published-558",
+  "sourceSnapshot": "mapped-retained-carrier-2026-10-08/shared-corner-cache-compiled-snapshot-2026-10-11.json",
+  "workerQualified": true,
+  "scope": "Shared-corner cache generation; excludes later alternate-owned-path candidate.",
+  "fullExpressionWorkerStatus": "passed-serial-repeat-with-earlier-timeout-retained",
+  "failureReport": "shared-corner-cache-worker-2026-10-11/expression-worker-failure.json",
+  "browserSmoke": {
+    "startup": true,
+    "createCube": true,
+    "keyboardUndoRedo": true,
+    "restoredEmptyScene": true,
+    "scope": "Chrome Dev smoke only; no general fillet or three-part acceptance."
+  },
+  "stepRootWorkerTests": {
+    "passed": 2,
+    "skipped": 28,
+    "totalSeconds": 198.75
+  },
+  "profileWorkerReport": "shared-corner-cache-profile-worker-2026-10-11.json",
+  "realBoundaryTests": {
+    "passed": 34,
+    "failed": 1,
+    "failure": "oblique sphere distance: 30000 ms test deadline",
+    "totalSeconds": 276.82,
+    "log": "/tmp/shared-corner-cache-real-boundary-20261011.log"
+  },
+  "fullResponseParityReport": "docs/qualification/shared-corner-cache-serial-worker-2026-10-11/expression-inspection-worker-report.json",
+  "latencyStabilityQualified": false,
+  "sphereDistanceSerial": {
+    "passed": 1,
+    "skipped": 34,
+    "testSeconds": 5.05,
+    "totalSeconds": 9.91,
+    "originalDeadlineMs": 30000,
+    "log": "/tmp/shared-corner-cache-sphere-distance-serial-20261011.log"
+  }
+}

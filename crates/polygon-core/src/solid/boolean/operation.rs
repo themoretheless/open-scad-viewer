@@ -6,25 +6,8 @@ pub enum Operation {
     Intersection,
     Difference,
 }
-impl value_codec::Serialize for Operation {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Union => value_codec::Value::String("union".into()),
-            Self::Intersection => value_codec::Value::String("intersection".into()),
-            Self::Difference => value_codec::Value::String("difference".into()),
-        }
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Operation {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        match value.as_str().unwrap_or("") {
-            "union" => Ok(Self::Union),
-            "intersection" => Ok(Self::Intersection),
-            "difference" => Ok(Self::Difference),
-            _ => Err(value_codec::error("Unknown enum variant")),
-        }
-    }
-}
+
+
 #[derive(Clone, Debug)]
 pub struct Options {
     /// Relative to the longest side of the combined input bounds.
@@ -36,78 +19,21 @@ pub struct Options {
     /// and by `Mesh::validate` instead.
     pub max_output_triangles: usize,
 }
-impl value_codec::Serialize for Options {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "relativeTolerance".into(),
-            value_codec::Serialize::to_value(&self.relative_tolerance),
-        );
-        object.insert(
-            "maxWork".into(),
-            value_codec::Serialize::to_value(&self.max_work),
-        );
-        object.insert(
-            "maxFragments".into(),
-            value_codec::Serialize::to_value(&self.max_fragments),
-        );
-        object.insert(
-            "maxOutputTriangles".into(),
-            value_codec::Serialize::to_value(&self.max_output_triangles),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Options {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let relative_tolerance: f64 = if let Some(v) = object.remove("relativeTolerance") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_tolerance()
-        };
-        let max_work: usize = if let Some(v) = object.remove("maxWork") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_work()
-        };
-        let max_fragments: usize = if let Some(v) = object.remove("maxFragments") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_fragments()
-        };
-        let max_output_triangles: usize = if let Some(v) = object.remove("maxOutputTriangles") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_output()
-        };
-        if let Some(key) = object.keys().next() {
-            return Err(value_codec::error(format!("Unknown field {key}")));
-        }
-        Ok(Self {
-            relative_tolerance,
-            max_work,
-            max_fragments,
-            max_output_triangles,
-        })
-    }
-}
+
+
 /// Largest combined input the BSP clipping path admits. Exact fast paths for
 /// separated, nested, identical or empty operands are not limited by it.
 pub const BSP_INPUT_TRIANGLES: usize = 10_000;
 pub(super) fn default_tolerance() -> f64 {
     1e-9
 }
-fn default_work() -> usize {
+pub(super) fn default_work() -> usize {
     8_000_000
 }
-fn default_fragments() -> usize {
+pub(super) fn default_fragments() -> usize {
     100_000
 }
-fn default_output() -> usize {
+pub(super) fn default_output() -> usize {
     MAX_TRIANGLES
 }
 impl Default for Options {
@@ -128,69 +54,8 @@ pub struct BooleanReport {
     pub fragments: usize,
     pub input_triangles: [usize; 2],
 }
-impl value_codec::Serialize for BooleanReport {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "operation".into(),
-            value_codec::Serialize::to_value(&self.operation),
-        );
-        object.insert(
-            "toleranceMm".into(),
-            value_codec::Serialize::to_value(&self.tolerance_mm),
-        );
-        object.insert("work".into(), value_codec::Serialize::to_value(&self.work));
-        object.insert(
-            "fragments".into(),
-            value_codec::Serialize::to_value(&self.fragments),
-        );
-        object.insert(
-            "inputTriangles".into(),
-            value_codec::Serialize::to_value(&self.input_triangles),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for BooleanReport {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let operation: Operation = value_codec::Deserialize::from_value(
-            object
-                .remove("operation")
-                .ok_or_else(|| value_codec::error("Missing field operation"))?,
-        )?;
-        let tolerance_mm: f64 = value_codec::Deserialize::from_value(
-            object
-                .remove("toleranceMm")
-                .ok_or_else(|| value_codec::error("Missing field toleranceMm"))?,
-        )?;
-        let work: usize = value_codec::Deserialize::from_value(
-            object
-                .remove("work")
-                .ok_or_else(|| value_codec::error("Missing field work"))?,
-        )?;
-        let fragments: usize = value_codec::Deserialize::from_value(
-            object
-                .remove("fragments")
-                .ok_or_else(|| value_codec::error("Missing field fragments"))?,
-        )?;
-        let input_triangles: [usize; 2] = value_codec::Deserialize::from_value(
-            object
-                .remove("inputTriangles")
-                .ok_or_else(|| value_codec::error("Missing field inputTriangles"))?,
-        )?;
-        Ok(Self {
-            operation,
-            tolerance_mm,
-            work,
-            fragments,
-            input_triangles,
-        })
-    }
-}
+
+
 pub(super) fn error(code: &'static str, message: impl Into<String>) -> Error {
     Error {
         code,
@@ -227,7 +92,7 @@ impl Budget {
             Ok(())
         }
     }
-    fn fragment(&mut self) -> Result<()> {
+    pub(super) fn fragment(&mut self) -> Result<()> {
         self.fragments += 1;
         if self.fragments > self.options.max_fragments {
             Err(error(
@@ -301,13 +166,13 @@ impl Polygon {
     }
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Side {
+pub(super) enum Side {
     Coplanar,
     Front,
     Back,
     Spanning,
 }
-fn classify(plane: Plane, p: &Polygon, eps: f64, budget: &mut Budget) -> Result<Side> {
+pub(super) fn classify(plane: Plane, p: &Polygon, eps: f64, budget: &mut Budget) -> Result<Side> {
     budget.tick(p.vertices.len())?;
     let mut front = false;
     let mut back = false;
@@ -324,13 +189,13 @@ fn classify(plane: Plane, p: &Polygon, eps: f64, budget: &mut Budget) -> Result<
     })
 }
 /// Coplanar orientation is retained separately for BSP construction and clipping.
-struct Split {
-    same: Vec<Polygon>,
-    opposite: Vec<Polygon>,
-    front: Vec<Polygon>,
-    back: Vec<Polygon>,
+pub(super) struct Split {
+    pub(super) same: Vec<Polygon>,
+    pub(super) opposite: Vec<Polygon>,
+    pub(super) front: Vec<Polygon>,
+    pub(super) back: Vec<Polygon>,
 }
-fn split(plane: Plane, polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Split> {
+pub(super) fn split(plane: Plane, polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Split> {
     let mut out = Split {
         same: vec![],
         opposite: vec![],
@@ -384,14 +249,14 @@ fn split(plane: Plane, polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) ->
     }
     Ok(out)
 }
-struct Node {
-    plane: Plane,
-    polygons: Vec<Polygon>,
-    front: Option<usize>,
-    back: Option<usize>,
+pub(super) struct Node {
+    pub(super) plane: Plane,
+    pub(super) polygons: Vec<Polygon>,
+    pub(super) front: Option<usize>,
+    pub(super) back: Option<usize>,
 }
 pub(super) struct Bsp {
-    nodes: Vec<Node>,
+    pub(super) nodes: Vec<Node>,
 }
 impl Bsp {
     pub(super) fn build(polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Self> {
@@ -469,7 +334,7 @@ impl Bsp {
             std::mem::swap(&mut n.front, &mut n.back);
         }
     }
-    fn clip(&self, polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
+    pub(super) fn clip(&self, polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
         if self.nodes.is_empty() {
             return Ok(polys);
         }
@@ -504,5 +369,206 @@ impl Bsp {
     }
     pub(super) fn polygons(self) -> Vec<Polygon> {
         self.nodes.into_iter().flat_map(|n| n.polygons).collect()
+    }
+}
+/// Reject disconnected vertex fans (edge counts alone miss pinched vertices).
+/// Canonical implementation lives in manifold-core (`validate_vertex_links`).
+pub(super) fn vertex_manifold(mesh: &Mesh) -> Result<()> {
+    manifold_core::validate_vertex_links(mesh.positions.len() / 3, &mesh.indices).map_err(|defect| {
+        invalid(match defect {
+            manifold_core::VertexLinkDefect::NonManifoldLink(_) => {
+                "Boolean solid has a nonmanifold vertex link"
+            }
+            manifold_core::VertexLinkDefect::DisconnectedFan(_) => {
+                "Boolean solid has a disconnected vertex fan"
+            }
+        })
+    })
+}
+pub(super) fn validate_solid(mesh: &Mesh) -> Result<()> {
+    if mesh.indices.is_empty() {
+        return Ok(());
+    }
+    let r = mesh.inspect()?;
+    if !r.closed || r.signed_volume_mm3 <= 0. {
+        return Err(invalid(
+            "Booleans require closed, consistently outward-oriented solid meshes",
+        ));
+    }
+    vertex_manifold(mesh)
+}
+pub(super) fn normalized(mesh: &Mesh, origin: Point, scale: f64) -> Result<Mesh> {
+    let mut map = BTreeMap::new();
+    let mut positions = Vec::new();
+    let mut indices = Vec::new();
+    for old in &mesh.indices {
+        let new = if let Some(&i) = map.get(old) {
+            i
+        } else {
+            let i = positions.len() / 3;
+            positions.extend(
+                mesh.point(*old)?
+                    .iter()
+                    .enumerate()
+                    .map(|(a, x)| (x - origin[a]) / scale),
+            );
+            map.insert(*old, i);
+            i
+        };
+        indices.push(new);
+    }
+    let result = Mesh {
+        positions,
+        indices,
+        uv: None,
+    };
+    result.validate()?;
+    Ok(result)
+}
+pub(super) fn polygons(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
+    let polygons = mesh
+        .indices
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|t| {
+            Polygon::new(
+                vec![mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?],
+                eps,
+                budget,
+            )?
+            .ok_or_else(|| numeric("Input triangle is smaller than the Boolean tolerance"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    merge_coplanar(polygons, eps, budget)
+}
+// Reuse planar faces instead of repeatedly splitting their triangulation edges.
+// Only adjacent, coplanar polygons whose union is convex may be merged.
+pub(super) fn merge_coplanar(polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Vec<Polygon>> {
+    let key = |a: Point, b: Point| {
+        (
+            a.map(|x| (x / eps).round() as i64),
+            b.map(|x| (x / eps).round() as i64),
+        )
+    };
+    let mut edges = BTreeMap::new();
+    let mut slots: Vec<_> = polygons.into_iter().map(Some).collect();
+    for (i, p) in slots.iter().enumerate() {
+        let p = p.as_ref().unwrap();
+        for k in 0..p.vertices.len() {
+            edges.insert(
+                key(p.vertices[k], p.vertices[(k + 1) % p.vertices.len()]),
+                (i, k),
+            );
+        }
+    }
+    for i in 0..slots.len() {
+        while let Some(p) = slots[i].as_ref() {
+            let mut pair = None;
+            for k in 0..p.vertices.len() {
+                budget.tick(1)?;
+                let Some(&(j, l)) =
+                    edges.get(&key(p.vertices[(k + 1) % p.vertices.len()], p.vertices[k]))
+                else {
+                    continue;
+                };
+                if i == j {
+                    continue;
+                }
+                let Some(q) = slots[j].as_ref() else { continue };
+                if dot(p.plane.normal, q.plane.normal) <= 1. - 1e-10
+                    || p.plane.distance(q.plane.origin).abs() >= eps
+                {
+                    continue;
+                }
+                let mut v = Vec::new();
+                for offset in 1..=p.vertices.len() {
+                    v.push(p.vertices[(k + offset) % p.vertices.len()]);
+                }
+                for offset in 2..q.vertices.len() {
+                    v.push(q.vertices[(l + offset) % q.vertices.len()]);
+                }
+                // Distinctness via the same quantization as `key` above:
+                // O(v log v) instead of the O(v^2) pairwise distance check.
+                budget.tick(v.len())?;
+                let mut seen = BTreeSet::new();
+                if v.iter().all(|p| seen.insert(p.map(|x| (x / eps).round() as i64)))
+                    && (0..v.len()).all(|t| {
+                        dot(
+                            cross(
+                                sub(v[(t + 1) % v.len()], v[t]),
+                                sub(v[(t + 2) % v.len()], v[(t + 1) % v.len()]),
+                            ),
+                            p.plane.normal,
+                        ) >= -eps * eps
+                    })
+                {
+                    pair = Some((j, v));
+                    break;
+                }
+            }
+            let Some((j, v)) = pair else { break };
+            let Some(merged) = Polygon::new(v, eps, budget)? else {
+                break;
+            };
+            for index in [i, j] {
+                let old = slots[index].take().unwrap();
+                for k in 0..old.vertices.len() {
+                    edges.remove(&key(
+                        old.vertices[k],
+                        old.vertices[(k + 1) % old.vertices.len()],
+                    ));
+                }
+            }
+            for k in 0..merged.vertices.len() {
+                edges.insert(
+                    key(
+                        merged.vertices[k],
+                        merged.vertices[(k + 1) % merged.vertices.len()],
+                    ),
+                    (i, k),
+                );
+            }
+            slots[i] = Some(merged);
+        }
+    }
+    Ok(slots.into_iter().flatten().collect())
+}
+
+pub(super) struct Vertices {
+    pub(super) points: Vec<Point>,
+    // Only point lookups/insertions by cell key; iteration order never leaks
+    // into the output, so hash ordering cannot affect determinism.
+    pub(super) cells: FxHashMap<[i64; 3], Vec<usize>>,
+    pub(super) eps: f64,
+}
+impl Vertices {
+    pub(super) fn new(eps: f64) -> Self {
+        Self {
+            points: vec![],
+            cells: FxHashMap::default(),
+            eps,
+        }
+    }
+    pub(super) fn insert(&mut self, p: Point) -> usize {
+        let cell = p.map(|v| (v / self.eps).floor() as i64);
+        for x in -1..=1 {
+            for y in -1..=1 {
+                for z in -1..=1 {
+                    if let Some(indices) = self.cells.get(&[cell[0] + x, cell[1] + y, cell[2] + z])
+                    {
+                        for &i in indices {
+                            if norm(sub(self.points[i], p)) <= self.eps {
+                                return i;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let id = self.points.len();
+        self.points.push(p);
+        self.cells.entry(cell).or_default().push(id);
+        id
     }
 }

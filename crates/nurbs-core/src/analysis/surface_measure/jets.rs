@@ -333,6 +333,27 @@ mod tests {
         assert!(i.lo <= value && value <= i.hi, "{value} outside {i:?}");
     }
     #[test]
+    fn bernstein_rearrangements_preserve_complement_correlation_and_interval_inputs() {
+        let t = I::new(0.75, 1.).unwrap();
+        let points = vec![[I::point(1.); 4], [I::point(1.125); 4]];
+        let out = evaluate_bernstein(points, t).unwrap();
+        for v in out {
+            assert!(v.lo <= 1.09375 && v.hi >= 1.125);
+            assert!(v.hi - v.lo < 0.031250000001);
+        }
+        let a = I::new(1., 1.01).unwrap();
+        let b = I::new(1.125, 1.13).unwrap();
+        let out = evaluate_bernstein(vec![[a; 4], [b; 4]], t).unwrap();
+        for a in [1., 1.005, 1.01] {
+            for b in [1.125, 1.1275, 1.13] {
+                for t in [0.75, 0.875, 1.] {
+                    let value = (1. - t) * a + t * b;
+                    assert!(out[0].lo <= value && value <= out[0].hi);
+                }
+            }
+        }
+    }
+    #[test]
     fn stable_jets_on_ulp_wide_queries_match_original_rational_derivatives() {
         let s = Surface {
             degree_u: 1,

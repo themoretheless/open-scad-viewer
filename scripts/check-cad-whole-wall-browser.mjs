@@ -4,7 +4,7 @@ import {createServer} from 'node:http'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
-const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-face-distance')
+const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-face-distance')
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
@@ -28,7 +28,7 @@ try {
   const NativeWorker=window.Worker;window.__holdDistance=false;window.__distanceRequests=0;window.__distanceResults=[];window.__distanceTimings=[]
   window.Worker=class extends NativeWorker {
    constructor(...args){super(...args);this.__starts=new Map();this.addEventListener('message',e=>{if(['materialChord','materialSegment','materialWall','wholeWall'].includes(e.data?.kind)&&e.data.ok){window.__distanceResults.push(e.data.result);const start=this.__starts.get(e.data.id);if(start!==undefined){window.__distanceTimings.push({workerRoundTripMs:performance.now()-start,cells:e.data.result.cells,domainCells:e.data.result.domainCells,converged:e.data.result.converged});this.__starts.delete(e.data.id)}}})}
-   postMessage(message,...args){if(['materialChord','materialSegment','materialWall','wholeWall'].includes(message?.job?.kind)){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}this.__starts.set(message.id,performance.now())}return super.postMessage(message,...args)}
+   postMessage(message,...args){if(['materialChord','materialSegment','materialWall','wholeWall'].includes(message?.job?.kind)){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;const callback=this.onmessage,result=structuredClone(window.__distanceResults.at(-1));window.__deliverLateDistance=()=>{if(!result||!callback)throw Error('Missing completed result or callback for late-response replay');callback({data:{version:1,id:message.id,kind:message.job.kind,ok:true,result}})};return}this.__starts.set(message.id,performance.now())}return super.postMessage(message,...args)}
    terminate(){if(this.__held)window.__distanceTerminated=true;return super.terminate()}
   }
  })
@@ -89,6 +89,7 @@ try {
    await page.waitForFunction(()=>window.__distanceHeld===true)
    await input(field.getByRole('spinbutton',{name:'Допуск, мм',exact:true}),'0.001')
    await page.waitForFunction(()=>window.__distanceTerminated===true)
+   await page.evaluate(()=>window.__deliverLateDistance())
    assert.equal(await field.locator('[data-whole-wall-thickness]').count(),0)
    await page.evaluate(()=>{window.__holdDistance=false;window.__failDistance=true});await run()
    await field.getByRole('alert').filter({hasText:'Поиск не выполнен'}).waitFor()
@@ -106,7 +107,7 @@ try {
   outcomes.push({name:specimen.name,result})
  }
  assert.deepEqual(errors,[])
- const report={passed:true,keyboard,tabs,outcomes,errors,cancelledHeldRequest:true,retry:true,unchanged:true,reloadExact:true,
+ const report={passed:true,keyboard,tabs,outcomes,errors,cancelledHeldRequest:true,lateReplyReplayed:true,retry:true,unchanged:true,reloadExact:true,
  wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')}
  await writeFile(path.join(directory,'report.json'),JSON.stringify(report,null,2)+'\n')
  console.log(JSON.stringify({passed:true,keyboard,cases:outcomes.length}))

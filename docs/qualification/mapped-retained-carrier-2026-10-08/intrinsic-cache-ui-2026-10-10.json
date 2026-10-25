@@ -1,0 +1,17 @@
+{
+  "schema": "expression-wall-ui-parity/1",
+  "wasmSha256": "7c77219ae1ee8e8899ef563a8124b67c93f896784c2fd6fbd00848055164183d",
+  "url": "http://127.0.0.1:5198/",
+  "budget": "standard",
+  "pendingRegions": 4085,
+  "cells": 10000,
+  "spans": 48488,
+  "intrinsicChecks": 2368,
+  "initialPairsChecked": 435,
+  "totalPairs": 435,
+  "matchesNativeStandardCounters": true,
+  "wholeWallQualified": false,
+  "evidence": "intrinsic-cache-ui-2026-10-10.png",
+  "workerZeroBudget": "intrinsic-cache-worker-zero-2026-10-10",
+  "workerBounded": "intrinsic-cache-worker-bounded-2026-10-10"
+}

@@ -1,0 +1,16 @@
+{
+  "scope": "exploratory normal-product audit, no Body certificate",
+  "cellsPerPair": 1024,
+  "spansPerPair": 8192,
+  "completePairs": 212,
+  "counts": {
+    "aligned-region": 72,
+    "work-limit": 58,
+    "resolution-limit": 14,
+    "normal-product-excluded": 68
+  },
+  "cells": 65940,
+  "spans": 15707,
+  "outputJsonSha256": "ac3fa4b8f670dd8c74fde2405330c63807fa765d7cb93bd02801ebfa38f661c3",
+  "sourceSurfacesUnchanged": true
+}

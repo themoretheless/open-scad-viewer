@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer
+
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  16:55:07
+   Duration  115.52s (transform 765ms, setup 0ms, import 886ms, tests 114.53s, environment 0ms)
+

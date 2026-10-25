@@ -1,0 +1,203 @@
+{
+  "schema": "fresh-cad-ui-step/1",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "toleranceMm": 1e-05,
+  "relativeVolumeTolerance": 1e-07,
+  "parts": [
+    {
+      "name": "bracket-ui-edited",
+      "file": "bracket-ui-edited.step",
+      "sha256": "07d8fcb2e6df3de5ee5e26147cb14fa9d191dbd6ce90d5cd6e90fd6fa0fa046b",
+      "expected": {
+        "boundsMm": [
+          [
+            4,
+            -2,
+            1
+          ],
+          [
+            44,
+            28,
+            21
+          ]
+        ],
+        "volumeMm3": 6495.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "bracket",
+        "rounded": true,
+        "translationMm": [
+          4,
+          -2,
+          1
+        ]
+      }
+    },
+    {
+      "name": "bracket-ui-reloaded",
+      "file": "bracket-ui-reloaded.step",
+      "sha256": "07d8fcb2e6df3de5ee5e26147cb14fa9d191dbd6ce90d5cd6e90fd6fa0fa046b",
+      "expected": {
+        "boundsMm": [
+          [
+            4,
+            -2,
+            1
+          ],
+          [
+            44,
+            28,
+            21
+          ]
+        ],
+        "volumeMm3": 6495.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "bracket",
+        "rounded": true,
+        "translationMm": [
+          4,
+          -2,
+          1
+        ]
+      }
+    },
+    {
+      "name": "flange-ui-edited",
+      "file": "flange-ui-edited.step",
+      "sha256": "22502f06fe374b867f1bdd4d38adb36c56fae1d36046e951c8c340dfdd7332a0",
+      "expected": {
+        "boundsMm": [
+          [
+            -16,
+            -22,
+            1
+          ],
+          [
+            24,
+            18,
+            7
+          ]
+        ],
+        "volumeMm3": 7041.916993999775,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "flange",
+        "rounded": true,
+        "translationMm": [
+          4,
+          -2,
+          1
+        ]
+      }
+    },
+    {
+      "name": "flange-ui-reloaded",
+      "file": "flange-ui-reloaded.step",
+      "sha256": "22502f06fe374b867f1bdd4d38adb36c56fae1d36046e951c8c340dfdd7332a0",
+      "expected": {
+        "boundsMm": [
+          [
+            -16,
+            -22,
+            1
+          ],
+          [
+            24,
+            18,
+            7
+          ]
+        ],
+        "volumeMm3": 7041.916993999775,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "flange",
+        "rounded": true,
+        "translationMm": [
+          4,
+          -2,
+          1
+        ]
+      }
+    },
+    {
+      "name": "enclosure-ui-edited",
+      "file": "enclosure-ui-edited.step",
+      "sha256": "839e865c3884bd0022333ff6d9f34427cbcf3f6fe6c2d0b16746ec3a64b31722",
+      "expected": {
+        "boundsMm": [
+          [
+            4,
+            -2,
+            1
+          ],
+          [
+            44,
+            28,
+            21
+          ]
+        ],
+        "volumeMm3": 7147.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "enclosure",
+        "rounded": true,
+        "translationMm": [
+          4,
+          -2,
+          1
+        ]
+      }
+    },
+    {
+      "name": "enclosure-ui-reloaded",
+      "file": "enclosure-ui-reloaded.step",
+      "sha256": "839e865c3884bd0022333ff6d9f34427cbcf3f6fe6c2d0b16746ec3a64b31722",
+      "expected": {
+        "boundsMm": [
+          [
+            4,
+            -2,
+            1
+          ],
+          [
+            44,
+            28,
+            21
+          ]
+        ],
+        "volumeMm3": 7147.707963267949,
+        "solids": 1
+      },
+      "gaugeSpecification": {
+        "part": "enclosure",
+        "rounded": true,
+        "translationMm": [
+          4,
+          -2,
+          1
+        ]
+      }
+    }
+  ],
+  "independentStepQualified": true,
+  "gaugeSpecificationSource": "Analytical fixture placement [3,-2,1] plus commanded UI translation [1,0,0]; appended after browser run, not derived from exported geometry.",
+  "independentDimensionsQualified": true,
+  "independentDimensionReport": {
+    "file": "dimension-report.json",
+    "sha256": "fdffaa6dedb5b8ff059a2eda177de137f7a47bab988b6fce3ee00f0e9e2f4895",
+    "gauges": 24
+  },
+  "stepBytesPreservedAcrossReload": true,
+  "independentStepReport": {
+    "file": "occt-report.json",
+    "sha256": "3b6353af9265daba5d7824caff5e34227a1b9086ae86887de135c271afb39a1c",
+    "oracle": "OpenCascade via cadquery-ocp",
+    "version": "8.0.1.0.0"
+  }
+}

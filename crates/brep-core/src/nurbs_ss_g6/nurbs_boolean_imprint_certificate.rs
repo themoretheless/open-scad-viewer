@@ -1,12 +1,5 @@
 use super::*;
 
-pub(crate) fn is_nurbs_boolean_candidate(a: &Model, b: &Model) -> bool {
-    a.faces
-        .iter()
-        .chain(&b.faces)
-        .all(|face| is_bezier_le3_positive(&face.surface))
-}
-
 /// Aggregate proof for the finite `/2` contacting-solid cell.
 #[derive(Clone, Debug)]
 pub struct NurbsBooleanImprintCertificate {
@@ -159,6 +152,70 @@ impl NurbsBooleanImprintCertificate {
     }
 }
 
+pub(super) fn mix_pt(a: &[f64], b: &[f64], t: f64) -> Vec<f64> {
+    a.iter()
+        .zip(b.iter())
+        .map(|(u, v)| (1. - t) * u + t * v)
+        .collect()
+}
+
+/// Elevate an admitted Bezier-le3 patch (or already-uniform bicubic) to R1 bicubic.
+/// Keeps the historical bilinear 1×1 elevation path; deg 2 and mixed use Bernstein
+/// elevation on U then V until 3×3.
+pub(super) fn as_uniform_bicubic(surface: &Surface) -> Option<Surface> {
+    if is_uniform_bicubic_positive(surface) {
+        return Some(surface.clone());
+    }
+    if !is_bezier_le3_positive(surface) {
+        return None;
+    }
+    if surface.degree_u == 1 && surface.degree_v == 1 {
+        return elevate_bilinear_1x1(surface);
+    }
+    let elevated = surface
+        .edit_axis(Axis::U, |c| c.elevate(3))
+        .ok()?
+        .edit_axis(Axis::V, |c| c.elevate(3))
+        .ok()?;
+    if is_uniform_bicubic_positive(&elevated) {
+        Some(elevated)
+    } else {
+        None
+    }
+}
+
+pub(super) fn elevate_bilinear_1x1(surface: &Surface) -> Option<Surface> {
+    let p00 = &surface.control_points[0][0];
+    let p10 = &surface.control_points[0][1];
+    let p01 = &surface.control_points[1][0];
+    let p11 = &surface.control_points[1][1];
+    let row = |a: &[f64], b: &[f64]| -> Vec<Vec<f64>> {
+        vec![
+            a.to_vec(),
+            mix_pt(a, b, 1. / 3.),
+            mix_pt(a, b, 2. / 3.),
+            b.to_vec(),
+        ]
+    };
+    let r0 = row(p00, p10);
+    let r1 = row(p01, p11);
+    let mut control_points = Vec::with_capacity(4);
+    for j in 0..4 {
+        let t = j as f64 / 3.;
+        control_points.push((0..4).map(|i| mix_pt(&r0[i], &r1[i], t)).collect());
+    }
+    Some(Surface {
+        degree_u: 3,
+        degree_v: 3,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points,
+        weights: vec![vec![1.; 4]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    })
+}
+
 pub fn nurbs_boolean_transverse_bicubic(
     a: &Surface,
     b: &Surface,
@@ -182,7 +239,7 @@ pub(super) fn model_aabb(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
-fn affine_planar_carrier(model: &Model) -> Result<Model> {
+pub(super) fn affine_planar_carrier(model: &Model) -> Result<Model> {
     let tolerance = model.tolerance_mm.max(1e-9);
     let mut carrier = model.clone();
     for (face_index, face) in model.faces.iter().enumerate() {
@@ -239,7 +296,7 @@ fn affine_planar_carrier(model: &Model) -> Result<Model> {
     Ok(carrier)
 }
 
-fn strict_partial_contact(a: &Model, b: &Model) -> Result<()> {
+pub(super) fn strict_partial_contact(a: &Model, b: &Model) -> Result<()> {
     let (amin, amax) = model_aabb(a);
     let (bmin, bmax) = model_aabb(b);
     let tolerance = a.tolerance_mm.max(b.tolerance_mm).max(1e-9);
@@ -343,13 +400,13 @@ pub fn nurbs_boolean_imprint_solids(
     Ok((result, cert))
 }
 
-fn point3(surface: &Surface, u: f64, v: f64) -> Result<[f64; 3]> {
-    let p = surface.evaluate(u, v)?.point;
-    Ok([p[0], p[1], p[2]])
+pub(super) fn near_point(a: [f64; 3], b: [f64; 3], tolerance: f64) -> bool {
+    norm(sub(a, b)) <= tolerance
 }
 
-fn near_point(a: [f64; 3], b: [f64; 3], tolerance: f64) -> bool {
-    norm(sub(a, b)) <= tolerance
+pub(super) fn point3(surface: &Surface, u: f64, v: f64) -> Result<[f64; 3]> {
+    let p = surface.evaluate(u, v)?.point;
+    Ok([p[0], p[1], p[2]])
 }
 
 /// Canonical one-body input for the finite V3 cell.  Its only non-planar face
@@ -540,20 +597,4 @@ pub(crate) fn canonical_graph_is_first(model: &Model) -> bool {
 pub(crate) fn is_nurbs_boolean_v5_candidate(a: &Model, b: &Model) -> bool {
     canonical_graph_frame_cell(a, true, false).is_ok()
         ^ canonical_graph_frame_cell(b, true, false).is_ok()
-}
-
-pub(super) fn unit_domain(mut curve: Curve) -> Curve {
-    let [lo, hi] = curve.domain();
-    for knot in &mut curve.knots {
-        *knot = (*knot - lo) / (hi - lo);
-    }
-    curve
-}
-
-pub(super) fn edge_between(model: &Model, a: usize, b: usize) -> Result<usize> {
-    model
-        .edges
-        .iter()
-        .position(|edge| edge.vertices == [a.min(b), a.max(b)])
-        .ok_or_else(|| refuse("V3 clipped box edge is missing"))
 }

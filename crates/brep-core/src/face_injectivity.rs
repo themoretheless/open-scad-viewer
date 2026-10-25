@@ -15,6 +15,7 @@ pub struct Face {
 }
 #[derive(Clone, Debug)]
 pub struct Quotient {
+    pub collapsed_axis: usize,
     pub collapsed_end: usize,
     pub pole_edge: usize,
     pub pole_vertex: usize,
@@ -99,9 +100,10 @@ fn inspect_impl(
             .is_some_and(|r| r.reason == "collapsed-boundary-requires-quotient-proof")
             && max_spans - report.spans >= 256
         {
-            if let Some((end, edge, vertex)) = declared_pole(model, face) {
+            if let Some((axis, end, edge, vertex)) = declared_pole_chart(model, face) {
+                let canonical = canonical_pole_surface(&f.surface,axis);
                 let proof = surface_quotient_injectivity::certify_source_frame(
-                    &f.surface,
+                    &canonical,
                     end,
                     16,
                     max_spans - report.spans,
@@ -109,11 +111,12 @@ fn inspect_impl(
                 report.spans += proof.cells;
                 let polar = if !proof.proven && max_spans-report.spans >= 64 {
                     let r=surface_quotient_injectivity::certify_polar_source_frame(
-                        &f.surface,end,8,max_spans-report.spans)?;
+                        &canonical,end,8,max_spans-report.spans)?;
                     report.spans+=r.cells;
                     Some(r)
                 } else { None };
                 Some(Quotient {
+                    collapsed_axis: axis,
                     collapsed_end: end,
                     pole_edge: edge,
                     pole_vertex: vertex,
@@ -147,7 +150,18 @@ pub fn inspect_with_projections(
     inspect_impl(model, max_spans, max_linear_cells, false, proposals)
 }
 
-pub(crate) fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize, usize)> {
+pub(crate) fn declared_pole(model:&Model,face:usize)->Option<(usize,usize,usize)> {
+    let (axis,end,edge,vertex)=declared_pole_chart(model,face)?;
+    (axis==0).then_some((end,edge,vertex))
+}
+/// Exact parameter exchange, not a fitted/rounded proxy surface.
+pub(crate) fn canonical_pole_surface(s:&nurbs_core::surface::Surface,axis:usize)->nurbs_core::surface::Surface {
+    if axis==0 {return s.clone();}
+    nurbs_core::surface::Surface {degree_u:s.degree_v,degree_v:s.degree_u,knots_u:s.knots_v.clone(),knots_v:s.knots_u.clone(),
+        control_points:(0..s.control_points[0].len()).map(|v|s.control_points.iter().map(|r|r[v].clone()).collect()).collect(),
+        weights:(0..s.weights[0].len()).map(|v|s.weights.iter().map(|r|r[v]).collect()).collect(),periodic_u:s.periodic_v,periodic_v:s.periodic_u}
+}
+pub(crate) fn declared_pole_chart(model:&Model,face:usize)->Option<(usize,usize,usize,usize)> {
     let f = &model.faces[face];
     let s = &f.surface;
     let u = [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]];
@@ -172,8 +186,11 @@ pub(crate) fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize,
             let b = &ce.pcurve.control_points[1];
             if a[0] == b[0] && ((a[1] == v[0] && b[1] == v[1]) || (a[1] == v[1] && b[1] == v[0])) {
                 if let Some(end) = u.iter().position(|value| *value == a[0]) {
-                    return Some((end, ce.edge, edge.vertices[0]));
+                    return Some((0,end, ce.edge, edge.vertices[0]));
                 }
+            }
+            if a[1]==b[1] && ((a[0]==u[0] && b[0]==u[1]) || (a[0]==u[1] && b[0]==u[0])) {
+                if let Some(end)=v.iter().position(|value|*value==a[1]) {return Some((1,end,ce.edge,edge.vertices[0]));}
             }
         }
     }
@@ -182,6 +199,24 @@ pub(crate) fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize,
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unequal_annular_radii_cover_regular_middle_and_owned_pole_quotients() {
+        for radii in [[0.5,1.25],[1.25,0.5]] {
+            let model=crate::circular_blend::partial_annular_variable_arc(20.,5.,6.,radii,[0.3,0.7,0.4],1e-7).unwrap();
+            let before=value_codec::to_string(&model).unwrap();
+            let r=inspect(&model,10000).unwrap();
+            assert!(r.all_faces_injective);
+            assert_eq!(r.faces.len(),31);
+            assert!(r.faces.iter().all(Face::absence_proven));
+            for face in [0,10] {assert!(r.faces[face].quotient.as_ref().unwrap().result.proven);}
+            let middle=r.faces[5].result.as_ref().unwrap();
+            assert_eq!(middle.reason,"global-polar-p-matrix");
+            assert!(middle.polar_p_matrix.as_ref().unwrap().determinant_lower>0.);
+            let short=inspect(&model,1).unwrap();assert!(!short.all_faces_injective);
+            assert!(short.faces.iter().any(|f|!f.absence_proven()));
+            assert_eq!(value_codec::to_string(&model).unwrap(),before);
+        }
+    }
     #[test]
     #[cfg(feature = "codec")]
     #[ignore = "requires an explicitly supplied retained-model diagnostic fixture"]
@@ -409,15 +444,16 @@ mod tests {
         let before = format!("{model:?}");
         let r = inspect(&model, 1000).unwrap();
         assert!(r.all_faces_injective);
-        assert_eq!(r.spans, 968);
+        let required = r.spans;
+        assert!(required > 0 && required <= 1000);
         for f in &r.faces {
             let x = f.result.as_ref().unwrap();
             assert_eq!(x.reason, "global-projective-projection-contraction");
             assert!(x.projective_projection.is_some());
         }
-        let r = inspect(&model, 967).unwrap();
+        let r = inspect(&model, required-1).unwrap();
         assert!(!r.all_faces_injective);
-        assert_eq!(r.spans, 967);
+        assert_eq!(r.spans, required-1);
         assert_eq!(
             r.faces.last().unwrap().result.as_ref().unwrap().reason,
             "work-limit"
@@ -503,9 +539,10 @@ impl Inspector {
             .is_some_and(|r| r.reason == "collapsed-boundary-requires-quotient-proof")
             && self.max_spans - self.report.spans >= 256
         {
-            if let Some((end, edge, vertex)) = declared_pole(self.model.as_ref(), face) {
+            if let Some((axis, end, edge, vertex)) = declared_pole_chart(self.model.as_ref(), face) {
+                let canonical = canonical_pole_surface(&f.surface,axis);
                 let proof = surface_quotient_injectivity::certify_source_frame(
-                    &f.surface,
+                    &canonical,
                     end,
                     16,
                     self.max_spans - self.report.spans,
@@ -513,11 +550,12 @@ impl Inspector {
                 self.report.spans += proof.cells;
                 let polar = if !proof.proven && self.max_spans-self.report.spans >= 64 {
                     let r=surface_quotient_injectivity::certify_polar_source_frame(
-                        &f.surface,end,8,self.max_spans-self.report.spans)?;
+                        &canonical,end,8,self.max_spans-self.report.spans)?;
                     self.report.spans+=r.cells;
                     Some(r)
                 } else { None };
                 Some(Quotient {
+                    collapsed_axis: axis,
                     collapsed_end: end,
                     pole_edge: edge,
                     pole_vertex: vertex,

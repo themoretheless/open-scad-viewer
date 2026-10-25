@@ -52,7 +52,7 @@
 #[cfg(feature = "codec")]
 mod serialization;
 use super::plane_torus::{
-    TorusPatchCurve, lift_parallel, torus_residual,
+    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
 #[cfg(test)]
 use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
@@ -749,5 +749,3 @@ mod tests {
         }
     }
 }
-
-use brep_core::intersections::{CanonicalTorus,recognize_torus};

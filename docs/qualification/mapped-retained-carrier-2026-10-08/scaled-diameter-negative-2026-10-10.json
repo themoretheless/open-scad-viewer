@@ -1,0 +1,31 @@
+{
+  "schema": "retained-profile-diameter-negative/1",
+  "passed": true,
+  "scales": [
+    1e-08,
+    1,
+    1000000.0
+  ],
+  "relativeTranslations": [
+    0,
+    100
+  ],
+  "endpointOrders": 2,
+  "spanBudgets": [
+    0,
+    1,
+    4,
+    8,
+    100
+  ],
+  "combinations": 60,
+  "assertions": [
+    "No true exclusion for an analytical normal diameter",
+    "Reported work never exceeds supplied budget",
+    "At budget 100 the exclusion is explicitly insufficient, not exhausted"
+  ],
+  "seconds": 0.04,
+  "log": "/tmp/scaled-diameter-negative-20261010.log",
+  "scope": "Rational half-cylinder retained profile; not arbitrary NURBS or whole-wall qualification",
+  "productionCodeChanged": false
+}

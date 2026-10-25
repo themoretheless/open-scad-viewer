@@ -1,0 +1,408 @@
+{
+  "schema": "source-strata-tessellation-browser/1",
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "geometryArtifact": {
+    "bytes": 12834623,
+    "sha256": "2e0e21416b1266384f3b33c18b5de381220c89ee10449b7c4f847361eda120a9"
+  },
+  "cases": [
+    {
+      "name": "unified-fiber-caps",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 44,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 164,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 596,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 164,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-fiber-cavity-c0",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 100,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 340,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 1180,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 338,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-fiber-descending",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 44,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 164,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 596,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 164,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-fiber-multipiece-g1",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 108,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 420,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 1620,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 420,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-fiber-multipiece-g2",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 108,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 420,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 1620,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 420,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-fiber-oblique",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 44,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 164,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 596,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 164,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-sphere-nonbinary",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 48,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 224,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 960,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 224,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-sphere-poles",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 48,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 224,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 960,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 224,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    },
+    {
+      "name": "unified-sphere-translated",
+      "passed": true,
+      "levels": [
+        {
+          "segments": 2,
+          "triangles": 48,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 4,
+          "triangles": 224,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        },
+        {
+          "segments": 8,
+          "triangles": 960,
+          "closed": true,
+          "boundaryEdges": 0,
+          "nonManifoldEdges": 0,
+          "orientationConflicts": 0,
+          "degenerateTriangles": 0
+        }
+      ],
+      "afterStep": {
+        "segments": 4,
+        "triangles": 224,
+        "closed": true,
+        "boundaryEdges": 0,
+        "nonManifoldEdges": 0,
+        "orientationConflicts": 0,
+        "degenerateTriangles": 0
+      },
+      "sourceUnchanged": true,
+      "modelUnchanged": true
+    }
+  ],
+  "scope": "Native construction and manifold tessellation in Chromium WASM, including STEP import. No analytic mesh deviation or complete UI lifecycle qualification."
+}

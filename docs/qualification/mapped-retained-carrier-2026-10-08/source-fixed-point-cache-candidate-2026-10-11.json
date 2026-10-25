@@ -1,0 +1,20 @@
+{
+  "scope": "Fragment-local immutable source point memoization; logical work and traversal unchanged; qualification pending",
+  "source": "crates/brep-core/src/source_contour_winding.rs",
+  "sha256": "731e452489ce7a45a069d45a91c9161a1b98e2fd715b264fe1045da5e19c284c",
+  "cacheCapacity": 4096,
+  "publicWasmUpdated": false,
+  "focusedCapacityAndOwnershipGate": {
+    "log": "/tmp/source-fixed-point-cache-capacity-20261011.log",
+    "cargoExit": 0
+  },
+  "fullReplayExact": true,
+  "fullReplayRegression": "source-fixed-point-cache-full-regression-2026-10-11.json",
+  "fullBrepGate": "running",
+  "rootContactGate": "passed",
+  "rootProposalGate": "passed",
+  "replayElapsedMs": 316860.8345,
+  "latencyQualified": false,
+  "currentSourceWithManualBenchmarkSha256": "4fe739781a0d0854a855c9fe2883759767ea0c51cc007138b54df0a1ab79a8d6",
+  "manualBenchmark": "running; test-only addition after full replay and full BRep compilation"
+}

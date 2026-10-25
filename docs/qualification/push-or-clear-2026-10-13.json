@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-13",
+  "scope": "Preserve all tracked and nonignored untracked CAD work without changing active checkout or index",
+  "base": "b8c12d08993e02ba0eb4bbddabaafc075efaac8e",
+  "snapshotBranch": "codex/preserve-fillet-push-20261013-143639",
+  "remoteMain": "95eb118ccac83d9796156eb57b75205e9a98c5f0",
+  "checks": {
+    "vueTypes": "passed",
+    "diffCheck": "passed",
+    "native": "1046 passed, 0 failed, 4 ignored",
+    "candidateWorkerAndBrowser": "passed scoped projective cuboid mouse/keyboard",
+    "correctedCoverageAndMixedTests": "passed",
+    "productionDist": "failed: DirectModeler 511234 bytes exceeds 445772"
+  },
+  "push": "not attempted: skill requires stopping on failed checks",
+  "merge": "not attempted",
+  "cleanup": "not attempted",
+  "stash": "stash@{0}: On (no branch): preserve concurrent edits during cylinder push rebase",
+  "worktrees": "worktree /Users/themoretheless/Documents/Sources/open-scad-viewer\nHEAD 5d063edd16e258cbf247a1ba168ee487e9fc7597\nbranch refs/heads/codex/hardware-offloading-and-wip-2026-10-08\n\nworktree /private/tmp/open-scad-viewer-cad-resume\nHEAD c29ead2da9169ab60a2181443c454f0a7fd121a3\nbranch refs/heads/codex/cad-concurrent-resume-2026-10-01\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/open-scad-viewer-laser-cam\nHEAD 4f6d37ddb8a01ce4c2ea719cc88a7819a45d1475\nbranch refs/heads/codex/laser-cam-foundation\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/open-scad-viewer-laser-p1\nHEAD ea9b941b4211b53de8aae816e1cb842091377c79\nbranch refs/heads/codex/laser-cam-p1\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/open-scad-viewer-push-2026-10-04\nHEAD bd2ffba81b0deb5356277286828e7b1bb0ba6ea9\nbranch refs/heads/codex/push-integration-2026-10-04\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/osv-pr37-budget-fix\nHEAD f824aa31f386235f4d11b4a364bef44910c88335\nbranch refs/heads/codex/frame-ci-budget\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/osv-pr38-memory-fix\nHEAD 64e01a204c3d88acab89481543df910e8e676aa1\nbranch refs/heads/codex/pr38-memory\nprunable gitdir file points to non-existent location\n\nworktree /Users/themoretheless/.codex/tmp/osv-push-integration-20261007\nHEAD de021272cbe5c26ad0778945c00b2cf5ad2fbbf6\nbranch refs/heads/codex/push-integration-2026-10-07\n\nworktree /Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer\nHEAD b8c12d08993e02ba0eb4bbddabaafc075efaac8e\nbranch refs/heads/codex/fillet-end-transitions-2026-10-07\n\nworktree /Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer\nHEAD 5e3ec937f1449ec105b43e02e860a744d21e70f6\nbranch refs/heads/codex/spatial-oblique-bishop",
+  "publishedLocalWasmSha256": "5f6ee10c1469f86629584c9d0373b7a38059b400909117b2c4b6da0b225cf36e"
+}

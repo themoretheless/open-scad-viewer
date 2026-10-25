@@ -14,7 +14,7 @@ fn exact_levels_keep_charges_owned_output_and_iterator_progression() {
     let mut multi=MultiSweep::new(&profiles,&path,&scale,&twist,options()).unwrap();
     let before=multi.next_sections;
     for count in [3,5,9,17,33,3,9,33] {
-        let original=multi.preview_uncached(count).unwrap();assert!(original.report.continuous_bound);
+        let original=multi.preview_uncached(count,10000,1000000).unwrap();assert!(original.report.continuous_bound);
         let mut first=multi.preview_at(count).unwrap();
         assert_eq!(format!("{original:?}"),format!("{first:?}"));
         assert_eq!(multi.next_sections,before);
@@ -23,7 +23,7 @@ fn exact_levels_keep_charges_owned_output_and_iterator_progression() {
         assert_eq!(format!("{original:?}"),format!("{:?}",multi.preview_at(count).unwrap()));
         bounded();
     }
-    let original=multi.preview_uncached(3).unwrap();
+    let original=multi.preview_uncached(3,10000,1000000).unwrap();
     assert_eq!(format!("{original:?}"),format!("{:?}",multi.next().unwrap().unwrap()));
     assert!(multi.next().is_none());
     // Even an internal stale slot cannot bypass the public count guard.
@@ -63,7 +63,7 @@ fn source_laws_frames_anchors_and_work_policies_have_distinct_keys() {
     let low=MultiSweep::new(&profiles,&path,&scale,&twist,rmf_options).unwrap()
         .with_spatial_rmf_error_limits(512,1,1).unwrap();
     assert!(get(&key(&low,3).unwrap()).is_none());
-    assert_eq!(format!("{:?}",low.preview_uncached(3)),format!("{:?}",low.preview_at(3)));
+    assert_eq!(format!("{:?}",low.preview_uncached(3,1,1)),format!("{:?}",low.preview_at(3)));
 }
 #[test]
 fn storage_and_key_limits_refuse_oversized_or_unproved_entries() {

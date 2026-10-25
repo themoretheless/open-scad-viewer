@@ -1,0 +1,28 @@
+{
+  "schema": "cad-mapped-root-step-occt/1",
+  "stepSha256": "aa9dd26f7ebc622f48bec5e20ab307125054acff9d218474ddfd48d816220961",
+  "scope": "One specified native source-body STEP export; independent solid validity, signed volume and axis extents.",
+  "occtValid": true,
+  "solids": 1,
+  "volumeMm3": 0.16666666666666663,
+  "expectedVolumeMm3": 0.16666666666666666,
+  "volumeErrorMm3": 2.7755575615628914e-17,
+  "boundsMm": [
+    -1e-07,
+    -1e-07,
+    -1e-07,
+    1.0000001,
+    1.0000001,
+    1.0000001
+  ],
+  "expectedBoundsMm": [
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "maxBoundsErrorMm": 1.0000000005838672e-07,
+  "passed": true
+}

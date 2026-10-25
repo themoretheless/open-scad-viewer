@@ -1,0 +1,80 @@
+{
+  "schema": "implicit-sphere-private-wasm-runtime-correspondence/1",
+  "qualifiedCodeRevision": "5bb7320b22f280f55e38fbd363549addef003b85",
+  "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a",
+  "wasmBytes": 18073723,
+  "node": "v26.11.1",
+  "tsx": "4.23.13",
+  "inputs": [
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime.mts",
+      "sha256": "ae7011446fa1bfd6c1118151f0f85d79a2350a215f366f2343a143f6956dfce2"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step/moving-affine-caps.source.json",
+      "sha256": "436ae17596d15696087bf55346f7d3da3bc367270259ec4b7a47eafb507d5af6"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step/nonplanar-caps.source.json",
+      "sha256": "2b9f2ff6277b58149caa0d93c1110bf53c4eee3f29002a6ecfbc6a13b84517ba"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step/planar-caps.source.json",
+      "sha256": "c6f605d2eaf2944b2a1652c1ff8d2d978ed1cdb51b9c993be6a7343926cdf650"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step/rational-profile-affine-caps.source.json",
+      "sha256": "a9d84772c47afbd59e0644c65bd281bf4aa3a2403325ce5b743cf6038ae62ac3"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step/rational-profile-caps.source.json",
+      "sha256": "6ab6ee0f61c69de32ca52e8140d601ec528b0afb539d846b67d7a236706d2a75"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/rational-cap-step/reflected-caps.source.json",
+      "sha256": "9392782d95db0bb411322b7be3ca2233cadc215222695a6123e275a1810cc0e4"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/sphere-step/sphere-nonbinary-radius.source.json",
+      "sha256": "7a1305122f4980dba986d50d0da6b2ecd45b64c2907b935616051f350cdc5e93"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/sphere-step/sphere-regular.source.json",
+      "sha256": "9dcb4c1ab8165bf11f7b2eb86f3ce7956bd38df6ef4ba227683fbef646c55788"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/sphere-step/sphere-translated-poles.source.json",
+      "sha256": "83124272c29ec36158dad838d2f95d48b0cb97a0f53888b9b5de9950528a0256"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-test-contract-2026-10-16/sphere-step/sphere-two-poles.source.json",
+      "sha256": "a493dd5193ffd10d545d90a6d0952d64f1a073fbed6a8914441e313cb62129cb"
+    },
+    {
+      "path": "docs/qualification/rational-cap-source-audit-2026-10-16/wasm-runtime.mts",
+      "sha256": "71ae6cb19ba9b8bec12922bb789752837ff086a1b07aec79c70f45b51a93e6a8"
+    },
+    {
+      "path": "src/services/valueBinaryCodec.ts",
+      "sha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176"
+    }
+  ],
+  "inputsSha256": "28c90367f0fa5680cc853da482e23a257ea31c08e73c6539c31f9d6c3f8d2390",
+  "inputCorrespondenceVerified": true,
+  "reports": [
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/wasm-runtime-report.json",
+      "sha256": "9e31ce246681749c3e270816a8bbca15ddc95a26f1e7f14f1544b1bced7a2791",
+      "cases": 4,
+      "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a"
+    },
+    {
+      "path": "docs/qualification/implicit-sphere-source-2026-10-16/rational-cap-wasm-runtime-report.json",
+      "sha256": "834ebf09e5fc5724aabdd74b7e6cc298f4d51ef47f6b0e2b2e0a0955f3fbe968",
+      "cases": 6,
+      "wasmSha256": "bf079682200cccd37f3cd9b0ea77147e6d25e1b07f3da8eef5bf78139e822a6a"
+    }
+  ],
+  "sharpC0Passed": true,
+  "publicPackageQualified": false
+}

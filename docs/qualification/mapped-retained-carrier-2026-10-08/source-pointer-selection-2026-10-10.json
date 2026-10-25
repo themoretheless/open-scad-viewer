@@ -1,0 +1,18 @@
+{
+  "schema": "source-pointer-selection/1",
+  "bodySelectionAfterMenuClosed": true,
+  "openMenuBodySelection": false,
+  "strokeHitRead": {
+    "label": "Кольцевая деталь — переход ребро 0",
+    "x": 674.573486989821,
+    "y": 404.7637974021348
+  },
+  "selectedAfterNativeClick": [
+    "Кольцевая деталь — переход ребро 1"
+  ],
+  "exactRequestedEdgeMatched": false,
+  "limits": [
+    "Native stroke click selects a source edge; the exact-edge match did not pass",
+    "File popover overlays the scene row while open; close it before selection"
+  ]
+}

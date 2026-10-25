@@ -143,3 +143,21 @@
             assert!(inspect(&curves, 1e-10, 100, 10000).unwrap().proven_simple);
         }
     }
+
+    #[test]
+    fn rational_arc_and_chord_require_owned_endpoints_and_strict_open_side() {
+        let arc=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.,0.],vec![0.5,0.],vec![1.,1.]],weights:vec![1.,0.5,1.],periodic:false};
+        let chord=Curve::from_polyline(vec![vec![1.,1.],vec![0.,0.]]).unwrap();
+        let two=vec![arc.clone(),chord];let before=format!("{two:?}");
+        let proof=inspect(&two,1e-8,100,1000).unwrap();assert!(proof.proven_simple);assert!(proof.cells>0 && proof.cells<=1000);
+        assert!(!inspect(&two,1e-8,100,1).unwrap().proven_simple);
+        let reversed=two.iter().rev().map(Curve::reverse).collect::<Result<Vec<_>>>().unwrap();assert!(inspect(&reversed,1e-8,100,1000).unwrap().proven_simple);
+        let mut rotated=two.clone();for c in &mut rotated {for p in &mut c.control_points {let [x,y]=[p[0],p[1]];p[0]=1024.+x-y;p[1]=-2048.+x+y;}}
+        assert!(inspect(&rotated,1e-8,100,1000).unwrap().proven_simple);
+        let three=vec![arc.clone(),Curve::from_polyline(vec![vec![1.,1.],vec![0.5,0.5]]).unwrap(),Curve::from_polyline(vec![vec![0.5,0.5],vec![0.,0.]]).unwrap()];
+        assert!(inspect(&three,1e-8,100,1000).unwrap().proven_simple);
+        let crossed=vec![arc.clone(),Curve::from_polyline(vec![vec![1.,1.],vec![-1.,-1.]]).unwrap(),Curve::from_polyline(vec![vec![-1.,-1.],vec![0.,0.]]).unwrap()];
+        assert!(!inspect(&crossed,1e-8,100,1000).unwrap().proven_simple);
+        let mut coincident=two.clone();coincident[0].control_points[1]=vec![0.5,0.5];assert!(!inspect(&coincident,1e-8,100,1000).unwrap().proven_simple);
+        assert_eq!(format!("{two:?}"),before);
+    }

@@ -1,0 +1,14 @@
+{
+  "schema": "cad-qualification-source-inputs/1",
+  "scope": "Selected changed root/correspondence sources for in-progress WASM build; not a complete reproducibility manifest or successful build result",
+  "head": "b8c12d08993e02ba0eb4bbddabaafc075efaac8e",
+  "sources": {
+    "crates/cad-predicates/src/bezier_composition_identity.rs": "5c644d770a1239c2902702c70cf216bd485c7df1c2c63f8e111ed70381b80e63",
+    "crates/cad-predicates/src/bezier_point_identity.rs": "0fd925f6353bbd8cdbfac0f0eee5f413060f9e4fa299e2386b5e96fdae049115",
+    "crates/nurbs-core/src/curve_axis_driver.rs": "3790f1e2763449d5cceb9b1d71c05d2a07c25beeb14df706ee94e534f832735f",
+    "crates/nurbs-core/src/curve_point_identity.rs": "62914e6905403d275264c49493bb4e40ebbcf55f908492c82468004d9fe854e8",
+    "crates/nurbs-core/src/curve_surface_affine.rs": "51d44f807eba0999e224be2fce47fda1b16797e4f3564c94b8114577651b525c",
+    "crates/brep-core/src/source_shared_edge.rs": "5012caa47fc9a63031e5defe281590bcceb02e9d9a2e0fddd5323a0197f79812",
+    "crates/brep-core/src/source_mapped_edge.rs": "6c9eafcbcac304ca42be162ce2b66937d571b2742345902b390fc0ef449cd83c"
+  }
+}

@@ -10,7 +10,7 @@ use crate::{
     Result,
 };
 type Net = Vec<Vec<[I; 2]>>;
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Root {
     pub uv: [[f64; 2]; 2],
     pub parameter: [f64; 2],
@@ -373,6 +373,21 @@ fn intersections_original(
             })
         }
     }
+    isolate(stack, tolerance_uv, max_cells, |uv| {
+        let xyz = rectangle_bounds(s, uv)?;
+        let t = signed_div(
+            I::new(xyz[dominant][0], xyz[dominant][1])?.sub(I::point(origin[dominant]))?,
+            direction[dominant],
+        )?;
+        Ok([t.lo, t.hi])
+    })
+}
+fn isolate(
+    mut stack: Vec<Cell>,
+    tolerance_uv: f64,
+    max_cells: usize,
+    mut parameter_bounds: impl FnMut([[f64; 2]; 2]) -> Result<[f64; 2]>,
+) -> Result<Report> {
     let mut report = Report {
         profile_parameterization: None,
         roots: Vec::new(),
@@ -402,15 +417,9 @@ fn intersections_original(
                 }
                 let uv = global_domain(&cell, unit)?;
                 if uv.iter().all(|d| (d[1] - d[0]).next_up() <= tolerance_uv) {
-                    let xyz = rectangle_bounds(s, uv)?;
-                    let t = signed_div(
-                        I::new(xyz[dominant][0], xyz[dominant][1])?
-                            .sub(I::point(origin[dominant]))?,
-                        direction[dominant],
-                    )?;
                     report.roots.push(Root {
                         uv,
-                        parameter: [t.lo, t.hi],
+                        parameter: parameter_bounds(uv)?,
                     });
                     continue;
                 }
@@ -449,8 +458,169 @@ fn intersections_original(
     Ok(report)
 }
 
+/// Root isolation on caller-enclosed homogeneous polynomial coefficients.
+/// This returns diagnostic roots, not a B-rep or material certificate.
+pub(crate) fn intersections_coefficients(
+    net: &[Vec<[I; 4]>],
+    domain: [[f64; 2]; 2],
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    max_cells: usize,
+) -> Result<Report> {
+    check(
+        !net.is_empty()
+            && !net[0].is_empty()
+            && net.len() <= 17
+            && net[0].len() <= 17
+            && net.iter().all(|r| r.len() == net[0].len())
+            && net
+                .iter()
+                .flatten()
+                .flat_map(|h| h.iter())
+                .all(|v| v.lo.is_finite() && v.hi.is_finite() && v.lo <= v.hi)
+            && domain
+                .iter()
+                .all(|r| r.iter().all(|x| x.is_finite()) && r[0] < r[1])
+            && origin.iter().chain(&direction).all(|x| x.is_finite())
+            && direction.iter().any(|x| *x != 0.)
+            && tolerance_uv.is_finite()
+            && tolerance_uv > 0.
+            && max_cells <= 100000,
+        "Bound homogeneous line intersection domains and work",
+    )?;
+    if net.iter().flatten().any(|h| h[3].lo <= 0.) {
+        return Ok(Report {
+            roots: Vec::new(),
+            unresolved: vec![domain],
+            cells: 0,
+            complete: false,
+            profile_parameterization: None,
+        });
+    }
+    let dominant = (0..3)
+        .max_by(|&a, &b| direction[a].abs().total_cmp(&direction[b].abs()))
+        .unwrap();
+    let axes: Vec<_> = (0..3).filter(|&a| a != dominant).collect();
+    let projected = net
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|h| {
+                    let mut out = [I::point(0.); 2];
+                    for k in 0..2 {
+                        out[k] = h[axes[k]]
+                            .sub(I::point(origin[axes[k]]).mul(h[3])?)?
+                            .mul(I::point(direction[dominant]))?
+                            .sub(
+                                h[dominant]
+                                    .sub(I::point(origin[dominant]).mul(h[3])?)?
+                                    .mul(I::point(direction[axes[k]]))?,
+                            )?;
+                    }
+                    Ok(out)
+                })
+                .collect::<Result<Vec<_>>>()
+        })
+        .collect::<Result<Net>>()?;
+    let initial = Cell {
+        net: projected,
+        domain: [[0., 1.]; 2],
+        span: domain,
+    };
+    isolate(vec![initial], tolerance_uv, max_cells, |uv| {
+        let mut t = [I::point(0.); 2];
+        for a in 0..2 {
+            t[a] = I::new(uv[a][0], uv[a][1])?
+                .sub(I::point(domain[a][0]))?
+                .div(I::point(domain[a][1]).sub(I::point(domain[a][0]))?)?
+                .intersect(0., 1.)?;
+        }
+        let evaluate = |mut row: Vec<[I; 4]>, parameter: I| -> Result<[I; 4]> {
+            let q = I::point(1.).sub(parameter)?;
+            while row.len() > 1 {
+                row = row
+                    .windows(2)
+                    .map(|p| {
+                        let mut h = [I::point(0.); 4];
+                        for k in 0..4 {
+                            h[k] = p[0][k].mul(q)?.add(p[1][k].mul(parameter)?)?;
+                        }
+                        Ok(h)
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+            }
+            Ok(row[0])
+        };
+        let rows = net
+            .iter()
+            .map(|r| evaluate(r.clone(), t[1]))
+            .collect::<Result<Vec<_>>>()?;
+        let h = evaluate(rows, t[0])?;
+        let coordinate = h[dominant].div(h[3])?;
+        let parameter = signed_div(
+            coordinate.sub(I::point(origin[dominant]))?,
+            direction[dominant],
+        )?;
+        Ok([parameter.lo, parameter.hi])
+    })
+}
+
 /// Conservative line parameter range of a complete surface rectangle, using
 /// the ray's dominant coordinate. Useful for rejecting regions behind a ray.
+/// Conservative finite-line parameters that can meet a certified position box.
+/// None proves exclusion; Some does not prove a surface intersection or material.
+pub fn finite_line_enclosure_parameters(
+    bounds: [[f64; 2]; 3],
+    origin: [f64; 3],
+    direction: [f64; 3],
+) -> Result<Option<[f64; 2]>> {
+    line_enclosure_parameters(bounds, origin, direction, [0., 1.])
+}
+/// Infinite-line box exclusion, preserving possible intersections at any t.
+pub fn infinite_line_enclosure_parameters(
+    bounds: [[f64; 2]; 3],
+    origin: [f64; 3],
+    direction: [f64; 3],
+) -> Result<Option<[f64; 2]>> {
+    line_enclosure_parameters(
+        bounds,
+        origin,
+        direction,
+        [f64::NEG_INFINITY, f64::INFINITY],
+    )
+}
+fn line_enclosure_parameters(
+    bounds: [[f64; 2]; 3],
+    origin: [f64; 3],
+    direction: [f64; 3],
+    mut parameter: [f64; 2],
+) -> Result<Option<[f64; 2]>> {
+    check(
+        origin.iter().chain(&direction).all(|x| x.is_finite())
+            && direction.iter().any(|&x| x != 0.),
+        "Choose a finite nonzero line",
+    )?;
+    for axis in 0..3 {
+        let box_axis = I::new(bounds[axis][0], bounds[axis][1])?;
+        if direction[axis] == 0. {
+            if !box_axis.contains(origin[axis]) {
+                return Ok(None);
+            }
+            continue;
+        }
+        let t = box_axis
+            .sub(I::point(origin[axis]))?
+            .div_signed(I::point(direction[axis]))?;
+        parameter[0] = parameter[0].max(t.lo);
+        parameter[1] = parameter[1].min(t.hi);
+        if parameter[0] > parameter[1] {
+            return Ok(None);
+        }
+    }
+    Ok(Some(parameter))
+}
+
 pub fn parameter_bounds(
     s: &Surface,
     uv: [[f64; 2]; 2],
@@ -476,6 +646,101 @@ pub fn parameter_bounds(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn coefficient_plane_roots_keep_original_domains_and_refusals() {
+        let net: Vec<Vec<_>> = [0., 1.]
+            .into_iter()
+            .map(|u| {
+                [0., 1.]
+                    .into_iter()
+                    .map(|v| [I::point(u), I::point(v), I::point(0.), I::point(1.)])
+                    .collect()
+            })
+            .collect();
+        let out = intersections_coefficients(
+            &net,
+            [[2., 4.], [3., 7.]],
+            [0.25, 0.75, -1.],
+            [0., 0., 2.],
+            1e-6,
+            100,
+        )
+        .unwrap();
+        assert!(out.complete);
+        assert_eq!(out.roots.len(), 1);
+        let root = &out.roots[0];
+        for (a, expected) in [2.5, 6.].into_iter().enumerate() {
+            assert!(root.uv[a][0] <= expected && root.uv[a][1] >= expected);
+        }
+        assert!(root.parameter[0] <= 0.5 && root.parameter[1] >= 0.5);
+        let miss = intersections_coefficients(
+            &net,
+            [[0., 1.]; 2],
+            [2., 0.5, -1.],
+            [0., 0., 2.],
+            1e-6,
+            100,
+        )
+        .unwrap();
+        assert!(miss.complete && miss.roots.is_empty());
+        let coincident =
+            intersections_coefficients(&net, [[0., 1.]; 2], [0., 0.5, 0.], [1., 0., 0.], 1e-6, 100)
+                .unwrap();
+        assert!(!coincident.complete && !coincident.unresolved.is_empty());
+        let zero = intersections_coefficients(
+            &net,
+            [[0., 1.]; 2],
+            [0.25, 0.75, -1.],
+            [0., 0., 2.],
+            1e-6,
+            0,
+        )
+        .unwrap();
+        assert!(!zero.complete && zero.cells == 0 && zero.unresolved.len() == 1);
+    }
+    #[test]
+    fn finite_line_box_exclusion_preserves_crossings_and_tangencies() {
+        let bounds = [[0., 1.]; 3];
+        let distant = infinite_line_enclosure_parameters(bounds, [10., 0.5, 0.5], [1., 0., 0.])
+            .unwrap()
+            .unwrap();
+        assert!(distant[0] <= -10. && distant[1] >= -9.);
+        assert!(
+            finite_line_enclosure_parameters(bounds, [10., 0.5, 0.5], [1., 0., 0.])
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            infinite_line_enclosure_parameters(bounds, [-1., -3., 0.5], [1., 1., 0.])
+                .unwrap()
+                .is_none()
+        );
+
+        let t = finite_line_enclosure_parameters(bounds, [-1., 0.5, 0.5], [3., 0., 0.])
+            .unwrap()
+            .unwrap();
+        assert!(t[0] <= 1. / 3. && t[1] >= 2. / 3.);
+        let reverse = finite_line_enclosure_parameters(bounds, [2., 0.5, 0.5], [-3., 0., 0.])
+            .unwrap()
+            .unwrap();
+        assert!(reverse[0] <= 1. / 3. && reverse[1] >= 2. / 3.);
+        assert!(
+            finite_line_enclosure_parameters(bounds, [-1., 2., 0.5], [3., 0., 0.])
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            finite_line_enclosure_parameters(bounds, [-1., -3., 0.5], [3., 3., 0.])
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            finite_line_enclosure_parameters(bounds, [-1., 1., 0.5], [1., 0., 0.])
+                .unwrap()
+                .is_some()
+        );
+        assert!(finite_line_enclosure_parameters(bounds, [0.; 3], [0.; 3]).is_err());
+    }
     #[test]
     fn rational_quintic_ray_isolation_returns_original_parameter_enclosures() {
         let surface = Surface {

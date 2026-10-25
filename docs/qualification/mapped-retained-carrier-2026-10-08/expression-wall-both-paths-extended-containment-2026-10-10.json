@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "geometryQualified": false,
+  "pendingContainedInPrevious": true,
+  "changes": [
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "beforeRegions": 15061,
+      "afterRegions": 15067,
+      "beforeRawParameterVolume": {
+        "numerator": 5301,
+        "denominator": 16384,
+        "value": 0.32354736328125
+      },
+      "afterRawParameterVolume": {
+        "numerator": 10601,
+        "denominator": 32768,
+        "value": 0.323516845703125
+      }
+    }
+  ],
+  "scope": "Exact endpoint containment, allowing same-face endpoint exchange. Raw parameter volume sums are not physical volume or thickness.",
+  "sha256": {
+    "/tmp/expression-wall-intrinsic-extended-20261010.json": "9d5ed074f77d33aaa45ba594bc4fd3f50b060769bde93380cc5e3ddae64c1a4d",
+    "/tmp/expression-wall-both-paths-extended-20261010.json": "cd5457ed305de3d8089fadc9bb68e23899ce0402c975cc8fb4b8abb008d4e102"
+  }
+}

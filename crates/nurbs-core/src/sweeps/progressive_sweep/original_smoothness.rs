@@ -1,5 +1,6 @@
 //! Sufficient open original-frame C1/C2, separate from retained seams/error.
 use super::*;
+mod guided_arc;
 use crate::sweeps::progressive_miter::{
     authored_frame_certificate as frame, scalar_certificate::Status,
 };
@@ -135,6 +136,25 @@ impl Sweep<'_> {
                         out.reason = Some("original-frame-path-knot-continuity-unproved");
                         return Ok(out);
                     }
+                    if self.options.orientation==Orientation::RotationMinimizing
+                        && self.spatial_rmf_error_limits.is_some() {
+                        // The original Bishop ODE N'=((P' x P'')/|P'|²) x N
+                        // has C(k-1) coefficients on a regular C(k+1) path.
+                        // Its unique Ck orthonormal solution exists on this
+                        // compact OPEN domain. No numerical integration error
+                        // or retained seam credit follows from this theorem.
+                        let regular=crate::curve_regularity::inspect(self.path,max_cells)?;
+                        out.cells+=regular.cells;
+                        if !regular.spanwise_regular {
+                            out.reason=Some("original-spatial-bishop-speed-unproved");return Ok(out);
+                        }
+                        let zero=constant_vector_law([0.;3])?;
+                        let seed=frame::certify_fixed_path_values(self.path,self.options.normal,&zero,[0.,0.],max_cells-regular.cells)?;
+                        out.cells+=seed.cells;
+                        out.source_frame_smoothness_certified=seed.status==Status::Certified;
+                        out.reason=if out.source_frame_smoothness_certified {None}else{Some("original-spatial-bishop-seed-unproved")};
+                        return Ok(out);
+                    }
                     if self.options.orientation == Orientation::RotationMinimizing
                         && !authored_error::original_line(self.path)
                         && !authored_error::original_planar_rmf(self.path, self.options.normal)
@@ -256,20 +276,38 @@ impl Sweep<'_> {
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-guided-frame-mode-unproved")};
         let Some(guide)=self.orientation_guide else{return Ok(out);};
         if self.frame_laws.is_some()||self.path.periodic||guide.periodic||!path_is_closed(self.path)?||!path_is_closed(guide)?{return Ok(out);}
+        // Keep the cheaper sufficient Cartesian route. A failed source jet
+        // query is charged before trying the geometric arc owner.
+        let mut cartesian=true;
         for (curve,k) in [(self.path,order+1),(guide,order),(self.twist,order)] {
-            if !knot_continuity(curve,k,&mut out.exact_work,max_exact_work)?{out.reason=Some("closed-guided-frame-knot-jets-unproved");return Ok(out);}
-            let seam=super::endpoint_jets::certify(curve,k,max_exact_work-out.exact_work)?;out.exact_work+=seam.exact_work;
-            if !seam.certified{out.reason=Some("closed-guided-frame-endpoint-jets-unproved");return Ok(out);}
+            if !knot_continuity(curve,k,&mut out.exact_work,max_exact_work)? {
+                out.reason=Some("closed-guided-frame-knot-jets-unproved");cartesian=false;break;
+            }
+            let seam=super::endpoint_jets::certify(curve,k,max_exact_work-out.exact_work)?;
+            out.exact_work+=seam.exact_work;
+            if !seam.certified {
+                out.reason=Some("closed-guided-frame-endpoint-jets-unproved");cartesian=false;break;
+            }
+        }
+        if !cartesian {
+            return if self.options.spacing==Spacing::Parameter {Ok(out)}
+                else {guided_arc::certify(self,guide,out,max_cells,max_exact_work)};
         }
         if self.options.spacing!=Spacing::Parameter {
             for curve in [self.path,guide] {
                 let regular=crate::curve_regularity::inspect(curve,max_cells-out.cells)?;out.cells+=regular.cells;
-                if !regular.spanwise_regular{out.reason=Some("closed-guided-arc-source-speed-unproved");return Ok(out);}
+                if !regular.spanwise_regular {out.reason=Some("closed-guided-arc-source-speed-unproved");return Ok(out);}
             }
-            let (status,cells)=frame::certify_independent_guided_cover(self.path,guide,self.twist,max_cells-out.cells)?;
-            out.cells+=cells;out.closed_source_frame_smoothness_certified=status==Status::Certified;
-            out.reason=if out.closed_source_frame_smoothness_certified{None}else{Some("closed-guided-independent-frame-cover-unproved")};
-        }else{
+            // This strong Cartesian-product proposal is bounded independently
+            // of the caller allowance. A true station correspondence can be
+            // regular even when unrelated path/guide parameters are singular.
+            let (status,cells)=frame::certify_independent_guided_cover(self.path,guide,self.twist,(max_cells-out.cells).min(4096))?;
+            out.cells+=cells;
+            if status!=Status::Certified {
+                return guided_arc::certify(self,guide,out,max_cells,max_exact_work);
+            }
+            out.closed_source_frame_smoothness_certified=true;out.reason=None;
+        }else {
             let cover=frame::certify_guided_cover(self.path,guide,self.twist,max_cells)?;
             out.cells=cover.cells;out.closed_source_frame_smoothness_certified=cover.status==Status::Certified;
             out.reason=if out.closed_source_frame_smoothness_certified{None}else{cover.reason};
@@ -300,6 +338,30 @@ impl Sweep<'_> {
         let seam=super::endpoint_jets::certify(self.twist,order,max_exact_work-out.exact_work)?;
         out.exact_work+=seam.exact_work;
         if !seam.certified {out.reason=Some("closed-path-frame-endpoint-jets-unproved");return Ok(out);}
+        if self.options.orientation==Orientation::RotationMinimizing && self.spatial_rmf_error_limits.is_some() {
+            // The ORIGINAL Bishop ODE exists on the positive-speed source.
+            // Closing its holonomy by alpha=angle*normalized_arc makes N(1)=N(0).
+            // Its corrected angular field is omega+alpha' T. Periodic Ck tangent
+            // jets and periodic correction rates give a periodic Ck solution.
+            // In parameter mode the speed jets must also match: direction-only
+            // identities do not prove periodic derivatives of alpha(t).
+            // In original arc units the exact Ck unit-tangent joins already
+            // prove the periodic angular field. Raw speed factors cancel in
+            // arc composition; parameter-mode correction still needs them.
+            if !path_ok && self.options.spacing==Spacing::Parameter {
+                out.reason=Some("closed-bishop-source-cartesian-jets-unproved");return Ok(out);
+            }
+            let regular=crate::curve_regularity::inspect(self.path,max_cells-out.cells)?;
+            out.cells+=regular.cells;
+            if !regular.spanwise_regular {out.reason=Some("closed-bishop-source-speed-unproved");return Ok(out);}
+            let initial=frame::certify_fixed_path_values(self.path,self.options.normal,self.twist,[0.,0.],max_cells-out.cells)?;
+            out.cells+=initial.cells;
+            out.closed_source_frame_smoothness_certified=initial.status==Status::Certified;
+            out.reason=if out.closed_source_frame_smoothness_certified {None}else{Some("closed-bishop-initial-seed-unproved")};
+            // Frame well-posedness/smoothness only. This is neither a corrected
+            // derivative enclosure nor a retained/source boundary certificate.
+            return Ok(out);
+        }
         if self.options.orientation!=Orientation::FixedNormal {
             let plane=super::source_plane::certify(self.path,self.options.normal,max_exact_work-out.exact_work)?;
             out.exact_work+=plane.exact_work;

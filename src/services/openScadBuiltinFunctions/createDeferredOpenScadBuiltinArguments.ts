@@ -1,8 +1,7 @@
-import { DEG_TO_RAD, MAX_UINT32, RAD_TO_DEG, SQRT_ONE_THIRD, SQRT_THREE_QUARTERS, TRIG_HUGE_VALUE, UTF8 } from '../openScadBuiltinFunctions'
-import type { BuiltinHandler, OpenScadBuiltinFunctionContext, OpenScadBuiltinValue, ReducedDegrees } from '../openScadBuiltinFunctions'
+import { MAX_UINT32, Mt19937, UTF8 } from '../openScadBuiltinFunctions'
+import type { BuiltinHandler, OpenScadBuiltinFunctionContext, OpenScadBuiltinValue } from '../openScadBuiltinFunctions'
 import { TT } from '../openscadCompiler'
 import type { Expr, ExpressionArgument, FunctionValue } from '../openscadCompiler'
-import { nextUp } from '../../core/float'
 
 /**
  * Preserve OpenSCAD's call-by-name boundary for built-ins. The reference
@@ -111,92 +110,6 @@ export function binaryNumber(name: string, operation: (left: number, right: numb
       numberValue(context, name, right, 1),
     )
   }
-}
-
-export function reduceDegrees(value: number, period: number): ReducedDegrees | undefined {
-  if (!(value < TRIG_HUGE_VALUE && value > -TRIG_HUGE_VALUE)) return undefined
-  if (value >= 0 && value < period) return { angle: value, cycles: 0 }
-  const cycles = Math.floor(value / period)
-  return { angle: value - cycles * period, cycles }
-}
-
-export function firstQuadrantComponents(angle: number): readonly [sin: number, cos: number] {
-  if (angle === 30) return [0.5, SQRT_THREE_QUARTERS]
-  if (angle === 45) return [Math.SQRT1_2, Math.SQRT1_2]
-  if (angle === 60) return [SQRT_THREE_QUARTERS, 0.5]
-  if (angle < 45) {
-    const radians = angle * DEG_TO_RAD
-    return [Math.sin(radians), Math.cos(radians)]
-  }
-  const complement = (90 - angle) * DEG_TO_RAD
-  return [Math.cos(complement), Math.sin(complement)]
-}
-
-export function unitCircleComponents(value: number): readonly [sin: number, cos: number] | undefined {
-  const reduced = reduceDegrees(value, 360)
-  if (reduced === undefined) return undefined
-  const { angle } = reduced
-  if (angle === 0) return [angle, 1]
-  if (angle === 90) return [1, 0]
-  if (angle === 180) return [-0, -1]
-  if (angle === 270) return [-1, -0]
-
-  const quadrant = Math.floor(angle / 90)
-  const [sin, cos] = firstQuadrantComponents(angle - quadrant * 90)
-  if (quadrant === 0) return [sin, cos]
-  if (quadrant === 1) return [cos, -sin]
-  if (quadrant === 2) return [-sin, -cos]
-  return [-cos, sin]
-}
-
-export function sinDegrees(value: number): number {
-  return unitCircleComponents(value)?.[0] ?? Number.NaN
-}
-
-export function cosDegrees(value: number): number {
-  return unitCircleComponents(value)?.[1] ?? Number.NaN
-}
-
-export function tanDegrees(value: number): number {
-  const reduced = reduceDegrees(value, 180)
-  if (reduced === undefined) return Number.NaN
-  if (reduced.angle === 0) return reduced.cycles % 2 === 0 ? 0 : -0
-  if (reduced.angle === 90) return reduced.cycles % 2 === 0 ? Infinity : -Infinity
-
-  const oppose = reduced.angle > 90
-  const acute = oppose ? 180 - reduced.angle : reduced.angle
-  const magnitude = acute === 30
-    ? SQRT_ONE_THIRD
-    : acute === 45
-      ? 1
-      : acute === 60
-        ? Math.sqrt(3)
-        : Math.tan(acute * DEG_TO_RAD)
-  return oppose ? -magnitude : magnitude
-}
-
-export function asinDegrees(value: number): number {
-  const degrees = Math.asin(value) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return sinDegrees(whole) === value ? whole : degrees
-}
-
-export function acosDegrees(value: number): number {
-  const degrees = Math.acos(value) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return cosDegrees(whole) === value ? whole : degrees
-}
-
-export function atanDegrees(value: number): number {
-  const degrees = Math.atan(value) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return tanDegrees(whole) === value ? whole : degrees
-}
-
-export function atan2Degrees(y: number, x: number): number {
-  const degrees = Math.atan2(y, x) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return Math.abs(degrees - whole) < 3e-14 ? whole : degrees
 }
 
 /** C++ std::round semantics: halfway cases round away from zero. */
@@ -353,6 +266,18 @@ export function compareUtf8(left: string, right: string): number {
   return leftBytes.length - rightBytes.length
 }
 
+export function nextUp(value: number): number {
+  if (Number.isNaN(value) || value === Infinity) return value
+  if (value === 0) return Number.MIN_VALUE
+  const buffer = new ArrayBuffer(8)
+  const view = new DataView(buffer)
+  view.setFloat64(0, value, false)
+  let bits = view.getBigUint64(0, false)
+  bits = value > 0 ? bits + 1n : bits - 1n
+  view.setBigUint64(0, bits, false)
+  return view.getFloat64(0, false)
+}
+
 export function rangeItemCount(range: { readonly start: number; readonly step: number; readonly end: number }): number {
   const { start, step, end } = range
   if ([start, step, end].some(Number.isNaN)) return 0
@@ -404,4 +329,73 @@ export function equalValues(left: OpenScadBuiltinValue, right: OpenScadBuiltinVa
     return rightCount !== 0 && left.start === right.start && left.step === right.step && leftCount === rightCount
   }
   return left === right
+}
+
+export function minMax(name: 'min' | 'max'): BuiltinHandler {
+  return (args, context) => {
+    if (args.length === 0) return fail(context, name, 'expects at least 1 argument')
+    const first = args[0]
+    if (args.length === 1 && Array.isArray(first)) {
+      const values = first
+      if (values.length === 0) return fail(context, name, 'expects at least 1 vector element')
+      let selected = values[0]
+      for (let index = 1; index < values.length; index++) {
+        const compared = name === 'min'
+          ? compareValues(values[index], selected)
+          : compareValues(selected, values[index])
+        if (compared !== undefined && compared < 0) selected = values[index]
+      }
+      return selected
+    }
+    let selected = numberValue(context, name, first, 0)
+    for (let index = 1; index < args.length; index++) {
+      const value = numberValue(context, name, args[index], index)
+      if ((name === 'min' && value < selected) || (name === 'max' && value > selected)) selected = value
+    }
+    return selected
+  }
+}
+
+/** OpenSCAD 2021.01's 31-bit floating-point hash, used to seed mt19937. */
+export function hashFloatingPoint(value: number): number {
+  if (!Number.isFinite(value)) return Number.isNaN(value) ? 0 : value > 0 ? 314159 : -314159
+  if (value === 0) return 0
+
+  let exponent = Math.floor(Math.log2(Math.abs(value))) + 1
+  const divisor = 2 ** exponent
+  let mantissa = Number.isFinite(divisor) && divisor !== 0
+    ? value / divisor
+    : value / (2 ** (exponent - 1)) / 2
+  let sign = 1
+  if (mantissa < 0) {
+    sign = -1
+    mantissa = -mantissa
+  }
+
+  const bits = 31n
+  const modulus = (1n << bits) - 1n
+  let hash = 0n
+  while (mantissa !== 0) {
+    hash = ((hash << 28n) & modulus) | (hash >> 3n)
+    mantissa *= 268_435_456
+    exponent -= 28
+    const integral = Math.trunc(mantissa)
+    mantissa -= integral
+    hash += BigInt(integral)
+    if (hash >= modulus) hash -= modulus
+  }
+
+  exponent = exponent >= 0 ? exponent % 31 : 30 - ((-1 - exponent) % 31)
+  hash = ((hash << BigInt(exponent)) & modulus) | (hash >> BigInt(31 - exponent))
+  return Number(BigInt.asIntN(32, hash * BigInt(sign)))
+}
+
+/** libc++/libstdc++ generate_canonical<double, 53> over mt19937. */
+export function seededRandom(seed: number): () => number {
+  const generator = new Mt19937(hashFloatingPoint(seed))
+  return () => {
+    const low = generator.next()
+    const high = generator.next()
+    return (low + high * 0x1_0000_0000) / 0x1_0000_0000_0000_0000
+  }
 }

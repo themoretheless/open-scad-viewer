@@ -83,7 +83,7 @@ pub fn author_general_nurbs_boolean(
         let minimum = distances.iter().copied().fold(f64::INFINITY, f64::min);
         let maximum = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if minimum < -clear && maximum > clear {
-            let ss = nurbs_core::ss_intersection::intersect_surface_surface(
+            let ss = nurbs_core::ss_intersection::intersect_surface_surface_report(
                 top,
                 &face.surface,
                 source.tolerance_context().ok(),
@@ -94,15 +94,7 @@ pub fn author_general_nurbs_boolean(
                     error.message
                 ))
             })?;
-            if ss["version"] != "nurbs-ss/1"
-                || ss["coverage"]["complete"] != true
-                || ss["coverage"]["missedBranchProof"] != true
-                || ss["booleanMutationAuthority"] != false
-                || !ss["unresolved"]
-                    .as_array()
-                    .map(|a| a.is_empty())
-                    .unwrap_or(false)
-            {
+            if !ss.complete() {
                 return Err(refuse(
                     "nurbs-boolean/1 requires complete nurbs-ss/1 reports without Boolean mutation authority",
                 ));
@@ -110,31 +102,25 @@ pub fn author_general_nurbs_boolean(
             ss_face_pairs = ss_face_pairs
                 .checked_add(1)
                 .ok_or_else(|| Error::new("BREP_SS_RESOURCE_LIMIT", "SS face-pair overflow"))?;
-            for component in ss["components"].as_array().cloned().unwrap_or_default() {
-                if component["kind"] != "curve" || component["contactClass"] != "transverse" {
-                    if matches!(component["kind"].as_str(), Some("empty") | Some("overlap")) {
-                        continue;
+            for component in &ss.components {
+                use nurbs_core::intersection::ContactClass;
+                use nurbs_core::ss_intersection::SurfaceSurfaceComponent;
+                let [start, end] = match component {
+                    SurfaceSurfaceComponent::Exact(branch) => branch.first_trace,
+                    SurfaceSurfaceComponent::Continued(branch)
+                        if branch.contact == ContactClass::Transverse =>
+                    {
+                        [branch.first_uv, branch.last_uv]
                     }
-                    if component["kind"] == "curve" {
+                    SurfaceSurfaceComponent::Overlap(_) => continue,
+                    _ => {
                         return Err(refuse(
                             "nurbs-boolean/1 admits only transverse curve strata from nurbs-ss/1",
                         ));
                     }
-                    continue;
-                }
-                let pcurve = &component["pcurveFirst"];
-                let start = pcurve
-                    .get("start")
-                    .and_then(value_codec::Value::as_array)
-                    .ok_or_else(|| refuse("SS pcurveFirst missing start"))?;
-                let end = pcurve
-                    .get("end")
-                    .and_then(value_codec::Value::as_array)
-                    .ok_or_else(|| refuse("SS pcurveFirst missing end"))?;
-                let s0 = start[0].as_f64().unwrap_or(f64::NAN);
-                let s1 = start[1].as_f64().unwrap_or(f64::NAN);
-                let e0 = end[0].as_f64().unwrap_or(f64::NAN);
-                let e1 = end[1].as_f64().unwrap_or(f64::NAN);
+                };
+                let [s0, s1] = start;
+                let [e0, e1] = end;
                 if (s0 - e0).abs() <= clear {
                     ss_roots.push(s0);
                 } else if (s1 - e1).abs() <= clear {

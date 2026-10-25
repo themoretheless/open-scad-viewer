@@ -1,0 +1,9 @@
+{
+  "test": "partial_rational_multispan_carrier_transfers_owned_transition_contact",
+  "cells": 100000,
+  "spans": 1000000,
+  "trimCells": 1000000,
+  "sourceManifest": "retained-intrinsic-cache-native-inputs-2026-10-10.json",
+  "report": "retained-intrinsic-cache-partial-wall-max-2026-10-10.json",
+  "scope": "Matched partial-carrier aligned-chord coverage; no whole physical wall qualification before native certificate."
+}

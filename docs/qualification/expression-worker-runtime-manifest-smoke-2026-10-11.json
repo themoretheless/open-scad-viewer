@@ -1,0 +1,14 @@
+{
+  "schema": "expression-worker-staging/1",
+  "stage": "/Users/themoretheless/.codex/tmp/expression-worker-manifest-smoke-2026-10-11",
+  "input": "/Users/themoretheless/.codex/worktrees/fillet-end-transitions/open-scad-viewer/public/wasm/geometry-kernel.wasm",
+  "wasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "byteLength": 13108282,
+  "liveWasmSha256": "aec4f2618d7356e5ec305e12aa931cdf264a90e2f7f4a4d5cd36cfd4482ccdc3",
+  "liveWasmUnchanged": true,
+  "workerQualified": false,
+  "runtimeManifestSha256": "84d298d7704bd9ff7b46298294eef14a6299f05c16a42ec71c60ea9978919e5a",
+  "runtimeFileCount": 854,
+  "scope": "Disposable runtime/package copy only. Run checker from this directory with absolute saved request and native replay paths. No live package publication.",
+  "runtimeManifestVerified": true
+}

@@ -1,21 +1,32 @@
 import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
 import {bondedSolidExample} from '../src/features/bondedSolidExample'
 import {Worker} from 'node:worker_threads'
+import {readFileSync} from 'node:fs'
+import {createHash} from 'node:crypto'
+import identity from '../src/generated/geometry-kernels/identity'
 import {afterEach, expect, it, vi} from 'vitest'
 import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSolidWorkerClient'
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
 import type {TrussModel} from '../src/services/trussAnalysis'
 import {resolveTrussScenario} from '../src/services/trussScenario'
-import {serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
 import type {LighteningOptions} from '../src/services/solidLightening'
+
+const artifactBytes=readFileSync('public/wasm/geometry-kernel.wasm')
+const expectedArtifact={sha256:createHash('sha256').update(artifactBytes).digest('hex'),byteLength:artifactBytes.length}
+expect(identity).toEqual(expectedArtifact)
+if(process.env.CAD_EXPECTED_WASM_SHA256)expect(expectedArtifact.sha256).toBe(process.env.CAD_EXPECTED_WASM_SHA256)
 
 class NodePort implements MainSolidPort {
   onmessage:MainSolidPort['onmessage']=null
   onerror:MainSolidPort['onerror']=null
   onmessageerror:MainSolidPort['onmessageerror']=null
   constructor(readonly worker:Worker) {
-    worker.on('message',data=>this.onmessage?.({data} as MessageEvent))
+    worker.on('message',data=>{
+      if(data?.__webWorkerHarness==='artifact'){expect(data.identity).toEqual(expectedArtifact);return}
+      this.onmessage?.({data} as MessageEvent)
+    })
     worker.on('error',error=>this.onerror?.({message:error.message} as ErrorEvent))
     worker.on('messageerror',()=>this.onmessageerror?.({} as MessageEvent))
   }
@@ -25,13 +36,23 @@ class NodePort implements MainSolidPort {
 const clients:MainSolidWorkerClient[]=[], workers:Worker[]=[]
 const bar=():TrussModel=>({nodesMm:[[0,0,0],[10,0,0]],members:[{nodes:[0,1],youngMpa:2000,areaMm2:2}],restrained:[[true,true,true],[false,true,true]],forcesN:[[0,0,0],[100,0,0]]})
 const latticeOptions:LighteningOptions={pattern:'octet',axis:'z',cell:10,rib:2,rim:0,bottom:0,top:0,seed:42,jitter:0,lineWidth:.45,perimeters:3,skin:0,step:1,diagonals:true}
-function realWorker(){
+function realWorker(artifact=expectedArtifact){
   const worker=new Worker(new URL('./fixtures/web-worker-node-harness.mjs',import.meta.url),{
-    workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false},
+    workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false,expectedArtifact:artifact},
   })
   workers.push(worker);return new NodePort(worker)
 }
 afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()));vi.unstubAllGlobals()})
+
+it('rejects a mismatched worker artifact before decoding and recovers with a matching replacement',async()=>{
+ const document={version:1 as const,sketches:[],bodies:[],curves:[],surfaces:[]}
+ const text=serializeDirectDocument(document)
+ const mismatched={...expectedArtifact,sha256:'0'.repeat(64)}
+ const failed=new MainSolidWorkerClient(()=>realWorker(mismatched));clients.push(failed)
+ await expect(failed.run({kind:'restoreDocument',text})).rejects.toThrow('Worker loaded a different WASM publication')
+ const replacement=new MainSolidWorkerClient(realWorker);clients.push(replacement)
+ expect(serializeDirectDocument(await replacement.run({kind:'restoreDocument',text}))).toBe(text)
+},30_000)
 
 it('rounds all rotated cuboid edges with endpoint radii through the real body-edit worker',async()=>{
   const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
@@ -53,6 +74,57 @@ it('rounds all rotated cuboid edges with endpoint radii through the real body-ed
   }
   expect(JSON.stringify(document)).toBe(before)
 },60_000)
+
+it('rounds all rotated cuboid edges with constant radii through the real body-edit worker',async()=>{
+  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
+  const brep=transformNurbsBrep(source,[
+    [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
+    [Math.sin(a)*Math.cos(b),Math.cos(a),Math.sin(a)*Math.sin(b),-9],
+    [-Math.sin(b),0,Math.cos(b),23],[0,0,0,1],
+  ])
+  const body={id:'rotated',name:'Rotated',brep,mesh:tessellateNurbsBrep(brep)}
+  const document={version:1 as const,sketches:[],bodies:[body]},before=JSON.stringify(document)
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const measurements:{edge:number,radius:number,length:number,volume:number,expected:number}[]=[]
+  for(let edge=0;edge<brep.edges.length;edge++) for(const radius of [.1,1,2]){
+    const result=await client.run({kind:'bodyEdit',document,options:{operation:'edge-fillet',id:body.id,face:0,edges:[edge],openings:[],segments:8,distance:0,radius,endRadius:radius,filletMode:'constant',axis:'z'}})
+    const [p,q]=source.edges[edge].vertices.map(i=>source.vertices[i].point)
+    const length=Math.hypot(...p.map((x,i)=>x-q[i]))
+    expect(result.bodies[0].id).toBe(body.id)
+    const history=new DirectHistory(document),original=serializeDirectDocument(history.document)
+    history.commit(result)
+    const committed=serializeDirectDocument(history.document)
+    expect(serializeDirectDocument(history.undo())).toBe(original)
+    expect(serializeDirectDocument(history.redo())).toBe(committed)
+    expect(serializeDirectDocument(parseDirectDocument(committed))).toBe(committed)
+    const volume=analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3
+    const expected=480-(1-Math.PI/4)*length*radius*radius
+    expect(volume).toBeCloseTo(expected,4)
+    measurements.push({edge,radius,length,volume,expected})
+  }
+  const heldPort=realWorker(),heldClient=new MainSolidWorkerClient(()=>heldPort);clients.push(heldClient)
+  const pending=heldClient.run({kind:'bodyEdit',document,options:{operation:'edge-fillet',id:body.id,face:0,edges:[0],openings:[],segments:8,distance:0,radius:1,endRadius:1,filletMode:'constant',axis:'z'}})
+  const rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'})
+  const callback=heldPort.onmessage!
+  let release!:(event:MessageEvent)=>void
+  const captured=new Promise<MessageEvent>(resolve=>{release=resolve})
+  heldPort.onmessage=event=>release(event)
+  const event=await captured
+  expect(event.data.ok).toBe(true)
+  heldClient.cancel();callback(event);await rejection
+  expect(JSON.stringify(document)).toBe(before)
+  if(process.env.CAD_CONSTANT_FILLET_WORKER_REPORT){
+    const {readFileSync,writeFileSync}=await import('node:fs')
+    const {createHash}=await import('node:crypto')
+    const wasm=readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))
+    writeFileSync(process.env.CAD_CONSTANT_FILLET_WORKER_REPORT,JSON.stringify({
+      schema:'constant-fillet-worker/1',passed:true,
+      wasmSha256:createHash('sha256').update(wasm).digest('hex'),measurements,
+      scope:'Real packaged worker: twelve rotated cuboid edges, three constant radii, body identity, analytic volume, Undo/Redo, document serialization and cancellation of a captured successful real reply. Does not qualify general NURBS edges or browser interaction.'
+    },null,2)+'\n')
+  }
+},120_000)
 
 it('prepares and extrudes polynomial rounded profiles through the shipped worker',async()=>{
   const client=new MainSolidWorkerClient(realWorker);clients.push(client)
@@ -620,4 +692,94 @@ it('refuses a captured successful finite-patch response after cancellation',asyn
  const captured=new Promise<MessageEvent>(resolve=>{release=resolve});heldPort.onmessage=event=>release(event)
  const event=await captured;expect(event.data.ok).toBe(true);expect(event.data.result.qualification.finiteNurbsPatchProven).toBe(true)
  client.cancel();callback(event);await rejection
+},30_000)
+
+it('duplicates a source and linked instance through the real worker without changing original buffers',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const source=extrudeDirectSketch({id:'profile',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source')
+ const base={operation:'instance-create' as const,id:'source',ids:['source'],createdId:'instance',x:20,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options:base})
+ const before=serializeDirectDocument(linked)
+ const options={...base,operation:'duplicate' as const,ids:['source','instance'],copyIds:['source-copy','instance-copy'],x:10,y:10}
+ const copied=await client.run({kind:'sceneEdit',document:linked,options})
+ expect(serializeDirectDocument(linked)).toBe(before)
+ expect(copied.bodies).toHaveLength(4)
+ expect(copied.bodies.find(body=>body.id==='instance-copy')!.instance!.sourceId).toBe('source-copy')
+ for(const original of linked.bodies)expect(copied.bodies.find(body=>body.id===original.id)).toEqual(original)
+ const bounds=(id:string)=>Array.from(copied.bodies.find(body=>body.id===id)!.mesh.positions).filter((_,i)=>i%3===0)
+ expect(Math.min(...bounds('source-copy'))).toBe(10)
+ expect(Math.min(...bounds('instance-copy'))).toBe(30)
+ await expect(client.run({kind:'sceneEdit',document:copied,options})).rejects.toThrow('Invalid duplicate identities.')
+ const retry=await client.run({kind:'sceneEdit',document:linked,options:{...options,copyIds:['retry-source','retry-instance']}})
+ expect(retry.bodies.find(body=>body.id==='retry-instance')!.instance!.sourceId).toBe('retry-source')
+},30_000)
+
+it('discards a genuine late duplicate reply after cancellation and commits only the replacement',async()=>{
+ const source=extrudeDirectSketch({id:'profile',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source')
+ const history=new DirectHistory({version:1,sketches:[],bodies:[source]})
+ const original=serializeDirectDocument(history.document)
+ const heldPort=realWorker();let starts=0
+ const client=new MainSolidWorkerClient(()=>starts++===0?heldPort:realWorker());clients.push(client)
+ const options={operation:'duplicate' as const,id:'source',ids:['source'],copyIds:['cancelled-copy'],x:10,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const pending=history.commitAsync(()=>client.run({kind:'sceneEdit',document:history.document,options}))
+ const rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'})
+ const callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve})
+ heldPort.onmessage=event=>release(event)
+ const event=await captured
+ expect(event.data.ok).toBe(true)
+ client.cancel();await rejection
+ expect(serializeDirectDocument(history.document)).toBe(original)
+ expect(history.canUndo).toBe(false)
+ const replacement=history.commitAsync(()=>client.run({kind:'sceneEdit',document:history.document,
+  options:{...options,copyIds:['replacement-copy'],x:20}}))
+ callback(event)
+ expect(await replacement).toBe(true)
+ callback(event)
+ expect(history.document.bodies.map(body=>body.id)).toEqual(['source','replacement-copy'])
+ expect(history.storageStats.undoStates).toBe(1)
+ const committed=serializeDirectDocument(history.document)
+ expect(serializeDirectDocument(history.undo())).toBe(original)
+ expect(serializeDirectDocument(history.redo())).toBe(committed)
+ expect(serializeDirectDocument(parseDirectDocument(committed))).toBe(committed)
+ expect(starts).toBe(2)
+},30_000)
+
+it('keeps replacement profile coverage after a genuine cancelled worker reply arrives late',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {effectScope,ref,shallowRef}=await import('vue')
+ const {useProfileBridgeInspection}=await import('../src/services/useProfileBridgeInspection')
+ const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8')).wholeCoverage
+ const {op:_,...input}=fixture.request
+ const options=shallowRef<import('../src/services/nurbsProfileBridgeChords').ProfileBridgeChordOptions|undefined>(structuredClone(input))
+ const active=ref(true),scope=effectScope(),heldPort=realWorker();let starts=0
+ const client=new MainSolidWorkerClient(()=>starts++===0?heldPort:realWorker());clients.push(client)
+ const controller=scope.run(()=>useProfileBridgeInspection(options,active,client))!
+ try {
+  const initial=controller.run()
+  const callback=heldPort.onmessage!
+  let release!:(event:MessageEvent)=>void
+  const captured=new Promise<MessageEvent>(resolve=>{release=resolve})
+  heldPort.onmessage=event=>release(event)
+  const event=await captured
+  expect(event.data.ok).toBe(true)
+  expect(event.data.result.coverage.completeExclusion).toBe(true)
+  // Capture the real complete proof, then invalidate it before UI delivery.
+  controller.cancel();await initial
+  expect(controller.result.value).toBeNull()
+  options.value={...input,coverage:{...input.coverage,cells:0}}
+  const replacement=controller.retry()
+  callback(event)
+  await replacement
+  const accepted=controller.result.value
+  expect(accepted).not.toBeNull()
+  expect(accepted!.coverage!.completeExclusion).toBe(false)
+  expect(accepted!.wholeThicknessQualified).toBe(false)
+  callback(event)
+  expect(controller.result.value).toBe(accepted)
+  expect(controller.pending.value).toBe(false)
+  expect(controller.error.value).toBe('')
+  expect(starts).toBe(2)
+ }finally {scope.stop()}
 },30_000)

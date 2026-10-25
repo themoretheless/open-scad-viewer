@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "tabs": 64,
+  "escapeCycles": 4,
+  "command": "Box",
+  "openerRestoredOnCancel": true,
+  "workspaceFocusedAfterCreation": true,
+  "errors": []
+}

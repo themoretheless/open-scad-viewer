@@ -48,10 +48,6 @@ pub struct LoftCap {
 fn supplied_cap(definition: &LoftCap, sections: &[Vec<Curve>]) -> Result<Cap> {
     definition.surface.validate()?;
     let s = &definition.surface;
-    if s.knots_u[s.degree_u] != 0. || s.knots_u[s.control_points.len()] != 1.
-        || s.knots_v[s.degree_v] != 0. || s.knots_v[s.control_points[0].len()] != 1. {
-        return Err(err("Authored loft caps need normalized U/V domains"));
-    }
     let loops = definition.trims.iter().map(|ring| {
         let mut spans = Vec::new();
         for curve in ring {
@@ -75,7 +71,9 @@ fn supplied_cap(definition: &LoftCap, sections: &[Vec<Curve>]) -> Result<Cap> {
     if audit.valid != Some(true) || audit.winding.first() != Some(&Some(1)) {
         return Err(err("Authored cap trim region must have a resolved positive outer winding"));
     }
-    let sample = s.evaluate(0.5,0.5)?;
+    let u=s.knots_u[s.degree_u]*0.5+s.knots_u[s.control_points.len()]*0.5;
+    let v=s.knots_v[s.degree_v]*0.5+s.knots_v[s.control_points[0].len()]*0.5;
+    let sample = s.evaluate(u,v)?;
     let (u,v) = sample.first_derivatives().ok_or_else(|| err("Cap reference derivatives are unavailable"))?;
     let normal = unit(cross(u,v))?;
     Ok(Cap { normal, surface: s.clone(), loops })
@@ -248,6 +246,7 @@ fn section_loft(
     if !(2..=1025).contains(&sections.len()) {
         return Err(err("Need 2..1025 rational sections"));
     }
+    let parametric_edges=caps.is_some();
     let loop_count = sections[0].len();
     if !(1..=16).contains(&loop_count) || sections.iter().any(|s| s.len() != loop_count) {
         return Err(err("Need matching 1..16 loops per section"));
@@ -417,17 +416,13 @@ fn section_loft(
                     nurbs_core::surface::loft(&[a.clone(), b.clone()])?
                 };
                 let end_edge = side.iso(nurbs_core::surface::Axis::U, 1.)?;
-                let start_edge = side.iso(nurbs_core::surface::Axis::U, 0.)?.reverse()?;
-                build.rectangular_patch(
-                    side,
-                    [
-                        ids[layer][ring][i],
-                        ids[layer][ring][j],
-                        ids[next][ring][j],
-                        ids[next][ring][i],
-                    ],
-                    [a.clone(), end_edge, b.reverse()?, start_edge],
-                );
+                let start_edge=side.iso(nurbs_core::surface::Axis::U,0.)?;
+                let corners=[ids[layer][ring][i],ids[layer][ring][j],ids[next][ring][j],ids[next][ring][i]];
+                if parametric_edges {
+                    build.rectangular_patch_parametric(side,corners,[a.clone(),end_edge,b.reverse()?,start_edge]);
+                }else {
+                    build.rectangular_patch(side,corners,[a.clone(),end_edge,b.reverse()?,start_edge.reverse()?]);
+                }
                 shell_faces[ring].push(FaceUse {
                     face: build.model.faces.len() - 1,
                     reversed: false,
@@ -446,12 +441,10 @@ fn section_loft(
             let mut coedges = Vec::new();
             for i in 0..uv.len() {
                 let j = (i + 1) % uv.len();
-                coedges.push(build.coedge(
-                    ids[layer][ring][i],
-                    ids[layer][ring][j],
-                    prepared[layer][ring][i].clone(),
-                    uv[i].clone(),
-                ));
+                let (a,b)=(ids[layer][ring][i],ids[layer][ring][j]);
+                let curve=prepared[layer][ring][i].clone();let pcurve=uv[i].clone();
+                coedges.push(if parametric_edges {build.coedge_parametric(a,b,curve,pcurve,false)}
+                    else {build.coedge(a,b,curve,pcurve)});
             }
             wires.push(build.wire(coedges));
         }

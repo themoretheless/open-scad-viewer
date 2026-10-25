@@ -7,13 +7,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v105.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v109.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
 ), 'utf8'))
 const githubFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-github-actions-v36.json',
+  root, 'docs/qualification/environment-freeze/g1-github-actions-v40.json',
 ), 'utf8'))
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -163,8 +163,8 @@ function aggregate(artifacts: string, suffix: string, sha = sourceSha, githubSha
   // These cases exercise evidence integrity, so they must not depend on the
   // image of whichever GitHub runner happens to execute the test suite.
   const env: NodeJS.ProcessEnv = { ...process.env, GITHUB_SHA: githubSha }
-  delete env.ImageOS
-  delete env.ImageVersion
+  // Windows environment names are case-insensitive and may be stored in any case.
+  for (const name of Object.keys(env)) if (/^image(?:os|version)$/iu.test(name)) delete env[name]
   const child = spawnSync(process.execPath, [
     harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output,
   ], { cwd: root, encoding: 'utf8', env })
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v105',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v109',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -231,6 +231,28 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     const result=aggregate(artifacts,'observed-image')
     expect(result.process.status,result.process.stderr).toBe(0)
     expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+  })
+
+  it.each(['observed', 'unobserved'])('checks %s Windows rollout image without loosening host admission', kind => {
+    const {artifacts}=fixture()
+    const row=plan.matrix.find((item:any)=>item.executionEnvironmentIds.includes('windows-node20'))
+    const target=resolve(artifacts,`${row.id}--windows-node20--run-1`)
+    const fragment=JSON.parse(readFileSync(resolve(target,'fragment.json'),'utf8'))
+    const preflight=JSON.parse(readFileSync(resolve(target,'preflight.json'),'utf8'))
+    const variant=githubFreeze.runnerImages['windows-2025'].observedVariants[0]
+    for(const value of [fragment,preflight]) {
+      value.host.runnerImage=variant.imageOS
+      value.host.runnerImageVersion=kind==='observed'?variant.imageVersion:'19000101.0.0'
+    }
+    writeEvidence(target,fragment,preflight)
+    const result=aggregate(artifacts,`windows-${kind}`)
+    if(kind==='observed') {
+      expect(result.process.status,result.process.stderr).toBe(0)
+      expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+    } else {
+      expect(result.process.status).toBe(1)
+      expect(JSON.parse(readFileSync(result.output,'utf8')).errors.join('\n')).toMatch(/hosted runner identity mismatch/u)
+    }
   })
 
   it.each(['missing', 'duplicate', 'environment mismatch', 'discovery-only'])('rejects %s artifacts', kind => {

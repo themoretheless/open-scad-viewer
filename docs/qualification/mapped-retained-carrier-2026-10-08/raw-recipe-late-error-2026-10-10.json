@@ -1,0 +1,16 @@
+{
+  "schema": "expression-inspection-stale-error/1",
+  "change": "Late worker failures now require the same current request identity as successful results, including raw mutations outside reactive notifications.",
+  "regressions": [
+    "valid raw mutation discards stale CAD_TIMEOUT",
+    "invalid raw mutation discards stale CAD_TIMEOUT",
+    "Retry after restoring recipe succeeds"
+  ],
+  "tests": {
+    "files": 5,
+    "passed": 74,
+    "failed": 0,
+    "log": "/tmp/expression-ui-controller-fixed-20261010.log"
+  },
+  "scope": "Expression inspection controller and related transport/focus/panel suites; not full P0 command matrix"
+}

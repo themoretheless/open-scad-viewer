@@ -5,20 +5,20 @@ use crate::{
     source_volume::Body,
 };
 use nurbs_core::{Error, Result, surface_distance::rectangle_bounds};
-pub struct Report<'a> {
-    pub best: Option<Certificate<'a>>,
+pub struct Report<'a, E = crate::source_shared_edge::SharedEdge> {
+    pub best: Option<Certificate<'a,E>>,
     pub attempts: usize,
     pub refused: usize,
     pub candidates_exhausted: bool,
 }
-pub fn search<'a>(
-    body: &'a Body,
+pub fn search<'a,E: crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
     groups: [&[usize]; 2],
     grid: usize,
     max_attempts: usize,
     tolerance_uv: f64,
     limits: Limits,
-) -> Result<Report<'a>> {
+) -> Result<Report<'a,E>> {
     crate::material_segment::valid_line(
         [0.; 3],
         [1., 0., 0.],

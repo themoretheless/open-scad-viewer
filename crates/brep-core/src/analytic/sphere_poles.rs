@@ -8,7 +8,7 @@ pub fn sphere_exact(radius: f64) -> Result<Model> {
     size(radius, "Sphere radius")?;
     let significand = (radius.to_bits() & ((1_u64 << 52) - 1)) | (1_u64 << 52);
     if significand % 3 == 0 {
-        super::sphere(radius)
+        super::sphere_regular::build(radius)
     } else {
         sphere_pole_charts(radius)
     }

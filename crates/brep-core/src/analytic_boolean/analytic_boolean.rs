@@ -220,7 +220,7 @@ pub fn analytic_boolean_audited(
     Ok((audited, certificate))
 }
 
-fn cylinder_pair_boolean(
+pub(super) fn cylinder_pair_boolean(
     a: &Model,
     b: &Model,
     operation: &str,

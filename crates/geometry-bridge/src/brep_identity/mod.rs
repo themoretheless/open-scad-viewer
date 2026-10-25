@@ -13,15 +13,17 @@ use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use value_codec::Number;
 
-use crate::semantic_contract_error as invalid;
 
+pub(crate) use canonical_json::{js_number, stable_json};
+
+mod canonical_json;
 
 #[cfg(test)]
 mod tests;
 
 mod identity_digest;
-mod validate_operations;
+mod occurrence_index;
 mod validate_occurrence_identity;
 pub use identity_digest::*;
-pub use validate_operations::*;
+use occurrence_index::*;
 pub use validate_occurrence_identity::*;

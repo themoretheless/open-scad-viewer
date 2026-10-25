@@ -1,0 +1,22 @@
+node:fs:1956
+  const result = binding.readdir(
+                         ^
+
+Error: ENOENT: no such file or directory, scandir '/private/tmp/osv-interpolated-carrier-delivery-20261018/dist/'
+    at readdirSync (node:fs:1956:26)
+    at walk (file:///private/tmp/osv-interpolated-carrier-delivery-20261018/scripts/verify-dist.mjs:11:22)
+    at file:///private/tmp/osv-interpolated-carrier-delivery-20261018/scripts/verify-dist.mjs:17:1
+    at #evaluateSync (node:internal/modules/esm/module_job:702:24)
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:717:43)
+    at node:internal/modules/esm/loader:383:11
+    at TracingChannel.traceSync (node:diagnostics_channel:557:14)
+    at ModuleLoader.importForEntryPoint (node:internal/modules/esm/loader:372:21)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:184:34)
+    at node:internal/main/run_main_module:33:47 {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'scandir',
+  path: '/private/tmp/osv-interpolated-carrier-delivery-20261018/dist/'
+}
+
+Node.js v26.12.0

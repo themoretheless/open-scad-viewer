@@ -1,0 +1,130 @@
+{
+  "schema": "cad-qualification-evidence/1",
+  "files": [
+    {
+      "path": "boundary_embedding-final-tests.log.gz",
+      "bytes": 1670,
+      "sha256": "c629725de8212d8f7ef3131547ccc28ff45c333f11cc6e4a93dca9cb51933924"
+    },
+    {
+      "path": "boundary_hull_contact-final-tests.log.gz",
+      "bytes": 1932,
+      "sha256": "1e150e8ce35f5af08cc495460ccc032f0df4f6a598756e80d7323572f03923f4"
+    },
+    {
+      "path": "embedding-tests.log.gz",
+      "bytes": 1781,
+      "sha256": "e133a1ff7a3df2f091a3ab891b15e1fa74d953c962a5e176c4cd7d71ee0ad869"
+    },
+    {
+      "path": "face-tests.log.gz",
+      "bytes": 1831,
+      "sha256": "fd73eae84240210613e6f21942d766b5722e90817025a68dbb7b0b8460e6b7b7"
+    },
+    {
+      "path": "final.json.gz",
+      "bytes": 4055,
+      "sha256": "c89d25d4145b29e02b348483f54809cb98b8c463753034030cee4f6ee2ae6e58"
+    },
+    {
+      "path": "final.log.gz",
+      "bytes": 1434,
+      "sha256": "0f0503f462b6aab4dd2c10863be530f49e6d2303d10d85088ba4045ec88ecab7"
+    },
+    {
+      "path": "hull-tests.log.gz",
+      "bytes": 2637,
+      "sha256": "a38b43fc5e729307ece512132627395a1a7b0c9573ef16caa173685a7a03e29d"
+    },
+    {
+      "path": "injectivity-tests.log.gz",
+      "bytes": 1691,
+      "sha256": "1072da58c925855da6d63fa44dd258439f319179cd396237dcf4f1c0f963a127"
+    },
+    {
+      "path": "join-tests.log.gz",
+      "bytes": 2274,
+      "sha256": "c6e7bbae704c81850e2861841c90fc79fd74b4541c11709eb0f27dc033b9ffa6"
+    },
+    {
+      "path": "joint-128.json.gz",
+      "bytes": 2575,
+      "sha256": "b3d8bf549d41cedba7bca00f6c61df591a224c90492216babaa327d20db9b4c3"
+    },
+    {
+      "path": "joint-128.log.gz",
+      "bytes": 1433,
+      "sha256": "45d4f729cce67b2ba336ae07497fd32044ccae8b56474283eea4ac18273c1e4d"
+    },
+    {
+      "path": "joint-before-tilt.json.gz",
+      "bytes": 2560,
+      "sha256": "265f31592d5a92e15dcdb4337e768158ab69432bcfe57dfd9f9e54aa54fb9336"
+    },
+    {
+      "path": "joint-before-tilt.log.gz",
+      "bytes": 1435,
+      "sha256": "c70f7761f9e840bf95336a4da6e975b4a0fdf0d51f99f7a16ee5d1d9d95e06d2"
+    },
+    {
+      "path": "joint-polar.json.gz",
+      "bytes": 2543,
+      "sha256": "2d7e77b179b7550af1f955ae12a56b83cc0c98ba9ebd7b73df275b3686c33ccd"
+    },
+    {
+      "path": "joint-polar.log.gz",
+      "bytes": 1450,
+      "sha256": "f66eab3872f281cb51f75789411c31cd59f69786a8f82da2362e0fd21ee95781"
+    },
+    {
+      "path": "joint.json.gz",
+      "bytes": 2552,
+      "sha256": "2cd625572f72d7a9e2de59f4260cf3697d0361a36961562b82cf2bec818cceb8"
+    },
+    {
+      "path": "joint.log.gz",
+      "bytes": 1435,
+      "sha256": "0d7bddf49ca6db8f66190a4da0f81b36b55826f9cdb16afb7067b9d87c7cad09"
+    },
+    {
+      "path": "p-matrix.json.gz",
+      "bytes": 2233,
+      "sha256": "19dcd5024b246dfc441bee535fbbf2e1325ae678ee8a2b09f17b74722c7ac374"
+    },
+    {
+      "path": "p-matrix.log.gz",
+      "bytes": 1443,
+      "sha256": "7fdc95d78c668658ee45f1649a96b9aca317a8e5a1c147090ec696064b808cbd"
+    },
+    {
+      "path": "probe.json.gz",
+      "bytes": 2231,
+      "sha256": "11e6d34d06a992645c4eb325042e2e5cd6be20f4f6aef83db4615d60633fb498"
+    },
+    {
+      "path": "probe.log.gz",
+      "bytes": 1439,
+      "sha256": "3790bc1dd91adba206f273cf18af4b2d435cb4d37c43870d905fe38b3bedd67c"
+    },
+    {
+      "path": "self-tests.log.gz",
+      "bytes": 1558,
+      "sha256": "e3657e51c711117df072c5d1a67b495c61cd19a17cb7b4a9981aa87887b393c0"
+    },
+    {
+      "path": "self_intersection-final-tests.log.gz",
+      "bytes": 1559,
+      "sha256": "6aa543ed276a75ed0d6244e1edd8e84e374ddc1c45393388eacb8b6aa0138989"
+    },
+    {
+      "path": "surface_injectivity-final-tests.log.gz",
+      "bytes": 1693,
+      "sha256": "e235c728e61ecaba7202e947c1b0b3df3cd70ca4abca6ab4479baeb68a2ce7a0"
+    },
+    {
+      "path": "surface_quotient_injectivity-final-tests.log.gz",
+      "bytes": 1506,
+      "sha256": "51221bc180c77204c5e1f920f8b40192cf4aa3fe76dbaacdae45e4ad49303cdd"
+    }
+  ]
+}

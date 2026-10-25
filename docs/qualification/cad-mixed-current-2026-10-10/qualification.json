@@ -1,0 +1,9 @@
+{
+  "wasmSha256": "4cf2545b10c2d9f53534fc46f052a94a9a2b42a6767bf434bd9c369fa3843696",
+  "historyTestsPassed": 17,
+  "testSeconds": 28.79,
+  "operationsPerPart": 20,
+  "stepFiles": 6,
+  "independentGaugesPassed": 16,
+  "scope": "Current service/WASM mixed-operation histories for bracket, flange, enclosure; independent OpenCascade dimension gauges on both STEP cycles. Actual mixed-operation UI/history/reload acceptance remains open."
+}

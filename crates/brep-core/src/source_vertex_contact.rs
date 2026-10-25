@@ -7,17 +7,17 @@ use crate::{
 use cad_predicates::Sign;
 use nurbs_core::{Error, Result};
 use std::collections::BTreeMap;
-pub struct Certificate {
+pub struct Certificate<E = crate::source_shared_edge::SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
     vertex: usize,
     point: [f64; 3],
     plane: [[f64; 3]; 3],
     uses: [(Address, usize); 2],
-    material_hulls: [Option<crate::source_planar_material_hull::Certificate>;2],
+    material_hulls: [Option<crate::source_planar_material_hull::Certificate<E>>;2],
     corner_image: Option<crate::source_corner_plane_image::Certificate>,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
         self.faces
     }
@@ -37,10 +37,10 @@ impl Certificate {
         &self.uses
     }
     pub fn corner_image(&self)->Option<&crate::source_corner_plane_image::Certificate> {self.corner_image.as_ref()}
-    pub fn material_hulls(&self)->&[Option<crate::source_planar_material_hull::Certificate>;2] {&self.material_hulls}
+    pub fn material_hulls(&self)->&[Option<crate::source_planar_material_hull::Certificate<E>>;2] {&self.material_hulls}
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = crate::source_shared_edge::SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub reason: &'static str,
 }
@@ -88,17 +88,30 @@ pub(crate) fn corner(source: &Fragment, end: usize) -> Option<[f64; 3]> {
             .unwrap(),
     )
 }
+/// Exact source-to-carrier endpoint fractions from private native admission.
+pub trait VertexCarrier:crate::source_seam_tangency::Carrier {
+    fn corner_range(&self,side:usize)->Option<[[f64;2];2]>;
+}
+impl VertexCarrier for crate::source_shared_edge::SharedEdge {
+    fn corner_range(&self,side:usize)->Option<[[f64;2];2]> {
+        if self.ranges().is_some() {return None;}
+        Some(crate::source_seam_tangency::ranges(self)[side])
+    }
+}
+impl VertexCarrier for crate::source_projective_edge::Edge {
+    fn corner_range(&self,side:usize)->Option<[[f64;2];2]> {Some(self.uses()[side].range())}
+}
 /// Exact clamped canonical carrier endpoint, including a UV point inside its
-/// surface chart. The private SharedEdge proves the full original composition.
-/// Mapped ranges and root-valued endpoints require their own point proof.
-pub(crate) fn carrier_corner(shell: &Shell, address: Address, end: usize) -> Option<[f64;3]> {
+/// surface chart. The private carrier proves the original composition.
+/// An exact endpoint fraction must be zero or one; roots remain unsupported.
+pub(crate) fn carrier_corner<E:VertexCarrier>(shell: &Shell<E>, address: Address, end: usize) -> Option<[f64;3]> {
     if end>1 {return None;}
     let (index,slot)=shell.uses().iter().enumerate().find_map(|(i,uses)| {
         uses.iter().position(|a|*a==address).map(|slot|(i,slot))
     })?;
     let shared=&shell.edges()[index];
-    if shared.ranges().is_some() {return None;}
-    let source=&shared.uses()[slot];
+    let range=shared.corner_range(slot)?;
+    let source=shared.fragment(slot);
     let Endpoint::Parameter(t)=source.endpoints()[end] else {return None;};
     let domain=source.curve().domain();
     let side=domain.iter().position(|p|*p==t)?;
@@ -107,13 +120,13 @@ pub(crate) fn carrier_corner(shell: &Shell, address: Address, end: usize) -> Opt
     let d=world.domain();
     if world.periodic || !world.knots[..=world.degree].iter().all(|t|*t==d[0])
         || !world.knots[n..].iter().all(|t|*t==d[1]) {return None;}
-    let reversed=shared.reversed()[slot]^source.reversed();
-    let canonical=side^usize::from(reversed);
+    let [numerator,denominator]=range[side];
+    let canonical=if numerator==0. {0} else if numerator==denominator {1} else {return None;};
     let i=if canonical==0 {0}else{n-1};
     if world.weights[i]<=0. {return None;}
     world.control_points[i].as_slice().try_into().ok()
 }
-pub fn certify(shell: &Shell, faces: [usize; 2], max_work: u64) -> Result<Report> {
+pub fn certify<E:VertexCarrier>(shell: &Shell<E>, faces: [usize; 2], max_work: u64) -> Result<Report<E>> {
     let regions = shell
         .regions()
         .ok_or_else(|| Error::new("BREP_SOURCE_CONTACT", "Qualified regions required"))?;

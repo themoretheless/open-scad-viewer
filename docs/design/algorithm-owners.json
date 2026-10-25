@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-03",
+  "date": "2026-10-15",
   "decisions": [
     {
       "id": "sketch-relations",
@@ -249,6 +249,20 @@
         "src/services/gpuTrussSolver.ts"
       ],
       "reason": "GPU host buffers and display-only reference paths remain host-owned. Persisted geometry, topology and qualification require native owners; this registry does not assert CPU/GPU parity or completed migration."
+    },
+    {
+      "id": "incoming-gpu-preview-and-reference",
+      "owner": "application-gpu-reference (TypeScript/WGSL)",
+      "action": "migrate",
+      "files": [
+        "src/services/gpuCsgPrimitives.ts",
+        "src/services/gpuMarchingCubes.ts",
+        "src/services/gpuNurbsReference.ts",
+        "src/services/gpuSemanticEdges.ts",
+        "src/services/gpuSubdivision.ts",
+        "src/services/gpuTrussSolver.ts"
+      ],
+      "reason": "Imported main preview meshes, GPU readback processing, CPU tessellation reference and PCG fallback remain TypeScript/WGSL code. This is an explicit remaining migration, not Rust ownership credit. They do not compute loft/sweep/frame/cap error, regularity, contact, shell or Solid certificates; those are recomputed by nurbs-core/brep-core. Native replacement of these unrelated GPU fallbacks is outside the common boundary certificate and has not been qualified."
     },
     {
       "id": "remaining-mesh-numerics",

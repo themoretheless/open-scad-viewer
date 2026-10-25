@@ -499,7 +499,7 @@ pub fn intersect_plane_cone(
 /// (x, y) coordinates (x along the in-plane axis projection e1, y along
 /// e2 = normal x e1, origin at the apex projection Q).
 #[allow(clippy::too_many_arguments)]
-fn conic_halfplanes(
+pub(super) fn conic_halfplanes(
     plane: &CanonicalPlane,
     cone: &CanonicalCone,
     rect: &[Halfplane2; 4],
@@ -567,7 +567,7 @@ fn conic_halfplanes(
 
 /// Homogeneous 3D numerator of Q + x(t) e1 + y(t) e2 with
 /// (x, y) = num / den.
-fn conic_num3(
+pub(super) fn conic_num3(
     q: [f64; 3],
     e1: [f64; 3],
     e2: [f64; 3],

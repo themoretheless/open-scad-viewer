@@ -8,14 +8,14 @@ use crate::{
     source_shell_incidence::{Address, Shell},
 };
 use nurbs_core::{Error, Result, surface_injectivity};
-pub struct Certificate {
+pub struct Certificate<E = SharedEdge> {
     region: SourceRegion,
     plane: [[f64; 3]; 3],
     chart: surface_injectivity::Report,
-    edges: Vec<SharedEdge>,
+    edges: Vec<E>,
     points: Vec<[f64; 3]>,
 }
-impl Certificate {
+impl<E> Certificate<E> {
     pub fn region(&self) -> &SourceRegion {
         &self.region
     }
@@ -25,19 +25,19 @@ impl Certificate {
     pub fn chart(&self) -> &surface_injectivity::Report {
         &self.chart
     }
-    pub fn edges(&self) -> &[SharedEdge] {
+    pub fn edges(&self) -> &[E] {
         &self.edges
     }
     pub fn points(&self) -> &[[f64; 3]] {
         &self.points
     }
 }
-pub struct Report {
-    pub certificate: Option<Certificate>,
+pub struct Report<E = SharedEdge> {
+    pub certificate: Option<Certificate<E>>,
     pub exact_work: u64,
     pub reason: &'static str,
 }
-pub fn certify(shell: &Shell, face: usize, max_work: u64) -> Result<Report> {
+pub fn certify<E:crate::source_vertex_contact::VertexCarrier>(shell: &Shell<E>, face: usize, max_work: u64) -> Result<Report<E>> {
     let regions = shell
         .regions()
         .ok_or_else(|| Error::new("BREP_SOURCE_MATERIAL_HULL", "Original regions required"))?;
@@ -92,12 +92,12 @@ pub fn certify(shell: &Shell, face: usize, max_work: u64) -> Result<Report> {
                 return Ok(out);
             };
             let shared = &shell.edges()[index];
-            // Only direct full-source composition authority is used here.
-            // General mapped restrictions need independent range enclosures.
-            if shared.ranges().is_some() || shared.world().weights.iter().any(|w| *w <= 0.) {
+            // The privately qualified correspondence stays in the canonical domain.
+            // Keeping all original carrier control points enlarges the hull.
+            if shared.corner_range(slot).is_none() || shared.world().weights.iter().any(|w| *w <= 0.) {
                 return Ok(out);
             }
-            let source = &shared.uses()[slot];
+            let source = shared.fragment(slot);
             let domain = source.curve().domain();
             let expected = if source.reversed() {
                 [domain[1], domain[0]]

@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "scope": "two actual browser tabs on controlled flange plus retained AP242 body; one 1 mm X transform; conflict detection both directions; explicit load; Undo; Redo; reload",
+  "checks": {
+    "local-before-load == undo-local": true,
+    "writer == loaded": true,
+    "loaded == redo-loaded": true,
+    "redo-loaded == reload": true
+  },
+  "writerDiffersFromLocal": true,
+  "sourceSHA256": "dd666c556fb52fd8e2abe21d750a343c11858e6b811df2fdeaac99eb7230788d",
+  "limitations": [
+    "Does not qualify simultaneous writes at identical storage commit time.",
+    "Does not qualify browser process crashes or storage corruption.",
+    "Does not complete the full command matrix."
+  ],
+  "additionalDeterministicTests": {
+    "scope": "mock-controlled worker decode race, en and ru; not real simultaneous browser commits",
+    "result": "2 passed",
+    "test": "rejects a shared version replaced during decoding and retries the latest version",
+    "checks": [
+      "Late previous shared version is not applied",
+      "Changed-during-load error localized",
+      "Retry loads latest shared document",
+      "Undo restores entire local document"
+    ],
+    "testSourceSHA256": "4138161acbd3a72eeb9d791e4b338729bd82ec724319bdb8dbd73de3d59fa4e4"
+  },
+  "validation": {
+    "directModelerUiTests": 325,
+    "durationSeconds": 141.54,
+    "vueTypecheck": "passed",
+    "diffCheck": "passed"
+  }
+}

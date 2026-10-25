@@ -69,14 +69,16 @@
 //! contacts are reported; where the plane patch crosses a cap disk the cap
 //! chord is not a component — coverage is NumericallyResolved, never
 //! certified complete, and nothing here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::cylinder_cylinder::arc_parameter;
-use brep_core::intersections::{CanonicalPlane, recognize_plane};
+pub(crate) use brep_core::intersections::{CanonicalPlane, recognize_plane};
 use super::plane_sphere::{
     EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d, conic_sweep,
 };
 use super::sphere_cylinder::CylinderPatchCurve;
 use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect};
-use brep_core::intersections::{CanonicalCone, recognize_cone};
+pub(crate) use brep_core::intersections::{CanonicalCone, recognize_cone};
 use super::*;
 use brep_core::Model;
 

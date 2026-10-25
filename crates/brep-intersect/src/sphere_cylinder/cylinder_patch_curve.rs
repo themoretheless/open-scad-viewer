@@ -31,7 +31,7 @@ pub enum SphereCylinderComponent {
 
 /// Where a resolved circle sits on the cylinder boundary.
 #[derive(Clone, Copy)]
-enum CircleSite {
+pub(super) enum CircleSite {
     /// On the side wall: radius is the cylinder radius.
     Side,
     /// On a cap disk with the given circle radius.
@@ -40,7 +40,7 @@ enum CircleSite {
 
 /// Exact circle component at axial position `axial` relative to the cylinder
 /// center, with UV lifts on both surfaces and a 16-sample residual bound.
-fn circle_component(
+pub(super) fn circle_component(
     sphere: &CanonicalSphere,
     cylinder: &CanonicalCylinder,
     axial: f64,
@@ -259,27 +259,4 @@ pub fn intersect_sphere_cylinder(
             .push(circle_component(&sphere, &cylinder, axial, site)?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for CylinderPatchCurve {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for SphereCylinderComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                sphere_uv,
-                cylinder_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"sphereUv":sphere_uv,"cylinderUv":cylinder_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }

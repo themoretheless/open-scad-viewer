@@ -1,0 +1,292 @@
+{
+  "schema": "signed-affine-solid-native-qualification-v1",
+  "qualifiedCodeRevision": "e5a554db7c4f2143abbe3e11ab413ba29e758d6b",
+  "lowerCheckpointRevision": "a9202f2c30d297de092123616abaf8a0f3aff926",
+  "nativeCheckpointPassed": true,
+  "sourceGuardVerified": true,
+  "inputsSha256": "b56f4c7287e34514756f9418354459f8c0323f8778fd5688c676a3ed303bf8e8",
+  "checks": [
+    {
+      "name": "exact-predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib"
+      ],
+      "log": "logs/exact-predicates-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 2.401,
+      "testResults": [
+        {
+          "passed": 58,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "nurbs-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "log": "logs/nurbs-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 98.699,
+      "testResults": [
+        {
+          "passed": 1584,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "source-volume-matrices",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "ideal_volume",
+        "--test",
+        "ideal_spatial_volume",
+        "--test",
+        "ideal_volume_atlas",
+        "--test",
+        "ideal_closed_spatial_volume",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/source-volume-matrices-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 163.584,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "regularity-and-g2",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "surface_regularity",
+        "--test",
+        "surface_g2",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/regularity-and-g2-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 1.974,
+      "testResults": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "brep-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "log": "logs/brep-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 986.824,
+      "testResults": [
+        {
+          "passed": 1103,
+          "failed": 0,
+          "ignored": 3
+        }
+      ]
+    },
+    {
+      "name": "brep-aag-serial",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "log": "logs/brep-aag-serial-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 23.873,
+      "testResults": [
+        {
+          "passed": 44,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "bridge-full",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--lib"
+      ],
+      "log": "logs/bridge-full-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 185.873,
+      "testResults": [
+        {
+          "passed": 340,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "name": "native-json-step",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "geometry-bridge",
+        "--test",
+        "general_boundary_certificate",
+        "--test",
+        "closed_material_certificate",
+        "--test",
+        "smooth_closed_material_certificate",
+        "--test",
+        "smooth_closed_step_matrix",
+        "--",
+        "--nocapture"
+      ],
+      "log": "logs/native-json-step-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 184.376,
+      "testResults": [
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "name": "no-codec-libraries",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "log": "logs/no-codec-libraries-final.log",
+      "exitCode": 0,
+      "elapsedSeconds": 10.23,
+      "testResults": []
+    }
+  ],
+  "reusedLowerChecks": 0,
+  "publicWasmRebuilt": false,
+  "freshCiQualified": false,
+  "semanticG1MatrixQualified": false,
+  "independentStepQualified": false,
+  "browserQualified": false,
+  "idealSourceSmoothnessQualified": true,
+  "physicalCapSmoothnessQualified": false,
+  "nativeSignedStepMatrixQualified": true,
+  "fullGoalComplete": false,
+  "idealSourceSmoothnessScope": "qualified-original-closed-material-frame-and-profile-cases-no-physical-caps",
+  "totalPassed": 3185,
+  "totalIgnored": 4
+}

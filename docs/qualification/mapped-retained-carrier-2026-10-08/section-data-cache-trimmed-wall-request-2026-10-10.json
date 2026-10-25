@@ -1,0 +1,8 @@
+{
+  "test": "restricted_profile_seams_match_owned_neighbor_supports",
+  "cells": 10000,
+  "spans": 1000000,
+  "trimCells": 100000,
+  "sourceManifest": "section-data-cache-native-inputs-2026-10-10.json",
+  "report": "section-data-cache-trimmed-wall-2026-10-10.json"
+}

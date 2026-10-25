@@ -1,0 +1,845 @@
+{
+  "schema": "qualification-json-compaction/1",
+  "method": "Remove JSON whitespace outside strings; preserve numeric tokens, strings, order and all values; parsed equality checked for each file",
+  "originalSnapshot": "df1877ebe",
+  "files": [
+    {
+      "path": "docs/qualification/cad-fresh-parts-shared-corner-normalized-2026-10-11/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "2726e78e5f6ced42bb53e33462956a4860c32c1ca11a032d206699570ca68bde",
+      "sha256": "f0ae6d464ce738ec9e9cbbdd9a5da66a67aee0651f3d8c27171cb513a61a9835"
+    },
+    {
+      "path": "docs/qualification/cad-fresh-reload-step-browser-2026-10-11/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "4622de6abd74996bdda18b5d03715e5b1ce9656c5a2eb54e3b245dba1a4d4892",
+      "sha256": "2739949dd6db0914a03bd07bc214b96a8fa4b4b5defa504290472ffd701b57ea"
+    },
+    {
+      "path": "docs/qualification/cad-fresh-ui-fillet-2026-10-11/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "3db2f801797a2a196f2be4aaf7cf3383d4a0706213a4472a97ccf13e31f39936",
+      "sha256": "39e7f98cb7e92296c197c09f16233ae4fb22912d877ab0f922400ccbf250335e"
+    },
+    {
+      "path": "docs/qualification/cad-mixed-history-current-2026-10-09/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "67ed9f92ae0f1b9f4adc58a2c9de20928cb054ea521c4560670a283491fb8910",
+      "sha256": "70860d2c2efe30ca1a6e0b547bf71538c1302525f194379267aae62b997b6608"
+    },
+    {
+      "path": "docs/qualification/cad-mixed-ui-step-roundtrip-2026-10-10/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "fa42c73162645891f655c860a7a30e4d188a8c9b317e4eef860092557ee57afe",
+      "sha256": "9fa9df6edd3abc4d2e015b259be8e2ac0702b456ee22ed79a254d8e3957448ac"
+    },
+    {
+      "path": "docs/qualification/cad-parts-current-wasm-identity-2026-10-09/identity-diagnostic.json",
+      "beforeBytes": 412213,
+      "afterBytes": 244734,
+      "beforeLines": 14838,
+      "afterLines": 1,
+      "originalSha256": "8db8ad8e76e94e8129606adf9499b67a4b283c6d209e8933448e3a7631f0574c",
+      "sha256": "b41ec72dc3f2f654f627b69608708457884a9a439cf23f03a66d5cb92cee6998"
+    },
+    {
+      "path": "docs/qualification/cad-parts-fixed-shear-2026-10-10/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "b2d97fa00953d0d7174fc9ff97c44ba54f95d3c017981daa1e69bc71e4cd0f21",
+      "sha256": "88ae129f17b568e228d55681de03dafcf6c0830279ca321e0e26e4d555c215af"
+    },
+    {
+      "path": "docs/qualification/cad-parts-global-root-2026-10-10/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "05864ef3e517932a533d7468767e99d672da176b59193a4d27a29cfea73c49fc",
+      "sha256": "214c21b3f5ad0e252c85dbbae004462b7a6b706424905c984ab2614cce887416"
+    },
+    {
+      "path": "docs/qualification/cad-parts-history-replay-2026-10-10/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "a5e12d236742f3fdd6ad7f5b03e4ab2b95dfa50b2e18e364b467419a4372d45e",
+      "sha256": "16256e170ffbec47c1324d2d7cad20775ebe9e9618ed2e0c54b0632fa8dcc2d7"
+    },
+    {
+      "path": "docs/qualification/cad-parts-piecewise-wasm-2026-10-10/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "ceb4fc058e9f4b70d3f1837eab4ee51f0d39672cdb4245ea32ef270df941c06a",
+      "sha256": "9dcb5ca4232476caff699b9d59543191092417952d7062d54fd40a6cfe7ca83e"
+    },
+    {
+      "path": "docs/qualification/cad-parts-step-identity-fixed-2026-10-09/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "1480d2b1242a1e551ad788b2993c1c6cd2cd4aa9564b7f5b9581e8f0b156bb8a",
+      "sha256": "24a02c007a1f5eb29382a3828e507abb0ea86ee53f5342d025888857ef96419b"
+    },
+    {
+      "path": "docs/qualification/cad-ui-history-2026-10-09/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "d2450b4587c1328b446f5b32aa9d65fe5644432e60b9a16601f60f8b99601336",
+      "sha256": "917f53a79476508a5bc831beb29fb2fd5c16f39b0e561738517eab14fc09bca7"
+    },
+    {
+      "path": "docs/qualification/exact-boundary-client-timing-worker-2026-10-11/expression-inspection-worker-report.json",
+      "beforeBytes": 16113532,
+      "afterBytes": 2585594,
+      "beforeLines": 545649,
+      "afterLines": 1,
+      "originalSha256": "c11466ab1e07b9056b353f41927926044b36233d4d82f45cf3093c7e0f11e31c",
+      "sha256": "1bcb6ad16e09e8b14c6f9c436291e837b3d6549eb57402564076babfcb7eaa2e"
+    },
+    {
+      "path": "docs/qualification/exact-boundary-observed-worker-2026-10-11/expression-inspection-worker-report.json",
+      "beforeBytes": 16112952,
+      "afterBytes": 2585195,
+      "beforeLines": 545625,
+      "afterLines": 1,
+      "originalSha256": "ba3874ef866e19c09cbfaba505e195c3050d31db8a0414541eb811c7734a9fec",
+      "sha256": "cb5ae1481ae1cb602248737c79814a19689e561ee2eec5e3a9fcaaccd65031f8"
+    },
+    {
+      "path": "docs/qualification/exact-boundary-required-timing-worker-2026-10-11/expression-inspection-worker-report.json",
+      "beforeBytes": 16113232,
+      "afterBytes": 2585385,
+      "beforeLines": 545635,
+      "afterLines": 1,
+      "originalSha256": "7c735eea53d235a4c311304048e0d4b1de872b6e75699a0f50c2d5e9b3359151",
+      "sha256": "e01a0675b19424a6988a5ffeb293ede3acc78b3af674c27aecdd9f581ffad41f"
+    },
+    {
+      "path": "docs/qualification/exact-boundary-timed-worker-2026-10-11/expression-inspection-worker-report.json",
+      "beforeBytes": 16113226,
+      "afterBytes": 2585379,
+      "beforeLines": 545635,
+      "afterLines": 1,
+      "originalSha256": "59fa19c8a2967bd2aefad0107decfd11b14f71b7c00847ebdc3766d7fecc76b2",
+      "sha256": "4c7143cba97f6782cf4348c56cc1c75782e85e1e329b2fc2caa16db4ea553220"
+    },
+    {
+      "path": "docs/qualification/expression-worker-staging-runtime-2026-10-11.json",
+      "beforeBytes": 13533525,
+      "afterBytes": 2152942,
+      "beforeLines": 427231,
+      "afterLines": 1,
+      "originalSha256": "bc423ec0e9c5a40d871891ac617376a9574550d736b184b75ba056be91d8f310",
+      "sha256": "3056bad692f8d39013f52c785d7f943322aad1f78d5e7aab0548cfd90ac923f1"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/aligned-chord-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13802603,
+      "afterBytes": 2193065,
+      "beforeLines": 439834,
+      "afterLines": 1,
+      "originalSha256": "39a134f2b31ec2ff1129719c24e40bd67edcb5c391acb26a461647d25c0b6d61",
+      "sha256": "ac5ecfad2acda762c89b6c8baf262c4c5da480ae2fee984fa414e2fcc1eb463e"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/aligned-chord-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16113758,
+      "afterBytes": 2584320,
+      "beforeLines": 545684,
+      "afterLines": 1,
+      "originalSha256": "528590724fcd6ab84c4f217bfe72e009a22bd6ce406b8f580069df0b5c834eb7",
+      "sha256": "fe074fb65b5f587929db081fdef3bd99211d6d80e6e40d40605458296ad5290e"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/boundary-mesh-wasm-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 16930640,
+      "afterBytes": 3038894,
+      "beforeLines": 581312,
+      "afterLines": 1,
+      "originalSha256": "a1aaefe15180b4e9b892d01575188e95a4b791c3aaf8268513e69e5daf4345b7",
+      "sha256": "8ae16ddf52d430b1f74fc0eed1c1938c096cc153ecf7484ef627512211cfd025"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/current-inspection-worker-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 16930631,
+      "afterBytes": 3038885,
+      "beforeLines": 581312,
+      "afterLines": 1,
+      "originalSha256": "ef46a531042a0c6bc27f33ab980c9bb50e8cf9c352dea6a01850d8bff7441d77",
+      "sha256": "22c1adf5758623a63be188e543f6e9e59b0c9c12540cfc228182654e7fe9e6a0"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/exact-rational-boundary-dispatch-wall-2026-10-11.json",
+      "beforeBytes": 1647725,
+      "afterBytes": 447740,
+      "beforeLines": 118391,
+      "afterLines": 1,
+      "originalSha256": "f8eac2bf94bfe28eee6541690ff8b3f0e977bf1e62912475cd28d7dd6a505f97",
+      "sha256": "6942d035782ede0dc61bf5f945b99d7b1d3d1eac5385f7cb5ffba8713f64dfee"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-adaptive-wall-pending.json",
+      "beforeBytes": 1489539,
+      "afterBytes": 332609,
+      "beforeLines": 113277,
+      "afterLines": 1,
+      "originalSha256": "fcc7118747fc0b8bb1a298e508f431bbcd74630dd7deb97d982fea76942d86a3",
+      "sha256": "ddcb7f6260ed08ef031ecc94e5d453dc32ee13a8e06f9b06ae13b4862ef5e36b"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-cached-wall-pending.json",
+      "beforeBytes": 1489538,
+      "afterBytes": 332608,
+      "beforeLines": 113277,
+      "afterLines": 1,
+      "originalSha256": "46f606585304a0835dff69447a2120359fb6452c221fdef82260281c4a3fc4bd",
+      "sha256": "08d708e5b55136eeae3cb0c02c663a7a88b3b07d67f246d978e4630f14779346"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-combined-wall-first-pass-pending.json",
+      "beforeBytes": 178724,
+      "afterBytes": 39668,
+      "beforeLines": 13625,
+      "afterLines": 1,
+      "originalSha256": "4f7522a92f8e53e86d777ad4c4e25c93b69e8ece3612d51e5a70de2ca2ed4901",
+      "sha256": "feea8048549e0afa9a7cf296f89ccc11da090f88e803d75db1637bfe4a0e2464"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-corrected-endpoint-pair-wall-pending.json",
+      "beforeBytes": 1637643,
+      "afterBytes": 370877,
+      "beforeLines": 124032,
+      "afterLines": 1,
+      "originalSha256": "85939f89c5cdc9497fa48992cbcb4cba38d3f55a40d6e75a217fddde8bd5de09",
+      "sha256": "872fb014045e01c8b7d7dc1da64ee99a22ec8045ef8889c64fa5f35a98c24614"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-display-wasm-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 13807047,
+      "afterBytes": 2229960,
+      "beforeLines": 440173,
+      "afterLines": 1,
+      "originalSha256": "f35578c75e748edcc93a6ea10a48c2985c3e80a33cbaf4f9780e3e08453cb04d",
+      "sha256": "e9877bfa96fd63ace227dfd5b39eaf9f25f29c12718606a5930e845f9e632bd1"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-inspection-wasm-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 13531168,
+      "afterBytes": 2151105,
+      "beforeLines": 427150,
+      "afterLines": 1,
+      "originalSha256": "3d392348f7a9bf6061276bcc8d191ecb8cb7d0de15382539497c97e322d1176c",
+      "sha256": "e38479508280c76d4860b725b00cdcb0836aae0b105492a513250124c1797850"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-mesh-extended-wasm-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 24809864,
+      "afterBytes": 5976075,
+      "beforeLines": 914821,
+      "afterLines": 1,
+      "originalSha256": "fe82e8078e6835daed329c0149746e1eb288a5a663deba5e37a7eede2f84be9e",
+      "sha256": "7c08003efd0846a3cdf3e830296f7f5a634a5c8b632fbd689881a6a960a8d3c2"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-mesh-wasm-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 18439374,
+      "afterBytes": 3743689,
+      "beforeLines": 645572,
+      "afterLines": 1,
+      "originalSha256": "46308e2017c4a49571de090298e87044dfe7844480a630be60b540103aa53313",
+      "sha256": "4b462dce5a7427b080c80dc97b33bd247145f968fcf7b3faa47eb65cbacc69ec"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-normal-cones-wall-pending.json",
+      "beforeBytes": 1635065,
+      "afterBytes": 369451,
+      "beforeLines": 123918,
+      "afterLines": 1,
+      "originalSha256": "eed6ae7b025865cfe6a9d811acb4b2131aa71740a0518609447767fbe14de03d",
+      "sha256": "caf170009ab7b91df453d6827813ca59d46d6ab309cdf07f53666e63e5aaffcc"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-retained-endpoint-pair-wall-pending.json",
+      "beforeBytes": 1637643,
+      "afterBytes": 370877,
+      "beforeLines": 124032,
+      "afterLines": 1,
+      "originalSha256": "b232fa004ef5cc5ae013b1a719eaaf4b29b6729c988b14ff92233df58c693b26",
+      "sha256": "a1890221fa09ae2dc23e0886ae2e47a035b632e4fadeabd27f66826be8d7b701"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-span-normal-wall-pending.json",
+      "beforeBytes": 1635065,
+      "afterBytes": 369451,
+      "beforeLines": 123918,
+      "afterLines": 1,
+      "originalSha256": "8afff6646fdc2f26e91268d16f267bcf8ce05745ed5519f0e12dab87405033b5",
+      "sha256": "ea1e4180d309ae0f68db5821ba66803ac6a5e632b9519a39f6779b959e5488e4"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-symmetric-wall-pending.json",
+      "beforeBytes": 1384756,
+      "afterBytes": 310190,
+      "beforeLines": 105214,
+      "afterLines": 1,
+      "originalSha256": "f23cb78befc3c3f5d8c2e8bb573ebba8e9e6c26ff98f0a09b10ce2f9a9994c67",
+      "sha256": "67a857e9e4e33b151a3b5979bf1f6bc0bd1348450d0bd36e6127d85d03d1d18c"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-trimmed-wall-pending.json",
+      "beforeBytes": 1637643,
+      "afterBytes": 370877,
+      "beforeLines": 124032,
+      "afterLines": 1,
+      "originalSha256": "0fc46eff3c70aea5a1ffcb392c0aa21546a9280bc119a0669635ca194943eb1b",
+      "sha256": "5b1383a1780e963fbb4d083419ad716933c54332f0d789f4a8accbd9a5b77e98"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/expression-wasm-replay-2026-10-09/expression-worker-report.json",
+      "beforeBytes": 10857133,
+      "afterBytes": 1818364,
+      "beforeLines": 314080,
+      "afterLines": 1,
+      "originalSha256": "5824504187309daa5aeeabed1d48077da9580552461fa97b372bcfdeee8c10ec",
+      "sha256": "7f4bc054083fba67db3ec4e7acfb27866dc26a8a8a791c62f4e9baad89865379"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/first-path-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16114048,
+      "afterBytes": 2584491,
+      "beforeLines": 545694,
+      "afterLines": 1,
+      "originalSha256": "64c7283bb27ecd0eaad60beaa10a4396412aa12b30e973010f4b626f24aeab4d",
+      "sha256": "eebd67c7b26dfa00b28c511adc98c6848fb795b70148dcba438c960b0dab334d"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/first-path-worker-bounded-2026-10-10/wall-report.json",
+      "beforeBytes": 1633645,
+      "afterBytes": 432492,
+      "beforeLines": 118505,
+      "afterLines": 1,
+      "originalSha256": "ac96492cc027bc8533d8a06700a73b2f5112fbb204e52f9abb616c7f5effb660",
+      "sha256": "84a760a83eb6afa80f9dc81428e9c610b26828aae95f9384398a427473bb0bc7"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/first-path-worker-zero-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13802874,
+      "afterBytes": 2193217,
+      "beforeLines": 439844,
+      "afterLines": 1,
+      "originalSha256": "564d1bf7dcc2f3f7f31c1dcb31b6ac4605b0ada9d31cce7290df5644d0b59e3b",
+      "sha256": "92ea24149174e85b723aeac91b4bd01ab01c120dd9c6ec20437898b423220830"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/fixed-shear-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "897e9f5ef898664b64a59b5d800f3370886d2e327657dd3dd2e6a4a719a71f2c",
+      "sha256": "5d0aa259ada2aaf9a1a0f1f36e4f0ce83bebd44eb0016df27f4db821dd099a52"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/intrinsic-cache-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "67b6aba7c1eb81f0f972097a84c8e86eee2c6a11234b2f66f96c8a4c17037bf0",
+      "sha256": "2bb4f1d1f140ff388f14da08b5a2bf2ef341aa2b481069eb982ca1050c903b31"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/intrinsic-cache-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16114049,
+      "afterBytes": 2584492,
+      "beforeLines": 545694,
+      "afterLines": 1,
+      "originalSha256": "1c3f5c62afd2dc51759058b49fae5a6d382504da56837815dfd5e085d23df082",
+      "sha256": "fafba259b61eb5769871098669ae37af7a2da5aa751e980db3155021fbc725a7"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/intrinsic-cache-worker-bounded-2026-10-10/wall-report.json",
+      "beforeBytes": 1633645,
+      "afterBytes": 432492,
+      "beforeLines": 118505,
+      "afterLines": 1,
+      "originalSha256": "ac96492cc027bc8533d8a06700a73b2f5112fbb204e52f9abb616c7f5effb660",
+      "sha256": "84a760a83eb6afa80f9dc81428e9c610b26828aae95f9384398a427473bb0bc7"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/intrinsic-cache-worker-zero-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13802881,
+      "afterBytes": 2193224,
+      "beforeLines": 439844,
+      "afterLines": 1,
+      "originalSha256": "c06a852f905e7b2c59f7540dc829bbbe0c211f8b1d9d95532e23560e0ddb3143",
+      "sha256": "15afecd4bc5d45f6f6304980936cd84bc9a097bf21cb66886f32e488e5b226ef"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/multispan-global-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "0e0b85cf720809c2ac4aa360080bfac20c0de272708b97b038198fff08257474",
+      "sha256": "ed16d505432cd8da116a81b2aed57e3deb9a30a111a7f4156cd7c1fc13dc1a82"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "8b8e5700d7073099d1790116149427602b235696b3a792502690083ec9f09f65",
+      "sha256": "4d20347f4a272070e9888cf5623b8b0afb00297311538cf6de36d3b0867ecf44"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/neighbor-tangency-qualified-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13532407,
+      "afterBytes": 2152024,
+      "beforeLines": 427190,
+      "afterLines": 1,
+      "originalSha256": "cc955931ee2aa3f99f7de626cf127315ecf36be83c2a13a3a5c9b83b064d05c5",
+      "sha256": "152ee689f3b640f6111b87582d60b7af2456c1c321aa099038e8344176d07969"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/neighbor-tangency-unproven-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13532305,
+      "afterBytes": 2151975,
+      "beforeLines": 427185,
+      "afterLines": 1,
+      "originalSha256": "f3d8a8ebd7e93c7862592317cb70f2df40578bd2a30c0c0ea298626b18421c6d",
+      "sha256": "fa045610a3c9505af48e90fa0713f796c73948f4e3d1dbb2abdd7106548df873"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/original-normal-cache-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "5c1b81b6f6d31bbe55edcc26c01c641bc992c9353c1f5473bc620f3d7922bf1a",
+      "sha256": "3e964eff2c82d6a8bd8d603c086baf36f96a458fe8398d8c59a39f1fc966597d"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/original-normal-sharing-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "5d772451557a854cacc5b86b36e2ae9011e8334eca34c6efb0e6b317c0d1bc7e",
+      "sha256": "8a499738ec7dd44e811f87a8e1ac0a6aba3f2faa4e9b5f7b0a2b6811ca63f6f1"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/owner-fixed-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16114167,
+      "afterBytes": 2584591,
+      "beforeLines": 545698,
+      "afterLines": 1,
+      "originalSha256": "0b23f1519bfe8dd5a6c6a7ef3a3522d07b7cf85039e124d3801d0b687a6c6e64",
+      "sha256": "d94bad08a5103f0b6af5c75e9fc53f0379b0a47d2f8018c8d06ae3c1ca1702b7"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/query-order-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "8217b472015b702525deb501a2f50fb23e9d027fef05ab275e26d5fb14d64e9b",
+      "sha256": "37b3496131477895e076ee6fd8817628bd3ad1f2cf370f226a573549da89317d"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/radius-qualified-worker-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 13535977,
+      "afterBytes": 2152904,
+      "beforeLines": 427393,
+      "afterLines": 1,
+      "originalSha256": "82d44bb1a2841add128b5e2890db947e6d549d87db63fa71c5d4c8cf0f25d40f",
+      "sha256": "41c85803e79e4f39ef5b1116235e9d6b4636588bcfbd916191507ca14f39ca48"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/radius-unproven-worker-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 13535934,
+      "afterBytes": 2152861,
+      "beforeLines": 427393,
+      "afterLines": 1,
+      "originalSha256": "b3ec3d26a23f83ee290ed7720cf62dd77ce28bf47b442964099565e58c168cd1",
+      "sha256": "f086bea3982cea41e109584242825fb7139e14b6eaf082b782851c9799cea2aa"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/radius-violation-worker-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 13535979,
+      "afterBytes": 2152906,
+      "beforeLines": 427393,
+      "afterLines": 1,
+      "originalSha256": "536d00c2703f174817c01cb1544501673fc110683d918fdffb8b7b7c93a76bc5",
+      "sha256": "711ccf0cf73e6ad61885ee5c90b4a938f644827d456a0f409356a661ac65fbf9"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/rail-position-cache-dispatch-wall-2026-10-10.json",
+      "beforeBytes": 1647725,
+      "afterBytes": 447740,
+      "beforeLines": 118391,
+      "afterLines": 1,
+      "originalSha256": "f8eac2bf94bfe28eee6541690ff8b3f0e977bf1e62912475cd28d7dd6a505f97",
+      "sha256": "6942d035782ede0dc61bf5f945b99d7b1d3d1eac5385f7cb5ffba8713f64dfee"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/refined-inspection-worker-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 18278564,
+      "afterBytes": 3393859,
+      "beforeLines": 640341,
+      "afterLines": 1,
+      "originalSha256": "c530cce19dcf46c88a5e964b1fd55e76d33948abd30158eb6aafb09bb64f92f7",
+      "sha256": "1e931f9c7b6fed45c8cefa1a55f1217e0d5e21263959e04baa5b4d4561f4765d"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/restored-profile-step/.matplotlib/fontlist-v3.11.0.json",
+      "beforeBytes": 290596,
+      "afterBytes": 207727,
+      "beforeLines": 11123,
+      "afterLines": 1,
+      "originalSha256": "02a79c180ffb010a03264c772cd14c79cbb005896a68a200109791be663aad40",
+      "sha256": "67ef7129c00ad5098aaa639ddebf82829f602dd064e7c09fa456479a297c3d9b"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/retained-cache-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "a4e61a0f7819d7ab94339ec9da2d1d51798f47a6f87d8f121a20bce668b5b937",
+      "sha256": "6a5ac0a6a3ac49ae1568795c7698da028d94e9081ff0bb4bf79e7cf73fa58d00"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/section-data-cache-root-worker-2026-10-10.json",
+      "beforeBytes": 700081,
+      "afterBytes": 169700,
+      "beforeLines": 26949,
+      "afterLines": 1,
+      "originalSha256": "79b4aa5303c8b2fcb70de1bce74d6bba846930ba3242a597cecf3c7e625de2ca",
+      "sha256": "2ee2075a7d0e4c714abe87dfae28dd18db8d3fe30543748426f6b5b88c251e18"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/separated-refined-inspection-worker-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 18278575,
+      "afterBytes": 3393870,
+      "beforeLines": 640341,
+      "afterLines": 1,
+      "originalSha256": "3c6fbbd96b13cb40a6360cc20ac0d8656540a6ad4c8bbe951d6c3aa8fa727f7f",
+      "sha256": "0994062a2ae21519e193b835345aa87292e05343ce842b3e87397a5d56cf858b"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-cache-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16114055,
+      "afterBytes": 2584498,
+      "beforeLines": 545694,
+      "afterLines": 1,
+      "originalSha256": "352ca81cc92d6134021f4b9764f924ebb967c08cac417a74ec2b77eb95d08bbb",
+      "sha256": "4b19ebca8e9d80173e0313a272192be9105a604f0cff9dd4415c8c384f8515ff"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-cache-worker-zero-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13802874,
+      "afterBytes": 2193217,
+      "beforeLines": 439844,
+      "afterLines": 1,
+      "originalSha256": "9b570e4e633feb6a865aade5e88e41aabe232448a6c59b1826629b7a19d2fd41",
+      "sha256": "d6f98b49055d218dd26f9e17c2fcdc5f744cbaed724479861f94a7cd70a6f141"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-corner-cache-dispatch-wall-2026-10-11.json",
+      "beforeBytes": 1647725,
+      "afterBytes": 447740,
+      "beforeLines": 118391,
+      "afterLines": 1,
+      "originalSha256": "edc26a11500bf8811bdf4931fe96cc6f233f47c17fdb5eccdc35bafd36264faa",
+      "sha256": "41d4e686c87d20d1bfcef6f32a92d84475355463743a89161d426ef194e8313b"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/source-boundary-point-band-outside-wall-diff-2026-10-11.json",
+      "beforeBytes": 921427,
+      "afterBytes": 238165,
+      "beforeLines": 63681,
+      "afterLines": 1,
+      "originalSha256": "e66765541b96a8ee7472868d18d3c5bb88b333183258ce2bd43f10b6a2a88d4f",
+      "sha256": "e144239f15eef3e52e743d53076f25c02f347da1c4be48c33d39de629878bafe"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/source-fixed-point-cache-canonical-optimized-worker-2026-10-11.json",
+      "beforeBytes": 16113601,
+      "afterBytes": 2585663,
+      "beforeLines": 545649,
+      "afterLines": 1,
+      "originalSha256": "b32ec8ebac226e61f76edbb6b526367be9d05b471478de7550006565ee52909f",
+      "sha256": "3d86ef7e372bf444b5a20ec7dfb83f269f7b3bf71c31fd33954de3f1e8aaf1f6"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/source-fixed-point-cache-canonical-raw-worker-2026-10-11.json",
+      "beforeBytes": 16113569,
+      "afterBytes": 2585631,
+      "beforeLines": 545649,
+      "afterLines": 1,
+      "originalSha256": "aca378f04eed84e5732a2609fd3809d5c9833397c0f0cf23a05df6bc3132eec1",
+      "sha256": "4b17a7abe77483c4638106b0744e0c1e3f570e010d2cac95ba35e77a0f59e35d"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/span-stage-worker-bounded-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16114049,
+      "afterBytes": 2584492,
+      "beforeLines": 545694,
+      "afterLines": 1,
+      "originalSha256": "f4c2f806fc0a8983a3e9715a89c0c0922b19af69e02ea08f3d76e92d29fdf033",
+      "sha256": "d7b706fba0508c71a9546b1b8f7fcc36e4fb7c68b6f7fb7be71043c719553976"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/span-stage-worker-zero-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13802880,
+      "afterBytes": 2193223,
+      "beforeLines": 439844,
+      "afterLines": 1,
+      "originalSha256": "870fd23bf379a55fd7e525ceb636eeced96a1aada44cbc41f5890f064e1b0249",
+      "sha256": "a21396033fe330dfd9b5b12eec4abc63f5a15d335a6f1345ccda0f35cb3dd365"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/subnormal-quotient-wasm-2026-10-09/expression-inspection-worker-report.json",
+      "beforeBytes": 16930637,
+      "afterBytes": 3038891,
+      "beforeLines": 581312,
+      "afterLines": 1,
+      "originalSha256": "7cbfeb3fd116b7b3ccb2a158863cea69a888aa40314c88118a9e918bfec8439b",
+      "sha256": "a0c0b333cb765aae6e4cf683f80c4da4d69ff5f4da5d2a39feba78d5bb71082c"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/support-tangency-qualified-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13536888,
+      "afterBytes": 2152789,
+      "beforeLines": 427412,
+      "afterLines": 1,
+      "originalSha256": "85c49488a2c2cf442a3a0bfd75b465cbe74ed43338af45f38e1098153d79a49d",
+      "sha256": "fa504155c195dfad3224f71fe82ba745230fb29a5d36e97a49bab41b3e0365be"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/support-tangency-unproven-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13532158,
+      "afterBytes": 2151844,
+      "beforeLines": 427183,
+      "afterLines": 1,
+      "originalSha256": "a35d3eb1afc5fc4e4fe98b363657b5466aa6902ff967943fc92b87786b0abd79",
+      "sha256": "4dfc624ab715e5caed2fb3bc758b2576a7a8947fee6069c3720288cd55df747a"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/transverse-cone-dispatch-wall-2026-10-11.json",
+      "beforeBytes": 1647725,
+      "afterBytes": 447740,
+      "beforeLines": 118391,
+      "afterLines": 1,
+      "originalSha256": "f8eac2bf94bfe28eee6541690ff8b3f0e977bf1e62912475cd28d7dd6a505f97",
+      "sha256": "6942d035782ede0dc61bf5f945b99d7b1d3d1eac5385f7cb5ffba8713f64dfee"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/triangle-addressed-summary-2026-10-09.json",
+      "beforeBytes": 2019483,
+      "afterBytes": 708495,
+      "beforeLines": 102121,
+      "afterLines": 1,
+      "originalSha256": "7c018bd0e308aaf4de0d94ba603da6f05036c808d442e8130fdd791d11880ae7",
+      "sha256": "452603aff154695233133957fcb5fff10fe46019c5a1441a55c26ad5ca26e9fa"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/wasm-current-2026-10-09/report.json",
+      "beforeBytes": 3234039,
+      "afterBytes": 989157,
+      "beforeLines": 112619,
+      "afterLines": 1,
+      "originalSha256": "151ffea87f5ed28bf6e14777e9b7b5e8ad9dd58cf049a31e223b0e1b15aa9218",
+      "sha256": "846c9e63c84278e5ce072a3bb3777125324993b5d47f17e2b6815d51e0f91717"
+    },
+    {
+      "path": "docs/qualification/neighbor-reason-phased-inspection-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13532489,
+      "afterBytes": 2152090,
+      "beforeLines": 427193,
+      "afterLines": 1,
+      "originalSha256": "f3bcd45a5d3dbf836fe9fd2edf174d131e898d652c1a52197ac7eec4d631a38a",
+      "sha256": "8ed70f08a7ee5131b4b4bfb4f7df858e84358c11f9c19dccae571d17c0c2d33b"
+    },
+    {
+      "path": "docs/qualification/neighbor-reason-restore-worker-2026-10-10/expression-worker-report.json",
+      "beforeBytes": 10857855,
+      "afterBytes": 1818828,
+      "beforeLines": 314107,
+      "afterLines": 1,
+      "originalSha256": "0a08015451059e4a580f93e5dc5224aea4f0709c6cb70b88821659aa96f386a0",
+      "sha256": "c806aab903b522751a265f74be09ae9a99b049262f2a8a47a41e9bf86166d117"
+    },
+    {
+      "path": "docs/qualification/neighbor-reason-unproven-restore-worker-2026-10-10/expression-worker-report.json",
+      "beforeBytes": 10857753,
+      "afterBytes": 1818779,
+      "beforeLines": 314102,
+      "afterLines": 1,
+      "originalSha256": "a3e2ce26362171120332d2b7eb99ed0a593ad88d5a9b8af4dc0cefdb7a0344b3",
+      "sha256": "bf554ce0d307c268390aa55b977467b6204f2fcf2613bad27b73c0eb080c89ed"
+    },
+    {
+      "path": "docs/qualification/projective-editor-2026-10-13/optimized-worker-report.json",
+      "beforeBytes": 632249,
+      "afterBytes": 156569,
+      "beforeLines": 24710,
+      "afterLines": 1,
+      "originalSha256": "11993384f9f94b46e00369a388b02de71e7d7dd58b37a3a3fe10cc7be628bd6f",
+      "sha256": "057bea5f85c9ff73e349d1d137af84856b9fdf236e008060d2be5939198282b2"
+    },
+    {
+      "path": "docs/qualification/projective-editor-2026-10-13/raw-worker-report.json",
+      "beforeBytes": 632255,
+      "afterBytes": 156575,
+      "beforeLines": 24710,
+      "afterLines": 1,
+      "originalSha256": "5cbd5cebb2705a37f4a2f96844531880623161e9813bc1c4f082bed0727802eb",
+      "sha256": "a92eafa289508caf159f8392020d115565b0ae2fe520a6c1493748ba065d6cc4"
+    },
+    {
+      "path": "docs/qualification/query-order-aligned-profile-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 16111472,
+      "afterBytes": 2583991,
+      "beforeLines": 545581,
+      "afterLines": 1,
+      "originalSha256": "c8d06cf80cbc309135cfbf73097df03a77acb961c6628a147760601374faf07b",
+      "sha256": "dfe4c6c32efa80ef58851e69320b14a6995b07be4443462cf11010648798048b"
+    },
+    {
+      "path": "docs/qualification/query-order-inspection-worker-2026-10-10/expression-inspection-worker-report.json",
+      "beforeBytes": 13532480,
+      "afterBytes": 2152081,
+      "beforeLines": 427193,
+      "afterLines": 1,
+      "originalSha256": "a3d61d89eda0d9669ff53b8945925601c661fc070a6baae443c76eb090841d98",
+      "sha256": "0147617c613c04b90985d6dbb9747f236fe34246b97980d1fa94e810c6f45cd2"
+    },
+    {
+      "path": "docs/qualification/rail-cache-matched-worker-2026-10-11/expression-inspection-worker-report.json",
+      "beforeBytes": 16112064,
+      "afterBytes": 2584539,
+      "beforeLines": 545590,
+      "afterLines": 1,
+      "originalSha256": "6558d5ca0b67c66b48cc4df20aa514411754f5acf49944f5535780426f6be574",
+      "sha256": "2fc6450acc46d6cd00cb6bd0ffb5de5d633398708f4247f0d2af0bc3d4aeb8e0"
+    },
+    {
+      "path": "docs/qualification/shared-corner-cache-serial-worker-2026-10-11/expression-inspection-worker-report.json",
+      "beforeBytes": 16113583,
+      "afterBytes": 2585645,
+      "beforeLines": 545649,
+      "afterLines": 1,
+      "originalSha256": "375f471e03cf81c062f2e75c2b7070d49a5d03f820aa24db29a6ded68753b4a3",
+      "sha256": "07b41a334e8e8c2974cdf4b915a91688bf82d9375b32f7c75a521d320416b4ce"
+    },
+    {
+      "path": "output/projective-integration-20261013/current-mixed-worker.json",
+      "beforeBytes": 9614289,
+      "afterBytes": 1854385,
+      "beforeLines": 336368,
+      "afterLines": 1,
+      "originalSha256": "1b4ed1e12ab3d25408f01325b6ce62428dbd590c3b1cc941dc2fe30bf7bbce16",
+      "sha256": "b5a0b340cc5ca1357acf821dde4edb77d74d27c584fa4b3302ae2bd23a4cf0fa"
+    },
+    {
+      "path": "output/projective-integration-20261013/optimized-worker/worker-report.json",
+      "beforeBytes": 632249,
+      "afterBytes": 156569,
+      "beforeLines": 24710,
+      "afterLines": 1,
+      "originalSha256": "11993384f9f94b46e00369a388b02de71e7d7dd58b37a3a3fe10cc7be628bd6f",
+      "sha256": "057bea5f85c9ff73e349d1d137af84856b9fdf236e008060d2be5939198282b2"
+    },
+    {
+      "path": "output/projective-integration-20261013/raw-worker/worker-report.json",
+      "beforeBytes": 632255,
+      "afterBytes": 156575,
+      "beforeLines": 24710,
+      "afterLines": 1,
+      "originalSha256": "5cbd5cebb2705a37f4a2f96844531880623161e9813bc1c4f082bed0727802eb",
+      "sha256": "a92eafa289508caf159f8392020d115565b0ae2fe520a6c1493748ba065d6cc4"
+    }
+  ],
+  "beforeBytes": 687666998,
+  "afterBytes": 120929267,
+  "beforeLines": 23831802,
+  "afterLines": 87,
+  "fingerprintMetadataUpdates": [
+    {
+      "path": "docs/qualification/expression-worker-staging-smoke-2026-10-11.json",
+      "replacedHashes": 1,
+      "beforeSha256": "f6ca92c943bc31af42f8bd7a29c5ad8f8a4af038c3aad9dd37e97cd113bed755",
+      "sha256": "47e3f56b97e7c7d794eddf75cde427e09d928ce7d4135d74d66b8885c5f68259"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/exact-rational-boundary-dispatch-regression-2026-10-11.json",
+      "replacedHashes": 1,
+      "beforeSha256": "53d30f6597b9be8bf747802bb7eaf1585a6979239c1dece6ee97abbd3c801959",
+      "sha256": "cc2baf8dae13ee40a42e8416b845e470681f4e5d190a84d1a68792a5d4d1c13e"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/first-path-worker-bounded-2026-10-10/native-parity.json",
+      "replacedHashes": 1,
+      "beforeSha256": "079885fb9ab59ee41ab7e4b66aefdbff361d3ca4a1d676731cfc67291d3e6d21",
+      "sha256": "8bca06628c226f58ca9cecae8d6eb9ce174a105ecf0e8c4bea2698b03af4e39b"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/intrinsic-cache-worker-bounded-2026-10-10/native-parity.json",
+      "replacedHashes": 1,
+      "beforeSha256": "83832e5503ccf0898e27c54d4a812f1b9f97bc07328e1b2792c529ffd11ae15f",
+      "sha256": "ae9d11149a21b549a6ad3c7986c3c1d1308b04a0359efa0d0642c839f5455032"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/rail-position-cache-dispatch-regression-2026-10-10.json",
+      "replacedHashes": 1,
+      "beforeSha256": "23582b6a54696431a1213c7abfcc934e3bc5d5cdfb1278fff106cc3b5c50528e",
+      "sha256": "1f33945ccc405fa81794d8a5393db2c0566df07b76ae17e328e0e152dab14df3"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/shared-corner-cache-dispatch-regression-2026-10-11.json",
+      "replacedHashes": 2,
+      "beforeSha256": "a732daa883a694b33eb82180e014f5e452d61dc345172c850adee827dd892a5a",
+      "sha256": "023463e49d62fbbd5ec4e9d688820e1114262f7c17ca0aa028e2ca61ef6adb40"
+    },
+    {
+      "path": "docs/qualification/mapped-retained-carrier-2026-10-08/transverse-cone-dispatch-regression-2026-10-11.json",
+      "replacedHashes": 1,
+      "beforeSha256": "f91aa5fb3e60c7b9298778f2b250cc5a10e8d53077af9b90bd2cf14555427b5c",
+      "sha256": "00a00d5a0959ee7e1a0377520f6d136d9a60d43517af21f879ecedcd33e1db6e"
+    },
+    {
+      "path": "docs/qualification/projective-editor-integration-2026-10-13.json",
+      "replacedHashes": 2,
+      "beforeSha256": "9793c1bbc77d1c4ab386791badb564db01b25c5cf235f89217e5d4114779a7c1",
+      "sha256": "aee81116204c4993740f4361a120d730d3c23ed8986dcded21c9180560b253c5"
+    }
+  ],
+  "remainingHistoricalHashReferencesInCompactedReports": []
+}

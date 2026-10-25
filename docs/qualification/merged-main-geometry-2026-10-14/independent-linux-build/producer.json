@@ -1,0 +1,93 @@
+{
+  "scope": "Build observation only; zero semantic qualification work or production approval",
+  "sourceSha": "9abb0632f0ac9cc0a5bcf4bfafdc96eda30ec929",
+  "rustSubtree": "c546568801f2c67f3ea20ed29afd0f32dbfcfe79",
+  "builder": {
+    "os": "linux",
+    "arch": "x64",
+    "node": "v22.23.3",
+    "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+    "binaryen": "116.0.0"
+  },
+  "inputs": [
+    {
+      "path": "package.json",
+      "sha256": "b6826bd5ec09caae63fed9046649c988b5b0d178d5b686b62cefabdc48a91cb7"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a"
+    },
+    {
+      "path": "crates/Cargo.lock",
+      "sha256": "471646f31c91112a85e2621f728b242172cdd5886a0bc67605e22b1ceb15f3ac"
+    },
+    {
+      "path": "scripts/build-geometry-kernels.mjs",
+      "sha256": "5c2721f1ee4fcd3efafbb6a8a2495d24276db8ddb5ed12471d0d0748365d89bf"
+    },
+    {
+      "path": "scripts/build-language-kernel.mjs",
+      "sha256": "7011250e36adfb44cedb8e22360f8d7ad7e175aa18df49d2597202ec05d68dbe"
+    },
+    {
+      "path": "scripts/build-photogrammetry.mjs",
+      "sha256": "a2b87eb5b2181d79836493edd1e5735125ec5b8d62972e9480d8262e11e51a27"
+    },
+    {
+      "path": "scripts/build-vr.mjs",
+      "sha256": "3e893a7953d9a31e602712657cff84db8ea04da69674bd78c0ab977b75ee1abf"
+    },
+    {
+      "path": "scripts/build-wasm-brotli.mjs",
+      "sha256": "40e0f0c2b73da1266adc024dcdf4d239d1aa3421a4e504b0e4a02fbf66d96cc2"
+    },
+    {
+      "path": "scripts/pack-geometry-kernel.mjs",
+      "sha256": "99fe1b4ffa2a878077e7e48ac31d0e6abe2d1f89a0ae0de6c76967188cbe2188"
+    },
+    {
+      "path": "scripts/pack-language-kernel.mjs",
+      "sha256": "c078b26ad172babf252d2714f4d524db98dbc6c890b1bc24c7efad255ef3e64e"
+    },
+    {
+      "path": "scripts/pack-photogrammetry.mjs",
+      "sha256": "3e62e44db0db9a8f124384f9175a940febf23a44cdc60a691b54019fe323e731"
+    },
+    {
+      "path": "scripts/pack-harfbuzz.mjs",
+      "sha256": "45b3a9909d022fb5ebef073f591c999977560d4fe2c47bf0e1281e5684c3639f"
+    },
+    {
+      "path": "scripts/wasm-optimize.mjs",
+      "sha256": "24abee5d2d10be8dc10622d5f2ffa7fe68a54b0383a4bc43b9794fd003743654"
+    },
+    {
+      "path": "scripts/reproducible-cargo.mjs",
+      "sha256": "0bb43e36ce5029401aab0751987849560bb512811d9fc1d212ee4c08d1f0065b"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "sha256": "9fb8e6d9ae50b16ddadf537a2026015584dd166ce5f8da11ae0f843aed179fba",
+      "byteLength": 12012241
+    },
+    {
+      "path": "public/wasm/language-kernel.wasm",
+      "sha256": "8e69ecfb63734cb5e9c432ab1c50ae2922069694239b785705faece78ed3894d",
+      "byteLength": 2523510
+    },
+    {
+      "path": "public/wasm/photogrammetry.wasm",
+      "sha256": "5642a47849197709c46d79b9f0e352d28325fcba71c54ad695ad6682baaa73c8",
+      "byteLength": 719929
+    }
+  ],
+  "buildPipeline": "passed",
+  "qualificationCredit": 0
+}

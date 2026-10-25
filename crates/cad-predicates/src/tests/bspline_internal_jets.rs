@@ -37,13 +37,10 @@ fn audit_mode(
         None,
     );
     if endpoints {
-        rational_bspline_cartesian_endpoint_jet_identity(
-            &mut ctx, &controls, &knots, degree, order,
-        )
-        .unwrap()
-    } else {
-        rational_bspline_internal_jet_identity(&mut ctx, &controls, &knots, degree, order)
+        rational_bspline_cartesian_endpoint_jet_identity(&mut ctx, &controls, &knots, degree, order)
             .unwrap()
+    } else {
+        rational_bspline_internal_jet_identity(&mut ctx, &controls, &knots, degree, order).unwrap()
     }
 }
 fn audit(
@@ -228,6 +225,58 @@ fn fourth_jet_is_not_inferred_from_third_jet() {
     );
     assert_eq!(
         audit(&bad, &knots, 4, 4, 1000000).outcome,
+        BezierIdentity::Different
+    );
+}
+#[test]
+fn zero_order_position_at_full_multiplicity_never_uses_a_saturating_continuity_shortcut() {
+    let mut p = [
+        [0., 0., 0., 1.],
+        [0.5, 0., 0., 2.],
+        [1., 0., 0., 4.],
+        [1., 0., 0., 0.3],
+        [1.5, 0., 0., 0.7],
+        [2., 0., 0., 1.],
+    ];
+    let u = [0., 0., 0., 0.5, 0.5, 0.5, 1., 1., 1.];
+    let full = audit(&p, &u, 2, 0, 1000000);
+    assert_eq!(full.outcome, BezierIdentity::Equal);
+    assert_eq!(
+        audit(&p, &u, 2, 1, 1000000).outcome,
+        BezierIdentity::Different
+    );
+    for max in [0, full.work_used - 1] {
+        assert_ne!(audit(&p, &u, 2, 0, max).outcome, BezierIdentity::Equal);
+    }
+    p[3][0] = p[3][0].next_up();
+    assert_eq!(
+        audit(&p, &u, 2, 0, 1000000).outcome,
+        BezierIdentity::Different
+    );
+    // Unit-direction jets are identical even for this disconnected position.
+    // The native owner must require BOTH independent original premises.
+}
+#[test]
+fn zero_order_nonclamped_endpoint_position_is_exact_and_keeps_the_work_limit() {
+    let p = [
+        [1., 2., 3., 1.],
+        [1., 2., 3., 2.],
+        [1., 2., 3., 3.],
+        [1., 2., 3., 4.],
+    ];
+    let u = [-2., -1., 0., 0.5, 1., 2., 3.];
+    let r = audit_mode(&p, &u, 2, 0, 1000000, true);
+    assert_eq!(r.outcome, BezierIdentity::Equal);
+    for max in [0, r.work_used - 1] {
+        assert_ne!(
+            audit_mode(&p, &u, 2, 0, max, true).outcome,
+            BezierIdentity::Equal
+        );
+    }
+    let mut bad = p;
+    bad[0][0] = bad[0][0].next_up();
+    assert_eq!(
+        audit_mode(&bad, &u, 2, 0, 1000000, true).outcome,
         BezierIdentity::Different
     );
 }

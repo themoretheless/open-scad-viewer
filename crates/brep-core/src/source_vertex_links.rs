@@ -44,7 +44,7 @@ fn cycle(graph: &BTreeMap<Node, Vec<Node>>) -> Option<Vec<Node>> {
         current = next;
     }
 }
-pub fn inspect(shell: &Shell, max_corners: usize) -> Result<Report> {
+pub fn inspect<E>(shell: &Shell<E>, max_corners: usize) -> Result<Report> {
     if !(1..=100000).contains(&max_corners) {
         return Err(Error::new(
             "BREP_SOURCE_VERTEX_LINK",

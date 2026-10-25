@@ -11,7 +11,7 @@ import {promisify} from 'node:util'
 const execFileAsync=promisify(execFile)
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 
-const [fixture,output='/tmp/solid-instances-browser']=process.argv.slice(2)
+const [fixture,output=path.join(os.tmpdir(),'solid-instances-browser')]=process.argv.slice(2)
 if(!fixture)throw Error('Usage: node scripts/benchmark-solid-instances-browser.mjs compact-document.json output-directory')
 const collectWorkers=process.argv.includes('--worker-memory'),collectRetained=process.argv.includes('--retained-memory')||collectWorkers,retainedSamples=[]
 const iterations=Number(process.argv.find(arg=>arg.startsWith('--iterations='))?.split('=')[1]??5)

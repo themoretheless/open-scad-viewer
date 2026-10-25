@@ -1,0 +1,25 @@
+{
+  "scope": "native-projective-uv-model-step-transport",
+  "verified": [
+    "positive inverse projective Bezier weight proposal",
+    "fresh exact whole-interval curve/surface agreement before Model creation",
+    "weighted tetrahedron native Body to Model to STEP v6 to imported Model",
+    "STEP geometry topology and entity identity equality through existing assert_step_identity"
+  ],
+  "validation": {
+    "passed": 1,
+    "failed": 0,
+    "log": "/tmp/source-projective-model-transfer-repair-20261011.log"
+  },
+  "limitations": [
+    "partial/root restrictions still require exact Model restriction storage",
+    "non-Bezier projective parameter transport unsupported",
+    "nonrepresentable coefficient proposal refuses exact proof",
+    "capped body STEP and replay currently running",
+    "independent external STEP viewer not yet used for these new fixtures"
+  ],
+  "sha256": {
+    "source_body_model.rs": "23c4cf5efa1bffd211fd46828658b99d5233c5db8d7d2f746a6a6418c1b34ad5",
+    "source_shell_incidence.rs": "d8e3aa883ceaa641e70997eb56552e1bf6f4bddbeb88725cd750a7b9073a8f90"
+  }
+}

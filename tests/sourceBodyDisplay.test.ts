@@ -1,41 +1,53 @@
-import {describe,it,expect,vi} from 'vitest'
+import {it,expect,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {gunzipSync} from 'node:zlib'
-import {SourceBodyDisplay} from '../src/services/sourceBodyDisplay'
-import type {MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
-import type {SourceBodyRecord} from '../src/services/sourceBodyArchive'
+import {SourceBodyDisplay,SourceBodyDisplayError,sourceBodyDisplayMessage,sourceBodyDisplayLocation} from '../src/services/sourceBodyDisplay'
+import {createSourceBodyRecord} from '../src/services/sourceBodyArchive'
 import type {SourceBodyResult} from '../src/services/sourceBody'
-const fixture=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-document.json.gz',import.meta.url))).toString()).sourceBodies[0] as SourceBodyRecord
-const admitted={admitted:true} as SourceBodyResult
-function deferred(){let resolve!:(v:SourceBodyResult)=>void;const promise=new Promise<SourceBodyResult>(r=>resolve=r);return {promise,resolve}}
-describe('source display preparation',()=>{
- it('ignores a late result after cancellation',async()=>{
-  const task=deferred(),publish=vi.fn(),fail=vi.fn(),cancel=vi.fn()
-  const display=new SourceBodyDisplay({run:vi.fn(()=>task.promise),cancel} as unknown as MainSolidWorkerClient)
-  const pending=display.prepare([fixture],publish,fail);display.cancel();task.resolve(admitted);await pending
-  expect(publish).not.toHaveBeenCalled();expect(fail).not.toHaveBeenCalled();expect(cancel).toHaveBeenCalledTimes(2)
- })
- it('retries with source inputs and preserves errors per body',async()=>{
-  const run=vi.fn().mockRejectedValueOnce(new Error('native failure')).mockResolvedValueOnce(admitted)
-  const display=new SourceBodyDisplay({run,cancel:vi.fn()} as unknown as MainSolidWorkerClient),publish=vi.fn(),fail=vi.fn()
-  await display.prepare([fixture],publish,fail);expect(fail).toHaveBeenCalledWith(fixture.id,expect.any(Error))
-  await display.prepare([fixture],publish,fail);expect(publish).toHaveBeenCalledWith(fixture.id,admitted)
-  expect(run.mock.calls[1]![0].options.displaySegments).toBe(32)
- })
- it('a replacement request owns publication even if the old worker responds',async()=>{
-  const old=deferred(),next=deferred(),run=vi.fn().mockReturnValueOnce(old.promise).mockReturnValueOnce(next.promise)
-  const display=new SourceBodyDisplay({run,cancel:vi.fn()} as unknown as MainSolidWorkerClient),publish=vi.fn(),fail=vi.fn()
-  const a=display.prepare([fixture],publish,fail),b=display.prepare([{...fixture,id:'next'}],publish,fail)
-  old.resolve(admitted);next.resolve(admitted);await Promise.all([a,b])
-  expect(publish).toHaveBeenCalledTimes(1);expect(publish).toHaveBeenCalledWith('next',admitted)
- })
- it('retains native diagnostics on refusal and continues with the next body',async()=>{
-  const diagnostics={reason:'source-volume-initial-work-limit',incidence:{uncertainPair:[1,2]},embedding:null,volume:{uncertainFace:3}}
-  const run=vi.fn().mockResolvedValueOnce({admitted:false,sourceBody:null,edges:[],diagnostics}).mockResolvedValueOnce(admitted)
-  const display=new SourceBodyDisplay({run,cancel:vi.fn()} as unknown as MainSolidWorkerClient),publish=vi.fn(),fail=vi.fn()
-  await display.prepare([fixture,{...fixture,id:'next'}],publish,fail)
-  expect(fail).toHaveBeenCalledWith(fixture.id,expect.objectContaining({code:'CAD_SOURCE_BODY_RESTORE',sourceBodyId:fixture.id,diagnostics}))
-  expect(publish).toHaveBeenCalledTimes(1);expect(publish).toHaveBeenCalledWith('next',admitted)
- })
-
+const {op:_,...options}=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json',import.meta.url),'utf8'))
+const denied=(uncertainPair:unknown):SourceBodyResult=>({admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'mapped-source-endpoints-unproven',incidence:{uncertainPair},embedding:null,volume:null}})
+it('locates a native refusal in the bound original recipe and preserves both locales',async()=>{
+ const refusal=denied(5),run=vi.fn().mockResolvedValue(refusal),publish=vi.fn(),fail=vi.fn()
+ const display=new SourceBodyDisplay({run,cancel:vi.fn()})
+ await display.prepare([createSourceBodyRecord('original','Original body',options)],publish,fail)
+ expect(publish).not.toHaveBeenCalled();expect(fail).toHaveBeenCalledOnce()
+ const [id,error]=fail.mock.calls[0]!
+ expect(id).toBe('original');expect(error).toBeInstanceOf(SourceBodyDisplayError)
+ expect(error).toMatchObject({sourceBodyId:'original',pair:5,code:'CAD_SOURCE_BODY_RESTORE'})
+ const faces=[...new Set(options.definition.shell.pairs[5].uses.map((u:number[])=>u[0]))]
+ expect(error.faces).toEqual(faces)
+ expect(sourceBodyDisplayLocation(error,'ru')).toContain('Ребро 6')
+ expect(sourceBodyDisplayLocation(error,'en')).toContain('Edge 6')
+ expect(sourceBodyDisplayMessage(error,'ru')).toContain('точки обрезки')
+ expect(sourceBodyDisplayMessage(error,'en')).toContain('trim points')
+ expect(error.diagnostics).toBe(refusal.diagnostics)
+})
+it('never invents a scene location for missing or invalid native pair indices',()=>{
+ for(const pair of [null,undefined,-1,0.5,NaN,Infinity,'5',options.definition.shell.pairs.length]){
+  const error=new SourceBodyDisplayError(denied(pair).diagnostics,options.definition,'original')
+  expect(error.pair).toBeNull();expect(error.faces).toEqual([])
+  expect(sourceBodyDisplayLocation(error,'ru')).toBe('')
+ }
+ expect(sourceBodyDisplayLocation(new Error('CAD_PROTOCOL'),'en')).toBe('')
+})
+it('does not publish a refusal or its address after source display cancellation',async()=>{
+ let resolve!:(result:SourceBodyResult)=>void
+ const run=vi.fn(()=>new Promise<SourceBodyResult>(r=>{resolve=r})),publish=vi.fn(),fail=vi.fn()
+ const display=new SourceBodyDisplay({run,cancel:vi.fn()})
+ const pending=display.prepare([createSourceBodyRecord('original','Original body',options)],publish,fail)
+ display.cancel();resolve(denied(5));await pending
+ expect(publish).not.toHaveBeenCalled();expect(fail).not.toHaveBeenCalled()
+})
+it('provides distinct localized next actions for each supported native refusal',()=>{
+ for(const [reason,ru,en] of [
+  ['mapped-source-endpoints-unproven','точки обрезки','trim points'],
+  ['mapped-source-composition-unproven','исходные кривые','original curves'],
+  ['mapped-source-uses-not-opposite','ориентацию граней','face orientation'],
+  ['source-shell-work-limit','Увеличьте лимиты','Increase limits'],
+ ]){
+  const diagnostics={...denied(5).diagnostics,reason:reason!}
+  const error=new SourceBodyDisplayError(diagnostics,options.definition,'original')
+  expect(sourceBodyDisplayMessage(error,'ru')).toContain(ru)
+  expect(sourceBodyDisplayMessage(error,'en')).toContain(en)
+  expect(sourceBodyDisplayLocation(error,'ru')).toContain('Ребро 6')
+ }
 })

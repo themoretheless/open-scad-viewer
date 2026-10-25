@@ -1,0 +1,23 @@
+{
+  "schema": "original-fibered-source-private-release-build/1",
+  "sourceRevision": "a24cc8934793256d4d6f028fadc7b2ab45a9f3ad",
+  "nativeInputsSha256": "ac7fac07d2b0d1f227f50fb96f59e312498cd7b1491305af03f899ed6c9a29ea",
+  "wasmSha256": "614ae302e233bdb23004c7b0bfc2efde43db0ff5dc40b451b017dd4e4f74c0bb",
+  "wasmBytes": 18190172,
+  "preservedArtifact": "/private/tmp/osv-fibered-source-artifact-20261016/geometry_wasm.wasm",
+  "buildCommand": [
+    "cargo",
+    "+nightly-2026-09-16",
+    "build",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-wasm",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--release"
+  ],
+  "buildExitCode": 0,
+  "publicPackageQualified": false
+}

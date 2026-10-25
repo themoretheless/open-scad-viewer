@@ -1,0 +1,29 @@
+{
+  "scope": "native-projective-root-clipped-interior-contact",
+  "test": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 33.26,
+    "log": "/tmp/source-projective-interior-fiber-20261011.log"
+  },
+  "verified": [
+    "original root-clipped wedge assembled with projective maps and exact endpoint candidates",
+    "new planar cap has nonempty original interior-contact ownership certificate",
+    "existing fixture manifold, complete contact and conservative volume gates still pass"
+  ],
+  "limitations": [
+    "supported coordinate-fiber plane preimages only",
+    "general nonlinear interior intersection qualification incomplete",
+    "general fillet construction and deployment unchanged"
+  ],
+  "sha256": {
+    "source_interior_contact.rs": "02cd08dc2b3071518e901dbce46360b985bd5b25b2028dcedad1841b0383d579",
+    "source_face_contacts.rs": "c03e36c938f864a7df78ba732004b276024a001ba354fff8b45ca80e3d1b9f51",
+    "source_fiber_contact.rs": "370e38bb95157c81baa4707b3d7235f779a2586f99d2a3b661b6eada76980760"
+  },
+  "regression": {
+    "passed": 3,
+    "failed": 0,
+    "log": "/tmp/source-projective-interior-regression-20261011.log"
+  }
+}

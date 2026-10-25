@@ -1,0 +1,47 @@
+{
+  "scope": "Addressed rational root candidates through original material-region projective shell assembly and replay",
+  "evidence": {
+    "material_incidence_control": {
+      "passed": 1,
+      "log": "/tmp/source-fraction-shell-material-ownership-20261011.log",
+      "source_parameters": [
+        "1/3",
+        "4/5 on reversed rational UV curve"
+      ],
+      "faces": 2,
+      "edges": 4,
+      "owned_vertices": 4,
+      "manifold_links": true,
+      "genus": 0,
+      "includes": [
+        "original region qualification and root partition",
+        "shared edge rational candidate gate",
+        "binary region/shell replay",
+        "identical vertex ownership",
+        "forged candidate refusal",
+        "duplicate candidate address refusal"
+      ]
+    },
+    "full_shell_incidence_regression": {
+      "passed": 13,
+      "seconds": 100.82,
+      "log": "/tmp/source-fraction-shell-all-incidence-20261011.log"
+    },
+    "original_chord_control_now_supported": {
+      "passed": 1,
+      "log": "/tmp/source-supported-chord-shell-replay-20261011.log"
+    }
+  },
+  "authority": "Regions and original root equations are freshly replayed; rational candidate metadata is rechecked under one shell work budget",
+  "limitations": [
+    "The two-face fixture is coincident and proves closed incidence, not an embedded solid or volume",
+    "Rational candidate proposals are supplied explicitly; automatic discovery is incomplete",
+    "General fillets, complete wall/self-intersection qualification and WASM/worker/UI integration remain open"
+  ],
+  "supporting_line_regression": {
+    "passed": 13,
+    "failed": 0,
+    "seconds": 32.38,
+    "log": "/tmp/source-supported-chord-incidence-regression-20261011.log"
+  }
+}

@@ -320,7 +320,7 @@ pub(super) fn clip_line_rect(
 }
 
 /// Polar form (blossom) of the quadratic c0 + c1 t + c2 t^2 at (u, v).
-fn polar(c: [f64; 3], u: f64, v: f64) -> f64 {
+pub(super) fn polar(c: [f64; 3], u: f64, v: f64) -> f64 {
     c[0] + c[1] * (u + v) / 2. + c[2] * u * v
 }
 

@@ -1,0 +1,13 @@
+{
+  "scope": "exploratory audit, not a Body certificate",
+  "inputJsonSha256": "b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea",
+  "classificationSha256": "2ec2bfbe0f8a29584ac5e83b8e8e90189d8f87fa36981eb88c737bc61f1ec158",
+  "outputJsonSha256": "38fab37e377602fad2cd7d37a0d221e1fab62e23885350fec7448f40671dac21",
+  "completePairs": 212,
+  "normalExcluded": 68,
+  "alignedRegion": 72,
+  "workLimit": 72,
+  "cells": 12238,
+  "spans": 3389,
+  "sourceSurfacesUnchanged": true
+}

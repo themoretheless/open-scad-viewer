@@ -552,9 +552,17 @@ impl Algebra for Expansion {
     }
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         ctx.charge(1)?;
-        let mut result = Self(Vec::with_capacity(
-            (self.0.len() * other.0.len() * 2).min(32),
-        ));
+        // Multiplication by the exact unit cannot change any expansion term.
+        // Retain context/capacity checks even when no arithmetic is needed.
+        if self.is_one() {
+            ctx.terms(other.0.len())?;
+            return Ok(other.clone());
+        }
+        if other.is_one() {
+            ctx.terms(self.0.len())?;
+            return Ok(self.clone());
+        }
+        let mut result = Self::scalar(0.);
         for &left in &self.0 {
             for &right in &other.0 {
                 let (rounded, residual) = split_product(left, right, ctx)?;

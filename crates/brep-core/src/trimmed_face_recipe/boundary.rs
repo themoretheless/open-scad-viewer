@@ -577,12 +577,14 @@ pub fn locate_contact_boundaries(
     Ok(out)
 }
 
+#[cfg(feature = "codec")]
 pub struct AddressedSourcePoint {
     pub loop_index: usize,
     pub boundary_index: usize,
     pub crossing_cell: usize,
     pub report: Option<crate::source_contact_point::Report>,
 }
+#[cfg(feature = "codec")]
 pub struct SourcePointSearch {
     pub search: FaceCrossings,
     pub points: Vec<AddressedSourcePoint>,

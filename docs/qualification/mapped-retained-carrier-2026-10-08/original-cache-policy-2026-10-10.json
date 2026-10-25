@@ -1,0 +1,14 @@
+{
+  "schema": "original-chord-cache-policy-regression/1",
+  "passed": true,
+  "suiteTests": 42,
+  "sourceSha256": "8fabc0af4e0f7ae9b0b32df58774b64fec5dec2bfd92aa9e363ed796e49bb654",
+  "checks": [
+    "same owner and UV rectangle under strict and wide angular policies give distinct decisions",
+    "warm results preserve policy",
+    "degenerate nonfinite and out-of-domain UV rejected with warm cache",
+    "zero-budget rectangle rejected even after complete paid result"
+  ],
+  "log": "/tmp/original-cache-final-suite-20261010.log",
+  "scope": "Native cache authority regression; does not prove whole shell thickness or WASM parity. Production source unchanged since running WASM build; only a regression test was added."
+}

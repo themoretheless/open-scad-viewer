@@ -1,0 +1,10 @@
+{
+  "test": "partial_rational_multispan_carrier_transfers_owned_transition_contact",
+  "cells": 100000,
+  "spans": 1000000,
+  "trimCells": 1000000,
+  "sourceManifest": "section-data-cache-native-inputs-2026-10-10.json",
+  "report": "section-data-cache-partial-wall-max-2026-10-10.json",
+  "comparisonBaseline": "width-gram-partial-wall-max-2026-10-10.json",
+  "scope": "Matched partial rational carrier after section-data caching; pending domains must be preserved, no admission from budgets."
+}

@@ -199,7 +199,7 @@ pub(super) fn invert(
 impl value_codec::Serialize for ImplicitSphereSection {
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({"representation":"implicit-surface-plane-pullback","sourceSurface":self.source_surface,
-            "normal":self.normal,"point":self.point,"domain":[0.,1.,0.,1.],"recognitionErrorUpper":self.recognition_error,
+            "normal":self.normal,"point":self.point,"domain":[0.,1.,0.,1.],"observedRecognitionResidual":self.recognition_error,
             "arcComponentsEnumerated":false,"permitsTopologyChange":false,
             "worldClip":self.clip.as_ref().map(|c|value_codec::json!({"center":c.center,"cosine":c.cosine,"sine":c.sine,"intervals":c.intervals}))})
     }

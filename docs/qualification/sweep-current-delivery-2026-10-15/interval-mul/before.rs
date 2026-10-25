@@ -41,21 +41,56 @@ impl Interval {
             self.hi * b.hi,
         ];
         numeric(
-            p.iter().all(|x| x.is_finite()),
+            p[0].is_finite() && p[1].is_finite() && p[2].is_finite() && p[3].is_finite(),
             "Distance product exceeded numeric range",
         )?;
         Self::new(
-            p.iter().copied().fold(f64::INFINITY, f64::min).next_down(),
-            p.iter()
-                .copied()
-                .fold(f64::NEG_INFINITY, f64::max)
+            f64::INFINITY
+                .min(p[0])
+                .min(p[1])
+                .min(p[2])
+                .min(p[3])
+                .next_down(),
+            f64::NEG_INFINITY
+                .max(p[0])
+                .max(p[1])
+                .max(p[2])
+                .max(p[3])
                 .next_up(),
         )
     }
     /// Outward-rounded quotient; `b` must be separated above zero.
     pub fn div(self, b: Self) -> Result<Self> {
         numeric(b.lo > 0., "Distance denominator is not separated from zero")?;
-        self.mul(Self::new((1. / b.hi).next_down(), (1. / b.lo).next_up())?)
+        let reciprocal = [(1. / b.hi).next_down(), (1. / b.lo).next_up()];
+        if reciprocal.iter().all(|v| v.is_finite()) {
+            return self.mul(Self::new(reciprocal[0], reciprocal[1])?);
+        }
+        // A reciprocal can overflow although every requested ratio is finite
+        // (for example, subnormal/subnormal). With a positive denominator,
+        // the exact quotient extrema occur at the four endpoint combinations.
+        let ratios = [
+            self.lo / b.lo,
+            self.lo / b.hi,
+            self.hi / b.lo,
+            self.hi / b.hi,
+        ];
+        numeric(
+            ratios.iter().all(|v| v.is_finite()),
+            "Distance quotient exceeded numeric range",
+        )?;
+        Self::new(
+            ratios
+                .iter()
+                .copied()
+                .fold(f64::INFINITY, f64::min)
+                .next_down(),
+            ratios
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max)
+                .next_up(),
+        )
     }
     /// Outward-rounded quotient for a nonzero-signed denominator.
     pub fn div_signed(self, b: Self) -> Result<Self> {
@@ -154,5 +189,164 @@ mod tests {
         let iv = Interval::new(0., 2.).unwrap();
         assert_eq!(iv.try_intersect(3., 4.).unwrap(), None);
         assert_eq!(iv.try_intersect(-1., 1.).unwrap(), Some(Interval { lo: 0., hi: 1. }));
+    }
+}
+
+#[cfg(test)]
+mod product_regression {
+    use super::*;
+    fn previous_product(a: Interval, b: Interval) -> Result<Interval> {
+        let p = [a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi];
+        numeric(
+            p.iter().all(|x| x.is_finite()),
+            "Distance product exceeded numeric range",
+        )?;
+        Interval::new(
+            p.iter().copied().fold(f64::INFINITY, f64::min).next_down(),
+            p.iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max)
+                .next_up(),
+        )
+    }
+    #[test]
+    fn product_is_bit_identical_for_signed_zero_subnormals_large_bounds_and_refusals() {
+        let values = [
+            -f64::MAX,
+            -1e100,
+            -1.,
+            -f64::MIN_POSITIVE,
+            -f64::from_bits(1),
+            -0.,
+            0.,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            1.,
+            1e100,
+            f64::MAX,
+        ];
+        let mut intervals = Vec::new();
+        for lo in values {
+            for hi in values {
+                if lo <= hi {
+                    intervals.push(Interval::new(lo, hi).unwrap());
+                }
+            }
+        }
+        intervals.extend([
+            Interval::point(f64::NAN),
+            Interval::point(f64::INFINITY),
+            Interval::point(f64::NEG_INFINITY),
+        ]);
+        for &a in &intervals {
+            for &b in &intervals {
+                let old = previous_product(a, b);
+                let new = a.mul(b);
+                match (old, new) {
+                    (Ok(old), Ok(new)) => {
+                        assert_eq!(old.lo.to_bits(), new.lo.to_bits(), "{a:?} {b:?}");
+                        assert_eq!(old.hi.to_bits(), new.hi.to_bits(), "{a:?} {b:?}");
+                    }
+                    (Err(_), Err(_)) => {}
+                    _ => panic!("Changed numeric refusal for {a:?} {b:?}"),
+                }
+            }
+        }
+    }
+    #[test]
+    #[ignore = "Explicit paired debug microbenchmark; not application latency"]
+    fn paired_product_microbenchmark() {
+        use std::{hint::black_box, time::Instant};
+        let a = Interval::new(-0.3, 0.7).unwrap();
+        let b = Interval::new(0.2, 0.9).unwrap();
+        for round in 0..3 {
+            let start = Instant::now();
+            for _ in 0..100000 {
+                black_box(previous_product(black_box(a), black_box(b)).unwrap());
+            }
+            let old = start.elapsed();
+            let start = Instant::now();
+            for _ in 0..100000 {
+                black_box(black_box(a).mul(black_box(b)).unwrap());
+            }
+            eprintln!(
+                "round={round} products=100000 old_us={} scalar_us={}",
+                old.as_micros(),
+                start.elapsed().as_micros()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod quotient_tests {
+    use super::*;
+    #[test]
+    fn affine_surface_derivative_at_subnormal_parameter_is_enclosed() {
+        let source = crate::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1., 1.], vec![1., 1.]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let tiny = f64::from_bits(4);
+        let (bound, _) = crate::normal_alignment::derivative_path_bounds(
+            &source,
+            [[tiny, tiny], [0., 0.]],
+            0,
+            32,
+        )
+        .unwrap();
+        let components = bound
+            .expect("finite affine derivative at the subnormal chart point")
+            .components();
+        for (range, exact) in components.into_iter().zip([1., 0., 0.]) {
+            assert!(range[0].is_finite() && range[1].is_finite());
+            assert!(range[0] <= exact && exact <= range[1]);
+        }
+    }
+    #[test]
+    fn finite_subnormal_ratios_survive_reciprocal_overflow() {
+        let tiny = f64::from_bits(1);
+        let one = Interval::point(tiny).div(Interval::point(tiny)).unwrap();
+        assert!(one.contains(1.));
+        assert!(one.width() < 1e-14);
+        let range = Interval::new(tiny, tiny * 4.)
+            .unwrap()
+            .div(Interval::new(tiny * 2., tiny * 8.).unwrap())
+            .unwrap();
+        assert!(range.contains(0.125) && range.contains(2.));
+        let negative = Interval::new(-tiny * 4., -tiny)
+            .unwrap()
+            .div(Interval::new(tiny * 2., tiny * 8.).unwrap())
+            .unwrap();
+        assert!(negative.contains(-2.) && negative.contains(-0.125));
+        let signed = Interval::point(tiny)
+            .div_signed(Interval::point(-tiny))
+            .unwrap();
+        assert!(signed.contains(-1.) && signed.width() < 1e-14);
+        assert!(
+            Interval::point(0.)
+                .div(Interval::point(tiny))
+                .unwrap()
+                .contains(0.)
+        );
+        assert!(
+            Interval::point(f64::MAX)
+                .div(Interval::point(tiny))
+                .is_err()
+        );
+        assert!(
+            Interval::point(tiny)
+                .div_signed(Interval::new(-tiny, tiny).unwrap())
+                .is_err()
+        );
     }
 }

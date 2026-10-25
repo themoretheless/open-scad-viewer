@@ -44,6 +44,8 @@ mod cad_body_keypoints;
 mod cad_boolean;
 mod cad_boundary_agreement;
 mod cad_boundary_regularity;
+mod cad_boundary_certificate;
+mod cad_sweep_boundary;
 mod cad_bridge_curve;
 mod cad_centered_lattice;
 mod cad_clearance;
@@ -54,7 +56,11 @@ mod cad_display;
 mod cad_draft;
 mod cad_edge_edit;
 mod cad_face_contacts;
+mod cad_implicit_body;
+mod cad_fibered_body;
 mod cad_face_distance;
+mod cad_source_body;
+mod cad_expression_shell;
 mod cad_face_selection;
 mod cad_hole;
 mod cad_lattice;
@@ -80,7 +86,6 @@ mod cad_sketch;
 mod cad_sketch_offset;
 mod cad_sketch_trim;
 mod cad_solid_distance;
-mod cad_source_body;
 mod cad_split;
 mod cad_surface_diagnostics;
 mod cad_sweep_smoothness;
@@ -136,6 +141,9 @@ pub use math_core::{Error, Result};
 fn input(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
+fn semantic_contract_error(message: &str) -> Error {
+    Error::new("BREP_SEMANTIC_CONTRACT", message)
+}
 mod request_codec;
 use request_codec::*;
 pub(crate) use request_codec::{mass_model, diagnosis_json, mesh_from_triangles, triangles_from_mesh};
@@ -163,12 +171,6 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         }
     }
     dispatch_local(v)
-}
-
-/// Violation of a B-rep semantic contract (identity, envelope, provenance, attestation,
-/// execution plan, production, result): one code for the whole family of contract checks.
-fn semantic_contract_error(message: &str) -> Error {
-    Error::new("BREP_SEMANTIC_CONTRACT", message)
 }
 
 fn dispatch_local(mut v: Value) -> Result<Value> {

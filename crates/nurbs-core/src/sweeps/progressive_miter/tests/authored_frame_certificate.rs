@@ -318,3 +318,22 @@ fn twisted_cover_retains_normalized_second_jets_and_shared_work() {
         assert!(refused.intervals.is_none());
     }
 }
+
+#[test]
+fn original_axis_plane_identity_preserves_constant_normal_jets_with_rational_seed_magnitude() {
+    let axis = law(vec![vec![1.,0.,0.],vec![1.,1.,0.]],[2.,5.]);
+    let mut normal = law(vec![vec![0.,0.,1.],vec![0.,0.,3.]],[7.,11.]);
+    normal.weights=vec![1.,1.25];
+    let before=(axis.clone(),normal.clone());
+    let r=certify(&axis,&normal,[0.,1.],1000).unwrap();
+    assert_eq!(r.status,Status::Certified);
+    let n=r.transverse.unwrap();
+    assert_eq!(n.value,[[0.,0.],[0.,0.],[1.,1.]]);
+    assert_eq!(n.first,[[0.,0.];3]);assert_eq!(n.second,[[0.,0.];3]);
+    assert_eq!(source_axis_normal(&axis,&normal),Some((2,1.)));
+    let mut off_plane=axis.clone();off_plane.control_points[1][2]=f64::MIN_POSITIVE;
+    assert_eq!(source_axis_normal(&off_plane,&normal),None);
+    let mut reversal=normal.clone();reversal.control_points[1][2]=-1.;
+    assert_eq!(source_axis_normal(&axis,&reversal),None);
+    assert_eq!((axis,normal),before);
+}

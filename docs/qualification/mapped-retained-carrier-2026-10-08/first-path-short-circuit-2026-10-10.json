@@ -1,0 +1,34 @@
+{
+  "schema": "corrected-chord-first-path/1",
+  "change": "Check complete first coordinate-path endpoint chord before enclosing alternate path; unresolved results retain alternate intersection and endpoint position refinement.",
+  "sourceSha256": "4dbdb9537afd718e240e138911ea73e47f1a7c28a2b09430191d074300328a10",
+  "nativeRegression": {
+    "passed": 13,
+    "failed": 0,
+    "seconds": 6.67,
+    "log": "/tmp/first-path-native-20261010.log"
+  },
+  "standardComparison": {
+    "state": "passed",
+    "seconds": 296.4,
+    "report": "expression-wall-first-path-standard-2026-10-10.json",
+    "comparison": "expression-wall-first-path-standard-comparison-2026-10-10.json",
+    "spansSaved": 0,
+    "exactReportUnchanged": true
+  },
+  "previousExtendedRun": {
+    "pid": 34033,
+    "state": "passed",
+    "report": "/tmp/expression-wall-intrinsic-extended-20261010.json",
+    "includesThisChange": false
+  },
+  "wasmIncludesThisChange": false,
+  "wholeWallQualified": false,
+  "performanceImprovementMeasured": false,
+  "nativeChordTheorems": {
+    "passed": 41,
+    "failed": 0,
+    "seconds": 0.65,
+    "log": "/tmp/first-path-chord-theorem-20261010.log"
+  }
+}

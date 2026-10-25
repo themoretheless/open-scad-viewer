@@ -1,0 +1,750 @@
+{
+  "scope": "Preserve incoming immutable version collisions byte-for-byte; zero imported qualification work",
+  "sourceCommit": "e3a2d07157e7e0b8666e33355c2fba6a5c61db7b",
+  "records": [
+    {
+      "originalPath": ".github/workflows/g1-qualification-clean.yml",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/.github/workflows/g1-qualification-clean.yml",
+      "sha256": "5ad58479e5b0c895868d5974aa97219bb59d6a16261334e6440e3ac67cd1b8a4",
+      "byteLength": 19116
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v68.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v68.json",
+      "sha256": "36cbec7bef2804e579ad319633b11b10c7d0f2236f20be8a5d8caa7fbb756a01",
+      "byteLength": 152908
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v69.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v69.json",
+      "sha256": "edf522b71fc95dca308701d9207a78f89534606d9ee9331d66283b4ad356ef69",
+      "byteLength": 145054
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v70.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v70.json",
+      "sha256": "c3e5dc7942a943e810a3823f931d9f1b38d4e0caf5e1a8dde99831f9bebaa485",
+      "byteLength": 138636
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v71.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v71.json",
+      "sha256": "ddb5c40fa118d33927abdacf144a2a98e1e0dddc94853059e79c975664a063d9",
+      "byteLength": 141689
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v72.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v72.json",
+      "sha256": "d2973bbda20913d0a019446044154ebddb116836f51446cd1d4fcb0e6db5ced0",
+      "byteLength": 201152
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v73.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v73.json",
+      "sha256": "689a61c60b1856e175ebde35702d4882701854f9a1ecb99fadab127f005211cd",
+      "byteLength": 193775
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v74.json",
+      "sha256": "ddc95fdac64ee12e35d0246506fc67e3f98e57f980c788fba38de58226edcf87",
+      "byteLength": 189933
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v75.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v75.json",
+      "sha256": "33ee0059f920e047e3bcdaa6afc8831a1e491ffb707b1c9f2bbbf7bc8a015424",
+      "byteLength": 194303
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v76.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v76.json",
+      "sha256": "231c48b1c5cba4a701b9a14ace79ad1714760699b53a29dd2f456a7dd00f427f",
+      "byteLength": 188468
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v77.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v77.json",
+      "sha256": "8679ae28d91d1e2500a2a917ea61b95420ffd93297e62db9fd5e1c465cdb5a87",
+      "byteLength": 188530
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v78.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v78.json",
+      "sha256": "6fe6c20e32133d10215009b351af06a42b0c5048776d661807f4bad43261df11",
+      "byteLength": 189002
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v79.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v79.json",
+      "sha256": "b80929f34611754e541389659e1299f3298c87c76e673f9a902bae32a3e5bb4b",
+      "byteLength": 195354
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v80.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v80.json",
+      "sha256": "dd488812b1e95c0f279dab167994907cda8fa8b74acff1b0c30f92e6a10008a7",
+      "byteLength": 377777
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v81.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v81.json",
+      "sha256": "2be211d6d00a4d22c072160d51c995620758b1b4e29f5e93ed733105119c653d",
+      "byteLength": 311127
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v82.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v82.json",
+      "sha256": "1b50ce534d32fcc9a1a72360c8eff3665d4c7d4b4e5fd9fec9f81ce4f34207a6",
+      "byteLength": 311825
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v83.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v83.json",
+      "sha256": "67b2268ad786d2ece7a08e25b371f34622fa0a1070a92dc0119805fd315e575d",
+      "byteLength": 353419
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v84.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v84.json",
+      "sha256": "c0a5479edb2ffa008fde869b25c901a962477b2b6a9b82bee9be5078857a70c1",
+      "byteLength": 308273
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v85.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v85.json",
+      "sha256": "b41920c3621ba88c6332a1977f4c8775b0d04f72eaccac693a96d344e3d69cf0",
+      "byteLength": 305983
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v9.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-toolchain-fingerprints-v9.json",
+      "sha256": "e7476156b67f5e0b00ee98ff5f60740d64e17796067a2d018f9c7f63c856b60c",
+      "byteLength": 9660
+    },
+    {
+      "originalPath": "docs/qualification/g0-v68-g1-v85-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v68-g1-v85-refreeze-review.md",
+      "sha256": "01a8a928f07bc5d17138c82a43e1fee40b387c124e67b078a0c22d44a9f76e4a",
+      "byteLength": 921
+    },
+    {
+      "originalPath": "docs/qualification/g0-v68-g1-v85-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v68-g1-v85-refreeze-status-v1.json",
+      "sha256": "f05080e04a4232438e0e96e646b54aaae0fcd3ae05fd36dc3a80e3cade71731b",
+      "byteLength": 344623
+    },
+    {
+      "originalPath": "docs/qualification/g0-v69-g1-v86-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v69-g1-v86-refreeze-review.md",
+      "sha256": "b2273d8cebd5deb0c43cb92967d70492898221a4b847b5489cc92fabd52a9322",
+      "byteLength": 606
+    },
+    {
+      "originalPath": "docs/qualification/g0-v69-g1-v86-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v69-g1-v86-refreeze-status-v1.json",
+      "sha256": "fb9fd376c8c8e35749a157b956d9838fcf523696a58790ca4b1bec862221af27",
+      "byteLength": 260042
+    },
+    {
+      "originalPath": "docs/qualification/g0-v70-g1-v87-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v70-g1-v87-refreeze-review.md",
+      "sha256": "e3783cd643da820d7b6a9c7bef2162a2129c9cb06ff648ffc9fd9e8836329784",
+      "byteLength": 566
+    },
+    {
+      "originalPath": "docs/qualification/g0-v70-g1-v87-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v70-g1-v87-refreeze-status-v1.json",
+      "sha256": "aef9f74950ce06ecf89156259355e495c014b2430afb5d881b74145adce17632",
+      "byteLength": 410301
+    },
+    {
+      "originalPath": "docs/qualification/g0-v71-g1-v88-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v71-g1-v88-refreeze-review.md",
+      "sha256": "bf250a45635cef09ebb3a1ba094b09eb5383afe1c76c45f331d03de0feb094aa",
+      "byteLength": 545
+    },
+    {
+      "originalPath": "docs/qualification/g0-v71-g1-v88-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v71-g1-v88-refreeze-status-v1.json",
+      "sha256": "58bf225e2c41757758169c063d7213eb6a3c79657ad632f45fb0acd93d3b51ff",
+      "byteLength": 280703
+    },
+    {
+      "originalPath": "docs/qualification/g0-v72-g1-v89-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v72-g1-v89-refreeze-review.md",
+      "sha256": "b0936195677ab91d9d93e7504244d22c4f174087ac99552245ac0d8bd720e9f2",
+      "byteLength": 535
+    },
+    {
+      "originalPath": "docs/qualification/g0-v72-g1-v89-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v72-g1-v89-refreeze-status-v1.json",
+      "sha256": "b0f42b1c43b8b2e5bbd1650961feeb9662b282d3e218edee56a5aa8e60c6b08b",
+      "byteLength": 488158
+    },
+    {
+      "originalPath": "docs/qualification/g0-v73-g1-v90-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v73-g1-v90-refreeze-review.md",
+      "sha256": "c6293f2e3fad2f4ee8c55cd584b03df67dbd0e287ce3b2c65df04505e47b8f36",
+      "byteLength": 547
+    },
+    {
+      "originalPath": "docs/qualification/g0-v73-g1-v90-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v73-g1-v90-refreeze-status-v1.json",
+      "sha256": "1d83caaa3567eedc3f830a175d804726216e438acaa73515395489a32b31ed59",
+      "byteLength": 512604
+    },
+    {
+      "originalPath": "docs/qualification/g0-v74-g1-v91-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v74-g1-v91-refreeze-review.md",
+      "sha256": "50e1c3ef5251b9b3749d5654136929c9007ae5f16baef2676ea59cf087d66981",
+      "byteLength": 555
+    },
+    {
+      "originalPath": "docs/qualification/g0-v74-g1-v91-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v74-g1-v91-refreeze-status-v1.json",
+      "sha256": "1c972ad0cac14a503f2e2c2737253aba0098b0c2d95b732d53547381617320cb",
+      "byteLength": 312466
+    },
+    {
+      "originalPath": "docs/qualification/g0-v75-g1-v92-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v75-g1-v92-refreeze-review.md",
+      "sha256": "1ffc51a58b5af3a574d5048b30096b73d35d61fb4c1a5ec398354a4599c64adc",
+      "byteLength": 570
+    },
+    {
+      "originalPath": "docs/qualification/g0-v75-g1-v92-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v75-g1-v92-refreeze-status-v1.json",
+      "sha256": "49ef52d5365a12f861e17e94d4a4c224822c6d544bb905764923dbb35fb88678",
+      "byteLength": 317303
+    },
+    {
+      "originalPath": "docs/qualification/g0-v76-g1-v93-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v76-g1-v93-refreeze-review.md",
+      "sha256": "be2ec10fc351f8c9ac393fa95a9ec48c921a56eed15c2db759f39641ecaba8f2",
+      "byteLength": 558
+    },
+    {
+      "originalPath": "docs/qualification/g0-v76-g1-v93-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v76-g1-v93-refreeze-status-v1.json",
+      "sha256": "cfde26b92f1b77c002d2c332e8223e11c867913504cb0bf39a4bf2b2f85a4d40",
+      "byteLength": 315311
+    },
+    {
+      "originalPath": "docs/qualification/g0-v77-g1-v94-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v77-g1-v94-refreeze-review.md",
+      "sha256": "0ef610fec7be8b769b387c6b8f80812a1f2cd85cfcaab2743d2814628b76965c",
+      "byteLength": 526
+    },
+    {
+      "originalPath": "docs/qualification/g0-v77-g1-v94-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v77-g1-v94-refreeze-status-v1.json",
+      "sha256": "26aefbcf2cb5bbd4fbbe1155127af44bbf23fad5050228bfcd46be5489fa0512",
+      "byteLength": 317483
+    },
+    {
+      "originalPath": "docs/qualification/g0-v78-g1-v95-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v78-g1-v95-refreeze-review.md",
+      "sha256": "f146d32a538ee5da56eeff342b3d1964ae006839837858f679a4120e5949a308",
+      "byteLength": 576
+    },
+    {
+      "originalPath": "docs/qualification/g0-v78-g1-v95-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v78-g1-v95-refreeze-status-v1.json",
+      "sha256": "83f6d552153490a210a4fdfbe3b3b6111090f77f569490525eea3b88ae099139",
+      "byteLength": 319994
+    },
+    {
+      "originalPath": "docs/qualification/g0-v79-g1-v96-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v79-g1-v96-refreeze-review.md",
+      "sha256": "472c9a601ac60430e7c14b27eb9f34629a1af861e5de38c4c9f6f21a1968e083",
+      "byteLength": 554
+    },
+    {
+      "originalPath": "docs/qualification/g0-v79-g1-v96-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v79-g1-v96-refreeze-status-v1.json",
+      "sha256": "c6f1114fa85bcec158f21460e817bbfc9fb79d76db9308cb65f5bffc0cccadbf",
+      "byteLength": 329303
+    },
+    {
+      "originalPath": "docs/qualification/g0-v80-g1-v97-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v80-g1-v97-refreeze-review.md",
+      "sha256": "3918c91c1b0ccddb58f4c5190e94502200e2aea1aaadd0a9ffc11be553e68e83",
+      "byteLength": 535
+    },
+    {
+      "originalPath": "docs/qualification/g0-v80-g1-v97-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v80-g1-v97-refreeze-status-v1.json",
+      "sha256": "dd4352c8e36ced1d43634610a3387dfe759c6055833c024baaf2261a7ad923eb",
+      "byteLength": 748694
+    },
+    {
+      "originalPath": "docs/qualification/g0-v81-g1-v98-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v81-g1-v98-refreeze-review.md",
+      "sha256": "ce415bc9ac54d7907f07e2d74328c7a6a21e2b9253885874aa909104936cbdd9",
+      "byteLength": 442
+    },
+    {
+      "originalPath": "docs/qualification/g0-v81-g1-v98-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v81-g1-v98-refreeze-status-v1.json",
+      "sha256": "3d475d60df7029bb5c1c0858483aeaa3df34487a15565befbc673b62818ac4d1",
+      "byteLength": 434168
+    },
+    {
+      "originalPath": "docs/qualification/g0-v82-g1-v99-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v82-g1-v99-refreeze-review.md",
+      "sha256": "35d47cf877ab010cafbd454aba06d51068a45781f560adad6c58d92ee1d6bb7e",
+      "byteLength": 509
+    },
+    {
+      "originalPath": "docs/qualification/g0-v82-g1-v99-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v82-g1-v99-refreeze-status-v1.json",
+      "sha256": "011c036f052828fb4027aa7ef5d05a63489f18e4e5e83367b6a4e0b32a2ee925",
+      "byteLength": 436703
+    },
+    {
+      "originalPath": "docs/qualification/g0-v83-g1-v100-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v83-g1-v100-refreeze-review.md",
+      "sha256": "f6cd86c5c86f4050990062d9334fc5ca37711ac63c3e204bb88ddde23ac8452d",
+      "byteLength": 450
+    },
+    {
+      "originalPath": "docs/qualification/g0-v83-g1-v100-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v83-g1-v100-refreeze-status-v1.json",
+      "sha256": "8643f0f0ddc22373541098890365f3c54369c84412ca9658392f386c96b2aa39",
+      "byteLength": 474737
+    },
+    {
+      "originalPath": "docs/qualification/g0-v84-g1-v101-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v84-g1-v101-refreeze-review.md",
+      "sha256": "8b75efc7824c02260589eecb9da40d224a591a0836493002f3f8d89e6528f452",
+      "byteLength": 422
+    },
+    {
+      "originalPath": "docs/qualification/g0-v84-g1-v101-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v84-g1-v101-refreeze-status-v1.json",
+      "sha256": "1d118bc7bd42b080a2aac4641afd5b773f2767f8db01f1df759fb1acd1d9e947",
+      "byteLength": 440081
+    },
+    {
+      "originalPath": "docs/qualification/g0-v85-g1-v102-refreeze-review.md",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v85-g1-v102-refreeze-review.md",
+      "sha256": "afd3584d62b03d98cd8ef02df3b4dfb72842bcc3bbfbae5f953dc57a6614ea91",
+      "byteLength": 436
+    },
+    {
+      "originalPath": "docs/qualification/g0-v85-g1-v102-refreeze-status-v1.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/g0-v85-g1-v102-refreeze-status-v1.json",
+      "sha256": "ee4f172db27154918df3690672424f98f490e86a5c1291605206e63571840e4f",
+      "byteLength": 439770
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v51.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v51.json",
+      "sha256": "46fe7ea1471ed5c9bc4932c0feb68b5312b20101d14023b7d86a1d54b5cf4588",
+      "byteLength": 29155
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v52.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v52.json",
+      "sha256": "c9385e2d89e01b7b0bb987c8060eb14e421276cae2cca6794a9ae2b78bdbde46",
+      "byteLength": 28935
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v53.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v53.json",
+      "sha256": "de7a1bafd42b93b2ed1bb829469f4815e5d1ebf88ded02388a06c7721fc20633",
+      "byteLength": 30193
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v54.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v54.json",
+      "sha256": "75c5eaa9402a76df508a221fe501d800bc9099ba0954ad1816468972b2753068",
+      "byteLength": 30978
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v55.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v55.json",
+      "sha256": "e4723994b18b96328ca3929e4ac0444ff68c577b20fc700d68ff847fbccd0cac",
+      "byteLength": 41453
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v56.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v56.json",
+      "sha256": "7345d6bf28a1238217959158436bc098389f6a192021736d7ee1d0ae597ac1ee",
+      "byteLength": 44054
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v57.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v57.json",
+      "sha256": "c12e6ef04646c38ef5ebc5e4aada90f31e1aaa7dd537921ba5a5bc0c24a183d1",
+      "byteLength": 44062
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v58.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v58.json",
+      "sha256": "b2d34f09f5768c7933185b19df420f5f342a24624c3eb23e3bc69aea646a330c",
+      "byteLength": 44077
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v59.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v59.json",
+      "sha256": "9c904851cb4c78be338741f5f9181f43cbf834cbc985295665607142f61fd08e",
+      "byteLength": 44065
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v60.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v60.json",
+      "sha256": "c4448dba75d1972fde064312270872c1b3b74aac6b1388b1a04602d9426f8fb2",
+      "byteLength": 44033
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v61.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v61.json",
+      "sha256": "321d1f140a474817a4e1cdb736065ba7d9b14d59c8e5e627f33aa4b3f5517174",
+      "byteLength": 44083
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v62.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v62.json",
+      "sha256": "a0cd10def0f2747e0677356c4d3de860d2cc5e2948109db559a5d7e77a3af0bf",
+      "byteLength": 44521
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v64.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v64.json",
+      "sha256": "7b8e0c2903ab9981d25bf6c6d0126387d22ea79b309d3fd9420c6ca1c300f101",
+      "byteLength": 77138
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v65.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v65.json",
+      "sha256": "c4da9373ce58b2ce9ea88a8911a105ca4b1e55338e131e851b6e95f7eb300386",
+      "byteLength": 77138
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v66.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v66.json",
+      "sha256": "bf89ad05ae5f6aa9fa11efb24e95464877d8c38c08b533abe25e58f5d1d5a224",
+      "byteLength": 74882
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v67.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v67.json",
+      "sha256": "d940e6c210aa2d165e32efe118fc87a0dc5f93642267124278f142664eb27532",
+      "byteLength": 75083
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v68.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/own-rust-cad-v68.json",
+      "sha256": "b84fdfd3bc0c1fb38418cbd13a66dc4d15506c632f1617bf0d4ce4dcd7a7346e",
+      "byteLength": 75611
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v100.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v100.json",
+      "sha256": "30a40f4fbfca58e07a8111d1d35019979d58684da988d2ac4817df2c298948f8",
+      "byteLength": 75491
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v101.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v101.json",
+      "sha256": "ae18f7bd55aed3e6b9fb8298730b05630b0e6664d4c9001b6641f65428b87cbb",
+      "byteLength": 75464
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v102.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v102.json",
+      "sha256": "227623506d1c397f23788a3547d90c1ef0986dbd7b0c7313dadc2f99bed591a8",
+      "byteLength": 75478
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v85.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v85.json",
+      "sha256": "9ee430296e5052293100d79c3c0aba73f17c1cb68c41f4f41ef4ce7ec1b1683b",
+      "byteLength": 75490
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v86.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v86.json",
+      "sha256": "e850ea166074a5b34473aafd928536c8c5fda9e79ceb9334cc34bb5b179ab11a",
+      "byteLength": 75312
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v87.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v87.json",
+      "sha256": "f298106faa2f9e5cf1b62c6bb64055f74645351c42a2d2dba67b59c727168ed6",
+      "byteLength": 75272
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v88.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v88.json",
+      "sha256": "a2dee0099486333ee79beaba23247fea469f46e2582b301e7a182e55730545f0",
+      "byteLength": 75251
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v89.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v89.json",
+      "sha256": "514119823a4093a2fe4a763959636a0d30bf966be0e601c7e3c40e963d81c33c",
+      "byteLength": 75241
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v90.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v90.json",
+      "sha256": "bac57190084d38d5a54e35d328a4ab2c61852ec06331423501a55fc5386a9aff",
+      "byteLength": 75253
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v91.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v91.json",
+      "sha256": "91b850d9ec259ce1487f0a49bf2fa8c2dea09b5e33b27da26c483d21b0b4ad35",
+      "byteLength": 75261
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v92.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v92.json",
+      "sha256": "61033c7984ca85b933543af63ce3200896a3d9537268dc51046da5976cf5defb",
+      "byteLength": 75276
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v93.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v93.json",
+      "sha256": "4ac769063e85e53254dddb4e97cb82f112ec05b1c74404ef25ab71633e0ba695",
+      "byteLength": 75264
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v94.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v94.json",
+      "sha256": "d55a2599844d72a957c700a8b83e36f09ad25cfc0628a2d8e587d578dcb250a4",
+      "byteLength": 75232
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v95.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v95.json",
+      "sha256": "b1c07be83d5fdebe4126264cc0ad295d643967cfb8dcf2e093baf89d138b3407",
+      "byteLength": 75282
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v96.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v96.json",
+      "sha256": "939be45a14ec9512eea723f4ca0494b2cdc0477e02899e4726b5c2fba0e727e2",
+      "byteLength": 75591
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v97.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v97.json",
+      "sha256": "aa0ac7a809068966ddf4ab0f9377a14b818992f6fbe00e1c85f23c672de171a8",
+      "byteLength": 75595
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v98.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v98.json",
+      "sha256": "8187d0b90e95f64ec3366695c31dc02946fdfe4d75bb0bc680711fef90ece83e",
+      "byteLength": 75543
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v99.json",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/docs/qualification/semantic-manifold-g1-plan-v99.json",
+      "sha256": "286f8428ee6289ce5dfe8c55df59a8287c67b52c8dba3882c3a465dfc4a1b2ac",
+      "byteLength": 75563
+    },
+    {
+      "originalPath": "scripts/qualificationFrozenArchives.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/qualificationFrozenArchives.mjs",
+      "sha256": "925ded6aa2ebb545cedd156ab67cbc3d14d8210b95c96de7499450c8fcb0229e",
+      "byteLength": 50502
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v68-v85.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v68-v85.mjs",
+      "sha256": "892dc4369663fcc084bd82d8c7277aa4a23e80605a169ab0360045b758f8875a",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v69-v86.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v69-v86.mjs",
+      "sha256": "e2dc9b29468f7bc954aaa1aca7f81d4de683d765326c0a8e96b36e11be4fbdd5",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v70-v87.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v70-v87.mjs",
+      "sha256": "1338db74ecb741549553722c5f7499de9b385edaf5a6bf04113cbc5bd0e2f8f6",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v71-v88.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v71-v88.mjs",
+      "sha256": "e765b32b2ef45321864cd0daf5c516a6c7828d217a1f5ba26f78fe9c7584f9f3",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v72-v89.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v72-v89.mjs",
+      "sha256": "6732343c3a2de5595308fc55f2321bf91edf6655fde0251330fe85f2d8c334b2",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v73-v90.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v73-v90.mjs",
+      "sha256": "76ebc178cc1fce7836b29b3a2b8eeea0341ff7e879b7c9c1c5b96afe4531df13",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v74-v91.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v74-v91.mjs",
+      "sha256": "e70a16fa5e1c95fecc915ac21f61a730a54fca7587866f789f410de9f78796b5",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v75-v92.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v75-v92.mjs",
+      "sha256": "93ed8092fa58ad496afc5a55fa95ccb88f509d414ce548177f5d596a6e9dddca",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v76-v93.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v76-v93.mjs",
+      "sha256": "ed434d2a7416095758457a9a69af49d2c967f3fa5dec543c32ce27941ff3c633",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v77-v94.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v77-v94.mjs",
+      "sha256": "4aea0c07ddd8e605608a5d7c65547b061b57332440aaefef4b2514eb968000e0",
+      "byteLength": 20473
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v78-v95.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v78-v95.mjs",
+      "sha256": "c8d83e650a5787da790953b73bc5d71161e6132772929f6328385959de05119d",
+      "byteLength": 20756
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v79-v96.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v79-v96.mjs",
+      "sha256": "f5fc905878fbd0c757f2d8b4ddefb8b3ee6d0fb0e18366bf276e14901877d2db",
+      "byteLength": 20756
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v80-v97.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v80-v97.mjs",
+      "sha256": "407a8aae48047c3fee6c9553370331ebb126987f5a879f3e7ce8fc64ad1ae301",
+      "byteLength": 20756
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v81-v98.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v81-v98.mjs",
+      "sha256": "37ec3f8b819042b269c3771f9c3370df8103de7921395542342c223a63860b65",
+      "byteLength": 20756
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v82-v99.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v82-v99.mjs",
+      "sha256": "37c525e34e827a177e28fa98f7cd8f6c5b1666f0a459eb3480e533d845716f81",
+      "byteLength": 20756
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v83-v100.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v83-v100.mjs",
+      "sha256": "d883f653a5588cb6129bd7c98dd17229525b3059bae342aa5d231cc5a9e33d3b",
+      "byteLength": 21030
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v84-v101.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints-v84-v101.mjs",
+      "sha256": "e67d1477212befea220976760a0b60bf06a7e25985135e6470a25c03dbf9ebfa",
+      "byteLength": 21043
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/refresh-qualification-fingerprints.mjs",
+      "sha256": "2ecee4482e0826b0c419fbc967a061eef2a7fc4aad17e2fa50d8d1db9f4804d7",
+      "byteLength": 21043
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v54.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v54.mjs",
+      "sha256": "ed96dfaddb7857ced2c0ff10d74df57e9a391f4b4a74c9c03d35e2b027802691",
+      "byteLength": 5263
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v55.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v55.mjs",
+      "sha256": "a878e90de34afa9831052c9af92ae6956bcf4abdf7cf0a4b54ccf70d8cb1dbbb",
+      "byteLength": 5253
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v56.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v56.mjs",
+      "sha256": "0cdf2a9e5861d70931e15ef9e23fd0bd3e925bafaf7d26ee3d13c5a98e54de2a",
+      "byteLength": 5265
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v57.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v57.mjs",
+      "sha256": "b5053ca38c07eb47ddb6080a11fc5ceb769fdca1357cf2962f8ecbae140adc30",
+      "byteLength": 5273
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v58.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v58.mjs",
+      "sha256": "d2db3fd1a4baa12aeeb2c0f41bf3afb6bd35456baf0cade0b481cc50c49e2a5a",
+      "byteLength": 5288
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v59.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v59.mjs",
+      "sha256": "8241a0f4b81d766bea18d8954c8806379f00711182221b45f2fb3dfd07a3e92f",
+      "byteLength": 5276
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v60.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v60.mjs",
+      "sha256": "5aca16366d5e3197ad9850415f17bb42e47263cfc0b5e681b7ea8f8d42ffe61b",
+      "byteLength": 5244
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v61.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v61.mjs",
+      "sha256": "6c33ef3489cf1b72e06c4f770de83090768fe669b6a17449d0fbafaf2ac3bd2f",
+      "byteLength": 5294
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v62.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v62.mjs",
+      "sha256": "7db80630612b67951dd66e3642dd59bcee09e3dac652ae98b20978841b855438",
+      "byteLength": 5272
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v64.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v64.mjs",
+      "sha256": "ad93c3128e7a6769309a322ab7409071a19c5057cfaa8a664f524b01711ec106",
+      "byteLength": 5475
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v65.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v65.mjs",
+      "sha256": "018080a2203f0a2fb67f297aeced042278abc26991e48d38769f490d98716d1d",
+      "byteLength": 5475
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v66.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v66.mjs",
+      "sha256": "b7c7ef045c8413a8b9ce3653f6b9f58bb4bb684357905bf831789e8f6ed5f856",
+      "byteLength": 5235
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v67.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v67.mjs",
+      "sha256": "812ea7fdd2c20dbdffd13cfbd8eb097ee761dc857c99eaeadd6cd694366e0d6a",
+      "byteLength": 5206
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v68.mjs",
+      "archivePath": "docs/qualification/main-history-e3a2d0715/scripts/release-own-rust-v68.mjs",
+      "sha256": "35cb817f20c5428a14a74ae8c1a9591bea2d76ad558c97d8dac34b862324c45b",
+      "byteLength": 5220
+    }
+  ]
+}

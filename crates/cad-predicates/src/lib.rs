@@ -5,6 +5,10 @@
 //! construction results as authored input. Opaque references prevent accidental
 //! cross-source reuse; they do not authenticate arbitrary caller assertions.
 mod arithmetic;
+mod fibered_affine;
+pub use fibered_affine::*;
+mod bezier_quadric_identity;
+pub use bezier_quadric_identity::*;
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
 mod line_chart_identity;
@@ -21,6 +25,8 @@ mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;
 pub use projective_strip_jets::*;
+mod curve_geometric_jets;
+pub use curve_geometric_jets::*;
 mod bezier_strip_jets;
 pub use bezier_strip_jets::*;
 mod bspline_internal_jets;
@@ -66,7 +72,7 @@ pub(crate) fn binomial_u64(n: usize, k: usize) -> u64 {
     }
 }
 
-pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-11";
+pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-15";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sign {
@@ -663,6 +669,7 @@ mod quadratic_shear_identity;
 pub use quadratic_shear_identity::*;
 
 mod projected_surface_jacobian;
+pub use projected_surface_jacobian::Decision as SurfaceDerivativeDecision;
 pub use projected_surface_jacobian::*;
 
 mod quadratic_curve_separator;

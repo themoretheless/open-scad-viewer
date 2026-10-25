@@ -1,0 +1,42 @@
+{
+  "schema": "pr58-fingerprint-refresh/1",
+  "baseCommit": "e51471d52a46c75de5d0402ba31bc84757f22ec6",
+  "rustAndWasmUnchanged": true,
+  "ownRustSourceBundleVerified": true,
+  "historicalArchivesVerified": 795,
+  "node20TestsPassed": 35,
+  "node22TestsPassed": 35,
+  "distributionVerified": true,
+  "vueTypes": true,
+  "ownershipAudit": true,
+  "activeVersions": {
+    "ownRust": 77,
+    "g0": 91,
+    "g1": 108
+  },
+  "completedSemanticWorkUnits": 0,
+  "requiredSemanticWorkUnits": 4740,
+  "qualificationClaim": "none",
+  "records": [
+    {
+      "path": "docs/qualification/own-rust-cad-v77.json",
+      "sha256": "10e51030089b0d4a594a426f5fe290c986a6d2cb6b4cae48f3fa88410a9ddcbf",
+      "bytes": 301480
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v91.json",
+      "sha256": "39ccfffa890b1574664b5465e265ff1b0f8e277ccddf356c3d95660a25aa49eb",
+      "bytes": 1130018
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v108.json",
+      "sha256": "1ae9e7d0801a1e055d87172548b9717b710eae2a69f8710eabb0ad1a2f54ed8a",
+      "bytes": 78153
+    },
+    {
+      "path": "docs/qualification/g0-v91-g1-v108-refreeze-status-v1.json",
+      "sha256": "f0dc04bded525e0273136ccb708dcb48a7515a7cc79dbd95ffae9c681ef09de8",
+      "bytes": 1253460
+    }
+  ]
+}

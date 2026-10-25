@@ -1,0 +1,12 @@
+{
+  "scope": "native quadratic partial affine boundary fixture; no general NURBS or closed-solid claim",
+  "sourceSha256": "a9194a60311ef434b56ff438cb95f99cce8fd5d0214352b6934160802b8cfced",
+  "mappedTests": 6,
+  "sharedEdgeTests": 11,
+  "maxDeviationMm": 0.001,
+  "adaptiveSegmentsMoreThanOne": true,
+  "fixedEnds": true,
+  "mixedRootEnd": true,
+  "depthZeroPreservesPending": true,
+  "completeCanonicalSource": false
+}

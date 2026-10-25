@@ -1,0 +1,89 @@
+{
+  "scope": "Fresh bounded STEP preparation from privately admitted projective source bodies, including retained root-valued trims",
+  "native_authority": [
+    "Material source regions",
+    "Fresh original composition and root identity after endpoint refinement",
+    "Manifold vertex links, all face pairs and signed volume before exchange",
+    "Original source curves and surfaces serialized unchanged"
+  ],
+  "implementation": [
+    "Generic endpoint preparation retains projective ranges, weights and rational root proposals through fresh replay",
+    "Numeric trim representatives are bounded against the same owned source vertices",
+    "STEP is an exchange candidate, not a source Model/editing certificate"
+  ],
+  "evidence": {
+    "targeted_root_body": {
+      "passed": 1,
+      "seconds": 14.15,
+      "log": "/tmp/source-projective-root-exchange-20261011.log"
+    },
+    "source_exchange_serialization": {
+      "passed": 1,
+      "log": "/tmp/source-projective-exchange-compile-20261011.log"
+    },
+    "independent_occt": {
+      "schema": "cad-projective-root-step-occt/1",
+      "scope": "Unit tetrahedron with one original edge split at a certified source root",
+      "stepSha256": "3d8dea1ab8671ef14b3ce6c7b4fcb59a0519fd464f3e8b975d847987aa7161ee",
+      "occtValid": true,
+      "counts": {
+        "solids": 1,
+        "faces": 4,
+        "edges": 7,
+        "vertices": 5
+      },
+      "volumeMm3": 0.1666666666666666,
+      "expectedVolumeMm3": 0.16666666666666666,
+      "volumeErrorMm3": 5.551115123125783e-17,
+      "boundsMm": [
+        -1e-07,
+        -1e-07,
+        -1e-07,
+        1.0000001,
+        1.0000001,
+        1.0000001
+      ],
+      "maxBoundsErrorMm": 1.0000000005838672e-07,
+      "verticesMm": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.7499999999999998,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "maxExpectedVertexErrorMm": 2.220446049250313e-16,
+      "passed": true
+    },
+    "shell_regression": {
+      "passed": 13,
+      "failed": 0,
+      "seconds": 114.83,
+      "log": "/tmp/source-projective-root-exchange-shell-regression-20261011.log"
+    }
+  },
+  "limitations": [
+    "The independent control is a planar tetrahedron with one root-split edge and unit projective weights",
+    "General nonlinear embedded fillet bodies and combined nonunit-map/root STEP cases remain unqualified",
+    "WASM publication unchanged"
+  ]
+}

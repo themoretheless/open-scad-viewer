@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "qualificationCredit": 0,
+  "failedRun": 38643390625,
+  "failedSource": "cd81d41dc0a4285816100a4a2649a195be4ef1ea",
+  "failure": "Unrecorded Windows runner image; preflight refused before qualification work. Separate full Node20 CI found three expectations stale after stronger native one-cell proofs.",
+  "successor": {
+    "ownRust": 72,
+    "g0": 86,
+    "g1": 103,
+    "environment": 38,
+    "importedFragments": 0
+  },
+  "observedWindowsImages": [
+    [
+      "win25-vs2026",
+      "20260925.250.1"
+    ],
+    [
+      "win25-vs2026",
+      "20261007.264.1"
+    ]
+  ],
+  "windowsObservations": [
+    {
+      "imageOS": "win25-vs2026",
+      "imageVersion": "20260925.250.1",
+      "qualificationWorkUnits": 0,
+      "sample": 1,
+      "architecture": "X64"
+    },
+    {
+      "imageOS": "win25-vs2026",
+      "imageVersion": "20260925.250.1",
+      "architecture": "X64",
+      "sample": 2,
+      "qualificationWorkUnits": 0
+    },
+    {
+      "qualificationWorkUnits": 0,
+      "sample": 3,
+      "imageOS": "win25-vs2026",
+      "imageVersion": "20260925.250.1",
+      "architecture": "X64"
+    },
+    {
+      "imageOS": "win25-vs2026",
+      "imageVersion": "20260925.250.1",
+      "sample": 4,
+      "qualificationWorkUnits": 0,
+      "architecture": "X64"
+    },
+    {
+      "architecture": "X64",
+      "qualificationWorkUnits": 0,
+      "sample": 5,
+      "imageVersion": "20260925.250.1",
+      "imageOS": "win25-vs2026"
+    },
+    {
+      "imageVersion": "20261007.264.1",
+      "architecture": "X64",
+      "sample": 6,
+      "imageOS": "win25-vs2026",
+      "qualificationWorkUnits": 0
+    },
+    {
+      "qualificationWorkUnits": 0,
+      "imageVersion": "20261007.264.1",
+      "sample": 7,
+      "imageOS": "win25-vs2026",
+      "architecture": "X64"
+    },
+    {
+      "qualificationWorkUnits": 0,
+      "sample": 8,
+      "imageOS": "win25-vs2026",
+      "architecture": "X64",
+      "imageVersion": "20260925.250.1"
+    }
+  ],
+  "browserTreesUnchanged": 4,
+  "rustSubtreeUnchanged": "c546568801f2c67f3ea20ed29afd0f32dbfcfe79",
+  "primaryWasmUnchanged": "21e5ca1473fc9d7094784bc2b3369e7a4b97d874fe9fe55d0d2e4203a64925f7",
+  "records": [
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/failed-run-status.gz",
+      "sha256": "629e48589e302a5fad4015e8b64796bf36f114fc881b7cf037f97c0c982fca7a",
+      "uncompressedSha256": "815402bf686e1e562f883eaebf5ec73d3b7dd62f15c896b5dc016d0519b4f7ac",
+      "uncompressedBytes": 230485
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-node20-preflight.gz",
+      "sha256": "1c00c678912bad6056310b6aa45f1121ec8b825f3c960f7235d60ae58b96d156",
+      "uncompressedSha256": "ac8726fd9a97beac35e02f06fd45e9fc5e30a03df14f33ba49fe998bd5e1c030",
+      "uncompressedBytes": 59018
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/ci-node20-contract-failure.gz",
+      "sha256": "cec5834073df250366238e4d1b8b2e3212de6727893587c37783bfaaed97c86d",
+      "uncompressedSha256": "80bbd3d5bda4c56b47b4fd9e9a0c2c33660fde1c1272c24df16f8a1efa5e642e",
+      "uncompressedBytes": 390210
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/browser-discovery.gz",
+      "sha256": "9b02470656bfb54d5af0c24c7f62d3484b49502060cb246d4168395029b18696",
+      "uncompressedSha256": "caa41e7e29f7ca6c2c3597d6269f8503b504c267a5707a1575d0f70a57f7bf93",
+      "uncompressedBytes": 79785
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-discovery-jobs.gz",
+      "sha256": "3f2a209158584b47ad2299e835f6e41df60ab8f4bac8de85e9f47bc1a3bd5207",
+      "uncompressedSha256": "e7c9a75b5dc86fb83a6b6f77be778d2b523d0250100915cbec16b84fd0537e0f",
+      "uncompressedBytes": 7863
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-1.gz",
+      "sha256": "8d5f4b240d17a05aec01460569aee34cefc5a526f1f15522791b61b1e8633b3b",
+      "uncompressedSha256": "23448cf6e0154b785c09514579aff5cd0f9f305ac5bb6b861247aca5a19bb3b1",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-2.gz",
+      "sha256": "8d8b93f5051b6d6f5d605062f29474292b590b1e740fdc38ff8bc93edecdab52",
+      "uncompressedSha256": "1d77aec2aa790bc3c06dd1cac9011bfe012dc5bb3e0796f00014700cc6722f15",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-3.gz",
+      "sha256": "3b5b13131918f5dd7c286ab25d7587fe52a23c91f459f053585e423ea22ab9f9",
+      "uncompressedSha256": "0588e59b7bea006baaf7cae182d48be07cd83a23b2258a4abc27a54ea4b9c913",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-4.gz",
+      "sha256": "43d16d9529c5bc4fdcf9522862d060e1240cf1ef11d4345318c04a22156308b5",
+      "uncompressedSha256": "9ba741325d566d3f624b1e60386ad5531a95285a993e750a1b934afb07dafa00",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-5.gz",
+      "sha256": "2f3ef1568361a2f4a062fa02740062b8b7e79b6541e4d804ed9fefc267bcb36c",
+      "uncompressedSha256": "5e9d4ecfeb9a44edadc23bf83605b38e2d9b4386e2c88ceefdc37d805b1041a6",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-6.gz",
+      "sha256": "d2718a68dff9cefa9ad7d3ecb9f61e4aa62e42194800fdca1ea54ed474678b81",
+      "uncompressedSha256": "79ee48ae3ed4948c61ca8f20b22ad90b0e6126eed75c96997e666fc9c9e9f53b",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-7.gz",
+      "sha256": "a6d91bb95f82705c4d9798ccb62164214b2339e1d4949c4369238a1d3a419048",
+      "uncompressedSha256": "c87f146ea0725f57bac1c83da94dac6ac492576dbaeeb01b625eeee8a2b36e88",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/windows-windows-rollout-8.gz",
+      "sha256": "cb735cf0bf1d9e853bbec453376a545204010c5178c73d9cd33449d70876bc4c",
+      "uncompressedSha256": "70db5a1af8d9b9ac4c5cae6612e0208bd19d524da9990d9ccc34015bb527156d",
+      "uncompressedBytes": 146
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/runner-runner-discovery-macos-15.gz",
+      "sha256": "e3683c330a273d4220e2659b56de55b28797a7906fd44e31b309166752708d6d",
+      "uncompressedSha256": "be9bfb61d778669dea9b7d8dc3eb14a0e0da1f0826b563fec3e05ffabde7f30c",
+      "uncompressedBytes": 115
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/runner-runner-discovery-ubuntu-24.04.gz",
+      "sha256": "083e72bfa0e3a18fa4ff6b5d32b5350010a82ff8d60259ba8191254091fca719",
+      "uncompressedSha256": "92aad39016d1b380c885748f99e575432745a4057f15259a2b2beb3dfeea43d1",
+      "uncompressedBytes": 117
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/runner-runner-discovery-windows-2025.gz",
+      "sha256": "1224ec52bb959b38e932611ae1392a2cb7d8d65859e9787fe3c04488d72a83d2",
+      "uncompressedSha256": "07ba4288cd7d49d32c13a233e4cc8f4cda3b8c6b7519ae85438a74ac9f697600",
+      "uncompressedBytes": 127
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/ci-node22-contract-failure.gz",
+      "sha256": "c9ee34f9e9c7353cb0759a3c7b0b2a6448444b56f18f1ff3cc00da4f904121e1",
+      "uncompressedSha256": "11dc24343e288834b427b5d3a1f6cc4e65da429819494e224dc351164897e841",
+      "uncompressedBytes": 390175
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/proof-contract-node26-timeout.gz",
+      "sha256": "ca5fb042b81daa71e8ec72b5f4e881286b6955f4c4e9ca7f21b05a38869e94bd",
+      "uncompressedSha256": "f2c487630cb7032ca65005d49dd4d49c218c9eb445460ebced80eed1bcf4c877",
+      "uncompressedBytes": 1018
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/proof-contract-node22-passed.gz",
+      "sha256": "bf7c300cf8455859dad3a7e1193a01b4edf236cc84b037ca1c71906edc38b821",
+      "uncompressedSha256": "6f63ac54cb7e580704e7d90340bc252db5c7bcd886dc1abe2d67751f8cbf0448",
+      "uncompressedBytes": 252
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/vue-typecheck.gz",
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    {
+      "path": "docs/qualification/g1-v102-runner-rollout-2026-10-15/mcp-typecheck.gz",
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    }
+  ],
+  "proofContractTests": {
+    "status": "passed",
+    "runtime": "Node v22.23.3, macOS arm64",
+    "passed": 3,
+    "unchangedPerTestTimeoutMs": 180000,
+    "skippedByExplicitFocusedSelection": 21,
+    "scope": "One quarter-chart test and two multiple-hole body tests; focused selection supplies no full-suite or G1 credit.",
+    "localNode26Attempt": "One 180-second timeout, two passes; preserved separately.",
+    "committedTestDeadlinesChanged": false
+  },
+  "typechecks": {
+    "status": "passed",
+    "targets": [
+      "Vue application",
+      "MCP"
+    ]
+  },
+  "wasmBuildInputsUnchanged": 15
+}

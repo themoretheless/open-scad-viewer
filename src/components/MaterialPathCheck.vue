@@ -29,6 +29,11 @@ watch(()=>props.model,model=>{
 watch(()=>[props.active,props.model,enabled.value,mode.value,extended.value,normalAudit.value,toleranceMm.value,JSON.stringify(faceGroups.value),automatic.value,...origin.value,...direction.value],()=>{
  request.value=null;wallResult.value=null;wholeResult.value=null;result.value=null;error.value='';pending.value=false;worker.cancel()
 },{flush:'sync'})
+function cancel(){
+ request.value=null;worker.cancel();pending.value=false
+ wallResult.value=null;wholeResult.value=null;result.value=null;error.value=''
+ searchProgress.value=0;searchTotal.value=0
+}
 function run(){
  if(!props.model){error.value=label('Выберите тело с исходной геометрией.','Choose a body with original geometry.');return}
  if(!((mode.value==='wall'||mode.value==='whole')&&automatic.value)&&(!origin.value.every(Number.isFinite)||!direction.value.every(Number.isFinite)||direction.value.every(x=>x===0))){
@@ -134,6 +139,7 @@ onUnmounted(()=>{worker.dispose();emit('state',false,null)})
   <label v-if="mode==='chord'"><input v-model="normalAudit" type="checkbox">{{label('Проверить направление к граням','Check direction against faces')}}</label>
   <label><input v-model="extended" type="checkbox">{{label('Расширенный расчёт','Extended calculation')}}</label>
   <button type="button" @click="run">{{result||error?label('Повторить проверку','Retry check'):label('Проверить','Check')}} · Enter</button>
+  <button v-if="pending" type="button" @click="cancel">{{label('Отменить расчёт','Cancel calculation')}}</button>
   <p v-if="pending" role="status">{{label('Проверяю материал…','Checking material…')}}</p>
   <p v-if="error" id="material-path-error" role="alert">{{error}}</p>
   <template v-if="wholeResult">

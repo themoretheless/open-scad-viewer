@@ -123,7 +123,7 @@ export interface CustomizeResult {
 
 export class ArtifactSizeError extends RangeError {
   constructor(readonly estimatedBytes: number, readonly maxBytes: number) {
-    super(`Export is estimated at ${estimatedBytes.toLocaleString()} bytes, above the ${maxBytes.toLocaleString()}-byte limit`)
+    super(`Export is estimated at ${estimatedBytes.toLocaleString('en-US')} bytes, above the ${maxBytes.toLocaleString('en-US')}-byte limit`)
     this.name = 'ArtifactSizeError'
   }
 }
@@ -144,7 +144,7 @@ export class GeometryBusyError extends Error {
 
 export class GeometryDeadlineExceededError extends Error {
   constructor(readonly deadlineMs: number) {
-    super(`Geometry evaluation exceeded its ${deadlineMs.toLocaleString()} ms deadline`)
+    super(`Geometry evaluation exceeded its ${deadlineMs.toLocaleString('en-US')} ms deadline`)
     this.name = 'GeometryDeadlineExceededError'
   }
 }

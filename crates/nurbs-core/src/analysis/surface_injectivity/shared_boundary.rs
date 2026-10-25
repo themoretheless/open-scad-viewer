@@ -381,6 +381,7 @@ fn certify_shared_natural_boundary_strips(
         linear_projection: None,
         projective_projection: None,
         polar_projection: None,
+        polar_p_matrix: None,
         contraction_upper: None,
         spans: 0,
         reason: "shared-boundary-unproved",

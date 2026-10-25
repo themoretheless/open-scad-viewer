@@ -1,0 +1,27 @@
+{
+  "schema": "expression-browser-bounded-acceptance/1",
+  "passed": true,
+  "url": "http://127.0.0.1:5198/",
+  "wasmSha256": "bc8bb52d0e1ea23a5614d7989628d0e83590235b9a55928f25fb2405a3f7ab98",
+  "actions": [
+    "select expression-source:0",
+    "open File and shell inspection",
+    "choose standard budget",
+    "start inspection",
+    "Escape while pending",
+    "parameters and Check enabled again",
+    "restart inspection",
+    "wait for report",
+    "show source candidate faces"
+  ],
+  "observed": {
+    "pendingRegions": 4085,
+    "initialPairsChecked": 435,
+    "totalPairs": 435,
+    "cells": 10000,
+    "spans": 48488,
+    "intrinsicChecked": 2368,
+    "wholeThicknessQualified": false
+  },
+  "scope": "Actual browser mouse/keyboard cancellation and successful restart on packaged first-path version. Does not qualify latest original cache WASM, all commands, transition rendering or arbitrary geometry."
+}

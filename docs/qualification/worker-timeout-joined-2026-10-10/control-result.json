@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "expectedProcessExit": 1,
+  "actualProcessExit": 1,
+  "workersStarted": 1,
+  "workersJoined": 1,
+  "scope": "Deliberate 1 ms timeout control; verifies failure artifact is written after worker exit. Does not qualify geometry or latency."
+}

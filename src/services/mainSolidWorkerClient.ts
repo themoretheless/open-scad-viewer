@@ -8,7 +8,8 @@ export interface MainSolidPort {
   postMessage(message:MainSolidRequest):void
   terminate():void
 }
-export interface MainSolidRunOptions {signal?:AbortSignal; timeoutMs?:number}
+export interface MainSolidTiming {clientElapsedMs:number;warmupMs:number;executeMs:number;prepareMs:number}
+export interface MainSolidRunOptions {signal?:AbortSignal; timeoutMs?:number; onTiming?:(timing:MainSolidTiming)=>void}
 export class MainSolidWorkerError extends Error {
   constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
 }
@@ -28,6 +29,7 @@ export class MainSolidWorkerClient {
     if(signal?.aborted) return Promise.reject(cancelled())
     const timeoutMs=options.timeoutMs??120000
     if(!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>120000) return Promise.reject(new RangeError('CAD timeout must be between 1 and 120000 ms'))
+    const onTiming=options.onTiming, started=onTiming?performance.now():0
     // postMessage snapshots the payload. Retain only response dimensions here,
     // avoiding a second host-side copy of potentially large CAD meshes.
     let expected:MainSolidExpectation
@@ -41,7 +43,7 @@ export class MainSolidWorkerClient {
     return new Promise((resolve,reject)=>{
       let settled=false
       let timer:ReturnType<typeof setTimeout>|undefined
-      const finish=(error?:Error,result?:MainSolidResults[K],discard=false)=>{
+      const finish=(error?:Error,result?:MainSolidResults[K],discard=false,timing?:MainSolidResponse['timing'])=>{
         if(settled)return
         settled=true;clearTimeout(timer)
         signal?.removeEventListener('abort',abort)
@@ -49,6 +51,10 @@ export class MainSolidWorkerClient {
         if(this.active?.fail===fail)this.active=null
         if(discard){if(this.worker===worker)this.worker=null;worker.terminate()}
         error?reject(error):resolve(result!)
+        // Observers cannot change command settlement, cancellation or geometry.
+        if(onTiming && timing && [timing.warmupMs,timing.executeMs,timing.prepareMs].every(value=>Number.isFinite(value)&&value>=0)) {
+          try {onTiming({...timing,clientElapsedMs:performance.now()-started})} catch { /* Optional observation must not fail a CAD command. */ }
+        }
       }
       const fail=(error:Error,discard:boolean)=>finish(error,undefined,discard)
       const abort=()=>fail(cancelled(),true)
@@ -62,12 +68,12 @@ export class MainSolidWorkerClient {
         if(data.ok===true && 'result' in data) {
           // Unpack transferred typed-array payloads before the plain-array protocol checks.
           const result=decodeMainSolidResult(expected.kind,data.result)
-          if(mainSolidResult(expected,result))finish(undefined,result as MainSolidResults[K])
+          if(mainSolidResult(expected,result))finish(undefined,result as MainSolidResults[K],false,data.timing)
           else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
         } else if(data.ok===false && 'error' in data && data.error
           && typeof data.error.name==='string' && typeof data.error.message==='string'
           && (data.error.code===undefined || typeof data.error.code==='string')) {
-          finish(new MainSolidWorkerError(data.error.code??'CAD_OPERATION',data.error.message,data.error.name))
+          finish(new MainSolidWorkerError(data.error.code??'CAD_OPERATION',data.error.message,data.error.name),undefined,false,data.timing)
         } else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
       }
       worker.onerror=event=>fail(new MainSolidWorkerError('CAD_CRASH',event.message||'CAD worker failed'),true)
@@ -75,7 +81,7 @@ export class MainSolidWorkerClient {
       this.active={fail}
       signal?.addEventListener('abort',abort,{once:true})
       timer=setTimeout(()=>fail(new MainSolidWorkerError('CAD_TIMEOUT','CAD operation exceeded its time limit'),true),timeoutMs)
-      try {worker.postMessage({version:1,id,job})}
+      try {worker.postMessage({version:1,id,job,...(onTiming?{traceTiming:true}:{})})}
       catch {fail(new MainSolidWorkerError('CAD_TRANSPORT','CAD request could not be sent'),true)}
     })
   }

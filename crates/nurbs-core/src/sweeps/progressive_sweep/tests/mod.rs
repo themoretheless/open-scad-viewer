@@ -1380,3 +1380,46 @@ fn retained_regularity_is_separate_from_error_admission_across_frame_modes(){
         // Coincident profiles intentionally remain R regular; this is not I.
     }
 }
+
+#[test]
+fn shared_original_arc_chord_keeps_one_union_ledger_and_refuses_partial_cover() {
+    let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+        control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![0.,1.,1.]],weights:vec![1.;3],periodic:false};
+    let profile=crate::primitives::line([0.,0.,0.],[2.,0.,0.]).unwrap();
+    let profiles=vec![profile;8];
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();
+    let twist=constant_vector_law([0.;3]).unwrap();
+    let axis=constant_vector_law([0.,0.,1.]).unwrap();
+    let normal=constant_vector_law([1.,0.,0.]).unwrap();
+    let opts=Options {orientation:Orientation::Fixed,normal:[1.,0.,0.],
+        spacing:Spacing::ArcLength {tolerance:0.001,max_cells:100000},
+        initial_sections:3,max_sections:9,max_deviation:1.};
+    for authored in [false,true] {
+        let preview=|curves:&[Curve],budget| {
+            let sweep=MultiSweep::new(curves,&path,&scale,&twist,opts).unwrap();
+            let sweep=if authored {sweep.with_frame_laws(&axis,&normal).unwrap()}else{sweep};
+            sweep.preview_at_with_error_limits(3,budget,1000000).unwrap().report
+        };
+        let one=preview(&profiles[..1],10000);
+        let union=preview(&profiles,10000);
+        assert!(one.continuous_bound && union.continuous_bound,"{authored}/{one:?}/{union:?}");
+        assert_eq!(one.continuous_error_upper,union.continuous_error_upper);
+        assert!(union.error_certificate_cells<8*one.error_certificate_cells);
+        assert!(union.error_certificate_cells<=10000);
+        let exact=preview(&profiles,union.error_certificate_cells);
+        assert!(exact.continuous_bound);
+        assert_eq!(exact.continuous_error_upper,union.continuous_error_upper);
+        for budget in [0,1,union.error_certificate_cells-1] {
+            let partial=preview(&profiles,budget);
+            assert!(partial.error_certificate_cells<=budget);
+            assert!(!partial.continuous_bound,"{authored}/{budget}/{partial:?}");
+            assert!(partial.continuous_error_upper.is_none());
+        }
+        // A later source must obtain its own bound: the shared result belongs
+        // only to this operation, never to a rounded station-count cache.
+        let mut changed=path.clone();changed.control_points[1][1]=0.25;
+        let altered=MultiSweep::new(&profiles,&changed,&scale,&twist,opts).unwrap()
+            .preview_at_with_error_limits(3,10000,1000000).unwrap();
+        if !authored {assert_ne!(altered.report.continuous_error_upper,union.continuous_error_upper);}
+    }
+}

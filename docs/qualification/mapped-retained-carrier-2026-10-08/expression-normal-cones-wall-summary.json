@@ -1,0 +1,500 @@
+{
+  "complete": false,
+  "pending_source_pairs": 70,
+  "previous_pending_source_pairs": 210,
+  "pending_domains": 4425,
+  "resolved_previous_pairs": 140,
+  "new_pending_pairs": 0,
+  "pairs": [
+    {
+      "faces": [
+        0,
+        0
+      ],
+      "domains": 414
+    },
+    {
+      "faces": [
+        0,
+        1
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "domains": 90
+    },
+    {
+      "faces": [
+        0,
+        5
+      ],
+      "domains": 88
+    },
+    {
+      "faces": [
+        0,
+        6
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        0,
+        7
+      ],
+      "domains": 6
+    },
+    {
+      "faces": [
+        0,
+        11
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        0,
+        15
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        0,
+        19
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        0,
+        23
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        0,
+        27
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        0,
+        28
+      ],
+      "domains": 303
+    },
+    {
+      "faces": [
+        1,
+        5
+      ],
+      "domains": 12
+    },
+    {
+      "faces": [
+        1,
+        10
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        1,
+        27
+      ],
+      "domains": 38
+    },
+    {
+      "faces": [
+        1,
+        28
+      ],
+      "domains": 56
+    },
+    {
+      "faces": [
+        2,
+        5
+      ],
+      "domains": 2
+    },
+    {
+      "faces": [
+        2,
+        7
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        2,
+        24
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        2,
+        27
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        2,
+        28
+      ],
+      "domains": 84
+    },
+    {
+      "faces": [
+        3,
+        8
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        3,
+        25
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        5,
+        5
+      ],
+      "domains": 176
+    },
+    {
+      "faces": [
+        5,
+        6
+      ],
+      "domains": 12
+    },
+    {
+      "faces": [
+        5,
+        7
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        5,
+        10
+      ],
+      "domains": 30
+    },
+    {
+      "faces": [
+        5,
+        11
+      ],
+      "domains": 12
+    },
+    {
+      "faces": [
+        5,
+        12
+      ],
+      "domains": 2
+    },
+    {
+      "faces": [
+        5,
+        15
+      ],
+      "domains": 12
+    },
+    {
+      "faces": [
+        5,
+        19
+      ],
+      "domains": 12
+    },
+    {
+      "faces": [
+        5,
+        23
+      ],
+      "domains": 12
+    },
+    {
+      "faces": [
+        6,
+        10
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        6,
+        27
+      ],
+      "domains": 38
+    },
+    {
+      "faces": [
+        6,
+        28
+      ],
+      "domains": 56
+    },
+    {
+      "faces": [
+        7,
+        10
+      ],
+      "domains": 2
+    },
+    {
+      "faces": [
+        7,
+        12
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        8,
+        13
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        10,
+        10
+      ],
+      "domains": 174
+    },
+    {
+      "faces": [
+        10,
+        11
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "domains": 36
+    },
+    {
+      "faces": [
+        10,
+        15
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        10,
+        16
+      ],
+      "domains": 8
+    },
+    {
+      "faces": [
+        10,
+        19
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        10,
+        23
+      ],
+      "domains": 28
+    },
+    {
+      "faces": [
+        11,
+        27
+      ],
+      "domains": 38
+    },
+    {
+      "faces": [
+        11,
+        28
+      ],
+      "domains": 56
+    },
+    {
+      "faces": [
+        12,
+        16
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        13,
+        17
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        15,
+        27
+      ],
+      "domains": 38
+    },
+    {
+      "faces": [
+        15,
+        28
+      ],
+      "domains": 56
+    },
+    {
+      "faces": [
+        16,
+        16
+      ],
+      "domains": 88
+    },
+    {
+      "faces": [
+        16,
+        20
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        17,
+        17
+      ],
+      "domains": 100
+    },
+    {
+      "faces": [
+        17,
+        21
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        19,
+        27
+      ],
+      "domains": 38
+    },
+    {
+      "faces": [
+        19,
+        28
+      ],
+      "domains": 56
+    },
+    {
+      "faces": [
+        20,
+        20
+      ],
+      "domains": 88
+    },
+    {
+      "faces": [
+        20,
+        24
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        21,
+        21
+      ],
+      "domains": 100
+    },
+    {
+      "faces": [
+        21,
+        25
+      ],
+      "domains": 20
+    },
+    {
+      "faces": [
+        23,
+        27
+      ],
+      "domains": 38
+    },
+    {
+      "faces": [
+        23,
+        28
+      ],
+      "domains": 56
+    },
+    {
+      "faces": [
+        24,
+        24
+      ],
+      "domains": 88
+    },
+    {
+      "faces": [
+        24,
+        27
+      ],
+      "domains": 32
+    },
+    {
+      "faces": [
+        24,
+        28
+      ],
+      "domains": 42
+    },
+    {
+      "faces": [
+        25,
+        25
+      ],
+      "domains": 100
+    },
+    {
+      "faces": [
+        27,
+        27
+      ],
+      "domains": 272
+    },
+    {
+      "faces": [
+        27,
+        28
+      ],
+      "domains": 512
+    },
+    {
+      "faces": [
+        28,
+        28
+      ],
+      "domains": 272
+    }
+  ]
+}

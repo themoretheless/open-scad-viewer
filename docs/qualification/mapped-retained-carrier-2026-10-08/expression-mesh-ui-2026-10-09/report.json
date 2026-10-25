@@ -1,0 +1,13 @@
+{
+  "wasmSha256": "1e4099284758502a394d2bbed7a67e183c7c71e2a5fa789cefbe608d4bce55fd",
+  "triangles": 1762,
+  "pendingRegions": 6123,
+  "highlightedPendingBoxes": 1,
+  "hiddenTriangles": 0,
+  "newRunTriangles": 0,
+  "newRunPendingBoxes": 0,
+  "escapeClearsPreview": true,
+  "freshRetryRestoresTriangles": 1762,
+  "inspectionConsoleErrors": [],
+  "scope": "Annular saved recipe on isolated browser origin 5197. Partial preview only; no watertight mesh or Body admission. Existing code-editor route error and WebGPU fallback are outside this qualification."
+}

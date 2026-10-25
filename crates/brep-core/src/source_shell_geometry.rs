@@ -14,11 +14,11 @@ pub struct Limits {
     pub exact_work: u64,
     pub driver_cells: usize,
 }
-pub struct Geometry {
-    shell: Shell,
+pub struct Geometry<E = crate::source_shared_edge::SharedEdge> {
+    shell: Shell<E>,
     topology: source_vertex_links::Report,
     charts: ChartReport,
-    contacts: source_face_contacts::ShellReport,
+    contacts: source_face_contacts::ShellReport<E>,
     inverse_shear: Option<InverseShearContacts>,
 }
 pub struct InverseShearContacts {
@@ -37,8 +37,8 @@ impl InverseShearContacts {
         &self.inverse
     }
 }
-impl Geometry {
-    pub fn shell(&self) -> &Shell {
+impl<E> Geometry<E> {
+    pub fn shell(&self) -> &Shell<E> {
         &self.shell
     }
     pub fn topology(&self) -> &source_vertex_links::Report {
@@ -48,15 +48,15 @@ impl Geometry {
         &self.charts
     }
     /// Primary contact diagnostics; an inverse proof may establish embedding separately.
-    pub fn contacts(&self) -> &source_face_contacts::ShellReport {
+    pub fn contacts(&self) -> &source_face_contacts::ShellReport<E> {
         &self.contacts
     }
     pub fn inverse_shear(&self) -> Option<&InverseShearContacts> {
         self.inverse_shear.as_ref()
     }
 }
-pub struct Report {
-    pub geometry: Option<Geometry>,
+pub struct Report<E = crate::source_shared_edge::SharedEdge> {
+    pub geometry: Option<Geometry<E>>,
     pub corners: usize,
     pub spans: usize,
     pub linear_cells: usize,
@@ -73,6 +73,33 @@ pub struct Report {
 /// Material orientation, signed volume and Model conversion remain separate.
 pub fn qualify(shell: Shell, limits: Limits) -> Result<Report> {
     qualify_impl(shell, limits, None)
+}
+/// Fresh projective-shell admission. All face pairs are inspected; unsupported
+/// nonlinear contacts stay unresolved. Material orientation/volume remain separate.
+pub fn qualify_projective(shell:Shell<crate::source_projective_edge::Edge>,limits:Limits)
+    ->Result<Report<crate::source_projective_edge::Edge>> {
+    if !limits.tolerance_uv.is_finite() || limits.tolerance_uv<=0. || shell.regions().is_none()
+        || !(1..=100000).contains(&limits.corners) || !(1..=100000).contains(&limits.spans)
+        || limits.linear_cells>100000 || !(1..=100000000).contains(&limits.exact_work)
+        || !(1..=100000).contains(&limits.driver_cells) {
+        return Err(Error::new("BREP_SOURCE_SHELL_GEOMETRY","Choose original regions and bounded projective geometry work"));
+    }
+    let mut out=Report{geometry:None,corners:0,spans:0,linear_cells:0,exact_work:0,driver_cells:0,pairs:0,
+        reason:"source-shell-topology-unproven",uncertain_vertex:None,uncertain_face:None,next_pair:None};
+    let topology=source_vertex_links::inspect(&shell,limits.corners)?;out.corners=topology.corners;
+    if !topology.all_manifold || topology.genus.is_none() {out.reason=topology.reason;out.uncertain_vertex=topology.uncertain_vertex;return Ok(out);}
+    let charts=shell.inspect_face_charts(limits.spans,limits.linear_cells)?;
+    out.spans=charts.spans;out.linear_cells=charts.linear_cells;
+    if !charts.all_injective {
+        out.reason="source-shell-chart-injectivity-unproven";
+        out.uncertain_face=charts.faces.iter().find(|f|!f.injectivity_proven()).map(|f|f.face);return Ok(out);
+    }
+    if out.spans==limits.spans {out.reason="source-shell-contact-work-limit";out.next_pair=Some([0,1]);return Ok(out);}
+    let contacts=source_face_contacts::inspect_shell_with_projective_fibers(&shell,limits.tolerance_uv,limits.pairs,limits.exact_work,limits.spans-out.spans,limits.driver_cells,limits.linear_cells-out.linear_cells)?;
+    out.spans+=contacts.spans;out.linear_cells+=contacts.linear_cells;out.driver_cells+=contacts.driver_cells;out.exact_work=contacts.exact_work;out.pairs=contacts.pairs.len();out.next_pair=contacts.next_pair;
+    if !contacts.all_pairs_qualified || contacts.next_pair.is_some() {out.reason="source-shell-extra-contact-unproven";return Ok(out);}
+    out.geometry=Some(Geometry{shell,topology,charts,contacts,inverse_shear:None});
+    out.reason="source-projective-shell-embedded-qualified";Ok(out)
 }
 /// Explicit proposal only: original charts, inverse equations, roots, ownership
 /// and inverse contacts are all recomputed. A proposal is never admission authority.

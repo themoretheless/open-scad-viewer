@@ -2,6 +2,7 @@
 //! bounding structures and exact predicates.
 pub(crate) mod distance_bounds;
 pub(crate) mod interval_vec3;
+pub(crate) mod bernstein_tensor;
 pub(crate) mod exact_curve_segments;
 pub(crate) mod exact_products;
 pub(crate) mod periodic_chart;

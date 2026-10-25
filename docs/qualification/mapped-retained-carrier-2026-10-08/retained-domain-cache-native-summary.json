@@ -1,0 +1,22 @@
+{
+  "scope": "Counters for the identical annular request: preceding WASM versus updated native debug dispatch; elapsed times are not a runtime comparison. Updated WASM qualification pending.",
+  "nativeElapsedMs": 56765.637167,
+  "beforeRuntime": "WASM 9d9ebf",
+  "afterRuntime": "native debug e9c8cf4f",
+  "before": {
+    "cells": 12152,
+    "domainCells": 406655,
+    "domainQueries": 18261,
+    "endpointQueries": 957614,
+    "spans": 23220
+  },
+  "after": {
+    "cells": 12152,
+    "domainCells": 247847,
+    "domainQueries": 9473,
+    "endpointQueries": 574598,
+    "spans": 22830
+  },
+  "unprovenPairs": 45,
+  "wholeWallQualified": false
+}

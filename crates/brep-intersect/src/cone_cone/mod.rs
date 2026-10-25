@@ -37,7 +37,9 @@
 //! classification. Resolved contacts are exact rational circles (four
 //! 90-degree arcs, weights cos(pi/4)) with iso-v lifts on all four side
 //! patches of both cones. Nothing here authorizes a topology change.
-use brep_core::intersections::{CanonicalCone, recognize_cone};
+#[cfg(feature = "codec")]
+mod serialization;
+use super::plane_cone::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 use brep_core::intersections::sphere_sphere::{RECOGNITION, circle_curve};
 use super::*;

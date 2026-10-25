@@ -1,0 +1,137 @@
+{
+  "scope": "Four joins of the controlled assembled full-Hermite transition against actual retained/original neighboring faces. No global solid, thickness or self-intersection qualification.",
+  "nativeTest": {
+    "name": "restricted_profile_seams_match_owned_neighbor_supports",
+    "passed": true,
+    "seconds": 267.06,
+    "controls": [
+      "zero budget",
+      "one cell and one span",
+      "zero controls",
+      "NaN tolerance",
+      "exact shell identity",
+      "shared budget counts"
+    ]
+  },
+  "bridgeTest": {
+    "passed": true,
+    "seconds": 68.43
+  },
+  "cases": {
+    "admitted": {
+      "basis": "owned-full-Hermite-actual-shell-neighbors",
+      "cells": 2298,
+      "qualified": true,
+      "reason": "profile-transition-neighbor-tangency-qualified",
+      "solidQualified": false,
+      "spans": 9096,
+      "upperSineSquared": [
+        0.0,
+        0.0,
+        2.17e-321,
+        9.981695228808158e-07
+      ],
+      "version": 1
+    },
+    "unproven": {
+      "basis": "owned-full-Hermite-actual-shell-neighbors",
+      "cells": 0,
+      "qualified": false,
+      "reason": "profile-transition-neighbor-budget-exhausted",
+      "solidQualified": false,
+      "spans": 0,
+      "upperSineSquared": null,
+      "version": 1
+    },
+    "violation": {
+      "basis": "owned-full-Hermite-actual-shell-neighbors",
+      "cells": 2298,
+      "qualified": true,
+      "reason": "profile-transition-neighbor-tangency-qualified",
+      "solidQualified": false,
+      "spans": 9096,
+      "upperSineSquared": [
+        0.0,
+        0.0,
+        2.17e-321,
+        9.981695228808158e-07
+      ],
+      "version": 1
+    }
+  },
+  "wasm": {
+    "buildPassed": true,
+    "byteLength": 12885509,
+    "sha256": "4cf2545b10c2d9f53534fc46f052a94a9a2b42a6767bf434bd9c369fa3843696"
+  },
+  "transportAndUiTests": {
+    "passed": 26,
+    "seconds": 3.16,
+    "scope": "Native JSON transport, rendered panel, stale-response controller, archive tolerance/budget preservation and detached mutation; not actual browser execution."
+  },
+  "workers": {
+    "qualified": {
+      "passed": true,
+      "workersStarted": 2,
+      "workersJoined": 2,
+      "timingsMs": {
+        "refusal": 980.7241670000001,
+        "dispatchCancellation": 24.655874999999924,
+        "retry": 10758.948667
+      },
+      "result": {
+        "basis": "owned-full-Hermite-actual-shell-neighbors",
+        "cells": 2298,
+        "qualified": true,
+        "reason": "profile-transition-neighbor-tangency-qualified",
+        "solidQualified": false,
+        "spans": 9096,
+        "upperSineSquared": [
+          0,
+          0,
+          2.17e-321,
+          9.981695228808158e-07
+        ],
+        "version": 1
+      }
+    },
+    "unproven": {
+      "passed": true,
+      "workersStarted": 2,
+      "workersJoined": 2,
+      "timingsMs": {
+        "refusal": 830.3582909999999,
+        "dispatchCancellation": 24.784625000000005,
+        "retry": 10433.125834
+      },
+      "result": {
+        "basis": "owned-full-Hermite-actual-shell-neighbors",
+        "cells": 0,
+        "qualified": false,
+        "reason": "profile-transition-neighbor-budget-exhausted",
+        "solidQualified": false,
+        "spans": 0,
+        "upperSineSquared": null,
+        "version": 1
+      }
+    }
+  },
+  "browser": {
+    "passed": true,
+    "report": "neighbor-tangency-browser-2026-10-10.json",
+    "controls": [
+      "keyboard edge selection",
+      "zero budget refusal",
+      "budget change clears result",
+      "Esc cancels",
+      "fresh calculation qualifies four joins"
+    ],
+    "scope": "Controlled saved annular transition only"
+  },
+  "proposedNeighborIndependenceRegression": {
+    "passed": true,
+    "seconds": 18.55,
+    "name": "actual_original_neighbor_angles_ignore_proposed_neighbor_profile",
+    "scope": "Full owned edge 5, selected profile 0: original-neighbor upper bound and exact work counts are identical with and without proposed profile 5. Wrong neighbor incidence refuses."
+  }
+}

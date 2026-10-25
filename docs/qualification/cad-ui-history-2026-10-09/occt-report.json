@@ -1,0 +1,84 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket UI move +2mm and reload",
+      "stepSha256": "bd46bbdda8a050b507e5fec6284c6cd133bd981f3cf4285177d893f0f9a2a811",
+      "valid": true,
+      "solids": 1,
+      "faces": 25,
+      "boundsMm": [
+        [
+          8.999999899999999,
+          -1.0000000001102229e-07,
+          -1e-07
+        ],
+        [
+          55.0000001,
+          30.0000001,
+          26.000000100000005
+        ]
+      ],
+      "volumeMm3": 9224.420353285795,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 1.038182745105587e-06,
+      "volumeIntegrationRelativeError": 2.580760948638249e-14,
+      "passed": true,
+      "previewTriangles": 160
+    },
+    {
+      "name": "flange UI 20 edits and reload",
+      "stepSha256": "efd7467fe8350bf51087fb4dcbab4fa8dddfca3fb04e4e4895ffb324524109ea",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -13.000000100000005,
+          -18.00000009999998,
+          -1e-07
+        ],
+        [
+          27.00000010000001,
+          22.000000100000037,
+          12.000000100000005
+        ]
+      ],
+      "volumeMm3": 13460.19078843671,
+      "maxBoundsErrorMm": 1.0000003669574653e-07,
+      "volumeErrorMm3": 3.1529616535408422e-06,
+      "volumeIntegrationRelativeError": 5.598709142098213e-16,
+      "passed": true,
+      "previewTriangles": 7288
+    },
+    {
+      "name": "enclosure UI 20 edits fixed history and reload",
+      "stepSha256": "3bb186a297a76bfb47423bfa4dec8bb0f17f6cd24b36b88011f3024219b7a506",
+      "valid": true,
+      "solids": 1,
+      "faces": 106,
+      "boundsMm": [
+        [
+          6.999999899999999,
+          -1e-07,
+          1.9999998999999926
+        ],
+        [
+          47.0000001,
+          30.0000001,
+          28.00000010000003
+        ]
+      ],
+      "volumeMm3": 7981.620353265717,
+      "maxBoundsErrorMm": 1.0000002959031917e-07,
+      "volumeErrorMm3": 1.0059566193376668e-06,
+      "volumeIntegrationRelativeError": 5.294439575090664e-14,
+      "passed": true,
+      "previewTriangles": 494
+    }
+  ]
+}

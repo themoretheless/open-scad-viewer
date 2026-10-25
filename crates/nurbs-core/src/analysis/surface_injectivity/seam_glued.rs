@@ -50,6 +50,7 @@ pub fn certify_seam_glued_rectangle(
         linear_projection: None,
         projective_projection: None,
         polar_projection: None,
+        polar_p_matrix: None,
         contraction_upper: None,
         spans: 0,
         reason: "projection-not-proven",

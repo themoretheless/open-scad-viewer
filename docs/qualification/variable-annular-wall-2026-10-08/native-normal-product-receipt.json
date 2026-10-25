@@ -1,0 +1,12 @@
+{
+  "comparison": "All 212 face IDs, cells, spans, exclusions and retained closed products equal the exploratory implementation",
+  "wasmIntegrated": false,
+  "native-normal-product-audit.json.gz": {
+    "uncompressedSha256": "85b99c5768c1c77deccbf1576bb29d73adeb8dd2d82d8c757c43eae7fd382326",
+    "bytes": 529119
+  },
+  "native-normal-product-tests.log.gz": {
+    "uncompressedSha256": "29c84d8acf7d91d5969a4b1a76fbdd5ee8a65791078586a671b007958cd7dc21",
+    "bytes": 5725
+  }
+}

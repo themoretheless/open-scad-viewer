@@ -215,3 +215,42 @@
         }
         assert!(!certify(&s, 2).unwrap().proven);
     }
+
+#[test]
+    fn polar_p_matrix_handles_strong_shear_without_claiming_contraction() {
+        let mut s=Surface {
+            degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:(0..3).map(|i|(0..2).map(|v|vec![2.,i as f64/2.,if i==2 {10.-v as f64}else{-(v as f64)}]).collect()).collect(),
+            weights:vec![vec![1.;2];3],periodic_u:false,periodic_v:false,
+        };
+        let coordinates=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+        let before=format!("{s:?}");
+        assert!(certify_polar_projection(&s,coordinates,16,256).unwrap().is_none());
+        let proof=certify_polar_p_matrix(&s,coordinates,16,256).unwrap().unwrap();
+        assert!(proof.diagonal_lower.iter().all(|v|*v>0.));
+        assert!(proof.determinant_lower>0.);
+        assert!(certify_polar_p_matrix(&s,coordinates,16,255).unwrap().is_none());
+        let automatic=certify(&s,10000).unwrap();
+        assert!(automatic.proven);
+        assert_eq!(format!("{s:?}"),before);
+        // This projection folds in U, so positive endpoint samples are insufficient.
+        for p in &mut s.control_points[1] {p[1]=2.;}
+        for p in &mut s.control_points[2] {p[1]=0.;}
+        assert!(certify_polar_p_matrix(&s,coordinates,16,256).unwrap().is_none());
+    }
+
+
+#[test]
+    fn polar_p_matrix_refuses_c0_internal_knots_and_wrong_angle_branch() {
+        let mut s=Surface {degree_u:1,degree_v:1,
+            knots_u:vec![0.,0.,0.5,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:(0..3).map(|i|(0..2).map(|v|vec![2.,i as f64/2.,-(v as f64)]).collect()).collect(),
+            weights:vec![vec![1.;2];3],periodic_u:false,periodic_v:false};
+        let coordinates=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+        assert!(certify_polar_p_matrix(&s,coordinates,4,32).unwrap().is_none());
+        s.knots_u=vec![0.,0.,1.,1.];s.control_points.remove(1);s.weights.remove(1);
+        let mut wrong=coordinates;wrong[0][0]=-1.;
+        assert!(certify_polar_p_matrix(&s,wrong,4,16).unwrap().is_none());
+    }
+
+

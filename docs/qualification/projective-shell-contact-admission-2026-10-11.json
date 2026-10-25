@@ -1,0 +1,23 @@
+{
+  "scope": "Fresh embedding admission of the rationally reparameterized tetrahedron through manifold incidence, whole-chart injectivity and all six exact shared-line pair proofs",
+  "passed": true,
+  "publishedWasmChanged": false,
+  "sourceSha256": {
+    "source_allowed_contact.rs": "538ef110b05c0e7f04098357df2978849533c54ba9e5593cdfb235ca972eb1fe",
+    "source_face_contacts.rs": "257b286ddde88372fde2359e185a87e4484c105c5255683ca7c185a261f5843b",
+    "source_shell_geometry.rs": "efc8c0e78e002fc0f3f48891dffe60c8d917028555ce40f2ce9a74d7ea503931",
+    "source_shell_incidence.rs": "38056a866c0b05172dfca5650e3aa6e8614609d93f3e848494f870ea2dd382ce"
+  },
+  "logs": [
+    "/tmp/source-projective-contact-budget-20261011.log",
+    "/tmp/source-projective-contact-incidence-regression-20261011.log",
+    "/tmp/source-projective-contact-region-regression-20261011.log"
+  ],
+  "incompletePairBudgetRefused": true,
+  "remaining": [
+    "additional nonlinear contact proof consumers for projective shells",
+    "material orientation and signed-volume qualification",
+    "general fillet-body/radius/thickness qualification",
+    "WASM worker UI integration"
+  ]
+}

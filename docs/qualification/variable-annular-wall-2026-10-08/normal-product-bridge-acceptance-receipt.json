@@ -1,0 +1,12 @@
+{
+  "scope": "Native bridge acceptance only; pending WASM optimizer and worker qualification",
+  "normal-product-bridge-acceptance.json.gz": {
+    "uncompressedSha256": "51f52d76ffddfc49fe4d7abbdec1a55e8ba61203b9b02fecce201768cc30e504",
+    "bytes": 265526
+  },
+  "normal-product-bridge-acceptance.log.gz": {
+    "uncompressedSha256": "d8b93d637294cdff2a1f5d432f4ab268478d99a6767ae49b865529641a303791",
+    "bytes": 6703
+  },
+  "requestSha256": "b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea"
+}

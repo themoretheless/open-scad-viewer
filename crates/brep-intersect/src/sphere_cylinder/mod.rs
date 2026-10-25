@@ -22,10 +22,13 @@
 //! tangent contacts are never reported as point or guessed-circle components,
 //! matching the house tangency discipline. Nothing here authorizes a topology
 //! change.
-use brep_core::intersections::sphere_sphere::{
-    self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve, lift,
+#[cfg(feature = "codec")]
+mod serialization;
+use super::sphere_sphere::{
+    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+    lift,
 };
-use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
+pub(crate) use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
 use super::*;
 use brep_core::Model;
 

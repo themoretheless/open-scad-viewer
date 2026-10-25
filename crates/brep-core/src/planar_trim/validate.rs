@@ -197,7 +197,7 @@ impl Region {
     pub(super) fn validate(&self) -> Result<()> {
         self.nesting_depths(true).map(|_| ())
     }
-    fn nesting_depths(&self, material_left: bool) -> Result<Vec<usize>> {
+    pub(super) fn nesting_depths(&self, material_left: bool) -> Result<Vec<usize>> {
         let areas: Vec<f64> = self
             .loops
             .iter()

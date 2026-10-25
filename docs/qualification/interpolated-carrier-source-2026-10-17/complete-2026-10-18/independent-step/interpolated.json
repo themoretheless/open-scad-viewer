@@ -1,0 +1,22 @@
+{
+  "schema": "original-interpolated-carrier-independent-occt/1",
+  "passed": true,
+  "ocpVersion": "7.7.2.0",
+  "scope": "One specified distinct-carrier native STEP body: independent validity, full retained NURBS bases, topology, orientation and converged numerical retained-volume flux. Original embedding/Gk remain separate native proofs.",
+  "stepSha256": "f175435c35060bfda91e023cf5f7a616be11ff0708ed48dee40133868cc15abe",
+  "nativeBodySha256": "31083fd5d90d11b64927275a38fc8b09473e27bba9bc51e9be75a8e7a1997f29",
+  "verifierSha256": "e13573e58729e265f2cc99e766f31f854cc8277245ae2b4dca5e321ef20312e9",
+  "solids": 1,
+  "faces": 6,
+  "edges": 12,
+  "vertices": 8,
+  "twoFaceEdges": 12,
+  "maxPoleErrorMm": 0.0,
+  "volumeMm3": 3.9374999999790585,
+  "independentFluxVolumeMm3": [
+    3.937499999999968,
+    3.937499999999984
+  ],
+  "volumeErrorMm3": 2.092548356813495e-11,
+  "fullGoalComplete": false
+}

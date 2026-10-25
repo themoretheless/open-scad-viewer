@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "mode": "corner",
+  "inputMode": "mouse",
+  "keyboardNumericInput": false,
+  "contextSwitch": false,
+  "oversizeRefusal": true,
+  "localized": true,
+  "reduceRadiusRecovery": true,
+  "inlineQuantityRecovery": true,
+  "dimensionZoomAndResize": true,
+  "undoRedo": true,
+  "reload": true,
+  "applyWithoutRecompute": true,
+  "lateResponseAfterCancelAndReopen": true,
+  "errors": []
+}

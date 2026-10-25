@@ -1,0 +1,11 @@
+
+running 6 tests
+test compilation_and_execution_reject_wrong_graph_or_device_and_binding_overflow ... ok
+test constant_only_empty_and_scalar_expressions_have_defined_results ... ok
+test branches_share_expressions_and_prune_dead_nodes_before_caching ... ok
+test invalid_binding_calls_leave_the_prepared_program_usable ... ok
+test generated_operations_and_broadcast_order_match_cpu ... ok
+test grid_stride_writes_tail_above_the_workgroup_dispatch_limit ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 38.61s
+

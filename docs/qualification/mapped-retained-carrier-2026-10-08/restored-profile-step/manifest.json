@@ -1,0 +1,27 @@
+{
+  "toleranceMm": 1e-06,
+  "relativeVolumeTolerance": 1e-09,
+  "parts": [
+    {
+      "name": "restored-profile-24x12x8",
+      "file": "profile.step",
+      "sha256": "41e01112fc9cb14d5a48d2970750e8137eb93b299832e47ac84b00d833740c64",
+      "expected": {
+        "boundsMm": [
+          [
+            30,
+            0,
+            0
+          ],
+          [
+            54,
+            12,
+            8
+          ]
+        ],
+        "volumeMm3": 2304,
+        "solids": 1
+      }
+    }
+  ]
+}

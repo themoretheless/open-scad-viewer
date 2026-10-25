@@ -1,0 +1,258 @@
+{
+  "sameRequest": true,
+  "geometryQualified": false,
+  "scope": "Closed nondegenerate parameter boxes, exact endpoint partition; checks coverage of reported contact products only. No whole-solid admission.",
+  "sourceSha256": {
+    "alternate-owned-path-dispatch-native-2026-10-11.json": "642307338270b65d3df027b7cc7eb3b7945b5e8da3e372120f34ed754d520e51",
+    "source-boundary-point-band-dispatch-native-2026-10-11.json": "793de4840c9f2d7f294c07851db4fe098a801d5ffbf57f32cfb208a7be9ac38f"
+  },
+  "pairs": [
+    {
+      "pairIndex": 10,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 14,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 18,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 22,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 37,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 39,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 66,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 70,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 74,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 88,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 92,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 95,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 96,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 99,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 114,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 115,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 119,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 123,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 139,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 143,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 147,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 152,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 162,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 173,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 174,
+      "oldProofNotCovered": 1,
+      "newPendingNotCovered": 1
+    },
+    {
+      "pairIndex": 185,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 189,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 193,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 195,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 202,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 205,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 206,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 209,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 224,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 228,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 232,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 243,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 247,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 279,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 283,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 291,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 294,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 298,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 322,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 334,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 337,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 345,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 348,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    },
+    {
+      "pairIndex": 361,
+      "oldProofNotCovered": 0,
+      "newPendingNotCovered": 0
+    }
+  ],
+  "oldProofPreserved": false,
+  "newPendingContained": false
+}
