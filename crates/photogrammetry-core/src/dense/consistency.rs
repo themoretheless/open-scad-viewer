@@ -283,10 +283,20 @@ pub(super) fn filter(
         for y in 0..map.height.saturating_sub(1) {
             for x in 0..map.width.saturating_sub(1) {
                 let a = y * map.width + x;
-                for triangle in [
-                    [a, a + map.width, a + 1],
-                    [a + 1, a + map.width, a + map.width + 1],
-                ] {
+                let (b, c, d) = (a + 1, a + map.width, a + map.width + 1);
+                // Default split uses the anti-diagonal (b, c). When one of b or c is missing
+                // (`u32::MAX`) while the main diagonal (a, d) is intact, fall back to the
+                // main diagonal so 3-corner boundary cells along oblique silhouettes still
+                // emit their single supported triangle instead of dropping both.
+                let candidates = if (ids[b] == u32::MAX || ids[c] == u32::MAX)
+                    && ids[a] != u32::MAX
+                    && ids[d] != u32::MAX
+                {
+                    [[a, c, d], [a, d, b]]
+                } else {
+                    [[a, c, b], [b, c, d]]
+                };
+                for triangle in candidates {
                     if triangle.iter().any(|&i| ids[i] == u32::MAX) {
                         continue;
                     }
@@ -661,6 +671,54 @@ mod tests {
                 assert_eq!(z[1], z[2]);
             }
         }
+    }
+
+    #[test]
+    fn adaptive_quad_diagonal_recovers_three_corner_boundary_triangles() {
+        let camera = Camera::identity(100., 2., 2.);
+        let mut a = map();
+        // In the top-left 2x2 quad (0, 1, 4, 5), invalidate corner 1 (`b`) while
+        // keeping 0 (`a`), 4 (`c`), and 5 (`d`) valid at depth 4.0.
+        a.depth[1] = 0.;
+        let b = DepthMap {
+            image: 1,
+            width: 4,
+            height: 4,
+            step: 1.,
+            depth: a.depth.clone(),
+            confidence: vec![1.; 16],
+            neighbors: vec![0],
+        };
+        let image = Image {
+            width: 48,
+            height: 48,
+            rgb: vec![128; 48 * 48 * 3],
+            focal: 100.,
+        };
+        let sparse = Reconstruction {
+            cameras: vec![Some(camera); 2],
+            points: vec![],
+            input_images: 2,
+            reprojection_rmse: 0.,
+        };
+        let mut diagnostics = DenseDiagnostics {
+            photometric_samples: 30,
+            view_reports: vec![Default::default(); 2],
+            ..Default::default()
+        };
+        let patches = filter(
+            &[image.clone(), image],
+            &sparse,
+            &[a, b],
+            &DenseOptions::default(),
+            &mut diagnostics,
+            &mut |_, _, _| true,
+        )
+        .unwrap();
+        // A full 4x4 grid has 9 quads = 18 triangles; missing corner 1 affects two
+        // top-row quads (0,1,4,5) and (1,2,5,6), each retaining 1 valid 3-corner
+        // triangle instead of losing both in (0,1,4,5) -> 16 triangles total.
+        assert_eq!(patches[0].triangles.len(), 16);
     }
 }
 

@@ -13,6 +13,7 @@ struct Surfel {
     /// through a chain of successively close but incompatible observations.
     anchor: V3,
     normal: Option<V3>,
+    normal_sum: V3,
     position_sum: V3,
     color_sum: V3,
     weight: f64,
@@ -29,6 +30,7 @@ impl Surfel {
         Self {
             anchor: sample.position,
             normal: sample.normal,
+            normal_sum: sample.normal.map_or([0.; 3], |n| scale(n, sample.weight)),
             position_sum: scale(sample.position, sample.weight),
             color_sum: sample.color.map(|v| v as f64 * sample.weight),
             weight: sample.weight,
@@ -39,6 +41,15 @@ impl Surfel {
     }
     fn centroid(&self) -> V3 {
         scale(self.position_sum, 1. / self.weight)
+    }
+    fn refined_normal(&self) -> Option<V3> {
+        self.normal.map(|fallback| {
+            if norm(self.normal_sum) > 1e-12 {
+                unit(self.normal_sum)
+            } else {
+                fallback
+            }
+        })
     }
     fn accepts(&self, sample: &Sample, radius: f64) -> Option<f64> {
         // Preserve each view's sampling resolution and never count one image twice.
@@ -65,6 +76,9 @@ impl Surfel {
         Some(distance)
     }
     fn add(&mut self, sample: &Sample) {
+        if let Some(n) = sample.normal {
+            self.normal_sum = add(self.normal_sum, scale(n, sample.weight));
+        }
         self.position_sum = add(self.position_sum, scale(sample.position, sample.weight));
         self.color_sum = add(
             self.color_sum,
@@ -76,6 +90,7 @@ impl Surfel {
     }
     /// Absorb another compatible surfel during the optional merge pass.
     fn absorb(&mut self, other: &Surfel) {
+        self.normal_sum = add(self.normal_sum, other.normal_sum);
         self.position_sum = add(self.position_sum, other.position_sum);
         self.color_sum = add(self.color_sum, other.color_sum);
         self.weight += other.weight;
@@ -96,7 +111,7 @@ impl Surfel {
         {
             return false;
         }
-        let (Some(a), Some(b)) = (self.normal, other.normal) else {
+        let (Some(a), Some(b)) = (self.refined_normal(), other.refined_normal()) else {
             return false;
         };
         if dot(a, b) < 0.9 {
@@ -220,12 +235,16 @@ pub(super) fn fuse_consolidating(
     if footprints.is_empty() {
         return Ok(Surface::default());
     }
-    let middle = footprints.len() / 2;
+    let total_samples = footprints.len();
+    let middle = total_samples / 2;
     footprints.select_nth_unstable_by(middle, f64::total_cmp);
     let step = (footprints[middle] * 0.9).max(1e-12);
     drop(footprints);
-    let mut grid = FastMap::<[i64; 3], Vec<u32>>::default();
-    let mut surfels = Vec::<Surfel>::new();
+    let mut grid = FastMap::<[i64; 3], Vec<u32>>::with_capacity_and_hasher(
+        total_samples / 2,
+        Default::default(),
+    );
+    let mut surfels = Vec::<Surfel>::with_capacity(total_samples);
     let mut patch_indices = Vec::with_capacity(patches.len());
     for (patch_index, patch) in patches.iter().enumerate() {
         let mut ids = Vec::with_capacity(patch.samples.len());
@@ -285,7 +304,11 @@ pub(super) fn fuse_consolidating(
     } else {
         None
     };
-    let mut surface = Surface::default();
+    let mut surface = Surface {
+        positions: Vec::with_capacity(surfels.len()),
+        colors: Vec::with_capacity(surfels.len()),
+        triangles: Vec::new(),
+    };
     for (old, surfel) in surfels.into_iter().enumerate() {
         if merged.as_ref().is_some_and(|(_, alive)| !alive[old]) {
             continue;
@@ -426,6 +449,30 @@ mod tests {
         assert_eq!(after.triangles.len(), 1);
         assert_eq!(diagnostics.fused_samples, 6);
         assert!(after.positions.iter().all(|p| p[0] == 0.5));
+        // Weighted normal accumulation allows the merge pass to reconcile two
+        // surfels whose initial anchor normals were slightly outside the 0.9
+        // cosine threshold once a third observation refines the group normal.
+        let mut tilted = patches();
+        tilted[0].samples.iter_mut().for_each(|s| {
+            s.normal = Some(unit([0.28, 0., -0.96]));
+        });
+        tilted[1].samples.iter_mut().for_each(|s| {
+            s.normal = Some(unit([-0.10, 0., -0.995]));
+            s.weight = 3.;
+        });
+        tilted[2].samples.iter_mut().for_each(|s| {
+            s.normal = Some(unit([-0.22, 0., -0.975]));
+        });
+        let refined = fuse_consolidating(
+            &tilted,
+            true,
+            true,
+            &mut DenseDiagnostics::default(),
+            &mut |_, _, _| true,
+        )
+        .unwrap();
+        assert_eq!(refined.positions.len(), 3);
+        assert_eq!(refined.triangles.len(), 1);
         // The pass is deterministic and disabled fusion keeps it inert.
         let repeat = fuse_consolidating(
             &patches(),

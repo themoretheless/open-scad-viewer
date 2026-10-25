@@ -185,7 +185,16 @@ describe('photogrammetry Worker failure isolation', () => {
     expect(kernel.dense).not.toHaveBeenCalled()
     expect(events).toContainEqual({type: 'surface', result: surface})
     expect(terminalEvents()).toHaveLength(1)
-    expect(terminalEvents()[0].type).toBe('done')
+    const done = terminalEvents()[0]
+    expect(done.type).toBe('done')
+    if (done.type === 'done') {
+      expect(done.timings.densePath).toBe('gpu')
+      expect(done.timings.densePrepareMs).toBeGreaterThanOrEqual(0)
+      expect(done.timings.denseSweepMs).toBeGreaterThanOrEqual(0)
+      expect(done.timings.denseFinishMs).toBeGreaterThanOrEqual(0)
+      expect(done.timings.denseMs)
+        .toBeGreaterThanOrEqual(done.timings.densePrepareMs! + done.timings.denseSweepMs!)
+    }
   })
 
   it('falls back to the CPU dense path when the GPU sweep is unavailable', async () => {
@@ -194,7 +203,9 @@ describe('photogrammetry Worker failure isolation', () => {
     await run({...request, gpu: true})
     expect(kernel.dense).toHaveBeenCalledOnce()
     expect(events).toContainEqual({type: 'surface', result: surface})
-    expect(terminalEvents()[0].type).toBe('done')
+    const done = terminalEvents()[0]
+    expect(done.type).toBe('done')
+    if (done.type === 'done') expect(done.timings.densePath).toBe('cpu')
   })
 
   it('falls back to the CPU dense path when the GPU sweep rejects', async () => {
@@ -203,7 +214,9 @@ describe('photogrammetry Worker failure isolation', () => {
     gpuSweep.mockRejectedValue(new Error('no adapter'))
     await run({...request, gpu: true})
     expect(kernel.dense).toHaveBeenCalledOnce()
-    expect(terminalEvents()[0].type).toBe('done')
+    const done = terminalEvents()[0]
+    expect(done.type).toBe('done')
+    if (done.type === 'done') expect(done.timings.densePath).toBe('cpu')
   })
 
   it('keeps the CPU path for non-baseline presets even with the GPU flag', async () => {

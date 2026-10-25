@@ -174,17 +174,10 @@ impl GpuMatcher {
         let col_bytes = (cols as u64) * 8;
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
-        self.queue.write_buffer(
-            &buffers.params,
-            0,
-            &[
-                rows.to_ne_bytes(),
-                cols.to_ne_bytes(),
-                0u32.to_ne_bytes(),
-                0u32.to_ne_bytes(),
-            ]
-            .concat(),
-        );
+        let mut params_bytes = [0u8; 16];
+        params_bytes[0..4].copy_from_slice(&rows.to_ne_bytes());
+        params_bytes[4..8].copy_from_slice(&cols.to_ne_bytes());
+        self.queue.write_buffer(&buffers.params, 0, &params_bytes);
         if !packed_a.is_empty() {
             self.queue
                 .write_buffer(&buffers.descriptors_a, 0, &packed_a);

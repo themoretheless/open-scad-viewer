@@ -25,6 +25,12 @@ export interface PhotoTimings {
   sparseMatchMs?: number
   sparseFinishMs?: number
   denseMs: number
+  /** Which estimator path produced the dense surface: browser WebGPU sweep or host CPU. */
+  densePath?: 'gpu' | 'cpu'
+  /** Browser GPU dense sweep stage breakdown (present when densePath is 'gpu'). */
+  densePrepareMs?: number
+  denseSweepMs?: number
+  denseFinishMs?: number
 }
 
 export type PhotoWorkerEvent =

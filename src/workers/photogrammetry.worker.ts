@@ -42,11 +42,23 @@ function reconstructSurface(kernel: PhotogrammetryKernel, resolution: number, pr
 }
 
 /** Dense via the browser WebGPU sweep; any failure falls back to the CPU path. */
-async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: number, preset?: PhotoDensePreset): Promise<boolean> {
+async function reconstructSurfaceGpu(
+  kernel: PhotogrammetryKernel,
+  resolution: number,
+  preset: PhotoDensePreset | undefined,
+  timings: PhotoTimings,
+): Promise<boolean> {
+  const prepareStart = performance.now()
   const prepared = preset === undefined ? kernel.densePrepare(resolution) : kernel.densePrepare(resolution, preset)
+  timings.densePrepareMs = performance.now() - prepareStart
   if (!prepared) return false
+  const sweepStart = performance.now()
   const scores = await runGpuSweep(prepared.payload, prepared.wgsl, prepared.wgslVariants)
-  publishSurface(kernel, kernel.denseFinish(scores))
+  timings.denseSweepMs = performance.now() - sweepStart
+  const finishStart = performance.now()
+  const result = kernel.denseFinish(scores)
+  timings.denseFinishMs = performance.now() - finishStart
+  publishSurface(kernel, result)
   return true
 }
 
@@ -109,16 +121,21 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
       const denseStart = performance.now()
       const gpuEligible = data.densePreset === undefined || data.densePreset === 'baseline' || data.densePreset === 'accurate'
       const gpu = data.gpu && gpuEligible
-        ? await reconstructSurfaceGpu(kernel, data.resolution, data.densePreset).catch(error => {
+        ? await reconstructSurfaceGpu(kernel, data.resolution, data.densePreset, timings).catch(error => {
             post({type: 'warning', message: `WebGPU sweep unavailable: ${errorMessage(error)}`})
             return false
           })
         : false
-      if (gpu && !timings.gpuMemoryArchitecture) {
-        const memArch = activeGpuMemoryArchitecture()
-        if (memArch) timings.gpuMemoryArchitecture = memArch
+      if (gpu) {
+        timings.densePath = 'gpu'
+        if (!timings.gpuMemoryArchitecture) {
+          const memArch = activeGpuMemoryArchitecture()
+          if (memArch) timings.gpuMemoryArchitecture = memArch
+        }
+      } else {
+        timings.densePath = 'cpu'
+        reconstructSurface(kernel, data.resolution, data.densePreset)
       }
-      if (!gpu) reconstructSurface(kernel, data.resolution, data.densePreset)
       timings.denseMs = performance.now() - denseStart
     }
     post({type: 'done', timings})
