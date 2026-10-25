@@ -206,3 +206,64 @@ fn idx_decompose_x(idx: u32, row: u32) -> u32 {
     return idx % row;
 }
 "##;
+
+/// Emits valid WGSL helper functions `sdf_normal_tetrahedral(p: vec3<f32>, eps: f32) -> vec3<f32>`
+/// (using the 4-point tetrahedral finite-difference stencil $[-1,-1,1], [-1,1,-1], [1,-1,-1], [1,1,1]$)
+/// and `sdf_raymarch(ray_origin: vec3<f32>, ray_dir: vec3<f32>) -> vec4<f32>` calling `eval_sdf(p)`
+/// so WebGPU / Metal compute and fragment shaders can directly sphere-trace and shade any compiled `Field`.
+/// Returns `vec4<f32>(hit_pos_or_normal.xyz, hit_dist)` where `w >= 0.0` is the hit distance along the ray
+/// (`-1.0` on miss) and `xyz` is the unit outward normal at the hit point.
+pub fn generate_wgsl_tetrahedral_normal_and_raymarch_fn(
+    max_steps: u32,
+    hit_eps: f32,
+    max_dist: f32,
+) -> String {
+    let steps = max_steps.clamp(1, 2048);
+    let eps = if hit_eps.is_finite() && hit_eps > 0.0 {
+        hit_eps
+    } else {
+        1e-4
+    };
+    let dist_limit = if max_dist.is_finite() && max_dist > 0.0 {
+        max_dist
+    } else {
+        100.0
+    };
+    format!(
+        r#"fn sdf_normal_tetrahedral(p: vec3<f32>, eps: f32) -> vec3<f32> {{
+    let h = max(eps, 1e-6);
+    let k0 = vec3<f32>(1.0, -1.0, -1.0);
+    let k1 = vec3<f32>(-1.0, -1.0, 1.0);
+    let k2 = vec3<f32>(-1.0, 1.0, -1.0);
+    let k3 = vec3<f32>(1.0, 1.0, 1.0);
+    let g = k0 * eval_sdf(p + k0 * h)
+          + k1 * eval_sdf(p + k1 * h)
+          + k2 * eval_sdf(p + k2 * h)
+          + k3 * eval_sdf(p + k3 * h);
+    return normalize(g);
+}}
+
+fn sdf_raymarch(ray_origin: vec3<f32>, ray_dir: vec3<f32>) -> vec4<f32> {{
+    let dir = normalize(ray_dir);
+    var t: f32 = 0.0;
+    let max_steps: u32 = {steps}u;
+    let hit_eps: f32 = {eps:.8};
+    let max_dist: f32 = {dist_limit:.6};
+    for (var i: u32 = 0u; i < max_steps; i = i + 1u) {{
+        let p = ray_origin + dir * t;
+        let d = eval_sdf(p);
+        if (abs(d) <= hit_eps) {{
+            let n = sdf_normal_tetrahedral(p, hit_eps);
+            return vec4<f32>(n.x, n.y, n.z, t);
+        }}
+        t = t + max(d, hit_eps * 0.5);
+        if (t > max_dist) {{
+            break;
+        }}
+    }}
+    return vec4<f32>(0.0, 0.0, 0.0, -1.0);
+}}
+"#
+    )
+}
+

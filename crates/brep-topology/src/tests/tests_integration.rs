@@ -344,4 +344,23 @@
         assert_eq!(tet.shell_genus(0), Some(0));
         assert_eq!(tet.genus(), 0);
         assert_eq!(tet.adjacent_faces(0), vec![1, 2, 3]);
+        assert!(tet.isolated_vertices().is_empty());
+        assert_eq!(
+            tet.face_loop_counts(),
+            vec![(0, 1), (1, 1), (2, 1), (3, 1)]
+        );
+    }
+
+    #[test]
+    fn isolated_vertices_and_face_loop_counts() {
+        let mut m = sheet();
+        m.vertices.push(Vertex {
+            point: [5., 5., 5.],
+        });
+        m.vertices.push(Vertex {
+            point: [6., 6., 6.],
+        });
+        m.faces[0].holes = vec![0, 0];
+        assert_eq!(m.isolated_vertices(), vec![3, 4]);
+        assert_eq!(m.face_loop_counts(), vec![(0, 3)]);
     }

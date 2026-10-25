@@ -58,12 +58,14 @@ pub use tensor::{GpuLowTensor, GpuTensor, TensorComputeError};
 pub use tensor_core;
 
 pub use selection::CompactedArray;
-pub use scan::{compact_if_u32, exclusive_scan_u32, inclusive_scan_u32};
+pub use scan::{
+    compact_if_u32, exclusive_scan_u32, inclusive_scan_u32, radix_sort_by_key_u32, radix_sort_u32,
+};
 
 pub use kernel::{BindingInfo, KernelBindingError};
 pub use kernel_cache::{KernelCache, KernelCacheStats};
 
-pub use matrix::{GpuMatrix, MatrixView, matmul_f32_tiled_8x8};
+pub use matrix::{GpuMatrix, MatrixView, batched_matmul_f32, matmul_f32_tiled_8x8};
 
 pub use fusion::{Expression, FusedKernel, FusedSumKernel, FusionError, FusionGraph, Predicate};
 

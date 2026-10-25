@@ -667,4 +667,60 @@ impl Sketch {
         }
         Some(new_indices)
     }
+
+    /// Creates a regular polygon with `sides` vertices (`sides >= 3`) inscribed in a circle of
+    /// `radius` at `center`, starting at `start_angle_rad`, and appends `EqualLength` constraints
+    /// between consecutive closed polygon edges. Returns `Some((vertex_indices, constraint_indices))`.
+    pub fn add_regular_polygon(
+        &mut self,
+        center: (f64, f64),
+        radius: f64,
+        sides: usize,
+        start_angle_rad: f64,
+    ) -> Option<(Vec<usize>, Vec<usize>)> {
+        if !(3..=512).contains(&sides)
+            || !center.0.is_finite()
+            || !center.1.is_finite()
+            || !radius.is_finite()
+            || radius <= 1e-9
+            || !start_angle_rad.is_finite()
+            || self.points.len().saturating_add(sides) > 512
+        {
+            return None;
+        }
+        let mut vertex_indices = Vec::with_capacity(sides);
+        for i in 0..sides {
+            let theta = start_angle_rad + std::f64::consts::TAU * (i as f64 / sides as f64);
+            let (s, c) = theta.sin_cos();
+            let pt = [center.0 + radius * c, center.1 + radius * s];
+            if !pt[0].is_finite() || !pt[1].is_finite() || pt[0].abs() > 1e6 || pt[1].abs() > 1e6 {
+                return None;
+            }
+            let idx = self.points.len();
+            self.points.push(pt);
+            vertex_indices.push(idx);
+        }
+        let mut constraint_indices = Vec::with_capacity(sides - 1);
+        for i in 0..(sides - 1) {
+            let a = vertex_indices[i];
+            let b = vertex_indices[i + 1];
+            let c = vertex_indices[i + 1];
+            let d = vertex_indices[(i + 2) % sides];
+            let ci = self.constraints.len();
+            self.constraints.push(Constraint::EqualLength { a, b, c, d });
+            constraint_indices.push(ci);
+        }
+        Some((vertex_indices, constraint_indices))
+    }
+
+    /// Estimates remaining degrees of freedom via structural equation count:
+    /// `2 * num_points - scalar_constraint_equations_count`.
+    pub fn degrees_of_freedom(&self) -> isize {
+        let eqs: usize = self
+            .constraints
+            .iter()
+            .map(Self::constraint_residual_len)
+            .sum();
+        (2 * self.points.len()) as isize - eqs as isize
+    }
 }

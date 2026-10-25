@@ -62,4 +62,20 @@
         assert!(bolt.proof_safety_factor > 1.5);
         assert!(bolt.joint_separation_safety_factor > 2.5);
         assert!((bolt.recommended_tightening_torque_nm - 19.2).abs() < 0.5);
+
+        // Euler-Johnson column buckling: short column (Johnson) vs long column (Euler)
+        let short_col = column_buckling_euler_johnson(150.0, 1.0, 100.0, 833.33, 200_000.0, 250.0, 10_000.0).unwrap();
+        assert!(!short_col.is_euler_regime);
+        assert!(short_col.critical_stress_mpa < 250.0 && short_col.critical_stress_mpa > 180.0);
+        let long_col = column_buckling_euler_johnson(600.0, 1.0, 100.0, 833.33, 200_000.0, 250.0, 2_000.0).unwrap();
+        assert!(long_col.is_euler_regime);
+        assert!(long_col.safety_factor > 1.5);
+
+        // Thin-walled cylindrical pressure vessel: R=100 mm, t=5 mm, p=2.5 MPa, Sy=250 MPa
+        // hoop = 50 MPa, axial = 25 MPa, vM = 43.301 MPa
+        let (hoop, axial, vm, pv_fos) = thin_walled_pressure_vessel(100.0, 5.0, 2.5, 250.0).unwrap();
+        assert!((hoop - 50.0).abs() < 1e-9);
+        assert!((axial - 25.0).abs() < 1e-9);
+        assert!((vm - 25.0 * 3.0_f64.sqrt()).abs() < 1e-6);
+        assert!((pv_fos - 250.0 / vm).abs() < 1e-9);
     }

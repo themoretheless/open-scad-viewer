@@ -658,6 +658,38 @@ pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
     loft(&sections)
 }
 
+/// Creates a linear ($q=1$) ruled surface between two 3D NURBS curves `c0` and `c1`
+/// with $v \in [0, 1]$ and V-knots `[0, 0, 1, 1]`.
+///
+/// When `c0` and `c1` already share identical degree, knot vector, periodicity, and
+/// control point count, their control polygons and weights are linearly interpolated
+/// directly; otherwise their parameter domains, degrees, and knot multiplicities are
+/// unified via [`loft_aligned`].
+pub fn ruled_surface(c0: &Curve, c1: &Curve) -> Result<Surface> {
+    c0.validate()?;
+    c1.validate()?;
+    check(
+        c0.control_points[0].len() == 3 && c1.control_points[0].len() == 3,
+        "Ruled surface requires 3D curves.",
+    )?;
+    if c0.degree == c1.degree
+        && c0.knots == c1.knots
+        && c0.control_points.len() == c1.control_points.len()
+        && c0.periodic == c1.periodic
+    {
+        loft(&[c0.clone(), c1.clone()])
+    } else {
+        loft_aligned(&[c0.clone(), c1.clone()])
+    }
+}
+
+impl Surface {
+    /// Creates a linear ($q=1$) ruled surface between two 3D NURBS curves `c0` and `c1`.
+    pub fn ruled_surface(c0: &Curve, c1: &Curve) -> Result<Self> {
+        ruled_surface(c0, c1)
+    }
+}
+
 #[cfg(test)]
 mod construction_tests {
     use super::*;
@@ -744,6 +776,28 @@ mod construction_tests {
                 assert!((x[k] - a.evaluate(u).unwrap().point[k]).abs() < 1e-10);
                 assert!((y[k] - expected[k]).abs() < 1e-10);
             }
+        }
+    }
+    #[test]
+    fn ruled_surface_interpolates_compatible_and_elevated_curves() {
+        let c0 = Curve::from_polyline(vec![vec![0., 0., 0.], vec![2., 0., 0.]]).unwrap();
+        let c1 = Curve::from_polyline(vec![vec![0., 3., 1.], vec![2., 3., 1.]]).unwrap();
+        let s = ruled_surface(&c0, &c1).unwrap();
+        assert_eq!(s.degree_v, 1);
+        assert_eq!(s.knots_v, vec![0., 0., 1., 1.]);
+        let mid = s.evaluate(0.5, 0.5).unwrap().point;
+        assert!((mid[0] - 1.0).abs() < 1e-12);
+        assert!((mid[1] - 1.5).abs() < 1e-12);
+        assert!((mid[2] - 0.5).abs() < 1e-12);
+
+        let c1_deg2 = c1.elevate(2).unwrap();
+        let s_compat = Surface::ruled_surface(&c0, &c1_deg2).unwrap();
+        assert_eq!(s_compat.degree_u, 2);
+        assert_eq!(s_compat.degree_v, 1);
+        assert_eq!(s_compat.knots_v, vec![0., 0., 1., 1.]);
+        let mid2 = s_compat.evaluate(0.5, 0.5).unwrap().point;
+        for k in 0..3 {
+            assert!((mid2[k] - mid[k]).abs() < 1e-12);
         }
     }
 }

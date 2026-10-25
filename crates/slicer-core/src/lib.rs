@@ -255,6 +255,7 @@ pub use adhesion_and_support::{
     VariableLayerConfig, apply_fuzzy_skin_to_contour, generate_brim, generate_raft, generate_skirt,
     plan_layers_with_skins_and_supports, plan_tree_support_trunks, schedule_adaptive_heights,
 };
+pub use infill::generate_gyroid_infill_lines;
 use infill::{generate_cubic_infill, generate_infill, hatch, hatch_angled};
 
 /// Offset contours and hatch one already-computed layer section. Contours use
@@ -849,6 +850,10 @@ mod tests {
         assert!(!gyroid.paths.is_empty());
         assert!(!hilbert.paths.is_empty());
         assert!(!arch.paths.is_empty());
+        let gyroid_lines_z0 = generate_gyroid_infill_lines(([0.0, 0.0], [20.0, 20.0]), 0.2, 2.0);
+        let gyroid_lines_z1 = generate_gyroid_infill_lines(([0.0, 0.0], [20.0, 20.0]), 0.8, 2.0);
+        assert!(!gyroid_lines_z0.is_empty());
+        assert_ne!(gyroid_lines_z0, gyroid_lines_z1);
         assert!(conc
             .paths
             .iter()

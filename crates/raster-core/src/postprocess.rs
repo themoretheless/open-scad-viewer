@@ -616,6 +616,113 @@ pub fn bloom_bright_pass_and_blur(
     out
 }
 
+/// Computes the next Hierarchical-Z (Hi-Z) conservative maximum-depth mipmap level
+/// ($\lceil \text{width} / 2 \rceil \times \lceil \text{height} / 2 \rceil$) from `depth`
+/// for GPU/CPU two-phase occlusion culling.
+///
+/// For odd dimensions, boundary texels clamp-extend into the $2 \times 2$ reduction footprint
+/// (plus any trailing column/row when `width` or `height` is odd) so no depth sample is ever
+/// underestimated.
+pub fn build_hiz_mip_level_max(
+    depth: &[f32],
+    width: usize,
+    height: usize,
+) -> (Vec<f32>, usize, usize) {
+    let total = width.saturating_mul(height);
+    if width == 0 || height == 0 || depth.len() < total {
+        return (Vec::new(), 0, 0);
+    }
+    let out_w = width.div_ceil(2);
+    let out_h = height.div_ceil(2);
+    let mut out = Vec::with_capacity(out_w * out_h);
+
+    for oy in 0..out_h {
+        let y0 = (oy * 2).min(height - 1);
+        let y1 = (oy * 2 + 1).min(height - 1);
+        let row0 = &depth[y0 * width..(y0 + 1) * width];
+        let row1 = &depth[y1 * width..(y1 + 1) * width];
+
+        for ox in 0..out_w {
+            let x0 = (ox * 2).min(width - 1);
+            let x1 = (ox * 2 + 1).min(width - 1);
+            let d00 = row0[x0];
+            let d10 = row0[x1];
+            let d01 = row1[x0];
+            let d11 = row1[x1];
+            let max_d = d00.max(d10).max(d01.max(d11));
+            out.push(max_d);
+        }
+    }
+
+    (out, out_w, out_h)
+}
+
+/// Applies radial lens vignette darkening and subtle chromatic aberration to a flat `RGBA` (`4 * width * height`)
+/// floating-point framebuffer, preserving the alpha channel.
+pub fn apply_chromatic_aberration_and_vignette(
+    rgba: &[f32],
+    width: usize,
+    height: usize,
+    vignette_strength: f32,
+) -> Vec<f32> {
+    let total_px = width.saturating_mul(height);
+    let total_floats = total_px.saturating_mul(4);
+    if width == 0 || height == 0 || rgba.len() < total_floats {
+        return rgba.to_vec();
+    }
+    let strength = if vignette_strength.is_finite() {
+        vignette_strength.clamp(0.0, 2.0)
+    } else {
+        0.0
+    };
+    let inv_w = if width > 1 {
+        2.0 / ((width - 1) as f32)
+    } else {
+        0.0
+    };
+    let inv_h = if height > 1 {
+        2.0 / ((height - 1) as f32)
+    } else {
+        0.0
+    };
+    let max_x = (width - 1) as isize;
+    let mut out = vec![0.0_f32; total_floats];
+
+    for y in 0..height {
+        let ny = (y as f32) * inv_h - 1.0;
+        let ny2 = ny * ny;
+        let row_base = y * width * 4;
+        for x in 0..width {
+            let nx = (x as f32) * inv_w - 1.0;
+            // Normalized squared radius r^2 in [0, 2] (0 at center, 1 at edge midpoints, 2 at corners)
+            let r2 = 0.5 * (nx * nx + ny2);
+            let vig = (1.0 - strength * r2).clamp(0.0, 1.0);
+
+            // Radial horizontal dispersion offset (+/- 1px near outer edges when strength > 0)
+            let shift = if strength > 0.0 && nx.abs() > 0.5 {
+                if nx > 0.0 { 1_isize } else { -1_isize }
+            } else {
+                0_isize
+            };
+            let xr = ((x as isize) + shift).clamp(0, max_x) as usize;
+            let xb = ((x as isize) - shift).clamp(0, max_x) as usize;
+
+            let idx = row_base + x * 4;
+            let r_ch = rgba[row_base + xr * 4];
+            let g_ch = rgba[idx + 1];
+            let b_ch = rgba[row_base + xb * 4 + 2];
+            let a_ch = rgba[idx + 3];
+
+            out[idx] = r_ch * vig;
+            out[idx + 1] = g_ch * vig;
+            out[idx + 2] = b_ch * vig;
+            out[idx + 3] = a_ch;
+        }
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -746,5 +853,30 @@ mod tests {
         assert!(bloomed[1 * 5 + 2][0] > 0.3);
         // Far corner (0, 0) receives much less than immediate neighbor
         assert!(bloomed[0][0] < bloomed[1 * 5 + 2][0]);
+
+        // Hi-Z conservative max-depth mip pyramid level
+        let depth_4x4 = [
+            0.1_f32, 0.2, 0.3, 0.4, // row 0
+            0.5, 0.6, 0.7, 0.8, // row 1
+            0.15, 0.25, 0.95, 0.35, // row 2
+            0.45, 0.55, 0.65, 0.75, // row 3
+        ];
+        let (mip1, mw, mh) = build_hiz_mip_level_max(&depth_4x4, 4, 4);
+        assert_eq!((mw, mh), (2, 2));
+        assert_eq!(mip1, vec![0.6, 0.8, 0.55, 0.95]);
+        let (mip2, mw2, mh2) = build_hiz_mip_level_max(&mip1, mw, mh);
+        assert_eq!((mw2, mh2), (1, 1));
+        assert_eq!(mip2, vec![0.95]);
+
+        // Vignette darkens corners while preserving center and alpha
+        let mut flat_rgba = vec![1.0_f32; 3 * 3 * 4];
+        flat_rgba[4 * 4 + 3] = 0.75; // center alpha
+        let vignet = apply_chromatic_aberration_and_vignette(&flat_rgba, 3, 3, 0.5);
+        // Center pixel (1, 1) has r^2 = 0 -> unchanged RGB = 1.0
+        assert!((vignet[4 * 4] - 1.0).abs() < 1e-6);
+        assert!((vignet[4 * 4 + 3] - 0.75).abs() < 1e-6);
+        // Corner pixel (0, 0) has r^2 = 1.0 -> vig = 0.5
+        assert!((vignet[0] - 0.5).abs() < 1e-6);
+        assert!((vignet[3] - 1.0).abs() < 1e-6);
     }
 }

@@ -1,7 +1,7 @@
 //! Native point fitting, interpolation and cloud error reports.
 mod cloud_surface;
 use super::{
-    Curve, Result, Surface, ToleranceContext, binomial, box_of, check, context, distance, interval,
+    Curve, Result, Surface, ToleranceContext, binomial, check, context, distance, interval,
     next_up, numeric, solve,
 };
 use crate::foundation::guards::{Budget, require_finite_at};

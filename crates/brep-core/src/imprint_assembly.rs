@@ -201,7 +201,18 @@ impl<'m> Assembler<'m> {
                                 continue;
                             }
                             let point = edge.curve.evaluate(t)?.point;
-                            let id = out.special([point[0], point[1], point[2]]);
+                            let point = [point[0], point[1], point[2]];
+                            let tolerance = model.tolerance_mm.max(1e-12);
+                            let id = if let Some(id) = out.specials.iter().position(|vertex| {
+                                (0..3)
+                                    .map(|axis| (vertex.point[axis] - point[axis]).powi(2))
+                                    .sum::<f64>()
+                                    <= tolerance * tolerance
+                            }) {
+                                id
+                            } else {
+                                out.special(point)
+                            };
                             out.attach_edge(id, o, coedge.edge, t);
                         }
                     }

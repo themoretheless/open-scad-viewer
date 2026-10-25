@@ -3,19 +3,24 @@ import {useTransientNotice} from './composables/useTransientNotice'
 import SweepBoundaryBadges from './components/SweepBoundaryBadges.vue'
 import { useEditorFormatting } from './composables/useEditorFormatting'
 import { useEditorResize } from './composables/useEditorResize'
+import { useParameterPresets } from './composables/useParameterPresets'
+import { useSectionPlaneControls } from './composables/useSectionPlaneControls'
+import { useSourceProvenanceCaret } from './composables/useSourceProvenanceCaret'
+import { useWorkspaceFileActions } from './composables/useWorkspaceFileActions'
+import { useWorkspacePersistenceLifecycle } from './composables/useWorkspacePersistenceLifecycle'
 import VrControls from './components/VrControls.vue'
 import ModelingGridControls from './components/ModelingGridControls.vue'
 import MaterialControls from './features/MaterialControls.vue'
 import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
 import { useModelingGrid } from './services/modelingGrid'
-import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/rushFrontendDetect'
+import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension } from './services/rushFrontendDetect'
 import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './services/sweepViewportEvidence'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
-import { detectMeshImportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT, type MeshExportFormat } from './services/meshFormats'
+import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT } from './services/meshFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.vue'))
@@ -45,12 +50,11 @@ import type {
   DistanceMeasurement as PanelMeasurement,
   InspectSelection,
   SceneMeshRow,
-  SectionAxis,
   SourceProvenanceRow,
 } from './components/cadPanels.types'
 import type { GeometryQuality } from './core/build'
 import { meshTransferables, type MeshData } from './core/mesh'
-import { applyParameterPreset, captureParameterPreset, parameterTemplateHash, MAX_PARAMETER_PRESETS, type ParameterPreset } from './services/parameterPresets'
+import { MAX_PARAMETER_PRESETS } from './services/parameterPresets'
 import { analyzeSurfaceArea, type GeometryComputeResult } from './services/geometryCompute'
 import { AutoBuildScheduler } from './services/autoBuildScheduler'
 import { BuildPerformanceHistory, type BuildPerformanceSample } from './services/buildPerformance'
@@ -75,7 +79,6 @@ import { isPaletteCommandEnabled, type PaletteCommand } from './services/command
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
 import { nextRovingIndex } from './services/rovingFocus'
-import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
 import { withSelectionSurfaces } from './services/meshSurfaceGroups'
@@ -88,22 +91,18 @@ import {
   storageSet,
   storageSetJSON,
 } from './services/safeStorage'
-import { encodeCustomizerValue, extractCustomizerParameters, type CustomizerValue } from './services/scadCustomizer'
-import { applySourceSplice } from './services/sourceSplice'
+import { extractCustomizerParameters } from './services/scadCustomizer'
 import { planScenePublication } from './services/scenePublication'
 import {
   geometryExportEligibility,
   planGeometryPublication,
 } from './services/buildPromotionPolicy'
 import {
-  MAX_WORKSPACE_FILE_NAME_LENGTH,
   MAX_WORKSPACE_SOURCE_LENGTH,
   updateWorkspaceDocument,
-  workspaceDocumentsEqual,
   type WorkspaceDocumentSnapshot,
 } from './services/workspaceDocument'
-import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
-import { encodeWorkspaceShare } from './services/workspaceShare'
+import type { BrowserWorkspacePersistence } from './services/workspacePersistence'
 import { WebGPURenderer } from './services/webgpuRenderer'
 import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
 import type {
@@ -117,7 +116,7 @@ import type {
   StandardView,
 } from './services/rendererContracts'
 import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
-import { blockColors, GUTTER_OVERSCAN_ROWS, GUTTER_CONTENT_PADDING_PX, gutterRowPx, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, STORAGE_NOTICE_THROTTLE_MS, buildSources, downloadBlob, replaceSharedRecoveryHash, hexToRgb, lineAndColumn, readCommandMru, sanitizeFileName } from './appHelpers'
+import { blockColors, GUTTER_OVERSCAN_ROWS, GUTTER_CONTENT_PADDING_PX, gutterRowPx, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, buildSources, hexToRgb, lineAndColumn, readCommandMru } from './appHelpers'
 import type { DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
@@ -240,8 +239,6 @@ function syncHighlightScroll() {
   gutterViewportHeight.value = editorRef.value.clientHeight
 }
 const findInputRef = ref<HTMLInputElement | null>(null)
-const fileInputRef = ref<HTMLInputElement | null>(null)
-const convertInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
 const editorDiagnostic = ref<EditorDiagnostic | null>(null)
@@ -290,11 +287,50 @@ const renderedSource = ref('')
 const notice = ref('')
 const showNotice=useTransientNotice(notice)
 const fileName = ref(props.initialWorkspace.fileName)
-const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
-  props.initialWorkspaceDurable ? 'saved' : 'error',
-)
-const workspaceConflict = ref(props.workspacePersistence.hasConflict)
 const exampleGalleryOpen = ref(false)
+let renderer: WebGPURenderer | null = null
+let componentActive = true
+let fitNextRender = false
+const t = (key: string) => L[lang.value][key] ?? key
+const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
+
+const {
+  workspacePersistenceStatus,
+  workspaceConflict,
+  savingBrowser,
+  storageFailureDetail,
+  persistenceLabel,
+  bumpWorkspaceEditGeneration,
+  isRestoringWorkspace,
+  isSharedImportPending,
+  applySourceChange,
+  applyFileNameChange,
+  markDocumentReplaced,
+  scheduleWorkspacePersistence,
+  flushWorkspacePersistence,
+  handleVisibilityChange,
+  retryWorkspacePersistence,
+  saveBrowserDraft,
+  resolveWorkspaceConflict,
+  reportStorageFailure,
+  updateBeforeUnloadGuard,
+  detachBeforeUnloadGuard,
+   disposeWorkspacePersistenceTimer,
+} = useWorkspacePersistenceLifecycle({
+  initialWorkspaceDurable: props.initialWorkspaceDurable,
+  initialSharedImportPending: props.initialSharedImportPending,
+  workspacePersistence: props.workspacePersistence,
+  workspaceDocument,
+  code,
+  fileName,
+  lang,
+  exampleGalleryOpen,
+  getRenderer: () => renderer,
+  isComponentActive: () => componentActive,
+  markFitNextRender: () => { fitNextRender = true },
+  showNotice,
+  translate: t,
+})
 const FunctionReference = defineAsyncComponent(() => import('./components/FunctionReference.vue'))
 const functionReferenceOpen = ref(false)
 const functionReferenceQuery = ref('')
@@ -587,12 +623,33 @@ const meshVisibility = computed({
 const selectionMode = ref<SelectionMode>('face')
 const measurement = computed(() => sceneState.value.measurement)
 const measureActive = computed(() => sceneState.value.measureActive)
-const sectionEnabled = computed(() => sceneState.value.section.enabled)
-const sectionAxis = computed(() => sceneState.value.section.axis)
-const sectionOffset = computed(() => sceneState.value.section.offset)
-const sectionFlip = computed(() => sceneState.value.section.flip)
-const scanPanelOpen = ref(false)
-const scanToggleRef = ref<HTMLButtonElement | null>(null)
+const {
+  sectionEnabled,
+  sectionAxis,
+  sectionOffset,
+  sectionFlip,
+  scanPanelOpen,
+  scanToggleRef,
+  sectionRange,
+  sectionAvailable,
+  applySection,
+  syncSectionRange,
+  setSectionEnabled,
+  setSectionAxis,
+  setSectionOffset,
+  setSectionFlip,
+  resetSection,
+  closeScanPanel,
+} = useSectionPlaneControls({
+  gpuOk,
+  sceneMeshes,
+  meshVisibility,
+  isolated,
+  selectedMesh,
+  sceneState,
+  sceneController,
+  getRenderer: () => renderer,
+})
 const dockTab = ref<DockTab>('scene')
 // Direct-modeling actions of the Code viewport are reached through the command palette.
 const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
@@ -614,23 +671,6 @@ const {
 })
 const dockToggleRef = ref<HTMLButtonElement | null>(null)
 const editorMaxWidth = ref(820)
-const exportDialogOpen = ref(false)
-const exportDialogRef = ref<HTMLElement | null>(null)
-function openExportDialog() {
-  exportDialogOpen.value = true
-  void nextTick(() => {
-    const dialog = exportDialogRef.value
-    ;(dialog?.querySelector<HTMLElement>('input:checked') ?? dialog?.querySelector<HTMLElement>('button'))?.focus()
-  })
-}
-async function confirmExport() {
-  exportDialogOpen.value = false
-  await exportAdditionalMesh()
-}
-const persistenceLabel = computed(() => workspaceConflict.value
-  ? t('storageConflict')
-  : workspacePersistenceStatus.value === 'saving' ? t('savingDraft')
-    : workspacePersistenceStatus.value === 'error' ? t('unsavedDraft') : t('savedDraftStatus'))
 function handleDockTabKeydown(event: KeyboardEvent) {
   const key = DOCK_KEY_MAP[event.key]
   if (!key) return
@@ -692,17 +732,29 @@ const customizerParameters = computed(() => {
   if (!isRushFrontend(code.value)) return extractCustomizerParameters(code.value)
   return compactControls.value.parameters
 })
-const presetName = ref('')
-const presetSelection = ref('')
-const presetError = ref('')
-const presetUndo = shallowRef<{ before: string; after: string } | null>(null)
-const parameterPresets = computed(() => workspaceDocument.value.parameterPresets)
-const selectedPreset = computed(() => parameterPresets.value.find(item => item.id === presetSelection.value) ?? parameterPresets.value[0])
-const currentParameterTemplate = computed(() => {
-  if (!parameterPresets.value.length) return null
-  try { return parameterTemplateHash(code.value) } catch { return null }
+const {
+  presetName,
+  presetSelection,
+  presetError,
+  presetUndo,
+  parameterPresets,
+  selectedPreset,
+  presetCompatible,
+  saveParameterPreset,
+  replacePresetSource,
+  restoreParameterPreset,
+  undoParameterPreset,
+  removeParameterPreset,
+  updateCustomizer,
+} = useParameterPresets({
+  code,
+  editorRef,
+  workspaceDocument,
+  lang,
+  customizerParameters,
+  bumpWorkspaceEditGeneration,
+  scheduleWorkspacePersistence,
 })
-const presetCompatible = computed(() => !!selectedPreset.value && selectedPreset.value.templateHash === currentParameterTemplate.value)
 
 const stale = computed(() => renderedSource.value !== '' && (renderedSource.value !== code.value || renderedQuality.value === 'preview'))
 const sourceMatchesEditor = computed(() => renderedSource.value !== '' && renderedSource.value === code.value)
@@ -715,6 +767,38 @@ const exportEligibility = computed(() => geometryExportEligibility({
   currentSource: code.value,
 }))
 const canExport = computed(() => exportEligibility.value.allowed)
+const {
+  fileInputRef,
+  convertInputRef,
+  exportDialogOpen,
+  exportDialogRef,
+  additionalExportFormat,
+  openExportDialog,
+  confirmExport,
+  triggerOpen,
+  openSelectedFile,
+  handleDrop,
+  triggerConvert,
+  convertSelectedFile,
+  saveSource,
+  exportStl,
+  exportPerformance,
+  exportObj,
+  shareSource,
+} = useWorkspaceFileActions({
+  code,
+  fileName,
+  error,
+  canExport,
+  sceneMeshes,
+  buildCounters,
+  performanceSamples,
+  markFitNextRender: () => {
+    fitNextRender = true
+  },
+  showNotice,
+  translate: t,
+})
 const statusText = computed(() => rendering.value
   ? t('compiling')
   : error.value ? t('failed') : stale.value ? t('stale') : t('ready'))
@@ -794,26 +878,6 @@ const panelMeasurement = computed<PanelMeasurement | null>(() => measurement.val
   points: measurement.value.points,
   distance: measurement.value.distance ?? undefined,
 } : null)
-function isSectionMeshVisible(index: number) {
-  return meshVisibility.value[index] !== false && (!isolated.value || index === selectedMesh.value)
-}
-const sectionRange = computed(() => {
-  const axis = sectionAxis.value === 'x' ? 0 : sectionAxis.value === 'y' ? 1 : 2
-  let min = Infinity
-  let max = -Infinity
-  sceneMeshes.value.forEach((mesh, index) => {
-    if (!isSectionMeshVisible(index)) return
-    const bounds = inspectMesh(mesh, index).bounds
-    if (!bounds) return
-    min = Math.min(min, bounds.min[axis])
-    max = Math.max(max, bounds.max[axis])
-  })
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: -100, max: 100, step: 0.1 }
-  const span = Math.max(0.001, max - min)
-  return { min, max, step: Math.max(0.001, span / 500) }
-})
-const sectionAvailable = computed(() => gpuOk.value && sceneMeshes.value.some((_, index) => isSectionMeshVisible(index)))
-watch(sectionRange, syncSectionRange)
 const paletteCommands = computed(() => {
   const hasVisibleModel = sceneMeshes.value.some((_, index) => meshVisibility.value[index] !== false)
   const hasSelection = selectedMesh.value !== null
@@ -876,21 +940,10 @@ const paletteCommands = computed(() => {
 const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
 const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
-let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
-let lastStorageNotice = 0
 const autoBuildScheduler = new AutoBuildScheduler({ build: quality => { if (componentActive && autoRender.value) doRender(quality) }, edit: () => renderer?.previewCsgSource(code.value) })
 let buildGeneration = 0
-let storageDebounce: ReturnType<typeof setTimeout> | null = null
-let workspaceEditGeneration = 0
-let durableWorkspaceGeneration = props.initialWorkspaceDurable ? 0 : -1
-let workspaceSourceValid = true
-let workspaceFileNameValid = true
-let beforeUnloadAttached = false
-let sharedImportPending = props.initialSharedImportPending
-let restoringWorkspace = false
 let applyingWorkspaceReplacement = false
-let componentActive = true
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 const topbarRef = ref<HTMLElement | null>(null)
@@ -898,10 +951,6 @@ const topbarHeight = ref(52)
 let topbarResizeObserver: ResizeObserver | null = null
 let layoutResizeObserver: ResizeObserver | null = null
 let editorResizeObserver: ResizeObserver | null = null
-let fitNextRender = false
-
-const t = (key: string) => L[lang.value][key] ?? key
-const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
 onMounted(async () => {
   if (topbarRef.value) {
@@ -1035,10 +1084,7 @@ onUnmounted(() => {
   viewportController.invalidateRecovery()
   rendererRecoveryGate.reset()
   autoBuildScheduler.cancel()
-  if (storageDebounce) {
-    clearTimeout(storageDebounce)
-    void persistWorkspaceNow()
-  }
+  disposeWorkspacePersistenceTimer()
   componentActive = false
   setStorageFailureHandler(null)
   buildCoordinator?.dispose()
@@ -1198,45 +1244,21 @@ watch(code, value => {
   // A #code= hash left by shareSource() goes stale when code diverges. An
   // imported hash that is still the only durable copy is retained until the
   // replacement draft reaches IDB or the synchronous recovery journal.
-  if (!sharedImportPending && location.hash.startsWith('#code=')) {
+  if (!isSharedImportPending() && location.hash.startsWith('#code=')) {
     history.replaceState(null, '', location.pathname + location.search)
   }
-  if (restoringWorkspace) {
+  if (isRestoringWorkspace()) {
     if (autoRender.value) scheduleRender(0)
     return
   }
-  try {
-    workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { source: value })
-    workspaceSourceValid = true
-  } catch {
-    workspaceSourceValid = false
-    workspaceEditGeneration++
-    workspacePersistenceStatus.value = 'error'
-    updateBeforeUnloadGuard()
-    reportStorageFailure()
-    return
-  }
-  workspaceEditGeneration++
-  scheduleWorkspacePersistence()
+  if (!applySourceChange(value)) return
   if (autoRender.value) scheduleRender()
 })
 
 watch(fileName, value => {
   if (applyingWorkspaceReplacement) return
-  if (restoringWorkspace) return
-  try {
-    workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { fileName: value })
-    workspaceFileNameValid = true
-  } catch {
-    workspaceFileNameValid = false
-    workspaceEditGeneration++
-    workspacePersistenceStatus.value = 'error'
-    updateBeforeUnloadGuard()
-    reportStorageFailure()
-    return
-  }
-  workspaceEditGeneration++
-  scheduleWorkspacePersistence()
+  if (isRestoringWorkspace()) return
+  applyFileNameChange(value)
 })
 
 watch(autoRender, enabled => {
@@ -1265,189 +1287,6 @@ async function commitParameterControl(event: Event) {
   if (!(event.target instanceof HTMLInputElement) || event.target.type !== 'range') return
   await nextTick()
   if (componentActive && autoRender.value) autoBuildScheduler.flush()
-}
-
-function scheduleWorkspacePersistence() {
-  if (storageDebounce) clearTimeout(storageDebounce)
-  workspacePersistenceStatus.value = 'saving'
-  updateBeforeUnloadGuard()
-  storageDebounce = setTimeout(() => { void persistWorkspaceNow() }, 300)
-}
-
-async function persistWorkspaceNow(retryIndexedDb = false): Promise<boolean> {
-  storageDebounce = null
-  if (!workspaceSourceValid || !workspaceFileNameValid) {
-    workspacePersistenceStatus.value = 'error'
-    updateBeforeUnloadGuard()
-    return false
-  }
-  const generation = workspaceEditGeneration
-  const snapshot = workspaceDocument.value
-  workspacePersistenceStatus.value = 'saving'
-  updateBeforeUnloadGuard()
-  let saved = false
-  try {
-    if (retryIndexedDb) {
-      const result = await props.workspacePersistence.retry(snapshot)
-      saved = result.saved
-      if (result.restoredDocument) {
-        const editorUnchanged = generation === workspaceEditGeneration
-          && workspaceDocumentsEqual(workspaceDocument.value, snapshot)
-          && code.value === snapshot.source
-          && fileName.value === snapshot.fileName
-        if (editorUnchanged) await restoreWorkspaceDocument(result.restoredDocument)
-        else saved = false
-      }
-    } else {
-      saved = await props.workspacePersistence.save(snapshot)
-    }
-  } catch {
-    saved = false
-  }
-  workspaceConflict.value = props.workspacePersistence.hasConflict
-  if (!componentActive) return saved
-  if (saved) {
-    durableWorkspaceGeneration = Math.max(durableWorkspaceGeneration, generation)
-    if (sharedImportPending && location.hash.startsWith('#code=')) {
-      if (props.workspacePersistence.backend === 'indexeddb') {
-        history.replaceState(null, '', location.pathname + location.search)
-        sharedImportPending = false
-      } else {
-        replaceSharedRecoveryHash(code.value)
-      }
-    }
-    workspacePersistenceStatus.value = durableWorkspaceGeneration >= workspaceEditGeneration
-      ? 'saved'
-      : 'saving'
-  } else {
-    workspacePersistenceStatus.value = 'error'
-    reportStorageFailure()
-  }
-  updateBeforeUnloadGuard()
-  return saved
-}
-
-function flushWorkspacePersistence() {
-  if (storageDebounce) clearTimeout(storageDebounce)
-  if (!workspaceSourceValid || !workspaceFileNameValid) return
-  if (sharedImportPending && location.hash.startsWith('#code=')) replaceSharedRecoveryHash(code.value)
-  // localStorage is synchronous and therefore remains reliable during
-  // pagehide/freeze where the browser may terminate an unfinished IDB task.
-  if (!props.workspacePersistence.stageRecovery(workspaceDocument.value)) reportStorageFailure()
-  void persistWorkspaceNow()
-}
-
-function handleVisibilityChange() {
-  if (document.visibilityState === 'hidden' && storageDebounce) flushWorkspacePersistence()
-}
-
-function retryWorkspacePersistence() {
-  if (storageDebounce) {
-    clearTimeout(storageDebounce)
-    storageDebounce = null
-  }
-  void persistWorkspaceNow(true)
-}
-
-const savingBrowser = ref(false)
-const storageFailureDetail = ref('')
-async function saveBrowserDraft() {
-  if(savingBrowser.value) return
-  savingBrowser.value = true
-  if(storageDebounce) { clearTimeout(storageDebounce); storageDebounce = null }
-  try {
-    if(!workspaceSourceValid || !workspaceFileNameValid) { showNotice(t('failedBrowser')); return }
-    await resolveWorkspaceConflict(true)
-    showNotice(t(workspacePersistenceStatus.value === 'saved' && props.workspacePersistence.backend === 'indexeddb' ? 'savedBrowser' : 'failedBrowser'))
-  } finally { savingBrowser.value = false }
-}
-
-async function resolveWorkspaceConflict(preferCurrentDraft: boolean) {
-  const generation = workspaceEditGeneration
-  const snapshot = workspaceDocument.value
-  workspacePersistenceStatus.value = 'saving'
-  let result: WorkspaceRetryResult
-  try {
-    result = preferCurrentDraft
-      ? await props.workspacePersistence.saveCurrentDraft(snapshot)
-      : await props.workspacePersistence.resolveConflict(false, snapshot)
-  } catch {
-    result = { saved: false }
-  }
-  workspaceConflict.value = props.workspacePersistence.hasConflict
-  const editorUnchanged = generation === workspaceEditGeneration
-    && workspaceDocumentsEqual(workspaceDocument.value, snapshot)
-    && code.value === snapshot.source
-    && fileName.value === snapshot.fileName
-  if (result.restoredDocument && editorUnchanged) {
-    if (!workspaceDocumentsEqual(result.restoredDocument, snapshot)) {
-      await restoreWorkspaceDocument(result.restoredDocument)
-    }
-  } else if (!editorUnchanged) {
-    scheduleWorkspacePersistence()
-    return
-  }
-  if (result.saved) {
-    durableWorkspaceGeneration = workspaceEditGeneration
-    workspacePersistenceStatus.value = 'saved'
-    if (sharedImportPending && props.workspacePersistence.backend === 'indexeddb') {
-      history.replaceState(null, '', location.pathname + location.search)
-      sharedImportPending = false
-    }
-  } else {
-    workspacePersistenceStatus.value = 'error'
-    reportStorageFailure()
-  }
-  updateBeforeUnloadGuard()
-}
-
-function reportStorageFailure() {
-  storageFailureDetail.value = props.workspacePersistence.failureReason || (lang.value === 'ru' ? 'Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода.' : 'Could not write draft. Use Save in browser to retry the current code.')
-  const now = Date.now()
-  if (now - lastStorageNotice < STORAGE_NOTICE_THROTTLE_MS) return
-  lastStorageNotice = now
-  showNotice(t('storageFailed'))
-}
-
-function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (durableWorkspaceGeneration >= workspaceEditGeneration
-    && workspacePersistenceStatus.value !== 'error') return
-  event.preventDefault()
-  event.returnValue = ''
-}
-
-function updateBeforeUnloadGuard() {
-  const needed = durableWorkspaceGeneration < workspaceEditGeneration
-    || workspacePersistenceStatus.value === 'error'
-  if (needed && !beforeUnloadAttached) {
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    beforeUnloadAttached = true
-  } else if (!needed && beforeUnloadAttached) {
-    detachBeforeUnloadGuard()
-  }
-}
-
-function detachBeforeUnloadGuard() {
-  if (!beforeUnloadAttached) return
-  window.removeEventListener('beforeunload', handleBeforeUnload)
-  beforeUnloadAttached = false
-}
-
-async function restoreWorkspaceDocument(document: WorkspaceDocumentSnapshot) {
-  restoringWorkspace = true
-  workspaceSourceValid = true
-  workspaceFileNameValid = true
-  workspaceDocument.value = document
-  code.value = document.source
-  fileName.value = document.fileName
-  exampleGalleryOpen.value = false
-  renderer?.setSourceHighlight(null)
-  await nextTick()
-  restoringWorkspace = false
-  props.workspacePersistence.stageRecovery(document)
-  workspaceEditGeneration++
-  durableWorkspaceGeneration = workspaceEditGeneration
-  fitNextRender = true
 }
 
 function startBuildCoordinator() {
@@ -1648,15 +1487,13 @@ async function loadEditorDocument(example: string, nextFileName: string) {
   buildGeneration++
   editorDiagnostic.value = null
   renderer?.setSourceHighlight(null)
-  if (!sharedImportPending && location.hash.startsWith('#code=')) {
+  if (!isSharedImportPending() && location.hash.startsWith('#code=')) {
     history.replaceState(null, '', location.pathname + location.search)
   }
   workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, {
     source: example,
     fileName: nextFileName,
   })
-  workspaceSourceValid = true
-  workspaceFileNameValid = true
   const editor = editorRef.value
   if (editor) {
     editor.setRangeText(example, 0, editor.value.length, 'select')
@@ -1665,8 +1502,7 @@ async function loadEditorDocument(example: string, nextFileName: string) {
     code.value = example
   }
   fileName.value = nextFileName
-  workspaceEditGeneration++
-  scheduleWorkspacePersistence()
+  markDocumentReplaced()
   if (autoRender.value) scheduleRender()
   fitNextRender = true
   await nextTick()
@@ -1682,206 +1518,6 @@ async function loadExample(id: string) {
 async function loadMechanicalModel(source: string, name: string) {
   await loadEditorDocument(source, name)
   await doRender('full')
-}
-
-function triggerOpen() { fileInputRef.value?.click() }
-
-async function openSelectedFile(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (file) await openFile(file)
-}
-
-async function handleDrop(event: DragEvent) {
-  const file = event.dataTransfer?.files?.[0]
-  if (!file) return
-  if (detectMeshImportFormat(file.name)) await convertFile(file)
-  else await openFile(file)
-}
-
-function triggerConvert() { convertInputRef.value?.click() }
-
-async function convertSelectedFile(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (file) await convertFile(file)
-}
-
-/** Convert a dropped/picked mesh file to the selected export format and download it. */
-async function convertFile(file: File) {
-  try {
-    const { convertMeshFile } = await import('./services/meshConvert')
-    const result = await convertMeshFile(file.name, await file.arrayBuffer(), additionalExportFormat.value)
-    downloadBlob(new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }), result.fileName)
-    showNotice(`${t('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`)
-  } catch (error) { showNotice(error instanceof Error ? error.message : 'Conversion failed') }
-}
-
-async function openFile(file: File) {
-  if (file.size > MAX_WORKSPACE_SOURCE_LENGTH) {
-    error.value = t('fileTooLarge')
-    return
-  }
-  const source = await file.text()
-  if (source.length > MAX_WORKSPACE_SOURCE_LENGTH) {
-    error.value = t('fileTooLarge')
-    return
-  }
-  code.value = source
-  const requestedName = withSourceExtension(file.name, source)
-  fileName.value = requestedName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH)
-  fitNextRender = true
-  showNotice(t('opened'))
-}
-
-function saveSource() {
-  const blob = new Blob([code.value], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = sanitizeFileName(fileName.value)
-  link.click()
-  URL.revokeObjectURL(url)
-  showNotice(t('saved'))
-}
-
-const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
-async function exportAdditionalMesh() {
-  if (!canExport.value) return
-  try {
-    const [{ exportMeshFormatCompressed }, { flattenExportMeshes }] = await Promise.all([
-      import('./services/meshExportFormats'),
-      import('./services/meshExportAdapter'),
-    ])
-    const artifact = await exportMeshFormatCompressed(flattenExportMeshes(sceneMeshes.value), additionalExportFormat.value)
-    const buffer = new ArrayBuffer(artifact.data.byteLength)
-    new Uint8Array(buffer).set(artifact.data)
-    downloadBlob(new Blob([buffer], { type: artifact.mimeType }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.' + artifact.extension))
-    showNotice(t('exported'))
-  } catch (error) { showNotice(error instanceof Error ? error.message : 'Export failed') }
-}
-
-function exportStl() {
-  if (!canExport.value) return
-  const bytes = buildBinaryStl(sceneMeshes.value, fileName.value)
-  const buffer = new ArrayBuffer(bytes.byteLength)
-  new Uint8Array(buffer).set(bytes)
-  downloadBlob(new Blob([buffer], { type: 'model/stl' }), sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '.stl'))
-  showNotice(t('exported'))
-}
-
-function exportPerformance() {
-  downloadBlob(new Blob([JSON.stringify({
-    schemaVersion: 1,
-    recordedAt: new Date().toISOString(),
-    frameBoundary: 'GPU queue submission, not display presentation or GPU completion',
-    counters: buildCounters.value,
-    samples: performanceSamples.value,
-  }, null, 2)], { type: 'application/json' }), 'build-performance.json')
-}
-
-function exportObj() {
-  if (!canExport.value) return
-  downloadBlob(new Blob([buildObj(sceneMeshes.value)], { type: 'text/plain;charset=utf-8' }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.obj'))
-  showNotice(t('exported'))
-}
-
-function savePresetList(presets: readonly ParameterPreset[]): boolean {
-  try {
-    workspaceDocument.value = updateWorkspaceDocument(workspaceDocument.value, { parameterPresets: presets })
-    workspaceEditGeneration++
-    scheduleWorkspacePersistence()
-    return true
-  } catch {
-    presetError.value = lang.value === 'ru' ? 'Не удалось сохранить варианты: превышен допустимый объём.' : 'Could not save presets: storage size limit exceeded.'
-    return false
-  }
-}
-
-async function saveParameterPreset() {
-  await nextTick()
-  presetError.value = ''
-  if (parameterPresets.value.some(item => item.name === presetName.value.trim())) {
-    presetError.value = lang.value === 'ru' ? 'Вариант с таким именем уже есть. Выберите другое имя.' : 'This name already exists. Choose another name.'
-    return
-  }
-  try {
-    const preset = captureParameterPreset(code.value, presetName.value, crypto.randomUUID())
-    if (savePresetList([...parameterPresets.value, preset])) {
-      presetSelection.value = preset.id
-      presetName.value = ''
-    }
-  } catch {
-    presetError.value = lang.value === 'ru' ? 'Не удалось сохранить: нужны уникальные параметры (до 128) и имя до 80 символов.' : 'Could not save: requires unique parameters (up to 128) and a name of up to 80 characters.'
-  }
-}
-
-function replacePresetSource(source: string) {
-  if (source.length > MAX_WORKSPACE_SOURCE_LENGTH) throw new Error('source limit')
-  const editor = editorRef.value
-  if (editor) {
-    editor.setRangeText(source, 0, editor.value.length, 'preserve')
-    code.value = editor.value
-  } else code.value = source
-}
-
-function restoreParameterPreset() {
-  presetError.value = ''
-  if (!selectedPreset.value) return
-  try {
-    const before = code.value
-    const after = applyParameterPreset(before, selectedPreset.value)
-    if (before === after) return
-    replacePresetSource(after)
-    presetUndo.value = { before, after }
-  } catch {
-    presetError.value = lang.value === 'ru' ? 'Вариант не подходит к текущему исходнику.' : 'This preset does not match the current source.'
-  }
-}
-
-function undoParameterPreset() {
-  const undo = presetUndo.value
-  if (!undo || code.value !== undo.after) return
-  replacePresetSource(undo.before)
-  presetUndo.value = null
-}
-
-function removeParameterPreset() {
-  if (!selectedPreset.value) return
-  presetError.value = ''
-  if (savePresetList(parameterPresets.value.filter(item => item.id !== selectedPreset.value!.id))) presetSelection.value = ''
-}
-
-function updateCustomizer(name: string, value: CustomizerValue) {
-  const parameter = customizerParameters.value.find(candidate => candidate.name === name)
-  if (!parameter) return
-  const encoded = encodeCustomizerValue(value)
-  const applied = applySourceSplice(code.value, {
-    from: parameter.valueStart,
-    to: parameter.valueEnd,
-    insert: encoded,
-    expected: code.value.slice(parameter.valueStart, parameter.valueEnd),
-    origin: 'customizer',
-  })
-  const editor = editorRef.value
-  if (editor) {
-    editor.setRangeText(encoded, parameter.valueStart, parameter.valueEnd, 'select')
-    code.value = editor.value
-  } else code.value = applied.source
-}
-
-async function shareSource() {
-  const url = new URL(window.location.href)
-  url.hash = `code=${encodeWorkspaceShare(code.value)}`
-  history.replaceState(null, '', url)
-  try {
-    await navigator.clipboard.writeText(url.toString())
-    showNotice(t('copied'))
-  } catch {
-    showNotice(t('copyFailed'))
-  }
 }
 
 function fitView() { renderer?.fitView() }
@@ -2024,99 +1660,20 @@ function isolateSceneMesh(id: number | string) {
   isolated.value = renderer?.toggleIsolateSelection() ?? false
 }
 
-function revealSource(source: SourceProvenanceRow) {
-  if (!sourceMatchesEditor.value) {
-    showNotice(t('sourceStale'))
-    return
-  }
-  const editor = editorRef.value
-  if (!editor) return
-  const start = clamp(source.sourceStart, 0, code.value.length)
-  const end = clamp(source.sourceEnd, start, code.value.length)
-  editor.focus({ preventScroll: false })
-  editor.setSelectionRange(start, end, 'forward')
-  renderer?.setSourceHighlight(source.sourceId)
-}
-
-// Flat provenance span index for caret lookups: built lazily on the first query after a
-// scene publication and invalidated by the sceneMeshes array identity, replacing the
-// per-keystroke scan over every mesh × provenance run.
-interface ProvenanceSpan { start: number; end: number; id: number }
-let provenanceSpanCache: { meshes: readonly MeshData[]; spans: ProvenanceSpan[]; maxEnd: number[] } | null = null
-function provenanceSpanIndex(meshes: readonly MeshData[]) {
-  if (provenanceSpanCache?.meshes === meshes) return provenanceSpanCache
-  const entries: (ProvenanceSpan & { order: number })[] = []
-  let order = 0
-  for (const mesh of meshes) {
-    for (const run of mesh.provenance) {
-      const source = run.source
-      if (source) entries.push({ start: source.start, end: source.end, id: source.id, order: order++ })
-    }
-  }
-  // Sort by start ascending; within equal starts, later entries first, so the downward
-  // scan meets the earliest original span first and keeps it on full ties — identical
-  // to the previous linear meshes × runs iteration order.
-  entries.sort((a, b) => a.start - b.start || b.order - a.order)
-  const maxEnd = new Array<number>(entries.length)
-  let max = -Infinity
-  for (let i = 0; i < entries.length; i++) {
-    if (entries[i].end > max) max = entries[i].end
-    maxEnd[i] = max
-  }
-  provenanceSpanCache = { meshes, spans: entries, maxEnd }
-  return provenanceSpanCache
-}
-
-function sourceIdAtEditorCaret(): number | null {
-  const editor = editorRef.value
-  if (!editor || !sourceMatchesEditor.value) return null
-  const caret = editor.selectionStart === editor.selectionEnd
-    ? editor.selectionStart
-    : editor.selectionDirection === 'backward'
-      ? editor.selectionStart
-      : Math.max(editor.selectionStart, editor.selectionEnd - 1)
-  const { spans, maxEnd } = provenanceSpanIndex(sceneMeshes.value)
-  // Rightmost span with start <= caret; only that prefix can contain the caret.
-  let lo = 0, hi = spans.length
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1
-    if (spans[mid].start <= caret) lo = mid + 1
-    else hi = mid
-  }
-  let sourceId: number | null = null
-  let smallestSpan = Infinity
-  let deepestStart = -1
-  for (let j = lo - 1; j >= 0; j--) {
-    // No span at or before j reaches the caret, or none can beat the current best:
-    // a containing span starting at s is longer than caret - s, which only grows leftward.
-    if (maxEnd[j] <= caret || caret - spans[j].start >= smallestSpan) break
-    const span = spans[j]
-    if (span.end <= caret) continue
-    const length = span.end - span.start
-    if (length < smallestSpan || (length === smallestSpan && span.start > deepestStart)) {
-      sourceId = span.id
-      smallestSpan = length
-      deepestStart = span.start
-    }
-  }
-  return sourceId
-}
-
-function syncSourceHighlightFromEditor() {
-  const input = editorRef.value
-  if(input) {
-    const start=input.selectionStart, end=input.selectionEnd
-    const selected=input.value.slice(start,end)
-    selectedEditorName.value = /^\$?[A-Za-z_][\w$]*$/.test(selected)
-      && !/[\w$]/.test(input.value[start-1] ?? '') && !/[\w$]/.test(input.value[end] ?? '') ? selected : ''
-  }
-  renderer?.setSourceHighlight(sourceIdAtEditorCaret())
-}
-
-function highlightSource(sourceId: number | null) {
-  if (sourceId === null) syncSourceHighlightFromEditor()
-  else renderer?.setSourceHighlight(sourceMatchesEditor.value ? sourceId : null)
-}
+const {
+  syncSourceHighlightFromEditor,
+  highlightSource,
+  revealSource,
+} = useSourceProvenanceCaret({
+  code,
+  editorRef,
+  selectedEditorName,
+  sceneMeshes,
+  sourceMatchesEditor,
+  getRenderer: () => renderer,
+  showNotice,
+  translate: t,
+})
 
 function handleEditorInput() {
   editorDiagnostic.value = null
@@ -2151,72 +1708,6 @@ async function copyMeasurement(value: PanelMeasurement) {
     await navigator.clipboard.writeText(`A ${a.join(', ')}\nB ${b.join(', ')}\nDistance ${distance}`)
     showNotice(t('copied'))
   } catch { /* Clipboard may be unavailable outside a secure context. */ }
-}
-
-function applySection() {
-  const base: [number, number, number] = sectionAxis.value === 'x' ? [1, 0, 0]
-    : sectionAxis.value === 'y' ? [0, 1, 0]
-      : [0, 0, 1]
-  const sign = sectionFlip.value ? -1 : 1
-  renderer?.setSection(
-    sectionEnabled.value,
-    [base[0] * sign, base[1] * sign, base[2] * sign],
-    sectionOffset.value * sign,
-  )
-}
-
-function syncSectionRange() {
-  const { min, max } = sectionRange.value
-  if (sectionOffset.value < min || sectionOffset.value > max) {
-    sceneController.setSection({ offset: (min + max) / 2 })
-  }
-  applySection()
-}
-
-function setSectionEnabled(enabled: boolean) {
-  if (enabled && !sectionAvailable.value) return
-  const patch = enabled && !sceneState.value.section.initialized
-    ? { enabled, offset: (sectionRange.value.min + sectionRange.value.max) / 2, initialized: true }
-    : { enabled }
-  sceneController.setSection(patch)
-  applySection()
-}
-
-function setSectionAxis(axis: SectionAxis) {
-  sceneController.setSection({
-    axis,
-    offset: (sectionRange.value.min + sectionRange.value.max) / 2,
-    initialized: true,
-  })
-  applySection()
-}
-
-function setSectionOffset(offset: number) {
-  if (!Number.isFinite(offset)) return
-  sceneController.setSection({
-    offset: clamp(offset, sectionRange.value.min, sectionRange.value.max),
-    initialized: true,
-  })
-  applySection()
-}
-
-function setSectionFlip(flip: boolean) {
-  sceneController.setSection({ flip })
-  applySection()
-}
-
-function resetSection() {
-  sceneController.setSection({
-    offset: (sectionRange.value.min + sectionRange.value.max) / 2,
-    flip: false,
-    initialized: true,
-  })
-  applySection()
-}
-
-function closeScanPanel() {
-  scanPanelOpen.value = false
-  void nextTick(() => scanToggleRef.value?.focus())
 }
 
 function executeCommand(id: string) {

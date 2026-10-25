@@ -495,6 +495,33 @@ impl Cage {
             face_ids: ids,
         })
     }
+
+    /// Loop / Warren $C^2$ triangle subdivision scheme returning the refined `Cage`.
+    /// Automatically triangulates non-triangular control faces (e.g. quads) before refinement,
+    /// splits each triangle into 4 per level, computes interior edge odd vertices via
+    /// $\frac{3}{8}(v_0 + v_1) + \frac{1}{8}(v_{\text{opp0}} + v_{\text{opp1}})$ (or $\frac{1}{2}(v_0 + v_1)$ on boundaries),
+    /// and updates even vertices with Loop's valence weight $\beta$.
+    pub fn loop_subdivide(&self, levels: usize) -> Result<Cage> {
+        if levels > 5 {
+            return Err(error("Subdivision levels must be 0..5"));
+        }
+        self.validate()?;
+        let base_cage = if self.faces.iter().all(|f| f.len() == 3) {
+            self.clone()
+        } else {
+            let mut tri_faces = Vec::with_capacity(self.faces.len() * 2);
+            for f in &self.faces {
+                for i in 1..f.len() - 1 {
+                    tri_faces.push(vec![f[0], f[i], f[i + 1]]);
+                }
+            }
+            Cage {
+                vertices: self.vertices.clone(),
+                faces: tri_faces,
+            }
+        };
+        Ok(base_cage.subdivide_loop(levels)?.cage)
+    }
 }
 impl Refined {
     /// Triangulate faces with ear-clipping fallback for concave polygons.
@@ -772,6 +799,16 @@ mod tests {
         assert_eq!(refined.cage.faces.len(), 64);
         assert!(refined.cage.faces.iter().all(|f| f.len() == 3));
         assert!(refined.triangulate().is_ok());
+
+        let loop_cage = tetra.loop_subdivide(2).unwrap();
+        assert_eq!(loop_cage.faces.len(), 64);
+        let quad_cube = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let loop_from_quads = quad_cube.loop_subdivide(1).unwrap();
+        assert_eq!(loop_from_quads.faces.len(), 48); // 6 quads -> 12 tris -> 48 tris
     }
 }
 

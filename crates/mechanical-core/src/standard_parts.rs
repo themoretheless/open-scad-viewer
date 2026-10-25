@@ -1030,3 +1030,49 @@ pub struct LeadScrewSpec {
     /// Raising torque required per Newton of axial load ($T / F$ in $\text{N}\cdot\text{m}/\text{N}$).
     pub raising_torque_per_n_nm: f64,
 }
+
+/// DIN EN 13906-1 cylindrical helical compression spring specification and stress report.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CompressionSpringSpec {
+    pub wire_diameter_mm: f64,
+    pub mean_coil_diameter_mm: f64,
+    pub active_coils: f64,
+    pub spring_index: f64,
+    pub wahl_correction_factor: f64,
+    pub spring_rate_n_per_mm: f64,
+    pub deflection_mm: f64,
+    pub corrected_shear_stress_mpa: f64,
+    pub solid_length_mm: f64,
+}
+
+/// Performs a DIN EN 13906-1 cylindrical helical compression spring analysis, computing
+/// spring index $C = D / d$, Wahl curvature & direct-shear factor $K_W = \frac{4C - 1}{4C - 4} + \frac{0.615}{C}$,
+/// axial spring rate $k = \frac{G d^4}{8 D^3 n_a}$ (N/mm), axial deflection $s = F / k$ (mm),
+/// and corrected maximum torsional shear stress $\tau_{\max} = K_W \frac{8 F D}{\pi d^3}$ (MPa).
+pub fn helical_compression_spring_analysis(
+    wire_dia_mm: f64,
+    mean_coil_dia_mm: f64,
+    active_coils: f64,
+    shear_modulus_mpa: f64,
+    axial_load_n: f64,
+) -> Result<CompressionSpringSpec> {
+    let report = helical_spring_analysis(&HelicalSpringOptions {
+        wire_diameter_mm: wire_dia_mm,
+        mean_coil_diameter_mm: mean_coil_dia_mm,
+        active_coils,
+        shear_modulus_mpa,
+        axial_load_n,
+    })?;
+    Ok(CompressionSpringSpec {
+        wire_diameter_mm: wire_dia_mm,
+        mean_coil_diameter_mm: mean_coil_dia_mm,
+        active_coils,
+        spring_index: report.spring_index,
+        wahl_correction_factor: report.wahl_factor,
+        spring_rate_n_per_mm: report.spring_rate_n_per_mm,
+        deflection_mm: report.deflection_mm,
+        corrected_shear_stress_mpa: report.max_shear_stress_mpa,
+        solid_length_mm: report.solid_length_mm,
+    })
+}
+

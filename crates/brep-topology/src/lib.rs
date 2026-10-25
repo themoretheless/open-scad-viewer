@@ -324,11 +324,17 @@ impl<C, S, P> Model<C, S, P> {
     }
 }
 /// Topological invariants (Euler-Poincaré characteristic, genus) and fast adjacency queries.
+/// Vertex index within a `Model`.
+pub type VertexId = usize;
 /// Edge index within a `Model`.
 pub type EdgeId = usize;
+/// Face index within a `Model`.
+pub type FaceId = usize;
+/// Convenience type alias for a B-rep topological model.
+pub type Topology<C, S, P, V = [f64; 3]> = Model<C, S, P, V>;
 
 pub mod explorer {
-    use super::{EdgeId, Model};
+    use super::{EdgeId, FaceId, Model, VertexId};
     use rustc_hash::FxHashSet;
 
     /// Euler-Poincaré characteristic $\chi = V - E + F - H$ of the entire B-rep model,
@@ -565,6 +571,31 @@ pub mod explorer {
         components
     }
 
+    /// Sorted indices of isolated vertices (vertices not referenced by any edge in `model`).
+    pub fn isolated_vertices<C, S, P, V>(model: &Model<C, S, P, V>) -> Vec<VertexId> {
+        let mut used = vec![false; model.vertices.len()];
+        for edge in &model.edges {
+            for &v in &edge.vertices {
+                if let Some(slot) = used.get_mut(v) {
+                    *slot = true;
+                }
+            }
+        }
+        used.into_iter()
+            .enumerate()
+            .filter_map(|(vi, is_used)| (!is_used).then_some(vi))
+            .collect()
+    }
+
+    /// Total loop count (`1 + holes.len()`) for each face `(FaceId, loop_count)` in `model`.
+    pub fn face_loop_counts<C, S, P, V>(model: &Model<C, S, P, V>) -> Vec<(FaceId, usize)> {
+        model
+            .faces
+            .iter()
+            .enumerate()
+            .map(|(fi, face)| (fi, 1 + face.holes.len()))
+            .collect()
+    }
 }
 
 impl<C, S, P, V> Model<C, S, P, V> {
@@ -616,6 +647,16 @@ impl<C, S, P, V> Model<C, S, P, V> {
     /// Number of connected components of faces across non-degenerate shared edges.
     pub fn connected_face_components(&self) -> usize {
         explorer::connected_face_components(self)
+    }
+
+    /// Sorted indices of isolated vertices (vertices not referenced by any edge).
+    pub fn isolated_vertices(&self) -> Vec<VertexId> {
+        explorer::isolated_vertices(self)
+    }
+
+    /// Total loop count (`1 + holes.len()`) for each face `(FaceId, loop_count)`.
+    pub fn face_loop_counts(&self) -> Vec<(FaceId, usize)> {
+        explorer::face_loop_counts(self)
     }
 
     /// Canonical immutable predicate context derived from this model's legacy

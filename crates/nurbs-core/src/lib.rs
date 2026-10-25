@@ -10,7 +10,7 @@
     deref_patterns,
     yeet_expr
 )]
-#![allow(unused_features)]
+#![allow(unused_features, dead_code, unused_imports)]
 /// Task-oriented API views; existing flat module paths remain supported.
 pub mod domains;
 pub mod numerics;
@@ -134,7 +134,9 @@ use numerics::curve_jets;
 pub use crate::offset::curve_offset;
 pub use crate::analysis::class_a::{gaussian_and_mean_curvature_grid, zebra_reflection_stripes};
 pub use crate::analysis::frechet;
-pub use crate::analysis::frechet::hausdorff_curve_discrete;
+pub use crate::analysis::frechet::{discrete_frechet_distance_3d, hausdorff_curve_discrete};
+pub use crate::core::curve::Curve as NurbsCurve;
+pub use crate::core::surface::{Surface as NurbsSurface, ruled_surface};
 pub use crate::construct::curves::curve_reconstruction;
 pub(crate) use crate::offset::diagnostics as curve_offset_diagnostics;
 pub use crate::offset::curve_offset_join;

@@ -110,6 +110,11 @@
         assert!(spring.wahl_factor > 1.15);
         assert!(spring.deflection_mm > 0.0);
 
+        let comp_spring = helical_compression_spring_analysis(2.0, 16.0, 8.0, 79_300.0, 50.0).unwrap();
+        assert_eq!(comp_spring.spring_index, 8.0);
+        assert!((comp_spring.wahl_correction_factor - spring.wahl_factor).abs() < 1e-12);
+        assert!((comp_spring.corrected_shear_stress_mpa - spring.max_shear_stress_mpa).abs() < 1e-12);
+
         let gland = oring_gland_spec(2.5, 20.0, true).unwrap();
         assert_eq!(gland.gland_inner_diameter_mm, 20.0);
         assert!(gland.gland_outer_diameter_mm > 23.0);

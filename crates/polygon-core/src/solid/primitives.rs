@@ -249,6 +249,56 @@ pub fn cone_frustum(
     }
     cylinder(height, bottom_radius, top_radius, n, false).unwrap_or_else(|_| empty())
 }
+
+/// Closed watertight UV ellipsoid primitive centered at the origin with positive semi-axes
+/// `(rx, ry, rz)`, `lat_segments` latitude bands, and `lon_segments` longitude slices.
+pub fn ellipsoid(
+    rx: f64,
+    ry: f64,
+    rz: f64,
+    lat_segments: usize,
+    lon_segments: usize,
+) -> Mesh {
+    if !rx.is_finite()
+        || !ry.is_finite()
+        || !rz.is_finite()
+        || rx <= 0.0
+        || ry <= 0.0
+        || rz <= 0.0
+    {
+        return empty();
+    }
+    let rows = lat_segments.clamp(2, 256);
+    let cols = lon_segments.clamp(3, 512);
+    let mut m = Mesh {
+        positions: Vec::with_capacity((rows + 1) * cols * 3),
+        indices: Vec::with_capacity(rows * cols * 6),
+        uv: None,
+    };
+    for j in 0..=rows {
+        let theta = std::f64::consts::PI * (j as f64 / rows as f64);
+        let (st, ct) = if j == 0 {
+            (0.0, 1.0)
+        } else if j == rows {
+            (0.0, -1.0)
+        } else {
+            theta.sin_cos()
+        };
+        for i in 0..cols {
+            let phi = std::f64::consts::TAU * (i as f64 / cols as f64);
+            let (sp, cp) = phi.sin_cos();
+            m.positions.extend([rx * st * cp, ry * st * sp, rz * ct]);
+        }
+    }
+    for j in 0..rows {
+        for i in 0..cols {
+            let a = j * cols + i;
+            let b = j * cols + (i + 1) % cols;
+            m.indices.extend([a, a + cols, b + cols, a, b + cols, b]);
+        }
+    }
+    clean(m).unwrap_or_else(|_| empty())
+}
 pub fn clean(mut m: Mesh) -> Result<Mesh> {
     m = crate::solid::proximity::weld_exact(&m)?;
     let mut indices = Vec::new();
@@ -759,6 +809,7 @@ mod tests {
             capsule(2., 6., 24),
             cone_frustum(3., 1.5, 5., 24),
             cone_frustum(3., 0., 5., 24),
+            ellipsoid(4., 2.5, 1.5, 16, 24),
         ] {
             let r = m.inspect().unwrap();
             assert!(r.closed, "{r:?}");

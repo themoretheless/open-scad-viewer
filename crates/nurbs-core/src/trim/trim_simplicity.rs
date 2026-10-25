@@ -441,8 +441,15 @@ pub fn inspect(
             let adjacent = b == a + 1 || (a == 0 && b == n - 1);
             let proven = if n == 2 {
                 let join = curves[b].control_points[0].as_slice();
-                (bezier(&curves[a]) && bezier(&curves[b]) && lens_separated(&curves[a], &curves[b]))
-                    || adjacent_supported(&curves[a], &curves[b], join, true, &mut out.cells, max_cells)
+                adjacent_supported(&curves[a], &curves[b], join, true, &mut out.cells, max_cells)
+                    || (out.cells < max_cells
+                        && bezier(&curves[a])
+                        && bezier(&curves[b])
+                        && lens_separated(&curves[a], &curves[b])
+                        && {
+                            out.cells += 1;
+                            true
+                        })
             } else if adjacent {
                 let join = if b == a + 1 {
                     curves[b].control_points[0].as_slice()

@@ -555,6 +555,30 @@ mod arc_and_zhop_tests {
         // and restore E=1.0 at the travel destination
         assert!(wiped.len() > path_moves.len());
         assert!(wiped.iter().any(|m| (m[0] - 10.0).abs() < 1e-6 && (m[1] - 7.0).abs() < 1e-6 && (m[3] - 0.2).abs() < 1e-6));
+
+        // Direct circular arc fit detection & collinear extrusion move compression
+        let mut ccw_arc = Vec::new();
+        for k in 0..=8 {
+            let theta = std::f64::consts::FRAC_PI_2 * (k as f64 / 8.0);
+            ccw_arc.push([5.0 + 12.0 * theta.cos(), -3.0 + 12.0 * theta.sin()]);
+        }
+        let (center, radius, is_cw) = detect_circular_arc_fit(&ccw_arc, 0.02).unwrap();
+        assert!(!is_cw);
+        assert!((radius - 12.0).abs() < 1e-3);
+        assert!((center[0] - 5.0).abs() < 1e-3 && (center[1] + 3.0).abs() < 1e-3);
+
+        let collinear_moves = vec![
+            [0.0, 0.0, 0.2, 0.0],
+            [2.0, 0.0, 0.2, 0.1],
+            [5.0, 0.001, 0.2, 0.25],
+            [10.0, 0.0, 0.2, 0.5],
+            [10.0, 10.0, 0.2, 1.0],
+        ];
+        let compressed = compress_collinear_extrusion_moves(&collinear_moves, 0.01);
+        assert_eq!(compressed.len(), 3);
+        assert_eq!(compressed[0], [0.0, 0.0, 0.2, 0.0]);
+        assert_eq!(compressed[1], [10.0, 0.0, 0.2, 0.5]);
+        assert_eq!(compressed[2], [10.0, 10.0, 0.2, 1.0]);
     }
 }
 
@@ -1038,6 +1062,124 @@ pub fn inject_wiper_retraction(
     }
     out
 }
+
+/// Fits a circle `(center, radius, is_clockwise)` to a sequence of planar polyline points
+/// if all vertices lie within `tolerance_mm` of the circumcircle of the start, middle, and end points
+/// and maintain a consistent turning orientation (`G2` clockwise when `is_clockwise == true`, `G3` CCW otherwise).
+pub fn detect_circular_arc_fit(
+    points: &[[f64; 2]],
+    tolerance_mm: f64,
+) -> Option<([f64; 2], f64, bool)> {
+    if points.len() < 3 || !tolerance_mm.is_finite() || tolerance_mm < 0.0 {
+        return None;
+    }
+    let p_start = points[0];
+    let p_mid = points[points.len() / 2];
+    let p_end = *points.last()?;
+    if (p_end[0] - p_start[0]).hypot(p_end[1] - p_start[1]) < 1e-6 {
+        return None;
+    }
+    let (center, radius, is_clockwise) = circumcircle(p_start, p_mid, p_end)?;
+    if radius > 10_000.0 {
+        return None;
+    }
+    for (idx, pt) in points.iter().enumerate() {
+        let dist = (pt[0] - center[0]).hypot(pt[1] - center[1]);
+        if (dist - radius).abs() > tolerance_mm {
+            return None;
+        }
+        if idx > 0 && idx + 1 < points.len() {
+            let prev = points[idx - 1];
+            let next = points[idx + 1];
+            let c_step =
+                (pt[0] - prev[0]) * (next[1] - pt[1]) - (pt[1] - prev[1]) * (next[0] - pt[0]);
+            if c_step.abs() > 1e-12 && (c_step < 0.0) != is_clockwise {
+                return None;
+            }
+        }
+    }
+    Some((center, radius, is_clockwise))
+}
+
+/// Compresses consecutive collinear extrusion moves `[x, y, z, e]` (where `e` is cumulative extrusion)
+/// whose intermediate vertices lie within perpendicular spatial tolerance `tol_mm` of the chord
+/// and share a consistent extrusion rate $dE / ds$.
+pub fn compress_collinear_extrusion_moves(moves: &[[f64; 4]], tol_mm: f64) -> Vec<[f64; 4]> {
+    if moves.len() <= 2 || !tol_mm.is_finite() || tol_mm < 0.0 {
+        return moves.to_vec();
+    }
+    let mut out = Vec::with_capacity(moves.len());
+    let mut anchor_idx = 0usize;
+    out.push(moves[0]);
+
+    let mut i = 1usize;
+    while i < moves.len() {
+        if i + 1 >= moves.len() {
+            out.push(moves[i]);
+            break;
+        }
+        let a = moves[anchor_idx];
+        let c = moves[i + 1];
+        let dx = c[0] - a[0];
+        let dy = c[1] - a[1];
+        let dz = c[2] - a[2];
+        let chord_len = (dx * dx + dy * dy + dz * dz).sqrt();
+        let total_de = c[3] - a[3];
+
+        let mut can_merge = chord_len > 1e-7 && total_de > 1e-7;
+        if can_merge {
+            let inv_chord = 1.0 / chord_len;
+            let ux = dx * inv_chord;
+            let uy = dy * inv_chord;
+            let uz = dz * inv_chord;
+            let rate = total_de * inv_chord;
+
+            for k in (anchor_idx + 1)..=i {
+                let p = moves[k];
+                let prev = moves[k - 1];
+                let seg_dx = p[0] - prev[0];
+                let seg_dy = p[1] - prev[1];
+                let seg_dz = p[2] - prev[2];
+                let seg_len = (seg_dx * seg_dx + seg_dy * seg_dy + seg_dz * seg_dz).sqrt();
+                let seg_de = p[3] - prev[3];
+                if seg_len <= 1e-7 || seg_de <= 1e-7 {
+                    can_merge = false;
+                    break;
+                }
+                let seg_rate = seg_de / seg_len;
+                if (seg_rate - rate).abs() > 0.05 * rate.abs().max(1e-6) {
+                    can_merge = false;
+                    break;
+                }
+                let apx = p[0] - a[0];
+                let apy = p[1] - a[1];
+                let apz = p[2] - a[2];
+                let proj = apx * ux + apy * uy + apz * uz;
+                if proj <= 0.0 || proj >= chord_len {
+                    can_merge = false;
+                    break;
+                }
+                let perp_x = apx - proj * ux;
+                let perp_y = apy - proj * uy;
+                let perp_z = apz - proj * uz;
+                let perp_dist = (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z).sqrt();
+                if perp_dist > tol_mm {
+                    can_merge = false;
+                    break;
+                }
+            }
+        }
+        if can_merge {
+            i += 1;
+        } else {
+            out.push(moves[i]);
+            anchor_idx = i;
+            i += 1;
+        }
+    }
+    out
+}
+
 
 
 

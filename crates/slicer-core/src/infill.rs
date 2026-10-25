@@ -555,3 +555,65 @@ fn generate_archimedean_infill(
     Ok(paths)
 }
 
+/// Generates wavy phase-shifted $z$-dependent sinusoidal gyroid infill line segments
+/// `([x0, y0], [x1, y1])` across the axis-aligned bounding box `bounds = ([min_x, min_y], [max_x, max_y])`
+/// at height `z_mm` with row spacing `spacing_mm`.
+pub fn generate_gyroid_infill_lines(
+    bounds: ([f64; 2], [f64; 2]),
+    z_mm: f64,
+    spacing_mm: f64,
+) -> Vec<([f64; 2], [f64; 2])> {
+    let ([min_x, min_y], [max_x, max_y]) = bounds;
+    if !min_x.is_finite()
+        || !min_y.is_finite()
+        || !max_x.is_finite()
+        || !max_y.is_finite()
+        || !z_mm.is_finite()
+        || !spacing_mm.is_finite()
+        || spacing_mm <= 1e-4
+        || max_x <= min_x
+        || max_y <= min_y
+    {
+        return Vec::new();
+    }
+    let width = max_x - min_x;
+    let height = max_y - min_y;
+    let rows = ((height / spacing_mm).floor() as usize).clamp(1, 2048);
+    let step_x = (spacing_mm * 0.25).max(0.2);
+    let steps = ((width / step_x).ceil() as usize).clamp(2, 1024);
+    let period = (spacing_mm * 2.0).max(0.5);
+    let k = std::f64::consts::TAU / period;
+    let z_phase = z_mm * k;
+    let amp = spacing_mm * 0.35 * z_phase.cos();
+    let x_shift = 0.25 * period * z_phase.sin();
+    let mut segments = Vec::with_capacity(rows * steps);
+    for row in 0..rows {
+        let base_y = min_y + (row as f64 + 0.5) * spacing_mm;
+        if base_y > max_y {
+            break;
+        }
+        let row_phase = if row % 2 == 0 {
+            0.0
+        } else {
+            std::f64::consts::PI
+        };
+        let mut prev: Option<[f64; 2]> = None;
+        for s in 0..=steps {
+            let t = s as f64 / steps as f64;
+            let x = if row % 2 == 0 {
+                min_x + t * width
+            } else {
+                max_x - t * width
+            };
+            let y = (base_y + amp * ((x + x_shift) * k + row_phase).sin()).clamp(min_y, max_y);
+            let pt = [x, y];
+            if let Some(p0) = prev {
+                segments.push((p0, pt));
+            }
+            prev = Some(pt);
+        }
+    }
+    segments
+}
+
+

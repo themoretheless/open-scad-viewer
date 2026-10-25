@@ -29,7 +29,8 @@ pub mod uniform;
 pub mod variants;
 
 pub use postprocess::{
-    CullingStats, bilateral_depth_filter, bloom_bright_pass_and_blur,
-    compute_normal_map_from_depth, compute_ssao_ao, evaluate_culling_stats, fxaa_luma_antialias,
-    sobel_edge_outline, tone_map_aces_filmic,
+    CullingStats, apply_chromatic_aberration_and_vignette, bilateral_depth_filter,
+    bloom_bright_pass_and_blur, build_hiz_mip_level_max, compute_normal_map_from_depth,
+    compute_ssao_ao, evaluate_culling_stats, fxaa_luma_antialias, sobel_edge_outline,
+    tone_map_aces_filmic,
 };

@@ -331,3 +331,87 @@ export async function tessellateNurbsSurfaceOnGpu(
     subdivisionsV,
   )
 }
+
+export type NurbsSurface3D = NurbsSurface
+
+/**
+ * Compute an axis-aligned 3D bounding box `{ min: [x, y, z], max: [x, y, z] }` for a NURBS surface
+ * by sampling a `(gridSteps + 1) x (gridSteps + 1)` parameter lattice and refining extreme interior
+ * candidates along `(u, v)`.
+ */
+export function computeNurbsSurfaceBoundingBox(
+  surface: NurbsSurface3D,
+  gridSteps = 16,
+): { min: [number, number, number]; max: [number, number, number] } {
+  const steps = Math.max(4, Math.floor(gridSteps))
+  const evaluator = createNurbsSurfaceEvaluator(surface)
+  try {
+    const first = evaluator(surface.knotsU[surface.degreeU] ?? 0, surface.knotsV[surface.degreeV] ?? 0)
+    const [uMin, uMax] = first.domainU
+    const [vMin, vMax] = first.domainV
+    const spanU = Math.max(0, uMax - uMin)
+    const spanV = Math.max(0, vMax - vMin)
+
+    const min: Point3 = [first.point[0], first.point[1], first.point[2]]
+    const max: Point3 = [first.point[0], first.point[1], first.point[2]]
+
+    for (let i = 0; i <= steps; i++) {
+      const u = uMin + (i / steps) * spanU
+      for (let j = 0; j <= steps; j++) {
+        const v = vMin + (j / steps) * spanV
+        const pt = evaluator(u, v).point
+        for (let axis = 0; axis < 3; axis++) {
+          if (pt[axis] < min[axis]) min[axis] = pt[axis]
+          if (pt[axis] > max[axis]) max[axis] = pt[axis]
+        }
+      }
+    }
+
+    return { min, max }
+  } finally {
+    evaluator.dispose()
+  }
+}
+
+/**
+ * Extract `sampleCount` 3D points along an isoparametric curve on `surface`:
+ * - When `direction === 'u'`, `u` is held constant at `fixedParam` and `v` is sampled uniformly across `domainV`.
+ * - When `direction === 'v'`, `v` is held constant at `fixedParam` and `u` is sampled uniformly across `domainU`.
+ */
+export function extractNurbsSurfaceIsocurvePoints(
+  surface: NurbsSurface3D,
+  direction: 'u' | 'v',
+  fixedParam: number,
+  sampleCount = 32,
+): [number, number, number][] {
+  const count = Math.max(2, Math.floor(sampleCount))
+  const evaluator = createNurbsSurfaceEvaluator(surface)
+  try {
+    const first = evaluator(surface.knotsU[surface.degreeU] ?? 0, surface.knotsV[surface.degreeV] ?? 0)
+    const [uMin, uMax] = first.domainU
+    const [vMin, vMax] = first.domainV
+    const points: [number, number, number][] = []
+
+    if (direction === 'u') {
+      const uClamped = Math.min(uMax, Math.max(uMin, fixedParam))
+      const spanV = Math.max(0, vMax - vMin)
+      for (let i = 0; i < count; i++) {
+        const v = vMin + (i / (count - 1)) * spanV
+        const pt = evaluator(uClamped, v).point
+        points.push([pt[0], pt[1], pt[2]])
+      }
+    } else {
+      const vClamped = Math.min(vMax, Math.max(vMin, fixedParam))
+      const spanU = Math.max(0, uMax - uMin)
+      for (let i = 0; i < count; i++) {
+        const u = uMin + (i / (count - 1)) * spanU
+        const pt = evaluator(u, vClamped).point
+        points.push([pt[0], pt[1], pt[2]])
+      }
+    }
+
+    return points
+  } finally {
+    evaluator.dispose()
+  }
+}

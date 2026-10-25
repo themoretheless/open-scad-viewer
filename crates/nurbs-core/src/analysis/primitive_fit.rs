@@ -75,6 +75,25 @@ pub struct TorusFit {
     pub report: FitReport,
 }
 
+/// Результат fit'а плоскости `n · p + offset = 0` (`|n| = 1`).
+#[derive(Clone, Copy, Debug)]
+pub struct PlaneFit {
+    pub normal: [f64; 3],
+    pub offset: f64,
+    pub report: FitReport,
+}
+
+impl FitReport {
+    /// Доля точек с абсолютной невязкой `|r| <= threshold`.
+    pub fn inlier_ratio(&self, residuals: &[f64], threshold: f64) -> f64 {
+        if residuals.is_empty() || !threshold.is_finite() || threshold < 0.0 {
+            return 0.0;
+        }
+        let inliers = residuals.iter().filter(|&&r| r.abs() <= threshold).count();
+        inliers as f64 / residuals.len() as f64
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Малая векторная арифметика (f64, [f64; 3]).
 // ---------------------------------------------------------------------------
@@ -569,6 +588,25 @@ pub fn fit_torus(points: &[[f64; 3]]) -> Result<TorusFit> {
         axis,
         major_radius: x[6],
         minor_radius: x[7],
+        report,
+    })
+}
+
+/// Fit плоскости `n · p + offset = 0` методом наименьших квадратов (через главные оси ковариации).
+pub fn fit_plane(points: &[[f64; 3]]) -> Result<PlaneFit> {
+    validate_points(points, 3)?;
+    let c0 = centroid(points);
+    let axes = point_principal_axes(points, Acceleration::Cpu)
+        .map_err(|e| numeric_err(format!("PCA failed: {e}")))?;
+    let normal = unit(axes.axes[2]);
+    let offset = -dot(normal, c0);
+    require_finite_point(&normal, "plane normal")?;
+    require_finite_f64(offset, "plane offset")?;
+    let residuals: Vec<f64> = points.iter().map(|p| dot(*p, normal) + offset).collect();
+    let report = report_from_residuals(&residuals, 0, true)?;
+    Ok(PlaneFit {
+        normal,
+        offset,
         report,
     })
 }

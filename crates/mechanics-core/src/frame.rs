@@ -302,7 +302,6 @@ pub use assembly::{diagnose};
 
 
 mod spectral;
-use spectral::*;
 pub use spectral::{FrameBucklingMode, FrameBucklingResponse, buckling, FrameModalMode, FrameModalResponse, modal};
 
 
@@ -310,7 +309,6 @@ pub use spectral::{FrameBucklingMode, FrameBucklingResponse, buckling, FrameModa
 pub const MAX_PLASTIC_HINGES: usize = 256;
 
 mod plasticity;
-use plasticity::*;
 pub use plasticity::{PlasticHinge, CollapseStatus, FrameCollapseResponse, collapse};
 
 
@@ -318,7 +316,6 @@ pub use plasticity::{PlasticHinge, CollapseStatus, FrameCollapseResponse, collap
 pub const MAX_INFLUENCE_POSITIONS: usize = 1024;
 
 mod influence;
-use influence::*;
 pub use influence::{Resultant, InfluenceTarget, InfluenceResponse, influence};
 
 

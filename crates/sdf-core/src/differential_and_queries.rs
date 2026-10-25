@@ -773,3 +773,29 @@ pub fn polygonize_surface_nets(field: &Field, grid: &Grid) -> Result<Triangles> 
 
     finish_triangles(Triangles { positions, indices })
 }
+
+/// Evaluates a Triply Periodic Minimal Surface (TPMS) Gyroid sheet implicit field at point `p`
+/// with spatial period `period_mm` ($L$) and wall thickness `thickness_mm` ($t$):
+/// $$f(\mathbf{p}) = \frac{|\sin(kx)\cos(ky) + \sin(ky)\cos(kz) + \sin(kz)\cos(kx)|}{k} - \frac{t}{2}, \quad k = \frac{2\pi}{L}$$
+#[inline]
+pub fn evaluate_tpms_gyroid(p: Point, period_mm: f64, thickness_mm: f64) -> f64 {
+    let period = period_mm.abs().max(1e-6);
+    let k = std::f64::consts::TAU / period;
+    let (sx, cx) = (p[0] * k).sin_cos();
+    let (sy, cy) = (p[1] * k).sin_cos();
+    let (sz, cz) = (p[2] * k).sin_cos();
+    let iso = sx * cy + sy * cz + sz * cx;
+    iso.abs() / k - 0.5 * thickness_mm.max(0.0)
+}
+
+/// Evaluates a Triply Periodic Minimal Surface (TPMS) Schwarz-P sheet implicit field at point `p`
+/// with spatial period `period_mm` ($L$) and wall thickness `thickness_mm` ($t$):
+/// $$f(\mathbf{p}) = \frac{|\cos(kx) + \cos(ky) + \cos(kz)|}{k} - \frac{t}{2}, \quad k = \frac{2\pi}{L}$$
+#[inline]
+pub fn evaluate_tpms_schwarz_p(p: Point, period_mm: f64, thickness_mm: f64) -> f64 {
+    let period = period_mm.abs().max(1e-6);
+    let k = std::f64::consts::TAU / period;
+    let iso = (p[0] * k).cos() + (p[1] * k).cos() + (p[2] * k).cos();
+    iso.abs() / k - 0.5 * thickness_mm.max(0.0)
+}
+

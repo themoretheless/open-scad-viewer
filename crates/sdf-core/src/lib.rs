@@ -33,8 +33,10 @@ mod differential_and_queries;
 mod field_eval;
 mod wgsl;
 
-pub use differential_and_queries::polygonize_surface_nets;
-pub use wgsl::SDF_WGSL;
+pub use differential_and_queries::{
+    evaluate_tpms_gyroid, evaluate_tpms_schwarz_p, polygonize_surface_nets,
+};
+pub use wgsl::{SDF_WGSL, generate_wgsl_tetrahedral_normal_and_raymarch_fn};
 #[cfg(test)]
 use field_eval::{point, triangles_closed, triangles_ok};
 use field_eval::{finish_triangles, positive};
@@ -1393,6 +1395,18 @@ mod tests {
         let proj = sph2.closest_surface_point([5.0, 0.0, 0.0], 16, 1e-6);
         assert!((proj[0] - 2.0).abs() < 1e-5, "expected x=2.0, got {:?}", proj);
         assert!(proj[1].abs() < 1e-5 && proj[2].abs() < 1e-5);
+
+        // WGSL tetrahedral normal and sphere-tracing raymarcher helper generator
+        let wgsl_src = generate_wgsl_tetrahedral_normal_and_raymarch_fn(128, 1e-4, 250.0);
+        assert!(wgsl_src.contains("fn sdf_normal_tetrahedral(p: vec3<f32>, eps: f32) -> vec3<f32>"));
+        assert!(wgsl_src.contains("fn sdf_raymarch(ray_origin: vec3<f32>, ray_dir: vec3<f32>) -> vec4<f32>"));
+        assert!(wgsl_src.contains("eval_sdf("));
+
+        // Direct TPMS Gyroid & Schwarz-P evaluators
+        let g0 = evaluate_tpms_gyroid([0.0, 0.0, 0.0], 10.0, 1.2);
+        assert!((g0 + 0.6).abs() < 1e-12);
+        let sp_center = evaluate_tpms_schwarz_p([2.5, 2.5, 2.5], 10.0, 1.0);
+        assert!((sp_center + 0.5).abs() < 1e-12);
     }
 }
 

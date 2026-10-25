@@ -563,6 +563,19 @@ export class WebGPURenderer {
     return this.csgPreviewTree
   }
 
+  previewCsgSource(source: string) {
+    if (!source.trim()) {
+      this.setCsgPreviewTree(null)
+      return
+    }
+    void import('./gpuCsgParse').then(({ parseOpenScadCsgTree }) => {
+      const tree = parseOpenScadCsgTree(source)
+      this.setCsgPreviewTree(tree && tree.terms.length > 0 ? tree : null)
+    }).catch(() => {
+      this.setCsgPreviewTree(null)
+    })
+  }
+
   private ensureCsgDepthStencil(dev: GPUDevice, width: number, height: number) {
     if (!this.csgDepthStencil || this.csgDepthStencil.width !== width || this.csgDepthStencil.height !== height) {
       this.csgDepthStencil?.destroy()

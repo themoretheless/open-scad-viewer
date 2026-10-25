@@ -205,6 +205,37 @@ export interface MeshManifoldDiagnostics {
   eulerCharacteristic: number
 }
 
+const SCRATCH_WORLD_PTS = new Float64Array(9)
+
+function writeWorldTriangle(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  triangleIndex: number,
+  transform: Float32Array | readonly number[],
+  out: Float64Array,
+): boolean {
+  const base = triangleIndex * 3
+  if (base + 2 >= indices.length) return false
+  const m0 = transform[0]!, m1 = transform[1]!, m2 = transform[2]!, m3 = transform[3]!
+  const m4 = transform[4]!, m5 = transform[5]!, m6 = transform[6]!, m7 = transform[7]!
+  const m8 = transform[8]!, m9 = transform[9]!, m10 = transform[10]!, m11 = transform[11]!
+
+  for (let k = 0; k < 3; k++) {
+    const vIdx = indices[base + k]! * VERTEX_STRIDE
+    if (vIdx + 2 >= vertices.length) return false
+    const vx = vertices[vIdx]!, vy = vertices[vIdx + 1]!, vz = vertices[vIdx + 2]!
+    const wx = m0 * vx + m1 * vy + m2 * vz + m3
+    const wy = m4 * vx + m5 * vy + m6 * vz + m7
+    const wz = m8 * vx + m9 * vy + m10 * vz + m11
+    if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) return false
+    const o = k * 3
+    out[o] = wx
+    out[o + 1] = wy
+    out[o + 2] = wz
+  }
+  return true
+}
+
 /**
  * Inspects topological manifold diagnostics on a render mesh by welding coincident
  * world-space vertices (accounting for split per-face normal vertices) and analyzing
@@ -299,3 +330,126 @@ export function inspectMeshManifoldDiagnostics(
     eulerCharacteristic,
   }
 }
+
+export interface MeshTriangleQualitySummary {
+  triangleCount: number
+  minAspectRatio: number
+  maxAspectRatio: number
+  meanAspectRatio: number
+  degenerateTriangleCount: number
+  minAreaMm2: number
+  maxAreaMm2: number
+  totalAreaMm2: number
+}
+
+const EQUILATERAL_ALTITUDE_FACTOR = Math.sqrt(3) / 2
+
+/**
+ * Computes triangle aspect ratio and area quality statistics in a single zero-allocation
+ * pass over mesh triangles. Supports both tightly packed 3-float position buffers and
+ * 6-float interleaved `[x, y, z, nx, ny, nz]` render mesh vertex buffers.
+ *
+ * Aspect ratio is defined as the ratio of the longest edge to the corresponding altitude,
+ * normalized by $\frac{\sqrt{3}}{2}$ so that an equilateral triangle has an aspect ratio of $1.0$.
+ */
+export function computeMeshTriangleQualitySummary(mesh: {
+  vertices: Float32Array | number[]
+  indices: Uint32Array | number[]
+}): MeshTriangleQualitySummary {
+  const { vertices, indices } = mesh
+  const triangleCount = Math.floor(indices.length / 3)
+  if (triangleCount === 0 || vertices.length < 3) {
+    return {
+      triangleCount: 0,
+      minAspectRatio: 0,
+      maxAspectRatio: 0,
+      meanAspectRatio: 0,
+      degenerateTriangleCount: 0,
+      minAreaMm2: 0,
+      maxAreaMm2: 0,
+      totalAreaMm2: 0,
+    }
+  }
+
+  let maxIndex = 0
+  for (let i = 0; i < triangleCount * 3; i++) {
+    const idx = indices[i]!
+    if (idx > maxIndex) maxIndex = idx
+  }
+  const stride =
+    (maxIndex + 1) * 3 > vertices.length
+      ? 3
+      : vertices.length % 6 === 0 && (maxIndex + 1) * 6 === vertices.length
+        ? 6
+        : 3
+
+  let minAspectRatio = Infinity
+  let maxAspectRatio = 0
+  let sumAspectRatio = 0
+  let validCount = 0
+  let degenerateTriangleCount = 0
+  let minAreaMm2 = Infinity
+  let maxAreaMm2 = 0
+  let totalAreaMm2 = 0
+
+  for (let t = 0; t < triangleCount; t++) {
+    const base = t * 3
+    const i0 = indices[base]! * stride
+    const i1 = indices[base + 1]! * stride
+    const i2 = indices[base + 2]! * stride
+
+    if (i0 + 2 >= vertices.length || i1 + 2 >= vertices.length || i2 + 2 >= vertices.length) {
+      degenerateTriangleCount++
+      continue
+    }
+
+    const ax = vertices[i0]!, ay = vertices[i0 + 1]!, az = vertices[i0 + 2]!
+    const bx = vertices[i1]!, by = vertices[i1 + 1]!, bz = vertices[i1 + 2]!
+    const cx = vertices[i2]!, cy = vertices[i2 + 1]!, cz = vertices[i2 + 2]!
+
+    const abx = bx - ax, aby = by - ay, abz = bz - az
+    const bcx = cx - bx, bcy = cy - by, bcz = cz - bz
+    const cax = ax - cx, cay = ay - cy, caz = az - cz
+
+    const e0Sq = abx * abx + aby * aby + abz * abz
+    const e1Sq = bcx * bcx + bcy * bcy + bcz * bcz
+    const e2Sq = cax * cax + cay * cay + caz * caz
+    const maxEdgeSq = Math.max(e0Sq, e1Sq, e2Sq)
+
+    // Cross product AB x (-CA) = AB x AC
+    const acx = -cax, acy = -cay, acz = -caz
+    const nx = aby * acz - abz * acy
+    const ny = abz * acx - abx * acz
+    const nz = abx * acy - aby * acx
+    const doubleArea = Math.hypot(nx, ny, nz)
+    const area = 0.5 * doubleArea
+
+    if (!Number.isFinite(area) || area < 1e-10 || maxEdgeSq <= 0) {
+      degenerateTriangleCount++
+      continue
+    }
+
+    totalAreaMm2 += area
+    if (area < minAreaMm2) minAreaMm2 = area
+    if (area > maxAreaMm2) maxAreaMm2 = area
+
+    // L_max / h_min = L_max / (2 * area / L_max) = L_max^2 / (2 * area)
+    const aspectRatio = ( EQUILATERAL_ALTITUDE_FACTOR * maxEdgeSq ) / doubleArea
+    if (aspectRatio < minAspectRatio) minAspectRatio = aspectRatio
+    if (aspectRatio > maxAspectRatio) maxAspectRatio = aspectRatio
+    sumAspectRatio += aspectRatio
+    validCount++
+  }
+
+  return {
+    triangleCount,
+    minAspectRatio: validCount > 0 ? minAspectRatio : 0,
+    maxAspectRatio: validCount > 0 ? maxAspectRatio : 0,
+    meanAspectRatio: validCount > 0 ? sumAspectRatio / validCount : 0,
+    degenerateTriangleCount,
+    minAreaMm2: validCount > 0 ? minAreaMm2 : 0,
+    maxAreaMm2: validCount > 0 ? maxAreaMm2 : 0,
+    totalAreaMm2,
+  }
+}
+

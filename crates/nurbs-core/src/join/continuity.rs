@@ -28,12 +28,10 @@ pub mod preparation;
 mod regularity;
 mod station_scale;
 pub(crate) use exact_strip::inspect_proposed_station_projective_strip_jets;
-pub(crate) use exact_strip::inspect_station_projective_strip_jets;
 pub use projective_collection::inspect_projective_seam_collection_until_refused;
 pub use projective_collection::inspect_projective_seam_collection_with_rational_scale_proposals;
 pub use station_scale::propose_boundary_normal_scale;
 pub use station_scale::propose_station_normal_scale;
-pub(crate) use station_scale::propose_station_scale_scalar;
 type H = [f64; 4];
 #[derive(Clone, Copy)]
 struct Boundary {

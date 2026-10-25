@@ -499,7 +499,6 @@ use marching::*;
 
 
 mod sections;
-use sections::*;
 
 
 
@@ -737,7 +736,6 @@ pub use fillet_construction::chordal_fillet;
 pub use fillet_construction::rolling_ball_fillet;
 pub use fillet_construction::variable_radius_fillet;
 pub use fillet_construction::variable_g2_fillet;
-use fillet_construction::variable_radius_sections;
 pub use fillet_construction::g2_fillet;
 use fillet_construction::build_report;
 
@@ -745,5 +743,4 @@ use fillet_construction::build_report;
 mod section_geometry;
 use section_geometry::g2_section;
 use section_geometry::arc_section;
-use section_geometry::march_direction;
 use section_geometry::trace_spine;

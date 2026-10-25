@@ -3,6 +3,7 @@ use crate::tessellation::FillRule;
 use crate::{Result, check};
 use std::collections::{BTreeSet, HashMap};
 
+pub type Point = math_core::V2;
 pub type Rings = Vec<Vec<math_core::V2>>;
 pub use math_core::{cross2, sub2};
 

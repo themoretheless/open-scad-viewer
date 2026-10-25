@@ -515,6 +515,55 @@ fn insphere3d_and_segment_intersects_segment_2d_exact_predicates() {
         segment_triangle_intersect_3d_exact([1.0, 1.0, 2.0], [1.0, 1.0, 5.0], tri_a, tri_b, tri_c),
         Sign::Negative
     );
+
+    // tetrahedron_signed_volume_6x: positive, negative, and coplanar zero cases.
+    let (sign_pos, vol6_pos) = tetrahedron_signed_volume_6x(
+        [0.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [0.0, 3.0, 0.0],
+        [0.0, 0.0, 4.0],
+    );
+    assert_eq!(sign_pos, Sign::Positive);
+    assert!((vol6_pos - 24.0).abs() <= 1e-12);
+
+    let (sign_neg, vol6_neg) = tetrahedron_signed_volume_6x(
+        [0.0, 0.0, 0.0],
+        [0.0, 3.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [0.0, 0.0, 4.0],
+    );
+    assert_eq!(sign_neg, Sign::Negative);
+    assert!((vol6_neg - (-24.0)).abs() <= 1e-12);
+
+    let (sign_zero, vol6_zero) = tetrahedron_signed_volume_6x(
+        [0.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [0.0, 3.0, 0.0],
+        [1.0, 1.0, 0.0],
+    );
+    assert_eq!(sign_zero, Sign::Zero);
+    assert_eq!(vol6_zero, 0.0);
+
+    // barycentric_in_triangle_2d_exact: interior, edge 0/1/2, vertex 0/1/2, and exterior.
+    assert_eq!(
+        barycentric_in_triangle_2d_exact(ta, tb, tc, [1.0, 1.0]),
+        (Sign::Positive, Sign::Positive, Sign::Positive)
+    );
+    // On edge bc (opposite vertex a): orient2d(b, c, p) == Zero
+    assert_eq!(
+        barycentric_in_triangle_2d_exact(ta, tb, tc, [2.0, 2.0]),
+        (Sign::Zero, Sign::Positive, Sign::Positive)
+    );
+    // At vertex a: orient2d(c, a, a) == Zero and orient2d(a, b, a) == Zero
+    assert_eq!(
+        barycentric_in_triangle_2d_exact(ta, tb, tc, ta),
+        (Sign::Positive, Sign::Zero, Sign::Zero)
+    );
+    // Outside across edge bc: orient2d(b, c, p) == Negative
+    assert_eq!(
+        barycentric_in_triangle_2d_exact(ta, tb, tc, [3.0, 3.0]),
+        (Sign::Negative, Sign::Positive, Sign::Positive)
+    );
 }
 
 #[test]

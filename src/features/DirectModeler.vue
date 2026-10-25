@@ -21,9 +21,7 @@ import { prepareVrPolygons } from '../services/vrScene'
 import {faceAbsenceProven } from '../services/solidSelfIntersection'
 import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
 import {SolidSketchSnapPreparation} from '../services/solidSketchSnapPreparation'
-import {readSolidDraftHead,writeSolidDraftHead} from '../services/solidDraftHeadStore'
 import type {MainSolidJob} from '../services/mainSolidProtocol'
-import {collectSolidDraftSnapshots,withSolidDraftLock,solidDraftSnapshotId,readSolidDraftSnapshot,writeSolidDraftSnapshot,removeSolidDraftSnapshot} from '../services/solidDraftStore'
 import SceneObjectControls from '../components/SceneObjectControls.vue'
 const SceneVirtualList=defineAsyncComponent(()=>import('../components/SceneVirtualList.vue'))
 import { connectedEdgeChain } from '../services/edgeSelection'
@@ -55,17 +53,15 @@ import {SolidProfileDisplayQueue} from '../services/solidProfileDisplayQueue'
 import {SolidSurfaceDisplayQueue} from '../services/solidSurfaceDisplayQueue'
 import {SolidDisplayQueue} from '../services/solidDisplayQueue'
 import {SolidDisplayCache,type DisplayMesh} from '../services/solidDisplayCache'
-import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, MAX_DOCUMENT_CHARACTERS, MAX_DRAFT_CHARACTERS, parseDirectDocument, serializeDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from '../services/directModeling'
+import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, serializeDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from '../services/directModeling'
 import type {SolidSketchEditOptions} from '../services/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { exportPolygonStl, type PolygonMesh } from '../services/geometry/polygon'
 import type {SolidBooleanOptions} from '../services/solidBoolean'
 import { createDirectProjector, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
-import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
-import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
-import { exportMeshFormatCompressed } from '../services/meshExportFormats'
-import { downloadBytes } from '../services/downloadArtifact'
+import { MESH_IMPORT_ACCEPT } from '../services/meshImport'
+import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS } from '../services/meshConvert'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
 import type {SolidBrepToolOptions} from '../services/solidBrepTool'
 import type {SolidNurbsEditOptions} from '../services/solidNurbsEdit'
@@ -73,7 +69,6 @@ import { type SolidNurbsSurface, type SolidNurbsCurve } from '../services/solidN
 import type { SurfaceJetBoundary} from '../services/nurbsConstructors'
 import {isSolidNurbsRefit } from '../services/solidCurveReduction'
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
-import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
 import { touchPointers, panes, collectDragNodes, profileBooleanOperation, isProfileCommand, selectIndexKey, download, resizeSplit, COARSE_DISPLAY, canvasOf, primitiveKinds, PRIMITIVE_ICONS } from './directModeler/helpers'
 import type { Pane } from './directModeler/helpers'
@@ -86,6 +81,8 @@ import { useCommandPalette } from './directModeler/useCommandPalette'
 import { useSourceBodyTools } from './directModeler/useSourceBodyTools'
 import { useDiagnostics } from './directModeler/useDiagnostics'
 import { useMeasurements } from './directModeler/useMeasurements'
+import { useDraftPersistence } from './directModeler/useDraftPersistence'
+import { useFileExchange } from './directModeler/useFileExchange'
 const ProfileIntersectionPresentation=defineAsyncComponent(()=>import('../components/ProfileIntersectionPresentation.vue'))
 const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
 const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
@@ -101,31 +98,51 @@ const SolidVolumeDistance=defineAsyncComponent(()=>import('../components/SolidVo
 const MaterialPathCheck=defineAsyncComponent(()=>import('../components/MaterialPathCheck.vue'))
 const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
-const error = ref(''), saveError = ref(false), savePending=ref(false)
-const draftConflict=ref(false),loadingLatestDraft=ref(false)
-let persistedRevision:string|null=null
-const durableReady=readSolidDraftHead(key).then(head=>{persistedRevision=head?.revision??null;return head})
-void durableReady.catch(()=>{})
-let saveGeneration=0
-let persistedReference=storageGet(key)
-let stored = persistedReference ?? storageGet(props.embedded ? 'scad-main-modeler-v1' : 'scad-direct-modeler-v1')
-const restoringDraft=ref(!props.initialDocument&&(typeof indexedDB!=='undefined'||!!stored&&(!isGeometryKernelReady()||!!solidDraftSnapshotId(stored))))
-let restoreDisposed=false
-onUnmounted(()=>{restoreDisposed=true})
-let initial = emptyDirectDocument()
-try { if (!restoringDraft.value&&stored&&isGeometryKernelReady()&&!solidDraftSnapshotId(stored)&&!props.initialDocument) initial = parseDirectDocument(stored) } catch { saveError.value=true;error.value=label('Сохранённый JSON повреждён. Импортируйте резервный JSON через меню «Файл».','Saved JSON is corrupt. Import a JSON backup from the File menu.') }
-if (props.initialDocument) initial = props.initialDocument
+const error = ref('')
+const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
+const historyWorker=createSolidPreviewWorker(),historyPending=ref(false),historyMode=ref<'restore'|'import'|'shared'>('restore')
+let historyGeneration=0
+const {
+  initial,
+  saveError,
+  savePending,
+  draftConflict,
+  loadingLatestDraft,
+  restoringDraft,
+  isRestoreDisposed,
+  getSaveGeneration,
+  loadLatestDraft,
+  persist,
+  kernelReady,
+  kernelLoadError,
+  kernelLoading,
+  retryKernelLoad,
+  stopDraftRecovery,
+  cancelDraftRecovery,
+  restoreInitialDraft,
+} = useDraftPersistence({
+  key,
+  legacyKey: props.embedded ? 'scad-main-modeler-v1' : 'scad-direct-modeler-v1',
+  props,
+  label,
+  error,
+  workspace,
+  historyWorker,
+  historyPending,
+  historyMode,
+  bumpHistoryGeneration: () => ++historyGeneration,
+  getHistoryGeneration: () => historyGeneration,
+  getHistory: () => history,
+  getDocument: () => document,
+  getSnapDocument: () => snapDocument,
+  getCancelCommand: () => cancelCommand,
+  getSync: () => sync,
+  getFit: () => fit,
+})
 let history = new DirectHistory(initial)
 const document = shallowRef(history.document)
 // Committed render snapshot; gestures publish separate documents and never update this ref.
 const snapDocument = shallowRef(document.value)
-const stlInput = ref<HTMLInputElement>()
-const svgInput=ref<HTMLInputElement>(),svgBusy=ref(false)
-let svgController:AbortController|undefined
-function cancelSvg(){svgController?.abort();svgController=undefined;svgBusy.value=false}
-watch(()=>props.open,open=>{if(!open)cancelSvg()},{flush:'sync'})
-onUnmounted(cancelSvg)
-const stepInput = ref<HTMLInputElement>(), stepBusy = ref(false)
 const undoable = ref(false), redoable = ref(false)
 const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d'), tool = ref<'select' | 'rectangle' | 'circle' | 'arc' | 'polyline' | 'trim' | 'slot'>('select')
 const draftCursor=ref<Point2|null>(null)
@@ -170,7 +187,6 @@ const canAddDraftPoint=computed(()=>draftPointValid.value.every(Boolean)&&draftP
 function addExactDraftPoint(){if(tool.value!=='polyline'||!canAddDraftPoint.value)return;draft.value=[...draft.value,[...draftPoint.value]];draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 function undoDraftPoint(){draft.value=draft.value.slice(0,-1);draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
-const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
 const split = ref(34)
 const views = ref<Record<Pane, number>>({ '2d': 160, '3d': 160 })
 const centers = ref<Record<Pane, Point2>>({ '2d': [0, 0], '3d': [0, 0] })
@@ -428,8 +444,6 @@ function startVertexDrag(e:PointerEvent,index:number){
  vertexDrag={svg,pointer:e.pointerId,start:position(e),ids,before:history.document,moved:false,inverse:svg.getScreenCTM()?.inverse()??null}
  svg.setPointerCapture(e.pointerId)
 }
-const historyWorker=createSolidPreviewWorker(),historyPending=ref(false),historyMode=ref<'restore'|'import'|'shared'>('restore')
-let historyGeneration=0
 const nativeNurbsWorker=createSolidPreviewWorker(),nativeNurbsPending=ref(false)
 const nativeBrepMode=ref<'mass'|'mesh'|null>(null)
 let nativeNurbsGeneration=0
@@ -889,77 +903,6 @@ function trimAt(id:string,p:Point2){run(()=>{
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
-function draftConflictMessage(){return label('Документ изменён в другой вкладке. Скачайте JSON своих правок или загрузите сохранённую версию; Undo вернёт локальную модель.', 'Document changed in another tab. Download your edits as JSON or load the saved version; Undo restores your local model.')}
-function noteExternalDraft(){
- if(storageGet(key)!==persistedReference){draftConflict.value=true;saveError.value=true;error.value=draftConflictMessage()}
-}
-function onDraftStorage(event:StorageEvent){if(event.key===key||event.key===null)noteExternalDraft()}
-window.addEventListener?.('storage',onDraftStorage)
-onUnmounted(()=>window.removeEventListener?.('storage',onDraftStorage))
-if(typeof indexedDB!=='undefined')void collectSolidDraftSnapshots().catch(()=>{})
-async function loadLatestDraft(){
- if(loadingLatestDraft.value)return
- cancelCommand();loadingLatestDraft.value=true
- const generation=++historyGeneration,saveRevision=++saveGeneration,before=document.value,target=history
- const current=()=>!restoreDisposed&&props.open&&generation===historyGeneration&&saveRevision===saveGeneration&&document.value===before&&target===history
- savePending.value=false;historyMode.value='shared';historyPending.value=true;workspace.value?.focus()
- try{await withSolidDraftLock(key,async()=>{
-  await durableReady
-  if(!current())return
-  const head=await readSolidDraftHead(key),reference=storageGet(key)
-  if(!current())return
-  if(!head&&!reference)throw Error(label('Сохранённая версия отсутствует. Скачайте JSON текущей модели.','No saved version exists. Download the current model as JSON.'))
-  const text=head?.text??(solidDraftSnapshotId(reference)?await readSolidDraftSnapshot(reference!):reference!)
-  if(!current())return
-  // The shared draft lock keeps the canonical head stable until the validated
-  // replacement is published. Local edits remain the preceding history entry.
-  const applied=await target.commitAsync(async()=>{
-   const next=await historyWorker.run({kind:'restoreDocument',text})
-   if(!current()||storageGet(key)!==reference)throw Error(label('Документ изменился во время загрузки. Повторите загрузку.','Document changed while loading. Load it again.'))
-   return next
-  })
-  if(!applied||!current())return
-  persistedRevision=head?.revision??null;persistedReference=stored=reference;draftConflict.value=false;error.value='';saveError.value=false
-  sync()
- })}catch(e){if(current()){saveError.value=true;error.value=e instanceof Error?e.message:String(e)}}
- finally{if(generation===historyGeneration){loadingLatestDraft.value=false;historyPending.value=false}}
-}
-function persist() {
- const generation=++saveGeneration,previous=persistedReference
- savePending.value=true
- // Serialization finishes before the asynchronous write. Only top-level empty
- // collections are omitted; cloning materialized instance geometry is unnecessary.
- const persisted={...document.value}
- if(!persisted.curves?.length)delete persisted.curves
- if(!persisted.surfaces?.length)delete persisted.surfaces
- const text=serializeDirectDocument(persisted)
- void withSolidDraftLock(key,async()=>{
-  await durableReady
-  if(generation!==saveGeneration||restoreDisposed)return
-  if(storageGet(key)!==previous){draftConflict.value=true;throw Error('DRAFT_CONFLICT')}
-  let marker:string|undefined
-  try{
-   if(text.length>MAX_DRAFT_CHARACTERS)marker=await writeSolidDraftSnapshot(text)
-   if(generation!==saveGeneration||restoreDisposed){if(marker)await removeSolidDraftSnapshot(marker);return}
-   const head=await writeSolidDraftHead(key,persistedRevision,text,()=>generation===saveGeneration&&!restoreDisposed)
-   persistedRevision=head.revision
-   if(generation!==saveGeneration||restoreDisposed){if(marker)await removeSolidDraftSnapshot(marker);return}
-   const reference=marker??text
-   if(!storageSet(key,reference))throw Error('DRAFT_REFERENCE_FAILED')
-   stored=persistedReference=reference
-   saveError.value=false;draftConflict.value=false
-   await removeSolidDraftSnapshot(previous).catch(()=>{})
-  }catch(e){
-   if(marker&&stored!==marker)void removeSolidDraftSnapshot(marker).catch(()=>{})
-   throw e
-  }
- }).catch(e=>{
-  if(generation===saveGeneration&&!restoreDisposed){saveError.value=true;const detail=e instanceof Error?e.message:String(e);if(detail==='DRAFT_CONFLICT'){draftConflict.value=true;error.value=draftConflictMessage()}else if(e instanceof Error&&e.name==='QuotaExceededError')error.value=label('Хранилище заполнено. Скачайте JSON, освободите место и повторите сохранение.','Storage is full. Download JSON, free space and retry saving.')
-  else if(detail==='DRAFT_REFERENCE_FAILED')error.value=label('Документ записан в IndexedDB, но не удалось обновить указатель и уведомить другие вкладки. Скачайте JSON и повторите сохранение.','Document saved to IndexedDB, but its reference and other tabs could not be updated. Download JSON and retry saving.')
-  else if(detail==='DRAFT_CORRUPT')error.value=label('Сохранённая версия повреждена. Скачайте локальный JSON через меню «Файл».','Saved version is corrupt. Download local JSON from File.')
-  else error.value=label('Не удалось сохранить черновик: ','Could not save draft: ')+detail}
- }).finally(()=>{if(generation===saveGeneration)savePending.value=false})
-}
 /**
  * Rebuilding the thousands of hit-test polygons after a commit costs far more than a
  * frame, and doing it the instant a drag ends is felt as a stall. The dragged elements
@@ -1270,183 +1213,69 @@ function sendToMesh() {
     emit('toMesh')
   })
 }
-function closeFileMenu(e:KeyboardEvent) {
- const menu=e.currentTarget as HTMLDetailsElement
- if(!menu.open)return
- e.preventDefault();e.stopPropagation()
- if(sourceWallPending.value)cancelSourceWall()
- if(sourceSeamPending.value)cancelSourceSeam()
- if(sourceStepPending.value)cancelSourceStep()
- menu.open=false
- menu.querySelector('summary')?.focus()
-}
-function downloadProject(){if(!restoringDraft.value)download(serializeDirectDocument(document.value),'solid-model.json')}
-async function importFile(event: Event) {
- const input=event.target as HTMLInputElement,file=input.files?.[0]
- if(!file)return
- cancelCommand();error.value=''
- const generation=++historyGeneration,target=history,before=document.value
- const current=()=>generation===historyGeneration&&target===history&&!restoreDisposed&&props.open&&document.value===before
- historyMode.value='import';historyPending.value=true;workspace.value?.focus()
- try{
-  if(file.size>MAX_DOCUMENT_CHARACTERS)throw Error('Document exceeds 64 MB.')
-  const text=await file.text()
-  if(!current())return
-  const parsed=JSON.parse(text)
-  if(parsed?.language==='rush/nurbs-1'){
-   const next=await historyWorker.run({kind:'rushGraphImport',document:history.document,text,group:activeGroup.value||undefined})
-   if(!current())return
-   const {validateLocked,added}=prepareCommit(next)
-   const applied=await target.commitAsync(async()=>next,validateLocked)
-   if(!current()||!applied)return
-   historyPending.value=false;finishCommit(added)
-   const addedIds=new Set(added)
-   selection.value=next.surfaces?.find(item=>addedIds.has(item.id))?.id??next.curves?.find(item=>addedIds.has(item.id))?.id??''
-  }else{
-   // Inspect only the collections needed for metadata. Geometry is validated
-   // once in the worker, before the history transaction can be published.
-   if(!parsed||parsed.version!==1||!Array.isArray(parsed.bodies)||!Array.isArray(parsed.sketches)
-    ||[parsed.curves,parsed.surfaces].some(items=>items!=null&&!Array.isArray(items))
-    ||[...parsed.bodies,...parsed.sketches,...parsed.curves??[],...parsed.surfaces??[]].some(item=>!item||typeof item!=='object'))throw Error('Invalid direct modeling document.')
-   const imported=parsed as DirectDocument
-   if(imported.blenderProjectId===undefined)imported.blenderProjectId=crypto.randomUUID()
-   const {validateLocked,added}=prepareCommit(imported,'file')
-   const payload=stringifyMeshJson(imported)
-   const applied=await target.commitAsync(()=>historyWorker.run({kind:'restoreDocument',text:payload}),validateLocked)
-   if(!current()||!applied)return
-   historyPending.value=false;finishCommit(added);selection.value='';extraSelection.value=[]
-  }
-  fit('2d');fit('3d')
-  const menu=input.closest?.('details') as HTMLDetailsElement|null
-  if(menu)menu.open=false
- }catch(e){
-  const {solidImportErrorMessage}=await import('../services/solidImportErrorMessage')
-  if(generation===historyGeneration)error.value=solidImportErrorMessage(e,ru.value?'ru':'en')
- }
- finally{if(generation===historyGeneration)historyPending.value=false;input.value=''}
-}
-const bodyExportFormat = ref<MeshExportFormat>('stl_binary')
-async function downloadBody() {
-  if(restoringDraft.value)return
-  try {
-    if (!selectedBody.value) throw new Error(label('Выберите тело.', 'Select a body.'))
-    const body=structuredClone(selectedBody.value),format=bodyExportFormat.value
-    const artifact = await exportMeshFormatCompressed(polygonMeshToExportMesh(body.mesh), format)
-    downloadBytes(artifact.data, artifact.mimeType, `${body.name || 'body'}.${artifact.extension}`)
-  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
-}
-async function importStl(event: Event) {
-  const before=document.value
-  const input = event.target as HTMLInputElement, file = input.files?.[0]
-  try {
-    if (!file) return
-    const imported = await importMeshFromFile(file, { weld: 1e-4 })
-    if(restoreDisposed || !props.open || document.value!==before)throw Error('The scene changed during mesh import. Import again to add the mesh.')
-    const mesh = { positions: imported.positions.slice(), indices: imported.indices.slice() }
-    run(() => {
-      const d = history.document
-      const id = crypto.randomUUID()
-      d.bodies.push({ id, name: stripMeshExtension(file.name) || imported.format.toUpperCase(), mesh })
-      commit(d)
-      selection.value = id
-      mode.value = '3d'
-    })
-  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
-  finally { input.value = '' }
-}
-async function importStep(event: Event) {
-  const input = event.target as HTMLInputElement, file = input.files?.[0]
-  if (stepBusy.value) { input.value = ''; return }
-  const before=document.value
-  stepBusy.value = true; error.value = ''; notice.value = ''
-  try {
-    if (!file) return
-    if (file.size > 16 * 1024 * 1024) throw Error('STEP file exceeds 16 MiB.')
-    const text = await file.text()
-    const {prepareSolidStepImport} = await import('../services/solidStepExchange')
-    if(restoreDisposed || !props.open || document.value!==before)throw Error('The scene changed during STEP import. Import again to add its bodies.')
-    cancelCommand()
-    const imported = await prepareSolidStepImport(text, before)
-    if (restoreDisposed || !props.open || document.value !== before) {
-      throw Error(imported.report.retained
-        ? 'AP242 original saved, but the scene changed during import. Import again to add its bodies.'
-        : 'The scene changed during STEP import. Import again to add its bodies.')
-    }
-    commit(imported.document)
-    operation.value = null; advancedOp.value = null; subtract.value = null; boxSelect.value = false
-    pickObject(imported.selected, '3d'); fit('3d')
-    notice.value = imported.report.retained
-      ? label(`AP242: ${imported.report.occurrenceIdentities.length} экземпляров; оригинал сохранён.`, `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`)
-      : label('STEP: сетка импортирована.', 'STEP: mesh imported.')
-  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
-  finally { stepBusy.value = false; input.value = '' }
-}
-async function exportBlender() {
-  if(restoringDraft.value)return
-  error.value=''
-  const before=document.value
-  try {
-    const {exportSolidBlenderSnapshot}=await import('../services/solidBlenderExchange')
-    if(document.value!==before||restoreDisposed)throw Error(label('Сцена изменилась. Повторите экспорт.', 'The scene changed. Export again.'))
-    // Validate support before assigning identity or persisting metadata.
-    exportSolidBlenderSnapshot(before,before.blenderProjectId??'validate')
-    const id=history.ensureBlenderProjectId()
-    sync()
-    download(exportSolidBlenderSnapshot(document.value,id),'solid-model.osv-blender.json')
-  } catch(e){error.value=e instanceof Error?e.message:String(e)}
-}
-async function importSvg(event:Event) {
-  const input=event.target as HTMLInputElement,file=input.files?.[0]
-  if(!file||svgBusy.value){input.value='';return}
-  cancelSvg();const controller=new AbortController();svgController=controller
-  const before=document.value,generation=saveGeneration
-  svgBusy.value=true;error.value=''
-  let worker:import('../services/svgWorkerClient').SvgWorkerClient|undefined
-  try {
-    if(file.size>4*1024*1024)throw Error('SVG exceeds 4 MiB.')
-    const {createSvgWorkerClient}=await import('../services/svgWorkerClient')
-    const text=await file.text()
-    if(controller.signal.aborted)return
-    worker=createSvgWorkerClient()
-    const result=await worker.run({kind:'contours',svg:text,options:{}},{signal:controller.signal})
-    if(controller.signal.aborted)return
-    if(restoreDisposed||!props.open||document.value!==before||saveGeneration!==generation)throw Error(label('Сцена изменилась. Повторите импорт SVG.','The scene changed. Import SVG again.'))
-    if(!result.contours?.length)throw Error('SVG contains no closed contours.')
-    if(result.contours.some(r=>r.length>512))throw Error(label('Контур SVG превышает 512 вершин. Упростите исходный профиль.','SVG contour exceeds 512 vertices. Simplify the source profile.'))
-    const next=history.document
-    const ids=result.contours.map(points=>{
-      const id=crypto.randomUUID()
-      next.sketches.push({id,name:`${file.name.slice(0,70)} · ${next.sketches.length+1}`,closed:true,points})
-      return id
-    })
-    commit(parseDirectDocument(serializeDirectDocument(next)))
-    operation.value=null;advancedOp.value=null;subtract.value=null
-    activePlane.value=xyPlane();workplaneOutline.value=[]
-    selection.value=ids[0];extraSelection.value=ids.slice(1);mode.value='2d';sketchPaneOpen.value=true;fit('2d')
-    notice.value=label('SVG импортирован. Для отверстий выдавливайте выбранные контуры вместе.','SVG imported. Extrude the selected contours together to retain holes.')+(result.warnings.length?' '+result.warnings.join(' '):'')
-  } catch(e){if(!controller.signal.aborted)error.value=e instanceof Error?e.message:String(e)}
-  finally{worker?.dispose();if(svgController===controller){svgController=undefined;svgBusy.value=false}input.value=''}
-}
-async function exportBodySvg() {
-  if(restoringDraft.value)return
-  const body=selectedBody.value
-  if(!body)return
-  cancelSvg();const controller=new AbortController();svgController=controller
-  const mesh=structuredClone(body.mesh)
-  error.value=''
-  let worker:import('../services/svgWorkerClient').SvgWorkerClient|undefined
-  try {
-    const {createSvgWorkerClient}=await import('../services/svgWorkerClient')
-    if(controller.signal.aborted)return
-    worker=createSvgWorkerClient()
-    const vertices=new Float32Array(mesh.positions.length*2)
-    for(let i=0;i<mesh.positions.length;i+=3)vertices.set(mesh.positions.slice(i,i+3),i*2)
-    const result=await worker.run({kind:'project',axis:'z',options:{},meshes:[{vertices,indices:new Uint32Array(mesh.indices),faceIds:new Uint32Array(mesh.indices.length/3),transform:new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])}]},{signal:controller.signal})
-    if(!controller.signal.aborted&&!restoreDisposed&&props.open)download(result.svg,'body-xy.svg')
-  } catch(e){if(!controller.signal.aborted)error.value=e instanceof Error?e.message:String(e)}
-  finally{worker?.dispose();if(svgController===controller)svgController=undefined}
-}
-const { sourceStepPending, sourceStepError, sourceStepTolerance, selectedSourceBody, sourceSeamPending, sourceSeamError, sourceSeamResult, cancelSourceSeam, sourceSeamMessage, qualifySourceSeam, sourceWallPending, sourceWallError, sourceWallResult, sourceWallOpen, sourceWallMenuOpen, sourceWallCoverageResult, sourceWallCoverageMode, sourceWallScanResult, sourceWallScanMode, sourceWallGroups, sourceWallSide, sourceWallMinimum, sourceWallTolerance, cancelSourceWall, sourceWallFaces, sourceWallFileMenuToggle, toggleSourceWallFace, sourceWallFaceUncertain, sourceWallFaceFill, sourceWallMeasurement, sourceWallMessage, sourceWallInputError, qualifySourceWall, cancelSourceStep, exportSourceStep, exportStepCurrent, exportStepAssembly, exportStepOriginal } = useSourceBodyTools({ document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed: () => restoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection, isExpressionFaceHighlighted: sourceExpressionFaceHighlighted })
+const { sourceStepPending, sourceStepError, sourceStepTolerance, selectedSourceBody, sourceSeamPending, sourceSeamError, sourceSeamResult, cancelSourceSeam, sourceSeamMessage, qualifySourceSeam, sourceWallPending, sourceWallError, sourceWallResult, sourceWallOpen, sourceWallMenuOpen, sourceWallCoverageResult, sourceWallCoverageMode, sourceWallScanResult, sourceWallScanMode, sourceWallGroups, sourceWallSide, sourceWallMinimum, sourceWallTolerance, cancelSourceWall, sourceWallFaces, sourceWallFileMenuToggle, toggleSourceWallFace, sourceWallFaceUncertain, sourceWallFaceFill, sourceWallMeasurement, sourceWallMessage, sourceWallInputError, qualifySourceWall, cancelSourceStep, exportSourceStep, exportStepCurrent, exportStepAssembly, exportStepOriginal } = useSourceBodyTools({ document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection, isExpressionFaceHighlighted: sourceExpressionFaceHighlighted })
+const {
+  stlInput,
+  svgInput,
+  svgBusy,
+  stepInput,
+  stepBusy,
+  bodyExportFormat,
+  closeFileMenu,
+  downloadProject,
+  importFile,
+  downloadBody,
+  importStl,
+  importStep,
+  exportBlender,
+  importSvg,
+  exportBodySvg,
+} = useFileExchange({
+  props,
+  ru,
+  label,
+  document,
+  history,
+  historyWorker,
+  historyPending,
+  historyMode,
+  bumpHistoryGeneration: () => ++historyGeneration,
+  getHistoryGeneration: () => historyGeneration,
+  getSaveGeneration,
+  isRestoreDisposed,
+  restoringDraft,
+  error,
+  setNotice: message => {
+    notice.value = message
+  },
+  workspace,
+  activeGroup,
+  selection,
+  extraSelection,
+  mode,
+  sketchPaneOpen,
+  operation,
+  advancedOp,
+  subtract,
+  boxSelect,
+  activePlane,
+  workplaneOutline,
+  selectedBody,
+  sourceWallPending,
+  sourceSeamPending,
+  sourceStepPending,
+  cancelSourceWall,
+  cancelSourceSeam,
+  cancelSourceStep,
+  cancelCommand,
+  prepareCommit,
+  finishCommit,
+  commit,
+  sync,
+  run,
+  fit,
+  pickObject,
+})
 const selectedExpressionOptions=computed(()=>selectedSourceBody.value?sourceBodyRecordInspectionOptions(selectedSourceBody.value):undefined)
 const sourceExpressionFaces=ref<number[]>([])
 const sourceExpressionRadiusFaces=ref<number[]>([])
@@ -1541,79 +1370,6 @@ function splitKey(e: KeyboardEvent) {
 // triangle points back at the nearest working triangle so face picking and highlighting keep working.
 // Chrome refuses a synchronous WebAssembly.Module over 8 MB on the main thread, so the display
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
-const kernelReady = ref(isGeometryKernelReady())
-const kernelLoadError = ref(''), kernelLoading = ref(false)
-const initialRecoveryWanted = restoringDraft.value
-function retryKernelLoad() {
-  if (kernelLoading.value || restoreDisposed) return
-  restoringDraft.value = initialRecoveryWanted
-  void restoreInitialDraft()
-}
-const draftRecoveryWorker = createSolidPreviewWorker()
-let draftRecoveryGeneration = 0
-function stopDraftRecovery() {
-  draftRecoveryGeneration++
-  kernelLoading.value = false
-  draftRecoveryWorker.cancel()
-  history.cancelRestore()
-  restoringDraft.value = false
-}
-function cancelDraftRecovery() {
-  stopDraftRecovery()
-  saveError.value = true
-  error.value = label('Восстановление отменено. Сохранённый черновик не изменён; перезагрузите страницу, чтобы восстановить его.','Recovery cancelled. The saved draft is unchanged; reload the page to recover it.')
-}
-onUnmounted(() => { stopDraftRecovery(); draftRecoveryWorker.dispose() })
-async function restoreInitialDraft() {
-  const generation = ++draftRecoveryGeneration, target = history
-  const reference = stored, expectedReference = persistedReference, expectedGeneration = saveGeneration
-  const current = () => !restoreDisposed && generation === draftRecoveryGeneration && target === history
-    && saveGeneration === expectedGeneration && !history.canUndo && storageGet(key) === expectedReference
-  kernelLoading.value = true
-  kernelLoadError.value = ''
-  try {
-    try { await warmGeometryKernel() } catch (e) {
-      if (!restoreDisposed && generation === draftRecoveryGeneration) {
-        kernelLoadError.value = e instanceof Error ? e.message : String(e)
-      }
-      return
-    }
-    if (restoreDisposed) return
-    kernelReady.value = true
-    if (!restoringDraft.value || !current()) return
-    const head = await durableReady
-    const text = head?.text ?? (reference ? (solidDraftSnapshotId(reference) ? await readSolidDraftSnapshot(reference) : reference) : null)
-    if (!current()) return
-    if (text) {
-      const applied = await target.resetAsync(async () => {
-        const recovered = await draftRecoveryWorker.run({kind:'restoreDocument', text})
-        if (!current()) throw Error('Draft recovery cancelled.')
-        if (!head) await withSolidDraftLock(key, async () => {
-          if (!current()) throw Error('Draft recovery cancelled.')
-          const existing = await readSolidDraftHead(key)
-          if (existing && existing.text !== text) { draftConflict.value=true; throw Error(draftConflictMessage()) }
-          const migrated = existing ?? await writeSolidDraftHead(key, null, text, current)
-          if (current()) persistedRevision = migrated.revision
-        })
-        if (!current()) throw Error('Draft recovery cancelled.')
-        return recovered
-      })
-      if (!applied || !current()) return
-      snapDocument.value=history.document; document.value=snapDocument.value; error.value = ''; saveError.value = false
-    }
-    await nextTick()
-    if (current()) { fit('2d'); fit('3d') }
-  } catch(e) {
-    if (!current()) return
-    saveError.value = true
-    const detail = e instanceof Error ? e.message : String(e)
-    error.value = e instanceof SyntaxError || (e instanceof Error && e.name === 'SyntaxError') ? label('Сохранённый JSON повреждён. Импортируйте резервный JSON через меню «Файл».','Saved JSON is corrupt. Import a JSON backup from the File menu.')
-      : detail === 'Saved draft snapshot is missing or invalid. Import a JSON backup.' ? label('Сохранённый снимок отсутствует или повреждён. Импортируйте резервный JSON через меню «Файл».',detail)
-      : label('Не удалось восстановить сохранённый документ: ','Could not restore the saved document: ') + detail
-  } finally {
-    if (generation === draftRecoveryGeneration) { restoringDraft.value = false; kernelLoading.value = false }
-  }
-}
 if (!kernelReady.value || restoringDraft.value) void restoreInitialDraft()
 const smoothDisplay = ref(true)
 // Exact geometry keys survive history clones and include retained B-rep changes.
@@ -2386,7 +2142,7 @@ function keydown(e: KeyboardEvent) {
 }
 
 if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
-const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed: () => restoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
+const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
 function updateCv() { run(() => {
   const point = [cvX.value, cvY.value, cvZ.value]
   const invalid=point.findIndex(value=>!Number.isFinite(value))

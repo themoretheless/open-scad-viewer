@@ -366,12 +366,18 @@ fn direction_equal(
     let Some(axis) = (0..3).find(|&k| l[1][k].n.sign() != Sign::Zero) else {
         return Err(Reason::MissingProof);
     };
-    if order==0 {
+    if order == 0 && !arc {
         // Position and positively proportional velocity establish a continuous
         // unit tangent even when the original parameter speed jumps.
-        if l[1][axis].n.sign()!=r[1][axis].n.sign(){return Ok(false);}
+        if l[1][axis].n.sign() != r[1][axis].n.sign() {
+            return Ok(false);
+        }
         for k in 0..3 {
-            if !l[0][k].equal(&r[0][k],ctx)? || !l[1][k].mul(&r[1][axis],ctx)?.equal(&r[1][k].mul(&l[1][axis],ctx)?,ctx)? {
+            if !l[0][k].equal(&r[0][k], ctx)?
+                || !l[1][k]
+                    .mul(&r[1][axis], ctx)?
+                    .equal(&r[1][k].mul(&l[1][axis], ctx)?, ctx)?
+            {
                 return Ok(false);
             }
         }

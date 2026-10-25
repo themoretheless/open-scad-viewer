@@ -623,3 +623,88 @@ pub fn offset(rings: &Rings, distance: f64, round: bool, segments: usize) -> Res
         segments,
     )
 }
+
+/// Computes the minimum-area 2D oriented bounding box `(corners_ccw, area)` enclosing all
+/// finite vertices in `rings` by evaluating bounding rectangles aligned with the edges of
+/// the 2D convex hull (rotating calipers / edge-aligned min-area box).
+///
+/// Returns `None` if `rings` contains no finite vertices or if any coordinate is non-finite.
+pub fn oriented_bounding_box_2d(rings: &Rings) -> Option<([Point; 4], f64)> {
+    let mut pts = Vec::new();
+    for r in rings {
+        for &p in r {
+            if !p[0].is_finite() || !p[1].is_finite() {
+                return None;
+            }
+            pts.push(p);
+        }
+    }
+    if pts.is_empty() {
+        return None;
+    }
+    let hull = hull2(pts);
+    if hull.is_empty() {
+        return None;
+    }
+    if hull.len() == 1 {
+        let p = hull[0];
+        return Some(([p, p, p, p], 0.0));
+    }
+    if hull.len() == 2 {
+        let a = hull[0];
+        let b = hull[1];
+        return Some(([a, b, b, a], 0.0));
+    }
+
+    let mut best_area = f64::INFINITY;
+    let mut best_corners = [[0.0; 2]; 4];
+    let n = hull.len();
+    for i in 0..n {
+        let p0 = hull[i];
+        let p1 = hull[(i + 1) % n];
+        let dx = p1[0] - p0[0];
+        let dy = p1[1] - p0[1];
+        let len = dx.hypot(dy);
+        if len <= 1e-15 {
+            continue;
+        }
+        let ux = dx / len;
+        let uy = dy / len;
+        let vx = -uy;
+        let vy = ux;
+
+        let mut min_u = f64::INFINITY;
+        let mut max_u = f64::NEG_INFINITY;
+        let mut min_v = f64::INFINITY;
+        let mut max_v = f64::NEG_INFINITY;
+        for &p in &hull {
+            let rx = p[0] - p0[0];
+            let ry = p[1] - p0[1];
+            let u = rx * ux + ry * uy;
+            let v = rx * vx + ry * vy;
+            min_u = min_u.min(u);
+            max_u = max_u.max(u);
+            min_v = min_v.min(v);
+            max_v = max_v.max(v);
+        }
+        let w = (max_u - min_u).max(0.0);
+        let h = (max_v - min_v).max(0.0);
+        let box_area = w * h;
+        if box_area < best_area {
+            best_area = box_area;
+            let pt = |u: f64, v: f64| -> [f64; 2] {
+                [p0[0] + u * ux + v * vx, p0[1] + u * uy + v * vy]
+            };
+            best_corners = [
+                pt(min_u, min_v),
+                pt(max_u, min_v),
+                pt(max_u, max_v),
+                pt(min_u, max_v),
+            ];
+        }
+    }
+    if !best_area.is_finite() {
+        return None;
+    }
+    Some((best_corners, best_area))
+}

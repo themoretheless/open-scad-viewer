@@ -750,3 +750,122 @@ pub fn bolted_joint_analysis(
     })
 }
 
+/// Euler–Johnson column buckling analysis report.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ColumnBucklingReport {
+    /// Minimum radius of gyration $r = \sqrt{I_{\min} / A}$ in mm.
+    pub radius_of_gyration_mm: f64,
+    /// Effective column slenderness ratio $\lambda = K L / r$.
+    pub slenderness_ratio: f64,
+    /// Transition slenderness ratio $\lambda_c = \sqrt{2 \pi^2 E / \sigma_y}$ separating Johnson inelastic and Euler elastic buckling.
+    pub transition_slenderness: f64,
+    /// True if $\lambda \ge \lambda_c$ (Euler elastic regime), false if $\lambda < \lambda_c$ (Johnson parabolic regime).
+    pub is_euler_regime: bool,
+    /// Critical buckling stress $\sigma_{\text{cr}}$ in MPa.
+    pub critical_stress_mpa: f64,
+    /// Critical buckling load $P_{\text{cr}} = \sigma_{\text{cr}} A$ in N.
+    pub critical_load_n: f64,
+    /// Buckling safety factor $n = P_{\text{cr}} / P_{\text{applied}}$.
+    pub safety_factor: f64,
+}
+
+/// Computes column buckling capacity across both intermediate (Johnson parabolic) and slender (Euler hyperbola)
+/// regimes:
+/// - Slenderness ratio $\lambda = \frac{K L}{\sqrt{I_{\min} / A}}$
+/// - Transition slenderness $\lambda_c = \sqrt{\frac{2 \pi^2 E}{\sigma_y}}$
+/// - Critical stress $\sigma_{\text{cr}} = \sigma_y \left(1 - \frac{\sigma_y \lambda^2}{4 \pi^2 E}\right)$ for $\lambda < \lambda_c$ (Johnson)
+///   or $\sigma_{\text{cr}} = \frac{\pi^2 E}{\lambda^2}$ for $\lambda \ge \lambda_c$ (Euler).
+pub fn column_buckling_euler_johnson(
+    length_mm: f64,
+    effective_length_factor_k: f64,
+    area_mm2: f64,
+    min_inertia_mm4: f64,
+    elastic_modulus_mpa: f64,
+    yield_strength_mpa: f64,
+    applied_load_n: f64,
+) -> Result<ColumnBucklingReport> {
+    if ![
+        length_mm,
+        effective_length_factor_k,
+        area_mm2,
+        min_inertia_mm4,
+        elastic_modulus_mpa,
+        yield_strength_mpa,
+    ]
+    .into_iter()
+    .all(|v| v.is_finite() && v > 0.0)
+        || !applied_load_n.is_finite()
+        || applied_load_n < 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Euler-Johnson buckling requires positive finite geometry/material properties and non-negative load",
+        ));
+    }
+    let r_gyr = (min_inertia_mm4 / area_mm2).sqrt();
+    let lambda = (effective_length_factor_k * length_mm) / r_gyr;
+    let pi2_e = std::f64::consts::PI * std::f64::consts::PI * elastic_modulus_mpa;
+    let lambda_c = (2.0 * pi2_e / yield_strength_mpa).sqrt();
+    let is_euler = lambda >= lambda_c;
+    let sigma_cr = if is_euler {
+        pi2_e / (lambda * lambda)
+    } else {
+        yield_strength_mpa * (1.0 - (yield_strength_mpa * lambda * lambda) / (4.0 * pi2_e))
+    };
+    let p_cr = sigma_cr * area_mm2;
+    let fos = if applied_load_n > 1e-12 {
+        p_cr / applied_load_n
+    } else {
+        f64::INFINITY
+    };
+    Ok(ColumnBucklingReport {
+        radius_of_gyration_mm: r_gyr,
+        slenderness_ratio: lambda,
+        transition_slenderness: lambda_c,
+        is_euler_regime: is_euler,
+        critical_stress_mpa: sigma_cr,
+        critical_load_n: p_cr,
+        safety_factor: fos,
+    })
+}
+
+/// Computes cylindrical thin-walled pressure vessel stresses and von Mises safety factor:
+/// returns `(hoop_stress_mpa, axial_stress_mpa, von_mises_mpa, safety_factor)` where
+/// $\sigma_\theta = \frac{p r}{t}$, $\sigma_z = \frac{p r}{2 t}$, and
+/// $\sigma_{\text{vM}} = \sqrt{\sigma_\theta^2 - \sigma_\theta \sigma_z + \sigma_z^2} = \frac{\sqrt{3}}{2} \sigma_\theta$.
+pub fn thin_walled_pressure_vessel(
+    inner_radius_mm: f64,
+    wall_thickness_mm: f64,
+    internal_pressure_mpa: f64,
+    yield_strength_mpa: f64,
+) -> Result<(f64, f64, f64, f64)> {
+    if ![
+        inner_radius_mm,
+        wall_thickness_mm,
+        internal_pressure_mpa,
+        yield_strength_mpa,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || inner_radius_mm <= 0.0
+        || wall_thickness_mm <= 0.0
+        || internal_pressure_mpa < 0.0
+        || yield_strength_mpa <= 0.0
+    {
+        return Err(invalid(
+            "MECHANICS_INVALID_INPUT",
+            "Thin-walled pressure vessel requires positive radius, thickness, yield strength, and non-negative pressure",
+        ));
+    }
+    let hoop = internal_pressure_mpa * inner_radius_mm / wall_thickness_mm;
+    let axial = 0.5 * hoop;
+    let von_mises = (hoop * hoop - hoop * axial + axial * axial).sqrt();
+    let safety_factor = if von_mises > 1e-12 {
+        yield_strength_mpa / von_mises
+    } else {
+        f64::INFINITY
+    };
+    Ok((hoop, axial, von_mises, safety_factor))
+}
+
+

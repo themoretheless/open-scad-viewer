@@ -297,7 +297,7 @@ pub(super) fn sew_boundaries_impl(
         lc.trim(),
         &lf.surface,
         &rc.pcurve,
-        transferred_trim,
+        rc.trim().map(|trim| (&re.curve, trim)),
         &rf.surface,
         true,
         model.tolerance_mm,
@@ -573,7 +573,7 @@ pub(super) fn attach_impl(
         sc.trim(),
         &source_face.surface,
         &tc.pcurve,
-        transferred_trim,
+        tc.trim().map(|trim| (&te.curve, trim)),
         &target.faces[0].surface,
         true,
         tolerance,
@@ -686,7 +686,7 @@ fn share_patch_edge_with_trims(
     source_trim: Option<brep_topology::CoedgeTrim>,
     source_surface: &nurbs_core::surface::Surface,
     target_pcurve: &nurbs_core::curve::Curve,
-    target_trim: Option<brep_topology::CoedgeTrim>,
+    target_proof: Option<(&nurbs_core::curve::Curve, brep_topology::CoedgeTrim)>,
     target_surface: &nurbs_core::surface::Surface,
     target_reversed: bool,
     tolerance: f64,
@@ -720,14 +720,19 @@ fn share_patch_edge_with_trims(
             "Source boundary agreement unproved or budget exhausted",
         ));
     }
-    // A transferred trim already expresses the authored target relation in the
-    // opposite retained source parameterization; do not reverse those ends twice.
+    // The complete exact transfer proof already links the retained source to the
+    // authored target. Prove a partial target in its original parameterization,
+    // without approximating a projective map or reversing its ends twice.
+    let (target_curve, target_trim, target_reversed) = match target_proof {
+        Some((curve, trim)) => (curve, Some(trim), false),
+        None => (&source.curve, None, target_reversed),
+    };
     let second = verify_coedge_use(
-        &source.curve,
+        target_curve,
         target_pcurve,
         target_surface,
         target_trim,
-        target_reversed && target_trim.is_none(),
+        target_reversed,
         tolerance,
         max_verification_cells - first.cells,
     )?;

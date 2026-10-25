@@ -257,3 +257,162 @@ export function vectorDrawingPdf(sheets:DrawingSheet[]):Uint8Array {
  return new TextEncoder().encode(callGeometryRust<string>('drawing_pdf',{sheets:sheets.map(sheet=>sheet.svg)}))
 }
 export async function renderDrawingPdf(sheets:DrawingSheet[]):Promise<Uint8Array>{return vectorDrawingPdf(sheets)}
+
+export type Iso286HoleZone = 'H7' | 'H8' | 'H9'
+export type Iso286ShaftZone = 'g6' | 'f7' | 'h6' | 'k6' | 'n6' | 'p6' | 's6'
+
+export interface Iso286FitAnalysis {
+  nominalDiaMm: number
+  geometricMeanDiaMm: number
+  fundamentalToleranceUnitUm: number
+  holeZone: Iso286HoleZone
+  shaftZone: Iso286ShaftZone
+  holeToleranceMm: number
+  shaftToleranceMm: number
+  holeUpperDeviationMm: number
+  holeLowerDeviationMm: number
+  shaftUpperDeviationMm: number
+  shaftLowerDeviationMm: number
+  maxClearanceMm: number
+  minClearanceMm: number
+  fitType: 'clearance' | 'transition' | 'interference'
+}
+
+const ISO286_DIAMETER_STEPS_MM: ReadonlyArray<readonly [number, number]> = [
+  [0, 3],
+  [3, 6],
+  [6, 10],
+  [10, 18],
+  [18, 30],
+  [30, 50],
+  [50, 80],
+  [80, 120],
+  [120, 180],
+  [180, 250],
+  [250, 315],
+  [315, 400],
+  [400, 500],
+]
+
+/**
+ * Evaluates an ISO 286-1 hole-basis shaft/hole fit, computing the fundamental tolerance unit
+ * $i = 0.45 \sqrt[3]{D} + 0.001 D$ ($\mu\text{m}$), standard IT6/IT7/IT8/IT9 grade tolerances,
+ * hole deviations $(ES, EI)$ in mm, shaft deviations $(es, ei)$ in mm, maximum/minimum clearance,
+ * and fit classification (`'clearance' | 'transition' | 'interference'`).
+ */
+export function evaluateIso286HoleBasisFit(
+  nominalDiaMm: number,
+  holeZone: Iso286HoleZone,
+  shaftZone: Iso286ShaftZone,
+): Iso286FitAnalysis {
+  if (!Number.isFinite(nominalDiaMm) || nominalDiaMm <= 0 || nominalDiaMm > 500) {
+    throw new RangeError('Nominal diameter must be in the ISO 286-1 standard range (0, 500] mm.')
+  }
+
+  let dMin = 1
+  let dMax = 3
+  for (let idx = 0; idx < ISO286_DIAMETER_STEPS_MM.length; idx++) {
+    const step = ISO286_DIAMETER_STEPS_MM[idx]!
+    if (nominalDiaMm > step[0] && nominalDiaMm <= step[1]) {
+      dMin = step[0] === 0 ? 1 : step[0]
+      dMax = step[1]
+      break
+    }
+  }
+
+  const D = Math.sqrt(dMin * dMax)
+  const iUm = 0.45 * Math.cbrt(D) + 0.001 * D
+
+  const it6Um = 10 * iUm
+  const it7Um = 16 * iUm
+  const it8Um = 25 * iUm
+  const it9Um = 40 * iUm
+
+  const holeTolUm = holeZone === 'H7' ? it7Um : holeZone === 'H8' ? it8Um : it9Um
+  const holeLowerDeviationMm = 0
+  const holeUpperDeviationMm = holeTolUm * 1e-3
+
+  let shaftTolUm = it6Um
+  let esUm = 0
+  let eiUm = 0
+
+  switch (shaftZone) {
+    case 'g6': {
+      shaftTolUm = it6Um
+      esUm = -2.5 * Math.pow(D, 0.34)
+      eiUm = esUm - shaftTolUm
+      break
+    }
+    case 'f7': {
+      shaftTolUm = it7Um
+      esUm = -5.5 * Math.pow(D, 0.41)
+      eiUm = esUm - shaftTolUm
+      break
+    }
+    case 'h6': {
+      shaftTolUm = it6Um
+      esUm = 0
+      eiUm = -shaftTolUm
+      break
+    }
+    case 'k6': {
+      shaftTolUm = it6Um
+      eiUm = 0.6 * Math.cbrt(D)
+      esUm = eiUm + shaftTolUm
+      break
+    }
+    case 'n6': {
+      shaftTolUm = it6Um
+      eiUm = 5 * Math.pow(D, 0.34)
+      esUm = eiUm + shaftTolUm
+      break
+    }
+    case 'p6': {
+      shaftTolUm = it6Um
+      eiUm = it7Um + 2
+      esUm = eiUm + shaftTolUm
+      break
+    }
+    case 's6': {
+      shaftTolUm = it6Um
+      eiUm = it8Um + 0.4 * D
+      esUm = eiUm + shaftTolUm
+      break
+    }
+  }
+
+  const shaftUpperDeviationMm = esUm * 1e-3
+  const shaftLowerDeviationMm = eiUm * 1e-3
+  const holeToleranceMm = holeTolUm * 1e-3
+  const shaftToleranceMm = shaftTolUm * 1e-3
+
+  const maxClearanceMm = holeUpperDeviationMm - shaftLowerDeviationMm
+  const minClearanceMm = holeLowerDeviationMm - shaftUpperDeviationMm
+
+  let fitType: 'clearance' | 'transition' | 'interference'
+  if (minClearanceMm >= -1e-9) {
+    fitType = 'clearance'
+  } else if (maxClearanceMm <= 1e-9) {
+    fitType = 'interference'
+  } else {
+    fitType = 'transition'
+  }
+
+  return {
+    nominalDiaMm,
+    geometricMeanDiaMm: D,
+    fundamentalToleranceUnitUm: iUm,
+    holeZone,
+    shaftZone,
+    holeToleranceMm,
+    shaftToleranceMm,
+    holeUpperDeviationMm,
+    holeLowerDeviationMm,
+    shaftUpperDeviationMm,
+    shaftLowerDeviationMm,
+    maxClearanceMm,
+    minClearanceMm,
+    fitType,
+  }
+}
+

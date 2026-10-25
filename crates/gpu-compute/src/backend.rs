@@ -345,6 +345,135 @@ pub fn tuned_workgroup_size(backend: wgpu::Backend, metal_size: u32, default_siz
     }
 }
 
+/// Generates a complete, valid WGSL `@compute @workgroup_size(tile_size, tile_size, 1)` shared-memory
+/// tiled matrix multiplication shader (`C[M, N] = A[M, K] * B[K, N]`).
+///
+/// Uses `var<workgroup> tile_a` and `var<workgroup> tile_b` on-chip SRAM tiles (mapping directly
+/// to Apple Silicon Metal `threadgroup` memory and NVIDIA CUDA `__shared__` memory), `workgroupBarrier()`
+/// synchronization between tile loads and computation, and `fma()` inner loops.
+pub fn generate_wgsl_tiled_matmul_shader(tile_size: u32) -> String {
+    let ts = tile_size.clamp(1, 32);
+    let tile_elems = ts * ts;
+    format!(
+        r#"struct MatmulParams {{
+    m: u32,
+    k: u32,
+    n: u32,
+    _pad: u32,
+}}
+
+@group(0) @binding(0) var<uniform> params: MatmulParams;
+@group(0) @binding(1) var<storage, read> matrix_a: array<f32>;
+@group(0) @binding(2) var<storage, read> matrix_b: array<f32>;
+@group(0) @binding(3) var<storage, read_write> matrix_c: array<f32>;
+
+const TILE_SIZE: u32 = {ts}u;
+var<workgroup> tile_a: array<f32, {tile_elems}>;
+var<workgroup> tile_b: array<f32, {tile_elems}>;
+
+@compute @workgroup_size({ts}, {ts}, 1)
+fn main(
+    @builtin(global_invocation_id) global_id: vec3<u32>,
+    @builtin(local_invocation_id) local_id: vec3<u32>,
+) {{
+    let row = global_id.y;
+    let col = global_id.x;
+    let local_row = local_id.y;
+    let local_col = local_id.x;
+    let local_idx = local_row * TILE_SIZE + local_col;
+
+    var acc: f32 = 0.0;
+    let num_tiles = (params.k + TILE_SIZE - 1u) / TILE_SIZE;
+
+    for (var t: u32 = 0u; t < num_tiles; t = t + 1u) {{
+        let a_col = t * TILE_SIZE + local_col;
+        if (row < params.m && a_col < params.k) {{
+            tile_a[local_idx] = matrix_a[row * params.k + a_col];
+        }} else {{
+            tile_a[local_idx] = 0.0;
+        }}
+
+        let b_row = t * TILE_SIZE + local_row;
+        if (b_row < params.k && col < params.n) {{
+            tile_b[local_idx] = matrix_b[b_row * params.n + col];
+        }} else {{
+            tile_b[local_idx] = 0.0;
+        }}
+
+        workgroupBarrier();
+
+        for (var i: u32 = 0u; i < TILE_SIZE; i = i + 1u) {{
+            acc = fma(tile_a[local_row * TILE_SIZE + i], tile_b[i * TILE_SIZE + local_col], acc);
+        }}
+
+        workgroupBarrier();
+    }}
+
+    if (row < params.m && col < params.n) {{
+        matrix_c[row * params.n + col] = acc;
+    }}
+}}
+"#
+    )
+}
+
+/// Generates a complete, valid WGSL `@compute @workgroup_size(workgroup_size, 1, 1)` tree-based
+/// shared-memory parallel reduction shader with bank-conflict-free sequential addressing.
+pub fn generate_wgsl_parallel_reduction_shader(workgroup_size: u32) -> String {
+    let wg = workgroup_size.clamp(1, 1024).next_power_of_two().min(1024);
+    format!(
+        r#"struct ReductionParams {{
+    len: u32,
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
+}}
+
+@group(0) @binding(0) var<uniform> params: ReductionParams;
+@group(0) @binding(1) var<storage, read> input_data: array<f32>;
+@group(0) @binding(2) var<storage, read_write> block_sums: array<f32>;
+
+const WG_SIZE: u32 = {wg}u;
+var<workgroup> shared_data: array<f32, {wg}>;
+
+@compute @workgroup_size({wg}, 1, 1)
+fn main(
+    @builtin(local_invocation_id) local_id: vec3<u32>,
+    @builtin(workgroup_id) group_id: vec3<u32>,
+) {{
+    let tid = local_id.x;
+    let base = group_id.x * (WG_SIZE * 2u) + tid;
+
+    var sum: f32 = 0.0;
+    if (base < params.len) {{
+        sum = input_data[base];
+    }}
+    if (base + WG_SIZE < params.len) {{
+        sum = sum + input_data[base + WG_SIZE];
+    }}
+    shared_data[tid] = sum;
+    workgroupBarrier();
+
+    var stride: u32 = WG_SIZE / 2u;
+    loop {{
+        if (stride == 0u) {{
+            break;
+        }}
+        if (tid < stride) {{
+            shared_data[tid] = shared_data[tid] + shared_data[tid + stride];
+        }}
+        workgroupBarrier();
+        stride = stride / 2u;
+    }}
+
+    if (tid == 0u) {{
+        block_sums[group_id.x] = shared_data[0u];
+    }}
+}}
+"#
+    )
+}
+
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
 mod tests {
@@ -466,5 +595,21 @@ mod tests {
         assert!(v_simds > 0);
         assert!(v_sram > 0 && v_sram <= vk_topo.default_local_sram_bytes);
         assert_eq!(metal_topo.estimate_matmul_occupancy(0, 64, 64), (0, 0, 0));
+    }
+
+    #[test]
+    fn wgsl_tiled_matmul_and_parallel_reduction_shader_generators_emit_valid_kernels() {
+        let matmul_wgsl = generate_wgsl_tiled_matmul_shader(16);
+        assert!(matmul_wgsl.contains("@compute @workgroup_size(16, 16, 1)"));
+        assert!(matmul_wgsl.contains("var<workgroup> tile_a: array<f32, 256>;"));
+        assert!(matmul_wgsl.contains("var<workgroup> tile_b: array<f32, 256>;"));
+        assert!(matmul_wgsl.contains("workgroupBarrier();"));
+        assert!(matmul_wgsl.contains("fma("));
+
+        let reduce_wgsl = generate_wgsl_parallel_reduction_shader(256);
+        assert!(reduce_wgsl.contains("@compute @workgroup_size(256, 1, 1)"));
+        assert!(reduce_wgsl.contains("var<workgroup> shared_data: array<f32, 256>;"));
+        assert!(reduce_wgsl.contains("workgroupBarrier();"));
+        assert!(reduce_wgsl.contains("shared_data[tid] + shared_data[tid + stride]"));
     }
 }

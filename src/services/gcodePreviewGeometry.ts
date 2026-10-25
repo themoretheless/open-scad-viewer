@@ -164,3 +164,168 @@ export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewR
   context.save(); context.translate(20, size - padding); context.rotate(-Math.PI / 2)
   context.fillText(`Y ${bounds.min[1].toFixed(2)} … ${bounds.max[1].toFixed(2)} mm`, 0, 0); context.restore()
 }
+
+export interface GcodePrintabilityAudit {
+  retractionCount: number
+  unretractionCount: number
+  travelToExtrudeRatio: number
+  maxFeedrateMmPerMin: number
+  zHopCount: number
+}
+
+/**
+ * Audits G-code printability in a single linear pass over G0/G1/M82/M83/G90/G91/G92 commands,
+ * tracking filament retraction/unretraction cycles, non-extruding travel to extruding print
+ * distance ratio, peak feedrate (`F` in mm/min), and Z-hop lifts during travel moves.
+ */
+export function auditGcodePrintability(gcodeText: string): GcodePrintabilityAudit {
+  let retractionCount = 0
+  let unretractionCount = 0
+  let travelDistanceMm = 0
+  let extrudeDistanceMm = 0
+  let maxFeedrateMmPerMin = 0
+  let zHopCount = 0
+
+  let curX = 0
+  let curY = 0
+  let curZ = 0
+  let curE = 0
+  let relativeXyz = false
+  let relativeE = false
+  let isRetracted = false
+
+  const len = gcodeText.length
+  let lineStart = 0
+
+  while (lineStart < len) {
+    let lineEnd = gcodeText.indexOf('\n', lineStart)
+    if (lineEnd === -1) lineEnd = len
+
+    // Strip comments starting with ';'
+    let codeEnd = lineEnd
+    for (let i = lineStart; i < lineEnd; i++) {
+      if (gcodeText.charCodeAt(i) === 59 /* ';' */) {
+        codeEnd = i
+        break
+      }
+    }
+
+    const line = gcodeText.slice(lineStart, codeEnd).trim()
+    lineStart = lineEnd + 1
+    if (!line) continue
+
+    const upper = line.toUpperCase()
+    if (upper.startsWith('G90')) {
+      relativeXyz = false
+      relativeE = false
+      continue
+    }
+    if (upper.startsWith('G91')) {
+      relativeXyz = true
+      relativeE = true
+      continue
+    }
+    if (upper.startsWith('M82')) {
+      relativeE = false
+      continue
+    }
+    if (upper.startsWith('M83')) {
+      relativeE = true
+      continue
+    }
+
+    const tokens = upper.split(/\s+/)
+    const cmd = tokens[0]!
+
+    if (cmd === 'G92') {
+      for (let t = 1; t < tokens.length; t++) {
+        const tok = tokens[t]!
+        const prefix = tok.charAt(0)
+        const val = Number.parseFloat(tok.slice(1))
+        if (!Number.isFinite(val)) continue
+        if (prefix === 'X') curX = val
+        else if (prefix === 'Y') curY = val
+        else if (prefix === 'Z') curZ = val
+        else if (prefix === 'E') curE = val
+      }
+      continue
+    }
+
+    if (cmd !== 'G0' && cmd !== 'G00' && cmd !== 'G1' && cmd !== 'G01') {
+      continue
+    }
+
+    let nextX = curX
+    let nextY = curY
+    let nextZ = curZ
+    let nextE = curE
+    let hasXyz = false
+    let hasE = false
+
+    for (let t = 1; t < tokens.length; t++) {
+      const tok = tokens[t]!
+      if (tok.length < 2) continue
+      const prefix = tok.charAt(0)
+      const val = Number.parseFloat(tok.slice(1))
+      if (!Number.isFinite(val)) continue
+
+      if (prefix === 'X') {
+        nextX = relativeXyz ? curX + val : val
+        hasXyz = true
+      } else if (prefix === 'Y') {
+        nextY = relativeXyz ? curY + val : val
+        hasXyz = true
+      } else if (prefix === 'Z') {
+        nextZ = relativeXyz ? curZ + val : val
+        hasXyz = true
+      } else if (prefix === 'E') {
+        nextE = relativeE ? curE + val : val
+        hasE = true
+      } else if (prefix === 'F') {
+        if (val > maxFeedrateMmPerMin) maxFeedrateMmPerMin = val
+      }
+    }
+
+    const deltaE = hasE ? nextE - curE : 0
+    const deltaZ = nextZ - curZ
+    const dist = hasXyz ? Math.hypot(nextX - curX, nextY - curY, deltaZ) : 0
+
+    if (deltaE < -1e-6) {
+      retractionCount++
+      isRetracted = true
+    } else if (deltaE > 1e-6) {
+      if (isRetracted && (!hasXyz || dist < 1e-6)) {
+        unretractionCount++
+        isRetracted = false
+      } else if (isRetracted) {
+        unretractionCount++
+        isRetracted = false
+      }
+    }
+
+    if (hasXyz && dist > 0) {
+      if (deltaE > 1e-6) {
+        extrudeDistanceMm += dist
+      } else {
+        travelDistanceMm += dist
+        if (deltaZ > 1e-6) {
+          zHopCount++
+        }
+      }
+    }
+
+    curX = nextX
+    curY = nextY
+    curZ = nextZ
+    curE = nextE
+  }
+
+  return {
+    retractionCount,
+    unretractionCount,
+    travelToExtrudeRatio: extrudeDistanceMm > 0 ? travelDistanceMm / extrudeDistanceMm : 0,
+    maxFeedrateMmPerMin,
+    zHopCount,
+  }
+}
+

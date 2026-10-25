@@ -283,6 +283,57 @@ pub fn matmul_f32_tiled_8x8(
     out
 }
 
+/// Batched strided `f32` matrix multiplication `C[b] = A[b] @ B[b]` for `b in 0..batch`, where each
+/// batch slice `A[b]` has shape `(m × k)` and `B[b]` has shape `(k × n)`.
+///
+/// Delegates each batch slice to the 8×8 register-tiled FMA micro-kernel [`matmul_f32_tiled_8x8`].
+/// Also supports broadcasting a single `B` matrix (`b.len() == k * n`) across all `batch` slices of `A`.
+pub fn batched_matmul_f32(
+    a: &[f32],
+    b: &[f32],
+    batch: usize,
+    m: usize,
+    k: usize,
+    n: usize,
+) -> Result<Vec<f32>, ComputeError> {
+    let a_stride = m.checked_mul(k).ok_or(ComputeError::OutOfBounds)?;
+    let b_stride = k.checked_mul(n).ok_or(ComputeError::OutOfBounds)?;
+    let c_stride = m.checked_mul(n).ok_or(ComputeError::OutOfBounds)?;
+    let expected_a = batch.checked_mul(a_stride).ok_or(ComputeError::OutOfBounds)?;
+    let expected_b = batch.checked_mul(b_stride).ok_or(ComputeError::OutOfBounds)?;
+    let total_c = batch.checked_mul(c_stride).ok_or(ComputeError::OutOfBounds)?;
+
+    if a.len() != expected_a {
+        return Err(ComputeError::LengthMismatch {
+            expected: expected_a,
+            actual: a.len(),
+        });
+    }
+    let broadcast_b = batch > 1 && b.len() == b_stride;
+    if !broadcast_b && b.len() != expected_b {
+        return Err(ComputeError::LengthMismatch {
+            expected: expected_b,
+            actual: b.len(),
+        });
+    }
+    if batch == 0 || m == 0 || n == 0 {
+        return Ok(vec![0.0_f32; total_c]);
+    }
+
+    let mut out = Vec::with_capacity(total_c);
+    for idx in 0..batch {
+        let a_slice = &a[idx * a_stride..(idx + 1) * a_stride];
+        let b_slice = if broadcast_b {
+            &b[0..b_stride]
+        } else {
+            &b[idx * b_stride..(idx + 1) * b_stride]
+        };
+        let c_slice = matmul_f32_tiled_8x8(a_slice, b_slice, m, k, n);
+        out.extend_from_slice(&c_slice);
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,5 +360,24 @@ mod tests {
             }
         }
         assert!(matmul_f32_tiled_8x8(&[], &[], 0, 0, 0).is_empty());
+
+        // Batched matmul test (2 batches of 2x3 @ 3x2)
+        let a_batch = [
+            1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, // batch 0
+            2.0, 0.0, 1.0, 0.0, 3.0, 2.0, // batch 1
+        ];
+        let b_batch = [
+            1.0_f32, 0.0, 0.0, 1.0, 1.0, 1.0, // batch 0
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, // batch 1
+        ];
+        let c_batch = batched_matmul_f32(&a_batch, &b_batch, 2, 2, 3, 2).unwrap();
+        assert_eq!(
+            c_batch,
+            vec![
+                4.0, 5.0, 10.0, 11.0, // batch 0
+                7.0, 10.0, 19.0, 24.0, // batch 1
+            ]
+        );
+        assert!(batched_matmul_f32(&a_batch[..5], &b_batch, 2, 2, 3, 2).is_err());
     }
 }

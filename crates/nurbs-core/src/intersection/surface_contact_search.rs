@@ -6,7 +6,6 @@ use crate::{
     foundation::guards::Budget,
     surface::Surface,
     surface_contact::{self, Witness},
-    surface_distance::rectangle_bounds,
 };
 use std::collections::VecDeque;
 

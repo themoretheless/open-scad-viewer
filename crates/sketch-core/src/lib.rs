@@ -687,4 +687,32 @@ mod tests {
             axis_b: 3,
         }));
     }
+
+    #[test]
+    fn add_regular_polygon_and_degrees_of_freedom() {
+        let mut s = Sketch {
+            points: vec![],
+            circles: vec![],
+            constraints: vec![],
+        };
+        assert!(s.add_regular_polygon((0.0, 0.0), 5.0, 2, 0.0).is_none());
+        assert!(s.add_regular_polygon((0.0, 0.0), 0.0, 4, 0.0).is_none());
+
+        let (verts, cons) = s.add_regular_polygon((2.0, -1.0), 5.0, 6, 0.0).unwrap();
+        assert_eq!(verts.len(), 6);
+        assert_eq!(cons.len(), 5);
+        assert_eq!(s.points.len(), 6);
+        // 6 vertices -> 12 point coordinates, minus 5 EqualLength scalar equations = 7 DOF.
+        assert_eq!(s.degrees_of_freedom(), 7);
+
+        // Verify all 6 sides have equal length and lie on the radius-5 circle around (2, -1).
+        let side0 = length(subtract(s.points[verts[1]], s.points[verts[0]]));
+        assert!((side0 - 5.0).abs() < 1e-9);
+        for i in 0..6 {
+            let p = s.points[verts[i]];
+            let q = s.points[verts[(i + 1) % 6]];
+            assert!((length(subtract(p, [2.0, -1.0])) - 5.0).abs() < 1e-9);
+            assert!((length(subtract(q, p)) - side0).abs() < 1e-9);
+        }
+    }
 }

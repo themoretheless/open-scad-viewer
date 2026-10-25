@@ -393,7 +393,6 @@ pub const MAX_LOAD_STEPS: usize = 200;
 pub const MAX_NR_ITERATIONS: usize = 200;
 
 mod nonlinear;
-use nonlinear::*;
 pub use nonlinear::{NonlinearOptions, NonlinearStep, TrussNonlinearResponse, solve_nonlinear};
 
 

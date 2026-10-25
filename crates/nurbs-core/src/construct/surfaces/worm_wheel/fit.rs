@@ -739,7 +739,6 @@ pub use axial_fitting::verify_packed_axial_stock;
 pub use axial_fitting::fit_axial_tip;
 pub use axial_fitting::certify_axial_tip_grid;
 pub use axial_fitting::verify_packed_axial_tip;
-use axial_fitting::axial_source;
 pub use axial_fitting::qualify_axial_grid;
 pub use axial_fitting::regrid_axial_source;
 use axial_fitting::instance_source;
@@ -752,19 +751,12 @@ mod grid_packing;
 use grid_packing::build;
 use grid_packing::pack;
 pub use grid_packing::verify_packed_grid;
-use grid_packing::same_scalar_bits;
-use grid_packing::same_row_bits;
 use grid_packing::same_packed_definitions;
 
 #[path = "fit/grid_verification.rs"]
 mod grid_verification;
 use grid_verification::verify;
 use grid_verification::validate_layout;
-use grid_verification::saved_regular;
-use grid_verification::interpolation_error;
-use grid_verification::node;
 use grid_verification::ideal_net;
-use grid_verification::norm;
-use grid_verification::sixth_power;
 pub use grid_verification::fit_chart;
 use grid_verification::fit;

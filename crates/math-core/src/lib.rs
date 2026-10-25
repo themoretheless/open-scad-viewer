@@ -58,6 +58,7 @@ pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigi
 pub use spatial::{
     Aabb3, CatmullRomSpline3, DualQuat, Frustum, Obb3, Plane3, Quat, Ray3, barycentric_coords_3d,
     closest_point_on_triangle_3d, evaluate_catmull_rom_3d, evaluate_catmull_rom_tangent_3d,
+    expand_bits_10_to_30, morton3d_decode, morton3d_encode, morton3d_from_unit_point,
     plane_from_points_pca, ray_triangle_intersect_moller_trumbore, solve_linear_3x3,
     symmetric_eigen3,
 };

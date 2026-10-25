@@ -206,3 +206,16 @@ fn planar_xor() {
     let s: f64 = r.iter().map(|ring| area(ring).abs()).sum();
     assert!((s - 24.).abs() < 1e-6, "xor area={s}");
 }
+
+#[test]
+fn oriented_bounding_box_2d_rotated_rectangle() {
+    let angle = 0.6_f64;
+    let (s, c) = angle.sin_cos();
+    let rot = |x: f64, y: f64| -> [f64; 2] { [3.0 + x * c - y * s, -2.0 + x * s + y * c] };
+    // 6x2 rectangle rotated by 0.6 rad -> exact OBB area is 12.0 (whereas AABB area is > 21).
+    let rect = vec![rot(0.0, 0.0), rot(6.0, 0.0), rot(6.0, 2.0), rot(0.0, 2.0)];
+    let (corners, box_area) = oriented_bounding_box_2d(&vec![rect]).unwrap();
+    assert!((box_area - 12.0).abs() < 1e-9, "box_area={box_area}");
+    assert!((area(&corners) - 12.0).abs() < 1e-9);
+    assert!(oriented_bounding_box_2d(&vec![]).is_none());
+}

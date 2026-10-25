@@ -149,8 +149,19 @@ fn evaluate_bernstein(mut points: Vec<[I; 4]>, t: I) -> Result<[I; 4]> {
                 // before the next tensor axis: a constant row must not widen.
                 let a = points[i][k];
                 let b = points[i + 1][k];
-                points[i][k] = a.mul(beta)?.add(b.mul(t)?)?
+                let mut value = a.mul(beta)?.add(b.mul(t)?)?
                     .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
+                // All three expressions enclose the SAME original de
+                // Casteljau value. Their intersection preserves t+(1-t)=1
+                // without assuming independent coefficient intervals exact.
+                // Skip only an overflowing optional rearrangement.
+                if let Ok(affine) = b.sub(a).and_then(|d| d.mul(t)).and_then(|d| a.add(d)) {
+                    value = value.intersect(affine.lo, affine.hi)?;
+                }
+                if let Ok(affine) = a.sub(b).and_then(|d| d.mul(beta)).and_then(|d| b.add(d)) {
+                    value = value.intersect(affine.lo, affine.hi)?;
+                }
+                points[i][k] = value;
             }
         }
     }

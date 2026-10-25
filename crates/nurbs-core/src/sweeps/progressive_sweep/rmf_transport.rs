@@ -201,10 +201,10 @@ pub(crate) fn certify_original_rmf_transport_shared(
 pub fn certify_original_arc_rmf_transport(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool)->Result<OriginalRmfTransportReport>{
     certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None)
 }
-pub(super) fn certify_original_rmf_transport_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
+pub(super) fn certify_original_rmf_transport_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool,_spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
     certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None)
 }
-pub(crate) fn certify_original_rmf_transport_shared_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_work:usize,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
+pub(crate) fn certify_original_rmf_transport_shared_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_work:usize,closed:bool,_spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
     certify_original_rmf_transport_impl(path,normal,steps,max_work,max_work as u64,closed,Some(max_work))
 }
 

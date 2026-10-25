@@ -66,3 +66,84 @@ export function saveCadJoint(source:string,bodies:DirectBody[],o:CadOptions,min:
  const joints=readCadJoints(source).filter(old=>old.child!==child);joints.push(j);return source.replace(tag,'')+'\n/* cad-joints-v1 '+btoa(JSON.stringify(joints))+' */\n'
 }
 export const removeCadJoints=(source:string)=>source.replace(tag,'')
+
+export type CadKinematicJointType = 'fixed' | 'revolute' | 'slider' | 'cylindrical' | 'planar' | 'ball'
+
+export interface MechanismMobilitySummary {
+  bodyCount: number
+  groundedBodyCount: number
+  movingBodyCount: number
+  jointCount: number
+  totalFreeJointDof: number
+  totalConstrainedDof: number
+  mobility: number
+  classification: 'rigid-or-overconstrained' | 'kinematically-determinate' | 'underconstrained-mechanism'
+}
+
+const JOINT_FREE_DOF_TABLE: Readonly<Record<CadKinematicJointType, number>> = {
+  fixed: 0,
+  revolute: 1,
+  slider: 1,
+  cylindrical: 2,
+  planar: 3,
+  ball: 3,
+}
+
+/**
+ * Evaluates spatial 3D mechanism mobility using the Grübler-Kutzbach criterion:
+ * $M = 6(N - G - 1) + \sum_{i=1}^{J} f_i$, where $N - G$ is the number of moving links
+ * relative to the ground frame (equivalent to $6 N_{\text{moving}} - \sum (6 - f_i)$ when $G \ge 1$).
+ * Specifically follows the spatial formula $M = 6(N - G) - \sum c_i$ when grounded bodies are present,
+ * or $M = 6(N - 1) - \sum c_i$ for an ungrounded free spatial assembly ($G = 0$).
+ */
+export function evaluateMechanismMobility3d(
+  bodyCount: number,
+  groundedBodyCount: number,
+  joints: ReadonlyArray<{ type: CadKinematicJointType }>,
+): MechanismMobilitySummary {
+  if (!Number.isInteger(bodyCount) || bodyCount < 0) {
+    throw new RangeError('bodyCount must be a non-negative integer.')
+  }
+  if (!Number.isInteger(groundedBodyCount) || groundedBodyCount < 0 || groundedBodyCount > bodyCount) {
+    throw new RangeError('groundedBodyCount must be an integer between 0 and bodyCount.')
+  }
+
+  let totalFreeJointDof = 0
+  let totalConstrainedDof = 0
+
+  for (let i = 0; i < joints.length; i++) {
+    const f = JOINT_FREE_DOF_TABLE[joints[i]!.type]
+    if (f === undefined) {
+      throw new RangeError(`Unsupported kinematic joint type: ${String(joints[i]!.type)}`)
+    }
+    totalFreeJointDof += f
+    totalConstrainedDof += 6 - f
+  }
+
+  const movingBodyCount = Math.max(0, bodyCount - groundedBodyCount)
+  // Standard spatial Kutzbach formula: each moving link has 6 DOFs relative to ground (or relative
+  // to 1 reference body when groundedBodyCount === 0), minus constraints imposed by all joints.
+  const effectiveFreeBodies = groundedBodyCount > 0 ? movingBodyCount : Math.max(0, bodyCount - 1)
+  const mobility = 6 * effectiveFreeBodies - totalConstrainedDof
+
+  let classification: MechanismMobilitySummary['classification']
+  if (mobility <= 0) {
+    classification = 'rigid-or-overconstrained'
+  } else if (mobility === 1) {
+    classification = 'kinematically-determinate'
+  } else {
+    classification = 'underconstrained-mechanism'
+  }
+
+  return {
+    bodyCount,
+    groundedBodyCount,
+    movingBodyCount,
+    jointCount: joints.length,
+    totalFreeJointDof,
+    totalConstrainedDof,
+    mobility,
+    classification,
+  }
+}
+

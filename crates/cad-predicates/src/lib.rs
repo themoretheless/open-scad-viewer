@@ -1100,3 +1100,116 @@ pub fn segment_triangle_intersect_3d_exact(
     }
     Sign::Negative
 }
+
+/// Exact adaptive 3D tetrahedron orientation sign alongside the signed determinant magnitude `6 * V`.
+///
+/// The sign is certified by the exact adaptive `orient3d(a, b, c, d)` predicate, while the
+/// scalar `6 * V = ((b - a) × (c - a)) · (d - a)` is evaluated with exact expansion arithmetic
+/// (falling back to the binary64 determinant if finite, or `0.0` when exact `orient3d` is `Sign::Zero`).
+pub fn tetrahedron_signed_volume_6x(
+    a: [f64; 3],
+    b: [f64; 3],
+    c: [f64; 3],
+    d: [f64; 3],
+) -> (Sign, f64) {
+    let coords = [
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
+    ];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return (Sign::Zero, 0.0);
+    }
+    let scalars: Vec<_> = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("tet-vol-6x-ephemeral", 0, scalars) else {
+        return (Sign::Zero, 0.0);
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let pt = |offset: usize| {
+        [
+            source.leaf(offset).unwrap(),
+            source.leaf(offset + 1).unwrap(),
+            source.leaf(offset + 2).unwrap(),
+        ]
+    };
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let sign = match orient3d(&mut ctx, pt(0), pt(3), pt(6), pt(9)) {
+        Ok(Decision {
+            outcome: Outcome::Sign(s),
+            ..
+        }) => s,
+        _ => Sign::Zero,
+    };
+    if sign == Sign::Zero {
+        return (Sign::Zero, 0.0);
+    }
+    let mut exp_ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let inputs: Vec<Expansion> = coords.iter().map(|&v| Expansion::scalar(v)).collect();
+    let det_6v = if let Ok(exp) = expression(Predicate::Orient3, &inputs, &mut exp_ctx)
+        && let Ok(interval) = exp.enclosure(&mut exp_ctx)
+    {
+        let mid = 0.5 * (interval.lo + interval.hi);
+        if mid.is_finite() && mid != 0.0 {
+            mid
+        } else {
+            let bx = b[0] - a[0];
+            let by = b[1] - a[1];
+            let bz = b[2] - a[2];
+            let cx = c[0] - a[0];
+            let cy = c[1] - a[1];
+            let cz = c[2] - a[2];
+            let dx = d[0] - a[0];
+            let dy = d[1] - a[1];
+            let dz = d[2] - a[2];
+            bx * (cy * dz - cz * dy) + by * (cz * dx - cx * dz) + bz * (cx * dy - cy * dx)
+        }
+    } else {
+        let bx = b[0] - a[0];
+        let by = b[1] - a[1];
+        let bz = b[2] - a[2];
+        let cx = c[0] - a[0];
+        let cy = c[1] - a[1];
+        let cz = c[2] - a[2];
+        let dx = d[0] - a[0];
+        let dy = d[1] - a[1];
+        let dz = d[2] - a[2];
+        bx * (cy * dz - cz * dy) + by * (cz * dx - cx * dz) + bz * (cx * dy - cy * dx)
+    };
+    (sign, det_6v)
+}
+
+/// Exact 2D barycentric sub-triangle orientation signs `(orient2d(b, c, p), orient2d(c, a, p), orient2d(a, b, p))`
+/// for exact topological classification of point `p` with respect to triangle `(a, b, c)`
+/// (interior, edge 0/1/2, vertex 0/1/2, or exterior).
+pub fn barycentric_in_triangle_2d_exact(
+    a: [f64; 2],
+    b: [f64; 2],
+    c: [f64; 2],
+    p: [f64; 2],
+) -> (Sign, Sign, Sign) {
+    let coords = [a[0], a[1], b[0], b[1], c[0], c[1], p[0], p[1]];
+    if coords.iter().any(|v| !v.is_finite()) {
+        return (Sign::Zero, Sign::Zero, Sign::Zero);
+    }
+    let scalars = coords
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("bary-tri-2d-ephemeral", 0, scalars) else {
+        return (Sign::Zero, Sign::Zero, Sign::Zero);
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    let orient = |q0: usize, q1: usize, q2: usize| -> Sign {
+        let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+        match orient2d(&mut ctx, pair(q0), pair(q1), pair(q2)) {
+            Ok(Decision {
+                outcome: Outcome::Sign(s),
+                ..
+            }) => s,
+            _ => Sign::Zero,
+        }
+    };
+    (orient(2, 4, 6), orient(4, 0, 6), orient(0, 2, 6))
+}

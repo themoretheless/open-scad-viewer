@@ -279,6 +279,175 @@ pub fn statistical_outlier_removal(
     out
 }
 
+/// Estimates outward-oriented unit surface normals for each point in a 3D point cloud using
+/// local $k$-nearest-neighbor Principal Component Analysis (PCA): builds the $3 \times 3$
+/// local neighborhood covariance matrix in a stack-allocated $k$-NN buffer, extracts the
+/// eigenvector corresponding to the smallest eigenvalue via analytical Jacobi / trigonometric
+/// symmetric eigendecomposition, and consistently orients normals away from the global cloud centroid.
+pub fn estimate_point_cloud_normals(points: &[[f64; 3]], k_neighbors: usize) -> Vec<[f64; 3]> {
+    let n = points.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    if n < 3 || k_neighbors < 2 {
+        return vec![[0.0, 0.0, 1.0]; n];
+    }
+    let k = k_neighbors.clamp(2, 32).min(n - 1);
+
+    let mut global_centroid = [0.0_f64; 3];
+    let mut valid_count = 0usize;
+    for p in points {
+        if p[0].is_finite() && p[1].is_finite() && p[2].is_finite() {
+            global_centroid[0] += p[0];
+            global_centroid[1] += p[1];
+            global_centroid[2] += p[2];
+            valid_count += 1;
+        }
+    }
+    if valid_count < 3 {
+        return vec![[0.0, 0.0, 1.0]; n];
+    }
+    let inv_valid = 1.0 / (valid_count as f64);
+    global_centroid[0] *= inv_valid;
+    global_centroid[1] *= inv_valid;
+    global_centroid[2] *= inv_valid;
+
+    let mut normals = Vec::with_capacity(n);
+    for (i, &pi) in points.iter().enumerate() {
+        if !pi[0].is_finite() || !pi[1].is_finite() || !pi[2].is_finite() {
+            normals.push([0.0, 0.0, 1.0]);
+            continue;
+        }
+        // Stack-allocated sorted k-NN buffer storing (dist_sq, neighbor_index)
+        let mut best_d2 = [f64::INFINITY; 32];
+        let mut best_idx = [0usize; 32];
+        for (j, &pj) in points.iter().enumerate() {
+            if i == j || !pj[0].is_finite() || !pj[1].is_finite() || !pj[2].is_finite() {
+                continue;
+            }
+            let dx = pi[0] - pj[0];
+            let dy = pi[1] - pj[1];
+            let dz = pi[2] - pj[2];
+            let d2 = dx * dx + dy * dy + dz * dz;
+            if d2 < best_d2[k - 1] {
+                let mut pos = k - 1;
+                while pos > 0 && d2 < best_d2[pos - 1] {
+                    best_d2[pos] = best_d2[pos - 1];
+                    best_idx[pos] = best_idx[pos - 1];
+                    pos -= 1;
+                }
+                best_d2[pos] = d2;
+                best_idx[pos] = j;
+            }
+        }
+
+        // Compute local neighborhood centroid (including query point pi and its k neighbors)
+        let count = (k + 1) as f64;
+        let mut mean = pi;
+        for &nb_idx in &best_idx[..k] {
+            let nb = points[nb_idx];
+            mean[0] += nb[0];
+            mean[1] += nb[1];
+            mean[2] += nb[2];
+        }
+        mean[0] /= count;
+        mean[1] /= count;
+        mean[2] /= count;
+
+        // Accumulate 3x3 symmetric covariance matrix
+        let mut c00 = 0.0_f64;
+        let mut c01 = 0.0_f64;
+        let mut c02 = 0.0_f64;
+        let mut c11 = 0.0_f64;
+        let mut c12 = 0.0_f64;
+        let mut c22 = 0.0_f64;
+        for idx in std::iter::once(i).chain(best_idx[..k].iter().copied()) {
+            let p = points[idx];
+            let dx = p[0] - mean[0];
+            let dy = p[1] - mean[1];
+            let dz = p[2] - mean[2];
+            c00 += dx * dx;
+            c01 += dx * dy;
+            c02 += dx * dz;
+            c11 += dy * dy;
+            c12 += dy * dz;
+            c22 += dz * dz;
+        }
+
+        let mut a = [[c00, c01, c02], [c01, c11, c12], [c02, c12, c22]];
+        let mut v = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+
+        // Exact cyclic Jacobi rotations for 3x3 symmetric covariance matrix
+        for _ in 0..8 {
+            for &(p, q) in &[(0, 1), (0, 2), (1, 2)] {
+                let apq = a[p][q];
+                if apq.abs() <= 1e-15 {
+                    continue;
+                }
+                let app = a[p][p];
+                let aqq = a[q][q];
+                let tau = (aqq - app) / (2.0 * apq);
+                let t = if tau >= 0.0 {
+                    1.0 / (tau + (1.0 + tau * tau).sqrt())
+                } else {
+                    -1.0 / (-tau + (1.0 + tau * tau).sqrt())
+                };
+                let c = 1.0 / (1.0 + t * t).sqrt();
+                let s = t * c;
+                a[p][p] = app - t * apq;
+                a[q][q] = aqq + t * apq;
+                a[p][q] = 0.0;
+                a[q][p] = 0.0;
+                let r = 3 - p - q;
+                let apr = a[p][r];
+                let aqr = a[q][r];
+                a[p][r] = c * apr - s * aqr;
+                a[r][p] = a[p][r];
+                a[q][r] = s * apr + c * aqr;
+                a[r][q] = a[q][r];
+                for row in &mut v {
+                    let v_p = row[p];
+                    let v_q = row[q];
+                    row[p] = c * v_p - s * v_q;
+                    row[q] = s * v_p + c * v_q;
+                }
+            }
+        }
+
+        let mut min_col = 0;
+        if a[1][1] < a[min_col][min_col] {
+            min_col = 1;
+        }
+        if a[2][2] < a[min_col][min_col] {
+            min_col = 2;
+        }
+        let mut normal = [v[0][min_col], v[1][min_col], v[2][min_col]];
+        let norm_len =
+            (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
+        if norm_len > 1e-12 {
+            normal[0] /= norm_len;
+            normal[1] /= norm_len;
+            normal[2] /= norm_len;
+        } else {
+            normal = [0.0, 0.0, 1.0];
+        }
+
+        // Orient normal consistently outward from the global cloud centroid
+        let outward = [
+            pi[0] - global_centroid[0],
+            pi[1] - global_centroid[1],
+            pi[2] - global_centroid[2],
+        ];
+        let dot = normal[0] * outward[0] + normal[1] * outward[1] + normal[2] * outward[2];
+        if dot < -1e-12 || (dot.abs() <= 1e-12 && normal[2] < 0.0) {
+            normal = [-normal[0], -normal[1], -normal[2]];
+        }
+        normals.push(normal);
+    }
+    normals
+}
+
+
 #[cfg(test)]
 mod point_cloud_filter_tests {
     use super::*;
@@ -337,6 +506,26 @@ mod point_cloud_filter_tests {
         let filtered_large = statistical_outlier_removal(&large_cloud, 8, 2.0);
         assert_eq!(filtered_large.len(), 400);
         assert!(!filtered_large.contains(&[50.0, 50.0, 50.0]));
+
+        // PCA normal estimation on an axis-aligned octant/sphere point cloud
+        let mut sphere_pts = Vec::new();
+        for i in 0..8 {
+            let phi = std::f64::consts::PI * (i as f64 + 0.5) / 8.0;
+            for j in 0..16 {
+                let theta = std::f64::consts::TAU * (j as f64) / 16.0;
+                sphere_pts.push([
+                    phi.sin() * theta.cos(),
+                    phi.sin() * theta.sin(),
+                    phi.cos(),
+                ]);
+            }
+        }
+        let est_normals = estimate_point_cloud_normals(&sphere_pts, 8);
+        assert_eq!(est_normals.len(), sphere_pts.len());
+        for (p, n) in sphere_pts.iter().zip(&est_normals) {
+            let dot = p[0] * n[0] + p[1] * n[1] + p[2] * n[2];
+            assert!(dot > 0.92, "expected outward unit normal aligned with sphere radius, got dot={dot}");
+        }
     }
 }
 

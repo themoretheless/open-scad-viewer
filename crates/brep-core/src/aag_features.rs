@@ -648,3 +648,6 @@ pub use rib::{RibFeature, find_ribs};
 #[cfg(test)]
 #[path = "tests/aag_features.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "tests/aag_small_features.rs"]
+mod small_features_tests;

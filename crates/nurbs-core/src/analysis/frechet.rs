@@ -227,6 +227,43 @@ pub fn hausdorff_curve_discrete(
     Ok(d)
 }
 
+/// Exact discrete Fréchet coupling distance between two 3D polylines `poly_a` and `poly_b`
+/// using an $O(N)$ memory two-row dynamic programming table instead of an $O(N \cdot M)$
+/// full matrix allocation. Returns `0.0` if either polyline is empty.
+pub fn discrete_frechet_distance_3d(poly_a: &[[f64; 3]], poly_b: &[[f64; 3]]) -> f64 {
+    if poly_a.is_empty() || poly_b.is_empty() {
+        return 0.0;
+    }
+    // Use the shorter polyline along columns so the two-row DP table uses O(min(N, M)) memory.
+    let (rows, cols) = if poly_a.len() >= poly_b.len() {
+        (poly_a, poly_b)
+    } else {
+        (poly_b, poly_a)
+    };
+    let m = cols.len();
+    let dist_sq = |a: [f64; 3], b: [f64; 3]| -> f64 {
+        let dx = a[0] - b[0];
+        let dy = a[1] - b[1];
+        let dz = a[2] - b[2];
+        dx * dx + dy * dy + dz * dz
+    };
+    let mut prev = vec![0.0_f64; m];
+    let mut curr = vec![0.0_f64; m];
+    for (i, &pa) in rows.iter().enumerate() {
+        for (j, &pb) in cols.iter().enumerate() {
+            let d2 = dist_sq(pa, pb);
+            curr[j] = match (i > 0, j > 0) {
+                (false, false) => d2,
+                (true, false) => prev[0].max(d2),
+                (false, true) => curr[j - 1].max(d2),
+                (true, true) => prev[j].min(prev[j - 1]).min(curr[j - 1]).max(d2),
+            };
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+    prev[m - 1].sqrt()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,5 +344,20 @@ mod tests {
         let h_shift = hausdorff_curve_discrete(&forward, &shifted, 33).unwrap();
         assert!((h_shift - 0.75).abs() <= 1e-9);
         assert!(hausdorff_curve_discrete(&forward, &shifted, 1).is_err());
+    }
+
+    #[test]
+    fn discrete_frechet_distance_3d_two_row_dp() {
+        let poly_a = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0], [3.0, 0.0, 0.0]];
+        let poly_b = [[0.0, 0.5, 0.0], [1.5, 0.5, 0.0], [3.0, 0.5, 0.0]];
+        let d = discrete_frechet_distance_3d(&poly_a, &poly_b);
+        let d_sym = discrete_frechet_distance_3d(&poly_b, &poly_a);
+        assert!((d - d_sym).abs() <= 1e-12);
+        // Coupling (1,0,0) and (2,0,0) to (1.5, 0.5, 0) gives distance sqrt(0.5^2 + 0.5^2) = sqrt(0.5).
+        assert!((d - 0.5_f64.sqrt()).abs() <= 1e-12);
+
+        let rev_b = [[3.0, 0.0, 0.0], [1.5, 0.0, 0.0], [0.0, 0.0, 0.0]];
+        assert!((discrete_frechet_distance_3d(&poly_a, &rev_b) - 3.0).abs() <= 1e-12);
+        assert_eq!(discrete_frechet_distance_3d(&[], &poly_a), 0.0);
     }
 }

@@ -235,6 +235,89 @@ pub fn compact_if_u32<T: Copy>(input: &[T], keep: &[u32]) -> Result<Vec<T>, Comp
     Ok(out)
 }
 
+/// 4-pass 8-bit Least-Significant-Digit (LSD) radix sort over `u32` keys using stack-allocated
+/// `[usize; 256]` counting/prefix-scan histograms ($O(N)$ linear time, zero comparison branching).
+///
+/// Designed for high-throughput BVH Morton code and spatial particle sorting.
+pub fn radix_sort_u32(values: &[u32]) -> Vec<u32> {
+    let n = values.len();
+    if n <= 1 {
+        return values.to_vec();
+    }
+    let mut src = values.to_vec();
+    let mut dst = vec![0_u32; n];
+
+    for pass in 0..4 {
+        let shift = pass * 8;
+        let mut counts = [0_usize; 256];
+        for &v in &src {
+            let bucket = ((v >> shift) & 0xFF) as usize;
+            counts[bucket] += 1;
+        }
+        // If all elements fall into a single bucket in this byte, skip the scatter pass
+        if counts.iter().any(|&c| c == n) {
+            continue;
+        }
+        let mut offsets = [0_usize; 256];
+        let mut sum = 0_usize;
+        for b in 0..256 {
+            offsets[b] = sum;
+            sum += counts[b];
+        }
+        for &v in &src {
+            let bucket = ((v >> shift) & 0xFF) as usize;
+            let pos = offsets[bucket];
+            dst[pos] = v;
+            offsets[bucket] = pos + 1;
+        }
+        std::mem::swap(&mut src, &mut dst);
+    }
+    src
+}
+
+/// Stable 4-pass 8-bit LSD radix sort of `(keys, payloads)` pairs by `u32` key in $O(N)$ linear time.
+///
+/// Preserves relative order of elements with equal keys. If `keys.len() != payloads.len()`, sorts
+/// the prefix of length `keys.len().min(payloads.len())`.
+pub fn radix_sort_by_key_u32<T: Copy>(keys: &[u32], payloads: &[T]) -> (Vec<u32>, Vec<T>) {
+    let n = keys.len().min(payloads.len());
+    if n <= 1 {
+        return (keys[..n].to_vec(), payloads[..n].to_vec());
+    }
+    let mut src_keys = keys[..n].to_vec();
+    let mut dst_keys = vec![0_u32; n];
+    let mut src_vals = payloads[..n].to_vec();
+    let mut dst_vals = payloads[..n].to_vec();
+
+    for pass in 0..4 {
+        let shift = pass * 8;
+        let mut counts = [0_usize; 256];
+        for &k in &src_keys {
+            let bucket = ((k >> shift) & 0xFF) as usize;
+            counts[bucket] += 1;
+        }
+        if counts.iter().any(|&c| c == n) {
+            continue;
+        }
+        let mut offsets = [0_usize; 256];
+        let mut sum = 0_usize;
+        for b in 0..256 {
+            offsets[b] = sum;
+            sum += counts[b];
+        }
+        for (&k, &val) in src_keys.iter().zip(src_vals.iter()) {
+            let bucket = ((k >> shift) & 0xFF) as usize;
+            let pos = offsets[bucket];
+            dst_keys[pos] = k;
+            dst_vals[pos] = val;
+            offsets[bucket] = pos + 1;
+        }
+        std::mem::swap(&mut src_keys, &mut dst_keys);
+        std::mem::swap(&mut src_vals, &mut dst_vals);
+    }
+    (src_keys, src_vals)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,5 +335,16 @@ mod tests {
         let compacted = compact_if_u32(&values, &keep).unwrap();
         assert_eq!(compacted, vec![20.0, 40.0, 50.0]);
         assert!(compact_if_u32(&values, &[1, 0]).is_err());
+
+        let unsorted = [0xFFFF_FFFF_u32, 42, 0, 1024, 7, 42, 256, 65535];
+        let sorted = radix_sort_u32(&unsorted);
+        assert_eq!(sorted, vec![0, 7, 42, 42, 256, 1024, 65535, 0xFFFF_FFFF]);
+
+        let keys = [300_u32, 10, 200, 10, 5];
+        let payloads = [0_usize, 1, 2, 3, 4];
+        let (sk, sp) = radix_sort_by_key_u32(&keys, &payloads);
+        assert_eq!(sk, vec![5, 10, 10, 200, 300]);
+        // Stability check: key 10 at index 1 comes before key 10 at index 3
+        assert_eq!(sp, vec![4, 1, 3, 2, 0]);
     }
 }
