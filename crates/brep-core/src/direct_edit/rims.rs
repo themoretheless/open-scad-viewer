@@ -497,11 +497,11 @@ pub(super) fn merge_coplanar_rims(
                     }
                     curve_to_uv(&curve, origin_corner, u, v, len_u, len_v)?
                 };
-                coedges.push(brep_topology::Coedge {
-                    edge: edges[&use_.edge],
-                    reversed: use_.reversed,
-                    pcurve: mapped,
-                });
+                coedges.push(brep_topology::Coedge::new(
+                    edges[&use_.edge],
+                    use_.reversed,
+                    mapped,
+                ));
             }
             loop_ids.push(out.loops.len());
             out.loops.push(brep_topology::Loop { coedges });

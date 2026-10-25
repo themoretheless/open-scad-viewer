@@ -70,11 +70,11 @@ fn add(model: &mut Model, s: Surface, vertices: [usize; 4], reversed: bool) -> u
                 n
             });
         let traversal = if i >= 2 { [pair[1], pair[0]] } else { pair };
-        coedges.push(Coedge {
+        coedges.push(Coedge::new(
             edge,
-            reversed: model.edges[edge].vertices != traversal,
-            pcurve: nurbs_core::curve::Curve::from_polyline(pcs[i].clone()).unwrap(),
-        });
+            model.edges[edge].vertices != traversal,
+            nurbs_core::curve::Curve::from_polyline(pcs[i].clone()).unwrap(),
+        ));
     }
     let face = model.faces.len();
     let outer = model.loops.len();

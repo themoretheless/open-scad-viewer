@@ -113,11 +113,11 @@ pub fn convert(
                 .enumerate()
                 .map(|(edge, fragment)| {
                     let (index, reversed) = uses[&(face, wire, edge)];
-                    brep_topology::Coedge {
-                        edge: index,
+                    brep_topology::Coedge::new(
+                        index,
                         reversed,
-                        pcurve: fragment.clone(),
-                    }
+                        fragment.clone(),
+                    )
                 })
                 .collect();
             loops.push(brep_topology::Loop { coedges });

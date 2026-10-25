@@ -112,11 +112,11 @@ fn assemble(parts: Vec<Model>, tolerance: f64) -> Result<Model> {
                 };
                 let forward = vertices.root(source.edges[c.edge].vertices[0])
                     == vertices.root(source.edges[root].vertices[0]);
-                coedges.push(Coedge {
-                    edge: id,
-                    reversed: c.reversed ^ !forward,
-                    pcurve: c.pcurve.clone(),
-                });
+                coedges.push(Coedge::new(
+                    id,
+                    c.reversed ^ !forward,
+                    c.pcurve.clone(),
+                ));
             }
             wires.push(model.loops.len());
             model.loops.push(Loop { coedges });

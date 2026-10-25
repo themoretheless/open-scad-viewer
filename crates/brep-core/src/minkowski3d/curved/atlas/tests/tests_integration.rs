@@ -53,8 +53,7 @@
         altered.faces[0].surface.control_points[1][1][2] += 0.125;
         assert!(verify_source_atlas(&altered, &c).is_err());
     }
-    #[test]
-    fn closed_tetrahedron_with_collapsed_rectangular_boundaries() {
+    fn collapsed_tetrahedron() -> Model {
         let mut m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
         let surface = m.faces[0].surface.clone();
         m.vertices = vec![[1., 1., 1.], [-1., -1., 1.], [-1., 1., -1.], [1., -1., -1.]]
@@ -85,11 +84,11 @@
                     });
                     id
                 });
-                coedges.push(crate::Coedge {
+                coedges.push(crate::Coedge::new(
                     edge,
-                    reversed: a > b,
-                    pcurve: crate::line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
-                });
+                    a > b,
+                    crate::line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
+                ));
             }
             let outer = m.loops.len();
             m.loops.push(crate::Loop { coedges });
@@ -117,6 +116,11 @@
         }
         // Reinitialize persistent IDs after changing the entity counts.
         m.rebuild_topology_ids();
+        m
+    }
+    #[test]
+    fn closed_tetrahedron_with_collapsed_rectangular_boundaries() {
+        let m = collapsed_tetrahedron();
         let c = derive(&m, 0).unwrap();
         assert_eq!(c.positions.len(), 4);
         assert_eq!(c.triangles.len(), 4);

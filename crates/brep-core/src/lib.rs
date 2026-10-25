@@ -34,6 +34,10 @@ pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod circular_blend;
 pub mod feature_family;
+pub mod feature_graph;
+pub mod feature_history;
+pub mod history_snapshots;
+pub mod journal;
 pub mod edge_tangency;
 pub mod analytic_ss;
 mod boolean_support;
@@ -1158,6 +1162,39 @@ impl Model {
     }
     pub fn validate(&self) -> Result<Report> {
         self.validate_impl(true)
+    }
+
+    /// Validate every edge/pcurve lift over its complete authored interval.
+    /// Unlike sampled validation, exhaustion is inconclusive rather than a
+    /// successful admission. The model and its legacy report status are unchanged.
+    pub fn validate_continuous(&self, max_cells: usize) -> Result<Report> {
+        let mut report = self.validate_boundary_diagnostic_inputs()?;
+        let agreement = boundary_agreement::verify(self, max_cells)?;
+        for entry in &agreement.uses {
+            match entry.status {
+                nurbs_core::curve_surface_agreement::Status::WithinTolerance => {}
+                nurbs_core::curve_surface_agreement::Status::Mismatch => {
+                    return Err(Error::new(
+                        "BREP_GEOMETRY_MISMATCH",
+                        format!(
+                            "Continuous edge/lift mismatch at face {}, coedge {}",
+                            entry.face, entry.coedge
+                        ),
+                    ));
+                }
+                nurbs_core::curve_surface_agreement::Status::Unresolved => {
+                    return Err(Error::new(
+                        "BREP_GEOMETRY_UNRESOLVED",
+                        format!(
+                            "Continuous edge/lift agreement unresolved at face {}, coedge {}",
+                            entry.face, entry.coedge
+                        ),
+                    ));
+                }
+            }
+        }
+        report.geometry_agreement = "continuous_with_tolerance";
+        Ok(report)
     }
 
     /// Diagnostic-only admission. All topology, IDs, definitions, endpoint and

@@ -290,6 +290,103 @@ pub(crate) fn nonlinear(v: Value) -> Result<Value> {
     }))
 }
 
+/// Ground-structure SIMP topology optimization. `members.areaMm2` is the
+/// unit-density reference area; `cases` are weighted load cases given either
+/// as per-node `forcesN` or as `loads` wrenches (same schema as
+/// `truss_solve_wrenches`).
+pub(crate) fn topology(v: Value) -> Result<Value> {
+    require_exact_fields(
+        &v,
+        &["op", "nodesMm", "members", "restrained", "cases", "options"],
+        "truss topology request",
+    )?;
+    for (key, max) in [
+        ("nodesMm", MAX_NODES),
+        ("members", MAX_MEMBERS),
+        ("restrained", MAX_NODES),
+        ("cases", mechanics_core::truss_topology::MAX_LOAD_CASES),
+    ] {
+        let array = v[key]
+            .as_array()
+            .ok_or_else(|| input(format!("{key} must be an array")))?;
+        if array.len() > max {
+            return Err(input(format!("{key} exceeds truss topology limit {max}")));
+        }
+    }
+    let members = members(&v)?;
+    let nodes_mm = field::<Vec<[f64; 3]>>(&v, "nodesMm")?;
+    let restrained = field::<Vec<[bool; 3]>>(&v, "restrained")?;
+    let cases = v["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|case| {
+            let has_forces = case.get("forcesN").is_some();
+            require_exact_fields(
+                case,
+                if has_forces {
+                    &["forcesN", "weight"]
+                } else {
+                    &["loads", "weight"]
+                },
+                "truss topology load case",
+            )?;
+            let forces_n = if has_forces {
+                let forces_n = field::<Vec<[f64; 3]>>(case, "forcesN")?;
+                if forces_n.len() > MAX_NODES {
+                    return Err(input("Load case forces exceed the node budget"));
+                }
+                forces_n
+            } else {
+                assemble_loads(case, &nodes_mm)?
+            };
+            Ok(mechanics_core::truss_topology::LoadCase {
+                forces_n,
+                weight: field(case, "weight")?,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let options = &v["options"];
+    require_exact_fields(
+        options,
+        &["volumeFraction", "penalty", "maxIterations", "moveLimit", "tolerance"],
+        "truss topology options",
+    )?;
+    let result = mechanics_core::truss_topology::optimize(
+        &Model {
+            nodes_mm,
+            members,
+            restrained,
+            forces_n: cases
+                .first()
+                .map(|c| c.forces_n.clone())
+                .unwrap_or_default(),
+        },
+        &cases,
+        &mechanics_core::truss_topology::TopologyOptions {
+            volume_fraction: field(options, "volumeFraction")?,
+            penalty: field(options, "penalty")?,
+            max_iterations: field(options, "maxIterations")?,
+            move_limit: field(options, "moveLimit")?,
+            tolerance: field(options, "tolerance")?,
+        },
+    )?;
+    Ok(json!({
+        "densities": result.densities,
+        "areasMm2": result.areas_mm2,
+        "volumeMm3": result.volume_mm3,
+        "targetVolumeMm3": result.target_volume_mm3,
+        "compliancesNmm": result.compliances_nmm,
+        "initialComplianceNmm": result.initial_compliance_nmm,
+        "complianceNmm": result.compliance_nmm,
+        "iterations": result.iterations,
+        "converged": result.converged,
+        "maxDensityChange": result.max_density_change,
+        "activeMembers": result.active_members,
+        "axialForcesN": result.axial_forces_n,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -534,6 +631,80 @@ mod tests {
         bad["damping"] = json!(0.1);
         assert_eq!(
             crate::handle(bad).unwrap_err().code,
+            "GEOMETRY_INVALID_INPUT"
+        );
+    }
+
+    fn topology_request() -> Value {
+        // Two-support bracket; bar 0-1 joins fixed nodes and must vanish.
+        json!({"op":"truss_topology",
+            "nodesMm":[[0,0,0],[1000,0,0],[500,1000,0]],
+            "members":[
+                {"nodes":[0,1],"youngMpa":200000,"areaMm2":100},
+                {"nodes":[0,2],"youngMpa":200000,"areaMm2":100},
+                {"nodes":[1,2],"youngMpa":200000,"areaMm2":100}],
+            "restrained":[[true,true,true],[true,true,true],[false,false,false]],
+            "cases":[{"forcesN":[[0,0,0],[0,0,0],[1000,-500,0]],"weight":1}],
+            "options":{"volumeFraction":0.5,"penalty":3,"maxIterations":200,
+                "moveLimit":0.2,"tolerance":0.001}})
+    }
+
+    #[test]
+    fn topology_dispatch_optimizes_and_validates_schema() {
+        let request = topology_request();
+        let r = crate::handle(request.clone()).unwrap();
+        assert_eq!(r["converged"], json!(true));
+        assert_eq!(r["activeMembers"], json!([1, 2]));
+        assert!(r["densities"][0].as_f64().unwrap() <= 0.01);
+        let volume = r["volumeMm3"].as_f64().unwrap();
+        let target = r["targetVolumeMm3"].as_f64().unwrap();
+        assert!((volume - target).abs() <= 1e-6 * target);
+        assert!(
+            r["complianceNmm"].as_f64().unwrap()
+                < r["initialComplianceNmm"].as_f64().unwrap()
+        );
+        assert!(r["axialForcesN"][0].as_array().unwrap().len() == 3);
+        // Validation: bad option code and unauthorized fields.
+        let mut bad = request.clone();
+        bad["options"]["volumeFraction"] = json!(0.);
+        assert_eq!(
+            crate::handle(bad).unwrap_err().code,
+            "TRUSS_TOPOLOGY_INVALID_INPUT"
+        );
+        let mut bad = request.clone();
+        bad["options"]["damping"] = json!(0.5);
+        assert_eq!(
+            crate::handle(bad).unwrap_err().code,
+            "GEOMETRY_INVALID_INPUT"
+        );
+        let mut bad = request.clone();
+        bad["cases"][0]["forcesN"] = json!([[0,0,0],[0,0,0],[0,1000,0],[0,0,0]]);
+        // Wrong force vector length: structural, not schema, error.
+        assert_eq!(
+            crate::handle(bad).unwrap_err().code,
+            "TRUSS_TOPOLOGY_INVALID_INPUT"
+        );
+        let mut bad = request;
+        bad["cases"] = json!([]);
+        assert!(crate::handle(bad).is_err());
+    }
+
+    #[test]
+    fn topology_wrench_cases_match_nodal_forces() {
+        let nodal = topology_request();
+        let expected = crate::handle(nodal.clone()).unwrap();
+        let mut wrench = nodal;
+        wrench["cases"][0].as_object_mut().unwrap().remove("forcesN");
+        wrench["cases"][0]["loads"] = json!([
+            {"nodes":[2],"originMm":[500,1000,0],"forceN":[1000,-500,0],"momentNmm":[0,0,0]}]);
+        let r = crate::handle(wrench.clone()).unwrap();
+        assert_eq!(r["densities"], expected["densities"]);
+        assert_eq!(r["complianceNmm"], expected["complianceNmm"]);
+        assert_eq!(r["axialForcesN"], expected["axialForcesN"]);
+        // Both load schemas at once are ambiguous and refused.
+        wrench["cases"][0]["forcesN"] = json!([[0,0,0],[0,0,0],[1000,-500,0]]);
+        assert_eq!(
+            crate::handle(wrench).unwrap_err().code,
             "GEOMETRY_INVALID_INPUT"
         );
     }

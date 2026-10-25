@@ -38,11 +38,11 @@ pub fn bicubic_open_face(surface: Surface) -> Result<Model> {
             vertices: [i, j],
             curve: crate::line(corners[i].to_vec(), corners[j].to_vec()),
         });
-        coedges.push(Coedge {
-            edge: i,
-            reversed: false,
-            pcurve: crate::line(uv[i].to_vec(), uv[j].to_vec()),
-        });
+        coedges.push(Coedge::new(
+            i,
+            false,
+            crate::line(uv[i].to_vec(), uv[j].to_vec()),
+        ));
     }
     let mut model = Model(
         brep_topology::Model {

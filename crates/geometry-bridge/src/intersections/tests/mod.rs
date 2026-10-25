@@ -663,11 +663,11 @@
                 vertices: [i, j],
                 curve: line(corners[i].to_vec(), corners[j].to_vec()),
             });
-            coedges.push(Coedge {
-                edge: i,
-                reversed: false,
-                pcurve: line(uv[i].to_vec(), uv[j].to_vec()),
-            });
+            coedges.push(Coedge::new(
+                i,
+                false,
+                line(uv[i].to_vec(), uv[j].to_vec()),
+            ));
         }
         let mut model = brep_core::Model(
             brep_topology::Model {

@@ -11,6 +11,201 @@ pub struct SharedPatchEdge {
     pub verification_cells: usize,
 }
 
+fn map_trim_parameter(
+    value: f64,
+    target_domain: [f64; 2],
+    source_domain: [f64; 2],
+    scale: f64,
+) -> Option<f64> {
+    let x = if value == target_domain[0] {
+        0.
+    } else if value == target_domain[1] {
+        1.
+    } else {
+        (value - target_domain[0]) / (target_domain[1] - target_domain[0])
+    };
+    let y = 1. - x;
+    let t = if y == 0. {
+        0.
+    } else if y == 1. {
+        1.
+    } else {
+        y / (scale * (1. - y) + y)
+    };
+    let mapped = if t == 0. {
+        source_domain[0]
+    } else if t == 1. {
+        source_domain[1]
+    } else {
+        source_domain[0] + t * (source_domain[1] - source_domain[0])
+    };
+    (mapped.is_finite()
+        && mapped >= source_domain[0]
+        && mapped <= source_domain[1])
+        .then_some(mapped)
+}
+
+/// Transfer authored target ends through the opposite retained source geometry.
+/// Weight ratios only propose scales: a complete correspondence proof on the
+/// original curves certifies every partial trim before its ends are admitted.
+fn transfer_coedge_trim(
+    target: &nurbs_core::curve::Curve,
+    source: &nurbs_core::curve::Curve,
+    trim: Option<brep_topology::CoedgeTrim>,
+) -> Result<Option<brep_topology::CoedgeTrim>> {
+    let Some(trim) = trim else {
+        return Ok(None);
+    };
+    trim.validate()?;
+    let target_domain = target.domain();
+    let source_domain = source.domain();
+    if trim.curve_parameter.iter().any(|&value| {
+        !value.is_finite() || value < target_domain[0] || value > target_domain[1]
+    }) {
+        return Err(Error::new(
+            "BREP_TRIM_DOMAIN",
+            "Coedge trim interval must lie inside its original curve domain",
+        ));
+    }
+    let mut scales: Vec<f64> = vec![1.];
+    let a = &target.weights;
+    let b = &source.weights;
+    let ratio = b[b.len() - 1] * a[a.len() - 1] / (b[0] * a[0]);
+    if ratio.is_finite() && ratio > 0. {
+        for degree in 1..=target.degree.min(source.degree) {
+            let scale = ratio.powf(1. / degree as f64);
+            if (1e-12..=1e12).contains(&scale)
+                && !scales.iter().any(|candidate| candidate.to_bits() == scale.to_bits())
+            {
+                scales.push(scale);
+            }
+        }
+    }
+    for scale in scales {
+        let mapped_ends = trim.curve_parameter.map(|value| {
+            map_trim_parameter(value, target_domain, source_domain, scale)
+        });
+        let (Some(first), Some(second)) = (mapped_ends[0], mapped_ends[1]) else {
+            continue;
+        };
+        let curve_parameter = [first, second];
+        let mapped = brep_topology::CoedgeTrim {
+            curve_parameter,
+            pcurve_parameter: trim.pcurve_parameter,
+            periodic_lift: trim.periodic_lift,
+        };
+        if mapped.validate().is_err() {
+            continue;
+        }
+        let proof = nurbs_core::periodic_trim::verify_projective_curve_correspondence(
+            target,
+            source,
+            [scale, 1.],
+            true,
+            cad_predicates::MAX_WORK,
+        )?;
+        if proof.is_some() {
+            return Ok(Some(mapped));
+        }
+    }
+    Err(Error::new(
+        "BREP_THREAD_PATCH_UNRESOLVED",
+        "No certified correspondence for the retained boundary trim",
+    ))
+}
+
+fn trim_nodes(
+    curve: &nurbs_core::curve::Curve,
+    pcurve: &nurbs_core::curve::Curve,
+    surface: &nurbs_core::surface::Surface,
+    trim: brep_topology::CoedgeTrim,
+) -> Result<[[f64; 2]; 2]> {
+    trim.validate()?;
+    let domains = [curve.domain(), pcurve.domain()];
+    let parameters = [trim.curve_parameter, trim.pcurve_parameter];
+    for (parameter, domain) in parameters.iter().zip(domains) {
+        if parameter
+            .iter()
+            .any(|value| *value < domain[0] || *value > domain[1])
+        {
+            return Err(Error::new(
+                "BREP_TRIM_DOMAIN",
+                "Coedge trim interval must lie inside its original curve domain",
+            ));
+        }
+    }
+    let fraction = |value: f64, domain: [f64; 2]| {
+        if value == domain[0] {
+            0.
+        } else if value == domain[1] {
+            1.
+        } else {
+            (value - domain[0]) / (domain[1] - domain[0])
+        }
+    };
+    let nodes = std::array::from_fn(|end| {
+        std::array::from_fn(|axis| fraction(parameters[axis][end], domains[axis]))
+    });
+    let uv = [
+        pcurve.evaluate(trim.pcurve_parameter[0])?.point,
+        pcurve.evaluate(trim.pcurve_parameter[1])?.point,
+    ];
+    let surface_domains = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_u[surface.control_points.len()],
+        ],
+        [
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    for end in 0..2 {
+        for axis in 0..2 {
+            let periodic = [surface.periodic_u, surface.periodic_v][axis];
+            let domain = surface_domains[axis];
+            let expected = if periodic {
+                ((uv[end][axis] - domain[0]) / (domain[1] - domain[0])).floor() as i32
+            } else {
+                0
+            };
+            if trim.periodic_lift[end][axis] != expected {
+                return Err(Error::new(
+                    "BREP_TRIM_PERIODIC_LIFT",
+                    "Coedge periodic lift does not match its authored pcurve endpoint",
+                ));
+            }
+        }
+    }
+    Ok(nodes)
+}
+
+fn verify_coedge_use(
+    curve: &nurbs_core::curve::Curve,
+    pcurve: &nurbs_core::curve::Curve,
+    surface: &nurbs_core::surface::Surface,
+    trim: Option<brep_topology::CoedgeTrim>,
+    reversed: bool,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<Report> {
+    use nurbs_core::curve_surface_agreement;
+    if let Some(trim) = trim {
+        let nodes = trim_nodes(curve, pcurve, surface, trim)?;
+        let checked = curve_surface_agreement::verify_oriented_correspondence(
+            curve, pcurve, surface, &nodes, reversed, tolerance, max_cells,
+        )?;
+        Ok(Report {
+            status: checked.status,
+            cells: checked.cells,
+            witness: None,
+            witness_distance: None,
+        })
+    } else {
+        curve_surface_agreement::verify(curve, pcurve, surface, reversed, tolerance, max_cells)
+    }
+}
+
 /// Sew two boundary uses within one open shell. Retains the left world curve;
 /// exact opposite endpoints and continuous agreement on both faces are needed.
 /// This does not certify surface embedding or turn the shell into a solid.
@@ -96,10 +291,13 @@ pub(super) fn sew_boundaries_impl(
         },
         requested_world_tolerance: model.tolerance_mm,
     };
-    let proof = share_patch_edge(
+    let transferred_trim = transfer_coedge_trim(&re.curve, &le.curve, rc.trim())?;
+    let proof = share_patch_edge_with_trims(
         &provisional,
+        lc.trim(),
         &lf.surface,
         &rc.pcurve,
+        transferred_trim,
         &rf.surface,
         true,
         model.tolerance_mm,
@@ -108,6 +306,10 @@ pub(super) fn sew_boundaries_impl(
     let mut result = model.clone();
     result.loops[right[0]].coedges[right[1]].edge = lc.edge;
     result.loops[right[0]].coedges[right[1]].reversed = true;
+    if let Some(trim) = transferred_trim {
+        let coedge = result.loops[right[0]].coedges[right[1]].clone();
+        result.loops[right[0]].coedges[right[1]] = coedge.with_trim(trim)?;
+    }
     result.edges.remove(rc.edge);
     for c in result.loops.iter_mut().flat_map(|l| &mut l.coedges) {
         if c.edge > rc.edge {
@@ -365,10 +567,13 @@ pub(super) fn attach_impl(
         },
         requested_world_tolerance: tolerance,
     };
-    let shared = share_patch_edge(
+    let transferred_trim = transfer_coedge_trim(&te.curve, &se.curve, tc.trim())?;
+    let shared = share_patch_edge_with_trims(
         &provisional,
+        sc.trim(),
         &source_face.surface,
         &tc.pcurve,
+        transferred_trim,
         &target.faces[0].surface,
         true,
         tolerance,
@@ -418,12 +623,18 @@ pub(super) fn attach_impl(
         coedges: target.loops[0]
             .coedges
             .iter()
-            .map(|c| Coedge {
-                edge: edges[c.edge],
-                reversed: c.edge == tc.edge,
-                pcurve: c.pcurve.clone(),
+            .map(|c| {
+                let mut mapped = c.clone();
+                mapped.edge = edges[c.edge];
+                if c.edge == tc.edge {
+                    mapped.reversed = true;
+                    if let Some(trim) = transferred_trim {
+                        mapped = mapped.with_trim(trim)?;
+                    }
+                }
+                Ok(mapped)
             })
-            .collect(),
+            .collect::<Result<Vec<_>>>()?,
     });
     let face = result.faces.len();
     result.faces.push(Face {
@@ -457,7 +668,31 @@ pub fn share_patch_edge(
     tolerance: f64,
     max_verification_cells: usize,
 ) -> Result<SharedPatchEdge> {
-    use nurbs_core::curve_surface_agreement::{self, Status};
+    share_patch_edge_with_trims(
+        source,
+        None,
+        source_surface,
+        target_pcurve,
+        None,
+        target_surface,
+        target_reversed,
+        tolerance,
+        max_verification_cells,
+    )
+}
+
+fn share_patch_edge_with_trims(
+    source: &nurbs_core::thread::MappedEdge,
+    source_trim: Option<brep_topology::CoedgeTrim>,
+    source_surface: &nurbs_core::surface::Surface,
+    target_pcurve: &nurbs_core::curve::Curve,
+    target_trim: Option<brep_topology::CoedgeTrim>,
+    target_surface: &nurbs_core::surface::Surface,
+    target_reversed: bool,
+    tolerance: f64,
+    max_verification_cells: usize,
+) -> Result<SharedPatchEdge> {
+    use nurbs_core::curve_surface_agreement::Status;
     if !(1e-10..=1e-2).contains(&tolerance) || max_verification_cells > 100000 {
         return Err(Error::new(
             "BREP_INVALID_THREAD_PATCH",
@@ -470,10 +705,11 @@ pub fn share_patch_edge(
             "Shared boundary verification budget exhausted",
         ));
     }
-    let first = curve_surface_agreement::verify(
+    let first = verify_coedge_use(
         &source.curve,
         &source.pcurve,
         source_surface,
+        source_trim,
         false,
         tolerance,
         max_verification_cells,
@@ -484,11 +720,14 @@ pub fn share_patch_edge(
             "Source boundary agreement unproved or budget exhausted",
         ));
     }
-    let second = curve_surface_agreement::verify(
+    // A transferred trim already expresses the authored target relation in the
+    // opposite retained source parameterization; do not reverse those ends twice.
+    let second = verify_coedge_use(
         &source.curve,
         target_pcurve,
         target_surface,
-        target_reversed,
+        target_trim,
+        target_reversed && target_trim.is_none(),
         tolerance,
         max_verification_cells - first.cells,
     )?;

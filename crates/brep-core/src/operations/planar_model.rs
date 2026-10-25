@@ -291,11 +291,11 @@ pub(crate) fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tol
                     });
                     id
                 });
-                coedges.push(Coedge {
+                coedges.push(Coedge::new(
                     edge,
-                    reversed: a > b,
-                    pcurve: line(uv[i].to_vec(), uv[(i + 1) % ids.len()].to_vec()),
-                });
+                    a > b,
+                    line(uv[i].to_vec(), uv[(i + 1) % ids.len()].to_vec()),
+                ));
             }
             loop_ids.push(model.loops.len());
             model.loops.push(Loop { coedges });

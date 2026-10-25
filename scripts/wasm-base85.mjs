@@ -16,7 +16,7 @@ export function encodeBase85(bytes) {
   }
   return parts.join('')
 }
-export function decodeBase85(text, maximum = 4 * 1024 * 1024 + 4) {
+export function decodeBase85(text, maximum = 8 * 1024 * 1024 + 4) {
   if (!text.startsWith('b85:') || text.length < 9 || text.length > 9 + Math.ceil(maximum / 4) * 5) throw new Error('Base85 size limit')
   const valueAt = start => {
     let value = 0

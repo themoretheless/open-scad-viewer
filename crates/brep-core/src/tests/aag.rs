@@ -179,10 +179,10 @@ fn two_quad_sheet() -> (Model, usize) {
             if key == (1, 4) {
                 shared_edge = Some(edge);
             }
-            coedges.push(crate::Coedge {
+            coedges.push(crate::Coedge::new(
                 edge,
-                reversed: a > b,
-                pcurve: {
+                a > b,
+                {
                     let (a, b) = (uv[i], uv[(i + 1) % 4]);
                     nurbs_core::curve::Curve {
                         degree: 1,
@@ -192,7 +192,7 @@ fn two_quad_sheet() -> (Model, usize) {
                         periodic: false,
                     }
                 },
-            });
+            ));
         }
         let outer = m.0.loops.len();
         m.0.loops.push(Loop { coedges });
@@ -360,11 +360,11 @@ fn large_model_builds_within_a_second() {
             coedges: wire
                 .coedges
                 .iter()
-                .map(|c| crate::Coedge {
-                    edge: c.edge + e,
-                    reversed: c.reversed,
-                    pcurve: c.pcurve.clone(),
-                })
+                .map(|c| crate::Coedge::new(
+                    c.edge + e,
+                    c.reversed,
+                    c.pcurve.clone(),
+                ))
                 .collect(),
         }));
         m.0.faces.extend(unit.faces.iter().map(|face| crate::Face {

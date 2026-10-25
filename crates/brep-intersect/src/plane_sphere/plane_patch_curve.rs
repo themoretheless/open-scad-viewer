@@ -432,11 +432,11 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
             vertices: [i, j],
             curve: super::super::test_utils::line(corners[i].to_vec(), corners[j].to_vec()),
         });
-        coedges.push(Coedge {
-            edge: i,
-            reversed: false,
-            pcurve: super::super::test_utils::line(uv[i].to_vec(), uv[j].to_vec()),
-        });
+        coedges.push(Coedge::new(
+            i,
+            false,
+            super::super::test_utils::line(uv[i].to_vec(), uv[j].to_vec()),
+        ));
     }
     let mut model = Model(
         brep_topology::Model {

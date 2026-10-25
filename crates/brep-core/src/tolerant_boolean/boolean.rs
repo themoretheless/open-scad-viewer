@@ -331,7 +331,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
 
     // Network: hit vertices shared through (operand, edge, t), chains as
     // network edges (closed chains split in two at a midpoint vertex).
-    let mut asm = Assembler::new(a, b, operation);
+    let mut asm = Assembler::new(a, b, operation)?;
     let hit_vertex = |asm: &mut Assembler, h: &BoundaryHit| -> usize {
         if let Some(id) = asm.split_at(h.operand, h.edge, h.t, 1e-7) {
             return id;

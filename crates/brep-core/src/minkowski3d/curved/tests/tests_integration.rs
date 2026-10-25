@@ -172,20 +172,20 @@
         m.loops[outer].coedges = vec![
             old[0].clone(),
             old[1].clone(),
-            crate::Coedge {
+            crate::Coedge::new(
                 edge,
-                reversed: true,
-                pcurve: pc.reverse().unwrap(),
-            },
+                true,
+                pc.reverse().unwrap(),
+            ),
         ];
         let second = m.loops.len();
         m.loops.push(crate::Loop {
             coedges: vec![
-                crate::Coedge {
+                crate::Coedge::new(
                     edge,
-                    reversed: false,
-                    pcurve: pc,
-                },
+                    false,
+                    pc,
+                ),
                 old[2].clone(),
                 old[3].clone(),
             ],

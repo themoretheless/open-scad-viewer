@@ -146,11 +146,11 @@ pub fn cap_region(
         if bound.status != nurbs_core::curve_surface_agreement::Status::WithinTolerance {
             return Err(refused("Owned UV endpoint edits fail the whole cap lift"));
         }
-        ring.push(Coedge {
+        ring.push(Coedge::new(
             edge,
             reversed,
-            pcurve: if reversed { pc.reverse()? } else { pc },
-        });
+            if reversed { pc.reverse()? } else { pc },
+        ));
         vertex = source.edges[edge].vertices[usize::from(!reversed)];
         if vertex == start && !rim.is_empty() {
             return Err(refused("Multiple cap rims need separate hole ownership"));

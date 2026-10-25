@@ -407,14 +407,14 @@ pub fn nurbs_brep_from_mesh(mesh: &Mesh) -> Result<brep_core::Model> {
                 if co.reversed {
                     std::mem::swap(&mut v0, &mut v1);
                 }
-                loops[li].coedges.push(brep_topology::Coedge {
-                    edge: co.edge,
-                    reversed: co.reversed,
-                    pcurve: line(
+                loops[li].coedges.push(brep_topology::Coedge::new(
+                    co.edge,
+                    co.reversed,
+                    line(
                         uv(polygon.vertices[v0].point),
                         uv(polygon.vertices[v1].point),
                     ),
-                });
+                ));
             }
         }
         faces.push(brep_topology::Face {

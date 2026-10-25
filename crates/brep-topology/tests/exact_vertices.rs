@@ -38,11 +38,11 @@ fn intersection_contour_retains_exact_vertices_in_indexed_topology() {
             .collect(),
         loops: vec![Loop {
             coedges: (0..count)
-                .map(|edge| Coedge {
+                .map(|edge| Coedge::new(
                     edge,
-                    reversed: false,
-                    pcurve: (),
-                })
+                    false,
+                    (),
+                ))
                 .collect(),
         }],
         faces: vec![Face {

@@ -272,7 +272,7 @@ pub(crate) fn run<M: Mate>(
     operation: &str,
 ) -> Result<Model> {
     let tolerance = a.tolerance_mm.max(b.tolerance_mm);
-    let mut imprint = Imprint::new(a, b, mate_index, mate, sphere, band, operation);
+    let mut imprint = Imprint::new(a, b, mate_index, mate, sphere, band, operation)?;
     if let Some(relation) = mate.network(&mut imprint)? {
         return imprint_pipeline::regularized_empty_algebra(a, b, operation, relation);
     }

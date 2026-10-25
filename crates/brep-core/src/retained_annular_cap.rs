@@ -275,17 +275,17 @@ pub fn replace(model: &crate::Model, face: usize, max_work: u64) -> Result<CapRe
         result.loops.push(crate::Loop {
             coedges: vec![
                 a,
-                crate::Coedge {
-                    edge: radials[(i + 1) % radials.len()],
-                    reversed: false,
-                    pcurve: uv_line([1., 0.], [1., 1.]),
-                },
+                crate::Coedge::new(
+                    radials[(i + 1) % radials.len()],
+                    false,
+                    uv_line([1., 0.], [1., 1.]),
+                ),
                 b,
-                crate::Coedge {
-                    edge: radials[i],
-                    reversed: true,
-                    pcurve: uv_line([0., 1.], [0., 0.]),
-                },
+                crate::Coedge::new(
+                    radials[i],
+                    true,
+                    uv_line([0., 1.], [0., 0.]),
+                ),
             ],
         });
         let id = result.faces.len();

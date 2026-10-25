@@ -21,11 +21,11 @@ impl Builder {
             id
         });
         let reversed = self.model.edges[edge].vertices != [a, b];
-        Coedge {
+        Coedge::new(
             edge,
             reversed,
             pcurve,
-        }
+        )
     }
     /// The fourth input is the ORIGINAL increasing-V boundary, not a rounded
     /// reversed Curve. The coedge records its backwards traversal explicitly.

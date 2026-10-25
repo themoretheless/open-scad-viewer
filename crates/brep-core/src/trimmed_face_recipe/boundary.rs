@@ -206,11 +206,11 @@ pub fn assemble(
         let mut coedges = vec![];
         for (i, edge) in wire.iter().enumerate() {
             let ends = [start + i, start + (i + 1) % wire.len()];
-            coedges.push(Coedge {
-                edge: edges.len(),
-                reversed: edge.reversed,
-                pcurve: edge.pcurve.clone(),
-            });
+            coedges.push(Coedge::new(
+                edges.len(),
+                edge.reversed,
+                edge.pcurve.clone(),
+            ));
             edges.push(Edge {
                 degenerate: false,
                 vertices: if edge.reversed {

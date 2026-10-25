@@ -245,11 +245,11 @@ pub(super) fn build(source: FaceContext<'_>, limits: PeriodicFaceLimits) -> Resu
                     (edge, false)
                 };
                 edge_uses[edge].push((face, reversed));
-                coedges.push(Coedge {
+                coedges.push(Coedge::new(
                     edge,
                     reversed,
-                    pcurve: pc.clone(),
-                });
+                    pc.clone(),
+                ));
             }
             loop_ids.push(model.loops.len());
             model.loops.push(Loop { coedges });

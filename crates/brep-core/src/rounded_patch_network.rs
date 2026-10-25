@@ -105,7 +105,7 @@ pub fn assemble(surfaces:&[Surface],reversed:&[bool],tolerance:f64,max_work:u64,
                 let id=edges.len();edges.push(Edge{vertices:vs,curve,degenerate:false});uses.push(Vec::new());
                 candidates.entry(pair).or_default().push(id);(id,false)
             });
-            uses[edge].push((face,reverse));coedges.push(Coedge{edge,reversed:reverse,pcurve});
+            uses[edge].push((face,reverse));coedges.push(Coedge::new(edge, reverse, pcurve));
         }
         let outer=loops.len();loops.push(Loop{coedges});faces.push(Face{surface:surface.clone(),outer,holes:vec![]});
     }

@@ -66,11 +66,11 @@ pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
                 });
                 id
             });
-            coedges.push(Coedge {
+            coedges.push(Coedge::new(
                 edge,
-                reversed: a > b,
-                pcurve: line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
-            });
+                a > b,
+                line(uv[i].to_vec(), uv[(i + 1) % 4].to_vec()),
+            ));
         }
         let outer = m.0.loops.len();
         m.0.loops.push(Loop { coedges });

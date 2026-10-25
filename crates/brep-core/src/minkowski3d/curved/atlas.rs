@@ -29,6 +29,7 @@ pub struct Certificate {
     pub triangles: Vec<[u32; 3]>,
     pub report: Report,
 }
+#[derive(Clone)]
 struct Patch {
     ids: [u32; 3],
     h: Net,

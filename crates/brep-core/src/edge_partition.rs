@@ -203,11 +203,11 @@ pub fn partition(
         let replacements: Vec<_> = pc
             .into_iter()
             .zip(order)
-            .map(|(pcurve, i)| Coedge {
-                edge: child_edges[i],
-                reversed: original.reversed,
+            .map(|(pcurve, i)| Coedge::new(
+                child_edges[i],
+                original.reversed,
                 pcurve,
-            })
+            ))
             .collect();
         for c in &replacements {
             check_agreement(

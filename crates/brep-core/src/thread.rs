@@ -397,11 +397,11 @@ pub fn trimmed_patch_sheet(
             curve: edge.curve,
             degenerate: false,
         });
-        coedges.push(Coedge {
-            edge: i,
-            reversed: false,
-            pcurve: edge.pcurve,
-        });
+        coedges.push(Coedge::new(
+            i,
+            false,
+            edge.pcurve,
+        ));
     }
     model.loops.push(Loop { coedges });
     model.faces.push(Face {

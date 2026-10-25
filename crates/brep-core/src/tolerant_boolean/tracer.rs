@@ -230,17 +230,25 @@ impl<'m> Tracer<'m> {
                 "Tolerant Boolean: could not locate the trim edge the intersection leaves through",
             ));
         };
-        let (_, edge, reversed) = &chart.coedges[li][ci];
-        let edge = *edge;
-        let t0 = if *reversed { 1. - local } else { local };
+        let sampled = &chart.coedges[li][ci];
+        let edge = sampled.edge;
+        let c = sampled.curve_parameter;
+        let p = sampled.pcurve_parameter;
+        let t0 = if sampled.reversed {
+            c[1] + local * (c[0] - c[1])
+        } else {
+            c[0] + local * (c[1] - c[0])
+        };
         // Refine: edge curve C(t) meets the other surface S(s,r).
         let curve = &chart.model.edges[edge].curve;
+        let domain = curve.domain();
+        let trim_domain = [c[0].min(c[1]), c[0].max(c[1])];
         let other = if left_a { &self.b } else { &self.a };
         let mut t = t0;
         let mut uv = if left_a { hi.b } else { hi.a };
         let mut converged = false;
         for _ in 0..50 {
-            let ce = curve.evaluate(t.clamp(0., 1.))?;
+            let ce = curve.evaluate(t.clamp(trim_domain[0], trim_domain[1]))?;
             let cp = ce.point;
             let cp = [cp[0], cp[1], cp[2]];
             let j = other.jet(uv)?;
@@ -250,9 +258,13 @@ impl<'m> Tracer<'m> {
                 break;
             }
             // Tangent of the edge by finite difference (rational curves).
-            let dt = 1e-6;
-            let cq = curve.evaluate((t + dt).clamp(0., 1.))?.point;
-            let cm = curve.evaluate((t - dt).clamp(0., 1.))?.point;
+            let dt = 1e-6 * (trim_domain[1] - trim_domain[0]);
+            let cq = curve
+                .evaluate((t + dt).clamp(trim_domain[0], trim_domain[1]))?
+                .point;
+            let cm = curve
+                .evaluate((t - dt).clamp(trim_domain[0], trim_domain[1]))?
+                .point;
             let tangent = scale(
                 sub([cq[0], cq[1], cq[2]], [cm[0], cm[1], cm[2]]),
                 1. / (2. * dt),
@@ -267,7 +279,7 @@ impl<'m> Tracer<'m> {
             let Some(x) = solve(m, scale(r, -1.).to_vec()) else {
                 break;
             };
-            t = (t + x[0]).clamp(0., 1.);
+            t = (t + x[0]).clamp(trim_domain[0], trim_domain[1]);
             uv = other.clamp([uv[0] + x[1], uv[1] + x[2]]);
         }
         if !converged {
@@ -275,7 +287,10 @@ impl<'m> Tracer<'m> {
                 "Tolerant Boolean: boundary hit did not converge on the trim edge",
             ));
         }
-        if t < 1e-6 || t > 1. - 1e-6 {
+        let vertex_epsilon = 1e-6 * (domain[1] - domain[0]);
+        if (t - domain[0]).abs() <= vertex_epsilon
+            || (t - domain[1]).abs() <= vertex_epsilon
+        {
             return Err(unsupported(
                 "Tolerant Boolean: the intersection passes through a vertex of an operand",
             ));
@@ -285,11 +300,16 @@ impl<'m> Tracer<'m> {
                 "Tolerant Boolean: the intersection leaves a face at another face's boundary",
             ));
         }
-        let p = curve.evaluate(t)?.point;
-        let point = [p[0], p[1], p[2]];
-        // UV on the left chart: the coedge pcurve at the local parameter.
-        let (samples, _, _) = &chart.coedges[li][ci];
-        let local = if *reversed { 1. - t } else { t };
+        let point3 = curve.evaluate(t)?.point;
+        let point = [point3[0], point3[1], point3[2]];
+        // UV on the left chart: C and P share one coedge-local parameter;
+        // reversal applies only to the independently represented 3D curve.
+        let local = if sampled.reversed {
+            (c[1] - t) / (c[1] - c[0])
+        } else {
+            (t - c[0]) / (c[1] - c[0])
+        };
+        let q = p[0] + local * (p[1] - p[0]);
         let coedge_uv = {
             let wire = std::iter::once(&chart.model.faces[chart.face].outer)
                 .chain(&chart.model.faces[chart.face].holes)
@@ -297,10 +317,8 @@ impl<'m> Tracer<'m> {
                 .copied()
                 .unwrap();
             let coedge: &Coedge = &chart.model.loops[wire].coedges[ci];
-            let [d0, d1] = coedge.pcurve.domain();
-            pcurve_point(&coedge.pcurve, d0 + (d1 - d0) * local)?
+            pcurve_point(&coedge.pcurve, q)?
         };
-        let _ = samples;
         let (a, b) = if left_a {
             (coedge_uv, uv)
         } else {

@@ -382,11 +382,11 @@ pub(super) fn compact(
                     coedges: l
                         .coedges
                         .iter()
-                        .map(|c| brep_topology::Coedge {
-                            edge: edges[&c.edge],
-                            reversed: c.reversed,
-                            pcurve: c.pcurve.clone(),
-                        })
+                        .map(|c| brep_topology::Coedge::new(
+                            edges[&c.edge],
+                            c.reversed,
+                            c.pcurve.clone(),
+                        ))
                         .collect(),
                 })
                 .collect(),

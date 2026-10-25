@@ -8,7 +8,7 @@ import { brotliCompressSync, brotliDecompressSync, constants } from 'node:zlib'
 import { encodeBase85, decodeBase85 } from './wasm-base85.mjs'
 
 const MAX_WASM_BYTES = 16 * 1024 * 1024
-const MAX_COMPRESSED_BYTES = 4 * 1024 * 1024
+const MAX_COMPRESSED_BYTES = 8 * 1024 * 1024
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 
 /** Delivery-size evidence only; matching signatures do not prove semantic equivalence. */

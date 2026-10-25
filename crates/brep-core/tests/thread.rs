@@ -961,3 +961,205 @@ fn finite_external_candidate_builds_closed_body_with_shared_budget() {
     };
     assert!(brep_core::thread::finite_external_candidate(spec, [1.13, 1.87], no_work).is_err());
 }
+
+fn sewing_test_sheet(
+    x: f64,
+    y: f64,
+    reverse: bool,
+    domain: [f64; 2],
+    tolerance: f64,
+) -> brep_core::Model {
+    use nurbs_core::curve::Curve;
+    let points = [
+        vec![x, y, 0.],
+        vec![x + 1., y, 0.],
+        vec![x + 1., y + 1., 0.],
+        vec![x, y + 1., 0.],
+    ];
+    let wire: Vec<_> = (0..4)
+        .map(|i| {
+            Curve::from_polyline(vec![points[i].clone(), points[(i + 1) % 4].clone()]).unwrap()
+        })
+        .collect();
+    let mut model = brep_core::planar_cap::build_sheet(&[wire], 0., tolerance, 1000).unwrap();
+    let reparameterize = |curve: &mut Curve| {
+        let old = curve.domain();
+        for knot in &mut curve.knots {
+            *knot = domain[0]
+                + (*knot - old[0]) / (old[1] - old[0]) * (domain[1] - domain[0]);
+        }
+    };
+    for edge in &mut model.edges {
+        reparameterize(&mut edge.curve);
+    }
+    for coedge in model.loops.iter_mut().flat_map(|wire| &mut wire.coedges) {
+        reparameterize(&mut coedge.pcurve);
+    }
+    if reverse {
+        model.loops[0].coedges[1..].reverse();
+        for edge in &mut model.edges {
+            edge.curve = edge.curve.reverse().unwrap();
+            edge.vertices.reverse();
+        }
+        for coedge in &mut model.loops[0].coedges {
+            coedge.pcurve = coedge.pcurve.reverse().unwrap();
+        }
+    }
+    model.rebuild_topology_ids();
+    model
+}
+
+fn sewing_test_trim(
+    model: &mut brep_core::Model,
+    wire: usize,
+    slot: usize,
+    curve_parameter: [f64; 2],
+    pcurve_parameter: [f64; 2],
+) {
+    let coedge = model.loops[wire].coedges[slot].clone();
+    model.loops[wire].coedges[slot] = coedge
+        .with_trim(brep_topology::CoedgeTrim {
+            curve_parameter,
+            pcurve_parameter,
+            periodic_lift: [[0, 0], [0, 0]],
+        })
+        .unwrap();
+}
+
+#[test]
+fn attach_transfers_full_and_projective_partial_target_trims() {
+    for partial in [false, true] {
+        let source_domain = [-2., 6.];
+        let target_domain = [10., 14.];
+        let mut source = sewing_test_sheet(0., 0., false, source_domain, 1e-2);
+        let mut target = sewing_test_sheet(1., 0., false, target_domain, 1e-2);
+        let source_edge = source.loops[0].coedges[1].edge;
+        let target_edge = target.loops[0].coedges[3].edge;
+        let elevate = |old: &nurbs_core::curve::Curve| {
+            let mut projective = old.clone();
+            let domain = old.domain();
+            projective.degree = 2;
+            projective.knots = vec![
+                domain[0],
+                domain[0],
+                domain[0],
+                domain[1],
+                domain[1],
+                domain[1],
+            ];
+            projective.control_points = vec![
+                old.control_points[0].clone(),
+                old.control_points[0]
+                    .iter()
+                    .zip(&old.control_points[1])
+                    .map(|(a, b)| (a + b) * 0.5)
+                    .collect(),
+                old.control_points[1].clone(),
+            ];
+            projective.weights = vec![1., 2., 3.];
+            projective
+        };
+        target.edges[target_edge].curve = elevate(&target.edges[target_edge].curve);
+        target.loops[0].coedges[3].pcurve = elevate(&target.loops[0].coedges[3].pcurve);
+        let (curve_parameter, pcurve_parameter) = if partial {
+            ([12., 14.], [12., 14.])
+        } else {
+            (target_domain, target_domain)
+        };
+        sewing_test_trim(&mut target, 0, 3, curve_parameter, pcurve_parameter);
+        sewing_test_trim(&mut target, 0, 0, target_domain, target_domain);
+        let untouched_trim = target.loops[0].coedges[0].trim();
+        let target_before = target.clone();
+        let source_before = source.clone();
+        let (result, proof) =
+            brep_core::thread::attach_patch_sheet(&source, &target, 0, 1, 3, 10000).unwrap();
+        let transferred = result.loops[1].coedges[3].trim().unwrap();
+        if partial {
+            let expected = [0., -2.];
+            for (actual, expected) in transferred.curve_parameter.iter().zip(expected) {
+                assert!((actual - expected).abs() < 1e-12, "{actual} versus {expected}");
+            }
+        } else {
+            assert_eq!(transferred.curve_parameter, [6., -2.]);
+        }
+        assert_eq!(transferred.pcurve_parameter, pcurve_parameter);
+        assert_eq!(transferred.periodic_lift, [[0, 0], [0, 0]]);
+        assert_eq!(result.loops[1].coedges[0].trim(), untouched_trim);
+        assert!(result.loops[1].coedges[3].reversed);
+        assert!(proof
+            .agreements
+            .iter()
+            .all(|report| report.status
+                == nurbs_core::curve_surface_agreement::Status::WithinTolerance));
+        result.validate().unwrap();
+        assert!(brep_core::thread::attach_patch_sheet(&source, &target, 0, 1, 3, 0).is_err());
+        assert_eq!(source, source_before);
+        assert_eq!(target, target_before);
+    }
+}
+
+#[test]
+fn sew_transfers_full_and_partial_nonunit_target_trims() {
+    for partial in [false, true] {
+        let source_domain = [-2., 6.];
+        let target_domain = [10., 14.];
+        let source = sewing_test_sheet(0., 0., false, source_domain, 1e-8);
+        let target = sewing_test_sheet(0., 0., true, target_domain, 1e-8);
+        let (mut joined, _) =
+            brep_core::thread::join_patch_sheets(&source, &target, 0, 0, 10000).unwrap();
+        let (curve_parameter, pcurve_parameter) = if partial {
+            ([11., 13.], [11., 13.])
+        } else {
+            (target_domain, target_domain)
+        };
+        sewing_test_trim(&mut joined, 1, 1, curve_parameter, pcurve_parameter);
+        let before = joined.clone();
+        let (result, _) =
+            brep_core::thread::sew_patch_boundaries(&joined, [0, 1], [1, 1], 10000).unwrap();
+        let transferred = result.loops[1].coedges[1].trim().unwrap();
+        let expected = if partial { [4., 0.] } else { [6., -2.] };
+        for (actual, expected) in transferred.curve_parameter.iter().zip(expected) {
+            assert!((actual - expected).abs() < 1e-12, "{actual} versus {expected}");
+        }
+        assert_eq!(transferred.pcurve_parameter, pcurve_parameter);
+        assert_eq!(transferred.periodic_lift, [[0, 0], [0, 0]]);
+        assert!(result.loops[1].coedges[1].reversed);
+        result.validate().unwrap();
+        assert_eq!(joined, before);
+        let mut invalid = joined.clone();
+        sewing_test_trim(&mut invalid, 1, 1, [20., 21.], target_domain);
+        assert!(brep_core::thread::sew_patch_boundaries(&invalid, [0, 1], [1, 1], 10000).is_err());
+        assert_eq!(invalid.loops[1].coedges[1].trim().unwrap().curve_parameter, [20., 21.]);
+        assert_eq!(joined, before);
+    }
+}
+
+#[test]
+fn multi_edge_trim_transfer_is_atomic_on_later_failure() {
+    let source_domain = [-2., 6.];
+    let target_domain = [10., 14.];
+    let sheet = |x, y, domain| sewing_test_sheet(x, y, false, domain, 1e-8);
+    let a = sheet(0., 0., source_domain);
+    let b = sheet(1., 0., source_domain);
+    let c = sheet(1., 1., source_domain);
+    let (ab, _) = brep_core::thread::join_patch_sheets(&a, &b, 1, 3, 10000).unwrap();
+    let (abc, _) = brep_core::thread::attach_patch_sheet(&ab, &c, 1, 2, 0, 10000).unwrap();
+    let mut target = sheet(0., 1., target_domain);
+    sewing_test_trim(&mut target, 0, 0, target_domain, target_domain);
+    sewing_test_trim(&mut target, 0, 1, target_domain, target_domain);
+    let pairs = [([2, 3], 1), ([0, 2], 0)];
+    let (result, _) =
+        brep_core::thread::attach_patch_sheet_edges(&abc, &target, &pairs, 10000).unwrap();
+    assert_eq!(result.loops[3].coedges[0].trim().unwrap().curve_parameter, [6., -2.]);
+    assert_eq!(result.loops[3].coedges[1].trim().unwrap().curve_parameter, [6., -2.]);
+
+    let source_before = abc.clone();
+    let target_before = target.clone();
+    sewing_test_trim(&mut target, 0, 0, [20., 21.], target_domain);
+    let invalid_before = target.clone();
+    assert!(brep_core::thread::attach_patch_sheet_edges(&abc, &target, &pairs, 10000).is_err());
+    assert_eq!(abc, source_before);
+    assert_eq!(target, invalid_before);
+    assert_eq!(source_before.loops.len(), 3);
+    assert_eq!(target_before.loops[0].coedges[0].trim().unwrap().curve_parameter, target_domain);
+}

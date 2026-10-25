@@ -247,20 +247,20 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
             let bottom_wire = wire
                 .iter()
                 .enumerate()
-                .map(|(i, c)| Coedge {
-                    edge: low_edges[i],
-                    reversed: false,
-                    pcurve: cap_pcurve(c, bounds),
-                })
+                .map(|(i, c)| Coedge::new(
+                    low_edges[i],
+                    false,
+                    cap_pcurve(c, bounds),
+                ))
                 .collect();
             let top_wire = wire
                 .iter()
                 .enumerate()
-                .map(|(i, c)| Coedge {
-                    edge: high_edges[i],
-                    reversed: false,
-                    pcurve: cap_pcurve(c, bounds),
-                })
+                .map(|(i, c)| Coedge::new(
+                    high_edges[i],
+                    false,
+                    cap_pcurve(c, bounds),
+                ))
                 .collect();
             bottom_loops.push(push_loop(&mut model, bottom_wire));
             top_loops.push(push_loop(&mut model, top_wire));
@@ -269,26 +269,26 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
                 let outer = push_loop(
                     &mut model,
                     vec![
-                        Coedge {
-                            edge: low_edges[i],
-                            reversed: false,
-                            pcurve: line(vec![0., 0.], vec![1., 0.]),
-                        },
-                        Coedge {
-                            edge: vertical[j],
-                            reversed: false,
-                            pcurve: line(vec![1., 0.], vec![1., 1.]),
-                        },
-                        Coedge {
-                            edge: high_edges[i],
-                            reversed: true,
-                            pcurve: line(vec![1., 1.], vec![0., 1.]),
-                        },
-                        Coedge {
-                            edge: vertical[i],
-                            reversed: true,
-                            pcurve: line(vec![0., 1.], vec![0., 0.]),
-                        },
+                        Coedge::new(
+                            low_edges[i],
+                            false,
+                            line(vec![0., 0.], vec![1., 0.]),
+                        ),
+                        Coedge::new(
+                            vertical[j],
+                            false,
+                            line(vec![1., 0.], vec![1., 1.]),
+                        ),
+                        Coedge::new(
+                            high_edges[i],
+                            true,
+                            line(vec![1., 1.], vec![0., 1.]),
+                        ),
+                        Coedge::new(
+                            vertical[i],
+                            true,
+                            line(vec![0., 1.], vec![0., 0.]),
+                        ),
                     ],
                 );
                 let surface = Surface {

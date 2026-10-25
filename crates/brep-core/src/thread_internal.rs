@@ -269,11 +269,11 @@ fn cap(
         let coedges = cycle
             .iter()
             .zip(wire)
-            .map(|(&i, pcurve)| Coedge {
-                edge: edges[i].edge,
-                reversed: edges[i].reverse,
+            .map(|(&i, pcurve)| Coedge::new(
+                edges[i].edge,
+                edges[i].reverse,
                 pcurve,
-            })
+            ))
             .collect();
         loops.push(model.loops.len());
         model.loops.push(Loop { coedges });

@@ -129,11 +129,11 @@ impl Ledger {
                 (id, false)
             });
             self.uses[edge].push((face, rev));
-            coedges.push(Coedge {
+            coedges.push(Coedge::new(
                 edge,
-                reversed: rev,
+                rev,
                 pcurve,
-            });
+            ));
         }
         let outer = self.loops.len();
         self.loops.push(Loop { coedges });

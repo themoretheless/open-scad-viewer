@@ -43,7 +43,13 @@ pub(super) struct Jet {
     pub(super) dv: [f64; 3],
 }
 
-type CoedgeSamples = (Vec<[f64; 2]>, usize, bool);
+pub(super) struct CoedgeSamples {
+    pub(super) samples: Vec<[f64; 2]>,
+    pub(super) edge: usize,
+    pub(super) reversed: bool,
+    pub(super) curve_parameter: [f64; 2],
+    pub(super) pcurve_parameter: [f64; 2],
+}
 type CoedgeLoops = Vec<Vec<CoedgeSamples>>;
 
 /// Trimmed face with its UV domain, dense boundary polygons and per-coedge
@@ -73,14 +79,26 @@ impl<'m> Chart<'m> {
             let mut polygon = Vec::new();
             let mut list = Vec::new();
             for coedge in &model.loops[wire].coedges {
-                let [a, b] = coedge.pcurve.domain();
+                let (c, [a, b]) = coedge.trim().map_or(
+                    (
+                        model.edges[coedge.edge].curve.domain(),
+                        coedge.pcurve.domain(),
+                    ),
+                    |trim| (trim.curve_parameter, trim.pcurve_parameter),
+                );
                 let mut samples = Vec::with_capacity(DENSE + 1);
                 for i in 0..=DENSE {
                     let t = a + (b - a) * i as f64 / DENSE as f64;
                     samples.push(pcurve_point(&coedge.pcurve, t)?);
                 }
                 polygon.extend(samples[..DENSE].iter().copied());
-                list.push((samples, coedge.edge, coedge.reversed));
+                list.push(CoedgeSamples {
+                    samples,
+                    edge: coedge.edge,
+                    reversed: coedge.reversed,
+                    curve_parameter: c,
+                    pcurve_parameter: [a, b],
+                });
             }
             polygons.push(polygon);
             coedges.push(list);
@@ -149,9 +167,9 @@ impl<'m> Chart<'m> {
     pub(super) fn crossing(&self, from: [f64; 2], to: [f64; 2]) -> Option<(usize, usize, f64)> {
         let mut best: Option<(f64, (usize, usize, f64))> = None;
         for (li, list) in self.coedges.iter().enumerate() {
-            for (ci, (samples, _, _)) in list.iter().enumerate() {
+            for (ci, coedge) in list.iter().enumerate() {
                 for k in 0..DENSE {
-                    let (a, b) = (samples[k], samples[k + 1]);
+                    let (a, b) = (coedge.samples[k], coedge.samples[k + 1]);
                     if let Some((s, u)) = segments_intersect(from, to, a, b) {
                         let local = (k as f64 + u) / DENSE as f64;
                         if best.map(|(bs, _)| s < bs).unwrap_or(true) {

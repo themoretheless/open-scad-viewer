@@ -71,7 +71,7 @@ describe('synchronous Brotli WASM packages', () => {
     const excessive = bytes.slice()
     new DataView(excessive.buffer,excessive.byteOffset,excessive.byteLength).setUint32(0,16 * 1024 * 1024 + 1,true)
     expect(() => unpackBrotliWasmBase64(encodeBase85(excessive))).toThrow()
-    expect(() => unpackBrotliWasmBase64('b85:'+'0'.repeat(6 + Math.ceil((4*1024*1024+4)/4)*5))).toThrow(/input limit/)
+    expect(() => unpackBrotliWasmBase64('b85:'+'0'.repeat(6 + Math.ceil((8*1024*1024+4)/4)*5))).toThrow(/input limit/)
   })
 
   it('round-trips reference-encoded dictionary, overlapping and binary streams', () => {
@@ -114,11 +114,11 @@ describe('synchronous Brotli WASM packages', () => {
   })
 
   it('checks host input/output caps and enforces the decoder memory maximum', () => {
-    expect(() => unpackBrotliWasm(new Uint8Array(4 * 1024 * 1024 + 5))).toThrow(/input limit/)
+    expect(() => unpackBrotliWasm(new Uint8Array(8 * 1024 * 1024 + 5))).toThrow(/input limit/)
     const outputOverflow = pack(new Uint8Array())
     new DataView(outputOverflow.buffer, outputOverflow.byteOffset, outputOverflow.byteLength).setUint32(0, 16 * 1024 * 1024 + 1, true)
     expect(() => unpackBrotliWasm(outputOverflow)).toThrow(/output limit/)
-    expect(() => unpackBrotliWasmBase64('A'.repeat(4 * Math.ceil((4 * 1024 * 1024 + 4) / 3) + 1))).toThrow(/input limit/)
+    expect(() => unpackBrotliWasmBase64('A'.repeat(4 * Math.ceil((8 * 1024 * 1024 + 4) / 3) + 1))).toThrow(/input limit/)
     const module = new WebAssembly.Module(unpackWasmBase64(decoderBytes))
     expect(WebAssembly.Module.imports(module)).toEqual([])
     const runtime = new WebAssembly.Instance(module).exports as {memory: WebAssembly.Memory; prepare(size: number): number; decode(size: number): bigint}

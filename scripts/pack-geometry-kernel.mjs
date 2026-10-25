@@ -8,7 +8,7 @@ import {packStampHit,writePackStamp} from './wasm-pack-stamp.mjs'
 // Separate packing from compilation so an existing optimized artifact can be
 // repackaged without changing its byte identity or re-running wasm-opt.
 export function packGeometryKernel(wasm, output, publicWasm) {
-const stampPath=resolve(output,'.wasm-pack-stamp-brotli24-16-font-sections-v1-base118v')
+const stampPath=resolve(output,'.wasm-pack-stamp-brotli24-16-font-sections-v1-base118v2-bounded-streams')
 const packOutputs=[resolve(output,'kernel_bg.wasm'),resolve(publicWasm,'geometry-kernel.wasm'),resolve(output,'identity.ts'),resolve(output,'bytes.ts')]
 if(packStampHit(stampPath,wasm,packOutputs)){
   console.log('geometry-kernels: wasm unchanged, skipping packaging (stamp hit)')
@@ -27,12 +27,22 @@ while(at<wasm.length){
   if(id===10)split=at
 }
 const chunks=split<wasm.length?[wasm.subarray(0,split),wasm.subarray(split)]:[wasm]
-const compressed=chunks.map(chunk=>brotliCompressSync(chunk,{params:{[constants.BROTLI_PARAM_QUALITY]:11,[constants.BROTLI_PARAM_LGWIN]:24,[constants.BROTLI_PARAM_LGBLOCK]:16,[constants.BROTLI_PARAM_MODE]:constants.BROTLI_MODE_FONT}}))
-const header=Buffer.alloc(5+8*chunks.length)
-header.writeUInt32LE(wasm.length+0x80000000);header[4]=chunks.length
-chunks.forEach((chunk,i)=>{header.writeUInt32LE(chunk.length,5+8*i);header.writeUInt32LE(compressed[i].length,9+8*i)})
-const packed=Buffer.concat([header,...compressed])
-if(packed.length-4>4*1024*1024)throw new Error('Geometry WASM exceeds compressed input limit')
+const compress=chunk=>brotliCompressSync(chunk,{params:{[constants.BROTLI_PARAM_QUALITY]:11,[constants.BROTLI_PARAM_LGWIN]:24,[constants.BROTLI_PARAM_LGBLOCK]:16,[constants.BROTLI_PARAM_MODE]:constants.BROTLI_MODE_FONT}})
+// The synchronous decoder accepts at most 4 MiB per stream. Split recursively
+// instead of weakening that bound; the host concatenates decoded streams.
+const bounded=chunk=>{
+  const compressed=compress(chunk)
+  if(compressed.length<=4*1024*1024)return [{chunk,compressed}]
+  const middle=Math.ceil(chunk.length/2)
+  return [...bounded(chunk.subarray(0,middle)),...bounded(chunk.subarray(middle))]
+}
+const streams=chunks.flatMap(bounded)
+if(streams.length>8)throw new Error('Geometry WASM requires too many compressed streams')
+const header=Buffer.alloc(5+8*streams.length)
+header.writeUInt32LE(wasm.length+0x80000000);header[4]=streams.length
+streams.forEach(({chunk,compressed},i)=>{header.writeUInt32LE(chunk.length,5+8*i);header.writeUInt32LE(compressed.length,9+8*i)})
+const packed=Buffer.concat([header,...streams.map(stream=>stream.compressed)])
+if(packed.length-4>8*1024*1024)throw new Error('Geometry WASM exceeds compressed input limit')
 const bytes=encodeVariableBase118(packed)
 // Prepare the complete package before publishing: compression or size failures
 // must preserve the previously installed kernel, fingerprint and embedded bytes.

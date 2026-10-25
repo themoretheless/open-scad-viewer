@@ -26,9 +26,11 @@ pub mod diagnostics;
 pub mod frame;
 pub mod print_strength;
 pub mod section;
+pub mod structural_profiles;
 pub mod thermal_strength;
 pub mod truss;
 pub mod truss_loads;
+pub mod truss_topology;
 
 pub use math_core::{Error, Result};
 use math_core::{cross2, sub2};

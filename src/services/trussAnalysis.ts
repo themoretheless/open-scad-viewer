@@ -142,3 +142,68 @@ export function solveTrussNonlinear(
 ): TrussNonlinearResponse {
   return callGeometryRust<TrussNonlinearResponse>('truss_nonlinear', {...model, ...options})
 }
+
+/** One weighted topology load case: per-node forces, or explicit wrenches
+ * with the same schema as `solveTruss` (`loads`). */
+export type TrussTopologyLoadCase = {weight: number} & (
+  | {forcesN: TrussVector[]}
+  | {loads: TrussNodalWrench[]}
+)
+export interface TrussTopologyOptions {
+  /** Target material fraction of the ground-structure volume, (0, 1]. Default 0.5. */
+  volumeFraction?: number
+  /** SIMP stiffness penalty exponent, 1-10. Default 3. */
+  penalty?: number
+  /** OC iteration budget, 1-1000. Default 200. */
+  maxIterations?: number
+  /** Per-iteration density move limit, (0, 1]. Default 0.2. */
+  moveLimit?: number
+  /** Convergence on max |Δρ|, (0, 1). Default 1e-3. */
+  tolerance?: number
+}
+export interface TrussTopologyResponse {
+  /** Final densities in input member order, each in [1e-4, 1]. */
+  densities: number[]
+  /** Physical areas ρ·A_ref, matching the reported axial forces. */
+  areasMm2: number[]
+  volumeMm3: number
+  targetVolumeMm3: number
+  /** Per-case compliance of the final penalized model, N·mm. */
+  compliancesNmm: number[]
+  initialComplianceNmm: number
+  complianceNmm: number
+  iterations: number
+  /** False means the iteration budget was exhausted, not invalid input. */
+  converged: boolean
+  maxDensityChange: number
+  /** Members with final density ≥ 0.5, ascending input order. */
+  activeMembers: number[]
+  /** Per-case axial forces (tension positive) of the FINAL LINEAR model
+   * with areas ρ·A_ref; composes with trussScreen. */
+  axialForcesN: number[][]
+}
+
+/** Ground-structure SIMP topology optimization of a pin-jointed truss:
+ * minimizes weighted compliance Σ w_c·F_cᵀu_c under a material volume
+ * fraction constraint. `members.areaMm2` is the unit-density reference area.
+ * The ground structure must be kinematically stable at full density.
+ * Compliance layout estimate only — no buckling, joint or normative checks.
+ * Requires the geometry runtime.
+ */
+export function optimizeTrussTopology(
+  model: Omit<TrussModel, 'forcesN'>,
+  cases: TrussTopologyLoadCase[],
+  options: TrussTopologyOptions = {},
+): TrussTopologyResponse {
+  return callGeometryRust<TrussTopologyResponse>('truss_topology', {
+    ...model,
+    cases,
+    options: {
+      volumeFraction: options.volumeFraction ?? 0.5,
+      penalty: options.penalty ?? 3,
+      maxIterations: options.maxIterations ?? 200,
+      moveLimit: options.moveLimit ?? 0.2,
+      tolerance: options.tolerance ?? 1e-3,
+    },
+  })
+}

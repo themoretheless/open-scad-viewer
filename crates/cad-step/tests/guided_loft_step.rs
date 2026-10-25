@@ -40,11 +40,11 @@ fn open_face(surface: Surface) -> Model {
                 .collect(),
             loops: vec![Loop {
                 coedges: (0..4)
-                    .map(|i| Coedge {
-                        edge: i,
-                        reversed: false,
-                        pcurve: line2(uv[i], uv[(i + 1) % 4]),
-                    })
+                    .map(|i| Coedge::new(
+                        i,
+                        false,
+                        line2(uv[i], uv[(i + 1) % 4]),
+                    ))
                     .collect(),
             }],
             faces: vec![Face {
@@ -246,26 +246,26 @@ fn closed_loft_step_retains_shared_seam_and_cyclic_jets() {
             ],
             loops: vec![Loop {
                 coedges: vec![
-                    Coedge {
-                        edge: 0,
-                        reversed: false,
-                        pcurve: line2([0., 0.], [1., 0.]),
-                    },
-                    Coedge {
-                        edge: 1,
-                        reversed: false,
-                        pcurve: line2([1., 0.], [1., 1.]),
-                    },
-                    Coedge {
-                        edge: 0,
-                        reversed: true,
-                        pcurve: line2([1., 1.], [0., 1.]),
-                    },
-                    Coedge {
-                        edge: 2,
-                        reversed: true,
-                        pcurve: line2([0., 1.], [0., 0.]),
-                    },
+                    Coedge::new(
+                        0,
+                        false,
+                        line2([0., 0.], [1., 0.]),
+                    ),
+                    Coedge::new(
+                        1,
+                        false,
+                        line2([1., 0.], [1., 1.]),
+                    ),
+                    Coedge::new(
+                        0,
+                        true,
+                        line2([1., 1.], [0., 1.]),
+                    ),
+                    Coedge::new(
+                        2,
+                        true,
+                        line2([0., 1.], [0., 0.]),
+                    ),
                 ],
             }],
             faces: vec![Face {

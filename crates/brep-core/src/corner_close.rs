@@ -354,11 +354,11 @@ pub(crate) fn prepare_sides(
             saved.push((
                 side,
                 use_,
-                Coedge {
-                    edge: use_.edge,
+                Coedge::new(
+                    use_.edge,
                     reversed,
-                    pcurve: pc,
-                },
+                    pc,
+                ),
             ));
         }
     }

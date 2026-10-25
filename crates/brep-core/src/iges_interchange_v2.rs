@@ -579,11 +579,11 @@ impl<'a> Builder<'a> {
                 let edge = *edge_lists
                     .get(&(el, ei))
                     .ok_or_else(|| refuse("Invalid IGES edge-list reference"))?;
-                coedges.push(Coedge {
+                coedges.push(Coedge::new(
                     edge,
                     reversed,
                     pcurve,
-                });
+                ));
                 at += 7;
             }
             if at != v.len() {

@@ -11,6 +11,41 @@ impl value_codec::Serialize for CoedgeTrim {
     }
 }
 
+impl<'de> value_codec::Deserialize<'de> for CoedgeTrim {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let curve_parameter = value_codec::Deserialize::from_value(
+            object
+                .remove("curveParameter")
+                .ok_or_else(|| value_codec::error("Missing field curveParameter"))?,
+        )?;
+        let pcurve_parameter = value_codec::Deserialize::from_value(
+            object
+                .remove("pcurveParameter")
+                .ok_or_else(|| value_codec::error("Missing field pcurveParameter"))?,
+        )?;
+        let periodic_lift = value_codec::Deserialize::from_value(
+            object
+                .remove("periodicLift")
+                .ok_or_else(|| value_codec::error("Missing field periodicLift"))?,
+        )?;
+        if let Some(key) = object.keys().next() {
+            return Err(value_codec::error(format!("Unknown field {key}")));
+        }
+        let trim = Self {
+            curve_parameter,
+            pcurve_parameter,
+            periodic_lift,
+        };
+        trim.validate()
+            .map_err(|e| value_codec::error(format!("Invalid coedge trim: {e}")))?;
+        Ok(trim)
+    }
+}
+
 impl<V: value_codec::Serialize> value_codec::Serialize for Vertex<V> {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();
@@ -102,6 +137,9 @@ impl<P: value_codec::Serialize> value_codec::Serialize for Coedge<P> {
             "pcurve".into(),
             value_codec::Serialize::to_value(&self.pcurve),
         );
+        if let Some(trim) = self.trim {
+            object.insert("trim".into(), value_codec::Serialize::to_value(&trim));
+        }
         value_codec::Value::Object(object)
     }
 }
@@ -127,6 +165,10 @@ impl<'de, P: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Co
                 .remove("pcurve")
                 .ok_or_else(|| value_codec::error("Missing field pcurve"))?,
         )?;
+        let trim = object
+            .remove("trim")
+            .map(value_codec::Deserialize::from_value)
+            .transpose()?;
         if let Some(key) = object.keys().next() {
             return Err(value_codec::error(format!("Unknown field {key}")));
         }
@@ -134,6 +176,7 @@ impl<'de, P: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Co
             edge,
             reversed,
             pcurve,
+            trim,
         })
     }
 }

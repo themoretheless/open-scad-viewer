@@ -114,26 +114,26 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
                 let bottom = level_edges[layer][loop_index][k];
                 let top = level_edges[layer + 1][loop_index][k];
                 let coedges = vec![
-                    Coedge {
-                        edge: bottom,
-                        reversed: false,
-                        pcurve: unit_line([0., 0.], [1., 0.]),
-                    },
-                    Coedge {
-                        edge: vertical[next],
-                        reversed: false,
-                        pcurve: unit_line([1., 0.], [1., 1.]),
-                    },
-                    Coedge {
-                        edge: top,
-                        reversed: true,
-                        pcurve: unit_line([1., 1.], [0., 1.]),
-                    },
-                    Coedge {
-                        edge: vertical[k],
-                        reversed: true,
-                        pcurve: unit_line([0., 1.], [0., 0.]),
-                    },
+                    Coedge::new(
+                        bottom,
+                        false,
+                        unit_line([0., 0.], [1., 0.]),
+                    ),
+                    Coedge::new(
+                        vertical[next],
+                        false,
+                        unit_line([1., 0.], [1., 1.]),
+                    ),
+                    Coedge::new(
+                        top,
+                        true,
+                        unit_line([1., 1.], [0., 1.]),
+                    ),
+                    Coedge::new(
+                        vertical[k],
+                        true,
+                        unit_line([0., 1.], [0., 0.]),
+                    ),
                 ];
                 loops_out.push(Loop { coedges });
                 faces.push(Face {
@@ -163,11 +163,11 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
             let coedges = curves
                 .iter()
                 .enumerate()
-                .map(|(k, c)| Coedge {
-                    edge: level_edges[li][loop_index][k],
-                    reversed: false,
-                    pcurve: cap_pcurve(c, map),
-                })
+                .map(|(k, c)| Coedge::new(
+                    level_edges[li][loop_index][k],
+                    false,
+                    cap_pcurve(c, map),
+                ))
                 .collect();
             loops_out.push(Loop { coedges });
             loop_ids.push(loops_out.len() - 1);

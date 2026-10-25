@@ -218,11 +218,11 @@ pub fn replace(
         coedges: hole_curves
             .into_iter()
             .enumerate()
-            .map(|(i, pcurve)| Coedge {
-                edge: edge_start + boundary.len() - 1 - i,
-                reversed: true,
+            .map(|(i, pcurve)| Coedge::new(
+                edge_start + boundary.len() - 1 - i,
+                true,
                 pcurve,
-            })
+            ))
             .collect(),
     });
     model.faces[face_id].holes.push(hole);
@@ -231,11 +231,11 @@ pub fn replace(
         coedges: boundary
             .iter()
             .enumerate()
-            .map(|(i, b)| Coedge {
-                edge: edge_start + i,
-                reversed: false,
-                pcurve: b.replacement_pcurve.clone(),
-            })
+            .map(|(i, b)| Coedge::new(
+                edge_start + i,
+                false,
+                b.replacement_pcurve.clone(),
+            ))
             .collect(),
     });
     let replacement_face = model.faces.len();

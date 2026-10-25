@@ -54,7 +54,7 @@ for(let i=0;i<digits108.length;i++)rank108[digits108.charCodeAt(i)]=i
 const rank118=new Int16Array(128).fill(-1)
 const digits118=String.fromCharCode(22,23,24,25,26,28,29,30,31,127)+digits108
 for(let i=0;i<digits118.length;i++)rank118[digits118.charCodeAt(i)]=i
-export function decodeBase91(text,maximum=4*1024*1024+4){
+export function decodeBase91(text,maximum=8*1024*1024+4){
  if(text.startsWith('bKx:'))return decodeSeptBase118(text,maximum)
  const dense=text.startsWith('bBx:'),extended=text.startsWith('bAx:'),control=text.startsWith('b95:'),tabbed=text.startsWith('b94:'),widest=text.startsWith('b93:'),wide=text.startsWith('b92:'),base=dense?118:extended?108:control?95:tabbed?94:widest?93:wide?92:91,threshold=base*base-8193
  const digits=dense?rank118:extended?rank108:control?rank95:tabbed?rank94:widest?rank93:wide?rank92:rank,variable=dense||extended||control||tabbed||widest||wide||text.startsWith('b9v:')

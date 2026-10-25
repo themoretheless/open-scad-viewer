@@ -361,16 +361,16 @@ mod tests {
                     if reversed {
                         std::mem::swap(&mut a, &mut b)
                     }
-                    let previous = brep_core::Coedge {
-                        edge: 0,
-                        reversed: flags,
-                        pcurve: a.reverse().unwrap(),
-                    };
-                    let next = brep_core::Coedge {
-                        edge: 1,
-                        reversed: !flags,
-                        pcurve: b.clone(),
-                    };
+                    let previous = brep_core::Coedge::new(
+                        0,
+                        flags,
+                        a.reverse().unwrap(),
+                    );
+                    let next = brep_core::Coedge::new(
+                        1,
+                        !flags,
+                        b.clone(),
+                    );
                     let before = (
                         previous.pcurve.control_points.clone(),
                         next.pcurve.control_points.clone(),

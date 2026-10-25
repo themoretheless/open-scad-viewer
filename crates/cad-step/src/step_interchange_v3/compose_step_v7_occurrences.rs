@@ -207,11 +207,11 @@ impl<'a> DirectBuilder<'a> {
                 reversed,
                 surface,
             )?;
-            coedges.push(Coedge {
+            coedges.push(Coedge::new(
                 edge,
                 reversed,
                 pcurve,
-            });
+            ));
         }
         if coedges.is_empty() {
             return Err(refuse("EDGE_LOOP cannot be empty"));

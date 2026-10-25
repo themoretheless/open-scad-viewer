@@ -425,11 +425,11 @@ pub(crate) fn open_face(
             curve: boundary.curve,
             degenerate: boundary.collapsed_pole.is_some(),
         });
-        coedges.push(crate::Coedge {
-            edge: i,
-            reversed: false,
-            pcurve: boundary.pcurve,
-        });
+        coedges.push(crate::Coedge::new(
+            i,
+            false,
+            boundary.pcurve,
+        ));
     }
     let mut model = crate::Model(
         brep_topology::Model {
@@ -512,11 +512,11 @@ pub(crate) fn assemble_support_sheets(sheets: Vec<(crate::Model, bool)>) -> Resu
                 });
                 (index, false)
             };
-            coedges.push(crate::Coedge {
-                edge: index,
-                reversed: edge_reversed,
-                pcurve: use_.pcurve.clone(),
-            });
+            coedges.push(crate::Coedge::new(
+                index,
+                edge_reversed,
+                use_.pcurve.clone(),
+            ));
         }
         let outer = result.loops.len();
         result.0.loops.push(crate::Loop { coedges });

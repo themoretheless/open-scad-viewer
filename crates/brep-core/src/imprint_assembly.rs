@@ -11,6 +11,7 @@
 use crate::imprint_pipeline;
 use crate::uv_regions::{self, Arrangement, Piece, normalized};
 use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Vertex};
+use brep_topology::CoedgeTrim;
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::BTreeMap;
 
@@ -86,6 +87,55 @@ impl ChartVertices {
     }
 }
 
+/// Full-use metadata for geometry that has already reached its final domain.
+/// Lifts describe the authored pcurve endpoints; UV is deliberately not wrapped.
+pub(crate) fn derive_full_trim(
+    edge: &Edge,
+    coedge: &Coedge,
+    surface: &Surface,
+) -> Result<CoedgeTrim> {
+    let p = coedge.pcurve.domain();
+    let uv = [
+        coedge.pcurve.evaluate(p[0])?.point,
+        coedge.pcurve.evaluate(p[1])?.point,
+    ];
+    let domains = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_u[surface.control_points.len()],
+        ],
+        [
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    let mut periodic_lift = [[0; 2]; 2];
+    for end in 0..2 {
+        for axis in 0..2 {
+            if [surface.periodic_u, surface.periodic_v][axis] {
+                let d = domains[axis];
+                periodic_lift[end][axis] =
+                    ((uv[end][axis] - d[0]) / (d[1] - d[0])).floor() as i32;
+            }
+        }
+    }
+    Ok(CoedgeTrim {
+        curve_parameter: edge.curve.domain(),
+        pcurve_parameter: p,
+        periodic_lift,
+    })
+}
+
+pub(crate) fn attach_full_trim(
+    edge: &Edge,
+    coedge: &mut Coedge,
+    surface: &Surface,
+) -> Result<()> {
+    let trim = derive_full_trim(edge, coedge, surface)?;
+    *coedge = coedge.clone().with_trim(trim)?;
+    Ok(())
+}
+
 pub(crate) struct Assembler<'m> {
     pub(crate) src: [&'m Model; 2],
     /// Per operand (call order): keep the regions inside the other operand.
@@ -106,8 +156,8 @@ pub(crate) struct Assembler<'m> {
 }
 
 impl<'m> Assembler<'m> {
-    pub(crate) fn new(a: &'m Model, b: &'m Model, operation: &str) -> Self {
-        Self {
+    pub(crate) fn new(a: &'m Model, b: &'m Model, operation: &str) -> Result<Self> {
+        let mut out = Self {
             src: [a, b],
             want_inside: [
                 operation == "intersection",
@@ -124,7 +174,41 @@ impl<'m> Assembler<'m> {
             shell: Vec::new(),
             vmap: BTreeMap::new(),
             emap: BTreeMap::new(),
+        };
+        // Authored interior trim ends are network events even when no
+        // intersection was traced through them. Full 3D uses (including uses
+        // with only a partial pcurve) do not split the original edge.
+        for o in 0..2 {
+            let model = out.src[o];
+            for face in &model.faces {
+                for wire in std::iter::once(&face.outer).chain(&face.holes) {
+                    for coedge in &model.loops[*wire].coedges {
+                        let Some(trim) = coedge.trim() else {
+                            continue;
+                        };
+                        trim.validate()?;
+                        let edge = &model.edges[coedge.edge];
+                        let domain = edge.curve.domain();
+                        let c = trim.curve_parameter;
+                        if c[0].min(c[1]) == domain[0] && c[0].max(c[1]) == domain[1] {
+                            continue;
+                        }
+                        for &t in &c {
+                            if t <= domain[0] || t >= domain[1] {
+                                continue;
+                            }
+                            if out.split_at(o, coedge.edge, t, 1e-12).is_some() {
+                                continue;
+                            }
+                            let point = edge.curve.evaluate(t)?.point;
+                            let id = out.special([point[0], point[1], point[2]]);
+                            out.attach_edge(id, o, coedge.edge, t);
+                        }
+                    }
+                }
+            }
         }
+        Ok(out)
     }
 
     pub(crate) fn special(&mut self, point: [f64; 3]) -> usize {
@@ -192,10 +276,11 @@ impl<'m> Assembler<'m> {
     /// Vertex key at one original edge parameter of operand `o`.
     pub(crate) fn vkey_at(&self, o: usize, edge: usize, t: f64) -> Result<VKey> {
         let src = &self.src[o].edges[edge];
-        if t <= 0. {
+        let domain = src.curve.domain();
+        if t <= domain[0] {
             return Ok(VKey::Orig(o, src.vertices[0]));
         }
-        if t >= 1. {
+        if t >= domain[1] {
             return Ok(VKey::Orig(o, src.vertices[1]));
         }
         let table = self
@@ -242,8 +327,9 @@ impl<'m> Assembler<'m> {
                     .get(&(o, e))
                     .cloned()
                     .ok_or_else(|| unsupported("Imprint: piece of an unsplit edge"))?;
-                let t_lo = if j == 0 { 0. } else { table[j - 1].0 };
-                let t_hi = if j == table.len() { 1. } else { table[j].0 };
+                let domain = self.src[o].edges[e].curve.domain();
+                let t_lo = if j == 0 { domain[0] } else { table[j - 1].0 };
+                let t_hi = if j == table.len() { domain[1] } else { table[j].0 };
                 let v0 = self.vertex(self.vkey_at(o, e, t_lo)?);
                 let v1 = self.vertex(self.vkey_at(o, e, t_hi)?);
                 Edge {
@@ -270,10 +356,43 @@ impl<'m> Assembler<'m> {
             let mut pieces = Vec::new();
             for coedge in &model.loops[wire].coedges {
                 let e = coedge.edge;
+                let src = &model.edges[e];
+                let domain = src.curve.domain();
                 let table = self.splits.get(&(o, e)).cloned().unwrap_or_default();
-                if table.is_empty() {
-                    let src = &model.edges[e];
-                    let (va, vb) = if coedge.reversed {
+                let (c, p) = coedge.trim().map_or(
+                    (domain, coedge.pcurve.domain()),
+                    |trim| (trim.curve_parameter, trim.pcurve_parameter),
+                );
+                let lo = c[0].min(c[1]);
+                let hi = c[0].max(c[1]);
+                let full_3d = lo == domain[0] && hi == domain[1];
+                let mut bounds = vec![lo];
+                bounds.extend(
+                    table
+                        .iter()
+                        .map(|(t, _)| *t)
+                        .filter(|t| *t > lo && *t < hi),
+                );
+                bounds.push(hi);
+                let p_at = |t: f64| {
+                    let s = if coedge.reversed {
+                        (c[1] - t) / (c[1] - c[0])
+                    } else {
+                        (t - c[0]) / (c[1] - c[0])
+                    };
+                    p[0] + s * (p[1] - p[0])
+                };
+                let trim_pcurve = |a: f64, b: f64| -> Result<Curve> {
+                    if a < b {
+                        Ok(normalized(coedge.pcurve.trim(a, b)?))
+                    } else {
+                        Ok(normalized(coedge.pcurve.trim(b, a)?.reverse()?))
+                    }
+                };
+                let traversal_reversed = coedge.reversed ^ (c[1] < c[0]);
+                if full_3d && bounds.len() == 2 {
+                    let (ta, tb) = if traversal_reversed { (hi, lo) } else { (lo, hi) };
+                    let (va, vb) = if traversal_reversed {
                         (src.vertices[1], src.vertices[0])
                     } else {
                         (src.vertices[0], src.vertices[1])
@@ -281,37 +400,34 @@ impl<'m> Assembler<'m> {
                     pieces.push((
                         VKey::Orig(o, va),
                         VKey::Orig(o, vb),
-                        normalized(coedge.pcurve.clone()),
+                        trim_pcurve(p_at(ta), p_at(tb))?,
                         EKey::Orig(o, e),
-                        coedge.reversed,
+                        traversal_reversed,
                     ));
                     continue;
                 }
-                let count = table.len() + 1;
-                let order: Vec<usize> = if coedge.reversed {
-                    (0..count).rev().collect()
+                let order: Vec<usize> = if traversal_reversed {
+                    (0..bounds.len() - 1).rev().collect()
                 } else {
-                    (0..count).collect()
+                    (0..bounds.len() - 1).collect()
                 };
-                for j in order {
-                    let t_lo = if j == 0 { 0. } else { table[j - 1].0 };
-                    let t_hi = if j == count - 1 { 1. } else { table[j].0 };
-                    let (tau_a, tau_b) = if coedge.reversed {
-                        (1. - t_hi, 1. - t_lo)
+                for piece in order {
+                    let t_lo = bounds[piece];
+                    let t_hi = bounds[piece + 1];
+                    let (ta, tb) = if traversal_reversed {
+                        (t_hi, t_lo)
                     } else {
                         (t_lo, t_hi)
                     };
-                    let (ka, kb) = if coedge.reversed {
-                        (self.vkey_at(o, e, t_hi)?, self.vkey_at(o, e, t_lo)?)
-                    } else {
-                        (self.vkey_at(o, e, t_lo)?, self.vkey_at(o, e, t_hi)?)
-                    };
+                    let ka = self.vkey_at(o, e, ta)?;
+                    let kb = self.vkey_at(o, e, tb)?;
+                    let j = table.partition_point(|(t, _)| *t <= t_lo);
                     pieces.push((
                         ka,
                         kb,
-                        normalized(coedge.pcurve.trim(tau_a, tau_b)?),
+                        trim_pcurve(p_at(ta), p_at(tb))?,
                         EKey::Piece(o, e, j),
-                        coedge.reversed,
+                        traversal_reversed,
                     ));
                 }
             }
@@ -331,10 +447,14 @@ impl<'m> Assembler<'m> {
         o: usize,
         face: usize,
         reversed: bool,
-        outer: Vec<Coedge>,
-        holes: Vec<Vec<Coedge>>,
+        mut outer: Vec<Coedge>,
+        mut holes: Vec<Vec<Coedge>>,
         surface: Option<Surface>,
-    ) {
+    ) -> Result<()> {
+        let surface = surface.unwrap_or_else(|| self.src[o].faces[face].surface.clone());
+        for coedge in outer.iter_mut().chain(holes.iter_mut().flatten()) {
+            attach_full_trim(&self.edges[coedge.edge], coedge, &surface)?;
+        }
         let outer_id = self.loops.len();
         self.loops.push(Loop { coedges: outer });
         let mut hole_ids = Vec::with_capacity(holes.len());
@@ -344,7 +464,7 @@ impl<'m> Assembler<'m> {
         }
         let id = self.faces.len();
         self.faces.push(Face {
-            surface: surface.unwrap_or_else(|| self.src[o].faces[face].surface.clone()),
+            surface,
             outer: outer_id,
             holes: hole_ids,
         });
@@ -352,6 +472,7 @@ impl<'m> Assembler<'m> {
             face: id,
             reversed: reversed ^ self.flip[o],
         });
+        Ok(())
     }
 
     /// Whole original face (all loops), edges remapped and split where the
@@ -363,17 +484,16 @@ impl<'m> Assembler<'m> {
             let mut out = Vec::with_capacity(pieces.len());
             for (_, _, pcurve, key, rev) in pieces {
                 let edge = self.edge(key)?;
-                out.push(Coedge {
+                out.push(Coedge::new(
                     edge,
-                    reversed: rev,
+                    rev,
                     pcurve,
-                });
+                ));
             }
             built.push(out);
         }
         let outer = built.remove(0);
-        self.emit_face(o, face, reversed, outer, built, None);
-        Ok(())
+        self.emit_face(o, face, reversed, outer, built, None)
     }
 
     /// The face surface trimmed to the UV bounding box of a region and
@@ -467,7 +587,7 @@ impl<'m> Assembler<'m> {
                 holes.push(self.cycle_coedges(&arrangement, hole)?);
             }
             let surface = self.tight_surface(o, face, &mut outer, &mut holes)?;
-            self.emit_face(o, face, reversed, outer, holes, Some(surface));
+            self.emit_face(o, face, reversed, outer, holes, Some(surface))?;
         }
         Ok(())
     }
@@ -485,11 +605,11 @@ impl<'m> Assembler<'m> {
             } else {
                 (piece.pcurve.reverse()?, !piece.reversed)
             };
-            out.push(Coedge {
+            out.push(Coedge::new(
                 edge,
                 reversed,
                 pcurve,
-            });
+            ));
         }
         Ok(out)
     }
@@ -513,5 +633,222 @@ impl<'m> Assembler<'m> {
                 e.message
             ))),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Shell, TopologyIds, cuboid, cylinder};
+
+    fn set_domain(curve: &mut Curve, domain: [f64; 2]) {
+        let old = curve.domain();
+        for knot in &mut curve.knots {
+            *knot = domain[0] + (*knot - old[0]) / (old[1] - old[0]) * (domain[1] - domain[0]);
+        }
+    }
+
+    fn coedge(model: &Model, face: usize, index: usize) -> &Coedge {
+        let wire = model.faces[face].outer;
+        &model.loops[wire].coedges[index]
+    }
+
+    fn coedge_mut(model: &mut Model, face: usize, index: usize) -> &mut Coedge {
+        let wire = model.faces[face].outer;
+        &mut model.loops[wire].coedges[index]
+    }
+
+    fn scale_use(model: &mut Model, face: usize, index: usize) {
+        let edge = coedge_mut(model, face, index).edge;
+        set_domain(&mut model.edges[edge].curve, [2., 6.]);
+        set_domain(&mut coedge_mut(model, face, index).pcurve, [10., 14.]);
+    }
+
+    fn set_trim(model: &mut Model, face: usize, index: usize, c: [f64; 2], p: [f64; 2]) {
+        let coedge = coedge_mut(model, face, index);
+        let lifts = coedge.trim().map_or([[0; 2]; 2], |trim| trim.periodic_lift);
+        *coedge = coedge
+            .clone()
+            .with_trim(CoedgeTrim {
+                curve_parameter: c,
+                pcurve_parameter: p,
+                periodic_lift: lifts,
+            })
+            .unwrap();
+    }
+
+    fn partial_model(reversed: bool) -> (Model, usize) {
+        let mut model = cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
+        let index = (0..model.loops[model.faces[0].outer].coedges.len())
+            .find(|&i| coedge_mut(&mut model, 0, i).reversed == reversed)
+            .unwrap();
+        scale_use(&mut model, 0, index);
+        set_trim(&mut model, 0, index, [3., 5.], [11., 13.]);
+        (model, index)
+    }
+
+    fn shrunk_face(mut model: Model, face: usize) -> Model {
+        let count = model.loops[model.faces[face].outer].coedges.len();
+        for i in 0..count {
+            scale_use(&mut model, face, i);
+            set_trim(&mut model, face, i, [3., 5.], [11., 13.]);
+        }
+        model
+    }
+
+    fn emit_open(model: &Model, face: usize) -> Model {
+        let other = cuboid([10., 10., 10.], [11., 11., 11.]).unwrap();
+        let mut asm = Assembler::new(model, &other, "union").unwrap();
+        let mut chart = ChartVertices::default();
+        let mut pieces = Vec::new();
+        for (ka, kb, pcurve, key, reversed) in asm.boundary_pieces(0, face).unwrap() {
+            let ua = pcurve.evaluate(0.).unwrap().point;
+            let ub = pcurve.evaluate(1.).unwrap().point;
+            let ia = chart.index(asm.chart_key(ka), [ua[0], ua[1]]);
+            let ib = chart.index(asm.chart_key(kb), [ub[0], ub[1]]);
+            pieces.push(Piece {
+                v: [ia, ib],
+                pcurve,
+                key,
+                reversed,
+            });
+        }
+        asm.emit_chart(0, face, false, pieces, chart.len(), &|_| Ok(true))
+            .unwrap();
+        Model(
+            brep_topology::Model {
+                vertices: asm.vertices,
+                edges: asm.edges,
+                loops: asm.loops,
+                faces: asm.faces,
+                shells: vec![Shell {
+                    faces: asm.shell,
+                    closed: false,
+                }],
+                bodies: Vec::new(),
+                tolerance_mm: model.tolerance_mm,
+            },
+            TopologyIds::default(),
+        )
+    }
+
+    #[test]
+    fn partial_forward_and_reversed_use_native_authored_parameters() {
+        for reversed in [false, true] {
+            let (model, index) = partial_model(reversed);
+            let other = cuboid([10., 10., 10.], [11., 11., 11.]).unwrap();
+            let mut asm = Assembler::new(&model, &other, "union").unwrap();
+            assert_eq!(asm.splits[&(0, coedge(&model, 0, index).edge)].len(), 2);
+            let pieces = asm.boundary_pieces(0, 0).unwrap();
+            let (_, _, ref pcurve, key, rev) = pieces[index];
+            assert_eq!(rev, reversed);
+            let EKey::Piece(_, edge, _) = key else {
+                panic!("partial 3D trim must produce an edge piece")
+            };
+            assert_eq!(edge, coedge(&model, 0, index).edge);
+            let output_edge = asm.edge(key).unwrap();
+            assert_eq!(asm.edges[output_edge].curve.domain(), [3., 5.]);
+            let original = &coedge(&model, 0, index).pcurve;
+            for (t, q) in [(0., 11.), (1., 13.)] {
+                let got = pcurve.evaluate(t).unwrap().point;
+                let want = original.evaluate(q).unwrap().point;
+                assert_eq!(got, want, "reversed={reversed}");
+            }
+        }
+    }
+
+    #[test]
+    fn pcurve_only_partial_use_does_not_split_3d_edge() {
+        let (mut model, index) = partial_model(false);
+        set_trim(&mut model, 0, index, [2., 6.], [11., 13.]);
+        let other = cuboid([10., 10., 10.], [11., 11., 11.]).unwrap();
+        let asm = Assembler::new(&model, &other, "union").unwrap();
+        assert!(asm.splits.is_empty());
+        let pieces = asm.boundary_pieces(0, 0).unwrap();
+        assert!(matches!(pieces[index].3, EKey::Orig(0, _)));
+    }
+
+    #[test]
+    fn authored_original_endpoint_is_reused_and_external_splits_are_ignored() {
+        let (mut model, index) = partial_model(false);
+        set_trim(&mut model, 0, index, [2., 5.], [10., 13.]);
+        let other = cuboid([10., 10., 10.], [11., 11., 11.]).unwrap();
+        let asm = Assembler::new(&model, &other, "union").unwrap();
+        let pieces = asm.boundary_pieces(0, 0).unwrap();
+        assert!(matches!(pieces[index].0, VKey::Orig(0, _)));
+        assert!(matches!(pieces[index].1, VKey::Special(_)));
+
+        set_trim(&mut model, 0, index, [3., 5.], [11., 13.]);
+        let edge = coedge(&model, 0, index).edge;
+        let mut asm = Assembler::new(&model, &other, "union").unwrap();
+        for t in [2.5, 4., 5.5] {
+            let point = model.edges[edge].curve.evaluate(t).unwrap().point;
+            let id = asm.special([point[0], point[1], point[2]]);
+            asm.attach_edge(id, 0, edge, t);
+        }
+        let pieces = asm.boundary_pieces(0, 0).unwrap();
+        let selected: Vec<_> = pieces
+            .iter()
+            .filter(|piece| matches!(piece.3, EKey::Piece(0, e, _) if e == edge))
+            .collect();
+        assert_eq!(selected.len(), 2);
+        assert!(matches!(selected[0].3, EKey::Piece(0, _, 2)));
+        assert!(matches!(selected[1].3, EKey::Piece(0, _, 3)));
+    }
+
+    #[test]
+    fn overlapping_partial_uses_share_physical_edge_pieces() {
+        let (mut model, index) = partial_model(false);
+        let wire = model.faces[0].outer;
+        let mut second = model.loops[wire].coedges[index].clone();
+        second = second
+            .with_trim(CoedgeTrim {
+                curve_parameter: [4., 6.],
+                pcurve_parameter: [12., 14.],
+                periodic_lift: [[0; 2]; 2],
+            })
+            .unwrap();
+        model.loops[wire].coedges.push(second);
+        let other = cuboid([10., 10., 10.], [11., 11., 11.]).unwrap();
+        let asm = Assembler::new(&model, &other, "union").unwrap();
+        let pieces = asm.boundary_pieces(0, 0).unwrap();
+        let keys: Vec<_> = pieces.iter().map(|piece| piece.3).collect();
+        let common: Vec<_> = keys.iter().filter(|key| keys.iter().filter(|k| k == key).count() > 1).collect();
+        assert_eq!(common.len(), 2);
+        assert!(matches!(common[0], EKey::Piece(0, _, _)));
+    }
+
+    #[test]
+    fn emit_chart_attaches_full_trims_and_open_output_validates_continuously() {
+        let model = shrunk_face(cuboid([0., 0., 0.], [2., 2., 2.]).unwrap(), 0);
+        let output = emit_open(&model, 0);
+        for coedge in &output.loops[output.faces[0].outer].coedges {
+            let trim = coedge.trim().unwrap();
+            assert_eq!(trim.curve_parameter, output.edges[coedge.edge].curve.domain());
+            assert_eq!(trim.pcurve_parameter, coedge.pcurve.domain());
+        }
+        output.validate_continuous(10000).unwrap();
+    }
+
+    #[test]
+    fn same_chart_periodic_emit_and_lifts_do_not_wrap_or_follow_reversal() {
+        let model = shrunk_face(cylinder(2., 4.).unwrap(), 0);
+        let output = emit_open(&model, 0);
+        output.validate_continuous(10000).unwrap();
+
+        let source = cylinder(2., 4.).unwrap();
+        let coedge = &source.loops[source.faces[0].outer].coedges[0];
+        let mut pcurve = coedge.pcurve.clone();
+        for point in &mut pcurve.control_points {
+            point[0] += 1.25;
+        }
+        let forward = Coedge::new(coedge.edge, false, pcurve.clone());
+        let reversed = Coedge::new(coedge.edge, true, pcurve);
+        let a = derive_full_trim(&source.edges[coedge.edge], &forward, &source.faces[0].surface)
+            .unwrap();
+        let b = derive_full_trim(&source.edges[coedge.edge], &reversed, &source.faces[0].surface)
+            .unwrap();
+        assert_eq!(a.periodic_lift, b.periodic_lift);
+        assert_eq!(forward.pcurve.control_points[0][0], coedge.pcurve.control_points[0][0] + 1.25);
     }
 }

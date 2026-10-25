@@ -76,8 +76,32 @@ impl CoedgeTrim {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coedge<P> {
     pub edge: usize,
+    /// Reverses only the three-dimensional curve traversal. Stored trim domains
+    /// retain their authored direction and are never sorted by this flag.
     pub reversed: bool,
     pub pcurve: P,
+    trim: Option<CoedgeTrim>,
+}
+
+impl<P> Coedge<P> {
+    pub fn new(edge: usize, reversed: bool, pcurve: P) -> Self {
+        Self {
+            edge,
+            reversed,
+            pcurve,
+            trim: None,
+        }
+    }
+
+    pub fn trim(&self) -> Option<CoedgeTrim> {
+        self.trim
+    }
+
+    pub fn with_trim(mut self, trim: CoedgeTrim) -> Result<Self> {
+        trim.validate()?;
+        self.trim = Some(trim);
+        Ok(self)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

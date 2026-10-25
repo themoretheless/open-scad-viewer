@@ -8,9 +8,9 @@ pub fn host_sweep_linear_indexing_wgsl() -> String {
 }
 
 pub(in super::super) struct GrayImage {
-    width: usize,
-    height: usize,
-    values: Vec<f32>,
+    pub(super) width: usize,
+    pub(super) height: usize,
+    pub(super) values: Vec<f32>,
 }
 impl GrayImage {
     pub(in super::super) fn new(image: &Image) -> Self {
@@ -121,9 +121,6 @@ pub(in super::super) struct Source<'a> {
     pub(in super::super) rays: [V3; 25],
 }
 impl Source<'_> {
-    pub(in super::super) fn prepare_pixel(&mut self, center: V3) {
-        self.prepare_rays(center, 25);
-    }
     /// Scoring reads only rays[..len] (and plane.rs reads the center ray below
     /// len); entries beyond len keep their zero initialization.
     pub(in super::super) fn prepare_rays(&mut self, center: V3, len: usize) {

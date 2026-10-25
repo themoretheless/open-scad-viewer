@@ -30,15 +30,15 @@ pub fn sheet(surface: Surface) -> Model {
         .collect();
     m.loops.push(Loop {
         coedges: (0..4)
-            .map(|i| Coedge {
-                edge: i,
-                reversed: i >= 2,
-                pcurve: Curve::from_polyline(vec![
+            .map(|i| Coedge::new(
+                i,
+                i >= 2,
+                Curve::from_polyline(vec![
                     corners[i].to_vec(),
                     corners[(i + 1) % 4].to_vec(),
                 ])
                 .unwrap(),
-            })
+            ))
             .collect(),
     });
     m.faces.push(Face {

@@ -20,6 +20,7 @@ pub fn dispatch(v: Value) -> Routed {
         "truss_buckling" => truss::buckling(v),
         "truss_modal" => truss::modal(v),
         "truss_nonlinear" => truss::nonlinear(v),
+        "truss_topology" => truss::topology(v),
         "bonded_solid_solve" => bonded_solid::solve(v),
         "truss_screen" => print_strength::screening(v),
         "print_strength_profile" => print_strength::profile(v),
@@ -27,6 +28,7 @@ pub fn dispatch(v: Value) -> Routed {
         "structural_sections" => structural_sections::inspect(v),
         "section_torsion" => structural_sections::torsion(v),
         "thin_walled_section" => structural_sections::thin_walled(v),
+        "structural_profiles" => structural_sections::profiles(v),
         _ => return Routed::Unhandled(v),
     })
 }

@@ -166,7 +166,7 @@ impl GpuContext {
     pub fn max_storage_allocation_bytes(&self) -> u64 {
         self.limits
             .max_buffer_size
-            .min(self.limits.max_storage_buffer_binding_size as u64)
+            .min(self.limits.max_storage_buffer_binding_size)
     }
 
     /// Validates whether a byte size fits within the device's storage buffer allocation limits.

@@ -125,7 +125,7 @@ fn validate_allocation(
     let limits = &context.limits;
     if bytes > limits.max_buffer_size
         || (usage.contains(wgpu::BufferUsages::STORAGE)
-            && bytes > limits.max_storage_buffer_binding_size as u64)
+            && bytes > limits.max_storage_buffer_binding_size)
     {
         return Err(BufferError::TooLarge);
     }

@@ -121,11 +121,11 @@ impl Builder {
             });
             id
         });
-        Coedge {
+        Coedge::new(
             edge,
-            reversed: a > b,
+            a > b,
             pcurve,
-        }
+        )
     }
     pub(super) fn wire(&mut self, coedges: Vec<Coedge>) -> usize {
         let id = self.model.loops.len();

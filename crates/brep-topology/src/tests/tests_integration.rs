@@ -142,11 +142,11 @@
             ],
             loops: vec![Loop {
                 coedges: (0..3)
-                    .map(|edge| Coedge {
+                    .map(|edge| Coedge::new(
                         edge,
-                        reversed: false,
-                        pcurve: (),
-                    })
+                        false,
+                        (),
+                    ))
                     .collect(),
             }],
             faces: vec![Face {
@@ -168,6 +168,50 @@
     #[test]
     fn no_geometry_kernel_required() {
         sheet().validate_topology().unwrap();
+    }
+    #[test]
+    fn coedge_trim_is_validated_and_preserves_authored_direction() {
+        let coedge = Coedge::new(3, true, ());
+        assert_eq!(coedge.trim(), None);
+        let trim = CoedgeTrim {
+            curve_parameter: [2., 1.],
+            pcurve_parameter: [-1., 4.],
+            periodic_lift: [[1, 0], [-2, 3]],
+        };
+        let trimmed = coedge.with_trim(trim).unwrap();
+        assert!(trimmed.reversed);
+        assert_eq!(trimmed.trim(), Some(trim));
+
+        let invalid = CoedgeTrim {
+            curve_parameter: [0., 0.],
+            ..trim
+        };
+        assert!(Coedge::new(3, false, ()).with_trim(invalid).is_err());
+    }
+    #[test]
+    #[cfg(feature = "codec")]
+    fn legacy_coedge_without_trim_remains_readable() {
+        let legacy = Coedge::new(7, true, ());
+        let value = value_codec::Serialize::to_value(&legacy);
+        assert!(value.get("trim").is_none());
+        let restored: Coedge<()> = value_codec::Deserialize::from_value(value).unwrap();
+        assert_eq!(restored, legacy);
+        assert_eq!(restored.trim(), None);
+    }
+    #[test]
+    #[cfg(feature = "codec")]
+    fn coedge_trim_round_trips_through_codec() {
+        let trim = CoedgeTrim {
+            curve_parameter: [3., -2.],
+            pcurve_parameter: [0.25, 0.75],
+            periodic_lift: [[0, 1], [-1, 0]],
+        };
+        let coedge = Coedge::new(9, true, ()).with_trim(trim).unwrap();
+        let value = value_codec::Serialize::to_value(&coedge);
+        assert!(value.get("trim").is_some());
+        let restored: Coedge<()> = value_codec::Deserialize::from_value(value).unwrap();
+        assert_eq!(restored, coedge);
+        assert_eq!(restored.trim(), Some(trim));
     }
     #[test]
     #[cfg(feature = "codec")]
@@ -245,30 +289,30 @@
             loops: vec![
                 Loop {
                     coedges: vec![
-                        Coedge { edge: 0, reversed: true, pcurve: () },
-                        Coedge { edge: 2, reversed: true, pcurve: () },
-                        Coedge { edge: 1, reversed: true, pcurve: () },
+                        Coedge::new(0, true, ()),
+                        Coedge::new(2, true, ()),
+                        Coedge::new(1, true, ()),
                     ],
                 },
                 Loop {
                     coedges: vec![
-                        Coedge { edge: 0, reversed: false, pcurve: () },
-                        Coedge { edge: 4, reversed: false, pcurve: () },
-                        Coedge { edge: 3, reversed: true, pcurve: () },
+                        Coedge::new(0, false, ()),
+                        Coedge::new(4, false, ()),
+                        Coedge::new(3, true, ()),
                     ],
                 },
                 Loop {
                     coedges: vec![
-                        Coedge { edge: 1, reversed: false, pcurve: () },
-                        Coedge { edge: 5, reversed: false, pcurve: () },
-                        Coedge { edge: 4, reversed: true, pcurve: () },
+                        Coedge::new(1, false, ()),
+                        Coedge::new(5, false, ()),
+                        Coedge::new(4, true, ()),
                     ],
                 },
                 Loop {
                     coedges: vec![
-                        Coedge { edge: 2, reversed: false, pcurve: () },
-                        Coedge { edge: 3, reversed: false, pcurve: () },
-                        Coedge { edge: 5, reversed: true, pcurve: () },
+                        Coedge::new(2, false, ()),
+                        Coedge::new(3, false, ()),
+                        Coedge::new(5, true, ()),
                     ],
                 },
             ],

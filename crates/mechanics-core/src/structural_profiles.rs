@@ -66,7 +66,7 @@ pub struct ProfileReport {
 
 /// Geometric properties of an arbitrary doubly symmetric I-section from its
 /// nominal dimensions; rectangular decomposition, no fillets.
-pub fn i_section_properties(dims: &ISectionDims) -> Result<(f64, f64, f64, f64)> {
+pub fn i_section_properties(dims: &ISectionDims) -> Result<(f64, f64, f64, f64, f64)> {
     let &ISectionDims {
         h_mm: h,
         b_mm: b,
@@ -210,10 +210,10 @@ fn normalize(designation: &str) -> String {
     for c in designation.chars().filter(|c| !c.is_whitespace()) {
         match c {
             '×' | 'х' | 'Х' => out.push('X'),
-            'Б' => out.push('B'),
-            'К' => out.push('K'),
-            'И' => out.push('I'),
-            'Ш' => out.push_str("SH"),
+            'Б' | 'б' => out.push('B'),
+            'К' | 'к' => out.push('K'),
+            'И' | 'и' => out.push('I'),
+            'Ш' | 'ш' => out.push_str("SH"),
             c => out.extend(c.to_uppercase()),
         }
     }
@@ -345,7 +345,7 @@ mod tests {
         // without fillets should land within ~25 %.
         let r = lookup("IPE 300").unwrap();
         close(r.j_mm4, 20.1e4, 0.30);
-        close(r.cw_mm6, 126e9 * 1e-3, 0.30);
+        close(r.cw_mm6, 126e9, 0.30);
         assert!(r.j_mm4 > 0. && r.cw_mm6 > 0.);
     }
 

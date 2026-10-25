@@ -344,26 +344,26 @@ pub fn patch(
         .collect();
     model.loops.push(crate::Loop {
         coedges: vec![
-            crate::Coedge {
-                edge: 0,
-                reversed: false,
-                pcurve: first.skin_pcurve.clone(),
-            },
-            crate::Coedge {
-                edge: 1,
-                reversed: false,
-                pcurve: contacts[1].contact.fillet_pcurve.clone(),
-            },
-            crate::Coedge {
-                edge: 2,
-                reversed: true,
-                pcurve: last.skin_pcurve.reverse()?,
-            },
-            crate::Coedge {
-                edge: 3,
-                reversed: true,
-                pcurve: contacts[0].contact.fillet_pcurve.reverse()?,
-            },
+            crate::Coedge::new(
+                0,
+                false,
+                first.skin_pcurve.clone(),
+            ),
+            crate::Coedge::new(
+                1,
+                false,
+                contacts[1].contact.fillet_pcurve.clone(),
+            ),
+            crate::Coedge::new(
+                2,
+                true,
+                last.skin_pcurve.reverse()?,
+            ),
+            crate::Coedge::new(
+                3,
+                true,
+                contacts[0].contact.fillet_pcurve.reverse()?,
+            ),
         ],
     });
     model.faces.push(crate::Face {

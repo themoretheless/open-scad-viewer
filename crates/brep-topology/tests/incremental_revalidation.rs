@@ -56,11 +56,11 @@ fn append_tetra(m: &mut M, rng: &mut Rng) {
         m.loops.push(Loop {
             coedges: coedges
                 .into_iter()
-                .map(|(edge, reversed)| Coedge {
-                    edge: be + edge,
+                .map(|(edge, reversed)| Coedge::new(
+                    be + edge,
                     reversed,
-                    pcurve: (),
-                })
+                    (),
+                ))
                 .collect(),
         });
     }

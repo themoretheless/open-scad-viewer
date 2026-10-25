@@ -47,6 +47,7 @@
     "audit:wasm-package": "node scripts/audit-wasm-package.mjs",
     "test:wasm-package": "node --test tests/auditWasmPackage.test.mjs tests/geometryPackPublication.test.mjs",
     "test:wasm-optimize": "node --test tests/wasmOptimize.test.mjs tests/wasmOptCache.test.mjs",
+    "test:mechanics": "vitest run tests/mechanicsVerification.test.ts tests/trussAnalysis.test.ts tests/frameAnalysis.test.ts tests/structuralDiagnostics.test.ts tests/bucklingAnalysis.test.ts tests/structuralSections.test.ts tests/modalAnalysis.test.ts tests/collapseAnalysis.test.ts tests/thinWalledSection.test.ts tests/influenceAnalysis.test.ts tests/nonlinearTruss.test.ts tests/structuralProfiles.test.ts tests/trussTopology.test.ts",
     "audit:architecture": "node scripts/audit-architecture.mjs",
     "test:architecture": "node --test tests/auditArchitecture.test.mjs tests/nativeTestPartition.test.mjs",
     "audit:qualification-drift": "node scripts/audit-qualification-drift.mjs",

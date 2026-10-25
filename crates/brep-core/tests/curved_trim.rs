@@ -138,15 +138,15 @@ fn generated_nonlinear_section_splits_a_closed_body_with_shared_root_ends() {
             vertices: [base + i, base + next],
             degenerate: false,
         });
-        coedges.push(brep_core::Coedge {
+        coedges.push(brep_core::Coedge::new(
             edge,
-            reversed: false,
-            pcurve: nurbs_core::curve::Curve::from_polyline(vec![
+            false,
+            nurbs_core::curve::Curve::from_polyline(vec![
                 points[i].to_vec(),
                 points[next].to_vec(),
             ])
             .unwrap(),
-        });
+        ));
     }
     let wire = holed.loops.len();
     holed.loops.push(brep_core::Loop { coedges });

@@ -178,11 +178,11 @@ fn a_hole_in_the_actual_curved_cutter_cannot_be_treated_as_its_carrier() {
             vertices: [vertex_base + i, vertex_base + (i + 1) % 4],
             degenerate: false,
         });
-        coedges.push(Coedge {
-            edge: edge_base + i,
-            reversed: false,
+        coedges.push(Coedge::new(
+            edge_base + i,
+            false,
             pcurve,
-        });
+        ));
     }
     let hole = cutter.loops.len();
     cutter.loops.push(Loop { coedges });

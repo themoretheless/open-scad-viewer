@@ -123,11 +123,11 @@ pub fn replace_g2_mapped(
         reversed = Some(orientation);
         saved.push((
             old,
-            Coedge {
-                edge: u.edge,
-                reversed: old.reversed ^ reverse,
-                pcurve: pc,
-            },
+            Coedge::new(
+                u.edge,
+                old.reversed ^ reverse,
+                pc,
+            ),
         ));
     }
     let supports = std::array::from_fn(|i| mapped::Support {

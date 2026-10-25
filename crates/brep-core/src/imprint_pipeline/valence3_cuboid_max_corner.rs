@@ -164,11 +164,11 @@ pub(crate) fn valence3_cuboid_max_corner(
         }
     };
     let co = |a: usize, b: usize, pcurve: Curve| -> Coedge {
-        Coedge {
-            edge: eid(a, b),
-            reversed: a > b,
+        Coedge::new(
+            eid(a, b),
+            a > b,
             pcurve,
-        }
+        )
     };
     let xy = |p: &[f64]| vec![(p[0] - lx) / (hx - lx), (p[1] - ly) / (hy - ly)];
     let xz = |p: &[f64]| vec![(p[0] - lx) / (hx - lx), (p[2] - lz) / (hz - lz)];

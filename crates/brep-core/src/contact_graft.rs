@@ -417,11 +417,11 @@ pub fn attach_with_charts(source:&Model,patch:&Model,vertices:&[usize],targets:&
                 return Err(unproven(&format!("Transition edge {edge}, original face {}: {}; boundary census: {} {:?}, phase={:?}; exact work={exact_work}", target.face, e.message, census.reason, census.boundary, census.phase)));
             }
         }
-        let use_ = Coedge {
-            edge: edge_start + edge,
-            reversed: side == 1,
-            pcurve: pc,
-        };
+        let use_ = Coedge::new(
+            edge_start + edge,
+            side == 1,
+            pc,
+        );
         let source_reversed = source.shells[shell]
             .faces
             .iter()
@@ -449,11 +449,11 @@ pub fn attach_with_charts(source:&Model,patch:&Model,vertices:&[usize],targets:&
         coedges: patch.loops[patch.faces[0].outer]
             .coedges
             .iter()
-            .map(|c| Coedge {
-                edge: edge_start + c.edge,
-                reversed: c.reversed,
-                pcurve: c.pcurve.clone(),
-            })
+            .map(|c| Coedge::new(
+                edge_start + c.edge,
+                c.reversed,
+                c.pcurve.clone(),
+            ))
             .collect(),
     });
     let patch_face = model.faces.len();

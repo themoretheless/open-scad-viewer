@@ -62,11 +62,11 @@ fn subdivide(m: &mut Model) {
     m.loops[0].coedges[i].pcurve = uv[0].clone();
     m.loops[0].coedges.insert(
         i + 1,
-        brep_core::Coedge {
-            edge: next,
-            reversed: false,
-            pcurve: uv[1].clone(),
-        },
+        brep_core::Coedge::new(
+            next,
+            false,
+            uv[1].clone(),
+        ),
     );
     m.rebuild_topology_ids();
     m.validate().unwrap();

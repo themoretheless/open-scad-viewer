@@ -23,6 +23,75 @@ pub struct Report {
     pub uses: Vec<BoundaryUse>,
 }
 
+fn trim_nodes(
+    model: &Model,
+    face: &crate::Face,
+    coedge: &crate::Coedge,
+) -> Result<Option<[[f64; 2]; 2]>> {
+    let Some(trim) = coedge.trim() else {
+        return Ok(None);
+    };
+    trim.validate()?;
+    let edge = &model.edges[coedge.edge].curve;
+    let domains = [edge.domain(), coedge.pcurve.domain()];
+    let parameters = [trim.curve_parameter, trim.pcurve_parameter];
+    for (parameter, domain) in parameters.iter().zip(domains) {
+        if parameter
+            .iter()
+            .any(|value| *value < domain[0] || *value > domain[1])
+        {
+            return Err(Error::new(
+                "BREP_TRIM_DOMAIN",
+                "Coedge trim interval must lie inside its original curve domain",
+            ));
+        }
+    }
+    let fraction = |value: f64, domain: [f64; 2]| {
+        if value == domain[0] {
+            0.
+        } else if value == domain[1] {
+            1.
+        } else {
+            (value - domain[0]) / (domain[1] - domain[0])
+        }
+    };
+    let nodes = std::array::from_fn(|end| {
+        std::array::from_fn(|axis| fraction(parameters[axis][end], domains[axis]))
+    });
+    let uv = [
+        coedge.pcurve.evaluate(trim.pcurve_parameter[0])?.point,
+        coedge.pcurve.evaluate(trim.pcurve_parameter[1])?.point,
+    ];
+    let surface_domains = [
+        [
+            face.surface.knots_u[face.surface.degree_u],
+            face.surface.knots_u[face.surface.control_points.len()],
+        ],
+        [
+            face.surface.knots_v[face.surface.degree_v],
+            face.surface.knots_v[face.surface.control_points[0].len()],
+        ],
+    ];
+    for end in 0..2 {
+        for axis in 0..2 {
+            let periodic = [face.surface.periodic_u, face.surface.periodic_v][axis];
+            let domain = surface_domains[axis];
+            let expected = if periodic {
+                ((uv[end][axis] - domain[0]) / (domain[1] - domain[0])).floor() as i32
+            } else {
+                0
+            };
+            if trim.periodic_lift[end][axis] != expected {
+                return Err(Error::new(
+                    "BREP_TRIM_PERIODIC_LIFT",
+                    "Coedge periodic lift does not match its authored pcurve endpoint",
+                ));
+            }
+        }
+    }
+    Ok(Some(nodes))
+}
+
 /// A shared budget includes both uses of each edge. Unprocessed uses are
 /// explicitly unresolved. The model is immutable. Structural validation remains
 /// mandatory, while full-interval checks replace sampled edge/lift admission.
@@ -57,19 +126,40 @@ pub fn verify(model: &Model, max_cells: usize) -> Result<Report> {
                     witness: None,
                     witness_distance: None,
                 };
+                let nodes = trim_nodes(model, face, coedge)?;
                 if report.cells < max_cells {
-                    let checked = curve_surface_agreement::verify(
-                        &model.edges[coedge.edge].curve,
-                        &coedge.pcurve,
-                        &face.surface,
-                        coedge.reversed,
-                        model.tolerance_mm,
-                        (max_cells - report.cells).min(100_000),
-                    )?;
-                    report.cells += checked.cells;
-                    entry.status = checked.status;
-                    entry.witness = checked.witness;
-                    entry.witness_distance = checked.witness_distance;
+                    let budget = (max_cells - report.cells).min(100_000);
+                    let checked = if let Some(nodes) = nodes {
+                        let checked = curve_surface_agreement::verify_oriented_correspondence(
+                            &model.edges[coedge.edge].curve,
+                            &coedge.pcurve,
+                            &face.surface,
+                            &nodes,
+                            coedge.reversed,
+                            model.tolerance_mm,
+                            budget,
+                        )?;
+                        (checked.status, checked.cells, None, None)
+                    } else {
+                        let checked = curve_surface_agreement::verify(
+                            &model.edges[coedge.edge].curve,
+                            &coedge.pcurve,
+                            &face.surface,
+                            coedge.reversed,
+                            model.tolerance_mm,
+                            budget,
+                        )?;
+                        (
+                            checked.status,
+                            checked.cells,
+                            checked.witness,
+                            checked.witness_distance,
+                        )
+                    };
+                    report.cells += checked.1;
+                    entry.status = checked.0;
+                    entry.witness = checked.2;
+                    entry.witness_distance = checked.3;
                 }
                 report.complete &= entry.status == Status::WithinTolerance;
                 report.uses.push(entry);
@@ -133,7 +223,7 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
         (c.pcurve.degree!=1,s.degree_u+s.degree_v+c.pcurve.degree+model.edges[c.edge].curve.degree)
     });
     for (index,face,coedge) in jobs {
-        let decision=if report.work<max_work {
+        let decision=if coedge.trim().is_none() && report.work<max_work {
             curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
         }else{None};
         if let Some(d)=&decision{report.work+=d.work_used;}

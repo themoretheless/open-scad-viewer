@@ -220,6 +220,41 @@ fn marching_exits_through_trim_edges_with_shared_hits() {
 }
 
 #[test]
+fn chart_samples_only_authored_nonunit_trim_intervals() {
+    fn rescale(curve: &mut crate::Curve, domain: [f64; 2]) {
+        let old = curve.domain();
+        for knot in &mut curve.knots {
+            *knot = domain[0]
+                + (*knot - old[0]) / (old[1] - old[0]) * (domain[1] - domain[0]);
+        }
+    }
+    let mut model = cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
+    let wire = model.faces[0].outer;
+    for i in 0..model.loops[wire].coedges.len() {
+        let edge = model.loops[wire].coedges[i].edge;
+        rescale(&mut model.edges[edge].curve, [2., 6.]);
+        rescale(&mut model.loops[wire].coedges[i].pcurve, [10., 14.]);
+        let coedge = model.loops[wire].coedges[i].clone();
+        model.loops[wire].coedges[i] = coedge
+            .with_trim(brep_topology::CoedgeTrim {
+                curve_parameter: [3., 5.],
+                pcurve_parameter: [11., 13.],
+                periodic_lift: [[0; 2]; 2],
+            })
+            .unwrap();
+    }
+    let chart = Chart::new(&model, 0).unwrap();
+    for (ci, sampled) in chart.coedges[0].iter().enumerate() {
+        let source = &model.loops[wire].coedges[ci].pcurve;
+        assert_eq!(sampled.curve_parameter, [3., 5.]);
+        assert_eq!(sampled.pcurve_parameter, [11., 13.]);
+        assert_eq!(sampled.samples[0], pcurve_point(source, 11.).unwrap());
+        assert_eq!(*sampled.samples.last().unwrap(), pcurve_point(source, 13.).unwrap());
+    }
+    assert!(chart.inside([0.5, 0.5]));
+}
+
+#[test]
 fn ray_parity_classifies_points_against_exact_solids() {
     let sphere_model = sphere(2.).unwrap();
     let s = Solid::new(&sphere_model).unwrap();

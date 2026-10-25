@@ -103,26 +103,26 @@ pub struct SuppressReport {
 // Small vector helpers (same convention as operations.rs).
 // ---------------------------------------------------------------------------
 
-fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+pub(crate) fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
 }
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+pub(crate) fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
-fn mul(a: [f64; 3], s: f64) -> [f64; 3] {
+pub(crate) fn mul(a: [f64; 3], s: f64) -> [f64; 3] {
     [a[0] * s, a[1] * s, a[2] * s]
 }
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+pub(crate) fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+pub(crate) fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [
         a[1] * b[2] - a[2] * b[1],
         a[2] * b[0] - a[0] * b[2],
         a[0] * b[1] - a[1] * b[0],
     ]
 }
-fn norm(a: [f64; 3]) -> f64 {
+pub(crate) fn norm(a: [f64; 3]) -> f64 {
     dot(a, a).sqrt()
 }
 fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -130,16 +130,16 @@ fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct PlaneEq {
-    normal: [f64; 3],
-    offset: f64,
+pub(crate) struct PlaneEq {
+    pub(crate) normal: [f64; 3],
+    pub(crate) offset: f64,
 }
 
 /// Best-fit plane of a face from its boundary vertices, validating that both
 /// the boundary (all loops) and the surface control cage are coplanar. Works
 /// for faces with curved boundary edges (e.g. the cap of a rounded cuboid),
 /// unlike `operations::face_plane` which requires straight edges.
-fn face_plane_fit(model: &Model, face: usize) -> Result<PlaneEq> {
+pub(crate) fn face_plane_fit(model: &Model, face: usize) -> Result<PlaneEq> {
     let f = model
         .faces
         .get(face)
@@ -191,7 +191,7 @@ fn face_plane_fit(model: &Model, face: usize) -> Result<PlaneEq> {
 
 /// Plane ∩ plane → (point, unit direction). `None` when the planes are
 /// parallel within `tolerance` — the extension cannot close (diverging case).
-fn intersect_planes(a: PlaneEq, b: PlaneEq, tolerance: f64) -> Option<([f64; 3], [f64; 3])> {
+pub(crate) fn intersect_planes(a: PlaneEq, b: PlaneEq, tolerance: f64) -> Option<([f64; 3], [f64; 3])> {
     let d = cross(a.normal, b.normal);
     let len2 = dot(d, d);
     if !len2.is_finite() || len2 <= tolerance * tolerance {
@@ -213,7 +213,7 @@ fn intersect_planes(a: PlaneEq, b: PlaneEq, tolerance: f64) -> Option<([f64; 3],
 }
 
 /// Line ∩ plane. `None` when the line is parallel to the plane.
-fn line_plane(point: [f64; 3], dir: [f64; 3], plane: PlaneEq, tolerance: f64) -> Option<[f64; 3]> {
+pub(crate) fn line_plane(point: [f64; 3], dir: [f64; 3], plane: PlaneEq, tolerance: f64) -> Option<[f64; 3]> {
     let denom = dot(dir, plane.normal);
     if denom.abs() <= tolerance {
         return None;
@@ -225,6 +225,21 @@ fn line_plane(point: [f64; 3], dir: [f64; 3], plane: PlaneEq, tolerance: f64) ->
     } else {
         None
     }
+}
+
+/// vertex → sorted adjacent faces (via both outer and hole loops).
+pub(crate) fn vertex_face_incidence(model: &Model) -> Vec<BTreeSet<usize>> {
+    let mut incidence = vec![BTreeSet::new(); model.vertices.len()];
+    for (face_index, face) in model.faces.iter().enumerate() {
+        for &ring in std::iter::once(&face.outer).chain(&face.holes) {
+            for coedge in &model.loops[ring].coedges {
+                let edge = &model.edges[coedge.edge];
+                incidence[edge.vertices[0]].insert(face_index);
+                incidence[edge.vertices[1]].insert(face_index);
+            }
+        }
+    }
+    incidence
 }
 
 /// edge → sorted adjacent faces (via both outer and hole loops).
@@ -361,6 +376,33 @@ use suppression::*;
 
 mod rims;
 use rims::*;
+
+// Restored declarations for the retained 878/1038/1039 modules.
+pub const DIRTY_INVALID: &str = "BREP_DIRTY_INVALID";
+mod dirty;
+use dirty::rebuilt_faces_in_place;
+pub use dirty::{DirtyRegion, dirty_region_for_result};
+mod audit;
+use audit::validate_staged;
+pub use audit::{DIRECT_EDIT_AUDIT_REFUSED, direct_edit_model_hash};
+pub mod defeature_fillet;
+pub mod defeature_hole_pocket;
+pub mod defeature_report;
+
+pub const REPLACE_INVALID: &str = "BREP_REPLACE_INVALID";
+pub const REPLACE_UNSUPPORTED: &str = "BREP_REPLACE_UNSUPPORTED";
+pub const REPLACE_OUT_OF_DOMAIN: &str = "BREP_REPLACE_OUT_OF_DOMAIN";
+mod replace;
+pub use replace::{ReplaceFaceReport, replace_face};
+
+pub const DELETE_INVALID: &str = "BREP_DELETE_INVALID";
+pub const DELETE_UNSUPPORTED: &str = "BREP_DELETE_UNSUPPORTED";
+pub const DELETE_DIVERGENT: &str = "BREP_DELETE_DIVERGENT";
+mod delete;
+pub use delete::{
+    DeleteFaceOptions, DeleteFaceReport, DeleteFaceStrategy, delete_face,
+    recommend_delete_face_strategy,
+};
 
 
 // ---------------------------------------------------------------------------

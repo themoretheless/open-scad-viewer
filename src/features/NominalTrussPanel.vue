@@ -7,6 +7,8 @@ import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
 import {computeNominalLatticeGraph,computeTrussScenario} from '../services/mainSolidWorker'
 import {trussFieldMeshes} from '../services/trussFieldMeshes'
 import {screenTrussMembers,validatePrintStrengthProfile,type ValidatedPrintProfile,type ThermalEditorState,type ThermalEvaluation} from '../services/trussScreening'
+import {listStructuralProfiles,lookupStructuralProfile,type StructuralProfile,type StructuralProfileProperties} from '../services/structuralProfiles'
+import {optimizeTrussTopology,type TrussTopologyResponse} from '../services/trussAnalysis'
 import ThermalStrengthEditor from './ThermalStrengthEditor.vue'
 import type {LatticePrintSettings} from '../services/latticePrintSettings'
 
@@ -35,6 +37,33 @@ const solvedPrintProfile=shallowRef<ValidatedPrintProfile|null>(null)
 const thermalState=shallowRef<ThermalEditorState>({enabled:false,evaluation:null,error:''})
 const solvedThermal=shallowRef<ThermalEvaluation|null>(null)
 const effectiveYoung=computed(()=>thermalState.value.enabled?thermalState.value.evaluation?.result.youngMpa:youngMpa.value)
+const catalog=shallowRef<StructuralProfile[]>([])
+const selectedDesignation=ref(''),selectedProfile=shallowRef<StructuralProfileProperties|null>(null),profileError=ref('')
+const profileFamilies:{id:StructuralProfile['family'];label:string}[]=[
+  {id:'ipe',label:'IPE · EN 10365'},{id:'heb',label:'HEB · EN 10365'},{id:'w',label:'W · AISC'},
+  {id:'gost-8239',label:'ГОСТ 8239-89'},{id:'sto-aschm-b',label:'СТО АСЧМ · Б'},
+  {id:'sto-aschm-sh',label:'СТО АСЧМ · Ш'},{id:'sto-aschm-k',label:'СТО АСЧМ · К'},
+]
+const volumeFraction=ref(0.5),penalty=ref(3)
+const topologyResult=shallowRef<TrussTopologyResponse|null>(null),topologyError=ref('')
+function ensureCatalog(){
+  if(catalog.value.length)return
+  try{catalog.value=listStructuralProfiles();profileError.value=''}
+  catch(cause){profileError.value=String(cause)}
+}
+function selectProfile(){
+  selectedProfile.value=null;profileError.value=''
+  if(!selectedDesignation.value)return
+  try{selectedProfile.value=lookupStructuralProfile(selectedDesignation.value)}
+  catch(cause){profileError.value=String(cause)}
+}
+function applyProfile(){
+  if(!selectedDesignation.value){profileError.value=label('Выберите профиль.','Select a profile.');return}
+  try{
+    const profile=lookupStructuralProfile(selectedDesignation.value)
+    selectedProfile.value=profile;areaMm2.value=Number(profile.areaMm2.toFixed(4));profileError.value=''
+  }catch(cause){profileError.value=String(cause)}
+}
 function updateThermal(value:ThermalEditorState){thermalState.value=value;invalidateResult()}
 const printProfile=computed(()=>({material:material.value,grade:grade.value,propertySource:propertySource.value,
   nozzleMm:props.printSettings.nozzle,lineWidthMm:props.options.lineWidth,layerHeightMm:props.printSettings.layer,
@@ -58,12 +87,14 @@ let binding:{sourceBodyIndex:number;graphOptions:LighteningOptions}|null=null
 function invalidateResult(){
   clearField()
   revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;solvedPrintProfile.value=null;solvedThermal.value=null;error.value=''
+  topologyResult.value=null;topologyError.value=''
 }
 function invalidateGraph(){invalidateResult();graph.value=null;entries.value=[];binding=null;active.value=0}
 watch([()=>props.source,()=>props.ready,selectedMesh,()=>selectedMesh.value?.vertices,
   ()=>selectedMesh.value?.indices,()=>selectedMesh.value?.transform],invalidateGraph,{flush:'sync'})
 watch([()=>props.selection,()=>props.options],invalidateGraph,{deep:true,flush:'sync'})
 watch([entries,youngMpa,areaMm2,active,mode],invalidateResult,{deep:true,flush:'sync'})
+watch([volumeFraction,penalty],()=>{topologyResult.value=null;topologyError.value=''},{flush:'sync'})
 watch(printProfile,()=>{youngMpa.value='';tensionMpa.value='';compressionMpa.value='';invalidateResult()},{flush:'sync'})
 // The report Blob and its object URL are built lazily on download click, not on
 // every keystroke; the URL is revoked immediately after the click is dispatched.
@@ -138,6 +169,23 @@ async function solve(){
   }catch(cause){if(ticket===revision&&!(cause instanceof Error&&cause.name==='AbortError'))error.value=String(cause)}
   finally{if(ticket===revision){phase.value=null;controller=undefined}}
 }
+function optimize(){
+  topologyResult.value=null;topologyError.value=''
+  if(!graph.value||!current.value)return
+  const modulus=effectiveYoung.value
+  if(typeof modulus!=='number'||!Number.isFinite(modulus)||modulus<=0
+    ||typeof areaMm2.value!=='number'||!Number.isFinite(areaMm2.value)||areaMm2.value<=0){
+    topologyError.value=label('Модуль E и площадь должны быть положительными конечными числами.','E and area must be positive finite numbers.');return
+  }
+  try{
+    topologyResult.value=optimizeTrussTopology({
+      nodesMm:graph.value.nodes,
+      members:graph.value.edges.map(nodes=>({nodes,youngMpa:modulus,areaMm2:areaMm2.value as number})),
+      restrained:current.value.restrained,
+    },entries.value.map(entry=>({weight:1,loads:entry.loadCase.loads})),
+    {volumeFraction:Number(volumeFraction.value),penalty:Number(penalty.value)})
+  }catch(cause){topologyError.value=String(cause)}
+}
 const number=(value:number)=>value===0?'0':value.toPrecision(5)
 </script>
 
@@ -165,6 +213,19 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
         <label>{{label('Модуль E, MPa','Young modulus, MPa')}}<input v-if="!thermalState.enabled" v-model.number="youngMpa" type="number" min="0" step="100"><input v-else :value="effectiveYoung??''" type="number" readonly></label>
         <label>{{label('Площадь стержня, mm²','Member area, mm²')}}<input v-model.number="areaMm2" type="number" min="0" step="0.1"></label>
       </div>
+      <fieldset><legend>{{label('Каталог прокатных профилей','Rolled profile catalogue')}}</legend>
+        <p>{{label('Номинальные двутавры без закруглений. В осевую модель подставляется только площадь; изгиб и устойчивость этим не проверяются.','Nominal I-sections without fillets. Only area is applied to the axial model; this does not check bending or buckling.')}}</p>
+        <label>{{label('Профиль','Profile')}}<select v-model="selectedDesignation" :aria-label="label('Прокатный профиль','Rolled profile')" @focus="ensureCatalog" @mousedown="ensureCatalog" @change="selectProfile">
+          <option value="">{{label('Выберите профиль','Select a profile')}}</option>
+          <optgroup v-for="family in profileFamilies" :key="family.id" :label="family.label"><option v-for="profile in catalog.filter(item=>item.family===family.id)" :key="profile.designation" :value="profile.designation">{{profile.designation}}</option></optgroup>
+        </select></label>
+        <template v-if="selectedProfile">
+          <p>{{selectedProfile.heightMm}} × {{selectedProfile.flangeWidthMm}} mm · t<sub>w</sub> {{selectedProfile.webThicknessMm}} mm · t<sub>f</sub> {{selectedProfile.flangeThicknessMm}} mm</p>
+          <dl><dt>A, mm²</dt><dd>{{number(selectedProfile.areaMm2)}}</dd><dt>I<sub>strong</sub>, mm⁴</dt><dd>{{number(selectedProfile.iStrongMm4)}}</dd><dt>{{label('Масса, kg/m','Mass, kg/m')}}</dt><dd>{{number(selectedProfile.massKgM)}}</dd></dl>
+        </template>
+        <button :disabled="!selectedDesignation" @click="applyProfile">{{label('Применить площадь к стержням','Apply area to members')}}</button>
+        <p v-if="profileError" role="alert">{{profileError}}</p>
+      </fieldset>
       <label>{{label('Редактируемый случай','Edit case')}}<select v-model.number="active" :aria-label="label('Редактируемый случай','Edit case')"><option v-for="(entry,i) in entries" :key="i" :value="i">{{entry.loadCase.id}}</option></select></label>
       <div class="commands"><button :disabled="entries.length>=32" @click="duplicate">{{label('Дублировать случай','Duplicate case')}}</button><button :disabled="entries.length===1" @click="remove">{{label('Удалить случай','Remove case')}}</button></div>
       <label>{{label('Имя случая','Case name')}}<input v-model="current.id" maxlength="128"></label>
@@ -187,6 +248,25 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
       <label>{{label('Расчёт','Solve')}}<select v-model="mode" :aria-label="label('Режим расчёта','Result mode')"><option value="case">{{label('Текущий случай','Current case')}}</option><option value="combination">{{label('Линейная комбинация','Linear combination')}}</option></select></label>
       <div v-if="mode==='combination'" class="fields"><label v-for="(entry,i) in entries" :key="i">{{entry.loadCase.id}}<input v-model.number="entry.factor" type="number" step="0.1" :aria-label="`Factor ${entry.loadCase.id}`"></label></div>
       <div class="commands"><button :disabled="!!phase" @click="solve">{{label('Рассчитать модель','Solve model')}}</button><button v-if="phase" @click="invalidateResult">{{label('Отмена','Cancel')}}</button></div>
+      <fieldset><legend>{{label('SIMP-оптимизация топологии','SIMP topology optimization')}}</legend>
+        <p>{{label('Все случаи имеют вес 1; закрепления берутся из редактируемого случая. Текущая площадь стержня — эталон A_ref. Распределение материала для компоновки, без проверки устойчивости, узлов и норм.','All cases have weight 1; restraints come from the edited case. The current member area is the reference A_ref. A material-layout estimate without buckling, joint or code checks.')}}</p>
+        <div class="fields">
+          <label>{{label('Доля объёма','Volume fraction')}}<input v-model.number="volumeFraction" type="number" min="0.001" max="1" step="0.05"></label>
+          <label>{{label('Штраф SIMP','SIMP penalty')}}<input v-model.number="penalty" type="number" min="1" max="10" step="0.5"></label>
+        </div>
+        <button :disabled="!!phase" @click="optimize">{{label('Оптимизировать распределение','Optimize material layout')}}</button>
+        <p v-if="topologyError" role="alert">{{topologyError}}</p>
+        <div v-if="topologyResult" class="results" aria-label="Truss topology results">
+          <dl><dt>{{label('Податливость, N mm','Compliance, N mm')}}</dt><dd>{{number(topologyResult.initialComplianceNmm)}} → {{number(topologyResult.complianceNmm)}}</dd>
+            <dt>{{label('Объём / цель, mm³','Volume / target, mm³')}}</dt><dd>{{number(topologyResult.volumeMm3)}} / {{number(topologyResult.targetVolumeMm3)}}</dd>
+            <dt>{{label('Итерации','Iterations')}}</dt><dd>{{topologyResult.iterations}}</dd>
+            <dt>{{label('Сошлось','Converged')}}</dt><dd>{{topologyResult.converged?label('Да','Yes'):label('Нет: исчерпан лимит итераций','No: iteration budget exhausted')}}</dd>
+            <dt>{{label('Активные стержни, ρ ≥ 0,5','Active members, ρ ≥ 0.5')}}</dt><dd>{{topologyResult.activeMembers.length}} / {{graph.edges.length}}</dd></dl>
+          <details><summary>{{label('Плотности и площади стержней','Member densities and areas')}}</summary><div class="table-scroll"><table><thead><tr><th>{{label('Стержень','Member')}}</th><th>ρ</th><th>A, mm²</th></tr></thead><tbody>
+            <tr v-for="(member,i) in graph.edges" :key="i"><td>{{member.join(' - ')}}</td><td>{{number(topologyResult.densities[i])}}</td><td>{{number(topologyResult.areasMm2[i])}}</td></tr>
+          </tbody></table></div></details>
+        </div>
+      </fieldset>
       <section v-if="result" class="results" aria-label="Axial graph results">
         <h4>{{label('Номинальная осевая модель','Nominal axial model')}}</h4>
         <p v-for="warning in solvedPrintProfile?.warnings" :key="warning" role="status">{{warning==='layer-above-80-percent-nozzle'?label('Высота слоя превышает 80% диаметра сопла — проверьте профиль печати.','Layer height exceeds 80% of nozzle diameter; check the print profile.'):label('Ширина линии не больше высоты слоя — проверьте профиль печати.','Line width does not exceed layer height; check the print profile.')}}</p>

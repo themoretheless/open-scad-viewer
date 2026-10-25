@@ -115,26 +115,26 @@ pub(super) fn uv_sheet(
     for (i, surface) in cap.patches.into_iter().enumerate() {
         model.loops.push(Loop {
             coedges: vec![
-                Coedge {
-                    edge: i,
-                    reversed: false,
-                    pcurve: uv_line([0., 0.], [1., 0.]),
-                },
-                Coedge {
-                    edge: 2 * n + (i + 1) % n,
-                    reversed: false,
-                    pcurve: uv_line([1., 0.], [1., 1.]),
-                },
-                Coedge {
-                    edge: n + i,
-                    reversed: true,
-                    pcurve: uv_line([1., 1.], [0., 1.]),
-                },
-                Coedge {
-                    edge: 2 * n + i,
-                    reversed: true,
-                    pcurve: uv_line([0., 1.], [0., 0.]),
-                },
+                Coedge::new(
+                    i,
+                    false,
+                    uv_line([0., 0.], [1., 0.]),
+                ),
+                Coedge::new(
+                    2 * n + (i + 1) % n,
+                    false,
+                    uv_line([1., 0.], [1., 1.]),
+                ),
+                Coedge::new(
+                    n + i,
+                    true,
+                    uv_line([1., 1.], [0., 1.]),
+                ),
+                Coedge::new(
+                    2 * n + i,
+                    true,
+                    uv_line([0., 1.], [0., 0.]),
+                ),
             ],
         });
         model.faces.push(Face {

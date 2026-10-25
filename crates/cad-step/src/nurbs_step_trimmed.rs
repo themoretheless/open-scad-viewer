@@ -54,11 +54,11 @@ pub fn bicubic_trimmed_face(surface: Surface, hole_uv: [[f64; 2]; 4]) -> Result<
             vertices: [i, j],
             curve: crate::line(corners[i].to_vec(), corners[j].to_vec()),
         });
-        outer_coedges.push(Coedge {
-            edge: i,
-            reversed: false,
-            pcurve: crate::line(outer_uv[i].to_vec(), outer_uv[j].to_vec()),
-        });
+        outer_coedges.push(Coedge::new(
+            i,
+            false,
+            crate::line(outer_uv[i].to_vec(), outer_uv[j].to_vec()),
+        ));
     }
     let mut hole_coedges = Vec::new();
     // Hole UV loop must be CW (outer is CCW).
@@ -74,11 +74,11 @@ pub fn bicubic_trimmed_face(surface: Surface, hole_uv: [[f64; 2]; 4]) -> Result<
             vertices: [a, b],
             curve: crate::line(corners[a].to_vec(), corners[b].to_vec()),
         });
-        hole_coedges.push(Coedge {
-            edge: ei,
-            reversed: false,
-            pcurve: crate::line(hole_uv[i].to_vec(), hole_uv[j].to_vec()),
-        });
+        hole_coedges.push(Coedge::new(
+            ei,
+            false,
+            crate::line(hole_uv[i].to_vec(), hole_uv[j].to_vec()),
+        ));
     }
     let mut model = Model(
         brep_topology::Model {

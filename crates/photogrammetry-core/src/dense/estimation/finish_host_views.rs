@@ -358,7 +358,7 @@ fn ceil_f32(x: f64) -> f32 {
 /// bins come from the same `bin_range` the CPU selection uses.
 #[cfg(feature = "gpu")]
 #[allow(clippy::too_many_arguments)]
-fn gpu_job(
+pub(super) fn gpu_job(
     ref_index: usize,
     reference: &Camera,
     sources: &[Source],
@@ -408,7 +408,7 @@ fn gpu_job(
 /// Depth/confidence maps from GPU selections; depth is rebuilt in f64 from the
 /// winning bin and its sub-bin offset, exactly as `pick_depth` does.
 #[cfg(feature = "gpu")]
-fn maps_from_selection(
+pub(super) fn maps_from_selection(
     selection: &[Option<crate::gpu::sweep::Selection>],
     near: f64,
     far: f64,
@@ -430,7 +430,7 @@ fn maps_from_selection(
 /// GPU work counters: the shader evaluates every hypothesis/source/tap
 /// without early exits, so the diagnostics report that full work.
 #[cfg(feature = "gpu")]
-fn count_gpu_work(
+pub(super) fn count_gpu_work(
     diagnostics: &mut DenseDiagnostics,
     width: usize,
     height: usize,
@@ -449,7 +449,7 @@ fn count_gpu_work(
 /// cannot join the per-pass batch). Uploads only the rasters this view needs.
 #[cfg(feature = "gpu")]
 #[allow(clippy::too_many_arguments)]
-fn gpu_sweep_single(
+pub(super) fn gpu_sweep_single(
     gray: &GrayImage,
     reference: &Camera,
     sources: &[Source],

@@ -9,11 +9,11 @@ impl<'m, M: Mate> Imprint<'m, M> {
         sphere: CanonicalSphere,
         band: f64,
         operation: &str,
-    ) -> Self {
+    ) -> Result<Self> {
         let sphere_model = [a, b][1 - mate_index];
         let sphere_pieces = Self::sphere_boundary_pieces(sphere_model);
-        Self {
-            asm: Assembler::new(a, b, operation),
+        Ok(Self {
+            asm: Assembler::new(a, b, operation)?,
             mate_index,
             mate,
             sphere,
@@ -22,7 +22,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
             sphere_pieces,
             patch_uv: BTreeMap::new(),
             arcs: Vec::new(),
-        }
+        })
     }
 
     fn sphere_index(&self) -> usize {

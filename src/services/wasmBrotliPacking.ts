@@ -3,7 +3,7 @@ import {decodeBase91} from './wasmBase91'
 import decoderBytes from '../generated/wasm-brotli/bytes'
 import {unpackWasmBase64} from './wasmPacking'
 
-const inputLimit = 4 * 1024 * 1024
+const inputLimit = 8 * 1024 * 1024
 const outputLimit = 16 * 1024 * 1024
 let decoderModule: WebAssembly.Module | undefined
 interface Decoder extends WebAssembly.Exports {

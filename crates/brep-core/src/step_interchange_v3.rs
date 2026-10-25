@@ -2314,11 +2314,11 @@ impl<'a> DirectBuilder<'a> {
                 reversed,
                 surface,
             )?;
-            coedges.push(Coedge {
+            coedges.push(Coedge::new(
                 edge,
                 reversed,
                 pcurve,
-            });
+            ));
         }
         if coedges.is_empty() {
             return Err(refuse("EDGE_LOOP cannot be empty"));
@@ -4106,80 +4106,80 @@ fn periodicized_sphere(model: &Model) -> Result<Model> {
     result.0.loops = vec![
         Loop {
             coedges: vec![
-                Coedge {
-                    edge: pole_edges[0],
-                    reversed: false,
-                    pcurve: line([0., 0.], [4., 0.]),
-                },
-                Coedge {
-                    edge: 0,
-                    reversed: true,
-                    pcurve: line([4., 0.], [4., 1.]),
-                },
-                Coedge {
-                    edge: 4,
-                    reversed: false,
-                    pcurve: line([4., 1.], [3., 1.]),
-                },
-                Coedge {
-                    edge: 3,
-                    reversed: true,
-                    pcurve: line([3., 1.], [2., 1.]),
-                },
-                Coedge {
-                    edge: 2,
-                    reversed: true,
-                    pcurve: line([2., 1.], [1., 1.]),
-                },
-                Coedge {
-                    edge: 1,
-                    reversed: true,
-                    pcurve: line([1., 1.], [0., 1.]),
-                },
-                Coedge {
-                    edge: 0,
-                    reversed: false,
-                    pcurve: line([0., 1.], [0., 0.]),
-                },
+                Coedge::new(
+                    pole_edges[0],
+                    false,
+                    line([0., 0.], [4., 0.]),
+                ),
+                Coedge::new(
+                    0,
+                    true,
+                    line([4., 0.], [4., 1.]),
+                ),
+                Coedge::new(
+                    4,
+                    false,
+                    line([4., 1.], [3., 1.]),
+                ),
+                Coedge::new(
+                    3,
+                    true,
+                    line([3., 1.], [2., 1.]),
+                ),
+                Coedge::new(
+                    2,
+                    true,
+                    line([2., 1.], [1., 1.]),
+                ),
+                Coedge::new(
+                    1,
+                    true,
+                    line([1., 1.], [0., 1.]),
+                ),
+                Coedge::new(
+                    0,
+                    false,
+                    line([0., 1.], [0., 0.]),
+                ),
             ],
         },
         Loop {
             coedges: vec![
-                Coedge {
-                    edge: 1,
-                    reversed: false,
-                    pcurve: line([0., 1.], [1., 1.]),
-                },
-                Coedge {
-                    edge: 2,
-                    reversed: false,
-                    pcurve: line([1., 1.], [2., 1.]),
-                },
-                Coedge {
-                    edge: 3,
-                    reversed: false,
-                    pcurve: line([2., 1.], [3., 1.]),
-                },
-                Coedge {
-                    edge: 4,
-                    reversed: true,
-                    pcurve: line([3., 1.], [4., 1.]),
-                },
-                Coedge {
-                    edge: 5,
-                    reversed: false,
-                    pcurve: line([4., 1.], [4., 2.]),
-                },
-                Coedge {
-                    edge: pole_edges[1],
-                    reversed: false,
-                    pcurve: line([4., 2.], [0., 2.]),
-                },
-                Coedge {
-                    edge: 5,
-                    reversed: true,
-                    pcurve: line([0., 2.], [0., 1.]),
-                },
+                Coedge::new(
+                    1,
+                    false,
+                    line([0., 1.], [1., 1.]),
+                ),
+                Coedge::new(
+                    2,
+                    false,
+                    line([1., 1.], [2., 1.]),
+                ),
+                Coedge::new(
+                    3,
+                    false,
+                    line([2., 1.], [3., 1.]),
+                ),
+                Coedge::new(
+                    4,
+                    true,
+                    line([3., 1.], [4., 1.]),
+                ),
+                Coedge::new(
+                    5,
+                    false,
+                    line([4., 1.], [4., 2.]),
+                ),
+                Coedge::new(
+                    pole_edges[1],
+                    false,
+                    line([4., 2.], [0., 2.]),
+                ),
+                Coedge::new(
+                    5,
+                    true,
+                    line([0., 2.], [0., 1.]),
+                ),
             ],
         },
     ];

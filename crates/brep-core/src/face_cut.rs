@@ -518,22 +518,22 @@ fn partition_with_budget(
     let forward: Vec<_> = path
         .iter()
         .enumerate()
-        .map(|(i, s)| Coedge {
-            edge: edge_start + i,
-            reversed: false,
-            pcurve: s.pcurve.clone(),
-        })
+        .map(|(i, s)| Coedge::new(
+            edge_start + i,
+            false,
+            s.pcurve.clone(),
+        ))
         .collect();
     let backward = path
         .iter()
         .enumerate()
         .rev()
         .map(|(i, s)| {
-            Ok(Coedge {
-                edge: edge_start + i,
-                reversed: true,
-                pcurve: s.pcurve.reverse()?,
-            })
+            Ok(Coedge::new(
+                edge_start + i,
+                true,
+                s.pcurve.reverse()?,
+            ))
         })
         .collect::<Result<Vec<_>>>()?;
     let arc = |start: usize, end: usize| {

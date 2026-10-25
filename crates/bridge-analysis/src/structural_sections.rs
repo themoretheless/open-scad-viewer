@@ -200,6 +200,42 @@ pub fn thin_walled(v: Value) -> Result<Value> {
     }))
 }
 
+/// Rolled I-section catalogue lookup (IPE / HEB / W / GOST 8239-89 /
+/// STO ASChM 20-93). With `designation` returns the computed geometric
+/// properties; without it returns the full designation list for UI pickers.
+pub fn profiles(v: Value) -> Result<Value> {
+    let has_designation = v.get("designation").is_some();
+    require_exact_fields(
+        &v,
+        if has_designation {
+            &["op", "designation"]
+        } else {
+            &["op"]
+        },
+        "structural profiles",
+    )?;
+    if has_designation {
+        let designation: String = field(&v, "designation")?;
+        let r = mechanics_core::structural_profiles::lookup(&designation)?;
+        return Ok(json!({"designation":r.designation,"family":r.family,
+            "heightMm":r.dims.h_mm,"flangeWidthMm":r.dims.b_mm,
+            "webThicknessMm":r.dims.tw_mm,"flangeThicknessMm":r.dims.tf_mm,
+            "areaMm2":r.area_mm2,"massKgM":r.mass_kg_m,
+            "iStrongMm4":r.i_strong_mm4,"iWeakMm4":r.i_weak_mm4,
+            "wStrongMm3":r.w_strong_mm3,"wWeakMm3":r.w_weak_mm3,
+            "jMm4":r.j_mm4,"cwMm6":r.cw_mm6}));
+    }
+    let profiles: Vec<_> = mechanics_core::structural_profiles::list()
+        .iter()
+        .map(|(designation, family, dims)| {
+            json!({"designation":designation,"family":family,
+                "heightMm":dims.h_mm,"flangeWidthMm":dims.b_mm,
+                "webThicknessMm":dims.tw_mm,"flangeThicknessMm":dims.tf_mm})
+        })
+        .collect();
+    Ok(json!({"modelKind":"rolled-i-section-catalog-v1","profiles":profiles}))
+}
+
 /// Indexed, edge-connected boundary shells. This deliberately does not infer solid
 /// connectivity: separate shells can enclose cavities or overlap geometrically.
 fn boundary_connectivity(mesh: &Mesh) -> Result<Value> {
@@ -488,6 +524,33 @@ mod tests {
         bad["warping"] = json!(true);
         assert_eq!(
             crate::handle(bad).unwrap_err().code,
+            "GEOMETRY_INVALID_INPUT"
+        );
+    }
+
+    #[test]
+    fn structural_profiles_lookup_and_list_through_dispatch() {
+        let r = crate::handle(json!({"op":"structural_profiles","designation":"ipe 200"})).unwrap();
+        assert_eq!(r["designation"], json!("IPE 200"));
+        assert_eq!(r["family"], json!("ipe"));
+        assert!((r["areaMm2"].as_f64().unwrap() - 2724.8).abs() < 1e-6);
+        assert!(r["iStrongMm4"].as_f64().unwrap() > 0.);
+        assert!(r["cwMm6"].as_f64().unwrap() > 0.);
+        let list = crate::handle(json!({"op":"structural_profiles"})).unwrap();
+        let rows = list["profiles"].as_array().unwrap();
+        assert!(rows.len() >= 50);
+        assert!(rows.iter().any(|p| p["designation"] == json!("20B1")));
+        assert!(rows.iter().any(|p| p["designation"] == json!("W250X32.7")));
+        assert_eq!(
+            crate::handle(json!({"op":"structural_profiles","designation":"IPE 999"}))
+                .unwrap_err()
+                .code,
+            "PROFILE_UNKNOWN"
+        );
+        assert_eq!(
+            crate::handle(json!({"op":"structural_profiles","bogus":1}))
+                .unwrap_err()
+                .code,
             "GEOMETRY_INVALID_INPUT"
         );
     }

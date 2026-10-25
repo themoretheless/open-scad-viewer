@@ -364,11 +364,11 @@ fn holed_curved_patch(touching: bool) -> brep_core::Model {
                 weights: vec![1.; 3],
                 periodic: false,
             };
-            coedges.push(brep_core::Coedge {
-                edge: model.edges.len(),
-                reversed: false,
-                pcurve: Curve::from_polyline(vec![a.to_vec(), b.to_vec()]).unwrap(),
-            });
+            coedges.push(brep_core::Coedge::new(
+                model.edges.len(),
+                false,
+                Curve::from_polyline(vec![a.to_vec(), b.to_vec()]).unwrap(),
+            ));
             model.edges.push(brep_core::Edge {
                 vertices: [start + i, start + (i + 1) % ring.len()],
                 curve,

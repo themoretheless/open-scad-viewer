@@ -172,11 +172,11 @@ pub fn convert<E:Transfer>(
             let mut coedges = Vec::new();
             for (edge, _fragment) in source.edges().iter().enumerate() {
                 let (index, reversed, pcurve) = &uses[&(face, wire, edge)];
-                coedges.push(crate::Coedge {
-                    edge: *index,
-                    reversed: *reversed,
-                    pcurve: pcurve.clone(),
-                });
+                coedges.push(crate::Coedge::new(
+                    *index,
+                    *reversed,
+                    pcurve.clone(),
+                ));
             }
             loops.push(crate::Loop { coedges });
         }
@@ -298,5 +298,54 @@ mod tests {
             reverse.control_points,
             curve.control_points.into_iter().rev().collect::<Vec<_>>()
         );
+    }
+}
+
+/// Assert that a STEP export/import round trip preserves the model identity:
+/// same entity counts, topology indices and geometry within 1e-6.
+#[cfg(test)]
+pub fn assert_step_identity(source: &crate::Model, imported: &crate::Model) {
+    fn close(a: f64, b: f64, what: &str) {
+        assert!((a - b).abs() <= 1e-6, "{what}: {a} vs {b}");
+    }
+    assert_eq!(source.vertices.len(), imported.vertices.len(), "vertex count");
+    assert_eq!(source.edges.len(), imported.edges.len(), "edge count");
+    assert_eq!(source.loops.len(), imported.loops.len(), "loop count");
+    assert_eq!(source.faces.len(), imported.faces.len(), "face count");
+    assert_eq!(source.shells.len(), imported.shells.len(), "shell count");
+    assert_eq!(source.bodies.len(), imported.bodies.len(), "body count");
+    for (i, (a, b)) in source.vertices.iter().zip(&imported.vertices).enumerate() {
+        for d in 0..3 {
+            close(a.point[d], b.point[d], &format!("vertex {i} coordinate {d}"));
+        }
+    }
+    for (i, (a, b)) in source.edges.iter().zip(&imported.edges).enumerate() {
+        assert_eq!(a.degenerate, b.degenerate, "edge {i} degenerate");
+        assert_eq!(a.vertices, b.vertices, "edge {i} vertices");
+    }
+    for (i, (a, b)) in source.faces.iter().zip(&imported.faces).enumerate() {
+        let (sa, sb) = (&a.surface, &b.surface);
+        assert_eq!(sa.degree_u, sb.degree_u, "face {i} degree_u");
+        assert_eq!(sa.degree_v, sb.degree_v, "face {i} degree_v");
+        assert_eq!(sa.control_points.len(), sb.control_points.len(), "face {i} rows");
+        for (j, (ra, rb)) in sa.control_points.iter().zip(&sb.control_points).enumerate() {
+            assert_eq!(ra.len(), rb.len(), "face {i} row {j} columns");
+            for (k, (pa, pb)) in ra.iter().zip(rb).enumerate() {
+                for d in 0..3 {
+                    close(pa[d], pb[d], &format!("face {i} control point {j}/{k} coordinate {d}"));
+                }
+            }
+        }
+        for (j, (ra, rb)) in sa.weights.iter().zip(&sb.weights).enumerate() {
+            for (k, (wa, wb)) in ra.iter().zip(rb).enumerate() {
+                close(*wa, *wb, &format!("face {i} weight {j}/{k}"));
+            }
+        }
+        for (ka, kb) in sa.knots_u.iter().zip(&sb.knots_u) {
+            close(*ka, *kb, &format!("face {i} knot_u"));
+        }
+        for (ka, kb) in sa.knots_v.iter().zip(&sb.knots_v) {
+            close(*ka, *kb, &format!("face {i} knot_v"));
+        }
     }
 }

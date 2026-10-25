@@ -69,11 +69,11 @@ fn add_face(
         ([a, 1.], [a, 0.]),
     ];
     let coedges = (0..4)
-        .map(|i| Coedge {
-            edge: edges[i],
-            reversed: i >= 2,
-            pcurve: unit_line(uv[i].0, uv[i].1),
-        })
+        .map(|i| Coedge::new(
+            edges[i],
+            i >= 2,
+            unit_line(uv[i].0, uv[i].1),
+        ))
         .collect();
     let outer = loops.len();
     loops.push(Loop { coedges });

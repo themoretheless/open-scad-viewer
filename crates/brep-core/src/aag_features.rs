@@ -637,6 +637,12 @@ pub fn find_holes(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<Hol
 mod pockets;
 pub use pockets::{PocketKind,PocketWalls,PocketFeature,find_pockets};
 
+mod small;
+pub use small::*;
+mod boss;
+pub use boss::{BossFeature, BossKind, find_bosses};
+mod rib;
+pub use rib::{RibFeature, find_ribs};
 
 
 #[cfg(test)]

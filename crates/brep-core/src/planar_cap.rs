@@ -68,11 +68,11 @@ fn author_caps(caps: Vec<Cap>, tolerance: f64) -> Result<(crate::Model, usize)> 
                     curve,
                     degenerate: false,
                 });
-                coedges.push(crate::Coedge {
+                coedges.push(crate::Coedge::new(
                     edge,
-                    reversed: false,
+                    false,
                     pcurve,
-                });
+                ));
             }
             loop_ids.push(model.loops.len());
             model.loops.push(crate::Loop { coedges });

@@ -63,11 +63,11 @@ fn quad(
     for (i, curve) in curves.into_iter().enumerate() {
         let id = edge(model, edges, pairs[i], curve);
         let traversal = [vertices[i], vertices[(i + 1) % 4]];
-        ring.push(Coedge {
-            edge: id,
-            reversed: model.edges[id].vertices != traversal,
-            pcurve: Curve::from_polyline(vec![uv[i].to_vec(), uv[(i + 1) % 4].to_vec()])?,
-        });
+        ring.push(Coedge::new(
+            id,
+            model.edges[id].vertices != traversal,
+            Curve::from_polyline(vec![uv[i].to_vec(), uv[(i + 1) % 4].to_vec()])?,
+        ));
     }
     let outer = model.loops.len();
     let face = model.faces.len();
@@ -209,11 +209,11 @@ pub fn build(o: radius_transition::Options) -> Result<Report> {
         let mut ring = Vec::new();
         for (vertices, curve, pcurve) in specs {
             let id = edge(&mut model, &mut edges, vertices, curve);
-            ring.push(Coedge {
-                edge: id,
-                reversed: model.edges[id].vertices != vertices,
+            ring.push(Coedge::new(
+                id,
+                model.edges[id].vertices != vertices,
                 pcurve,
-            });
+            ));
         }
         let face = model.faces.len();
         let outer = model.loops.len();

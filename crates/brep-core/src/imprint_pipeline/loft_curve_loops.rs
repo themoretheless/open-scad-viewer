@@ -78,26 +78,26 @@ pub(super) fn loft_curve_loops(
         let outer = loops.len();
         loops.push(Loop {
             coedges: vec![
-                Coedge {
-                    edge: bottom_edges[i],
-                    reversed: false,
-                    pcurve: crate::line(vec![0., 0.], vec![1., 0.]),
-                },
-                Coedge {
-                    edge: vertical_edges[j],
-                    reversed: false,
-                    pcurve: crate::line(vec![1., 0.], vec![1., 1.]),
-                },
-                Coedge {
-                    edge: top_edges[i],
-                    reversed: true,
-                    pcurve: crate::line(vec![1., 1.], vec![0., 1.]),
-                },
-                Coedge {
-                    edge: vertical_edges[i],
-                    reversed: true,
-                    pcurve: crate::line(vec![0., 1.], vec![0., 0.]),
-                },
+                Coedge::new(
+                    bottom_edges[i],
+                    false,
+                    crate::line(vec![0., 0.], vec![1., 0.]),
+                ),
+                Coedge::new(
+                    vertical_edges[j],
+                    false,
+                    crate::line(vec![1., 0.], vec![1., 1.]),
+                ),
+                Coedge::new(
+                    top_edges[i],
+                    true,
+                    crate::line(vec![1., 1.], vec![0., 1.]),
+                ),
+                Coedge::new(
+                    vertical_edges[i],
+                    true,
+                    crate::line(vec![0., 1.], vec![0., 0.]),
+                ),
             ],
         });
         let face = faces.len();
@@ -181,11 +181,11 @@ pub(super) fn loft_curve_loops(
                             .collect(),
                         ..curve
                     };
-                    Coedge {
-                        edge: *edge,
-                        reversed: false,
+                    Coedge::new(
+                        *edge,
+                        false,
                         pcurve,
-                    }
+                    )
                 })
                 .collect(),
         });

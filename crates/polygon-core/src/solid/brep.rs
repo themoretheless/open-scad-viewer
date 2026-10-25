@@ -138,11 +138,11 @@ pub fn from_mesh(mesh: &Mesh, face_ids: Option<&[usize]>) -> Result<Model> {
                     });
                     id
                 });
-                coedges.push(Coedge {
+                coedges.push(Coedge::new(
                     edge,
-                    reversed: a > b,
-                    pcurve: (),
-                });
+                    a > b,
+                    (),
+                ));
             }
             loops.push(m.loops.len());
             m.loops.push(Loop { coedges });
