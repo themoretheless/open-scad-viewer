@@ -138,6 +138,8 @@ pub mod solid_audit;
 mod sphere_boolean;
 pub mod step_interchange;
 pub mod step_interchange_v3;
+mod step_part21;
+mod step_v3_export;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;

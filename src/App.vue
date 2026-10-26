@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import {useTransientNotice} from './composables/useTransientNotice'
 import SweepBoundaryBadges from './components/SweepBoundaryBadges.vue'
+import { useBuildAndRendererLifecycle, type SweepViewportProgressSnapshot } from './composables/useBuildAndRendererLifecycle'
+import { useCodeEditorViewport } from './composables/useCodeEditorViewport'
 import { useEditorFormatting } from './composables/useEditorFormatting'
 import { useEditorResize } from './composables/useEditorResize'
 import { useParameterPresets } from './composables/useParameterPresets'
 import { useSectionPlaneControls } from './composables/useSectionPlaneControls'
 import { useSourceProvenanceCaret } from './composables/useSourceProvenanceCaret'
+import { useViewportDisplayControls } from './composables/useViewportDisplayControls'
 import { useWorkspaceFileActions } from './composables/useWorkspaceFileActions'
 import { useWorkspacePersistenceLifecycle } from './composables/useWorkspacePersistenceLifecycle'
 import VrControls from './components/VrControls.vue'
@@ -13,11 +16,8 @@ import ModelingGridControls from './components/ModelingGridControls.vue'
 import MaterialControls from './features/MaterialControls.vue'
 import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
-import { useModelingGrid } from './services/modelingGrid'
 import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension } from './services/rushFrontendDetect'
 import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './services/sweepViewportEvidence'
-import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
-import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT } from './services/meshFormats'
@@ -46,26 +46,12 @@ const InspectPanel = defineAsyncComponent(() => import('./components/InspectPane
 const SceneOutliner = defineAsyncComponent(() => import('./components/SceneOutliner.vue'))
 const KeyboardShortcuts = defineAsyncComponent(() => import('./components/KeyboardShortcuts.vue'))
 import ViewCube from './components/ViewCube.vue'
-import type {
-  DistanceMeasurement as PanelMeasurement,
-  InspectSelection,
-  SceneMeshRow,
-  SourceProvenanceRow,
-} from './components/cadPanels.types'
 import type { GeometryQuality } from './core/build'
-import { meshTransferables, type MeshData } from './core/mesh'
+import { type MeshData } from './core/mesh'
 import { MAX_PARAMETER_PRESETS } from './services/parameterPresets'
 import { analyzeSurfaceArea, type GeometryComputeResult } from './services/geometryCompute'
-import { AutoBuildScheduler } from './services/autoBuildScheduler'
-import { BuildPerformanceHistory, type BuildPerformanceSample } from './services/buildPerformance'
 import { EXAMPLE_CATALOG, EXAMPLES } from './data/examples'
 import { assertExampleCatalog } from './services/exampleCatalog'
-import type { CameraState } from './services/cameraHistory'
-import {
-  BuildCoordinator,
-  type BuildCoordinatorState,
-  type PublishedGeometryBuild,
-} from './services/buildCoordinator'
 import {
   buildPaletteDescriptors,
   buildShortcutHelpGroups,
@@ -79,12 +65,9 @@ import { isPaletteCommandEnabled, type PaletteCommand } from './services/command
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
 import { nextRovingIndex } from './services/rovingFocus'
-import { inspectMesh } from './services/meshInspection'
-import { RendererRecoveryGate } from './services/rendererRecoveryGate'
-import { withSelectionSurfaces } from './services/meshSurfaceGroups'
 import { SceneController } from './services/sceneController'
 import { ViewportController } from './services/viewportController'
-import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
+import { revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
 import {
   setStorageFailureHandler,
   storageGet,
@@ -92,10 +75,8 @@ import {
   storageSetJSON,
 } from './services/safeStorage'
 import { extractCustomizerParameters } from './services/scadCustomizer'
-import { planScenePublication } from './services/scenePublication'
 import {
   geometryExportEligibility,
-  planGeometryPublication,
 } from './services/buildPromotionPolicy'
 import {
   MAX_WORKSPACE_SOURCE_LENGTH,
@@ -103,20 +84,13 @@ import {
   type WorkspaceDocumentSnapshot,
 } from './services/workspaceDocument'
 import type { BrowserWorkspacePersistence } from './services/workspacePersistence'
-import { WebGPURenderer } from './services/webgpuRenderer'
 import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
 import type {
-  DisplayMode,
-  DistanceMeasurement,
   PickHit,
-  ProjectionMode,
-  RendererLifecycleEvent,
   SelectionMode,
-  ShadingModel,
   StandardView,
 } from './services/rendererContracts'
-import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
-import { blockColors, GUTTER_OVERSCAN_ROWS, GUTTER_CONTENT_PADDING_PX, gutterRowPx, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, buildSources, hexToRgb, lineAndColumn, readCommandMru } from './appHelpers'
+import { blockColors, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, readCommandMru } from './appHelpers'
 import type { DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
@@ -135,9 +109,9 @@ const {
   toggleLang, toggleTheme, applyPreferences, attachSystemTheme, detachSystemTheme,
 } = useAppearance({
   onApplied(canvasColor) {
-    renderer?.setBackgroundColor(canvasColor)
+    getRenderer()?.setBackgroundColor(canvasColor)
     // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
-    renderer?.setTheme(renderThemeId.value)
+    getRenderer()?.setTheme(renderThemeId.value)
   },
 })
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
@@ -149,95 +123,27 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const highlightRef = ref<HTMLPreElement | null>(null)
 const selectedEditorName = ref('')
-const blocks = computed(() => editorBlocks(code.value))
-const foldedLines = ref(new Set<number>())
-const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
-const editorRows = computed(() => {
-  const lines = code.value.split('\n')
-  const currentBlocks = blocks.value
-  const byStart = new Map<number, EditorBlock>()
-  for (const b of currentBlocks) byStart.set(b.start, b)
-  // Highlighted lines and guides are needed only by the folded view and the
-  // virtualized guide window — compute them lazily, not for every keystroke.
-  let highlightedLines: string[] | null = null
-  const highlighted = () => highlightedLines ??= highlightedCode.value.replace(/\n$/, '').split('\n')
-  const guideEnds = new Map<number, number>()
-  const guideEnd = (b: EditorBlock) => {
-    let end = guideEnds.get(b.start)
-    if (end === undefined) {
-      end = b.end
-      while (end > b.start && !guideFitsIndent(lines[end] ?? '', b.column)) end--
-      guideEnds.set(b.start, end)
-    }
-    return end
-  }
-  type Guide = EditorBlock & { last: boolean }
-  return lines.map((text, line) => {
-    let html: string | undefined
-    let guides: Guide[] | undefined
-    return {
-      line,
-      text,
-      block: byStart.get(line),
-      get html() { return html ??= highlighted()[line] ?? '' },
-      get guides() {
-        if (!guides) {
-          guides = []
-          for (const b of currentBlocks) {
-            if (b.start >= line) break
-            if (b.end >= line && guideFitsIndent(text, b.column)) guides.push({ ...b, last: line === guideEnd(b) })
-          }
-        }
-        return guides
-      },
-    }
-  })
+const {
+  foldedLines,
+  highlightedCode,
+  foldedRows,
+  lineNumbersRef,
+  guidesRef,
+  editorLineCount,
+  guideRowPx,
+  visibleGutterRows,
+  visibleGuideRows,
+  gutterLinesHeight,
+  toggleFold,
+  editFoldedLine,
+  syncHighlightScroll,
+} = useCodeEditorViewport({
+  code,
+  selectedEditorName,
+  editorRef,
+  highlightRef,
 })
-const foldedRows = computed(() => {
-  let hiddenThrough=-1
-  return editorRows.value.filter(row=>{
-    if(row.line<=hiddenThrough)return false
-    if(row.block && foldedLines.value.has(row.line))hiddenThrough=row.block.end
-    return true
-  })
-})
-function toggleFold(line: number) {
-  const next = new Set(foldedLines.value); if(next.has(line)) next.delete(line); else next.add(line)
-  foldedLines.value = next
-}
-async function editFoldedLine(line: number) {
-  foldedLines.value = new Set(); await nextTick()
-  const editor = editorRef.value; if(!editor) return
-  const offset = code.value.split('\n').slice(0,line).reduce((n,s)=>n+s.length+1,0)
-  editor.focus(); editor.setSelectionRange(offset,offset)
-  editor.scrollTop = Math.max(0,line * parseFloat(getComputedStyle(editor).lineHeight)-40)
-  syncHighlightScroll()
-}
-const lineNumbersRef = ref<HTMLDivElement | null>(null)
-const guidesRef = ref<HTMLDivElement | null>(null)
-const editorLineCount = computed(() => editorRows.value.length)
-const guideRowPx = ref(1.58 * 0.82 * 16)
-const gutterScrollTop = ref(0)
-const gutterViewportHeight = ref(600)
-function visibleRowSlice(rowPx: number) {
-  const rows = editorRows.value
-  const first = Math.max(0, Math.floor((gutterScrollTop.value - GUTTER_CONTENT_PADDING_PX) / rowPx) - GUTTER_OVERSCAN_ROWS)
-  const last = Math.min(rows.length, Math.ceil((gutterScrollTop.value + gutterViewportHeight.value - GUTTER_CONTENT_PADDING_PX) / rowPx) + GUTTER_OVERSCAN_ROWS)
-  return rows.slice(first, last)
-}
-const visibleGutterRows = computed(() => visibleRowSlice(gutterRowPx))
-const visibleGuideRows = computed(() => visibleRowSlice(guideRowPx.value))
-const gutterLinesHeight = computed(() => `${editorRows.value.length * 1.58}em`)
 watch(code, () => { foldedLines.value = new Set(); void nextTick(syncHighlightScroll) }, { flush: 'post' })
-function syncHighlightScroll() {
-  if (!editorRef.value || !highlightRef.value) return
-  const layer = highlightRef.value.firstElementChild as HTMLElement | null
-  if(layer) layer.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
-  if (guidesRef.value) guidesRef.value.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
-  if (lineNumbersRef.value) lineNumbersRef.value.style.transform = `translateY(${-editorRef.value.scrollTop}px)`
-  gutterScrollTop.value = editorRef.value.scrollTop
-  gutterViewportHeight.value = editorRef.value.clientHeight
-}
 const findInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
@@ -248,34 +154,6 @@ const triangleCount = ref(0)
 const volume = ref(0)
 const surfaceArea = ref(0)
 const renderDuration = ref(0)
-const performanceHistory = new BuildPerformanceHistory()
-const performanceSamples = shallowRef<BuildPerformanceSample[]>([])
-const performanceLast = computed(() => performanceSamples.value.at(-1))
-const performanceMs = (value: number | null | undefined) => value == null ? '—' : `${value.toFixed(1)} ms`
-const performanceRows = computed(() => {
-  const sample = performanceSamples.value.at(-1)
-  if (!sample) return []
-  return [
-    [lang.value === 'ru' ? 'Разбор исходника' : 'Parse', performanceMs(sample.phases.parseMs)],
-    [lang.value === 'ru' ? 'Инициализация ядра' : 'Kernel initialization', performanceMs(sample.phases.initializeMs)],
-    [lang.value === 'ru' ? 'Вычисление геометрии' : 'Geometry evaluation', performanceMs(sample.phases.evaluateMs)],
-    [lang.value === 'ru' ? 'Анализ геометрии' : 'Geometry analysis', performanceMs(sample.phases.analyzeMs)],
-    [lang.value === 'ru' ? 'Вся работа в Worker' : 'Worker total', performanceMs(sample.workerMs)],
-    [lang.value === 'ru' ? 'Запрос → проверенный результат' : 'Request → validated result', performanceMs(sample.hostMs)],
-    [lang.value === 'ru' ? 'Публикация сцены (CPU)' : 'Scene publication (CPU)', performanceMs(sample.publicationMs)],
-    [lang.value === 'ru' ? 'Публикация → отправка кадра' : 'Publication → frame submission', performanceMs(sample.publicationToSubmitMs)],
-    [lang.value === 'ru' ? 'Правка → отправка кадра' : 'Edit → frame submission', performanceMs(sample.editToSubmitMs)],
-    [lang.value === 'ru' ? 'Переданные буферы' : 'Transferred buffers', `${(sample.transferBytes / 1024).toFixed(1)} KiB`],
-    [lang.value === 'ru' ? 'Загрузка вершин и индексов на GPU' : 'Vertex/index GPU upload', sample.upload ? `${(sample.upload.geometryUploadBytes / 1024).toFixed(1)} KiB` : '—'],
-    [lang.value === 'ru' ? 'Новые буферы вершин и индексов' : 'New vertex/index buffers', sample.upload?.geometryBuffersCreated ?? '—'],
-    [lang.value === 'ru' ? 'Объекты с повторно использованной геометрией' : 'Entities reusing geometry', sample.upload?.reusedEntities ?? '—'],
-  ]
-})
-
-let nextPerformanceFrameToken = 1
-let previousBuildCounters = { builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }
-let pendingPerformanceFrame: { frameToken: number; historyToken: number } | null = null
-const buildCounters = shallowRef({ builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 })
 const gpuOk = ref(false)
 const rendererInitializing = ref(false)
 const rendererUnavailableMessage = ref('')
@@ -288,9 +166,7 @@ const notice = ref('')
 const showNotice=useTransientNotice(notice)
 const fileName = ref(props.initialWorkspace.fileName)
 const exampleGalleryOpen = ref(false)
-let renderer: WebGPURenderer | null = null
 let componentActive = true
-let fitNextRender = false
 const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
@@ -325,9 +201,9 @@ const {
   fileName,
   lang,
   exampleGalleryOpen,
-  getRenderer: () => renderer,
+  getRenderer: () => getRenderer(),
   isComponentActive: () => componentActive,
-  markFitNextRender: () => { fitNextRender = true },
+  markFitNextRender: () => markFitNextRender(),
   showNotice,
   translate: t,
 })
@@ -371,14 +247,13 @@ const sourceViewportVisible = computed(() =>
     (code.value.includes('progressive_sweep') || code.value.includes('miter_sweep'))))
 watch(sourceViewportVisible, async visible => {
   if (!visible) {
-    renderer?.destroy()
-    renderer = null
-    gpuOk.value = false
+    destroySourceViewportRenderer()
     return
   }
   await nextTick()
-  if (!renderer) await initializeViewportRenderer()
-  else renderer.resize()
+  const activeRenderer = getRenderer()
+  if (!activeRenderer) await initializeViewportRenderer()
+  else activeRenderer.resize()
 })
 const solidBuilding = ref(false)
 let solidBuildAbort: AbortController | null = null
@@ -516,23 +391,9 @@ watch([mainEditPast,mainEditFuture],()=>{const d=boundedSourceHistory({past:main
 const mainCameraRevision=ref(0)
 const mainSelectedIndices=ref<number[]>([])
 const mainShiftSelection=ref(false)
-const mainProject=(point:readonly number[])=>renderer?.projectWorldPoint(point)??null
-const mainRay=(x:number,y:number)=>renderer?.worldRay(x,y)??null
-let mainPreserveGroup=false
-function mainSelectMany(indices:number[]){mainSelectedIndices.value=indices;mainPreserveGroup=true;try{renderer?.selectMesh(indices[0]??null)}finally{mainPreserveGroup=false}}
-let mainPreviewActive = false
-let sweepViewportActive=false
-const sweepViewportProgress=ref<{sections:number;deviation:number;budget:number;profileRegularityCertified?:boolean;wallRegularityCertified?:boolean|null;certifiedErrorUpper?:number|null;continuousErrorUpper?:number;phaseResolved?:boolean;frameTransportCertified?:boolean}|null>(null)
-let mainEditSelection: {source:string;index:number}|null = null
-function previewMainGeometry(meshes:MeshData[]|null) {
- if(meshes){mainPreviewActive=true;renderer?.setMeshes(meshes)}
- else if(mainPreviewActive){try{renderer?.setMeshes(sceneMeshes.value);renderer?.setMeshVisibilityBatch(meshVisibility.value);renderer?.selectMesh(selectedMesh.value)}finally{mainPreviewActive=false}}
-}
-function clearSweepViewportPreview(){
- sweepViewportProgress.value=null
- if(sweepViewportActive){previewMainGeometry(null);sweepViewportActive=false}
-}
-watch(code,clearSweepViewportPreview,{flush:'sync'})
+const mainProject=(point:readonly number[])=>getRenderer()?.projectWorldPoint(point)??null
+const mainRay=(x:number,y:number)=>getRenderer()?.worldRay(x,y)??null
+const sweepViewportProgress=ref<SweepViewportProgressSnapshot|null>(null)
 function commitMainSource(source:string, selectIndex=selectedMesh.value) {
  try {
   if(source.length>MAX_WORKSPACE_SOURCE_LENGTH)throw Error('source limit')
@@ -540,7 +401,7 @@ function commitMainSource(source:string, selectIndex=selectedMesh.value) {
   if(source===code.value)return
   if(mainEditPast.value.at(-1)?.after!==code.value)mainEditPast.value=[]
   mainEditPast.value.push({before:code.value,after:source});while(mainEditPast.value.length>30||(mainEditPast.value.length>1&&mainEditPast.value.reduce((n,e)=>n+e.before.length+e.after.length,0)>8_000_000))mainEditPast.value.shift();mainEditFuture.value=[]
-  mainEditSelection=selectIndex===null?null:{source,index:selectIndex}
+  setMainEditSelection(selectIndex===null?null:{source,index:selectIndex})
   replacePresetSource(source);void nextTick(()=>doRender('full'))
  } catch(e){error.value=e instanceof Error?e.message:String(e)}
 }
@@ -557,35 +418,6 @@ function undoMainGeometry(redo=false){
 const viewportController = new ViewportController()
 const viewportState = shallowRef(viewportController.state)
 viewportController.subscribe(state => { viewportState.value = state })
-const projection = computed(() => viewportState.value.camera.projection)
-const gridVisible = ref(true)
-const { step: gridStep } = useModelingGrid()
-watch(gridStep, step => renderer?.setGridStep(step))
-const standardView = computed({
-  get: () => viewportState.value.standardView,
-  set: (view: StandardView) => { viewportController.setStandardView(view) },
-})
-const activeView = computed(() => viewportState.value.activeView)
-const cameraYaw = computed(() => viewportState.value.camera.yaw)
-const cameraPitch = computed(() => viewportState.value.camera.pitch)
-const displayMode = ref<DisplayMode>('shaded')
-/** Scene-level default shading model for entities without their own material. */
-const shadingModel = ref<ShadingModel>('phong')
-/** Active matcap capture preset for the matcap shading model. */
-const matcapId = ref<string>(DEFAULT_MATCAP.id)
-/** Active environment-map preset for the PBR shading model (IBL). */
-const envId = ref<string>(DEFAULT_ENV.id)
-/** Key-light contact shadows (mesh surfaces + grid floor); default off. */
-const shadowsEnabled = ref(false)
-/** Active render theme preset id (Scene uniform theme tail). */
-const renderThemeId = ref<string>('default')
-/** Scene-level default material tail for entities without their own material. */
-const defaultBaseColor = ref('#ffffff')
-const defaultMetallic = ref(0)
-const defaultRoughness = ref(0.7)
-/** Preset-only material channels (no slider): kept so re-init and recovery restore them. */
-const defaultEmissive = ref<[number, number, number]>([0, 0, 0])
-const defaultAlpha = ref(1)
 const sceneController = new SceneController<PickHit>()
 const sceneState = shallowRef(sceneController.state)
 sceneController.subscribe(state => { sceneState.value = state })
@@ -620,9 +452,90 @@ const meshVisibility = computed({
   get: () => sceneState.value.visibility,
   set: (visibility: boolean[]) => { sceneController.update({ visibility }) },
 })
-const selectionMode = ref<SelectionMode>('face')
 const measurement = computed(() => sceneState.value.measurement)
 const measureActive = computed(() => sceneState.value.measureActive)
+const dockTab = ref<DockTab>('scene')
+const dockOpen = ref(true)
+const {
+  projection,
+  gridVisible,
+  gridStep,
+  standardView,
+  activeView,
+  cameraYaw,
+  cameraPitch,
+  displayMode,
+  shadingModel,
+  matcapId,
+  envId,
+  shadowsEnabled,
+  renderThemeId,
+  defaultBaseColor,
+  defaultMetallic,
+  defaultRoughness,
+  selectionMode,
+  sceneRows,
+  selectedSceneMeshId,
+  hoveredMesh,
+  currentInspection,
+  panelMeasurement,
+  fitView,
+  resetView,
+  previousView,
+  syncCameraState,
+  focusSelection,
+  clearSelection,
+  toggleIsolate,
+  toggleProjection,
+  toggleGrid,
+  changeStandardView,
+  setStandardView,
+  setDisplayMode,
+  setShadingModel,
+  setRenderTheme,
+  defaultMaterialState,
+  setDefaultBaseColor,
+  setDefaultMetallic,
+  setDefaultRoughness,
+  setMatcap,
+  setEnv,
+  setShadows,
+  applyMaterialPreset,
+  setSelectionMode,
+  selectSceneMesh,
+  setSceneMeshVisibility,
+  preselectSceneMesh,
+  focusSceneMesh,
+  isolateSceneMesh,
+  startMeasure,
+  cancelMeasure,
+  clearMeasurement,
+  copyMeasurement,
+} = useViewportDisplayControls({
+  viewportController,
+  viewportState,
+  sceneController,
+  sceneState,
+  sceneMeshes,
+  meshVisibility,
+  selectedMesh,
+  selectedHit,
+  hoveredHit,
+  isolated,
+  measurement,
+  measureActive,
+  renderedSource,
+  code,
+  surfaceArea,
+  volume,
+  mainCameraRevision,
+  dockOpen,
+  dockTab,
+  getRenderer: () => getRenderer(),
+  showNotice,
+  translate: t,
+})
+watch(gridStep, step => getRenderer()?.setGridStep(step))
 const {
   sectionEnabled,
   sectionAxis,
@@ -648,9 +561,8 @@ const {
   selectedMesh,
   sceneState,
   sceneController,
-  getRenderer: () => renderer,
+  getRenderer: () => getRenderer(),
 })
-const dockTab = ref<DockTab>('scene')
 // Direct-modeling actions of the Code viewport are reached through the command palette.
 const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
 const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
@@ -660,7 +572,6 @@ const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   const tools = (mainToolsRef.value?.commands ?? []) as readonly PaletteCommand[]
   return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
 })
-const dockOpen = ref(true)
 const {
   findOpen, replaceOpen, findQuery, findReplacement, findCaseSensitive, activeFindIndex, findResult, findStatus,
   openEditorFind, closeEditorFind, navigateFind, handleFindKeydown,
@@ -768,6 +679,97 @@ const exportEligibility = computed(() => geometryExportEligibility({
 }))
 const canExport = computed(() => exportEligibility.value.allowed)
 const {
+  syncSourceHighlightFromEditor,
+  highlightSource,
+  revealSource,
+} = useSourceProvenanceCaret({
+  code,
+  editorRef,
+  selectedEditorName,
+  sceneMeshes,
+  sourceMatchesEditor,
+  getRenderer: () => getRenderer(),
+  showNotice,
+  translate: t,
+})
+const {
+  getRenderer,
+  performanceSamples,
+  performanceLast,
+  performanceMs,
+  performanceRows,
+  buildCounters,
+  markFitNextRender,
+  advanceBuildGeneration,
+  setMainEditSelection,
+  mainSelectMany,
+  previewMainGeometry,
+  clearSweepViewportPreview,
+  scheduleRender,
+  cancelAutoBuild,
+  beginParameterGesture,
+  endParameterGesture,
+  commitParameterControl,
+  initializeViewportRenderer,
+  destroySourceViewportRenderer,
+  disposeRendererAndBuildCoordinator,
+  startBuildCoordinator,
+  doRender,
+  cancelGeometryBuild,
+} = useBuildAndRendererLifecycle({
+  canvasRef,
+  code,
+  lang,
+  autoRender,
+  sourceViewportVisible,
+  viewportController,
+  sceneController,
+  sceneMeshes,
+  meshVisibility,
+  selectedMesh,
+  selectedHit,
+  isolated,
+  measurement,
+  measureActive,
+  displayMode,
+  shadingModel,
+  matcapId,
+  envId,
+  shadowsEnabled,
+  renderThemeId,
+  selectionMode,
+  gridVisible,
+  gridStep,
+  error,
+  editorDiagnostic,
+  warnings,
+  meshCount,
+  triangleCount,
+  volume,
+  surfaceArea,
+  renderDuration,
+  rendering,
+  renderingQuality,
+  renderedQuality,
+  renderedSource,
+  gpuOk,
+  rendererInitializing,
+  rendererUnavailableMessage,
+  mainSelectedIndices,
+  mainShiftSelection,
+  sweepViewportProgress,
+  defaultMaterialState,
+  effectiveCanvasColor,
+  applySection,
+  syncSectionRange,
+  syncSourceHighlightFromEditor,
+  syncCameraState,
+  isComponentActive: () => componentActive,
+  showNotice,
+  translate: t,
+})
+watch(code, clearSweepViewportPreview, { flush: 'sync' })
+const {
   fileInputRef,
   convertInputRef,
   exportDialogOpen,
@@ -793,91 +795,13 @@ const {
   sceneMeshes,
   buildCounters,
   performanceSamples,
-  markFitNextRender: () => {
-    fitNextRender = true
-  },
+  markFitNextRender,
   showNotice,
   translate: t,
 })
 const statusText = computed(() => rendering.value
   ? t('compiling')
   : error.value ? t('failed') : stale.value ? t('stale') : t('ready'))
-const sceneRows = computed<SceneMeshRow[]>(() => sceneMeshes.value.map((mesh, index) => {
-  const meshId = mesh.entityId ?? index
-  const grouped = new Map<string | number, SourceProvenanceRow>()
-  for (const run of mesh.provenance) {
-    if (!run.source) continue
-    const sourceKey = run.source.instanceId ?? run.source.operationId ?? run.source.id
-    const existing = grouped.get(sourceKey)
-    const triangleCount = run.triangleEnd - run.triangleStart
-    if (existing) existing.triangleCount = (existing.triangleCount ?? 0) + triangleCount
-    else {
-      const location = lineAndColumn(renderedSource.value || code.value, run.source.start)
-      grouped.set(sourceKey, {
-        id: `${meshId}:${sourceKey}`,
-        sourceId: run.source.id,
-        label: run.source.label,
-        sourceStart: run.source.start,
-        sourceEnd: run.source.end,
-        line: location.line,
-        column: location.column,
-        originalId: run.source.originalId,
-        triangleCount,
-        color: mesh.color,
-      })
-    }
-  }
-  return {
-    id: meshId,
-    name: `${t('object')} ${index + 1}`,
-    visible: meshVisibility.value[index] !== false,
-    triangleCount: mesh.indices.length / 3,
-    color: mesh.color,
-    sources: [...grouped.values()],
-  }
-}))
-const sceneMeshId = (index: number | null) => index === null
-  ? null
-  : sceneMeshes.value[index]?.entityId ?? index
-const selectedSceneMeshId = computed(() => sceneMeshId(selectedMesh.value))
-const hoveredMesh = computed(() => sceneMeshId(hoveredHit.value?.meshIndex ?? null))
-const currentInspection = computed<InspectSelection | null>(() => {
-  const index = selectedMesh.value
-  const mesh = index === null ? null : sceneMeshes.value[index]
-  if (!mesh || index === null) return null
-  const facts = inspectMesh(mesh, index)
-  const hit = selectedHit.value?.meshIndex === index ? selectedHit.value : null
-  let source: SourceProvenanceRow | undefined
-  if (hit?.source) {
-    const location = lineAndColumn(renderedSource.value || code.value, hit.source.start)
-    source = {
-      id: `${mesh.entityId ?? index}:${hit.source.instanceId ?? hit.source.operationId ?? hit.source.originalId}`,
-      sourceId: hit.source.id,
-      label: hit.source.label,
-      sourceStart: hit.source.start,
-      sourceEnd: hit.source.end,
-      line: location.line,
-      column: location.column,
-      originalId: hit.source.originalId,
-      color: mesh.color,
-    }
-  }
-  return {
-    meshId: mesh.entityId ?? index,
-    meshName: `${t('object')} ${index + 1}`,
-    triangleCount: facts.triangles,
-    surfaceArea: sceneMeshes.value.length === 1 ? surfaceArea.value : undefined,
-    volume: sceneMeshes.value.length === 1 ? volume.value : undefined,
-    position: hit?.point,
-    normal: hit?.normal,
-    bounds: facts.bounds ?? undefined,
-    source,
-  }
-})
-const panelMeasurement = computed<PanelMeasurement | null>(() => measurement.value ? {
-  points: measurement.value.points,
-  distance: measurement.value.distance ?? undefined,
-} : null)
 const paletteCommands = computed(() => {
   const hasVisibleModel = sceneMeshes.value.some((_, index) => meshVisibility.value[index] !== false)
   const hasSelection = selectedMesh.value !== null
@@ -940,12 +864,7 @@ const paletteCommands = computed(() => {
 const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
 const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
-let buildCoordinator: BuildCoordinator | null = null
-const autoBuildScheduler = new AutoBuildScheduler({ build: quality => { if (componentActive && autoRender.value) doRender(quality) }, edit: () => renderer?.previewCsgSource(code.value) })
-let buildGeneration = 0
 let applyingWorkspaceReplacement = false
-const rendererRecoveryGate = new RendererRecoveryGate()
-let rendererErrorMessage = ''
 const topbarRef = ref<HTMLElement | null>(null)
 const topbarHeight = ref(52)
 let topbarResizeObserver: ResizeObserver | null = null
@@ -993,85 +912,6 @@ onMounted(async () => {
   if (sourceViewportVisible.value) await initializeViewportRenderer()
 })
 
-async function initializeViewportRenderer() {
-  const canvas = canvasRef.value
-  if (!canvas || !componentActive || !sourceViewportVisible.value || rendererInitializing.value) return
-  rendererInitializing.value = true
-  rendererUnavailableMessage.value = ''
-  const nextRenderer = new WebGPURenderer()
-  const ok = await nextRenderer.init(canvas)
-  if (!componentActive || !sourceViewportVisible.value) {
-    nextRenderer.destroy()
-    rendererInitializing.value = false
-    return
-  }
-  if (!ok) {
-    const status = nextRenderer.currentStatus
-    rendererUnavailableMessage.value = status.status === 'unavailable'
-      ? status.message
-      : status.status === 'error' ? status.error.message : t('noGpu')
-    nextRenderer.destroy()
-    renderer = null
-    gpuOk.value = false
-    rendererInitializing.value = false
-    return
-  }
-
-  renderer?.destroy()
-  renderer = nextRenderer
-  bindRendererCallbacks(nextRenderer)
-  nextRenderer.setDisplayMode(displayMode.value)
-  nextRenderer.setDefaultShadingModel(shadingModel.value)
-  nextRenderer.setDefaultMaterial(defaultMaterialState())
-  void nextRenderer.setMatcapTexture(matcapId.value).catch(() => {})
-  void nextRenderer.setEnvMap(envId.value).catch(() => {})
-  nextRenderer.setShadowsEnabled(shadowsEnabled.value)
-  nextRenderer.setBackgroundColor(effectiveCanvasColor())
-  // Applied after the app-theme background so a theme backgroundColor wins.
-  nextRenderer.setTheme(renderThemeId.value)
-  nextRenderer.setSelectionMode(selectionMode.value)
-  nextRenderer.setGridVisible(gridVisible.value)
-  nextRenderer.setGridStep(gridStep.value)
-  if (sceneMeshes.value.length) {
-    nextRenderer.setMeshes(sceneMeshes.value)
-    nextRenderer.setMeshVisibilityBatch(meshVisibility.value)
-    if (selectedMesh.value !== null) nextRenderer.selectMesh(selectedMesh.value)
-    applySection()
-    syncSourceHighlightFromEditor()
-    nextRenderer.fitView()
-  }
-  gpuOk.value = true
-  rendererInitializing.value = false
-}
-
-function bindRendererCallbacks(instance: WebGPURenderer) {
-  instance.onSelectionChange = (index, isIsolated, hit) => {
-    if (viewportController.isRecovering || mainPreviewActive) return
-    if(mainShiftSelection.value&&index!==null){const ids=new Set(mainSelectedIndices.value);ids.has(index)?ids.delete(index):ids.add(index);mainSelectedIndices.value=[...ids];if(!ids.has(index)){index=mainSelectedIndices.value.at(-1)??null;hit=null}}
-    else if(!mainPreserveGroup)mainSelectedIndices.value=index===null?[]:[index]
-    mainShiftSelection.value=false
-    sceneController.applyRendererSelection(index, isIsolated, hit)
-  }
-  instance.onHoverChange = hit => {
-    if (viewportController.isRecovering || mainPreviewActive) return
-    sceneController.applyRendererHover(hit)
-  }
-  instance.onMeasurementChange = (value, active) => {
-    if (viewportController.isRecovering || mainPreviewActive) return
-    sceneController.applyRendererMeasurement(value, active)
-  }
-  instance.onCameraHistoryChange = available => { viewportController.applyHistoryAvailability(available) }
-  instance.onFrameSubmitted = (token, at) => {
-    if (instance !== renderer) return
-    if (!pendingPerformanceFrame || pendingPerformanceFrame.frameToken !== token) return
-    if (performanceHistory.submitted(pendingPerformanceFrame.historyToken, at)) performanceSamples.value = performanceHistory.snapshot()
-  }
-  instance.onCameraChange = syncCameraState
-  instance.onStatusChange = event => handleRendererStatus(instance, event)
-  viewportController.applyHistoryAvailability(instance.canGoToPreviousView)
-  syncCameraState(instance.getCameraState())
-}
-
 onUnmounted(() => {
   topbarResizeObserver?.disconnect()
   topbarResizeObserver = null
@@ -1081,14 +921,10 @@ onUnmounted(() => {
   layoutResizeObserver = null
   editorResizeObserver?.disconnect()
   editorResizeObserver = null
-  viewportController.invalidateRecovery()
-  rendererRecoveryGate.reset()
-  autoBuildScheduler.cancel()
   disposeWorkspacePersistenceTimer()
   componentActive = false
   setStorageFailureHandler(null)
-  buildCoordinator?.dispose()
-  buildCoordinator = null
+  disposeRendererAndBuildCoordinator()
   window.removeEventListener('keydown', handleGlobalKey)
   detachSystemTheme()
   window.removeEventListener('pagehide', flushWorkspacePersistence)
@@ -1097,137 +933,8 @@ onUnmounted(() => {
   window.removeEventListener('blur', endParameterGesture)
   detachBeforeUnloadGuard()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
-  if (renderer) {
-    renderer.onSelectionChange = null
-    renderer.onHoverChange = null
-    renderer.onMeasurementChange = null
-    renderer.onCameraHistoryChange = null
-    renderer.onCameraChange = null
-    renderer.onStatusChange = null
-    renderer.onFrameSubmitted = null
-  }
-  renderer?.destroy()
-  renderer = null
   void props.workspacePersistence.close()
 })
-
-function handleRendererStatus(instance: WebGPURenderer, event: RendererLifecycleEvent) {
-  if (renderer !== instance) return
-  if (event.status === 'device-lost') {
-    showNotice(t('gpuLost'))
-    if (rendererRecoveryGate.registerDeviceLoss() === 'start') void recoverRenderer(instance)
-  } else if (event.status === 'error') {
-    rendererErrorMessage = `${t('rendererError')}: ${event.error.message}`
-    if (!rendering.value) error.value = rendererErrorMessage
-  } else if (event.status === 'ready' && rendererErrorMessage && error.value === rendererErrorMessage) {
-    error.value = ''
-    rendererErrorMessage = ''
-  }
-}
-
-interface RendererRecoveryNavigationSnapshot {
-  camera: CameraState
-  history: ReturnType<WebGPURenderer['getCameraHistorySnapshot']>
-}
-
-async function recoverRenderer(
-  instance: WebGPURenderer,
-  navigation: RendererRecoveryNavigationSnapshot = {
-    camera: instance.getCameraState(),
-    history: instance.getCameraHistorySnapshot(),
-  },
-) {
-  const canvas = canvasRef.value
-  if (!canvas || renderer !== instance) {
-    rendererRecoveryGate.reset()
-    return
-  }
-  const token = viewportController.beginRecovery()
-  // Triangle identities and hover ownership are renderer-local. Object
-  // selection can be restored by scene identity, but stale surface hits cannot.
-  selectedHit.value = null
-  sceneController.applyRendererHover(null)
-  let ready = false
-  let failureMessage = t('gpuRecoverFailed')
-
-  try {
-    const recovered = await instance.init(canvas)
-    if (!viewportController.isCurrentRecovery(token) || renderer !== instance) return
-    if (!recovered) return
-    if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
-      rendererRecoveryGate.registerDeviceLoss()
-    }
-    if (rendererRecoveryGate.mustDeferReady) return
-
-    instance.setDisplayMode(displayMode.value)
-    instance.setDefaultShadingModel(shadingModel.value)
-    instance.setDefaultMaterial(defaultMaterialState())
-    void instance.setMatcapTexture(matcapId.value).catch(() => {})
-    void instance.setEnvMap(envId.value).catch(() => {})
-    instance.setShadowsEnabled(shadowsEnabled.value)
-    instance.setBackgroundColor(effectiveCanvasColor())
-    instance.setTheme(renderThemeId.value)
-    instance.setSelectionMode(selectionMode.value)
-    instance.setGridVisible(gridVisible.value)
-    instance.setGridStep(gridStep.value)
-    // Builds can complete while adapter/device acquisition is pending. The CPU
-    // scene and Vue state are authoritative, so re-read them after the await.
-    const currentVisibility = [...meshVisibility.value]
-    const selectionCandidate = selectedMesh.value
-    const currentSelection = selectionCandidate !== null
-      && Number.isInteger(selectionCandidate)
-      && selectionCandidate >= 0
-      && selectionCandidate < sceneMeshes.value.length
-      && currentVisibility[selectionCandidate] !== false
-      ? selectionCandidate
-      : null
-    const currentIsolation = currentSelection !== null && isolated.value
-    const currentMeasurement = measurement.value
-    const currentMeasureActive = measureActive.value
-    selectedMesh.value = currentSelection
-    isolated.value = currentIsolation
-    if (sceneMeshes.value.length) {
-      instance.setMeshes(sceneMeshes.value)
-      instance.setMeshVisibilityBatch(currentVisibility)
-      if (currentSelection !== null) {
-        instance.selectMesh(currentSelection)
-        if (currentIsolation) instance.toggleIsolateSelection()
-      }
-    }
-    instance.restoreCameraState(navigation.camera)
-    if (!instance.restoreCameraHistory(navigation.history)) throw new Error(t('gpuRecoverFailed'))
-    instance.restoreMeasurement(currentMeasurement, currentMeasureActive)
-    applySection()
-    syncSourceHighlightFromEditor()
-    if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
-      rendererRecoveryGate.registerDeviceLoss()
-    }
-    if (!rendererRecoveryGate.mustDeferReady) ready = true
-  } catch (caught) {
-    failureMessage = caught instanceof Error ? caught.message : t('gpuRecoverFailed')
-  } finally {
-    viewportController.completeRecovery(token)
-    if (!viewportController.isCurrentRecovery(token) || renderer !== instance) return
-
-    const completion = rendererRecoveryGate.completeAttempt()
-    if (completion === 'retry') {
-      void recoverRenderer(instance, navigation)
-      return
-    }
-
-    if (!ready || completion === 'exhausted' || instance.currentStatus.status === 'device-lost') {
-      gpuOk.value = false
-      error.value = failureMessage
-      return
-    }
-
-    selectedHit.value = null
-    sceneController.applyRendererHover(null)
-    gpuOk.value = true
-    if (error.value === t('gpuRecoverFailed')) error.value = ''
-    showNotice(t('gpuRecovered'))
-  }
-}
 
 watch(code, value => {
   if (applyingWorkspaceReplacement) return
@@ -1236,11 +943,10 @@ watch(code, value => {
   // backwards when another document is restored. Geometry jobs instead use a
   // process-local monotonic generation, so old results can never alias a new
   // document that happens to have the same revision number.
-  buildGeneration++
-  performanceHistory.edited(buildGeneration, performance.now())
+  advanceBuildGeneration(performance.now())
   // Provenance belongs to the last compiled source revision. Never retain a
   // reverse highlight while the editor has moved ahead of that revision.
-  if (renderedSource.value !== value) renderer?.setSourceHighlight(null)
+  if (renderedSource.value !== value) getRenderer()?.setSourceHighlight(null)
   // A #code= hash left by shareSource() goes stale when code diverges. An
   // imported hash that is still the only durable copy is retained until the
   // replacement draft reaches IDB or the synchronous recovery journal.
@@ -1264,229 +970,14 @@ watch(fileName, value => {
 watch(autoRender, enabled => {
   storageSet('scad-auto', String(enabled))
   if (enabled) scheduleRender(0)
-  else autoBuildScheduler.cancel()
+  else cancelAutoBuild()
 })
-
-function scheduleRender(delay?: number) {
-  autoBuildScheduler.edited(delay === 0)
-}
-
-function beginParameterGesture(event: PointerEvent) {
-  if (autoRender.value && event.target instanceof HTMLInputElement && event.target.type === 'range') {
-    autoBuildScheduler.beginGesture()
-  }
-}
-
-async function endParameterGesture() {
-  // Vue source watchers must advance the revision before submitting the final value.
-  await nextTick()
-  if (componentActive && autoRender.value) autoBuildScheduler.endGesture()
-}
-
-async function commitParameterControl(event: Event) {
-  if (!(event.target instanceof HTMLInputElement) || event.target.type !== 'range') return
-  await nextTick()
-  if (componentActive && autoRender.value) autoBuildScheduler.flush()
-}
-
-function startBuildCoordinator() {
-  if (buildCoordinator) return
-  buildCoordinator = new BuildCoordinator({
-    selectionSurfaces: true,
-    workerFactory: () => new Worker(new URL('./workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
-    // Real Worker events already own their buffers; skip the same-realm snapshot.
-    snapshotEvents: false,
-    // The parser cancels cooperatively at its yield points (every ~50ms), so a
-    // superseded build normally reports `cancelled` well inside this grace
-    // window and the warm worker keeps its initialized WASM.
-    // The grace timer stays as the hard boundary for statements that never
-    // reach a yield point.
-    supersedeGraceMs: 300,
-    onPublish: handleGeometryResponse,
-    onSweepPreview:preview=>{
-      if(preview.documentRevision!==buildGeneration||!renderer)return
-      if(mainPreviewActive&&!sweepViewportActive)return
-      previewMainGeometry(preview.meshes)
-      sweepViewportActive=true
-      sweepViewportProgress.value={sections:preview.sections,deviation:preview.sampledControlDeviation,budget:preview.budget,profileRegularityCertified:preview.profileRegularityCertified,wallRegularityCertified:preview.wallRegularityCertified,certifiedErrorUpper:preview.certifiedErrorUpper,continuousErrorUpper:preview.continuousErrorUpper,phaseResolved:preview.phaseResolved,frameTransportCertified:preview.frameTransportCertified}
-    },
-    workerSilenceTimeoutMs: 30_000,
-    onWorkerRestart: () => showNotice(t('workerRestarted')),
-    onStateChange: handleBuildState,
-  })
-}
-
-function doRender(quality: GeometryQuality = 'full') {
-  autoBuildScheduler.cancelPending()
-  try {
-    startBuildCoordinator()
-    const documentRevision = buildGeneration
-    const source = code.value
-    buildSources.clear()
-    buildSources.set(documentRevision, source)
-    buildCoordinator!.requestBuild({ documentRevision, source, quality })
-  } catch (caught) {
-    handleWorkerError(caught)
-    return
-  }
-  error.value = ''
-  editorDiagnostic.value = null
-  warnings.value = []
-}
-
-function handleBuildState(state: BuildCoordinatorState) {
-  if(state.status!=='building')clearSweepViewportPreview()
-  if (buildCoordinator) {
-    const current = buildCoordinator.diagnostics
-    buildCounters.value = {
-      builds: previousBuildCounters.builds + current.builds,
-      superseded: previousBuildCounters.superseded + current.superseded,
-      workerStarts: previousBuildCounters.workerStarts + current.workerStarts,
-      hardRestarts: previousBuildCounters.hardRestarts + current.hardRestarts,
-    }
-  }
-  rendering.value = state.status === 'building'
-  autoBuildScheduler.setBuilding(rendering.value)
-  if (state.requestedQuality) renderingQuality.value = state.requestedQuality
-  if (!rendering.value && rendererErrorMessage && !error.value) error.value = rendererErrorMessage
-}
-
-function cancelGeometryBuild() {
-  autoBuildScheduler.cancel()
-  buildCoordinator?.cancel('user')
-  showNotice(t('buildCancelled'))
-}
-
-function handleGeometryResponse(response: PublishedGeometryBuild) {
-  if (response.status === 'succeeded') autoBuildScheduler.observe(response.quality, response.durationMs)
-  // The editor revision advances before its debounced preview is submitted.
-  // Never publish an older build during that window, even if the coordinator
-  // has not seen the replacement job yet.
-  if (response.documentRevision !== buildGeneration) return
-  clearSweepViewportPreview()
-  renderDuration.value = response.durationMs
-  const source = buildSources.get(response.documentRevision) ?? code.value
-  for (const revision of buildSources.keys()) {
-    if (revision < response.documentRevision) buildSources.delete(revision)
-  }
-
-  if (response.status === 'failed') {
-    error.value = response.error.code === 'WORKER_TIMEOUT' ? t('buildTimeout') : response.error.message
-    editorDiagnostic.value = diagnosticFromBuildError(source, response.error)
-    return
-  }
-
-  const publicationPlan = planGeometryPublication({
-    buildGeneration: response.documentRevision,
-    source,
-    quality: response.quality,
-    reduced: response.reduced,
-  }, { buildGeneration, source: code.value })
-  if (!publicationPlan.publish) return
-  const effectiveQuality = publicationPlan.effectiveQuality
-
-  try {
-    const publicationStartedAt = performance.now()
-    const displayMeshes = response.meshes.map(withSelectionSurfaces)
-    mainSelectedIndices.value=[]
-    const sameSourceSnapshot = renderedSource.value !== '' && renderedSource.value === source
-    const previousFaceHit = renderer?.currentHit
-    const previousMeshes = sceneMeshes.value
-    const previousVisibility = meshVisibility.value
-    const previousMeasurement = measurement.value
-    const previousMeasureActive = measureActive.value
-    const publication = planScenePublication({
-      previousMeshes,
-      previousVisibility,
-      previousSelectedIndex: selectedMesh.value,
-      previousIsolated: isolated.value,
-      nextMeshes: displayMeshes,
-      sameSourceSnapshot,
-    })
-
-    const frameToken = nextPerformanceFrameToken++
-    renderer?.setMeshes(displayMeshes, {
-      frameToken,
-      animate: renderedSource.value !== '' && !sameSourceSnapshot,
-      preserveMeasurement: publication.measurementMayBePreserved,
-    })
-    sceneController.publish({
-      meshes: displayMeshes,
-      visibility: publication.nextVisibility,
-      selectedIndex: publication.nextSelectedIndex,
-      isolated: publication.nextIsolated,
-    })
-    renderer?.setMeshVisibilityBatch(meshVisibility.value)
-    sceneController.applyRendererHover(null)
-    if (publication.nextSelectedIndex !== null) {
-      const faceRestored = previousFaceHit && previousMeshes[previousFaceHit.meshIndex]
-        && renderer?.restoreNativeFaceSelection(previousMeshes[previousFaceHit.meshIndex], previousFaceHit, publication.nextSelectedIndex)
-      if (!faceRestored) renderer?.selectMesh(publication.nextSelectedIndex)
-      if (publication.nextIsolated) renderer?.toggleIsolateSelection()
-    } else {
-      sceneController.applyRendererSelection(null, false, null)
-    }
-    if(mainEditSelection?.source===source){
-      const index=mainEditSelection.index<0?displayMeshes.length-1:Math.min(mainEditSelection.index,displayMeshes.length-1)
-      mainEditSelection=null
-      if(index>=0)renderer?.selectMesh(index)
-    }
-    if (publication.measurementMayBePreserved) {
-      // The renderer may rebuild this overlay; retaining the UI value avoids a
-      // preview → full flash and lets it restore the exact world-space points.
-      sceneController.setMeasurement(previousMeasurement, previousMeasureActive)
-    } else {
-      sceneController.setMeasurement(null, false)
-    }
-    if (fitNextRender) {
-      renderer?.fitView()
-      fitNextRender = false
-    }
-    meshCount.value = response.meshes.length
-    triangleCount.value = response.meshes.reduce((sum, mesh) => sum + mesh.indices.length / 3, 0)
-    volume.value = response.volume
-    surfaceArea.value = response.surfaceArea
-    warnings.value = response.warnings
-    renderedSource.value = source
-    renderedQuality.value = effectiveQuality
-    syncSourceHighlightFromEditor()
-    syncSectionRange()
-    const publishedAt = performance.now()
-    const historyToken = performanceHistory.record({
-      revision: response.documentRevision,
-      quality: response.quality,
-      phases: response.timings,
-      workerMs: response.durationMs,
-      hostMs: response.hostElapsedMs ?? null,
-      publicationMs: publishedAt - publicationStartedAt,
-      transferBytes: meshTransferables(response.meshes).reduce((sum, buffer) => sum + buffer.byteLength, 0),
-      upload: renderer?.currentStatus.status === 'ready' ? renderer.sceneUploadMetrics : null,
-    }, publishedAt)
-    pendingPerformanceFrame = { frameToken, historyToken }
-    performanceSamples.value = performanceHistory.snapshot()
-    // Auto builds are sequential: request full only after preview proves it
-    // used a reduced quality decision. Equivalent models therefore compile
-    // exactly once and reduced models retain the warm Worker for their full
-    // continuation.
-    if (publicationPlan.requestFull && autoRender.value) autoBuildScheduler.promote()
-  } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught)
-  }
-}
-
-function handleWorkerError(caught?: unknown) {
-  rendering.value = false
-  buildCoordinator?.dispose()
-  previousBuildCounters = { ...buildCounters.value }
-  buildCoordinator = null
-  error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
-}
 
 async function loadEditorDocument(example: string, nextFileName: string) {
   applyingWorkspaceReplacement = true
-  buildGeneration++
+  advanceBuildGeneration()
   editorDiagnostic.value = null
-  renderer?.setSourceHighlight(null)
+  getRenderer()?.setSourceHighlight(null)
   if (!isSharedImportPending() && location.hash.startsWith('#code=')) {
     history.replaceState(null, '', location.pathname + location.search)
   }
@@ -1504,7 +995,7 @@ async function loadEditorDocument(example: string, nextFileName: string) {
   fileName.value = nextFileName
   markDocumentReplaced()
   if (autoRender.value) scheduleRender()
-  fitNextRender = true
+  markFitNextRender()
   await nextTick()
   applyingWorkspaceReplacement = false
   editor?.focus({ preventScroll: true })
@@ -1520,161 +1011,6 @@ async function loadMechanicalModel(source: string, name: string) {
   await doRender('full')
 }
 
-function fitView() { renderer?.fitView() }
-function resetView() {
-  viewportController.resetView()
-  renderer?.resetView()
-}
-function previousView() {
-  const state = renderer?.previousView()
-  if (!state) return
-  viewportController.applyRestoredCamera(state)
-}
-
-/** Mirrors the renderer camera into the UI so the view cube stays truthful. */
-function syncCameraState(state: CameraState) {
-  mainCameraRevision.value++
-  viewportController.applyCamera(state)
-  if (viewportController.state.camera.projection !== state.projection) {
-    renderer?.setProjection(viewportController.state.camera.projection)
-  }
-}
-
-function focusSelection() {
-  if (!renderer?.fitSelection()) renderer?.fitView()
-}
-function clearSelection() { renderer?.clearSelection() }
-function toggleIsolate() {
-  isolated.value = renderer?.toggleIsolateSelection() ?? false
-}
-function toggleProjection() {
-  renderer?.setProjection(viewportController.toggleProjection())
-}
-function toggleGrid() {
-  gridVisible.value = !gridVisible.value
-  renderer?.setGridVisible(gridVisible.value)
-}
-function changeStandardView() {
-  const { view, projection: nextProjection } = viewportController.applyStandardView(viewportController.state.standardView)
-  renderer?.setCameraPreset(view, nextProjection)
-}
-function setStandardView(view: StandardView) {
-  viewportController.setStandardView(view)
-  changeStandardView()
-}
-function setDisplayMode(mode: DisplayMode) {
-  displayMode.value = mode
-  renderer?.setDisplayMode(mode)
-}
-function changeDisplayMode() { renderer?.setDisplayMode(displayMode.value) }
-function setShadingModel(model: ShadingModel) {
-  shadingModel.value = model
-  renderer?.setDefaultShadingModel(model)
-}
-function setRenderTheme(themeId: string) {
-  renderThemeId.value = themeId
-  renderer?.setTheme(themeId)
-}
-/** The full scene default material; renderer (re)initialization applies all of it. */
-function defaultMaterialState() {
-  return {
-    baseColor: hexToRgb(defaultBaseColor.value),
-    metallic: defaultMetallic.value,
-    roughness: defaultRoughness.value,
-    emissive: defaultEmissive.value,
-    alpha: defaultAlpha.value,
-  }
-}
-function applyDefaultMaterial() {
-  renderer?.setDefaultMaterial(defaultMaterialState())
-}
-function setDefaultBaseColor(hex: string) { defaultBaseColor.value = hex; applyDefaultMaterial() }
-function setDefaultMetallic(value: number) { defaultMetallic.value = value; applyDefaultMaterial() }
-function setDefaultRoughness(value: number) { defaultRoughness.value = value; applyDefaultMaterial() }
-function setMatcap(id: string) {
-  matcapId.value = id
-  void renderer?.setMatcapTexture(id)?.catch(() => {})
-}
-function setEnv(id: string) {
-  envId.value = id
-  void renderer?.setEnvMap(id)?.catch(() => {})
-}
-function setShadows(enabled: boolean) {
-  shadowsEnabled.value = enabled
-  renderer?.setShadowsEnabled(enabled)
-}
-/** Applies a MATERIAL_PRESETS entry to the scene default material controls. */
-function applyMaterialPreset(id: string) {
-  const preset = getMaterialPreset(id)
-  if (!preset) return
-  defaultBaseColor.value = '#' + preset.baseColor.map(channel => Math.round(Math.min(1, Math.max(0, channel)) * 255).toString(16).padStart(2, '0')).join('')
-  defaultMetallic.value = preset.metallic
-  defaultRoughness.value = preset.roughness
-  defaultEmissive.value = [...preset.emissive]
-  defaultAlpha.value = preset.alpha ?? 1
-  setShadingModel(preset.shadingModel)
-  applyDefaultMaterial()
-}
-
-function setSelectionMode(mode: SelectionMode) {
-  selectionMode.value = mode
-  renderer?.setSelectionMode(mode)
-}
-
-function meshIndex(id: number | string) {
-  const entityIndex = typeof id === 'string'
-    ? sceneMeshes.value.findIndex(mesh => mesh.entityId === id)
-    : -1
-  const index = entityIndex >= 0 ? entityIndex : typeof id === 'number' ? id : Number(id)
-  return Number.isInteger(index) && index >= 0 && index < sceneMeshes.value.length ? index : null
-}
-
-function selectSceneMesh(id: number | string) {
-  const index = meshIndex(id)
-  if (index === null) return
-  renderer?.selectMesh(index)
-}
-
-function setSceneMeshVisibility(id: number | string, visible: boolean) {
-  const index = meshIndex(id)
-  if (index === null) return
-  sceneController.setVisibility(index, visible)
-  renderer?.setMeshVisibility(index, visible)
-}
-
-function preselectSceneMesh(id: number | string | null) {
-  renderer?.setPreselection(id === null ? null : meshIndex(id))
-}
-
-function focusSceneMesh(id: number | string) {
-  const index = meshIndex(id)
-  if (index === null) return
-  renderer?.selectMesh(index)
-  renderer?.fitSelection()
-}
-
-function isolateSceneMesh(id: number | string) {
-  const index = meshIndex(id)
-  if (index === null) return
-  if (selectedMesh.value !== index) renderer?.selectMesh(index)
-  isolated.value = renderer?.toggleIsolateSelection() ?? false
-}
-
-const {
-  syncSourceHighlightFromEditor,
-  highlightSource,
-  revealSource,
-} = useSourceProvenanceCaret({
-  code,
-  editorRef,
-  selectedEditorName,
-  sceneMeshes,
-  sourceMatchesEditor,
-  getRenderer: () => renderer,
-  showNotice,
-  translate: t,
-})
-
 function handleEditorInput() {
   editorDiagnostic.value = null
   // The v-model update precedes this handler, so this also clears stale
@@ -1684,30 +1020,6 @@ function handleEditorInput() {
 
 function revealCurrentDiagnostic() {
   if (editorRef.value && editorDiagnostic.value) revealDiagnostic(editorRef.value, editorDiagnostic.value)
-}
-
-function startMeasure() {
-  sceneController.setMeasurement(measurement.value, true)
-  dockOpen.value = true
-  dockTab.value = 'inspect'
-  renderer?.setMeasureMode(true)
-}
-
-function cancelMeasure() {
-  sceneController.setMeasurement(measurement.value, false)
-  renderer?.setMeasureMode(false)
-}
-
-function clearMeasurement() { renderer?.clearMeasurement() }
-
-async function copyMeasurement(value: PanelMeasurement) {
-  if (value.points.length < 2) return
-  const [a, b] = value.points
-  const distance = value.distance ?? Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
-  try {
-    await navigator.clipboard.writeText(`A ${a.join(', ')}\nB ${b.join(', ')}\nDistance ${distance}`)
-    showNotice(t('copied'))
-  } catch { /* Clipboard may be unavailable outside a secure context. */ }
 }
 
 function executeCommand(id: string) {

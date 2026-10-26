@@ -10,17 +10,14 @@ const SourceBodyFailureNotice=defineAsyncComponent(()=>import('../components/Sou
 import type {ExpressionDisplayReport} from '../services/expressionDisplay'
 import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
 import type {ExpressionMeshReport} from '../services/expressionMesh'
-import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
 const CadDimensionOverlay=defineAsyncComponent(()=>import('../components/CadDimensionOverlay.vue'))
 import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
 const SolidGcodePanel=defineAsyncComponent(()=>import('./GcodePanel.vue'))
 const SolidLaserPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
 const VrControls=defineAsyncComponent(()=>import('../components/VrControls.vue'))
-import { prepareVrPolygons } from '../services/vrScene'
 import {faceAbsenceProven } from '../services/solidSelfIntersection'
 import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
-import {SolidSketchSnapPreparation} from '../services/solidSketchSnapPreparation'
 import type {MainSolidJob} from '../services/mainSolidProtocol'
 import SceneObjectControls from '../components/SceneObjectControls.vue'
 const SceneVirtualList=defineAsyncComponent(()=>import('../components/SceneVirtualList.vue'))
@@ -29,14 +26,13 @@ import CadQuantityInput from '../components/CadQuantityInput.vue'
 import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
 const SketchDimensionPanel=defineAsyncComponent(()=>import('../components/SketchDimensionPanel.vue'))
-import { defineAsyncComponent, computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
+import { defineAsyncComponent, computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import {solidVertexCount} from '../services/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../services/solidProfileEdit'
 import {isSolidSceneEdit} from '../services/solidSceneEdit'
 import {isSolidBodyEdit,type SolidBodyEditOptions} from '../services/solidBodyEdit'
-import {assignSolidMaterial,solidMaterialRgb} from '../services/solidMaterial'
+import {assignSolidMaterial} from '../services/solidMaterial'
 import { stringifyMeshJson } from '../services/meshJson'
-import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBody } from '../services/solidGpuView'
 import { rayTriangleDistance } from '../services/math3d'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
@@ -44,33 +40,27 @@ import WorkspaceActionBar from '../components/WorkspaceActionBar.vue'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 import { sameSketchPlane } from '../services/directExtrusion'
 import { useModelingGrid } from '../services/modelingGrid'
-import {SolidSnapPreparation} from '../services/solidSnapPreparation'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../services/modelingSnaps'
 import CommandPalette from '../components/CommandPalette.vue'
-import {SolidCurveDisplayQueue} from '../services/solidCurveDisplayQueue'
 import type {NurbsCurve,NurbsScreenProjection} from '../services/nurbsCurve'
-import {SolidProfileDisplayQueue} from '../services/solidProfileDisplayQueue'
-import {SolidSurfaceDisplayQueue} from '../services/solidSurfaceDisplayQueue'
-import {SolidDisplayQueue} from '../services/solidDisplayQueue'
-import {SolidDisplayCache,type DisplayMesh} from '../services/solidDisplayCache'
 import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, serializeDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from '../services/directModeling'
 import type {SolidSketchEditOptions} from '../services/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { storageGet, storageSet } from '../services/safeStorage'
-import { exportPolygonStl, type PolygonMesh } from '../services/geometry/polygon'
+import { exportPolygonStl } from '../services/geometry/polygon'
 import type {SolidBooleanOptions} from '../services/solidBoolean'
-import { createDirectProjector, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
+import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
 import { MESH_IMPORT_ACCEPT } from '../services/meshImport'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS } from '../services/meshConvert'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
 import type {SolidBrepToolOptions} from '../services/solidBrepTool'
 import type {SolidNurbsEditOptions} from '../services/solidNurbsEdit'
-import { type SolidNurbsSurface, type SolidNurbsCurve } from '../services/solidNurbs'
+import { type SolidNurbsCurve } from '../services/solidNurbs'
 import type { SurfaceJetBoundary} from '../services/nurbsConstructors'
 import {isSolidNurbsRefit } from '../services/solidCurveReduction'
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
-import { touchPointers, panes, collectDragNodes, profileBooleanOperation, isProfileCommand, selectIndexKey, download, resizeSplit, COARSE_DISPLAY, canvasOf, primitiveKinds, PRIMITIVE_ICONS } from './directModeler/helpers'
+import { touchPointers, panes, collectDragNodes, profileBooleanOperation, isProfileCommand, selectIndexKey, download, resizeSplit, canvasOf, primitiveKinds, PRIMITIVE_ICONS } from './directModeler/helpers'
 import type { Pane } from './directModeler/helpers'
 import { usePrimitives } from './directModeler/usePrimitives'
 import { useSceneTree } from './directModeler/useSceneTree'
@@ -83,6 +73,8 @@ import { useDiagnostics } from './directModeler/useDiagnostics'
 import { useMeasurements } from './directModeler/useMeasurements'
 import { useDraftPersistence } from './directModeler/useDraftPersistence'
 import { useFileExchange } from './directModeler/useFileExchange'
+import { useDisplayAndSnapQueues } from './directModeler/useDisplayAndSnapQueues'
+import { useViewportLayerAndPolygons } from './directModeler/useViewportLayerAndPolygons'
 const ProfileIntersectionPresentation=defineAsyncComponent(()=>import('../components/ProfileIntersectionPresentation.vue'))
 const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
 const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
@@ -333,43 +325,7 @@ const cameraDragging = ref(false), heightDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
 let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
-let dragNodes: SVGElement[] = []
-/**
- * Frame rate of the viewport, sampled over half-second windows.
- *
- * Measured from the browser's own frame callbacks, so it reflects what the eye sees
- * rather than the cost of any one handler.
- */
-const fps = ref(0)
-/** Median frame interval of the last window. A steady 33.3 ms means the frames are
- * being paced externally; uneven, longer intervals mean the work itself is too slow. */
-const frameMs = ref(0)
-/** GPU time of the latest draw, sampled alongside the frame rate. */
-const drawMs = ref(0)
-let fpsHandle = 0, fpsSince = 0, fpsPrevious = 0
-let fpsIntervals: number[] = []
-function fpsTick(now: number) {
-  if (fpsPrevious) fpsIntervals.push(now - fpsPrevious)
-  fpsPrevious = now
-  const elapsed = now - fpsSince
-  if (elapsed >= 500 && fpsIntervals.length) {
-    fps.value = Math.round((fpsIntervals.length * 1000) / elapsed)
-    const sorted = [...fpsIntervals].sort((a, b) => a - b)
-    frameMs.value = Math.round(sorted[sorted.length >> 1] * 10) / 10
-    drawMs.value = Math.round((gpuLayer?.drawMs ?? 0) * 10) / 10
-    fpsIntervals = []
-    fpsSince = now
-  }
-  fpsHandle = requestAnimationFrame(fpsTick)
-}
-
-let dragOffsetIds: string[] = []
 function translationPreviewIds(ids:string[]){return [...new Set([...ids,...document.value.bodies.filter(b=>b.instance&&ids.includes(b.instance.sourceId)).map(b=>b.id)])]}
-function clearDragPreview() {
-  for (const node of dragNodes) node.removeAttribute?.('transform')
-  dragNodes = []
-  if (dragOffsetIds.length) { gpuLayer?.setDragOffset(dragOffsetIds, [0, 0, 0]); dragOffsetIds = [] }
-}
 
 
 const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'|'vertex'>('body'),vertexIndexes=ref<number[]>([]),faceIndex=ref(-1),edgeIndex=ref(-1),edgeIndexes=ref<number[]>([]),openingFaces=ref<number[]>([])
@@ -460,16 +416,6 @@ let curveDrag:{id:string;kind:'center'|'radius'|'start'|'end';before:DirectDocum
 let cvDrag:{id:string;u:number;v:number;before:DirectDocument;point:number[];start:Point2;pointer:number;svg:SVGSVGElement;inverse:DOMMatrix|null}|null=null
 const faceSketchWorker=createSolidPreviewWorker(),faceSketchPending=ref(false)
 let faceSketchGeneration=0
-const snapPreparationWorker=createSolidPreviewWorker(),snapPreparation=new SolidSnapPreparation(snapPreparationWorker)
-const snapPreparationPending=ref(false),snapPreparationVersion=ref(0),snapPreparationErrors=ref<{id:string;message:string}[]>([])
-let snapPreparationGeneration=0
-function cancelSnapPreparation(){snapPreparationGeneration++;snapPreparation.cancel();snapPreparationPending.value=false}
-onUnmounted(()=>{cancelSnapPreparation();snapPreparationWorker.dispose();snapPreparation.clear()})
-const sketchSnapWorker=createSolidPreviewWorker(),sketchSnapPreparation=new SolidSketchSnapPreparation(sketchSnapWorker)
-const sketchSnapPending=ref(false),sketchSnapVersion=ref(0),sketchSnapErrors=ref<{id:string;message:string}[]>([])
-let sketchSnapGeneration=0
-function cancelSketchSnaps(){sketchSnapGeneration++;sketchSnapPreparation.cancel();sketchSnapPending.value=false}
-onUnmounted(()=>{cancelSketchSnaps();sketchSnapWorker.dispose();sketchSnapPreparation.clear()})
 let previousFocus: HTMLElement | null = null
 watch(() => props.open, async open => {
   if (open) {
@@ -556,24 +502,72 @@ const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && sel
 const profileBridgePanel=ref<InstanceType<typeof ProfileBridgeCheck>|null>(null)
 const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../services/nurbsSurface').NurbsSurface,import('../services/nurbsSurface').NurbsSurface]:null)
 type SolidTopology=import('../services/mainSolidProtocol').MainSolidResults['topology']
-const topology=shallowRef<SolidTopology>({faces:[],edges:[]}),topologyPending=ref(false),topologyRetryVisible=ref(false)
-const topologyWorker=createSolidPreviewWorker()
-let topologyPick=0,topologyGeneration=0,topologyBody:DirectBody|undefined,topologyRequest:Promise<SolidTopology|null>|null=null
-function cancelTopology(clear=false){topologyRetryVisible.value=false;topologyPick++;topologyGeneration++;topologyWorker.cancel();if(clear||topologyPending.value){topologyBody=undefined;topologyRequest=null;topology.value={faces:[],edges:[]}}topologyPending.value=false}
-function prepareTopology(body:DirectBody):Promise<SolidTopology|null>{
- if(topologyBody===body&&topologyRequest)return topologyRequest
- cancelTopology(true);const generation=topologyGeneration,source=document.value
- topologyBody=body;topologyPending.value=true
- topologyRequest=topologyWorker.run({kind:'topology',mesh:body.mesh}).then(result=>{
-  if(generation!==topologyGeneration||document.value!==source||selectedBody.value!==body)return null
-  topology.value=result;return result
- }).catch(()=>{if(generation===topologyGeneration&&document.value===source&&selectedBody.value===body){
-  topologyBody=undefined;topologyRequest=null;topologyRetryVisible.value=true
-  error.value=body.name+': '+label('Не удалось подготовить выбор граней. Нажмите «Повторить выбор граней».','Could not prepare face selection. Choose Retry face selection.')
- };return null}).finally(()=>{if(generation===topologyGeneration)topologyPending.value=false})
- return topologyRequest
-}
-onUnmounted(()=>{cancelTopology();topologyWorker.dispose()})
+const {
+  snapPreparation,
+  snapPreparationPending,
+  snapPreparationVersion,
+  snapPreparationErrors,
+  snapBodies,
+  snapPreparationNeedsRetry,
+  cancelSnapPreparation,
+  refreshSnapPreparation,
+  sketchSnapPreparation,
+  sketchSnapPending,
+  sketchSnapVersion,
+  sketchSnapErrors,
+  supportSnapSketches,
+  snapSketches,
+  sketchSnapsNeedRetry,
+  cancelSketchSnaps,
+  refreshSketchSnaps,
+  topology,
+  topologyPending,
+  topologyRetryVisible,
+  isTopologyReadyFor,
+  nextTopologyPick,
+  getTopologyPick,
+  cancelTopology,
+  prepareTopology,
+  curveDisplayQueue,
+  curveDisplayPending,
+  curveDisplayVersion,
+  curveDisplayErrors,
+  displayCurves,
+  curveDisplayNeedsRetry,
+  cancelCurveDisplay,
+  refreshCurveDisplay,
+  curvePoints,
+  profileDisplayQueue,
+  profileDisplayPending,
+  profileDisplayVersion,
+  profileDisplayErrors,
+  displayProfiles,
+  profileDisplayNeedsRetry,
+  cancelProfileDisplay,
+  refreshProfileDisplay,
+  profileLoops,
+  surfaceDisplayQueue,
+  surfaceDisplayPending,
+  surfaceDisplayVersion,
+  surfaceDisplayErrors,
+  surfaceDisplayNeedsRetry,
+  cancelSurfaceDisplay,
+  refreshSurfaceDisplay,
+} = useDisplayAndSnapQueues({
+  props,
+  kernelReady,
+  document,
+  snapDocument,
+  selectedBody,
+  workplaneOutline,
+  snap,
+  geometrySnap,
+  objectInView,
+  getAdvancedPreviewDocument: () => advancedPreview.value.document,
+  onSnapCacheInvalidated: () => { snapSceneCache = undefined },
+  label,
+  error,
+})
 function faceSelectionKey(e: KeyboardEvent) {
  if(topologyPending.value)return
  const index=selectIndexKey(e,faceIndex.value,topology.value.faces.length-1,-1)
@@ -595,21 +589,6 @@ const boundaryInputValid=computed(()=>({gap:Number.isFinite(boundaryOptions.valu
 const boundaryWorker=createSolidPreviewWorker(),boundaryPending=ref(false)
 const boundaryReport=shallowRef<{value:SurfaceBoundaryReport|null;error:string}|null>(null)
 onUnmounted(()=>boundaryWorker.dispose())
-const curveDisplayWorker=createSolidPreviewWorker(),curveDisplayQueue=new SolidCurveDisplayQueue(curveDisplayWorker)
-const curveDisplayPending=ref(false),curveDisplayVersion=ref(0),curveDisplayErrors=ref<{id:string;message:string}[]>([])
-let curveDisplayGeneration=0
-function cancelCurveDisplay(){curveDisplayGeneration++;curveDisplayQueue.cancel();curveDisplayPending.value=false}
-onUnmounted(()=>{cancelCurveDisplay();curveDisplayWorker.dispose();curveDisplayQueue.clear()})
-function curvePoints(curve:NurbsCurve):number[][]{void curveDisplayVersion.value;return curveDisplayQueue.get({id:'',curve})??[]}
-const profileDisplayWorker=createSolidPreviewWorker(),profileDisplayQueue=new SolidProfileDisplayQueue(profileDisplayWorker)
-const profileDisplayPending=ref(false),profileDisplayVersion=ref(0),profileDisplayErrors=ref<{id:string;message:string}[]>([])
-let profileDisplayGeneration=0
-function cancelProfileDisplay(){profileDisplayGeneration++;profileDisplayQueue.cancel();profileDisplayPending.value=false}
-onUnmounted(()=>{cancelProfileDisplay();profileDisplayWorker.dispose();profileDisplayQueue.clear()})
-function profileLoops(sketch:DirectSketch):Point2[][]{
- void profileDisplayVersion.value
- return sketch.retainedProfile?profileDisplayQueue.get({id:sketch.id,profile:sketch.retainedProfile})??[]:[sketch.points]
-}
 const retainedDisplay=computed(()=>new Map(document.value.sketches.filter(s=>s.retainedProfile).map(s=>[s.id,profileLoops(s)])))
 function sketchPath(sketch:DirectSketch,pane:Pane,loops:Point2[][]=retainedDisplay.value.get(sketch.id)??[sketch.points]){return loops.map(loop=>'M '+loop.map(p=>project(pane==='2d'?p:worldPoint(p,sketch.plane),pane).join(',')).join(' L ')+(sketch.closed?' Z':'')).join(' ')}
 const visibleSketches = computed(() => document.value.sketches.filter(s=>objectInView(s.id)&&samePlane(s.plane,activePlane.value)))
@@ -682,7 +661,7 @@ function chooseSketchFace() {
   choosingSketchFace.value=true;pickMode.value='face';mode.value='3d'
 }
 function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplaneOutline.value=[];workplaneBodyId.value='';choosingSketchFace.value=false;selection.value='';extraSelection.value=[] }
-const { volumeDistanceOpen, volumeContact, materialPathOpen, materialPathOverlay, measurementOpen, measureTarget, measureA, measureB, curveParameter, formatMeasurement, clearanceOpen, clearanceRevision, clearanceRetryVisible, measurementTarget, clearanceMeasurement, clearancePending, measurementPending, curvaturePending, vertexAValid, vertexBValid, curveParameterValid, measurementRevision, curvatureRevision, measurementRetryVisible, curvatureRetryVisible, measurement, curvatureMeasurement, edgeDistanceOpen, edgeDistanceA, edgeDistanceB, edgeDistanceBudget, edgeDistanceRevision, edgeDistanceRetryVisible, edgeDistancePending, edgeDistance, faceDistanceOpen, faceDistanceA, faceDistanceB, faceDistanceBudget, faceDistanceRevision, faceDistanceRetryVisible, faceDistancePending, faceDistance, shellDistanceOpen, shellDistanceBudget, shellDistanceRevision, shellDistanceRetryVisible, shellDistancePending, shellDistance } = useMeasurements({ document, edgeIndex, label, props, selectedBody, selection })
+const { manifoldMetrics, manifoldMetricsPending, manifoldMetricsRevision, manifoldMetricsRetryVisible, volumeDistanceOpen, volumeContact, materialPathOpen, materialPathOverlay, measurementOpen, measureTarget, measureA, measureB, curveParameter, formatMeasurement, clearanceOpen, clearanceRevision, clearanceRetryVisible, measurementTarget, clearanceMeasurement, clearancePending, measurementPending, curvaturePending, vertexAValid, vertexBValid, curveParameterValid, measurementRevision, curvatureRevision, measurementRetryVisible, curvatureRetryVisible, measurement, curvatureMeasurement, edgeDistanceOpen, edgeDistanceA, edgeDistanceB, edgeDistanceBudget, edgeDistanceRevision, edgeDistanceRetryVisible, edgeDistancePending, edgeDistance, faceDistanceOpen, faceDistanceA, faceDistanceB, faceDistanceBudget, faceDistanceRevision, faceDistanceRetryVisible, faceDistancePending, faceDistance, shellDistanceOpen, shellDistanceBudget, shellDistanceRevision, shellDistanceRetryVisible, shellDistancePending, shellDistance } = useMeasurements({ document, edgeIndex, label, props, selectedBody, selection })
 const { diagnosticPanel, diagnosticsOpen, sectionZ, sectionNormal, diagnosticsRevision, boundaryOpen, boundaryBudget, boundaryRevision, boundaryAgreementPending, boundaryIndex, boundaryResult, boundaryError, boundaryBudgetInvalid, boundaryDefects, boundarySelected, boundaryLine, faceContactsOpen, faceContactsBudget, faceContactsRevision, faceContactsPending, faceContactIndex, inspectWithinFaces, inspectExactBoundary, faceContactsResult, faceContactsError, faceContactsBudgetInvalid, faceContactDefects, faceContactSelected, faceContactPoint, sectionValidity, sectionInputInvalid, sectionErrorMessage, diagnosticsPending, diagnostics, intersectionInspection, intersectionPending, intersectionWork, intersectionIndex, selectedIntersection, selectedIntersectionLines, collapsedSectionPoints } = useDiagnostics({ document, label, props, selectedBody })
 const brepMass=shallowRef<BrepMassProperties|null>(null)
 watch(selectedBody,()=>{brepMass.value=null})
@@ -803,7 +782,112 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
   finally{if(generation===bodyEditGeneration){bodyEditPending.value=false;if(bodyEditApplyGeneration===generation){bodyEditApplyGeneration=null;applyCommand()}}}
  })
 },{flush:'sync'})
+const previewReplacesTarget=computed(()=>solidActive.value&&extrusionMode.value!=='new'&&(!!previewBody.value||previewEmpty.value))
+// Presentation state stays outside the persisted CAD document and undo history.
+const compactWorkspace = ref(true)
+const isolatedBodyIds = ref<string[]>([])
+const workspaceKey=props.embedded?'scad-main-workspace-v1':'scad-solid-workspace-v1'
+watch(restoringDraft,pending=>{
+ if(pending)return
+ try{
+  const state=JSON.parse(storageGet(workspaceKey)??'null')
+  if(!state || state.version!==1)return
+  const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id))
+  const read=(value:unknown):string[]=>Array.isArray(value)?value.filter((id):id is string=>typeof id==='string'&&ids.has(id)).slice(0,1000):[]
+  hiddenIds.value=read(state.hidden);lockedIds.value=read(state.locked);isolatedBodyIds.value=read(state.isolated)
+  if(typeof state.group==='string' && ((document.value.groups??[]).some(g=>g.name===state.group)||documentObjects(document.value).some(o=>o.group===state.group)))activeGroup.value=state.group
+ }catch{/* Invalid workspace preferences do not affect the CAD document. */}
+},{immediate:true})
+watch([hiddenIds,lockedIds,isolatedBodyIds,activeGroup],()=>{
+ if(!restoringDraft.value)storageSet(workspaceKey,JSON.stringify({version:1,hidden:hiddenIds.value,locked:lockedIds.value,isolated:isolatedBodyIds.value,group:activeGroup.value}))
+})
+const sceneBodies = computed(() => document.value.bodies.filter(b => objectVisible(b.id) && (!isolatedBodyIds.value.length || isolatedBodyIds.value.includes(b.id))))
+function toggleBodyIsolation() {
+  cancelCommandState()
+  if (isolatedBodyIds.value.length) { isolatedBodyIds.value = []; return }
+  isolatedBodyIds.value = document.value.bodies.filter(b => selectedIds.value.includes(b.id)).map(b => b.id)
+  hovered.value = ''
+}
+watch(() => document.value, d => {
+  if (!isolatedBodyIds.value.length) return
+  const ids = new Set([...documentObjects(d),...d.sourceBodies??[]].map(object => object.id))
+  const retained = isolatedBodyIds.value.filter(id => ids.has(id))
+  // Preview snapshots retain identity; only invalidate visibility when an isolated object disappears.
+  if (retained.length !== isolatedBodyIds.value.length) isolatedBodyIds.value = retained
+})
+const renderBodies=computed(()=>previewReplacesTarget.value?sceneBodies.value.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):sceneBodies.value)
+const {
+  fps,
+  frameMs,
+  drawMs,
+  settling,
+  hasDragNodes,
+  setDragNodes,
+  applyDragPreviewTransform,
+  clearDragPreview,
+  settleAfterDrag,
+  smoothDisplay,
+  displayPending,
+  cancelDisplayPreparation,
+  refreshDisplayPreparation,
+  vrSnapshot,
+  gpuActive,
+  gpuInitializing,
+  gpuRetryVisible,
+  gpuFailureNotice,
+  stopGpuLayer,
+  retryGpuLayer,
+  mountGpuCanvas,
+  meshPolygons,
+  cpuTransparency,
+  polygonView,
+  polygons,
+  cpuOrbitReady,
+  cpuOrbitActive,
+  polygonColor,
+  cpuOrbitTriangles,
+  surfacePolygons,
+  nurbsSurfacePolygons,
+  ghostPolygons,
+} = useViewportLayerAndPolygons({
+  props,
+  emitBackend: value => emit('backend', value),
+  kernelReady,
+  document,
+  camera,
+  views,
+  centers,
+  cameraDragging,
+  heightDragging,
+  previewingTransform,
+  selectedIds,
+  selectedBody,
+  selectedFaceTriangles,
+  pickMode,
+  hovered,
+  extrusionMode,
+  previewBody,
+  previewReplacesTarget,
+  renderBodies,
+  surfaceDisplayQueue,
+  surfaceDisplayVersion,
+  objectInView,
+  getAdvancedPreview: () => ({
+    document: advancedPreview.value.document ?? null,
+    bodyIds: advancedBodyIds.value,
+    surfaceIds: advancedSurfaceIds.value,
+  }),
+  getSubtract: () => subtract.value,
+  setNotice: message => { notice.value = message },
+  getNotice: () => notice.value,
+  label,
+})
 const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+watch(() => [props.open, kernelReady.value, smoothDisplay.value, renderBodies.value,
+  previewBody.value, advancedPreview.value.document, previewingTransform.value,
+  previewingTransform.value ? selectedIds.value.join(',') : ''] as const, () => {
+  refreshDisplayPreparation(advancedPreview.value.document)
+}, { flush: 'pre', immediate: true })
 const runoutProblemCurve=computed(()=>advancedOp.value==='nurbs-runout'&&advancedPreview.value.rawError.includes('RUNOUT_TARGET')?surfaceInputs.value[2]:undefined)
 const { sourceDisplayResults, sourceDisplayErrors, sourceDisplayPending, sourceEdgeSelection, sourceEdgeHover, cancelSourceDisplay, refreshSourceDisplay, pickSourceEdge, pickSourceBody, sourceDisplayEdges, sourceDisplayFaces, sourceUnresolvedCount, sourceUnresolvedBoxes, sourceDisplayEndpointBoxes } = useSourceDisplay({ camera, cancelCommandState, document, edgeIndex, edgeIndexes, extraSelection, faceIndex, hovered: () => hovered, kernelReady: () => kernelReady, mode, objectInView, objectSelectable, openingFaces, project, props, selection, tool })
 const featureEdges=computed(()=>authoredEdges.value.map(edge=>({i:edge.index,id:edge.id,points:edge.points.map(point=>project(point,'3d').join(',')).join(' ')})))
@@ -903,23 +987,6 @@ function trimAt(id:string,p:Point2){run(()=>{
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
-/**
- * Rebuilding the thousands of hit-test polygons after a commit costs far more than a
- * frame, and doing it the instant a drag ends is felt as a stall. The dragged elements
- * already carry the exact translation that was committed, so they stay correct for both
- * display and picking; the rebuild is deferred until the pointer has settled.
- */
-const settling = ref(false)
-let settleHandle = 0
-function settleAfterDrag() {
-  // The committed document normally rebuilds the GPU buffer, but never rely on that: a
-  // commit that changes nothing leaves the buffer, and with it a stale offset, in place.
-  if (dragOffsetIds.length) { gpuLayer?.setDragOffset(dragOffsetIds, [0, 0, 0]); dragOffsetIds = [] }
-  if (typeof setTimeout !== 'function') { clearDragPreview(); return }
-  settling.value = true
-  clearTimeout(settleHandle)
-  settleHandle = setTimeout(() => { settling.value = false; clearDragPreview() }, 140) as unknown as number
-}
 
 function pickBodyAt(p: Point2): { id: string; triangle: number } | null {
   const { yaw, pitch } = camera.value
@@ -1216,6 +1283,7 @@ function sendToMesh() {
 const { sourceStepPending, sourceStepError, sourceStepTolerance, selectedSourceBody, sourceSeamPending, sourceSeamError, sourceSeamResult, cancelSourceSeam, sourceSeamMessage, qualifySourceSeam, sourceWallPending, sourceWallError, sourceWallResult, sourceWallOpen, sourceWallMenuOpen, sourceWallCoverageResult, sourceWallCoverageMode, sourceWallScanResult, sourceWallScanMode, sourceWallGroups, sourceWallSide, sourceWallMinimum, sourceWallTolerance, cancelSourceWall, sourceWallFaces, sourceWallFileMenuToggle, toggleSourceWallFace, sourceWallFaceUncertain, sourceWallFaceFill, sourceWallMeasurement, sourceWallMessage, sourceWallInputError, qualifySourceWall, cancelSourceStep, exportSourceStep, exportStepCurrent, exportStepAssembly, exportStepOriginal } = useSourceBodyTools({ document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection, isExpressionFaceHighlighted: sourceExpressionFaceHighlighted })
 const {
   stlInput,
+  meshRepairMode,
   svgInput,
   svgBusy,
   stepInput,
@@ -1371,129 +1439,6 @@ function splitKey(e: KeyboardEvent) {
 // Chrome refuses a synchronous WebAssembly.Module over 8 MB on the main thread, so the display
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
 if (!kernelReady.value || restoringDraft.value) void restoreInitialDraft()
-const smoothDisplay = ref(true)
-// Exact geometry keys survive history clones and include retained B-rep changes.
-const displayCache = new SolidDisplayCache()
-function triangleNormals(mesh: PolygonMesh) {
-  const indices = mesh.indices, pos = mesh.positions, count = indices.length / 3
-  const normals = new Array<number[]>(count)
-  for (let t = 0, o = 0; t < count; t++, o += 3) {
-    const i0 = indices[o] * 3, i1 = indices[o + 1] * 3, i2 = indices[o + 2] * 3
-    const ax = pos[i0], ay = pos[i0 + 1], az = pos[i0 + 2]
-    const ux = pos[i1] - ax, uy = pos[i1 + 1] - ay, uz = pos[i1 + 2] - az
-    const wx = pos[i2] - ax, wy = pos[i2 + 1] - ay, wz = pos[i2 + 2] - az
-    const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx
-    const len = Math.hypot(nx, ny, nz) || 1
-    normals[t] = [nx / len, ny / len, nz / len]
-  }
-  return normals
-}
-const displayWorker = createSolidPreviewWorker()
-const displayQueue = new SolidDisplayQueue(displayWorker, displayCache)
-const displayVersion = ref(0)
-const displayPending = ref(false)
-let displayGeneration = 0
-function cancelDisplayPreparation() {
-  displayGeneration++
-  displayQueue.cancel()
-  displayPending.value = false
-}
-onUnmounted(() => { cancelDisplayPreparation(); displayWorker.dispose() })
-function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
-  void displayVersion.value
-  const transforming = previewingTransform.value && (selectedIds.value.includes(b.id) || !!b.instance && selectedIds.value.includes(b.instance.sourceId))
-  if (!transforming && !(heightDragging.value && b === previewBody.value) && smoothDisplay.value && b.brep && kernelReady.value) {
-    const cached = displayQueue.get(b)
-    if (cached) return cached
-  }
-  return { mesh: b.mesh, map: null, normals: triangleNormals(b.mesh) }
-}
-function shadeFromNormal(n: number[],projectPoint?:(p:number[])=>[number,number,number]): number {
-  const light = projectPoint?projectPoint(n):projectDirectPoint([n[0], n[1], n[2]], camera.value)
-  return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
-}
-// WebGPU layer under the 3D SVG: draws dense, per-pixel shaded surfaces with the same camera; the SVG then only
-// keeps transparent working-mesh polygons for picking plus gizmos and previews.
-const gpuActive = ref(false)
-watch(gpuActive,value=>emit('backend',value),{immediate:true})
-let gpuLayer: SolidGpuLayer | null = null
-let gpuResize: ResizeObserver | null = null
-let gpuInitStarted = false, gpuGeneration = 0
-let gpuCanvas: HTMLCanvasElement | null = null
-const gpuInitializing=ref(false),gpuRetryVisible=ref(false)
-let gpuFailureNotice=''
-function stopGpuLayer() {
-  gpuGeneration++;gpuResize?.disconnect();gpuResize=null
-  gpuLayer?.destroy();gpuLayer=null;gpuActive.value=false;gpuInitializing.value=false
-}
-function retryGpuLayer() {
-  if(gpuInitializing.value || !gpuCanvas || !props.open)return
-  stopGpuLayer()
-  const generation=gpuGeneration,canvas=gpuCanvas
-  gpuInitializing.value=true
-  const unavailable=()=>{
-    if(generation!==gpuGeneration)return
-    gpuInitializing.value=false;gpuActive.value=false;gpuRetryVisible.value=true
-    gpuResize?.disconnect();gpuResize=null
-    gpuFailureNotice=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')
-    notice.value=gpuFailureNotice
-  }
-  const layer=new SolidGpuLayer(canvas,unavailable);gpuLayer=layer
-  void layer.init().then(ok=>{
-    if(generation!==gpuGeneration){layer.destroy();return}
-    if(!ok || !layer.ready){layer.destroy();unavailable();return}
-    const wrap=canvas.parentElement
-    if(wrap){gpuResize=new ResizeObserver(()=>layer.resize(wrap.clientWidth,wrap.clientHeight,window.devicePixelRatio||1));gpuResize.observe(wrap);layer.resize(wrap.clientWidth,wrap.clientHeight,window.devicePixelRatio||1)}
-    gpuInitializing.value=false;gpuRetryVisible.value=false;gpuActive.value=true
-    if(notice.value===gpuFailureNotice)notice.value=''
-  })
-}
-function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
-  if(typeof HTMLCanvasElement==='undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported())return
-  gpuInitStarted=true;gpuCanvas=el;retryGpuLayer()
-}
-watch(()=>props.open,open=>{if(!open){stopGpuLayer();gpuRetryVisible.value=false}else if(gpuCanvas)void nextTick(retryGpuLayer)})
-onUnmounted(() => { stopGpuLayer();gpuCanvas=null; if (fpsHandle) cancelAnimationFrame(fpsHandle); fpsHandle = 0; clearTimeout(settleHandle) })
-watch(() => props.open, open => {
-  // The DOM-less test renderer has no frame callbacks, and a hidden workspace need not count.
-  if (typeof requestAnimationFrame !== 'function') return
-  if (fpsHandle) { cancelAnimationFrame(fpsHandle); fpsHandle = 0 }
-  if (!open) { fps.value = 0; frameMs.value = 0; return }
-  fpsIntervals = []; fpsPrevious = 0; fpsSince = performance.now(); fpsHandle = requestAnimationFrame(fpsTick)
-}, { immediate: true })
-const previewReplacesTarget=computed(()=>solidActive.value&&extrusionMode.value!=='new'&&(!!previewBody.value||previewEmpty.value))
-// Presentation state stays outside the persisted CAD document and undo history.
-const compactWorkspace = ref(true)
-const isolatedBodyIds = ref<string[]>([])
-const workspaceKey=props.embedded?'scad-main-workspace-v1':'scad-solid-workspace-v1'
-watch(restoringDraft,pending=>{
- if(pending)return
- try{
-  const state=JSON.parse(storageGet(workspaceKey)??'null')
-  if(!state || state.version!==1)return
-  const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id))
-  const read=(value:unknown):string[]=>Array.isArray(value)?value.filter((id):id is string=>typeof id==='string'&&ids.has(id)).slice(0,1000):[]
-  hiddenIds.value=read(state.hidden);lockedIds.value=read(state.locked);isolatedBodyIds.value=read(state.isolated)
-  if(typeof state.group==='string' && ((document.value.groups??[]).some(g=>g.name===state.group)||documentObjects(document.value).some(o=>o.group===state.group)))activeGroup.value=state.group
- }catch{/* Invalid workspace preferences do not affect the CAD document. */}
-},{immediate:true})
-watch([hiddenIds,lockedIds,isolatedBodyIds,activeGroup],()=>{
- if(!restoringDraft.value)storageSet(workspaceKey,JSON.stringify({version:1,hidden:hiddenIds.value,locked:lockedIds.value,isolated:isolatedBodyIds.value,group:activeGroup.value}))
-})
-const sceneBodies = computed(() => document.value.bodies.filter(b => objectVisible(b.id) && (!isolatedBodyIds.value.length || isolatedBodyIds.value.includes(b.id))))
-function toggleBodyIsolation() {
-  cancelCommandState()
-  if (isolatedBodyIds.value.length) { isolatedBodyIds.value = []; return }
-  isolatedBodyIds.value = document.value.bodies.filter(b => selectedIds.value.includes(b.id)).map(b => b.id)
-  hovered.value = ''
-}
-watch(() => document.value, d => {
-  if (!isolatedBodyIds.value.length) return
-  const ids = new Set([...documentObjects(d),...d.sourceBodies??[]].map(object => object.id))
-  const retained = isolatedBodyIds.value.filter(id => ids.has(id))
-  // Preview snapshots retain identity; only invalidate visibility when an isolated object disappears.
-  if (retained.length !== isolatedBodyIds.value.length) isolatedBodyIds.value = retained
-})
 const commandFailure = computed(() => Object.keys(invalidQuantities.value).length ? label('Исправьте числовой ввод', 'Correct the numeric input') : advancedOp.value ? advancedPreview.value.error : cornerActive.value ? cornerPreview.value.error : solidActive.value ? previewError.value : operation.value==='array'?sketchEditFailure.value:'')
 const commandActive = computed(() => !!(advancedOp.value || operation.value || subtract.value || booleanPending.value || directTransformPending.value || gizmoPending.value || nativeNurbsPending.value))
 const commandHint = computed(() => {
@@ -1586,169 +1531,6 @@ watch(() => document.value, () => {
 })
 const selectedGroup = computed(() => documentObjects(document.value).find(o=>o.id===selection.value)?.group ?? '')
 
-const renderBodies=computed(()=>previewReplacesTarget.value?sceneBodies.value.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):sceneBodies.value)
-watch([smoothDisplay, kernelReady], () => {
-  cancelDisplayPreparation()
-  displayCache.clear()
-  displayVersion.value++
-}, { flush: 'sync' })
-watch(() => [props.open, kernelReady.value, smoothDisplay.value, renderBodies.value,
-  previewBody.value, advancedPreview.value.document, previewingTransform.value,
-  previewingTransform.value ? selectedIds.value.join(',') : ''] as const, async () => {
-  cancelDisplayPreparation()
-  if (!props.open || !kernelReady.value) return
-  const generation = displayGeneration
-  const bodies = [...renderBodies.value, ...(previewBody.value ? [previewBody.value] : []), ...(advancedPreview.value.document?.bodies ?? [])]
-    .filter(b => (smoothDisplay.value || b.brep?.shells.some(s=>s.closed) && b.brep.shells.some(s=>!s.closed)) && !(previewingTransform.value && (selectedIds.value.includes(b.id) || !!b.instance && selectedIds.value.includes(b.instance.sourceId))))
-  displayPending.value = true
-  try {
-    const changed = await displayQueue.prepare(bodies)
-    if (generation === displayGeneration && changed) displayVersion.value++
-  } finally {
-    if (generation === displayGeneration) displayPending.value = false
-  }
-}, { flush: 'pre', immediate: true })
-function vrSnapshot() {
-  return prepareVrPolygons(renderBodies.value.map(body => ({ ...displayMeshFor(body).mesh, color: body.material ? solidMaterialRgb(body.material.color) : undefined })))
-}
-let surfaceGpuCache=new Map<PolygonMesh,ReturnType<typeof smoothTriangleList>>()
-onUnmounted(()=>surfaceGpuCache.clear())
-const gpuBodies = computed<SolidGpuBody[]>(() => {
-  if (!gpuActive.value) {surfaceGpuCache.clear();return []}
-  const hideSelected = !!advancedPreview.value.document
-  const items=[...renderBodies.value.filter(b=>!hideSelected||!advancedBodyIds.value.has(b.id)).map(b=>({b,preview:0})),...(advancedPreview.value.document?.bodies??[]).filter(b=>advancedBodyIds.value.has(b.id)).map(b=>({b,preview:1})),...(previewBody.value&&!previewReplacesTarget.value?[{b:previewBody.value,preview:2}]:[])]
-  const bodies=items.flatMap(({b,preview}) => {
-    const display = displayMeshFor(b)
-    const flat = display.flat ??= smoothTriangleList(display.mesh.positions, display.mesh.indices)
-    const count = display.mesh.indices.length / 3
-    const bodyHue = subtract.value?.a.includes(b.id) ? 45 : subtract.value?.b.includes(b.id) ? 350 : selectedIds.value.includes(b.id) ? 266 : hovered.value === b.id ? 190 : b.material ? -1 : 220
-    const faceHighlight = selectedBody.value?.id === b.id && pickMode.value === 'face'
-    const hues = new Float32Array(count)
-    for (let i = 0; i < count; i++) {
-      const working = display.map ? display.map[i] : i
-      hues[i] = preview ? -1 : faceHighlight && selectedFaceTriangles.value.has(working) ? 40 : bodyHue
-    }
-    return [{ id: b.id, positions: flat.positions, normals: flat.normals, hues, color:preview?solidMaterialRgb(preview===2?(extrusionMode.value==='difference'?'#ff647c':'#75e4b8'):b.id==='preview-split'?'#ffc977':'#77eac5'):b.material?solidMaterialRgb(b.material.color):undefined, metallic:preview?0:b.material?.metallic,roughness:b.material?.roughness,opacity:preview?(preview===2?.28:.45):b.material?.opacity }]
-  })
-  void surfaceDisplayVersion.value
-  const retainedSurfaceMeshes=new Map<PolygonMesh,ReturnType<typeof smoothTriangleList>>()
-  const surfaceItems=[...(document.value.surfaces??[]).filter(item=>objectInView(item.id)&&!(hideSelected&&advancedSurfaceIds.value.includes(item.id))).map(item=>({item,preview:false})),...(advancedPreview.value.document?.surfaces??[]).filter(item=>advancedSurfaceIds.value.includes(item.id)).map(item=>({item,preview:true}))]
-  for(const {item,preview} of surfaceItems){
-    const mesh=surfaceDisplayQueue.get(item)
-    if(!mesh)continue
-    const flat=surfaceGpuCache.get(mesh)??smoothTriangleList(mesh.positions,mesh.indices)
-    retainedSurfaceMeshes.set(mesh,flat)
-    bodies.push({id:item.id,positions:flat.positions,normals:flat.normals,hues:new Float32Array(mesh.indices.length/3).fill(!preview&&selectedIds.value.includes(item.id)?266:-1),color:preview?[.467,.918,.773]:[.192,.373,.447],metallic:undefined,roughness:undefined,opacity:preview ? .45 : .72})
-  }
-  surfaceGpuCache=retainedSurfaceMeshes
-  return bodies
-})
-watch(gpuBodies, bodies => gpuLayer?.setBodies(bodies), { flush: 'post' })
-watchEffect(() => {
-  if (!gpuActive.value) return
-  const size = views.value['3d'], center = centers.value['3d']
-  gpuLayer?.setView({ camera: camera.value, viewBox: [center[0] - size / 2, center[1] - size / 2, size] })
-})
-watch(gpuActive, active => { if (active && gpuLayer) gpuLayer.setBodies(gpuBodies.value) })
-function meshPolygons(b: ReturnType<typeof directExtrusionTool>,preview=0,projectPoint=createDirectProjector(camera.value),world=false) {
-  const display: DisplayMesh = cameraDragging.value || gpuActive.value ? { ...COARSE_DISPLAY, mesh: b.mesh, normals: world?triangleNormals(b.mesh):[] } : displayMeshFor(b)
-  const closed = display.closed ?? (b.brep?.shells.some(s=>!s.closed) ? displayQueue.get(b)?.workClosed : null)
-  const allClosed = !!b.brep?.shells.length && b.brep.shells.every(s=>s.closed)
-  const mesh = display.mesh, pos = mesh.positions, vertCount = pos.length / 3
-  const points = new Array<[number, number, number]>(vertCount)
-  for (let v = 0, o = 0; v < vertCount; v++, o += 3) points[v] = projectPoint([pos[o], pos[o + 1], pos[o + 2]])
-  const indices = mesh.indices, triCount = indices.length / 3
-  const out: Array<{ preview: number; surface: boolean; normal: number[]; closed: boolean; vertices: [number, number, number][]; id: string; material: typeof b.material; triangle: number; key: string; points: string; shade: number; depth: number }> = []
-  const checkBackface = !world && !preview && (b.material?.opacity ?? 1) === 1
-  for (let i = 0, o = 0; i < triCount; i++, o += 3) {
-    const p0 = points[indices[o]], p1 = points[indices[o + 1]], p2 = points[indices[o + 2]]
-    const isClosed = closed?.[i] ?? allClosed
-    if (checkBackface && isClosed && (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) <= 0) continue
-    const triangle = display.map ? display.map[i] : i
-    const face = [p0, p1, p2]
-    out.push({
-      preview, surface: false, normal: display.normals[i], closed: isClosed, vertices: face, id: b.id, material: b.material, triangle,
-      key: b.id + ':' + i, points: `${p0[0]},${p0[1]} ${p1[0]},${p1[1]} ${p2[0]},${p2[1]}`,
-      shade: world ? 0 : display.map ? shadeFromNormal(display.normals[i], projectPoint) : directFaceShade(mesh, i, camera.value, projectPoint),
-      depth: p0[2] + p1[2] + p2[2],
-    })
-  }
-  return out
-}
-/**
- * While the GPU layer draws the scene, these thousands of polygons are transparent hit
- * targets and nothing more. Re-projecting and re-rendering them mid-orbit costs more
- * than a frame and changes nothing anyone can see, so they are held still until the
- * camera settles, then rebuilt once for picking.
- */
-const worldPointProjection=(p:number[]):[number,number,number]=>[p[0],p[1],p[2]??0]
-const cpuTransparency=computed(()=>{
- if(gpuActive.value)return null
- const bodies=[...renderBodies.value.filter(b=>!advancedPreview.value.document||!advancedBodyIds.value.has(b.id)).map(b=>({b,preview:0})),...(advancedPreview.value.document?.bodies??[]).filter(b=>advancedBodyIds.value.has(b.id)).map(b=>({b,preview:1})),...(!previewReplacesTarget.value&&previewBody.value?[{b:previewBody.value,preview:2}]:[])]
- const surfaces=[...(document.value.surfaces??[]).filter(item=>objectInView(item.id)&&(!advancedPreview.value.document||!advancedSurfaceIds.value.includes(item.id))).map(item=>({item,preview:0})),...(advancedPreview.value.document?.surfaces??[]).filter(item=>advancedSurfaceIds.value.includes(item.id)).map(item=>({item,preview:1}))]
- if(!surfaces.length&&!bodies.some(({b,preview})=>preview||(b.material?.opacity??1)<1))return null
- const items=[...bodies.flatMap(({b,preview})=>meshPolygons(b,preview,worldPointProjection,true)),...surfaces.flatMap(({item,preview})=>{void surfaceDisplayVersion.value;const mesh=surfaceDisplayQueue.get(item);return mesh?meshPolygons({id:item.id,name:item.name,mesh},preview,worldPointProjection,true).map(p=>({...p,surface:true})):[]})]
- try{return {items,tree:new TransparentBsp(items.map(p=>({owner:p.key,triangle:p.vertices as unknown as [Vec3,Vec3,Vec3]})))}}catch{return {items,tree:null}}
-})
-let restingPolygons: ReturnType<typeof meshPolygons> = []
-const polygonView = computed(() => {
-  let limited=false
-  if (gpuActive.value && (cameraDragging.value || settling.value) && restingPolygons.length) return {items:restingPolygons,limited}
-  const projectPoint=createDirectProjector(camera.value)
-  const transparent=cpuTransparency.value
-  if(!transparent?.tree){
-  restingPolygons = renderBodies.value.flatMap(b=>meshPolygons(b,0,projectPoint)).sort((a, b) => a.depth - b.depth)
-
-  }
-  if(transparent){
-   limited=!transparent.tree
-   {
-    const source=new Map(transparent.items.map(p=>[p.key,p])),direction=[Math.sin(camera.value.yaw)*Math.cos(camera.value.pitch),Math.cos(camera.value.yaw)*Math.cos(camera.value.pitch),Math.sin(camera.value.pitch)] as Vec3
-    let fragments
-    try{fragments=transparent.tree?.ordered(direction)}catch{limited=true}
-    restingPolygons=(fragments??transparent.items.map(p=>({owner:p.key,triangle:p.vertices}))).flatMap((fragment,i)=>{
-     const original=source.get(fragment.owner)!,vertices=fragment.triangle.map(p=>projectPoint([...p])),a=vertices[0],b=vertices[1],c=vertices[2]
-     if(original.closed&&!original.preview&&!original.surface&&(original.material?.opacity??1)===1&&(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])<=0)return []
-
-     return [{...original,key:original.key+':split:'+i,vertices,depth:vertices.reduce((sum,p)=>sum+p[2]/3,0),points:vertices.map(p=>p.slice(0,2).join(',')).join(' '),shade:shadeFromNormal(original.normal!,projectPoint)}]
-    })
-    if(limited)restingPolygons.sort((a,b)=>a.depth-b.depth)
-   }
-  }
-  return {items:restingPolygons,limited}
-})
-const polygons=computed(()=>polygonView.value.items)
-const cpuOrbitReady=ref(false)
-const cpuOrbitActive=computed(()=>!gpuActive.value&&cameraDragging.value&&polygons.value.length>1200)
-function polygonColor(p:typeof polygons.value[number]){return p.preview?(p.preview===2?(extrusionMode.value==='difference'?'#ff647c':'#75e4b8'):p.id==='preview-split'?'#ffc977':'#77eac5'):p.surface?(selectedIds.value.includes(p.id)?'#8061bd':'#315f72'):p.material&&!selectedIds.value.includes(p.id)&&hovered.value!==p.id&&!subtract.value?.a.includes(p.id)&&!subtract.value?.b.includes(p.id)?`rgb(${solidMaterialRgb(p.material.color).map(c=>c*255*p.shade/78).join(' ')})`:`hsl(${selectedBody.value?.id===p.id&&selectedFaceTriangles.value.has(p.triangle)&&pickMode.value==='face'?40:subtract.value?.a.includes(p.id)?45:subtract.value?.b.includes(p.id)?350:selectedIds.value.includes(p.id)?266:hovered.value===p.id?190:220} 45% ${p.shade}%)`}
-const cpuOrbitTriangles=computed(()=>cpuOrbitActive.value?polygons.value.map(p=>({vertices:p.vertices,
- color:polygonColor(p),
- opacity:p.preview?(p.preview===2?.28:.45):p.surface?.72:p.material?.opacity??1,stroke:!p.preview&&!p.surface&&(p.material?.opacity??1)===1
-})):[])
-
-
-const surfaceDisplayWorker=createSolidPreviewWorker(),surfaceDisplayQueue=new SolidSurfaceDisplayQueue(surfaceDisplayWorker)
-const surfaceDisplayPending=ref(false),surfaceDisplayVersion=ref(0),surfaceDisplayErrors=ref<{id:string;message:string}[]>([])
-let surfaceDisplayGeneration=0
-function cancelSurfaceDisplay(){surfaceDisplayGeneration++;surfaceDisplayQueue.cancel();surfaceDisplayPending.value=false}
-const surfaceDisplayNeedsRetry=computed(()=>{
- void surfaceDisplayVersion.value
- return !surfaceDisplayPending.value&&[...(document.value.surfaces??[]),...(advancedPreview.value.document?.surfaces??[])].some(item=>!surfaceDisplayQueue.get(item))
-})
-onUnmounted(()=>{cancelSurfaceDisplay();surfaceDisplayWorker.dispose();surfaceDisplayQueue.clear()})
-function surfacePolygons(item:SolidNurbsSurface){
- void surfaceDisplayVersion.value
- const mesh=surfaceDisplayQueue.get(item)
- return mesh?meshPolygons({id:item.id,name:item.name,mesh}):[]
-}
-let restingSurfacePolygons: ReturnType<typeof meshPolygons> = []
-const nurbsSurfacePolygons = computed(() => {
-  if (gpuActive.value && cameraDragging.value && restingSurfacePolygons.length) return restingSurfacePolygons
-  restingSurfacePolygons = !kernelReady.value ? [] : (document.value.surfaces ?? []).filter(item=>objectInView(item.id)).flatMap(item => {
-    return surfacePolygons(item).sort((a,b)=>a.depth-b.depth)
-  })
-  return restingSurfacePolygons
-})
 const nurbsCurvePaths = computed(() => (document.value.curves ?? []).filter(item=>objectInView(item.id)).map(item => ({
   id: item.id,
   points: curvePoints(item.curve).map(point => project([point[0], point[1], point[2] ?? 0], '3d').join(',')).join(' '),
@@ -1767,7 +1549,6 @@ const nativeCage = computed(() => {
  * stays, so the visible density is constant and nothing jumps.
  */
 const sketchGridStep = computed(() => grid.value * Math.pow(10, Math.max(0, Math.ceil(Math.log10(views.value['2d'] / (100 * grid.value))))))
-const ghostPolygons = computed(() => previewBody.value ? meshPolygons(previewBody.value,2).sort((a,b)=>a.depth-b.depth) : [])
 const extrusionHandle = computed(() => {
   if (operation.value !== 'extrude' || !selectedSketch.value) return null
   const p = selectedSketch.value.points, center = [p.reduce((s,v)=>s+v[0],0)/p.length,p.reduce((s,v)=>s+v[1],0)/p.length]
@@ -1912,7 +1693,7 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
     extraSelection.value=[]
     const body=document.value.bodies.find(b=>b.id===id)
     if(!body)return
-    const ready=topologyBody===body&&!topologyPending.value&&topologyRequest!==null
+    const ready=isTopologyReadyFor(body)
     const choose=(result:SolidTopology,allowDrag:boolean)=>{
       const candidate=result.faces.findIndex(f=>f.triangles.includes(triangle))
       if(candidate<0)return
@@ -1924,7 +1705,7 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
     }
     if(selection.value!==id)pickObject(id,pane)
     if(ready)choose(topology.value,true)
-    else {const request=prepareTopology(body),pick=++topologyPick;void request.then(result=>{if(result&&pick===topologyPick&&selectedBody.value===body)choose(result,false)})}
+    else {const request=prepareTopology(body),pick=nextTopologyPick();void request.then(result=>{if(result&&pick===getTopologyPick()&&selectedBody.value===body)choose(result,false)})}
     return
   }
   if(boxSelect.value&&e.button===0&&!pan){const p=position(e);selectionBox.value={start:p,end:p,pane};svg.setPointerCapture(e.pointerId);return}
@@ -1988,12 +1769,11 @@ function move(e: PointerEvent) {
       // both the kernel round trip and the reactive re-render of every polygon.
       const worldDelta=axisVector(g.axis).map(v=>v*distance) as Vec3
       g.delta=worldDelta
-      if(!dragNodes.length)dragNodes=collectDragNodes(g.svg,translationPreviewIds(selectedIds.value))
+      const previewIds=translationPreviewIds(selectedIds.value)
+      if(!hasDragNodes())setDragNodes(collectDragNodes(g.svg,previewIds))
       const origin=project([0,0,0],'3d'),shifted=project(worldDelta,'3d')
       const offset=`translate(${shifted[0]-origin[0]},${shifted[1]-origin[1]})`
-      for(const node of dragNodes)node.setAttribute('transform',offset)
-      dragOffsetIds=translationPreviewIds(selectedIds.value)
-      gpuLayer?.setDragOffset(dragOffsetIds,worldDelta as [number,number,number])
+      applyDragPreviewTransform(offset,previewIds,worldDelta as [number,number,number])
       return
     }
     requestGizmoTransform(g.before,g.axis,g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1);return
@@ -2047,13 +1827,12 @@ function move(e: PointerEvent) {
       : delta) as Vec3
     gesture.bodyDrag = { ids, delta: worldDelta }
     // The DOM-less test renderer has no query API; the drag still commits on release.
-    if (!dragNodes.length) dragNodes = collectDragNodes(gesture.svg, translationPreviewIds(ids))
+    const previewIds = translationPreviewIds(ids)
+    if (!hasDragNodes()) setDragNodes(collectDragNodes(gesture.svg, previewIds))
     const origin = project([0, 0, 0], '3d'), shifted = project(worldDelta as unknown as Vec3, '3d')
     const offset = `translate(${shifted[0] - origin[0]},${shifted[1] - origin[1]})`
-    for (const node of dragNodes) node.setAttribute('transform', offset)
     // The visible surface comes from the GPU layer; move it in place, not by rebuilding.
-    dragOffsetIds = translationPreviewIds(ids)
-    gpuLayer?.setDragOffset(dragOffsetIds, worldDelta as [number, number, number])
+    applyDragPreviewTransform(offset, previewIds, worldDelta as [number, number, number])
     return
   }
   gesture.workerEdit=true
@@ -2224,73 +2003,12 @@ watch(()=>[props.open,kernelReady.value,selectedBody.value,document.value],()=>{
 watch(()=>[props.open,kernelReady.value,selectedBody.value,document.value,pickMode.value],()=>void refreshBodyEdges(),{immediate:true,flush:'post'})
 
 watch(()=>[props.open,document.value,selectedBody.value,faceIndex.value],()=>cancelFaceSketch(),{flush:'sync'})
-
-const supportSnapSketches=computed<DirectSketch[]>(()=>workplaneOutline.value.map((points,i)=>({id:`support-${i}`,name:'Support',closed:true,points:points.map(p=>[p[0],p[1]] as Point2)})))
-const snapSketches=computed(()=>[...snapDocument.value.sketches.filter(s=>objectInView(s.id)),...supportSnapSketches.value])
-const sketchSnapsNeedRetry=computed(()=>{void sketchSnapVersion.value;return props.open&&snap.value&&geometrySnap.value&&!sketchSnapPending.value&&snapSketches.value.some(s=>!sketchSnapPreparation.get(s))})
-async function refreshSketchSnaps(){
- cancelSketchSnaps();sketchSnapErrors.value=[];snapSceneCache=undefined
- if(!props.open||!kernelReady.value||!snap.value||!geometrySnap.value)return
- const generation=sketchSnapGeneration;sketchSnapPending.value=snapSketches.value.length>0
- const result=await sketchSnapPreparation.prepare(snapSketches.value)
- if(generation!==sketchSnapGeneration)return
- sketchSnapVersion.value++;snapSceneCache=undefined;sketchSnapErrors.value=result.errors;sketchSnapPending.value=false
-}
 watch(()=>[props.open,kernelReady.value,snap.value,geometrySnap.value,snapSketches.value],()=>void refreshSketchSnaps(),{immediate:true,flush:'post'})
-const snapBodies=computed(()=>snapDocument.value.bodies.filter(b=>objectInView(b.id)))
-const snapPreparationNeedsRetry=computed(()=>{void snapPreparationVersion.value;return props.open&&snap.value&&geometrySnap.value&&!snapPreparationPending.value&&snapBodies.value.some(b=>!snapPreparation.get(b))})
-async function refreshSnapPreparation(){
- cancelSnapPreparation();snapSceneCache=undefined;snapPreparationErrors.value=[]
- if(!props.open||!kernelReady.value||!snap.value||!geometrySnap.value)return
- const generation=snapPreparationGeneration
- snapPreparationPending.value=snapBodies.value.length>0
- const result=await snapPreparation.prepare(snapBodies.value)
- if(generation!==snapPreparationGeneration)return
- snapPreparationVersion.value++;snapSceneCache=undefined;snapPreparationErrors.value=result.errors;snapPreparationPending.value=false
-}
 watch(()=>[props.open,kernelReady.value,snap.value,geometrySnap.value,snapBodies.value],()=>void refreshSnapPreparation(),{immediate:true,flush:'post'})
-
-const displayCurves=computed(()=>[...(document.value.curves??[]),...(advancedPreview.value.document?.curves??[])])
-const curveDisplayNeedsRetry=computed(()=>{void curveDisplayVersion.value;return !curveDisplayPending.value&&displayCurves.value.some(item=>!curveDisplayQueue.get(item))})
-async function refreshCurveDisplay(){
- cancelCurveDisplay();curveDisplayErrors.value=[]
- if(!props.open||!kernelReady.value)return
- const generation=curveDisplayGeneration
- curveDisplayPending.value=displayCurves.value.length>0
- const result=await curveDisplayQueue.prepare(displayCurves.value)
- if(generation!==curveDisplayGeneration)return
- if(result.changed)curveDisplayVersion.value++
- curveDisplayErrors.value=result.errors;curveDisplayPending.value=false
-}
 watch(()=>[props.open,tool.value,document.value,JSON.stringify(activePlane.value),JSON.stringify(draftPoint.value),JSON.stringify(draftPointValid.value),JSON.stringify(draftEnd.value),JSON.stringify(draftEndValid.value),slotWidth.value,slotWidthValid.value,numericSlotRetry.value],refreshNumericSlot,{flush:'sync'})
 watch(()=>[props.open,kernelReady.value,document.value],()=>void refreshSourceDisplay(),{immediate:true,flush:'post'})
 watch(()=>[props.open,kernelReady.value,displayCurves.value],()=>void refreshCurveDisplay(),{immediate:true,flush:'post'})
-
-const displayProfiles=computed(()=>[...document.value.sketches,...(advancedPreview.value.document?.sketches??[])].flatMap(s=>s.retainedProfile?[{id:s.id,profile:s.retainedProfile}]:[]))
-const profileDisplayNeedsRetry=computed(()=>{void profileDisplayVersion.value;return !profileDisplayPending.value&&displayProfiles.value.some(item=>!profileDisplayQueue.get(item))})
-async function refreshProfileDisplay(){
- cancelProfileDisplay();profileDisplayErrors.value=[]
- if(!props.open||!kernelReady.value)return
- const generation=profileDisplayGeneration
- profileDisplayPending.value=displayProfiles.value.length>0
- const result=await profileDisplayQueue.prepare(displayProfiles.value)
- if(generation!==profileDisplayGeneration)return
- if(result.changed)profileDisplayVersion.value++
- profileDisplayErrors.value=result.errors;profileDisplayPending.value=false
-}
 watch(()=>[props.open,kernelReady.value,displayProfiles.value],()=>void refreshProfileDisplay(),{immediate:true,flush:'post'})
-
-async function refreshSurfaceDisplay(){
- cancelSurfaceDisplay();surfaceDisplayErrors.value=[]
- if(!props.open||!kernelReady.value)return
- const generation=surfaceDisplayGeneration
- const items=[...(document.value.surfaces??[]),...(advancedPreview.value.document?.surfaces??[])]
- surfaceDisplayPending.value=items.length>0
- const result=await surfaceDisplayQueue.prepare(items)
- if(generation!==surfaceDisplayGeneration)return
- if(result.changed)surfaceDisplayVersion.value++
- surfaceDisplayErrors.value=result.errors;surfaceDisplayPending.value=false
-}
 watch(()=>[props.open,kernelReady.value,document.value.surfaces,advancedPreview.value.document?.surfaces],()=>void refreshSurfaceDisplay(),{immediate:true,flush:'post'})
 
 watchEffect(onCleanup=>{
@@ -2401,6 +2119,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
+        <label class="file-row">{{ label('Проверка manifold при импорте', 'Manifold inspection on import') }}
+          <select v-model="meshRepairMode" :aria-label="label('Режим repair при импорте', 'Import repair mode')">
+            <option value="none">{{ label('Только проверка', 'Check only') }}</option>
+            <option value="conservative">Conservative</option>
+            <option value="full">Full · {{ label('зашивка отверстий', 'fill holes') }}</option>
+          </select>
+        </label>
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
         <button type="button" :disabled="svgBusy" @click="svgInput?.click()">{{ label('Импорт SVG как профили', 'Import SVG as profiles') }}</button>
         <button v-if="draftConflict" type="button" :disabled="loadingLatestDraft" @click="loadLatestDraft">{{ label('Загрузить сохранённую версию · локальная останется в Undo','Load saved version · keep local in Undo') }}</button>
@@ -3201,6 +2926,17 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <section v-if="selectedBody" class="body-diagnostics" :aria-label="label('Измерения','Measurements')">
         <button @click="measurementOpen=!measurementOpen" :aria-pressed="measurementOpen">{{ label('Измерения','Measurements') }}</button>
         <template v-if="measurementOpen">
+          <fieldset class="manifold-metrics" data-testid="manifold-metrics" :aria-label="label('Метрики manifold-сетки','Manifold mesh metrics')">
+            <legend>{{ label('Текущая сетка · Manifold','Current mesh · Manifold') }}</legend>
+            <small v-if="manifoldMetricsPending" role="status">{{ label('Вычисляю метрики сетки…','Computing mesh metrics…') }}</small>
+            <template v-if="manifoldMetrics?.value">
+              <output>V = {{ manifoldMetrics.value.signedVolume.toFixed(6) }} mm³ · A = {{ manifoldMetrics.value.surfaceArea.toFixed(6) }} mm²</output>
+              <small>χ = {{ manifoldMetrics.value.eulerCharacteristic }} · {{ label('компонент','components') }}: {{ manifoldMetrics.value.componentCount }} · {{ label('замкнутая','watertight') }}: {{ manifoldMetrics.value.watertight ? label('да','yes') : label('нет','no') }}</small>
+              <small>{{ label('Род компонент','Component genus') }}: {{ manifoldMetrics.value.components.map(component => component.genus ?? '—').join(', ') }}</small>
+            </template>
+            <p v-if="manifoldMetrics?.error" role="alert">{{ manifoldMetrics.error }}</p>
+            <button v-if="manifoldMetricsRetryVisible" @click="manifoldMetricsRevision++">{{ label('Повторить метрики сетки','Retry mesh metrics') }}</button>
+          </fieldset>
           <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-invalid="!vertexAValid" :aria-describedby="!vertexAValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина A','Vertex A')"></label>
           <label v-if="!materialPathOpen">{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>
           <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-invalid="!vertexBValid" :aria-describedby="!vertexBValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина B','Vertex B')"></label>
