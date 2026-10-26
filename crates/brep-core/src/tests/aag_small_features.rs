@@ -255,38 +255,48 @@ fn small_feature_scan_scales_toward_ten_thousand_faces() {
             model.shells.len(),
         );
         model.vertices.extend(unit.vertices.iter().cloned());
-        model.edges.extend(unit.edges.iter().map(|edge| crate::Edge {
-            degenerate: edge.degenerate,
-            vertices: [edge.vertices[0] + v, edge.vertices[1] + v],
-            curve: edge.curve.clone(),
+        model
+            .edges
+            .extend(unit.edges.iter().map(|edge| crate::Edge {
+                degenerate: edge.degenerate,
+                vertices: [edge.vertices[0] + v, edge.vertices[1] + v],
+                curve: edge.curve.clone(),
+            }));
+        model.loops.extend(unit.loops.iter().map(|wire| {
+            crate::Loop {
+                coedges: wire
+                    .coedges
+                    .iter()
+                    .map(|c| crate::Coedge::new(c.edge + e, c.reversed, c.pcurve.clone()))
+                    .collect(),
+            }
         }));
-        model.loops.extend(unit.loops.iter().map(|wire| crate::Loop {
-            coedges: wire
-                .coedges
-                .iter()
-                .map(|c| crate::Coedge::new(c.edge + e, c.reversed, c.pcurve.clone()))
-                .collect(),
+        model
+            .faces
+            .extend(unit.faces.iter().map(|face| crate::Face {
+                surface: face.surface.clone(),
+                outer: face.outer + l,
+                holes: face.holes.iter().map(|hole| hole + l).collect(),
+            }));
+        model.shells.extend(unit.shells.iter().map(|shell| {
+            Shell {
+                faces: shell
+                    .faces
+                    .iter()
+                    .map(|use_| brep_topology::FaceUse {
+                        face: use_.face + f,
+                        reversed: use_.reversed,
+                    })
+                    .collect(),
+                closed: shell.closed,
+            }
         }));
-        model.faces.extend(unit.faces.iter().map(|face| crate::Face {
-            surface: face.surface.clone(),
-            outer: face.outer + l,
-            holes: face.holes.iter().map(|hole| hole + l).collect(),
-        }));
-        model.shells.extend(unit.shells.iter().map(|shell| Shell {
-            faces: shell
-                .faces
-                .iter()
-                .map(|use_| brep_topology::FaceUse {
-                    face: use_.face + f,
-                    reversed: use_.reversed,
-                })
-                .collect(),
-            closed: shell.closed,
-        }));
-        model.bodies.extend(unit.bodies.iter().map(|body| brep_topology::Body {
-            outer_shell: body.outer_shell + s,
-            inner_shells: body.inner_shells.iter().map(|shell| shell + s).collect(),
-        }));
+        model
+            .bodies
+            .extend(unit.bodies.iter().map(|body| brep_topology::Body {
+                outer_shell: body.outer_shell + s,
+                inner_shells: body.inner_shells.iter().map(|shell| shell + s).collect(),
+            }));
     }
     assert_eq!(model.faces.len(), copies * 6);
 

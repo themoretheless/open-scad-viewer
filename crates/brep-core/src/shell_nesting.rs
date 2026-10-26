@@ -18,111 +18,235 @@ pub struct Report {
     /// Does not assert that shells have the correct geometric orientation.
     pub roles_consistent: Option<bool>,
 }
-pub fn inspect(model: &Model, tolerance_mm: f64, tolerance_uv: f64,
-    max_pairs: usize, max_cells: usize, max_domain_cells: usize) -> Result<Report> {
-    inspect_with_boundary(model,tolerance_mm,tolerance_uv,max_pairs,max_cells,max_domain_cells,None)
+pub fn inspect(
+    model: &Model,
+    tolerance_mm: f64,
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<Report> {
+    inspect_with_boundary(
+        model,
+        tolerance_mm,
+        tolerance_uv,
+        max_pairs,
+        max_cells,
+        max_domain_cells,
+        None,
+    )
 }
-pub(crate) fn inspect_with_boundary(model:&Model,tolerance_mm:f64,tolerance_uv:f64,
-    max_pairs:usize,max_cells:usize,max_domain_cells:usize,boundary:Option<&crate::boundary_embedding::Report>)->Result<Report> {
+pub(crate) fn inspect_with_boundary(
+    model: &Model,
+    tolerance_mm: f64,
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+    max_domain_cells: usize,
+    boundary: Option<&crate::boundary_embedding::Report>,
+) -> Result<Report> {
     model.validate()?;
     let n = model.shells.len();
-    if n == 0 || n > 448 || model.shells.iter().any(|s| !s.closed || s.faces.is_empty())
+    if n == 0
+        || n > 448
+        || model.shells.iter().any(|s| !s.closed || s.faces.is_empty())
         || !(1..=100000).contains(&max_pairs)
         || !(2..=1000000).contains(&max_cells)
         || !(2..=8000000).contains(&max_domain_cells)
-        || !tolerance_mm.is_finite() || tolerance_mm <= 0.
-        || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        || !tolerance_mm.is_finite()
+        || tolerance_mm <= 0.
+        || !tolerance_uv.is_finite()
+        || tolerance_uv <= 0.
     {
-        return Err(Error::new("BREP_INVALID_INPUT", "Nesting requires nonempty closed shells, positive tolerances and bounded work"));
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Nesting requires nonempty closed shells, positive tolerances and bounded work",
+        ));
     }
-    let total_pairs = n*(n-1)/2;
-    let mut out = Report { pairs: Vec::with_capacity(total_pairs.min(max_pairs)), total_pairs, cells: 0, domain_cells: 0, parents: None, roles_consistent: None };
-    let shells = (0..n).map(|i| solid_audit::isolated_outward_shell(model,i,false)).collect::<Result<Vec<_>>>()?;
+    let total_pairs = n * (n - 1) / 2;
+    let mut out = Report {
+        pairs: Vec::with_capacity(total_pairs.min(max_pairs)),
+        total_pairs,
+        cells: 0,
+        domain_cells: 0,
+        parents: None,
+        roles_consistent: None,
+    };
+    let shells = (0..n)
+        .map(|i| solid_audit::isolated_outward_shell(model, i, false))
+        .collect::<Result<Vec<_>>>()?;
     // Index only this invocation's fresh complete proof. Keep the exact
     // separation predicates; avoid rescanning every record for every face pair.
-    let separation_index = boundary.filter(|proof| proof.proven
-        && proof.intersections.pairs.all_pairs_classified
-        && proof.intersections.pairs.next_pair.is_none()).map(|proof| {
-        let pairs = &proof.intersections.pairs;
-        let individual = pairs.pairs.iter()
-            .filter(|p| p.reason == "pair-disjoint" && p.boundary.is_none())
-            .map(|p| (p.faces[0].min(p.faces[1]), p.faces[0].max(p.faces[1])))
-            .collect::<std::collections::HashSet<_>>();
-        let mut groups = std::collections::HashMap::<usize, Vec<_>>::new();
-        for group in &pairs.disjoint_groups {
-            // These are fresh original-pole certificates from this invocation.
-            // Oblique groups carry their outward-rounded projected intervals;
-            // they prove the same strict separation as coordinate groups.
-            let separated=if group.axis<3 {
-                if group.first_before_range {group.first_bounds[group.axis][1]<group.range_bounds[group.axis][0]}
-                else {group.range_bounds[group.axis][1]<group.first_bounds[group.axis][0]}
-            }else{group.projection.as_ref().is_some_and(|p|
-                if group.first_before_range {p.first_bounds[1]<p.range_bounds[0]}
-                else {p.range_bounds[1]<p.first_bounds[0]})};
-            if group.range[0]>group.face && separated {
-                groups.entry(group.face).or_default().push(group.range);
+    let separation_index = boundary
+        .filter(|proof| {
+            proof.proven
+                && proof.intersections.pairs.all_pairs_classified
+                && proof.intersections.pairs.next_pair.is_none()
+        })
+        .map(|proof| {
+            let pairs = &proof.intersections.pairs;
+            let individual = pairs
+                .pairs
+                .iter()
+                .filter(|p| p.reason == "pair-disjoint" && p.boundary.is_none())
+                .map(|p| (p.faces[0].min(p.faces[1]), p.faces[0].max(p.faces[1])))
+                .collect::<std::collections::HashSet<_>>();
+            let mut groups = std::collections::HashMap::<usize, Vec<_>>::new();
+            for group in &pairs.disjoint_groups {
+                // These are fresh original-pole certificates from this invocation.
+                // Oblique groups carry their outward-rounded projected intervals;
+                // they prove the same strict separation as coordinate groups.
+                let separated = if group.axis < 3 {
+                    if group.first_before_range {
+                        group.first_bounds[group.axis][1] < group.range_bounds[group.axis][0]
+                    } else {
+                        group.range_bounds[group.axis][1] < group.first_bounds[group.axis][0]
+                    }
+                } else {
+                    group.projection.as_ref().is_some_and(|p| {
+                        if group.first_before_range {
+                            p.first_bounds[1] < p.range_bounds[0]
+                        } else {
+                            p.range_bounds[1] < p.first_bounds[0]
+                        }
+                    })
+                };
+                if group.range[0] > group.face && separated {
+                    groups.entry(group.face).or_default().push(group.range);
+                }
             }
+            (individual, groups)
+        });
+    let mut inside = vec![vec![false; n]; n];
+    for a in 0..n {
+        for b in a + 1..n {
+            if out.pairs.len() == max_pairs
+                || max_cells - out.cells < 2
+                || max_domain_cells - out.domain_cells < 2
+            {
+                return Ok(out);
+            }
+            let remaining = total_pairs - out.pairs.len();
+            let pair_cells = ((max_cells - out.cells) / remaining).max(2);
+            let pair_domains = ((max_domain_cells - out.domain_cells) / remaining).max(2);
+            let separated = separation_index
+                .as_ref()
+                .is_some_and(|(individual, groups)| {
+                    model.shells[a].faces.iter().all(|fa| {
+                        model.shells[b].faces.iter().all(|fb| {
+                            let first = fa.face.min(fb.face);
+                            let second = fa.face.max(fb.face);
+                            individual.contains(&(first, second))
+                                || groups.get(&first).is_some_and(|ranges| {
+                                    ranges
+                                        .iter()
+                                        .any(|range| range[0] <= second && second < range[1])
+                                })
+                        })
+                    })
+                });
+            let r = if separated {
+                shell_relation::inspect_certified_boundaries(
+                    &shells[a],
+                    &shells[b],
+                    tolerance_uv,
+                    pair_cells,
+                    pair_domains,
+                )?
+            } else {
+                shell_relation::inspect(
+                    &shells[a],
+                    &shells[b],
+                    tolerance_mm,
+                    tolerance_uv,
+                    pair_cells,
+                    pair_domains,
+                )?
+            };
+            out.cells += r.boundary.cells
+                + r.witness_parity
+                    .iter()
+                    .flatten()
+                    .map(|p| p.cells)
+                    .sum::<usize>();
+            out.domain_cells += r.boundary.domain_cells
+                + r.witness_parity
+                    .iter()
+                    .flatten()
+                    .map(|p| p.domain_cells)
+                    .sum::<usize>();
+            out.pairs.push(Pair {
+                shells: [a, b],
+                result: r,
+            });
         }
-        (individual, groups)
-    });
-    let mut inside = vec![vec![false;n];n];
-    for a in 0..n { for b in a+1..n {
-        if out.pairs.len() == max_pairs || max_cells-out.cells < 2 || max_domain_cells-out.domain_cells < 2 {
+    }
+    for pair in &out.pairs {
+        let [a, b] = pair.shells;
+        let Some(ab) = pair.result.witness_parity[0]
+            .as_ref()
+            .and_then(|r| r.parity)
+        else {
+            return Ok(out);
+        };
+        let Some(ba) = pair.result.witness_parity[1]
+            .as_ref()
+            .and_then(|r| r.parity)
+        else {
+            return Ok(out);
+        };
+        if ab && ba {
             return Ok(out);
         }
-        let remaining = total_pairs-out.pairs.len();
-        let pair_cells=((max_cells-out.cells)/remaining).max(2);
-        let pair_domains=((max_domain_cells-out.domain_cells)/remaining).max(2);
-        let separated = separation_index.as_ref().is_some_and(|(individual, groups)| {
-            model.shells[a].faces.iter().all(|fa| model.shells[b].faces.iter().all(|fb| {
-                let first = fa.face.min(fb.face);
-                let second = fa.face.max(fb.face);
-                individual.contains(&(first, second))
-                    || groups.get(&first).is_some_and(|ranges| ranges.iter()
-                        .any(|range| range[0] <= second && second < range[1]))
-            }))
-        });
-        let r=if separated {
-            shell_relation::inspect_certified_boundaries(&shells[a],&shells[b],tolerance_uv,pair_cells,pair_domains)?
-        } else {shell_relation::inspect(&shells[a],&shells[b],tolerance_mm,tolerance_uv,pair_cells,pair_domains)?};
-        out.cells += r.boundary.cells + r.witness_parity.iter().flatten().map(|p|p.cells).sum::<usize>();
-        out.domain_cells += r.boundary.domain_cells + r.witness_parity.iter().flatten().map(|p|p.domain_cells).sum::<usize>();
-        out.pairs.push(Pair { shells: [a,b], result: r });
-    }}
-    for pair in &out.pairs {
-        let [a,b] = pair.shells;
-        let Some(ab) = pair.result.witness_parity[0].as_ref().and_then(|r|r.parity) else {return Ok(out)};
-        let Some(ba) = pair.result.witness_parity[1].as_ref().and_then(|r|r.parity) else {return Ok(out)};
-        if ab && ba { return Ok(out); }
-        inside[a][b] = ab; inside[b][a] = ba;
+        inside[a][b] = ab;
+        inside[b][a] = ba;
     }
-    let mut parents = vec![None;n];
+    let mut parents = vec![None; n];
     for i in 0..n {
-        let containers: Vec<_> = (0..n).filter(|&j|inside[i][j]).collect();
+        let containers: Vec<_> = (0..n).filter(|&j| inside[i][j]).collect();
         // Containers must form a chain, and every inclusion must be transitive.
-        for &a in &containers { for b in 0..n {
-            if inside[a][b] && !inside[i][b] { return Ok(out); }
-        }}
-        for (k,&a) in containers.iter().enumerate() { for &b in &containers[k+1..] {
-            if !inside[a][b] && !inside[b][a] { return Ok(out); }
-        }}
-        parents[i] = containers.iter().copied().find(|&a|containers.iter().all(|&b|a==b||inside[a][b]));
-        if !containers.is_empty() && parents[i].is_none() {return Ok(out)}
+        for &a in &containers {
+            for b in 0..n {
+                if inside[a][b] && !inside[i][b] {
+                    return Ok(out);
+                }
+            }
+        }
+        for (k, &a) in containers.iter().enumerate() {
+            for &b in &containers[k + 1..] {
+                if !inside[a][b] && !inside[b][a] {
+                    return Ok(out);
+                }
+            }
+        }
+        parents[i] = containers
+            .iter()
+            .copied()
+            .find(|&a| containers.iter().all(|&b| a == b || inside[a][b]));
+        if !containers.is_empty() && parents[i].is_none() {
+            return Ok(out);
+        }
     }
-    let mut owner = vec![None;n];
-    let mut cavity = vec![false;n];
+    let mut owner = vec![None; n];
+    let mut cavity = vec![false; n];
     let mut consistent = true;
-    for (body_id,body) in model.bodies.iter().enumerate() {
-        if owner[body.outer_shell].replace(body_id).is_some() {consistent=false;}
+    for (body_id, body) in model.bodies.iter().enumerate() {
+        if owner[body.outer_shell].replace(body_id).is_some() {
+            consistent = false;
+        }
         for &inner in &body.inner_shells {
-            if owner[inner].replace(body_id).is_some() {consistent=false;}
-            cavity[inner]=true;
+            if owner[inner].replace(body_id).is_some() {
+                consistent = false;
+            }
+            cavity[inner] = true;
             consistent &= parents[inner] == Some(body.outer_shell);
         }
     }
     consistent &= owner.iter().all(Option::is_some);
     for body in &model.bodies {
-        if let Some(parent) = parents[body.outer_shell] {consistent &= cavity[parent];}
+        if let Some(parent) = parents[body.outer_shell] {
+            consistent &= cavity[parent];
+        }
     }
     out.parents = Some(parents);
     out.roles_consistent = Some(consistent);

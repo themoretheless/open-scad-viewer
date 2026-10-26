@@ -1,5 +1,9 @@
 use super::*;
 
+#[path = "../../../manifold-core/tests/support/property_rng.rs"]
+mod property_rng;
+use property_rng::Rng;
+
 /// Leak a copy of `data` into a raw buffer, mimicking a host upload.
 /// `read_pod` copies out of it; the buffer is reclaimed by `reclaim`.
 fn upload<T: Copy>(data: &[T]) -> (usize, usize) {
@@ -241,7 +245,11 @@ fn manifold_boolean_unions_overlapping_boxes() {
     let (aip, ail) = upload(&ai);
     let (bvp, bvl) = upload(&bp);
     let (bip, bil) = upload(&bi);
-    unsafe { abi_manifold_boolean(avp, avl, aip, ail, FMT_F64, bvp, bvl, bip, bil, FMT_F64, 0) };
+    unsafe {
+        abi_manifold_boolean(
+            avp, avl, aip, ail, FMT_F64, bvp, bvl, bip, bil, FMT_F64, 0, 0.0, 1e-9,
+        )
+    };
     let response = unsafe { take_response() };
     let handle = response_handle(&response);
     unsafe {
@@ -313,5 +321,100 @@ fn manifold_repair_full_fills_open_box_top() {
         abi_array_free(handle);
         reclaim::<f64>(vp, vl);
         reclaim::<u32>(ip, il);
+    }
+}
+
+fn caught_response(call: impl FnOnce() -> u64) -> Value {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        call();
+        unsafe { take_response() }
+    })) {
+        Ok(response) => response,
+        Err(error) => std::panic::resume_unwind(error),
+    }
+}
+
+fn assert_invalid_transport(response: &Value, case: usize, operation: usize) {
+    if response["ok"].as_bool() == Some(true) {
+        let handle = response_handle(response);
+        unsafe { abi_array_free(handle) };
+        panic!("case {case}, operation {operation}: malformed input succeeded")
+    }
+    assert_eq!(
+        response["error"]["code"].as_str(),
+        Some("GEOMETRY_INVALID_INPUT"),
+        "case {case}, operation {operation}: {response:?}"
+    );
+}
+
+#[test]
+fn manifold_abi_fuzz_rejects_bad_buffers_without_handle_leaks() {
+    let baseline = mesh_analysis::live_result_count();
+    let mut rng = Rng::for_property(0x5EED_2002);
+    for case in 0..500 {
+        let vertex_count = 1 + rng.below(12);
+        let triangle_count = 1 + rng.below(16);
+        let mut positions = Vec::with_capacity(vertex_count * 3);
+        for _ in 0..vertex_count * 3 {
+            positions.push(rng.coord());
+        }
+        let mut indices = Vec::with_capacity(triangle_count * 3);
+        for _ in 0..triangle_count * 3 {
+            indices.push(rng.below(vertex_count) as u32);
+        }
+        let mutation = case % 10;
+        match mutation {
+            0 => {
+                positions.pop();
+            }
+            1 => indices.push(0),
+            2 => {
+                let index = rng.below(positions.len());
+                positions[index] = f64::NAN;
+            }
+            3 => {
+                let index = rng.below(positions.len());
+                positions[index] = f64::NEG_INFINITY;
+            }
+            4 => {
+                let index = rng.below(indices.len());
+                indices[index] = (vertex_count + 1) as u32;
+            }
+            _ => {}
+        }
+        let (vp, vl) = upload(&positions);
+        let (ip, il) = upload(&indices);
+        let fmt = if mutation == 5 { 7 } else { FMT_F64 };
+        let call_vp = if mutation == 6 { 0 } else { vp };
+        let call_ip = if mutation == 7 { 0 } else { ip };
+        let call_vl = if mutation == 8 {
+            vertex_limit(fmt, LIMIT) + 1
+        } else {
+            vl
+        };
+        let call_il = if mutation == 9 { LIMIT / 4 + 1 } else { il };
+        for operation in 0..4 {
+            let response = caught_response(|| unsafe {
+                match operation {
+                    0 => abi_manifold_check(call_vp, call_vl, call_ip, call_il, fmt),
+                    1 => abi_manifold_repair(call_vp, call_vl, call_ip, call_il, fmt, 0.0, 0),
+                    2 => abi_manifold_metrics(call_vp, call_vl, call_ip, call_il, fmt),
+                    _ => abi_manifold_boolean(
+                        call_vp, call_vl, call_ip, call_il, fmt, call_vp, call_vl, call_ip,
+                        call_il, fmt, 0, 0.0, 1e-9,
+                    ),
+                }
+            });
+            assert_invalid_transport(&response, case, operation);
+            assert_eq!(
+                mesh_analysis::live_result_count(),
+                baseline,
+                "case {case}, operation {operation}: result handle leaked"
+            );
+        }
+        unsafe {
+            reclaim::<f64>(vp, vl);
+            reclaim::<u32>(ip, il);
+        }
     }
 }

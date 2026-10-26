@@ -484,13 +484,25 @@ mod current_kernel_scope_tests {
 }
 
 mod periodic_chart_boundary_loops;
-pub use periodic_chart_boundary_loops::{OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits, own_periodic_chart_boundary_loops};
+pub use periodic_chart_boundary_loops::{
+    OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact,
+    OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits,
+    own_periodic_chart_boundary_loops,
+};
 
 mod periodic_chart_loop_winding;
-pub use periodic_chart_loop_winding::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
+pub use periodic_chart_loop_winding::{
+    OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding,
+};
 
 mod periodic_chart_fan_patches;
-pub use periodic_chart_fan_patches::{PeriodicChartFanPatchLimits, OwnedPeriodicChartFanPatches, own_periodic_chart_fan_patches};
+pub use periodic_chart_fan_patches::{
+    OwnedPeriodicChartFanPatches, PeriodicChartFanPatchLimits, own_periodic_chart_fan_patches,
+};
 
 mod periodic_sewn_faces;
-pub use periodic_sewn_faces::{PeriodicSewnFaceLimits, OriginalPeriodicSewnVertex, OriginalPeriodicSewnEdge, OriginalPeriodicSewnCoedge, OriginalPeriodicSewnFace, OwnedPeriodicSewnFaces, own_periodic_sewn_faces};
+pub use periodic_sewn_faces::{
+    OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge, OriginalPeriodicSewnFace,
+    OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces, PeriodicSewnFaceLimits,
+    own_periodic_sewn_faces,
+};

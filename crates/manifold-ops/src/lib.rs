@@ -126,12 +126,28 @@ impl std::fmt::Display for BooleanError {
 
 impl std::error::Error for BooleanError {}
 
-/// Default weld epsilon for pre/post repair (exact bitwise weld).
-const WELD_EPSILON: f64 = 0.0;
+/// Validated tolerances for operand repair and BSP classification.
+#[derive(Clone, Copy, Debug)]
+pub struct BooleanOptions {
+    /// Absolute mesh-unit epsilon used only when repair is necessary.
+    pub weld_epsilon: f64,
+    /// BSP tolerance relative to the longest combined input-bound side.
+    pub relative_tolerance: f64,
+}
+
+impl Default for BooleanOptions {
+    fn default() -> Self {
+        Self { weld_epsilon: 0.0, relative_tolerance: 1e-9 }
+    }
+}
+
+fn invalid_options(message: &'static str) -> BooleanError {
+    BooleanError::Kernel(math_core::Error { code: "GEOMETRY_INVALID_INPUT", message: message.into() })
+}
 
 /// Ensure `positions`/`indices` are strictly manifold, repairing in Full
 /// mode when necessary.
-fn admit(operand: usize, positions: &[f64], indices: &[usize]) -> Result<Admitted, BooleanError> {
+fn admit(operand: usize, positions: &[f64], indices: &[usize], weld_epsilon: f64) -> Result<Admitted, BooleanError> {
     let first = manifold_core::check(positions, indices);
     if first.is_manifold() {
         return Ok(Admitted {
@@ -140,7 +156,7 @@ fn admit(operand: usize, positions: &[f64], indices: &[usize]) -> Result<Admitte
             repair: None,
         });
     }
-    let out = manifold_core::repair_with_mode(positions, indices, WELD_EPSILON, RepairMode::Full);
+    let out = manifold_core::repair_with_mode(positions, indices, weld_epsilon, RepairMode::Full);
     if !out.is_manifold() {
         return Err(BooleanError::UnrepairableInput {
             operand,
@@ -160,7 +176,7 @@ struct Admitted {
     repair: Option<RepairReport>,
 }
 
-/// Boolean `a OP b` with guaranteed strictly manifold output.
+/// Boolean `a OP b` with guaranteed strictly manifold output and legacy tolerances.
 pub fn boolean_manifold(
     a_positions: &[f64],
     a_indices: &[usize],
@@ -168,8 +184,26 @@ pub fn boolean_manifold(
     b_indices: &[usize],
     op: BooleanOp,
 ) -> Result<BooleanOutcome, BooleanError> {
-    let a = admit(0, a_positions, a_indices)?;
-    let b = admit(1, b_positions, b_indices)?;
+    boolean_manifold_with_options(a_positions, a_indices, b_positions, b_indices, op, BooleanOptions::default())
+}
+
+/// Boolean with explicit repair and BSP tolerances; all geometry stays native.
+pub fn boolean_manifold_with_options(
+    a_positions: &[f64],
+    a_indices: &[usize],
+    b_positions: &[f64],
+    b_indices: &[usize],
+    op: BooleanOp,
+    options: BooleanOptions,
+) -> Result<BooleanOutcome, BooleanError> {
+    if !options.weld_epsilon.is_finite() || !(0.0..=1.0).contains(&options.weld_epsilon) {
+        return Err(invalid_options("Boolean weld epsilon must be finite and within 0..=1 mm"));
+    }
+    if !(1e-12..=1e-5).contains(&options.relative_tolerance) {
+        return Err(invalid_options("Boolean relative tolerance must be within 1e-12..=1e-5"));
+    }
+    let a = admit(0, a_positions, a_indices, options.weld_epsilon)?;
+    let b = admit(1, b_positions, b_indices, options.weld_epsilon)?;
 
     let to_mesh = |positions: Vec<f64>, indices: Vec<usize>| Mesh {
         positions,
@@ -180,7 +214,7 @@ pub fn boolean_manifold(
         &to_mesh(a.positions, a.indices),
         &to_mesh(b.positions, b.indices),
         op.into(),
-        &boolean::Options::default(),
+        &boolean::Options { relative_tolerance: options.relative_tolerance, ..boolean::Options::default() },
     )
     .map_err(BooleanError::Kernel)?;
 
@@ -190,7 +224,7 @@ pub fn boolean_manifold(
     let (positions, indices, output_report) = if report.is_manifold() {
         (built.mesh.positions, built.mesh.indices, report)
     } else {
-        let out = manifold_core::repair(&built.mesh.positions, &built.mesh.indices, WELD_EPSILON);
+        let out = manifold_core::repair(&built.mesh.positions, &built.mesh.indices, options.weld_epsilon);
         if !out.is_manifold() {
             return Err(BooleanError::NonManifoldOutput {
                 residual: Box::new(out.report.residual),
@@ -303,5 +337,25 @@ mod tests {
             err,
             BooleanError::UnrepairableInput { operand: 1, .. }
         ));
+    }
+
+    #[test]
+    fn explicit_tolerances_reach_bsp_and_invalid_values_are_rejected() {
+        let (ap, ai) = cube([0.0, 0.0, 0.0], 10.0);
+        let (bp, bi) = cube([5.0, 0.0, 0.0], 10.0);
+        let out = boolean_manifold_with_options(
+            &ap, &ai, &bp, &bi, BooleanOp::Union,
+            BooleanOptions { weld_epsilon: 1e-4, relative_tolerance: 1e-7 },
+        ).unwrap();
+        assert!((out.kernel_report.tolerance_mm - 1.5e-6).abs() < 1e-12);
+        for options in [
+            BooleanOptions { weld_epsilon: f64::NAN, ..BooleanOptions::default() },
+            BooleanOptions { weld_epsilon: 1.1, ..BooleanOptions::default() },
+            BooleanOptions { relative_tolerance: 0.0, ..BooleanOptions::default() },
+            BooleanOptions { relative_tolerance: 1e-4, ..BooleanOptions::default() },
+        ] {
+            let error = boolean_manifold_with_options(&ap, &ai, &bp, &bi, BooleanOp::Union, options).unwrap_err();
+            assert!(matches!(error, BooleanError::Kernel(ref e) if e.code == "GEOMETRY_INVALID_INPUT"));
+        }
     }
 }

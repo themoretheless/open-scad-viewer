@@ -217,9 +217,13 @@ fn bent_path_preserves_rational_hollow_section_and_nonparallel_caps() {
     assert_eq!(restored.faces.len(), body.faces.len());
     let caps = &body.faces[body.faces.len() - 2..];
     assert!(caps.iter().all(|f| f.holes.len() == 1));
-    let center=|s:&nurbs_core::surface::Surface|s.evaluate(
-        (s.knots_u[s.degree_u]+s.knots_u[s.control_points.len()])*0.5,
-        (s.knots_v[s.degree_v]+s.knots_v[s.control_points[0].len()])*0.5).unwrap();
+    let center = |s: &nurbs_core::surface::Surface| {
+        s.evaluate(
+            (s.knots_u[s.degree_u] + s.knots_u[s.control_points.len()]) * 0.5,
+            (s.knots_v[s.degree_v] + s.knots_v[s.control_points[0].len()]) * 0.5,
+        )
+        .unwrap()
+    };
     let a = center(&caps[0].surface);
     let b = center(&caps[1].surface);
     assert!(a.point.iter().zip(b.point).any(|(x, y)| (x - y).abs() > 1.));
@@ -482,164 +486,329 @@ fn periodic_wall_budget_uses_faces_without_reserving_caps() {
 
 #[test]
 fn authored_frames_keep_hollow_body_manifold_caps() {
-    use nurbs_core::progressive_sweep::{Options,Orientation,Spacing,constant_vector_law};
-    let path=nurbs_core::primitives::line([0.;3],[0.,0.,10.]).unwrap();
-    let scale=constant_vector_law([1.,0.,0.]).unwrap();
-    let twist=constant_vector_law([0.;3]).unwrap();
-    let mut axis=constant_vector_law([0.,0.,1.]).unwrap();
-    axis.control_points[1]=vec![0.,1.,1.];
-    let normal=constant_vector_law([1.,0.,0.]).unwrap();
-    let axes=constant_vector_law([1.;3]).unwrap();
-    let center=constant_vector_law([0.;3]).unwrap();
-    let (model,evidence)=brep_core::progressive_authored_profile_body(&circles(0.,1.),
-        &path,&scale,&twist,&axis,&normal,&axes,&center,Options {
-        normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
-        spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.005,
-    }).unwrap();
+    use nurbs_core::progressive_sweep::{Options, Orientation, Spacing, constant_vector_law};
+    let path = nurbs_core::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let mut axis = constant_vector_law([0., 0., 1.]).unwrap();
+    axis.control_points[1] = vec![0., 1., 1.];
+    let normal = constant_vector_law([1., 0., 0.]).unwrap();
+    let axes = constant_vector_law([1.; 3]).unwrap();
+    let center = constant_vector_law([0.; 3]).unwrap();
+    let (model, evidence) = brep_core::progressive_authored_profile_body(
+        &circles(0., 1.),
+        &path,
+        &scale,
+        &twist,
+        &axis,
+        &normal,
+        &axes,
+        &center,
+        Options {
+            normal: [1., 0., 0.],
+            orientation: Orientation::RotationMinimizing,
+            spacing: Spacing::Parameter,
+            initial_sections: 3,
+            max_sections: 129,
+            max_deviation: 0.005,
+        },
+    )
+    .unwrap();
     assert!(evidence.levels.last().unwrap().accepted);
-    assert_eq!(model.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(model.faces.iter().filter(|f| !f.holes.is_empty()).count(),2);
-    assert_eq!(model.bodies.len(),1);
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(
+        model.faces.iter().filter(|f| !f.holes.is_empty()).count(),
+        2
+    );
+    assert_eq!(model.bodies.len(), 1);
 }
-
 
 #[test]
 fn common_contact_anchor_retains_rational_outer_and_hole_body() {
-    use nurbs_core::progressive_sweep::{MultiSweep,Options,Orientation,Spacing,constant_vector_law};
-    let profiles=circles(0.,1.).into_iter().flatten().collect::<Vec<_>>();
-    let path=nurbs_core::primitives::line([0.;3],[0.,0.,10.]).unwrap();
-    let rail=nurbs_core::primitives::line([3.,0.,0.],[6.,0.,10.]).unwrap();
-    let scale=constant_vector_law([1.,0.,0.]).unwrap();
-    let twist=constant_vector_law([0.;3]).unwrap();
-    let mut sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options {
-        normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
-        spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.001,
-    }).unwrap().with_contact_guide(&rail,0,0.).unwrap();
-    let mut admitted=None;
-    for level in sweep.by_ref(){let level=level.unwrap();if level.report.accepted {admitted=Some(level.report);}}
-    let report=admitted.unwrap();
-    let transported=sweep.sections_at(report.sections).unwrap();
-    for i in 0..report.sections {
-        let f=i as f64/(report.sections-1) as f64;
-        for (index,radius) in [(0,3.),(1,1.)] {
-            let p=transported[index][i].evaluate(0.).unwrap().point;
-            assert!((p[0]-radius*(1.+f)).abs()<1e-10);
-            assert!(p[1].abs()<1e-10 && (p[2]-10.*f).abs()<1e-10);
-            assert_eq!(transported[index][i].weights,profiles[index].weights);
+    use nurbs_core::progressive_sweep::{
+        MultiSweep, Options, Orientation, Spacing, constant_vector_law,
+    };
+    let profiles = circles(0., 1.).into_iter().flatten().collect::<Vec<_>>();
+    let path = nurbs_core::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let rail = nurbs_core::primitives::line([3., 0., 0.], [6., 0., 10.]).unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let mut sweep = MultiSweep::new(
+        &profiles,
+        &path,
+        &scale,
+        &twist,
+        Options {
+            normal: [1., 0., 0.],
+            orientation: Orientation::RotationMinimizing,
+            spacing: Spacing::Parameter,
+            initial_sections: 3,
+            max_sections: 129,
+            max_deviation: 0.001,
+        },
+    )
+    .unwrap()
+    .with_contact_guide(&rail, 0, 0.)
+    .unwrap();
+    let mut admitted = None;
+    for level in sweep.by_ref() {
+        let level = level.unwrap();
+        if level.report.accepted {
+            admitted = Some(level.report);
         }
     }
-    let sections=(0..report.sections).map(|i|vec![vec![transported[0][i].clone()],vec![transported[1][i].clone()]]).collect::<Vec<_>>();
-    let model=rational_section_loft(&sections).unwrap();
-    let axes=constant_vector_law([1.;3]).unwrap();
-    let center=constant_vector_law([0.;3]).unwrap();
-    let loops=vec![vec![profiles[0].clone()],vec![profiles[1].clone()]];
-    let (public,evidence)=brep_core::progressive_guided_profile_body(&loops,&path,&scale,&twist,
-        &rail,Some((0,0.)),&axes,&center,Options {
-        normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
-        spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.001,
-    }).unwrap();
-    assert!(evidence.levels.last().unwrap().accepted);
-    assert_eq!(public.faces.len(),model.faces.len());
-    for (a,b) in public.faces.iter().zip(&model.faces) {
-        assert_eq!(a.surface.control_points,b.surface.control_points);
-        assert_eq!(a.surface.weights,b.surface.weights);
+    let report = admitted.unwrap();
+    let transported = sweep.sections_at(report.sections).unwrap();
+    for i in 0..report.sections {
+        let f = i as f64 / (report.sections - 1) as f64;
+        for (index, radius) in [(0, 3.), (1, 1.)] {
+            let p = transported[index][i].evaluate(0.).unwrap().point;
+            assert!((p[0] - radius * (1. + f)).abs() < 1e-10);
+            assert!(p[1].abs() < 1e-10 && (p[2] - 10. * f).abs() < 1e-10);
+            assert_eq!(transported[index][i].weights, profiles[index].weights);
+        }
     }
-    assert_eq!(public.validate().unwrap().boundary_edge_count,0);
+    let sections = (0..report.sections)
+        .map(|i| {
+            vec![
+                vec![transported[0][i].clone()],
+                vec![transported[1][i].clone()],
+            ]
+        })
+        .collect::<Vec<_>>();
+    let model = rational_section_loft(&sections).unwrap();
+    let axes = constant_vector_law([1.; 3]).unwrap();
+    let center = constant_vector_law([0.; 3]).unwrap();
+    let loops = vec![vec![profiles[0].clone()], vec![profiles[1].clone()]];
+    let (public, evidence) = brep_core::progressive_guided_profile_body(
+        &loops,
+        &path,
+        &scale,
+        &twist,
+        &rail,
+        Some((0, 0.)),
+        &axes,
+        &center,
+        Options {
+            normal: [1., 0., 0.],
+            orientation: Orientation::RotationMinimizing,
+            spacing: Spacing::Parameter,
+            initial_sections: 3,
+            max_sections: 129,
+            max_deviation: 0.001,
+        },
+    )
+    .unwrap();
+    assert!(evidence.levels.last().unwrap().accepted);
+    assert_eq!(public.faces.len(), model.faces.len());
+    for (a, b) in public.faces.iter().zip(&model.faces) {
+        assert_eq!(a.surface.control_points, b.surface.control_points);
+        assert_eq!(a.surface.weights, b.surface.weights);
+    }
+    assert_eq!(public.validate().unwrap().boundary_edge_count, 0);
 
-    assert_eq!(model.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(model.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(
+        model.faces.iter().filter(|f| !f.holes.is_empty()).count(),
+        2
+    );
     assert!(model.shells[0].closed);
-    let (step,_,_)=brep_core::export_step_v5(&model).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
-    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    assert_eq!(restored.faces.len(),model.faces.len());
+    let (step, _, _) = brep_core::export_step_v5(&model).unwrap();
+    let (restored, _, _) = brep_core::import_step_v5(&step).unwrap();
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(
+        restored
+            .faces
+            .iter()
+            .filter(|f| !f.holes.is_empty())
+            .count(),
+        2
+    );
+    assert_eq!(restored.faces.len(), model.faces.len());
 }
 
 #[test]
 fn cap_projection_certifies_within_existing_coordinate_limits() {
     let section = |origin: f64, z: f64| {
-        let points = [[origin, origin, z], [origin + 1., origin + 1., z],
-            [origin, origin + 2., z], [origin - 1., origin + 1., z]];
-        vec![(0..4).map(|i| Curve {
-            degree: 1, knots: vec![0.,0.,1.,1.],
-            control_points: vec![points[i].to_vec(),points[(i+1)%4].to_vec()],
-            weights: vec![1.,1.],periodic:false,
-        }).collect::<Vec<_>>()]
+        let points = [
+            [origin, origin, z],
+            [origin + 1., origin + 1., z],
+            [origin, origin + 2., z],
+            [origin - 1., origin + 1., z],
+        ];
+        vec![
+            (0..4)
+                .map(|i| Curve {
+                    degree: 1,
+                    knots: vec![0., 0., 1., 1.],
+                    control_points: vec![points[i].to_vec(), points[(i + 1) % 4].to_vec()],
+                    weights: vec![1., 1.],
+                    periodic: false,
+                })
+                .collect::<Vec<_>>(),
+        ]
     };
-    rational_section_loft(&[section(0.,0.),section(0.,10.)]).unwrap();
-    rational_section_loft(&[section(9e5,0.),section(9e5,10.)]).unwrap();
-}
-
-
-#[test]
-fn fixed_original_transport_bound_reaches_hollow_brep_and_step_without_global_promotion(){
-    use nurbs_core::progressive_sweep::{Options,Orientation,Spacing};
-    let path=nurbs_core::primitives::line([0.;3],[0.,0.,10.]).unwrap();
-    let scale=law(1.,2.);let twist=law(0.,0.25);
-    let options=Options {normal:[1.,0.,0.],orientation:Orientation::Fixed,spacing:Spacing::Parameter,
-        initial_sections:3,max_sections:129,max_deviation:0.01};
-    let (body,evidence)=brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,options).unwrap();
-    let report=evidence.levels.last().unwrap();
-    assert!(report.accepted&&report.continuous_bound);
-    assert!(report.continuous_error_upper.unwrap()<=options.max_deviation);
-    assert!(report.error_certificate_cells<=10000);
-    assert_eq!(body.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
-    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    assert!(brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,
-        Options {max_deviation:1e-30,..options}).is_err());
-}
-
-
-#[test]
-fn fixed_normal_original_transport_bound_reaches_hollow_brep_and_step_without_global_promotion(){
-    use nurbs_core::progressive_sweep::{Options,Orientation,Spacing};
-    let path=nurbs_core::primitives::line([0.;3],[0.,0.,10.]).unwrap();
-    let scale=law(1.,2.);let twist=law(0.,0.25);
-    let options=Options {normal:[1.,0.,0.],orientation:Orientation::FixedNormal,spacing:Spacing::Parameter,
-        initial_sections:3,max_sections:129,max_deviation:0.01};
-    let (body,evidence)=brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,options).unwrap();
-    let report=evidence.levels.last().unwrap();
-    assert!(report.accepted&&report.continuous_bound);
-    assert!(report.continuous_error_upper.unwrap()<=options.max_deviation);
-    assert!(report.error_certificate_cells<=10000);
-    assert_eq!(body.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
-    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    assert!(brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,
-        Options {max_deviation:1e-30,..options}).is_err());
+    rational_section_loft(&[section(0., 0.), section(0., 10.)]).unwrap();
+    rational_section_loft(&[section(9e5, 0.), section(9e5, 10.)]).unwrap();
 }
 
 #[test]
-fn frenet_curved_hollow_body_retains_original_error_and_native_step_topology(){
-    use nurbs_core::progressive_sweep::{Options,Orientation,Spacing};
-    let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-        control_points:vec![vec![0.;3],vec![0.5,0.,0.],vec![1.,1.,0.]],weights:vec![1.;3],periodic:false};
-    let profiles=vec![
-        vec![nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.1).unwrap()],
-        vec![nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.05).unwrap().reverse().unwrap()],
+fn fixed_original_transport_bound_reaches_hollow_brep_and_step_without_global_promotion() {
+    use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+    let path = nurbs_core::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let scale = law(1., 2.);
+    let twist = law(0., 0.25);
+    let options = Options {
+        normal: [1., 0., 0.],
+        orientation: Orientation::Fixed,
+        spacing: Spacing::Parameter,
+        initial_sections: 3,
+        max_sections: 129,
+        max_deviation: 0.01,
+    };
+    let (body, evidence) =
+        brep_core::progressive_profile_body(&circles(0., 1.), &path, &scale, &twist, options)
+            .unwrap();
+    let report = evidence.levels.last().unwrap();
+    assert!(report.accepted && report.continuous_bound);
+    assert!(report.continuous_error_upper.unwrap() <= options.max_deviation);
+    assert!(report.error_certificate_cells <= 10000);
+    assert_eq!(body.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(body.faces.iter().filter(|f| !f.holes.is_empty()).count(), 2);
+    let (step, _, _) = brep_core::export_step_v5(&body).unwrap();
+    let (restored, _, _) = brep_core::import_step_v5(&step).unwrap();
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(
+        restored
+            .faces
+            .iter()
+            .filter(|f| !f.holes.is_empty())
+            .count(),
+        2
+    );
+    assert!(
+        brep_core::progressive_profile_body(
+            &circles(0., 1.),
+            &path,
+            &scale,
+            &twist,
+            Options {
+                max_deviation: 1e-30,
+                ..options
+            }
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn fixed_normal_original_transport_bound_reaches_hollow_brep_and_step_without_global_promotion() {
+    use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+    let path = nurbs_core::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let scale = law(1., 2.);
+    let twist = law(0., 0.25);
+    let options = Options {
+        normal: [1., 0., 0.],
+        orientation: Orientation::FixedNormal,
+        spacing: Spacing::Parameter,
+        initial_sections: 3,
+        max_sections: 129,
+        max_deviation: 0.01,
+    };
+    let (body, evidence) =
+        brep_core::progressive_profile_body(&circles(0., 1.), &path, &scale, &twist, options)
+            .unwrap();
+    let report = evidence.levels.last().unwrap();
+    assert!(report.accepted && report.continuous_bound);
+    assert!(report.continuous_error_upper.unwrap() <= options.max_deviation);
+    assert!(report.error_certificate_cells <= 10000);
+    assert_eq!(body.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(body.faces.iter().filter(|f| !f.holes.is_empty()).count(), 2);
+    let (step, _, _) = brep_core::export_step_v5(&body).unwrap();
+    let (restored, _, _) = brep_core::import_step_v5(&step).unwrap();
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(
+        restored
+            .faces
+            .iter()
+            .filter(|f| !f.holes.is_empty())
+            .count(),
+        2
+    );
+    assert!(
+        brep_core::progressive_profile_body(
+            &circles(0., 1.),
+            &path,
+            &scale,
+            &twist,
+            Options {
+                max_deviation: 1e-30,
+                ..options
+            }
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn frenet_curved_hollow_body_retains_original_error_and_native_step_topology() {
+    use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+    let path = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0.; 3], vec![0.5, 0., 0.], vec![1., 1., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let profiles = vec![
+        vec![nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.1).unwrap()],
+        vec![
+            nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.05)
+                .unwrap()
+                .reverse()
+                .unwrap(),
+        ],
     ];
-    let scale=law(1.,1.);let twist=law(0.,0.);
-    let options=Options {normal:[0.,0.,1.],orientation:Orientation::Frenet,spacing:Spacing::Parameter,
-        initial_sections:3,max_sections:129,max_deviation:0.01};
-    let (body,evidence)=brep_core::progressive_profile_body(&profiles,&path,&scale,&twist,options).unwrap();
-    let report=evidence.levels.last().unwrap();
-    assert!(report.accepted&&report.continuous_bound);
-    assert!(report.continuous_error_upper.unwrap()<=options.max_deviation);
-    assert!(report.error_certificate_cells<=10000);
-    assert_eq!(body.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
-    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
-    assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    assert!(brep_core::progressive_profile_body(&profiles,&path,&scale,&twist,
-        Options {max_deviation:1e-30,..options}).is_err());
+    let scale = law(1., 1.);
+    let twist = law(0., 0.);
+    let options = Options {
+        normal: [0., 0., 1.],
+        orientation: Orientation::Frenet,
+        spacing: Spacing::Parameter,
+        initial_sections: 3,
+        max_sections: 129,
+        max_deviation: 0.01,
+    };
+    let (body, evidence) =
+        brep_core::progressive_profile_body(&profiles, &path, &scale, &twist, options).unwrap();
+    let report = evidence.levels.last().unwrap();
+    assert!(report.accepted && report.continuous_bound);
+    assert!(report.continuous_error_upper.unwrap() <= options.max_deviation);
+    assert!(report.error_certificate_cells <= 10000);
+    assert_eq!(body.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(body.faces.iter().filter(|f| !f.holes.is_empty()).count(), 2);
+    let (step, _, _) = brep_core::export_step_v5(&body).unwrap();
+    let (restored, _, _) = brep_core::import_step_v5(&step).unwrap();
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(
+        restored
+            .faces
+            .iter()
+            .filter(|f| !f.holes.is_empty())
+            .count(),
+        2
+    );
+    assert!(
+        brep_core::progressive_profile_body(
+            &profiles,
+            &path,
+            &scale,
+            &twist,
+            Options {
+                max_deviation: 1e-30,
+                ..options
+            }
+        )
+        .is_err()
+    );
 }

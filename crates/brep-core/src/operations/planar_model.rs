@@ -209,19 +209,46 @@ pub(crate) fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tol
         // coordinates. Normalizing decimal UVs and lifting them independently
         // can introduce a nonzero exact edge/face discrepancy.
         let coordinate_chart = (0..3).find_map(|fixed| {
-            let height=all_points[0][fixed];
-            if !all_points.iter().all(|p|p[fixed]==height) {return None;}
-            let mut axes=[(fixed+1)%3,(fixed+2)%3];
-            if normal[fixed]<0. {axes.swap(0,1);}
-            let ranges=axes.map(|axis| [
-                all_points.iter().map(|p|p[axis]).fold(f64::INFINITY,f64::min),
-                all_points.iter().map(|p|p[axis]).fold(f64::NEG_INFINITY,f64::max)]);
-            if ranges.iter().any(|r|r[1]-r[0]<=tolerance) {return None;}
+            let height = all_points[0][fixed];
+            if !all_points.iter().all(|p| p[fixed] == height) {
+                return None;
+            }
+            let mut axes = [(fixed + 1) % 3, (fixed + 2) % 3];
+            if normal[fixed] < 0. {
+                axes.swap(0, 1);
+            }
+            let ranges = axes.map(|axis| {
+                [
+                    all_points
+                        .iter()
+                        .map(|p| p[axis])
+                        .fold(f64::INFINITY, f64::min),
+                    all_points
+                        .iter()
+                        .map(|p| p[axis])
+                        .fold(f64::NEG_INFINITY, f64::max),
+                ]
+            });
+            if ranges.iter().any(|r| r[1] - r[0] <= tolerance) {
+                return None;
+            }
             // The edge graph chooses the canonical vertex. Do not project a
             // tolerance-merged vertex into this plane or outside its rectangle.
-            if all_points.iter().any(|p|model.vertices.iter().find(|v|close(v.point,*p,tolerance*4.))
-                .is_some_and(|v|v.point[fixed]!=height || (0..2).any(|k|v.point[axes[k]]<ranges[k][0] || v.point[axes[k]]>ranges[k][1]))) {return None;}
-            Some((fixed,height,axes,ranges))
+            if all_points.iter().any(|p| {
+                model
+                    .vertices
+                    .iter()
+                    .find(|v| close(v.point, *p, tolerance * 4.))
+                    .is_some_and(|v| {
+                        v.point[fixed] != height
+                            || (0..2).any(|k| {
+                                v.point[axes[k]] < ranges[k][0] || v.point[axes[k]] > ranges[k][1]
+                            })
+                    })
+            }) {
+                return None;
+            }
+            Some((fixed, height, axes, ranges))
         });
         let coordinates: Vec<_> = all_points
             .iter()

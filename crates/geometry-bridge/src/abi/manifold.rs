@@ -1,22 +1,43 @@
 use super::*;
 
+fn validate_transport(fmt: u32, vp: usize, vl: usize, ip: usize, il: usize) -> Result<()> {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
+        return Err(input("Mesh exceeds transport limit"));
+    }
+    if (vp == 0 && vl != 0) || (ip == 0 && il != 0) {
+        return Err(input("Mesh buffer is null"));
+    }
+    Ok(())
+}
+
+unsafe fn read_mesh(
+    fmt: u32,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+) -> Result<(Vec<f64>, Vec<usize>)> {
+    validate_transport(fmt, vp, vl, ip, il)?;
+    let positions = unsafe { read_vertices_f64(fmt, vp, vl) }?;
+    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
+        .into_iter()
+        .map(|index| index as usize)
+        .collect();
+    manifold_core::validate_indexed_mesh(&positions, &indices)
+        .map_err(|error| input(error.to_string()))?;
+    Ok((positions, indices))
+}
+
 /// Run manifold-core `check` on an uploaded mesh and return a result handle
 /// for `abi_array_field` (`ManifoldCheck` slots).
 /// # Safety
 /// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
 /// caller-owned buffers; they are only read.
 pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt: u32) -> u64 {
-    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
-        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
-    }
-    let vertices = match unsafe { read_vertices_f64(fmt, vp, vl) } {
-        Ok(v) => v,
-        Err(e) => return packed(geometry(Err(e))),
+    let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
+        Ok(mesh) => mesh,
+        Err(error) => return packed(geometry(Err(error))),
     };
-    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
-        .into_iter()
-        .map(|i| i as usize)
-        .collect();
     let report = manifold_core::check(&vertices, &indices);
     let flat = |edges: &[manifold_core::EdgeKey]| -> Vec<u32> {
         edges
@@ -66,9 +87,6 @@ pub unsafe fn abi_manifold_repair(
     epsilon: f64,
     mode: u32,
 ) -> u64 {
-    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
-        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
-    }
     if !epsilon.is_finite() {
         return packed(geometry(Err(input("Invalid weld epsilon"))));
     }
@@ -77,14 +95,10 @@ pub unsafe fn abi_manifold_repair(
         1 => manifold_core::RepairMode::Full,
         _ => return packed(geometry(Err(input("Invalid repair mode")))),
     };
-    let vertices = match unsafe { read_vertices_f64(fmt, vp, vl) } {
-        Ok(v) => v,
-        Err(e) => return packed(geometry(Err(e))),
+    let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
+        Ok(mesh) => mesh,
+        Err(error) => return packed(geometry(Err(error))),
     };
-    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
-        .into_iter()
-        .map(|i| i as usize)
-        .collect();
     let out = manifold_core::repair_with_mode(&vertices, &indices, epsilon, mode);
     let flags = (out.report.residual.is_manifold() as u32)
         | ((out.report.residual.is_manifold_with_boundary() as u32) << 1);
@@ -111,17 +125,10 @@ pub unsafe fn abi_manifold_repair(
 /// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
 /// caller-owned buffers; they are only read.
 pub unsafe fn abi_manifold_metrics(vp: usize, vl: usize, ip: usize, il: usize, fmt: u32) -> u64 {
-    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
-        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
-    }
-    let vertices = match unsafe { read_vertices_f64(fmt, vp, vl) } {
-        Ok(v) => v,
-        Err(e) => return packed(geometry(Err(e))),
+    let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
+        Ok(mesh) => mesh,
+        Err(error) => return packed(geometry(Err(error))),
     };
-    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
-        .into_iter()
-        .map(|i| i as usize)
-        .collect();
     let m = manifold_core::metrics(&vertices, &indices);
     let mut component_stats = Vec::with_capacity(m.components.len() * 6);
     let mut component_floats = Vec::with_capacity(m.components.len() * 2);
@@ -172,41 +179,33 @@ pub unsafe fn abi_manifold_boolean(
     b_il: usize,
     b_fmt: u32,
     op: u32,
+    weld_epsilon: f64,
+    relative_tolerance: f64,
 ) -> u64 {
-    for (fmt, vl, il) in [(a_fmt, a_vl, a_il), (b_fmt, b_vl, b_il)] {
-        if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
-            return packed(geometry(Err(input("Mesh exceeds transport limit"))));
-        }
-    }
     let op = match op {
         0 => manifold_ops::BooleanOp::Union,
         1 => manifold_ops::BooleanOp::Intersection,
         2 => manifold_ops::BooleanOp::Difference,
         _ => return packed(geometry(Err(input("Invalid boolean operation")))),
     };
-    let read =
-        |fmt: u32, vp: usize, vl: usize, ip: usize, il: usize| -> Result<(Vec<f64>, Vec<usize>)> {
-            let vertices = unsafe { read_vertices_f64(fmt, vp, vl) }?;
-            let indices = unsafe { read_u32(ip, il) }
-                .into_iter()
-                .map(|i| i as usize)
-                .collect();
-            Ok((vertices, indices))
-        };
-    let (a_positions, a_indices) = match read(a_fmt, a_vp, a_vl, a_ip, a_il) {
+    let (a_positions, a_indices) = match unsafe { read_mesh(a_fmt, a_vp, a_vl, a_ip, a_il) } {
         Ok(mesh) => mesh,
-        Err(e) => return packed(geometry(Err(e))),
+        Err(error) => return packed(geometry(Err(error))),
     };
-    let (b_positions, b_indices) = match read(b_fmt, b_vp, b_vl, b_ip, b_il) {
+    let (b_positions, b_indices) = match unsafe { read_mesh(b_fmt, b_vp, b_vl, b_ip, b_il) } {
         Ok(mesh) => mesh,
-        Err(e) => return packed(geometry(Err(e))),
+        Err(error) => return packed(geometry(Err(error))),
     };
-    let out = match manifold_ops::boolean_manifold(
+    let out = match manifold_ops::boolean_manifold_with_options(
         &a_positions,
         &a_indices,
         &b_positions,
         &b_indices,
         op,
+        manifold_ops::BooleanOptions {
+            weld_epsilon,
+            relative_tolerance,
+        },
     ) {
         Ok(out) => out,
         Err(manifold_ops::BooleanError::Kernel(e)) => return packed(geometry(Err(e))),

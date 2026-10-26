@@ -467,6 +467,17 @@ pub fn free(handle: usize) {
 }
 
 #[cfg(test)]
+pub fn live_result_count() -> usize {
+    RESULTS.with(|results| {
+        results
+            .borrow()
+            .iter()
+            .filter(|slot| slot.is_some())
+            .count()
+    })
+}
+
+#[cfg(test)]
 mod cooperative_tests {
     use super::*;
     use value_codec::json;

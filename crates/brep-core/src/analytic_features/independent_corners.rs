@@ -1,5 +1,7 @@
+use super::audited_feature_result::{
+    certify_blend_result, is_axis_aligned_cuboid, model_bounds, refuse,
+};
 use super::*;
-use super::audited_feature_result::{refuse,model_bounds,is_axis_aligned_cuboid,certify_blend_result};
 pub fn independent_cuboid_corner_fillets(
     model: &Model,
     radii: [Option<[f64; 2]>; 4],

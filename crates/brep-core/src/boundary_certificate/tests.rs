@@ -187,7 +187,13 @@ fn filled_cap_interior_displacement_is_included_in_the_complete_bound() {
 fn hole_regions_and_material_orientation_remain_independent_obligations() {
     let wire = |points: [[f64; 2]; 4]| {
         (0..4)
-            .map(|i| nurbs_core::curve::Curve::from_polyline(vec![points[i].to_vec(), points[(i + 1) % 4].to_vec()]).unwrap())
+            .map(|i| {
+                nurbs_core::curve::Curve::from_polyline(vec![
+                    points[i].to_vec(),
+                    points[(i + 1) % 4].to_vec(),
+                ])
+                .unwrap()
+            })
             .collect()
     };
     let source = crate::prism::extrude(

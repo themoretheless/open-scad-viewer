@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import VrControls from '../components/VrControls.vue'
 import { prepareVrPolygons } from '../services/vrScene'
-import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
@@ -12,7 +12,6 @@ import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind
 import { meshCentroid, sculptMesh } from '../services/meshEditing'
 import {
   MeshHistory,
-  booleanMeshObjects,
   buildEdgeList,
   createBoxMesh,
   createUvSphereMesh,
@@ -38,15 +37,23 @@ import {
   type MeshSelectMode,
   type MeshWorkspaceDocument,
 } from '../services/meshEditing'
+import { createSolidPreviewWorker } from '../services/solidPreviewWorker'
+import { useMainSolidTask } from './useMainSolidTask'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
 import { projectMeshModelerObject,cachedMeshModelerStats } from '../services/meshModelerProjection'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { storageGet, storageSet } from '../services/safeStorage'
-import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
-import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
-import { exportMeshFormatCompressed } from '../services/meshExportFormats'
+import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
+import { manifoldPreferenceSnapshot } from '../services/manifoldPreferences'
+import ManifoldSettings from '../components/ManifoldSettings.vue'
+import { formatMeshImportNotice } from '../services/meshImportReport'
+import { formatMeshBooleanNotice } from '../services/meshBooleanReport'
+import { formatMeshRepairNotice } from '../services/meshRepairReport'
+import { meshManifoldDefectLabels } from '../services/meshManifoldDefects'
+import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
 import { downloadBytes } from '../services/downloadArtifact'
 import type { PolygonMesh } from '../services/geometry/polygon'
+import type { KernelManifoldReport } from '../services/geometry/manifoldAnalysis'
 
 const props = defineProps<{ open: boolean; locale: string; seedDocument?: MeshWorkspaceDocument | null; paletteRequest?: number }>()
 const emit = defineEmits<{ close: []; exportToSolid: [doc: MeshWorkspaceDocument] }>()
@@ -64,7 +71,81 @@ const history = new MeshHistory(initial)
 const document = shallowRef(history.document)
 const undoable = ref(false)
 const redoable = ref(false)
+const undoOperation = ref('')
+const redoOperation = ref('')
 const error = ref('')
+const importNotice = ref('')
+const booleanNotice = ref('')
+const repairNotice = ref('')
+const solidWorker = createSolidPreviewWorker()
+const {
+  pending: meshTaskPending,
+  progress: meshTaskProgress,
+  kind: meshTaskKind,
+  run: runMeshTask,
+  cancel: cancelMeshTask,
+  dispose: disposeMeshTask,
+} = useMainSolidTask(solidWorker)
+const manifoldWorker = createSolidPreviewWorker()
+const {
+  pending: manifoldTaskPending,
+  progress: manifoldTaskProgress,
+  run: runManifoldTask,
+  cancel: cancelManifoldTask,
+  dispose: disposeManifoldTask,
+} = useMainSolidTask(manifoldWorker)
+const meshTaskStage = computed(() => {
+  const progress = meshTaskProgress.value
+  if (meshTaskKind.value === 'meshBoolean') return `${label('Булева операция manifold', 'Manifold Boolean operation')} · ${progress?.completed ?? 0}/${progress?.total ?? 1}`
+  if (meshTaskKind.value === 'meshExport') {
+    const phase = progress?.phase === 'export'
+      ? label('Экспорт файла', 'Exporting file')
+      : label('Анализ меша', 'Inspecting mesh')
+    return `${phase} · ${progress?.completed ?? 0}/${progress?.total ?? 2}`
+  }
+  if (meshTaskKind.value === 'meshImport') {
+    const phase = progress?.phase === 'decode'
+      ? label('Разбор файла', 'Decoding file')
+      : progress?.phase === 'finalize'
+        ? label('Сварка и индексация', 'Welding and indexing')
+        : progress?.phase === 'check'
+          ? label('Проверка manifold', 'Checking manifold topology')
+          : progress?.phase === 'repair'
+            ? label('Исправление топологии', 'Repairing topology')
+            : label('Повторная проверка', 'Verifying the result')
+    return `${phase} · ${progress?.completed ?? 0}/${progress?.total ?? 5}`
+  }
+  const phase = progress?.phase === 'repair'
+    ? label('Исправление топологии', 'Repairing topology')
+    : progress?.phase === 'verify'
+      ? label('Повторная проверка', 'Verifying the result')
+      : label('Проверка исходного меша', 'Checking the source mesh')
+  return `${phase} · ${progress?.completed ?? 0}/${progress?.total ?? 3}`
+})
+const meshTaskPresentation = computed(() => {
+  if (meshTaskKind.value === 'meshBoolean') return {
+    className: 'boolean-progress', total: 1,
+    progressLabel: label('Прогресс булевой операции', 'Boolean operation progress'),
+    cancelLabel: label('Отменить булеву операцию', 'Cancel Boolean'),
+  }
+  if (meshTaskKind.value === 'meshImport') return {
+    className: 'import-progress', total: 5,
+    progressLabel: label('Прогресс импорта', 'Mesh import progress'),
+    cancelLabel: label('Отменить импорт', 'Cancel import'),
+  }
+  if (meshTaskKind.value === 'meshExport') return {
+    className: 'export-progress', total: 2,
+    progressLabel: label('Прогресс экспорта', 'Mesh export progress'),
+    cancelLabel: label('Отменить экспорт', 'Cancel export'),
+  }
+  return {
+    className: 'repair-progress', total: 3,
+    progressLabel: label('Прогресс manifold repair', 'Manifold repair progress'),
+    cancelLabel: label('Отменить repair', 'Cancel repair'),
+  }
+})
+watch(() => props.open, open => { if (!open) cancelMeshTask() })
+onUnmounted(() => { disposeMeshTask(); disposeManifoldTask() })
 const kernelReady = ref(isGeometryKernelReady())
 // Mesh can open before Solid or the source viewport has warmed the shared WASM.
 // Publishing readiness invalidates projections that were requested while cold.
@@ -138,15 +219,36 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 }, { immediate: true })
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
+watch([document, selection], () => cancelMeshTask())
 const stats=computed(()=>kernelReady.value&&selected.value?cachedMeshModelerStats(selected.value.mesh):null)
+const manifoldReports = shallowRef<ReadonlyMap<string, KernelManifoldReport>>(new Map())
+async function refreshManifoldReports() {
+  cancelManifoldTask()
+  manifoldReports.value = new Map()
+  const objects = document.value.objects.map(({ id, mesh }) => ({ id, mesh }))
+  if (!props.open || !kernelReady.value || !objects.length) return
+  await runManifoldTask(
+    { kind: 'meshManifold', objects },
+    entries => { manifoldReports.value = new Map(entries.map(entry => [entry.id, entry.report])) },
+    caught => { error.value = caught instanceof Error ? caught.message : String(caught) },
+  )
+}
+watch([document, kernelReady, () => props.open], () => { void refreshManifoldReports() }, { immediate: true, flush: 'sync' })
+const expandedManifoldObject = ref('')
+const manifoldDefects = (objectId: string) => {
+  const report = manifoldReports.value.get(objectId)
+  return report ? meshManifoldDefectLabels(report, ru.value ? 'ru' : 'en') : []
+}
 
 function syncHistoryFlags() {
   undoable.value = history.canUndo
   redoable.value = history.canRedo
+  undoOperation.value = history.undoOperation
+  redoOperation.value = history.redoOperation
 }
 
-function commit(next: MeshWorkspaceDocument) {
-  history.commit(next)
+function commit(next: MeshWorkspaceDocument, operation = label('Редактирование меша', 'Edit mesh')) {
+  history.commit(next, operation)
   document.value = history.document
   syncHistoryFlags()
   error.value = ''
@@ -292,6 +394,33 @@ function applyMerge() {
   })
 }
 
+async function applyRepair() {
+  const object = selected.value
+  if (!object || meshTaskPending.value) return
+  error.value = ''
+  repairNotice.value = ''
+  importNotice.value = ''
+  booleanNotice.value = ''
+  const snapshot = document.value, sourceId = object.id
+  await runMeshTask({kind: 'meshRepair', mesh: object.mesh}, result => {
+    if (document.value !== snapshot || selection.value !== sourceId) return
+    const d = history.document
+    const index = d.objects.findIndex(o => o.id === sourceId)
+    if (index < 0) return
+    if (result.repair) {
+      d.objects[index] = { ...d.objects[index], mesh: result.mesh }
+      commit(d, label('Починить меш (Full)', 'Repair mesh (Full)'))
+      selectedVerts.value = []
+      selectedFaces.value = []
+      selectedEdges.value = []
+    }
+    repairNotice.value = formatMeshRepairNotice(result, ru.value ? 'ru' : 'en')
+  }, caught => {
+    const reason = caught instanceof Error ? caught.message : String(caught)
+    error.value = `${label('Repair не выполнен', 'Repair failed')}: ${reason} ${label('Документ не изменён.', 'Document was not changed.')}`
+  })
+}
+
 function applySeparate() {
   run(() => {
     if (!selected.value || !selectedFaces.value.length) throw new Error(label('Выберите грани.', 'Select faces.'))
@@ -368,21 +497,38 @@ function applyDuplicate() {
   })
 }
 
-function applyBoolean() {
-  run(() => {
-    if (!selected.value || !booleanTarget.value || booleanTarget.value === selection.value) {
-      throw new Error(label('Выберите два разных объекта.', 'Pick two different objects.'))
-    }
+async function applyBoolean() {
+  if (meshTaskPending.value) return
+  error.value = ''
+  booleanNotice.value = ''
+  repairNotice.value = ''
+  const fail = (caught: unknown) => {
+    const reason = caught instanceof Error ? caught.message : String(caught)
+    error.value = `${label('Булева операция не выполнена', 'Boolean failed')}: ${reason} ${label('Документ не изменён.', 'Document was not changed.')}`
+  }
+  if (!selected.value || !booleanTarget.value || booleanTarget.value === selection.value) {
+    fail(new Error(label('Выберите два разных объекта.', 'Pick two different objects.')))
+    return
+  }
+  const snapshot = document.value, sourceId = selection.value, targetId = booleanTarget.value
+  const a = snapshot.objects.find(object => object.id === sourceId)
+  const b = snapshot.objects.find(object => object.id === targetId)
+  if (!a || !b) {
+    fail(new Error(label('Второй объект не найден.', 'Second object missing.')))
+    return
+  }
+  const preferences = manifoldPreferenceSnapshot()
+  await runMeshTask({kind: 'meshBoolean', a: a.mesh, b: b.mesh, operation: booleanOp.value, options: {weldEpsilonMm: preferences.booleanWeldEpsilonMm, relativeTolerance: preferences.booleanRelativeTolerance}}, ({mesh, report}) => {
+    if (document.value !== snapshot || selection.value !== sourceId || booleanTarget.value !== targetId) return
     const d = history.document
-    const a = d.objects.find(o => o.id === selection.value)!
-    const b = d.objects.find(o => o.id === booleanTarget.value)
-    if (!b) throw new Error(label('Второй объект не найден.', 'Second object missing.'))
-    const mesh = booleanMeshObjects(a.mesh, b.mesh, booleanOp.value)
-    a.mesh = mesh
-    d.objects = d.objects.filter(o => o.id !== b.id)
+    const index = d.objects.findIndex(object => object.id === sourceId)
+    if (index < 0 || !d.objects.some(object => object.id === targetId)) return
+    d.objects[index] = {...d.objects[index], mesh}
+    d.objects = d.objects.filter(object => object.id !== targetId)
     commit(d)
     booleanTarget.value = ''
-  })
+    booleanNotice.value = formatMeshBooleanNotice(report, ru.value ? 'ru' : 'en')
+  }, fail)
 }
 
 function removeSelected() {
@@ -398,17 +544,26 @@ function removeSelected() {
 async function importMesh(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file) return
+  if (!file || meshTaskPending.value) { input.value = ''; return }
   try {
-    const imported = await importMeshFromFile(file, { weld: 1e-4 })
-    const mesh: PolygonMesh = { positions: imported.positions.slice(), indices: imported.indices.slice() }
-    const d = history.document
-    const id = `${imported.format}-${Date.now().toString(36)}`
-    d.objects.push({ id, name: stripMeshExtension(file.name) || imported.format.toUpperCase(), mesh, visible: true })
-    commit(d)
-    selection.value = id
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = ''
+    importNotice.value = ''
+    const fileName = file.name
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    if (meshTaskPending.value) return
+    const snapshot = document.value, preferences = manifoldPreferenceSnapshot()
+    await runMeshTask({kind: 'meshImport', fileName, input: bytes, options: {weld: preferences.importWeldEpsilonMm, repair: preferences.importRepair}}, imported => {
+      if (document.value !== snapshot) return
+      const mesh: PolygonMesh = {positions: imported.positions, indices: imported.indices}
+      const d = history.document
+      const id = `${imported.format}-${Date.now().toString(36)}`
+      d.objects.push({id, name: stripMeshExtension(fileName) || imported.format.toUpperCase(), mesh, visible: true})
+      commit(d)
+      selection.value = id
+      importNotice.value = formatMeshImportNotice(imported, ru.value ? 'ru' : 'en')
+    }, caught => { error.value = caught instanceof Error ? caught.message : String(caught) })
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
   } finally {
     input.value = ''
   }
@@ -429,13 +584,15 @@ function downloadStl() {
 
 const exportFormat = ref<MeshExportFormat>('3mf')
 async function downloadMesh() {
-  try {
-    if (!selected.value) throw new Error(label('Выберите объект.', 'Select an object.'))
-    const artifact = await exportMeshFormatCompressed(polygonMeshToExportMesh(selected.value.mesh), exportFormat.value)
-    downloadBytes(artifact.data, artifact.mimeType, `${selected.value.name || 'mesh'}.${artifact.extension}`)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  }
+  if (meshTaskPending.value) return
+  const object = selected.value
+  if (!object) { error.value = label('Выберите объект.', 'Select an object.'); return }
+  error.value = ''
+  const snapshot = document.value, id = object.id, name = object.name || 'mesh', target = exportFormat.value
+  await runMeshTask({ kind: 'meshExport', mesh: object.mesh, target, options: {} }, artifact => {
+    if (!props.open || document.value !== snapshot || selected.value?.id !== id) return
+    downloadBytes(artifact.data, artifact.mimeType, `${name}.${artifact.extension}`)
+  }, caught => { error.value = caught instanceof Error ? caught.message : String(caught) })
 }
 
 // Command palette: header actions, object tools and edit operations, filtered to what applies to the current selection.
@@ -469,6 +626,7 @@ const meshCommands = computed<MeshCommand[]>(() => {
     cmd('flip', 'Перевернуть нормали', 'Flip normals', applyFlip, { detail: label('Грани', 'Faces'), enabled: hasObject, disabledReason: needObject }),
     cmd('knife', 'Разрез по середине рёбер', 'Knife at edge midpoints', applyKnife, { detail: label('Рёбра', 'Edges'), shortcut: 'K', enabled: hasObject && hasEdges, disabledReason: label('Выберите рёбра', 'Select edges') }),
     cmd('merge', 'Слияние по расстоянию', 'Merge by distance', applyMerge, { detail: label('Топология', 'Topology'), enabled: hasObject, disabledReason: needObject }),
+    cmd('repair', 'Починить меш', 'Repair mesh', applyRepair, { detail: 'Full · manifold', enabled: hasObject && !meshTaskPending.value, disabledReason: meshTaskPending.value ? label('Repair уже выполняется', 'Repair is already running') : needObject }),
     cmd('separate', 'Отделить грани', 'Separate faces', applySeparate, { detail: label('Топология', 'Topology'), enabled: hasObject && hasFaces, disabledReason: needFaces }),
     cmd('join', 'Объединить объекты', 'Join objects', applyJoin, { detail: label('Топология', 'Topology'), enabled: document.value.objects.length > 1, disabledReason: label('Нужно два объекта', 'Two objects are required') }),
     cmd('symmetrize', 'Симметрия по X', 'Symmetrize X', applySymmetrize, { detail: label('Топология', 'Topology'), enabled: hasObject, disabledReason: needObject }),
@@ -488,7 +646,13 @@ defineExpose({ meshCommands, executeMeshCommand })
 function onWorkspaceKey(event: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); paletteOpen.value = true; return }
-  if (event.key === 'Escape') { if (elementDrag) { cancelElementDrag(); return } if (propsOpen.value) { propsOpen.value = false; return } emit('close') }
+  if (event.key === 'Escape') {
+    if (meshTaskPending.value) { cancelMeshTask(); return }
+    if (manifoldTaskPending.value) { cancelManifoldTask(); return }
+    if (elementDrag) { cancelElementDrag(); return }
+    if (propsOpen.value) { propsOpen.value = false; return }
+    emit('close')
+  }
   if ((event.target as HTMLElement).matches('input,textarea,select')) return
   if (event.key === '\\' && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); dockOpen.value = !dockOpen.value; return }
   const modes: Record<string, MeshSelectMode> = { '1': 'object', '2': 'vertex', '3': 'edge', '4': 'face' }
@@ -523,7 +687,7 @@ function getEdgeList(mesh: PolygonMesh): Array<[number, number]> {
 }
 
 function projected(object: MeshWorkspaceDocument['objects'][number]) {
-  return projectMeshModelerObject(object,camera.value,selectMode.value,getEdgeList)
+  return projectMeshModelerObject(object,camera.value,selectMode.value,getEdgeList,manifoldReports.value.get(object.id))
 }
 
 // Dragging a vertex, edge or face moves the current selection in the screen plane (LMB, no modifiers);
@@ -653,15 +817,16 @@ const sceneFaces = computed(() => {
       <button type="button" class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span class="hint"></span>
       <span class="ws-count" aria-live="polite">{{ label('Выбрано', 'Selected') }}: {{ selected ? 1 : 0 }}</span>
-      <button type="button" class="icon mesh-undo" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <button type="button" class="icon mesh-undo" :disabled="!undoable" :title="undoable ? `${label('Отменить', 'Undo')}: ${undoOperation} · Ctrl/⌘ Z` : label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
       <details class="file-menu mesh-file"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button type="button" @click="fileInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF', 'Import STL / OBJ / PLY / OFF / AMF / 3MF') }}</button>
+        <ManifoldSettings :locale="locale" />
         <button type="button" :disabled="!selected" @click="downloadStl">{{ label('Скачать STL выбранного', 'Download selected as STL') }}</button>
-        <label class="file-row"><select v-model="exportFormat" :aria-label="label('Формат экспорта', 'Export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button type="button" :disabled="!selected" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button></label>
+        <label class="file-row"><select v-model="exportFormat" :disabled="meshTaskPending" :aria-label="label('Формат экспорта', 'Export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button type="button" :disabled="!selected || meshTaskPending" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button></label>
         <button type="button" @click="downloadJson">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <button type="button" :disabled="!document.objects.length" @click="emit('exportToSolid', document)">{{ label('Открыть в Solid', 'Open in Solid') }}</button>
       </div></details>
-      <button type="button" class="icon mesh-redo" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+      <button type="button" class="icon mesh-redo" :disabled="!redoable" :title="redoable ? `${label('Повторить', 'Redo')}: ${redoOperation} · Ctrl/⌘ Shift Z` : label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
     </header>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="meshCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeMeshCommand" />
 
@@ -683,8 +848,13 @@ const sceneFaces = computed(() => {
         <span class="tool-divider" aria-hidden="true"></span>
         <button type="button" class="tool-icon" :title="label('Панель свойств', 'Properties panel')" :aria-label="label('Панель свойств', 'Properties panel')" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg></button>
         <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
+        <span v-if="manifoldTaskPending" class="manifold-progress" role="status" aria-label="manifold-inspection"><progress :value="manifoldTaskProgress?.completed ?? 0" :max="manifoldTaskProgress?.total ?? 1" :aria-label="label('Прогресс проверки manifold','Manifold inspection progress')"></progress>{{ label('Проверка manifold', 'Checking manifold topology') }} · {{ manifoldTaskProgress?.completed ?? 0 }}/{{ manifoldTaskProgress?.total ?? 1 }}<button type="button" :aria-label="label('Отменить проверку manifold','Cancel manifold inspection')" @click="cancelManifoldTask">{{ label('Отмена', 'Cancel') }}</button></span>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
         <span v-else-if="!kernelReady" role="status">{{ label('Подготовка геометрии…', 'Preparing geometry…') }}</span>
+        <span v-else-if="meshTaskPending" :class="meshTaskPresentation.className" role="status"><progress :value="meshTaskProgress?.completed ?? 0" :max="meshTaskProgress?.total ?? meshTaskPresentation.total" :aria-label="meshTaskPresentation.progressLabel"></progress>{{ meshTaskStage }}<button type="button" :aria-label="meshTaskPresentation.cancelLabel" @click="cancelMeshTask">{{ label('Отмена', 'Cancel') }}</button></span>
+        <p v-else-if="importNotice" class="import-report" role="status">{{ importNotice }} <button type="button" :aria-label="label('Закрыть отчёт импорта', 'Dismiss import report')" @click="importNotice = ''">×</button></p>
+        <p v-else-if="booleanNotice" class="boolean-report" role="status">{{ booleanNotice }} <button type="button" :aria-label="label('Закрыть отчёт булевой операции', 'Dismiss Boolean report')" @click="booleanNotice = ''">×</button></p>
+        <p v-else-if="repairNotice" class="repair-report" role="status">{{ repairNotice }} <button type="button" :aria-label="label('Закрыть отчёт repair', 'Dismiss repair report')" @click="repairNotice = ''">×</button></p>
       </div>
       <ModelingGridControls :locale="locale" />
       <WorkspaceActionBar v-if="selected" :label="label('Действия над объектом', 'Object actions')">
@@ -748,8 +918,20 @@ const sceneFaces = computed(() => {
               @click.stop="selection = object.id; togglePick('vertex', vert.id)"
             />
           </g>
+          <template v-for="object in scene" :key="`${object.id}-manifold-defects`">
+            <g v-if="object.defects.boundaryEdges.length || object.defects.nonManifoldEdges.length || object.defects.nonManifoldVertices.length" class="manifold-overlay" :data-object="object.id" pointer-events="none">
+              <line v-for="edge in object.defects.boundaryEdges" :key="`boundary-${edge.id}`" data-defect="boundary" class="manifold-boundary" :x1="edge.x1" :y1="edge.y1" :x2="edge.x2" :y2="edge.y2" />
+              <line v-for="edge in object.defects.nonManifoldEdges" :key="`non-manifold-${edge.id}`" data-defect="non-manifold" class="manifold-non-manifold" :x1="edge.x1" :y1="edge.y1" :x2="edge.x2" :y2="edge.y2" />
+              <circle v-for="vertex in object.defects.nonManifoldVertices" :key="`pinched-${vertex.id}`" data-defect="pinched-vertex" class="manifold-pinched" :cx="vertex.x" :cy="vertex.y" r="1.2" />
+            </g>
+          </template>
         </g>
       </svg>
+      <div v-if="scene.some(object => object.defects.boundaryEdges.length || object.defects.nonManifoldEdges.length || object.defects.nonManifoldVertices.length)" class="manifold-legend" role="note">
+        <span v-if="scene.some(object => object.defects.boundaryEdges.length)"><i class="boundary"></i>{{ label('Граница', 'Boundary') }}</span>
+        <span v-if="scene.some(object => object.defects.nonManifoldEdges.length)"><i class="non-manifold"></i>{{ label('Не manifold', 'Non-manifold') }}</span>
+        <span v-if="scene.some(object => object.defects.nonManifoldVertices.length)"><i class="pinched"></i>{{ label('Pinched-вершины', 'Pinched vertices') }}</span>
+      </div>
       </div>
       </div>
       <aside class="side-dock" :class="{ collapsed: !dockOpen }" :aria-label="label('Панель', 'Panel')">
@@ -763,7 +945,15 @@ const sceneFaces = computed(() => {
           <template v-if="dockTab === 'scene'">
             <div class="dock-heading">{{ label('Сцена', 'Scene') }} <span>{{ document.objects.length }}</span></div>
             <ul class="scene-list">
-              <li v-for="object in document.objects" :key="object.id"><button type="button" :aria-label="object.name" :aria-pressed="selection === object.id" @click="selection = object.id; selectedVerts = []; selectedFaces = []; selectedEdges = []"><span class="dot body"></span>{{ object.name }}<small>{{ object.mesh.indices.length / 3 }} △</small></button></li>
+              <li v-for="object in document.objects" :key="object.id">
+                <div class="scene-object">
+                  <button type="button" class="scene-object-select" :aria-label="object.name" :aria-pressed="selection === object.id" @click="selection = object.id; selectedVerts = []; selectedFaces = []; selectedEdges = []"><span class="dot body"></span>{{ object.name }}<small>{{ object.mesh.indices.length / 3 }} △</small></button>
+                  <button v-if="manifoldReports.get(object.id) && !manifoldReports.get(object.id)!.isManifold" type="button" class="manifold-warning" :aria-label="`${label('Дефекты manifold', 'Manifold defects')}: ${manifoldDefects(object.id).join(', ')}`" :title="manifoldDefects(object.id).join(', ')" :aria-expanded="expandedManifoldObject === object.id" @click.stop="expandedManifoldObject = expandedManifoldObject === object.id ? '' : object.id">⚠</button>
+                </div>
+                <ul v-if="expandedManifoldObject === object.id && manifoldReports.get(object.id) && !manifoldReports.get(object.id)!.isManifold" class="manifold-defects" :aria-label="label('Категории дефектов manifold', 'Manifold defect categories')">
+                  <li v-for="defect in manifoldDefects(object.id)" :key="defect">{{ defect }}</li>
+                </ul>
+              </li>
               <li v-if="!document.objects.length" class="scene-empty">{{ label('Объектов нет. Добавьте куб или сферу, импортируйте сетку или соберите модель в Code.', 'No objects. Add a cube or sphere, import a mesh, or build a model in Code.') }}</li>
             </ul>
           </template>
@@ -803,6 +993,7 @@ const sceneFaces = computed(() => {
           <h3>{{ label('Топология', 'Topology') }}</h3>
           <label>{{ label('Слияние', 'Merge by distance') }} <input v-model.number="mergeDistance" type="number" step="0.001" min="0.0001" /></label>
           <button type="button" @click="applyMerge">Merge</button>
+          <button type="button" :disabled="meshTaskPending" @click="applyRepair">{{ label('Починить меш · Full', 'Repair mesh · Full') }}</button>
           <button type="button" @click="applySeparate">Separate faces</button>
           <button type="button" @click="applyJoin">Join objects</button>
           <button type="button" @click="applySymmetrize">Symmetrize X</button>
@@ -833,16 +1024,16 @@ const sceneFaces = computed(() => {
         </section>
         <section v-if="document.objects.length > 1">
           <h3>Boolean</h3>
-          <select v-model="booleanOp">
+          <select v-model="booleanOp" :disabled="meshTaskPending">
             <option value="union">Union</option>
             <option value="difference">Difference</option>
             <option value="intersection">Intersection</option>
           </select>
-          <select v-model="booleanTarget">
+          <select v-model="booleanTarget" :disabled="meshTaskPending">
             <option value="">{{ label('Второй объект…', 'Second object…') }}</option>
             <option v-for="object in document.objects.filter(o => o.id !== selection)" :key="object.id" :value="object.id">{{ object.name }}</option>
           </select>
-          <button type="button" @click="applyBoolean">{{ label('Выполнить', 'Run') }}</button>
+          <button type="button" :disabled="meshTaskPending" @click="applyBoolean">{{ label('Выполнить', 'Run') }}</button>
         </section>
         <p v-if="!selected" class="tool-hint">{{ label('Выберите объект в полосе снизу или кликом по холсту.', 'Select an object in the strip below or by clicking the canvas.') }}</p>
             </div>

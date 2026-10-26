@@ -47,7 +47,7 @@ export function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0)
  return e.key==='Home'?min:e.key==='End'?last:Math.max(min,Math.min(last,current+(e.key==='ArrowDown'?1:-1)))
 }
 
-export function download(text: string, name: string) { const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); const a = window.document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
+export function download(text: string, name: string, mimeType = 'text/plain') { const url = URL.createObjectURL(new Blob([text], { type: mimeType })); const a = window.document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
 
 export function resizeSplit(e: PointerEvent) {
   if (e.button !== 0) return

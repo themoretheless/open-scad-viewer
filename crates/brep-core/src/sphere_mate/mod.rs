@@ -38,10 +38,10 @@ const MAX_SPAN: f64 = std::f64::consts::FRAC_PI_2 + 1e-9;
 /// Angular clearance between two events on one section circle.
 pub(crate) const EVENT_GAP: f64 = 1e-8;
 
-mod unsupported;
 mod imprint;
-mod sphere_inside;
 #[cfg(test)]
 mod parameter_tests;
-pub(crate) use unsupported::*;
+mod sphere_inside;
+mod unsupported;
 pub(crate) use sphere_inside::*;
+pub(crate) use unsupported::*;

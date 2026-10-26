@@ -47,7 +47,7 @@ fn floats(v: &[f64]) -> String {
         .collect::<Vec<_>>()
         .join(",")
 }
-fn enforce_output_limit(text: &str) -> Result<()> {
+pub(crate) fn enforce_output_limit(text: &str) -> Result<()> {
     if text.len() > MAX_OUTPUT_BYTES {
         return Err(refuse("STEP output exceeds 16 MiB"));
     }
@@ -441,7 +441,11 @@ fn periodicized_sphere(model: &Model) -> Result<Model> {
 }
 // Face counts and degrees do not establish a periodic carrier: partial
 // revolutions can have the same shape of patch records as a complete band.
-fn periodic_patch_grid_compatible(model: &Model, u_count: usize, v_count: usize) -> bool {
+pub(crate) fn periodic_patch_grid_compatible(
+    model: &Model,
+    u_count: usize,
+    v_count: usize,
+) -> bool {
     let compatible = |a: &Surface, ai: usize, aj: usize, b: &Surface, bi: usize, bj: usize| {
         a.control_points[ai][aj]
             .iter()
@@ -482,7 +486,7 @@ fn periodic_patch_grid_compatible(model: &Model, u_count: usize, v_count: usize)
     }
     true
 }
-fn periodicized_step_v6(model: &Model) -> Result<Model> {
+pub(crate) fn periodicized_step_v6(model: &Model) -> Result<Model> {
     if model.faces.len() == 8
         && model.vertices.len() == 6
         && model
@@ -864,7 +868,7 @@ fn knot_form_exchange(knots: &[f64], exact: bool) -> (Vec<usize>, Vec<f64>) {
     }
     (counts, values)
 }
-fn emit_curve_v5(w: &mut Writer, c: &Curve) -> usize {
+pub(crate) fn emit_curve_v5(w: &mut Writer, c: &Curve) -> usize {
     emit_curve_exchange(w, c, false)
 }
 pub(crate) fn emit_curve_source(w: &mut Writer, c: &Curve) -> usize {

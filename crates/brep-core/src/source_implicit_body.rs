@@ -324,8 +324,11 @@ pub fn verify_sphere(
     // Smooth implicit support alone cannot rule out folded/overlapping patches.
     // The SAME call must prove the full actual surface complex is embedded,
     // closed, nested and outward, before any original boundary/Gk flag is set.
-    let volume =
-        crate::volume_validity::inspect_with_linear(model, tolerance_uv, l.volume, l.linear_cells)?;
+    let volume = if l.linear_cells == 0 {
+        crate::volume_validity::inspect(model, tolerance_uv, l.volume)?
+    } else {
+        crate::volume_validity::inspect_with_linear(model, tolerance_uv, l.volume, l.linear_cells)?
+    };
     let proven = volume.proven;
     r.volume = Some(volume);
     if !proven {

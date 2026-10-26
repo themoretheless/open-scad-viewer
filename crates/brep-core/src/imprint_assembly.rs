@@ -201,18 +201,7 @@ impl<'m> Assembler<'m> {
                                 continue;
                             }
                             let point = edge.curve.evaluate(t)?.point;
-                            let point = [point[0], point[1], point[2]];
-                            let tolerance = model.tolerance_mm.max(1e-12);
-                            let id = if let Some(id) = out.specials.iter().position(|vertex| {
-                                (0..3)
-                                    .map(|axis| (vertex.point[axis] - point[axis]).powi(2))
-                                    .sum::<f64>()
-                                    <= tolerance * tolerance
-                            }) {
-                                id
-                            } else {
-                                out.special(point)
-                            };
+                            let id = out.special([point[0], point[1], point[2]]);
                             out.attach_edge(id, o, coedge.edge, t);
                         }
                     }
@@ -370,20 +359,16 @@ impl<'m> Assembler<'m> {
                 let src = &model.edges[e];
                 let domain = src.curve.domain();
                 let table = self.splits.get(&(o, e)).cloned().unwrap_or_default();
-                let (c, p) = coedge.trim().map_or(
-                    (domain, coedge.pcurve.domain()),
-                    |trim| (trim.curve_parameter, trim.pcurve_parameter),
-                );
+                let (c, p) = coedge
+                    .trim()
+                    .map_or((domain, coedge.pcurve.domain()), |trim| {
+                        (trim.curve_parameter, trim.pcurve_parameter)
+                    });
                 let lo = c[0].min(c[1]);
                 let hi = c[0].max(c[1]);
                 let full_3d = lo == domain[0] && hi == domain[1];
                 let mut bounds = vec![lo];
-                bounds.extend(
-                    table
-                        .iter()
-                        .map(|(t, _)| *t)
-                        .filter(|t| *t > lo && *t < hi),
-                );
+                bounds.extend(table.iter().map(|(t, _)| *t).filter(|t| *t > lo && *t < hi));
                 bounds.push(hi);
                 let p_at = |t: f64| {
                     let s = if coedge.reversed {
@@ -702,7 +687,12 @@ mod tests {
         let count = model.loops[model.faces[face].outer].coedges.len();
         for i in 0..count {
             scale_use(&mut model, face, i);
-            set_trim(&mut model, face, i, [3., 5.], [11., 13.]);
+            let c = if coedge(&model, face, i).reversed {
+                [4., 6.]
+            } else {
+                [2., 4.]
+            };
+            set_trim(&mut model, face, i, c, [10., 12.]);
         }
         model
     }
@@ -712,11 +702,13 @@ mod tests {
         let mut asm = Assembler::new(model, &other, "union").unwrap();
         let mut chart = ChartVertices::default();
         let mut pieces = Vec::new();
+        let mut links = Vec::new();
         for (ka, kb, pcurve, key, reversed) in asm.boundary_pieces(0, face).unwrap() {
             let ua = pcurve.evaluate(0.).unwrap().point;
             let ub = pcurve.evaluate(1.).unwrap().point;
             let ia = chart.index(asm.chart_key(ka), [ua[0], ua[1]]);
             let ib = chart.index(asm.chart_key(kb), [ub[0], ub[1]]);
+            links.push((ka, kb, ia, ib));
             pieces.push(Piece {
                 v: [ia, ib],
                 pcurve,
@@ -724,9 +716,37 @@ mod tests {
                 reversed,
             });
         }
+        // Close the gaps left by authored partial uses with the exact remainder
+        // of each source curve. This keeps the open-assembly agreement check
+        // meaningful on curved as well as planar faces.
+        let wire = model.faces[face].outer;
+        for i in 0..links.len() {
+            let next = (i + 1) % links.len();
+            let (_, from, _, ia) = links[i];
+            let (to, _, ib, _) = links[next];
+            let source = &model.loops[wire].coedges[i];
+            let interval = if source.reversed { [2., 4.] } else { [4., 6.] };
+            let mut curve = normalized(
+                model.edges[source.edge]
+                    .curve
+                    .trim(interval[0], interval[1])
+                    .unwrap(),
+            );
+            if source.reversed {
+                curve = curve.reverse().unwrap();
+            }
+            let pcurve = normalized(source.pcurve.trim(12., 14.).unwrap());
+            let key = asm.push_net([from, to], curve);
+            pieces.push(Piece {
+                v: [ia, ib],
+                pcurve,
+                key: EKey::Net(key),
+                reversed: false,
+            });
+        }
         asm.emit_chart(0, face, false, pieces, chart.len(), &|_| Ok(true))
             .unwrap();
-        Model(
+        let mut output = Model(
             brep_topology::Model {
                 vertices: asm.vertices,
                 edges: asm.edges,
@@ -740,7 +760,9 @@ mod tests {
                 tolerance_mm: model.tolerance_mm,
             },
             TopologyIds::default(),
-        )
+        );
+        output.rebuild_topology_ids();
+        output
     }
 
     #[test]

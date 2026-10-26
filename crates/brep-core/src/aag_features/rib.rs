@@ -52,7 +52,9 @@ fn bounds(model: &Model, face: usize) -> Result<Option<([f64; 3], [f64; 3])>> {
 }
 
 fn in_bounds(point: [f64; 3], bounds: ([f64; 3], [f64; 3]), tolerance: f64) -> bool {
-    (0..3).all(|axis| point[axis] >= bounds.0[axis] - tolerance && point[axis] <= bounds.1[axis] + tolerance)
+    (0..3).all(|axis| {
+        point[axis] >= bounds.0[axis] - tolerance && point[axis] <= bounds.1[axis] + tolerance
+    })
 }
 
 /// Find thin planar rib pairs. Thickness approximates the subgraph medial
@@ -76,12 +78,22 @@ pub fn find_ribs(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<RibF
     let mut planes = Vec::new();
     for face in 0..model.faces.len() {
         guard.tick()?;
-        if graph.nodes[face].attrs.as_ref().expect("fresh attrs checked").class != SurfaceClass::Plane {
+        if graph.nodes[face]
+            .attrs
+            .as_ref()
+            .expect("fresh attrs checked")
+            .class
+            != SurfaceClass::Plane
+        {
             continue;
         }
-        let Some(normal) = super::pockets::outward_normal(model, face, 0.5, 0.5)? else { continue };
+        let Some(normal) = super::pockets::outward_normal(model, face, 0.5, 0.5)? else {
+            continue;
+        };
         let center = super::pockets::face_point(model, face, 0.5, 0.5)?;
-        let Some(bounds) = bounds(model, face)? else { continue };
+        let Some(bounds) = bounds(model, face)? else {
+            continue;
+        };
         planes.push((face, normal, dot(normal, center), bounds));
     }
 

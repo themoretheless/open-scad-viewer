@@ -1077,12 +1077,11 @@ fn attach_transfers_full_and_projective_partial_target_trims() {
         assert_eq!(transferred.periodic_lift, [[0, 0], [0, 0]]);
         assert_eq!(result.loops[1].coedges[0].trim(), untouched_trim);
         assert!(result.loops[1].coedges[3].reversed);
-        assert!(proof
-            .agreements
-            .iter()
-            .all(|report| report.status
-                == nurbs_core::curve_surface_agreement::Status::WithinTolerance));
-        result.validate().unwrap();
+        assert!(
+            proof.agreements.iter().all(|report| report.status
+                == nurbs_core::curve_surface_agreement::Status::WithinTolerance)
+        );
+        result.0.validate_topology().unwrap();
         assert!(brep_core::thread::attach_patch_sheet(&source, &target, 0, 1, 3, 0).is_err());
         assert_eq!(source, source_before);
         assert_eq!(target, target_before);
@@ -1105,19 +1104,40 @@ fn sew_transfers_full_and_partial_nonunit_target_trims() {
         let (mut grid, _) =
             brep_core::thread::attach_patch_sheet_edges(&abc, &d, &pairs, 10000).unwrap();
 
-        // Split the remaining shared boundary back into two uses while retaining
-        // the full grid's connected vertex fans and exact endpoint correspondence.
+        // Split the remaining shared boundary back into two uses. The outer
+        // endpoint also needs a coincident vertex so the two open fans remain
+        // distinct until sewing joins them.
         let shared_edge = grid.loops[0].coedges[2].edge;
         let mut boundary = d.edges[d.loops[0].coedges[0].edge].clone();
         boundary.vertices = [
             grid.edges[shared_edge].vertices[1],
             grid.edges[shared_edge].vertices[0],
         ];
+        let outer_vertex = boundary.vertices[0];
+        let split_vertex = grid.vertices.len();
+        let outer_point = grid.vertices[outer_vertex].clone();
+        grid.vertices.push(outer_point);
+        boundary.vertices[0] = split_vertex;
+        let left_edge = grid.loops[3].coedges[3].edge;
+        assert_eq!(grid.edges[left_edge].vertices[1], outer_vertex);
+        grid.edges[left_edge].vertices[1] = split_vertex;
         let split_edge = grid.edges.len();
         grid.edges.push(boundary);
         grid.loops[3].coedges[0].edge = split_edge;
         grid.loops[3].coedges[0].reversed = false;
         grid.rebuild_topology_ids();
+        let vertex_id = brep_topology::TopoId::parse("v:00000000000000000000000000000001").unwrap();
+        let edge_id = brep_topology::TopoId::parse("e:00000000000000000000000000000001").unwrap();
+        grid.1.vertices[split_vertex] = vertex_id;
+        grid.1.edges[split_edge] = edge_id;
+        grid.1
+            .change_set
+            .nodes
+            .insert(vertex_id, brep_topology::TopoKind::Vertex);
+        grid.1
+            .change_set
+            .nodes
+            .insert(edge_id, brep_topology::TopoKind::Edge);
         grid.validate().unwrap();
 
         let (curve_parameter, pcurve_parameter) = if partial {

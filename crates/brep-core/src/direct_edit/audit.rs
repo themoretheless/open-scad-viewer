@@ -192,6 +192,8 @@ fn extract_patch(model: &Model, faces: &BTreeSet<usize>) -> Result<(Model, Vec<u
             bodies: vec![],
             lineage: model.1.lineage.clone(),
             change_set: Default::default(),
+            local_tolerances_mm: Default::default(),
+            sewed_edges: Default::default(),
         },
     );
     out.refresh_change_set(&[model]);

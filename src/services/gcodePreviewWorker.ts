@@ -1,5 +1,6 @@
 import { checkGcodePreviewJob, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest } from './gcodePreviewProtocol'
 import { decodeGcodePreviewResponse, type GcodePreviewWireResponse } from './gcodePreviewWorkerTransport'
+import { isPrintReadinessErrorCode, PrintReadinessError } from './printReadiness'
 
 export interface GcodeWorkerPort {
   postMessage(message: GcodePreviewRequest): void
@@ -56,7 +57,9 @@ export class GcodePreviewWorker {
           try { finish(undefined, decodeGcodePreviewResponse(data)) }
           catch { finish(new Error('Invalid response from G-code processing.'), undefined, true) }
         } else if (data.ok === false && typeof data.error === 'string') {
-          finish(new Error(data.error))
+          finish(isPrintReadinessErrorCode(data.errorCode)
+            ? new PrintReadinessError(data.errorCode, data.errorDetails)
+            : new Error(data.error))
         } else finish(new Error('Invalid response from G-code processing.'), undefined, true)
       }
       this.active = { cancel }

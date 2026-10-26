@@ -1,6 +1,6 @@
 //! Whole-original monotonicity proves the side of an implicit line root.
 use crate::source_boundary_fragment::{Endpoint, Fragment, Role};
-use nurbs_core::{curve::Curve, Result};
+use nurbs_core::{Result, curve::Curve};
 pub struct Report {
     pub proven: bool,
     pub driver_cells: usize,

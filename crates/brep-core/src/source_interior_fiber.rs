@@ -1,6 +1,6 @@
 //! Exact interior plane preimage of an unchanged tensor-product source chart.
 //! Region support and shared-boundary ownership are separate admission gates.
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 pub struct Certificate {
     surface: Surface,
     plane: [[f64; 3]; 3],

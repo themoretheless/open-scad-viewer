@@ -233,7 +233,8 @@ impl HealOperation {
     }
 }
 
-/// Immutable, context-bound authority for gap repair of at most one context cell.
+/// Immutable, context-bound authority for gap repair. Ordinary plans retain
+/// the one-cell limit; explicitly tolerant endpoint plans carry a user cap.
 #[derive(Clone, Debug)]
 pub struct AuthorizedHealPlan {
     pub(super) context: ToleranceSpecIdentity,
@@ -241,7 +242,58 @@ pub struct AuthorizedHealPlan {
     pub(super) per_entity_limit_mm: f64,
     pub(super) cumulative_limit_mm: f64,
     pub(super) identity: String,
+    pub(super) tolerant_endpoints: bool,
 }
+
+fn apply_tolerant_endpoint(admission: &mut Model, vertex: usize, to: [f64; 3]) -> Result<()> {
+    if vertex >= admission.vertices.len() || to.iter().any(|value| !value.is_finite()) {
+        return Err(refuse(
+            "BREP_HEAL_RECIPE_INVALID",
+            "Tolerant endpoint target is invalid",
+        ));
+    }
+    admission.vertices[vertex].point = to;
+    for edge in &mut admission.edges {
+        for endpoint in 0..2 {
+            if edge.vertices[endpoint] == vertex {
+                let control = if endpoint == 0 {
+                    0
+                } else {
+                    edge.curve.control_points.len() - 1
+                };
+                edge.curve.control_points[control] = to.to_vec();
+            }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn tolerant_endpoint_snapshot(
+    model: &Model,
+    vertex: usize,
+    to: [f64; 3],
+) -> Result<Model> {
+    let mut admission = model.clone();
+    apply_tolerant_endpoint(&mut admission, vertex, to)?;
+    admission.validate()?;
+    Ok(admission)
+}
+
+fn tolerant_endpoint_admission(model: &Model, operations: &[HealOperation]) -> Result<Model> {
+    let mut admission = model.clone();
+    for operation in operations {
+        let HealOperation::EndpointSnap { vertex, to, .. } = operation else {
+            return Err(refuse(
+                "BREP_HEAL_PLAN_INVALID",
+                "Tolerant sewing admits only endpoint snap operations",
+            ));
+        };
+        apply_tolerant_endpoint(&mut admission, *vertex, *to)?;
+    }
+    admission.validate()?;
+    Ok(admission)
+}
+
 impl AuthorizedHealPlan {
     pub fn new(
         model: &Model,
@@ -354,8 +406,54 @@ impl AuthorizedHealPlan {
             per_entity_limit_mm,
             cumulative_limit_mm,
             identity,
+            tolerant_endpoints: false,
         })
     }
+
+    /// Build a user-capped endpoint plan after proving that the requested
+    /// snaps are exactly sufficient to make the private admission copy valid.
+    pub fn new_tolerant_endpoints(
+        model: &Model,
+        context: &ToleranceContext,
+        operations: Vec<HealOperation>,
+        per_entity_limit_mm: f64,
+        cumulative_limit_mm: f64,
+    ) -> Result<Self> {
+        if !per_entity_limit_mm.is_finite()
+            || !cumulative_limit_mm.is_finite()
+            || per_entity_limit_mm <= 0.
+            || cumulative_limit_mm <= 0.
+        {
+            return Err(refuse(
+                "BREP_HEAL_BUDGET_EXCEEDED",
+                "Tolerant sewing caps must be finite and positive",
+            ));
+        }
+        let admission = tolerant_endpoint_admission(model, &operations)?;
+        let cell = context.spatial_bounds().absolute_mm;
+        let mut plan = Self::new(&admission, context, operations, cell, cell)?;
+        let source_identity = plan.identity.clone();
+        plan.per_entity_limit_mm = per_entity_limit_mm;
+        plan.cumulative_limit_mm = cumulative_limit_mm;
+        plan.tolerant_endpoints = true;
+        let signature = format!(
+            "{source_identity}:{:016x}:{:016x}",
+            per_entity_limit_mm.to_bits(),
+            cumulative_limit_mm.to_bits()
+        );
+        plan.identity = format!(
+            "authorized-tolerant-sew:{}",
+            TopoId::derive(
+                TopoKind::Body,
+                "authorized-tolerant-sew",
+                "plan",
+                "identity",
+                signature.as_bytes()
+            )
+        );
+        Ok(plan)
+    }
+
     pub fn context(&self) -> &ToleranceSpecIdentity {
         &self.context
     }
@@ -382,7 +480,13 @@ pub(crate) fn apply_authorized_heal_checked(
     plan: &AuthorizedHealPlan,
     mut before_operation: impl FnMut(usize) -> Result<()>,
 ) -> Result<Model> {
-    model.validate()?;
+    let admission = if plan.tolerant_endpoints {
+        Some(tolerant_endpoint_admission(model, plan.operations())?)
+    } else {
+        model.validate()?;
+        None
+    };
+    let proof_model = admission.as_ref().unwrap_or(model);
     let context = model
         .tolerance_context()
         .map_err(|_| refuse("BREP_HEAL_CONTEXT_MISMATCH", "Model context is invalid"))?;
@@ -417,7 +521,12 @@ pub(crate) fn apply_authorized_heal_checked(
                 "Boundary proof no longer matches the complete heal recipe",
             ));
         }
-        if !operation.proof_matches_model_with(&next, &context, &incidence) {
+        let operation_proof_model = if plan.tolerant_endpoints {
+            proof_model
+        } else {
+            &next
+        };
+        if !operation.proof_matches_model_with(operation_proof_model, &context, &incidence) {
             return Err(refuse(
                 "BREP_HEAL_PROOF_UNRELATED",
                 "Boundary proof is stale, foreign, or unrelated to the target entity",

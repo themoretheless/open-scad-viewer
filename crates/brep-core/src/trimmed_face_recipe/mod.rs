@@ -3,8 +3,8 @@
 use crate::{Coedge, Edge, Face, Loop, Vertex};
 use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{
-    curve::Curve, curve_surface_agreement as agreement, surface::Surface, trim_region_audit, Error,
-    Result,
+    Error, Result, curve::Curve, curve_surface_agreement as agreement, surface::Surface,
+    trim_region_audit,
 };
 
 mod boundary;

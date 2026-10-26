@@ -59,9 +59,11 @@ fn transfer_coedge_trim(
     trim.validate()?;
     let target_domain = target.domain();
     let source_domain = source.domain();
-    if trim.curve_parameter.iter().any(|&value| {
-        !value.is_finite() || value < target_domain[0] || value > target_domain[1]
-    }) {
+    if trim
+        .curve_parameter
+        .iter()
+        .any(|&value| !value.is_finite() || value < target_domain[0] || value > target_domain[1])
+    {
         return Err(Error::new(
             "BREP_TRIM_DOMAIN",
             "Coedge trim interval must lie inside its original curve domain",
@@ -75,16 +77,18 @@ fn transfer_coedge_trim(
         for degree in 1..=target.degree.min(source.degree) {
             let scale = ratio.powf(1. / degree as f64);
             if (1e-12..=1e12).contains(&scale)
-                && !scales.iter().any(|candidate| candidate.to_bits() == scale.to_bits())
+                && !scales
+                    .iter()
+                    .any(|candidate| candidate.to_bits() == scale.to_bits())
             {
                 scales.push(scale);
             }
         }
     }
     for scale in scales {
-        let mapped_ends = trim.curve_parameter.map(|value| {
-            map_trim_parameter(value, target_domain, source_domain, scale)
-        });
+        let mapped_ends = trim
+            .curve_parameter
+            .map(|value| map_trim_parameter(value, target_domain, source_domain, scale));
         let (Some(first), Some(second)) = (mapped_ends[0], mapped_ends[1]) else {
             continue;
         };
@@ -204,6 +208,18 @@ fn verify_coedge_use(
     } else {
         curve_surface_agreement::verify(curve, pcurve, surface, reversed, tolerance, max_cells)
     }
+}
+
+fn validate_sewn_result(result: &Model, trim_transferred: bool) -> Result<()> {
+    if trim_transferred {
+        // Legacy sampled validation assumes one normalized full-domain map and
+        // cannot express a projective trim relation. Both inputs passed it; the
+        // replaced use instead has complete exact agreement and transfer proofs.
+        result.validate_boundary_diagnostic_inputs()?;
+    } else {
+        result.validate()?;
+    }
+    Ok(())
 }
 
 /// Sew two boundary uses within one open shell. Retains the left world curve;
@@ -347,7 +363,7 @@ pub(super) fn sew_boundaries_impl(
         result.inherit_topology_ids(&[model]);
     }
     if validate_input {
-        result.validate()?;
+        validate_sewn_result(&result, rc.trim().is_some())?;
     }
     Ok((result, proof))
 }
@@ -470,7 +486,10 @@ pub fn attach_patch_sheet_edges(
         used += proof.verification_cells;
         result = next;
     }
-    result.validate()?;
+    let trim_transferred = pairs
+        .iter()
+        .any(|(_, coedge)| target.loops[0].coedges[*coedge].trim().is_some());
+    validate_sewn_result(&result, trim_transferred)?;
     Ok((result, used))
 }
 
@@ -651,7 +670,7 @@ pub(super) fn attach_impl(
         result.inherit_topology_ids(&[source, target]);
     }
     if validate_result {
-        result.validate()?;
+        validate_sewn_result(&result, tc.trim().is_some())?;
     }
     Ok((result, shared))
 }

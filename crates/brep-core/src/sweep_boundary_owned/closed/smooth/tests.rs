@@ -420,7 +420,7 @@ fn body(attempt: SmoothClosedAttempt) -> Box<SmoothClosedBody> {
         ),
     }
 }
-#[path = "tests/ownership.rs"]
-mod ownership;
 #[path = "tests/geometric_clock.rs"]
 mod geometric_clock;
+#[path = "tests/ownership.rs"]
+mod ownership;

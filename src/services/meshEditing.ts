@@ -1,6 +1,7 @@
 import {callGeometryRust} from './geometry/kernel'
 import type { SculptBrush } from './geometryEditing'
-import { booleanPolygonMeshes, brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { booleanManifoldInKernel, checkManifoldInKernel, repairManifoldInKernel, MANIFOLD_BOOLEAN_DEFAULT_OPTIONS, type KernelManifoldRepair, type KernelManifoldReport, type ManifoldBooleanOp, type ManifoldBooleanOptions } from './geometry/manifoldAnalysis'
 import { stringifyMeshJson } from './meshJson'
 import { parseBinaryStl } from './stlImport'
 
@@ -52,7 +53,7 @@ function validatePolygon(mesh: PolygonMesh) {
   normalizePolygonMesh(mesh)
 }
 
-interface MeshSnapshot { document: MeshWorkspaceDocument; characters: number; text: string }
+interface MeshSnapshot { document: MeshWorkspaceDocument; characters: number; text: string; operation: string }
 export class MeshHistory {
   private past: MeshSnapshot[] = []
   private future: MeshSnapshot[] = []
@@ -60,12 +61,15 @@ export class MeshHistory {
   constructor(document = emptyMeshDocument()) {
     const validated = parseMeshDocument(stringifyMeshJson(document))
     const validatedText = stringifyMeshJson(validated)
-    this.current = {document: validated, characters: validatedText.length, text: validatedText}
+    this.current = {document: validated, characters: validatedText.length, text: validatedText, operation: 'Initial document'}
   }
   get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
-  commit(document: MeshWorkspaceDocument) {
+  get currentOperation() { return this.current.operation }
+  get undoOperation() { return this.canUndo ? this.current.operation : '' }
+  get redoOperation() { return this.future[this.future.length - 1]?.operation ?? '' }
+  commit(document: MeshWorkspaceDocument, operation = 'Edit mesh') {
     const next = parseMeshDocument(stringifyMeshJson(document))
     const nextText = stringifyMeshJson(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return
@@ -76,7 +80,7 @@ export class MeshHistory {
     while (this.past.length > 80 || (this.past.length > 1 && retained > 24_000_000)) {
       retained -= this.past.shift()!.characters + 1
     }
-    this.current = {document: next, characters: nextText.length, text: nextText}
+    this.current = {document: next, characters: nextText.length, text: nextText, operation}
     this.future = []
   }
   undo() {
@@ -155,10 +159,88 @@ export function mergeByDistance(mesh: PolygonMesh, distance = 1e-4): PolygonMesh
   return nativeMeshEdit('merge', {mesh, distance})
 }
 
-export function booleanMeshObjects(a: PolygonMesh, b: PolygonMesh, operation: 'union' | 'difference' | 'intersection'): PolygonMesh {
-  const result = booleanPolygonMeshes(a, b, operation)
+export interface MeshRepairResult {
+  mesh: PolygonMesh
+  before: KernelManifoldReport
+  after: KernelManifoldReport
+  repair: KernelManifoldRepair | null
+}
+
+export interface MeshRepairProgress {
+  phase: 'check' | 'repair' | 'verify'
+  completed: number
+  total: 3
+}
+
+/** Full manifold repair for the editor command. Welding remains a separate,
+ * explicit operation, so repair does not alter scale-dependent tolerances. */
+export function repairMeshObject(mesh: PolygonMesh, onProgress?: (progress: MeshRepairProgress) => void): MeshRepairResult {
+  onProgress?.({phase: 'check', completed: 0, total: 3})
+  const before = checkManifoldInKernel(mesh.positions, mesh.indices)
+  if (before.isManifold) {
+    onProgress?.({phase: 'verify', completed: 2, total: 3})
+    return {mesh: {positions: mesh.positions.slice(), indices: mesh.indices.slice()}, before, after: before, repair: null}
+  }
+  onProgress?.({phase: 'repair', completed: 1, total: 3})
+  const repaired = repairManifoldInKernel(mesh.positions, mesh.indices, 0, true)
+  const repairedMesh = {positions: repaired.positions, indices: repaired.indices}
+  onProgress?.({phase: 'verify', completed: 2, total: 3})
+  const after = checkManifoldInKernel(repairedMesh.positions, repairedMesh.indices)
+  return {mesh: repairedMesh, before, after, repair: repaired}
+}
+
+export interface MeshBooleanReport {
+  operation: ManifoldBooleanOp
+  operandRepaired: readonly [boolean, boolean]
+  toleranceMm: number
+  weldEpsilonMm: number
+  relativeTolerance: number
+  work: number
+  fragments: number
+  inputTriangles: readonly [number, number]
+  outputTriangles: number
+  isManifold: boolean
+}
+
+export interface MeshBooleanResult {
+  mesh: PolygonMesh
+  report: MeshBooleanReport
+}
+
+export interface MeshBooleanProgress {
+  phase: 'boolean'
+  completed: 0
+  total: 1
+}
+
+/** Mesh-editor booleans use manifold-ops exclusively; the kernel owns all
+ * geometric and topological work, including Full pre-repair of the operands. */
+export function booleanMeshObjectsDetailed(a: PolygonMesh, b: PolygonMesh, operation: ManifoldBooleanOp, onProgress?: (progress: MeshBooleanProgress) => void, options: ManifoldBooleanOptions = {}): MeshBooleanResult {
+  onProgress?.({phase: 'boolean', completed: 0, total: 1})
+  const weldEpsilonMm = options.weldEpsilonMm ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.weldEpsilonMm
+  const relativeTolerance = options.relativeTolerance ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.relativeTolerance
+  const result = booleanManifoldInKernel(a.positions, a.indices, b.positions, b.indices, operation, {weldEpsilonMm, relativeTolerance})
   if (!result.indices.length) throw new Error('Boolean produced an empty mesh.')
-  return { positions: result.positions, indices: result.indices }
+  return {
+    mesh: {positions: result.positions, indices: result.indices},
+    report: {
+      operation,
+      operandRepaired: result.operandRepaired,
+      toleranceMm: result.kernel.toleranceMm,
+      weldEpsilonMm,
+      relativeTolerance,
+      work: result.kernel.work,
+      fragments: result.kernel.fragments,
+      inputTriangles: result.kernel.inputTriangles,
+      outputTriangles: result.indices.length / 3,
+      isManifold: result.isManifold,
+    },
+  }
+}
+
+/** Compatibility wrapper for callers that only need the resulting geometry. */
+export function booleanMeshObjects(a: PolygonMesh, b: PolygonMesh, operation: ManifoldBooleanOp): PolygonMesh {
+  return booleanMeshObjectsDetailed(a, b, operation).mesh
 }
 
 export function duplicateObject(object: MeshObject, delta: [number, number, number] = [5, 0, 0]): MeshObject {

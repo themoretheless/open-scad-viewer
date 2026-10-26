@@ -5,7 +5,7 @@ use crate::{
     trimmed_face_recipe::{self, Boundary, Limits, SourcePointSearch},
 };
 use cad_predicates::ToleranceContext;
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 
 mod proposal;
 mod qualify_linear_region;

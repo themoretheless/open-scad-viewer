@@ -58,15 +58,23 @@ import type {SolidRevolveOptions} from './solidRevolve'
 import type {DirectExtrusionOptions} from './directExtrusion'
 import type {inspectSolidIntersections} from './solidDiagnostics'
 import type {PolygonMesh} from './geometry/polygon'
+import type {KernelManifoldMetrics} from './geometry/manifoldAnalysis'
 import {parseBondedSolidInput,isBondedSolidResult,type BondedSolidResult} from './bondedSolidProtocol'
 import type {StructuralSections,BoundaryConnectivity} from './structuralSections'
 import type {MeshData} from '../core/mesh'
+import type {MeshBooleanResult,MeshRepairResult} from './meshEditing'
+import type {MeshManifoldEntry,MeshManifoldObject} from './meshManifoldDefects'
+import type {ManifoldBooleanOp} from './geometry/manifoldAnalysis'
+import type {ImportedMesh,MeshImportOptions,MeshImportRepairMode} from './meshImport'
+import type {MeshConvertOptions,MeshConvertResult,MeshExportArtifact,MeshExportInput,MeshExportOptions} from './meshConvert'
 import type {CadOptions} from './cadWorkbench'
 import type {CadPairReport} from './cadInspection'
 import type {DirectBody, DirectSketch, DirectDocument} from './directModeling'
 import type {MainOperation, MainParameters} from './mainModeling'
 import type {PickHit} from './rendererContracts'
-import type {TrussInput, TrussResponse} from './trussAnalysis'
+import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopologyOptions,TrussTopologyResponse} from './trussAnalysis'
+import type {StructuralProfileProperties} from './structuralProfiles'
+import type {AxialLimits,AxialScreeningRow} from './trussScreening'
 import {isNominalLatticeGraph, type LatticeGraphMesh, type NominalLatticeGraph} from './latticeGraphProtocol'
 import type {LighteningOptions} from './solidLightening'
 import { arrayOf } from './mainSolidProtocol/mainSolidExpectation'
@@ -106,6 +114,13 @@ export type MainSolidJob =
   | {kind:'surfaceDistance';a:NurbsSurface;b:NurbsSurface;toleranceMm:number;maxCells:number}
   | {kind:'curveDistance';a:NurbsCurve;b:NurbsCurve;toleranceMm:number;maxCells:number}
   | {kind:'measureVertices';a:DirectBody;indexA:number;b:DirectBody;indexB:number}
+  | {kind:'manifoldMetrics';mesh:PolygonMesh}
+  | {kind:'meshManifold';objects:MeshManifoldObject[]}
+  | {kind:'meshRepair';mesh:PolygonMesh}
+  | {kind:'meshBoolean';a:PolygonMesh;b:PolygonMesh;operation:ManifoldBooleanOp;options?:import('./geometry/manifoldAnalysis').ManifoldBooleanOptions}
+  | {kind:'meshImport';fileName:string;input:Uint8Array;options:MeshImportOptions}
+  | {kind:'meshConvert';fileName:string;input:Uint8Array;target:import('./meshFormats').MeshExportFormat;options:MeshConvertOptions}
+  | {kind:'meshExport';mesh:MeshExportInput;target:import('./meshFormats').MeshExportFormat;options:MeshExportOptions}
   | {kind:'measureEdge';body:DirectBody;edge:number;parameter:number}
   | {kind:'displayMesh';mesh:PolygonMesh;brep?:NurbsBrep;segments:number}
   | {kind:'restoreDocument';text:string}
@@ -137,6 +152,10 @@ export type MainSolidJob =
   | {kind:'inspect'; bodies:DirectBody[]}
   | {kind:'meshContacts'; mesh:PolygonMesh;maxWork?:number;maxContacts?:number}
   | {kind:'truss'; model:TrussInput}
+  | {kind:'trussField';model:TrussInput;result:TrussResponse;markerMm:number}
+  | {kind:'trussScreening';model:TrussInput;responses:TrussResponse[];limits:AxialLimits}
+  | {kind:'trussTopology';model:Omit<TrussModel,'forcesN'>;cases:TrussTopologyLoadCase[];options:TrussTopologyOptions}
+  | {kind:'structuralProfiles'}
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
@@ -182,6 +201,13 @@ export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
  surfaceMesh:true,
  surfaceBoundary:true,
  measureVertices:true,
+ manifoldMetrics:true,
+ meshManifold:true,
+ meshRepair:true,
+ meshBoolean:true,
+ meshImport:true,
+ meshConvert:true,
+ meshExport:true,
  measureEdge:true,
  primitive:true,
  rushGraphImport:true,
@@ -213,6 +239,10 @@ export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
  inspect:true,
  meshContacts:true,
  truss:true,
+ trussField:true,
+ trussScreening:true,
+ trussTopology:true,
+ structuralProfiles:true,
  latticeGraph:true,
  structuralSections:true,
  bondedSolid:true,
@@ -223,7 +253,7 @@ drawingSheets:true,
 animationFrames:true,
 animationSample:true,
 minkowski3d:true,}
-export interface MainSolidResults {profileBridgeChords:ProfileBridgeChordReport;expressionShellInspect:ExpressionInspectionResult;expressionShellRestore:ExpressionShellResult;sourceBodyRestore:SourceBodyResult;offsetContactQualification:OffsetContactQualification;offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;rushGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections;minkowski3d:SolidMinkowskiResult;
+export interface MainSolidResults {profileBridgeChords:ProfileBridgeChordReport;expressionShellInspect:ExpressionInspectionResult;expressionShellRestore:ExpressionShellResult;sourceBodyRestore:SourceBodyResult;offsetContactQualification:OffsetContactQualification;offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;manifoldMetrics:KernelManifoldMetrics;meshManifold:MeshManifoldEntry[];meshRepair:MeshRepairResult;meshBoolean:MeshBooleanResult;meshImport:ImportedMesh;meshConvert:MeshConvertResult;meshExport:MeshExportArtifact;measureEdge:CurveMeasurement;primitive:DirectDocument;rushGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse;trussField:MeshData[];trussScreening:AxialScreeningRow[];trussTopology:TrussTopologyResponse;structuralProfiles:StructuralProfileProperties[]; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections;minkowski3d:SolidMinkowskiResult;
 g2RunoutSurface:ReturnType<typeof createG2RunoutSurface>;
 animationFrames:AssemblyFrameExport;
 drawingPdf:Uint8Array;
@@ -235,6 +265,8 @@ export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
   | {ok:false; error:{name:string; message:string; code?:string}}
 )
+export interface MainSolidProgress {phase:string;completed:number;total:number}
+export type MainSolidProgressMessage = {version:1;id:number;kind:MainSolidJob['kind'];progress:MainSolidProgress}
 
 export const finite = (v:unknown): v is number => typeof v==='number' && Number.isFinite(v)
 /** Mesh buffers arrive as typed views after the worker transfer; plain arrays from JSON. */
@@ -281,10 +313,19 @@ export type MainSolidExpectation =
   | {kind:'surfaceBoundary';samples:number}
   | {kind:'brepTool';id:string;operation:'mass'|'mesh'|'display'}
   | {kind:'meshContacts';triangles:number;maxWork:number;maxContacts:number}
+  | {kind:'meshManifold';objects:{id:string;vertices:number;triangles:number}[]}
+  | {kind:'meshRepair';vertices:number;triangles:number}
+  | {kind:'meshBoolean';operation:ManifoldBooleanOp;weldEpsilonMm:number;relativeTolerance:number;vertices:[number,number];triangles:[number,number]}
+  | {kind:'meshImport';repair:MeshImportRepairMode}
+  | {kind:'meshConvert';fileName:string;byteLength:number;target:import('./meshFormats').MeshExportFormat;repair:MeshImportRepairMode}
+  | {kind:'meshExport';target:import('./meshFormats').MeshExportFormat;vertices:number;triangles:number}
   | {kind:'truss'; nodes:number; members:number}
+  | {kind:'trussField';members:number}
+  | {kind:'trussScreening';members:number;responses:number}
+  | {kind:'trussTopology';nodes:number;members:number;cases:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'profileBridgeChords'|'expressionShellInspect'|'expressionShellRestore'|'minkowski3d'|'g2RunoutSurface'|'surfaceBuild'|'sourceBodyRestore'|'offsetContactQualification'|'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
+  | {kind:Exclude<MainSolidJob['kind'],'profileBridgeChords'|'expressionShellInspect'|'expressionShellRestore'|'minkowski3d'|'g2RunoutSurface'|'surfaceBuild'|'sourceBodyRestore'|'offsetContactQualification'|'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'trussField'|'trussScreening'|'trussTopology'|'structuralSections'|'bondedSolid'|'meshContacts'|'meshManifold'|'meshRepair'|'meshBoolean'|'meshImport'|'meshConvert'|'meshExport'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
   | {kind:'minkowski3d';createdId:string;bodyIds:string[];sourceSizes:[number,number][];sourceKinds:('brep'|'mesh')[]}
   | {kind:'g2RunoutSurface';maxCells:number;maxExactWork:number;maxPatches:number;tolerances:[number,number,number]}
   | {kind:'surfaceBuild';runoutId?:string}

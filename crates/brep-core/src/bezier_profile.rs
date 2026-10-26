@@ -9,19 +9,20 @@ pub use boolean_ops::boolean;
 #[path = "bezier_profile_normalize.rs"]
 mod normalize_ops;
 pub use normalize_ops::normalize;
+#[path = "bezier_profile_area.rs"]
+mod area_ops;
 #[path = "bezier_profile_coincidence.rs"]
 mod coincidence_ops;
 #[path = "bezier_profile_departure.rs"]
 mod departure_ops;
 #[path = "bezier_profile_joint.rs"]
 mod joint_ops;
-#[path = "bezier_profile_area.rs"]
-mod area_ops;
 /// Keep the specialized line/circle arrangement where it applies; route
 /// polynomial quadratics, general conics and rational cubics to this kernel.
 pub fn requires_general(curve: &Curve, tolerance: f64) -> bool {
-    curve.degree >= 3 || (curve.degree == 2 &&
-        crate::planar_trim::span_green_area(curve, [0.,0.], tolerance).is_err())
+    curve.degree >= 3
+        || (curve.degree == 2
+            && crate::planar_trim::span_green_area(curve, [0., 0.], tolerance).is_err())
 }
 fn refused(message: &str) -> Error {
     Error::new("BREP_UNSUPPORTED_BEZIER_PROFILE", message)

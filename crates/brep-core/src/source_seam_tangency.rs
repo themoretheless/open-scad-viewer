@@ -1,7 +1,7 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
 use crate::source_shared_edge::SharedEdge;
-use nurbs_core::{interval_eval::Interval as I, Error, Result};
+use nurbs_core::{Error, Result, interval_eval::Interval as I};
 pub struct Limits {
     pub max_sine_squared: f64,
     pub cells: usize,
@@ -239,7 +239,12 @@ pub fn qualify<E: Carrier>(edge: &E, limits: Limits) -> Result<Report<E>> {
     // Only literal full-carrier endpoints have exact canonical representatives.
     // Root enclosures and affine ranges retain whole-interval qualification.
     if edge.literal_endpoints()
-        && (0..2).all(|side| edge.fragment(side).parameter_bounds().iter().all(|r| r[0] == r[1]))
+        && (0..2).all(|side| {
+            edge.fragment(side)
+                .parameter_bounds()
+                .iter()
+                .all(|r| r[0] == r[1])
+        })
     {
         queue.push([coverage.hi, coverage.hi]);
         queue.push([coverage.lo, coverage.lo]);

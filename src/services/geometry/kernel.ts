@@ -73,7 +73,7 @@ interface KernelExports extends WebAssembly.Exports {
  abi_manifold_check(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
  abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number):bigint
  abi_manifold_metrics(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
- abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number):bigint
+ abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number,weldEpsilon:number,relativeTolerance:number):bigint
  abi_certified_error_add(a:number,b:number):number
  abi_certified_error_mul(a:number,b:number):number
  abi_certified_error_sqrt_two(value:number):number

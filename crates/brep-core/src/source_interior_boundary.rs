@@ -5,8 +5,8 @@ use crate::{
     source_interior_fiber::Certificate,
 };
 use nurbs_core::{
-    interval_eval::{self, Interval},
     Error, Result,
+    interval_eval::{self, Interval},
 };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Side {

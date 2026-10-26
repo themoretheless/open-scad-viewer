@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   MeshHistory,
   booleanMeshObjects,
+  booleanMeshObjectsDetailed,
   createBoxMesh,
   deleteFaces,
   emptyMeshDocument,
@@ -20,6 +21,7 @@ import {
 import { isWorkspaceMode, WORKSPACE_MODES } from '../src/services/workspaceModes'
 import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/services/solidBridge'
 import { emptyDirectDocument } from '../src/services/directModeling'
+import { inspectPolygonMesh } from '../src/services/geometry/polygon'
 
 describe('workspace modes', () => {
   it('exposes Solid · Mesh, source being a drawer rather than a workspace', () => {
@@ -73,11 +75,39 @@ describe('mesh editing', () => {
     expect(() => moveVerticesProportional(mesh, [], [1, 0, 0], 2)).toThrow(/Select vertices/)
   })
 
-  it('boolean unions two boxes', () => {
+  it('runs all mesh-editor booleans through manifold-ops without mutating operands', () => {
     const a = transformMesh(createBoxMesh([10, 10, 10]), [0, 0, 0], 0, 1)
     const b = transformMesh(createBoxMesh([10, 10, 10]), [5, 0, 0], 0, 1)
-    const united = booleanMeshObjects(a, b, 'union')
-    expect(united.indices.length).toBeGreaterThan(0)
+    const beforeA = stringifyMeshJson(a)
+    const beforeB = stringifyMeshJson(b)
+    for (const [operation, volume] of [['union', 1500], ['intersection', 500], ['difference', 500]] as const) {
+      const {mesh, report} = booleanMeshObjectsDetailed(a, b, operation)
+      expect(report.operation).toBe(operation)
+      expect(report.operandRepaired).toEqual([false, false])
+      expect(report.isManifold).toBe(true)
+      expect(report.outputTriangles).toBe(mesh.indices.length / 3)
+      expect(inspectPolygonMesh(mesh).signedVolumeMm3).toBeCloseTo(volume, 6)
+    }
+    expect(stringifyMeshJson(a)).toBe(beforeA)
+    expect(stringifyMeshJson(b)).toBe(beforeB)
+    expect(booleanMeshObjects(a, b, 'union').indices.length).toBeGreaterThan(0)
+  })
+
+  it('reports Full pre-repair of an open Boolean operand', () => {
+    const openTetra = {
+      positions: Float64Array.from([0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2]),
+      indices: Uint32Array.from([0, 2, 1, 0, 1, 3, 1, 2, 3]),
+    }
+    const box = createBoxMesh([4, 4, 4])
+    const {report} = booleanMeshObjectsDetailed(openTetra, box, 'union')
+    expect(report.operandRepaired).toEqual([true, false])
+    expect(report.isManifold).toBe(true)
+  })
+
+  it('rejects an empty Boolean result', () => {
+    const a = createBoxMesh([2, 2, 2])
+    const b = transformMesh(createBoxMesh([2, 2, 2]), [20, 0, 0], 0, 1)
+    expect(() => booleanMeshObjectsDetailed(a, b, 'intersection')).toThrow(/empty mesh/)
   })
 
   it('extrudes a face via the geometry kernel', () => {

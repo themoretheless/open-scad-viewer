@@ -96,23 +96,36 @@ pub fn transpose_charts(source: &mut Model) {
         face.surface.knots_u = old.knots_v;
         face.surface.knots_v = old.knots_u;
         face.surface.control_points = (0..old.control_points[0].len())
-            .map(|j| old.control_points.iter().map(|row| row[j].clone()).collect()).collect();
+            .map(|j| {
+                old.control_points
+                    .iter()
+                    .map(|row| row[j].clone())
+                    .collect()
+            })
+            .collect();
         face.surface.weights = (0..old.weights[0].len())
-            .map(|j| old.weights.iter().map(|row| row[j]).collect()).collect();
+            .map(|j| old.weights.iter().map(|row| row[j]).collect())
+            .collect();
         // Keep a positive local trim winding after reversing the chart.
-        let wires = std::iter::once(face.outer).chain(face.holes.iter().copied()).collect::<Vec<_>>();
+        let wires = std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .collect::<Vec<_>>();
         for wire in wires {
             let ring = &mut source.loops[wire].coedges;
             ring.reverse();
             for use_ in ring {
                 use_.reversed = !use_.reversed;
                 use_.pcurve = use_.pcurve.reverse().unwrap();
-                for p in &mut use_.pcurve.control_points { p.swap(0, 1); }
+                for p in &mut use_.pcurve.control_points {
+                    p.swap(0, 1);
+                }
             }
         }
     }
     for shell in &mut source.shells {
-        for use_ in &mut shell.faces { use_.reversed = !use_.reversed; }
+        for use_ in &mut shell.faces {
+            use_.reversed = !use_.reversed;
+        }
     }
     source.rebuild_topology_ids();
     source.validate().unwrap();

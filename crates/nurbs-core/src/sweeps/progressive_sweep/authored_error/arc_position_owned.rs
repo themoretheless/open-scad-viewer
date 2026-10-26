@@ -2,7 +2,7 @@
 use super::*;
 
 pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,
-    shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
+    shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<SectionInterpolationReport>{
     check(
         count >= sweep.options.initial_sections && count <= sweep.options.max_sections,
         "Section count outside configured sweep",
@@ -24,7 +24,7 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
         return Ok(out);
     };
     if sweep.options.spacing != Spacing::Parameter && !original_line(sweep.path) {
-        return original_arc_length_section_interpolation(sweep,count,max_cells,shared_length);
+        return original_arc_length_section_interpolation_with_chord(sweep,count,max_cells,shared_length,shared_chord);
     }
     // Authored frame laws use normalized station fraction. For a rational
     // line, normalized arc-length position is exactly this uniform line;
@@ -122,8 +122,12 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
 }
 
 pub(super) fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
+    original_arc_length_section_interpolation_with_chord(sweep,count,max_cells,shared_length,None)
+}
+pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<SectionInterpolationReport>{
     let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,refinement_error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
+    if shared_chord.is_some_and(|c|c.budget_stopped) {out.reason=Some("arc-chord-work-limit");return Ok(out);}
     let path=sweep.path;
     let domain=path.domain();
     // Interior multiplicity > degree permits a jump, invalidating Lipschitz
@@ -229,11 +233,18 @@ pub(super) fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:u
             endpoints[station][control]=upper;endpoint_upper=endpoint_upper.max(upper);
         }
     }
+    let global_chord=if let Some(shared)=shared_chord {shared.bound}
+    else if path.control_points.len()==path.degree+1 {
+        let global=shared_global_chord(path,count,division.total.bounds,max_cells-out.cells)?;
+        out.cells+=global.cells;
+        if global.budget_stopped {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+        global.bound
+    }else {None};
     // Optional original curvature proof improves the positional chord bound.
     // Keep the valid Lipschitz bound on incomplete regularity/curvature work;
     // every attempted cell still consumes this invocation's unchanged budget.
     let coarse=I::point(division.total.bounds[1]).div(I::point((count-1) as f64))?.div(I::point(2.))?;
-    let curvature=if coarse.hi>sweep.options.max_deviation && max_cells>out.cells {
+    let curvature=if global_chord.is_none() && coarse.hi>sweep.options.max_deviation && max_cells>out.cells {
         let available=max_cells-out.cells;
         // A proved constant relative pose needs no later per-station law work.
         let allowance=if constant_values.is_some(){available}else{available/8};
@@ -246,10 +257,12 @@ pub(super) fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:u
         let width=I::point(interval[1]).sub(I::point(interval[0]))?;
         let arc=I::point(division.total.bounds[1]).mul(width)?;
         let lipschitz=arc.div(I::point(2.))?;
-        let position=if let Some(curvature)=curvature {
+        let mut best=global_chord.map_or(lipschitz.hi,|c|c.min(lipschitz.hi));
+        if let Some(curvature)=curvature {
             let quadratic=I::point(curvature).mul(arc)?.mul(arc)?.div(I::point(8.))?;
-            I::new(0.,lipschitz.hi.min(quadratic.hi))?
-        }else {lipschitz};
+            best=best.min(quadratic.hi);
+        }
+        let position=I::new(0.,best)?;
         let batch=if let Some(values)=&constant_values {
             // Equal original poles make the exact relative derivatives zero;
             // interval uncertainty of the constant value is not a derivative.

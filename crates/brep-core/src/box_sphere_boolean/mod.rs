@@ -17,8 +17,8 @@ use nurbs_core::{Result, curve::Curve};
 const RECOGNITION: f64 = 1e-9;
 
 mod box_face;
-mod mate;
 mod dispatch;
+mod mate;
 #[cfg(test)]
 mod tests;
 use box_face::*;

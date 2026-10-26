@@ -122,10 +122,15 @@ fn product_key(cell: &ExpressionWallCell) -> ([usize; 2], [[[u64; 2]; 2]; 2]) {
 // contained rectangle. Both certificates belong to this immutable face and
 // this inspection's angular policy; incomplete/negative results never enter.
 fn rectangle_contains(outer: [[f64; 2]; 2], inner: [[f64; 2]; 2]) -> bool {
-    (0..2).all(|axis| outer[axis].iter().chain(inner[axis].iter()).all(|v| v.is_finite())
-        && outer[axis][0] <= inner[axis][0]
-        && inner[axis][0] <= inner[axis][1]
-        && inner[axis][1] <= outer[axis][1])
+    (0..2).all(|axis| {
+        outer[axis]
+            .iter()
+            .chain(inner[axis].iter())
+            .all(|v| v.is_finite())
+            && outer[axis][0] <= inner[axis][0]
+            && inner[axis][0] <= inner[axis][1]
+            && inner[axis][1] <= outer[axis][1]
+    })
 }
 #[cfg(test)]
 mod product_tests {
@@ -448,8 +453,14 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 // A complete outside-trim proof excludes every contained UV
                 // rectangle on this same immutable face. Never reuse an
                 // unresolved classification or an inside classification here.
-                if trim_exclusions.get(&cell.faces[side]).is_some_and(|regions|
-                    regions.iter().any(|region| rectangle_contains(*region, cell.domains[side]))) {
+                if trim_exclusions
+                    .get(&cell.faces[side])
+                    .is_some_and(|regions| {
+                        regions
+                            .iter()
+                            .any(|region| rectangle_contains(*region, cell.domains[side]))
+                    })
+                {
                     out.cache_hits += 1;
                     outside = true;
                     break;
@@ -507,14 +518,22 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 });
                 let union_key = key(cell.faces[0], union);
                 let budget = (max_spans - out.spans).min(100000);
-                let decision = if intrinsic_exclusions.get(&cell.faces[0]).is_some_and(|regions|
-                    regions.iter().any(|region| rectangle_contains(*region, union))) {
+                let decision = if intrinsic_exclusions
+                    .get(&cell.faces[0])
+                    .is_some_and(|regions| {
+                        regions
+                            .iter()
+                            .any(|region| rectangle_contains(*region, union))
+                    }) {
                     out.cache_hits += 1;
                     Some(true)
                 } else if let Some(&decision) = intrinsic.get(&union_key) {
                     out.cache_hits += 1;
                     Some(decision)
-                } else if intrinsic_attempts.get(&union_key).is_some_and(|&previous| budget <= previous) {
+                } else if intrinsic_attempts
+                    .get(&union_key)
+                    .is_some_and(|&previous| budget <= previous)
+                {
                     // Exact same immutable query already refused with at least
                     // this much work. Keep it unresolved; no exclusion follows.
                     // A larger budget is allowed to retry the calculation.
@@ -525,44 +544,65 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     let (decision, spent) = match shell.faces[cell.faces[0]].kind {
                         ShellFaceKind::Original(index) => {
                             let surface = source.faces()[index][0].edges()[0].surface();
-                            let workspace=match original_chord_workspaces.entry(index) {
-                                std::collections::hash_map::Entry::Occupied(entry)=>entry.into_mut(),
-                                std::collections::hash_map::Entry::Vacant(entry)=>entry.insert(
-                                    nurbs_core::surface_self_chord::OriginalChordWorkspace::new(surface,max_sine_squared)?),
+                            let workspace = match original_chord_workspaces.entry(index) {
+                                std::collections::hash_map::Entry::Occupied(entry) => {
+                                    entry.into_mut()
+                                }
+                                std::collections::hash_map::Entry::Vacant(entry) => entry.insert(
+                                    nurbs_core::surface_self_chord::OriginalChordWorkspace::new(
+                                        surface,
+                                        max_sine_squared,
+                                    )?,
+                                ),
                             };
-                            let hits=workspace.cache_hits();
-                            let report=workspace.qualify_rectangle(union,budget)?;
-                            out.cache_hits+=workspace.cache_hits()-hits;
+                            let hits = workspace.cache_hits();
+                            let report = workspace.qualify_rectangle(union, budget)?;
+                            out.cache_hits += workspace.cache_hits() - hits;
                             (
                                 report.complete.then_some(report.certificate.is_some()),
                                 report.spans,
                             )
                         }
                         ShellFaceKind::Retained(_) => {
-                            let hits=retained_chord_workspace.cache_hits();
-                            let result=retained_chord_workspace.inspect_self_chords(union,max_sine_squared,budget)?;
-                            out.cache_hits+=retained_chord_workspace.cache_hits()-hits;
+                            let hits = retained_chord_workspace.cache_hits();
+                            let result = retained_chord_workspace.inspect_self_chords(
+                                union,
+                                max_sine_squared,
+                                budget,
+                            )?;
+                            out.cache_hits += retained_chord_workspace.cache_hits() - hits;
                             result
-                        },
-                        ShellFaceKind::Transition => {
-                            match &mut profile_chord_workspace {
-                                Some(workspace) => {
-                                    let hits=workspace.cache_hits();
-                                    let result=workspace.inspect_self_chords(union,max_sine_squared,budget)?;
-                                    out.cache_hits+=workspace.cache_hits()-hits;
-                                    #[cfg(test)] {
-                                        let direct=corrected_transition.as_ref().unwrap()
-                                            .inspect_self_chords(union,max_sine_squared,budget)?;
-                                        if direct.0.is_some() {
-                                            assert_eq!(result.0,direct.0,"Shared intrinsic exclusion must preserve the native decision");
-                                        }
-                                        assert!(result.1<=direct.1,"Sharing must not increase intrinsic span work");
-                                    }
-                                    result
-                                }
-                                None => (None, 0),
-                            }
                         }
+                        ShellFaceKind::Transition => match &mut profile_chord_workspace {
+                            Some(workspace) => {
+                                let hits = workspace.cache_hits();
+                                let result = workspace.inspect_self_chords(
+                                    union,
+                                    max_sine_squared,
+                                    budget,
+                                )?;
+                                out.cache_hits += workspace.cache_hits() - hits;
+                                #[cfg(test)]
+                                {
+                                    let direct = corrected_transition
+                                        .as_ref()
+                                        .unwrap()
+                                        .inspect_self_chords(union, max_sine_squared, budget)?;
+                                    if direct.0.is_some() {
+                                        assert_eq!(
+                                            result.0, direct.0,
+                                            "Shared intrinsic exclusion must preserve the native decision"
+                                        );
+                                    }
+                                    assert!(
+                                        result.1 <= direct.1,
+                                        "Sharing must not increase intrinsic span work"
+                                    );
+                                }
+                                result
+                            }
+                            None => (None, 0),
+                        },
                     };
                     out.spans += spent;
                     out.intrinsic_spans += spent;
@@ -691,35 +731,63 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 out.angle_excluded += 1;
                 continue;
             }
-            if cell.faces[0]!=cell.faces[1] && out.spans<max_spans {
-                if let (ShellFaceKind::Original(first),ShellFaceKind::Original(last))=
-                    (shell.faces[cell.faces[0]].kind,shell.faces[cell.faces[1]].kind) {
+            if cell.faces[0] != cell.faces[1] && out.spans < max_spans {
+                if let (ShellFaceKind::Original(first), ShellFaceKind::Original(last)) = (
+                    shell.faces[cell.faces[0]].kind,
+                    shell.faces[cell.faces[1]].kind,
+                ) {
                     // A midpoint direction is only a proposal. Native proof
                     // requires an exactly shared authored corner and fresh
                     // continuous paths and endpoint normal enclosures.
-                    let projection=std::array::from_fn(|k|
-                        b[k][0]*0.5+b[k][1]*0.5-a[k][0]*0.5-a[k][1]*0.5);
-                    if projection.iter().all(|x|x.is_finite()) {
-                        let surfaces=[source.faces()[first][0].edges()[0].surface(),
-                            source.faces()[last][0].edges()[0].surface()];
-                        let workspace=match corner_chord_workspaces.entry((first,last)) {
-                            std::collections::hash_map::Entry::Occupied(entry)=>entry.into_mut(),
-                            std::collections::hash_map::Entry::Vacant(entry)=>entry.insert(
-                                nurbs_core::surface_self_chord::SharedCornerWorkspace::new(surfaces,max_sine_squared)?),
+                    let projection = std::array::from_fn(|k| {
+                        b[k][0] * 0.5 + b[k][1] * 0.5 - a[k][0] * 0.5 - a[k][1] * 0.5
+                    });
+                    if projection.iter().all(|x| x.is_finite()) {
+                        let surfaces = [
+                            source.faces()[first][0].edges()[0].surface(),
+                            source.faces()[last][0].edges()[0].surface(),
+                        ];
+                        let workspace = match corner_chord_workspaces.entry((first, last)) {
+                            std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
+                            std::collections::hash_map::Entry::Vacant(entry) => entry.insert(
+                                nurbs_core::surface_self_chord::SharedCornerWorkspace::new(
+                                    surfaces,
+                                    max_sine_squared,
+                                )?,
+                            ),
                         };
-                        let budget=(max_spans-out.spans).min(64);
-                        let hits=workspace.cache_hits();
-                        let (excluded,spent)=workspace.inspect(cell.domains,projection,budget)?;
-                        out.cache_hits+=workspace.cache_hits()-hits;
-                        #[cfg(test)] {
-                            let direct=nurbs_core::surface_self_chord::inspect_shared_corner_chords(
-                                surfaces,cell.domains,projection,max_sine_squared,budget)?;
-                            if direct.0 {assert!(excluded,"Cached corner path must preserve direct admission");}
-                            assert!(spent<=direct.1,"Cached corner evidence must not increase span work");
+                        let budget = (max_spans - out.spans).min(64);
+                        let hits = workspace.cache_hits();
+                        let (excluded, spent) =
+                            workspace.inspect(cell.domains, projection, budget)?;
+                        out.cache_hits += workspace.cache_hits() - hits;
+                        #[cfg(test)]
+                        {
+                            let direct =
+                                nurbs_core::surface_self_chord::inspect_shared_corner_chords(
+                                    surfaces,
+                                    cell.domains,
+                                    projection,
+                                    max_sine_squared,
+                                    budget,
+                                )?;
+                            if direct.0 {
+                                assert!(
+                                    excluded,
+                                    "Cached corner path must preserve direct admission"
+                                );
+                            }
+                            assert!(
+                                spent <= direct.1,
+                                "Cached corner evidence must not increase span work"
+                            );
                         }
-                        out.spans+=spent;
-                        out.span_stages.shared_corner+=spent;
-                        if excluded {out.angle_excluded+=1;continue;}
+                        out.spans += spent;
+                        out.span_stages.shared_corner += spent;
+                        if excluded {
+                            out.angle_excluded += 1;
+                            continue;
+                        }
                     }
                 }
             }
@@ -727,31 +795,41 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 && matches!(shell.faces[cell.faces[0]].kind, ShellFaceKind::Original(_))
                 && out.spans < max_spans
             {
-                let ShellFaceKind::Original(index)=shell.faces[cell.faces[0]].kind else {unreachable!()};
-                let surface=source.faces()[index][0].edges()[0].surface();
-                let workspace=match original_chord_workspaces.entry(index) {
-                    std::collections::hash_map::Entry::Occupied(entry)=>entry.into_mut(),
-                    std::collections::hash_map::Entry::Vacant(entry)=>entry.insert(
-                        nurbs_core::surface_self_chord::OriginalChordWorkspace::new(surface,max_sine_squared)?),
+                let ShellFaceKind::Original(index) = shell.faces[cell.faces[0]].kind else {
+                    unreachable!()
                 };
-                let hits=workspace.cache_hits();
-                let (excluded,spent)=workspace.inspect_pair(cell.domains,(max_spans-out.spans).min(100000))?;
-                out.cache_hits+=workspace.cache_hits()-hits;
-                out.spans+=spent;
-                out.span_stages.original_pair+=spent;
-                if excluded {out.angle_excluded+=1;continue;}
+                let surface = source.faces()[index][0].edges()[0].surface();
+                let workspace = match original_chord_workspaces.entry(index) {
+                    std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        entry.insert(nurbs_core::surface_self_chord::OriginalChordWorkspace::new(
+                            surface,
+                            max_sine_squared,
+                        )?)
+                    }
+                };
+                let hits = workspace.cache_hits();
+                let (excluded, spent) =
+                    workspace.inspect_pair(cell.domains, (max_spans - out.spans).min(100000))?;
+                out.cache_hits += workspace.cache_hits() - hits;
+                out.spans += spent;
+                out.span_stages.original_pair += spent;
+                if excluded {
+                    out.angle_excluded += 1;
+                    continue;
+                }
             }
             if (cell.faces[0] == cell.faces[1] || same_retained_profile)
                 && matches!(shell.faces[cell.faces[0]].kind, ShellFaceKind::Retained(_))
                 && out.spans < max_spans
             {
-                let hits=retained_chord_workspace.cache_hits();
+                let hits = retained_chord_workspace.cache_hits();
                 let (excluded, spent) = retained_chord_workspace.inspect_pair(
                     cell.domains,
                     max_sine_squared,
                     (max_spans - out.spans).min(100000),
                 )?;
-                out.cache_hits+=retained_chord_workspace.cache_hits()-hits;
+                out.cache_hits += retained_chord_workspace.cache_hits() - hits;
                 out.spans += spent;
                 out.span_stages.retained_pair += spent;
                 if excluded == Some(true) {
@@ -773,31 +851,45 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     )?;
                     out.spans += spent;
                     out.span_stages.corrected_pair += spent;
-                    out.cache_hits+=workspace.cache_hits()-hits;
+                    out.cache_hits += workspace.cache_hits() - hits;
                     if excluded == Some(true) {
                         out.angle_excluded += 1;
                         continue;
                     }
                 }
             }
-            if out.spans<max_spans {
-                let sides=match (shell.faces[cell.faces[0]].kind,shell.faces[cell.faces[1]].kind) {
-                    (ShellFaceKind::Retained(end),ShellFaceKind::Transition)=>Some((0,1,end)),
-                    (ShellFaceKind::Transition,ShellFaceKind::Retained(end))=>Some((1,0,end)),
-                    _=>None,
+            if out.spans < max_spans {
+                let sides = match (
+                    shell.faces[cell.faces[0]].kind,
+                    shell.faces[cell.faces[1]].kind,
+                ) {
+                    (ShellFaceKind::Retained(end), ShellFaceKind::Transition) => Some((0, 1, end)),
+                    (ShellFaceKind::Transition, ShellFaceKind::Retained(end)) => Some((1, 0, end)),
+                    _ => None,
                 };
-                if let (Some((profile_side,transition_side,end)),Some(workspace))=(sides,&mut profile_chord_workspace) {
-                    out.profile_transition_checked+=1;
-                    let hits=workspace.cache_hits();
-                    let (excluded,spent)=workspace.inspect(
-                        cell.domains[profile_side],cell.domains[transition_side],end==1,
-                        max_sine_squared,(max_spans-out.spans).min(256))?;
-                    out.spans+=spent;out.profile_transition_spans+=spent;
-                    out.cache_hits+=workspace.cache_hits()-hits;
+                if let (Some((profile_side, transition_side, end)), Some(workspace)) =
+                    (sides, &mut profile_chord_workspace)
+                {
+                    out.profile_transition_checked += 1;
+                    let hits = workspace.cache_hits();
+                    let (excluded, spent) = workspace.inspect(
+                        cell.domains[profile_side],
+                        cell.domains[transition_side],
+                        end == 1,
+                        max_sine_squared,
+                        (max_spans - out.spans).min(256),
+                    )?;
+                    out.spans += spent;
+                    out.profile_transition_spans += spent;
+                    out.cache_hits += workspace.cache_hits() - hits;
                     match excluded {
-                        Some(true)=>{out.angle_excluded+=1;out.profile_transition_excluded+=1;continue;},
-                        Some(false)=>out.profile_transition_inconclusive+=1,
-                        None=>out.profile_transition_unresolved+=1,
+                        Some(true) => {
+                            out.angle_excluded += 1;
+                            out.profile_transition_excluded += 1;
+                            continue;
+                        }
+                        Some(false) => out.profile_transition_inconclusive += 1,
+                        None => out.profile_transition_unresolved += 1,
                     }
                 }
             }

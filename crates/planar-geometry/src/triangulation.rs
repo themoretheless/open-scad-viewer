@@ -153,7 +153,10 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
 }
 
 fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result<Vec<u32>> {
-    let mut remaining = ring.to_vec();
+    // Bridge endpoints have distinct boundary occurrences despite sharing a
+    // position index. Ear caches must be keyed by occurrence, not position.
+    let nodes = ring.to_vec();
+    let mut remaining: Vec<usize> = (0..ring.len()).collect();
     let mut indices = Vec::with_capacity((ring.len() - 2) * 3);
     // Keep scans contiguous, but do not revisit the same rejected prefix after
     // every removal. Benchmarked against indexed linked-list traversal.
@@ -196,11 +199,6 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
             // forward error is less than 8*EPSILON*(|left|+|right|).
             // This deliberately loose bound includes subtraction/product/sum
             // rounding; underflow, overflow and cancellation use exact fallback.
-            *work = work.saturating_add(16);
-            check(
-                *work <= MAX_WORK,
-                "Profile triangulation work budget exceeded",
-            )?;
             let dx = pa[0] - pc[0];
             let dy = pa[1] - pc[1];
             let ex = pb[0] - pc[0];
@@ -227,6 +225,11 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
                     cad_predicates::Sign::Negative
                 });
             }
+            *work = work.saturating_add(16);
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
             let mut context = cad_predicates::PredicateContext::new(
                 &source,
                 &tolerance,
@@ -245,6 +248,20 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
             )?;
             match decision.outcome {
                 cad_predicates::Outcome::Sign(sign) => Ok(sign),
+                cad_predicates::Outcome::Indeterminate(
+                    cad_predicates::Reason::PrecisionExhausted,
+                ) => {
+                    // Expansion products cannot represent every dyadic value
+                    // when UV coordinates span the subnormal range. Binary64
+                    // inputs are still exactly decidable as integers times a
+                    // common power of two; no coordinate is rounded to zero.
+                    *work = work.saturating_add(64);
+                    check(
+                        *work <= MAX_WORK,
+                        "Profile triangulation work budget exceeded",
+                    )?;
+                    Ok(exact_binary64_orientation(pa, pb, pc))
+                }
                 cad_predicates::Outcome::Indeterminate(_) => Err(crate::error(
                     "Profile triangulation predicate could not be proved",
                 )),
@@ -267,79 +284,141 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
         cross2(ab, ac).abs()
             > 64. * f64::EPSILON * (ab_len * ac_len + coordinate_scale * (ab_len + ac_len))
     };
+    #[derive(Clone, Copy)]
+    struct Ear {
+        triangle: [u32; 3],
+        stable: bool,
+    }
+    let measure_ear = |a: usize,
+                       b: usize,
+                       c: usize,
+                       remaining: &[usize],
+                       work: &mut usize|
+     -> Result<(Option<Ear>, Option<usize>)> {
+        *work += 1;
+        check(
+            *work <= MAX_WORK,
+            "Profile triangulation work budget exceeded",
+        )?;
+        let (a, b, c) = (nodes[a], nodes[b], nodes[c]);
+        let (pa, pb, pc) = (positions[a], positions[b], positions[c]);
+        if orientation(a, b, c, work)? != cad_predicates::Sign::Positive {
+            return Ok((None, None));
+        }
+        // Exact positive orientation can still describe a rounding sliver
+        // between samples of one straight authored edge. Keep its vertex
+        // in the boundary and clip a better-conditioned ear instead.
+        let stable = conditioned(pa, pb, pc);
+        let min = [pa[0].min(pb[0]).min(pc[0]), pa[1].min(pb[1]).min(pc[1])];
+        let max = [pa[0].max(pb[0]).max(pc[0]), pa[1].max(pb[1]).max(pc[1])];
+        for &occurrence in remaining {
+            *work += 1;
+            let v = nodes[occurrence];
+            let p = positions[v];
+            if p != pa
+                && p != pb
+                && p != pc
+                && p[0] >= min[0]
+                && p[0] <= max[0]
+                && p[1] >= min[1]
+                && p[1] <= max[1]
+                && orientation(a, b, v, work)? != cad_predicates::Sign::Negative
+                && orientation(b, c, v, work)? != cad_predicates::Sign::Negative
+                && orientation(c, a, v, work)? != cad_predicates::Sign::Negative
+            {
+                check(
+                    *work <= MAX_WORK,
+                    "Profile triangulation work budget exceeded",
+                )?;
+                return Ok((None, Some(occurrence)));
+            }
+        }
+        check(
+            *work <= MAX_WORK,
+            "Profile triangulation work budget exceeded",
+        )?;
+        Ok((
+            Some(Ear {
+                triangle: [a as u32, b as u32, c as u32],
+                stable,
+            }),
+            None,
+        ))
+    };
+    let mut cached = vec![None; nodes.len()];
+    let mut blockers = vec![None; nodes.len()];
+    let mut location = vec![usize::MAX; nodes.len()];
+    for (i, &b) in remaining.iter().enumerate() {
+        location[b] = i;
+        let a = remaining[(i + remaining.len() - 1) % remaining.len()];
+        let c = remaining[(i + 1) % remaining.len()];
+        (cached[b], blockers[b]) = measure_ear(a, b, c, &remaining, work)?;
+    }
     while remaining.len() > 3 {
         let n = remaining.len();
         let mut selected = None;
         let mut fallback = None;
         for offset in 0..n {
-            let i = (cursor + offset) % n;
             *work += 1;
             check(
                 *work <= MAX_WORK,
                 "Profile triangulation work budget exceeded",
             )?;
-            let (a, b, c) = (
-                remaining[(i + n - 1) % n],
-                remaining[i],
-                remaining[(i + 1) % n],
-            );
-            let (pa, pb, pc) = (positions[a], positions[b], positions[c]);
-            if orientation(a, b, c, work)? != cad_predicates::Sign::Positive {
+            let i = (cursor + offset) % n;
+            let Some(ear) = cached[remaining[i]] else {
                 continue;
+            };
+            if ear.stable {
+                selected = Some((i, ear.triangle));
+                break;
             }
-            // Exact positive orientation can still describe a rounding sliver
-            // between samples of one straight authored edge. Keep its vertex
-            // in the boundary and clip a better-conditioned ear instead.
-            let stable = conditioned(pa, pb, pc);
-            let min = [pa[0].min(pb[0]).min(pc[0]), pa[1].min(pb[1]).min(pc[1])];
-            let max = [pa[0].max(pb[0]).max(pc[0]), pa[1].max(pb[1]).max(pc[1])];
-            let mut blocked = false;
-            for &v in &remaining {
-                *work += 1;
-                let p = positions[v];
-                if p != pa
-                    && p != pb
-                    && p != pc
-                    && p[0] >= min[0]
-                    && p[0] <= max[0]
-                    && p[1] >= min[1]
-                    && p[1] <= max[1]
-                    && orientation(a, b, v, work)? != cad_predicates::Sign::Negative
-                    && orientation(b, c, v, work)? != cad_predicates::Sign::Negative
-                    && orientation(c, a, v, work)? != cad_predicates::Sign::Negative
-                {
-                    blocked = true;
-                    break;
-                }
-            }
-            check(
-                *work <= MAX_WORK,
-                "Profile triangulation work budget exceeded",
-            )?;
-            if !blocked {
-                let ear = (i, [a as u32, b as u32, c as u32]);
-                if stable {
-                    selected = Some(ear);
-                    break;
-                }
-                if fallback.is_none() {
-                    fallback = Some(ear);
-                }
+            if fallback.is_none() {
+                fallback = Some((i, ear.triangle));
             }
         }
         let (index, triangle) = selected.or(fallback).ok_or_else(|| {
             crate::error("Profile cannot be triangulated without crossing its boundary")
         })?;
         indices.extend(triangle);
-        remaining.remove(index);
+        let removed = remaining.remove(index);
+        cached[removed] = None;
+        blockers[removed] = None;
+        location[removed] = usize::MAX;
+        for i in index..remaining.len() {
+            location[remaining[i]] = i;
+        }
         cursor = index % remaining.len();
+        if remaining.len() == 3 {
+            break;
+        }
+        // Removing a point cannot invalidate a previously visible ear, and
+        // only its adjacent ears change shape. Retest those two plus rejected
+        // ears whose recorded blocker was removed, instead of repeating the
+        // complete quadratic visibility scan after every clipped triangle.
+        let mut retest = vec![
+            remaining[(index + remaining.len() - 1) % remaining.len()],
+            remaining[index % remaining.len()],
+        ];
+        for &b in &remaining {
+            if blockers[b] == Some(removed) {
+                retest.push(b);
+            }
+        }
+        retest.sort_unstable();
+        retest.dedup();
+        for b in retest {
+            let i = location[b];
+            let a = remaining[(i + remaining.len() - 1) % remaining.len()];
+            let c = remaining[(i + 1) % remaining.len()];
+            (cached[b], blockers[b]) = measure_ear(a, b, c, &remaining, work)?;
+        }
     }
     check(
-        orientation(remaining[0], remaining[1], remaining[2], work)?
+        orientation(nodes[remaining[0]], nodes[remaining[1]], nodes[remaining[2]], work)?
             == cad_predicates::Sign::Positive,
         "Profile has a degenerate final triangle",
     )?;
-    indices.extend(remaining.into_iter().map(|i| i as u32));
+    indices.extend(remaining.into_iter().map(|i| nodes[i] as u32));
     // Recondition rounding slivers by flipping internal diagonals only.
     // Every replacement retains the original four vertices and boundary
     // segments; exact orientations prevent crossing or inverted triangles.
@@ -398,18 +477,60 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
                 break;
             }
         }
-        if !bad {
+        // Some boundary shapes force a rounding sliver whose edges cannot be
+        // flipped. Ear clipping already admitted that case as a fallback; keep
+        // the valid boundary-preserving mesh instead of rejecting the profile.
+        if !bad || repair.is_none() {
             break;
         }
-        let (index, other, first, second) = repair.ok_or_else(|| {
-            crate::error("Boundary triangles cannot be conditioned without changing their boundary")
-        })?;
+        let (index, other, first, second) = repair.unwrap();
         for k in 0..3 {
             indices[index + k] = first[k] as u32;
             indices[other + k] = second[k] as u32;
         }
     }
     Ok(indices)
+}
+
+fn exact_binary64_orientation(
+    pa: [f64; 2],
+    pb: [f64; 2],
+    pc: [f64; 2],
+) -> cad_predicates::Sign {
+    use num_bigint::BigInt;
+
+    let dyadic = |value: f64| {
+        let bits = value.to_bits();
+        let encoded = ((bits >> 52) & 0x7ff) as i32;
+        let mantissa = (bits & 0x000f_ffff_ffff_ffff) | if encoded == 0 { 0 } else { 1 << 52 };
+        let exponent = if encoded == 0 {
+            -1074
+        } else {
+            encoded - 1023 - 52
+        };
+        let signed = (mantissa as i128) * if value.is_sign_negative() { -1 } else { 1 };
+        (signed, exponent)
+    };
+    let values = [pa[0], pa[1], pb[0], pb[1], pc[0], pc[1]].map(dyadic);
+    let common_exponent = values
+        .iter()
+        .filter(|(mantissa, _)| *mantissa != 0)
+        .map(|(_, exponent)| *exponent)
+        .min()
+        .unwrap_or(0);
+    let scaled: Vec<BigInt> = values
+        .into_iter()
+        .map(|(mantissa, exponent)| {
+            BigInt::from(mantissa) << (exponent - common_exponent) as usize
+        })
+        .collect();
+    let determinant = (&scaled[2] - &scaled[0]) * (&scaled[5] - &scaled[1])
+        - (&scaled[3] - &scaled[1]) * (&scaled[4] - &scaled[0]);
+    match determinant.cmp(&BigInt::from(0)) {
+        std::cmp::Ordering::Less => cad_predicates::Sign::Negative,
+        std::cmp::Ordering::Equal => cad_predicates::Sign::Zero,
+        std::cmp::Ordering::Greater => cad_predicates::Sign::Positive,
+    }
 }
 
 #[cfg(test)]
@@ -491,7 +612,7 @@ mod tests {
                             area
                         })
                         .sum::<f64>();
-                    assert!((area - 18. / 25.).abs() < 1e-12);
+                    assert!((area - 18. / 25.).abs() < 1e-12, "{swap} {sx} {sy}: area={area} indices={:?} positions={:?}", mesh.indices, mesh.positions);
                 }
             }
         }

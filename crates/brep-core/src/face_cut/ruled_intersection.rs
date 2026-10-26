@@ -45,11 +45,15 @@ fn construct(
     if !(4..=100000).contains(&max_cells)
         || !tolerance_mm.is_finite()
         || tolerance_mm <= 0.
-        || surfaces
-            .iter()
-            .any(|s| s.periodic_u || s.periodic_v || s.control_points[0][0].len() != 3
-                || s.control_points.len().checked_mul(s.control_points[0].len())
-                    .is_none_or(|n| n > 4096))
+        || surfaces.iter().any(|s| {
+            s.periodic_u
+                || s.periodic_v
+                || s.control_points[0][0].len() != 3
+                || s.control_points
+                    .len()
+                    .checked_mul(s.control_points[0].len())
+                    .is_none_or(|n| n > 4096)
+        })
     {
         return Err(invalid("Need bounded nonperiodic 3D section inputs"));
     }
@@ -65,15 +69,31 @@ fn construct(
             knots_u: original.knots_v.clone(),
             knots_v: original.knots_u.clone(),
             control_points: (0..original.control_points[0].len())
-                .map(|j| original.control_points.iter().map(|row| row[j].clone()).collect()).collect(),
+                .map(|j| {
+                    original
+                        .control_points
+                        .iter()
+                        .map(|row| row[j].clone())
+                        .collect()
+                })
+                .collect(),
             weights: (0..original.weights[0].len())
-                .map(|j| original.weights.iter().map(|row| row[j]).collect()).collect(),
+                .map(|j| original.weights.iter().map(|row| row[j]).collect())
+                .collect(),
             periodic_u: original.periodic_v,
             periodic_v: original.periodic_u,
         };
         &transposed
-    } else { surfaces[0] };
-    let uv_ends = uv_ends.map(|ends| if swapped { ends.map(|p| [p[1], p[0]]) } else { ends });
+    } else {
+        surfaces[0]
+    };
+    let uv_ends = uv_ends.map(|ends| {
+        if swapped {
+            ends.map(|p| [p[1], p[0]])
+        } else {
+            ends
+        }
+    });
     let plane = surfaces[1];
     let n = s.control_points.len();
     if !(1..=3).contains(&s.degree_u)

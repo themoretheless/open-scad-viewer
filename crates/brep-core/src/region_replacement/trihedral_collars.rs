@@ -169,30 +169,41 @@ pub fn prepare_trihedral_collars(
         // The composed Bernstein owner keeps source/candidate jets correlated.
         // It freshly rechecks the ORIGINAL support and actual saved candidate;
         // construction provenance alone never supplies positive geometry.
-        let clamped=|knots:&[f64],degree:usize,n:usize| n==degree+1
-            &&knots[..=degree].iter().all(|&v|v==knots[degree])
-            &&knots[n..].iter().all(|&v|v==knots[n]);
-        let composed=clamped(&p.knots,p.degree,p.control_points.len())
-            &&!s.periodic_u&&!s.periodic_v
-            &&p.degree.saturating_mul(s.degree_u+s.degree_v)<=16;
-        let proof=if composed {
-            let inspected=nurbs_core::surface_g2_pcurves::inspect_owned_collar(
-                boundary,&p,&s,direction,&built.surface,tolerances,max_cells-out.cells,
-                max_exact.saturating_sub(out.exact_work).min(20000),remaining.min(2000000))?;
-            out.coefficient_work+=inspected.coefficient_work;
+        let clamped = |knots: &[f64], degree: usize, n: usize| {
+            n == degree + 1
+                && knots[..=degree].iter().all(|&v| v == knots[degree])
+                && knots[n..].iter().all(|&v| v == knots[n])
+        };
+        let composed = clamped(&p.knots, p.degree, p.control_points.len())
+            && !s.periodic_u
+            && !s.periodic_v
+            && p.degree.saturating_mul(s.degree_u + s.degree_v) <= 16;
+        let proof = if composed {
+            let inspected = nurbs_core::surface_g2_pcurves::inspect_owned_collar(
+                boundary,
+                &p,
+                &s,
+                direction,
+                &built.surface,
+                tolerances,
+                max_cells - out.cells,
+                max_exact.saturating_sub(out.exact_work).min(20000),
+                remaining.min(2000000),
+            )?;
+            out.coefficient_work += inspected.coefficient_work;
             inspected.owned
-        }else{
+        } else {
             nurbs_core::surface_g2_pcurves::inspect_owned(
-            boundary,
-            [&p, &collar_pcurve],
-            [&s, &built.surface],
-            [false, false],
-            tolerances[0],
-            tolerances[1],
-            tolerances[2],
-            max_cells - out.cells,
-            max_exact.saturating_sub(out.exact_work).min(20000),
-        )?
+                boundary,
+                [&p, &collar_pcurve],
+                [&s, &built.surface],
+                [false, false],
+                tolerances[0],
+                tolerances[1],
+                tolerances[2],
+                max_cells - out.cells,
+                max_exact.saturating_sub(out.exact_work).min(20000),
+            )?
         };
         out.cells += proof.report.geometric.cells;
         out.exact_work += proof.report.positions.exact_work;

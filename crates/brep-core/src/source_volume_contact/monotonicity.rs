@@ -1,5 +1,5 @@
 //! Outward SPD proof on a complete dyadic partition of a trivariate cube.
-use nurbs_core::{interval_eval::Interval as I, Result};
+use nurbs_core::{Result, interval_eval::Interval as I};
 type Net = [[Vec<[I; 3]>; 2]; 2];
 pub(super) struct Report {
     pub certified: bool,

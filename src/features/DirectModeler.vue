@@ -47,10 +47,10 @@ import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, seria
 import type {SolidSketchEditOptions} from '../services/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { storageGet, storageSet } from '../services/safeStorage'
-import { exportPolygonStl } from '../services/geometry/polygon'
 import type {SolidBooleanOptions} from '../services/solidBoolean'
 import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
 import { MESH_IMPORT_ACCEPT } from '../services/meshImport'
+import ManifoldSettings from '../components/ManifoldSettings.vue'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS } from '../services/meshConvert'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
 import type {SolidBrepToolOptions} from '../services/solidBrepTool'
@@ -92,7 +92,7 @@ const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
 const error = ref('')
 const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
-const historyWorker=createSolidPreviewWorker(),historyPending=ref(false),historyMode=ref<'restore'|'import'|'shared'>('restore')
+const historyWorker=createSolidPreviewWorker(),historyPending=ref(false),historyMode=ref<'restore'|'import'|'export'|'shared'>('restore')
 let historyGeneration=0
 const {
   initial,
@@ -422,7 +422,7 @@ watch(() => props.open, async open => {
     previousFocus = window.document.activeElement as HTMLElement
     await nextTick(); workspace.value?.focus()
   }
-  else { cancelGesture(); operation.value = null; previousFocus?.focus() }
+  else { await nextTick(); cancelGesture(); operation.value = null; previousFocus?.focus() }
 }, { immediate: true })
 
 const selectedSketch = computed(() => document.value.sketches.find(s => s.id === selection.value))
@@ -490,12 +490,16 @@ function selectEdgeChain() {
   edgeIndexes.value=connectedEdgeChain(authoredEdges.value,edgeIndexes.value.length?edgeIndexes.value:[edgeIndex.value])
 }
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
+const selectedBodies = computed(() => selectedIds.value.flatMap(id => {
+  const body = document.value.bodies.find(body => body.id === id)
+  return body ? [body] : []
+}))
 const manufacturingOpen=ref(false),manufacturingRevision=ref(0)
 watch(document,()=>{manufacturingRevision.value++},{flush:'sync'})
 const manufacturingSelection=computed(()=>selectedIds.value.length===1?document.value.bodies.filter(body=>body.id===selectedIds.value[0]):[])
 const manufacturingScene=computed(()=>manufacturingOpen.value?manufacturingMeshes({version:1,sketches:[],bodies:manufacturingSelection.value}):[])
 
-const selectedBrepBodies = computed(() => selectedIds.value.map(id=>document.value.bodies.find(b=>b.id===id)).filter(b=>b?.brep))
+const selectedBrepBodies = computed(() => selectedBodies.value.filter(b=>b.brep))
 const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
@@ -661,7 +665,7 @@ function chooseSketchFace() {
   choosingSketchFace.value=true;pickMode.value='face';mode.value='3d'
 }
 function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplaneOutline.value=[];workplaneBodyId.value='';choosingSketchFace.value=false;selection.value='';extraSelection.value=[] }
-const { manifoldMetrics, manifoldMetricsPending, manifoldMetricsRevision, manifoldMetricsRetryVisible, volumeDistanceOpen, volumeContact, materialPathOpen, materialPathOverlay, measurementOpen, measureTarget, measureA, measureB, curveParameter, formatMeasurement, clearanceOpen, clearanceRevision, clearanceRetryVisible, measurementTarget, clearanceMeasurement, clearancePending, measurementPending, curvaturePending, vertexAValid, vertexBValid, curveParameterValid, measurementRevision, curvatureRevision, measurementRetryVisible, curvatureRetryVisible, measurement, curvatureMeasurement, edgeDistanceOpen, edgeDistanceA, edgeDistanceB, edgeDistanceBudget, edgeDistanceRevision, edgeDistanceRetryVisible, edgeDistancePending, edgeDistance, faceDistanceOpen, faceDistanceA, faceDistanceB, faceDistanceBudget, faceDistanceRevision, faceDistanceRetryVisible, faceDistancePending, faceDistance, shellDistanceOpen, shellDistanceBudget, shellDistanceRevision, shellDistanceRetryVisible, shellDistancePending, shellDistance } = useMeasurements({ document, edgeIndex, label, props, selectedBody, selection })
+const { manifoldMetrics, manifoldMetricsPending, manifoldMetricsRevision, manifoldMetricsRetryVisible, manifoldMetricsExportPending, manifoldMetricsExportError, exportManifoldMetrics, volumeDistanceOpen, volumeContact, materialPathOpen, materialPathOverlay, measurementOpen, measureTarget, measureA, measureB, curveParameter, formatMeasurement, clearanceOpen, clearanceRevision, clearanceRetryVisible, measurementTarget, clearanceMeasurement, clearancePending, measurementPending, curvaturePending, vertexAValid, vertexBValid, curveParameterValid, measurementRevision, curvatureRevision, measurementRetryVisible, curvatureRetryVisible, measurement, curvatureMeasurement, edgeDistanceOpen, edgeDistanceA, edgeDistanceB, edgeDistanceBudget, edgeDistanceRevision, edgeDistanceRetryVisible, edgeDistancePending, edgeDistance, faceDistanceOpen, faceDistanceA, faceDistanceB, faceDistanceBudget, faceDistanceRevision, faceDistanceRetryVisible, faceDistancePending, faceDistance, shellDistanceOpen, shellDistanceBudget, shellDistanceRevision, shellDistanceRetryVisible, shellDistancePending, shellDistance } = useMeasurements({ document, edgeIndex, label, props, selectedBody, selectedBodies, selection })
 const { diagnosticPanel, diagnosticsOpen, sectionZ, sectionNormal, diagnosticsRevision, boundaryOpen, boundaryBudget, boundaryRevision, boundaryAgreementPending, boundaryIndex, boundaryResult, boundaryError, boundaryBudgetInvalid, boundaryDefects, boundarySelected, boundaryLine, faceContactsOpen, faceContactsBudget, faceContactsRevision, faceContactsPending, faceContactIndex, inspectWithinFaces, inspectExactBoundary, faceContactsResult, faceContactsError, faceContactsBudgetInvalid, faceContactDefects, faceContactSelected, faceContactPoint, sectionValidity, sectionInputInvalid, sectionErrorMessage, diagnosticsPending, diagnostics, intersectionInspection, intersectionPending, intersectionWork, intersectionIndex, selectedIntersection, selectedIntersectionLines, collapsedSectionPoints } = useDiagnostics({ document, label, props, selectedBody })
 const brepMass=shallowRef<BrepMassProperties|null>(null)
 watch(selectedBody,()=>{brepMass.value=null})
@@ -1283,7 +1287,8 @@ function sendToMesh() {
 const { sourceStepPending, sourceStepError, sourceStepTolerance, selectedSourceBody, sourceSeamPending, sourceSeamError, sourceSeamResult, cancelSourceSeam, sourceSeamMessage, qualifySourceSeam, sourceWallPending, sourceWallError, sourceWallResult, sourceWallOpen, sourceWallMenuOpen, sourceWallCoverageResult, sourceWallCoverageMode, sourceWallScanResult, sourceWallScanMode, sourceWallGroups, sourceWallSide, sourceWallMinimum, sourceWallTolerance, cancelSourceWall, sourceWallFaces, sourceWallFileMenuToggle, toggleSourceWallFace, sourceWallFaceUncertain, sourceWallFaceFill, sourceWallMeasurement, sourceWallMessage, sourceWallInputError, qualifySourceWall, cancelSourceStep, exportSourceStep, exportStepCurrent, exportStepAssembly, exportStepOriginal } = useSourceBodyTools({ document, error, label, objectInView, objectSelectable, project, props, isRestoreDisposed, restoringDraft, selectedBody, sourceDisplayResults, sourceEdgeSelection, isExpressionFaceHighlighted: sourceExpressionFaceHighlighted })
 const {
   stlInput,
-  meshRepairMode,
+  meshImportProgress,
+  meshImportStatus,
   svgInput,
   svgBusy,
   stepInput,
@@ -2108,7 +2113,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span v-if="surfaceDisplayErrors.length" role="alert">{{ label('Не удалось отобразить поверхности: ','Could not display surfaces: ')+surfaceDisplayErrors.map(e=>e.id).join(', ') }} {{ surfaceDisplayErrors[0].message }}</span>
       <span v-if="primitivePending" role="status" aria-label="primitive-build">{{ label('Создаю тело…','Creating body…') }} <button @click="cancelPrimitive">Esc</button></span>
       <span v-if="displayPending" role="status" aria-label="display-refinement">{{ label('Обновляю отображение…','Updating display…') }} <button @click="cancelDisplayPreparation">Esc</button></span>
-      <span v-if="historyPending" role="status" aria-label="history-restore">{{ historyMode==='import'?label('Проверяю импорт…','Checking import…'):historyMode==='shared'?label('Загружаю общую версию…','Loading shared version…'):label('Восстанавливаю историю…','Restoring history…') }} <button @click="cancelHistoryRestore">Esc</button></span>
+      <span v-if="historyPending" role="status" aria-label="history-restore">
+        <progress v-if="(historyMode==='import' || historyMode==='export') && meshImportProgress" :value="meshImportProgress.completed" :max="meshImportProgress.total" :aria-label="historyMode==='export'?label('Прогресс экспорта меша','Mesh export progress'):label('Прогресс импорта меша','Mesh import progress')"></progress>
+        {{ (historyMode==='import' || historyMode==='export') && meshImportStatus ? meshImportStatus : historyMode==='import'?label('Проверяю импорт…','Checking import…'):historyMode==='export'?label('Подготовка экспорта…','Preparing export…'):historyMode==='shared'?label('Загружаю общую версию…','Loading shared version…'):label('Восстанавливаю историю…','Restoring history…') }}
+        <button @click="cancelHistoryRestore">Esc</button>
+      </span>
       <span class="save-status" :class="{ error: saveError }" role="status" :title="savePending ? label('Сохраняю…','Saving…') : saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser')" :aria-label="savePending ? label('Сохраняю…','Saving…') : saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser')">
         <span v-if="savePending">…</span>
         <svg v-else-if="saveError" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
@@ -2119,13 +2128,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
-        <label class="file-row">{{ label('Проверка manifold при импорте', 'Manifold inspection on import') }}
-          <select v-model="meshRepairMode" :aria-label="label('Режим repair при импорте', 'Import repair mode')">
-            <option value="none">{{ label('Только проверка', 'Check only') }}</option>
-            <option value="conservative">Conservative</option>
-            <option value="full">Full · {{ label('зашивка отверстий', 'fill holes') }}</option>
-          </select>
-        </label>
+        <ManifoldSettings :locale="locale" />
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
         <button type="button" :disabled="svgBusy" @click="svgInput?.click()">{{ label('Импорт SVG как профили', 'Import SVG as profiles') }}</button>
         <button v-if="draftConflict" type="button" :disabled="loadingLatestDraft" @click="loadLatestDraft">{{ label('Загрузить сохранённую версию · локальная останется в Undo','Load saved version · keep local in Undo') }}</button>
@@ -2318,9 +2321,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <button class="tool-icon" :aria-pressed="smoothDisplay" :title="label('Гладкий показ B-rep', 'Smooth B-rep display')" :aria-label="label('Гладкий показ B-rep', 'Smooth B-rep display')" @click="smoothDisplay = !smoothDisplay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M8 9c1 3 2 3 4 3s3 0 4-3" stroke-opacity=".5"/></svg></button>
               <button class="tool-icon" :aria-pressed="floorVisible" :title="label('Сетка 3D', '3D grid')" :aria-label="label('Сетка 3D', '3D grid')" @click="floorVisible = !floorVisible"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.grid" /></svg></button>
               <span class="subtle">{{ pickMode==='face'?label('Ctrl/⌘ + клик — несколько открытых граней','Ctrl/⌘ click — multiple openings'):label('ЛКМ/ПКМ — вращать · Shift — панорама', 'Drag to orbit · Shift to pan') }}</span>
-              <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать STL выбранного тела','Download selected body as STL')" :aria-label="label('Скачать STL','Download STL')" @click="run(() => download(exportPolygonStl(selectedBody!.mesh), 'body.stl'))"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg><span class="tool-tag">STL</span></button>
-              <select v-model="bodyExportFormat" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select>
-              <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
+              <select v-model="bodyExportFormat" :disabled="historyPending" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select>
+              <button class="tool-icon" :disabled="!selectedBody || historyPending" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
           </div>
           <WorkspaceActionBar v-if="pane === '3d' && selectedBody && !commandActive" :label="label('Действия над телом', 'Body actions')">
             <span class="ws-name">{{ selectedBody.name || label('Тело', 'Body') }}</span>
@@ -2936,6 +2938,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             </template>
             <p v-if="manifoldMetrics?.error" role="alert">{{ manifoldMetrics.error }}</p>
             <button v-if="manifoldMetricsRetryVisible" @click="manifoldMetricsRevision++">{{ label('Повторить метрики сетки','Retry mesh metrics') }}</button>
+            <div class="manifold-metrics-export">
+              <button type="button" :disabled="manifoldMetricsExportPending" @click="exportManifoldMetrics('json')">{{ label('Экспорт JSON','Export JSON') }}</button>
+              <button type="button" :disabled="manifoldMetricsExportPending" @click="exportManifoldMetrics('csv')">{{ label('Экспорт CSV','Export CSV') }}</button>
+              <small>{{ label(`Выделено тел: ${selectedBodies.length}`,`Selected bodies: ${selectedBodies.length}`) }}</small>
+            </div>
+            <small v-if="manifoldMetricsExportPending" role="status">{{ label('Экспортирую метрики…','Exporting metrics…') }}</small>
+            <p v-if="manifoldMetricsExportError" role="alert">{{ manifoldMetricsExportError }}</p>
           </fieldset>
           <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-invalid="!vertexAValid" :aria-describedby="!vertexAValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина A','Vertex A')"></label>
           <label v-if="!materialPathOpen">{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>

@@ -25,9 +25,9 @@ use crate::uv_arrangement::{
 };
 use nurbs_core::{Error, Result};
 
-mod boolean_certificate;
 mod analytic_boolean;
+mod boolean_certificate;
 #[cfg(test)]
 mod tests;
-pub use boolean_certificate::*;
 pub use analytic_boolean::*;
+pub use boolean_certificate::*;

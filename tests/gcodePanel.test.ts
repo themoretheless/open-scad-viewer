@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import GcodePanel from '../src/features/GcodePanel.vue'
 import type { MeshData } from '../src/core/mesh'
 import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../src/services/gcodePreviewProtocol'
+import { PrintReadinessError } from '../src/services/printReadiness'
 
 const service = vi.hoisted(() => ({ run: vi.fn(), cancel: vi.fn(), dispose: vi.fn(), download: vi.fn(), draw: vi.fn(), health: vi.fn(), discover: vi.fn(), send: vi.fn() }))
 vi.mock('../src/services/gcodePreviewWorker', () => ({ createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }) }))
@@ -178,6 +179,22 @@ it('shows validation and worker errors, clears obsolete downloads, and can retry
   await ui.click('Generate toolpaths')
   expect(ui.text()).not.toContain('The mesh is open.')
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(true)
+})
+
+it.each([
+  ['Построить траектории', 'slice'],
+  ['Собрать print job', 'job'],
+] as const)('shows a localized print-readiness refusal without creating a result: %s', async (button, kind) => {
+  const ui = await mount({ locale: 'ru' })
+  service.run.mockRejectedValueOnce(new PrintReadinessError('PRINT_NOT_WATERTIGHT', {
+    boundaryEdges: 3, nonManifoldEdges: 0, nonManifoldVertices: 0, degenerateTriangles: 0, isolatedVertices: 0,
+  }))
+  await ui.click(button)
+  expect(service.run).toHaveBeenCalledWith(expect.objectContaining({ kind }))
+  expect(ui.text()).toContain('Печать заблокирована')
+  expect(ui.text()).toContain('граничные рёбра: 3')
+  expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
+  expect(ui.text()).not.toContain('open-scad-viewer/print-preview 2')
 })
 
 it('opens its own preview dialect without a selected model and rejects oversized files before reading', async () => {

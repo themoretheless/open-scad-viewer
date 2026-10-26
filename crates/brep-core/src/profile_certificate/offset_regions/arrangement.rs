@@ -16,15 +16,12 @@ fn at(a: &Point, b: &Point, t: &Q) -> Point {
 }
 fn on(p: &Point, a: &Point, b: &Point) -> bool {
     cross(&difference(b, a), &difference(p, a)).is_zero()
-        && (0..2).all(|k| {
-            p[k] >= *(&a[k]).min(&b[k]) && p[k] <= *(&a[k]).max(&b[k])
-        })
+        && (0..2).all(|k| p[k] >= *(&a[k]).min(&b[k]) && p[k] <= *(&a[k]).max(&b[k]))
 }
 fn parameters(a: &Point, b: &Point, c: &Point, d: &Point) -> (Vec<Q>, Vec<Q>) {
-    if (0..2).any(|k| {
-        (&a[k]).max(&b[k]) < (&c[k]).min(&d[k])
-            || (&c[k]).max(&d[k]) < (&a[k]).min(&b[k])
-    }) {
+    if (0..2)
+        .any(|k| (&a[k]).max(&b[k]) < (&c[k]).min(&d[k]) || (&c[k]).max(&d[k]) < (&a[k]).min(&b[k]))
+    {
         return (Vec::new(), Vec::new());
     }
     let u = difference(b, a);
@@ -169,14 +166,29 @@ fn angle(a: &Point, b: &Point) -> std::cmp::Ordering {
 /// Exact NONZERO integer-weighted fill, including negative-only islands.
 /// Each source ring keeps its own winding; overlaps are selected only after
 /// actual complete intersection splitting, never by unioning positive fills.
-pub(in crate::profile_certificate) fn nonzero(rings: &Rings, coefficients: &[i32]) -> Result<Rings> {
-    if rings.len() != coefficients.len() || rings.len() > 32
-        || coefficients.iter().any(|&c| i64::from(c).abs() > 1_000_000) {
+pub(in crate::profile_certificate) fn nonzero(
+    rings: &Rings,
+    coefficients: &[i32],
+) -> Result<Rings> {
+    if rings.len() != coefficients.len()
+        || rings.len() > 32
+        || coefficients.iter().any(|&c| i64::from(c).abs() > 1_000_000)
+    {
         return Err(refused("Invalid exact nonzero arrangement coefficients"));
     }
-    let sets = rings.iter().map(|r|vec![r.clone()]).collect::<Vec<_>>();
+    let sets = rings.iter().map(|r| vec![r.clone()]).collect::<Vec<_>>();
     // <=1022 source edges and bounded32 coefficients make this i64 sum safe.
-    arrange(&sets, &|w|w.iter().zip(coefficients).map(|(&a,&b)|a*i64::from(b)).sum::<i64>() != 0, 1022)
+    arrange(
+        &sets,
+        &|w| {
+            w.iter()
+                .zip(coefficients)
+                .map(|(&a, &b)| a * i64::from(b))
+                .sum::<i64>()
+                != 0
+        },
+        1022,
+    )
 }
 pub(in crate::profile_certificate) fn regularize(rings: &Rings) -> Result<Rings> {
     arrange(std::slice::from_ref(rings), &|w| w[0] > 0, 1022)
@@ -212,10 +224,12 @@ fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) 
     }
     let bboxes: Vec<[(&Q, &Q); 2]> = original
         .iter()
-        .map(|((a, b), _)| [
-            ((&a[0]).min(&b[0]), (&a[0]).max(&b[0])),
-            ((&a[1]).min(&b[1]), (&a[1]).max(&b[1])),
-        ])
+        .map(|((a, b), _)| {
+            [
+                ((&a[0]).min(&b[0]), (&a[0]).max(&b[0])),
+                ((&a[1]).min(&b[1]), (&a[1]).max(&b[1])),
+            ]
+        })
         .collect();
     let mut cuts = vec![vec![Q::zero(), Q::one()]; original.len()];
     let mut incidences = 0;

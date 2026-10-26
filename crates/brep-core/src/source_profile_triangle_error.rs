@@ -139,7 +139,8 @@ pub(super) fn bound_region(
     }
     let mut squared = I::point(0.);
     for magnitude in magnitudes {
-        let unit = I::point(magnitude).div(I::point(scale))?;
+        let ratio = magnitude / scale;
+        let unit = I::new(ratio.next_down(), ratio.next_up())?;
         squared = squared.add(unit.mul(unit)?)?;
     }
     let euclidean = I::point(scale).mul(I::point(squared.hi.sqrt().next_up()))?;
@@ -155,7 +156,10 @@ pub(super) fn bound_region(
         }
         let mut squared = I::point(0.);
         for magnitude in coordinates {
-            let unit = I::point(magnitude).div(I::point(scale))?;
+            // Direct division also works for subnormal scales, whose reciprocal
+            // overflows even though every normalized coordinate is at most one.
+            let ratio = magnitude / scale;
+            let unit = I::new(ratio.next_down(), ratio.next_up())?;
             squared = squared.add(unit.mul(unit)?)?;
         }
         let upper = I::point(scale)

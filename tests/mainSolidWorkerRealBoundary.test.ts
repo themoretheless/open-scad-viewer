@@ -773,6 +773,7 @@ it('keeps replacement profile coverage after a genuine cancelled worker reply ar
   callback(event)
   await replacement
   const accepted=controller.result.value
+  expect(controller.error.value).toBe('')
   expect(accepted).not.toBeNull()
   expect(accepted!.coverage!.completeExclusion).toBe(false)
   expect(accepted!.wholeThicknessQualified).toBe(false)

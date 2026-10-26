@@ -30,6 +30,154 @@ it('runs contact inspection through the worker handler and warmed WASM',async()=
  expect(mesh.indices.byteLength).toBe(24)
 })
 
+it('checks a mesh batch with per-object progress and strict report validation',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {createBoxMesh}=await import('../src/services/meshEditing')
+ const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
+ const open={positions:new Float64Array([0,0,0,2,0,0,0,2,0,0,0,2]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3])}
+ const box=createBoxMesh([2,2,2]),before=structuredClone({open,box})
+ const job={kind:'meshManifold' as const,objects:[{id:'open',mesh:open},{id:'box',mesh:box}]}
+ await handle({version:1,id:1,job})
+ expect(progress.map(message=>message.progress)).toEqual([
+  {phase:'check',completed:0,total:2},{phase:'check',completed:1,total:2},
+ ])
+ expect(messages).toHaveLength(1)
+ expect(messages[0]).toMatchObject({ok:true,kind:'meshManifold',result:[{id:'open',report:{isManifold:false}},{id:'box',report:{isManifold:true}}]})
+ if(messages[0].ok){
+  const expectation=mainSolidExpectation(job)
+  expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
+  const malformed=structuredClone(messages[0].result) as import('../src/services/meshManifoldDefects').MeshManifoldEntry[]
+  malformed[0].id='stale'
+  expect(mainSolidResult(expectation,malformed)).toBe(false)
+ }
+ expect({open,box}).toEqual(before)
+ expect(open.indices.byteLength).toBe(36);expect(box.indices.byteLength).toBeGreaterThan(0)
+})
+
+it('runs staged Full mesh repair with protocol validation and immutable input',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
+ const mesh={positions:new Float64Array([0,0,0,2,0,0,0,2,0,0,0,2]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3])}
+ const before=structuredClone(mesh),job={kind:'meshRepair' as const,mesh}
+ await handle({version:1,id:1,job})
+ expect(progress.map(message=>message.progress)).toEqual([
+  {phase:'check',completed:0,total:3},{phase:'repair',completed:1,total:3},{phase:'verify',completed:2,total:3},
+ ])
+ expect(messages).toHaveLength(1);expect(messages[0]).toMatchObject({ok:true,kind:'meshRepair',result:{repair:{filledHoles:1},after:{isManifold:true}}})
+ if(messages[0].ok)expect(mainSolidResult(mainSolidExpectation(job),messages[0].result)).toBe(true)
+ expect(mesh).toEqual(before);expect(mesh.positions.byteLength).toBe(96);expect(mesh.indices.byteLength).toBe(36)
+})
+
+it('runs manifold mesh Boolean with honest progress and strict result validation',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {createBoxMesh,transformMesh}=await import('../src/services/meshEditing')
+ const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
+ const a=createBoxMesh([2,2,2]),b=transformMesh(createBoxMesh([2,2,2]),[1,0,0],0,1)
+ const beforeA=structuredClone(a),beforeB=structuredClone(b),job={kind:'meshBoolean' as const,a,b,operation:'union' as const,options:{weldEpsilonMm:1e-4,relativeTolerance:1e-7}}
+ await handle({version:1,id:1,job})
+ expect(progress.map(message=>message.progress)).toEqual([{phase:'boolean',completed:0,total:1}])
+ expect(messages).toHaveLength(1);expect(messages[0]).toMatchObject({ok:true,kind:'meshBoolean',result:{report:{operation:'union',isManifold:true,weldEpsilonMm:1e-4,relativeTolerance:1e-7,toleranceMm:3e-7,inputTriangles:[a.indices.length/3,b.indices.length/3]}}})
+ if(messages[0].ok){
+  const expectation=mainSolidExpectation(job)
+  expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
+  const malformed=structuredClone(messages[0].result) as import('../src/services/meshEditing').MeshBooleanResult
+  malformed.report.outputTriangles++
+  expect(mainSolidResult(expectation,malformed)).toBe(false)
+ }
+ expect(a).toEqual(beforeA);expect(b).toEqual(beforeB)
+ expect(a.indices.byteLength).toBeGreaterThan(0);expect(b.indices.byteLength).toBeGreaterThan(0)
+})
+
+it('imports and Fully repairs a mesh in the worker with staged progress',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
+ const source=['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4'].join('\n')
+ const input=new TextEncoder().encode(source),before=input.slice(),job={kind:'meshImport' as const,fileName:'open.obj',input,options:{weld:1e-4,repair:'full' as const}}
+ await handle({version:1,id:1,job})
+ expect(progress.map(message=>message.progress)).toEqual([
+  {phase:'decode',completed:0,total:5},{phase:'finalize',completed:1,total:5},{phase:'check',completed:2,total:5},
+  {phase:'repair',completed:3,total:5},{phase:'verify',completed:4,total:5},
+ ])
+ expect(messages).toHaveLength(1);expect(messages[0]).toMatchObject({ok:true,kind:'meshImport',result:{format:'obj',triangleCount:4,manifold:{mode:'full',repair:{filledHoles:1},after:{isManifold:true}}}})
+ if(messages[0].ok){
+  const expectation=mainSolidExpectation(job)
+  expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
+  const malformed=structuredClone(messages[0].result) as import('../src/services/meshImport').ImportedMesh
+  expect(mainSolidResult(expectation,{...malformed,triangleCount:3})).toBe(false)
+ }
+ expect(input).toEqual(before);expect(input.byteLength).toBeGreaterThan(0)
+})
+
+it('converts a complete mesh in the worker with seven-stage progress and strict output validation',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
+ const source=['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4'].join('\n')
+ const input=new TextEncoder().encode(source),before=input.slice()
+ const job={kind:'meshConvert' as const,fileName:'open.obj',input,target:'ply' as const,options:{weld:1e-4,repair:'full' as const}}
+ await handle({version:1,id:1,job})
+ expect(progress.map(message=>message.progress)).toEqual([
+  {phase:'decode',completed:0,total:7},{phase:'finalize',completed:1,total:7},{phase:'check',completed:2,total:7},
+  {phase:'repair',completed:3,total:7},{phase:'verify',completed:4,total:7},{phase:'inspect',completed:5,total:7},
+  {phase:'export',completed:6,total:7},
+ ])
+ expect(messages).toHaveLength(1)
+ expect(messages[0]).toMatchObject({ok:true,kind:'meshConvert',result:{fileName:'open.ply',format:'ply',source:{fileName:'open.obj',format:'obj',byteLength:input.byteLength,triangleCount:4}}})
+ if(messages[0].ok){
+  const expectation=mainSolidExpectation(job),result=messages[0].result as import('../src/services/meshConvert').MeshConvertResult
+  expect(mainSolidResult(expectation,result)).toBe(true)
+  expect(mainSolidResult(expectation,{...result,fileName:'stale.ply'})).toBe(false)
+  expect(mainSolidResult(expectation,{...result,source:{...result.source,byteLength:0}})).toBe(false)
+  expect(mainSolidResult(expectation,{...result,data:new Uint8Array()})).toBe(false)
+ }
+ expect(input).toEqual(before);expect(input.byteLength).toBeGreaterThan(0)
+})
+
+it('exports an existing mesh in the worker with staged progress and strict validation',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {createBoxMesh}=await import('../src/services/meshEditing')
+ const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
+ const mesh=createBoxMesh([2,2,2]),before=structuredClone(mesh)
+ const job={kind:'meshExport' as const,mesh,target:'ply' as const,options:{}}
+ await handle({version:1,id:1,job})
+ expect(progress.map(message=>message.progress)).toEqual([
+  {phase:'inspect',completed:0,total:2},{phase:'export',completed:1,total:2},
+ ])
+ expect(messages).toHaveLength(1);expect(messages[0]).toMatchObject({ok:true,kind:'meshExport',result:{extension:'ply',mimeType:'application/octet-stream'}})
+ if(messages[0].ok){
+  const expectation=mainSolidExpectation(job),result=messages[0].result as import('../src/services/meshConvert').MeshExportArtifact
+  expect(mainSolidResult(expectation,result)).toBe(true)
+  expect(mainSolidResult(expectation,{...result,extension:'obj'})).toBe(false)
+  expect(mainSolidResult(expectation,{...result,data:new Uint8Array()})).toBe(false)
+ }
+ expect(mesh).toEqual(before);expect(mesh.indices.byteLength).toBeGreaterThan(0)
+})
+
+it('exports a complete scene through the same mesh job without detaching source buffers',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const scene={
+  vertices:new Float32Array([0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]),
+  indices:new Uint32Array([0,1,2]),
+  transform:new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
+ } as import('../src/core/mesh').MeshData
+ const before=structuredClone(scene),messages:MainSolidResponse[]=[]
+ const handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ const job={kind:'meshExport' as const,mesh:[scene],target:'obj' as const,options:{}}
+ await handle({version:1,id:1,job})
+ expect(messages).toHaveLength(1);expect(messages[0]).toMatchObject({ok:true,kind:'meshExport',result:{extension:'obj'}})
+ if(messages[0].ok){
+  const expectation=mainSolidExpectation(job)
+  expect(expectation).toMatchObject({vertices:3,triangles:1})
+  expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
+ }
+ expect(scene).toEqual(before);expect(scene.vertices.byteLength).toBeGreaterThan(0);expect(scene.indices.byteLength).toBeGreaterThan(0)
+})
+
 it('extrudes a document in the worker without mutating its source',async()=>{
  const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
  const document={version:1 as const,sketches:[{id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[]}
@@ -398,6 +546,22 @@ it('measures vertices and curvature in the worker and validates numeric response
  await handle({version:1,id:3,job:{...vertexJob,indexA:999}});expect(messages[2]).toMatchObject({ok:false})
 })
 
+it('returns validated manifold metrics through the worker protocol',async()=>{
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0,0,0,1]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3,2,0,3])}
+ const job={kind:'manifoldMetrics' as const,mesh},messages:MainSolidResponse[]=[]
+ await createMainSolidWorkerHandler(message=>messages.push(message))({version:1,id:1,job})
+ expect(messages[0]).toMatchObject({ok:true,kind:'manifoldMetrics',result:{vertexCount:4,triangleCount:4,edgeCount:6,eulerCharacteristic:2,componentCount:1,watertight:true}})
+ if(!messages[0].ok)throw Error('Manifold metrics failed')
+ const result=messages[0].result as import('../src/services/geometry/manifoldAnalysis').KernelManifoldMetrics
+ expect(result.signedVolume).toBeCloseTo(1/6,10)
+ expect(result.surfaceArea).toBeCloseTo((3+Math.sqrt(3))/2,10)
+ expect(result.components[0].genus).toBe(0)
+ expect(mainSolidResult(mainSolidExpectation(job),result)).toBe(true)
+ expect(mainSolidResult(mainSolidExpectation(job),{...result,signedVolume:NaN})).toBe(false)
+ expect(mainSolidResult(mainSolidExpectation(job),{...result,components:[{...result.components[0],genus:-1}]})).toBe(false)
+})
+
 it('reports sampled surface boundaries through the worker with bounded result validation',async()=>{
  const {readFileSync}=await import('node:fs')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
@@ -658,4 +822,41 @@ it('reports opt-in warmup execution and transfer preparation timings without cha
  expect(messages[1]).not.toHaveProperty('timing')
  for(const value of Object.values(messages[0].timing!)){expect(Number.isFinite(value)).toBe(true);expect(value).toBeGreaterThanOrEqual(0)}
  await handle({version:1,id:903,job:{...job,indexA:999},traceTiming:true});expect(messages[2]).toMatchObject({ok:false});expect(messages[2].timing).toBeDefined()
+})
+
+it('runs SIMP and returns the full structural profile catalogue through the worker handler',async()=>{
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ await handle({version:1,id:1,job:{kind:'structuralProfiles'}})
+ expect(messages[0]).toMatchObject({id:1,kind:'structuralProfiles',ok:true})
+ if(!messages[0].ok)throw Error('Catalogue failed')
+ const profiles=messages[0].result as import('../src/services/structuralProfiles').StructuralProfileProperties[]
+ expect(profiles).toHaveLength(58)
+ expect(new Set(profiles.map(profile=>profile.designation)).size).toBe(profiles.length)
+ expect(profiles.find(profile=>profile.designation==='IPE 200')).toMatchObject({family:'ipe',areaMm2:expect.any(Number),iStrongMm4:expect.any(Number)})
+ await handle({version:1,id:2,job:{kind:'trussTopology',model:{
+  nodesMm:[[0,0,0],[1000,0,0]],members:[{nodes:[0,1],youngMpa:200000,areaMm2:100}],
+  restrained:[[true,true,true],[false,true,true]],
+ },cases:[{weight:1,loads:[{nodes:[1],originMm:[1000,0,0],forceN:[1000,0,0],momentNmm:[0,0,0]}]}],options:{volumeFraction:.4,penalty:1}}})
+ expect(messages[1]).toMatchObject({id:2,kind:'trussTopology',ok:true})
+ if(!messages[1].ok)throw Error('Topology optimization failed')
+ const result=messages[1].result as import('../src/services/trussAnalysis').TrussTopologyResponse
+ expect(result.densities[0]).toBeCloseTo(.4,3)
+ expect(result.axialForcesN[0][0]).toBeCloseTo(1000,9)
+})
+
+it('generates force markers and axial screening through the worker handler',async()=>{
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ const model:TrussModel={nodesMm:[[0,0,0],[10,0,0]],members:[{nodes:[0,1],youngMpa:2000,areaMm2:2}],
+  restrained:[[true,true,true],[false,true,true]],forcesN:[[0,0,0],[100,0,0]]}
+ await handle({version:1,id:1,job:{kind:'truss',model}})
+ if(!messages[0].ok)throw Error('Truss solve failed')
+ const solved=messages[0].result as import('../src/services/trussAnalysis').TrussResponse
+ await handle({version:1,id:2,job:{kind:'trussField',model,result:solved,markerMm:1}})
+ expect(messages[1]).toMatchObject({kind:'trussField',ok:true})
+ if(!messages[1].ok)throw Error('Marker generation failed')
+ const meshes=messages[1].result as import('../src/core/mesh').MeshData[]
+ expect(meshes).toHaveLength(1);expect(meshes[0].indices).toHaveLength(24)
+ expect(meshes[0].color).toEqual([.95,.3,.2,1])
+ await handle({version:1,id:3,job:{kind:'trussScreening',model,responses:[solved],limits:{tensionMpa:80,compressionMpa:40,safetyFactor:2}}})
+ expect(messages[2]).toMatchObject({kind:'trussScreening',ok:true,result:[{memberIndex:0,utilization:1.25,governingResponse:0,stressMpa:50,status:'overloaded'}]})
 })

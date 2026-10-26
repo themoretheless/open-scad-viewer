@@ -438,10 +438,10 @@ pub fn own_periodic_native_chart_shores(
 
 #[cfg(test)]
 #[path = "periodic_chart_shores/tests/tests_fixtures.rs"]
-pub(super) mod tests ;
+pub(super) mod tests;
 
 #[path = "periodic_chart_shores/shore_derivation.rs"]
 mod shore_derivation;
 use shore_derivation::derive;
-use shore_derivation::scalar;
 use shore_derivation::order;
+use shore_derivation::scalar;

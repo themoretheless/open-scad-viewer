@@ -4,7 +4,8 @@ import type {MeshData} from '../core/mesh'
 import type {PickHit} from './rendererContracts'
 import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
-import type {TrussInput} from './trussAnalysis'
+import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopologyOptions} from './trussAnalysis'
+import type {AxialLimits} from './trussScreening'
 import {resolveTrussScenario, type TrussScenario} from './trussScenario'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, type LatticeGraphMesh} from './latticeGraphProtocol'
 import type {LighteningOptions} from './solidLightening'
@@ -31,6 +32,22 @@ export function computeCadInspection(bodies:import('./directModeling').DirectBod
 
 export function computeTrussAnalysis(model:TrussInput,options:MainSolidRunOptions={}){
  return shared.run({kind:'truss',model},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computeTrussField(model:TrussInput,result:TrussResponse,markerMm:number,options:MainSolidRunOptions={}){
+ return shared.run({kind:'trussField',model,result,markerMm},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computeTrussScreening(model:TrussInput,responses:TrussResponse[],limits:AxialLimits,options:MainSolidRunOptions={}){
+ return shared.run({kind:'trussScreening',model,responses,limits},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computeTrussTopology(model:Omit<TrussModel,'forcesN'>,cases:TrussTopologyLoadCase[],options:TrussTopologyOptions={},runOptions:MainSolidRunOptions={}){
+ return shared.run({kind:'trussTopology',model,cases,options},runOptions)
+}
+
+export function computeStructuralProfileCatalog(options:MainSolidRunOptions={}){
+ return shared.run({kind:'structuralProfiles'},{...options,timeoutMs:options.timeoutMs??30000})
 }
 
 export async function computeTrussScenario(scenario:TrussScenario,options:MainSolidRunOptions={}){

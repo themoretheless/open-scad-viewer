@@ -16,13 +16,13 @@
 //! lifts: planar sections of a stereographic patch are exact circles (or lines
 //! through the UV origin when the plane contains the patch pole) clipped to
 //! the patch quarter-disk. Nothing here authorizes a topology change.
-#[cfg(feature = "codec")]
-mod serialization;
 mod frames;
 pub mod pole_charts;
-pub use pole_charts::{ImplicitSphereSection, WorldCircleClip, recognize_any};
+#[cfg(feature = "codec")]
+mod serialization;
 use super::*;
 use crate::Model;
+pub use pole_charts::{ImplicitSphereSection, WorldCircleClip, recognize_any};
 
 /// Recognition tolerance relative to radius for the canonical structure
 /// screen (vertex distances, frame orthonormality, control points).
@@ -36,9 +36,9 @@ const LINEAR: [f64; 3] = [0., 0.5, 1.];
 const SQUARE: [f64; 3] = [0., 0., 1.];
 pub const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;
 
-mod sphere_patch_circle;
 mod lift_clipped;
+mod sphere_patch_circle;
 #[cfg(test)]
 mod tests;
-pub use sphere_patch_circle::*;
 pub use lift_clipped::*;
+pub use sphere_patch_circle::*;

@@ -242,8 +242,17 @@ fn ordered(
             // of its active basis then excludes every interior zero, including
             // knots. Single Bernstein charts retain the less restrictive
             // endpoint-basis proof below.
-            if n!=degree+1 && !(0..n).filter(|&i|if end==0 {i>=degree}else{i<n-degree})
-                .all(|i|(0..free).all(|j|at(i,j)==sign)) {
+            if n != degree + 1
+                && !(0..n)
+                    .filter(|&i| {
+                        if end == 0 {
+                            i >= degree
+                        } else {
+                            i < n - degree
+                        }
+                    })
+                    .all(|i| (0..free).all(|j| at(i, j) == sign))
+            {
                 continue;
             }
             // Endpoint Bernstein basis is strictly positive away from its

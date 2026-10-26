@@ -42,7 +42,12 @@ fn points(h: &Net) -> Vec<P> {
     let mut seen = BTreeSet::new();
     bernstein::corners(h)
         .into_iter()
-        .chain(h.iter().flatten().map(sb::point))
+        .chain(
+            h.iter()
+                .flatten()
+                .filter(|p| p[3] > Q::zero())
+                .map(sb::point),
+        )
         .filter(|p| seen.insert(p.clone()))
         .collect()
 }
@@ -204,7 +209,7 @@ fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
     {
         return Ok(true);
     }
-    if !positive_sum(&au, &bv, 1) {
+    if !positive_sum(&au, &bv, 1) && !p.h.iter().flatten().any(|p| p[3].is_zero()) {
         return Ok(false);
     }
     let range = |p: &Scalar| {
@@ -230,6 +235,45 @@ fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
         &bernstein::product(&au, &bv, work)?,
         &bernstein::product(&av, &bu, work)?,
     );
+    if p.h.iter().flatten().any(|p| p[3].is_zero()) {
+        // At a certified removable homogeneous vertex, strict coefficient
+        // positivity is impossible. Positivity in the open triangle plus the
+        // separately proved Jordan boundary still gives projected degree one.
+        let trace = au
+            .iter()
+            .zip(&bv)
+            .flat_map(|(a, b)| a.iter().zip(b).map(|(a, b)| a + b))
+            .collect::<Vec<_>>();
+        if !(trace.iter().all(|q| *q >= Q::zero())
+            && det.iter().flatten().all(|q| *q >= Q::zero())
+            && det.iter().flatten().any(|q| *q > Q::zero()))
+        {
+            return Ok(false);
+        }
+        // Prove the boundary of each singular chart, including internal star
+        // edges. Interior positivity alone must not authorize an edge collapse.
+        let edges = [
+            bernstein::edges(&p.motion[0]),
+            bernstein::edges(&p.motion[1]),
+        ];
+        let curves = (0..3)
+            .map(|i| [edges[0][i].clone(), edges[1][i].clone()])
+            .collect::<Vec<_>>();
+        for curve in &curves {
+            if !monotone(curve, n, work)? {
+                return Ok(false);
+            }
+        }
+        for i in 0..3 {
+            for j in i + 1..3 {
+                let shared = if (i + 1) % 3 == j { &c[j] } else { &c[i] };
+                if !curve_pair(&curves[i], &curves[j], Some(shared), n, work)? {
+                    return Ok(false);
+                }
+            }
+        }
+        return Ok(true);
+    }
     Ok(det.iter().flatten().all(|q| *q > Q::zero()))
 }
 type Curve = [Vec<sb::H>; 2];
@@ -240,6 +284,7 @@ fn projected(p: &P, n: &P) -> P {
 fn curve_points(c: &Curve, n: &P) -> Vec<P> {
     c.iter()
         .flatten()
+        .filter(|h| h[3] > Q::zero())
         .map(|h| projected(&sb::point(h), n))
         .collect()
 }
@@ -248,7 +293,8 @@ fn plane_separated(a: &[P], b: &[P], n: &P, work: &mut Work) -> Result<bool> {
         for i in 0..p.len() {
             for j in i + 1..p.len() {
                 work.charge(1)?;
-                if separates(a, b, &cross(n, &sub(&p[j], &p[i]))) {
+                let edge = sub(&p[j], &p[i]);
+                if separates(a, b, &edge) || separates(a, b, &cross(n, &edge)) {
                     return Ok(true);
                 }
             }
@@ -275,22 +321,16 @@ fn monotone(c: &Curve, n: &P, work: &mut Work) -> Result<bool> {
             .map(|v| (&v[1] - &v[0]) * integer(d as i64))
             .collect::<Vec<_>>()
     };
-    let choose = |n: usize, k: usize| (0..k).fold(1i64, |v, i| v * (n - i) as i64 / (i + 1) as i64);
     let product = |a: &[Q], b: &[Q], work: &mut Work| -> Result<Vec<Q>> {
-        let (n, m) = (a.len() - 1, b.len() - 1);
-        let mut p = vec![Q::zero(); n + m + 1];
-        for (i, x) in a.iter().enumerate() {
-            for (j, y) in b.iter().enumerate() {
-                work.charge(1)?;
-                p[i + j] += x
-                    * y
-                    * Q::new(
-                        num_bigint::BigInt::from(choose(n, i)) * choose(m, j),
-                        choose(n + m, i + j).into(),
-                    );
-            }
+        work.charge(a.len() * b.len())?;
+        let product = sb::multiply(a, b);
+        if product
+            .iter()
+            .any(|q| q.numer().bits() > 8192 || q.denom().bits() > 8192)
+        {
+            return Err(fail("atlas edge derivative bit budget exceeded"));
         }
-        Ok(p)
+        Ok(product)
     };
     let a = product(&deriv(&x), &w, work)?;
     let b = product(&x, &deriv(&w), work)?;
@@ -338,13 +378,63 @@ fn star(
             return Err(fail("atlas vertex link branches"));
         }
     }
-    if zero(&n) {
+    match star_projected(vertex, incident, patches, positions, &links, &n, work) {
+        Ok(count) => Ok(count),
+        Err(first) => {
+            // Area sums can lie exactly in a cap plane at a conical rim.
+            // Normalize/deduplicate directions, then reprove the entire disk.
+            let mut normals = BTreeSet::new();
+            for &i in incident {
+                let c = bernstein::corners(&patches[i].h);
+                let v = cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0]));
+                let norm: Q = v
+                    .iter()
+                    .map(|q| {
+                        if *q < Q::zero() {
+                            -q.clone()
+                        } else {
+                            q.clone()
+                        }
+                    })
+                    .sum();
+                if !norm.is_zero() {
+                    normals.insert(v.map(|q| q / &norm));
+                }
+            }
+            let n: P = std::array::from_fn(|k| normals.iter().map(|p| p[k].clone()).sum());
+            if let Ok(count) =
+                star_projected(vertex, incident, patches, positions, &links, &n, work)
+            {
+                return Ok(count);
+            }
+            for n in projection::directions(&normals, work)? {
+                if let Ok(count) =
+                    star_projected(vertex, incident, patches, positions, &links, &n, work)
+                {
+                    return Ok(count);
+                }
+            }
+            Err(first)
+        }
+    }
+}
+#[allow(clippy::too_many_arguments)]
+fn star_projected(
+    _vertex: u32,
+    incident: &[usize],
+    patches: &[Patch],
+    positions: &[P],
+    links: &BTreeMap<u32, (u32, Curve)>,
+    n: &P,
+    work: &mut Work,
+) -> Result<usize> {
+    if zero(n) {
         return Err(fail("rational atlas projection is degenerate"));
     }
     for i in incident {
         if !regular(&patches[*i], &n, work)? {
             #[cfg(test)]
-            eprintln!("atlas regularity unproved at vertex {vertex}, patch {i}");
+            eprintln!("atlas regularity unproved at vertex {_vertex}, patch {i}");
             return Err(fail(
                 "rational atlas projected vertex disk regularity is unproved",
             ));
@@ -485,7 +575,7 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
     for u in uses {
         let s = &m.faces[u.face].surface;
         if rectangle(m, u.face).is_err() {
-            let mut charts = vec![trim::chart(m, u.face, work)?];
+            let mut charts = trim::charts(m, u.face, work)?;
             for _ in 0..depth {
                 charts = charts
                     .iter()
@@ -555,7 +645,7 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
 }
 pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
     let mut work = Work::default();
-    let (positions, mut patches) = build(m, depth, &mut work)?;
+    let (mut positions, mut patches) = build(m, depth, &mut work)?;
     let mut original = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
     for p in &patches {
         for (k, mut e) in bernstein::edges(&p.h).into_iter().enumerate() {
@@ -570,7 +660,62 @@ pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
         .values()
         .any(|e| e.len() == 2 && !sb::same(&e[0], &e[1]))
     {
-        transport::synchronize(&mut patches, &mut work)?;
+        // Preserve the old successful recipe and its deterministic receipts.
+        // A failed attempt never leaves partially changed charts behind.
+        let mut candidate = patches.clone();
+        let mut trial = Work(work.0);
+        if transport::synchronize(&mut candidate, &mut trial).is_ok() {
+            patches = candidate;
+            work = trial;
+        } else {
+            let mut candidate = patches.clone();
+            let mut trial = Work(work.0);
+            if transport::synchronize_images(&mut candidate, &mut trial).is_ok() {
+                patches = candidate;
+                work = trial;
+            } else {
+                nonlinear::synchronize(&mut patches, &mut work)?;
+            }
+        }
+    }
+    if patches
+        .iter()
+        .any(|p| p.h.iter().flatten().any(|h| h[3].is_zero()))
+    {
+        // A whole conical sector can have no common projection with its cap
+        // at a rim vertex. Subdivide the exact source charts, including their
+        // neighbors, to obtain smaller conforming stars before proving them.
+        // Image-only straight seam gluing is insufficient for midpoint splits.
+        let mut seams = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
+        for p in &patches {
+            for (k, mut h) in bernstein::edges(&p.h).into_iter().enumerate() {
+                let (a, b) = (p.ids[k], p.ids[(k + 1) % 3]);
+                if a > b {
+                    h.reverse();
+                }
+                seams.entry((a.min(b), a.max(b))).or_default().push(h);
+            }
+        }
+        if seams
+            .values()
+            .any(|e| e.len() != 2 || !sb::same(&e[0], &e[1]))
+        {
+            return Err(fail(
+                "singular atlas refinement needs pointwise synchronized seams",
+            ));
+        }
+        let mut vertices = BTreeMap::new();
+        let mut refined = Vec::new();
+        for p in &patches {
+            for h in bernstein::subdivide(&p.h, &mut work)? {
+                append_patch(h, false, &mut vertices, &mut refined, &mut work)?;
+            }
+        }
+        positions = vec![std::array::from_fn(|_| Q::zero()); vertices.len()];
+        for (p, i) in vertices {
+            positions[i as usize] = p;
+        }
+        patches = refined;
     }
     let mut edges = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
     let mut stars = vec![Vec::new(); positions.len()];
@@ -587,7 +732,7 @@ pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
         }
     }
     for ((a, b), e) in &edges {
-        if e.len() != 2 || !sb::same(&e[0], &e[1]) {
+        if e.len() != 2 || !(sb::same(&e[0], &e[1]) || segment_seam(&e[0], &e[1], &mut work)?) {
             return Err(fail("rational atlas has an unmatched pointwise seam"));
         }
         let balance = patches

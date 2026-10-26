@@ -40,8 +40,8 @@
 
 use crate::aag::DihedralClass;
 use crate::aag_features::{HoleFeature, PocketFeature, PocketKind};
-use crate::analysis::surface_classify::{Axis, SurfaceClass};
 use crate::aag_fillets::FilletChain;
+use crate::analysis::surface_classify::{Axis, SurfaceClass};
 use crate::operations::{PlanarBoundary, loop_vertices, model_from_trimmed_polygons};
 use crate::solid_audit::SolidAuditCertificate;
 use crate::transactions::ModelSnapshot;
@@ -404,6 +404,18 @@ pub use delete::{
     recommend_delete_face_strategy,
 };
 
+pub const SNAP_INVALID: &str = "BREP_SNAP_INVALID";
+pub const SNAP_UNSUPPORTED: &str = "BREP_SNAP_UNSUPPORTED";
+pub const SNAP_NO_FIT: &str = "BREP_SNAP_NO_FIT";
+mod snap;
+pub use snap::{SnapReport, snap_face_to_analytic};
+mod simplify;
+pub use simplify::{
+    SIMPLIFY_CYLINDER_UNSUPPORTED, SIMPLIFY_INVALID, SIMPLIFY_NEIGHBOR_DRIFT,
+    SIMPLIFY_UNKNOWN_FACE, SIMPLIFY_VOLUME_DRIFT, SimplificationLog, SimplificationRecord,
+    SimplificationSkip, SimplifyOptions, SimplifyReport, SimplifyRun, rollback_simplification,
+    simplify_to_analytic,
+};
 
 // ---------------------------------------------------------------------------
 // Direct modeling: move face (checklist 871).
@@ -482,8 +494,7 @@ pub const OFFSET_UNSUPPORTED: &str = "BREP_OFFSET_UNSUPPORTED";
 pub const OFFSET_INVALID: &str = "BREP_OFFSET_INVALID";
 
 mod offset;
-pub use offset::{OffsetOptions, OffsetFaceReport, offset_face};
-
+pub use offset::{OffsetFaceReport, OffsetOptions, offset_face};
 
 // ---------------------------------------------------------------------------
 // Tests.

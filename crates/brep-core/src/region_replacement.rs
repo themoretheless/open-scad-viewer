@@ -6,12 +6,12 @@ use std::collections::{BTreeMap, BTreeSet};
 #[path = "region_replacement/mapped.rs"]
 mod mapped;
 pub use mapped::{MappedReplacement, replace_g2_mapped};
-#[path="region_replacement/network.rs"]
+#[path = "region_replacement/network.rs"]
 mod network;
-pub use network::{RegionPatch,NetworkReplacement,replace_g2_network};
-#[path="region_replacement/cap.rs"]
+pub use network::{NetworkReplacement, RegionPatch, replace_g2_network};
+#[path = "region_replacement/cap.rs"]
 mod cap;
-pub use cap::{SurfaceCap,cap_region};
+pub use cap::{SurfaceCap, cap_region};
 
 pub struct Replacement {
     pub model: Model,
@@ -546,18 +546,24 @@ pub fn replace(
 
 #[path = "region_replacement/radius_network.rs"]
 mod radius_network;
-pub use radius_network::{EdgeRadius, RadiusEdge, RadiusCorner, RadiusNetwork, plan_radius_network};
+pub use radius_network::{
+    EdgeRadius, RadiusCorner, RadiusEdge, RadiusNetwork, plan_radius_network,
+};
 #[path = "region_replacement/trihedral_setbacks.rs"]
 mod trihedral_setbacks;
-pub use trihedral_setbacks::{FacePort, EdgeSetback, TrihedralSetbacks, plan_trihedral_setbacks};
+pub use trihedral_setbacks::{EdgeSetback, FacePort, TrihedralSetbacks, plan_trihedral_setbacks};
 
 #[path = "region_replacement/trihedral_skins.rs"]
 mod trihedral_skins;
-pub use trihedral_skins::{StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips};
+pub use trihedral_skins::{
+    StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips,
+};
 
 #[path = "region_replacement/trihedral_rim.rs"]
 mod trihedral_rim;
-pub use trihedral_rim::{RimConnector, TrihedralRim, RimSupports, build_trihedral_rim, inspect_rim_supports};
+pub use trihedral_rim::{
+    RimConnector, RimSupports, TrihedralRim, build_trihedral_rim, inspect_rim_supports,
+};
 
 #[path = "region_replacement/spatial_rim.rs"]
 mod spatial_rim;

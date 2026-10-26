@@ -1,4 +1,4 @@
-import {mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
+import {mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidProgress, type MainSolidProgressMessage, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
 import {decodeMainSolidResult} from './mainSolidWorkerTransport'
 
 export interface MainSolidPort {
@@ -9,7 +9,7 @@ export interface MainSolidPort {
   terminate():void
 }
 export interface MainSolidTiming {clientElapsedMs:number;warmupMs:number;executeMs:number;prepareMs:number}
-export interface MainSolidRunOptions {signal?:AbortSignal; timeoutMs?:number; onTiming?:(timing:MainSolidTiming)=>void}
+export interface MainSolidRunOptions {signal?:AbortSignal; timeoutMs?:number; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void}
 export class MainSolidWorkerError extends Error {
   constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
 }
@@ -29,7 +29,7 @@ export class MainSolidWorkerClient {
     if(signal?.aborted) return Promise.reject(cancelled())
     const timeoutMs=options.timeoutMs??120000
     if(!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>120000) return Promise.reject(new RangeError('CAD timeout must be between 1 and 120000 ms'))
-    const onTiming=options.onTiming, started=onTiming?performance.now():0
+    const onTiming=options.onTiming,onProgress=options.onProgress,started=onTiming?performance.now():0
     // postMessage snapshots the payload. Retain only response dimensions here,
     // avoiding a second host-side copy of potentially large CAD meshes.
     let expected:MainSolidExpectation
@@ -60,17 +60,27 @@ export class MainSolidWorkerClient {
       const abort=()=>fail(cancelled(),true)
       worker.onmessage=event=>{
         if(settled)return
-        const data=event.data as Partial<MainSolidResponse>|null
+        const data=event.data as Partial<MainSolidResponse|MainSolidProgressMessage>|null
         if(data?.version===1 && Number.isSafeInteger(data.id) && data.id!>0 && data.id!<id)return
         if(!data || data.version!==1 || data.id!==id || data.kind!==expected.kind){
           fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true);return
         }
-        if(data.ok===true && 'result' in data) {
+        if('progress' in data){
+          const progress=data.progress
+          if(!progress||typeof progress.phase!=='string'||!progress.phase.length||progress.phase.length>64
+            ||!Number.isSafeInteger(progress.completed)||!Number.isSafeInteger(progress.total)
+            ||progress.completed<0||progress.total<1||progress.completed>progress.total){
+            fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker progress'),true);return
+          }
+          if(onProgress)try{onProgress(progress)}catch{/* Observation cannot change command settlement. */}
+          return
+        }
+        if('ok' in data&&data.ok===true && 'result' in data) {
           // Unpack transferred typed-array payloads before the plain-array protocol checks.
           const result=decodeMainSolidResult(expected.kind,data.result)
           if(mainSolidResult(expected,result))finish(undefined,result as MainSolidResults[K],false,data.timing)
           else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
-        } else if(data.ok===false && 'error' in data && data.error
+        } else if('ok' in data&&data.ok===false && 'error' in data && data.error
           && typeof data.error.name==='string' && typeof data.error.message==='string'
           && (data.error.code===undefined || typeof data.error.code==='string')) {
           finish(new MainSolidWorkerError(data.error.code??'CAD_OPERATION',data.error.message,data.error.name),undefined,false,data.timing)

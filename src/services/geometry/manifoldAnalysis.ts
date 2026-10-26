@@ -197,6 +197,18 @@ export type ManifoldBooleanOp = 'union' | 'intersection' | 'difference'
 
 const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = {union: 0, intersection: 1, difference: 2}
 
+export interface ManifoldBooleanOptions {
+  /** Absolute mm epsilon for necessary pre/post repair; zero keeps exact welding. */
+  readonly weldEpsilonMm?: number
+  /** BSP tolerance relative to the longest combined input-bound side. */
+  readonly relativeTolerance?: number
+}
+
+export const MANIFOLD_BOOLEAN_DEFAULT_OPTIONS: Required<ManifoldBooleanOptions> = Object.freeze({
+  weldEpsilonMm: 0,
+  relativeTolerance: 1e-9,
+})
+
 /** Boolean result from the manifold-ops kernel (abi_manifold_boolean). */
 export interface KernelManifoldBoolean {
   readonly positions: Float64Array<ArrayBuffer>
@@ -224,7 +236,10 @@ export function booleanManifoldInKernel(
   bVertices: Float32Array | Float64Array,
   bIndices: Uint32Array,
   op: ManifoldBooleanOp,
+  options: ManifoldBooleanOptions = {},
 ): KernelManifoldBoolean {
+  const weldEpsilonMm = options.weldEpsilonMm ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.weldEpsilonMm
+  const relativeTolerance = options.relativeTolerance ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.relativeTolerance
   const {exports: wasm, memory, takeResponse} = kernelRuntime()
   let avp = 0
   let aip = 0
@@ -240,7 +255,7 @@ export function booleanManifoldInKernel(
       takeResponse(wasm.abi_manifold_boolean(
         avp, aVertices.length, aip, aIndices.length, kernelVertexFormat(aVertices),
         bvp, bVertices.length, bip, bIndices.length, kernelVertexFormat(bVertices),
-        MANIFOLD_BOOLEAN_OP_TAG[op],
+        MANIFOLD_BOOLEAN_OP_TAG[op], weldEpsilonMm, relativeTolerance,
       )),
     )
     const buffer = memory.buffer

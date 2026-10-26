@@ -230,16 +230,18 @@ pub fn find_fillet_chains_with(
         if let Some(r) = radius {
             require_finite_f64(r, "face radius")?;
         }
-        infos.push(FaceInfo { class, axis, radius });
+        infos.push(FaceInfo {
+            class,
+            axis,
+            radius,
+        });
     }
 
     // 2. Candidate blend faces: small-radius rotational or spherical faces
     //    with at least two distinct tangential neighbors.
-    let tangential = |class: DihedralClass| {
-        matches!(class, DihedralClass::Smooth | DihedralClass::Tangent)
-    };
-    let mut tangential_neighbors: Vec<BTreeSet<usize>> =
-        vec![BTreeSet::new(); model.faces.len()];
+    let tangential =
+        |class: DihedralClass| matches!(class, DihedralClass::Smooth | DihedralClass::Tangent);
+    let mut tangential_neighbors: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); model.faces.len()];
     for edge in &aag.edges {
         guard.tick()?;
         if !tangential(edge.class) || edge.uses.len() != 2 {
@@ -604,9 +606,7 @@ mod tests {
         let sphere_faces: usize = chains
             .iter()
             .flat_map(|c| c.faces.iter())
-            .filter(|&&f| {
-                aag.nodes[f].attrs.as_ref().unwrap().class == SurfaceClass::Sphere
-            })
+            .filter(|&&f| aag.nodes[f].attrs.as_ref().unwrap().class == SurfaceClass::Sphere)
             .count();
         assert_eq!(sphere_faces, 1, "corner face assigned exactly once");
     }

@@ -27,11 +27,8 @@ fn bernstein_product(a: &[Q], b: &[Q]) -> Vec<Q> {
 pub(super) fn tangent_numerators(net: &[[Q; 3]]) -> [Vec<Q>; 2] {
     let degree = Q::from_integer((net.len() - 1).into());
     let h: [Vec<Q>; 3] = std::array::from_fn(|k| net.iter().map(|p| p[k].clone()).collect());
-    let d: [Vec<Q>; 3] = std::array::from_fn(|k| {
-        h[k].windows(2)
-            .map(|p| (&p[1] - &p[0]) * &degree)
-            .collect()
-    });
+    let d: [Vec<Q>; 3] =
+        std::array::from_fn(|k| h[k].windows(2).map(|p| (&p[1] - &p[0]) * &degree).collect());
     std::array::from_fn(|k| {
         bernstein_product(&d[k], &h[2])
             .into_iter()
@@ -47,22 +44,22 @@ pub(super) fn no_stationary(net: &[[Q; 3]], axis: usize) -> bool {
         && (d.iter().all(|q| q >= &Q::zero()) || d.iter().all(|q| q <= &Q::zero()))
 }
 mod algebraic;
-pub(super) mod surface_expression;
-pub(super) mod ray_winding;
-pub(super) mod event_coordinates;
-pub(super) mod parameter_order;
+pub(super) mod algebraic_events;
+pub(super) mod algebraic_point_pullback;
+pub(super) mod bivariate;
 pub(super) mod branch_germ;
 pub(super) mod branch_neighbourhood;
 pub(super) mod branch_slice;
 pub(super) mod carrier_sides;
-pub(super) mod selected_winding;
-pub(super) mod selected_clearance;
-pub(super) mod shore_carrier;
 pub(super) mod chart_coverage;
-pub(super) mod bivariate;
-pub(super) mod algebraic_events;
+pub(super) mod event_coordinates;
+pub(super) mod parameter_order;
+pub(super) mod ray_winding;
+pub(super) mod selected_clearance;
+pub(super) mod selected_winding;
+pub(super) mod shore_carrier;
 pub(super) mod shore_events;
-pub(super) mod algebraic_point_pullback;
+pub(super) mod surface_expression;
 pub(super) use algebraic::endpoint_only;
 pub(super) use bivariate::{
     endpoint_census, fiber, fiber_gcd, intersection_polynomials, nonlinear_relation,

@@ -30,7 +30,7 @@ export interface UseDraftPersistenceOptions {
   workspace: Ref<HTMLElement | undefined>
   historyWorker: ReturnType<typeof createSolidPreviewWorker>
   historyPending: Ref<boolean>
-  historyMode: Ref<'restore' | 'import' | 'shared'>
+  historyMode: Ref<'restore' | 'import' | 'export' | 'shared'>
   bumpHistoryGeneration: () => number
   getHistoryGeneration: () => number
   getHistory: () => DirectHistory

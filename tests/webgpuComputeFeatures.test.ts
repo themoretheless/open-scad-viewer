@@ -10,8 +10,10 @@ import {
 } from '../src/services/nurbsCurve'
 import {
   closestPointOnNurbsSurface,
+  computeNurbsSurfaceBoundingBox,
   evaluateNurbsSurfaceArea,
   evaluateNurbsSurfaceNormal,
+  extractNurbsSurfaceIsocurvePoints,
   type NurbsSurface,
 } from '../src/services/nurbsSurface'
 
@@ -326,5 +328,22 @@ describe('WebGPU compute feature negotiation', () => {
     for (const pt of arcPoly) {
       expect(Math.hypot(pt[0], pt[1])).toBeCloseTo(2, 2)
     }
+
+    // NURBS surface bounding box and isoparametric curve point extraction
+    const surfBbox = computeNurbsSurfaceBoundingBox(rectSurface, 8)
+    expect(surfBbox.min).toEqual([0, 0, 0])
+    expect(surfBbox.max).toEqual([2, 3, 0])
+
+    const isoU = extractNurbsSurfaceIsocurvePoints(rectSurface, 'u', 0.5, 5)
+    expect(isoU).toHaveLength(5)
+    expect(isoU[0]).toEqual([1, 0, 0])
+    expect(isoU[2]).toEqual([1, 1.5, 0])
+    expect(isoU[4]).toEqual([1, 3, 0])
+
+    const isoV = extractNurbsSurfaceIsocurvePoints(rectSurface, 'v', 0.5, 5)
+    expect(isoV).toHaveLength(5)
+    expect(isoV[0]).toEqual([0, 1.5, 0])
+    expect(isoV[2]).toEqual([1, 1.5, 0])
+    expect(isoV[4]).toEqual([2, 1.5, 0])
   })
 })

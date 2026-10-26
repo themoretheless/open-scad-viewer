@@ -4,23 +4,34 @@ import type {MeshData} from '../core/mesh'
 import type {LighteningOptions} from '../services/solidLightening'
 import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
 import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
-import {computeNominalLatticeGraph,computeTrussScenario} from '../services/mainSolidWorker'
-import {trussFieldMeshes} from '../services/trussFieldMeshes'
-import {screenTrussMembers,validatePrintStrengthProfile,type ValidatedPrintProfile,type ThermalEditorState,type ThermalEvaluation} from '../services/trussScreening'
-import {listStructuralProfiles,lookupStructuralProfile,type StructuralProfile,type StructuralProfileProperties} from '../services/structuralProfiles'
-import {optimizeTrussTopology,type TrussTopologyResponse} from '../services/trussAnalysis'
+import {computeNominalLatticeGraph,computeStructuralProfileCatalog,computeTrussField,computeTrussScenario,computeTrussScreening,computeTrussTopology} from '../services/mainSolidWorker'
+import {validatePrintStrengthProfile,type AxialScreeningRow,type ValidatedPrintProfile,type ThermalEditorState,type ThermalEvaluation} from '../services/trussScreening'
+import type {StructuralProfileProperties} from '../services/structuralProfiles'
+import type {TrussTopologyResponse} from '../services/trussAnalysis'
 import ThermalStrengthEditor from './ThermalStrengthEditor.vue'
 import type {LatticePrintSettings} from '../services/latticePrintSettings'
 
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;printSettings:LatticePrintSettings;previewEpoch?:number}>()
 const emit=defineEmits<{preview:[meshes:MeshData[]|null]}>()
-const showField=ref(false),markerMm=ref(1)
-function clearField(){if(showField.value){showField.value=false;emit('preview',null)}}
-function updateField(){
-  if(!showField.value){emit('preview',null);return}
+const showField=ref(false),markerMm=ref(1),fieldBusy=ref(false)
+let fieldRevision=0,fieldController:AbortController|undefined
+function cancelField(){fieldRevision++;fieldController?.abort();fieldController=undefined;fieldBusy.value=false}
+function clearField(){cancelField();if(showField.value){showField.value=false;emit('preview',null)}}
+async function updateField(){
+  if(!showField.value){cancelField();emit('preview',null);return}
   if(!result.value){clearField();return}
-  try{emit('preview',trussFieldMeshes(result.value.model,result.value.result,markerMm.value));error.value=''}
-  catch(cause){clearField();error.value=String(cause)}
+  const snapshot=result.value,ticket=++fieldRevision,abort=new AbortController()
+  fieldController?.abort();fieldController=abort;fieldBusy.value=true
+  try{
+    const meshes=await computeTrussField(snapshot.model,snapshot.result,markerMm.value,{signal:abort.signal})
+    if(ticket!==fieldRevision)return
+    emit('preview',meshes);error.value=''
+  }catch(cause){
+    if(ticket===fieldRevision){
+      showField.value=false;emit('preview',null)
+      if(!(cause instanceof Error&&cause.name==='AbortError'))error.value=String(cause)
+    }
+  }finally{if(ticket===fieldRevision){fieldBusy.value=false;fieldController=undefined}}
 }
 watch(()=>props.previewEpoch,clearField,{flush:'sync'})
 const label=(ru:string,en:string)=>props.locale==='ru'?ru:en
@@ -28,7 +39,7 @@ const graph=shallowRef<NominalLatticeGraph|null>(null)
 const entries=ref<{loadCase:TrussLoadCase;factor:number}[]>([])
 const active=ref(0),mode=ref<'case'|'combination'>('case')
 const youngMpa=ref<number|string>(''),areaMm2=ref<number|string>('')
-const phase=ref<'graph'|'solve'|null>(null),error=ref('')
+const phase=ref<'graph'|'solve'|'topology'|null>(null),error=ref('')
 const result=shallowRef<Awaited<ReturnType<typeof computeTrussScenario>>|null>(null)
 const tensionMpa=ref<number|string>(''),compressionMpa=ref<number|string>(''),safetyFactor=ref(2)
 const material=ref(''),grade=ref(''),propertySource=ref('')
@@ -37,44 +48,72 @@ const solvedPrintProfile=shallowRef<ValidatedPrintProfile|null>(null)
 const thermalState=shallowRef<ThermalEditorState>({enabled:false,evaluation:null,error:''})
 const solvedThermal=shallowRef<ThermalEvaluation|null>(null)
 const effectiveYoung=computed(()=>thermalState.value.enabled?thermalState.value.evaluation?.result.youngMpa:youngMpa.value)
-const catalog=shallowRef<StructuralProfile[]>([])
+const catalog=shallowRef<StructuralProfileProperties[]>([])
 const selectedDesignation=ref(''),selectedProfile=shallowRef<StructuralProfileProperties|null>(null),profileError=ref('')
-const profileFamilies:{id:StructuralProfile['family'];label:string}[]=[
+const profileBusy=ref(false)
+let catalogPromise:Promise<void>|null=null,catalogController:AbortController|undefined,catalogRevision=0
+const profileFamilies:{id:StructuralProfileProperties['family'];label:string}[]=[
   {id:'ipe',label:'IPE · EN 10365'},{id:'heb',label:'HEB · EN 10365'},{id:'w',label:'W · AISC'},
   {id:'gost-8239',label:'ГОСТ 8239-89'},{id:'sto-aschm-b',label:'СТО АСЧМ · Б'},
   {id:'sto-aschm-sh',label:'СТО АСЧМ · Ш'},{id:'sto-aschm-k',label:'СТО АСЧМ · К'},
 ]
 const volumeFraction=ref(0.5),penalty=ref(3)
 const topologyResult=shallowRef<TrussTopologyResponse|null>(null),topologyError=ref('')
-function ensureCatalog(){
-  if(catalog.value.length)return
-  try{catalog.value=listStructuralProfiles();profileError.value=''}
-  catch(cause){profileError.value=String(cause)}
+function cancelCatalog(){
+  catalogRevision++;catalogController?.abort();catalogController=undefined;catalogPromise=null;profileBusy.value=false
+}
+function ensureCatalog():Promise<void>{
+  if(catalog.value.length){profileError.value='';return Promise.resolve()}
+  if(catalogPromise)return catalogPromise
+  const ticket=++catalogRevision,abort=new AbortController()
+  catalogController=abort;profileBusy.value=true;profileError.value=''
+  catalogPromise=(async()=>{
+    try{
+      const value=await computeStructuralProfileCatalog({signal:abort.signal})
+      if(ticket!==catalogRevision)return
+      catalog.value=value
+      if(selectedDesignation.value)selectProfile()
+    }catch(cause){
+      if(ticket===catalogRevision&&!(cause instanceof Error&&cause.name==='AbortError'))profileError.value=String(cause)
+    }finally{
+      if(ticket===catalogRevision){profileBusy.value=false;catalogController=undefined;catalogPromise=null}
+    }
+  })()
+  return catalogPromise
 }
 function selectProfile(){
-  selectedProfile.value=null;profileError.value=''
-  if(!selectedDesignation.value)return
-  try{selectedProfile.value=lookupStructuralProfile(selectedDesignation.value)}
-  catch(cause){profileError.value=String(cause)}
+  profileError.value=''
+  selectedProfile.value=catalog.value.find(profile=>profile.designation===selectedDesignation.value)??null
 }
 function applyProfile(){
   if(!selectedDesignation.value){profileError.value=label('Выберите профиль.','Select a profile.');return}
-  try{
-    const profile=lookupStructuralProfile(selectedDesignation.value)
-    selectedProfile.value=profile;areaMm2.value=Number(profile.areaMm2.toFixed(4));profileError.value=''
-  }catch(cause){profileError.value=String(cause)}
+  const profile=selectedProfile.value
+  if(!profile){profileError.value=label('Дождитесь загрузки каталога.','Wait for the catalogue to load.');return}
+  areaMm2.value=Number(profile.areaMm2.toFixed(4));profileError.value=''
 }
 function updateThermal(value:ThermalEditorState){thermalState.value=value;invalidateResult()}
 const printProfile=computed(()=>({material:material.value,grade:grade.value,propertySource:propertySource.value,
   nozzleMm:props.printSettings.nozzle,lineWidthMm:props.options.lineWidth,layerHeightMm:props.printSettings.layer,
   nozzleTempC:Number(nozzleTempC.value),bedTempC:bedTempC.value===''?NaN:Number(bedTempC.value)}))
-const screening=computed(()=>{
-  const thermal=solvedThermal.value?.result
-  if(!result.value||(!thermal&&(tensionMpa.value===''||compressionMpa.value==='')))return {rows:[],error:''}
-  try{return {rows:screenTrussMembers(result.value.model,[result.value.result],{
-    tensionMpa:thermal?.tensionMpa??Number(tensionMpa.value),compressionMpa:thermal?.compressionMpa??Number(compressionMpa.value),safetyFactor:Number(safetyFactor.value)}),error:''}}
-  catch(cause){return {rows:[],error:String(cause)}}
-})
+const screening=shallowRef<{rows:AxialScreeningRow[];error:string}>({rows:[],error:''}),screeningBusy=ref(false)
+let screeningRevision=0,screeningController:AbortController|undefined
+const operationBusy=computed(()=>!!phase.value||profileBusy.value||fieldBusy.value||screeningBusy.value)
+function cancelScreening(){screeningRevision++;screeningController?.abort();screeningController=undefined;screeningBusy.value=false}
+async function updateScreening(){
+  cancelScreening()
+  const snapshot=result.value,thermal=solvedThermal.value?.result
+  if(!snapshot||(!thermal&&(tensionMpa.value===''||compressionMpa.value===''))){screening.value={rows:[],error:''};return}
+  const limits={tensionMpa:thermal?.tensionMpa??Number(tensionMpa.value),
+    compressionMpa:thermal?.compressionMpa??Number(compressionMpa.value),safetyFactor:Number(safetyFactor.value)}
+  const ticket=screeningRevision,abort=new AbortController()
+  screeningController=abort;screeningBusy.value=true;screening.value={rows:[],error:''}
+  try{
+    const rows=await computeTrussScreening(snapshot.model,[snapshot.result],limits,{signal:abort.signal})
+    if(ticket===screeningRevision)screening.value={rows,error:''}
+  }catch(cause){
+    if(ticket===screeningRevision&&!(cause instanceof Error&&cause.name==='AbortError'))screening.value={rows:[],error:String(cause)}
+  }finally{if(ticket===screeningRevision){screeningBusy.value=false;screeningController=undefined}}
+}
 const current=computed(()=>entries.value[active.value]?.loadCase??null)
 const load=computed(()=>current.value?.loads[0]??null)
 const selectedMesh=computed(()=>props.selection.length===1?props.meshes[props.selection[0]]??null:null)
@@ -85,7 +124,7 @@ let revision=0,controller:AbortController|undefined,nextCase=1
 let binding:{sourceBodyIndex:number;graphOptions:LighteningOptions}|null=null
 
 function invalidateResult(){
-  clearField()
+  clearField();cancelScreening();screening.value={rows:[],error:''}
   revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;solvedPrintProfile.value=null;solvedThermal.value=null;error.value=''
   topologyResult.value=null;topologyError.value=''
 }
@@ -95,6 +134,7 @@ watch([()=>props.source,()=>props.ready,selectedMesh,()=>selectedMesh.value?.ver
 watch([()=>props.selection,()=>props.options],invalidateGraph,{deep:true,flush:'sync'})
 watch([entries,youngMpa,areaMm2,active,mode],invalidateResult,{deep:true,flush:'sync'})
 watch([volumeFraction,penalty],()=>{topologyResult.value=null;topologyError.value=''},{flush:'sync'})
+watch([result,tensionMpa,compressionMpa,safetyFactor,solvedThermal],()=>{void updateScreening()},{flush:'sync'})
 watch(printProfile,()=>{youngMpa.value='';tensionMpa.value='';compressionMpa.value='';invalidateResult()},{flush:'sync'})
 // The report Blob and its object URL are built lazily on download click, not on
 // every keystroke; the URL is revoked immediately after the click is dispatched.
@@ -106,7 +146,7 @@ function downloadReport(){
   const a=document.createElement('a');a.href=url;a.download='nominal-truss.json';a.click()
   URL.revokeObjectURL(url)
 }
-onUnmounted(invalidateResult)
+onUnmounted(()=>{invalidateResult();cancelCatalog()})
 
 async function generate(){
   invalidateGraph()
@@ -119,6 +159,7 @@ async function generate(){
     graph.value=value;binding=snapshot;nextCase=2
     entries.value=[{factor:1,loadCase:{id:'case-1',restrained:value.nodes.map(()=>[false,false,false]),
       loads:[{nodes:[],originMm:[0,0,0],forceN:[0,0,0],momentNmm:[0,0,0]}]}}]
+    void ensureCatalog()
   }catch(cause){if(ticket===revision&&!(cause instanceof Error&&cause.name==='AbortError'))error.value=String(cause)}
   finally{if(ticket===revision){phase.value=null;controller=undefined}}
 }
@@ -169,7 +210,7 @@ async function solve(){
   }catch(cause){if(ticket===revision&&!(cause instanceof Error&&cause.name==='AbortError'))error.value=String(cause)}
   finally{if(ticket===revision){phase.value=null;controller=undefined}}
 }
-function optimize(){
+async function optimize(){
   topologyResult.value=null;topologyError.value=''
   if(!graph.value||!current.value)return
   const modulus=effectiveYoung.value
@@ -177,14 +218,19 @@ function optimize(){
     ||typeof areaMm2.value!=='number'||!Number.isFinite(areaMm2.value)||areaMm2.value<=0){
     topologyError.value=label('Модуль E и площадь должны быть положительными конечными числами.','E and area must be positive finite numbers.');return
   }
+  const model={nodesMm:graph.value.nodes,
+    members:graph.value.edges.map(nodes=>({nodes,youngMpa:modulus,areaMm2:areaMm2.value as number})),
+    restrained:current.value.restrained}
+  const cases=entries.value.map(entry=>({weight:1,loads:entry.loadCase.loads}))
+  controller?.abort()
+  const ticket=++revision,abort=new AbortController();controller=abort;phase.value='topology'
   try{
-    topologyResult.value=optimizeTrussTopology({
-      nodesMm:graph.value.nodes,
-      members:graph.value.edges.map(nodes=>({nodes,youngMpa:modulus,areaMm2:areaMm2.value as number})),
-      restrained:current.value.restrained,
-    },entries.value.map(entry=>({weight:1,loads:entry.loadCase.loads})),
-    {volumeFraction:Number(volumeFraction.value),penalty:Number(penalty.value)})
-  }catch(cause){topologyError.value=String(cause)}
+    const value=await computeTrussTopology(model,cases,
+      {volumeFraction:Number(volumeFraction.value),penalty:Number(penalty.value)},{signal:abort.signal})
+    if(ticket===revision)topologyResult.value=value
+  }catch(cause){
+    if(ticket===revision&&!(cause instanceof Error&&cause.name==='AbortError'))topologyError.value=String(cause)
+  }finally{if(ticket===revision){phase.value=null;controller=undefined}}
 }
 const number=(value:number)=>value===0?'0':value.toPrecision(5)
 </script>
@@ -193,7 +239,7 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
   <details class="nominal-truss">
     <summary>{{label('Осевая модель графа','Axial graph model')}}</summary>
     <p class="model-scope">{{label('Номинальная сеть по габаритам. Без обрезки поверхностью, оболочки, изгиба и потери устойчивости. Не оценка прочности детали.','Nominal bounding-box network. No surface clipping, shell, bending or buckling. Not a part-strength assessment.')}}</p>
-    <button :disabled="!available||!!phase" @click="generate">{{label('Построить граф','Generate graph')}}</button>
+    <button :disabled="!available||operationBusy" @click="generate">{{label('Построить граф','Generate graph')}}</button>
     <span v-if="!available" role="status">{{label('Нужно одно тело и актуальная сборка.','One body and a current build are required.')}}</span>
     <template v-if="graph&&current&&load">
       <p>{{graph.nodes.length}} {{label('узлов','nodes')}} · {{graph.edges.length}} {{label('стержней','members')}}</p>
@@ -215,15 +261,16 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
       </div>
       <fieldset><legend>{{label('Каталог прокатных профилей','Rolled profile catalogue')}}</legend>
         <p>{{label('Номинальные двутавры без закруглений. В осевую модель подставляется только площадь; изгиб и устойчивость этим не проверяются.','Nominal I-sections without fillets. Only area is applied to the axial model; this does not check bending or buckling.')}}</p>
-        <label>{{label('Профиль','Profile')}}<select v-model="selectedDesignation" :aria-label="label('Прокатный профиль','Rolled profile')" @focus="ensureCatalog" @mousedown="ensureCatalog" @change="selectProfile">
+        <label>{{label('Профиль','Profile')}}<select v-model="selectedDesignation" :disabled="operationBusy" :aria-busy="profileBusy" :aria-label="label('Прокатный профиль','Rolled profile')" @focus="ensureCatalog" @mousedown="ensureCatalog" @change="selectProfile">
           <option value="">{{label('Выберите профиль','Select a profile')}}</option>
           <optgroup v-for="family in profileFamilies" :key="family.id" :label="family.label"><option v-for="profile in catalog.filter(item=>item.family===family.id)" :key="profile.designation" :value="profile.designation">{{profile.designation}}</option></optgroup>
         </select></label>
+        <p v-if="profileBusy" role="status">{{label('Загрузка каталога…','Loading catalogue…')}}</p>
         <template v-if="selectedProfile">
           <p>{{selectedProfile.heightMm}} × {{selectedProfile.flangeWidthMm}} mm · t<sub>w</sub> {{selectedProfile.webThicknessMm}} mm · t<sub>f</sub> {{selectedProfile.flangeThicknessMm}} mm</p>
           <dl><dt>A, mm²</dt><dd>{{number(selectedProfile.areaMm2)}}</dd><dt>I<sub>strong</sub>, mm⁴</dt><dd>{{number(selectedProfile.iStrongMm4)}}</dd><dt>{{label('Масса, kg/m','Mass, kg/m')}}</dt><dd>{{number(selectedProfile.massKgM)}}</dd></dl>
         </template>
-        <button :disabled="!selectedDesignation" @click="applyProfile">{{label('Применить площадь к стержням','Apply area to members')}}</button>
+        <button :disabled="operationBusy||!selectedProfile" @click="applyProfile">{{label('Применить площадь к стержням','Apply area to members')}}</button>
         <p v-if="profileError" role="alert">{{profileError}}</p>
       </fieldset>
       <label>{{label('Редактируемый случай','Edit case')}}<select v-model.number="active" :aria-label="label('Редактируемый случай','Edit case')"><option v-for="(entry,i) in entries" :key="i" :value="i">{{entry.loadCase.id}}</option></select></label>
@@ -247,14 +294,14 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
       </fieldset>
       <label>{{label('Расчёт','Solve')}}<select v-model="mode" :aria-label="label('Режим расчёта','Result mode')"><option value="case">{{label('Текущий случай','Current case')}}</option><option value="combination">{{label('Линейная комбинация','Linear combination')}}</option></select></label>
       <div v-if="mode==='combination'" class="fields"><label v-for="(entry,i) in entries" :key="i">{{entry.loadCase.id}}<input v-model.number="entry.factor" type="number" step="0.1" :aria-label="`Factor ${entry.loadCase.id}`"></label></div>
-      <div class="commands"><button :disabled="!!phase" @click="solve">{{label('Рассчитать модель','Solve model')}}</button><button v-if="phase" @click="invalidateResult">{{label('Отмена','Cancel')}}</button></div>
+      <div class="commands"><button :disabled="operationBusy" @click="solve">{{label('Рассчитать модель','Solve model')}}</button><button v-if="phase" @click="invalidateResult">{{label('Отмена','Cancel')}}</button></div>
       <fieldset><legend>{{label('SIMP-оптимизация топологии','SIMP topology optimization')}}</legend>
         <p>{{label('Все случаи имеют вес 1; закрепления берутся из редактируемого случая. Текущая площадь стержня — эталон A_ref. Распределение материала для компоновки, без проверки устойчивости, узлов и норм.','All cases have weight 1; restraints come from the edited case. The current member area is the reference A_ref. A material-layout estimate without buckling, joint or code checks.')}}</p>
         <div class="fields">
-          <label>{{label('Доля объёма','Volume fraction')}}<input v-model.number="volumeFraction" type="number" min="0.001" max="1" step="0.05"></label>
-          <label>{{label('Штраф SIMP','SIMP penalty')}}<input v-model.number="penalty" type="number" min="1" max="10" step="0.5"></label>
+          <label>{{label('Доля объёма','Volume fraction')}}<input v-model.number="volumeFraction" :disabled="operationBusy" type="number" min="0.001" max="1" step="0.05"></label>
+          <label>{{label('Штраф SIMP','SIMP penalty')}}<input v-model.number="penalty" :disabled="operationBusy" type="number" min="1" max="10" step="0.5"></label>
         </div>
-        <button :disabled="!!phase" @click="optimize">{{label('Оптимизировать распределение','Optimize material layout')}}</button>
+        <button :disabled="operationBusy" @click="optimize">{{label('Оптимизировать распределение','Optimize material layout')}}</button>
         <p v-if="topologyError" role="alert">{{topologyError}}</p>
         <div v-if="topologyResult" class="results" aria-label="Truss topology results">
           <dl><dt>{{label('Податливость, N mm','Compliance, N mm')}}</dt><dd>{{number(topologyResult.initialComplianceNmm)}} → {{number(topologyResult.complianceNmm)}}</dd>
@@ -275,10 +322,11 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
         <fieldset><legend>{{label('Поиск перегруженных стержней','Axial demand screening')}}</legend>
           <p>{{label('Только рассчитанный случай или комбинация. Допуски задаются для вашего материала и процесса печати; потеря устойчивости не проверяется.','Only the solved case or combination. Supply limits for your material and printing process; buckling is not checked.')}}</p>
           <div class="fields">
-            <label>{{label('Предел растяжения, MPa','Tensile limit, MPa')}}<input v-if="!solvedThermal" v-model.number="tensionMpa" type="number" min="0" step="0.1"><input v-else :value="solvedThermal.result.tensionMpa" type="number" readonly></label>
-            <label>{{label('Предел сжатия, MPa','Compressive limit, MPa')}}<input v-if="!solvedThermal" v-model.number="compressionMpa" type="number" min="0" step="0.1"><input v-else :value="solvedThermal.result.compressionMpa" type="number" readonly></label>
-            <label>{{label('Коэффициент запаса','Safety factor')}}<input v-model.number="safetyFactor" type="number" min="1" step="0.1"></label>
+            <label>{{label('Предел растяжения, MPa','Tensile limit, MPa')}}<input v-if="!solvedThermal" v-model.number="tensionMpa" :disabled="operationBusy" type="number" min="0" step="0.1"><input v-else :value="solvedThermal.result.tensionMpa" type="number" readonly></label>
+            <label>{{label('Предел сжатия, MPa','Compressive limit, MPa')}}<input v-if="!solvedThermal" v-model.number="compressionMpa" :disabled="operationBusy" type="number" min="0" step="0.1"><input v-else :value="solvedThermal.result.compressionMpa" type="number" readonly></label>
+            <label>{{label('Коэффициент запаса','Safety factor')}}<input v-model.number="safetyFactor" :disabled="operationBusy" type="number" min="1" step="0.1"></label>
           </div>
+          <p v-if="screeningBusy" role="status">{{label('Оценка стержней…','Screening members…')}}</p>
           <p v-if="screening.error" role="alert">{{screening.error}}</p>
           <template v-if="screening.rows.length">
             <p>{{label('Более 100% — превышение осевого допуска; менее 30% — малая осевая нагрузка. Уменьшение сечения требует повторного расчёта всех нагрузок, жёсткости и устойчивости.','Above 100% exceeds the axial limit; below 30% indicates low axial demand. Resizing requires rechecking all loads, stiffness and stability.')}}</p>
@@ -287,15 +335,15 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
             </tbody></table></div>
           </template>
         </fieldset>
-        <label class="field-toggle"><input v-model="showField" type="checkbox" @change="updateField">{{label('Знак осевого усилия в предпросмотре','Preview axial force sign')}}</label>
-        <label>{{label('Размер маркера, mm','Marker size, mm')}}<input v-model.number="markerMm" type="number" min="0.001" step="0.1" @input="showField&&updateField()"></label>
+        <label class="field-toggle"><input v-model="showField" :disabled="operationBusy&&!fieldBusy" type="checkbox" @change="updateField">{{label('Знак осевого усилия в предпросмотре','Preview axial force sign')}}</label>
+        <label>{{label('Размер маркера, mm','Marker size, mm')}}<input v-model.number="markerMm" :disabled="!showField||(operationBusy&&!fieldBusy)" type="number" min="0.001" step="0.1" @input="showField&&updateField()"></label>
         <p v-if="showField" class="force-legend"><span><i class="compression"></i>{{label('Сжатие','Compression')}} (−N)</span><span><i class="zero"></i>0 N</span><span><i class="tension"></i>{{label('Растяжение','Tension')}} (+N)</span></p>
         <details><summary>{{label('Стержни','Members')}}</summary><div class="table-scroll"><table><thead><tr><th>{{label('Узлы','Nodes')}}</th><th>N</th><th>MPa</th></tr></thead><tbody><tr v-for="(member,i) in result.model.members" :key="i"><td>{{member.nodes.join(' - ')}}</td><td>{{number(result.result.axialForcesN[i])}}</td><td>{{number(result.result.axialStressesMpa[i])}}</td></tr></tbody></table></div></details>
         <details><summary>{{label('Перемещения и реакции','Displacements and reactions')}}</summary><div class="table-scroll"><table><thead><tr><th>{{label('Узел','Node')}}</th><th>XYZ, mm</th><th>XYZ, N</th></tr></thead><tbody><tr v-for="(point,i) in result.result.displacementsMm" :key="i"><th>{{i}}</th><td>{{point.map(number).join(', ')}}</td><td>{{result.result.reactionsN[i].map(number).join(', ')}}</td></tr></tbody></table></div></details>
       </section>
     </template>
     <button v-if="phase==='graph'" @click="invalidateResult">{{label('Отмена','Cancel')}}</button>
-    <p v-if="phase" role="status">{{label('Расчёт…','Computing…')}}</p>
+    <p v-if="phase||fieldBusy" role="status">{{label('Расчёт…','Computing…')}}</p>
     <p v-if="error" role="alert">{{error}}</p>
   </details>
 </template>

@@ -45,15 +45,43 @@ impl Boundary {
         self.body.annular_caps.as_ref()
     }
     pub fn cap_faces(&self) -> Vec<usize> {
-        self.caps().map_or_else(||if self.body.station_closed {Vec::new()}else{
-            vec![self.body.model.faces.len()-2,self.body.model.faces.len()-1]
-        }, CapEvidence::faces)
+        self.caps().map_or_else(
+            || {
+                if self.body.station_closed {
+                    Vec::new()
+                } else {
+                    vec![
+                        self.body.model.faces.len() - 2,
+                        self.body.model.faces.len() - 1,
+                    ]
+                }
+            },
+            CapEvidence::faces,
+        )
     }
-    pub fn cap_selection_work(&self)->u64 {self.body.cap_selection_work}
-    pub fn cap_face_groups(&self)->[Vec<usize>;2] {
-        self.caps().map_or_else(||{let faces=self.cap_faces();if faces.is_empty(){[vec![],vec![]]}else{[vec![faces[0]],vec![faces[1]]]}},|caps|caps.face_groups().clone())
+    pub fn cap_selection_work(&self) -> u64 {
+        self.body.cap_selection_work
     }
-    pub fn planar_cap_faces(&self)->Vec<usize> {if self.caps().is_some(){vec![]}else{self.cap_faces()}}
+    pub fn cap_face_groups(&self) -> [Vec<usize>; 2] {
+        self.caps().map_or_else(
+            || {
+                let faces = self.cap_faces();
+                if faces.is_empty() {
+                    [vec![], vec![]]
+                } else {
+                    [vec![faces[0]], vec![faces[1]]]
+                }
+            },
+            |caps| caps.face_groups().clone(),
+        )
+    }
+    pub fn planar_cap_faces(&self) -> Vec<usize> {
+        if self.caps().is_some() {
+            vec![]
+        } else {
+            self.cap_faces()
+        }
+    }
     pub fn boundary(&self) -> &BoundaryCertificate {
         &self.body.station_boundary
     }

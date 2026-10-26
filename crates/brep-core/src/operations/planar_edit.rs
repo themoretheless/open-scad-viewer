@@ -86,95 +86,203 @@ pub fn draft_planar_prism(
 // may be nonconvex or contain holes; no other vertex level may be crossed.
 fn push_prismatic_cap(model: &Model, face_id: usize, distance: f64) -> Result<Model> {
     model.validate()?;
-    if model.bodies.len()!=1 || model.shells.len()!=1 || !model.bodies[0].inner_shells.is_empty() {
+    if model.bodies.len() != 1
+        || model.shells.len() != 1
+        || !model.bodies[0].inner_shells.is_empty()
+    {
         return Err(unsupported("Cap editing requires one connected shell"));
     }
-    let shell=&model.shells[model.bodies[0].outer_shell];
-    let selected=shell.faces.iter().find(|f|f.face==face_id)
-        .ok_or_else(||unsupported("Unknown cap face"))?;
-    let mut plane=face_plane(model,face_id)?;
-    if selected.reversed {plane.normal=mul(plane.normal,-1.);plane.offset=-plane.offset;}
-    let tolerance=model.tolerance_mm*8.;
-    let face=&model.faces[face_id];
-    let mut moved=BTreeSet::new();
-    let mut cap_edges=BTreeSet::new();
+    let shell = &model.shells[model.bodies[0].outer_shell];
+    let selected = shell
+        .faces
+        .iter()
+        .find(|f| f.face == face_id)
+        .ok_or_else(|| unsupported("Unknown cap face"))?;
+    let mut plane = face_plane(model, face_id)?;
+    if selected.reversed {
+        plane.normal = mul(plane.normal, -1.);
+        plane.offset = -plane.offset;
+    }
+    let tolerance = model.tolerance_mm * 8.;
+    let face = &model.faces[face_id];
+    let mut moved = BTreeSet::new();
+    let mut cap_edges = BTreeSet::new();
     for ring in std::iter::once(&face.outer).chain(&face.holes) {
-        moved.extend(loop_vertices(model,*ring)?);
-        cap_edges.extend(model.loops[*ring].coedges.iter().map(|c|c.edge));
+        moved.extend(loop_vertices(model, *ring)?);
+        cap_edges.extend(model.loops[*ring].coedges.iter().map(|c| c.edge));
     }
     // A displayed planar rim can consist of several adjacent B-rep faces.
     // Include its connected coplanar component, never a remote coplanar cap.
     loop {
-        let count=moved.len();
+        let count = moved.len();
         for usage in &shell.faces {
-            let f=&model.faces[usage.face];
-            let mut ids=Vec::new();
-            for ring in std::iter::once(&f.outer).chain(&f.holes) {ids.extend(loop_vertices(model,*ring)?);}
-            let edges=std::iter::once(&f.outer).chain(&f.holes).flat_map(|&id|model.loops[id].coedges.iter().map(|c|c.edge)).collect::<Vec<_>>();
-            if edges.iter().any(|id|cap_edges.contains(id)) && ids.iter().all(|&i|(dot(plane.normal,model.vertices[i].point)-plane.offset).abs()<=tolerance) {
+            let f = &model.faces[usage.face];
+            let mut ids = Vec::new();
+            for ring in std::iter::once(&f.outer).chain(&f.holes) {
+                ids.extend(loop_vertices(model, *ring)?);
+            }
+            let edges = std::iter::once(&f.outer)
+                .chain(&f.holes)
+                .flat_map(|&id| model.loops[id].coedges.iter().map(|c| c.edge))
+                .collect::<Vec<_>>();
+            if edges.iter().any(|id| cap_edges.contains(id))
+                && ids.iter().all(|&i| {
+                    (dot(plane.normal, model.vertices[i].point) - plane.offset).abs() <= tolerance
+                })
+            {
                 moved.extend(ids);
                 cap_edges.extend(edges);
             }
         }
-        if moved.len()==count {break;}
+        if moved.len() == count {
+            break;
+        }
     }
-    for (i,v) in model.vertices.iter().enumerate() {
-        let gap=plane.offset-dot(plane.normal,v.point);
-        if moved.contains(&i) {if gap.abs()>tolerance{return Err(unsupported("Cap is not planar"));}}
-        else if gap<=tolerance || gap+distance<=tolerance {
+    for (i, v) in model.vertices.iter().enumerate() {
+        let gap = plane.offset - dot(plane.normal, v.point);
+        if moved.contains(&i) {
+            if gap.abs() > tolerance {
+                return Err(unsupported("Cap is not planar"));
+            }
+        } else if gap <= tolerance || gap + distance <= tolerance {
             return Err(unsupported("Cap displacement reaches another vertex level"));
         }
     }
     for edge in &model.edges {
-        if moved.contains(&edge.vertices[0])!=moved.contains(&edge.vertices[1]) {
-            let d=sub(model.vertices[edge.vertices[1]].point,model.vertices[edge.vertices[0]].point);
-            if norm(cross(d,plane.normal))>tolerance {
-                return Err(unsupported("Cap side edges must follow the displacement direction"));
+        if moved.contains(&edge.vertices[0]) != moved.contains(&edge.vertices[1]) {
+            let d = sub(
+                model.vertices[edge.vertices[1]].point,
+                model.vertices[edge.vertices[0]].point,
+            );
+            if norm(cross(d, plane.normal)) > tolerance {
+                return Err(unsupported(
+                    "Cap side edges must follow the displacement direction",
+                ));
             }
         }
     }
-    let mut polygons=Vec::new();
+    let mut polygons = Vec::new();
     for usage in &shell.faces {
-        face_plane(model,usage.face)?; // Refuse curved geometry; do not flatten it.
-        let f=&model.faces[usage.face];
-        let ring=|id| -> Result<Vec<[f64;3]>> {
-            let mut points=loop_vertices(model,id)?.into_iter().map(|i| {
-                let p=model.vertices[i].point;
-                if moved.contains(&i){add(p,mul(plane.normal,distance))}else{p}
-            }).collect::<Vec<_>>();
-            if usage.reversed {points.reverse();}
+        face_plane(model, usage.face)?; // Refuse curved geometry; do not flatten it.
+        let f = &model.faces[usage.face];
+        let ring = |id| -> Result<Vec<[f64; 3]>> {
+            let mut points = loop_vertices(model, id)?
+                .into_iter()
+                .map(|i| {
+                    let p = model.vertices[i].point;
+                    if moved.contains(&i) {
+                        add(p, mul(plane.normal, distance))
+                    } else {
+                        p
+                    }
+                })
+                .collect::<Vec<_>>();
+            if usage.reversed {
+                points.reverse();
+            }
             Ok(points)
         };
-        polygons.push(PlanarBoundary{outer:ring(f.outer)?,holes:f.holes.iter().map(|&id|ring(id)).collect::<Result<Vec<_>>>()?});
+        polygons.push(PlanarBoundary {
+            outer: ring(f.outer)?,
+            holes: f
+                .holes
+                .iter()
+                .map(|&id| ring(id))
+                .collect::<Result<Vec<_>>>()?,
+        });
     }
-    let mut out=model_from_trimmed_polygons(polygons,model.tolerance_mm)?;
+    let mut out = model_from_trimmed_polygons(polygons, model.tolerance_mm)?;
     // This edit changes geometry without splitting or merging topology. Match
     // the rebuilt incidence graph to the source, including displaced vertices.
     fn correspondence<T: PartialEq>(target: &[T], source: &[T]) -> Result<Vec<usize>> {
-        if target.len()!=source.len() {return Err(unsupported("Cap reconstruction changed topology"));}
-        let mut used=BTreeSet::new();
-        let mut result=Vec::new();
+        if target.len() != source.len() {
+            return Err(unsupported("Cap reconstruction changed topology"));
+        }
+        let mut used = BTreeSet::new();
+        let mut result = Vec::new();
         for key in target {
-            let matches=source.iter().enumerate().filter(|(_,candidate)|*candidate==key).map(|(i,_)|i).collect::<Vec<_>>();
-            if matches.len()!=1 || !used.insert(matches[0]) {return Err(unsupported("Cap topology correspondence is ambiguous"));}
+            let matches = source
+                .iter()
+                .enumerate()
+                .filter(|(_, candidate)| *candidate == key)
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>();
+            if matches.len() != 1 || !used.insert(matches[0]) {
+                return Err(unsupported("Cap topology correspondence is ambiguous"));
+            }
             result.push(matches[0]);
         }
         Ok(result)
     }
-    let expected=model.vertices.iter().enumerate().map(|(i,v)|if moved.contains(&i){add(v.point,mul(plane.normal,distance))}else{v.point}).collect::<Vec<_>>();
-    let vertex_map=correspondence(&out.vertices.iter().map(|v|v.point).collect::<Vec<_>>(),&expected)?;
-    let edge_key=|mut pair:[usize;2]|{pair.sort();pair};
-    let edge_map=correspondence(&out.edges.iter().map(|e|edge_key(e.vertices.map(|i|vertex_map[i]))).collect::<Vec<_>>(),&model.edges.iter().map(|e|edge_key(e.vertices)).collect::<Vec<_>>())?;
-    let ring_key=|mut edges:Vec<usize>|{edges.sort();edges};
-    let loop_map=correspondence(&out.loops.iter().map(|l|ring_key(l.coedges.iter().map(|c|edge_map[c.edge]).collect())).collect::<Vec<_>>(),&model.loops.iter().map(|l|ring_key(l.coedges.iter().map(|c|c.edge).collect())).collect::<Vec<_>>())?;
-    let face_map=correspondence(&out.faces.iter().map(|f|(loop_map[f.outer],ring_key(f.holes.iter().map(|&i|loop_map[i]).collect()))).collect::<Vec<_>>(),&model.faces.iter().map(|f|(f.outer,ring_key(f.holes.clone()))).collect::<Vec<_>>())?;
-    out.1.vertices=vertex_map.iter().map(|&i|model.1.vertices[i]).collect();
-    out.1.edges=edge_map.iter().map(|&i|model.1.edges[i]).collect();
-    out.1.loops=loop_map.iter().map(|&i|model.1.loops[i]).collect();
-    out.1.faces=face_map.iter().map(|&i|model.1.faces[i]).collect();
-    out.1.shells=model.1.shells.clone();
-    out.1.bodies=model.1.bodies.clone();
-    out.1.lineage=model.1.lineage.clone();
+    let expected = model
+        .vertices
+        .iter()
+        .enumerate()
+        .map(|(i, v)| {
+            if moved.contains(&i) {
+                add(v.point, mul(plane.normal, distance))
+            } else {
+                v.point
+            }
+        })
+        .collect::<Vec<_>>();
+    let vertex_map = correspondence(
+        &out.vertices.iter().map(|v| v.point).collect::<Vec<_>>(),
+        &expected,
+    )?;
+    let edge_key = |mut pair: [usize; 2]| {
+        pair.sort();
+        pair
+    };
+    let edge_map = correspondence(
+        &out.edges
+            .iter()
+            .map(|e| edge_key(e.vertices.map(|i| vertex_map[i])))
+            .collect::<Vec<_>>(),
+        &model
+            .edges
+            .iter()
+            .map(|e| edge_key(e.vertices))
+            .collect::<Vec<_>>(),
+    )?;
+    let ring_key = |mut edges: Vec<usize>| {
+        edges.sort();
+        edges
+    };
+    let loop_map = correspondence(
+        &out.loops
+            .iter()
+            .map(|l| ring_key(l.coedges.iter().map(|c| edge_map[c.edge]).collect()))
+            .collect::<Vec<_>>(),
+        &model
+            .loops
+            .iter()
+            .map(|l| ring_key(l.coedges.iter().map(|c| c.edge).collect()))
+            .collect::<Vec<_>>(),
+    )?;
+    let face_map = correspondence(
+        &out.faces
+            .iter()
+            .map(|f| {
+                (
+                    loop_map[f.outer],
+                    ring_key(f.holes.iter().map(|&i| loop_map[i]).collect()),
+                )
+            })
+            .collect::<Vec<_>>(),
+        &model
+            .faces
+            .iter()
+            .map(|f| (f.outer, ring_key(f.holes.clone())))
+            .collect::<Vec<_>>(),
+    )?;
+    out.1.vertices = vertex_map.iter().map(|&i| model.1.vertices[i]).collect();
+    out.1.edges = edge_map.iter().map(|&i| model.1.edges[i]).collect();
+    out.1.loops = loop_map.iter().map(|&i| model.1.loops[i]).collect();
+    out.1.faces = face_map.iter().map(|&i| model.1.faces[i]).collect();
+    out.1.shells = model.1.shells.clone();
+    out.1.bodies = model.1.bodies.clone();
+    out.1.lineage = model.1.lineage.clone();
     out.refresh_change_set(&[model]);
     out.validate()?;
     Ok(out)

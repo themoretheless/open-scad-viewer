@@ -72,52 +72,110 @@ pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Repor
 /// Scope is exactly the pairs incident to `face`; this cannot certify the
 /// remaining body pairs or self-intersections within any individual face.
 pub struct IncidentReport {
-    pub face:usize,
-    pub pairs:Vec<Pair>,
-    pub total_pairs:usize,
-    pub next_pair:Option<[usize;2]>,
-    pub cells:usize,
-    pub domain_cells:usize,
-    pub all_incident_pairs_classified:bool,
-    pub all_incident_pairs_disjoint:bool,
+    pub face: usize,
+    pub pairs: Vec<Pair>,
+    pub total_pairs: usize,
+    pub next_pair: Option<[usize; 2]>,
+    pub cells: usize,
+    pub domain_cells: usize,
+    pub all_incident_pairs_classified: bool,
+    pub all_incident_pairs_disjoint: bool,
     /// Additional exact vertex work; legacy pair-search work is separate.
-    pub vertex_exact_work:u64,
+    pub vertex_exact_work: u64,
 }
-pub fn inspect_incident(model:&Model,face:usize,tolerance_uv:f64,limits:Limits)->Result<IncidentReport> {
-    if face>=model.faces.len() {return Err(Error::new("BREP_CONTACT_FACE","Incident face index is out of range"));}
-    let mut inspector=Inspector::new(std::sync::Arc::new(model.clone()),tolerance_uv,limits,
-        vec![],vec![],false,false,None)?;
-    inspector.incident=Some(face);
-    inspector.report.total_pairs=model.faces.len()-1;
-    while !inspector.finished() {inspector.advance(64)?;}
-    let r=inspector.finish()?;
-    Ok(IncidentReport {face,pairs:r.pairs,total_pairs:r.total_pairs,next_pair:r.next_pair,
-        cells:r.cells,domain_cells:r.domain_cells,all_incident_pairs_classified:r.all_pairs_classified,
-        all_incident_pairs_disjoint:r.all_pairs_disjoint,vertex_exact_work:0})
+pub fn inspect_incident(
+    model: &Model,
+    face: usize,
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<IncidentReport> {
+    if face >= model.faces.len() {
+        return Err(Error::new(
+            "BREP_CONTACT_FACE",
+            "Incident face index is out of range",
+        ));
+    }
+    let mut inspector = Inspector::new(
+        std::sync::Arc::new(model.clone()),
+        tolerance_uv,
+        limits,
+        vec![],
+        vec![],
+        false,
+        false,
+        None,
+    )?;
+    inspector.incident = Some(face);
+    inspector.report.total_pairs = model.faces.len() - 1;
+    while !inspector.finished() {
+        inspector.advance(64)?;
+    }
+    let r = inspector.finish()?;
+    Ok(IncidentReport {
+        face,
+        pairs: r.pairs,
+        total_pairs: r.total_pairs,
+        next_pair: r.next_pair,
+        cells: r.cells,
+        domain_cells: r.domain_cells,
+        all_incident_pairs_classified: r.all_pairs_classified,
+        all_incident_pairs_disjoint: r.all_pairs_disjoint,
+        vertex_exact_work: 0,
+    })
 }
 /// Extend the same scoped search with freshly proven exact owned-vertex
 /// contacts. A metric locality bound never promotes the pair's exact status.
-pub fn inspect_incident_with_vertices(model:&Model,face:usize,tolerance_uv:f64,limits:Limits,max_exact:u64)->Result<IncidentReport> {
-    if max_exact>1000000 {return Err(Error::new("BREP_CONTACT_BUDGET","Exact vertex work exceeds its bounded allowance"));}
-    let mut report=inspect_incident(model,face,tolerance_uv,limits)?;
+pub fn inspect_incident_with_vertices(
+    model: &Model,
+    face: usize,
+    tolerance_uv: f64,
+    limits: Limits,
+    max_exact: u64,
+) -> Result<IncidentReport> {
+    if max_exact > 1000000 {
+        return Err(Error::new(
+            "BREP_CONTACT_BUDGET",
+            "Exact vertex work exceeds its bounded allowance",
+        ));
+    }
+    let mut report = inspect_incident(model, face, tolerance_uv, limits)?;
     for pair in &mut report.pairs {
-        if pair.reason!="pair-unresolved" {continue;}
-        if report.cells==limits.cells||report.domain_cells==limits.domain_cells||report.vertex_exact_work==max_exact {break;}
-        let allowance=(limits.cells-report.cells).min(limits.domain_cells-report.domain_cells).min(100000);
-        let attempt=crate::trimmed_vertex_contact::inspect(model,pair.faces,
-            allowance,max_exact-report.vertex_exact_work)?;
-        report.cells+=attempt.cells;report.vertex_exact_work+=attempt.exact_work;
+        if pair.reason != "pair-unresolved" {
+            continue;
+        }
+        if report.cells == limits.cells
+            || report.domain_cells == limits.domain_cells
+            || report.vertex_exact_work == max_exact
+        {
+            break;
+        }
+        let allowance = (limits.cells - report.cells)
+            .min(limits.domain_cells - report.domain_cells)
+            .min(100000);
+        let attempt = crate::trimmed_vertex_contact::inspect(
+            model,
+            pair.faces,
+            allowance,
+            max_exact - report.vertex_exact_work,
+        )?;
+        report.cells += attempt.cells;
+        report.vertex_exact_work += attempt.exact_work;
         // The vertex primitive has one combined geometry/trim ledger. Charge
         // all its work to the UV allowance too, rather than omit trim work.
-        report.domain_cells+=attempt.cells;
-        pair.boundary_cells+=attempt.cells;
-        if let Some(c)=attempt.certificate.filter(|c|c.exact_vertex_contact) {
-            pair.boundary=Some(SharedBoundary::OwnedVertex(c));pair.reason="shared-vertex";
+        report.domain_cells += attempt.cells;
+        pair.boundary_cells += attempt.cells;
+        if let Some(c) = attempt.certificate.filter(|c| c.exact_vertex_contact) {
+            pair.boundary = Some(SharedBoundary::OwnedVertex(c));
+            pair.reason = "shared-vertex";
         }
     }
-    report.all_incident_pairs_classified=report.next_pair.is_none()
-        &&report.pairs.len()==report.total_pairs&&report.pairs.iter().all(|p|
-            p.boundary.is_some()||p.hull_disjoint||p.result.as_ref().is_some_and(|r|r.absence_proven));
+    report.all_incident_pairs_classified = report.next_pair.is_none()
+        && report.pairs.len() == report.total_pairs
+        && report.pairs.iter().all(|p| {
+            p.boundary.is_some()
+                || p.hull_disjoint
+                || p.result.as_ref().is_some_and(|r| r.absence_proven)
+        });
     // Exact vertex contact is a real contact, never a disjointness proof.
     Ok(report)
 }
@@ -228,76 +286,112 @@ pub(crate) struct Inspector {
     scalar_next: usize,
     done: bool,
     failed: bool,
-    incident:Option<usize>,
+    incident: Option<usize>,
 }
 impl Inspector {
-    pub(crate) fn new(model: std::sync::Arc<Model>, tolerance_uv: f64, limits: Limits,
-        hulls: Vec<crate::boundary_hull_contact::Certificate>, caps: Vec<[usize; 3]>,
-        sweep_hulls: bool, joint_exact_domain: bool,
-        prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>) -> Result<Self> {
-    model.validate_boundary_diagnostic_inputs()?;
-    if !(1..=100_000).contains(&limits.pairs)
-        || !(1..=1_000_000).contains(&limits.cells)
-        || !(1..=8_000_000).contains(&limits.domain_cells)
-        || !(1..=100_000).contains(&limits.cells_per_pair)
-        || !(1..=1_000_000).contains(&limits.domain_cells_per_pair)
-        || !tolerance_uv.is_finite()
-        || tolerance_uv <= 0.
-    {
-        return Err(Error::new(
-            "BREP_CONTACT_BUDGET",
-            "Use positive bounded pair, geometry and UV budgets and finite positive UV tolerance",
-        ));
-    }
-    // Prepare each chart once, rather than validate/copy the model per pair.
-    let domains = (0..model.faces.len())
-        .map(|f| FaceDomain::new(&model, f, tolerance_uv))
-        .collect::<Result<Vec<_>>>()?;
-    let n = model.faces.len();
-    let total_pairs = n
-        .checked_mul(n.saturating_sub(1))
-        .ok_or_else(|| Error::new("BREP_CONTACT_BUDGET", "Too many face pairs"))?
-        / 2;
-    let mut out = Report {
-        pairs: Vec::new(),
-        disjoint_groups: Vec::new(),
-        grouped_pairs: 0,
-        group_cells: 0,
-        total_pairs,
-        next_pair: None,
-        cells: 0,
-        domain_cells: 0,
-        all_pairs_disjoint: true,
-        all_pairs_classified: true,
-    };
-    let cover = if sweep_hulls && n > 1 {
-        let (cover, cells) = prepared
-            .unwrap_or_else(|| crate::face_contact_groups::Cover::prepare(&model, limits.cells));
-        out.cells += cells;
-        out.group_cells += cells;
-        cover
-    } else {
-        None
-    };
+    pub(crate) fn new(
+        model: std::sync::Arc<Model>,
+        tolerance_uv: f64,
+        limits: Limits,
+        hulls: Vec<crate::boundary_hull_contact::Certificate>,
+        caps: Vec<[usize; 3]>,
+        sweep_hulls: bool,
+        joint_exact_domain: bool,
+        prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
+    ) -> Result<Self> {
+        model.validate_boundary_diagnostic_inputs()?;
+        if !(1..=100_000).contains(&limits.pairs)
+            || !(1..=1_000_000).contains(&limits.cells)
+            || !(1..=8_000_000).contains(&limits.domain_cells)
+            || !(1..=100_000).contains(&limits.cells_per_pair)
+            || !(1..=1_000_000).contains(&limits.domain_cells_per_pair)
+            || !tolerance_uv.is_finite()
+            || tolerance_uv <= 0.
+        {
+            return Err(Error::new(
+                "BREP_CONTACT_BUDGET",
+                "Use positive bounded pair, geometry and UV budgets and finite positive UV tolerance",
+            ));
+        }
+        // Prepare each chart once, rather than validate/copy the model per pair.
+        let domains = (0..model.faces.len())
+            .map(|f| FaceDomain::new(&model, f, tolerance_uv))
+            .collect::<Result<Vec<_>>>()?;
+        let n = model.faces.len();
+        let total_pairs = n
+            .checked_mul(n.saturating_sub(1))
+            .ok_or_else(|| Error::new("BREP_CONTACT_BUDGET", "Too many face pairs"))?
+            / 2;
+        let mut out = Report {
+            pairs: Vec::new(),
+            disjoint_groups: Vec::new(),
+            grouped_pairs: 0,
+            group_cells: 0,
+            total_pairs,
+            next_pair: None,
+            cells: 0,
+            domain_cells: 0,
+            all_pairs_disjoint: true,
+            all_pairs_classified: true,
+        };
+        let cover = if sweep_hulls && n > 1 {
+            let (cover, cells) = prepared.unwrap_or_else(|| {
+                crate::face_contact_groups::Cover::prepare(&model, limits.cells)
+            });
+            out.cells += cells;
+            out.group_cells += cells;
+            cover
+        } else {
+            None
+        };
         let pending = cover.as_ref().map(|c| vec![c.root]).unwrap_or_default();
-        Ok(Self { model, limits, hulls, caps, sweep_hulls, joint_exact_domain,
-            domains, cover, report: out, cursor: 0, pending, scalar_next: 1, done: n < 2, failed: false, incident:None })
+        Ok(Self {
+            model,
+            limits,
+            hulls,
+            caps,
+            sweep_hulls,
+            joint_exact_domain,
+            domains,
+            cover,
+            report: out,
+            cursor: 0,
+            pending,
+            scalar_next: 1,
+            done: n < 2,
+            failed: false,
+            incident: None,
+        })
     }
-    pub(crate) fn finished(&self) -> bool { self.done }
+    pub(crate) fn finished(&self) -> bool {
+        self.done
+    }
     /// One unit visits a cover node or attempts the next scalar pair.
     pub(crate) fn advance(&mut self, max_units: usize) -> Result<usize> {
         if !(1..=100_000).contains(&max_units) {
-            return Err(Error::new("BREP_CONTACT_STEP", "Use a positive bounded traversal step"));
+            return Err(Error::new(
+                "BREP_CONTACT_STEP",
+                "Use a positive bounded traversal step",
+            ));
         }
-        if self.failed { return Err(Error::new("BREP_CONTACT_FAILED", "Discard a failed traversal before retrying")); }
+        if self.failed {
+            return Err(Error::new(
+                "BREP_CONTACT_FAILED",
+                "Discard a failed traversal before retrying",
+            ));
+        }
         let result = self.advance_inner(max_units);
         self.failed = result.is_err();
         result
     }
     fn advance_inner(&mut self, max_units: usize) -> Result<usize> {
-        if self.done { return Ok(0); }
+        if self.done {
+            return Ok(0);
+        }
         let model = self.model.as_ref();
-        let source_volume_context = self.joint_exact_domain.then(|| source_volume_contact::Prepared::new(model));
+        let source_volume_context = self
+            .joint_exact_domain
+            .then(|| source_volume_contact::Prepared::new(model));
         let limits = self.limits;
         let hulls = &self.hulls;
         let caps = &self.caps;

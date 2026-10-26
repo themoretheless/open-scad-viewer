@@ -10,13 +10,25 @@ mod atlas_legacy;
 mod prismatic;
 pub use atlas::Certificate as SourceAtlasCertificate;
 /// Independent source atlas certificate, without requiring a Minkowski sum.
-pub fn certify_source_atlas(m: &Model, depth: u8) -> Result<SourceAtlasCertificate> { atlas::derive(m, depth) }
+pub fn certify_source_atlas(m: &Model, depth: u8) -> Result<SourceAtlasCertificate> {
+    atlas::derive(m, depth)
+}
 pub fn verify_source_atlas(m: &Model, c: &SourceAtlasCertificate) -> Result<()> {
-    if c.version != 1 || c.depth>3 || c.positions.len()>1024 || c.triangles.len()>1024
-        || c.report.chart_triangles != c.triangles.len() || c.report.vertex_stars != c.positions.len()
-        || c.triangles.iter().any(|t|t.iter().any(|i|*i as usize>=c.positions.len())||t[0]==t[1]||t[1]==t[2]||t[0]==t[2])
+    if c.version != 1
+        || c.depth > 3
+        || c.positions.len() > 1024
+        || c.triangles.len() > 1024
+        || c.report.chart_triangles != c.triangles.len()
+        || c.report.vertex_stars != c.positions.len()
+        || c.triangles.iter().any(|t| {
+            t.iter().any(|i| *i as usize >= c.positions.len())
+                || t[0] == t[1]
+                || t[1] == t[2]
+                || t[0] == t[2]
+        })
         || c.source != source_id(&Source::Brep(m.clone()))?
-        || atlas::derive(m, c.depth)? != *c {
+        || atlas::derive(m, c.depth)? != *c
+    {
         return Err(fail("source atlas certificate is false"));
     }
     Ok(())
@@ -50,7 +62,9 @@ impl<'de> Deserialize<'de> for SourceAtlasTopologyReport {
             Some("polynomial-shear-ambient-isotopy") => {
                 Ok(Self::Polynomial(value_codec::from_value(v)?))
             }
-            Some("rational-atlas-ambient-isotopy") => Ok(Self::Rational(value_codec::from_value(v)?)),
+            Some("rational-atlas-ambient-isotopy") => {
+                Ok(Self::Rational(value_codec::from_value(v)?))
+            }
             _ => Err(error("Unknown source ambient topology proof")),
         }
     }

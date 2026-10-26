@@ -21,13 +21,18 @@ impl SharedEdge {
     pub fn covers_complete_canonical_source(&self) -> bool {
         // Composition identity covers original curves, not their retained
         // fragments. Actual owned ends must also cover each complete domain.
-        let complete_uses=self.uses.iter().all(|fragment| {
-            let domain=fragment.curve().domain();
-            let expected=if fragment.reversed() {[domain[1],domain[0]]} else {domain};
-            fragment.endpoints().iter().zip(expected).all(|(endpoint,t)| {
-                matches!(endpoint, Endpoint::Parameter(value) if *value == t)
-            })
-        });
+        let complete_uses =
+            self.uses.iter().all(|fragment| {
+                let domain = fragment.curve().domain();
+                let expected = if fragment.reversed() {
+                    [domain[1], domain[0]]
+                } else {
+                    domain
+                };
+                fragment.endpoints().iter().zip(expected).all(
+                    |(endpoint, t)| matches!(endpoint, Endpoint::Parameter(value) if *value == t),
+                )
+            });
         complete_uses && self.maps_complete_canonical_source()
     }
     /// Full original composition, independently of the actual retained ends.

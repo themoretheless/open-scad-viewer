@@ -1,12 +1,13 @@
 //! Immutable source-expression point for a certified original UV crossing.
 //! This is not a Cartesian Model vertex or exact world-edge endpoint admission.
 use nurbs_core::{
+    Error, Result,
     curve::Curve,
     interval_eval::{self, Interval as I},
     surface::Surface,
-    uv_curve_crossings as crossings, Error, Result,
+    uv_curve_crossings as crossings,
 };
-use value_codec::{json, Deserialize, Serialize, Value};
+use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone)]
 pub struct SourcePoint {
     surface: Surface,

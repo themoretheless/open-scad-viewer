@@ -1,8 +1,8 @@
 use super::offset::radial_distance;
 use super::*;
 use crate::aag::Aag;
-use crate::aag_fillets::find_fillet_chains;
 use crate::aag_features::{find_holes, find_pockets};
+use crate::aag_fillets::find_fillet_chains;
 use crate::analytic_features::analytic_fillet;
 
 fn budget() -> Budget {
@@ -555,9 +555,7 @@ fn move_curved_face_is_refused_typed() {
         .faces
         .iter()
         .enumerate()
-        .find_map(|(i, f)| {
-            (f.surface.degree_u > 1 || f.surface.degree_v > 1).then_some(i)
-        })
+        .find_map(|(i, f)| (f.surface.degree_u > 1 || f.surface.degree_v > 1).then_some(i))
         .expect("cylinder side");
     let before = model.clone();
     let error = move_face(&model, side, [1., 0., 0.], 1., &budget()).unwrap_err();
@@ -762,17 +760,14 @@ fn offset_solid_cylinder_changes_radius() {
             .nodes
             .iter()
             .enumerate()
-            .filter(|(_, n)| {
-                n.attrs.as_ref().unwrap().class == SurfaceClass::Cylinder
-            })
+            .filter(|(_, n)| n.attrs.as_ref().unwrap().class == SurfaceClass::Cylinder)
             .map(|(i, _)| i)
             .collect();
         assert!(!side.is_empty());
         (side,)
     };
     let before = model.clone();
-    let report = offset_face(&model, side[0], 1., OffsetOptions::default(), &budget())
-        .unwrap();
+    let report = offset_face(&model, side[0], 1., OffsetOptions::default(), &budget()).unwrap();
     assert!(!report.auto_expanded, "no concentric partner on a solid");
     assert_eq!(report.old_radii.len(), 1);
     assert!((report.new_radii[0] - 3.).abs() < 1e-9);
@@ -814,13 +809,11 @@ fn offset_cylinder_next_to_fillet_is_refused_typed() {
         .nodes
         .iter()
         .enumerate()
-        .find_map(|(i, n)| {
-            (n.attrs.as_ref().unwrap().class == SurfaceClass::Cylinder).then_some(i)
-        })
+        .find_map(|(i, n)| (n.attrs.as_ref().unwrap().class == SurfaceClass::Cylinder).then_some(i))
         .expect("fillet cylinder");
     let before = rounded.clone();
-    let error = offset_face(&rounded, fillet, 0.5, OffsetOptions::default(), &budget())
-        .unwrap_err();
+    let error =
+        offset_face(&rounded, fillet, 0.5, OffsetOptions::default(), &budget()).unwrap_err();
     assert_eq!(error.code, OFFSET_UNSUPPORTED, "{error:?}");
     assert!(
         error.message.contains("tangent") || error.message.contains("blend"),
@@ -855,12 +848,9 @@ fn offset_unsupported_classes_are_refused_typed() {
         .faces
         .iter()
         .enumerate()
-        .find_map(|(i, f)| {
-            (f.surface.degree_u > 1 || f.surface.degree_v > 1).then_some(i)
-        })
+        .find_map(|(i, f)| (f.surface.degree_u > 1 || f.surface.degree_v > 1).then_some(i))
         .expect("torus side");
-    let error = offset_face(&torus, face, 0.5, OffsetOptions::default(), &budget())
-        .unwrap_err();
+    let error = offset_face(&torus, face, 0.5, OffsetOptions::default(), &budget()).unwrap_err();
     assert_eq!(error.code, OFFSET_UNSUPPORTED, "{error:?}");
     assert_eq!(torus, before);
 

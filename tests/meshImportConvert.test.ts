@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { convertMeshFile, MESH_EXPORT_FORMATS } from '../src/services/meshConvert'
 import { exportMeshFormat } from '../src/services/meshExportFormats'
+import { formatMeshImportNotice } from '../src/services/meshImportReport'
 import {
   detectMeshImportFormat,
   importMeshFile,
@@ -107,8 +108,41 @@ describe('meshImport', () => {
     expect(mesh.triangleCount).toBe(closedMesh.indices.length / 3)
     expect(mesh.sourceVertexCount).toBe(mesh.triangleCount * 3)
     expect(mesh.vertexCount).toBe(closedMesh.positions.length / 3)
+    expect(mesh.manifold.after.isManifold).toBe(true)
     const unwelded = await importMeshFile('mesh.stl', stl, { weld: false })
     expect(unwelded.vertexCount).toBe(unwelded.triangleCount * 3)
+    expect(unwelded.manifold.mode).toBe('none')
+  })
+
+  it('reports residual boundary defects without changing them in Conservative mode', async () => {
+    const openTetra = [
+      'v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1',
+      'f 1 3 2', 'f 1 2 4', 'f 2 3 4',
+    ].join('\n')
+    const mesh = await importMeshFile('open.obj', encoder.encode(openTetra))
+    expect(mesh.triangleCount).toBe(3)
+    expect(mesh.manifold.before.isManifoldWithBoundary).toBe(true)
+    expect(mesh.manifold.after.isManifold).toBe(false)
+    expect(mesh.manifold.after.boundaryEdges).toHaveLength(6)
+    expect(formatMeshImportNotice(mesh, 'en')).toContain('Remaining defects: boundary edges: 3')
+  })
+
+  it('fills a simple import hole in Full mode and localizes the repair report', async () => {
+    const openTetra = [
+      'v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1',
+      'f 1 3 2', 'f 1 2 4', 'f 2 3 4',
+    ].join('\n')
+    const checked = await importMeshFile('open.obj', encoder.encode(openTetra), { repair: 'none' })
+    expect(checked.manifold.repair).toBeNull()
+    expect(checked.manifold.after.boundaryEdges).toHaveLength(6)
+
+    const repaired = await importMeshFile('open.obj', encoder.encode(openTetra), { repair: 'full' })
+    expect(repaired.triangleCount).toBe(4)
+    expect(repaired.manifold.repair).toMatchObject({ filledHoles: 1, filledTriangles: 1, mode: 1 })
+    expect(repaired.manifold.after.isManifold).toBe(true)
+    expect(repaired.manifold.after.boundaryEdges).toHaveLength(0)
+    expect(formatMeshImportNotice(repaired, 'en')).toContain('holes filled: 1')
+    expect(formatMeshImportNotice(repaired, 'ru')).toContain('зашито отверстий: 1')
   })
 
   it.each(MESH_EXPORT_FORMATS)('round-trips the kernel %s writer through the importer', async format => {

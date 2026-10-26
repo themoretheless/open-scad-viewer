@@ -1,6 +1,6 @@
 //! Conservative source-region flux integration on admitted embedded geometry.
 use crate::{source_contour_winding, source_shell_geometry::Geometry};
-use nurbs_core::{interval_eval::Interval as I, trim_domain::Location, Error, Result};
+use nurbs_core::{Error, Result, interval_eval::Interval as I, trim_domain::Location};
 use std::{cmp::Ordering, collections::BinaryHeap};
 pub struct Limits {
     pub axis: usize,
@@ -76,17 +76,38 @@ impl<E:crate::source_seam_tangency::Carrier> Body<E> {
         limits: crate::source_seam_tangency::Limits,
         polynomial_work: usize,
     ) -> Result<crate::source_seam_tangency::SynchronizedReport<E>>
-    where E: crate::source_seam_tangency::SynchronizedCarrier {
+    where
+        E: crate::source_seam_tangency::SynchronizedCarrier,
+    {
         let source = self.geometry.shell().edges().get(edge).ok_or_else(|| {
-            Error::new("BREP_SOURCE_SEAM_INDEX", "Selected source edge does not belong to this body")
+            Error::new(
+                "BREP_SOURCE_SEAM_INDEX",
+                "Selected source edge does not belong to this body",
+            )
         })?;
-        crate::source_seam_tangency::qualify_with_synchronized_boundaries(source, limits, polynomial_work)
+        crate::source_seam_tangency::qualify_with_synchronized_boundaries(
+            source,
+            limits,
+            polynomial_work,
+        )
     }
     /// Retain original root expressions and parameter correspondence for an edge.
-    pub fn edge_restriction(&self,edge:usize)->Result<crate::source_edge_restriction::Restriction<E>>
-        where E:crate::source_edge_restriction::RestrictionCarrier {
-        let source=self.geometry.shell().edges().get(edge).ok_or_else(||Error::new("BREP_SOURCE_SEAM_INDEX","Selected source edge does not belong to this body"))?;
-        Ok(crate::source_edge_restriction::Restriction::from_edge(source))
+    pub fn edge_restriction(
+        &self,
+        edge: usize,
+    ) -> Result<crate::source_edge_restriction::Restriction<E>>
+    where
+        E: crate::source_edge_restriction::RestrictionCarrier,
+    {
+        let source = self.geometry.shell().edges().get(edge).ok_or_else(|| {
+            Error::new(
+                "BREP_SOURCE_SEAM_INDEX",
+                "Selected source edge does not belong to this body",
+            )
+        })?;
+        Ok(crate::source_edge_restriction::Restriction::from_edge(
+            source,
+        ))
     }
     pub fn reverse_orientation(&self) -> bool {
         self.reverse_orientation
@@ -217,7 +238,7 @@ fn evaluate<E>(
             return Err(Error::new(
                 "BREP_SOURCE_VOLUME_ORIENTATION",
                 "Source chart orientation is unqualified",
-            ))
+            ));
         }
     }))
 }
@@ -265,30 +286,32 @@ pub fn qualify<E:crate::source_planar_flux::FluxSupport>(geometry: Geometry<E>, 
         if out.cells == limits.cells || out.spans == limits.spans {
             return Ok(out);
         }
-        // Whole-chart flux already has exact coverage and costs one cell.
-        // Green integration is needed only for retained material subsets.
-        let region = &geometry.shell().regions().unwrap()[face];
-        let planar = if region.whole_chart_material() {
-            crate::source_planar_flux::Report { bound: None, cells: 0 }
+        let planar = crate::source_planar_flux::bound(
+            &geometry,
+            face,
+            limits.axis,
+            limits.origin,
+            limits.absolute_error / (8. * geometry.shell().faces().len() as f64),
+            (limits.cells - out.cells).min(limits.spans - out.spans),
+        )?;
+        out.cells += planar.cells;
+        out.spans += planar.cells;
+        let fixed = planar.bound.is_some();
+        let bound = if let Some(bound) = planar.bound {
+            bound
         } else {
-            crate::source_planar_flux::bound(&geometry,face,limits.axis,limits.origin,
-                limits.absolute_error/(8.*geometry.shell().faces().len() as f64),
-                (limits.cells-out.cells).min(limits.spans-out.spans))?
-        };
-        // Even an algebraically zero flux visits one original face. Its
-        // coverage cannot bypass the caller's shared face/span budget.
-        let cost = if planar.bound.is_some() { planar.cells.max(1) } else { planar.cells };
-        out.cells += cost;
-        out.spans += cost;
-        let fixed=planar.bound.is_some();
-        let bound=if let Some(bound)=planar.bound {bound} else {
-            let Some(bound)=evaluate(&geometry,face,rectangle,&limits,&mut out)? else {return Ok(out);};
+            let Some(bound) = evaluate(&geometry, face, rectangle, &limits, &mut out)? else {
+                return Ok(out);
+            };
             bound
         };
         let index = nodes.len();
         roots.push(index);
         if !fixed {
-            queue.push(Priority {index,width:bound.hi-bound.lo});
+            queue.push(Priority {
+                index,
+                width: bound.hi - bound.lo,
+            });
         }
         nodes.push(Node {
             face,

@@ -46,25 +46,24 @@ pub const EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY: &str = "exact-variable-radius
 /// Exact equal-radius sphere/cylinder valence-3 corner on an audited AA cuboid.
 pub const EXACT_VALENCE3_CORNER_BLEND_CAPABILITY: &str = "exact-valence3-corner-blend/1";
 
-
 #[cfg(test)]
 #[path = "../tests/analytic_features.rs"]
 mod tests;
 
-mod audited_feature_result;
-mod exact_variable_radius_fillet;
 mod analytic_fillet;
-mod frame_law_ruled_sweep;
 mod audited_bent_rmf_sweep;
+mod audited_feature_result;
 mod exact_analytic_shell;
+mod exact_variable_radius_fillet;
+mod frame_law_ruled_sweep;
 mod import_iges;
-pub use audited_feature_result::*;
-pub use exact_variable_radius_fillet::*;
 pub use analytic_fillet::*;
-pub use frame_law_ruled_sweep::*;
 pub use audited_bent_rmf_sweep::*;
+pub use audited_feature_result::*;
 pub use exact_analytic_shell::*;
+pub use exact_variable_radius_fillet::*;
+pub use frame_law_ruled_sweep::*;
 
 mod independent_corners;
-pub use independent_corners::*;
 pub use import_iges::*;
+pub use independent_corners::*;

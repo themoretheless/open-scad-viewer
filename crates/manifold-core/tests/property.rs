@@ -1,41 +1,16 @@
-//! Deterministic property tests for manifold-core.
+//! Reproducible property tests for manifold-core.
 //!
-//! A fixed-seed LCG keeps the corpus reproducible across machines and
-//! toolchains (no proptest dependency). Each property runs over several
-//! thousand pseudo-random meshes, including hostile inputs: duplicate
-//! vertices, jittered coordinates, degenerate triangles, flipped winding
-//! and duplicated faces.
+//! Portable xorshift64* streams need no proptest dependency. Fixed seeds are
+//! used by default; MANIFOLD_PROPERTY_SEED derives a fresh deterministic stream
+//! for every property and is printed on failure. Cases include duplicate
+//! vertices, jittered coordinates, degenerate triangles, flipped winding and
+//! duplicated faces.
 
 use manifold_core::{RepairMode, check, metrics, repair, repair_with_mode};
 
-/// xorshift64* — small, deterministic, portable.
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> u64 {
-        let mut x = self.0;
-        x ^= x >> 12;
-        x ^= x << 25;
-        x ^= x >> 27;
-        self.0 = x;
-        x.wrapping_mul(0x2545F4914F6CDD1D)
-    }
-
-    fn below(&mut self, n: usize) -> usize {
-        (self.next() % n as u64) as usize
-    }
-
-    fn coord(&mut self) -> f64 {
-        // Coordinates on a coarse grid with occasional duplicates and NaN-free
-        // jitter: welding must find real duplicates, noise must stay finite.
-        let base = (self.below(8)) as f64;
-        if self.below(4) == 0 {
-            base + self.below(1000) as f64 * 1e-9
-        } else {
-            base
-        }
-    }
-}
+#[path = "support/property_rng.rs"]
+mod property_rng;
+use property_rng::Rng;
 
 /// Random triangle soup over `vertex_count` vertices.
 fn random_mesh(
@@ -62,7 +37,7 @@ fn random_mesh(
 
 #[test]
 fn check_never_panics_on_random_soup() {
-    let mut rng = Rng(0x5EED_0001);
+    let mut rng = Rng::for_property(0x5EED_0001);
     for case in 0..2000 {
         let (vc, tc) = (1 + rng.below(40), rng.below(60));
         let (p, i) = random_mesh(&mut rng, vc, tc);
@@ -89,7 +64,7 @@ fn check_never_panics_on_random_soup() {
 
 #[test]
 fn conservative_repair_is_a_fixpoint() {
-    let mut rng = Rng(0x5EED_0002);
+    let mut rng = Rng::for_property(0x5EED_0002);
     for case in 0..1500 {
         let (vc, tc) = (1 + rng.below(40), rng.below(60));
         let (p, i) = random_mesh(&mut rng, vc, tc);
@@ -117,7 +92,7 @@ fn conservative_repair_is_a_fixpoint() {
 
 #[test]
 fn full_repair_never_panics_and_keeps_faces() {
-    let mut rng = Rng(0x5EED_0003);
+    let mut rng = Rng::for_property(0x5EED_0003);
     for _case in 0..1500 {
         let (vc, tc) = (1 + rng.below(40), rng.below(60));
         let (p, i) = random_mesh(&mut rng, vc, tc);
@@ -131,7 +106,7 @@ fn full_repair_never_panics_and_keeps_faces() {
 
 #[test]
 fn metrics_are_finite_and_consistent() {
-    let mut rng = Rng(0x5EED_0004);
+    let mut rng = Rng::for_property(0x5EED_0004);
     for case in 0..1500 {
         let (vc, tc) = (1 + rng.below(40), rng.below(60));
         let (p, i) = random_mesh(&mut rng, vc, tc);
@@ -188,7 +163,7 @@ fn isolated_correction(p: &[f64], i: &[usize]) -> i64 {
 
 #[test]
 fn welded_random_soup_makes_exact_duplicates_merge() {
-    let mut rng = Rng(0x5EED_0005);
+    let mut rng = Rng::for_property(0x5EED_0005);
     for case in 0..800 {
         let vertex_count = 2 + rng.below(20);
         let tc = 1 + rng.below(30);
@@ -200,6 +175,96 @@ fn welded_random_soup_makes_exact_duplicates_merge() {
         assert!(
             out.indices.iter().all(|&v| v < out.positions.len() / 3),
             "case {case}"
+        );
+    }
+}
+
+fn random_unwelded_cube(rng: &mut Rng, omitted_face: Option<usize>) -> (Vec<f64>, Vec<usize>, f64) {
+    #[rustfmt::skip]
+    let cube_indices = [
+        0, 2, 1, 0, 3, 2,
+        4, 5, 6, 4, 6, 7,
+        0, 1, 5, 0, 5, 4,
+        2, 3, 7, 2, 7, 6,
+        1, 2, 6, 1, 6, 5,
+        3, 0, 4, 3, 4, 7,
+    ];
+    let [x, y, z] = [
+        rng.below(8) as f64,
+        rng.below(8) as f64,
+        rng.below(8) as f64,
+    ];
+    let s = 1.0 + rng.below(8) as f64;
+    #[rustfmt::skip]
+    let cube = [
+        x, y, z, x + s, y, z, x + s, y + s, z, x, y + s, z,
+        x, y, z + s, x + s, y, z + s, x + s, y + s, z + s, x, y + s, z + s,
+    ];
+    let mut positions = Vec::with_capacity(cube_indices.len() * 3);
+    let mut indices = Vec::with_capacity(cube_indices.len());
+    for (triangle, corners) in cube_indices.as_chunks::<3>().0.iter().enumerate() {
+        if omitted_face == Some(triangle / 2) {
+            continue;
+        }
+        // Independent corners force welding to do real work while preserving
+        // the oriented surface and the reference triangle order.
+        for &corner in corners {
+            let index = indices.len();
+            indices.push(index);
+            positions.extend_from_slice(&cube[corner * 3..corner * 3 + 3]);
+        }
+    }
+    (positions, indices, s)
+}
+
+fn triangle_soup_signed_volume(positions: &[f64], indices: &[usize]) -> f64 {
+    indices
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|t| {
+            let a = &positions[t[0] * 3..t[0] * 3 + 3];
+            let b = &positions[t[1] * 3..t[1] * 3 + 3];
+            let c = &positions[t[2] * 3..t[2] * 3 + 3];
+            (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
+                + a[2] * (b[0] * c[1] - b[1] * c[0]))
+                / 6.0
+        })
+        .sum()
+}
+
+#[test]
+fn full_repair_is_idempotent() {
+    let mut rng = Rng::for_property(0x5EED_0006);
+    for case in 0..800 {
+        let omitted_face = (rng.below(2) == 1).then(|| rng.below(6));
+        let (p, i, _) = random_unwelded_cube(&mut rng, omitted_face);
+        let first = repair_with_mode(&p, &i, 0.0, RepairMode::Full);
+        assert!(first.is_manifold(), "case {case}");
+        let second = repair_with_mode(&first.positions, &first.indices, 0.0, RepairMode::Full);
+        assert_eq!(second.positions, first.positions, "case {case}");
+        assert_eq!(second.indices, first.indices, "case {case}");
+    }
+}
+
+#[test]
+fn exact_weld_preserves_signed_volume() {
+    let mut rng = Rng::for_property(0x5EED_0007);
+    for case in 0..800 {
+        let (positions, indices, size) = random_unwelded_cube(&mut rng, None);
+        let before = triangle_soup_signed_volume(&positions, &indices);
+        let repaired = repair(&positions, &indices, 0.0);
+        let after = metrics(&repaired.positions, &repaired.indices).signed_volume;
+        assert!(repaired.is_manifold(), "case {case}");
+        let tolerance = 1e-12 * before.abs().max(1.0);
+        assert!(
+            (after - before).abs() <= tolerance,
+            "case {case}: {after} != {before}"
+        );
+        assert!(
+            (after - size * size * size).abs() <= tolerance,
+            "case {case}: {after} != {}",
+            size * size * size
         );
     }
 }

@@ -459,26 +459,56 @@ fn construct_impl(
         // Correction work remains caller-owned across rejected candidates.
         // Charge combined correction work conservatively to each supplied
         // allowance; no failed candidate starts a fresh work budget.
-        let remaining=|budget:Budget|->Result<Budget>{
-            let max_work=match budget.max_work {
-                Some(work) if work.is_finite() && work>=spent as f64=>Some(work-spent as f64),
-                Some(_)=>return Err(invalid("Progressive miter correction work exhausted during refinement")),
-                None=>None,
+        let remaining = |budget: Budget| -> Result<Budget> {
+            let max_work = match budget.max_work {
+                Some(work) if work.is_finite() && work >= spent as f64 => Some(work - spent as f64),
+                Some(_) => {
+                    return Err(invalid(
+                        "Progressive miter correction work exhausted during refinement",
+                    ));
+                }
+                None => None,
             };
-            Ok(Budget {max_work,..budget})
+            Ok(Budget { max_work, ..budget })
         };
-        let attempt=Request {loops:request.loops,points:request.points,scale:request.scale,twist:request.twist,
-            options:progressive_miter::Options {initial_steps:initial,..request.options},
-            affine:request.affine,frames:request.frames,guide:request.guide,
-            circle:request.circle.map(remaining).transpose()?,
-            caps:request.caps.as_ref().map(|cap|->Result<CapCorrection>{Ok(CapCorrection {budget:remaining(cap.budget)?,authored_frame:cap.authored_frame})}).transpose()?,
+        let attempt = Request {
+            loops: request.loops,
+            points: request.points,
+            scale: request.scale,
+            twist: request.twist,
+            options: progressive_miter::Options {
+                initial_steps: initial,
+                ..request.options
+            },
+            affine: request.affine,
+            frames: request.frames,
+            guide: request.guide,
+            circle: request.circle.map(remaining).transpose()?,
+            caps: request
+                .caps
+                .as_ref()
+                .map(|cap| -> Result<CapCorrection> {
+                    Ok(CapCorrection {
+                        budget: remaining(cap.budget)?,
+                        authored_frame: cap.authored_frame,
+                    })
+                })
+                .transpose()?,
         };
-        let attempt_limits=Limits {projection_exact_work:limits.projection_exact_work.saturating_sub(spent),..*limits};
-        match construct_attempt(&attempt,&attempt_limits,false,None,annular_caps,false)? {
-            ConstructionAttempt::Complete(mut body)=>{
+        let attempt_limits = Limits {
+            projection_exact_work: limits.projection_exact_work.saturating_sub(spent),
+            ..*limits
+        };
+        match construct_attempt(&attempt, &attempt_limits, false, None, annular_caps, false)? {
+            ConstructionAttempt::Complete(mut body) => {
                 previous.append(&mut body.levels);
-                body.levels=previous;
-                if let Some(correction)=&mut body.correction {correction.work=correction.work.checked_add(spent).ok_or_else(||invalid("Progressive miter correction work overflow"))?;}
+                body.levels = previous;
+                if let Some(correction) = &mut body.correction {
+                    correction.work = correction
+                        .work
+                        .checked_add(spent)
+                        .ok_or_else(|| invalid("Progressive miter correction work overflow"))?;
+                }
                 return Ok(body);
             }
             ConstructionAttempt::Refine {

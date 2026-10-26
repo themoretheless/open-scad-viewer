@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createBoxMesh, deleteFaces, flipFaces } from '../src/services/meshEditing'
-import { projectMeshModelerFaces } from '../src/services/meshModelerProjection'
-import { defaultDirectCamera } from '../src/services/directModelingTools'
+import { projectMeshModelerFaces, projectMeshModelerObject } from '../src/services/meshModelerProjection'
+import { defaultDirectCamera, projectDirectPoint } from '../src/services/directModelingTools'
+import { cachedMeshManifoldReport } from '../src/services/meshManifoldDefects'
 
 describe('Mesh viewport closed-shell visibility', () => {
   it('never paints the far side of a cube over the near side throughout an orbit', () => {
@@ -34,5 +35,42 @@ describe('Mesh viewport closed-shell visibility', () => {
         expect(projectMeshModelerFaces(mesh, { yaw: 0.3, pitch })).toHaveLength(mesh.indices.length / 3)
       }
     }
+  })
+})
+
+describe('Mesh viewport manifold defect overlay', () => {
+  const openTetra = {
+    positions: Float64Array.from([0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2]),
+    indices: Uint32Array.from([0, 2, 1, 0, 1, 3, 1, 2, 3, 0, 3, 2]),
+  }
+
+  it('projects kernel boundary edges with the scene camera', () => {
+    const camera = {yaw: 0.4, pitch: 0.2}
+    const open = deleteFaces(openTetra, [3])
+    const report = cachedMeshManifoldReport(open)
+    const result = projectMeshModelerObject({mesh: open, visible: true}, camera, 'object', () => [], report)
+    expect(result.defects.boundaryEdges).toHaveLength(3)
+    expect(result.defects.nonManifoldEdges).toHaveLength(0)
+    const a = report.boundaryEdges[0]
+    const expected = projectDirectPoint(Array.from(open.positions.slice(a * 3, a * 3 + 3)), camera)
+    expect(result.defects.boundaryEdges[0].x1).toBeCloseTo(expected[0])
+    expect(result.defects.boundaryEdges[0].y1).toBeCloseTo(-expected[1])
+    const closed = createBoxMesh()
+    const clean = projectMeshModelerObject({mesh: closed, visible: true}, camera, 'object', () => [], cachedMeshManifoldReport(closed))
+    expect(clean.defects).toEqual({boundaryEdges: [], nonManifoldEdges: [], nonManifoldVertices: []})
+  })
+
+  it('projects pinched vertices reported for touching closed shells', () => {
+    const pinched = {
+      positions: Float64Array.from([0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2, -2, 0, 0, 0, -2, 0, 0, 0, -2]),
+      indices: Uint32Array.from([0, 2, 1, 0, 1, 3, 1, 2, 3, 0, 3, 2, 0, 5, 4, 0, 4, 6, 4, 5, 6, 0, 6, 5]),
+    }
+    const report = cachedMeshManifoldReport(pinched)
+    expect(Array.from(report.nonManifoldVertices)).toEqual([0])
+    const camera = defaultDirectCamera()
+    const result = projectMeshModelerObject({mesh: pinched, visible: true}, camera, 'object', () => [], report)
+    expect(result.defects.nonManifoldVertices).toHaveLength(1)
+    const expected = projectDirectPoint([0, 0, 0], camera)
+    expect(result.defects.nonManifoldVertices[0]).toEqual({id: 0, x: expected[0], y: -expected[1]})
   })
 })

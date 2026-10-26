@@ -300,10 +300,13 @@ pub unsafe extern "C" fn abi_manifold_boolean(
     b_il: usize,
     b_fmt: u32,
     op: u32,
+    weld_epsilon: f64,
+    relative_tolerance: f64,
 ) -> u64 {
     unsafe {
         geometry_bridge::abi::abi_manifold_boolean(
             a_vp, a_vl, a_ip, a_il, a_fmt, b_vp, b_vl, b_ip, b_il, b_fmt, op,
+            weld_epsilon, relative_tolerance,
         )
     }
 }

@@ -7,7 +7,7 @@ use crate::Model;
 use crate::solid_audit::{LocallyValidatedModel, SolidAuditCertificate};
 use crate::trim_sew::{
     AuthorizedHealPlan, HealOperation, SewCertificate, apply_authorized_heal,
-    apply_authorized_heal_checked, prove_model_edge_correspondence,
+    apply_authorized_heal_checked, prove_model_edge_correspondence, tolerant_endpoint_snapshot,
 };
 use brep_topology::RevisionState;
 use cad_predicates::ToleranceSpecIdentity;
@@ -111,10 +111,39 @@ impl AuthorizedHealTransaction {
                     ));
                 }
                 let actual = recipe.displacement(self.original.model())?;
-                cumulative += actual * recipe.write_set(self.original.model()).len() as f64;
+                if actual > plan.per_entity_limit_mm() {
+                    return Err(Error::new(
+                        "BREP_HEAL_BUDGET_EXCEEDED",
+                        "Per-entity physical displacement budget exceeded",
+                    ));
+                }
+                let write_set = recipe.write_set(self.original.model());
+                cumulative += actual * write_set.len() as f64;
+                if cumulative > plan.cumulative_limit_mm() {
+                    return Err(Error::new(
+                        "BREP_HEAL_BUDGET_EXCEEDED",
+                        "Cumulative physical displacement budget exceeded",
+                    ));
+                }
+                let entity_ids = write_set
+                    .into_iter()
+                    .filter_map(|(kind, index)| match kind {
+                        crate::TopoKind::Vertex => self.original.model().1.vertices.get(index),
+                        crate::TopoKind::Edge => self.original.model().1.edges.get(index),
+                        crate::TopoKind::Loop => self.original.model().1.loops.get(index),
+                        crate::TopoKind::Face => self.original.model().1.faces.get(index),
+                        crate::TopoKind::Shell => self.original.model().1.shells.get(index),
+                        crate::TopoKind::Body => self.original.model().1.bodies.get(index),
+                        crate::TopoKind::ControlPoint => None,
+                    })
+                    .copied()
+                    .collect();
                 Ok(HealDisplacementLedgerEntry {
                     operation,
+                    entity_ids,
                     actual_mm: actual,
+                    before_mm: actual,
+                    after_mm: 0.,
                     cumulative_mm: cumulative,
                 })
             })
@@ -207,7 +236,13 @@ impl AuthorizedHealTransaction {
 #[derive(Clone, Debug)]
 pub struct HealDisplacementLedgerEntry {
     pub operation: usize,
+    /// Persistent identities in deterministic topology-kind/index order.
+    pub entity_ids: Vec<crate::TopoId>,
     pub actual_mm: f64,
+    /// Authorized geometric gap before this operation.
+    pub before_mm: f64,
+    /// Residual displacement on checked idempotent reapplication.
+    pub after_mm: f64,
     pub cumulative_mm: f64,
 }
 
@@ -255,6 +290,57 @@ pub fn authorized_heal_endpoint(
     }
     .bind_native_proof();
     execute_native_plan(model, &context, vec![operation])
+}
+
+/// Authorized endpoint sewing for an imported model whose only structural
+/// admission failures are resolved by the requested snaps. The original model
+/// remains private until the healed output passes the ordinary commit audit.
+pub(crate) fn authorized_heal_endpoint_tolerant(
+    model: &Model,
+    vertex: usize,
+    to: [f64; 3],
+    per_entity_cap_mm: f64,
+    cumulative_cap_mm: f64,
+) -> Result<AuthorizedHealResult> {
+    let context = model.tolerance_context()?;
+    let expected_id = *model
+        .1
+        .vertices
+        .get(vertex)
+        .ok_or_else(|| Error::new("BREP_HEAL_RECIPE_INVALID", "Vertex index is out of range"))?;
+    let admission = tolerant_endpoint_snapshot(model, vertex, to)?;
+    let proof = admission
+        .edges
+        .iter()
+        .enumerate()
+        .filter(|(_, edge)| edge.vertices.contains(&vertex))
+        .find_map(|(edge, _)| prove_model_edge_correspondence(&admission, &context, edge).ok())
+        .ok_or_else(|| {
+            Error::new(
+                "BREP_HEAL_PROOF_REQUIRED",
+                "Vertex has no native opposite manifold boundary proof",
+            )
+        })?;
+    let operation = HealOperation::EndpointSnap {
+        vertex,
+        expected_id,
+        to,
+        correspondence: proof,
+    }
+    .bind_native_proof();
+    let plan = AuthorizedHealPlan::new_tolerant_endpoints(
+        model,
+        &context,
+        vec![operation],
+        per_entity_cap_mm,
+        cumulative_cap_mm,
+    )?;
+    let snapshot = ModelSnapshot {
+        model: Arc::new(model.clone()),
+    };
+    let mut transaction = AuthorizedHealTransaction::begin(snapshot, HealCancellation::default());
+    transaction.apply(&plan)?;
+    transaction.commit()
 }
 
 pub fn authorized_heal_refit(

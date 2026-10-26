@@ -1,4 +1,4 @@
-import { onUnmounted, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, onUnmounted, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
 import {
   MAX_DOCUMENT_CHARACTERS,
   parseDirectDocument,
@@ -10,9 +10,10 @@ import {
 } from '../../services/directModeling'
 import { xyPlane, type SketchPlane } from '../../services/directSketchGeometry'
 import { downloadBytes } from '../../services/downloadArtifact'
-import { polygonMeshToExportMesh, type MeshExportFormat } from '../../services/meshConvert'
-import { exportMeshFormatCompressed } from '../../services/meshExportFormats'
-import { importMeshFromFile, stripMeshExtension } from '../../services/meshImport'
+import { type MeshExportFormat } from '../../services/meshConvert'
+import { stripMeshExtension } from '../../services/meshFormats'
+import { manifoldPreferenceSnapshot } from '../../services/manifoldPreferences'
+import { formatMeshImportNotice } from '../../services/meshImportReport'
 import { stringifyMeshJson } from '../../services/meshJson'
 import type { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
 import { download, type Pane } from './helpers'
@@ -25,7 +26,7 @@ export interface UseFileExchangeOptions {
   history: DirectHistory
   historyWorker: ReturnType<typeof createSolidPreviewWorker>
   historyPending: Ref<boolean>
-  historyMode: Ref<'restore' | 'import' | 'shared'>
+  historyMode: Ref<'restore' | 'import' | 'export' | 'shared'>
   bumpHistoryGeneration: () => number
   getHistoryGeneration: () => number
   getSaveGeneration: () => number
@@ -112,6 +113,29 @@ export function useFileExchange(options: UseFileExchangeOptions) {
   } = options
 
   const stlInput = ref<HTMLInputElement>()
+  const meshImportProgress = ref<{ phase: string; completed: number; total: number }>()
+  const meshImportStatus = computed(() => {
+    const progress = meshImportProgress.value
+    if (!progress) return ''
+    const phase =
+      progress.phase === 'decode'
+        ? label('Разбор файла', 'Decoding file')
+        : progress.phase === 'finalize'
+          ? label('Сборка индексированного меша', 'Building indexed mesh')
+          : progress.phase === 'check'
+            ? label('Проверка manifold', 'Checking manifold topology')
+            : progress.phase === 'repair'
+              ? label('Исправление топологии', 'Repairing topology')
+              : progress.phase === 'inspect'
+                ? label('Анализ меша', 'Inspecting mesh')
+                : progress.phase === 'export'
+                  ? label('Экспорт файла', 'Exporting file')
+                  : label('Повторная проверка', 'Verifying the result')
+    return `${phase} · ${progress.completed}/${progress.total}`
+  })
+  watch(historyPending, pending => {
+    if (!pending) meshImportProgress.value = undefined
+  }, { flush: 'sync' })
   const svgInput = ref<HTMLInputElement>()
   const svgBusy = ref(false)
   let svgController: AbortController | undefined
@@ -232,39 +256,83 @@ export function useFileExchange(options: UseFileExchangeOptions) {
   }
 
   async function downloadBody() {
-    if (restoringDraft.value) return
+    if (restoringDraft.value || historyPending.value) return
+    cancelCommand()
+    error.value = ''
+    const body = selectedBody.value
+    if (!body) { error.value = label('Выберите тело.', 'Select a body.'); return }
+    const generation = bumpHistoryGeneration(), before = document.value, id = body.id
+    const name = body.name || 'body', format = bodyExportFormat.value
+    const current = () => generation === getHistoryGeneration() && !isRestoreDisposed()
+      && props.open && document.value === before && selectedBody.value?.id === id
+    historyMode.value = 'export'
+    historyPending.value = true
+    workspace.value?.focus()
     try {
-      if (!selectedBody.value) throw new Error(label('Выберите тело.', 'Select a body.'))
-      const body = structuredClone(selectedBody.value),
-        format = bodyExportFormat.value
-      const artifact = await exportMeshFormatCompressed(polygonMeshToExportMesh(body.mesh), format)
-      downloadBytes(artifact.data, artifact.mimeType, `${body.name || 'body'}.${artifact.extension}`)
+      const artifact = await historyWorker.run(
+        { kind: 'meshExport', mesh: body.mesh, target: format, options: {} },
+        { onProgress: progress => { if (current()) meshImportProgress.value = progress } },
+      )
+      if (!current()) return
+      historyPending.value = false
+      downloadBytes(artifact.data, artifact.mimeType, `${name}.${artifact.extension}`)
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
+      if (generation === getHistoryGeneration()) error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      if (generation === getHistoryGeneration()) historyPending.value = false
     }
   }
 
   async function importStl(event: Event) {
-    const before = document.value
     const input = event.target as HTMLInputElement,
       file = input.files?.[0]
+    if (!file) return
+    cancelCommand()
+    error.value = ''
+    setNotice('')
+    const generation = bumpHistoryGeneration(),
+      target = history,
+      before = document.value
+    const current = () =>
+      generation === getHistoryGeneration() &&
+      target === history &&
+      !isRestoreDisposed() &&
+      props.open &&
+      document.value === before
+    historyMode.value = 'import'
+    historyPending.value = true
+    workspace.value?.focus()
     try {
-      if (!file) return
-      const imported = await importMeshFromFile(file, { weld: 1e-4 })
-      if (isRestoreDisposed() || !props.open || document.value !== before)
-        throw Error('The scene changed during mesh import. Import again to add the mesh.')
-      const mesh = { positions: imported.positions.slice(), indices: imported.indices.slice() }
-      run(() => {
-        const d = history.document
-        const id = crypto.randomUUID()
-        d.bodies.push({ id, name: stripMeshExtension(file.name) || imported.format.toUpperCase(), mesh })
-        commit(d)
-        selection.value = id
-        mode.value = '3d'
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      if (!current()) return
+      const preferences = manifoldPreferenceSnapshot()
+      const imported = await historyWorker.run(
+        {
+          kind: 'meshImport',
+          fileName: file.name,
+          input: bytes,
+          options: { weld: preferences.importWeldEpsilonMm, repair: preferences.importRepair },
+        },
+        { onProgress: progress => { if (current()) meshImportProgress.value = progress } },
+      )
+      if (!current()) return
+      // Publishing the document must not make its watcher cancel this completed import.
+      historyPending.value = false
+      const d = history.document
+      const id = crypto.randomUUID()
+      d.bodies.push({
+        id,
+        name: stripMeshExtension(file.name) || imported.format.toUpperCase(),
+        mesh: { positions: imported.positions, indices: imported.indices },
       })
+      commit(d)
+      selection.value = id
+      mode.value = '3d'
+      setNotice(formatMeshImportNotice(imported, ru.value ? 'ru' : 'en'))
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
+      if (generation === getHistoryGeneration()) error.value = e instanceof Error ? e.message : String(e)
     } finally {
+      if (generation === getHistoryGeneration()) historyPending.value = false
       input.value = ''
     }
   }
@@ -453,6 +521,8 @@ export function useFileExchange(options: UseFileExchangeOptions) {
 
   return {
     stlInput,
+    meshImportProgress,
+    meshImportStatus,
     svgInput,
     svgBusy,
     stepInput,

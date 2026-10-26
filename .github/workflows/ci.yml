@@ -55,6 +55,28 @@ jobs:
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
       - name: Test remaining native workspace cases
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
+      - name: Test manifold properties with fixed seeds
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core -p manifold-ops --test property -- --nocapture
+      - name: Test manifold properties with a random reproducible seed
+        run: |
+          seed="$(od -An -N8 -tu8 /dev/urandom | tr -d '[:space:]')"
+          echo "MANIFOLD_PROPERTY_SEED=$seed"
+          MANIFOLD_PROPERTY_SEED="$seed" cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core -p manifold-ops --test property -- --nocapture
+      - name: Fuzz malformed manifold transport with fixed seeds
+        run: |
+          cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core --test transport_fuzz -- --nocapture
+          cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge manifold_abi_fuzz_rejects_bad_buffers_without_handle_leaks -- --nocapture
+      - name: Fuzz malformed manifold transport with a random reproducible seed
+        run: |
+          seed="$(od -An -N8 -tu8 /dev/urandom | tr -d '[:space:]')"
+          echo "MANIFOLD_PROPERTY_SEED=$seed"
+          MANIFOLD_PROPERTY_SEED="$seed" cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core --test transport_fuzz -- --nocapture
+          MANIFOLD_PROPERTY_SEED="$seed" cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge manifold_abi_fuzz_rejects_bad_buffers_without_handle_leaks -- --nocapture
+      - name: Compare manifold booleans and metrics with manifold-3d
+        working-directory: tools/manifold-bench
+        run: |
+          npm ci
+          npm run test:differential
       - run: python3 scripts/check-gpu-architecture.py
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings

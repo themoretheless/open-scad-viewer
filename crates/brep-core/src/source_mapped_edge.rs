@@ -8,7 +8,7 @@ use crate::{
 use cad_predicates::{
     AuthoredScalar, Limits, ParameterIdentity, PredicateContext, SourceArena, ToleranceContext,
 };
-use nurbs_core::{curve::Curve, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve};
 type Range = [[f64; 2]; 2];
 fn error() -> Error {
     Error::new(
@@ -270,9 +270,17 @@ pub fn qualify_with_candidates(
                 &fragments[0].endpoints()[i],
                 &fragments[1].endpoints()[1 - i],
             ) {
-                (Endpoint::Carrier { .. }, _) | (_, Endpoint::Carrier { .. }) =>
-                    crate::source_carrier_point::same_mapped_endpoint(world, fragments, ranges,
-                        [&fragments[0].endpoints()[i], &fragments[1].endpoints()[1-i]]),
+                (Endpoint::Carrier { .. }, _) | (_, Endpoint::Carrier { .. }) => {
+                    crate::source_carrier_point::same_mapped_endpoint(
+                        world,
+                        fragments,
+                        ranges,
+                        [
+                            &fragments[0].endpoints()[i],
+                            &fragments[1].endpoints()[1 - i],
+                        ],
+                    )
+                }
                 (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
                     let da = fragments[0].curve().domain();
                     let db = fragments[1].curve().domain();
@@ -542,238 +550,600 @@ mod tests {
         .unwrap();
         assert!(r.edge.is_some(), "{}", r.reason);
         assert!(r.driver_cells > 0);
-        let mapped=r.edge.as_ref().unwrap();
-        let endpoint=mapped.sample_endpoint(1,3).unwrap().endpoint.expect("root endpoint on partial canonical source");
-        let bounds=endpoint.world_bounds();
-        assert!(bounds[0][0]<=0.75 && 0.75<=bounds[0][1]);
+        let mapped = r.edge.as_ref().unwrap();
+        let endpoint = mapped
+            .sample_endpoint(1, 3)
+            .unwrap()
+            .endpoint
+            .expect("root endpoint on partial canonical source");
+        let bounds = endpoint.world_bounds();
+        assert!(bounds[0][0] <= 0.75 && 0.75 <= bounds[0][1]);
         assert!(!mapped.covers_complete_canonical_source());
-        assert!(qualify(
-            &world,
-            [&fb, &root],
-            [RANGES[1], RANGES[0]],
-            [Some(plane), None],
-            100_000_000,
-            1000
-        )
-        .unwrap()
-        .edge
-        .is_some());
-        assert!(qualify(
-            &world,
-            [&root, &fb],
-            RANGES,
-            [None, Some(plane)],
-            100_000_000,
-            0
-        )
-        .unwrap()
-        .edge
-        .is_none());
-        assert!(qualify(&world, [&fa, &fb], RANGES, [None, None], 1, 0)
+        assert!(
+            qualify(
+                &world,
+                [&fb, &root],
+                [RANGES[1], RANGES[0]],
+                [Some(plane), None],
+                100_000_000,
+                1000
+            )
             .unwrap()
             .edge
-            .is_none());
+            .is_some()
+        );
+        assert!(
+            qualify(
+                &world,
+                [&root, &fb],
+                RANGES,
+                [None, Some(plane)],
+                100_000_000,
+                0
+            )
+            .unwrap()
+            .edge
+            .is_none()
+        );
+        assert!(
+            qualify(&world, [&fa, &fb], RANGES, [None, None], 1, 0)
+                .unwrap()
+                .edge
+                .is_none()
+        );
     }
     #[test]
     fn curved_partial_affine_edge_has_one_adaptive_partition_for_both_uses() {
-        for rational in [false,true] {
-        let (mut sa,mut sb,a,b,mut world)=fixture();
-        for (surface,vertical) in [(&mut sa,false),(&mut sb,true)] {
-            surface.degree_u=2;surface.knots_u=vec![0.,0.,0.,1.,1.,1.];
-            surface.control_points=[(0.,0.),(0.5,0.5),(1.,0.)].into_iter().map(|(x,z)|
-                [0.,1.].into_iter().map(|v|if vertical {vec![x,0.,z+v]} else {vec![x,v,z]}).collect()).collect();
-            surface.weights=[1.,if rational {0.5}else{1.},1.].into_iter().map(|w|vec![w;2]).collect();
-        }
-        world.degree=2;world.knots=vec![-5.,-5.,-5.,3.,3.,3.];
-        world.control_points=vec![vec![0.,0.,0.],vec![0.5,0.,0.5],vec![1.,0.,0.]];
-        world.weights=vec![1.,if rational {0.5}else{1.},1.];
-        let fa=Fragment::new(&sa,&a,Endpoint::Parameter(2.5),Endpoint::Parameter(3.5)).unwrap();
-        let fb=Fragment::new(&sb,&b,Endpoint::Parameter(18.),Endpoint::Parameter(10.)).unwrap();
-        let qualified=qualify(&world,[&fa,&fb],RANGES,[None;2],100000000,0).unwrap();
-        let edge=qualified.edge.expect("exact curved partial affine uses");
-        let limits=|cells,depth|crate::source_shared_edge::BoundaryMeshLimits {
-            max_deviation_mm:0.001,cells,spans:10000,max_depth:depth,
-        };
-        let mesh=edge.prepare_boundary_mesh(limits(10000,16)).unwrap();
-        assert!(mesh.pending.is_empty());assert!(mesh.segments.len()>1);
-        for segment in &mesh.segments {
-            assert!(segment.deviation_upper_mm<=0.001);
-            let [a,b]=segment.vertices;
-            assert!(mesh.vertices[a].canonical[1]<mesh.vertices[b].canonical[0]);
-        }
-        // Every partition vertex owns the two original UV enclosures, not two
-        // independently rounded per-face approximations.
-        for vertex in &mesh.vertices {
-            for side in 0..2 {
-                let d=edge.uses()[side].curve().domain();
-                assert!(d[0]<=vertex.parameters[side][0] && vertex.parameters[side][1]<=d[1]);
+        for rational in [false, true] {
+            let (mut sa, mut sb, a, b, mut world) = fixture();
+            for (surface, vertical) in [(&mut sa, false), (&mut sb, true)] {
+                surface.degree_u = 2;
+                surface.knots_u = vec![0., 0., 0., 1., 1., 1.];
+                surface.control_points = [(0., 0.), (0.5, 0.5), (1., 0.)]
+                    .into_iter()
+                    .map(|(x, z)| {
+                        [0., 1.]
+                            .into_iter()
+                            .map(|v| {
+                                if vertical {
+                                    vec![x, 0., z + v]
+                                } else {
+                                    vec![x, v, z]
+                                }
+                            })
+                            .collect()
+                    })
+                    .collect();
+                surface.weights = [1., if rational { 0.5 } else { 1. }, 1.]
+                    .into_iter()
+                    .map(|w| vec![w; 2])
+                    .collect();
             }
-        }
-        let stopped=edge.prepare_boundary_mesh(limits(10000,0)).unwrap();
-        assert!(stopped.segments.is_empty());assert_eq!(stopped.pending.len(),1);
-        assert_eq!(stopped.pending[0].reason,"boundary-mesh-depth-limit");
-        assert_eq!(stopped.pending[0].vertices,Some([0,1]));
-        assert!(!edge.covers_complete_canonical_source());
-        let root_u=if rational {0.5}else{0.75};
-        let root_t=if rational {3.}else{3.5};
-        let root_fb=Fragment::new(&sb,&b,Endpoint::Parameter(if rational {14.}else{18.}),Endpoint::Parameter(10.)).unwrap();
-        let cutter=Curve::from_polyline(vec![vec![root_u,-1.],vec![root_u,1.]]).unwrap();
-        let contact=crate::source_contact_point::qualify(&sa,&a,&cutter,
-            [[root_t-0.000001,root_t+0.000001],[0.49,0.51]],10000).unwrap().point.unwrap();
-        let root=Fragment::new(&sa,&a,Endpoint::Parameter(2.5),
-            Endpoint::Crossing {point:contact,role:Role::Boundary}).unwrap();
-        let plane=[[root_u,0.,0.],[root_u,1.,0.],[root_u,0.,1.]];
-        let admitted=qualify(&world,[&root,&root_fb],RANGES,[None,Some(plane)],100000000,10000).unwrap();
-        let root_edge=admitted.edge.expect("curved partial edge with exact common root end");
-        let root_mesh=root_edge.prepare_boundary_mesh(limits(10000,16)).unwrap();
-        assert!(root_mesh.pending.is_empty());assert!(root_mesh.segments.len()>1);
-        assert!(root_mesh.vertices[1].canonical[0]<=root_u && root_u<=root_mesh.vertices[1].canonical[1]);
-        assert!(root_mesh.segments.iter().all(|s|s.deviation_upper_mm<=0.001));
+            world.degree = 2;
+            world.knots = vec![-5., -5., -5., 3., 3., 3.];
+            world.control_points = vec![vec![0., 0., 0.], vec![0.5, 0., 0.5], vec![1., 0., 0.]];
+            world.weights = vec![1., if rational { 0.5 } else { 1. }, 1.];
+            let fa =
+                Fragment::new(&sa, &a, Endpoint::Parameter(2.5), Endpoint::Parameter(3.5)).unwrap();
+            let fb =
+                Fragment::new(&sb, &b, Endpoint::Parameter(18.), Endpoint::Parameter(10.)).unwrap();
+            let qualified = qualify(&world, [&fa, &fb], RANGES, [None; 2], 100000000, 0).unwrap();
+            let edge = qualified.edge.expect("exact curved partial affine uses");
+            let limits = |cells, depth| crate::source_shared_edge::BoundaryMeshLimits {
+                max_deviation_mm: 0.001,
+                cells,
+                spans: 10000,
+                max_depth: depth,
+            };
+            let mesh = edge.prepare_boundary_mesh(limits(10000, 16)).unwrap();
+            assert!(mesh.pending.is_empty());
+            assert!(mesh.segments.len() > 1);
+            for segment in &mesh.segments {
+                assert!(segment.deviation_upper_mm <= 0.001);
+                let [a, b] = segment.vertices;
+                assert!(mesh.vertices[a].canonical[1] < mesh.vertices[b].canonical[0]);
+            }
+            // Every partition vertex owns the two original UV enclosures, not two
+            // independently rounded per-face approximations.
+            for vertex in &mesh.vertices {
+                for side in 0..2 {
+                    let d = edge.uses()[side].curve().domain();
+                    assert!(
+                        d[0] <= vertex.parameters[side][0] && vertex.parameters[side][1] <= d[1]
+                    );
+                }
+            }
+            let stopped = edge.prepare_boundary_mesh(limits(10000, 0)).unwrap();
+            assert!(stopped.segments.is_empty());
+            assert_eq!(stopped.pending.len(), 1);
+            assert_eq!(stopped.pending[0].reason, "boundary-mesh-depth-limit");
+            assert_eq!(stopped.pending[0].vertices, Some([0, 1]));
+            assert!(!edge.covers_complete_canonical_source());
+            let root_u = if rational { 0.5 } else { 0.75 };
+            let root_t = if rational { 3. } else { 3.5 };
+            let root_fb = Fragment::new(
+                &sb,
+                &b,
+                Endpoint::Parameter(if rational { 14. } else { 18. }),
+                Endpoint::Parameter(10.),
+            )
+            .unwrap();
+            let cutter = Curve::from_polyline(vec![vec![root_u, -1.], vec![root_u, 1.]]).unwrap();
+            let contact = crate::source_contact_point::qualify(
+                &sa,
+                &a,
+                &cutter,
+                [[root_t - 0.000001, root_t + 0.000001], [0.49, 0.51]],
+                10000,
+            )
+            .unwrap()
+            .point
+            .unwrap();
+            let root = Fragment::new(
+                &sa,
+                &a,
+                Endpoint::Parameter(2.5),
+                Endpoint::Crossing {
+                    point: contact,
+                    role: Role::Boundary,
+                },
+            )
+            .unwrap();
+            let plane = [[root_u, 0., 0.], [root_u, 1., 0.], [root_u, 0., 1.]];
+            let admitted = qualify(
+                &world,
+                [&root, &root_fb],
+                RANGES,
+                [None, Some(plane)],
+                100000000,
+                10000,
+            )
+            .unwrap();
+            let root_edge = admitted
+                .edge
+                .expect("curved partial edge with exact common root end");
+            let root_mesh = root_edge.prepare_boundary_mesh(limits(10000, 16)).unwrap();
+            assert!(root_mesh.pending.is_empty());
+            assert!(root_mesh.segments.len() > 1);
+            assert!(
+                root_mesh.vertices[1].canonical[0] <= root_u
+                    && root_u <= root_mesh.vertices[1].canonical[1]
+            );
+            assert!(
+                root_mesh
+                    .segments
+                    .iter()
+                    .all(|s| s.deviation_upper_mm <= 0.001)
+            );
         }
     }
     #[test]
     fn independently_partitioned_uv_uses_replay_one_partial_canonical_edge() {
-        let (sa,sb,mut a,mut b,mut world)=fixture();
-        a.knots=vec![2.,2.,2.5,3.5,4.,4.];
-        a.control_points=vec![vec![0.,0.],vec![0.25,0.],vec![0.75,0.],vec![1.,0.]];
-        a.weights=vec![1.;4];
-        b.knots=vec![10.,10.,14.,18.,18.];
-        b.control_points=vec![vec![0.25,0.],vec![0.5,0.],vec![0.75,0.]];
-        b.weights=vec![1.;3];
-        world.knots=vec![-5.,-5.,-1.,3.,3.];
-        world.control_points=vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,0.,0.]];
-        world.weights=vec![1.;3];
-        let fa=Fragment::new(&sa,&a,Endpoint::Parameter(2.5),Endpoint::Parameter(3.5)).unwrap();
-        let fb=Fragment::new(&sb,&b,Endpoint::Parameter(18.),Endpoint::Parameter(10.)).unwrap();
-        let report=qualify(&world,[&fa,&fb],RANGES,[None;2],100000000,0).unwrap();
-        let edge=report.edge.expect(report.reason);
+        let (sa, sb, mut a, mut b, mut world) = fixture();
+        a.knots = vec![2., 2., 2.5, 3.5, 4., 4.];
+        a.control_points = vec![vec![0., 0.], vec![0.25, 0.], vec![0.75, 0.], vec![1., 0.]];
+        a.weights = vec![1.; 4];
+        b.knots = vec![10., 10., 14., 18., 18.];
+        b.control_points = vec![vec![0.25, 0.], vec![0.5, 0.], vec![0.75, 0.]];
+        b.weights = vec![1.; 3];
+        world.knots = vec![-5., -5., -1., 3., 3.];
+        world.control_points = vec![vec![0., 0., 0.], vec![0.5, 0., 0.], vec![1., 0., 0.]];
+        world.weights = vec![1.; 3];
+        let fa =
+            Fragment::new(&sa, &a, Endpoint::Parameter(2.5), Endpoint::Parameter(3.5)).unwrap();
+        let fb =
+            Fragment::new(&sb, &b, Endpoint::Parameter(18.), Endpoint::Parameter(10.)).unwrap();
+        let report = qualify(&world, [&fa, &fb], RANGES, [None; 2], 100000000, 0).unwrap();
+        let edge = report.edge.expect(report.reason);
         assert!(!edge.covers_complete_canonical_source());
-        assert_eq!(edge.uses()[0].curve(),&a);
-        assert_eq!(edge.uses()[1].curve(),&b);
-        let restored=crate::source_shared_edge_restore::restore(edge.definition(),
-            crate::source_shared_edge_restore::Limits{mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!(restored.edge.expect(restored.reason).definition(),edge.definition());
-        let bad=Fragment::new(&sb,&b,Endpoint::Parameter(18.-1e-12),Endpoint::Parameter(10.)).unwrap();
-        assert!(qualify(&world,[&fa,&bad],RANGES,[None;2],100000000,0).unwrap().edge.is_none());
-        let root=|surface:&Surface,curve:&Curve,x:f64,t:f64| {
-            let cutter=Curve::from_polyline(vec![vec![x,-1.],vec![x,1.]]).unwrap();
-            let report=crate::source_contact_point::qualify(surface,curve,&cutter,
-                [[t-0.05,t+0.05],[0.4,0.6]],10000).unwrap();
-            Endpoint::Crossing{point:report.point.expect(report.reason),role:Role::Boundary}
+        assert_eq!(edge.uses()[0].curve(), &a);
+        assert_eq!(edge.uses()[1].curve(), &b);
+        let restored = crate::source_shared_edge_restore::restore(
+            edge.definition(),
+            crate::source_shared_edge_restore::Limits {
+                mapping_cells_per_use: 10000,
+                exact_work: 100000000,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            restored.edge.expect(restored.reason).definition(),
+            edge.definition()
+        );
+        let bad = Fragment::new(
+            &sb,
+            &b,
+            Endpoint::Parameter(18. - 1e-12),
+            Endpoint::Parameter(10.),
+        )
+        .unwrap();
+        assert!(
+            qualify(&world, [&fa, &bad], RANGES, [None; 2], 100000000, 0)
+                .unwrap()
+                .edge
+                .is_none()
+        );
+        let root = |surface: &Surface, curve: &Curve, x: f64, t: f64| {
+            let cutter = Curve::from_polyline(vec![vec![x, -1.], vec![x, 1.]]).unwrap();
+            let report = crate::source_contact_point::qualify(
+                surface,
+                curve,
+                &cutter,
+                [[t - 0.05, t + 0.05], [0.4, 0.6]],
+                10000,
+            )
+            .unwrap();
+            Endpoint::Crossing {
+                point: report.point.expect(report.reason),
+                role: Role::Boundary,
+            }
         };
-        let ra=Fragment::new(&sa,&a,root(&sa,&a,0.375,2.75),root(&sa,&a,0.625,3.25)).unwrap();
-        let rb=Fragment::new(&sb,&b,root(&sb,&b,0.625,16.),root(&sb,&b,0.375,12.)).unwrap();
-        let candidates=[[Some([2.75,0.5]),Some([3.25,0.5])],[Some([16.,0.5]),Some([12.,0.5])]];
-        let report=qualify_with_candidates(&world,[&ra,&rb],RANGES,[None;2],candidates,100000000,0).unwrap();
-        let rooted=report.edge.expect(report.reason);
-        assert_eq!(report.root_checks,4);
-        assert!(rooted.uses().iter().all(|fragment|fragment.endpoints().iter().all(|end|
-            matches!(end,Endpoint::Crossing{..}))));
-        let restored=crate::source_shared_edge_restore::restore(rooted.definition(),
-            crate::source_shared_edge_restore::Limits{mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!(restored.edge.expect(restored.reason).definition(),rooted.definition());
-        let mut displaced=candidates;displaced[1][0]=Some([16.+1e-12,0.5]);
-        assert!(qualify_with_candidates(&world,[&ra,&rb],RANGES,[None;2],displaced,100000000,0).unwrap().edge.is_none());
+        let ra = Fragment::new(
+            &sa,
+            &a,
+            root(&sa, &a, 0.375, 2.75),
+            root(&sa, &a, 0.625, 3.25),
+        )
+        .unwrap();
+        let rb = Fragment::new(
+            &sb,
+            &b,
+            root(&sb, &b, 0.625, 16.),
+            root(&sb, &b, 0.375, 12.),
+        )
+        .unwrap();
+        let candidates = [
+            [Some([2.75, 0.5]), Some([3.25, 0.5])],
+            [Some([16., 0.5]), Some([12., 0.5])],
+        ];
+        let report = qualify_with_candidates(
+            &world,
+            [&ra, &rb],
+            RANGES,
+            [None; 2],
+            candidates,
+            100000000,
+            0,
+        )
+        .unwrap();
+        let rooted = report.edge.expect(report.reason);
+        assert_eq!(report.root_checks, 4);
+        assert!(rooted.uses().iter().all(|fragment| {
+            fragment
+                .endpoints()
+                .iter()
+                .all(|end| matches!(end, Endpoint::Crossing { .. }))
+        }));
+        let restored = crate::source_shared_edge_restore::restore(
+            rooted.definition(),
+            crate::source_shared_edge_restore::Limits {
+                mapping_cells_per_use: 10000,
+                exact_work: 100000000,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            restored.edge.expect(restored.reason).definition(),
+            rooted.definition()
+        );
+        let mut displaced = candidates;
+        displaced[1][0] = Some([16. + 1e-12, 0.5]);
+        assert!(
+            qualify_with_candidates(
+                &world,
+                [&ra, &rb],
+                RANGES,
+                [None; 2],
+                displaced,
+                100000000,
+                0
+            )
+            .unwrap()
+            .edge
+            .is_none()
+        );
     }
     #[test]
     fn independent_irrational_roots_on_multispan_uv_uses_keep_owned_plane_relation() {
-        let (sa,sb,mut a,mut b,mut world)=fixture();
+        let (sa, sb, mut a, mut b, mut world) = fixture();
         // x(q)=(q+q*q)/2 has strictly positive derivative. Its roots for
         // x=1/4 and x=1/2 are irrational; no binary64 parameter is supplied.
-        world.degree=2;world.knots=vec![-5.,-5.,-5.,3.,3.,3.];
-        world.control_points=vec![vec![0.,0.,0.],vec![0.25,0.,0.],vec![1.,0.,0.]];
-        world.weights=vec![1.;3];
-        a.degree=2;a.knots=vec![2.,2.,2.,3.,4.,4.,4.];
-        a.control_points=[0.,0.125,0.625,1.].into_iter().map(|x|vec![x,0.]).collect();
-        a.weights=vec![1.;4];
-        b.degree=2;b.knots=vec![10.,10.,10.,12.,14.,18.,18.,18.];
-        b.control_points=[0.,0.0625,0.25,0.625,1.].into_iter().map(|x|vec![x,0.]).collect();
-        b.weights=vec![1.;5];
-        let root=|surface:&Surface,curve:&Curve,x:f64,selector:[f64;2]| {
-            let cutter=Curve::from_polyline(vec![vec![x,-1.],vec![x,1.]]).unwrap();
-            let report=crate::source_contact_point::qualify(surface,curve,&cutter,
-                [selector,[0.4,0.6]],10000).unwrap();
-            Endpoint::Crossing{point:report.point.expect(report.reason),role:Role::Boundary}
+        world.degree = 2;
+        world.knots = vec![-5., -5., -5., 3., 3., 3.];
+        world.control_points = vec![vec![0., 0., 0.], vec![0.25, 0., 0.], vec![1., 0., 0.]];
+        world.weights = vec![1.; 3];
+        a.degree = 2;
+        a.knots = vec![2., 2., 2., 3., 4., 4., 4.];
+        a.control_points = [0., 0.125, 0.625, 1.]
+            .into_iter()
+            .map(|x| vec![x, 0.])
+            .collect();
+        a.weights = vec![1.; 4];
+        b.degree = 2;
+        b.knots = vec![10., 10., 10., 12., 14., 18., 18., 18.];
+        b.control_points = [0., 0.0625, 0.25, 0.625, 1.]
+            .into_iter()
+            .map(|x| vec![x, 0.])
+            .collect();
+        b.weights = vec![1.; 5];
+        let root = |surface: &Surface, curve: &Curve, x: f64, selector: [f64; 2]| {
+            let cutter = Curve::from_polyline(vec![vec![x, -1.], vec![x, 1.]]).unwrap();
+            let report = crate::source_contact_point::qualify(
+                surface,
+                curve,
+                &cutter,
+                [selector, [0.4, 0.6]],
+                10000,
+            )
+            .unwrap();
+            Endpoint::Crossing {
+                point: report.point.expect(report.reason),
+                role: Role::Boundary,
+            }
         };
-        let fa=Fragment::new(&sa,&a,root(&sa,&a,0.25,[2.73,2.74]),root(&sa,&a,0.5,[3.23,3.24])).unwrap();
-        let fb=Fragment::new(&sb,&b,root(&sb,&b,0.5,[14.94,14.95]),root(&sb,&b,0.25,[12.92,12.94])).unwrap();
-        let plane=|x|[[x,0.,0.],[x,1.,0.],[x,0.,1.]];
-        let ranges=[[[0.,1.],[1.,1.]];2];
-        let planes=[Some(plane(0.25)),Some(plane(0.5))];
-        let mut split=world.clone();split.knots=vec![-5.,-5.,-5.,-1.,3.,3.,3.];
-        split.control_points=[0.,0.125,0.625,1.].into_iter().map(|x|vec![x,0.,0.]).collect();
-        split.weights=vec![1.;4];
-        for world in [world,split] {
-        let report=qualify(&world,[&fa,&fb],ranges,planes,100000000,10000).unwrap();
-        let edge=report.edge.expect(report.reason);
-        assert!(report.driver_cells>0);
-        assert_eq!(report.root_checks,2);
-        assert!(!edge.covers_complete_canonical_source());
-        assert!(edge.uses().iter().all(|f|f.endpoints().iter().all(|e|matches!(e,Endpoint::Crossing{..}))));
-        let restored=crate::source_shared_edge_restore::restore(edge.definition(),
-            crate::source_shared_edge_restore::Limits{mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!(restored.edge.expect(restored.reason).definition(),edge.definition());
-        assert!(qualify(&world,[&fa,&fb],ranges,planes,100000000,0).unwrap().edge.is_none());
-        assert!(qualify(&world,[&fa,&fb],ranges,[None;2],100000000,10000).unwrap().edge.is_none());
-        assert!(qualify(&world,[&fa,&fb],ranges,[planes[0],Some(plane(0.5+1e-12))],100000000,10000).unwrap().edge.is_none());
+        let fa = Fragment::new(
+            &sa,
+            &a,
+            root(&sa, &a, 0.25, [2.73, 2.74]),
+            root(&sa, &a, 0.5, [3.23, 3.24]),
+        )
+        .unwrap();
+        let fb = Fragment::new(
+            &sb,
+            &b,
+            root(&sb, &b, 0.5, [14.94, 14.95]),
+            root(&sb, &b, 0.25, [12.92, 12.94]),
+        )
+        .unwrap();
+        let plane = |x| [[x, 0., 0.], [x, 1., 0.], [x, 0., 1.]];
+        let ranges = [[[0., 1.], [1., 1.]]; 2];
+        let planes = [Some(plane(0.25)), Some(plane(0.5))];
+        let mut split = world.clone();
+        split.knots = vec![-5., -5., -5., -1., 3., 3., 3.];
+        split.control_points = [0., 0.125, 0.625, 1.]
+            .into_iter()
+            .map(|x| vec![x, 0., 0.])
+            .collect();
+        split.weights = vec![1.; 4];
+        for world in [world, split] {
+            let report = qualify(&world, [&fa, &fb], ranges, planes, 100000000, 10000).unwrap();
+            let edge = report.edge.expect(report.reason);
+            assert!(report.driver_cells > 0);
+            assert_eq!(report.root_checks, 2);
+            assert!(!edge.covers_complete_canonical_source());
+            assert!(edge.uses().iter().all(|f| {
+                f.endpoints()
+                    .iter()
+                    .all(|e| matches!(e, Endpoint::Crossing { .. }))
+            }));
+            let restored = crate::source_shared_edge_restore::restore(
+                edge.definition(),
+                crate::source_shared_edge_restore::Limits {
+                    mapping_cells_per_use: 10000,
+                    exact_work: 100000000,
+                    driver_cells: 10000,
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                restored.edge.expect(restored.reason).definition(),
+                edge.definition()
+            );
+            assert!(
+                qualify(&world, [&fa, &fb], ranges, planes, 100000000, 0)
+                    .unwrap()
+                    .edge
+                    .is_none()
+            );
+            assert!(
+                qualify(&world, [&fa, &fb], ranges, [None; 2], 100000000, 10000)
+                    .unwrap()
+                    .edge
+                    .is_none()
+            );
+            assert!(
+                qualify(
+                    &world,
+                    [&fa, &fb],
+                    ranges,
+                    [planes[0], Some(plane(0.5 + 1e-12))],
+                    100000000,
+                    10000
+                )
+                .unwrap()
+                .edge
+                .is_none()
+            );
         }
     }
     #[test]
     fn local_plane_uniqueness_matches_one_branch_and_refuses_opposite_branch_roots() {
-        for oblique in [false,true] {
-        let (mut sa,mut sb,mut a,mut b,mut world)=fixture();
-        // x(q)=(2q-1)^2 crosses each chosen plane twice globally.
-        world.degree=2;world.knots=vec![-5.,-5.,-5.,3.,3.,3.];
-        world.control_points=vec![vec![1.,0.,0.],vec![-1.,0.,0.],vec![1.,0.,0.]];world.weights=vec![1.;3];
-        a.degree=2;a.knots=vec![2.,2.,2.,3.,4.,4.,4.];
-        a.control_points=[1.,0.,0.,1.].into_iter().map(|x|vec![x,0.]).collect();a.weights=vec![1.;4];
-        b.degree=2;b.knots=vec![10.,10.,10.,12.,14.,18.,18.,18.];
-        b.control_points=[1.,0.5,0.,0.,1.].into_iter().map(|x|vec![x,0.]).collect();b.weights=vec![1.;5];
-        if oblique {
-            // Apply the same exact affine shear to both original surfaces
-            // and their canonical curve; the UV root owners stay unchanged.
-            let shear=|p:&mut Vec<f64>| {let (x,y)=(p[0],p[1]);p[0]=x+y;p[1]=x+2.*y;};
-            for p in &mut world.control_points {shear(p);}
-            for surface in [&mut sa,&mut sb] {
-                for row in &mut surface.control_points {for p in row {shear(p);}}
+        for oblique in [false, true] {
+            let (mut sa, mut sb, mut a, mut b, mut world) = fixture();
+            // x(q)=(2q-1)^2 crosses each chosen plane twice globally.
+            world.degree = 2;
+            world.knots = vec![-5., -5., -5., 3., 3., 3.];
+            world.control_points = vec![vec![1., 0., 0.], vec![-1., 0., 0.], vec![1., 0., 0.]];
+            world.weights = vec![1.; 3];
+            a.degree = 2;
+            a.knots = vec![2., 2., 2., 3., 4., 4., 4.];
+            a.control_points = [1., 0., 0., 1.].into_iter().map(|x| vec![x, 0.]).collect();
+            a.weights = vec![1.; 4];
+            b.degree = 2;
+            b.knots = vec![10., 10., 10., 12., 14., 18., 18., 18.];
+            b.control_points = [1., 0.5, 0., 0., 1.]
+                .into_iter()
+                .map(|x| vec![x, 0.])
+                .collect();
+            b.weights = vec![1.; 5];
+            if oblique {
+                // Apply the same exact affine shear to both original surfaces
+                // and their canonical curve; the UV root owners stay unchanged.
+                let shear = |p: &mut Vec<f64>| {
+                    let (x, y) = (p[0], p[1]);
+                    p[0] = x + y;
+                    p[1] = x + 2. * y;
+                };
+                for p in &mut world.control_points {
+                    shear(p);
+                }
+                for surface in [&mut sa, &mut sb] {
+                    for row in &mut surface.control_points {
+                        for p in row {
+                            shear(p);
+                        }
+                    }
+                }
             }
-        }
-        let root=|surface:&Surface,curve:&Curve,x:f64,selector:[f64;2]| {
-            let cutter=Curve::from_polyline(vec![vec![x,-1.],vec![x,1.]]).unwrap();
-            let report=crate::source_contact_point::qualify(surface,curve,&cutter,[selector,[0.4,0.6]],10000).unwrap();
-            Endpoint::Crossing{point:report.point.expect(report.reason),role:Role::Boundary}
-        };
-        let fa=Fragment::new(&sa,&a,root(&sa,&a,0.5,[2.29,2.30]),root(&sa,&a,0.125,[2.64,2.65])).unwrap();
-        let fb=Fragment::new(&sb,&b,root(&sb,&b,0.125,[12.58,12.59]),root(&sb,&b,0.5,[11.17,11.18])).unwrap();
-        let plane=|x|if oblique {[[x,x,0.],[x+1.,x+2.,0.],[x,x,1.]]} else {[[x,0.,0.],[x,1.,0.],[x,0.,1.]]};
-        let planes=[Some(plane(0.5)),Some(plane(0.125))];let ranges=[[[0.,1.],[1.,1.]];2];
-        assert!(!nurbs_core::curve_axis_driver::certify(&world,0,128).unwrap().monotonic_proven);
-        let report=qualify(&world,[&fa,&fb],ranges,planes,100000000,10000).unwrap();
-        let edge=report.edge.expect(report.reason);assert_eq!(report.root_checks,2);assert!(report.driver_cells>0);
-        let replay=crate::source_shared_edge_restore::restore(edge.definition(),
-            crate::source_shared_edge_restore::Limits{mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!(replay.edge.expect(replay.reason).definition(),edge.definition());
-        // A fixed original parameter must match the owned root on the same
-        // branch, even when that plane also meets another canonical branch.
-        let mixed_a=Fragment::new(&sa,&a,root(&sa,&a,0.25,[2.49,2.51]),
-            root(&sa,&a,0.125,[2.64,2.65])).unwrap();
-        let mixed_b=Fragment::new(&sb,&b,root(&sb,&b,0.125,[12.58,12.59]),
-            Endpoint::Parameter(12.)).unwrap();
-        let mixed_planes=[Some(plane(0.25)),Some(plane(0.125))];
-        let mixed=qualify(&world,[&mixed_a,&mixed_b],ranges,mixed_planes,100000000,10000).unwrap();
-        let mixed_edge=mixed.edge.expect(mixed.reason);
-        let restored=crate::source_shared_edge_restore::restore(mixed_edge.definition(),
-            crate::source_shared_edge_restore::Limits{mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!(restored.edge.expect(restored.reason).definition(),mixed_edge.definition());
-        let mixed_wrong=Fragment::new(&sb,&b,root(&sb,&b,0.125,[12.58,12.59]),
-            Endpoint::Parameter(16.)).unwrap();
-        assert!(qualify(&world,[&mixed_a,&mixed_wrong],ranges,mixed_planes,100000000,256).unwrap().edge.is_none());
-        // Same physical plane/point, but the other canonical branch must not
-        // be merged into the left branch by an overlap or midpoint heuristic.
-        let wrong=Fragment::new(&sb,&b,root(&sb,&b,0.125,[15.41,15.42]),root(&sb,&b,0.5,[11.17,11.18])).unwrap();
-        assert!(qualify(&world,[&fa,&wrong],ranges,planes,100000000,256).unwrap().edge.is_none());
-        assert!(qualify(&world,[&fa,&fb],ranges,planes,100000000,0).unwrap().edge.is_none());
-        assert!(qualify(&world,[&fa,&fb],ranges,[None;2],100000000,10000).unwrap().edge.is_none());
+            let root = |surface: &Surface, curve: &Curve, x: f64, selector: [f64; 2]| {
+                let cutter = Curve::from_polyline(vec![vec![x, -1.], vec![x, 1.]]).unwrap();
+                let report = crate::source_contact_point::qualify(
+                    surface,
+                    curve,
+                    &cutter,
+                    [selector, [0.4, 0.6]],
+                    10000,
+                )
+                .unwrap();
+                Endpoint::Crossing {
+                    point: report.point.expect(report.reason),
+                    role: Role::Boundary,
+                }
+            };
+            let fa = Fragment::new(
+                &sa,
+                &a,
+                root(&sa, &a, 0.5, [2.29, 2.30]),
+                root(&sa, &a, 0.125, [2.64, 2.65]),
+            )
+            .unwrap();
+            let fb = Fragment::new(
+                &sb,
+                &b,
+                root(&sb, &b, 0.125, [12.58, 12.59]),
+                root(&sb, &b, 0.5, [11.17, 11.18]),
+            )
+            .unwrap();
+            let plane = |x| {
+                if oblique {
+                    [[x, x, 0.], [x + 1., x + 2., 0.], [x, x, 1.]]
+                } else {
+                    [[x, 0., 0.], [x, 1., 0.], [x, 0., 1.]]
+                }
+            };
+            let planes = [Some(plane(0.5)), Some(plane(0.125))];
+            let ranges = [[[0., 1.], [1., 1.]]; 2];
+            assert!(
+                !nurbs_core::curve_axis_driver::certify(&world, 0, 128)
+                    .unwrap()
+                    .monotonic_proven
+            );
+            let report = qualify(&world, [&fa, &fb], ranges, planes, 100000000, 10000).unwrap();
+            let edge = report.edge.expect(report.reason);
+            assert_eq!(report.root_checks, 2);
+            assert!(report.driver_cells > 0);
+            let replay = crate::source_shared_edge_restore::restore(
+                edge.definition(),
+                crate::source_shared_edge_restore::Limits {
+                    mapping_cells_per_use: 10000,
+                    exact_work: 100000000,
+                    driver_cells: 10000,
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                replay.edge.expect(replay.reason).definition(),
+                edge.definition()
+            );
+            // A fixed original parameter must match the owned root on the same
+            // branch, even when that plane also meets another canonical branch.
+            let mixed_a = Fragment::new(
+                &sa,
+                &a,
+                root(&sa, &a, 0.25, [2.49, 2.51]),
+                root(&sa, &a, 0.125, [2.64, 2.65]),
+            )
+            .unwrap();
+            let mixed_b = Fragment::new(
+                &sb,
+                &b,
+                root(&sb, &b, 0.125, [12.58, 12.59]),
+                Endpoint::Parameter(12.),
+            )
+            .unwrap();
+            let mixed_planes = [Some(plane(0.25)), Some(plane(0.125))];
+            let mixed = qualify(
+                &world,
+                [&mixed_a, &mixed_b],
+                ranges,
+                mixed_planes,
+                100000000,
+                10000,
+            )
+            .unwrap();
+            let mixed_edge = mixed.edge.expect(mixed.reason);
+            let restored = crate::source_shared_edge_restore::restore(
+                mixed_edge.definition(),
+                crate::source_shared_edge_restore::Limits {
+                    mapping_cells_per_use: 10000,
+                    exact_work: 100000000,
+                    driver_cells: 10000,
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                restored.edge.expect(restored.reason).definition(),
+                mixed_edge.definition()
+            );
+            let mixed_wrong = Fragment::new(
+                &sb,
+                &b,
+                root(&sb, &b, 0.125, [12.58, 12.59]),
+                Endpoint::Parameter(16.),
+            )
+            .unwrap();
+            assert!(
+                qualify(
+                    &world,
+                    [&mixed_a, &mixed_wrong],
+                    ranges,
+                    mixed_planes,
+                    100000000,
+                    256
+                )
+                .unwrap()
+                .edge
+                .is_none()
+            );
+            // Same physical plane/point, but the other canonical branch must not
+            // be merged into the left branch by an overlap or midpoint heuristic.
+            let wrong = Fragment::new(
+                &sb,
+                &b,
+                root(&sb, &b, 0.125, [15.41, 15.42]),
+                root(&sb, &b, 0.5, [11.17, 11.18]),
+            )
+            .unwrap();
+            assert!(
+                qualify(&world, [&fa, &wrong], ranges, planes, 100000000, 256)
+                    .unwrap()
+                    .edge
+                    .is_none()
+            );
+            assert!(
+                qualify(&world, [&fa, &fb], ranges, planes, 100000000, 0)
+                    .unwrap()
+                    .edge
+                    .is_none()
+            );
+            assert!(
+                qualify(&world, [&fa, &fb], ranges, [None; 2], 100000000, 10000)
+                    .unwrap()
+                    .edge
+                    .is_none()
+            );
         }
     }
     #[test]
@@ -803,35 +1173,46 @@ mod tests {
             point(&sb, &b, 0.4, [12.3, 12.5]),
         )
         .unwrap();
-        let mut split_world=world.clone();
-        split_world.knots=vec![-5.,-5.,-1.,3.,3.];
-        split_world.control_points.insert(1,vec![0.5,0.,0.]);
-        split_world.weights.insert(1,1.);
-        for world in [world,split_world] {
-        let r = qualify(&world, [&fa, &fb], RANGES, [None, None], 100_000_000, 0).unwrap();
-        assert!(r.edge.is_some(), "{}", r.reason);
-        assert_eq!(r.driver_cells, 0);
-        let e = r.edge.unwrap();
-        let replay=crate::source_shared_edge_restore::restore(e.definition(),
-            crate::source_shared_edge_restore::Limits{mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!(replay.edge.expect(replay.reason).definition(),e.definition());
-        assert!(e.uses().iter().all(|f| f
-            .endpoints()
-            .iter()
-            .all(|p| matches!(p, Endpoint::Crossing { .. }))));
-        let wrong = Fragment::new(
-            &sb,
-            &b,
-            point(&sb, &b, 0.6 + 1e-12, [15.5, 15.7]),
-            point(&sb, &b, 0.4, [12.3, 12.5]),
-        )
-        .unwrap();
-        assert!(
-            qualify(&world, [&fa, &wrong], RANGES, [None, None], 100_000_000, 0)
-                .unwrap()
-                .edge
-                .is_none()
-        );
+        let mut split_world = world.clone();
+        split_world.knots = vec![-5., -5., -1., 3., 3.];
+        split_world.control_points.insert(1, vec![0.5, 0., 0.]);
+        split_world.weights.insert(1, 1.);
+        for world in [world, split_world] {
+            let r = qualify(&world, [&fa, &fb], RANGES, [None, None], 100_000_000, 0).unwrap();
+            assert!(r.edge.is_some(), "{}", r.reason);
+            assert_eq!(r.driver_cells, 0);
+            let e = r.edge.unwrap();
+            let replay = crate::source_shared_edge_restore::restore(
+                e.definition(),
+                crate::source_shared_edge_restore::Limits {
+                    mapping_cells_per_use: 10000,
+                    exact_work: 100000000,
+                    driver_cells: 10000,
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                replay.edge.expect(replay.reason).definition(),
+                e.definition()
+            );
+            assert!(e.uses().iter().all(|f| {
+                f.endpoints()
+                    .iter()
+                    .all(|p| matches!(p, Endpoint::Crossing { .. }))
+            }));
+            let wrong = Fragment::new(
+                &sb,
+                &b,
+                point(&sb, &b, 0.6 + 1e-12, [15.5, 15.7]),
+                point(&sb, &b, 0.4, [12.3, 12.5]),
+            )
+            .unwrap();
+            assert!(
+                qualify(&world, [&fa, &wrong], RANGES, [None, None], 100_000_000, 0)
+                    .unwrap()
+                    .edge
+                    .is_none()
+            );
         }
     }
     #[test]
@@ -927,41 +1308,50 @@ mod tests {
         for (axis, expected) in [0.609375, 0.859375, 0.].into_iter().enumerate() {
             assert!(b[axis][0] <= expected && expected <= b[axis][1]);
         }
-        let restore = |value| crate::source_shared_edge_restore::restore(value,
-            crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100_000_000,driver_cells:10000}).unwrap();
-        let restored=restore(edge.definition()).edge.unwrap();
-        assert_eq!(restored.definition(),edge.definition());
-        assert_eq!(restored.ranges(),edge.ranges());
-        assert_eq!(restored.reversed(),edge.reversed());
-        let mut displaced=edge.definition();
-        displaced["recipe"]["candidates"][0][1][0]=value_codec::json!(0.625+1e-12);
-        displaced["certificateQualified"]=value_codec::json!(true);
+        let restore = |value| {
+            crate::source_shared_edge_restore::restore(
+                value,
+                crate::source_shared_edge_restore::Limits {
+                    mapping_cells_per_use: 10000,
+                    exact_work: 100_000_000,
+                    driver_cells: 10000,
+                },
+            )
+            .unwrap()
+        };
+        let restored = restore(edge.definition()).edge.unwrap();
+        assert_eq!(restored.definition(), edge.definition());
+        assert_eq!(restored.ranges(), edge.ranges());
+        assert_eq!(restored.reversed(), edge.reversed());
+        let mut displaced = edge.definition();
+        displaced["recipe"]["candidates"][0][1][0] = value_codec::json!(0.625 + 1e-12);
+        displaced["certificateQualified"] = value_codec::json!(true);
         assert!(restore(displaced).edge.is_none());
 
         match &edge.uses()[0].endpoints()[1] {
             Endpoint::Crossing { point, .. } => assert_eq!(point.definition(), definition),
             _ => panic!("root expression was replaced"),
         }
-        assert!(qualify_with_candidates(
-            &world,
-            [&fa, &fb],
-            ranges,
-            [None; 2],
-            [[None, Some([0.625 + 1e-12, 0.609375])], [None, None]],
-            100_000_000,
-            0
-        )
-        .unwrap()
-        .edge
-        .is_none());
-        assert!(crate::source_root_parameter::verify(
-            &point,
-            [0.6, 0.609375],
-            cad_predicates::MAX_WORK
-        )
-        .unwrap()
-        .parameters
-        .is_none());
+        assert!(
+            qualify_with_candidates(
+                &world,
+                [&fa, &fb],
+                ranges,
+                [None; 2],
+                [[None, Some([0.625 + 1e-12, 0.609375])], [None, None]],
+                100_000_000,
+                0
+            )
+            .unwrap()
+            .edge
+            .is_none()
+        );
+        assert!(
+            crate::source_root_parameter::verify(&point, [0.6, 0.609375], cad_predicates::MAX_WORK)
+                .unwrap()
+                .parameters
+                .is_none()
+        );
         assert!(
             crate::source_root_parameter::verify(&point, [0.625, 0.609375], 1)
                 .unwrap()

@@ -279,66 +279,147 @@ pub(crate) fn qualify_with_prepared<'a,E: crate::source_shared_chord_map::ChordC
             // At original chart corners the two point boxes lose their common
             // anchor dependency. Integrate source derivatives instead; every
             // proposed projection is checked by a source-bound cone proof.
-            let mut corners=[[false;2];2];let mut anchored=true;
-            for s in 0..2 {for a in 0..2 {
-                if uv[s][a][0]==natural[s][a][0] {corners[s][a]=false;}
-                else if uv[s][a][1]==natural[s][a][1] {corners[s][a]=true;}
-                else {anchored=false;}
-            }}
-            let mut excluded=false;
-            if let Some(shared)=shared_boundary.as_ref() {
-                if (0..2).all(|side|shared.canonical_bounds(side,uv[side]).is_ok()) {
-                    let geometric=(limits.spans-out.spans).min(64);
-                    let normals=(limits.normal_spans-out.normal_spans).min(64);
-                    match shared.exclude_normal_chords(uv,limits.max_sine_squared,geometric,normals) {
-                        Ok((proof,used,normal_used))=>{out.spans+=used;out.normal_spans+=normal_used;excluded=proof;}
-                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=geometric;out.normal_spans+=normals;}
-                        Err(e)=>return Err(e),
+            let mut corners = [[false; 2]; 2];
+            let mut anchored = true;
+            for s in 0..2 {
+                for a in 0..2 {
+                    if uv[s][a][0] == natural[s][a][0] {
+                        corners[s][a] = false;
+                    } else if uv[s][a][1] == natural[s][a][1] {
+                        corners[s][a] = true;
+                    } else {
+                        anchored = false;
                     }
                 }
             }
-            if excluded {out.normal_products+=1;continue;}
+            let mut excluded = false;
+            if let Some(shared) = shared_boundary.as_ref() {
+                if (0..2).all(|side| shared.canonical_bounds(side, uv[side]).is_ok()) {
+                    let geometric = (limits.spans - out.spans).min(64);
+                    let normals = (limits.normal_spans - out.normal_spans).min(64);
+                    match shared.exclude_normal_chords(
+                        uv,
+                        limits.max_sine_squared,
+                        geometric,
+                        normals,
+                    ) {
+                        Ok((proof, used, normal_used)) => {
+                            out.spans += used;
+                            out.normal_spans += normal_used;
+                            excluded = proof;
+                        }
+                        Err(e) if e.code == "NURBS_NUMERIC_ERROR" => {
+                            out.spans += geometric;
+                            out.normal_spans += normals;
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+            if excluded {
+                out.normal_products += 1;
+                continue;
+            }
 
             if anchored {
-                'projections:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
-                    if x==0&&y==0&&z==0 {continue;}
-                    let allowance=(limits.spans-out.spans).min(64);
-                    if allowance==0 {break 'projections;}
-                    match nurbs_core::surface_self_chord::qualify_corner_chords(
-                        surfaces,corners,uv,[x as f64,y as f64,z as f64],limits.max_sine_squared,allowance) {
-                        Ok((proof,used))=>{out.spans+=used;if proof.is_some(){excluded=true;break 'projections;}}
-                        Err(e) if e.code=="NURBS_INVALID_INPUT"=>{break 'projections;}
-                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{
-                            out.spans+=allowance;break 'projections;
+                'projections: for x in -1..=1 {
+                    for y in -1..=1 {
+                        for z in -1..=1 {
+                            if x == 0 && y == 0 && z == 0 {
+                                continue;
+                            }
+                            let allowance = (limits.spans - out.spans).min(64);
+                            if allowance == 0 {
+                                break 'projections;
+                            }
+                            match nurbs_core::surface_self_chord::qualify_corner_chords(
+                                surfaces,
+                                corners,
+                                uv,
+                                [x as f64, y as f64, z as f64],
+                                limits.max_sine_squared,
+                                allowance,
+                            ) {
+                                Ok((proof, used)) => {
+                                    out.spans += used;
+                                    if proof.is_some() {
+                                        excluded = true;
+                                        break 'projections;
+                                    }
+                                }
+                                Err(e) if e.code == "NURBS_INVALID_INPUT" => {
+                                    break 'projections;
+                                }
+                                Err(e) if e.code == "NURBS_NUMERIC_ERROR" => {
+                                    out.spans += allowance;
+                                    break 'projections;
+                                }
+                                Err(e) => return Err(e),
+                            }
                         }
-                        Err(e)=>return Err(e),
-                    }
-                }}}
-            }
-            if !excluded {if let Some(paths)=anchors {
-                let projections:Vec<_>=(-1..=1).flat_map(|x|(-1..=1).flat_map(move|y|(-1..=1).map(move|z|[x as f64,y as f64,z as f64])))
-                    .filter(|p|*p!=[0.;3]).collect();
-                let allowance=(limits.spans-out.spans).min(64);
-                if allowance>0 {
-                    // Conservative query charge includes supplied factors even if
-                    // a path refusal prevents querying one of the normals.
-                    let count=factors.iter().filter(|f|f.is_some()).count();
-                    let normals=if count<=query_budget-out.factored_queries {out.factored_queries+=count;factors}else{[None,None]};
-                    let query=paths.qualify_product_projections_with_normals(uv,&projections,limits.max_sine_squared,allowance,normals);
-                    let query=match query {
-                        Err(e) if e.code=="NURBS_INVALID_INPUT" && normals.iter().any(Option::is_some)=>
-                            paths.qualify_product_projections(uv,&projections,limits.max_sine_squared,allowance),
-                        other=>other,
-                    };
-                    match query {
-                        Ok((proof,used))=>{out.spans+=used;excluded=proof.is_some();}
-                        Err(e) if e.code=="NURBS_INVALID_INPUT"=>{}
-                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=allowance;}
-                        Err(e)=>return Err(e),
                     }
                 }
-            }}
-            if excluded {out.normal_products+=1;continue;}
+            }
+            if !excluded {
+                if let Some(paths) = anchors {
+                    let projections: Vec<_> = (-1..=1)
+                        .flat_map(|x| {
+                            (-1..=1).flat_map(move |y| {
+                                (-1..=1).map(move |z| [x as f64, y as f64, z as f64])
+                            })
+                        })
+                        .filter(|p| *p != [0.; 3])
+                        .collect();
+                    let allowance = (limits.spans - out.spans).min(64);
+                    if allowance > 0 {
+                        // Conservative query charge includes supplied factors even if
+                        // a path refusal prevents querying one of the normals.
+                        let count = factors.iter().filter(|f| f.is_some()).count();
+                        let normals = if count <= query_budget - out.factored_queries {
+                            out.factored_queries += count;
+                            factors
+                        } else {
+                            [None, None]
+                        };
+                        let query = paths.qualify_product_projections_with_normals(
+                            uv,
+                            &projections,
+                            limits.max_sine_squared,
+                            allowance,
+                            normals,
+                        );
+                        let query = match query {
+                            Err(e)
+                                if e.code == "NURBS_INVALID_INPUT"
+                                    && normals.iter().any(Option::is_some) =>
+                            {
+                                paths.qualify_product_projections(
+                                    uv,
+                                    &projections,
+                                    limits.max_sine_squared,
+                                    allowance,
+                                )
+                            }
+                            other => other,
+                        };
+                        match query {
+                            Ok((proof, used)) => {
+                                out.spans += used;
+                                excluded = proof.is_some();
+                            }
+                            Err(e) if e.code == "NURBS_INVALID_INPUT" => {}
+                            Err(e) if e.code == "NURBS_NUMERIC_ERROR" => {
+                                out.spans += allowance;
+                            }
+                            Err(e) => return Err(e),
+                        }
+                    }
+                }
+            }
+            if excluded {
+                out.normal_products += 1;
+                continue;
+            }
             out.unresolved_products.push(uv);
             continue;
         };

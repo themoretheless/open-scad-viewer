@@ -1,8 +1,10 @@
 //! Restore a projectively parameterized body through fresh native gates.
-use crate::{source_projective_edge::Edge, source_shell_incidence, source_shell_geometry, source_volume};
+pub use crate::source_body_restore::Limits;
+use crate::{
+    source_projective_edge::Edge, source_shell_geometry, source_shell_incidence, source_volume,
+};
 use nurbs_core::{Error, Result};
 use value_codec::Value;
-pub use crate::source_body_restore::Limits;
 
 pub struct Report {
     pub incidence: source_shell_incidence::Report<Edge>,

@@ -21,32 +21,38 @@ mod iso_intersection;
 pub use iso_intersection::{IsoIntersection, generate_iso_intersection_curve};
 #[path = "face_cut/ruled_intersection.rs"]
 mod ruled_intersection;
-pub use ruled_intersection::{generate_ruled_plane_cut,generate_ruled_plane_cut_between};
-#[path="face_cut/bind_intersection.rs"]
+pub use ruled_intersection::{generate_ruled_plane_cut, generate_ruled_plane_cut_between};
+#[path = "face_cut/bind_intersection.rs"]
 mod bind_intersection;
 pub use bind_intersection::bind_intersection_ends;
-#[path="face_cut/automatic_partition.rs"]
+#[path = "face_cut/automatic_partition.rs"]
 mod automatic_partition;
-pub use automatic_partition::{AutomaticPartition,partition_ruled_at_face};
-#[path="face_cut/automatic_network.rs"]
+pub use automatic_partition::{AutomaticPartition, partition_ruled_at_face};
+#[path = "face_cut/automatic_network.rs"]
 mod automatic_network;
-pub use automatic_network::{SectionFace,AutomaticNetwork,partition_ruled_network};
+pub use automatic_network::{AutomaticNetwork, SectionFace, partition_ruled_network};
 #[path = "face_cut/automatic_cap.rs"]
 mod automatic_cap;
-pub use automatic_cap::{CapSelection, AutomaticCap, trim_ruled_and_cap};
+pub use automatic_cap::{AutomaticCap, CapSelection, trim_ruled_and_cap};
 #[path = "face_cut/automatic_fiber.rs"]
 mod automatic_fiber;
 pub use automatic_fiber::{
     AutomaticFiberPartition, partition_fiber_at_face, partition_fiber_at_face_automatic,
 };
-#[path = "face_cut/fiber_network.rs"]
-mod fiber_network;
 #[path = "face_cut/fiber_branches.rs"]
 mod fiber_branches;
-pub use fiber_branches::{FiberBranch, FiberBranchRefusal, FiberBranches, partition_fiber_branches_at_face};
-pub use fiber_network::{AutomaticFiberCapRequest, partition_fiber_network_automatic, trim_fiber_and_cap_automatic};
-pub use fiber_network::{FiberFaceRequest, FiberNetwork, partition_fiber_network,
-    FiberCapRequest, FiberCap, trim_fiber_and_cap};
+#[path = "face_cut/fiber_network.rs"]
+mod fiber_network;
+pub use fiber_branches::{
+    FiberBranch, FiberBranchRefusal, FiberBranches, partition_fiber_branches_at_face,
+};
+pub use fiber_network::{
+    AutomaticFiberCapRequest, partition_fiber_network_automatic, trim_fiber_and_cap_automatic,
+};
+pub use fiber_network::{
+    FiberCap, FiberCapRequest, FiberFaceRequest, FiberNetwork, partition_fiber_network,
+    trim_fiber_and_cap,
+};
 
 pub struct Segment {
     pub curve: Curve,
@@ -518,23 +524,13 @@ fn partition_with_budget(
     let forward: Vec<_> = path
         .iter()
         .enumerate()
-        .map(|(i, s)| Coedge::new(
-            edge_start + i,
-            false,
-            s.pcurve.clone(),
-        ))
+        .map(|(i, s)| Coedge::new(edge_start + i, false, s.pcurve.clone()))
         .collect();
     let backward = path
         .iter()
         .enumerate()
         .rev()
-        .map(|(i, s)| {
-            Ok(Coedge::new(
-                edge_start + i,
-                true,
-                s.pcurve.reverse()?,
-            ))
-        })
+        .map(|(i, s)| Ok(Coedge::new(edge_start + i, true, s.pcurve.reverse()?)))
         .collect::<Result<Vec<_>>>()?;
     let arc = |start: usize, end: usize| {
         let mut result = Vec::new();

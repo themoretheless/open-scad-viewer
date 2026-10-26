@@ -88,6 +88,21 @@ impl value_codec::Serialize for TopologyIds {
             "changeSet".into(),
             value_codec::Serialize::to_value(&self.change_set),
         );
+        let local_tolerances: BTreeMap<String, f64> = self
+            .local_tolerances_mm
+            .iter()
+            .map(|(id, tolerance)| (id.to_string(), *tolerance))
+            .collect();
+        object.insert(
+            "localTolerancesMm".into(),
+            value_codec::Serialize::to_value(&local_tolerances),
+        );
+        object.insert(
+            "sewedEdges".into(),
+            value_codec::Serialize::to_value(
+                &self.sewed_edges.iter().copied().collect::<Vec<_>>(),
+            ),
+        );
         value_codec::Value::Object(object)
     }
 }
@@ -107,6 +122,8 @@ impl<'de> value_codec::Deserialize<'de> for TopologyIds {
                 "bodies",
                 "lineage",
                 "changeSet",
+                "localTolerancesMm",
+                "sewedEdges",
             ]
             .contains(&key.as_str())
         }) {
@@ -139,6 +156,26 @@ impl<'de> value_codec::Deserialize<'de> for TopologyIds {
                 .map(value_codec::Deserialize::from_value)
                 .transpose()?
                 .unwrap_or_default(),
+            local_tolerances_mm: {
+                let encoded: BTreeMap<String, f64> = object
+                    .get("localTolerancesMm")
+                    .cloned()
+                    .map(value_codec::Deserialize::from_value)
+                    .transpose()?
+                    .unwrap_or_default();
+                encoded
+                    .into_iter()
+                    .map(|(id, tolerance)| {
+                        TopoId::parse(&id)
+                            .map(|id| (id, tolerance))
+                            .map_err(value_codec::error)
+                    })
+                    .collect::<value_codec::Result<_>>()?
+            },
+            sewed_edges: {
+                let encoded: Vec<TopoId> = read("sewedEdges")?;
+                encoded.into_iter().collect()
+            },
         })
     }
 }

@@ -47,16 +47,40 @@ fn planar_and_round_solids_match_analytic_mass_properties() {
 }
 #[test]
 fn world_coordinate_trim_endpoints_preserve_cap_mass() {
-    let shell=crate::operations::boolean(&cuboid([0.;3],[40.,30.,20.]).unwrap(),
-        &cuboid([2.,2.,2.],[38.,28.,22.]).unwrap(),"difference").unwrap();
-    let top=shell.faces.iter().position(|f|f.surface.control_points.iter().flatten().all(|p|p[2]==20.)).unwrap();
-    let edited=crate::operations::push_planar_face(&shell,top,0.5).unwrap();
-    near(mass_properties(&edited,1e-7,200_000).unwrap().signed_volume_mm3,7152.+264.*0.5);
+    let shell = crate::operations::boolean(
+        &cuboid([0.; 3], [40., 30., 20.]).unwrap(),
+        &cuboid([2., 2., 2.], [38., 28., 22.]).unwrap(),
+        "difference",
+    )
+    .unwrap();
+    let top = shell
+        .faces
+        .iter()
+        .position(|f| {
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 20.)
+        })
+        .unwrap();
+    let edited = crate::operations::push_planar_face(&shell, top, 0.5).unwrap();
+    near(
+        mass_properties(&edited, 1e-7, 200_000)
+            .unwrap()
+            .signed_volume_mm3,
+        7152. + 264. * 0.5,
+    );
 }
 #[test]
 fn narrow_world_chart_after_repeated_cap_placement_preserves_mass() {
     let model:Model=value_codec::from_str(include_str!("../../../../../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/rotated-enclosure-mass.json")).unwrap();
-    near(mass_properties(&model,1e-7,300_000).unwrap().signed_volume_mm3,7416.);
+    near(
+        mass_properties(&model, 1e-7, 300_000)
+            .unwrap()
+            .signed_volume_mm3,
+        7416.,
+    );
 }
 #[test]
 fn holes_translations_and_resource_refusals_are_explicit() {

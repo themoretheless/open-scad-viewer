@@ -314,9 +314,15 @@ fn boundary_centered(cells:&[Poly],work:&mut Work,dyadic:bool)->Result<(Vec<P>,V
         // interiors while avoiding gratuitous 1/3 coordinates on dyadic input.
         // The legacy polyhedral recipe keeps its original centroid witnesses.
         let center = if dyadic {
-            let n=f.len().next_power_of_two();
-            std::array::from_fn(|k|(f.iter().map(|p|p[k].clone()).sum::<Q>()+&f.last().unwrap()[k]*integer((n-f.len())as i64))/integer(n as i64))
-        }else{centroid(f)};
+            let n = f.len().next_power_of_two();
+            std::array::from_fn(|k| {
+                (f.iter().map(|p| p[k].clone()).sum::<Q>()
+                    + &f.last().unwrap()[k] * integer((n - f.len()) as i64))
+                    / integer(n as i64)
+            })
+        } else {
+            centroid(f)
+        };
         guard(&center)?;
         all.insert(center.clone());
         for i in 0..f.len() {

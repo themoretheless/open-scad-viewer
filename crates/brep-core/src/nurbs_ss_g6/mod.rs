@@ -30,21 +30,21 @@ use std::collections::{BTreeMap, BTreeSet};
 
 type GraphFrame<'a> = (usize, &'a Surface, [f64; 3], [f64; 3], [f64; 3], [f64; 3]);
 
-mod g6_maturity;
-mod certify_exact_planar_iso_intersection;
-mod join_certified_multispan_fragments;
-mod nurbs_boolean_imprint_certificate;
-mod nurbs_boolean_graph_patch_v3;
-mod author_general_operation_naming;
 mod author_general_nurbs_boolean;
+mod author_general_operation_naming;
+mod certify_exact_planar_iso_intersection;
+mod g6_maturity;
+mod join_certified_multispan_fragments;
 mod nurbs_boolean_graph_containment_v4;
+mod nurbs_boolean_graph_patch_v3;
+mod nurbs_boolean_imprint_certificate;
 #[cfg(test)]
 mod tests;
-pub use g6_maturity::*;
-pub use certify_exact_planar_iso_intersection::*;
-pub use join_certified_multispan_fragments::*;
-pub use nurbs_boolean_imprint_certificate::*;
-pub use nurbs_boolean_graph_patch_v3::*;
-use author_general_operation_naming::*;
 pub use author_general_nurbs_boolean::*;
+use author_general_operation_naming::*;
+pub use certify_exact_planar_iso_intersection::*;
+pub use g6_maturity::*;
+pub use join_certified_multispan_fragments::*;
 pub use nurbs_boolean_graph_containment_v4::*;
+pub use nurbs_boolean_graph_patch_v3::*;
+pub use nurbs_boolean_imprint_certificate::*;

@@ -26,6 +26,20 @@ it('keeps independent snapshots and preserves redo on a no-op commit', () => {
   expect(history.undo().objects[0].name).toBe('initial')
 })
 
+it('records operation names across undo, redo and no-op commits', () => {
+  const history = new MeshHistory(document('initial'))
+  history.commit(document('repaired'), 'Repair mesh (Full)')
+  expect(history.currentOperation).toBe('Repair mesh (Full)')
+  expect(history.undoOperation).toBe('Repair mesh (Full)')
+  history.commit(history.document, 'Ignored no-op')
+  expect(history.currentOperation).toBe('Repair mesh (Full)')
+  history.undo()
+  expect(history.redoOperation).toBe('Repair mesh (Full)')
+  history.redo()
+  expect(history.currentOperation).toBe('Repair mesh (Full)')
+  expect(history.canRedo).toBe(false)
+})
+
 it('retains exactly 80 past snapshots and moves sizes with undo/redo', () => {
   const history = new MeshHistory(document('0'))
   for (let i=1;i<=90;i++) history.commit(document(String(i)))

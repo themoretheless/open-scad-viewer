@@ -356,37 +356,38 @@ fn large_model_builds_within_a_second() {
             vertices: [edge.vertices[0] + v, edge.vertices[1] + v],
             curve: edge.curve.clone(),
         }));
-        m.0.loops.extend(unit.loops.iter().map(|wire| crate::Loop {
-            coedges: wire
-                .coedges
-                .iter()
-                .map(|c| crate::Coedge::new(
-                    c.edge + e,
-                    c.reversed,
-                    c.pcurve.clone(),
-                ))
-                .collect(),
+        m.0.loops.extend(unit.loops.iter().map(|wire| {
+            crate::Loop {
+                coedges: wire
+                    .coedges
+                    .iter()
+                    .map(|c| crate::Coedge::new(c.edge + e, c.reversed, c.pcurve.clone()))
+                    .collect(),
+            }
         }));
         m.0.faces.extend(unit.faces.iter().map(|face| crate::Face {
             surface: face.surface.clone(),
             outer: face.outer + l,
             holes: face.holes.iter().map(|h| h + l).collect(),
         }));
-        m.0.shells.extend(unit.shells.iter().map(|shell| Shell {
-            faces: shell
-                .faces
-                .iter()
-                .map(|u| brep_topology::FaceUse {
-                    face: u.face + f,
-                    reversed: u.reversed,
-                })
-                .collect(),
-            closed: shell.closed,
+        m.0.shells.extend(unit.shells.iter().map(|shell| {
+            Shell {
+                faces: shell
+                    .faces
+                    .iter()
+                    .map(|u| brep_topology::FaceUse {
+                        face: u.face + f,
+                        reversed: u.reversed,
+                    })
+                    .collect(),
+                closed: shell.closed,
+            }
         }));
-        m.0.bodies.extend(unit.bodies.iter().map(|body| brep_topology::Body {
-            outer_shell: body.outer_shell + s,
-            inner_shells: body.inner_shells.iter().map(|i| i + s).collect(),
-        }));
+        m.0.bodies
+            .extend(unit.bodies.iter().map(|body| brep_topology::Body {
+                outer_shell: body.outer_shell + s,
+                inner_shells: body.inner_shells.iter().map(|i| i + s).collect(),
+            }));
     }
     assert_eq!(m.faces.len(), copies * 6);
     let start = std::time::Instant::now();

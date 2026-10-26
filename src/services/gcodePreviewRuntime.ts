@@ -2,6 +2,7 @@ import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, inspectGcode } from './g
 import { flattenGroupGeometry } from './meshFlatten'
 import { warmGeometryKernel } from './geometry/kernel'
 import { checkGcodePreviewJob, type GcodePreviewJob, type GcodePreviewRequest, type GcodePreviewResponse } from './gcodePreviewProtocol'
+import { assertPrintReady, PrintReadinessError } from './printReadiness'
 
 function requestId(request: GcodePreviewRequest): number {
   return request && typeof request === 'object' && Number.isSafeInteger(request.id) ? request.id : 0
@@ -14,7 +15,13 @@ function checkedJob(request: GcodePreviewRequest): GcodePreviewJob {
 }
 
 function failure(id: number, error: unknown): GcodePreviewResponse {
-  return { version: 1, id, ok: false, error: error instanceof Error ? error.message : String(error) }
+  return {
+    version: 1,
+    id,
+    ok: false,
+    error: error instanceof Error ? error.message : String(error),
+    ...(error instanceof PrintReadinessError ? { errorCode: error.code, errorDetails: error.details } : {}),
+  }
 }
 
 function executeJob(id: number, job: GcodePreviewJob): GcodePreviewResponse {
@@ -36,6 +43,7 @@ function executeJob(id: number, job: GcodePreviewJob): GcodePreviewResponse {
     }
   }
   const mesh = flattenGroupGeometry([job.mesh])
+  assertPrintReady(mesh)
   if (job.kind === 'job') {
     const result = emitPolygonMeshGcodeJob(mesh, job.zMin, job.zMax, job.settings)
     return {

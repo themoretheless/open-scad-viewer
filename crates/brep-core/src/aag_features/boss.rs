@@ -47,30 +47,59 @@ pub fn find_bosses(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<Bo
     for candidate in candidates {
         guard.tick()?;
         let top_offset = dot(candidate.top_normal, candidate.top_center);
-        let top_faces = candidate.faces.iter().copied().filter(|&face| {
-            let attrs = graph.nodes[face].attrs.as_ref().expect("fresh attrs checked");
-            if attrs.class != SurfaceClass::Plane {
-                return false;
-            }
-            super::pockets::outward_normal(model, face, 0.5, 0.5)
-                .ok()
-                .flatten()
-                .is_some_and(|normal| {
-                    dot(normal, candidate.top_normal) > 1. - AXIS_DOT_TOLERANCE
-                        && (dot(normal, candidate.top_center) - top_offset).abs() <= linear_tol
-                })
-        }).collect::<Vec<_>>();
-        let wall_faces = candidate.faces.iter().copied()
-            .filter(|face| !top_faces.contains(face)).collect::<Vec<_>>();
-        let top_area = top_faces.iter()
-            .map(|&face| graph.nodes[face].attrs.as_ref().expect("fresh attrs checked").area)
+        let top_faces = candidate
+            .faces
+            .iter()
+            .copied()
+            .filter(|&face| {
+                let attrs = graph.nodes[face]
+                    .attrs
+                    .as_ref()
+                    .expect("fresh attrs checked");
+                if attrs.class != SurfaceClass::Plane {
+                    return false;
+                }
+                super::pockets::outward_normal(model, face, 0.5, 0.5)
+                    .ok()
+                    .flatten()
+                    .is_some_and(|normal| {
+                        dot(normal, candidate.top_normal) > 1. - AXIS_DOT_TOLERANCE
+                            && (dot(normal, candidate.top_center) - top_offset).abs() <= linear_tol
+                    })
+            })
+            .collect::<Vec<_>>();
+        let wall_faces = candidate
+            .faces
+            .iter()
+            .copied()
+            .filter(|face| !top_faces.contains(face))
+            .collect::<Vec<_>>();
+        let top_area = top_faces
+            .iter()
+            .map(|&face| {
+                graph.nodes[face]
+                    .attrs
+                    .as_ref()
+                    .expect("fresh attrs checked")
+                    .area
+            })
             .sum::<f64>();
         let kind = if wall_faces.iter().all(|&face| {
-            graph.nodes[face].attrs.as_ref().expect("fresh attrs checked").class == SurfaceClass::Cylinder
+            graph.nodes[face]
+                .attrs
+                .as_ref()
+                .expect("fresh attrs checked")
+                .class
+                == SurfaceClass::Cylinder
         }) {
             BossKind::Cylindrical
         } else if wall_faces.iter().all(|&face| {
-            graph.nodes[face].attrs.as_ref().expect("fresh attrs checked").class == SurfaceClass::Plane
+            graph.nodes[face]
+                .attrs
+                .as_ref()
+                .expect("fresh attrs checked")
+                .class
+                == SurfaceClass::Plane
         }) {
             BossKind::Prismatic
         } else {

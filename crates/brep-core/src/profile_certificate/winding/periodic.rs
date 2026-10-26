@@ -1,24 +1,32 @@
 //! Original periodic chain admission followed by exact UV nonzero-fill regions.
 mod multispan;
-pub use multispan::{MultispanSurfaceRegions, OwnedMultispanPeriodicFaces, bind_multispan_regions_to_surface, assemble_multispan_periodic_surface_faces, MultispanChartAlias, MultispanPeriodicRegions, regularize_multispan_periodic_winding};
 use super::*;
+pub use multispan::{
+    MultispanChartAlias, MultispanPeriodicRegions, MultispanSurfaceRegions,
+    OwnedMultispanPeriodicFaces, assemble_multispan_periodic_surface_faces,
+    bind_multispan_regions_to_surface, regularize_multispan_periodic_winding,
+};
 mod linear_contacts;
 pub use linear_contacts::{LinearPeriodicContactRegions, regularize_linear_periodic_contacts};
 mod clock_mapped;
 mod face_build;
-pub use clock_mapped::{OwnedClockMappedFaces, assemble_clock_mapped_surface_faces, ClockMappedSurfaceRegions, bind_clock_mapped_regions_to_surface, ClockMappedPeriodicRegions, regularize_clock_mapped_periodic_winding};
+pub use clock_mapped::{
+    ClockMappedPeriodicRegions, ClockMappedSurfaceRegions, OwnedClockMappedFaces,
+    assemble_clock_mapped_surface_faces, bind_clock_mapped_regions_to_surface,
+    regularize_clock_mapped_periodic_winding,
+};
 mod exact_contacts;
 pub use exact_contacts::{ExactPeriodicContactRegions, regularize_exact_periodic_contacts};
 mod approximate;
 mod coherent;
-pub use coherent::{OwnedPeriodicFaces, PeriodicFaceLimits, assemble_periodic_surface_faces};
 pub use approximate::{
     ApproximatePeriodicWindingRegions, regularize_approximated_periodic_winding,
 };
 pub use coherent::{
     CoherentPeriodicWindingRegions, SurfacePeriodicRegions, bind_periodic_regions_to_surface,
-    regularize_projective_coherent_periodic_winding, regularize_coherent_periodic_winding,
+    regularize_coherent_periodic_winding, regularize_projective_coherent_periodic_winding,
 };
+pub use coherent::{OwnedPeriodicFaces, PeriodicFaceLimits, assemble_periodic_surface_faces};
 use nurbs_core::periodic_trim::{
     self as periodic, ChartAssemblyLimits, Report, WeightedChartAssembly, WeightedChartGraph,
 };

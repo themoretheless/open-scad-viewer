@@ -41,7 +41,15 @@ impl PairContactProof<'_> {
             Self::ProfilePaired(_) => "profile-paired-contact",
             Self::ProfileRuled(_) => "profile-ruled-contact",
             Self::ProfileBoundary(_) => "profile-boundary-contact",
-            Self::TransitionCoordinate(_) => "transition-coordinate-separated",            Self::ProfileVertex(c) => if c.excluded_domain().is_some() {"profile-vertex-excluded"} else {"profile-vertex-contact"},            Self::TransitionXyBounds(_) => "transition-xy-bounds-separated",
+            Self::TransitionCoordinate(_) => "transition-coordinate-separated",
+            Self::ProfileVertex(c) => {
+                if c.excluded_domain().is_some() {
+                    "profile-vertex-excluded"
+                } else {
+                    "profile-vertex-contact"
+                }
+            }
+            Self::TransitionXyBounds(_) => "transition-xy-bounds-separated",
             Self::TransitionXyHull(_) => "transition-xy-hull-separated",
             Self::Boundary(_) => "boundary-contact",
             Self::ProfileHull(_) => "profile-hull-separated",
@@ -133,23 +141,40 @@ impl ShellContactAudit<'_> {
     }
     /// Transport diagnostics only; this Value never restores geometric authority.
     pub fn diagnostics(&self) -> value_codec::Value {
-        let kind=|face:&ShellFace| match face.kind() {ShellFaceKind::Original(_)=>"original",ShellFaceKind::Retained(_)=>"retained",ShellFaceKind::Transition=>"transition"};
-        let mut pending_reasons=std::collections::BTreeMap::<String,usize>::new();
-        let mut pending_kinds=std::collections::BTreeMap::<String,usize>::new();
+        let kind = |face: &ShellFace| match face.kind() {
+            ShellFaceKind::Original(_) => "original",
+            ShellFaceKind::Retained(_) => "retained",
+            ShellFaceKind::Transition => "transition",
+        };
+        let mut pending_reasons = std::collections::BTreeMap::<String, usize>::new();
+        let mut pending_kinds = std::collections::BTreeMap::<String, usize>::new();
         for pair in &self.pairs {
-            if !matches!(pair.proof,PairContactProof::Pending) {continue;}
-            *pending_reasons.entry(pair.reason.into()).or_default()+=1;
-            let mut kinds=pair.support.faces.map(|i|kind(&self.owners[i]));
-            kinds.sort();
-            *pending_kinds.entry(format!("{}-{}",kinds[0],kinds[1])).or_default()+=1;
-        }
-        let faces=self.owners.iter().enumerate().map(|(index,face)| {
-            match face.kind() {
-                ShellFaceKind::Original(source)=>value_codec::json!({"index":index,"kind":"original","sourceFace":source}),
-                ShellFaceKind::Retained(side)=>value_codec::json!({"index":index,"kind":"retained","retainedSide":side}),
-                ShellFaceKind::Transition=>value_codec::json!({"index":index,"kind":"transition"}),
+            if !matches!(pair.proof, PairContactProof::Pending) {
+                continue;
             }
-        }).collect::<Vec<_>>();
+            *pending_reasons.entry(pair.reason.into()).or_default() += 1;
+            let mut kinds = pair.support.faces.map(|i| kind(&self.owners[i]));
+            kinds.sort();
+            *pending_kinds
+                .entry(format!("{}-{}", kinds[0], kinds[1]))
+                .or_default() += 1;
+        }
+        let faces = self
+            .owners
+            .iter()
+            .enumerate()
+            .map(|(index, face)| match face.kind() {
+                ShellFaceKind::Original(source) => {
+                    value_codec::json!({"index":index,"kind":"original","sourceFace":source})
+                }
+                ShellFaceKind::Retained(side) => {
+                    value_codec::json!({"index":index,"kind":"retained","retainedSide":side})
+                }
+                ShellFaceKind::Transition => {
+                    value_codec::json!({"index":index,"kind":"transition"})
+                }
+            })
+            .collect::<Vec<_>>();
         value_codec::json!({"version":1,"kind":"expression-shell-contact-audit","pendingPairs":self.pending_pairs(),
             "faces":faces,"pendingByReason":pending_reasons,"pendingByFaceKinds":pending_kinds,
             "cells":self.cells,"spans":self.spans,"domainCells":self.domain_cells,"exactWork":self.exact_work,"driverCells":self.driver_cells,"linearCells":self.linear_cells,

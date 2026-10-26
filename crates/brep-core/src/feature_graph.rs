@@ -278,9 +278,11 @@ impl FeatureGraph {
                     reason,
                 });
             }
-            if feature.suppressed || incoming.get(&id).is_some_and(|parents| {
-                parents.iter().any(|parent| skipped.contains(parent))
-            }) {
+            if feature.suppressed
+                || incoming
+                    .get(&id)
+                    .is_some_and(|parents| parents.iter().any(|parent| skipped.contains(parent)))
+            {
                 skipped.insert(id);
             }
         }

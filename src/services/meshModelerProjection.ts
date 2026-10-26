@@ -2,6 +2,7 @@ import {meshObjectStats,buildEdgeList} from './meshEditing'
 import {callGeometryRust} from './geometry/kernel'
 import {projectDirectPoint, type OrbitCamera } from './directModelingTools'
 import { inspectPolygonMesh, type PolygonMesh } from './geometry/polygon'
+import type { KernelManifoldReport } from './geometry/manifoldAnalysis'
 
 // Editing publishes a new mesh. Reuse its topology report while only the camera moves.
 const orientation = new WeakMap<PolygonMesh, number>()
@@ -23,31 +24,51 @@ export function projectMeshModelerFaces(mesh: PolygonMesh, camera: OrbitCamera) 
   return faces.map(([points, face, depth]) => ({points: points.map(p => `${p[0]},${-p[1]}`).join(' '), face, depth}))
 }
 
-export function projectMeshModelerObject(object:{visible?:boolean;mesh:PolygonMesh},camera:OrbitCamera,selectMode:string,getEdgeList:(mesh:PolygonMesh)=>Array<[number,number]>) {
-  if (!object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
-  const cam = camera
-  const tris = projectMeshModelerFaces(object.mesh, cam)
-  const verts: Array<{ x: number; y: number; id: number }> = []
-  const pos = object.mesh.positions
-  if (selectMode === 'vertex') {
-    for (let i = 0, o = 0; o < pos.length; i++, o += 3) {
-      const p = projectDirectPoint([pos[o], pos[o + 1], pos[o + 2]], cam)
-      verts.push({ x: p[0], y: -p[1], id: i })
-    }
+export interface ProjectedMeshLine { x1: number; y1: number; x2: number; y2: number; id: number }
+export interface ProjectedMeshVertex { x: number; y: number; id: number }
+export interface MeshManifoldSceneOverlay {
+  boundaryEdges: ProjectedMeshLine[]
+  nonManifoldEdges: ProjectedMeshLine[]
+  nonManifoldVertices: ProjectedMeshVertex[]
+}
+
+const emptyManifoldOverlay = (): MeshManifoldSceneOverlay => ({boundaryEdges: [], nonManifoldEdges: [], nonManifoldVertices: []})
+
+export function projectMeshModelerObject(
+  object:{visible?:boolean;mesh:PolygonMesh},
+  camera:OrbitCamera,
+  selectMode:string,
+  getEdgeList:(mesh:PolygonMesh)=>Array<[number,number]>,
+  manifoldReport?:KernelManifoldReport,
+) {
+  if (!object.visible) return {
+    tris: [] as Array<{ points: string; face: number; depth: number }>,
+    verts: [] as ProjectedMeshVertex[], edges: [] as ProjectedMeshLine[], defects: emptyManifoldOverlay(),
   }
-  const edges = selectMode === 'edge' ? (() => {
-    const edgeList = getEdgeList(object.mesh)
-    const vertexCount = pos.length / 3
-    const projX = new Float64Array(vertexCount)
-    const projY = new Float64Array(vertexCount)
-    for (let i = 0, o = 0; i < vertexCount; i++, o += 3) {
-      const p = projectDirectPoint([pos[o], pos[o + 1], pos[o + 2]], cam)
-      projX[i] = p[0]
-      projY[i] = -p[1]
-    }
-    return edgeList.map(([a, b], id) => ({ id, x1: projX[a], y1: projY[a], x2: projX[b], y2: projY[b] }))
-  })() : []
-  return { tris, verts, edges }
+  const tris = projectMeshModelerFaces(object.mesh, camera)
+  const pos = object.mesh.positions
+  let projected: ProjectedMeshVertex[] | undefined
+  const vertices = () => projected ??= Array.from({length: pos.length / 3}, (_, id) => {
+    const p = projectDirectPoint([pos[id * 3], pos[id * 3 + 1], pos[id * 3 + 2]], camera)
+    return {x: p[0], y: -p[1], id}
+  })
+  const verts = selectMode === 'vertex' ? vertices() : []
+  const edges = selectMode === 'edge' ? getEdgeList(object.mesh).map(([a, b], id) => {
+    const points = vertices()
+    return {id, x1: points[a].x, y1: points[a].y, x2: points[b].x, y2: points[b].y}
+  }) : []
+  const defects = emptyManifoldOverlay()
+  if (manifoldReport && !manifoldReport.isManifold) {
+    const points = vertices()
+    const lines = (indices: Uint32Array) => Array.from({length: indices.length / 2}, (_, id): ProjectedMeshLine => {
+      const a = points[indices[id * 2]], b = points[indices[id * 2 + 1]]
+      return {id, x1: a.x, y1: a.y, x2: b.x, y2: b.y}
+    })
+    defects.boundaryEdges = lines(manifoldReport.boundaryEdges)
+    defects.nonManifoldEdges = lines(manifoldReport.nonManifoldEdges)
+    defects.nonManifoldVertices = Array.from(manifoldReport.nonManifoldVertices, id => points[id])
+  }
+  return { tris, verts, edges, defects }
 }
 
 const statistics=new WeakMap<PolygonMesh,ReturnType<typeof meshObjectStats>&{edges:number}>()

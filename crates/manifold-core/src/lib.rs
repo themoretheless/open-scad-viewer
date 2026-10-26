@@ -23,10 +23,12 @@ pub(crate) fn edge_key(a: usize, b: usize) -> EdgeKey {
 
 mod metrics;
 pub mod repair;
+mod validation;
 pub mod vertex_link;
 
 pub use metrics::{ComponentMetrics, MeshMetrics, metrics};
 pub use repair::{RepairMode, RepairOutcome, RepairReport, repair, repair_with_mode};
+pub use validation::{IndexedMeshError, validate_indexed_mesh};
 pub use vertex_link::{VertexLinkDefect, validate_vertex_links};
 
 /// Structured manifoldness report for an indexed triangle mesh.

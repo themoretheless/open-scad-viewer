@@ -289,8 +289,12 @@ pub(super) fn move_face_local(
             "Move consumes the whole body; refused instead of returning an empty solid",
         ));
     }
-    let mut staged = model_from_trimmed_polygons(kept, tolerance)
-        .map_err(|e| Error::new(MOVE_UNSUPPORTED, format!("Move rebuild failed: {}", e.message)))?;
+    let mut staged = model_from_trimmed_polygons(kept, tolerance).map_err(|e| {
+        Error::new(
+            MOVE_UNSUPPORTED,
+            format!("Move rebuild failed: {}", e.message),
+        )
+    })?;
     restore_unchanged_ids(&mut staged, model, guard)?;
     staged.refresh_change_set(&[model]);
     staged.validate()?;
@@ -351,15 +355,18 @@ pub(super) fn canonical_polygons(
         let rings = |ring_id: usize| -> Result<Vec<[f64; 3]>> {
             let mut points: Vec<[f64; 3]> = loop_vertices(model, ring_id)?
                 .iter()
-                .map(|&v| substitute.get(&v).copied().unwrap_or(model.vertices[v].point))
+                .map(|&v| {
+                    substitute
+                        .get(&v)
+                        .copied()
+                        .unwrap_or(model.vertices[v].point)
+                })
                 .collect();
             // Substitution can collapse a ring segment (a shard shrinking to
             // a triangle): weld consecutive duplicates, including the wrap.
             let tol = model.tolerance_mm * 4.;
             points.dedup_by(|a, b| dist(*a, *b) <= tol);
-            while points.len() > 1
-                && dist(points[0], points[points.len() - 1]) <= tol
-            {
+            while points.len() > 1 && dist(points[0], points[points.len() - 1]) <= tol {
                 points.pop();
             }
             if reversed_of[face_id] {

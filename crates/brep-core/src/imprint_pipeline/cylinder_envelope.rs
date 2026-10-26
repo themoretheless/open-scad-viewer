@@ -80,27 +80,44 @@ pub(crate) fn rounded_profile_curves(
     }
     // Nonadjacent boundary spans must be proved disjoint. A valid adjacent
     // tangent budget alone does not exclude a collision across a concave notch.
-    let mut spec = cad_predicates::ToleranceContext::default_valid().specification().clone();
+    let mut spec = cad_predicates::ToleranceContext::default_valid()
+        .specification()
+        .clone();
     spec.linear_abs = source.tolerance_mm;
-    let bounds: Vec<_> = curves.iter().map(|curve| {
-        let mut min = [f64::INFINITY; 2];
-        let mut max = [f64::NEG_INFINITY; 2];
-        for point in &curve.control_points {
-            for axis in 0..2 { min[axis] = min[axis].min(point[axis]); max[axis] = max[axis].max(point[axis]); }
-        }
-        (min, max)
-    }).collect();
+    let bounds: Vec<_> = curves
+        .iter()
+        .map(|curve| {
+            let mut min = [f64::INFINITY; 2];
+            let mut max = [f64::NEG_INFINITY; 2];
+            for point in &curve.control_points {
+                for axis in 0..2 {
+                    min[axis] = min[axis].min(point[axis]);
+                    max[axis] = max[axis].max(point[axis]);
+                }
+            }
+            (min, max)
+        })
+        .collect();
     for i in 0..curves.len() {
         for j in i + 2..curves.len() {
-            if i == 0 && j + 1 == curves.len() { continue; }
+            if i == 0 && j + 1 == curves.len() {
+                continue;
+            }
             let (a_min, a_max) = bounds[i];
             let (b_min, b_max) = bounds[j];
-            if (0..2).any(|axis| a_max[axis] + source.tolerance_mm < b_min[axis] || b_max[axis] + source.tolerance_mm < a_min[axis]) { continue; }
+            if (0..2).any(|axis| {
+                a_max[axis] + source.tolerance_mm < b_min[axis]
+                    || b_max[axis] + source.tolerance_mm < a_min[axis]
+            }) {
+                continue;
+            }
             let report = nurbs_core::intersection::intersect_curve_curve_report(
                 &curves[i],
                 &curves[j],
-                Some(cad_predicates::ToleranceContext::new(spec.clone())
-                    .map_err(|_| refuse("Invalid fillet collision tolerance"))?),
+                Some(
+                    cad_predicates::ToleranceContext::new(spec.clone())
+                        .map_err(|_| refuse("Invalid fillet collision tolerance"))?,
+                ),
             )?;
             if !report.report.unresolved.is_empty() || !report.report.components.is_empty() {
                 return Err(refuse(

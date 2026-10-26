@@ -303,10 +303,10 @@ pub fn own_periodic_support_boundaries(
 }
 #[cfg(test)]
 #[path = "periodic_support_boundaries/tests/tests_fixtures.rs"]
-pub(in crate::profile_certificate::span_intersections::translated) mod tests ;
+pub(in crate::profile_certificate::span_intersections::translated) mod tests;
 
 #[path = "periodic_support_boundaries/support_plan.rs"]
 mod support_plan;
+use support_plan::basis;
 use support_plan::plan;
 use support_plan::world_curve;
-use support_plan::basis;

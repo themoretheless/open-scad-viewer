@@ -1,12 +1,21 @@
 //! Exact nonzero-fill regularization of separated simple original NURBS wires.
 use super::*;
 mod periodic;
-pub use periodic::{LinearPeriodicContactRegions, regularize_linear_periodic_contacts, MultispanSurfaceRegions, OwnedMultispanPeriodicFaces, bind_multispan_regions_to_surface, assemble_multispan_periodic_surface_faces, MultispanChartAlias, MultispanPeriodicRegions, regularize_multispan_periodic_winding, OwnedClockMappedFaces, assemble_clock_mapped_surface_faces, ClockMappedSurfaceRegions, bind_clock_mapped_regions_to_surface, ClockMappedPeriodicRegions, regularize_clock_mapped_periodic_winding, ExactPeriodicContactRegions, regularize_exact_periodic_contacts,OwnedPeriodicFaces, PeriodicFaceLimits, assemble_periodic_surface_faces};
 pub use periodic::{
     ApproximatePeriodicWindingRegions, CoherentPeriodicWindingRegions, PeriodicWindingRegions,
     SurfacePeriodicRegions, bind_periodic_regions_to_surface,
     regularize_approximated_periodic_winding, regularize_coherent_periodic_winding,
-    regularize_projective_coherent_periodic_winding, regularize_periodic_winding,
+    regularize_periodic_winding, regularize_projective_coherent_periodic_winding,
+};
+pub use periodic::{
+    ClockMappedPeriodicRegions, ClockMappedSurfaceRegions, ExactPeriodicContactRegions,
+    LinearPeriodicContactRegions, MultispanChartAlias, MultispanPeriodicRegions,
+    MultispanSurfaceRegions, OwnedClockMappedFaces, OwnedMultispanPeriodicFaces,
+    OwnedPeriodicFaces, PeriodicFaceLimits, assemble_clock_mapped_surface_faces,
+    assemble_multispan_periodic_surface_faces, assemble_periodic_surface_faces,
+    bind_clock_mapped_regions_to_surface, bind_multispan_regions_to_surface,
+    regularize_clock_mapped_periodic_winding, regularize_exact_periodic_contacts,
+    regularize_linear_periodic_contacts, regularize_multispan_periodic_winding,
 };
 
 #[derive(Clone, Debug)]

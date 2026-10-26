@@ -35,32 +35,68 @@ pub struct OrientedExpressionVolume<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     reverse_orientation: bool,
 }
 impl OrientedExpressionVolume<'_, '_, '_, '_, '_, '_, '_, '_, '_, '_> {
-    pub fn geometry(&self) -> &EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> { self.geometry }
-    pub fn signed_bounds(&self) -> [f64; 2] { self.signed_bounds }
-    pub fn positive_bounds(&self) -> [f64; 2] { self.positive_bounds }
-    pub fn reverse_orientation(&self) -> bool { self.reverse_orientation }
+    pub fn geometry(&self) -> &EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
+        self.geometry
+    }
+    pub fn signed_bounds(&self) -> [f64; 2] {
+        self.signed_bounds
+    }
+    pub fn positive_bounds(&self) -> [f64; 2] {
+        self.positive_bounds
+    }
+    pub fn reverse_orientation(&self) -> bool {
+        self.reverse_orientation
+    }
 }
 pub struct ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     pub report: ExpressionVolumeReport,
     pub certificate: Option<OrientedExpressionVolume<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>>,
 }
-fn admitted_volume_bounds(bounds: Option<[f64; 2]>, complete: bool, error: f64) -> Result<Option<([f64; 2], bool)>> {
-    if !complete { return Ok(None); }
-    let Some([lo, hi]) = bounds else { return Ok(None); };
+fn admitted_volume_bounds(
+    bounds: Option<[f64; 2]>,
+    complete: bool,
+    error: f64,
+) -> Result<Option<([f64; 2], bool)>> {
+    if !complete {
+        return Ok(None);
+    }
+    let Some([lo, hi]) = bounds else {
+        return Ok(None);
+    };
     let value = I::new(lo, hi)?;
-    if I::point(value.hi).sub(I::point(value.lo))?.hi > error || (lo <= 0. && hi >= 0.) { return Ok(None); }
-    if hi < 0. { Ok(Some(([-hi, -lo], true))) } else { Ok(Some(([lo, hi], false))) }
+    if I::point(value.hi).sub(I::point(value.lo))?.hi > error || (lo <= 0. && hi >= 0.) {
+        return Ok(None);
+    }
+    if hi < 0. {
+        Ok(Some(([-hi, -lo], true)))
+    } else {
+        Ok(Some(([lo, hi], false)))
+    }
 }
-impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>
+    EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>
+{
     /// Recompute all volume work from immutable geometry. Caller diagnostics
     /// and previously serialized intervals never construct this certificate.
-    pub fn qualify_volume<'v>(&'v self, limits: ExpressionVolumeLimits) -> Result<ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
+    pub fn qualify_volume<'v>(
+        &'v self,
+        limits: ExpressionVolumeLimits,
+    ) -> Result<ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
         let error = limits.absolute_error;
         let report = self.inspect_volume(limits)?;
-        let certificate = admitted_volume_bounds(report.signed_bounds, report.complete, error)?.map(|(positive_bounds, reverse_orientation)| {
-            OrientedExpressionVolume { geometry: self, signed_bounds: report.signed_bounds.unwrap(), positive_bounds, reverse_orientation }
-        });
-        Ok(ExpressionVolumeQualification { report, certificate })
+        let certificate = admitted_volume_bounds(report.signed_bounds, report.complete, error)?
+            .map(
+                |(positive_bounds, reverse_orientation)| OrientedExpressionVolume {
+                    geometry: self,
+                    signed_bounds: report.signed_bounds.unwrap(),
+                    positive_bounds,
+                    reverse_orientation,
+                },
+            );
+        Ok(ExpressionVolumeQualification {
+            report,
+            certificate,
+        })
     }
 }
 struct Node {
@@ -122,29 +158,67 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 let root = shell.assembly.patch.rails.face.boundary.rooted[0];
                 let source_geometry = root.restricted.proposal.body.geometry();
                 let remaining_faces = shell.faces().len() - face;
-                let allowance = planar_allowance(limits.cells - out.cells, limits.spans - out.spans, remaining_faces);
-                let report = crate::source_planar_flux::bound(source_geometry, original, limits.axis, limits.origin,
-                    error_share, allowance)?;
-                out.cells += report.cells; out.spans += report.cells;
+                let allowance = planar_allowance(
+                    limits.cells - out.cells,
+                    limits.spans - out.spans,
+                    remaining_faces,
+                );
+                let report = crate::source_planar_flux::bound(
+                    source_geometry,
+                    original,
+                    limits.axis,
+                    limits.origin,
+                    error_share,
+                    allowance,
+                )?;
+                out.cells += report.cells;
+                out.spans += report.cells;
                 planar = report.bound;
             }
-            let fixed = planar.is_some_and(|b| I::point(b.hi).sub(I::point(b.lo)).is_ok_and(|w| w.hi <= error_share));
-            if fixed { out.planar_faces += 1; }
-            let bound = if let Some(bound) = planar { bound } else {
-                let Some(bound) = evaluate(face, domain, &mut out)? else { return Ok(out); };
+            let fixed = planar.is_some_and(|b| {
+                I::point(b.hi)
+                    .sub(I::point(b.lo))
+                    .is_ok_and(|w| w.hi <= error_share)
+            });
+            if fixed {
+                out.planar_faces += 1;
+            }
+            let bound = if let Some(bound) = planar {
+                bound
+            } else {
+                let Some(bound) = evaluate(face, domain, &mut out)? else {
+                    return Ok(out);
+                };
                 bound
             };
-            let index = nodes.len(); roots.push(index);
-            if !fixed { queue.push(Priority(index, bound.hi - bound.lo)); }
-            nodes.push(Node { face, domain, bound, parent: None, children: None });
+            let index = nodes.len();
+            roots.push(index);
+            if !fixed {
+                queue.push(Priority(index, bound.hi - bound.lo));
+            }
+            nodes.push(Node {
+                face,
+                domain,
+                bound,
+                parent: None,
+                children: None,
+            });
         }
         loop {
             let mut total = I::point(0.);
-            for &index in &roots { total = total.add(nodes[index].bound)?; }
+            for &index in &roots {
+                total = total.add(nodes[index].bound)?;
+            }
             out.signed_bounds = Some([total.lo, total.hi]);
             if I::point(total.hi).sub(I::point(total.lo))?.hi <= limits.absolute_error {
-                out.complete = true; out.uncertain_face = None; out.uncertain_domain = None;
-                out.reason = if total.lo > 0. || total.hi < 0. { "expression-volume-sign-and-error-enclosed" } else { "expression-volume-sign-unresolved" };
+                out.complete = true;
+                out.uncertain_face = None;
+                out.uncertain_domain = None;
+                out.reason = if total.lo > 0. || total.hi < 0. {
+                    "expression-volume-sign-and-error-enclosed"
+                } else {
+                    "expression-volume-sign-unresolved"
+                };
                 return Ok(out);
             }
             if let Some(next) = queue.peek() {

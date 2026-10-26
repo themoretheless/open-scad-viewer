@@ -4,7 +4,7 @@ use super::*;
 pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,mode:OriginalTransport,shared_guide:Option<&crate::curve_measure::DivisionReport>,rmf_steps:usize,shared_rmf:Option<&super::super::rmf_transport::OriginalRmfTransportReport>,mut shared_pose:Option<&mut SharedArcPose>)->Result<SectionInterpolationReport>{
     let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,refinement_error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
-    let phase=if mode==OriginalTransport::Contact {
+    let phase=if matches!(mode,OriginalTransport::Contact|OriginalTransport::Guided) {
         let Spacing::ArcLength {max_cells:constructor_budget,..}=sweep.options.spacing else{return Ok(out);};
         let phase=super::super::arc_guide::certify(sweep.path,sweep.orientation_guide.unwrap(),max_cells.min(constructor_budget))?;
         out.cells+=phase.cells;Some(phase)
@@ -104,8 +104,8 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let report=if let Some(shared)=shared_rmf {shared} else {
         let remaining=max_cells-out.cells;
         // Exact coefficient work and interval cells share this owner.
-        owned_transport=super::super::rmf_transport::certify_original_rmf_transport_shared(sweep.path,sweep.options.normal,
-            rmf_steps,remaining,closed)?;
+        owned_transport=super::super::rmf_transport::certify_original_rmf_transport_shared_for_spacing(sweep.path,sweep.options.normal,
+            rmf_steps,remaining,closed,sweep.options.spacing)?;
         out.cells+=owned_transport.cells+owned_transport.exact_work as usize;
         &owned_transport
         };
@@ -118,7 +118,9 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let Some(phase)=phase else{out.reason=Some("corrected-affine-frame-phase-unproved");return Ok(out);};
         Some(phase)
     }else{None};
-    let tolerance=phase.as_ref().and_then(|p|p.scale_upper).filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down());
+    let tolerance=if mode==OriginalTransport::Contact {
+        phase.as_ref().and_then(|p|p.scale_upper).filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down())
+    }else{tolerance};
     let owned;
     let division=if let Some(shared)=shared_length{shared}else{
         owned=crate::curve_measure::divide_by_length(sweep.path,count-1,tolerance,(max_cells-out.cells).min(constructor_budget))?;
@@ -258,7 +260,22 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         // displacement to this bound under the same caller tolerance.
         // CorrectedRegular already owns a shared arc-jet/curvature proof
         // below; avoid duplicating its original-source work across profiles.
-        if mode!=OriginalTransport::CorrectedRegular {
+        // New geometric arc joins use an original arc-station chord cover.
+        // The policy depends on the fresh source proof, never on the requested
+        // tolerance: tightening admission cannot change the geometric bound.
+        let use_arc_chord=spatial_transport.is_some_and(|r|r.used_geometric_arc_join_premises)||mode==OriginalTransport::Guided&&same_phase;
+        if use_arc_chord {
+            if out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+            let (cells,chord)=arc_chord::upper(sweep.path,path_interval,station,division.total.bounds,residual,spatial_transport.is_some(),max_cells-out.cells)?;
+            out.cells+=cells;
+            if chord.is_none() && out.cells==max_cells {out.reason=Some("arc-chord-work-limit");return Ok(out);}
+            if let Some(chord)=chord {
+                coarse_position=I::new(0.,coarse_position.hi.min(chord))?;
+                for (upper,relative) in coarse_errors.iter_mut().zip(&relative_errors) {
+                    *upper=relative.add(coarse_position)?.hi;
+                }
+            }
+        } else if mode!=OriginalTransport::CorrectedRegular {
             if position_curvature.is_none() {
                 // A fixed local ceiling keeps the proof route independent of
                 // the caller's total budget; clipping a fractional allowance
@@ -277,7 +294,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
                 let arc=I::point(division.total.bounds[1]).mul(h)?;
                 let refined=I::point(curvature).mul(arc)?.mul(arc)?.div(I::point(8.))?.add(I::point(residual))?;
                 coarse_position=I::new(0.,coarse_position.hi.min(refined.hi))?;
-                for (upper,relative) in coarse_errors.iter_mut().zip(relative_errors) {
+                for (upper,relative) in coarse_errors.iter_mut().zip(&relative_errors) {
                     *upper=relative.add(coarse_position)?.hi;
                 }
             }

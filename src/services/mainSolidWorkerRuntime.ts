@@ -26,7 +26,9 @@ import {solidTopology} from './directSolidTools'
 import {retainedProfileDisplay} from './retainedSketchProfile'
 import {tessellateSolidNurbsSurface,sampleSolidNurbsCurve} from './solidNurbs'
 import {measureSurfaceBoundaries} from './solidSurfaceDiagnostics'
-import {measureSolidVertices,measureSolidEdgeCurvature,measureFaceDistance,measureShellDistance} from './solidMeasurements'
+import {measureSolidVertices,measureSolidManifoldMetrics,measureSolidEdgeCurvature,measureFaceDistance,measureShellDistance} from './solidMeasurements'
+import {booleanMeshObjectsDetailed,repairMeshObject} from './meshEditing'
+import {inspectMeshManifoldObjects} from './meshManifoldDefects'
 import {addSolidPrimitive} from './solidPrimitive'
 import {prepareSolidDisplay} from './solidDisplayPreparation'
 import {SolidInstanceBatchCache} from './solidInstanceBatchCache'
@@ -51,16 +53,19 @@ import {inspectStructuralSections} from './structuralSections'
 import {inspectCadPairs} from './cadInspection'
 import {cadOperation} from './cadWorkbench'
 import {mainOperation} from './mainModeling'
-import {solveTruss} from './trussAnalysis'
+import {optimizeTrussTopology,solveTruss} from './trussAnalysis'
+import {trussFieldMeshes} from './trussFieldMeshes'
+import {screenTrussMembers} from './trussScreening'
+import {listStructuralProfiles,lookupStructuralProfile} from './structuralProfiles'
 import {spatialGraph} from './solidLightening'
 import {flattenGroupGeometry} from './meshFlatten'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGraph} from './latticeGraphProtocol'
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from './workerHandlerRuntime'
-import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
+import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
-async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSolidResults]> {
+async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
 case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
@@ -103,6 +108,13 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'surfaceDistance':return measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells)
     case 'curveDistance':return measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells)
     case 'measureVertices':return measureSolidVertices(job.a,job.indexA,job.b,job.indexB)
+    case 'manifoldMetrics':return measureSolidManifoldMetrics(job.mesh)
+    case 'meshManifold':return inspectMeshManifoldObjects(job.objects,onProgress)
+    case 'meshRepair':return repairMeshObject(job.mesh,onProgress)
+    case 'meshBoolean':return booleanMeshObjectsDetailed(job.a,job.b,job.operation,onProgress,job.options)
+    case 'meshImport':return (await import('./meshImport')).importMeshFile(job.fileName,job.input,job.options,onProgress)
+    case 'meshConvert':return (await import('./meshConvert')).convertMeshFile(job.fileName,job.input,job.target,job.options,onProgress)
+    case 'meshExport':return (await import('./meshConvert')).exportMesh(job.mesh,job.target,job.options,onProgress)
     case 'measureEdge':return measureSolidEdgeCurvature(job.body,job.edge,job.parameter)
     case 'primitive':return addSolidPrimitive(job.document,job.options)
     case 'displayMesh':return prepareSolidDisplay(job.mesh,job.brep,job.segments)
@@ -139,6 +151,10 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'cad':return cadOperation(job.document,job.options)
     case 'main':return mainOperation(job.meshes,job.selected,job.hit,job.operation,job.parameters)
     case 'truss':return solveTruss(job.model)
+    case 'trussField':return trussFieldMeshes(job.model,job.result,job.markerMm)
+    case 'trussScreening':return screenTrussMembers(job.model,job.responses,job.limits)
+    case 'trussTopology':return optimizeTrussTopology(job.model,job.cases,job.options)
+    case 'structuralProfiles':return listStructuralProfiles().map(profile=>lookupStructuralProfile(profile.designation))
     case 'latticeGraph': {
       checkLatticeGraphInput(job.mesh,job.options)
       const graph={modelKind:'nominal-bounding-box-axial' as const,...spatialGraph({id:'nominal',name:'Nominal graph',mesh:flattenGroupGeometry([job.mesh])},job.options)}
@@ -148,7 +164,10 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
   }
 }
 
-export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void) {
+export function createMainSolidWorkerHandler(
+  post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void,
+  postProgress:(response:MainSolidProgressMessage)=>void=()=>{},
+) {
   let kernelWarm=false
   const timing=new Map<number,{warmupMs:number;executeMs:number;prepareMs:number}>()
   return createWorkerHandler<MainSolidRequest,MainSolidResponse,MainSolidResults[keyof MainSolidResults]>(post,{
@@ -164,8 +183,9 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
       const entry={warmupMs:0,executeMs:0,prepareMs:0};timing.set(request.id,entry);const start=performance.now();try{await warmGeometryKernel()}finally{entry.warmupMs=performance.now()-start}
     },
     execute:async request=>{
-      const entry=timing.get(request.id);if(!entry)return execute(request.job)
-      const start=performance.now();try{return await execute(request.job)}finally{entry.executeMs=performance.now()-start}
+      const onProgress=(progress:MainSolidProgress)=>postProgress({version:1,id:request.id,kind:request.job.kind,progress})
+      const entry=timing.get(request.id);if(!entry)return execute(request.job,onProgress)
+      const start=performance.now();try{return await execute(request.job,onProgress)}finally{entry.executeMs=performance.now()-start}
     },
     success:(request,result)=>{
       // Transfer only the freshly created response buffers; never the request's scene-owned ones.

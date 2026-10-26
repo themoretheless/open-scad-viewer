@@ -19,3 +19,12 @@ npm run bench:memory -- tmp/memory.json
 ```
 
 `--quick` shortens the CPU pass. Do not import this package from `src/`.
+
+## Differential qualification
+
+```sh
+npm ci
+npm run test:differential
+```
+
+The differential runner reads the shared `differential-corpus.json`, evaluates every union/intersection/difference in native Rust and `manifold-3d`, and compares volume, surface area, and whole-mesh genus with a relative tolerance of `1e-7`. Every mismatch is a test failure with the case, operation, metric, both values, and tolerance; there is no snapshot-update mode. The Rust example is a sidecar adapter only and is not linked into the product kernel.

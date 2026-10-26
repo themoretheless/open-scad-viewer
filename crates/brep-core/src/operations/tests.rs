@@ -5,28 +5,54 @@ fn push_boolean_partitioned_cap_moves_all_supports() {
         &cuboid([0.; 3], [12., 10., 10.]).unwrap(),
         &cuboid([8., 0., 0.], [20., 10., 10.]).unwrap(),
         "union",
-    ).unwrap();
-    let caps: Vec<_> = model.faces.iter().enumerate().filter(|(_, face)|
-        face.surface.control_points.iter().flatten().all(|p| (p[2] - 10.).abs() < 1e-8)
-    ).map(|(id, _)| id).collect();
+    )
+    .unwrap();
+    let caps: Vec<_> = model
+        .faces
+        .iter()
+        .enumerate()
+        .filter(|(_, face)| {
+            face.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| (p[2] - 10.).abs() < 1e-8)
+        })
+        .map(|(id, _)| id)
+        .collect();
     assert!(caps.len() > 1, "fixture must contain partitioned cap faces");
     for cap in caps {
         for distance in [2., -2.] {
             let edited = push_planar_face(&model, cap, distance).unwrap();
             assert_eq!(edited.validate().unwrap().boundary_edge_count, 0);
-            let volume = crate::analysis::mass_properties(&edited, 1e-7, 200_000).unwrap().signed_volume_mm3;
+            let volume = crate::analysis::mass_properties(&edited, 1e-7, 200_000)
+                .unwrap()
+                .signed_volume_mm3;
             assert!((volume - 200. * (10. + distance)).abs() < 1e-5, "{volume}");
             assert_eq!(bounds(&edited), ([0.; 3], [20., 10., 10. + distance]));
-            let longitudinal: Vec<_> = edited.edges.iter().enumerate().filter(|(_, edge)| {
-                let a = edited.vertices[edge.vertices[0]].point;
-                let b = edited.vertices[edge.vertices[1]].point;
-                a[0] == b[0] && a[1] == b[1]
-            }).map(|(id, _)| id).collect();
+            let longitudinal: Vec<_> = edited
+                .edges
+                .iter()
+                .enumerate()
+                .filter(|(_, edge)| {
+                    let a = edited.vertices[edge.vertices[0]].point;
+                    let b = edited.vertices[edge.vertices[1]].point;
+                    a[0] == b[0] && a[1] == b[1]
+                })
+                .map(|(id, _)| id)
+                .collect();
             assert_eq!(longitudinal.len(), 4);
-            let rounded = crate::analytic_features::exact_convex_prism_fillet(&edited, &longitudinal, 1.).unwrap();
-            let volume = crate::analysis::mass_properties(&rounded.model, 1e-7, 200_000).unwrap().signed_volume_mm3;
+            let rounded =
+                crate::analytic_features::exact_convex_prism_fillet(&edited, &longitudinal, 1.)
+                    .unwrap();
+            let volume = crate::analysis::mass_properties(&rounded.model, 1e-7, 200_000)
+                .unwrap()
+                .signed_volume_mm3;
             let expected = (200. - 4. + std::f64::consts::PI) * (10. + distance);
-            assert!((volume - expected).abs() < 1e-5, "rounded {volume}, expected {expected}");
+            assert!(
+                (volume - expected).abs() < 1e-5,
+                "rounded {volume}, expected {expected}"
+            );
         }
         assert!(push_planar_face(&model, cap, -10.).is_err());
     }
@@ -35,35 +61,84 @@ fn push_boolean_partitioned_cap_moves_all_supports() {
 
 #[test]
 fn push_nonconvex_cap_and_enclosure_preserves_floor() {
-    let bracket=extrude_polygon(&[[0.,0.],[40.,0.],[40.,5.],[5.,5.],[5.,30.],[0.,30.]],0.,20.).unwrap();
-    let enclosure=boolean(&cuboid([0.;3],[40.,30.,20.]).unwrap(),&cuboid([2.,2.,2.],[38.,28.,22.]).unwrap(),"difference").unwrap();
-    for (model,volume,area) in [(bracket,6500.,325.),(enclosure,7152.,264.)] {
-        let top=model.faces.iter().enumerate().find(|(_,f)|f.surface.control_points.iter().flatten().all(|p|(p[2]-20.).abs()<1e-8)).unwrap().0;
-        let before=model.clone();
-        for distance in [1.,-1.] {
-            let edited=push_planar_face(&model,top,distance).unwrap();
-            let mass=crate::analysis::mass_properties(&edited,1e-7,200_000).unwrap().signed_volume_mm3;
-            assert!((mass-(volume+area*distance)).abs()<1e-5,"{mass}");
-            assert_eq!(edited.validate().unwrap().boundary_edge_count,0);
-            for (before,after) in [(&model.1.vertices,&edited.1.vertices),(&model.1.edges,&edited.1.edges),(&model.1.loops,&edited.1.loops),(&model.1.faces,&edited.1.faces),(&model.1.shells,&edited.1.shells),(&model.1.bodies,&edited.1.bodies)] {
-                assert_eq!(before.iter().collect::<BTreeSet<_>>(),after.iter().collect::<BTreeSet<_>>());
+    let bracket = extrude_polygon(
+        &[
+            [0., 0.],
+            [40., 0.],
+            [40., 5.],
+            [5., 5.],
+            [5., 30.],
+            [0., 30.],
+        ],
+        0.,
+        20.,
+    )
+    .unwrap();
+    let enclosure = boolean(
+        &cuboid([0.; 3], [40., 30., 20.]).unwrap(),
+        &cuboid([2., 2., 2.], [38., 28., 22.]).unwrap(),
+        "difference",
+    )
+    .unwrap();
+    for (model, volume, area) in [(bracket, 6500., 325.), (enclosure, 7152., 264.)] {
+        let top = model
+            .faces
+            .iter()
+            .enumerate()
+            .find(|(_, f)| {
+                f.surface
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .all(|p| (p[2] - 20.).abs() < 1e-8)
+            })
+            .unwrap()
+            .0;
+        let before = model.clone();
+        for distance in [1., -1.] {
+            let edited = push_planar_face(&model, top, distance).unwrap();
+            let mass = crate::analysis::mass_properties(&edited, 1e-7, 200_000)
+                .unwrap()
+                .signed_volume_mm3;
+            assert!((mass - (volume + area * distance)).abs() < 1e-5, "{mass}");
+            assert_eq!(edited.validate().unwrap().boundary_edge_count, 0);
+            for (before, after) in [
+                (&model.1.vertices, &edited.1.vertices),
+                (&model.1.edges, &edited.1.edges),
+                (&model.1.loops, &edited.1.loops),
+                (&model.1.faces, &edited.1.faces),
+                (&model.1.shells, &edited.1.shells),
+                (&model.1.bodies, &edited.1.bodies),
+            ] {
+                assert_eq!(
+                    before.iter().collect::<BTreeSet<_>>(),
+                    after.iter().collect::<BTreeSet<_>>()
+                );
             }
-            for (i,v) in model.vertices.iter().enumerate() {
-                let mut expected=v.point;
-                if (expected[2]-20.).abs()<1e-8 {expected[2]+=distance;}
-                let target=edited.vertices.iter().position(|v|norm(sub(v.point,expected))<1e-8).unwrap();
-                assert_eq!(model.1.vertices[i],edited.1.vertices[target]);
+            for (i, v) in model.vertices.iter().enumerate() {
+                let mut expected = v.point;
+                if (expected[2] - 20.).abs() < 1e-8 {
+                    expected[2] += distance;
+                }
+                let target = edited
+                    .vertices
+                    .iter()
+                    .position(|v| norm(sub(v.point, expected)) < 1e-8)
+                    .unwrap();
+                assert_eq!(model.1.vertices[i], edited.1.vertices[target]);
             }
             // Every pre-existing level below the selected cap stays fixed.
-            for v in model.vertices.iter().filter(|v|v.point[2]<20.-1e-8) {
-                assert!(edited.vertices.iter().any(|p|p.point==v.point));
+            for v in model.vertices.iter().filter(|v| v.point[2] < 20. - 1e-8) {
+                assert!(edited.vertices.iter().any(|p| p.point == v.point));
             }
         }
-        assert!(push_planar_face(&model,top,-20.).is_err());
-        assert_eq!(model.vertices.iter().map(|v|v.point).collect::<Vec<_>>(),before.vertices.iter().map(|v|v.point).collect::<Vec<_>>());
+        assert!(push_planar_face(&model, top, -20.).is_err());
+        assert_eq!(
+            model.vertices.iter().map(|v| v.point).collect::<Vec<_>>(),
+            before.vertices.iter().map(|v| v.point).collect::<Vec<_>>()
+        );
     }
 }
-
 
 fn bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
     (
@@ -110,15 +185,50 @@ fn rotate_z(model: &mut Model, angle: f64) {
 
 #[test]
 fn rotated_nonconvex_cap_moves_along_normal_and_refuses_oblique_sides() {
-    let model=extrude_polygon(&[[0.,0.],[4.,0.],[4.,1.],[1.,1.],[1.,3.],[0.,3.]],0.,2.).unwrap();
-    let top=model.faces.iter().position(|f|f.surface.control_points.iter().flatten().all(|p|p[2]==2.)).unwrap();
-    let rotated=crate::transform::affine(&model,[[1.,0.,0.,7.],[0.,0.6,-0.8,-3.],[0.,0.8,0.6,2.],[0.,0.,0.,1.]]).unwrap();
-    let pushed=push_planar_face(&rotated,top,0.5).unwrap();
-    let volume=crate::analysis::mass_properties(&pushed,1e-7,200_000).unwrap().signed_volume_mm3;
-    assert!((volume-15.).abs()<1e-6);
-    let sheared=crate::transform::affine(&model,[[1.,0.,0.25,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]]).unwrap();
-    assert!(push_planar_face(&sheared,top,0.5).is_err());
-    assert!(push_planar_face(&model,top,-2.).is_err());
+    let model = extrude_polygon(
+        &[[0., 0.], [4., 0.], [4., 1.], [1., 1.], [1., 3.], [0., 3.]],
+        0.,
+        2.,
+    )
+    .unwrap();
+    let top = model
+        .faces
+        .iter()
+        .position(|f| {
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 2.)
+        })
+        .unwrap();
+    let rotated = crate::transform::affine(
+        &model,
+        [
+            [1., 0., 0., 7.],
+            [0., 0.6, -0.8, -3.],
+            [0., 0.8, 0.6, 2.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap();
+    let pushed = push_planar_face(&rotated, top, 0.5).unwrap();
+    let volume = crate::analysis::mass_properties(&pushed, 1e-7, 200_000)
+        .unwrap()
+        .signed_volume_mm3;
+    assert!((volume - 15.).abs() < 1e-6);
+    let sheared = crate::transform::affine(
+        &model,
+        [
+            [1., 0., 0.25, 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap();
+    assert!(push_planar_face(&sheared, top, 0.5).is_err());
+    assert!(push_planar_face(&model, top, -2.).is_err());
 }
 
 #[test]

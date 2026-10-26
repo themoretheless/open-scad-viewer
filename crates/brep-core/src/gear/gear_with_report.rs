@@ -163,11 +163,9 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
             let coedges = curves
                 .iter()
                 .enumerate()
-                .map(|(k, c)| Coedge::new(
-                    level_edges[li][loop_index][k],
-                    false,
-                    cap_pcurve(c, map),
-                ))
+                .map(|(k, c)| {
+                    Coedge::new(level_edges[li][loop_index][k], false, cap_pcurve(c, map))
+                })
                 .collect();
             loops_out.push(Loop { coedges });
             loop_ids.push(loops_out.len() - 1);

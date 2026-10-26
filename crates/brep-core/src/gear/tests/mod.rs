@@ -52,7 +52,7 @@ fn spur_gear_is_a_closed_exact_solid_with_the_expected_volume() {
     assert!(geometry.flank_deviation <= FLANK_FIT);
     // Even straight extrusion retains the outward floating-point rounding bound.
     assert!(geometry.sweep_deviation >= 0. && geometry.sweep_deviation <= SWEEP_FIT);
-    assert!(!geometry.flank_rounding_certified);
+    assert!(geometry.flank_rounding_certified);
     // The volume lies between the root and tip cylinders and close to
     // the pitch cylinder (teeth fill about half the band).
     let v = volume(&model);
@@ -78,7 +78,7 @@ fn helical_and_herringbone_gears_match_the_sweep_within_tolerance() {
         let (model, geometry) = gear_with_report(&spec).unwrap();
         assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
         assert!(geometry.sweep_deviation > 0. && geometry.sweep_deviation <= SWEEP_FIT);
-        assert!(!geometry.sweep_rounding_certified);
+        assert!(geometry.sweep_rounding_certified);
         let expected_faces = (16 * 6 + 8) * if herringbone { 2 } else { 1 } + 2;
         assert_eq!(geometry.face_count, expected_faces);
         let spur = gear(&GearSpec {

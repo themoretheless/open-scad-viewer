@@ -1,5 +1,6 @@
 //! STEP length-unit resolution, including bounded conversion chains.
 use super::*;
+use crate::step_part21::refs;
 fn si_scale(args: &[Value]) -> Result<f64> {
     if !args
         .iter()
@@ -153,3 +154,71 @@ pub(super) fn length_scale(
     Ok(found[0])
 }
 
+/// Resolve reachable uncertainty contexts to millimetres. Each measure uses
+/// its own explicit length unit; multiple measures select the tightest value.
+pub(super) fn uncertainty_mm(
+    entities: &BTreeMap<usize, Entity>,
+    reachable: &BTreeSet<usize>,
+) -> Result<Option<f64>> {
+    let mut uncertainty_ids = BTreeSet::new();
+    for id in reachable {
+        let entity = &entities[id];
+        match &entity.value {
+            Value::Call(n, args) if n == "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT" => {
+                for value in args {
+                    let mut references = Vec::new();
+                    refs(value, &mut references);
+                    uncertainty_ids.extend(references);
+                }
+            }
+            Value::List(parts) => {
+                for part in parts {
+                    if let Value::Call(n, args) = part
+                        && n == "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT"
+                    {
+                        for value in args {
+                            let mut references = Vec::new();
+                            refs(value, &mut references);
+                            uncertainty_ids.extend(references);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut tolerance = None::<f64>;
+    for id in uncertainty_ids {
+        let entity = entities
+            .get(&id)
+            .ok_or_else(|| refuse("Missing uncertainty reference"))?;
+        let Value::Call(name, args) = &entity.value else {
+            return Err(refuse("Uncertainty context must reference an entity call"));
+        };
+        if name != "UNCERTAINTY_MEASURE_WITH_UNIT" || args.len() != 4 {
+            return Err(refuse(
+                "UNCERTAINTY_MEASURE_WITH_UNIT argument count mismatch",
+            ));
+        }
+        let value = match &args[0] {
+            Value::Call(name, values) if name == "LENGTH_MEASURE" && values.len() == 1 => {
+                number(&values[0], "uncertainty LENGTH_MEASURE")?
+            }
+            value => number(value, "uncertainty measure")?,
+        };
+        let scale = unit_scale(
+            entities,
+            one_ref(&args[1], "uncertainty length unit")?,
+            0,
+            &mut BTreeSet::new(),
+        )?;
+        let value_mm = value * scale;
+        if !value_mm.is_finite() || !(1e-10..=1e-2).contains(&value_mm) {
+            return Err(refuse(
+                "STEP uncertainty must convert to a finite B-rep tolerance in [1e-10, 1e-2] mm",
+            ));
+        }
+        tolerance = Some(tolerance.map_or(value_mm, |current| current.min(value_mm)));
+    }
+    Ok(tolerance)
+}

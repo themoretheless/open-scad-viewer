@@ -10,9 +10,14 @@ use nurbs_core::{
 };
 mod boundary_census;
 mod qualified_radius;
-pub use qualified_radius::{RadiusQualifiedGraft, RadiusTangentGraft, attach_radius_qualified, attach_radius_tangent_qualified};
+pub use qualified_radius::{
+    RadiusQualifiedGraft, RadiusTangentGraft, attach_radius_qualified,
+    attach_radius_tangent_qualified,
+};
 mod fit_boundaries;
-pub use fit_boundaries::{fit_boundaries, fit_boundaries_with_charts, FittedPatch, BoundaryAdjustment};
+pub use fit_boundaries::{
+    BoundaryAdjustment, FittedPatch, fit_boundaries, fit_boundaries_with_charts,
+};
 #[derive(Clone, Copy)]
 pub struct Target {
     pub face: usize,
@@ -343,23 +348,28 @@ pub fn attach_with_charts(source:&Model,patch:&Model,vertices:&[usize],targets:&
         }
         let mut pc = if let Some(Some(pc)) = charts.get(edge) {
             pc.validate()?;
-            if pc.control_points[0].len()!=2 {return Err(invalid("Source boundary chart must be two-dimensional"));}
+            if pc.control_points[0].len() != 2 {
+                return Err(invalid("Source boundary chart must be two-dimensional"));
+            }
             pc.clone()
         } else {
-        let projection = curve_pullback::project(
-            &patch.edges[edge].curve,
-            &face.surface,
-            curve_pullback::Limits {
-                tolerance: source.tolerance_mm * 0.5,
-                max_segments: 256,
-                max_iterations: 32,
-                agreement_cells: max_cells - cells,
-            },
-        )?;
-        cells += projection.agreement_cells;
-        projection
-            .pcurve
-            .ok_or_else(|| unproven(&format!("Transition edge {edge} pullback into retained face {} is unresolved",target.face)))?
+            let projection = curve_pullback::project(
+                &patch.edges[edge].curve,
+                &face.surface,
+                curve_pullback::Limits {
+                    tolerance: source.tolerance_mm * 0.5,
+                    max_segments: 256,
+                    max_iterations: 32,
+                    agreement_cells: max_cells - cells,
+                },
+            )?;
+            cells += projection.agreement_cells;
+            projection.pcurve.ok_or_else(|| {
+                unproven(&format!(
+                    "Transition edge {edge} pullback into retained face {} is unresolved",
+                    target.face
+                ))
+            })?
         };
         // Save the exact existing chart endpoint authority, then independently
         // verify the actual edited pcurve. The pre-edit report is not inherited.

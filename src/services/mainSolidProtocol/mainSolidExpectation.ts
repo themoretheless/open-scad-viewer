@@ -1,6 +1,7 @@
 
 import { isNumericSequence } from '../mainSolidProtocol'
 import type { MainSolidExpectation, MainSolidJob } from '../mainSolidProtocol'
+import type { PolygonMesh } from '../geometry/polygon'
 import { boundaryExpectation } from '../solidBoundaryAgreement'
 import { callGeometryRust } from '../geometry/kernel'
 import { contactQualificationExpectation } from '../nurbsOffsetContactQualification'
@@ -16,6 +17,7 @@ import { expressionShellExpectation } from '../expressionShell'
 import { solidDistanceExpectation } from '../solidDistance'
 import { sourceBodyExpectation } from '../sourceBody'
 import { wholeWallExpectation } from '../solidWholeWall'
+import { MANIFOLD_BOOLEAN_DEFAULT_OPTIONS } from '../geometry/manifoldAnalysis'
 
 export function arrayOf(value:unknown, length:number, check:(v:unknown)=>boolean):boolean {
   if(!Array.isArray(value)||value.length!==length)return false
@@ -96,9 +98,24 @@ if(job.kind==='g2RunoutSurface')return {kind:job.kind,maxCells:job.options.maxCe
   if(job.kind==='displayMesh')return {kind:job.kind,triangles:job.mesh.indices.length/3}
   if(job.kind==='brepTool')return {kind:job.kind,id:job.options.id,operation:job.options.kind}
   if(job.kind==='meshContacts')return {kind:job.kind,triangles:job.mesh.indices.length/3,maxWork:job.maxWork??200_000,maxContacts:job.maxContacts??10_000}
+  if(job.kind==='meshManifold')return {kind:job.kind,objects:job.objects.map(object=>({id:object.id,vertices:object.mesh.positions.length/3,triangles:object.mesh.indices.length/3}))}
+  if(job.kind==='meshRepair')return {kind:job.kind,vertices:job.mesh.positions.length/3,triangles:job.mesh.indices.length/3}
+  if(job.kind==='meshBoolean')return {kind:job.kind,operation:job.operation,weldEpsilonMm:job.options?.weldEpsilonMm??MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.weldEpsilonMm,relativeTolerance:job.options?.relativeTolerance??MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.relativeTolerance,vertices:[job.a,job.b].map(mesh=>mesh.positions.length/3) as [number,number],triangles:[job.a,job.b].map(mesh=>mesh.indices.length/3) as [number,number]}
+  if(job.kind==='meshImport')return {kind:job.kind,repair:job.options.repair??(job.options.weld===false?'none':'conservative')}
+  if(job.kind==='meshConvert')return {kind:job.kind,fileName:job.fileName,byteLength:job.input.byteLength,target:job.target,repair:job.options.repair??(job.options.weld===false?'none':'conservative')}
+  if(job.kind==='meshExport'){
+    if(Array.isArray(job.mesh))return {kind:job.kind,target:job.target,
+      vertices:job.mesh.reduce((sum,mesh)=>sum+mesh.vertices.length/6,0),
+      triangles:job.mesh.reduce((sum,mesh)=>sum+mesh.indices.length/3,0)}
+    const mesh=job.mesh as PolygonMesh
+    return {kind:job.kind,target:job.target,vertices:mesh.positions.length/3,triangles:mesh.indices.length/3}
+  }
   if(job.kind==='bondedSolid'){
     const m=parseBondedSolidInput(job.inputJson)
     return {kind:job.kind,nodes:m.nodesMm.length,tets:m.tets.length,bonds:m.bonds.length}
   }
+  if(job.kind==='trussField')return {kind:job.kind,members:job.model.members.length}
+  if(job.kind==='trussScreening')return {kind:job.kind,members:job.model.members.length,responses:job.responses.length}
+  if(job.kind==='trussTopology')return {kind:job.kind,nodes:job.model.nodesMm.length,members:job.model.members.length,cases:job.cases.length}
   return job.kind==='truss' ? {kind:job.kind,nodes:job.model.nodesMm.length,members:job.model.members.length} : job.kind==='structuralSections'?{kind:job.kind,axis:job.axis,stations:[...job.stations]}:{kind:job.kind}
 }

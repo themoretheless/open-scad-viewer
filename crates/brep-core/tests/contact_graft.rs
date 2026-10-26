@@ -1,29 +1,72 @@
-#[path = "../examples/support/contact_graft_fixture.rs"]
-mod fixture;
 #[path = "../examples/support/curved_contact_body_fixture.rs"]
 mod curved_fixture;
+#[path = "../examples/support/contact_graft_fixture.rs"]
+mod fixture;
 use brep_core::contact_graft;
 #[test]
 fn variable_curved_body_keeps_fits_but_refuses_unproved_original_cap_membership() {
-    let f=curved_fixture::build().unwrap();let before=(f.source.clone(),f.patch.clone());
-    let fitted=contact_graft::fit_boundaries_with_charts(&f.source,&f.patch,&f.mapping,&f.keeps,&f.source_pcurves,1e-8,100000,1000000).unwrap();
-    assert_eq!(fitted.adjustments.iter().map(|a|a.edge).collect::<Vec<_>>(),vec![0,2]);
-    assert!(fitted.adjustments.iter().all(|a|a.displacement_upper_mm<=f.source.tolerance_mm/8.&&a.source_face<f.source.faces.len()));
-    assert_eq!(fitted.model.vertices,f.patch.vertices);
-    for i in [1,3] {assert_eq!(fitted.model.edges[i].curve,f.patch.edges[i].curve);}
-    for e in &fitted.model.edges {
-        assert_eq!(e.curve.control_points[0],fitted.model.vertices[e.vertices[0]].point);
-        assert_eq!(*e.curve.control_points.last().unwrap(),fitted.model.vertices[e.vertices[1]].point);
+    let f = curved_fixture::build().unwrap();
+    let before = (f.source.clone(), f.patch.clone());
+    let fitted = contact_graft::fit_boundaries_with_charts(
+        &f.source,
+        &f.patch,
+        &f.mapping,
+        &f.keeps,
+        &f.source_pcurves,
+        1e-8,
+        100000,
+        1000000,
+    )
+    .unwrap();
+    assert_eq!(
+        fitted
+            .adjustments
+            .iter()
+            .map(|a| a.edge)
+            .collect::<Vec<_>>(),
+        vec![0, 2]
+    );
+    assert!(
+        fitted
+            .adjustments
+            .iter()
+            .all(|a| a.displacement_upper_mm <= f.source.tolerance_mm / 8.
+                && a.source_face < f.source.faces.len())
+    );
+    assert_eq!(fitted.model.vertices, f.patch.vertices);
+    for i in [1, 3] {
+        assert_eq!(fitted.model.edges[i].curve, f.patch.edges[i].curve);
     }
-    let targets=contact_graft::plan_targets(&f.source,&fitted.model,&f.mapping,&f.keeps).unwrap();
+    for e in &fitted.model.edges {
+        assert_eq!(
+            e.curve.control_points[0],
+            fitted.model.vertices[e.vertices[0]].point
+        );
+        assert_eq!(
+            *e.curve.control_points.last().unwrap(),
+            fitted.model.vertices[e.vertices[1]].point
+        );
+    }
+    let targets =
+        contact_graft::plan_targets(&f.source, &fitted.model, &f.mapping, &f.keeps).unwrap();
     // This binding/end fixture is not a solid-graft authorization. Its
     // original cap crossing has an independent exact conic regression in
     // cad-predicates::tiny_finite_cap_crossing_is_not_admitted_and_bounded_inward_proposal_is_separated.
-    let error=contact_graft::attach_with_charts(&f.source,&fitted.model,&f.mapping,&targets,&fitted.source_pcurves,
-        1e-8,100000-fitted.cells,1000000-fitted.exact_work).err().expect("Incomplete original cap membership must refuse");
-    assert_eq!(error.code,"BREP_CONTACT_GRAFT_UNPROVEN");
-    assert!(error.message.contains("membership")||error.message.contains("census"));
-    assert_eq!((f.source,f.patch),before);
+    let error = contact_graft::attach_with_charts(
+        &f.source,
+        &fitted.model,
+        &f.mapping,
+        &targets,
+        &fitted.source_pcurves,
+        1e-8,
+        100000 - fitted.cells,
+        1000000 - fitted.exact_work,
+    )
+    .err()
+    .expect("Incomplete original cap membership must refuse");
+    assert_eq!(error.code, "BREP_CONTACT_GRAFT_UNPROVEN");
+    assert!(error.message.contains("membership") || error.message.contains("census"));
+    assert_eq!((f.source, f.patch), before);
 }
 #[test]
 fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body() {

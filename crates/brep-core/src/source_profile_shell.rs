@@ -11,20 +11,30 @@ mod flux;
 pub use flux::MaterialFluxReport;
 #[path = "source_profile_shell_gap.rs"]
 mod gap;
-pub use gap::{ExpressionGapReport, ExpressionFaceClearance};
+pub use gap::{ExpressionFaceClearance, ExpressionGapReport};
 #[path = "source_profile_shell_segment.rs"]
 mod segment;
-pub use segment::{ExpressionSegmentReport, ExpressionSegmentCandidate, ExpressionLineReport, ExpressionTrimmedLineReport, ExpressionMaterialLineReport, ExpressionMaterialInterval, ExpressionMaterialLine, ExpressionMaterialLineQualification, ExpressionEndpointNormalReport};
+pub use segment::{
+    ExpressionEndpointNormalReport, ExpressionLineReport, ExpressionMaterialInterval,
+    ExpressionMaterialLine, ExpressionMaterialLineQualification, ExpressionMaterialLineReport,
+    ExpressionSegmentCandidate, ExpressionSegmentReport, ExpressionTrimmedLineReport,
+};
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
-pub use volume::{ExpressionVolumeLimits, ExpressionVolumeReport,ExpressionVolumeQualification,OrientedExpressionVolume};
+pub use volume::{
+    ExpressionVolumeLimits, ExpressionVolumeQualification, ExpressionVolumeReport,
+    OrientedExpressionVolume,
+};
 #[path = "source_profile_shell_wall.rs"]
 mod wall;
-pub use wall::{ExpressionWallCell, ExpressionWallReport, ExpressionWallQualification, ExpressionAlignedChordMinimum, ExpressionWallPendingReason};
 use super::*;
 use crate::source_boundary_fragment::Fragment;
 use crate::source_shell_incidence::Address;
 use std::collections::{BTreeMap, BTreeSet};
+pub use wall::{
+    ExpressionAlignedChordMinimum, ExpressionWallCell, ExpressionWallPendingReason,
+    ExpressionWallQualification, ExpressionWallReport,
+};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ShellFaceKind {
     Original(usize),
@@ -79,63 +89,133 @@ pub struct ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     vertex_ids: BTreeMap<(usize, usize, usize), usize>,
     components: usize,
 }
-fn original_support_derivatives(source:&nurbs_core::surface::Surface,domain:[[f64;2];2],max_spans:usize)
-    ->Result<(Option<[[[f64;2];3];2]>,usize)> {
+fn original_support_derivatives(
+    source: &nurbs_core::surface::Surface,
+    domain: [[f64; 2]; 2],
+    max_spans: usize,
+) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
     source.validate()?;
-    let natural=[[source.knots_u[source.degree_u],source.knots_u[source.control_points.len()]],
-        [source.knots_v[source.degree_v],source.knots_v[source.control_points[0].len()]]];
-    if max_spans>100000 || (0..2).any(|k|!domain[k].iter().all(|v|v.is_finite())
-        || domain[k][0]>domain[k][1] || domain[k][0]<natural[k][0] || domain[k][1]>natural[k][1]) {
-        return Err(Error::new("BREP_PROFILE_SHELL","Keep original derivatives in the natural domain and bounded work"));
+    let natural = [
+        [
+            source.knots_u[source.degree_u],
+            source.knots_u[source.control_points.len()],
+        ],
+        [
+            source.knots_v[source.degree_v],
+            source.knots_v[source.control_points[0].len()],
+        ],
+    ];
+    if max_spans > 100000
+        || (0..2).any(|k| {
+            !domain[k].iter().all(|v| v.is_finite())
+                || domain[k][0] > domain[k][1]
+                || domain[k][0] < natural[k][0]
+                || domain[k][1] > natural[k][1]
+        })
+    {
+        return Err(Error::new(
+            "BREP_PROFILE_SHELL",
+            "Keep original derivatives in the natural domain and bounded work",
+        ));
     }
-                let mut out = [[[0.; 2]; 3]; 2];
-                let mut spent = 0;
-                for axis in 0..2 {
-                    if spent==max_spans {return Ok((None,spent));}
-                    let (bounds, used) = nurbs_core::normal_alignment::derivative_path_bounds(source, domain, axis, max_spans - spent)?;
-                    spent += used;
-                    let Some(bounds) = bounds else { return Ok((None, spent)); };
-                    out[axis] = bounds.components();
-                }
-                Ok((Some(out), spent))
+    let mut out = [[[0.; 2]; 3]; 2];
+    let mut spent = 0;
+    for axis in 0..2 {
+        if spent == max_spans {
+            return Ok((None, spent));
+        }
+        let (bounds, used) = nurbs_core::normal_alignment::derivative_path_bounds(
+            source,
+            domain,
+            axis,
+            max_spans - spent,
+        )?;
+        spent += used;
+        let Some(bounds) = bounds else {
+            return Ok((None, spent));
+        };
+        out[axis] = bounds.components();
+    }
+    Ok((Some(out), spent))
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     /// Flux of a complete support rectangle in its native chart orientation.
     /// The caller must classify material trim and apply shell orientation before
     /// summing volume. A support rectangle alone never admits a solid.
     pub fn enclose_support_flux(
-        &self, face: usize, domain: [[f64; 2]; 2], axis: usize, origin: f64,
-        max_controls: usize, max_spans: usize,
+        &self,
+        face: usize,
+        domain: [[f64; 2]; 2],
+        axis: usize,
+        origin: f64,
+        max_controls: usize,
+        max_spans: usize,
     ) -> Result<(Option<nurbs_core::surface_flux::Bound>, usize)> {
         if axis >= 3 || !origin.is_finite() {
-            return Err(Error::new("BREP_PROFILE_SHELL", "Choose a finite support flux axis and origin"));
+            return Err(Error::new(
+                "BREP_PROFILE_SHELL",
+                "Choose a finite support flux axis and origin",
+            ));
         }
-        let (position, position_spans) = self.enclose_support(face, domain, max_controls, max_spans)?;
-        let Some(position) = position else { return Ok((None, position_spans)); };
-        let (derivatives, derivative_spans) = self.enclose_support_derivatives(face, domain, max_controls, max_spans - position_spans)?;
+        let (position, position_spans) =
+            self.enclose_support(face, domain, max_controls, max_spans)?;
+        let Some(position) = position else {
+            return Ok((None, position_spans));
+        };
+        let (derivatives, derivative_spans) = self.enclose_support_derivatives(
+            face,
+            domain,
+            max_controls,
+            max_spans - position_spans,
+        )?;
         let spent = position_spans + derivative_spans;
-        let Some(derivatives) = derivatives else { return Ok((None, spent)); };
-        let bound = nurbs_core::surface_flux::bound_expression(position, derivatives, domain, axis, origin, false)?;
+        let Some(derivatives) = derivatives else {
+            return Ok((None, spent));
+        };
+        let bound = nurbs_core::surface_flux::bound_expression(
+            position,
+            derivatives,
+            domain,
+            axis,
+            origin,
+            false,
+        )?;
         Ok((Some(bound), spent))
     }
     /// First derivatives in the same parameters as `enclose_support`.
     /// These enclose the supporting expression, without a trim classification.
     pub fn enclose_support_derivatives(
-        &self, face: usize, domain: [[f64; 2]; 2],
-        max_controls: usize, max_spans: usize,
+        &self,
+        face: usize,
+        domain: [[f64; 2]; 2],
+        max_controls: usize,
+        max_spans: usize,
     ) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
-        if max_controls > 1000000 || max_spans > 100000
-            || domain.iter().any(|r| !r.iter().all(|v| v.is_finite()) || r[0] > r[1])
+        if max_controls > 1000000
+            || max_spans > 100000
+            || domain
+                .iter()
+                .any(|r| !r.iter().all(|v| v.is_finite()) || r[0] > r[1])
         {
-            return Err(Error::new("BREP_PROFILE_SHELL", "Bound support derivative parameters and work"));
+            return Err(Error::new(
+                "BREP_PROFILE_SHELL",
+                "Bound support derivative parameters and work",
+            ));
         }
-        let kind = self.faces.get(face).ok_or_else(|| Error::new("BREP_PROFILE_SHELL", "Unknown expression face"))?.kind;
-        if max_spans==0 {
-            let natural=self.support_domain(face)?;
-            if (0..2).any(|k|domain[k][0]<natural[k][0] || domain[k][1]>natural[k][1]) {
-                return Err(Error::new("BREP_PROFILE_SHELL","Keep exhausted derivative queries in the owned support domain"));
+        let kind = self
+            .faces
+            .get(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SHELL", "Unknown expression face"))?
+            .kind;
+        if max_spans == 0 {
+            let natural = self.support_domain(face)?;
+            if (0..2).any(|k| domain[k][0] < natural[k][0] || domain[k][1] > natural[k][1]) {
+                return Err(Error::new(
+                    "BREP_PROFILE_SHELL",
+                    "Keep exhausted derivative queries in the owned support domain",
+                ));
             }
-            return Ok((None,0));
+            return Ok((None, 0));
         }
 
         let root = self.assembly.patch.rails.face.boundary.rooted[0];
@@ -235,7 +315,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         max_controls: usize,
         max_spans: usize,
     ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
-        use nurbs_core::interval_eval::{evaluate_surface_interval, Interval};
+        use nurbs_core::interval_eval::{Interval, evaluate_surface_interval};
         if max_controls > 1000000
             || max_spans > 100000
             || domain
@@ -838,7 +918,8 @@ mod original_contact;
 pub use original_contact::{
     OriginalAdditionalContact, OriginalAdditionalProof, OriginalAdditionalReport,
     OriginalContactReport, OriginalFiberContact, OriginalFiberProof, OriginalFiberReport,
-    OriginalPlanarContact, OriginalHullContact, OriginalHullReport, OriginalPoleContact, OriginalPoleProof, OriginalPoleReport,
+    OriginalHullContact, OriginalHullReport, OriginalPlanarContact, OriginalPoleContact,
+    OriginalPoleProof, OriginalPoleReport,
 };
 #[path = "source_profile_shell_audit.rs"]
 mod audit;
@@ -847,9 +928,12 @@ pub use audit::{AuditedContactPair, ContactAuditLimits, PairContactProof, ShellC
 mod transition_contact;
 pub use transition_contact::{TransitionPlaneContact, TransitionPlaneReport};
 
-#[path="source_profile_shell_ruled_contact.rs"]
+#[path = "source_profile_shell_ruled_contact.rs"]
 mod ruled_contact;
-pub use ruled_contact::{TransitionRuledContact,TransitionRuledReport,ProfileRuledImage,ProfileRuledImageReport,ProfileRuledContact,ProfileRuledContactReport};
+pub use ruled_contact::{
+    ProfileRuledContact, ProfileRuledContactReport, ProfileRuledImage, ProfileRuledImageReport,
+    TransitionRuledContact, TransitionRuledReport,
+};
 
 #[path = "source_profile_shell_section_contact.rs"]
 mod section_contact;
@@ -857,78 +941,101 @@ pub use section_contact::{TransitionSectionContact, TransitionSectionContactRepo
 
 pub use original_contact::{ProfileHullContact, ProfileHullReport};
 
-pub use original_contact::{OriginalBoundaryContact,OriginalBoundaryProof,OriginalBoundaryReport};
+pub use original_contact::{
+    OriginalBoundaryContact, OriginalBoundaryProof, OriginalBoundaryReport,
+};
 
-#[path="source_profile_shell_xy_contact.rs"]
+#[path = "source_profile_shell_xy_contact.rs"]
 mod xy_contact;
-pub use xy_contact::{TransitionXyHullContact,TransitionXyHullReport};
+pub use xy_contact::{TransitionXyHullContact, TransitionXyHullReport};
 
 pub use xy_contact::{TransitionXyBoundsContact, TransitionXyBoundsReport};
 
-#[path="source_profile_shell_vertex_contact.rs"]
+#[path = "source_profile_shell_vertex_contact.rs"]
 mod vertex_contact;
-pub use vertex_contact::{ProfileVertexContact,ProfileVertexReport};
+pub use vertex_contact::{ProfileVertexContact, ProfileVertexReport};
 
-#[path="source_profile_shell_coordinate_contact.rs"]
+#[path = "source_profile_shell_coordinate_contact.rs"]
 mod coordinate_contact;
-pub use coordinate_contact::{TransitionCoordinateContact,TransitionCoordinateReport};
+pub use coordinate_contact::{TransitionCoordinateContact, TransitionCoordinateReport};
 
-#[path="source_profile_shell_boundary_contact.rs"]
+#[path = "source_profile_shell_boundary_contact.rs"]
 mod profile_boundary_contact;
-pub use profile_boundary_contact::{ProfileBoundaryContact,ProfileBoundaryReport};
+pub use profile_boundary_contact::{ProfileBoundaryContact, ProfileBoundaryReport};
 
-#[path="source_profile_shell_paired_contact.rs"]
+#[path = "source_profile_shell_paired_contact.rs"]
 mod profile_paired_contact;
-pub use profile_paired_contact::{ProfilePairedContact,ProfilePairedReport};
+pub use profile_paired_contact::{ProfilePairedContact, ProfilePairedReport};
 
-#[path="source_profile_shell_xy_plane_contact.rs"]
+#[path = "source_profile_shell_xy_plane_contact.rs"]
 mod xy_plane_contact;
-pub use xy_plane_contact::{TransitionXyPlaneContact,TransitionXyPlaneReport};
+pub use xy_plane_contact::{TransitionXyPlaneContact, TransitionXyPlaneReport};
 
 #[path = "source_profile_shell_display.rs"]
 mod display;
-pub use display::{ExpressionDisplayLimits, ExpressionDisplayCell, ExpressionDisplayReport};
+pub use display::{ExpressionDisplayCell, ExpressionDisplayLimits, ExpressionDisplayReport};
 
 #[path = "source_profile_shell_mesh.rs"]
 mod display_mesh;
-pub use display_mesh::{ExpressionMeshLimits, ExpressionMeshTile, ExpressionMeshPending, ExpressionMeshReport};
+pub use display_mesh::{
+    ExpressionMeshLimits, ExpressionMeshPending, ExpressionMeshReport, ExpressionMeshTile,
+};
 
-#[path="source_profile_shell_edge_mesh.rs"]
+#[path = "source_profile_shell_edge_mesh.rs"]
 mod edge_mesh;
-pub use edge_mesh::{ShellBoundaryPartition,ShellBoundaryMeshReport};
+pub use edge_mesh::{ShellBoundaryMeshReport, ShellBoundaryPartition};
 
-#[path="source_profile_shell_boundary_graph.rs"]
+#[path = "source_profile_shell_boundary_graph.rs"]
 mod boundary_graph;
-pub use boundary_graph::{BoundaryGraphVertex,BoundaryGraphSegment,BoundaryGraphPending,BoundaryGraphReport};
+pub use boundary_graph::{
+    BoundaryGraphPending, BoundaryGraphReport, BoundaryGraphSegment, BoundaryGraphVertex,
+};
 
-#[path="source_profile_shell_boundary_loops.rs"]
+#[path = "source_profile_shell_boundary_loops.rs"]
 mod boundary_loops;
-pub use boundary_loops::{BoundaryLoopSegment,BoundaryFaceLoop};
+pub use boundary_loops::{BoundaryFaceLoop, BoundaryLoopSegment};
 
-#[path="source_profile_shell_face_candidates.rs"]
+#[path = "source_profile_shell_face_candidates.rs"]
 mod face_candidates;
-pub use face_candidates::{FaceTriangleCandidate,FaceCandidatePending,FaceCandidateReport};
+pub use face_candidates::{FaceCandidatePending, FaceCandidateReport, FaceTriangleCandidate};
 
-#[path="source_profile_shell_refine_triangles.rs"]
+#[path = "source_profile_shell_refine_triangles.rs"]
 mod refine_triangles;
-pub use refine_triangles::{TriangleRefinementLimits,RefinedTriangle,TriangleRefinementPending,TriangleRefinementReport,TriangleNumericFailure,RegionalTransitionReport};
+pub use refine_triangles::{
+    RefinedTriangle, RegionalTransitionReport, TriangleNumericFailure, TriangleRefinementLimits,
+    TriangleRefinementPending, TriangleRefinementReport,
+};
 
-#[path="source_triangle_incidence.rs"]
+#[path = "source_triangle_incidence.rs"]
 mod triangle_incidence;
 pub use triangle_incidence::TriangleIncidenceReport;
 impl FaceCandidateReport {
-    pub fn inspect_incidence(&self)->TriangleIncidenceReport {triangle_incidence::inspect(&self.triangles.iter().map(|t|t.vertices).collect::<Vec<_>>())}
+    pub fn inspect_incidence(&self) -> TriangleIncidenceReport {
+        triangle_incidence::inspect(
+            &self
+                .triangles
+                .iter()
+                .map(|t| t.vertices)
+                .collect::<Vec<_>>(),
+        )
+    }
 }
 
 impl TriangleRefinementReport {
     /// Counts all leaves, including unqualified geometry. This audits topology
     /// preservation only, and does not admit pending leaves as material.
-    pub fn inspect_leaf_incidence(&self)->TriangleIncidenceReport {
-        triangle_incidence::inspect(&self.accepted.iter().map(|t|t.triangle.vertices)
-            .chain(self.pending.iter().map(|t|t.triangle.vertices)).collect::<Vec<_>>())
+    pub fn inspect_leaf_incidence(&self) -> TriangleIncidenceReport {
+        triangle_incidence::inspect(
+            &self
+                .accepted
+                .iter()
+                .map(|t| t.triangle.vertices)
+                .chain(self.pending.iter().map(|t| t.triangle.vertices))
+                .collect::<Vec<_>>(),
+        )
     }
 }
 
-#[path="source_profile_shell_bisect_edges.rs"]
+#[path = "source_profile_shell_bisect_edges.rs"]
 mod bisect_edges;
-pub use bisect_edges::{InteriorBisectionReport,AdaptiveInteriorLimits};
+pub use bisect_edges::{AdaptiveInteriorLimits, InteriorBisectionReport};

@@ -80,6 +80,25 @@ it('aborts noncooperative work, cleans listeners and starts a fresh realm',async
   ports[1].reply({ok:true,result:response()});await next
 })
 
+it('publishes validated progress without letting observers change settlement',async()=>{
+ const {client,ports}=setup(),onProgress=vi.fn(()=>{throw Error('observer failure')})
+ const task=client.run({kind:'inspect',bodies:[]},{onProgress}),resolved=vi.fn()
+ void task.then(resolved)
+ ports[0].reply({progress:{phase:'check',completed:0,total:3}})
+ expect(onProgress).toHaveBeenCalledWith({phase:'check',completed:0,total:3})
+ await Promise.resolve();expect(resolved).not.toHaveBeenCalled();expect(ports[0].terminate).not.toHaveBeenCalled()
+ ports[0].reply({progress:{phase:'repair',completed:1,total:3}})
+ ports[0].reply({ok:true,result:[]});await expect(task).resolves.toEqual([])
+ expect(onProgress).toHaveBeenCalledTimes(2)
+})
+
+it.each([null,{phase:'',completed:0,total:3},{phase:'check',completed:-1,total:3},{phase:'check',completed:4,total:3},{phase:'check',completed:0,total:0}])('rejects malformed worker progress: %j',async progress=>{
+ const {client,ports}=setup(),task=client.run({kind:'inspect',bodies:[]})
+ ports[0].reply({progress})
+ await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ expect(ports[0].terminate).toHaveBeenCalledOnce()
+})
+
 it('times out, clears timers and does not time out a later successful job',async()=>{
   vi.useFakeTimers()
   const {client,ports}=setup(), task=client.run({kind:'truss',model:model()},{timeoutMs:25})
@@ -222,4 +241,57 @@ it('reports a typed operation failure but never reports a late cancelled respons
   controller.abort();await rejected
   late({data:{version:1,id:request.id,kind:'inspect',ok:true,result:[],timing}} as MessageEvent)
   expect(onTiming).toHaveBeenCalledTimes(1)
+})
+
+const topologyResult=()=>({densities:[.4],areasMm2:[40],volumeMm3:400000,targetVolumeMm3:400000,
+ compliancesNmm:[125],initialComplianceNmm:50,complianceNmm:125,iterations:1,converged:true,
+ maxDensityChange:.6,activeMembers:[],axialForcesN:[[1000]]})
+const topologyJob=()=>{const {forcesN,...structure}=model();return {kind:'trussTopology' as const,model:structure,
+ cases:[{weight:1,forcesN:[[0,0,0],[1000,0,0]] as [number,number,number][]}],options:{volumeFraction:.4,penalty:1}}}
+
+it('accepts a complete SIMP response with request-sized arrays',async()=>{
+ const {client,ports}=setup(),task=client.run(topologyJob())
+ ports[0].reply({ok:true,result:topologyResult()})
+ await expect(task).resolves.toEqual(topologyResult())
+})
+
+it.each([{densities:[NaN]},{densities:[]},{axialForcesN:[[NaN]]},{axialForcesN:[[]]}])('rejects malformed SIMP arrays: %j',async patch=>{
+ const {client,ports}=setup(),task=client.run(topologyJob())
+ ports[0].reply({ok:true,result:{...topologyResult(),...patch}})
+ await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+
+const profile=()=>({designation:'IPE 200',family:'ipe' as const,heightMm:200,flangeWidthMm:100,
+ webThicknessMm:5.6,flangeThicknessMm:8.5,areaMm2:2800,massKgM:22,iStrongMm4:19400000,
+ iWeakMm4:1400000,wStrongMm3:194000,wWeakMm3:28000,jMm4:70000,cwMm6:13000000000})
+
+it('accepts one complete catalogue and rejects duplicates or non-finite properties',async()=>{
+ const {client,ports}=setup()
+ const valid=client.run({kind:'structuralProfiles'})
+ ports[0].reply({ok:true,result:[profile()]});await expect(valid).resolves.toEqual([profile()])
+ for(const result of [[profile(),profile()],[{...profile(),areaMm2:NaN}]]){
+  const task=client.run({kind:'structuralProfiles'})
+  ports.at(-1)!.reply({ok:true,result})
+  await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ }
+})
+
+it('accepts complete field meshes and rejects duplicate force groups',async()=>{
+ const {trussFieldMeshes}=await import('../src/services/trussFieldMeshes')
+ const {client,ports}=setup(),job={kind:'trussField' as const,model:model(),result:response(),markerMm:1}
+ const meshes=trussFieldMeshes(job.model,job.result,job.markerMm)
+ const valid=client.run(job);ports[0].reply({ok:true,result:meshes});await expect(valid).resolves.toEqual(meshes)
+ const invalid=client.run(job);ports[0].reply({ok:true,result:[meshes[0],meshes[0]]})
+ await expect(invalid).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+
+const screeningJob=()=>({kind:'trussScreening' as const,model:model(),responses:[response()],limits:{tensionMpa:80,compressionMpa:40,safetyFactor:2}})
+const screeningRows=()=>[{memberIndex:0,utilization:1.25,governingResponse:0,stressMpa:50,status:'overloaded' as const}]
+it('accepts ranked axial screening and rejects inconsistent rows',async()=>{
+ const {client,ports}=setup()
+ const valid=client.run(screeningJob());ports[0].reply({ok:true,result:screeningRows()});await expect(valid).resolves.toEqual(screeningRows())
+ for(const result of [[{...screeningRows()[0],utilization:NaN}],[{...screeningRows()[0],governingResponse:1}],[{...screeningRows()[0],status:'low-demand'}]]){
+  const task=client.run(screeningJob());ports.at(-1)!.reply({ok:true,result})
+  await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ }
 })

@@ -5,7 +5,10 @@ import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
 import { solidVertexCount, type PointMeasurement, type CurveMeasurement, type FaceDistanceResult, type ShellDistanceResult } from '../../services/solidMeasurements'
 import { type NurbsCurveDistance } from '../../services/nurbsCurve'
 import { type DirectDocument, type DirectBody } from '../../services/directModeling'
+import type { KernelManifoldMetrics } from '../../services/geometry/manifoldAnalysis'
+import { serializeManifoldMetricsReport, type ManifoldMetricsExportFormat, type ManifoldMetricsReportRow } from '../../services/manifoldMetricsReport'
 import { computed, ref, shallowRef, watchEffect, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'vue'
+import { download } from './helpers'
 
 export interface MeasurementsOptions {
   document: ShallowRef<DirectDocument>
@@ -13,11 +16,12 @@ export interface MeasurementsOptions {
   label: (a: string, b: string) => string
   props: Readonly<{ open: boolean }>
   selectedBody: ComputedRef<DirectBody | undefined>
+  selectedBodies: ComputedRef<DirectBody[]>
   selection: Ref<string>
 }
 
 export function useMeasurements(options: MeasurementsOptions) {
-  const { document, edgeIndex, label, props, selectedBody, selection } = options
+  const { document, edgeIndex, label, props, selectedBody, selectedBodies, selection } = options
 const volumeDistanceOpen=ref(false),volumeContact=shallowRef<Vec3[]|null>(null)
 const materialPathOpen=ref(false)
 const materialPathOverlay=shallowRef<import('../../services/solidMaterialVolume').MaterialOverlay|null>(null)
@@ -150,5 +154,45 @@ watchEffect(onCleanup=>{
  }).catch(()=>{if(current){shellDistanceRetryVisible.value=true;shellDistance.value={value:null,error:label('Не удалось измерить оболочки тел. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these boundary shells. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)shellDistancePending.value=false})
 })
-  return { volumeDistanceOpen, volumeContact, materialPathOpen, materialPathOverlay, measurementOpen, measureTarget, measureA, measureB, curveParameter, formatMeasurement, clearanceOpen, clearanceRevision, clearanceRetryVisible, measurementTarget, clearanceMeasurement, clearancePending, measurementPending, curvaturePending, vertexAValid, vertexBValid, curveParameterValid, measurementRevision, curvatureRevision, measurementRetryVisible, curvatureRetryVisible, measurement, curvatureMeasurement, edgeDistanceOpen, edgeDistanceA, edgeDistanceB, edgeDistanceBudget, edgeDistanceRevision, edgeDistanceRetryVisible, edgeDistancePending, edgeDistance, faceDistanceOpen, faceDistanceA, faceDistanceB, faceDistanceBudget, faceDistanceRevision, faceDistanceRetryVisible, faceDistancePending, faceDistance, shellDistanceOpen, shellDistanceBudget, shellDistanceRevision, shellDistanceRetryVisible, shellDistancePending, shellDistance }
+const manifoldMetricsWorker=createSolidPreviewWorker()
+const manifoldMetricsPending=ref(false),manifoldMetricsRevision=ref(0),manifoldMetricsRetryVisible=ref(false)
+const manifoldMetrics=shallowRef<{value:KernelManifoldMetrics|null;error:string}|null>(null)
+onUnmounted(()=>manifoldMetricsWorker.dispose())
+watchEffect(onCleanup=>{
+ void manifoldMetricsRevision.value
+ const enabled=props.open&&measurementOpen.value,body=selectedBody.value,snapshot=document.value,sourceId=selection.value
+ let current=true
+ onCleanup(()=>{current=false;manifoldMetricsWorker.cancel()})
+ manifoldMetrics.value=null;manifoldMetricsPending.value=false;manifoldMetricsRetryVisible.value=false
+ if(!enabled||!body)return
+ manifoldMetricsPending.value=true
+ const valid=()=>current&&props.open&&document.value===snapshot&&selection.value===sourceId&&measurementOpen.value
+ void manifoldMetricsWorker.run({kind:'manifoldMetrics',mesh:body.mesh}).then(value=>{
+  if(valid())manifoldMetrics.value={value,error:''}
+ }).catch(()=>{if(valid()){
+  manifoldMetricsRetryVisible.value=true
+  manifoldMetrics.value={value:null,error:label('Не удалось вычислить manifold-метрики текущей сетки. Повторите расчёт.','Could not compute manifold metrics for the current mesh. Retry the calculation.')}
+ }})
+ .finally(()=>{if(valid())manifoldMetricsPending.value=false})
+})
+const manifoldMetricsExportWorker=createSolidPreviewWorker()
+const manifoldMetricsExportPending=ref(false),manifoldMetricsExportError=ref('')
+onUnmounted(()=>manifoldMetricsExportWorker.dispose())
+async function exportManifoldMetrics(format:ManifoldMetricsExportFormat){
+ if(manifoldMetricsExportPending.value)return
+ const bodies=selectedBodies.value
+ if(!bodies.length){manifoldMetricsExportError.value=label('Выберите хотя бы одно тело.','Select at least one body.');return}
+ manifoldMetricsExportPending.value=true;manifoldMetricsExportError.value=''
+ try{
+  const rows:ManifoldMetricsReportRow[]=[]
+  for(const body of bodies){
+   const metrics=await manifoldMetricsExportWorker.run({kind:'manifoldMetrics',mesh:body.mesh})
+   rows.push({id:body.id,name:body.name,metrics})
+  }
+  download(serializeManifoldMetricsReport(rows,format),`manifold-metrics.${format}`,format==='json'?'application/json':'text/csv;charset=utf-8')
+ }catch{
+  manifoldMetricsExportError.value=label('Не удалось экспортировать метрики выделенных тел. Повторите попытку.','Could not export metrics for the selected bodies. Try again.')
+ }finally{manifoldMetricsExportPending.value=false}
+}
+  return { manifoldMetrics, manifoldMetricsPending, manifoldMetricsRevision, manifoldMetricsRetryVisible, manifoldMetricsExportPending, manifoldMetricsExportError, exportManifoldMetrics, volumeDistanceOpen, volumeContact, materialPathOpen, materialPathOverlay, measurementOpen, measureTarget, measureA, measureB, curveParameter, formatMeasurement, clearanceOpen, clearanceRevision, clearanceRetryVisible, measurementTarget, clearanceMeasurement, clearancePending, measurementPending, curvaturePending, vertexAValid, vertexBValid, curveParameterValid, measurementRevision, curvatureRevision, measurementRetryVisible, curvatureRetryVisible, measurement, curvatureMeasurement, edgeDistanceOpen, edgeDistanceA, edgeDistanceB, edgeDistanceBudget, edgeDistanceRevision, edgeDistanceRetryVisible, edgeDistancePending, edgeDistance, faceDistanceOpen, faceDistanceA, faceDistanceB, faceDistanceBudget, faceDistanceRevision, faceDistanceRetryVisible, faceDistancePending, faceDistance, shellDistanceOpen, shellDistanceBudget, shellDistanceRevision, shellDistanceRetryVisible, shellDistancePending, shellDistance }
 }

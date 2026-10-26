@@ -269,17 +269,31 @@ mod tests {
         let mut model = mixed_unit_assembly();
         let source = model.clone();
         let mut surface = crate::cuboid([500., 0., 0.], [502., 2., 2.]).unwrap();
-        surface.0.bodies.clear(); surface.1.bodies.clear();
+        surface.0.bodies.clear();
+        surface.1.bodies.clear();
         surface.0.shells[0].closed = false;
         surface.refresh_change_set(&[]);
         surface.validate().unwrap();
         append(&mut model, &surface);
         model.refresh_change_set(&[&source, &surface]);
-        let face = model.faces.iter().position(|f| f.surface.control_points.iter().flatten().all(|p| (p[2] - 101.6).abs() < 1e-8)).unwrap();
+        let face = model
+            .faces
+            .iter()
+            .position(|f| {
+                f.surface
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .all(|p| (p[2] - 101.6).abs() < 1e-8)
+            })
+            .unwrap();
         let result = crate::operations::push_planar_face(&model, face, 1.).unwrap();
         assert_eq!(result.faces.len(), model.faces.len());
         let untouched = extract_range(&result, 0..0).0;
-        assert_eq!(value_codec::to_string(&untouched.0).unwrap(), value_codec::to_string(&surface.0).unwrap());
+        assert_eq!(
+            value_codec::to_string(&untouched.0).unwrap(),
+            value_codec::to_string(&surface.0).unwrap()
+        );
         assert_eq!(untouched.1.faces, surface.1.faces);
         assert_eq!(untouched.1.shells, surface.1.shells);
     }

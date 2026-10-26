@@ -85,6 +85,12 @@ export function stripMeshExtension(fileName: string): string {
   return fileName
 }
 
+/** Derive a safe download name without loading the conversion pipeline. */
+export function convertedMeshFileName(inputName: string, extension: string): string {
+  const base = stripMeshExtension(inputName).replace(/[/\\\0]/gu, '_').trim() || 'mesh'
+  return `${base}.${extension}`
+}
+
 /** Latin-1 view of the first `length` bytes, for header sniffing. */
 export function asciiPrefix(bytes: Uint8Array, length: number): string {
   let out = ''

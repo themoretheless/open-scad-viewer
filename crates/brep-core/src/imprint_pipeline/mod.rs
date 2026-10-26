@@ -10,16 +10,15 @@ use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, 
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::BTreeMap;
 
-
 #[cfg(test)]
 #[path = "../tests/imprint_pipeline.rs"]
 mod tests;
 
-mod spatial_relation;
-mod loft_curve_loops;
-mod valence3_cuboid_max_corner;
 mod cylinder_envelope;
-pub use spatial_relation::*;
-pub(crate) use loft_curve_loops::*;
-pub(crate) use valence3_cuboid_max_corner::*;
+mod loft_curve_loops;
+mod spatial_relation;
+mod valence3_cuboid_max_corner;
 pub use cylinder_envelope::*;
+pub(crate) use loft_curve_loops::*;
+pub use spatial_relation::*;
+pub(crate) use valence3_cuboid_max_corner::*;

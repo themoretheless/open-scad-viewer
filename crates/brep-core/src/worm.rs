@@ -3,8 +3,8 @@ pub use crate::thread::FiniteThreadLimits as BuildLimits;
 use crate::{Error, Model, Result};
 use nurbs_core::worm::{QualifiedTrimmedPatches, Spec};
 mod wheel;
+pub use wheel::{WheelBodyCandidate, WheelCapLimits, WheelCaps, wheel_body_candidate, wheel_caps};
 pub use wheel::{WheelBuildOptions, finite_wheel_with_certificates};
-pub use wheel::{WheelCapLimits, WheelCaps, wheel_caps, WheelBodyCandidate, wheel_body_candidate};
 fn refuse(s: &str) -> Error {
     Error::new("BREP_WORM_UNPROVEN", s)
 }

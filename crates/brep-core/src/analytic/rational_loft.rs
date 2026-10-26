@@ -2,10 +2,12 @@
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
 use nurbs_core::numerics::error_upper as error_bound;
-mod smooth_stations;
 mod affine_stations;
-pub use affine_stations::{AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls};
-pub use smooth_stations::{SmoothStationWalls,smooth_station_walls};
+mod smooth_stations;
+pub use affine_stations::{
+    AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls,
+};
+pub use smooth_stations::{SmoothStationWalls, smooth_station_walls};
 mod polygon_stations;
 pub use polygon_stations::{PolygonStationWalls, smooth_polygon_station_walls};
 type P = [f64; 3];
@@ -188,9 +190,9 @@ fn section_loft_impl(
     for section in &prepared[1..] {
         for (a, b) in prepared[0].iter().zip(section) {
             if a.len() != b.len()
-                || a.iter()
-                    .zip(b)
-                    .any(|(a, b)| a.degree != b.degree || a.control_points.len() != b.control_points.len())
+                || a.iter().zip(b).any(|(a, b)| {
+                    a.degree != b.degree || a.control_points.len() != b.control_points.len()
+                })
             {
                 return Err(err(
                     "Rational section span correspondence/degrees must match",
@@ -581,108 +583,198 @@ pub(crate) fn retained_section_partition(sections:&[Vec<Vec<Curve>>],max_product
         }
         retained.push(rings);
     }
-    if let Some(first)=retained.first() {
-        if retained.iter().any(|station|station.len()!=first.len() || station.iter().zip(first).any(|(a,b)|
-            a.len()!=b.len() || a.iter().zip(b).any(|(a,b)|a.degree!=b.degree || a.knots!=b.knots || a.weights!=b.weights || a.periodic!=b.periodic))) {
-            upper=None;
+    if let Some(first) = retained.first() {
+        if retained.iter().any(|station| {
+            station.len() != first.len()
+                || station.iter().zip(first).any(|(a, b)| {
+                    a.len() != b.len()
+                        || a.iter().zip(b).any(|(a, b)| {
+                            a.degree != b.degree
+                                || a.knots != b.knots
+                                || a.weights != b.weights
+                                || a.periodic != b.periodic
+                        })
+                })
+        }) {
+            upper = None;
         }
-    } else {upper=None;}
-    Ok((retained,upper,products))
+    } else {
+        upper = None;
+    }
+    Ok((retained, upper, products))
 }
 
 #[cfg(test)]
-#[path="tests/rational_loft_body_partition_tests.rs"]
+#[path = "tests/rational_loft_body_partition_tests.rs"]
 mod body_partition_tests;
 
 pub fn progressive_profile_body_with_evidence(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,
-    options:nurbs_core::progressive_sweep::Options,
-)->Result<ProgressiveBodyEvidence>{
-    progressive_profile_body_with_evidence_and_correction(loops,path,scale,twist,affine,frames,guidance,options,None)
+    loops: &[Vec<Curve>],
+    path: &Curve,
+    scale: &Curve,
+    twist: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    frames: Option<(&Curve, &Curve)>,
+    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    options: nurbs_core::progressive_sweep::Options,
+) -> Result<ProgressiveBodyEvidence> {
+    progressive_profile_body_with_evidence_and_correction(
+        loops, path, scale, twist, affine, frames, guidance, options, None,
+    )
 }
 pub fn progressive_profile_body_with_evidence_and_correction(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
-    correction:Option<EndpointCapCorrection>,
-)->Result<ProgressiveBodyEvidence>{
-    progressive_profile_body_with_rmf_policy(loops,path,scale,twist,affine,frames,guidance,options,correction,None)
+    loops: &[Vec<Curve>],
+    path: &Curve,
+    scale: &Curve,
+    twist: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    frames: Option<(&Curve, &Curve)>,
+    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    options: nurbs_core::progressive_sweep::Options,
+    correction: Option<EndpointCapCorrection>,
+) -> Result<ProgressiveBodyEvidence> {
+    progressive_profile_body_with_rmf_policy(
+        loops, path, scale, twist, affine, frames, guidance, options, correction, None,
+    )
 }
 
 /// Optional bounded original spatial RMF proof; existing callers retain their policy.
 pub fn progressive_profile_body_with_rmf_policy(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
-    correction:Option<EndpointCapCorrection>,rmf_policy:Option<(usize,usize,usize)>,
-)->Result<ProgressiveBodyEvidence>{
-    progressive_profile_body_with_rmf_policy_and_corrections(loops,path,scale,twist,affine,frames,guidance,options,correction,None,rmf_policy)
+    loops: &[Vec<Curve>],
+    path: &Curve,
+    scale: &Curve,
+    twist: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    frames: Option<(&Curve, &Curve)>,
+    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    options: nurbs_core::progressive_sweep::Options,
+    correction: Option<EndpointCapCorrection>,
+    rmf_policy: Option<(usize, usize, usize)>,
+) -> Result<ProgressiveBodyEvidence> {
+    progressive_profile_body_with_rmf_policy_and_corrections(
+        loops, path, scale, twist, affine, frames, guidance, options, correction, None, rmf_policy,
+    )
 }
 
 /// Explicit same-basis circle repair applies only to these retained ruled walls.
 /// Its displacement is charged against the original source, including filled caps.
 pub fn progressive_profile_body_with_rmf_policy_and_corrections(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
-    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
-    rmf_policy:Option<(usize,usize,usize)>,
-)->Result<ProgressiveBodyEvidence>{
-    progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
-        correction,profile_correction,rmf_policy,None,false)
+    loops: &[Vec<Curve>],
+    path: &Curve,
+    scale: &Curve,
+    twist: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    frames: Option<(&Curve, &Curve)>,
+    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    options: nurbs_core::progressive_sweep::Options,
+    correction: Option<EndpointCapCorrection>,
+    profile_correction: Option<EndpointCapCorrection>,
+    rmf_policy: Option<(usize, usize, usize)>,
+) -> Result<ProgressiveBodyEvidence> {
+    progressive_profile_body_internal(
+        loops,
+        path,
+        scale,
+        twist,
+        affine,
+        frames,
+        guidance,
+        options,
+        correction,
+        profile_correction,
+        rmf_policy,
+        None,
+        false,
+    )
 }
 
 /// Source-owned progressive body with complete radial annular end caps.
 /// Legacy constructors keep their representation; this explicit mode shares
 /// cap construction/filling work and preserves physical cap groups.
 pub fn progressive_profile_body_with_annular_caps(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
-    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
-    rmf_policy:Option<(usize,usize,usize)>,caps:crate::retained_annular_cap::reference_filling::Limits,
-)->Result<AnnularProgressiveBody>{
-    let body=progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
-        correction,profile_correction,rmf_policy,Some(caps),false)?;
+    loops: &[Vec<Curve>],
+    path: &Curve,
+    scale: &Curve,
+    twist: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    frames: Option<(&Curve, &Curve)>,
+    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    options: nurbs_core::progressive_sweep::Options,
+    correction: Option<EndpointCapCorrection>,
+    profile_correction: Option<EndpointCapCorrection>,
+    rmf_policy: Option<(usize, usize, usize)>,
+    caps: crate::retained_annular_cap::reference_filling::Limits,
+) -> Result<AnnularProgressiveBody> {
+    let body = progressive_profile_body_internal(
+        loops,
+        path,
+        scale,
+        twist,
+        affine,
+        frames,
+        guidance,
+        options,
+        correction,
+        profile_correction,
+        rmf_policy,
+        Some(caps),
+        false,
+    )?;
     Ok(annular_caps::Boundary::new(body))
 }
 
 /// Native selection preserves exact legacy caps. A failed terminal coedge
 /// probe and annular construction/filling share one exact-work allowance.
 pub fn progressive_profile_body_with_automatic_caps(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
-    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
-    rmf_policy:Option<(usize,usize,usize)>,caps:crate::retained_annular_cap::reference_filling::Limits,
-)->Result<AnnularProgressiveBody>{
-    let body=progressive_profile_body_internal(loops,path,scale,twist,affine,frames,guidance,options,
-        correction,profile_correction,rmf_policy,Some(caps),true)?;
+    loops: &[Vec<Curve>],
+    path: &Curve,
+    scale: &Curve,
+    twist: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    frames: Option<(&Curve, &Curve)>,
+    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    options: nurbs_core::progressive_sweep::Options,
+    correction: Option<EndpointCapCorrection>,
+    profile_correction: Option<EndpointCapCorrection>,
+    rmf_policy: Option<(usize, usize, usize)>,
+    caps: crate::retained_annular_cap::reference_filling::Limits,
+) -> Result<AnnularProgressiveBody> {
+    let body = progressive_profile_body_internal(
+        loops,
+        path,
+        scale,
+        twist,
+        affine,
+        frames,
+        guidance,
+        options,
+        correction,
+        profile_correction,
+        rmf_policy,
+        Some(caps),
+        true,
+    )?;
     Ok(annular_caps::Boundary::new(body))
 }
 
-
-
 #[cfg(test)]
-#[path="tests/rational_loft_retained_tests.rs"]
+#[path = "tests/rational_loft_retained_tests.rs"]
 mod retained_tests;
 
 #[cfg(test)]
-#[path="tests/rational_loft_cap_certificate_tests.rs"]
+#[path = "tests/rational_loft_cap_certificate_tests.rs"]
 mod cap_certificate_tests;
 
 #[cfg(test)]
-#[path="tests/rational_loft_supplied_multispan_tests.rs"]
+#[path = "tests/rational_loft_supplied_multispan_tests.rs"]
 mod supplied_multispan_tests;
 
 #[cfg(test)]
-#[path="tests/rational_loft_nonuniform_wall_regression.rs"]
+#[path = "tests/rational_loft_nonuniform_wall_regression.rs"]
 mod nonuniform_wall_regression;
 
 #[cfg(test)]
-#[path="tests/rational_loft_closed_planar_rmf_boundary_tests.rs"]
+#[path = "tests/rational_loft_closed_planar_rmf_boundary_tests.rs"]
 mod closed_planar_rmf_boundary_tests;
 
 #[path = "rational_loft/owned_progressive_body.rs"]

@@ -217,10 +217,11 @@ fn weld(positions: &[f64], epsilon: f64) -> (Vec<f64>, Vec<usize>, usize) {
 /// seed triangle; conflicting components cannot exist because constraints
 /// are only checked, never forced.
 fn unify_orientation(triangles: &mut [[usize; 3]]) -> usize {
-    use std::collections::HashMap;
+    use std::collections::{BTreeMap, HashMap};
     // Edge -> incident (triangle, direction of traversal: true if a->b
     // with a < b... store actual (from, to) of the directed half-edge).
-    let mut half_edges: HashMap<EdgeKey, Vec<(usize, usize, usize)>> = HashMap::new();
+    // Ordered edges make adjacency insertion and BFS traversal reproducible.
+    let mut half_edges: BTreeMap<EdgeKey, Vec<(usize, usize, usize)>> = BTreeMap::new();
     for (ti, t) in triangles.iter().enumerate() {
         for i in 0..3 {
             let (a, b) = (t[i], t[(i + 1) % 3]);
@@ -302,9 +303,9 @@ fn duplicate_vertex(positions: &mut Vec<f64>, v: usize) -> usize {
 /// belong to the same shell. Every shell beyond the first receives its own
 /// copies of the edge endpoints. Returns the number of duplicated vertices.
 fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3]]) -> usize {
-    use std::collections::HashMap;
-    // Edge -> incident triangle ids.
-    let mut edge_tris: HashMap<EdgeKey, Vec<usize>> = HashMap::new();
+    use std::collections::{BTreeMap, BTreeSet};
+    // Ordered traversal keeps shell ownership and new vertex IDs stable.
+    let mut edge_tris: BTreeMap<EdgeKey, Vec<usize>> = BTreeMap::new();
     for (ti, t) in triangles.iter().enumerate() {
         for i in 0..3 {
             edge_tris
@@ -320,8 +321,8 @@ fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3
         }
         // Union-find over incident triangles, joined by shared edges other
         // than `edge` itself.
-        let mut parent: HashMap<usize, usize> = tris.iter().map(|&t| (t, t)).collect();
-        fn find(parent: &mut HashMap<usize, usize>, x: usize) -> usize {
+        let mut parent: BTreeMap<usize, usize> = tris.iter().map(|&t| (t, t)).collect();
+        fn find(parent: &mut BTreeMap<usize, usize>, x: usize) -> usize {
             let mut r = x;
             while parent[&r] != r {
                 r = parent[&r];
@@ -334,8 +335,8 @@ fn split_non_manifold_edges(positions: &mut Vec<f64>, triangles: &mut [[usize; 3
             }
             r
         }
-        let tri_set: std::collections::HashSet<usize> = tris.iter().copied().collect();
-        let mut link_owner: HashMap<EdgeKey, usize> = HashMap::new();
+        let tri_set: BTreeSet<usize> = tris.iter().copied().collect();
+        let mut link_owner: BTreeMap<EdgeKey, usize> = BTreeMap::new();
         for &ti in &tri_set {
             for i in 0..3 {
                 let key = edge_key(triangles[ti][i], triangles[ti][(i + 1) % 3]);
@@ -453,12 +454,13 @@ fn split_pinched_vertices(positions: &mut Vec<f64>, triangles: &mut [[usize; 3]]
 /// Returns (filled loops, added triangles). Non-simple loops and ambiguous
 /// (branching) boundaries are left for the residual report.
 fn fill_boundary_loops(positions: &[f64], triangles: &mut Vec<[usize; 3]>) -> (usize, usize) {
-    use std::collections::HashMap;
+    use std::collections::{BTreeMap, BTreeSet};
     let flat: Vec<usize> = triangles.iter().flatten().copied().collect();
     let uses = mesh_topology::EdgeUses::new(&flat);
-    // Directed boundary edges as traversed by the surface.
-    let mut next_edge: HashMap<usize, usize> = HashMap::new();
-    let mut ambiguous: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    // Directed boundary edges as traversed by the surface. Ordered starts
+    // make loop selection and exterior tie-breaking independent of hash seeds.
+    let mut next_edge: BTreeMap<usize, usize> = BTreeMap::new();
+    let mut ambiguous: BTreeSet<usize> = BTreeSet::new();
     for [a, b] in uses.boundary() {
         if next_edge.insert(a, b).is_some() {
             ambiguous.insert(a);
@@ -469,7 +471,7 @@ fn fill_boundary_loops(positions: &[f64], triangles: &mut Vec<[usize; 3]>) -> (u
     }
     // Walk all simple boundary loops first.
     let mut loops: Vec<Vec<usize>> = Vec::new();
-    let mut visited: std::collections::HashSet<EdgeKey> = std::collections::HashSet::new();
+    let mut visited: BTreeSet<EdgeKey> = BTreeSet::new();
     let starts: Vec<usize> = next_edge.keys().copied().collect();
     for start in starts {
         let mut loop_vs = vec![start];

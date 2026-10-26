@@ -2,6 +2,7 @@
 pub mod edit;
 pub mod weight_edit;
 pub mod surface_edit;
+pub mod surface_extension;
 pub mod direct_edit;
 pub mod morph;
 pub mod fairing;

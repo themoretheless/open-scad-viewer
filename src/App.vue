@@ -775,6 +775,10 @@ const {
   exportDialogOpen,
   exportDialogRef,
   additionalExportFormat,
+  conversionPending,
+  conversionProgress,
+  conversionOperation,
+  cancelConversion,
   openExportDialog,
   confirmExport,
   triggerOpen,
@@ -798,6 +802,21 @@ const {
   markFitNextRender,
   showNotice,
   translate: t,
+})
+const conversionStatus = computed(() => {
+  const progress = conversionProgress.value
+  if (!progress) return ''
+  const labels: Record<string, [string, string]> = {
+    decode: ['Разбор файла', 'Decoding file'],
+    finalize: ['Сборка меша', 'Building indexed mesh'],
+    check: ['Проверка manifold', 'Checking manifold topology'],
+    repair: ['Исправление топологии', 'Repairing topology'],
+    verify: ['Повторная проверка', 'Verifying the result'],
+    inspect: ['Анализ меша', 'Inspecting mesh'],
+    export: ['Экспорт файла', 'Exporting file'],
+  }
+  const label = labels[progress.phase] ?? ['Конвертация', 'Converting']
+  return `${label[lang.value === 'ru' ? 0 : 1]} · ${progress.completed}/${progress.total}`
 })
 const statusText = computed(() => rendering.value
   ? t('compiling')
@@ -1156,7 +1175,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
             <button type="button" :title="t('saveFile')" @click="saveSource">{{ t('save') }}</button>
             <button type="button" :disabled="savingBrowser" :title="t('saveBrowserHelp')" @click="saveBrowserDraft">{{ savingBrowser ? t('savingDraft') : t('saveBrowser') }}</button>
             <button type="button" :title="t('shareFile')" @click="shareSource">{{ t('share') }}</button>
-            <button type="button" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
+            <button type="button" :disabled="conversionPending" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
             <span class="menu-status" role="status">{{ persistenceLabel }}</span>
           </div>
         </details>
@@ -1810,6 +1829,11 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
       <span class="status-item kernel-badge">Manifold</span>
       <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
       <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item" role="status">{{ persistenceLabel }}</span>
+      <span v-if="conversionPending" class="status-item conversion-status" role="status">
+        <span>{{ conversionStatus || t(conversionOperation === 'export' ? 'exportTitle' : 'convertFile') }}</span>
+        <progress :max="conversionProgress?.total ?? (conversionOperation === 'export' ? 2 : 7)" :value="conversionProgress?.completed ?? 0" />
+        <button type="button" :aria-label="t('cancel')" @click="cancelConversion">{{ t('cancel') }}</button>
+      </span>
       <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item status-hint">{{ t('hint') }}</span>
     </footer>
 
@@ -1822,7 +1846,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           </div>
           <button class="icon-btn" type="button" :aria-label="t('close')" @click="exportDialogOpen = false">×</button>
         </header>
-        <fieldset class="format-grid">
+        <fieldset class="format-grid" :disabled="conversionPending">
           <legend>{{ t('exportFormat') }}</legend>
           <label v-for="format in MESH_EXPORT_FORMATS" :key="format" class="format-card" :class="{ active: additionalExportFormat === format }">
             <input v-model="additionalExportFormat" type="radio" name="export-format" :value="format">
@@ -1832,10 +1856,10 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
         </fieldset>
         <p class="dialog-note" :class="{ warning: !canExport }">{{ canExport ? t('exportScope') : t('needsFullBuild') }}</p>
         <footer class="dialog-footer">
-          <button class="btn" type="button" :title="t('convertFileHelp')" @click="exportDialogOpen = false; triggerConvert()">{{ t('convertFile') }}</button>
+          <button class="btn" type="button" :disabled="conversionPending" :title="t('convertFileHelp')" @click="exportDialogOpen = false; triggerConvert()">{{ t('convertFile') }}</button>
           <span class="statusbar-spacer" aria-hidden="true" />
           <button class="btn" type="button" @click="exportDialogOpen = false">{{ t('cancel') }}</button>
-          <button class="btn btn-primary" type="button" :disabled="!canExport" @click="confirmExport">{{ t('download') }} {{ MESH_FORMAT_LABELS[additionalExportFormat] }}</button>
+          <button class="btn btn-primary" type="button" :disabled="!canExport || conversionPending" @click="confirmExport">{{ t('download') }} {{ MESH_FORMAT_LABELS[additionalExportFormat] }}</button>
         </footer>
       </div>
     </div>

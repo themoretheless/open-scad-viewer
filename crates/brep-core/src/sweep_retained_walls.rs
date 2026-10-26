@@ -107,23 +107,53 @@ mod correspondence_tests {
     use super::*;
     #[test]
     fn original_sections_require_owned_domains_world_edges_and_shared_exact_work() {
-        let sections=[0.,10.].iter().map(|&z|vec![vec![nurbs_core::primitives::circle(
-            [0.,0.,z],[0.,0.,1.],0.5).unwrap()]]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();
-        let r=inspect_correspondence(&model,&sections,false,1024,1000000).unwrap();
-        assert!(r.certified && r.inspected_faces==4);
-        assert_eq!(r.reason,"exact-retained-coefficients");
-        let short=inspect_correspondence(&model,&sections,false,1024,r.exact_work-1).unwrap();
-        assert!(!short.certified && short.exact_work<=r.exact_work-1);
-        let mut changed=model.clone(); changed.shells[0].faces.pop();
-        assert_eq!(inspect_correspondence(&changed,&sections,false,1024,1000000).unwrap().reason,"retained-body-face-coverage-unproved");
-        let mut changed=model.clone();let wire=changed.faces[0].outer;
-        let edge=changed.loops[wire].coedges[0].edge;
-        changed.edges[edge].curve.control_points[0][2]+=0.125;
-        assert_eq!(inspect_correspondence(&changed,&sections,false,1024,1000000).unwrap().reason,"retained-wall-domain-unproved");
-        changed=model.clone();changed.faces[0].outer=changed.loops.len();
-        assert!(!inspect_correspondence(&changed,&sections,false,1024,1000000).unwrap().certified);
-        let mut source=sections.clone();source[0][0][0].weights[0]=0.5;
-        assert_eq!(inspect_correspondence(&model,&source,false,1024,1000000).unwrap().reason,"retained-wall-mismatch");
+        let sections = [0., 10.]
+            .iter()
+            .map(|&z| {
+                vec![vec![
+                    nurbs_core::primitives::circle([0., 0., z], [0., 0., 1.], 0.5).unwrap(),
+                ]]
+            })
+            .collect::<Vec<_>>();
+        let model = crate::rational_section_loft(&sections).unwrap();
+        let r = inspect_correspondence(&model, &sections, false, 1024, 1000000).unwrap();
+        assert!(r.certified && r.inspected_faces == 4);
+        assert_eq!(r.reason, "exact-retained-coefficients");
+        let short =
+            inspect_correspondence(&model, &sections, false, 1024, r.exact_work - 1).unwrap();
+        assert!(!short.certified && short.exact_work <= r.exact_work - 1);
+        let mut changed = model.clone();
+        changed.shells[0].faces.pop();
+        assert_eq!(
+            inspect_correspondence(&changed, &sections, false, 1024, 1000000)
+                .unwrap()
+                .reason,
+            "retained-body-face-coverage-unproved"
+        );
+        let mut changed = model.clone();
+        let wire = changed.faces[0].outer;
+        let edge = changed.loops[wire].coedges[0].edge;
+        changed.edges[edge].curve.control_points[0][2] += 0.125;
+        assert_eq!(
+            inspect_correspondence(&changed, &sections, false, 1024, 1000000)
+                .unwrap()
+                .reason,
+            "retained-wall-domain-unproved"
+        );
+        changed = model.clone();
+        changed.faces[0].outer = changed.loops.len();
+        assert!(
+            !inspect_correspondence(&changed, &sections, false, 1024, 1000000)
+                .unwrap()
+                .certified
+        );
+        let mut source = sections.clone();
+        source[0][0][0].weights[0] = 0.5;
+        assert_eq!(
+            inspect_correspondence(&model, &source, false, 1024, 1000000)
+                .unwrap()
+                .reason,
+            "retained-wall-mismatch"
+        );
     }
 }

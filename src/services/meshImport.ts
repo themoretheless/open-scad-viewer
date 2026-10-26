@@ -1,5 +1,11 @@
 import {decodeMeshBytesInKernel} from './geometry/meshImportKernel'
 import {callGeometryRust, GeometryKernelError, warmGeometryKernel} from './geometry/kernel'
+import {
+  checkManifoldInKernel,
+  repairManifoldInKernel,
+  type KernelManifoldRepair,
+  type KernelManifoldReport,
+} from './geometry/manifoldAnalysis'
 /**
  * Unified mesh file import. Decodes STL (ASCII/binary), OBJ, PLY (ASCII/binary),
  * OFF, AMF and 3MF into one welded, indexed triangle mesh that the mesh
@@ -43,14 +49,26 @@ export class MeshImportError extends Error {
   }
 }
 
+export type MeshImportRepairMode = 'none' | 'conservative' | 'full'
+export type MeshImportRepairStats = Omit<KernelManifoldRepair, 'positions' | 'indices'>
+
+/** Before/after topology evidence and the changes made by the selected repair. */
+export interface MeshImportManifoldAnalysis {
+  readonly mode: MeshImportRepairMode
+  readonly before: KernelManifoldReport
+  readonly after: KernelManifoldReport
+  readonly repair: MeshImportRepairStats | null
+}
+
 export interface ImportedMesh extends PolygonMesh {
   readonly format: MeshImportFormat
   readonly triangleCount: number
   readonly vertexCount: number
-  /** Vertex count before welding; equal to `vertexCount` for already indexed files. */
+  /** Decoded vertex count before import welding and topology repair. */
   readonly sourceVertexCount: number
   /** Triangles dropped because welding collapsed them. */
   readonly degenerateTriangles: number
+  readonly manifold: MeshImportManifoldAnalysis
 }
 
 export interface MeshImportOptions {
@@ -62,7 +80,17 @@ export interface MeshImportOptions {
    * distorting geometry. `false` keeps the file's own indexing.
    */
   readonly weld?: number | false
+  /** Topology repair after import welding. Conservative is the safe default;
+   * Full additionally splits non-manifold fans and fills simple boundary loops.
+   * With `weld: false`, repair defaults to `none` so file indexing is preserved. */
+  readonly repair?: MeshImportRepairMode
   readonly maxBytes?: number
+}
+
+export interface MeshImportProgress {
+  readonly phase: 'decode' | 'finalize' | 'check' | 'repair' | 'verify'
+  readonly completed: number
+  readonly total: 5
 }
 
 /** Decode a mesh file into one welded indexed triangle mesh. */
@@ -70,6 +98,7 @@ export async function importMeshFile(
   fileName: string,
   input: Uint8Array | ArrayBuffer,
   options: MeshImportOptions = {},
+  onProgress?: (progress: MeshImportProgress) => void,
 ): Promise<ImportedMesh> {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input)
   const maxBytes = options.maxBytes ?? MESH_IMPORT_MAX_BYTES
@@ -80,9 +109,12 @@ export async function importMeshFile(
   if (!format) {
     throw new MeshImportError('unsupported-format', `Cannot detect a supported mesh format for ${fileName}. Supported: ${MESH_IMPORT_FORMATS.map(f => f.toUpperCase()).join(', ')}.`)
   }
+  onProgress?.({phase: 'decode', completed: 0, total: 5})
   await warmGeometryKernel()
   const raw = await decode(format, fileName, bytes)
-  return finalize(format, raw.positions, raw.indices, options.weld ?? 0)
+  onProgress?.({phase: 'finalize', completed: 1, total: 5})
+  const repair = options.repair ?? (options.weld === false ? 'none' : 'conservative')
+  return finalize(format, raw.positions, raw.indices, options.weld ?? 0, repair, onProgress)
 }
 
 /** Convenience wrapper for browser `File` objects. */
@@ -136,9 +168,49 @@ function nativeImportCall<T>(op: string, payload: Record<string, unknown>, forma
   throw new MeshImportError(code, error instanceof Error ? error.message : String(error), format)
  }
 }
-function finalize(format: MeshImportFormat, positions: ArrayLike<number>, indices: ArrayLike<number>, weld: number | false): ImportedMesh {
- const result = nativeImportCall<{positions: number[]; indices: number[]; sourceVertexCount: number; degenerateTriangles: number}>(
-  'mesh_import_finalize', {positions, indices, weld}, format)
- return Object.freeze({...result, format, positions: Float64Array.from(result.positions), indices: Uint32Array.from(result.indices),
-  triangleCount: result.indices.length / 3, vertexCount: result.positions.length / 3})
+function finalize(
+  format: MeshImportFormat,
+  positions: ArrayLike<number>,
+  indices: ArrayLike<number>,
+  weld: number | false,
+  mode: MeshImportRepairMode,
+  onProgress?: (progress: MeshImportProgress) => void,
+): ImportedMesh {
+  const result = nativeImportCall<{positions: number[]; indices: number[]; sourceVertexCount: number; degenerateTriangles: number}>(
+    'mesh_import_finalize', {positions, indices, weld}, format)
+  let finalPositions = Float64Array.from(result.positions)
+  let finalIndices = Uint32Array.from(result.indices)
+  onProgress?.({phase: 'check', completed: 2, total: 5})
+  const before = checkManifoldInKernel(finalPositions, finalIndices)
+  let after = before
+  let repair: MeshImportRepairStats | null = null
+  if (mode !== 'none' && !before.isManifold) {
+    // Welding is already owned by mesh_import_finalize; do not apply a second epsilon here.
+    onProgress?.({phase: 'repair', completed: 3, total: 5})
+    const repaired = repairManifoldInKernel(finalPositions, finalIndices, 0, mode === 'full')
+    finalPositions = repaired.positions
+    finalIndices = repaired.indices
+    onProgress?.({phase: 'verify', completed: 4, total: 5})
+    after = checkManifoldInKernel(finalPositions, finalIndices)
+    repair = Object.freeze({
+      weldedVertices: repaired.weldedVertices,
+      removedDegenerateTriangles: repaired.removedDegenerateTriangles,
+      flippedTriangles: repaired.flippedTriangles,
+      splitVertices: repaired.splitVertices,
+      filledHoles: repaired.filledHoles,
+      filledTriangles: repaired.filledTriangles,
+      mode: repaired.mode,
+      isManifold: repaired.isManifold,
+      isManifoldWithBoundary: repaired.isManifoldWithBoundary,
+    })
+  } else onProgress?.({phase: 'verify', completed: 4, total: 5})
+  return Object.freeze({
+    ...result,
+    format,
+    positions: finalPositions,
+    indices: finalIndices,
+    triangleCount: finalIndices.length / 3,
+    vertexCount: finalPositions.length / 3,
+    manifold: Object.freeze({mode, before, after, repair}),
+  })
 }

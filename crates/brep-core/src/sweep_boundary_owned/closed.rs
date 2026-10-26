@@ -532,10 +532,12 @@ pub fn construct_closed_with_ideal_atlas(
 #[cfg(test)]
 mod tests;
 
-mod smooth;
 mod rational;
-pub use rational::{RationalClosedLimits,RationalClosedReport,RationalClosedBody,RationalClosedAttempt,FilledGraphCapReport,
-    construct_rational_closed_material,verify_rational_closed_material};
+mod smooth;
+pub use rational::{
+    FilledGraphCapReport, RationalClosedAttempt, RationalClosedBody, RationalClosedLimits,
+    RationalClosedReport, construct_rational_closed_material, verify_rational_closed_material,
+};
 pub use smooth::{
     BindingReport as AffineWallBindingReport, OriginalReport as OriginalClosedReport,
     SmoothClosedAttempt, SmoothClosedBody, SmoothClosedLimits, SmoothClosedReport,

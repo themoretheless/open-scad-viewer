@@ -9,13 +9,13 @@ use crate::step_part21::{
     Entity, MAX_GRAPH_DEPTH, Value, boolean, call, component, components, expand, ints, list, name,
     number, one_ref, parse, reachable, refs, string_value, usize_value, values,
 };
-pub use crate::step_v3_export::{
-    export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
-    export_step_v9,
-};
 pub(crate) use crate::step_v3_export::{
     Writer, canonical_face_senses, certify_periodic_surface, certify_step_v8_topology,
     emit_curve_source, emit_surface_source, refs_text,
+};
+pub use crate::step_v3_export::{
+    export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
+    export_step_v9,
 };
 use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::{CoedgeTrim, Vertex};
@@ -1023,9 +1023,9 @@ fn surface_v5(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Resu
 }
 
 mod units;
-use units::{length_scale, uncertainty_mm};
 #[cfg(test)]
 use units::unit_scale;
+use units::{length_scale, uncertainty_mm};
 
 fn part21_views(text: &str) -> (String, String) {
     let bytes = text.as_bytes();
@@ -1772,9 +1772,11 @@ impl<'a> DirectBuilder<'a> {
         // A closed edge may share its endpoint vertex while tracing a full
         // nonconstant curve. Only a constant control hull is a pole edge.
         let pole = self.vertices[va].point;
-        let degenerate = va == vb && c3.control_points.iter().all(|point| {
-            point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b)
-        });
+        let degenerate = va == vb
+            && c3
+                .control_points
+                .iter()
+                .all(|point| point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b));
         verify_correspondence(
             &c3,
             &pc,

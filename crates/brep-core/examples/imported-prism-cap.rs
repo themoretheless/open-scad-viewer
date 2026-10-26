@@ -1,4 +1,4 @@
-use brep_core::{analysis, operations, prism, Model};
+use brep_core::{Model, analysis, operations, prism};
 fn main() {
     let model: Model = value_codec::from_str(include_str!(
         "../../../docs/qualification/cad-roadmap-2026-09-28/parts-history/imported-flange.json"

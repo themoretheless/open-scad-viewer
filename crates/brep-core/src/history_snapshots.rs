@@ -255,9 +255,7 @@ fn surface_extra_bytes(surface: &Surface) -> usize {
         + surface
             .control_points
             .iter()
-            .map(|row| {
-                vec_allocation(row) + row.iter().map(vec_allocation).sum::<usize>()
-            })
+            .map(|row| vec_allocation(row) + row.iter().map(vec_allocation).sum::<usize>())
             .sum::<usize>()
         + vec_allocation(&surface.weights)
         + surface.weights.iter().map(vec_allocation).sum::<usize>()

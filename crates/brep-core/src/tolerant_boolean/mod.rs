@@ -37,11 +37,11 @@ const MAX_TURN: f64 = 0.12;
 const MAX_POINTS: usize = 4000;
 const DENSE: usize = 32;
 
-mod unsupported;
-mod tracer;
 mod boolean;
 #[cfg(test)]
 mod tests;
-use unsupported::*;
-pub(crate) use tracer::*;
+mod tracer;
+mod unsupported;
 pub use boolean::*;
+pub(crate) use tracer::*;
+use unsupported::*;

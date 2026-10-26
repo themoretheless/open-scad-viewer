@@ -2,7 +2,7 @@
 //! This does not prove cross-face endpoint ownership or admit a shell pair.
 use crate::{source_allowed_contact, source_boundary_fragment::Fragment};
 use cad_predicates::{BezierIdentity, Sign};
-use nurbs_core::{curve::Curve, interval_eval::Interval as I, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve, interval_eval::Interval as I};
 #[derive(Clone)]
 pub struct MappedUse {
     world: Curve,

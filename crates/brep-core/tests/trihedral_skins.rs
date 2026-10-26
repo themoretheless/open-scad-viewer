@@ -113,11 +113,17 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
     if let Some(directory) = std::env::var_os("OSV_TRIHEDRAL_SKIN_EVIDENCE") {
         let d = std::path::PathBuf::from(directory);
         std::fs::create_dir_all(&d).unwrap();
-        let collar_data=collars.boundaries.iter().map(|c| value_codec::json!({
-            "curve":c.curve,"surface":c.surface,"originalSurface":c.original_surface,
-            "originalPcurve":c.original_pcurve,"direction":c.direction,
-            "g2Upper":c.g2.upper,"positionUpperMm":c.positions.upper
-        })).collect::<Vec<_>>();
+        let collar_data = collars
+            .boundaries
+            .iter()
+            .map(|c| {
+                value_codec::json!({
+                    "curve":c.curve,"surface":c.surface,"originalSurface":c.original_surface,
+                    "originalPcurve":c.original_pcurve,"direction":c.direction,
+                    "g2Upper":c.g2.upper,"positionUpperMm":c.positions.upper
+                })
+            })
+            .collect::<Vec<_>>();
         std::fs::write(d.join("corner-collars.json"),value_codec::to_string(&value_codec::json!({
             "boundaries":collar_data,"cells":collars.cells,"exactWork":collars.exact_work,
             "coefficientWork":collars.coefficient_work,"centralSurfaceBuilt":false,"closedBody":false

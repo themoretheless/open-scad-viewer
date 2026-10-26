@@ -6,8 +6,7 @@
 use super::*;
 use crate::aag::Aag;
 use crate::aag_features::{
-    find_holes, find_pockets, scan_small_features, HoleEntry, SmallFeatureKind,
-    SmallFeatureOptions,
+    HoleEntry, SmallFeatureKind, SmallFeatureOptions, find_holes, find_pockets, scan_small_features,
 };
 use crate::analysis::surface_classify::SurfaceClass;
 
@@ -458,15 +457,25 @@ pub fn defeature_holes_and_pockets(
             .transpose()?;
         let mut candidates = Vec::<FeatureRef>::new();
         if options.holes {
-            candidates.extend(find_holes(&current, &graph, budget)?.into_iter().map(FeatureRef::Hole));
+            candidates.extend(
+                find_holes(&current, &graph, budget)?
+                    .into_iter()
+                    .map(FeatureRef::Hole),
+            );
         }
         if options.pockets {
-            candidates.extend(find_pockets(&current, &graph, budget)?.into_iter().map(FeatureRef::Pocket));
+            candidates.extend(
+                find_pockets(&current, &graph, budget)?
+                    .into_iter()
+                    .map(FeatureRef::Pocket),
+            );
         }
         let mut selected = None;
         for feature in candidates {
             let (kind, faces) = match &feature {
-                FeatureRef::Hole(hole) => (DefeatureKind::Hole, hole_faces(hole).into_iter().collect()),
+                FeatureRef::Hole(hole) => {
+                    (DefeatureKind::Hole, hole_faces(hole).into_iter().collect())
+                }
                 FeatureRef::Pocket(pocket) => (DefeatureKind::Pocket, pocket.faces.clone()),
                 FeatureRef::FilletChain(_) => continue,
             };
@@ -490,7 +499,9 @@ pub fn defeature_holes_and_pockets(
             selected = Some((feature, kind, faces));
             break;
         }
-        let Some((feature, kind, faces)) = selected else { break };
+        let Some((feature, kind, faces)) = selected else {
+            break;
+        };
         let report = run(&current, &graph, &feature, budget)?;
         if report.removed {
             current = report.model.clone();

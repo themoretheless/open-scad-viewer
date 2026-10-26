@@ -97,6 +97,12 @@ fn trim_nodes(
 /// mandatory, while full-interval checks replace sampled edge/lift admission.
 pub fn verify(model: &Model, max_cells: usize) -> Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
+    verify_for_defects(model, max_cells)
+}
+
+/// Diagnostic entry for classifying an already defective model. Structural
+/// admission is deliberately not used as a pre-filter for defect reporting.
+pub(crate) fn verify_for_defects(model: &Model, max_cells: usize) -> Result<Report> {
     if max_cells == 0 || max_cells > 1_000_000 {
         return Err(Error::new(
             "BREP_AGREEMENT_BUDGET",
@@ -237,75 +243,146 @@ mod tests {
     use super::*;
     #[test]
     fn moving_hollow_tensor_sides_fit_shared_exact_work_budget() {
-        let ring=|radius:f64,z:f64,f:f64| {
-            let h=f.hypot(1.);
-            [[ [radius,0.],[radius,radius],[0.,radius]],
-             [[0.,radius],[-radius,radius],[-radius,0.]],
-             [[-radius,0.],[-radius,-radius],[0.,-radius]],
-             [[0.,-radius],[radius,-radius],[radius,0.]]].into_iter().map(|points|nurbs_core::curve::Curve {
-                degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-                control_points:points.into_iter().map(|xy|vec![2.*xy[0],xy[1]/h,z-xy[1]*f/h]).collect(),
-                weights:vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.],periodic:false,
-            }).collect::<Vec<_>>()
+        let ring = |radius: f64, z: f64, f: f64| {
+            let h = f.hypot(1.);
+            [
+                [[radius, 0.], [radius, radius], [0., radius]],
+                [[0., radius], [-radius, radius], [-radius, 0.]],
+                [[-radius, 0.], [-radius, -radius], [0., -radius]],
+                [[0., -radius], [radius, -radius], [radius, 0.]],
+            ]
+            .into_iter()
+            .map(|points| nurbs_core::curve::Curve {
+                degree: 2,
+                knots: vec![0., 0., 0., 1., 1., 1.],
+                control_points: points
+                    .into_iter()
+                    .map(|xy| vec![2. * xy[0], xy[1] / h, z - xy[1] * f / h])
+                    .collect(),
+                weights: vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.],
+                periodic: false,
+            })
+            .collect::<Vec<_>>()
         };
-        let mut sections=(0..=8).map(|i| {
-            let f=i as f64/8.;let outer=ring(0.5,10.*f,f);
-            let hole=ring(0.25,10.*f,f).into_iter().rev().map(|c|c.reverse().unwrap()).collect();
-            vec![outer,hole]
-        }).collect::<Vec<_>>();
-        for (index,z) in [(0,0.),(8,10.)] {
-            let flat=sections[index].iter().flatten().cloned().collect::<Vec<_>>();
-            let projected=nurbs_core::section_projection::project(&flat,2,[0.,0.],z,2_f64.powi(-40),0.6,1000000).unwrap().curves.unwrap();
-            sections[index]=vec![projected[..4].to_vec(),projected[4..].to_vec()];
+        let mut sections = (0..=8)
+            .map(|i| {
+                let f = i as f64 / 8.;
+                let outer = ring(0.5, 10. * f, f);
+                let hole = ring(0.25, 10. * f, f)
+                    .into_iter()
+                    .rev()
+                    .map(|c| c.reverse().unwrap())
+                    .collect();
+                vec![outer, hole]
+            })
+            .collect::<Vec<_>>();
+        for (index, z) in [(0, 0.), (8, 10.)] {
+            let flat = sections[index]
+                .iter()
+                .flatten()
+                .cloned()
+                .collect::<Vec<_>>();
+            let projected = nurbs_core::section_projection::project(
+                &flat,
+                2,
+                [0., 0.],
+                z,
+                2_f64.powi(-40),
+                0.6,
+                1000000,
+            )
+            .unwrap()
+            .curves
+            .unwrap();
+            sections[index] = vec![projected[..4].to_vec(), projected[4..].to_vec()];
         }
-        let model=crate::rational_section_loft(&sections).unwrap();
-        assert_eq!(model.faces.len(),66);
-        let report=verify_exact(&model,1000000).unwrap();
-        assert!(report.all_equal && report.all_joins_exact,"work={} unresolved={:?}",report.work,
-            report.uses.iter().filter(|u|!u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)).collect::<Vec<_>>());
-        assert!(report.work<1000000);
-        let partial=verify_exact(&model,report.work-1).unwrap();
-        assert!(!partial.all_equal && partial.work<=report.work-1);
-        assert_eq!(partial.uses.len(),report.uses.len());
+        let model = crate::rational_section_loft(&sections).unwrap();
+        assert_eq!(model.faces.len(), 66);
+        let report = verify_exact(&model, 1000000).unwrap();
+        assert!(
+            report.all_equal && report.all_joins_exact,
+            "work={} unresolved={:?}",
+            report.work,
+            report
+                .uses
+                .iter()
+                .filter(|u| !u
+                    .decision
+                    .as_ref()
+                    .is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Equal))
+                .collect::<Vec<_>>()
+        );
+        assert!(report.work < 1000000);
+        let partial = verify_exact(&model, report.work - 1).unwrap();
+        assert!(!partial.all_equal && partial.work <= report.work - 1);
+        assert_eq!(partial.uses.len(), report.uses.len());
     }
     #[test]
     fn exact_closure_survives_a_nonplanar_bilinear_warp_and_weight_scaling() {
-        let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();
+        let mut m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
         // z -> z + xy/4: top/bottom become bilinear graphs. Every box edge
         // has constant x or y, so its exact image remains a straight segment.
-        for v in &mut m.vertices {v.point[2]+=v.point[0]*v.point[1]/4.;}
+        for v in &mut m.vertices {
+            v.point[2] += v.point[0] * v.point[1] / 4.;
+        }
         for e in &mut m.edges {
-            for p in &mut e.curve.control_points {p[2]+=p[0]*p[1]/4.;}
-            for w in &mut e.curve.weights {*w*=3.;}
+            for p in &mut e.curve.control_points {
+                p[2] += p[0] * p[1] / 4.;
+            }
+            for w in &mut e.curve.weights {
+                *w *= 3.;
+            }
         }
         for f in &mut m.faces {
-            for row in &mut f.surface.control_points {for p in row {p[2]+=p[0]*p[1]/4.;}}
-            for row in &mut f.surface.weights {for w in row {*w*=2.;}}
+            for row in &mut f.surface.control_points {
+                for p in row {
+                    p[2] += p[0] * p[1] / 4.;
+                }
+            }
+            for row in &mut f.surface.weights {
+                for w in row {
+                    *w *= 2.;
+                }
+            }
         }
         m.validate().unwrap();
-        let r=verify_exact(&m,1000000).unwrap();
-        assert!(r.all_equal);assert!(r.all_joins_exact);assert_eq!(r.joins.len(),6);assert_eq!(r.uses.len(),24);
-        let needed=r.work;
-        assert!(needed>0 && needed<1000000);
-        assert!(verify_exact(&m,needed).unwrap().all_equal);
-        let partial=verify_exact(&m,needed-1).unwrap();
-        assert!(!partial.all_equal);assert!(partial.work<=needed-1);
-        assert_eq!(partial.uses.len(),24);
+        let r = verify_exact(&m, 1000000).unwrap();
+        assert!(r.all_equal);
+        assert!(r.all_joins_exact);
+        assert_eq!(r.joins.len(), 6);
+        assert_eq!(r.uses.len(), 24);
+        let needed = r.work;
+        assert!(needed > 0 && needed < 1000000);
+        assert!(verify_exact(&m, needed).unwrap().all_equal);
+        let partial = verify_exact(&m, needed - 1).unwrap();
+        assert!(!partial.all_equal);
+        assert!(partial.work <= needed - 1);
+        assert_eq!(partial.uses.len(), 24);
     }
     #[test]
     fn exact_closure_distinguishes_a_subtolerance_gap_and_keeps_every_use() {
-        let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();
-        let r=verify_exact(&m,1000000).unwrap();
-        assert!(r.all_equal);assert!(r.all_joins_exact);assert_eq!(r.joins.len(),6);assert_eq!(r.uses.len(),24);assert!(r.work<=1000000);
-        let partial=verify_exact(&m,1).unwrap();
-        assert!(!partial.all_equal);assert_eq!(partial.uses.len(),24);assert!(partial.work<=1);
-        m.edges[0].curve.control_points[0][2]+=1e-12;
-        assert!(verify(&m,10000).unwrap().complete);
-        let before=format!("{m:?}");
-        let r=verify_exact(&m,1000000).unwrap();
+        let mut m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let r = verify_exact(&m, 1000000).unwrap();
+        assert!(r.all_equal);
+        assert!(r.all_joins_exact);
+        assert_eq!(r.joins.len(), 6);
+        assert_eq!(r.uses.len(), 24);
+        assert!(r.work <= 1000000);
+        let partial = verify_exact(&m, 1).unwrap();
+        assert!(!partial.all_equal);
+        assert_eq!(partial.uses.len(), 24);
+        assert!(partial.work <= 1);
+        m.edges[0].curve.control_points[0][2] += 1e-12;
+        assert!(verify(&m, 10000).unwrap().complete);
+        let before = format!("{m:?}");
+        let r = verify_exact(&m, 1000000).unwrap();
         assert!(!r.all_equal);
-        assert!(r.uses.iter().any(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Different)));
-        assert_eq!(format!("{m:?}"),before);
+        assert!(r.uses.iter().any(|u| {
+            u.decision
+                .as_ref()
+                .is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Different)
+        }));
+        assert_eq!(format!("{m:?}"), before);
     }
     #[test]
     fn exhaustion_preserves_all_boundary_uses_without_mutation() {
@@ -402,53 +479,95 @@ mod tests {
 
     #[test]
     fn partial_annular_ruled_support_closes_every_authored_boundary_exactly() {
-        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-        let before=format!("{model:?}");let r=verify_exact(&model,1_000_000).unwrap();
-        assert!(r.all_equal&&r.all_joins_exact);assert_eq!(r.uses.len(),108);assert!(r.work<=1_000_000);
-        assert!(r.uses.iter().all(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)));
-        assert_eq!(format!("{model:?}"),before);
+        let model =
+            crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();
+        let before = format!("{model:?}");
+        let r = verify_exact(&model, 1_000_000).unwrap();
+        assert!(r.all_equal && r.all_joins_exact);
+        assert_eq!(r.uses.len(), 108);
+        assert!(r.work <= 1_000_000);
+        assert!(r.uses.iter().all(|u| {
+            u.decision
+                .as_ref()
+                .is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Equal)
+        }));
+        assert_eq!(format!("{model:?}"), before);
     }
     #[test]
     fn partial_annular_exact_boundaries_cover_scale_radius_and_direction_matrix() {
-        for scale in [0.1,1.,10.] { for radius in [0.5,1.25,2.] { for direction in [-1.,1.] {
-            let model=crate::circular_blend::partial_annular_quarter(
-                20.*scale,5.*scale,6.*scale,radius*scale,direction,1e-7*scale).unwrap();
-            let r=verify_exact(&model,1_000_000).unwrap();
-            assert!(r.all_equal&&r.all_joins_exact,
-                "scale={scale} radius={radius} direction={direction}: {r:?}");
-            assert_eq!(r.uses.len(),108);
-        } } }
-    }
-    #[test]
-    fn sphere_charts_have_global_perspective_injectivity(){
-        for radius in [2.,3.,1e-5,1e6]{
-            let model=crate::sphere(radius).unwrap();let before=format!("{model:?}");
-            for (index,face) in model.faces.iter().enumerate(){
-                let basis=[[1.,0.,0.,0.],[0.,1.,0.,0.]];
-                let denominator=[0.,0.,if index<4{1.}else{-1.},radius];
-                let q=nurbs_core::surface_injectivity::certify_projective_projection(&face.surface,basis,denominator,16).unwrap();
-                assert!(q.is_some(),"radius={radius}, face={index}, q={q:?}");
-                assert!(nurbs_core::surface_injectivity::certify_projective_projection(&face.surface,basis,denominator,15).unwrap().is_none());
+        for scale in [0.1, 1., 10.] {
+            for radius in [0.5, 1.25, 2.] {
+                for direction in [-1., 1.] {
+                    let model = crate::circular_blend::partial_annular_quarter(
+                        20. * scale,
+                        5. * scale,
+                        6. * scale,
+                        radius * scale,
+                        direction,
+                        1e-7 * scale,
+                    )
+                    .unwrap();
+                    let r = verify_exact(&model, 1_000_000).unwrap();
+                    assert!(
+                        r.all_equal && r.all_joins_exact,
+                        "scale={scale} radius={radius} direction={direction}: {r:?}"
+                    );
+                    assert_eq!(r.uses.len(), 108);
+                }
             }
-            assert_eq!(format!("{model:?}"),before);
         }
     }
     #[test]
-    fn sphere_equator_uses_exact_rational_circle_traversal(){
+    fn sphere_charts_have_global_perspective_injectivity() {
+        for radius in [2., 3., 1e-5, 1e6] {
+            let model = crate::sphere(radius).unwrap();
+            let before = format!("{model:?}");
+            for (index, face) in model.faces.iter().enumerate() {
+                let basis = [[1., 0., 0., 0.], [0., 1., 0., 0.]];
+                let denominator = [0., 0., if index < 4 { 1. } else { -1. }, radius];
+                let q = nurbs_core::surface_injectivity::certify_projective_projection(
+                    &face.surface,
+                    basis,
+                    denominator,
+                    16,
+                )
+                .unwrap();
+                assert!(q.is_some(), "radius={radius}, face={index}, q={q:?}");
+                assert!(
+                    nurbs_core::surface_injectivity::certify_projective_projection(
+                        &face.surface,
+                        basis,
+                        denominator,
+                        15
+                    )
+                    .unwrap()
+                    .is_none()
+                );
+            }
+            assert_eq!(format!("{model:?}"), before);
+        }
+    }
+    #[test]
+    fn sphere_equator_uses_exact_rational_circle_traversal() {
         // Radius 3 makes the stereographic control coordinates binary-exact,
         // separating circle parameterization from control-coordinate rounding.
-        let model=crate::sphere(3.).unwrap();
-        let before=format!("{model:?}");
-        let r=verify_exact(&model,1000000).unwrap();
-        assert!(r.all_equal,"{:?}",r.uses);assert!(r.all_joins_exact);
-        assert_eq!(format!("{model:?}"),before);
+        let model = crate::sphere(3.).unwrap();
+        let before = format!("{model:?}");
+        let r = verify_exact(&model, 1000000).unwrap();
+        assert!(r.all_equal, "{:?}", r.uses);
+        assert!(r.all_joins_exact);
+        assert_eq!(format!("{model:?}"), before);
         // Radius 2 still requires nonbinary 4/3 surface coordinates. A
         // tolerance-qualified sphere must not acquire an exact volume claim.
-        let rounded=crate::sphere(2.).unwrap();
-        assert!(verify(&rounded,4096).unwrap().complete);
-        let r=verify_exact(&rounded,1000000).unwrap();
+        let rounded = crate::sphere(2.).unwrap();
+        assert!(verify(&rounded, 4096).unwrap().complete);
+        let r = verify_exact(&rounded, 1000000).unwrap();
         assert!(!r.all_equal);
-        assert!(r.uses.iter().any(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Different)));
+        assert!(r.uses.iter().any(|u| {
+            u.decision
+                .as_ref()
+                .is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Different)
+        }));
     }
 }
 

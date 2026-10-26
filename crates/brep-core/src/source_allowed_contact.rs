@@ -9,7 +9,7 @@ use crate::{
 use cad_predicates::{
     AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 pub struct Certificate<E = SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
@@ -128,26 +128,52 @@ pub(crate) fn plane(s: &Surface, used: &mut u64, budget: u64) -> Result<Option<[
 }
 /// Exact literal source corners, with no evaluated or rounded endpoint weld.
 /// Restricted to a clamped natural-boundary line on an admitted affine map.
-fn partial_support_segment<E:Support>(edge:&E)->Option<[[f64;3];2]> {
-    if !linear(edge.world()) {return None;}
-    let use_=edge.fragment(0);let c=use_.curve();let s=use_.surface();
-    if c.degree!=1 || c.control_points.len()!=2 || c.weights[0]!=c.weights[1] || c.periodic {return None;}
-    let counts=[s.control_points.len(),s.control_points[0].len()];
-    let degree=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
-    let natural=std::array::from_fn::<_,2,_>(|axis|[knots[axis][degree[axis]],knots[axis][counts[axis]]]);
-    for axis in 0..2 {
-        if degree[axis]==0 || knots[axis][..=degree[axis]].iter().any(|&t|t!=natural[axis][0])
-            || knots[axis][counts[axis]..].iter().any(|&t|t!=natural[axis][1]) {return None;}
+fn partial_support_segment<E: Support>(edge: &E) -> Option<[[f64; 3]; 2]> {
+    if !linear(edge.world()) {
+        return None;
     }
-    let mut indices=[[0;2];2];
-    for end in 0..2 {for axis in 0..2 {
-        let value=*c.control_points[end].get(axis)?;
-        indices[end][axis]=if value==natural[axis][0] {0}
-            else if value==natural[axis][1] {counts[axis]-1}else{return None;};
-    }}
+    let use_ = edge.fragment(0);
+    let c = use_.curve();
+    let s = use_.surface();
+    if c.degree != 1 || c.control_points.len() != 2 || c.weights[0] != c.weights[1] || c.periodic {
+        return None;
+    }
+    let counts = [s.control_points.len(), s.control_points[0].len()];
+    let degree = [s.degree_u, s.degree_v];
+    let knots = [&s.knots_u, &s.knots_v];
+    let natural = std::array::from_fn::<_, 2, _>(|axis| {
+        [knots[axis][degree[axis]], knots[axis][counts[axis]]]
+    });
+    for axis in 0..2 {
+        if degree[axis] == 0
+            || knots[axis][..=degree[axis]]
+                .iter()
+                .any(|&t| t != natural[axis][0])
+            || knots[axis][counts[axis]..]
+                .iter()
+                .any(|&t| t != natural[axis][1])
+        {
+            return None;
+        }
+    }
+    let mut indices = [[0; 2]; 2];
+    for end in 0..2 {
+        for axis in 0..2 {
+            let value = *c.control_points[end].get(axis)?;
+            indices[end][axis] = if value == natural[axis][0] {
+                0
+            } else if value == natural[axis][1] {
+                counts[axis] - 1
+            } else {
+                return None;
+            };
+        }
+    }
     // Opposite corners are not a natural boundary segment.
-    if (indices[0][0]!=indices[1][0]) == (indices[0][1]!=indices[1][1]) {return None;}
-    Some(indices.map(|[u,v]|std::array::from_fn(|k|s.control_points[u][v][k])))
+    if (indices[0][0] != indices[1][0]) == (indices[0][1] != indices[1][1]) {
+        return None;
+    }
+    Some(indices.map(|[u, v]| std::array::from_fn(|k| s.control_points[u][v][k])))
 }
 pub(crate) fn complete_shared_chain<E>(shell: &Shell<E>, indices: &[usize], face: usize) -> bool {
     // Coverage here concerns the unchanged original pcurve. The contact

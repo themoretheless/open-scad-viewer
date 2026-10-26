@@ -325,7 +325,12 @@ pub(super) fn offset_cylinder(
         }
         let moved: BTreeMap<usize, [f64; 3]> = moved_vertices
             .iter()
-            .map(|&v| (v, radial_scale(&axis, *old_r, *new_r, model.vertices[v].point)))
+            .map(|&v| {
+                (
+                    v,
+                    radial_scale(&axis, *old_r, *new_r, model.vertices[v].point),
+                )
+            })
             .collect();
         for (&v, &point) in &moved {
             staged.vertices[v].point = point;
@@ -407,7 +412,12 @@ pub(super) fn offset_cylinder(
         // Does the face use any changed edge?
         let uses_changed = std::iter::once(&staged_face.outer)
             .chain(&staged_face.holes)
-            .any(|&ring| staged.loops[ring].coedges.iter().any(|c| changed_edges.contains(&c.edge)));
+            .any(|&ring| {
+                staged.loops[ring]
+                    .coedges
+                    .iter()
+                    .any(|c| changed_edges.contains(&c.edge))
+            });
         if !uses_changed {
             continue;
         }

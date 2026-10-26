@@ -340,13 +340,26 @@ pub(in super::super) fn produce(
     self_pair: bool,
     width: &Q,
 ) -> Result<(u8, Vec<Factor>)> {
-    produce_system(&intersection_polynomials(a,b,self_pair)?,self_pair,width)
+    produce_system(
+        &intersection_polynomials(a, b, self_pair)?,
+        self_pair,
+        width,
+    )
 }
-pub(in super::super) fn produce_system(system:&[Bi;2],self_pair:bool,width:&Q)->Result<(u8,Vec<Factor>)>{
-    if system.iter().any(|p|p.len()==1&&p[0].len()==1&&!p[0][0].is_zero()){return Ok((0,Vec::new()))}
+pub(in super::super) fn produce_system(
+    system: &[Bi; 2],
+    self_pair: bool,
+    width: &Q,
+) -> Result<(u8, Vec<Factor>)> {
+    if system
+        .iter()
+        .any(|p| p.len() == 1 && p[0].len() == 1 && !p[0][0].is_zero())
+    {
+        return Ok((0, Vec::new()));
+    }
     for k in [0, 1, 2, 3, 5, 7, 11] {
         let attempt = (|| -> Result<Vec<Factor>> {
-            let e = [shear(&system[0],k)?,shear(&system[1],k)?];
+            let e = [shear(&system[0], k)?, shear(&system[1], k)?];
             let r = eliminant(&e)?;
             if r.len() == 1 {
                 return Ok(Vec::new());
@@ -422,14 +435,34 @@ pub(in super::super) fn verify(
     k: u8,
     factors: &[Factor],
 ) -> Result<Vec<Event>> {
-    verify_system(&intersection_polynomials(a,b,self_pair)?,self_pair,width,k,factors)
+    verify_system(
+        &intersection_polynomials(a, b, self_pair)?,
+        self_pair,
+        width,
+        k,
+        factors,
+    )
 }
-pub(in super::super) fn verify_system(system:&[Bi;2],self_pair:bool,width:&Q,k:u8,factors:&[Factor])->Result<Vec<Event>>{
-    if system.iter().any(|p|p.len()==1&&p[0].len()==1&&!p[0][0].is_zero()){if k!=0||!factors.is_empty(){return Err(refused("Unit residual system has extraneous events"))}return Ok(Vec::new())}
+pub(in super::super) fn verify_system(
+    system: &[Bi; 2],
+    self_pair: bool,
+    width: &Q,
+    k: u8,
+    factors: &[Factor],
+) -> Result<Vec<Event>> {
+    if system
+        .iter()
+        .any(|p| p.len() == 1 && p[0].len() == 1 && !p[0][0].is_zero())
+    {
+        if k != 0 || !factors.is_empty() {
+            return Err(refused("Unit residual system has extraneous events"));
+        }
+        return Ok(Vec::new());
+    }
     if ![0, 1, 2, 3, 5, 7, 11].contains(&k) || factors.len() > 256 {
         return Err(refused("Invalid algebraic projection or factor count"));
     }
-    let e = [shear(&system[0],k)?,shear(&system[1],k)?];
+    let e = [shear(&system[0], k)?, shear(&system[1], k)?];
     let r = eliminant(&e)?;
     let mut product_all = vec![Q::one()];
     let mut events = Vec::new();

@@ -64,10 +64,19 @@ mod tests {
         let mut model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
         // Each chart is a regular plane, but the first two cross internally.
         for (face, f) in model.faces.iter_mut().enumerate() {
-            f.surface.control_points = (0..2).map(|u| (0..2).map(|v| {
-                if face == 1 { vec![u as f64, 0.5, v as f64 - 0.5] }
-                else { vec![u as f64, v as f64, face as f64 * 10.] }
-            }).collect()).collect();
+            f.surface.control_points = (0..2)
+                .map(|u| {
+                    (0..2)
+                        .map(|v| {
+                            if face == 1 {
+                                vec![u as f64, 0.5, v as f64 - 0.5]
+                            } else {
+                                vec![u as f64, v as f64, face as f64 * 10.]
+                            }
+                        })
+                        .collect()
+                })
+                .collect();
         }
         let report = inspect(&model, 1e-8, 6, limits()).unwrap();
         assert!(report.faces.all_faces_injective);

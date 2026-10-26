@@ -335,9 +335,9 @@ fn cluster_cylinders(graph: &Aag, linear_tol: f64) -> Vec<Vec<usize>> {
         .nodes
         .iter()
         .filter(|n| {
-            n.attrs
-                .as_ref()
-                .is_some_and(|a| a.class == SurfaceClass::Cylinder && a.axis.is_some() && a.radius.is_some())
+            n.attrs.as_ref().is_some_and(|a| {
+                a.class == SurfaceClass::Cylinder && a.axis.is_some() && a.radius.is_some()
+            })
         })
         .map(|n| n.face)
         .collect();
@@ -615,9 +615,10 @@ pub fn find_holes(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<Hol
         .iter()
         .enumerate()
         .map(|(i, h)| {
-            !holes.iter().enumerate().any(|(j, other)| {
-                i != j && h.faces.iter().all(|f| other.step_faces.contains(f))
-            })
+            !holes
+                .iter()
+                .enumerate()
+                .any(|(j, other)| i != j && h.faces.iter().all(|f| other.step_faces.contains(f)))
         })
         .collect();
     let mut holes: Vec<HoleFeature> = holes
@@ -635,7 +636,7 @@ pub fn find_holes(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<Hol
 // ==========================================================================
 
 mod pockets;
-pub use pockets::{PocketKind,PocketWalls,PocketFeature,find_pockets};
+pub use pockets::{PocketFeature, PocketKind, PocketWalls, find_pockets};
 
 mod small;
 pub use small::*;
@@ -644,10 +645,9 @@ pub use boss::{BossFeature, BossKind, find_bosses};
 mod rib;
 pub use rib::{RibFeature, find_ribs};
 
-
-#[cfg(test)]
-#[path = "tests/aag_features.rs"]
-mod tests;
 #[cfg(test)]
 #[path = "tests/aag_small_features.rs"]
 mod small_features_tests;
+#[cfg(test)]
+#[path = "tests/aag_features.rs"]
+mod tests;

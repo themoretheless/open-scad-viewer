@@ -432,23 +432,43 @@ fn construct_with_ideal_impl(
 }
 
 mod closed;
-pub use closed::{ClosedAttempt, ClosedBody, ClosedLimits, ClosedReport, MaterialLimits, MaterialReport, construct_closed_with_ideal_atlas};
-pub use closed::{SmoothClosedAttempt,SmoothClosedBody,SmoothClosedLimits,SmoothClosedReport,construct_smooth_closed_with_ideal_atlas};
 pub use closed::OriginalClosedLimits;
-pub use closed::{OriginalClosedReport,AffineWallBindingReport};
 pub use closed::verify_smooth_closed_with_ideal_atlas;
-pub use closed::{RationalClosedLimits,RationalClosedReport,RationalClosedBody,RationalClosedAttempt,FilledGraphCapReport,
-    construct_rational_closed_material,verify_rational_closed_material};
+pub use closed::{AffineWallBindingReport, OriginalClosedReport};
+pub use closed::{
+    ClosedAttempt, ClosedBody, ClosedLimits, ClosedReport, MaterialLimits, MaterialReport,
+    construct_closed_with_ideal_atlas,
+};
+pub use closed::{
+    FilledGraphCapReport, RationalClosedAttempt, RationalClosedBody, RationalClosedLimits,
+    RationalClosedReport, construct_rational_closed_material, verify_rational_closed_material,
+};
+pub use closed::{
+    SmoothClosedAttempt, SmoothClosedBody, SmoothClosedLimits, SmoothClosedReport,
+    construct_smooth_closed_with_ideal_atlas,
+};
 
 mod common_trim_region;
 
-fn ideal_refused(mut body: Box<CertifiedBody>, ideal: IdealLimits, cells: usize, exact_work: u64, reason: &'static str) -> Attempt {
+fn ideal_refused(
+    mut body: Box<CertifiedBody>,
+    ideal: IdealLimits,
+    cells: usize,
+    exact_work: u64,
+    reason: &'static str,
+) -> Attempt {
     body.report.certified = false;
     body.report.reason = Some(reason);
     body.report.ideal_volume = Some(nurbs_core::progressive_sweep::IdealVolumeReport {
-        embedding_certified: false, regularity_certified: false,
-        parameter_topology_preserved: false, cells, exact_work,
-        boxes: 0, monotonicity_lower: None, projection: ideal.projection, reason: Some(reason),
+        embedding_certified: false,
+        regularity_certified: false,
+        parameter_topology_preserved: false,
+        cells,
+        exact_work,
+        boxes: 0,
+        monotonicity_lower: None,
+        projection: ideal.projection,
+        reason: Some(reason),
     });
     Attempt::Refused(Box::new(body.report))
 }

@@ -34,30 +34,74 @@ pub struct Replay<E> {
 /// Native sealed carriers replay original compositions after root refinement.
 pub trait ExchangeCarrier: crate::source_edge_restriction::RestrictionCarrier {
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value>;
-    fn replay_refined(&self, fragments: [Fragment; 2], limits: crate::source_shared_edge_restore::Limits) -> Result<Replay<Self>>;
+    fn replay_refined(
+        &self,
+        fragments: [Fragment; 2],
+        limits: crate::source_shared_edge_restore::Limits,
+    ) -> Result<Replay<Self>>;
     fn same_mapping(&self, other: &Self) -> bool;
 }
 impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
-    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> { body.definition() }
-    fn replay_refined(&self, fragments: [Fragment; 2], limits: crate::source_shared_edge_restore::Limits) -> Result<Replay<Self>> {
-        let mut value=self.definition();
-        value["uses"]=value_codec::Value::Array(fragments.iter().map(Fragment::definition).collect());
-        let r=crate::source_shared_edge_restore::restore(value,limits)?;
-        Ok(Replay{edge:r.edge,work:r.work_used,driver:r.driver_cells,root_checks:r.root_checks,reason:r.reason})
+    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> {
+        body.definition()
     }
-    fn same_mapping(&self, other: &Self) -> bool { self.world()==other.world() && self.reversed()==other.reversed() && self.ranges()==other.ranges() }
-}
-impl ExchangeCarrier for crate::source_projective_edge::Edge {
-    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> { body.definition() }
-    fn replay_refined(&self, fragments: [Fragment; 2], limits: crate::source_shared_edge_restore::Limits) -> Result<Replay<Self>> {
-        let mut value=self.definition();
-        for side in 0..2 { value["uses"][side]["fragment"]=fragments[side].definition(); }
-        let r=crate::source_projective_edge::restore(value,limits.mapping_cells_per_use,limits.exact_work,limits.driver_cells)?;
-        Ok(Replay{edge:r.edge,work:r.exact_work,driver:r.driver_cells,root_checks:r.root_checks,reason:r.reason})
+    fn replay_refined(
+        &self,
+        fragments: [Fragment; 2],
+        limits: crate::source_shared_edge_restore::Limits,
+    ) -> Result<Replay<Self>> {
+        let mut value = self.definition();
+        value["uses"] =
+            value_codec::Value::Array(fragments.iter().map(Fragment::definition).collect());
+        let r = crate::source_shared_edge_restore::restore(value, limits)?;
+        Ok(Replay {
+            edge: r.edge,
+            work: r.work_used,
+            driver: r.driver_cells,
+            root_checks: r.root_checks,
+            reason: r.reason,
+        })
     }
     fn same_mapping(&self, other: &Self) -> bool {
-        self.world()==other.world() && (0..2).all(|side|self.uses()[side].reversed()==other.uses()[side].reversed()
-            && self.uses()[side].range()==other.uses()[side].range() && self.uses()[side].weights()==other.uses()[side].weights())
+        self.world() == other.world()
+            && self.reversed() == other.reversed()
+            && self.ranges() == other.ranges()
+    }
+}
+impl ExchangeCarrier for crate::source_projective_edge::Edge {
+    fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> {
+        body.definition()
+    }
+    fn replay_refined(
+        &self,
+        fragments: [Fragment; 2],
+        limits: crate::source_shared_edge_restore::Limits,
+    ) -> Result<Replay<Self>> {
+        let mut value = self.definition();
+        for side in 0..2 {
+            value["uses"][side]["fragment"] = fragments[side].definition();
+        }
+        let r = crate::source_projective_edge::restore(
+            value,
+            limits.mapping_cells_per_use,
+            limits.exact_work,
+            limits.driver_cells,
+        )?;
+        Ok(Replay {
+            edge: r.edge,
+            work: r.exact_work,
+            driver: r.driver_cells,
+            root_checks: r.root_checks,
+            reason: r.reason,
+        })
+    }
+    fn same_mapping(&self, other: &Self) -> bool {
+        self.world() == other.world()
+            && (0..2).all(|side| {
+                self.uses()[side].reversed() == other.uses()[side].reversed()
+                    && self.uses()[side].range() == other.uses()[side].range()
+                    && self.uses()[side].weights() == other.uses()[side].weights()
+            })
     }
 }
 pub struct Prepared<E = crate::source_shared_edge::SharedEdge> {
@@ -151,11 +195,13 @@ pub fn prepare<E: ExchangeCarrier>(
     for (index, edge) in shell.edges().iter().enumerate() {
         let mut uses = Vec::new();
         for side in 0..2 {
-            let fragment=edge.fragment(side);
+            let fragment = edge.fragment(side);
             let mut endpoints = Vec::new();
             for endpoint in fragment.endpoints() {
                 endpoints.push(match endpoint {
-                    Endpoint::Carrier { .. } => { return Ok(out); },
+                    Endpoint::Carrier { .. } => {
+                        return Ok(out);
+                    }
                     Endpoint::Parameter(t) => Endpoint::Parameter(*t),
                     Endpoint::Crossing { point, role } => {
                         if out.root_checks == limits.root_checks

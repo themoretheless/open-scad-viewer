@@ -1,6 +1,8 @@
 import type {DirectBody} from './directModeling'
 import {analyzeNurbsBrep} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
+import {metricsManifoldInKernel, type KernelManifoldMetrics} from './geometry/manifoldAnalysis'
+import type {PolygonMesh} from './geometry/polygon'
 export interface PointMeasurement {a:number[];b:number[];deltaMm:number[];distanceMm:number}
 export interface CurveMeasurement {point:number[];curvaturePerMm:number;radiusMm:number|null;parameter:number}
 export interface SolidMassMeasurement {
@@ -20,6 +22,9 @@ function vertex(body:DirectBody,index:number) {
  return [p[o],p[o+1],p[o+2]]
 }
 export const measureSolidVertices=(a:DirectBody,ia:number,b:DirectBody,ib:number):PointMeasurement=>callGeometryRust('cad_measure_points',{a:vertex(a,ia),b:vertex(b,ib)})
+/** Topological and geometric metrics of the body's current render mesh. */
+export const measureSolidManifoldMetrics=(mesh:PolygonMesh):KernelManifoldMetrics=>
+ metricsManifoldInKernel(mesh.positions,mesh.indices)
 export function measureSolidEdgeCurvature(body:DirectBody,edge:number,t:number):CurveMeasurement {
  if(!body.brep?.edges[edge])throw Error('Choose a B-rep edge.')
  return callGeometryRust('cad_curve_curvature',{curve:body.brep.edges[edge].curve,t})

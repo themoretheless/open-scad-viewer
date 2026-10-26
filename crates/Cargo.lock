@@ -1316,6 +1316,8 @@ dependencies = [
  "manifold-core",
  "osv-math",
  "polygon-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1770,6 +1772,7 @@ name = "planar-geometry"
 version = "0.1.0"
 dependencies = [
  "cad-predicates",
+ "num-bigint",
  "osv-math",
  "rustc-hash 2.1.1",
 ]

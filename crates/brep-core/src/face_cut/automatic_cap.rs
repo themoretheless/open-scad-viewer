@@ -68,7 +68,11 @@ pub fn trim_ruled_and_cap(
                     }
                 }
                 Location::Outside => {}
-                _ => return Err(unproven("Removal seed is on or unresolved near a cut boundary")),
+                _ => {
+                    return Err(unproven(
+                        "Removal seed is on or unresolved near a cut boundary",
+                    ));
+                }
             }
         }
         selected.push(owner.ok_or_else(|| unproven("Removal seed owns no cut sector"))?);

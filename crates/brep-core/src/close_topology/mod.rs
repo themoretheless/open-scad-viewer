@@ -19,8 +19,10 @@ const MAX_PARTS: usize = 64;
 const MAX_RELATIONS: usize = 4096;
 const MAX_RADIAL_USES: usize = 16;
 
-
-pub use interchange::{encode_complex, decode_complex, interchange_certificate, export_complex_step, import_complex_step, export_complex_iges, import_complex_iges};
+pub use interchange::{
+    decode_complex, encode_complex, export_complex_iges, export_complex_step, import_complex_iges,
+    import_complex_step, interchange_certificate,
+};
 
 mod interchange;
 

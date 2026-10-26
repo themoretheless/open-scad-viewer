@@ -126,32 +126,43 @@ fn mixed_root_and_fixed_endpoints_need_exact_point_membership_and_unique_world_r
     for (axis, expected) in [0.609375, 0.859375, 0.].into_iter().enumerate() {
         assert!(b[axis][0] <= expected && expected <= b[axis][1]);
     }
-    let restore = |definition, work| crate::source_shared_edge_restore::restore(definition,
-        crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:work,driver_cells:10000}).unwrap();
-    let restored = restore(e.definition(),100_000_000).edge.unwrap();
-    assert_eq!(restored.definition(),e.definition());
-    assert_eq!(restored.reversed(),e.reversed());
+    let restore = |definition, work| {
+        crate::source_shared_edge_restore::restore(
+            definition,
+            crate::source_shared_edge_restore::Limits {
+                mapping_cells_per_use: 10000,
+                exact_work: work,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap()
+    };
+    let restored = restore(e.definition(), 100_000_000).edge.unwrap();
+    assert_eq!(restored.definition(), e.definition());
+    assert_eq!(restored.reversed(), e.reversed());
     assert!(!e.covers_complete_canonical_source());
     assert!(!restored.covers_complete_canonical_source());
-    assert!(restore(e.definition(),1).edge.is_none());
-    let mut missing_plane=e.definition();
-    missing_plane["recipe"]["planes"][1]=value_codec::Value::Null;
-    missing_plane["certificateQualified"]=value_codec::Value::Bool(true);
-    assert!(restore(missing_plane,100_000_000).edge.is_none());
+    assert!(restore(e.definition(), 1).edge.is_none());
+    let mut missing_plane = e.definition();
+    missing_plane["recipe"]["planes"][1] = value_codec::Value::Null;
+    missing_plane["certificateQualified"] = value_codec::Value::Bool(true);
+    assert!(restore(missing_plane, 100_000_000).edge.is_none());
 
     assert_eq!(e.world(), &world);
     assert_eq!(e.uses()[1].curve(), &main_b);
-    assert!(qualify_with_planes(
-        &world,
-        [&fb, &fa],
-        [true, false],
-        [Some(plane), None],
-        100_000_000,
-        10000
-    )
-    .unwrap()
-    .edge
-    .is_some());
+    assert!(
+        qualify_with_planes(
+            &world,
+            [&fb, &fa],
+            [true, false],
+            [Some(plane), None],
+            100_000_000,
+            10000
+        )
+        .unwrap()
+        .edge
+        .is_some()
+    );
     let wrong = Fragment::new(
         &side,
         &main_b,

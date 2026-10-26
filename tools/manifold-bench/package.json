@@ -6,7 +6,8 @@
   "description": "Sidecar Manifold comparison benches. Not part of the product runtime.",
   "scripts": {
     "bench:cpu": "node bench-cpu.mjs",
-    "bench:memory": "node --expose-gc bench-memory.mjs"
+    "bench:memory": "node --expose-gc bench-memory.mjs",
+    "test:differential": "node differential.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

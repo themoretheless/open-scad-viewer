@@ -26,52 +26,69 @@ fn periodic_spatial_rmf_varying_laws_hollow_boundary() {
 
 #[test]
 fn parameter_spatial_rmf_varying_laws_hollow_complete_boundary() {
-    qualify_closed_spatial_rmf_with_spacing(true,true,false,true);
+    qualify_closed_spatial_rmf_with_spacing(true, true, false, true);
 }
 
 #[test]
 fn parameter_periodic_spatial_rmf_varying_laws_hollow_complete_boundary() {
-    qualify_closed_spatial_rmf_with_spacing(true,true,true,true);
+    qualify_closed_spatial_rmf_with_spacing(true, true, true, true);
 }
 
 #[test]
 fn arc_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles() {
-    qualify_closed_spatial_rmf_contours(3,true,true,false);
+    qualify_closed_spatial_rmf_contours(3, true, true, false);
 }
 
 #[test]
 fn parameter_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles() {
-    qualify_closed_spatial_rmf_contours(3,true,true,true);
+    qualify_closed_spatial_rmf_contours(3, true, true, true);
 }
 
 fn qualify_closed_spatial_rmf(hollow: bool, varying: bool, periodic: bool) {
-    qualify_closed_spatial_rmf_with_spacing(hollow,varying,periodic,false);
+    qualify_closed_spatial_rmf_with_spacing(hollow, varying, periodic, false);
 }
 
-fn qualify_closed_spatial_rmf_with_spacing(hollow: bool, varying: bool, periodic: bool, parameter:bool) {
-    qualify_closed_spatial_rmf_contours(usize::from(hollow),varying,periodic,parameter);
+fn qualify_closed_spatial_rmf_with_spacing(
+    hollow: bool,
+    varying: bool,
+    periodic: bool,
+    parameter: bool,
+) {
+    qualify_closed_spatial_rmf_contours(usize::from(hollow), varying, periodic, parameter);
 }
 
-fn qualify_closed_spatial_rmf_contours(holes:usize,varying:bool,periodic:bool,parameter:bool) {
-    qualify_closed_spatial_rmf_source(holes,varying,periodic,parameter,false,false);
+fn qualify_closed_spatial_rmf_contours(
+    holes: usize,
+    varying: bool,
+    periodic: bool,
+    parameter: bool,
+) {
+    qualify_closed_spatial_rmf_source(holes, varying, periodic, parameter, false, false);
 }
 
 #[test]
 fn rational_nonuniform_closed_spatial_rmf_hollow_complete_boundary_and_material() {
-    qualify_closed_spatial_rmf_source(1,false,false,false,true,false);
+    qualify_closed_spatial_rmf_source(1, false, false, false, true, false);
 }
 
 #[test]
 fn antipodal_closed_spatial_rmf_hollow_complete_boundary_and_material() {
-    qualify_closed_spatial_rmf_source(1,false,false,false,false,true);
+    qualify_closed_spatial_rmf_source(1, false, false, false, false, true);
 }
 
-fn qualify_closed_spatial_rmf_source(holes:usize,varying:bool,periodic:bool,parameter:bool,rational:bool,antipodal:bool) {
-    let hollow=holes>0;
+fn qualify_closed_spatial_rmf_source(
+    holes: usize,
+    varying: bool,
+    periodic: bool,
+    parameter: bool,
+    rational: bool,
+    antipodal: bool,
+) {
+    let hollow = holes > 0;
     use nurbs_core::{
         curve::Curve,
         progressive_sweep::{
-            constant_vector_law, Level, MultiSweep, Options, Orientation, Spacing,
+            Level, MultiSweep, Options, Orientation, Spacing, constant_vector_law,
         },
     };
     let vertices: [[f64; 3]; 4] = [[1., 0., 0.], [0., 1., 1.], [-1., 0., 0.], [0., -1., 0.5]];
@@ -369,80 +386,191 @@ fn open_spatial_rmf_varying_hollow_corrected_filled_caps_complete_boundary() {
 
 #[test]
 fn parameter_open_spatial_rmf_varying_hollow_corrected_filled_caps_complete_boundary() {
-    qualify_open_spatial_rmf_with_spacing(true,true);
+    qualify_open_spatial_rmf_with_spacing(true, true);
 }
 
-fn qualify_open_spatial_rmf(hollow:bool) {
-    qualify_open_spatial_rmf_with_spacing(hollow,false);
+fn qualify_open_spatial_rmf(hollow: bool) {
+    qualify_open_spatial_rmf_with_spacing(hollow, false);
 }
 
-fn qualify_open_spatial_rmf_with_spacing(hollow:bool,parameter:bool) {
-    use nurbs_core::progressive_sweep::{constant_vector_law,Options,Orientation,Spacing};
-    let path=nurbs_core::paths::bezier(vec![vec![0.,0.,0.],vec![0.,0.,1.],vec![1.,0.,2.],vec![0.,1.,3.],vec![0.,0.,4.],vec![0.,0.,5.]],None).unwrap();
-    let profile=nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.05).unwrap();
-    let mut loops=vec![vec![profile]];
-    if hollow {loops.push(vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.02).unwrap()]);}
-    let law=|start:[f64;3],middle:[f64;3]|if hollow {nurbs_core::curve::Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![start.to_vec(),middle.to_vec(),start.to_vec()],weights:vec![1.,2.,1.],periodic:false}}else{constant_vector_law(start).unwrap()};
-    let scale=law([1.1,0.,0.],[1.2,0.,0.]);
-    let twist=law([0.125,0.,0.],[0.2,0.,0.]);
-    let axes=law([1.,1.25,0.75],[1.2,1.1,0.8]);
-    let center=law([0.01,-0.02,0.03],[0.02,0.,0.01]);
-    let stations=if hollow {127}else{129};
-    let faces=if hollow {8*(stations-1)+2}else{4*(stations-1)+2};
-    let options=Options {normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
-        spacing:if parameter {Spacing::Parameter} else {Spacing::ArcLength {tolerance:0.0001,max_cells:100000}},initial_sections:stations,max_sections:stations,max_deviation:0.25};
-    let correction=crate::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000};
-    let body=crate::analytic::progressive_profile_body_with_rmf_policy(&loops,&path,&scale,&twist,
-        Some((&axes,&center)),None,None,options,Some(correction),Some((4096,100000,1000000))).unwrap();
-    let report=body.approximation.levels.last().unwrap();
+fn qualify_open_spatial_rmf_with_spacing(hollow: bool, parameter: bool) {
+    use nurbs_core::progressive_sweep::{Options, Orientation, Spacing, constant_vector_law};
+    let path = nurbs_core::paths::bezier(
+        vec![
+            vec![0., 0., 0.],
+            vec![0., 0., 1.],
+            vec![1., 0., 2.],
+            vec![0., 1., 3.],
+            vec![0., 0., 4.],
+            vec![0., 0., 5.],
+        ],
+        None,
+    )
+    .unwrap();
+    let profile = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.05).unwrap();
+    let mut loops = vec![vec![profile]];
+    if hollow {
+        loops.push(vec![
+            nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.02).unwrap(),
+        ]);
+    }
+    let law = |start: [f64; 3], middle: [f64; 3]| {
+        if hollow {
+            nurbs_core::curve::Curve {
+                degree: 2,
+                knots: vec![0., 0., 0., 1., 1., 1.],
+                control_points: vec![start.to_vec(), middle.to_vec(), start.to_vec()],
+                weights: vec![1., 2., 1.],
+                periodic: false,
+            }
+        } else {
+            constant_vector_law(start).unwrap()
+        }
+    };
+    let scale = law([1.1, 0., 0.], [1.2, 0., 0.]);
+    let twist = law([0.125, 0., 0.], [0.2, 0., 0.]);
+    let axes = law([1., 1.25, 0.75], [1.2, 1.1, 0.8]);
+    let center = law([0.01, -0.02, 0.03], [0.02, 0., 0.01]);
+    let stations = if hollow { 127 } else { 129 };
+    let faces = if hollow {
+        8 * (stations - 1) + 2
+    } else {
+        4 * (stations - 1) + 2
+    };
+    let options = Options {
+        normal: [1., 0., 0.],
+        orientation: Orientation::RotationMinimizing,
+        spacing: if parameter {
+            Spacing::Parameter
+        } else {
+            Spacing::ArcLength {
+                tolerance: 0.0001,
+                max_cells: 100000,
+            }
+        },
+        initial_sections: stations,
+        max_sections: stations,
+        max_deviation: 0.25,
+    };
+    let correction = crate::analytic::EndpointCapCorrection {
+        quantum: 2_f64.powi(-40),
+        tolerance: 1e-9,
+        max_work: 1000000,
+    };
+    let body = crate::analytic::progressive_profile_body_with_rmf_policy(
+        &loops,
+        &path,
+        &scale,
+        &twist,
+        Some((&axes, &center)),
+        None,
+        None,
+        options,
+        Some(correction),
+        Some((4096, 100000, 1000000)),
+    )
+    .unwrap();
+    let report = body.approximation.levels.last().unwrap();
     assert!(report.accepted && report.continuous_bound && !report.closed_path);
     assert!(body.retained_walls.certified);
-    assert!(body.retained_caps.as_ref().unwrap().exact,"{:?}",body.retained_caps);
-    assert!(body.filled_cap_error_upper.is_some(),"{:?}",body.cap_projection);
-    assert_eq!(body.boundary_error_within_budget,Some(true));
-    let correction_error=body.cap_correction_error_upper.unwrap();
-    assert!(correction_error>0. && correction_error<=1e-9);
-    assert!(body.boundary_error_upper.unwrap()>=correction_error);
+    assert!(
+        body.retained_caps.as_ref().unwrap().exact,
+        "{:?}",
+        body.retained_caps
+    );
+    assert!(
+        body.filled_cap_error_upper.is_some(),
+        "{:?}",
+        body.cap_projection
+    );
+    assert_eq!(body.boundary_error_within_budget, Some(true));
+    let correction_error = body.cap_correction_error_upper.unwrap();
+    assert!(correction_error > 0. && correction_error <= 1e-9);
+    assert!(body.boundary_error_upper.unwrap() >= correction_error);
     body.model.validate().unwrap();
-    assert_eq!(body.model.faces.len(),faces);
-    assert_eq!(body.model.faces.iter().rev().take(2).map(|f|f.holes.len()).collect::<Vec<_>>(),vec![usize::from(hollow);2]);
-    let profiles=loops.iter().flatten().cloned().collect::<Vec<_>>();
-    let sizes=vec![1;loops.len()];
-    let source=nurbs_core::progressive_sweep::MultiSweep::new(&profiles,&path,&scale,&twist,options).unwrap()
-        .with_affine_laws(&axes,&center).unwrap().with_spatial_rmf_error_limits(4096,100000,1000000).unwrap();
-    let planes=source.certify_ideal_endpoint_planes(&sizes,1e-9,10000,100000,1000000).unwrap();
-    assert!(planes.endpoint_normals.is_some(),"{planes:?}");
-    let short=source.certify_ideal_endpoint_planes(&sizes,1e-9,10000,planes.cells-1,1000000).unwrap();
+    assert_eq!(body.model.faces.len(), faces);
+    assert_eq!(
+        body.model
+            .faces
+            .iter()
+            .rev()
+            .take(2)
+            .map(|f| f.holes.len())
+            .collect::<Vec<_>>(),
+        vec![usize::from(hollow); 2]
+    );
+    let profiles = loops.iter().flatten().cloned().collect::<Vec<_>>();
+    let sizes = vec![1; loops.len()];
+    let source =
+        nurbs_core::progressive_sweep::MultiSweep::new(&profiles, &path, &scale, &twist, options)
+            .unwrap()
+            .with_affine_laws(&axes, &center)
+            .unwrap()
+            .with_spatial_rmf_error_limits(4096, 100000, 1000000)
+            .unwrap();
+    let planes = source
+        .certify_ideal_endpoint_planes(&sizes, 1e-9, 10000, 100000, 1000000)
+        .unwrap();
+    assert!(planes.endpoint_normals.is_some(), "{planes:?}");
+    let short = source
+        .certify_ideal_endpoint_planes(&sizes, 1e-9, 10000, planes.cells - 1, 1000000)
+        .unwrap();
     assert!(short.endpoint_normals.is_none());
-    let caps=[faces-2,faces-1];
-    let volume=crate::volume_validity::inspect_sweep(&body.model,1e-8,spatial_volume_limits(),100000,&caps,
-        crate::sweep_cap_contacts::Budgets {max_walls:1024,max_exact_work:1000000,max_chart_cells:100000,
-            max_trim_pairs:10000,max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();
-    assert!(volume.proven && volume.boundary.proven,"boundary={} nesting={:?} orientations={:?}",volume.boundary.proven,volume.nesting.as_ref().map(|n|n.roles_consistent),volume.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
-    eprintln!("open spatial RMF hollow={hollow} faces={faces} full boundary={:?} filled caps={:?} correction={correction_error}",body.boundary_error_upper,body.filled_cap_error_upper);
+    let caps = [faces - 2, faces - 1];
+    let volume = crate::volume_validity::inspect_sweep(
+        &body.model,
+        1e-8,
+        spatial_volume_limits(),
+        100000,
+        &caps,
+        crate::sweep_cap_contacts::Budgets {
+            max_walls: 1024,
+            max_exact_work: 1000000,
+            max_chart_cells: 100000,
+            max_trim_pairs: 10000,
+            max_trim_cells: 100000,
+            max_trim_domain_cells: 1000000,
+        },
+    )
+    .unwrap();
+    assert!(
+        volume.proven && volume.boundary.proven,
+        "boundary={} nesting={:?} orientations={:?}",
+        volume.boundary.proven,
+        volume.nesting.as_ref().map(|n| n.roles_consistent),
+        volume
+            .orientations
+            .iter()
+            .map(|o| o.outward)
+            .collect::<Vec<_>>()
+    );
+    eprintln!(
+        "open spatial RMF hollow={hollow} faces={faces} full boundary={:?} filled caps={:?} correction={correction_error}",
+        body.boundary_error_upper, body.filled_cap_error_upper
+    );
 }
 
-fn spatial_volume_limits()->crate::volume_validity::Limits {
+fn spatial_volume_limits() -> crate::volume_validity::Limits {
     crate::volume_validity::Limits {
-            boundary: crate::boundary_embedding::Limits {
-                exact_work: 1000000,
-                trim_pairs: 10000,
-                trim_cells: 100000,
-                trim_domain_cells: 1000000,
-                spans: 1024,
-                contacts: crate::face_contacts::Limits {
-                    pairs: 20000,
-                    cells: 200000,
-                    domain_cells: 1000000,
-                    cells_per_pair: 1000,
-                    domain_cells_per_pair: 10000,
-                },
+        boundary: crate::boundary_embedding::Limits {
+            exact_work: 1000000,
+            trim_pairs: 10000,
+            trim_cells: 100000,
+            trim_domain_cells: 1000000,
+            spans: 1024,
+            contacts: crate::face_contacts::Limits {
+                pairs: 20000,
+                cells: 200000,
+                domain_cells: 1000000,
+                cells_per_pair: 1000,
+                domain_cells_per_pair: 10000,
             },
-            nesting_pairs: 10000,
-            nesting_cells: 100000,
-            nesting_domain_cells: 1000000,
-            orientation_cells: 100000,
-            orientation_domain_cells: 1000000,
-            orientation_spans: 1000,
-        }
+        },
+        nesting_pairs: 10000,
+        nesting_cells: 100000,
+        nesting_domain_cells: 1000000,
+        orientation_cells: 100000,
+        orientation_domain_cells: 1000000,
+        orientation_spans: 1000,
+    }
 }

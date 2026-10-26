@@ -142,6 +142,16 @@ mod step_part21;
 mod step_v3_export;
 mod stepped_prism;
 pub mod transactions;
+#[cfg(feature = "codec")]
+pub mod healing_report;
+#[cfg(feature = "codec")]
+pub mod healing;
+#[cfg(feature = "codec")]
+pub mod tolerance_unify;
+#[cfg(feature = "codec")]
+pub mod defects;
+#[cfg(feature = "codec")]
+pub mod import_policy;
 pub mod transform;
 mod transform_plane_charts;
 pub mod affine_lattice;
@@ -254,6 +264,10 @@ pub struct TopologyIds {
     pub bodies: Vec<TopoId>,
     pub lineage: Vec<TopologyLineageRecord>,
     pub change_set: ChangeSet,
+    /// Optional edge/vertex tolerance overrides; absence inherits `tolerance_mm`.
+    pub local_tolerances_mm: BTreeMap<TopoId, f64>,
+    /// Persistent identities marked by successful tolerant sewing.
+    pub sewed_edges: BTreeSet<TopoId>,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TopologyLineageRecord {

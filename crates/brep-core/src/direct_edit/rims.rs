@@ -170,14 +170,12 @@ pub(super) fn merge_coplanar_rims(
                 .shells
                 .iter()
                 .enumerate()
-                .find_map(|(s, sh)| {
-                    sh.faces
-                        .iter()
-                        .any(|u| u.face == face)
-                        .then_some((s, ()))
-                })
+                .find_map(|(s, sh)| sh.faces.iter().any(|u| u.face == face).then_some((s, ())))
                 .ok_or_else(|| {
-                    error(SUPPRESS_INVALID, format!("Face {face} is not used by any shell"))
+                    error(
+                        SUPPRESS_INVALID,
+                        format!("Face {face} is not used by any shell"),
+                    )
                 })?;
             match shell_of {
                 None => shell_of = Some(shell),
@@ -464,9 +462,9 @@ pub(super) fn merge_coplanar_rims(
     // Append merged loops and faces; hook faces into their shells.
     for merged_face in &merged {
         guard.tick()?;
-        let shell = *shell_remap.get(&merged_face.shell).ok_or_else(|| {
-            unsupported("Shard shell vanished during suppression")
-        })?;
+        let shell = *shell_remap
+            .get(&merged_face.shell)
+            .ok_or_else(|| unsupported("Shard shell vanished during suppression"))?;
         let mut loop_ids = Vec::new();
         // UV frame data for pcurve mapping, recomputed from the surface.
         let origin_corner: [f64; 3] = {

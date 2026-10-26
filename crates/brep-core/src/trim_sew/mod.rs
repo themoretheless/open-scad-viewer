@@ -8,22 +8,21 @@ use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result, curve::Curve, surface::Axis, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::{ChangeKind, ChangeProvenance, Model, TopoId, TopoKind, TopologyChange};
+pub use nurbs_intersect::RationalCurveDefinition;
 use nurbs_intersect::predicate_evidence::{
     ComposedEvidence, EvidenceClaim, PredicateEvidence, compose_predicate_evidence,
 };
-use crate::{ChangeKind, ChangeProvenance, Model, TopoId, TopoKind, TopologyChange};
-pub use nurbs_intersect::RationalCurveDefinition;
-
 
 #[cfg(test)]
 #[path = "../tests/trim_sew.rs"]
 mod tests;
 
-mod chart_kind;
 mod authorized_heal_plan;
-mod prove_curve_pcurve_correspondence;
+mod chart_kind;
 mod classify_imprint_circle_events;
-pub use chart_kind::*;
+mod prove_curve_pcurve_correspondence;
 pub use authorized_heal_plan::*;
-pub use prove_curve_pcurve_correspondence::*;
+pub use chart_kind::*;
 pub use classify_imprint_circle_events::*;
+pub use prove_curve_pcurve_correspondence::*;

@@ -329,88 +329,169 @@ pub(super) type AnalyticTube = (f64, f64, f64, [f64; 3], [f64; 3], [[f64; 3]; 2]
 /// Experimental preview construction for one top outer quarter-rim edge.
 /// This returns no feature certificate: result boundary proof and complete
 /// source ownership qualification are still required before command admission.
-pub fn build_partial_annular_preview(model: &Model, edge_index: usize, radius: f64) -> Result<Model> {
+pub fn build_partial_annular_preview(
+    model: &Model,
+    edge_index: usize,
+    radius: f64,
+) -> Result<Model> {
     const CODE: &str = "BREP_PARTIAL_ANNULAR_PREVIEW_REFUSED";
     model.validate()?;
     audit_solid(model)?;
-    let (outer,inner,height,origin,axis,_) = recognize_analytic_tube(model)
-        .ok_or_else(|| refuse(CODE,"Preview source must be a recognized annular cylinder"))?;
-    let edge=model.edges.get(edge_index).ok_or_else(|| refuse(CODE,"Invalid circular edge"))?;
-    let curve=&edge.curve;
-    if curve.degree!=2 || curve.periodic || curve.knots!=[0.,0.,0.,1.,1.,1.]
-        || curve.control_points.len()!=3 || curve.weights.len()!=3 {
-        return Err(refuse(CODE,"Select a top outer quarter-circle edge"));
+    let (outer, inner, height, origin, axis, _) = recognize_analytic_tube(model)
+        .ok_or_else(|| refuse(CODE, "Preview source must be a recognized annular cylinder"))?;
+    let edge = model
+        .edges
+        .get(edge_index)
+        .ok_or_else(|| refuse(CODE, "Invalid circular edge"))?;
+    let curve = &edge.curve;
+    if curve.degree != 2
+        || curve.periodic
+        || curve.knots != [0., 0., 0., 1., 1., 1.]
+        || curve.control_points.len() != 3
+        || curve.weights.len() != 3
+    {
+        return Err(refuse(CODE, "Select a top outer quarter-circle edge"));
     }
-    let tolerance=(outer.max(height)*1e-10).max(1e-12);
-    let local:Vec<_>=curve.control_points.iter().map(|p|sub3([p[0],p[1],p[2]],origin)).collect();
-    let radial:Vec<_>=local.iter().map(|p| {
-        let z=dot3(*p,axis);
-        [p[0]-z*axis[0],p[1]-z*axis[1],p[2]-z*axis[2]]
-    }).collect();
-    if local.iter().any(|p|(dot3(*p,axis)-height).abs()>tolerance)
-        || [0,2].iter().any(|i|(dot3(radial[*i],radial[*i]).sqrt()-outer).abs()>tolerance)
-        || dot3(radial[0],radial[2]).abs()>outer*tolerance
-        || (0..3).any(|k|(radial[1][k]-radial[0][k]-radial[2][k]).abs()>tolerance)
-        || curve.weights.iter().zip([1.,std::f64::consts::FRAC_1_SQRT_2,1.]).any(|(a,b)|(*a-b).abs()>1e-12) {
-        return Err(refuse(CODE,"Edge is not a recognized top outer quarter-circle"));
+    let tolerance = (outer.max(height) * 1e-10).max(1e-12);
+    let local: Vec<_> = curve
+        .control_points
+        .iter()
+        .map(|p| sub3([p[0], p[1], p[2]], origin))
+        .collect();
+    let radial: Vec<_> = local
+        .iter()
+        .map(|p| {
+            let z = dot3(*p, axis);
+            [p[0] - z * axis[0], p[1] - z * axis[1], p[2] - z * axis[2]]
+        })
+        .collect();
+    if local
+        .iter()
+        .any(|p| (dot3(*p, axis) - height).abs() > tolerance)
+        || [0, 2]
+            .iter()
+            .any(|i| (dot3(radial[*i], radial[*i]).sqrt() - outer).abs() > tolerance)
+        || dot3(radial[0], radial[2]).abs() > outer * tolerance
+        || (0..3).any(|k| (radial[1][k] - radial[0][k] - radial[2][k]).abs() > tolerance)
+        || curve
+            .weights
+            .iter()
+            .zip([1., std::f64::consts::FRAC_1_SQRT_2, 1.])
+            .any(|(a, b)| (*a - b).abs() > 1e-12)
+    {
+        return Err(refuse(
+            CODE,
+            "Edge is not a recognized top outer quarter-circle",
+        ));
     }
-    let first=unit3(radial[0]).ok_or_else(||refuse(CODE,"Invalid radial frame"))?;
-    let second=unit3(cross3(axis,first)).ok_or_else(||refuse(CODE,"Invalid radial frame"))?;
-    let direction=dot3(radial[2],second).signum();
-    let local=crate::circular_blend::partial_annular_quarter(outer,inner,height,radius,direction,model.tolerance_mm)?;
-    let mut result=place_axial(&local,[first,second],axis,origin)?;
+    let first = unit3(radial[0]).ok_or_else(|| refuse(CODE, "Invalid radial frame"))?;
+    let second = unit3(cross3(axis, first)).ok_or_else(|| refuse(CODE, "Invalid radial frame"))?;
+    let direction = dot3(radial[2], second).signum();
+    let local = crate::circular_blend::partial_annular_quarter(
+        outer,
+        inner,
+        height,
+        radius,
+        direction,
+        model.tolerance_mm,
+    )?;
+    let mut result = place_axial(&local, [first, second], axis, origin)?;
     result.inherit_topology_ids(&[model]);
     // This explicitly selected edit replaces exactly one source body with
     // exactly one result body. Preserve its identity independently of the
     // changed shell signature. Persisted means entity identity, not geometry.
-    if model.bodies.len()!=1 || result.bodies.len()!=1 {
-        return Err(refuse(CODE,"Preview requires one source and one result body"));
+    if model.bodies.len() != 1 || result.bodies.len() != 1 {
+        return Err(refuse(
+            CODE,
+            "Preview requires one source and one result body",
+        ));
     }
-    let body_id=model.1.bodies[0];
-    result.1.bodies[0]=body_id;
+    let body_id = model.1.bodies[0];
+    result.1.bodies[0] = body_id;
     result.1.lineage.push(crate::TopologyLineageRecord {
-        operation:"persist".into(), entity_kind:"body".into(),
-        parents:vec![body_id], children:vec![body_id],
+        operation: "persist".into(),
+        entity_kind: "body".into(),
+        parents: vec![body_id],
+        children: vec![body_id],
     });
-    let mut face_relations=vec![vec![];result.faces.len()];
-    if result.faces.len()!=27 {
-        return Err(refuse(CODE,"Unexpected partial annular preview face layout"));
+    let mut face_relations = vec![vec![]; result.faces.len()];
+    if result.faces.len() != 27 {
+        return Err(refuse(
+            CODE,
+            "Unexpected partial annular preview face layout",
+        ));
     }
-    for (target_index,target) in result.faces.iter().enumerate() {
+    for (target_index, target) in result.faces.iter().enumerate() {
         // The prototype author fixes this face ordering: three
         // five-face blend sectors, then three four-face unrounded sectors.
-        let role=if target_index<15 {target_index%5}
-            else { [1,2,3,4][(target_index-15)%4] };
-        if role==0 {continue;} // New blend surface, not retained support.
-        let candidates:Vec<_>=model.faces.iter().enumerate().filter_map(|(source_index,source)| {
-            let s=&source.surface;
-            if role==1 || role==4 {
-                let z=if role==1 {height} else {0.};
-                return (s.degree_u==1 && s.degree_v==1 &&
-                    s.control_points.iter().flatten().all(|p|
-                        (dot3(sub3([p[0],p[1],p[2]],origin),axis)-z).abs()<=tolerance))
+        let role = if target_index < 15 {
+            target_index % 5
+        } else {
+            [1, 2, 3, 4][(target_index - 15) % 4]
+        };
+        if role == 0 {
+            continue;
+        } // New blend surface, not retained support.
+        let candidates: Vec<_> = model
+            .faces
+            .iter()
+            .enumerate()
+            .filter_map(|(source_index, source)| {
+                let s = &source.surface;
+                if role == 1 || role == 4 {
+                    let z = if role == 1 { height } else { 0. };
+                    return (s.degree_u == 1
+                        && s.degree_v == 1
+                        && s.control_points.iter().flatten().all(|p| {
+                            (dot3(sub3([p[0], p[1], p[2]], origin), axis) - z).abs() <= tolerance
+                        }))
                     .then_some(source_index);
-            }
-            if s.degree_u!=2 || s.degree_v!=1 {return None;}
-            let radial_point=|p:&Vec<f64>| {
-                let d=sub3([p[0],p[1],p[2]],origin);let z=dot3(d,axis);
-                [d[0]-z*axis[0],d[1]-z*axis[1],d[2]-z*axis[2]]
-            };
-            let a=radial_point(&s.control_points[0][0]);
-            let b=radial_point(&s.control_points[2][0]);
-            let expected=if role==2 {outer} else {inner};
-            if (dot3(a,a).sqrt()-expected).abs()>tolerance {return None;}
-            let controls:Vec<_>=target.surface.control_points.iter().flatten().map(radial_point).collect();
-            let contained=controls.iter().all(|p|dot3(*p,a)>=-outer*tolerance && dot3(*p,b)>=-outer*tolerance);
-            let interior=controls.iter().any(|p|dot3(*p,a)>outer*tolerance && dot3(*p,b)>outer*tolerance);
-            (contained && interior).then_some(source_index)
-        }).collect();
-        if candidates.len()!=1 {
-            return Err(refuse(CODE,"Retained preview support has ambiguous source ownership"));
+                }
+                if s.degree_u != 2 || s.degree_v != 1 {
+                    return None;
+                }
+                let radial_point = |p: &Vec<f64>| {
+                    let d = sub3([p[0], p[1], p[2]], origin);
+                    let z = dot3(d, axis);
+                    [d[0] - z * axis[0], d[1] - z * axis[1], d[2] - z * axis[2]]
+                };
+                let a = radial_point(&s.control_points[0][0]);
+                let b = radial_point(&s.control_points[2][0]);
+                let expected = if role == 2 { outer } else { inner };
+                if (dot3(a, a).sqrt() - expected).abs() > tolerance {
+                    return None;
+                }
+                let controls: Vec<_> = target
+                    .surface
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .map(radial_point)
+                    .collect();
+                let contained = controls.iter().all(|p| {
+                    dot3(*p, a) >= -outer * tolerance && dot3(*p, b) >= -outer * tolerance
+                });
+                let interior = controls
+                    .iter()
+                    .any(|p| dot3(*p, a) > outer * tolerance && dot3(*p, b) > outer * tolerance);
+                (contained && interior).then_some(source_index)
+            })
+            .collect();
+        if candidates.len() != 1 {
+            return Err(refuse(
+                CODE,
+                "Retained preview support has ambiguous source ownership",
+            ));
         }
-        face_relations[target_index]=candidates;
+        face_relations[target_index] = candidates;
     }
-    Model::record_relations(&mut result.1.lineage,"face",&model.1.faces,&result.1.faces,&face_relations);
+    Model::record_relations(
+        &mut result.1.lineage,
+        "face",
+        &model.1.faces,
+        &result.1.faces,
+        &face_relations,
+    );
     result.refresh_change_set(&[model]);
     result.validate()?;
     Ok(result)

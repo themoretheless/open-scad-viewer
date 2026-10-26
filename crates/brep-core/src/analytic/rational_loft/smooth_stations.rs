@@ -2,8 +2,8 @@
 //! No regularity, embedding or Solid claim is issued by this construction.
 use super::*;
 use nurbs_core::interval_eval::Interval;
-mod generic;
 mod error_bound;
+mod generic;
 pub struct SmoothStationWalls {
     pub sides: Option<Vec<Vec<Surface>>>,
     pub wall_displacement_upper: Option<f64>,

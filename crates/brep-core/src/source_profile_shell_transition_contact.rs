@@ -240,62 +240,114 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 assert!(std::ptr::eq(trace.source(), neighbor));
                 assert_eq!(trace.axes(), [0, 1]);
                 assert_eq!(trace.linear_axis(), 1);
-                let original_projection=nurbs_core::surface_projected_jordan::certify(
-                    source,[0,1],1e-8,max_work,max_cells)?;
-                eprintln!("transition original source XY Jordan qualified={} exactWork={} boundaryCells={} reason={}",
-                    original_projection.certificate.is_some(),original_projection.exact_work,
-                    original_projection.boundary_cells,original_projection.reason);
+                let original_projection = nurbs_core::surface_projected_jordan::certify(
+                    source,
+                    [0, 1],
+                    1e-8,
+                    max_work,
+                    max_cells,
+                )?;
+                eprintln!(
+                    "transition original source XY Jordan qualified={} exactWork={} boundaryCells={} reason={}",
+                    original_projection.certificate.is_some(),
+                    original_projection.exact_work,
+                    original_projection.boundary_cells,
+                    original_projection.reason
+                );
                 let monotone=crate::source_ruled_projection_contact::exact_trace::certify_monotone_coordinate(
                     &trace,1,max_controls)?.expect("whole ruled neighbor trace is strictly monotone in Y");
-                assert!(std::ptr::eq(monotone.trace(),&trace));
-                assert!(monotone.increasing() && monotone.coordinate()==1);
-                assert_eq!(monotone.parameter_domain(),trace.curve().domain());
-                let section0=profile.section(root.axis,root.parameters[0])?;
-                let section1=profile.section(root.axis,root.parameters[1])?;
-                let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(section0,section1,
-                    [root.parameters[1]-root.parameters[0];2])?;
-                if let Some(bridge)=bridge.constrain_original_rails(max_controls)?.0 {
-                    if let Some(bounds)=bridge.enclose_with_transverse_correction(domain[0],domain[1],max_spans)?.0 {
-                        let mut target=bounds[1];
-                        let mut tiled=[f64::INFINITY,f64::NEG_INFINITY];
-                        let mut spent=0;let mut complete=true;
-                        let split=|axis:usize,i:usize|if i==0 {domain[axis][0]} else if i==8 {domain[axis][1]}
-                            else {domain[axis][0]+(domain[axis][1]-domain[axis][0])*(i as f64/8.)};
-                        for i in 0..8 {for j in 0..8 {
-                            let (cell,used)=bridge.enclose_with_transverse_correction(
-                                [split(0,i),split(0,i+1)],[split(1,j),split(1,j+1)],max_spans-spent)?;
-                            spent+=used;
-                            if let Some(cell)=cell {
-                                tiled[0]=tiled[0].min(cell[1][0]);tiled[1]=tiled[1].max(cell[1][1]);
-                            } else {complete=false;}
-                        }}
-                        if complete {target=[target[0].max(tiled[0]),target[1].min(tiled[1])];}
-                        eprintln!("transition full tiled Y complete={complete} target={target:?} spans={spent}");
-                        let candidates=monotone.coordinate_preimage(target,128)?;
-                        assert!(candidates.cells<=128);
-                        assert!(std::ptr::eq(candidates.owner(),&monotone));
-                        assert_eq!(candidates.target(),target);
-                        let owned=self.assembly.patch.rails.face.boundary.rooted[rail];
-                        let neighbor_side=1-owned.points[0].source_side();
-                        let root_parameters=owned.points.each_ref().map(|p|
-                            p.uv_bounds()[neighbor_side][1-trace.linear_axis()]);
-                        let exterior_candidates=candidates.exterior_domains(root_parameters)?;
-                        eprintln!("transition neighbor rootParameters={root_parameters:?} exteriorCandidates={exterior_candidates:?}");
-                        eprintln!("transition neighbor full Y target={:?} candidateParameters={:?} cells={}",
-                            target,candidates.domains,candidates.cells);
+                assert!(std::ptr::eq(monotone.trace(), &trace));
+                assert!(monotone.increasing() && monotone.coordinate() == 1);
+                assert_eq!(monotone.parameter_domain(), trace.curve().domain());
+                let section0 = profile.section(root.axis, root.parameters[0])?;
+                let section1 = profile.section(root.axis, root.parameters[1])?;
+                let bridge = nurbs_core::normal_alignment::ProfileSectionBridge::new(
+                    section0,
+                    section1,
+                    [root.parameters[1] - root.parameters[0]; 2],
+                )?;
+                if let Some(bridge) = bridge.constrain_original_rails(max_controls)?.0 {
+                    if let Some(bounds) = bridge
+                        .enclose_with_transverse_correction(domain[0], domain[1], max_spans)?
+                        .0
+                    {
+                        let mut target = bounds[1];
+                        let mut tiled = [f64::INFINITY, f64::NEG_INFINITY];
+                        let mut spent = 0;
+                        let mut complete = true;
+                        let split = |axis: usize, i: usize| {
+                            if i == 0 {
+                                domain[axis][0]
+                            } else if i == 8 {
+                                domain[axis][1]
+                            } else {
+                                domain[axis][0]
+                                    + (domain[axis][1] - domain[axis][0]) * (i as f64 / 8.)
+                            }
+                        };
+                        for i in 0..8 {
+                            for j in 0..8 {
+                                let (cell, used) = bridge.enclose_with_transverse_correction(
+                                    [split(0, i), split(0, i + 1)],
+                                    [split(1, j), split(1, j + 1)],
+                                    max_spans - spent,
+                                )?;
+                                spent += used;
+                                if let Some(cell) = cell {
+                                    tiled[0] = tiled[0].min(cell[1][0]);
+                                    tiled[1] = tiled[1].max(cell[1][1]);
+                                } else {
+                                    complete = false;
+                                }
+                            }
+                        }
+                        if complete {
+                            target = [target[0].max(tiled[0]), target[1].min(tiled[1])];
+                        }
+                        eprintln!(
+                            "transition full tiled Y complete={complete} target={target:?} spans={spent}"
+                        );
+                        let candidates = monotone.coordinate_preimage(target, 128)?;
+                        assert!(candidates.cells <= 128);
+                        assert!(std::ptr::eq(candidates.owner(), &monotone));
+                        assert_eq!(candidates.target(), target);
+                        let owned = self.assembly.patch.rails.face.boundary.rooted[rail];
+                        let neighbor_side = 1 - owned.points[0].source_side();
+                        let root_parameters = owned
+                            .points
+                            .each_ref()
+                            .map(|p| p.uv_bounds()[neighbor_side][1 - trace.linear_axis()]);
+                        let exterior_candidates = candidates.exterior_domains(root_parameters)?;
+                        eprintln!(
+                            "transition neighbor rootParameters={root_parameters:?} exteriorCandidates={exterior_candidates:?}"
+                        );
+                        eprintln!(
+                            "transition neighbor full Y target={:?} candidateParameters={:?} cells={}",
+                            target, candidates.domains, candidates.cells
+                        );
                     }
                 }
-                eprintln!("transition curved neighbor monotoneY range={:?} domain={:?}",
-                    monotone.coordinate_range(),monotone.parameter_domain());
+                eprintln!(
+                    "transition curved neighbor monotoneY range={:?} domain={:?}",
+                    monotone.coordinate_range(),
+                    monotone.parameter_domain()
+                );
                 eprintln!(
                     "transition curved neighbor exactTrace=true curveDegree={} curveDomain={:?}",
                     trace.curve().degree,
                     trace.curve().domain()
                 );
             }
-            eprintln!("transition curved neighbor face={} degrees={:?} knots={:?} controls={:?} weights={:?} sourceFreeAxis={} sourceControls={:?}",
-                index, [neighbor.degree_u,neighbor.degree_v], [&neighbor.knots_u,&neighbor.knots_v],
-                neighbor.control_points,neighbor.weights,free_axis,source.control_points);
+            eprintln!(
+                "transition curved neighbor face={} degrees={:?} knots={:?} controls={:?} weights={:?} sourceFreeAxis={} sourceControls={:?}",
+                index,
+                [neighbor.degree_u, neighbor.degree_v],
+                [&neighbor.knots_u, &neighbor.knots_v],
+                neighbor.control_points,
+                neighbor.weights,
+                free_axis,
+                source.control_points
+            );
         }
         let Some(plane) =
             crate::source_allowed_contact::plane(neighbor, &mut out.exact_work, max_work)?

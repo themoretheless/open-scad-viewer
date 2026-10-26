@@ -291,8 +291,10 @@ pub fn transport_fragment(
     let mut endpoints = Vec::new();
     for endpoint in original.endpoints() {
         let endpoint = match endpoint {
-            Endpoint::Carrier { .. } => { return Ok(out); },
-                    Endpoint::Parameter(t) => Endpoint::Parameter(*t),
+            Endpoint::Carrier { .. } => {
+                return Ok(out);
+            }
+            Endpoint::Parameter(t) => Endpoint::Parameter(*t),
             Endpoint::Crossing { point, role } => {
                 if out.mapping_cells == max_mapping_cells {
                     return Ok(out);

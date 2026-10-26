@@ -316,13 +316,26 @@ pub(super) fn trimmed_plane(
     }
     // Enclose every authored outer control without rounding a UV inverse.
     // Rational arc controls can exceed nominal +/-R by a binary64 ulp.
-    let bounds=std::array::from_fn::<_,2,_>(|axis|outer.control_points.iter().fold([-radius,radius],|r,p|[r[0].min(p[axis]),r[1].max(p[axis])]));
+    let bounds = std::array::from_fn::<_, 2, _>(|axis| {
+        outer.control_points.iter().fold([-radius, radius], |r, p| {
+            [r[0].min(p[axis]), r[1].max(p[axis])]
+        })
+    });
     let surface = Surface {
-        degree_u: 1,degree_v: 1,
-        knots_u: vec![bounds[0][0],bounds[0][0],bounds[0][1],bounds[0][1]],
-        knots_v: vec![bounds[1][0],bounds[1][0],bounds[1][1],bounds[1][1]],
-        control_points: (0..2).map(|u|(0..2).map(|v|vec![bounds[0][u],bounds[1][v],height]).collect()).collect(),
-        weights: vec![vec![1.,1.],vec![1.,1.]],periodic_u:false,periodic_v:false,
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![bounds[0][0], bounds[0][0], bounds[0][1], bounds[0][1]],
+        knots_v: vec![bounds[1][0], bounds[1][0], bounds[1][1], bounds[1][1]],
+        control_points: (0..2)
+            .map(|u| {
+                (0..2)
+                    .map(|v| vec![bounds[0][u], bounds[1][v], height])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1., 1.], vec![1., 1.]],
+        periodic_u: false,
+        periodic_v: false,
     };
     let inner = Curve {
         control_points: angular

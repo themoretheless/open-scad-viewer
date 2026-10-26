@@ -52,7 +52,7 @@ pub fn inspect_with_exact(
         closure: inspect_agreement(model, proof.agreement)?,
     })
 }
-fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Result<Report> {
+pub(crate) fn inspect_shell_closures(model: &Model) -> Vec<ShellClosure> {
     let mut shells = Vec::with_capacity(model.shells.len());
     for (shell, s) in model.shells.iter().enumerate() {
         let mut uses = std::collections::BTreeMap::<usize, Vec<bool>>::new();
@@ -82,6 +82,11 @@ fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Re
         }
         shells.push(out);
     }
+    shells
+}
+
+fn inspect_agreement(model: &Model, agreement: boundary_agreement::Report) -> Result<Report> {
+    let shells = inspect_shell_closures(model);
     let status = if shells.iter().any(|s| !s.boundary_edges.is_empty()) {
         Closure::OpenBoundary
     } else if shells.iter().any(|s| !s.incompatible_edges.is_empty())

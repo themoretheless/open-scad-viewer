@@ -1,8 +1,9 @@
-import { nextTick, ref, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { nextTick, onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { useMainSolidTask } from '../features/useMainSolidTask'
+import { createSolidPreviewWorker } from '../services/solidPreviewWorker'
 import { downloadBlob, sanitizeFileName } from '../appHelpers'
 import type { MeshData } from '../core/mesh'
 import type { BuildPerformanceSample } from '../services/buildPerformance'
-import { buildBinaryStl, buildObj } from '../services/meshExport'
 import { detectMeshImportFormat, type MeshExportFormat } from '../services/meshFormats'
 import { SOURCE_FILE_EXTENSION, withSourceExtension } from '../services/rushFrontendDetect'
 import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
@@ -45,6 +46,14 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   const exportDialogOpen = ref(false)
   const exportDialogRef = ref<HTMLElement | null>(null)
   const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
+  const conversionTask = useMainSolidTask(createSolidPreviewWorker())
+  const conversionOperation = ref<'convert' | 'export'>('convert')
+  const { pending: conversionPending, progress: conversionProgress } = conversionTask
+  let disposed = false
+  onUnmounted(() => {
+    disposed = true
+    conversionTask.dispose()
+  })
 
   function openExportDialog() {
     exportDialogOpen.value = true
@@ -78,7 +87,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   }
 
   function triggerConvert() {
-    convertInputRef.value?.click()
+    if (!conversionPending.value) convertInputRef.value?.click()
   }
 
   async function convertSelectedFile(event: Event) {
@@ -88,16 +97,29 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     if (file) await convertFile(file)
   }
 
-  /** Convert a dropped/picked mesh file to the selected export format and download it. */
+  /** The whole conversion runs off the UI thread; only the current task may download. */
   async function convertFile(file: File) {
+    if (disposed || conversionPending.value) return
+    const target = additionalExportFormat.value
     try {
-      const { convertMeshFile } = await import('../services/meshConvert')
-      const result = await convertMeshFile(file.name, await file.arrayBuffer(), additionalExportFormat.value)
-      downloadBlob(new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }), result.fileName)
-      showNotice(`${translate('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`)
+      const input = new Uint8Array(await file.arrayBuffer())
+      if (disposed) return
+      conversionOperation.value = 'convert'
+      await conversionTask.run(
+        { kind: 'meshConvert', fileName: file.name, input, target, options: {} },
+        result => {
+          downloadBlob(new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }), result.fileName)
+          showNotice(`${translate('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`)
+        },
+        caught => showNotice(caught instanceof Error ? caught.message : 'Conversion failed'),
+      )
     } catch (caught) {
-      showNotice(caught instanceof Error ? caught.message : 'Conversion failed')
+      if (!disposed) showNotice(caught instanceof Error ? caught.message : 'Conversion failed')
     }
+  }
+
+  function cancelConversion() {
+    conversionTask.cancel()
   }
 
   async function openFile(file: File) {
@@ -128,39 +150,29 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     showNotice(translate('saved'))
   }
 
-  async function exportAdditionalMesh() {
-    if (!canExport.value) return
-    try {
-      const [{ exportMeshFormatCompressed }, { flattenExportMeshes }] = await Promise.all([
-        import('../services/meshExportFormats'),
-        import('../services/meshExportAdapter'),
-      ])
-      const artifact = await exportMeshFormatCompressed(
-        flattenExportMeshes(sceneMeshes.value),
-        additionalExportFormat.value,
-      )
-      const buffer = new ArrayBuffer(artifact.data.byteLength)
-      new Uint8Array(buffer).set(artifact.data)
-      downloadBlob(
-        new Blob([buffer], { type: artifact.mimeType }),
-        sanitizeFileName(fileName.value).replace(/\.scad$/i, '.' + artifact.extension),
-      )
-      showNotice(translate('exported'))
-    } catch (caught) {
-      showNotice(caught instanceof Error ? caught.message : 'Export failed')
-    }
+  async function exportScene(target: MeshExportFormat, sourceExtension: RegExp) {
+    if (disposed || conversionPending.value || !canExport.value) return
+    const mesh = sceneMeshes.value, sourceName = fileName.value
+    conversionOperation.value = 'export'
+    await conversionTask.run(
+      { kind: 'meshExport', mesh, target, options: {} },
+      artifact => {
+        downloadBlob(
+          new Blob([artifact.data.slice().buffer as ArrayBuffer], { type: artifact.mimeType }),
+          sanitizeFileName(sourceName).replace(sourceExtension, '.' + artifact.extension),
+        )
+        showNotice(translate('exported'))
+      },
+      caught => showNotice(caught instanceof Error ? caught.message : 'Export failed'),
+    )
+  }
+
+  function exportAdditionalMesh() {
+    return exportScene(additionalExportFormat.value, /\.scad$/i)
   }
 
   function exportStl() {
-    if (!canExport.value) return
-    const bytes = buildBinaryStl(sceneMeshes.value, fileName.value)
-    const buffer = new ArrayBuffer(bytes.byteLength)
-    new Uint8Array(buffer).set(bytes)
-    downloadBlob(
-      new Blob([buffer], { type: 'model/stl' }),
-      sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '.stl'),
-    )
-    showNotice(translate('exported'))
+    return exportScene('stl_binary', SOURCE_FILE_EXTENSION)
   }
 
   function exportPerformance() {
@@ -186,12 +198,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   }
 
   function exportObj() {
-    if (!canExport.value) return
-    downloadBlob(
-      new Blob([buildObj(sceneMeshes.value)], { type: 'text/plain;charset=utf-8' }),
-      sanitizeFileName(fileName.value).replace(/\.scad$/i, '.obj'),
-    )
-    showNotice(translate('exported'))
+    return exportScene('obj', /\.scad$/i)
   }
 
   async function shareSource() {
@@ -212,6 +219,10 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     exportDialogOpen,
     exportDialogRef,
     additionalExportFormat,
+    conversionPending,
+    conversionProgress,
+    conversionOperation,
+    cancelConversion,
     openExportDialog,
     confirmExport,
     triggerOpen,

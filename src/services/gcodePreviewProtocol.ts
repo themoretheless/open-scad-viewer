@@ -1,6 +1,7 @@
 import type { MeshData } from '../core/mesh'
 import { fitsClonedBufferBudget } from './clonedBufferBudget'
 import { GCODE_FLAVORS, type GcodePreviewResult, type JobSettingsInput, type ToolpathSettingsInput } from './geometry/polygon'
+import type { PrintReadinessErrorCode, PrintReadinessErrorDetails } from './printReadiness'
 
 export const GCODE_PREVIEW_MAX_BYTES = 4 * 1024 * 1024
 export const GCODE_PREVIEW_MAX_MESH_BYTES = 16 * 1024 * 1024
@@ -25,7 +26,7 @@ export interface GcodePreviewDocument {
 export interface GcodePreviewRequest { version: 1; id: number; job: GcodePreviewJob; responseFormat?: 'f64-moves-v1' }
 export type GcodePreviewResponse =
   | { version: 1; id: number; ok: true; result: GcodePreviewDocument }
-  | { version: 1; id: number; ok: false; error: string }
+  | { version: 1; id: number; ok: false; error: string; errorCode?: PrintReadinessErrorCode; errorDetails?: PrintReadinessErrorDetails }
 
 function checkMesh(mesh: GcodeSceneMesh, zMin: number, zMax: number): GcodeSceneMesh {
   if (!mesh || !(mesh.vertices instanceof Float32Array) || !(mesh.indices instanceof Uint32Array)

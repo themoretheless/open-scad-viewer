@@ -229,9 +229,14 @@ impl Cover {
     pub fn pair_separated(&self, a: usize, b: usize) -> Option<bool> {
         let first = self.faces[a]?;
         let second = self.faces[b]?;
-        Some((0..3).any(|k| first[k][1] < second[k][0] || second[k][1] < first[k][0])
-            || (0..DIRECTIONS.len()).any(|k| self.projections[a][k].zip(self.projections[b][k])
-                .is_some_and(|(a,b)| a[1]<b[0] || b[1]<a[0])))
+        Some(
+            (0..3).any(|k| first[k][1] < second[k][0] || second[k][1] < first[k][0])
+                || (0..DIRECTIONS.len()).any(|k| {
+                    self.projections[a][k]
+                        .zip(self.projections[b][k])
+                        .is_some_and(|(a, b)| a[1] < b[0] || b[1] < a[0])
+                }),
+        )
     }
     /// Caller charges one shared cell for this attempted group certificate.
     pub fn certify(&self, face: usize, node: usize) -> Option<Certificate> {

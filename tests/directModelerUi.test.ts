@@ -27,6 +27,8 @@ import {stringifyMeshJson} from '../src/services/meshJson'
 import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 vi.mock('../src/services/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
+const downloadArtifactBytes=vi.hoisted(()=>vi.fn())
+vi.mock('../src/services/downloadArtifact',()=>({downloadBytes:downloadArtifactBytes}))
 const displayWorkerRun=vi.hoisted(()=>vi.fn())
 const primitiveWorkerRun=vi.hoisted(()=>vi.fn())
 const measurementWorkerRun=vi.hoisted(()=>vi.fn())
@@ -70,9 +72,9 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
  const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
- return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='rushGraphImport'?importSolidRushGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='minkowski3d'?applySolidMinkowski(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
+ return {createSolidPreviewWorker:()=>({run:(job:any,options:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge','manifoldMetrics'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job,options))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='rushGraphImport'?importSolidRushGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='minkowski3d'?applySolidMinkowski(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
 })
-afterEach(()=>{previewWorkerRun.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
+afterEach(()=>{previewWorkerRun.mockReset();downloadArtifactBytes.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
 const svgWorkerRun=vi.hoisted(()=>vi.fn())
 vi.mock('../src/services/svgWorkerClient',()=>({createSvgWorkerClient:()=>({run:svgWorkerRun,dispose:()=>{}})}))
 afterEach(()=>svgWorkerRun.mockReset())
@@ -137,6 +139,11 @@ async function mount(props: Record<string,unknown> = {}, savedDraft?:string, pre
  return {commands:()=>instance.value.solidCommands as Array<{id:string;label:string;enabled?:boolean;disabledReason?:string}>,storageChanged:()=>windowListeners.get('storage')?.({key:'scad-solid-modeler-v1'}),all,text,button,click,svg,pointer,event,setProps:async(next:Record<string,unknown>)=>{Object.assign(currentProps,next);await nextTick()},preferences,serialized:()=>stored,doc:()=>{const parsed=JSON.parse(stored) as DirectDocument;return parsed.bodies.some(body=>body.instance&&!body.mesh)?JSON.parse(stringifyMeshJson(parseDirectDocument(stored))) as DirectDocument:parsed},field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await flushClearance()}}
 }
 
+function meshExportSeed(): DirectDocument {
+ const sketch={id:'export-sketch',name:'Export profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
+ return {version:1,sketches:[],bodies:[{...extrudeDirectSketch(sketch,10,'export-body'),name:'Cube'}]}
+}
+
 function cylinderSeed(): DirectDocument {
  const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,2)
  return {version:1,sketches:[],bodies:[{id:'imported-cylinder',name:'Imported cylinder',brep,
@@ -145,6 +152,7 @@ function cylinderSeed(): DirectDocument {
 
 it('edits physical material parameters without losing color or history, then restores the saved document',async()=>{
  const ui=await mount()
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&n.props['aria-label']==='Cube')).toBe(true))
  await ui.click('Cube');await ui.click('Properties')
  const change=async(label:string,value:string)=>{
   const input=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===label)!
@@ -158,6 +166,114 @@ it('edits physical material parameters without losing color or history, then res
  await ui.click('↷')
  const saved=ui.serialized(),restored=await mount({},saved)
  expect(restored.doc().bodies[0].material).toEqual({name:'Custom',color:'#b87333',metallic:1,roughness:.2})
+})
+
+it('imports a mesh through the Solid worker with Full manifold repair',async()=>{
+ const {importMeshFile}=await import('../src/services/meshImport')
+ previewWorkerRun.mockImplementation((job,options)=>job.kind==='meshImport'
+  ?importMeshFile(job.fileName,job.input,job.options,options.onProgress):undefined)
+ const ui=await mount(),before=ui.doc()
+ const source=[
+  'v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1',
+  'f 1 3 2','f 1 2 4','f 2 3 4',
+ ].join('\n'),bytes=new TextEncoder().encode(source)
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.type==='file'&&n.props.accept?.includes('.stl'))!
+ const mode=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Import repair mode')!
+ mode.props['onUpdate:modelValue']('full')
+ const target={files:[{name:'open.obj',arrayBuffer:async()=>bytes.buffer}],value:'open.obj'}
+ await input.props.onChange({target});await nextTick()
+ expect(previewWorkerRun).toHaveBeenCalledWith(
+  expect.objectContaining({kind:'meshImport',fileName:'open.obj',options:{weld:1e-4,repair:'full'}}),
+  expect.objectContaining({onProgress:expect.any(Function)}),
+ )
+ expect(target.value).toBe('')
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ expect(ui.doc().bodies.at(-1)?.name).toBe('open')
+ expect(ui.doc().bodies.at(-1)?.mesh.indices).toHaveLength(12)
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('shows mesh import phases and ignores completion after cancellation',async()=>{
+ let resolveImport!:(value:any)=>void,request:{job:any;options:any}|undefined
+ previewWorkerRun.mockImplementation((job,options)=>job.kind==='meshImport'
+  ?new Promise(resolve=>{request={job,options};resolveImport=resolve}):undefined)
+ const ui=await mount(),before=ui.doc()
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.type==='file'&&n.props.accept?.includes('.stl'))!
+ const bytes=new TextEncoder().encode('mesh')
+ const importing=input.props.onChange({target:{files:[{name:'pending.obj',arrayBuffer:async()=>bytes.buffer}],value:'pending.obj'}})
+ await flushClearance();expect(request).toBeDefined()
+ request!.options.onProgress({phase:'repair',completed:3,total:5});await nextTick()
+ const status=ui.all().find(n=>n.props['aria-label']==='history-restore')!
+ expect(ui.text(status)).toContain('Repairing topology · 3/5')
+ const progress=ui.all(status).find(n=>n.tag==='progress')!
+ expect(progress.props.value).toBe(3);expect(progress.props.max).toBe(5)
+ ui.all(status).find(n=>n.tag==='button')!.props.onClick()
+ request!.options.onProgress({phase:'verify',completed:4,total:5})
+ resolveImport({});await importing;await nextTick()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.props['aria-label']==='history-restore')).toBe(false)
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+})
+
+it('exports the selected Solid body through the worker',async()=>{
+ previewWorkerRun.mockImplementation((job,options)=>job.kind==='meshExport'
+  ?Promise.resolve().then(()=>{
+   options.onProgress({phase:'inspect',completed:0,total:2})
+   options.onProgress({phase:'export',completed:1,total:2})
+   return {data:new Uint8Array([1]),mimeType:'model/stl',extension:'stl'}
+  }):undefined)
+ const ui=await mount({initialDocument:meshExportSeed()})
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&n.props['aria-label']==='Cube')).toBe(true))
+ await ui.click('Cube');await ui.click('Download')
+ expect(previewWorkerRun).toHaveBeenCalledWith(
+  expect.objectContaining({kind:'meshExport',target:'stl_binary',options:{}}),
+  expect.objectContaining({onProgress:expect.any(Function)}),
+ )
+ expect(downloadArtifactBytes).toHaveBeenCalledWith(expect.any(Uint8Array),expect.any(String),'Cube.stl')
+ expect(ui.all().some(n=>n.props['aria-label']==='history-restore')).toBe(false)
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+})
+
+it('shows Solid export progress and ignores a late result after cancellation',async()=>{
+ let resolveExport!:(value:any)=>void,request:{job:any;options:any}|undefined
+ previewWorkerRun.mockImplementation((job,options)=>job.kind==='meshExport'
+  ?new Promise(resolve=>{request={job,options};resolveExport=resolve}):undefined)
+ const ui=await mount({initialDocument:meshExportSeed()})
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&n.props['aria-label']==='Cube')).toBe(true))
+ await ui.click('Cube')
+ const exporting=ui.button('Download').props.onClick()
+ await flushClearance();expect(request).toBeDefined()
+ request!.options.onProgress({phase:'inspect',completed:0,total:2});await nextTick()
+ const status=ui.all().find(n=>n.props['aria-label']==='history-restore')!
+ expect(ui.text(status)).toContain('Inspecting mesh · 0/2')
+ const progress=ui.all(status).find(n=>n.tag==='progress')!
+ expect(progress.props['aria-label']).toBe('Mesh export progress')
+ expect(progress.props.value).toBe(0);expect(progress.props.max).toBe(2)
+ expect(ui.button('Download').props.disabled).toBe(true)
+ expect(ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Body export format')!.props.disabled).toBe(true)
+ ui.all(status).find(n=>n.tag==='button')!.props.onClick()
+ request!.options.onProgress({phase:'export',completed:1,total:2})
+ resolveExport({data:new Uint8Array([1]),mimeType:'model/stl',extension:'stl'})
+ await exporting;await nextTick()
+ expect(downloadArtifactBytes).not.toHaveBeenCalled()
+ expect(ui.all().some(n=>n.props['aria-label']==='history-restore')).toBe(false)
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+})
+
+it('does not add a late imported mesh after the Solid document changes',async()=>{
+ let resolveImport!:(value:any)=>void,started!:()=>void
+ const running=new Promise<void>(resolve=>{started=resolve})
+ previewWorkerRun.mockImplementation(job=>job.kind==='meshImport'
+  ?new Promise(resolve=>{resolveImport=resolve;started()}):undefined)
+ const ui=await mount()
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.type==='file'&&n.props.accept?.includes('.stl'))!
+ const bytes=new TextEncoder().encode('mesh')
+ const importing=input.props.onChange({target:{files:[{name:'late.obj',arrayBuffer:async()=>bytes.buffer}],value:'late.obj'}})
+ await running;await ui.click('Box');const edited=ui.doc()
+ resolveImport({});await importing;await nextTick()
+ expect(ui.doc()).toEqual(edited)
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
 })
 
 it('imports STEP through the Solid file input and keeps Undo independent of the saved original',async()=>{
@@ -1504,6 +1620,39 @@ it('exports Blender from the file menu and persists the same identity on repeat 
   await vi.waitFor(()=>expect(click).toHaveBeenCalledTimes(2))
   expect(JSON.parse(await blobs[1].text()).projectId).toBe(first.projectId)
  } finally {vi.restoreAllMocks()}
+})
+
+it('exports manifold metrics for every selected body as JSON and CSV without editing the document',async()=>{
+ const box=createBrepBox([0,0,0],[2,3,4]),cylinder=createBrepCylinder(2,5)
+ const {measureSolidManifoldMetrics}=await import('../src/services/solidMeasurements')
+ measurementWorkerRun.mockImplementation((job:any)=>job.kind==='manifoldMetrics'?Promise.resolve(measureSolidManifoldMetrics(job.mesh)):undefined)
+ const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[
+  {id:'box',name:'Metrics box',brep:box,mesh:tessellateNurbsBrep(box,1)},
+  {id:'cylinder',name:'Metrics cylinder',brep:cylinder,mesh:tessellateNurbsBrep(cylinder,2)},
+ ]}})
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&n.props['aria-label']==='Metrics box')).toBe(true))
+ await ui.click('Metrics box');await ui.click('Metrics cylinder',true);await ui.click('Properties');await ui.click('Measurements')
+ expect(ui.text(ui.all()[0])).toContain('Selected bodies: 2')
+ const before=ui.serialized(),blobs:Blob[]=[],click=vi.fn(),anchor={href:'',download:'',click}
+ vi.stubGlobal('window',{document:{createElement:()=>anchor}})
+ vi.spyOn(URL,'createObjectURL').mockImplementation(blob=>{blobs.push(blob as Blob);return 'blob:metrics'})
+ vi.spyOn(URL,'revokeObjectURL').mockImplementation(()=>{})
+ try{
+  await ui.click('Export JSON');await vi.waitFor(()=>expect(click).toHaveBeenCalledTimes(1))
+  const report=JSON.parse(await blobs[0].text())
+  expect(report.bodies.map((body:{id:string})=>body.id)).toEqual(['box','cylinder'])
+  expect(report.bodies[0].signedVolumeMm3).toBeCloseTo(24,8)
+  expect(report.bodies[1].signedVolumeMm3).toBeGreaterThan(0)
+  expect(report.bodies[0].components[0].genus).toBe(0)
+  expect(anchor.download).toBe('manifold-metrics.json');expect(blobs[0].type).toBe('application/json')
+  await ui.click('Export CSV');await vi.waitFor(()=>expect(click).toHaveBeenCalledTimes(2))
+  const csv=await blobs[1].text()
+  expect(csv.split('\r\n')).toHaveLength(4)
+  expect(csv).toContain('bodyId,bodyName,vertexCount,triangleCount')
+  expect(csv).toContain('box,Metrics box,');expect(csv).toContain('cylinder,Metrics cylinder,')
+  expect(anchor.download).toBe('manifold-metrics.csv');expect(blobs[1].type).toBe('text/csv;charset=utf-8')
+  expect(ui.serialized()).toBe(before)
+ }finally{vi.restoreAllMocks()}
 })
 
 it('highlights the first disallowed triangle pair without changing the document',async()=>{
@@ -4024,7 +4173,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  for(const selection of [null,'Cube','Profile']){
   if(selection)await ui.click(selection)
   const commands=ui.commands(),current=commands.map(c=>c.id)
-  expect(commands).toHaveLength(97);expect(new Set(current).size).toBe(current.length)
+  expect(commands).toHaveLength(98);expect(new Set(current).size).toBe(current.length)
   if(ids.length)expect(current).toEqual(ids);else ids=current
   for(const command of commands){
    expect(command.label.trim(),command.id).not.toBe('')
@@ -4428,6 +4577,7 @@ it('shows source-only topology without claiming the sum topology',async()=>{
   expect(ui.text(notice)).toContain(proved?'Source body topology is preserved; sum topology is unproved.':'Source surface approximation topology is unproved.')
   expect(ui.text(notice)).not.toContain('Source surface and sum approximation topology proved.')
  }
+})
 
 for(const locale of ['en','ru'])it('adds explicit edges without clearing selection or editing geometry: '+locale,async()=>{
  const seed=cylinderSeed(),ui=await mount({locale,seedDocument:seed});await ui.click('Imported cylinder');await ui.click(locale==='ru'?'Рёбра':'Edges')

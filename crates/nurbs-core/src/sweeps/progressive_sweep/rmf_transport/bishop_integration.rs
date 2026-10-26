@@ -9,6 +9,7 @@ pub(super) fn certify_original_rmf_transport_impl(
     max_exact_work: u64,
     closed: bool,
     shared_work: Option<usize>,
+    geometric_arc: bool,
 ) -> Result<OriginalRmfTransportReport> {
     path.validate()?;
     check(
@@ -40,25 +41,73 @@ pub(super) fn certify_original_rmf_transport_impl(
     // Bishop transport requires a continuous unit tangent, not equal
     // parameter speeds. Exact C0 position/positive tangent identity suffices
     // for piecewise regular sources; the ODE bounds hold on every span.
-    let knots = if path.periodic {
-        endpoint_jets::certify_knots(path, 1, max_exact_work)?
-    } else {
-        endpoint_jets::certify_direction(path, 0, false, false, max_exact_work)?
-    };
-    out.exact_work = knots.exact_work;
-    if !knots.certified {
-        return Ok(out);
-    }
-    if closed {
-        let seam = if path.periodic {
-            endpoint_jets::certify(path, 1, max_exact_work - out.exact_work)?
-        } else {
-            endpoint_jets::certify_direction(path, 0, true, false, max_exact_work - out.exact_work)?
-        };
-        out.exact_work += seam.exact_work;
-        if !seam.certified {
-            out.reason = Some("rmf-original-closed-tangent-unproved");
+    let use_nonperiodic_direction =
+        !geometric_arc && !path.periodic && (path.weights.first() == path.weights.last() || path.degree <= 2);
+    if use_nonperiodic_direction {
+        let knots = endpoint_jets::certify_direction(path, 0, false, false, max_exact_work)?;
+        out.exact_work = knots.exact_work;
+        if !knots.certified {
             return Ok(out);
+        }
+        if closed {
+            let seam = endpoint_jets::certify_direction(
+                path,
+                0,
+                true,
+                false,
+                max_exact_work - out.exact_work,
+            )?;
+            out.exact_work += seam.exact_work;
+            if !seam.certified {
+                out.reason = Some("rmf-original-closed-tangent-unproved");
+                return Ok(out);
+            }
+        }
+    } else {
+        let knots = endpoint_jets::certify_knots(path, 1, max_exact_work)?;
+        out.exact_work = knots.exact_work;
+        let mut cartesian = knots.certified;
+        if cartesian && closed {
+            let seam = endpoint_jets::certify(path, 1, max_exact_work - out.exact_work)?;
+            out.exact_work += seam.exact_work;
+            cartesian = seam.certified;
+            if !cartesian {
+                out.reason = Some("rmf-original-closed-tangent-unproved");
+            }
+        }
+        if !cartesian {
+            if !geometric_arc {
+                return Ok(out);
+            }
+            for &endpoints in if closed {
+                &[false, true][..]
+            } else {
+                &[false][..]
+            } {
+                let position = endpoint_jets::certify_position(
+                    path,
+                    endpoints,
+                    max_exact_work - out.exact_work,
+                )?;
+                out.exact_work += position.exact_work;
+                if !position.certified {
+                    out.reason = Some("rmf-original-position-continuity-unproved");
+                    return Ok(out);
+                }
+                let tangent = endpoint_jets::certify_direction(
+                    path,
+                    0,
+                    endpoints,
+                    true,
+                    max_exact_work - out.exact_work,
+                )?;
+                out.exact_work += tangent.exact_work;
+                if !tangent.certified {
+                    out.reason = Some("rmf-original-forward-tangent-unproved");
+                    return Ok(out);
+                }
+            }
+            out.used_geometric_arc_join_premises = true;
         }
     }
     let max_cells = match shared_work {
@@ -458,6 +507,7 @@ pub(super) fn certify_original_rmf_transport_impl(
             prefix = next_prefix;
         }
         out.closing_angle = Some(angle);
+        out.original_arc_length = Some([total.lo, total.hi]);
         out.arc_corrected_normals = Some(corrected);
         out.correction_phases = Some(phases);
         out.correction_rate = Some(I::new(angle[0], angle[1])?.div(total)?);

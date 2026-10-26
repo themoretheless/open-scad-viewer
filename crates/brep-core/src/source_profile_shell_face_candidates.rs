@@ -124,15 +124,21 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 });
                 continue;
             }
-            let Ok(fill) =
-                planar_geometry::triangulation::triangulate_profile(&rings[0], &rings[1..])
-            else {
-                result.pending.push(FaceCandidatePending {
-                    face,
-                    reason: "face-triangulation-proposal-refused",
-                });
-                continue;
-            };
+            let fill =
+                match planar_geometry::triangulation::triangulate_profile(&rings[0], &rings[1..]) {
+                    Ok(fill) => fill,
+                    Err(error) => {
+                        eprintln!(
+                            "face {face} rings={:?} triangulation refused: {error}",
+                            rings.iter().map(Vec::len).collect::<Vec<_>>()
+                        );
+                        result.pending.push(FaceCandidatePending {
+                            face,
+                            reason: "face-triangulation-proposal-refused",
+                        });
+                        continue;
+                    }
+                };
             let mut ids = Vec::new();
             let mut valid = true;
             for point in &fill.positions {

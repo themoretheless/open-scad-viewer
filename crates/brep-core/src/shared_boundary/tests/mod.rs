@@ -1,71 +1,179 @@
 use super::*;
 #[test]
-fn sphere_equator_is_the_only_contact_of_opposite_exact_disk_sides(){
-    let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
-    for faces in [[0,4],[1,5],[2,6],[3,7]]{
-        assert!(certify_opposite(&model,faces).unwrap().is_some(),"{faces:?}");
+fn sphere_equator_is_the_only_contact_of_opposite_exact_disk_sides() {
+    let model = crate::analytic::sphere(3.).unwrap();
+    let before = format!("{model:?}");
+    for faces in [[0, 4], [1, 5], [2, 6], [3, 7]] {
+        assert!(
+            certify_opposite(&model, faces).unwrap().is_some(),
+            "{faces:?}"
+        );
     }
-    let mut changed=model.clone();changed.faces[4].surface.control_points[1][1][2]+=1e-12;
-    assert!(certify_opposite(&changed,[0,4]).unwrap().is_none());
-    let mut same_side=model.clone();for row in &mut same_side.faces[4].surface.control_points{for p in row{p[2]=-p[2];}}
-    assert!(certify_opposite(&same_side,[0,4]).unwrap().is_none());
-    let rounded=crate::analytic::sphere(2.).unwrap();assert!(certify_opposite(&rounded,[0,4]).unwrap().is_none());
-    assert_eq!(format!("{model:?}"),before);
+    let mut changed = model.clone();
+    changed.faces[4].surface.control_points[1][1][2] += 1e-12;
+    assert!(certify_opposite(&changed, [0, 4]).unwrap().is_none());
+    let mut same_side = model.clone();
+    for row in &mut same_side.faces[4].surface.control_points {
+        for p in row {
+            p[2] = -p[2];
+        }
+    }
+    assert!(certify_opposite(&same_side, [0, 4]).unwrap().is_none());
+    let rounded = crate::analytic::sphere(2.).unwrap();
+    assert!(certify_opposite(&rounded, [0, 4]).unwrap().is_none());
+    assert_eq!(format!("{model:?}"), before);
 }
 #[test]
-fn adjacent_cylinder_sides_use_exact_authored_axis_planes(){
-    let model=crate::analytic::cylinder(2.,4.).unwrap();
-    for faces in [[0,1],[1,2],[2,3],[0,3]]{
-        assert!(inspect_opposite_pair(&model,faces).unwrap().is_some(),"{faces:?}");
+fn adjacent_cylinder_sides_use_exact_authored_axis_planes() {
+    let model = crate::analytic::cylinder(2., 4.).unwrap();
+    for faces in [[0, 1], [1, 2], [2, 3], [0, 3]] {
+        assert!(
+            inspect_opposite_pair(&model, faces).unwrap().is_some(),
+            "{faces:?}"
+        );
     }
-    let a=&model.faces[0].surface;let b=&model.faces[1].surface;
-    let edge=model.loops[model.faces[0].outer].coedges.iter().find(|ca|model.loops[model.faces[1].outer].coedges.iter().any(|cb|cb.edge==ca.edge)).unwrap();
-    let other=model.loops[model.faces[1].outer].coedges.iter().find(|cb|cb.edge==edge.edge).unwrap();
-    let mut same_side=b.clone();for row in &mut same_side.control_points{for p in row{p[0]=p[0].abs();}}
-    assert!(!opposite_axis_sides(a,&same_side,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
+    let a = &model.faces[0].surface;
+    let b = &model.faces[1].surface;
+    let edge = model.loops[model.faces[0].outer]
+        .coedges
+        .iter()
+        .find(|ca| {
+            model.loops[model.faces[1].outer]
+                .coedges
+                .iter()
+                .any(|cb| cb.edge == ca.edge)
+        })
+        .unwrap();
+    let other = model.loops[model.faces[1].outer]
+        .coedges
+        .iter()
+        .find(|cb| cb.edge == edge.edge)
+        .unwrap();
+    let mut same_side = b.clone();
+    for row in &mut same_side.control_points {
+        for p in row {
+            p[0] = p[0].abs();
+        }
+    }
+    assert!(!opposite_axis_sides(
+        a,
+        &same_side,
+        &edge.pcurve,
+        &other.pcurve,
+        &model.edges[edge.edge].curve
+    ));
 }
 #[test]
 fn collapsed_secondary_boundary_must_be_an_owned_curve_endpoint() {
-    let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-    for pair in [[0,1],[10,11]] {
-        let c=certify(&model,pair).unwrap();assert_eq!(c.sided_face,pair[0]);
-        let mut extra=model.clone();
+    let model =
+        crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();
+    for pair in [[0, 1], [10, 11]] {
+        let c = certify(&model, pair).unwrap();
+        assert_eq!(c.sided_face, pair[0]);
+        let mut extra = model.clone();
         // Moving an opposite zero corner within the support plane creates
         // an extra reachable contact rather than an allowed collapsed end.
-        let controls=&mut extra.faces[pair[0]].surface.control_points;
-        let pole=[0,controls.len()-1].into_iter().find(|&i|controls[i].iter().all(|p|p==&controls[i][0])).unwrap();
-        controls[pole][2][0]+=1e-12;
-        assert!(!bezier_plane_edge_only(&extra.faces[pair[0]].surface,[&[0.,0.,6.],&[1.,0.,6.],&[0.,1.,6.]],(1,0)),"direct helper pair={pair:?}");
-        assert!(certify(&extra,pair).is_none(),"pair={pair:?} certificate={:?}",certify(&extra,pair));
+        let controls = &mut extra.faces[pair[0]].surface.control_points;
+        let pole = [0, controls.len() - 1]
+            .into_iter()
+            .find(|&i| controls[i].iter().all(|p| p == &controls[i][0]))
+            .unwrap();
+        controls[pole][2][0] += 1e-12;
+        assert!(
+            !bezier_plane_edge_only(
+                &extra.faces[pair[0]].surface,
+                [&[0., 0., 6.], &[1., 0., 6.], &[0., 1., 6.]],
+                (1, 0)
+            ),
+            "direct helper pair={pair:?}"
+        );
+        assert!(
+            certify(&extra, pair).is_none(),
+            "pair={pair:?} certificate={:?}",
+            certify(&extra, pair)
+        );
     }
 }
 #[test]
 fn tangent_boundary_control_rows_remain_strictly_separated() {
-    let model=crate::analytic::cylinder(2.,4.).unwrap();
-    let edge=model.loops[model.faces[0].outer].coedges.iter().find(|ca|model.loops[model.faces[1].outer].coedges.iter().any(|cb|cb.edge==ca.edge)).unwrap();
-    let other=model.loops[model.faces[1].outer].coedges.iter().find(|cb|cb.edge==edge.edge).unwrap();
-    let mut a=model.faces[0].surface.clone();let b=&model.faces[1].surface;
-    let (fixed,row)=boundary(&a,&edge.pcurve,&model.edges[edge.edge].curve).unwrap();
-    let axis=(0..3).find(|&k|model.edges[edge.edge].curve.control_points.iter().all(|p|p[k]==model.edges[edge.edge].curve.control_points[0][k])).unwrap();
-    let plane=model.edges[edge.edge].curve.control_points[0][axis];
-    for (u,r) in a.control_points.iter_mut().enumerate(){for (v,p) in r.iter_mut().enumerate(){if [u,v][fixed]==1{p[axis]=plane;}}}
-    assert!(opposite_axis_sides(&a,b,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
-    let opposite=if row==0{2}else{0};
-    if fixed==0{a.control_points[opposite][0][axis]=plane;}else{a.control_points[0][opposite][axis]=plane;}
-    assert!(!opposite_axis_sides(&a,b,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
+    let model = crate::analytic::cylinder(2., 4.).unwrap();
+    let edge = model.loops[model.faces[0].outer]
+        .coedges
+        .iter()
+        .find(|ca| {
+            model.loops[model.faces[1].outer]
+                .coedges
+                .iter()
+                .any(|cb| cb.edge == ca.edge)
+        })
+        .unwrap();
+    let other = model.loops[model.faces[1].outer]
+        .coedges
+        .iter()
+        .find(|cb| cb.edge == edge.edge)
+        .unwrap();
+    let mut a = model.faces[0].surface.clone();
+    let b = &model.faces[1].surface;
+    let (fixed, row) = boundary(&a, &edge.pcurve, &model.edges[edge.edge].curve).unwrap();
+    let axis = (0..3)
+        .find(|&k| {
+            model.edges[edge.edge]
+                .curve
+                .control_points
+                .iter()
+                .all(|p| p[k] == model.edges[edge.edge].curve.control_points[0][k])
+        })
+        .unwrap();
+    let plane = model.edges[edge.edge].curve.control_points[0][axis];
+    for (u, r) in a.control_points.iter_mut().enumerate() {
+        for (v, p) in r.iter_mut().enumerate() {
+            if [u, v][fixed] == 1 {
+                p[axis] = plane;
+            }
+        }
+    }
+    assert!(opposite_axis_sides(
+        &a,
+        b,
+        &edge.pcurve,
+        &other.pcurve,
+        &model.edges[edge.edge].curve
+    ));
+    let opposite = if row == 0 { 2 } else { 0 };
+    if fixed == 0 {
+        a.control_points[opposite][0][axis] = plane;
+    } else {
+        a.control_points[0][opposite][axis] = plane;
+    }
+    assert!(!opposite_axis_sides(
+        &a,
+        b,
+        &edge.pcurve,
+        &other.pcurve,
+        &model.edges[edge.edge].curve
+    ));
 }
 #[test]
-fn cylinder_caps_admit_curved_exact_trims_but_not_nearby_lifts(){
-    let model=crate::analytic::cylinder(2.,4.).unwrap();
-    for side in 0..4{for cap in 4..6{
-        let c=inspect_pair(&model,[side,cap]).unwrap().expect("exact curved cap trim");
-        assert_eq!(c.sided_face,side);assert_eq!(c.planar_face,cap);
-        let mut broken=model.clone();
-        let wire=broken.faces[cap].outer;
-        let use_=broken.loops[wire].coedges.iter_mut().find(|u|u.edge==c.edge).unwrap();
-        use_.pcurve.control_points[1][0]+=1e-12;
-        assert!(certify(&broken,[side,cap]).is_none());
-    }}
+fn cylinder_caps_admit_curved_exact_trims_but_not_nearby_lifts() {
+    let model = crate::analytic::cylinder(2., 4.).unwrap();
+    for side in 0..4 {
+        for cap in 4..6 {
+            let c = inspect_pair(&model, [side, cap])
+                .unwrap()
+                .expect("exact curved cap trim");
+            assert_eq!(c.sided_face, side);
+            assert_eq!(c.planar_face, cap);
+            let mut broken = model.clone();
+            let wire = broken.faces[cap].outer;
+            let use_ = broken.loops[wire]
+                .coedges
+                .iter_mut()
+                .find(|u| u.edge == c.edge)
+                .unwrap();
+            use_.pcurve.control_points[1][0] += 1e-12;
+            assert!(certify(&broken, [side, cap]).is_none());
+        }
+    }
 }
 #[test]
 fn cube_only_certifies_adjacent_pairs() {

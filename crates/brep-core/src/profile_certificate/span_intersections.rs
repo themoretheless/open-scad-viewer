@@ -4,9 +4,70 @@ use super::*;
 mod translated;
 pub use translated::{OwnedTranslatedSpanIntersections, own_translated_span_intersections};
 mod event_nodes;
-pub use event_nodes::{OwnedOriginalPeriodicEmbedding, own_original_periodic_embedding, OriginalPeriodicSourceUse, OriginalPeriodicWireUse, OriginalPeriodicJoinKind, OriginalPeriodicWireJoin, OriginalPeriodicWire, OwnedOriginalPeriodicWires, own_original_periodic_wires, OriginalPeriodicPieceCoverage, OwnedOriginalPeriodicSurface, bind_original_periodic_pieces_to_surface, OriginalPeriodicEvent, OriginalPeriodicShoreCell, OriginalPeriodicCutOrigin, OriginalPeriodicCut, OriginalPeriodicPiece, OriginalPeriodicTransition, OriginalPeriodicPoint, OwnedOriginalPeriodicPieces, own_original_periodic_pieces, OriginalChartCutOrigin, OriginalChartCut, OriginalChartRegion, OriginalChartInterval, OwnedOriginalChartIntervals, own_original_chart_intervals, OriginalChartShoreEvent, OriginalChartShoreCell, OwnedOriginalChartEvents, own_original_chart_events, OwnedOriginalUnifiedRegions, own_original_unified_regions, OwnedOriginalUnifiedBoundaryWinding, own_original_unified_boundary_winding, OwnedOriginalUnifiedFilled, own_original_unified_filled, OwnedOriginalUnifiedSides, own_original_unified_sides, own_original_unified_sides_automatically, OwnedOriginalUnifiedCycles, own_original_unified_cycles, OwnedOriginalUnifiedRotation, own_original_unified_rotation, OriginalUnifiedPort, OwnedOriginalUnifiedPorts, own_original_unified_ports, OriginalUnifiedVertex, OriginalUnifiedEdgeCarrier, OriginalUnifiedEdge, OriginalUnifiedIncidence, OwnedOriginalUnifiedGraph, own_original_unified_graph, OriginalSourceParameter, OriginalSourceCutOrigin, OriginalSourceCut, OriginalSourceCommonUse, OriginalUnifiedCarrier, OwnedOriginalSourceCarriers, own_original_source_carriers, OriginalCommonPartitionRef, OriginalCommonEdgeUse, OriginalCommonEdge, OwnedOriginalCommonDictionary, own_original_common_dictionary, OriginalCommonCutOrigin, OriginalCommonCut, OriginalCommonContributor, OriginalCommonSegment, OwnedOriginalCommonPartition, own_original_common_partition, OriginalCommonClipOrigin, OriginalCommonClipBoundary, OriginalCommonClip, OwnedOriginalCommonClips, own_original_common_clips, OriginalPointPreimage, OwnedOriginalPointPullback, own_original_point_pullback, OriginalPairCutOrigin, OriginalPairCut, OwnedOriginalPairCuts, own_original_pair_cuts, OriginalOverlapContactRef, OwnedOriginalOverlapPartition, own_original_overlap_partition, OriginalOverlapSplit, OriginalOverlapContact, OwnedOriginalOverlapContacts, own_original_overlap_contacts, OriginalOverlapComponent, OwnedOriginalOverlapComponents, own_original_overlap_components, OriginalPhysicalVertex, OriginalPhysicalTrace, OriginalPhysicalEdgeUse, OriginalPhysicalEdge, OriginalPhysicalFacePatch, OriginalPhysicalFace, OwnedOriginalPhysicalFaces, OriginalPhysicalFaceLimits, own_original_physical_faces, assemble_original_physical_faces, OwnedOriginalGlobalChartEmbedding, own_original_global_chart_embedding, OriginalAtlasPairLimits, OriginalAtlasPairProof, OriginalAtlasPair, OwnedOriginalAtlasPairs, own_original_atlas_pairs, OriginalInjectiveAtlasLimits, OriginalInjectiveChart, OwnedOriginalInjectiveChartAtlas, own_original_injective_chart_atlas, OriginalSurfaceRegularityRecord, OwnedOriginalRegularTrimSurface, own_original_regular_trim_surface, OriginalChartCoverageCell, OwnedOriginalTrimChartCoverage, own_original_trim_chart_coverage, OriginalQuotientCoedge, OriginalQuotientEdge, OriginalQuotientVertexLink, OwnedOriginalPeriodicTopology, own_original_periodic_topology, OwnedOriginalSurfaceSeams, bind_original_seams_to_surface, OriginalSeamUse, OwnedOriginalSeamDictionary, own_original_seam_dictionary, OriginalShoreMembership, OwnedOriginalShoreMembership, classify_original_shore_carrier, OwnedOriginalShorePair, own_original_shore_pair, OwnedOriginalShoreCarrier, own_original_shore_carrier, OriginalChartVertexLimits, OwnedOriginalChartVertices, own_original_chart_vertices, assemble_original_filled_regions, OriginalFilledRegion, OwnedOriginalFilledRegions, own_original_filled_regions, OwnedOriginalBoundaryWinding, own_original_boundary_winding, OriginalBoundaryAssemblyLimits, own_original_carrier_sides_automatically, assemble_original_filled_boundaries, OwnedOriginalFilledBoundaries, own_original_filled_boundaries, OwnedOriginalCarrierSides, own_original_carrier_sides, OwnedOriginalCarrierCycles, own_original_carrier_cycles, OriginalCarrierVertex, OriginalCarrierIncidence, OwnedOriginalCarrierGraph, own_original_carrier_graph, OriginalCarrierCut, OriginalAtomicCarrier, OwnedOriginalCarriers, own_original_carriers, BranchNeighbourhoodLimits, BranchNeighbourhoodRecord, OwnedBranchNeighbourhood, own_branch_neighbourhood, ContactPortOrderLimits, OriginalContactPort, OwnedContactPortOrder, own_original_contact_port_order, try_own_event_branch, LeadingBranchRay, OwnedEventBranch, own_event_branch, ContactAtlasLimits, ContactOccurrence, SourceContactParameter, OriginalContactAtlas, assemble_original_contact_atlas, EventParameterRef, ParameterOrderLimits, QualifiedParameterOrder, compare_event_parameters, AlgebraicEventNode, AlgebraicEventPosition, CurveEventNodes, own_curve_event_nodes};
 use algebraic_intersections::{ExactRatio, decode_factors, encode_factors, outward, ratio};
 use arithmetic::algebraic_events as engine;
+pub use event_nodes::{
+    AlgebraicEventNode, AlgebraicEventPosition, BranchNeighbourhoodLimits,
+    BranchNeighbourhoodRecord, ContactAtlasLimits, ContactOccurrence, ContactPortOrderLimits,
+    CurveEventNodes, EventParameterRef, LeadingBranchRay, OriginalAtlasPair,
+    OriginalAtlasPairLimits, OriginalAtlasPairProof, OriginalAtomicCarrier,
+    OriginalBoundaryAssemblyLimits, OriginalCarrierCut, OriginalCarrierIncidence,
+    OriginalCarrierVertex, OriginalChartCoverageCell, OriginalChartCut, OriginalChartCutOrigin,
+    OriginalChartInterval, OriginalChartRegion, OriginalChartShoreCell, OriginalChartShoreEvent,
+    OriginalChartVertexLimits, OriginalCommonClip, OriginalCommonClipBoundary,
+    OriginalCommonClipOrigin, OriginalCommonContributor, OriginalCommonCut,
+    OriginalCommonCutOrigin, OriginalCommonEdge, OriginalCommonEdgeUse, OriginalCommonPartitionRef,
+    OriginalCommonSegment, OriginalContactAtlas, OriginalContactPort, OriginalFilledRegion,
+    OriginalInjectiveAtlasLimits, OriginalInjectiveChart, OriginalOverlapComponent,
+    OriginalOverlapContact, OriginalOverlapContactRef, OriginalOverlapSplit, OriginalPairCut,
+    OriginalPairCutOrigin, OriginalPeriodicCut, OriginalPeriodicCutOrigin, OriginalPeriodicEvent,
+    OriginalPeriodicJoinKind, OriginalPeriodicPiece, OriginalPeriodicPieceCoverage,
+    OriginalPeriodicPoint, OriginalPeriodicShoreCell, OriginalPeriodicSourceUse,
+    OriginalPeriodicTransition, OriginalPeriodicWire, OriginalPeriodicWireJoin,
+    OriginalPeriodicWireUse, OriginalPhysicalEdge, OriginalPhysicalEdgeUse, OriginalPhysicalFace,
+    OriginalPhysicalFaceLimits, OriginalPhysicalFacePatch, OriginalPhysicalTrace,
+    OriginalPhysicalVertex, OriginalPointPreimage, OriginalQuotientCoedge, OriginalQuotientEdge,
+    OriginalQuotientVertexLink, OriginalSeamUse, OriginalShoreMembership, OriginalSourceCommonUse,
+    OriginalSourceCut, OriginalSourceCutOrigin, OriginalSourceParameter,
+    OriginalSurfaceRegularityRecord, OriginalUnifiedCarrier, OriginalUnifiedEdge,
+    OriginalUnifiedEdgeCarrier, OriginalUnifiedIncidence, OriginalUnifiedPort,
+    OriginalUnifiedVertex, OwnedBranchNeighbourhood, OwnedContactPortOrder, OwnedEventBranch,
+    OwnedOriginalAtlasPairs, OwnedOriginalBoundaryWinding, OwnedOriginalCarrierCycles,
+    OwnedOriginalCarrierGraph, OwnedOriginalCarrierSides, OwnedOriginalCarriers,
+    OwnedOriginalChartEvents, OwnedOriginalChartIntervals, OwnedOriginalChartVertices,
+    OwnedOriginalCommonClips, OwnedOriginalCommonDictionary, OwnedOriginalCommonPartition,
+    OwnedOriginalFilledBoundaries, OwnedOriginalFilledRegions, OwnedOriginalGlobalChartEmbedding,
+    OwnedOriginalInjectiveChartAtlas, OwnedOriginalOverlapComponents, OwnedOriginalOverlapContacts,
+    OwnedOriginalOverlapPartition, OwnedOriginalPairCuts, OwnedOriginalPeriodicEmbedding,
+    OwnedOriginalPeriodicPieces, OwnedOriginalPeriodicSurface, OwnedOriginalPeriodicTopology,
+    OwnedOriginalPeriodicWires, OwnedOriginalPhysicalFaces, OwnedOriginalPointPullback,
+    OwnedOriginalRegularTrimSurface, OwnedOriginalSeamDictionary, OwnedOriginalShoreCarrier,
+    OwnedOriginalShoreMembership, OwnedOriginalShorePair, OwnedOriginalSourceCarriers,
+    OwnedOriginalSurfaceSeams, OwnedOriginalTrimChartCoverage, OwnedOriginalUnifiedBoundaryWinding,
+    OwnedOriginalUnifiedCycles, OwnedOriginalUnifiedFilled, OwnedOriginalUnifiedGraph,
+    OwnedOriginalUnifiedPorts, OwnedOriginalUnifiedRegions, OwnedOriginalUnifiedRotation,
+    OwnedOriginalUnifiedSides, ParameterOrderLimits, QualifiedParameterOrder,
+    SourceContactParameter, assemble_original_contact_atlas, assemble_original_filled_boundaries,
+    assemble_original_filled_regions, assemble_original_physical_faces,
+    bind_original_periodic_pieces_to_surface, bind_original_seams_to_surface,
+    classify_original_shore_carrier, compare_event_parameters, own_branch_neighbourhood,
+    own_curve_event_nodes, own_event_branch, own_original_atlas_pairs,
+    own_original_boundary_winding, own_original_carrier_cycles, own_original_carrier_graph,
+    own_original_carrier_sides, own_original_carrier_sides_automatically, own_original_carriers,
+    own_original_chart_events, own_original_chart_intervals, own_original_chart_vertices,
+    own_original_common_clips, own_original_common_dictionary, own_original_common_partition,
+    own_original_contact_port_order, own_original_filled_boundaries, own_original_filled_regions,
+    own_original_global_chart_embedding, own_original_injective_chart_atlas,
+    own_original_overlap_components, own_original_overlap_contacts, own_original_overlap_partition,
+    own_original_pair_cuts, own_original_periodic_embedding, own_original_periodic_pieces,
+    own_original_periodic_topology, own_original_periodic_wires, own_original_physical_faces,
+    own_original_point_pullback, own_original_regular_trim_surface, own_original_seam_dictionary,
+    own_original_shore_carrier, own_original_shore_pair, own_original_source_carriers,
+    own_original_trim_chart_coverage, own_original_unified_boundary_winding,
+    own_original_unified_cycles, own_original_unified_filled, own_original_unified_graph,
+    own_original_unified_ports, own_original_unified_regions, own_original_unified_rotation,
+    own_original_unified_sides, own_original_unified_sides_automatically, try_own_event_branch,
+};
 #[derive(Clone, Debug, PartialEq)]
 pub struct SpanPairCertificate {
     pub first: usize,
@@ -670,87 +731,201 @@ mod tests {
 
 #[cfg(test)]
 mod locus_tests;
-pub use translated::{OriginalPieceEventLocation, OriginalPieceEvent, OwnedPeriodicPairEvents, own_periodic_pair_events};
+pub use translated::{
+    OriginalPieceEvent, OriginalPieceEventLocation, OwnedPeriodicPairEvents,
+    own_periodic_pair_events,
+};
 
-pub use translated::{OriginalPeriodicCommonClip, OwnedPeriodicCommonClips, own_periodic_common_clips};
+pub use translated::{
+    OriginalPeriodicCommonClip, OwnedPeriodicCommonClips, own_periodic_common_clips,
+};
 
-pub use translated::{OriginalPeriodicArrangementOrigin, OriginalPeriodicArrangementCut, OriginalPeriodicArrangementUse, OriginalPeriodicArrangementInterval, OwnedPeriodicArrangementCuts, own_periodic_arrangement_cuts};
+pub use translated::{
+    OriginalPeriodicArrangementCut, OriginalPeriodicArrangementInterval,
+    OriginalPeriodicArrangementOrigin, OriginalPeriodicArrangementUse,
+    OwnedPeriodicArrangementCuts, own_periodic_arrangement_cuts,
+};
 
-pub use translated::{OriginalPeriodicAlignedOrigin, OriginalPeriodicAlignedCut, OriginalPeriodicIntervalBinding, OriginalPeriodicIntervalAlias, OwnedPeriodicAlignedIntervals, own_periodic_aligned_intervals};
+pub use translated::{
+    OriginalPeriodicAlignedCut, OriginalPeriodicAlignedOrigin, OriginalPeriodicIntervalAlias,
+    OriginalPeriodicIntervalBinding, OwnedPeriodicAlignedIntervals, own_periodic_aligned_intervals,
+};
 
-pub use translated::{OriginalPeriodicChartCutRef, OriginalPeriodicChartRelationOrigin, OriginalPeriodicChartRelation, OriginalPeriodicChartIncidence, OriginalPeriodicChartVertex, OriginalPeriodicChartCarrier, OriginalPeriodicChartEdge, OwnedPeriodicChartGraph, own_periodic_chart_graph};
+pub use translated::{
+    OriginalPeriodicChartCarrier, OriginalPeriodicChartCutRef, OriginalPeriodicChartEdge,
+    OriginalPeriodicChartIncidence, OriginalPeriodicChartRelation,
+    OriginalPeriodicChartRelationOrigin, OriginalPeriodicChartVertex, OwnedPeriodicChartGraph,
+    own_periodic_chart_graph,
+};
 
 pub use translated::own_periodic_pair_events_translated;
 
-pub use translated::{OriginalPeriodicSeamNode, OriginalPeriodicSeamPair, OwnedPeriodicSeamContacts, own_periodic_seam_contacts};
+pub use translated::{
+    OriginalPeriodicSeamNode, OriginalPeriodicSeamPair, OwnedPeriodicSeamContacts,
+    own_periodic_seam_contacts,
+};
 
 pub use translated::own_periodic_quotient_arrangement_cuts;
 
 pub use translated::{OwnedPeriodicQuotientGraph, own_periodic_quotient_graph};
 
-pub use translated::{OriginalPeriodicVertexChartUse, OriginalPeriodicVertexChart, OwnedPeriodicVertexCharts, own_periodic_vertex_charts};
+pub use translated::{
+    OriginalPeriodicVertexChart, OriginalPeriodicVertexChartUse, OwnedPeriodicVertexCharts,
+    own_periodic_vertex_charts,
+};
 
 pub use translated::{OriginalPeriodicPort, OwnedPeriodicPorts, own_periodic_ports};
 
-pub use translated::{OriginalPeriodicTangentWitness, OwnedPeriodicRotation, own_periodic_rotation};
+pub use translated::{
+    OriginalPeriodicTangentWitness, OwnedPeriodicRotation, own_periodic_rotation,
+};
 
 pub use translated::{OwnedPeriodicCycles, own_periodic_cycles};
 
-pub use translated::{OriginalPeriodicBoundaryPart, OriginalPeriodicBoundaryWalk, OwnedPeriodicBoundaryLifts, own_periodic_boundary_lifts};
+pub use translated::{
+    OriginalPeriodicBoundaryPart, OriginalPeriodicBoundaryWalk, OwnedPeriodicBoundaryLifts,
+    own_periodic_boundary_lifts,
+};
 
-pub use translated::{OriginalPeriodicWireContribution, OriginalPeriodicWireJump, OriginalPeriodicEdgeJump, OriginalPeriodicBalanceTerm, OriginalPeriodicVertexBalance, OriginalPeriodicWireFlux, OwnedPeriodicWireJumps, own_periodic_wire_jumps};
+pub use translated::{
+    OriginalPeriodicBalanceTerm, OriginalPeriodicEdgeJump, OriginalPeriodicVertexBalance,
+    OriginalPeriodicWireContribution, OriginalPeriodicWireFlux, OriginalPeriodicWireJump,
+    OwnedPeriodicWireJumps, own_periodic_wire_jumps,
+};
 
-pub use translated::{OriginalPeriodicPathCrossing, OwnedPeriodicRelativeWinding, own_periodic_relative_winding};
+pub use translated::{
+    OriginalPeriodicPathCrossing, OwnedPeriodicRelativeWinding, own_periodic_relative_winding,
+};
 
-pub use translated::{OriginalPeriodicFillRule, OriginalPeriodicOperand, OriginalPeriodicBooleanOp, OriginalPeriodicOperandPeriods, OwnedPeriodicMaterialRule, OwnedPeriodicMaterialSample, own_periodic_material_rule, own_periodic_material_sample};
+pub use translated::{
+    OriginalPeriodicBooleanOp, OriginalPeriodicFillRule, OriginalPeriodicOperand,
+    OriginalPeriodicOperandPeriods, OwnedPeriodicMaterialRule, OwnedPeriodicMaterialSample,
+    own_periodic_material_rule, own_periodic_material_sample,
+};
 
-pub use translated::{OwnedPeriodicChartSideProbes, OwnedPeriodicMaterialSides, own_periodic_chart_side_probes, own_periodic_material_sides};
+pub use translated::{
+    OwnedPeriodicChartSideProbes, OwnedPeriodicMaterialSides, own_periodic_chart_side_probes,
+    own_periodic_material_sides,
+};
 
-pub use translated::{OriginalPeriodicSelectedEdge, OwnedPeriodicBoundarySelection, own_periodic_boundary_selection};
+pub use translated::{
+    OriginalPeriodicSelectedEdge, OwnedPeriodicBoundarySelection, own_periodic_boundary_selection,
+};
 
-pub use translated::{OwnedPeriodicSideProbes, OriginalPeriodicSideView, own_periodic_physical_side_probes};
+pub use translated::{
+    OriginalPeriodicSideView, OwnedPeriodicSideProbes, own_periodic_physical_side_probes,
+};
 
-pub use translated::{OriginalPeriodicMaterialSector, OwnedPeriodicMaterialCycles, own_periodic_material_cycles};
+pub use translated::{
+    OriginalPeriodicMaterialSector, OwnedPeriodicMaterialCycles, own_periodic_material_cycles,
+};
 
 pub use translated::{OwnedPeriodicMaterialLifts, own_periodic_material_lifts};
 
-pub use translated::{OriginalPeriodicSupportWireRole, OriginalNaturalBoundaryCurve, OriginalPeriodicNaturalBoundary, OwnedPeriodicSupportBoundaries, own_periodic_support_boundaries};
+pub use translated::{
+    OriginalNaturalBoundaryCurve, OriginalPeriodicNaturalBoundary, OriginalPeriodicSupportWireRole,
+    OwnedPeriodicSupportBoundaries, own_periodic_support_boundaries,
+};
 
-pub use translated::{OriginalPeriodicNaturalCarrier, OwnedPeriodicSupportSideProbes, own_periodic_support_side_probes, OwnedPeriodicSupportMaterialRule, own_periodic_support_material_rule, OwnedPeriodicSupportSides, own_periodic_support_sides, OwnedPeriodicSupportSelection, own_periodic_support_selection};
+pub use translated::{
+    OriginalPeriodicNaturalCarrier, OwnedPeriodicSupportMaterialRule,
+    OwnedPeriodicSupportSelection, OwnedPeriodicSupportSideProbes, OwnedPeriodicSupportSides,
+    own_periodic_support_material_rule, own_periodic_support_selection,
+    own_periodic_support_side_probes, own_periodic_support_sides,
+};
 
-pub use translated::{OriginalPeriodicSupportVertex, OriginalPeriodicSupportSector, OwnedPeriodicSupportCycles, own_periodic_support_cycles, OwnedPeriodicSupportLifts, own_periodic_support_lifts};
+pub use translated::{
+    OriginalPeriodicSupportSector, OriginalPeriodicSupportVertex, OwnedPeriodicSupportCycles,
+    OwnedPeriodicSupportLifts, own_periodic_support_cycles, own_periodic_support_lifts,
+};
 
 pub use translated::{OwnedPeriodicSupportPath, own_periodic_support_path};
 
-pub use translated::{OriginalPeriodicCochainTerm, OriginalPeriodicSeparatingCochain, OriginalPeriodicRegionProbe, OwnedPeriodicSupportSignatures, own_periodic_support_signatures, OriginalPeriodicMaterialComponent, OwnedPeriodicSupportRegions, own_periodic_support_regions};
+pub use translated::{
+    OriginalPeriodicCochainTerm, OriginalPeriodicMaterialComponent, OriginalPeriodicRegionProbe,
+    OriginalPeriodicSeparatingCochain, OwnedPeriodicSupportRegions, OwnedPeriodicSupportSignatures,
+    own_periodic_support_regions, own_periodic_support_signatures,
+};
 
-pub use translated::{PeriodicRegionSearchLimits, PeriodicRegionSearchStop, PeriodicRegionSearchReport, construct_periodic_support_regions};
-pub use translated::{OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTracePoint, OriginalPeriodicSurfaceTraceEndpoint, OwnedPeriodicSupportTraces, own_periodic_support_traces};
+pub use translated::{
+    OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTraceEndpoint,
+    OriginalPeriodicSurfaceTracePoint, OwnedPeriodicSupportTraces, own_periodic_support_traces,
+};
+pub use translated::{
+    PeriodicRegionSearchLimits, PeriodicRegionSearchReport, PeriodicRegionSearchStop,
+    construct_periodic_support_regions,
+};
 
-pub use translated::{OriginalPeriodicSurfaceEndpointUse, OriginalPeriodicSurfaceBoundaryFan, OriginalPeriodicSurfaceIncidenceVertex, OriginalPeriodicSurfaceIncidenceEdge, OriginalPeriodicSurfaceIncidenceLoop, OwnedPeriodicSupportIncidence, own_periodic_support_incidence};
+pub use translated::{
+    OriginalPeriodicSurfaceBoundaryFan, OriginalPeriodicSurfaceEndpointUse,
+    OriginalPeriodicSurfaceIncidenceEdge, OriginalPeriodicSurfaceIncidenceLoop,
+    OriginalPeriodicSurfaceIncidenceVertex, OwnedPeriodicSupportIncidence,
+    own_periodic_support_incidence,
+};
 
-pub use translated::{PeriodicSourceChartCopyLimits, OriginalPeriodicSourceChartCopy, OriginalPeriodicSourceChartWorldPoint, OwnedPeriodicSourceChartCopies, own_periodic_source_chart_copies};
+pub use translated::{
+    OriginalPeriodicSourceChartCopy, OriginalPeriodicSourceChartWorldPoint,
+    OwnedPeriodicSourceChartCopies, PeriodicSourceChartCopyLimits,
+    own_periodic_source_chart_copies,
+};
 
-pub use translated::{OriginalPeriodicNativeChartCorner, OriginalPeriodicNativeCornerVertex, OwnedPeriodicNativeChartCorners, own_periodic_native_chart_corners};
+pub use translated::{
+    OriginalPeriodicNativeChartCorner, OriginalPeriodicNativeCornerVertex,
+    OwnedPeriodicNativeChartCorners, own_periodic_native_chart_corners,
+};
 
-pub use translated::{OriginalPeriodicNativeShoreRole, OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShore, PeriodicNativeShoreLimits, OwnedPeriodicNativeChartShores, own_periodic_native_chart_shores};
+pub use translated::{
+    OriginalPeriodicNativeShore, OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShoreRole,
+    OwnedPeriodicNativeChartShores, PeriodicNativeShoreLimits, own_periodic_native_chart_shores,
+};
 
-pub use translated::{OriginalPeriodicShoreSampleOrigin, OriginalPeriodicShoreMaterialSample, PeriodicShoreMaterialSampleLimits, OwnedPeriodicShoreMaterialSamples, own_periodic_shore_material_samples};
+pub use translated::{
+    OriginalPeriodicShoreMaterialSample, OriginalPeriodicShoreSampleOrigin,
+    OwnedPeriodicShoreMaterialSamples, PeriodicShoreMaterialSampleLimits,
+    own_periodic_shore_material_samples,
+};
 
-pub use translated::{OriginalPeriodicShoreContactKind, OriginalPeriodicShoreContact, PeriodicShoreMaterialIntervalLimits, OwnedPeriodicShoreMaterialIntervals, own_periodic_shore_material_intervals};
+pub use translated::{
+    OriginalPeriodicShoreContact, OriginalPeriodicShoreContactKind,
+    OwnedPeriodicShoreMaterialIntervals, PeriodicShoreMaterialIntervalLimits,
+    own_periodic_shore_material_intervals,
+};
 
-pub use translated::{OriginalPeriodicChartVertexKey, OriginalPeriodicChartCycleVertex, OriginalPeriodicChartCycleEdgeKind, OriginalPeriodicChartCycleEdge, PeriodicChartCycleLimits, OwnedPeriodicChartCycles, own_periodic_chart_cycles};
+pub use translated::{
+    OriginalPeriodicChartCycleEdge, OriginalPeriodicChartCycleEdgeKind,
+    OriginalPeriodicChartCycleVertex, OriginalPeriodicChartVertexKey, OwnedPeriodicChartCycles,
+    PeriodicChartCycleLimits, own_periodic_chart_cycles,
+};
 
-pub use translated::{PeriodicChartWindingLimits, OwnedPeriodicChartWinding, own_periodic_chart_winding, construct_periodic_chart_winding};
+pub use translated::{
+    OwnedPeriodicChartWinding, PeriodicChartWindingLimits, construct_periodic_chart_winding,
+    own_periodic_chart_winding,
+};
 
-pub use translated::{OriginalPeriodicChartCycleSides,OwnedPeriodicChartCycleSides,PeriodicChartCycleOrientation,PeriodicChartCycleSideLimits,own_periodic_chart_cycle_sides};
+pub use translated::{
+    OriginalPeriodicChartCycleSides, OwnedPeriodicChartCycleSides, PeriodicChartCycleOrientation,
+    PeriodicChartCycleSideLimits, own_periodic_chart_cycle_sides,
+};
 
-pub use translated::{OriginalPeriodicChartStrictPatch,OwnedPeriodicChartStrictPatches,PeriodicChartStrictPatchLimits,own_periodic_chart_strict_patches};
+pub use translated::{
+    OriginalPeriodicChartStrictPatch, OwnedPeriodicChartStrictPatches,
+    PeriodicChartStrictPatchLimits, own_periodic_chart_strict_patches,
+};
 
-pub use translated::{OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits, own_periodic_chart_boundary_loops};
+pub use translated::{
+    OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact,
+    OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits,
+    own_periodic_chart_boundary_loops,
+};
 
 pub use translated::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
 
-pub use translated::{PeriodicChartFanPatchLimits, OwnedPeriodicChartFanPatches, own_periodic_chart_fan_patches};
+pub use translated::{
+    OwnedPeriodicChartFanPatches, PeriodicChartFanPatchLimits, own_periodic_chart_fan_patches,
+};
 
-pub use translated::{PeriodicSewnFaceLimits, OriginalPeriodicSewnVertex, OriginalPeriodicSewnEdge, OriginalPeriodicSewnCoedge, OriginalPeriodicSewnFace, OwnedPeriodicSewnFaces, own_periodic_sewn_faces};
+pub use translated::{
+    OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge, OriginalPeriodicSewnFace,
+    OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces, PeriodicSewnFaceLimits,
+    own_periodic_sewn_faces,
+};

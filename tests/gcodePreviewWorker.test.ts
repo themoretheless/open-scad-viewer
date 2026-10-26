@@ -4,8 +4,9 @@ import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocumen
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../src/services/gcodePreviewGeometry'
 import { executeGcodePreview, executeGcodePreviewAsync } from '../src/services/gcodePreviewRuntime'
 import { prepareGcodePreviewTransfer } from '../src/services/gcodePreviewWorkerTransport'
+import { PrintReadinessError } from '../src/services/printReadiness'
 
-const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn(), warm: vi.fn() }))
+const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn(), warm: vi.fn(), printReady: vi.fn() }))
 vi.mock('../src/services/geometry/kernel', () => ({ warmGeometryKernel: geometry.warm }))
 vi.mock('../src/services/geometry/polygon', () => ({
   emitPolygonMeshGcode: geometry.emit,
@@ -16,6 +17,10 @@ vi.mock('../src/services/geometry/polygon', () => ({
 }))
 vi.mock('../src/services/meshFlatten', () => ({
   flattenGroupGeometry: (...args: unknown[]) => geometry.flatten(...args),
+}))
+vi.mock('../src/services/printReadiness', async importOriginal => ({
+  ...await importOriginal<object>(),
+  assertPrintReady: (...args: unknown[]) => geometry.printReady(...args),
 }))
 const identity = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
 const mesh = () => ({ vertices: new Float32Array([0, 0, 0, 0, 0, 1, 5, 0, 0, 0, 0, 1, 0, 5, 2, 0, 0, 1]), indices: new Uint32Array([0, 1, 2]), transform: identity.slice() })
@@ -52,6 +57,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
   geometry.warm.mockReset().mockResolvedValue(undefined)
+  geometry.printReady.mockReset()
   geometry.flatten.mockImplementation(() => ({ positions: [0, 0, 0, 5, 0, 0, 0, 5, 2], indices: [0, 1, 2] }))
 })
 afterEach(() => { clients.splice(0).forEach(client => client.dispose()); vi.useRealTimers() })
@@ -185,6 +191,18 @@ describe('G-code worker lifecycle', () => {
     await expect(client.run(job())).rejects.toThrow('Could not send')
     expect(workers[0].terminate).toHaveBeenCalledOnce()
   })
+
+  it('preserves structured print-readiness failures across the worker boundary', async () => {
+    const { client, workers } = setup()
+    const pending = client.run(job())
+    workers[0].send('message', {
+      version: 1, id: 1, ok: false, error: '3D printing blocked',
+      errorCode: 'PRINT_NOT_WATERTIGHT', errorDetails: { boundaryEdges: 3 },
+    })
+    await expect(pending).rejects.toMatchObject({
+      name: 'PrintReadinessError', code: 'PRINT_NOT_WATERTIGHT', details: { boundaryEdges: 3 },
+    })
+  })
 })
 
 describe('G-code worker boundary and scene geometry', () => {
@@ -216,6 +234,25 @@ describe('G-code worker boundary and scene geometry', () => {
     geometry.parse.mockReturnValue({preview: result().preview, dialect: result().dialect, native: true})
     expect((await executeGcodePreviewAsync({...request, id: 2})).ok).toBe(true)
     expect(geometry.parse).toHaveBeenCalledOnce()
+  })
+
+  it('gates slice and job before emission without gating existing G-code parsing', () => {
+    const refusal = new PrintReadinessError('PRINT_NOT_WATERTIGHT', { boundaryEdges: 3 })
+    geometry.printReady.mockImplementation(() => { throw refusal })
+    const input = job()
+    if (input.kind !== 'slice') throw new Error('Expected slice')
+    for (const kind of ['slice', 'job'] as const) {
+      const response = executeGcodePreview({ version: 1, id: 3, job: { kind, mesh: input.mesh, zMin: 0, zMax: 2, settings: {} } })
+      expect(response).toMatchObject({
+        ok: false, errorCode: 'PRINT_NOT_WATERTIGHT', errorDetails: { boundaryEdges: 3 },
+      })
+    }
+    expect(geometry.printReady).toHaveBeenCalledTimes(2)
+    expect(geometry.emit).not.toHaveBeenCalled()
+    expect(geometry.emitJob).not.toHaveBeenCalled()
+    geometry.parse.mockReturnValue({ preview: result().preview, dialect: result().dialect, native: true })
+    expect(executeGcodePreview({ version: 1, id: 4, job: { kind: 'parse', gcode: '; existing' } })).toMatchObject({ ok: true })
+    expect(geometry.printReady).toHaveBeenCalledTimes(2)
   })
 
   it('shares validated slice and job execution with the synchronous entry', async () => {

@@ -1,13 +1,13 @@
 //! Separation of retained original face domains, including root-valued trims.
 //! Outside proofs prune products; unresolved domains remain covered geometrically.
 use crate::{source_contour_winding, source_volume::Body};
-use std::collections::HashMap;
 use nurbs_core::{
     Error, Result,
     surface::Surface,
     surface_distance::{enclosure_distance, rectangle_bounds},
     trim_domain::Location,
 };
+use std::collections::HashMap;
 type Product = [[[f64; 2]; 2]; 2];
 pub struct Limits {
     pub cells: usize,

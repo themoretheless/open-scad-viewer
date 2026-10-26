@@ -112,7 +112,12 @@ pub(super) fn find_boss_candidates(
     volume_max: f64,
 ) -> Result<Vec<PendingBoss>> {
     let n = model.faces.len();
-    let attrs_of = |face: usize| graph.nodes[face].attrs.as_ref().expect("fresh attrs checked");
+    let attrs_of = |face: usize| {
+        graph.nodes[face]
+            .attrs
+            .as_ref()
+            .expect("fresh attrs checked")
+    };
     let wall_eligible = |face: usize| {
         matches!(
             attrs_of(face).class,
@@ -423,7 +428,13 @@ pub fn scan_small_features(
         let area: f64 = chain
             .faces
             .iter()
-            .map(|&face| graph.nodes[face].attrs.as_ref().expect("fresh attrs checked").area)
+            .map(|&face| {
+                graph.nodes[face]
+                    .attrs
+                    .as_ref()
+                    .expect("fresh attrs checked")
+                    .area
+            })
             .sum();
         push(SmallFeature {
             kind: SmallFeatureKind::Fillet,

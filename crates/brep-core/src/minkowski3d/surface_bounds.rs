@@ -38,9 +38,7 @@ fn restrict(h: &[H], knots: &[f64], degree: usize, a: &Q, b: &Q) -> Result<Vec<H
                 }
                 let alpha = (&t - &knots[k]) / den;
                 let one_minus_alpha = Q::one() - &alpha;
-                d[j] = std::array::from_fn(|k| {
-                    &one_minus_alpha * &d[j - 1][k] + &alpha * &d[j][k]
-                });
+                d[j] = std::array::from_fn(|k| &one_minus_alpha * &d[j - 1][k] + &alpha * &d[j][k]);
             }
         }
         let mut row = Vec::with_capacity(degree + 5);

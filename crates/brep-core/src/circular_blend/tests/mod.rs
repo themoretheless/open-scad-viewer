@@ -170,75 +170,156 @@ fn transition_joins_constant_radius_patch_with_matching_tangent_planes() {
 }
 
 #[test]
-fn transition_join_has_full_interval_normal_coverage_and_refuses_the_pole(){
-    for direction in [-1.,1.] {
-        let transition=plane_cylinder_transition(20.,6.,0.,1.25,0.3,direction*0.7).unwrap();
-        let constant=plane_cylinder_rim(20.,6.,1.25,0.3+direction*0.7,direction*0.4).unwrap();
-        let before=format!("{:?}",transition.surface);
-        let mut queue=vec![[0.,1.]];let mut checked=0;let mut admitted=0;
-        while let Some(v)=queue.pop(){
-            checked+=1;assert!(checked*2<=100000,"whole meridian angular coverage exhausted at {v:?}, admitted={admitted}");
-            let r=nurbs_core::normal_alignment::inspect_pair(
-                [&transition.surface,&constant[0].surface],[[[1.,1.],v],[[0.,0.],v]],1e-6,2).unwrap();
-            if r.aligned==Some(true){admitted+=1;continue}
-            assert_ne!(r.aligned,Some(false),"a proved angular break cannot be hidden by subdivision");
-            let mid=v[0]/2.+v[1]/2.;assert!(mid>v[0]&&mid<v[1]);
-            queue.push([mid,v[1]]);queue.push([v[0],mid]);
+fn transition_join_has_full_interval_normal_coverage_and_refuses_the_pole() {
+    for direction in [-1., 1.] {
+        let transition =
+            plane_cylinder_transition(20., 6., 0., 1.25, 0.3, direction * 0.7).unwrap();
+        let constant =
+            plane_cylinder_rim(20., 6., 1.25, 0.3 + direction * 0.7, direction * 0.4).unwrap();
+        let before = format!("{:?}", transition.surface);
+        let mut queue = vec![[0., 1.]];
+        let mut checked = 0;
+        let mut admitted = 0;
+        while let Some(v) = queue.pop() {
+            checked += 1;
+            assert!(
+                checked * 2 <= 100000,
+                "whole meridian angular coverage exhausted at {v:?}, admitted={admitted}"
+            );
+            let r = nurbs_core::normal_alignment::inspect_pair(
+                [&transition.surface, &constant[0].surface],
+                [[[1., 1.], v], [[0., 0.], v]],
+                1e-6,
+                2,
+            )
+            .unwrap();
+            if r.aligned == Some(true) {
+                admitted += 1;
+                continue;
+            }
+            assert_ne!(
+                r.aligned,
+                Some(false),
+                "a proved angular break cannot be hidden by subdivision"
+            );
+            let mid = v[0] / 2. + v[1] / 2.;
+            assert!(mid > v[0] && mid < v[1]);
+            queue.push([mid, v[1]]);
+            queue.push([v[0], mid]);
         }
-        assert!(admitted>1);
-        eprintln!("transition direction={direction}: checked={checked}, admitted={admitted}, normal spans={}",checked*2);
-        let pole=nurbs_core::normal_alignment::inspect_pair(
-            [&transition.surface,&constant[0].surface],[[[0.,0.],[0.5,0.5]],[[0.,0.],[0.5,0.5]]],1e-6,2).unwrap();
-        assert_eq!(pole.aligned,None);assert_eq!(pole.reason,"normal-unresolved");
-        assert_eq!(format!("{:?}",transition.surface),before);
+        assert!(admitted > 1);
+        eprintln!(
+            "transition direction={direction}: checked={checked}, admitted={admitted}, normal spans={}",
+            checked * 2
+        );
+        let pole = nurbs_core::normal_alignment::inspect_pair(
+            [&transition.surface, &constant[0].surface],
+            [[[0., 0.], [0.5, 0.5]], [[0., 0.], [0.5, 0.5]]],
+            1e-6,
+            2,
+        )
+        .unwrap();
+        assert_eq!(pole.aligned, None);
+        assert_eq!(pole.reason, "normal-unresolved");
+        assert_eq!(format!("{:?}", transition.surface), before);
     }
 }
 
 #[test]
 fn original_transition_projected_cusp_has_quadratic_separator() {
-    let span=plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_6).unwrap();
-    let project=|c:&Curve| {
-        let mut c=c.clone();for p in &mut c.control_points {p.truncate(2);} c
+    let span =
+        plane_cylinder_transition(20., 6., 0., 1.25, 0., std::f64::consts::FRAC_PI_6).unwrap();
+    let project = |c: &Curve| {
+        let mut c = c.clone();
+        for p in &mut c.control_points {
+            p.truncate(2);
+        }
+        c
     };
-    let curves=[project(&span.plane_contact),project(&span.cylinder_contact)];
-    let join=&curves[0].control_points[0];
-    let t=&curves[0].control_points[1];
-    let tangent=[t[0]-join[0],t[1]-join[1]];
-    let ratio=|curve:&Curve,u:f64| {
-        let p=curve.evaluate(u).unwrap().point;
-        let delta=[p[0]-join[0],p[1]-join[1]];
-        let l=tangent[0]*delta[1]-tangent[1]*delta[0];
-        let b=tangent[0]*delta[0]+tangent[1]*delta[1];
-        l/(b*b)
+    let curves = [
+        project(&span.plane_contact),
+        project(&span.cylinder_contact),
+    ];
+    let join = &curves[0].control_points[0];
+    let t = &curves[0].control_points[1];
+    let tangent = [t[0] - join[0], t[1] - join[1]];
+    let ratio = |curve: &Curve, u: f64| {
+        let p = curve.evaluate(u).unwrap().point;
+        let delta = [p[0] - join[0], p[1] - join[1]];
+        let l = tangent[0] * delta[1] - tangent[1] * delta[0];
+        let b = tangent[0] * delta[0] + tangent[1] * delta[1];
+        l / (b * b)
     };
-    let mut work=0;let mut proven=false;
-    for u in [0.1,0.25,0.5,0.75,0.9] {
-        let beta=(ratio(&curves[0],u)+ratio(&curves[1],u))*0.5;
-        let r=nurbs_core::curve_quadratic_separator::certify([&curves[0],&curves[1]],[0,0],1,beta,1_000_000).unwrap();
-        work+=r.exact_work;
-        eprintln!("original projected cusp beta={beta} work={} sides={:?}",r.exact_work,r.certificate.as_ref().map(|c|c.sides()));
-        if r.certificate.is_some() {proven=true;break;}
+    let mut work = 0;
+    let mut proven = false;
+    for u in [0.1, 0.25, 0.5, 0.75, 0.9] {
+        let beta = (ratio(&curves[0], u) + ratio(&curves[1], u)) * 0.5;
+        let r = nurbs_core::curve_quadratic_separator::certify(
+            [&curves[0], &curves[1]],
+            [0, 0],
+            1,
+            beta,
+            1_000_000,
+        )
+        .unwrap();
+        work += r.exact_work;
+        eprintln!(
+            "original projected cusp beta={beta} work={} sides={:?}",
+            r.exact_work,
+            r.certificate.as_ref().map(|c| c.sides())
+        );
+        if r.certificate.is_some() {
+            proven = true;
+            break;
+        }
     }
-    assert!(proven,"original cusp quadratic separation unproven; work={work}");
-    let jordan=nurbs_core::surface_projected_jordan::certify(&span.surface,[0,1],1e-8,100_000_000,100000).unwrap();
-    eprintln!("original projected Jordan: {} work={} cells={}",jordan.reason,jordan.exact_work,jordan.boundary_cells);
-    assert!(jordan.certificate.is_some(),"{}",jordan.reason);
-    let certificate=jordan.certificate.unwrap();
-    assert_eq!(certificate.surface(),&span.surface);
-    assert_eq!(certificate.collapsed_boundaries(),&[3]);
-    assert_eq!(certificate.boundary().len(),3);
-    assert_eq!(certificate.separators().len(),1);
+    assert!(
+        proven,
+        "original cusp quadratic separation unproven; work={work}"
+    );
+    let jordan = nurbs_core::surface_projected_jordan::certify(
+        &span.surface,
+        [0, 1],
+        1e-8,
+        100_000_000,
+        100000,
+    )
+    .unwrap();
+    eprintln!(
+        "original projected Jordan: {} work={} cells={}",
+        jordan.reason, jordan.exact_work, jordan.boundary_cells
+    );
+    assert!(jordan.certificate.is_some(), "{}", jordan.reason);
+    let certificate = jordan.certificate.unwrap();
+    assert_eq!(certificate.surface(), &span.surface);
+    assert_eq!(certificate.collapsed_boundaries(), &[3]);
+    assert_eq!(certificate.boundary().len(), 3);
+    assert_eq!(certificate.separators().len(), 1);
 }
 #[test]
 fn transition_rounding_correction_preserves_interior_projection_orientation() {
-    for direction in [-1.,1.] {
-        for (a,b) in [(0.,1.25),(1.25,0.),(0.5,1.25),(1.25,0.5)] {
-            let span=plane_cylinder_transition(20.,6.,a,b,0.3,direction*0.7).unwrap();
-            let report=nurbs_core::surface_projection_jacobian::certify(&span.surface,[0,1],100_000_000).unwrap();
-            assert!(report.certificate.is_some(),"radii {a}->{b} direction={direction}: {} {:?}",report.reason,report.exact_reason);
-            assert_eq!(report.opposite_v_boundary_signs,None);
-            let expected=if direction>0. {cad_predicates::Sign::Negative} else {cad_predicates::Sign::Positive};
-            assert_eq!(report.certificate.unwrap().orientation(),expected);
+    for direction in [-1., 1.] {
+        for (a, b) in [(0., 1.25), (1.25, 0.), (0.5, 1.25), (1.25, 0.5)] {
+            let span = plane_cylinder_transition(20., 6., a, b, 0.3, direction * 0.7).unwrap();
+            let report = nurbs_core::surface_projection_jacobian::certify(
+                &span.surface,
+                [0, 1],
+                100_000_000,
+            )
+            .unwrap();
+            assert!(
+                report.certificate.is_some(),
+                "radii {a}->{b} direction={direction}: {} {:?}",
+                report.reason,
+                report.exact_reason
+            );
+            assert_eq!(report.opposite_v_boundary_signs, None);
+            let expected = if direction > 0. {
+                cad_predicates::Sign::Negative
+            } else {
+                cad_predicates::Sign::Positive
+            };
+            assert_eq!(report.certificate.unwrap().orientation(), expected);
         }
     }
 }

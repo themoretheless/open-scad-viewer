@@ -117,120 +117,261 @@ fn domain(s: &nurbs_core::surface::Surface) -> [[f64; 2]; 2] {
 /// Proves a lower threshold for aligned material chords, including unselected
 /// walls, cavities, same-face pairs and root-ended trim regions. Exclusions and
 /// distance bounds use complete original charts as conservative supersets.
-pub fn qualify<'a,E: crate::source_shared_chord_map::ChordCarrier>(body: &'a Body<E>, minimum_mm: f64, limits: Limits) -> Result<Report<'a,E>> {
+pub fn qualify<'a, E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+) -> Result<Report<'a, E>> {
     qualify_with_self_facts(body, minimum_mm, limits, Vec::new())
 }
 /// Reuses only owned private self-face facts for this immutable Body. Public
 /// reports cannot supply proof. Higher thresholds or broader angle requests
 /// cannot be covered by a stale or narrower certificate.
-pub fn qualify_with_self_facts<'a,E: crate::source_shared_chord_map::ChordCarrier>(
+pub fn qualify_with_self_facts<'a, E: crate::source_shared_chord_map::ChordCarrier>(
     body: &'a Body<E>,
     minimum_mm: f64,
     limits: Limits,
-    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-) -> Result<Report<'a,E>> {
-    qualify_with_self_facts_and_normal_products(body,minimum_mm,limits,facts,
-        NormalProductLimits{cells:0,cells_per_pair:0})
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+) -> Result<Report<'a, E>> {
+    qualify_with_self_facts_and_normal_products(
+        body,
+        minimum_mm,
+        limits,
+        facts,
+        NormalProductLimits {
+            cells: 0,
+            cells_per_pair: 0,
+        },
+    )
 }
 /// Optional bounded full-chart normal exclusions. Zero cells preserves the
 /// original scheduling; only a completely excluded product proves a pair.
-pub fn qualify_with_self_facts_and_normal_products<'a,E: crate::source_shared_chord_map::ChordCarrier>(
-    body:&'a Body<E>, minimum_mm:f64, limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-    products:NormalProductLimits,
-) -> Result<Report<'a,E>> {
-    qualify_with_self_facts_and_factored_normals(body,minimum_mm,limits,facts,products,
-        FactoredNormalLimits{exact_work:0,queries:0,cells:0,cells_per_pair:0})
+pub fn qualify_with_self_facts_and_normal_products<
+    'a,
+    E: crate::source_shared_chord_map::ChordCarrier,
+>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+    products: NormalProductLimits,
+) -> Result<Report<'a, E>> {
+    qualify_with_self_facts_and_factored_normals(
+        body,
+        minimum_mm,
+        limits,
+        facts,
+        products,
+        FactoredNormalLimits {
+            exact_work: 0,
+            queries: 0,
+            cells: 0,
+            cells_per_pair: 0,
+        },
+    )
 }
 /// Reuses exact limiting directions only for their immutable original face.
 /// Regular-normal proofs retain their scheduling and are never replaced.
-pub fn qualify_with_self_facts_and_factored_normals<'a,E: crate::source_shared_chord_map::ChordCarrier>(
-    body:&'a Body<E>, minimum_mm:f64, limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-    products:NormalProductLimits, factors:FactoredNormalLimits,
-)->Result<Report<'a,E>> {
-    qualify_with_retained_gap_facts(body,minimum_mm,limits,facts,products,factors,Vec::new())
+pub fn qualify_with_self_facts_and_factored_normals<
+    'a,
+    E: crate::source_shared_chord_map::ChordCarrier,
+>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+    products: NormalProductLimits,
+    factors: FactoredNormalLimits,
+) -> Result<Report<'a, E>> {
+    qualify_with_retained_gap_facts(
+        body,
+        minimum_mm,
+        limits,
+        facts,
+        products,
+        factors,
+        Vec::new(),
+    )
 }
 /// Add private original retained-domain certificates without replacing earlier proofs.
-pub fn qualify_with_retained_gap_facts<'a,E: crate::source_shared_chord_map::ChordCarrier>(
-    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-    products:NormalProductLimits,factors:FactoredNormalLimits,
-    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
-)->Result<Report<'a,E>> {
-    qualify_with_retained_gap_pass(body,minimum_mm,limits,facts,products,factors,retained_gaps,None)
+pub fn qualify_with_retained_gap_facts<'a, E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+    products: NormalProductLimits,
+    factors: FactoredNormalLimits,
+    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
+) -> Result<Report<'a, E>> {
+    qualify_with_retained_gap_pass(
+        body,
+        minimum_mm,
+        limits,
+        facts,
+        products,
+        factors,
+        retained_gaps,
+        None,
+    )
 }
 /// Additional fair bounded pass over unresolved original distinct-face products.
-pub fn qualify_with_retained_gap_pass<'a,E: crate::source_shared_chord_map::ChordCarrier>(
-    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-    products:NormalProductLimits,factors:FactoredNormalLimits,
-    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
-    retained:Option<RetainedGapLimits>,
-)->Result<Report<'a,E>> {
-    qualify_with_mixed_pair_facts(body,minimum_mm,limits,facts,products,factors,retained_gaps,retained,Vec::new())
+pub fn qualify_with_retained_gap_pass<'a, E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+    products: NormalProductLimits,
+    factors: FactoredNormalLimits,
+    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
+    retained: Option<RetainedGapLimits>,
+) -> Result<Report<'a, E>> {
+    qualify_with_mixed_pair_facts(
+        body,
+        minimum_mm,
+        limits,
+        facts,
+        products,
+        factors,
+        retained_gaps,
+        retained,
+        Vec::new(),
+    )
 }
 /// Reuse complete retained product proofs bound to this original immutable body.
 /// Certificates cover the requested threshold and normal-angle criterion.
-pub fn qualify_with_mixed_pair_facts<'a,E: crate::source_shared_chord_map::ChordCarrier>(
-    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-    products:NormalProductLimits,factors:FactoredNormalLimits,
-    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
-    retained:Option<RetainedGapLimits>,
-    mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a,E>>,
-)->Result<Report<'a,E>> {
-    qualify_with_mixed_pair_pass(body,minimum_mm,limits,facts,products,factors,retained_gaps,retained,mixed_pairs,None)
+pub fn qualify_with_mixed_pair_facts<'a, E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+    products: NormalProductLimits,
+    factors: FactoredNormalLimits,
+    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
+    retained: Option<RetainedGapLimits>,
+    mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a, E>>,
+) -> Result<Report<'a, E>> {
+    qualify_with_mixed_pair_pass(
+        body,
+        minimum_mm,
+        limits,
+        facts,
+        products,
+        factors,
+        retained_gaps,
+        retained,
+        mixed_pairs,
+        None,
+    )
 }
 /// Additional bounded mixed criterion over the remaining original products.
-pub fn qualify_with_mixed_pair_pass<'a,E: crate::source_shared_chord_map::ChordCarrier>(
-    body:&'a Body<E>,minimum_mm:f64,limits:Limits,
-    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a,E>>,
-    products:NormalProductLimits,factors:FactoredNormalLimits,
-    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a,E>>,
-    retained:Option<RetainedGapLimits>,
-    mut mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a,E>>,
-    mixed:Option<MixedPairLimits>,
-)->Result<Report<'a,E>> {
-    if let Some(m)=mixed {
-        let r=m.domains;
-        if [m.normal_spans,m.normal_spans_per_pair,r.cells,r.spans,r.cells_per_pair,r.spans_per_pair,r.domain_cells_per_pair,r.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
-            ||!(1..=1000000).contains(&r.domain_cells)||!r.tolerance_uv.is_finite()||r.tolerance_uv<=0. {
-            return Err(Error::new("BREP_SOURCE_MIXED_WALL_LIMIT","Choose bounded total and per-pair mixed proof work"));
+pub fn qualify_with_mixed_pair_pass<'a, E: crate::source_shared_chord_map::ChordCarrier>(
+    body: &'a Body<E>,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
+    products: NormalProductLimits,
+    factors: FactoredNormalLimits,
+    mut retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
+    retained: Option<RetainedGapLimits>,
+    mut mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a, E>>,
+    mixed: Option<MixedPairLimits>,
+) -> Result<Report<'a, E>> {
+    if let Some(m) = mixed {
+        let r = m.domains;
+        if [
+            m.normal_spans,
+            m.normal_spans_per_pair,
+            r.cells,
+            r.spans,
+            r.cells_per_pair,
+            r.spans_per_pair,
+            r.domain_cells_per_pair,
+            r.domain_cells_per_query,
+        ]
+        .iter()
+        .any(|n| !(1..=100000).contains(n))
+            || !(1..=1000000).contains(&r.domain_cells)
+            || !r.tolerance_uv.is_finite()
+            || r.tolerance_uv <= 0.
+        {
+            return Err(Error::new(
+                "BREP_SOURCE_MIXED_WALL_LIMIT",
+                "Choose bounded total and per-pair mixed proof work",
+            ));
         }
     }
-    let mut mixed_faces=std::collections::HashSet::new();
+    let mut mixed_faces = std::collections::HashSet::new();
     for proof in &mixed_pairs {
-        let mut faces=proof.faces();faces.sort();
-        if !std::ptr::eq(proof.body(),body)||proof.lower_mm()<minimum_mm
-            ||proof.max_sine_squared()<limits.max_sine_squared||!mixed_faces.insert(faces) {
-            return Err(Error::new("BREP_SOURCE_MIXED_WALL_FACT","Use unique original body proofs covering the requested threshold and angle"));
+        let mut faces = proof.faces();
+        faces.sort();
+        if !std::ptr::eq(proof.body(), body)
+            || proof.lower_mm() < minimum_mm
+            || proof.max_sine_squared() < limits.max_sine_squared
+            || !mixed_faces.insert(faces)
+        {
+            return Err(Error::new(
+                "BREP_SOURCE_MIXED_WALL_FACT",
+                "Use unique original body proofs covering the requested threshold and angle",
+            ));
         }
     }
-    if let Some(r)=retained {
-        if [r.cells,r.spans,r.cells_per_pair,r.spans_per_pair,r.domain_cells_per_pair,r.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
-            ||!(1..=1000000).contains(&r.domain_cells)||!r.tolerance_uv.is_finite()||r.tolerance_uv<=0. {
-            return Err(Error::new("BREP_SOURCE_RETAINED_GAP_LIMIT","Choose positive bounded total and per-pair retained domain work"));
+    if let Some(r) = retained {
+        if [
+            r.cells,
+            r.spans,
+            r.cells_per_pair,
+            r.spans_per_pair,
+            r.domain_cells_per_pair,
+            r.domain_cells_per_query,
+        ]
+        .iter()
+        .any(|n| !(1..=100000).contains(n))
+            || !(1..=1000000).contains(&r.domain_cells)
+            || !r.tolerance_uv.is_finite()
+            || r.tolerance_uv <= 0.
+        {
+            return Err(Error::new(
+                "BREP_SOURCE_RETAINED_GAP_LIMIT",
+                "Choose positive bounded total and per-pair retained domain work",
+            ));
         }
     }
-    let mut retained_pairs=std::collections::HashSet::new();
+    let mut retained_pairs = std::collections::HashSet::new();
     for gap in &retained_gaps {
-        let mut faces=gap.faces();faces.sort();
-        if !std::ptr::eq(gap.body(),body)||gap.lower_mm()<minimum_mm
-            ||!retained_pairs.insert(faces) {
-            return Err(Error::new("BREP_SOURCE_RETAINED_WALL_FACT","Use unique owned retained face facts covering the requested threshold"));
+        let mut faces = gap.faces();
+        faces.sort();
+        if !std::ptr::eq(gap.body(), body)
+            || gap.lower_mm() < minimum_mm
+            || !retained_pairs.insert(faces)
+        {
+            return Err(Error::new(
+                "BREP_SOURCE_RETAINED_WALL_FACT",
+                "Use unique owned retained face facts covering the requested threshold",
+            ));
         }
     }
-    let enabled=factors.exact_work>0;
-    if factors.exact_work>100_000_000 || factors.queries>100000 || factors.cells>100000
-        || factors.cells_per_pair>100000 || [factors.queries,factors.cells,factors.cells_per_pair]
-            .iter().any(|n|(*n>0)!=enabled) {
-        return Err(Error::new("BREP_SOURCE_WALL_FACTORED_LIMIT","Choose bounded exact, query and product work"));
+    let enabled = factors.exact_work > 0;
+    if factors.exact_work > 100_000_000
+        || factors.queries > 100000
+        || factors.cells > 100000
+        || factors.cells_per_pair > 100000
+        || [factors.queries, factors.cells, factors.cells_per_pair]
+            .iter()
+            .any(|n| (*n > 0) != enabled)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_WALL_FACTORED_LIMIT",
+            "Choose bounded exact, query and product work",
+        ));
     }
-    if products.cells>100000 || products.cells_per_pair>100000
-        || (products.cells==0)!=(products.cells_per_pair==0) {
-        return Err(Error::new("BREP_SOURCE_WALL_NORMAL_PRODUCT_LIMIT",
-            "Choose bounded total and per-pair normal product work"));
+    if products.cells > 100000
+        || products.cells_per_pair > 100000
+        || (products.cells == 0) != (products.cells_per_pair == 0)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_WALL_NORMAL_PRODUCT_LIMIT",
+            "Choose bounded total and per-pair normal product work",
+        ));
     }
     if !minimum_mm.is_finite()
         || minimum_mm <= 0.

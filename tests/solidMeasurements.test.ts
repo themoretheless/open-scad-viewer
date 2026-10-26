@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {measureSolidVertices,measureSolidEdgeCurvature,measureSolidMassProperties} from '../src/services/solidMeasurements'
+import {measureSolidVertices,measureSolidManifoldMetrics,measureSolidEdgeCurvature,measureSolidMassProperties} from '../src/services/solidMeasurements'
 import {createBrepBox,createBrepCylinder,createBrepSphere,booleanNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
 const body=(brep:ReturnType<typeof createBrepBox>)=>({id:'body',name:'Body',brep,mesh:tessellateNurbsBrep(brep)})
 it('measures vertices across bodies without modifying their documents',()=>{
@@ -64,4 +64,19 @@ it('computes volume, surface area, center of mass, and principal inertia for B-R
  const meshMass=measureSolidMassProperties(meshOnly)
  expect(meshMass.volumeMm3).toBeCloseTo(48,4)
  expect(meshMass.centerOfMass[2]).toBeCloseTo(3,3)
+})
+
+it('computes manifold metrics for closed and open meshes in Rust',()=>{
+ const box=body(createBrepBox([0,0,0],[2,4,6]))
+ const closed=measureSolidManifoldMetrics(box.mesh)
+ expect(closed).toMatchObject({vertexCount:8,triangleCount:12,edgeCount:18,eulerCharacteristic:2,componentCount:1,watertight:true})
+ expect(closed.signedVolume).toBeCloseTo(48,8)
+ expect(closed.surfaceArea).toBeCloseTo(88,8)
+ expect(closed.components).toHaveLength(1)
+ expect(closed.components[0]).toMatchObject({genus:0,boundaryEdges:0,eulerCharacteristic:2})
+
+ const open=measureSolidManifoldMetrics({positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])})
+ expect(open).toMatchObject({vertexCount:3,triangleCount:1,edgeCount:3,eulerCharacteristic:1,componentCount:1,watertight:false,signedVolume:0})
+ expect(open.surfaceArea).toBeCloseTo(.5,8)
+ expect(open.components[0].genus).toBeNull()
 })

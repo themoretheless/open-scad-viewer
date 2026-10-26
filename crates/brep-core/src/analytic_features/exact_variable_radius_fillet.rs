@@ -196,57 +196,91 @@ pub fn exact_variable_radius_fillet(
     radii: &[[f64; 2]],
 ) -> Result<AuditedFeatureResult> {
     model.validate()?;
-    let refusal = || refuse(
-        "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-        "Variable-radius fillet requires one straight edge of an orthogonal planar cuboid",
-    );
+    let refusal = || {
+        refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Variable-radius fillet requires one straight edge of an orthogonal planar cuboid",
+        )
+    };
     if edges.len() != 1 || radii.len() != 1 || edges[0] >= model.edges.len() {
         return Err(refusal());
     }
     let selected = &model.edges[edges[0]];
     let a = model.vertices[selected.vertices[0]].point;
     let b = model.vertices[selected.vertices[1]].point;
-    if is_axis_aligned_cuboid(model) && (a[0]-b[0]).abs() <= 1e-12
-        && (a[1]-b[1]).abs() <= 1e-12 && (a[2]-b[2]).abs() > 1e-12 {
+    if is_axis_aligned_cuboid(model)
+        && (a[0] - b[0]).abs() <= 1e-12
+        && (a[1] - b[1]).abs() <= 1e-12
+        && (a[2] - b[2]).abs() > 1e-12
+    {
         return exact_axis_aligned_variable_radius_fillet(model, edges, radii);
     }
     let vertex = selected.vertices[0];
-    let adjacent: Vec<_> = model.edges.iter().enumerate()
-        .filter_map(|(i,e)| (i != edges[0] && e.vertices.contains(&vertex)).then_some(i))
+    let adjacent: Vec<_> = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter_map(|(i, e)| (i != edges[0] && e.vertices.contains(&vertex)).then_some(i))
         .collect();
-    if adjacent.len() != 2 { return Err(refusal()); }
-    let mut axes = [[0.;3];3];
+    if adjacent.len() != 2 {
+        return Err(refusal());
+    }
+    let mut axes = [[0.; 3]; 3];
     for (axis, edge_id) in [adjacent[0], adjacent[1], edges[0]].into_iter().enumerate() {
         let edge = &model.edges[edge_id];
-        if edge.curve.degree != 1 { return Err(refusal()); }
-        let other = edge.vertices.iter().copied().find(|&v|v != vertex).ok_or_else(refusal)?;
-        let delta: [f64;3] = std::array::from_fn(|j|model.vertices[other].point[j]-a[j]);
-        let length = delta[0].hypot(delta[1]).hypot(delta[2]);
-        if !length.is_finite() || length <= 1e-12 { return Err(refusal()); }
-        axes[axis] = delta.map(|v|v/length);
-    }
-    for i in 0..3 { for j in 0..i {
-        if (0..3).map(|k|axes[i][k]*axes[j][k]).sum::<f64>().abs() > 1e-12 {
+        if edge.curve.degree != 1 {
             return Err(refusal());
         }
-    }}
-    let mut to_local = [[0.;4];4];
-    let mut to_world = [[0.;4];4];
-    to_local[3][3]=1.;to_world[3][3]=1.;
+        let other = edge
+            .vertices
+            .iter()
+            .copied()
+            .find(|&v| v != vertex)
+            .ok_or_else(refusal)?;
+        let delta: [f64; 3] = std::array::from_fn(|j| model.vertices[other].point[j] - a[j]);
+        let length = delta[0].hypot(delta[1]).hypot(delta[2]);
+        if !length.is_finite() || length <= 1e-12 {
+            return Err(refusal());
+        }
+        axes[axis] = delta.map(|v| v / length);
+    }
     for i in 0..3 {
-        for j in 0..3 { to_local[i][j]=axes[i][j];to_world[i][j]=axes[j][i]; }
-        to_local[i][3]=-(0..3).map(|j|axes[i][j]*a[j]).sum::<f64>();
-        to_world[i][3]=a[i];
+        for j in 0..i {
+            if (0..3).map(|k| axes[i][k] * axes[j][k]).sum::<f64>().abs() > 1e-12 {
+                return Err(refusal());
+            }
+        }
+    }
+    let mut to_local = [[0.; 4]; 4];
+    let mut to_world = [[0.; 4]; 4];
+    to_local[3][3] = 1.;
+    to_world[3][3] = 1.;
+    for i in 0..3 {
+        for j in 0..3 {
+            to_local[i][j] = axes[i][j];
+            to_world[i][j] = axes[j][i];
+        }
+        to_local[i][3] = -(0..3).map(|j| axes[i][j] * a[j]).sum::<f64>();
+        to_world[i][3] = a[i];
     }
     // Recover a coordinate frame, then recognize and audit the entire source.
     // Three orthogonal incident edges alone do not qualify a cuboid.
-    let local = crate::transform::affine(model,to_local)?;
-    let result = exact_axis_aligned_variable_radius_fillet(&local,edges,radii)?;
-    let world = crate::transform::affine(&result.model,to_world)?;
-    certify_blend_result(world,EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY,
-        vec!["exact_linear_radius_law","rational_conical_fillet_face",
-             "no_constant_radius_substitution","no_valence3_corner","rigid_cuboid_placement"],
-        radii[0][0].max(radii[0][1]),"BREP_VARIABLE_RADIUS_FILLET_REFUSED")
+    let local = crate::transform::affine(model, to_local)?;
+    let result = exact_axis_aligned_variable_radius_fillet(&local, edges, radii)?;
+    let world = crate::transform::affine(&result.model, to_world)?;
+    certify_blend_result(
+        world,
+        EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY,
+        vec![
+            "exact_linear_radius_law",
+            "rational_conical_fillet_face",
+            "no_constant_radius_substitution",
+            "no_valence3_corner",
+            "rigid_cuboid_placement",
+        ],
+        radii[0][0].max(radii[0][1]),
+        "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+    )
 }
 
 pub(super) fn exact_axis_aligned_variable_radius_fillet(

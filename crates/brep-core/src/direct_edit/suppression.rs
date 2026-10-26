@@ -419,6 +419,8 @@ pub(super) fn compact(
             bodies: Vec::new(),
             lineage: model.1.lineage.clone(),
             change_set: Default::default(),
+            local_tolerances_mm: Default::default(),
+            sewed_edges: Default::default(),
         },
     );
 

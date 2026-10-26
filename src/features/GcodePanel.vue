@@ -7,6 +7,7 @@ import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../services/gc
 import { gcodePreviewMoveCount } from '../services/gcodePreviewTransport'
 import { GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../services/gcodePreviewProtocol'
 import { createGcodePreviewWorker } from '../services/gcodePreviewWorker'
+import { formatPrintReadinessError } from '../services/printReadiness'
 import {
   companionDiscover,
   companionHealth,
@@ -141,7 +142,7 @@ async function generate(kind: 'slice' | 'job') {
       ? `body-${props.selection[0] + 1}-job.gcode`
       : `body-${props.selection[0] + 1}-preview.gcode`
   } catch (reason) {
-    if (ticket === revision && !(reason instanceof Error && reason.name === 'AbortError')) error.value = reason instanceof Error ? reason.message : String(reason)
+    if (ticket === revision && !(reason instanceof Error && reason.name === 'AbortError')) error.value = formatPrintReadinessError(reason, props.locale)
   } finally { if (ticket === revision) busy.value = false }
 }
 function cancel() { invalidate(label('Расчёт отменён.', 'Processing cancelled.')) }

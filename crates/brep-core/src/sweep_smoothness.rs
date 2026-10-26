@@ -1,8 +1,8 @@
 //! Native ownership and sufficient exact jets of retained wall seams.
 //! Caps, trim/world-edge identity and global shell validity remain separate.
+pub mod complete;
 pub mod geometric;
 pub mod tangent;
-pub mod complete;
 use crate::{Error, MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Result};
 use nurbs_core::{
     continuity::{self, ProjectiveSeam, ProjectiveSeamCollectionReport},
@@ -266,108 +266,255 @@ mod tests {
     use super::*;
     #[test]
     fn unequal_profile_strip_speeds_prove_only_the_actual_smooth_seam() {
-        let corners=[[0.,0.],[1.,0.],[3.,0.],[3.,1.],[0.,1.],[0.,0.]];
-        let sections=[0.,1.].into_iter().map(|z|vec![corners.windows(2).map(|p|
-            nurbs_core::primitives::line([p[0][0],p[0][1],z],[p[1][0],p[1][1],z]).unwrap()
-        ).collect::<Vec<_>>()]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let before=model.clone();
-        let unit=continuity::inspect_projective_seam_collection_until_refused(
-            &model.faces.iter().map(|f|f.surface.clone()).collect::<Vec<_>>(),
-            &[ProjectiveSeam {patches:[0,1],boundaries:["uMax".into(),"uMin".into()],order:2,normal_scale:1.}],
+        let corners = [[0., 0.], [1., 0.], [3., 0.], [3., 1.], [0., 1.], [0., 0.]];
+        let sections = [0., 1.]
+            .into_iter()
+            .map(|z| {
+                vec![
+                    corners
+                        .windows(2)
+                        .map(|p| {
+                            nurbs_core::primitives::line(
+                                [p[0][0], p[0][1], z],
+                                [p[1][0], p[1][1], z],
+                            )
+                            .unwrap()
+                        })
+                        .collect::<Vec<_>>(),
+                ]
+            })
+            .collect::<Vec<_>>();
+        let model = crate::rational_section_loft(&sections).unwrap();
+        let caps = [model.faces.len() - 2, model.faces.len() - 1];
+        let before = model.clone();
+        let unit = continuity::inspect_projective_seam_collection_until_refused(
+            &model
+                .faces
+                .iter()
+                .map(|f| f.surface.clone())
+                .collect::<Vec<_>>(),
+            &[ProjectiveSeam {
+                patches: [0, 1],
+                boundaries: ["uMax".into(), "uMin".into()],
+                order: 2,
+                normal_scale: 1.,
+            }],
             2000000,
-        ).unwrap();
-        assert!(unit.certified,"Exact binary-ratio fallback must cover unequal profile speeds even with the unit proposal");
-        let proof=inspect_axis(&model,&caps,Axis::Profile,2000000).unwrap();
+        )
+        .unwrap();
+        assert!(
+            unit.certified,
+            "Exact binary-ratio fallback must cover unequal profile speeds even with the unit proposal"
+        );
+        let proof = inspect_axis(&model, &caps, Axis::Profile, 2000000).unwrap();
         assert!(proof.extraction_complete);
-        assert!(!proof.g2_certified && !proof.g1_certified,"Sharp corners remain C0");
-        assert!(proof.g2.seams[0].certified,"The collinear seam has unequal represented speeds: {:?}",proof.g2.seams);
-        assert!(proof.g2.seams.iter().skip(1).any(|s|!s.certified));
-        assert_eq!(model.faces[0].surface.control_points,before.faces[0].surface.control_points);
-        let zero=inspect_axis(&model,&caps,Axis::Profile,0).unwrap();
-        assert!(!zero.g2_certified && zero.g2.seams.iter().all(|s|!s.certified));
-        let short=inspect_axis(&model,&caps,Axis::Profile,proof.g2.seams[0].work-1).unwrap();
+        assert!(
+            !proof.g2_certified && !proof.g1_certified,
+            "Sharp corners remain C0"
+        );
+        assert!(
+            proof.g2.seams[0].certified,
+            "The collinear seam has unequal represented speeds: {:?}",
+            proof.g2.seams
+        );
+        assert!(proof.g2.seams.iter().skip(1).any(|s| !s.certified));
+        assert_eq!(
+            model.faces[0].surface.control_points,
+            before.faces[0].surface.control_points
+        );
+        let zero = inspect_axis(&model, &caps, Axis::Profile, 0).unwrap();
+        assert!(!zero.g2_certified && zero.g2.seams.iter().all(|s| !s.certified));
+        let short = inspect_axis(&model, &caps, Axis::Profile, proof.g2.seams[0].work - 1).unwrap();
         assert!(!short.g2.seams[0].certified);
-        let mut kink=model.clone();
-        for p in &mut kink.faces[0].surface.control_points[0] {p[1]=f64::EPSILON;}
-        let damaged=inspect_axis(&kink,&caps,Axis::Profile,2000000).unwrap();
-        assert!(!damaged.g2.seams[0].certified,"A nonzero transverse kink must remain unproved");
+        let mut kink = model.clone();
+        for p in &mut kink.faces[0].surface.control_points[0] {
+            p[1] = f64::EPSILON;
+        }
+        let damaged = inspect_axis(&kink, &caps, Axis::Profile, 2000000).unwrap();
+        assert!(
+            !damaged.g2.seams[0].certified,
+            "A nonzero transverse kink must remain unproved"
+        );
     }
     #[test]
     fn unequal_profile_closing_seam_uses_owned_surfaces_and_exact_ratio() {
-        let corners=[[1.,0.],[3.,0.],[3.,1.],[0.,1.],[0.,0.],[1.,0.]];
-        let sections=[0.,1.].into_iter().map(|z|vec![corners.windows(2).map(|p|
-            nurbs_core::primitives::line([p[0][0],p[0][1],z],[p[1][0],p[1][1],z]).unwrap()
-        ).collect::<Vec<_>>()]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();
-        let seams=[ProjectiveSeam {patches:[0,4],boundaries:["uMin".into(),"uMax".into()],order:2,normal_scale:1.}];
-        assert!(model.loops[model.faces[0].outer].coedges.iter().any(|a|
-            boundary(&model.faces[0].surface,&a.pcurve,Axis::Profile)==Some("uMin")
-                && model.loops[model.faces[4].outer].coedges.iter().any(|b|
-                    a.edge==b.edge && boundary(&model.faces[4].surface,&b.pcurve,Axis::Profile)==Some("uMax"))
-        ),"The tested closing seam must be a shared owned world edge");
-        let audit=|model:&Model,work|continuity::inspect_projective_seam_collection_until_refused(
-            &model.faces.iter().map(|f|f.surface.clone()).collect::<Vec<_>>(),&seams,work
-        ).unwrap();
-        let proof=audit(&model,2000000);
-        assert!(proof.certified && proof.seams[0].regularity_certified,"{:?}",proof.seams);
-        assert!(!audit(&model,proof.exact_work-1).certified);
-        assert!(!audit(&model,0).certified);
-        let mut kink=model.clone();
-        for p in &mut kink.faces[0].surface.control_points[1] {p[1]=f64::EPSILON;}
-        assert!(!audit(&kink,2000000).certified);
+        let corners = [[1., 0.], [3., 0.], [3., 1.], [0., 1.], [0., 0.], [1., 0.]];
+        let sections = [0., 1.]
+            .into_iter()
+            .map(|z| {
+                vec![
+                    corners
+                        .windows(2)
+                        .map(|p| {
+                            nurbs_core::primitives::line(
+                                [p[0][0], p[0][1], z],
+                                [p[1][0], p[1][1], z],
+                            )
+                            .unwrap()
+                        })
+                        .collect::<Vec<_>>(),
+                ]
+            })
+            .collect::<Vec<_>>();
+        let model = crate::rational_section_loft(&sections).unwrap();
+        let seams = [ProjectiveSeam {
+            patches: [0, 4],
+            boundaries: ["uMin".into(), "uMax".into()],
+            order: 2,
+            normal_scale: 1.,
+        }];
+        assert!(
+            model.loops[model.faces[0].outer]
+                .coedges
+                .iter()
+                .any(
+                    |a| boundary(&model.faces[0].surface, &a.pcurve, Axis::Profile) == Some("uMin")
+                        && model.loops[model.faces[4].outer]
+                            .coedges
+                            .iter()
+                            .any(|b| a.edge == b.edge
+                                && boundary(&model.faces[4].surface, &b.pcurve, Axis::Profile)
+                                    == Some("uMax"))
+                ),
+            "The tested closing seam must be a shared owned world edge"
+        );
+        let audit = |model: &Model, work| {
+            continuity::inspect_projective_seam_collection_until_refused(
+                &model
+                    .faces
+                    .iter()
+                    .map(|f| f.surface.clone())
+                    .collect::<Vec<_>>(),
+                &seams,
+                work,
+            )
+            .unwrap()
+        };
+        let proof = audit(&model, 2000000);
+        assert!(
+            proof.certified && proof.seams[0].regularity_certified,
+            "{:?}",
+            proof.seams
+        );
+        assert!(!audit(&model, proof.exact_work - 1).certified);
+        assert!(!audit(&model, 0).certified);
+        let mut kink = model.clone();
+        for p in &mut kink.faces[0].surface.control_points[1] {
+            p[1] = f64::EPSILON;
+        }
+        assert!(!audit(&kink, 2000000).certified);
     }
     #[test]
     fn sharp_rational_profiles_preserve_nonuniform_station_g2_work() {
-        let corners=[[-1.,-1.],[1.,-1.],[1.,1.],[-1.,1.],[-1.,-1.]];
-        let mut z=0.;
-        let sections=(0..49).map(|station|{
-            if station>0 {z+=if station%2==0 {2.} else {1.};}
-            vec![corners.windows(2).map(|pair|Curve {
-                degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-                control_points:vec![vec![pair[0][0],pair[0][1],z],
-                    vec![(pair[0][0]+pair[1][0])*0.5,(pair[0][1]+pair[1][1])*0.5,z],
-                    vec![pair[1][0],pair[1][1],z]],
-                weights:vec![1.,0.5,1.],periodic:false,
-            }).collect::<Vec<_>>()]
-        }).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let isolated=inspect_axis(&model,&caps,Axis::Station,2000000).unwrap();
-        assert!(isolated.extraction_complete&&isolated.g2_certified,"station work={}",isolated.exact_work);
-        let combined=inspect_profile(&model,&caps,2000000).unwrap();
-        assert!(!combined.profile.g1_certified&&!combined.profile.g2_certified);
-        assert!(combined.station.g2_certified,"combined work={}",combined.total_exact_work);
-        assert_eq!(combined.station_continuity,"G2");
-        assert!(combined.total_exact_work<=2000000);
-        assert_eq!(combined.profile.g2.seams.len(),combined.profile.edge_ids.len());
-        assert_eq!(combined.profile.g2.unresolved_seams.len(),combined.profile.edge_ids.len());
-        assert!(combined.profile.g2.seams.iter().skip(1).all(|s| !s.certified && !s.exact_identity && s.work==0));
-        let short=inspect_profile(&model,&caps,combined.total_exact_work-1).unwrap();
+        let corners = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.], [-1., -1.]];
+        let mut z = 0.;
+        let sections = (0..49)
+            .map(|station| {
+                if station > 0 {
+                    z += if station % 2 == 0 { 2. } else { 1. };
+                }
+                vec![
+                    corners
+                        .windows(2)
+                        .map(|pair| Curve {
+                            degree: 2,
+                            knots: vec![0., 0., 0., 1., 1., 1.],
+                            control_points: vec![
+                                vec![pair[0][0], pair[0][1], z],
+                                vec![
+                                    (pair[0][0] + pair[1][0]) * 0.5,
+                                    (pair[0][1] + pair[1][1]) * 0.5,
+                                    z,
+                                ],
+                                vec![pair[1][0], pair[1][1], z],
+                            ],
+                            weights: vec![1., 0.5, 1.],
+                            periodic: false,
+                        })
+                        .collect::<Vec<_>>(),
+                ]
+            })
+            .collect::<Vec<_>>();
+        let model = crate::rational_section_loft(&sections).unwrap();
+        let caps = [model.faces.len() - 2, model.faces.len() - 1];
+        let isolated = inspect_axis(&model, &caps, Axis::Station, 2000000).unwrap();
+        assert!(
+            isolated.extraction_complete && isolated.g2_certified,
+            "station work={}",
+            isolated.exact_work
+        );
+        let combined = inspect_profile(&model, &caps, 2000000).unwrap();
+        assert!(!combined.profile.g1_certified && !combined.profile.g2_certified);
+        assert!(
+            combined.station.g2_certified,
+            "combined work={}",
+            combined.total_exact_work
+        );
+        assert_eq!(combined.station_continuity, "G2");
+        assert!(combined.total_exact_work <= 2000000);
+        assert_eq!(
+            combined.profile.g2.seams.len(),
+            combined.profile.edge_ids.len()
+        );
+        assert_eq!(
+            combined.profile.g2.unresolved_seams.len(),
+            combined.profile.edge_ids.len()
+        );
+        assert!(
+            combined
+                .profile
+                .g2
+                .seams
+                .iter()
+                .skip(1)
+                .all(|s| !s.certified && !s.exact_identity && s.work == 0)
+        );
+        let short = inspect_profile(&model, &caps, combined.total_exact_work - 1).unwrap();
         assert!(!short.station.g2_certified);
-        assert!(short.total_exact_work<=combined.total_exact_work-1);
-        eprintln!("sharp-profile independent station G2 work={} combined profile={} total={}",isolated.exact_work,combined.profile.exact_work,combined.total_exact_work);
+        assert!(short.total_exact_work <= combined.total_exact_work - 1);
+        eprintln!(
+            "sharp-profile independent station G2 work={} combined profile={} total={}",
+            isolated.exact_work, combined.profile.exact_work, combined.total_exact_work
+        );
     }
     #[test]
     fn profile_g1_curvature_jump_keeps_independent_station_g2() {
-        let directions=[[1.,0.],[0.,1.],[-1.,0.],[0.,-1.],[1.,0.]];
-        let sections=[0.,1.,3.].into_iter().map(|z|vec![directions.windows(2).enumerate().map(|(i,pair)|Curve {
-            degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-            control_points:vec![vec![pair[0][0],pair[0][1],z],
-                vec![pair[0][0]+pair[1][0],pair[0][1]+pair[1][1],z],
-                vec![pair[1][0],pair[1][1],z]],
-            weights:vec![1.,if i==0 {1.} else {0.5},1.],periodic:false,
-        }).collect::<Vec<_>>()]).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();
-        let caps=[model.faces.len()-2,model.faces.len()-1];
-        let proof=inspect_profile(&model,&caps,2000000).unwrap();
-        assert!(proof.profile.extraction_complete&&proof.profile.g1_certified&&!proof.profile.g2_certified);
-        assert_eq!(proof.profile.g1.as_ref().unwrap().certified_order,Some(1));
+        let directions = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.], [1., 0.]];
+        let sections = [0., 1., 3.]
+            .into_iter()
+            .map(|z| {
+                vec![
+                    directions
+                        .windows(2)
+                        .enumerate()
+                        .map(|(i, pair)| Curve {
+                            degree: 2,
+                            knots: vec![0., 0., 0., 1., 1., 1.],
+                            control_points: vec![
+                                vec![pair[0][0], pair[0][1], z],
+                                vec![pair[0][0] + pair[1][0], pair[0][1] + pair[1][1], z],
+                                vec![pair[1][0], pair[1][1], z],
+                            ],
+                            weights: vec![1., if i == 0 { 1. } else { 0.5 }, 1.],
+                            periodic: false,
+                        })
+                        .collect::<Vec<_>>(),
+                ]
+            })
+            .collect::<Vec<_>>();
+        let model = crate::rational_section_loft(&sections).unwrap();
+        let caps = [model.faces.len() - 2, model.faces.len() - 1];
+        let proof = inspect_profile(&model, &caps, 2000000).unwrap();
+        assert!(
+            proof.profile.extraction_complete
+                && proof.profile.g1_certified
+                && !proof.profile.g2_certified
+        );
+        assert_eq!(proof.profile.g1.as_ref().unwrap().certified_order, Some(1));
         assert!(proof.station.g2_certified);
-        assert_eq!(proof.station_continuity,"G2");
-        assert_eq!(proof.cap_continuity,"C0");
-        assert!(proof.total_exact_work<=2000000);
+        assert_eq!(proof.station_continuity, "G2");
+        assert_eq!(proof.cap_continuity, "C0");
+        assert!(proof.total_exact_work <= 2000000);
     }
     #[test]
     fn actual_circle_walls_own_profile_station_and_cap_sets_in_one_budget() {

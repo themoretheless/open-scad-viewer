@@ -8,8 +8,8 @@ use cad_predicates::{
     AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
 use nurbs_core::{curve::Curve, surface::Surface};
-mod monotone_coordinate;
 pub mod bilinear_graph;
+mod monotone_coordinate;
 
 mod certificate;
 mod separates_surfaces;

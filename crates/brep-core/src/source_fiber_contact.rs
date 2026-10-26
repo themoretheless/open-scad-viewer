@@ -783,37 +783,43 @@ mod tests {
         .unwrap();
         assert!(audit.all_pairs_qualified);
         assert_eq!(audit.pairs.len(), 10);
-        assert!(audit
-            .pairs
-            .iter()
-            .any(|p| p.faces == [0, 2] && p.pole_planar.as_ref().is_some_and(|c| c.faces() == [0, 2] && c.edges().len() == 2)));
-        assert!(source_shell_incidence::assemble_regions_with_root_planes(
-            &regions,
-            &pairs,
-            &specs,
-            100_000_000,
-            0
-        )
-        .unwrap()
-        .shell
-        .is_none());
-        assert!(source_shell_incidence::assemble_regions_with_root_planes(
-            &regions,
-            &pairs,
-            &[
-                RootPlanes {
-                    pair: first,
-                    planes: [None, Some(plane)]
-                },
-                RootPlanes {
-                    pair: first,
-                    planes: [None, Some(plane)]
-                }
-            ],
-            100_000_000,
-            10000
-        )
-        .is_err());
+        assert!(audit.pairs.iter().any(|p| {
+            p.faces == [0, 2]
+                && p.pole_planar
+                    .as_ref()
+                    .is_some_and(|c| c.faces() == [0, 2] && c.edges().len() == 2)
+        }));
+        assert!(
+            source_shell_incidence::assemble_regions_with_root_planes(
+                &regions,
+                &pairs,
+                &specs,
+                100_000_000,
+                0
+            )
+            .unwrap()
+            .shell
+            .is_none()
+        );
+        assert!(
+            source_shell_incidence::assemble_regions_with_root_planes(
+                &regions,
+                &pairs,
+                &[
+                    RootPlanes {
+                        pair: first,
+                        planes: [None, Some(plane)]
+                    },
+                    RootPlanes {
+                        pair: first,
+                        planes: [None, Some(plane)]
+                    }
+                ],
+                100_000_000,
+                10000
+            )
+            .is_err()
+        );
     }
     #[test]
     fn closed_curved_wedge_preserves_mixed_root_and_fixed_vertex_ownership() {
@@ -953,13 +959,14 @@ mod tests {
             .filter(|e| e.world() == &original)
             .collect::<Vec<_>>();
         assert_eq!(common.len(), 2);
-        assert!(common.iter().all(|e| e
-            .uses()
-            .iter()
-            .flat_map(|f| f.endpoints())
-            .filter(|x| matches!(x, Endpoint::Crossing { .. }))
-            .count()
-            == 1));
+        assert!(common.iter().all(|e| {
+            e.uses()
+                .iter()
+                .flat_map(|f| f.endpoints())
+                .filter(|x| matches!(x, Endpoint::Crossing { .. }))
+                .count()
+                == 1
+        }));
         let audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
             &shell,
             1e-8,
@@ -1022,53 +1029,112 @@ mod tests {
             10000,
         )
         .unwrap();
-        assert!(audit
-            .pairs
-            .iter()
-            .any(|p| p.faces == [0, 2] && p.pole_planar.as_ref().is_some_and(|c| c.faces() == [0, 2] && !c.edges().is_empty())));
+        assert!(audit.pairs.iter().any(|p| {
+            p.faces == [0, 2]
+                && p.pole_planar
+                    .as_ref()
+                    .is_some_and(|c| c.faces() == [0, 2] && !c.edges().is_empty())
+        }));
     }
     #[test]
     fn extended_canonical_carriers_preserve_closed_source_shell() {
         let (regions, mut pairs) = wedge_regions(1.);
         let mut maps = Vec::new();
         for (i, pair) in pairs.iter_mut().enumerate() {
-            if pair.world.degree != 1 { continue; }
+            if pair.world.degree != 1 {
+                continue;
+            }
             let a = pair.world.control_points[0].clone();
             let b = pair.world.control_points[1].clone();
             pair.world.control_points = vec![
-                a.iter().zip(&b).map(|(a,b)| 2.*a-b).collect(),
-                b.iter().zip(&a).map(|(b,a)| 2.*b-a).collect(),
+                a.iter().zip(&b).map(|(a, b)| 2. * a - b).collect(),
+                b.iter().zip(&a).map(|(b, a)| 2. * b - a).collect(),
             ];
             maps.push(source_shell_incidence::AffineMaps {
                 pair: i,
-                ranges: pair.world_reversed.map(|r| if r {
-                    [[2.,3.],[1.,3.]]
-                } else { [[1.,3.],[2.,3.]] }),
+                ranges: pair.world_reversed.map(|r| {
+                    if r {
+                        [[2., 3.], [1., 3.]]
+                    } else {
+                        [[1., 3.], [2., 3.]]
+                    }
+                }),
             });
         }
         assert!(!maps.is_empty());
-        assert!(source_shell_incidence::assemble_regions(&regions, &pairs, 100_000_000).unwrap().shell.is_none());
+        assert!(
+            source_shell_incidence::assemble_regions(&regions, &pairs, 100_000_000)
+                .unwrap()
+                .shell
+                .is_none()
+        );
         let result = source_shell_incidence::assemble_regions_with_maps(
-            &regions, &pairs, &[], &maps, 100_000_000, 10000).unwrap();
-        assert!(result.shell.is_some(), "{} {:?}", result.reason, result.uncertain_pair);
+            &regions,
+            &pairs,
+            &[],
+            &maps,
+            100_000_000,
+            10000,
+        )
+        .unwrap();
+        assert!(
+            result.shell.is_some(),
+            "{} {:?}",
+            result.reason,
+            result.uncertain_pair
+        );
         let shell = result.shell.unwrap();
         for spec in &maps {
             assert_eq!(shell.edges()[spec.pair].ranges(), Some(spec.ranges));
             assert!(!shell.edges()[spec.pair].covers_complete_canonical_source());
         }
         let audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
-            &shell, 1e-8, crate::face_contacts::Limits {
-                pairs: 10, cells: 10000, domain_cells: 10000,
-                cells_per_pair: 1000, domain_cells_per_pair: 1000,
-            }, 100_000_000, 1000, 10000, 10000).unwrap();
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 10,
+                cells: 10000,
+                domain_cells: 10000,
+                cells_per_pair: 1000,
+                domain_cells_per_pair: 1000,
+            },
+            100_000_000,
+            1000,
+            10000,
+            10000,
+        )
+        .unwrap();
         assert!(audit.all_pairs_qualified);
         assert_eq!(audit.pairs.len(), 10);
-        maps[0].ranges[0][0] = [1.,4.];
-        assert!(source_shell_incidence::assemble_regions_with_maps(
-            &regions, &pairs, &[], &maps, 100_000_000, 10000).unwrap().shell.is_none());
-        maps.push(source_shell_incidence::AffineMaps { pair: maps[0].pair, ranges: maps[0].ranges });
-        assert!(source_shell_incidence::assemble_regions_with_maps(
-            &regions, &pairs, &[], &maps, 100_000_000, 10000).is_err());
+        maps[0].ranges[0][0] = [1., 4.];
+        assert!(
+            source_shell_incidence::assemble_regions_with_maps(
+                &regions,
+                &pairs,
+                &[],
+                &maps,
+                100_000_000,
+                10000
+            )
+            .unwrap()
+            .shell
+            .is_none()
+        );
+        maps.push(source_shell_incidence::AffineMaps {
+            pair: maps[0].pair,
+            ranges: maps[0].ranges,
+        });
+        assert!(
+            source_shell_incidence::assemble_regions_with_maps(
+                &regions,
+                &pairs,
+                &[],
+                &maps,
+                100_000_000,
+                10000
+            )
+            .is_err()
+        );
     }
 
     #[test]

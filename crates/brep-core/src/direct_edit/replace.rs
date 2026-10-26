@@ -128,7 +128,12 @@ fn project_parameter(curve: &Curve, point: [f64; 3]) -> Result<f64> {
         .candidates
         .iter()
         .min_by(|a, b| a.distance_upper.total_cmp(&b.distance_upper))
-        .ok_or_else(|| error(REPLACE_UNSUPPORTED, "Curve projection produced no candidate"))?;
+        .ok_or_else(|| {
+            error(
+                REPLACE_UNSUPPORTED,
+                "Curve projection produced no candidate",
+            )
+        })?;
     let domain = curve.domain();
     let mut t = (0.5 * (best.parameter_interval[0] + best.parameter_interval[1]))
         .clamp(domain[0], domain[1]);
@@ -429,12 +434,14 @@ pub fn replace_face(
         };
         let old = source.vertices[v].point;
         let moved = match &geom {
-            TargetGeom::Plane(frame) => line_plane(lp, ld, frame.equation(), 1e-12).ok_or_else(|| {
-                error(
-                    REPLACE_UNSUPPORTED,
-                    format!("Vertex {v}: the slide line is parallel to the target plane"),
-                )
-            })?,
+            TargetGeom::Plane(frame) => {
+                line_plane(lp, ld, frame.equation(), 1e-12).ok_or_else(|| {
+                    error(
+                        REPLACE_UNSUPPORTED,
+                        format!("Vertex {v}: the slide line is parallel to the target plane"),
+                    )
+                })?
+            }
             TargetGeom::Cylinder(cyl) => {
                 let Some((a, b)) = line_cylinder(&cyl.axis, cyl.radius, lp, ld) else {
                     return Err(error(

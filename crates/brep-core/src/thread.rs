@@ -169,12 +169,13 @@ pub fn closed_body_candidate(
 }
 
 mod caps;
-pub use caps::{cap_patch_network_plane, cap_patch_network_plane_general, trimmed_patch_sheet_with_planar_ends, planarize_patch_edges};
-
+pub use caps::{
+    cap_patch_network_plane, cap_patch_network_plane_general, planarize_patch_edges,
+    trimmed_patch_sheet_with_planar_ends,
+};
 
 mod turns;
 pub use turns::{TurnSheet, clipped_thread_network, untrimmed_turn_sheet};
-
 
 /// Match a sheet boundary's endpoints to an immutable source curve, changing
 /// incident endpoint controls only. Rechecks every resulting boundary use.
@@ -340,8 +341,10 @@ pub fn align_patch_endpoints_many(
 
 mod sewing;
 use sewing::attach_two_edges_impl;
-pub use sewing::{SharedPatchEdge, sew_patch_boundaries, join_patch_sheets, attach_patch_sheet, attach_patch_sheet_two_edges, attach_patch_sheet_edges, share_patch_edge};
-
+pub use sewing::{
+    SharedPatchEdge, attach_patch_sheet, attach_patch_sheet_edges, attach_patch_sheet_two_edges,
+    join_patch_sheets, sew_patch_boundaries, share_patch_edge,
+};
 
 pub fn trimmed_patch_sheet(
     candidate: &TrimCandidate,

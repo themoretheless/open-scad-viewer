@@ -491,6 +491,8 @@ impl Model {
                 .collect(),
             lineage: vec![],
             change_set: ChangeSet::default(),
+            local_tolerances_mm: BTreeMap::new(),
+            sewed_edges: BTreeSet::new(),
         };
         self.refresh_change_set(&[]);
     }

@@ -12,12 +12,18 @@ pub struct FaceDomain {
     rectangle_closure: Option<[[f64; 2]; 2]>,
 }
 impl FaceDomain {
-    pub(crate) fn contains_natural_rectangle(&self, r: [[f64;2];2]) -> bool {
-        (0..2).all(|k| r[k][0].is_finite() && r[k][1].is_finite()
-            && self.natural[k][0] <= r[k][0] && r[k][0] <= r[k][1] && r[k][1] <= self.natural[k][1])
+    pub(crate) fn contains_natural_rectangle(&self, r: [[f64; 2]; 2]) -> bool {
+        (0..2).all(|k| {
+            r[k][0].is_finite()
+                && r[k][1].is_finite()
+                && self.natural[k][0] <= r[k][0]
+                && r[k][0] <= r[k][1]
+                && r[k][1] <= self.natural[k][1]
+        })
     }
-    pub(crate) fn literal_rectangle(&self)->Option<[[f64;2];2]> {
-        self.rectangle_closure.filter(|r|self.contains_closed_rectangle(*r))
+    pub(crate) fn literal_rectangle(&self) -> Option<[[f64; 2]; 2]> {
+        self.rectangle_closure
+            .filter(|r| self.contains_closed_rectangle(*r))
     }
     pub fn new(model: &Model, face_index: usize, tolerance_uv: f64) -> Result<Self> {
         let face = model.faces.get(face_index).ok_or_else(|| {

@@ -159,7 +159,9 @@ impl MultiSweep<'_> {
             count >= self.options.initial_sections && count <= self.options.max_sections,
             "Preview section count outside configured sweep budget",
         )?;
-        let key = original_level_cache::key(self, count);
+        let key = (cell_limit >= 10000 && product_limit >= 1000000)
+            .then(|| original_level_cache::key(self, count))
+            .flatten();
         if let Some(level) = key.as_ref().and_then(|k| original_level_cache::get(k)) {
             return Ok(level);
         }
@@ -180,12 +182,12 @@ impl MultiSweep<'_> {
         // fields too. Their copied endpoint/phase displacement is still proved
         // independently by each profile owner; no seam flag is cached here.
         let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
-            &&first.orientation_guide.is_some_and(|g|!g.periodic)
-            &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
-        let closed_length_owner=path_is_closed(first.path)?&&first.orientation_guide.is_none()&&first.contact_point.is_none()
+            &&first.orientation_guide.is_some_and(|g|!g.periodic);
+        let closed_length_owner=path_is_closed(first.path)?&&((first.orientation_guide.is_none()&&first.contact_point.is_none()
             &&((matches!(first.options.orientation,Orientation::CorrectedFrenet|Orientation::Frenet)&&first.frame_laws.is_none())
                 ||first.options.orientation==Orientation::Fixed
-                ||first.options.orientation==Orientation::FixedNormal&&first.frame_laws.is_none());
+                ||first.options.orientation==Orientation::FixedNormal&&first.frame_laws.is_none()))
+            ||shared_guided);
         let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
             && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
             && (!first.path.periodic||closed_length_owner)&&(!path_is_closed(first.path)?||closed_length_owner))) {
@@ -217,8 +219,16 @@ impl MultiSweep<'_> {
             check(self.sweeps.iter().all(|s|s.orientation_guide.is_some_and(|g|std::ptr::eq(g,guide))),
                 "Shared guide length certificate requires identical original guide")?;
             let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing else{unreachable!()};
-            let report=crate::curve_measure::divide_by_length(guide,count-1,tolerance,max_cells.min(cell_limit-cells))?;
-            cells+=report.cells;Some(report)
+            let phase=if first.contact_point.is_none() {
+                let phase=arc_guide::certify(first.path,guide,max_cells.min(cell_limit-cells))?;
+                cells+=phase.cells;Some(phase)
+            }else{None};
+            if phase.as_ref().is_some_and(|p|p.scale_upper.is_some()) || cells>=cell_limit {
+                None
+            } else {
+                let report=crate::curve_measure::divide_by_length(guide,count-1,tolerance,max_cells.min(cell_limit-cells))?;
+                cells+=report.cells;Some(report)
+            }
         }else{None};
         // Both station policies share precisely the same original Bishop
         // transport and closing phase. Source arc division is also shared.

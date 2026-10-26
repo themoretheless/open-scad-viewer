@@ -1,6 +1,6 @@
 use crate::{
-    MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Report, boundary_agreement, curve_point, distance,
-    invalid, require,
+    MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Report, TopoKind, boundary_agreement, curve_point,
+    distance, invalid, require,
 };
 use nurbs_core::{Error, Result, curve::Curve, surface::{Surface, SurfaceSampler}};
 use std::collections::{BTreeMap, BTreeSet};
@@ -126,6 +126,16 @@ impl Model {
             code: error.code,
             message: error.message,
         })?;
+        for (id, tolerance) in &self.1.local_tolerances_mm {
+            require(
+                matches!(id.kind(), TopoKind::Vertex | TopoKind::Edge) && ids.contains(id),
+                "Local tolerance refers to an unknown or unsupported entity",
+            )?;
+            require(
+                tolerance.is_finite() && (1e-10..=1e-2).contains(tolerance),
+                "Invalid local edge/vertex tolerance",
+            )?;
+        }
         let mut vertex_used = vec![false; self.vertices.len()];
         for v in &self.vertices {
             require(
