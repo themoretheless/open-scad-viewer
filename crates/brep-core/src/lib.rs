@@ -87,6 +87,7 @@ pub mod imprint_pipeline;
 pub mod intersections;
 pub mod nurbs_ss_g6;
 pub mod nurbs_ss_general;
+pub mod ss_face_membership;
 pub mod nurbs_step_interchange;
 mod nurbs_step_shared;
 pub mod nurbs_step_solid;
