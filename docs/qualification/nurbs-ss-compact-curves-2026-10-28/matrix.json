@@ -1,0 +1,60 @@
+{
+  "timestampUtc": "2026-10-27T23:33:17.004725+00:00",
+  "baseCommit": "7208f4f149bba0140c2244651589c1bd7fecab69",
+  "scope": "Compact saved original SS world curves and two native pcurves with whole-clock coefficient bounds; no topology or release authority",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "2691941b2e870cc142fe9b9c1a303710a3e5608af7e01777df1c975e0fb5e32a",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "4a986e28bc4bfdaaab43800b7709197bca101bbf465a6f51984f1504969e6b90",
+    "crates/nurbs-core/tests/ss_graph_curves.rs": "9de5eda10218fdc8d39ca6fcb34af89ac82976d28e165fd1287e3b49afce2216",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/arithmetic.rs": "22674fd81499de096deeccb7f60eed060e2f7af2a4c31a7ffb037472c165a498",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/expressions.rs": "ff33f0c3896536d5896cda492200751ecfcd79af79f1ed970a0fb30cb1a4f4ee",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/mod.rs": "0b1d6035a727ef82c82a1b41c495858a8163a38a7cd4b0f0aa696f3ffaa5d202",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/proof.rs": "7301e9b0d92a34741324a71e12d4aa76844b9b2f87a659874952b30ba0696c6c"
+  },
+  "native": {
+    "exitCode": 0,
+    "resultSummaries": 168,
+    "passed": 3040,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0,
+    "logSha256": "681d3a4a899e785d9f71f1f503343d23cfab9a47a475c6ed19da4438b0d5e2a0"
+  },
+  "brepSsCompatibility": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 53,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 1836,
+    "logSha256": "43fd4fb243aa4edd55a291f3634cfa4acff08df6cf38dcc5a1c5dc5997df3ade"
+  },
+  "focusedBeforeFinalClockReplayGuard": {
+    "exitCode": 0,
+    "resultSummaries": 3,
+    "passed": 39,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0,
+    "logSha256": "c6453f681772a6ba3a52bbb61b7c004ebc0fdb126b215d86243d74aa4e546b56"
+  },
+  "checks": {
+    "apiMapping": {
+      "exitCode": 0,
+      "publicModules": 239,
+      "catalogEntries": 200,
+      "logSha256": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1"
+    },
+    "rustfmt": "passed",
+    "diffWhitespace": "passed",
+    "architecture": {
+      "exitCode": 1,
+      "diagnostics": 83,
+      "newCurveFileDiagnostics": [],
+      "limitsChanged": false,
+      "logSha256": "c7115f955eaf30f96ec3098d89580c89dd4acc180b40057eb8d6cc9f88ffdb43"
+    }
+  },
+  "wasmRebuiltForThisExtension": false,
+  "fullPlanComplete": false
+}

@@ -761,3 +761,5 @@ pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, Original
 
 mod qualified_dispatch;
 pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_ss_branches};
+
+pub use quadratic_graph::{GraphCurveTolerances, GraphCurveBuildLimits, GraphCurveVertex, GraphEdgeCurves, QualifiedGraphCurves, construct_graph_curves};

@@ -4,9 +4,14 @@ use super::fiber::FiberSources;
 use crate::exact_curve_segments::{exact_add, exact_mul};
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 type Poly = [[f64; 3]; 3];
+mod curves;
 mod diagonalize;
 mod line_clip;
 mod ranges;
+pub use curves::{
+    GraphCurveBuildLimits, GraphCurveTolerances, GraphCurveVertex, GraphEdgeCurves,
+    QualifiedGraphCurves, construct_graph_curves,
+};
 pub use ranges::OriginalGraphSSRange;
 #[path = "quadratic_graph/linear_factors.rs"]
 mod linear_factors;
