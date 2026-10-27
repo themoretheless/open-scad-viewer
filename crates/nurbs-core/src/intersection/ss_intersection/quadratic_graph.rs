@@ -4,6 +4,8 @@ use super::fiber::FiberSources;
 use crate::exact_curve_segments::{exact_add, exact_mul};
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 type Poly = [[f64; 3]; 3];
+mod diagonalize;
+mod line_clip;
 #[path = "quadratic_graph/linear_factors.rs"]
 mod linear_factors;
 #[derive(Clone, Copy, Debug)]
@@ -130,9 +132,11 @@ struct Data {
     xy: [f64; 4],
     domains: [[[f64; 2]; 2]; 2],
     heights: [Poly; 2],
-    /// a*(u-cu)^2+b*(v-cv)^2+k, in normalized ORIGINAL source coordinates.
+    /// Centered diagonal polynomial, mapped to original normalized UV by basis.
     diagonal: [f64; 3],
     center: [f64; 2],
+    /// Original normalized UV displacement from centered diagonal coordinates.
+    basis: [[f64; 2]; 2],
     kind: QuadraticGraphSSKind,
     vertices: Vec<OriginalGraphSSVertex>,
     edges: Vec<OriginalGraphSSEdge>,
@@ -264,34 +268,15 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
     for i in 0..3 {
         for j in 0..3 {
             f[i][j] = w.add(p[i][j], -q[i][j])?;
-            if !matches!((i, j), (0, 0) | (1, 0) | (2, 0) | (0, 1) | (0, 2)) {
+            if !matches!((i, j), (0, 0) | (1, 0) | (2, 0) | (0, 1) | (0, 2) | (1, 1)) {
                 check(
                     f[i][j] == 0.,
-                    "Mixed/higher graph difference needs another exact classifier",
+                    "Higher mixed graph difference needs another exact classifier",
                 )?;
             }
         }
     }
-    let mut a = f[2][0];
-    let mut b = f[0][2];
-    let mut center = [0.5; 2];
-    for (axis, (quadratic, linear)) in [(a, f[1][0]), (b, f[0][1])].into_iter().enumerate() {
-        if quadratic == 0. {
-            check(
-                linear == 0.,
-                "Linear graph difference uses the regular branch path",
-            )?;
-        } else {
-            let den = w.mul(2., quadratic)?;
-            center[axis] = w.div(-linear, den)?;
-        }
-    }
-    let mut k = f[0][0];
-    for (c, coefficient) in [(center[0], a), (center[1], b)] {
-        let square = w.mul(c, c)?;
-        let term = w.mul(coefficient, square)?;
-        k = w.add(k, -term)?;
-    }
+    let ([mut a, mut b, mut k], center, basis) = diagonalize::form(&f, &mut w)?;
     if a < 0. && b <= 0. || a == 0. && b < 0. {
         a = -a;
         b = -b;
@@ -303,6 +288,7 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
         heights: [p, q],
         diagonal: [a, b, k],
         center,
+        basis,
         kind: QuadraticGraphSSKind::Empty,
         vertices: vec![],
         edges: vec![],
@@ -324,16 +310,7 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
                 });
             }
         } else if k < 0. {
-            for (axis, coefficient) in [a, b].into_iter().enumerate() {
-                let square = w.id(I::point(-k), I::point(coefficient))?;
-                let radius = w.sqrt(square)?;
-                let low = w.is(I::point(center[axis]), radius)?;
-                let high = w.ia(I::point(center[axis]), radius)?;
-                check(
-                    low.lo > 0. && high.hi < 1.,
-                    "Closed ellipse must be strictly contained in both original graph patches",
-                )?;
-            }
+            diagonalize::contained(&d, &mut w)?;
             d.kind = QuadraticGraphSSKind::ClosedEllipse;
             for quadrant in 0..4 {
                 d.vertices.push(OriginalGraphSSVertex {
@@ -355,17 +332,7 @@ fn derive(source: &FiberSources, limits: QuadraticGraphSSLimits) -> Result<Data>
         if k < 0. {
             linear_factors::parallel(&mut d, &mut w)?;
         } else if k == 0. {
-            let axis = if a != 0. { 0 } else { 1 };
-            if (0.0..=1.0).contains(&center[axis]) {
-                d.kind = QuadraticGraphSSKind::TangentDoubleLine;
-                let mut endpoints = [center; 2];
-                endpoints[0][1 - axis] = 0.;
-                endpoints[1][1 - axis] = 1.;
-                segment(&mut d, endpoints, 2);
-                for vertex in &mut d.vertices {
-                    vertex.singular = true;
-                }
-            }
+            line_clip::double(&mut d, &mut w)?;
         }
     } else {
         linear_factors::crossing(&mut d, &mut w)?;
@@ -431,15 +398,22 @@ impl QualifiedQuadraticGraphSS {
             2 => [neg(x), neg(y)],
             _ => [y, neg(x)],
         };
-        let mut uv = [I::point(0.); 2];
+        let mut delta = [I::point(0.); 2];
         for axis in 0..2 {
             let square = w.id(
                 I::point(-self.data.diagonal[2]),
                 I::point(self.data.diagonal[axis]),
             )?;
             let radius = w.sqrt(square)?;
-            let delta = w.im(radius, unit[axis])?;
-            uv[axis] = w.ia(I::point(self.data.center[axis]), delta)?;
+            delta[axis] = w.im(radius, unit[axis])?;
+        }
+        let mut uv = [I::point(0.); 2];
+        for axis in 0..2 {
+            uv[axis] = I::point(self.data.center[axis]);
+            for j in 0..2 {
+                let term = w.im(I::point(self.data.basis[axis][j]), delta[j])?;
+                uv[axis] = w.ia(uv[axis], term)?;
+            }
         }
         Ok(uv)
     }
@@ -590,6 +564,9 @@ mod proof_tests {
         assert!(bad.reverify().is_err());
         let mut bad = o.clone();
         bad.data.edges[0].multiplicity = 2;
+        assert!(bad.reverify().is_err());
+        let mut bad = o.clone();
+        bad.data.basis[0][1] = 0.5;
         assert!(bad.reverify().is_err());
         for s in [&mut a, &mut b] {
             for row in &mut s.control_points {
