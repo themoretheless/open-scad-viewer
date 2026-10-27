@@ -487,6 +487,33 @@ mod tests {
         }
         let short=crate::source_pole_tangency::qualify_body_plane_limits(&body,planes.work-1).unwrap();
         assert!(short.certificate.is_none());assert!(short.work<planes.work);
+        let atlas_limits = |work, cells| crate::source_pole_tangency::FanLimits {
+            inward_extent: 0.125, subdivisions: 8, exact_work: work, cells,
+        };
+        let atlas = crate::source_pole_tangency::qualify_body_pole_atlas(
+            &body, atlas_limits(100000000, 100000)).unwrap();
+        let polar = atlas.certificate.expect(atlas.reason);
+        assert!(std::ptr::eq(polar.body(), &body));
+        assert_eq!(polar.collars().len(), body.geometry().shell().poles().len());
+        assert_eq!(atlas.completed_poles, polar.collars().len());
+        assert_eq!(polar.orientations().len(), 2);
+        assert!(polar.orientations().iter().all(|p| p.axis() == 2));
+        assert_ne!(polar.orientations()[0].positive(), polar.orientations()[1].positive());
+        assert_eq!(atlas.cells, 64 * polar.collars().len());
+        assert_eq!(atlas.exact_work, planes.work);
+        for (i, (address, collar)) in polar.collars().iter().enumerate() {
+            assert_eq!(*address, body.geometry().shell().poles()[i].0);
+            assert!(std::ptr::eq(collar.surface(), body.geometry().shell().poles()[i].1.source().surface()));
+        }
+        let short_cells = crate::source_pole_tangency::qualify_body_pole_atlas(
+            &body, atlas_limits(100000000, atlas.cells - 1)).unwrap();
+        assert!(short_cells.certificate.is_none());
+        assert!(short_cells.completed_poles < atlas.completed_poles);
+        assert!(short_cells.cells <= atlas.cells - 1);
+        let short_work = crate::source_pole_tangency::qualify_body_pole_atlas(
+            &body, atlas_limits(atlas.exact_work - 1, 100000)).unwrap();
+        assert!(short_work.certificate.is_none());
+        assert_eq!(short_work.completed_poles, 0);
         let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
         let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
             crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,

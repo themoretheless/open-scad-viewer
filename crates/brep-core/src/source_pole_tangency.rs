@@ -282,3 +282,6 @@ pub fn qualify_body_plane_limits<E: Carrier>(
 }
 #[cfg(test)]
 mod tests;
+
+mod fan;
+pub use fan::{BodyPoleAtlas, FanLimits, FanReport, PoleOrientation, qualify_body_pole_atlas};
