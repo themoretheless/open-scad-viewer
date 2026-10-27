@@ -30,24 +30,9 @@ pub struct PolarCollarReport<'a> {
     pub cells: usize,
     pub reason: &'static str,
 }
-/// Prove one-to-one mapping of an original closed collar modulo its collapsed
-/// side. The extended radial/angular map is globally injective by strict
-/// weighted diagonal dominance on that rectangle. Positive radial derivative
-/// separates every interior point from the pole. Compactness then makes the
-/// induced continuous bijection a homeomorphism onto its image.
-///
-/// The radius is normalized in the original parameter domain. Transposition
-/// and row reversal only permute original controls; no rounded patch is built.
-pub fn certify_polar_collar(
-    s: &Surface,
-    boundary: Boundary,
-    inward_extent: f64,
-    subdivisions: usize,
-    max_cells: usize,
-) -> Result<PolarCollarReport<'_>> {
-    s.validate()?;
+pub(super) fn source_view(s: &Surface, boundary: Boundary) -> Surface {
     let transpose = matches!(boundary, Boundary::VMin | Boundary::VMax);
-    let view = if transpose {
+    if transpose {
         Surface {
             degree_u: s.degree_v,
             degree_v: s.degree_u,
@@ -64,7 +49,25 @@ pub fn certify_polar_collar(
         }
     } else {
         s.clone()
-    };
+    }
+}
+/// Prove one-to-one mapping of an original closed collar modulo its collapsed
+/// side. The extended radial/angular map is globally injective by strict
+/// weighted diagonal dominance on that rectangle. Positive radial derivative
+/// separates every interior point from the pole. Compactness then makes the
+/// induced continuous bijection a homeomorphism onto its image.
+///
+/// The radius is normalized in the original parameter domain. Transposition
+/// and row reversal only permute original controls; no rounded patch is built.
+pub fn certify_polar_collar(
+    s: &Surface,
+    boundary: Boundary,
+    inward_extent: f64,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<PolarCollarReport<'_>> {
+    s.validate()?;
+    let view = source_view(s, boundary);
     let end = usize::from(matches!(boundary, Boundary::UMax | Boundary::VMax));
     let proof =
         report::certify_polar_collar_inner(&view, end, inward_extent, subdivisions, max_cells)?;

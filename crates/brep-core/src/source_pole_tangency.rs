@@ -288,3 +288,6 @@ pub use fan::{BodyPoleAtlas, FanLimits, FanReport, PoleOrientation, qualify_body
 
 mod projection;
 pub use projection::{TransverseBodyPoleAtlas, TransverseLimits, TransverseReport, qualify_body_transverse_pole_atlas};
+
+mod projected_chart;
+pub use projected_chart::{ProjectedChartAtlas, ProjectedChartLimits, ProjectedChartReport, qualify_body_projected_chart_atlas};
