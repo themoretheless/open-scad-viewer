@@ -440,3 +440,191 @@ fn mixed_uv_lines_keep_the_shared_biquadratic_world_height_instead_of_an_endpoin
     }
     o.reverify().unwrap();
 }
+#[test]
+fn continuous_ranges_cover_original_ellipse_arcs_and_both_native_domains() {
+    let form = [1., 1., -1., -0.015625];
+    let s = sources(form, [0.5; 2]);
+    let o = ss::qualify_quadratic_graph_ss(&s, Default::default()).unwrap();
+    let h = -0.5;
+    let radii = [0.125, (1f64 / 48.).sqrt()];
+    for edge in 0..4 {
+        for clock in [[0., 1.], [0.125, 0.75], [0.5, 0.5]] {
+            let r = o.edge_enclosure(edge, clock, 1024).unwrap();
+            assert_eq!(r.clock, clock);
+            for i in 0..=40 {
+                let t = clock[0] + (clock[1] - clock[0]) * i as f64 / 40.;
+                let x = (1. - t * t) / (1. + t * t);
+                let y = 2. * t / (1. + t * t);
+                let [x, y] = match edge {
+                    0 => [x, y],
+                    1 => [-y, x],
+                    2 => [-x, -y],
+                    _ => [y, -x],
+                };
+                let u = 0.5 + radii[0] * x - h * radii[1] * y;
+                let v = 0.5 + radii[1] * y;
+                contains(r.normalized_uv[0], u);
+                contains(r.normalized_uv[1], v);
+                contains(r.first_uv[0], 2. + 4. * u);
+                contains(r.first_uv[1], -4. + 8. * v);
+                contains(r.second_uv[0], -3. + 8. * u);
+                contains(r.second_uv[1], 7. + 4. * v);
+                contains(r.world[0], u);
+                contains(r.world[1], v);
+                contains(r.world[2], background(u, v));
+            }
+            assert!(r.normalized_uv.iter().all(|v| v[0] >= 0. && v[1] <= 1.));
+        }
+    }
+    // The arc bulges beyond the U coordinate of BOTH endpoints.
+    let r = o.edge_enclosure(0, [0., 1.], 1024).unwrap();
+    let a = o.edge_station(0, 0., 1024).unwrap();
+    let b = o.edge_station(0, 1., 1024).unwrap();
+    let u = 0.5 + 0.125 * 0.8 + 0.5 * radii[1] * 0.6;
+    assert!(u > a.normalized_uv[0][1].max(b.normalized_uv[0][1]));
+    contains(r.normalized_uv[0], u);
+    o.reverify().unwrap();
+}
+#[test]
+fn continuous_world_range_contains_an_interior_height_missed_by_the_endpoint_hull() {
+    let s = sources([1., 1., 2., 0.], [0.5; 2]);
+    let mut a = s.first().clone();
+    let mut b = s.second().clone();
+    for surface in [&mut a, &mut b] {
+        for row in &mut surface.control_points {
+            for p in row {
+                p[2] = p[2] - background(p[0], p[1]) + p[0] * p[1];
+            }
+        }
+    }
+    let o =
+        ss::qualify_quadratic_graph_ss(&ss::FiberSources::new(&a, &b).unwrap(), Default::default())
+            .unwrap();
+    let r = o.edge_enclosure(0, [0., 1.], 1024).unwrap();
+    let a = o.edge_station(0, 0., 1024).unwrap();
+    let b = o.edge_station(0, 1., 1024).unwrap();
+    assert!(a.world[2][1].max(b.world[2][1]) < 1e-12);
+    contains(r.world[2], 0.25);
+    contains(r.world[2], 0.);
+    for i in 0..=64 {
+        let t = i as f64 / 64.;
+        contains(r.world[2], t * (1. - t));
+    }
+}
+#[test]
+fn all_owned_linear_families_have_continuous_ranges_that_refine_and_swap_supports() {
+    for form in [[0., 0., 1., 0.], [1., 1., 2., 0.], [1., 1., 2., -0.0625]] {
+        let s = sources(form, [0.5; 2]);
+        let reverse = ss::FiberSources::new(s.second(), s.first()).unwrap();
+        let o = ss::qualify_quadratic_graph_ss(&s, Default::default()).unwrap();
+        let q = ss::qualify_quadratic_graph_ss(&reverse, Default::default()).unwrap();
+        for edge in 0..o.edges().len() {
+            let full = o.edge_enclosure(edge, [0., 1.], 1024).unwrap();
+            let part = o.edge_enclosure(edge, [0.25, 0.5], 1024).unwrap();
+            let swap = q.edge_enclosure(edge, [0.25, 0.5], 1024).unwrap();
+            assert_eq!(part.first_uv, swap.second_uv);
+            assert_eq!(part.second_uv, swap.first_uv);
+            for axis in 0..2 {
+                assert!(
+                    full.normalized_uv[axis][0] <= part.normalized_uv[axis][0]
+                        && part.normalized_uv[axis][1] <= full.normalized_uv[axis][1]
+                );
+            }
+            assert!(
+                part.world
+                    .iter()
+                    .zip(full.world)
+                    .all(|(p, f)| f[0] <= p[0] && p[1] <= f[1])
+            );
+            for t in [0.25, 0.375, 0.5] {
+                let p = o.edge_station(edge, t, 1024).unwrap();
+                for axis in 0..3 {
+                    contains(part.world[axis], (p.world[axis][0] + p.world[axis][1]) / 2.);
+                }
+            }
+        }
+    }
+}
+#[test]
+fn continuous_ranges_validate_clock_indices_and_charge_the_exact_provided_budget() {
+    let o = ss::qualify_quadratic_graph_ss(
+        &sources([1., 1., 1., -0.0625], [0.5; 2]),
+        Default::default(),
+    )
+    .unwrap();
+    for clock in [
+        [-0.01, 1.],
+        [0., 1.01],
+        [0.5, 0.25],
+        [f64::NAN, 1.],
+        [0., f64::INFINITY],
+    ] {
+        assert!(o.edge_enclosure(0, clock, 1024).is_err());
+    }
+    assert!(o.edge_enclosure(4, [0., 1.], 1024).is_err());
+    for work in [0, 1, 4097] {
+        assert!(o.edge_enclosure(0, [0., 1.], work).is_err());
+    }
+    let r = o.edge_enclosure(0, [0.25, 0.75], 1024).unwrap();
+    assert!(o.edge_enclosure(0, r.clock, r.operations).is_ok());
+    assert_eq!(
+        o.edge_enclosure(0, r.clock, r.operations - 1)
+            .unwrap_err()
+            .code,
+        "NURBS_RESOURCE_LIMIT"
+    );
+    for form in [[1., 1., 1., 0.], [1., 1., 1., 0.125]] {
+        let o =
+            ss::qualify_quadratic_graph_ss(&sources(form, [0.5; 2]), Default::default()).unwrap();
+        assert!(o.edge_enclosure(0, [0., 1.], 1024).is_err());
+    }
+}
+#[test]
+fn original_native_domains_do_not_require_a_representable_binary64_span() {
+    let domains = [[[1e-6, 1.], [1e-8, 0.75]], [[-2e-5, 2.], [0.001, 3.]]];
+    let a = patch([1., 1., -1., -0.015625], [0.5; 2], domains[0]);
+    let b = patch([0.; 4], [0.5; 2], domains[1]);
+    let s = ss::FiberSources::new(&a, &b).unwrap();
+    let o = ss::qualify_quadratic_graph_ss(&s, Default::default()).unwrap();
+    assert_eq!(o.kind(), K::ClosedEllipse);
+    let radii = [0.125, (1f64 / 48.).sqrt()];
+    for edge in 0..4 {
+        let range = o.edge_enclosure(edge, [0., 1.], 1024).unwrap();
+        for t in [0., 0.125, 0.5, 0.75, 1.] {
+            let x = (1. - t * t) / (1. + t * t);
+            let y = 2. * t / (1. + t * t);
+            let [x, y] = match edge {
+                0 => [x, y],
+                1 => [-y, x],
+                2 => [-x, -y],
+                _ => [y, -x],
+            };
+            let uv = [0.5 + radii[0] * x + 0.5 * radii[1] * y, 0.5 + radii[1] * y];
+            let point = o.edge_station(edge, t, 1024).unwrap();
+            for (side, surface) in [&a, &b].into_iter().enumerate() {
+                let native = [0, 1].map(|axis| {
+                    (1. - uv[axis]) * domains[side][axis][0] + uv[axis] * domains[side][axis][1]
+                });
+                let bounds = if side == 0 {
+                    point.first_uv
+                } else {
+                    point.second_uv
+                };
+                let ranged = if side == 0 {
+                    range.first_uv
+                } else {
+                    range.second_uv
+                };
+                for axis in 0..2 {
+                    contains(bounds[axis], native[axis]);
+                    contains(ranged[axis], native[axis]);
+                }
+                let p = surface.evaluate(native[0], native[1]).unwrap().point;
+                for (actual, expected) in p.iter().zip([uv[0], uv[1], background(uv[0], uv[1])]) {
+                    assert!((actual - expected).abs() < 1e-12);
+                }
+            }
+        }
+    }
+    o.reverify().unwrap();
+}

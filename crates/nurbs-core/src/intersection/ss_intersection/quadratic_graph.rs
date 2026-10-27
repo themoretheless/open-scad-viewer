@@ -6,6 +6,8 @@ use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 type Poly = [[f64; 3]; 3];
 mod diagonalize;
 mod line_clip;
+mod ranges;
+pub use ranges::OriginalGraphSSRange;
 #[path = "quadratic_graph/linear_factors.rs"]
 mod linear_factors;
 #[derive(Clone, Copy, Debug)]
@@ -201,7 +203,7 @@ fn graph(s: &Surface, w: &mut Work) -> Result<([f64; 4], [[f64; 2]; 2], Poly)> {
                 && knots[degree + 1..].iter().all(|v| *v == domain[axis][1]),
             "Graph must retain complete original clamped knot spans",
         )?;
-        w.add(domain[axis][1], -domain[axis][0])?;
+        w.is(I::point(domain[axis][1]), I::point(domain[axis][0]))?;
     }
     let x = s.control_points[0][0][0];
     let y = s.control_points[0][0][1];
@@ -377,11 +379,13 @@ impl QualifiedQuadraticGraphSS {
         )
     }
     fn ellipse(&self, quadrant: usize, t: f64, w: &mut Work) -> Result<[I; 2]> {
+        self.ellipse_interval(quadrant, I::point(t), w)
+    }
+    fn ellipse_interval(&self, quadrant: usize, t: I, w: &mut Work) -> Result<[I; 2]> {
         check(
             self.kind() == QuadraticGraphSSKind::ClosedEllipse && quadrant < 4,
             "Unknown original ellipse chart",
         )?;
-        let t = I::point(t);
         let square = w.im(t, t)?;
         let den = w.ia(I::point(1.), square)?;
         let num = w.is(I::point(1.), square)?;
@@ -439,11 +443,11 @@ impl QualifiedQuadraticGraphSS {
         let mut native = [[[0.; 2]; 2]; 2];
         for surface in 0..2 {
             for axis in 0..2 {
-                let span = w.add(
-                    self.data.domains[surface][axis][1],
-                    -self.data.domains[surface][axis][0],
+                let span = w.is(
+                    I::point(self.data.domains[surface][axis][1]),
+                    I::point(self.data.domains[surface][axis][0]),
                 )?;
-                let term = w.im(I::point(span), uv[axis])?;
+                let term = w.im(span, uv[axis])?;
                 let value = w.ia(I::point(self.data.domains[surface][axis][0]), term)?;
                 native[surface][axis] = [value.lo, value.hi];
             }

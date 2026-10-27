@@ -757,7 +757,7 @@ pub use fiber_coverage::{FiberDiscoveryLimits,FiberDiscoveryKind,FiberDiscoveryN
 pub use fiber_coverage::{PhysicalFiberBranchLimits, OriginalPhysicalFiberBranch, OriginalPhysicalFiberVertex, OriginalPhysicalFiberTrim, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches};
 
 mod quadratic_graph;
-pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, OriginalGraphSSPoint, OriginalGraphSSVertex, OriginalGraphSSEdgeGeometry, OriginalGraphSSEdge, OriginalGraphSSBranch, OriginalGraphSSTrim, OriginalGraphSSStation, QualifiedQuadraticGraphSS, qualify_quadratic_graph_ss};
+pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, OriginalGraphSSPoint, OriginalGraphSSVertex, OriginalGraphSSEdgeGeometry, OriginalGraphSSEdge, OriginalGraphSSBranch, OriginalGraphSSTrim, OriginalGraphSSStation, OriginalGraphSSRange, QualifiedQuadraticGraphSS, qualify_quadratic_graph_ss};
 
 mod qualified_dispatch;
 pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_ss_branches};
