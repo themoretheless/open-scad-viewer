@@ -505,24 +505,6 @@ mod tests {
             std::fs::write(path, &step).unwrap();
         }
         let (imported, _, _) = crate::import_step_v6(&step).unwrap();
-        eprintln!(
-            "STEP faces source={:?} imported={:?} shell={:?}",
-            transferred
-                .faces
-                .iter()
-                .map(|f| f.surface.control_points[0][0][0])
-                .collect::<Vec<_>>(),
-            imported
-                .faces
-                .iter()
-                .map(|f| f.surface.control_points[0][0][0])
-                .collect::<Vec<_>>(),
-            imported.shells[0]
-                .faces
-                .iter()
-                .map(|f| f.face)
-                .collect::<Vec<_>>()
-        );
         crate::source_body_model::assert_step_identity(&transferred, &imported);
         let body_definition = body.definition().unwrap();
         let exchange = crate::source_exchange_step::prepare(
@@ -2390,10 +2372,9 @@ mod tests {
                 assert_eq!(incidence_report.orientation_conflicts,0);
                 assert_eq!(incidence_report.duplicate_triangles,0);
                 assert_eq!(incidence_report.degenerate_triangles,0);
-                eprintln!("candidate topology triangles={} pendingFaces={} openEdges={} nonmanifoldEdges={} invalidVertexLinks={} pending={:?}",
+                eprintln!("candidate topology triangles={} pendingFaces={} openEdges={} nonmanifoldEdges={} invalidVertexLinks={}",
                     candidates.triangles.len(),candidates.pending.len(),incidence_report.open_edges,
-                    incidence_report.nonmanifold_edges,incidence_report.invalid_vertex_links,
-                    candidates.pending.iter().map(|p|(p.face,p.reason)).collect::<Vec<_>>());
+                    incidence_report.nonmanifold_edges,incidence_report.invalid_vertex_links);
                 assert!(!candidates.triangles.is_empty());
                 let admitted_faces=candidates.triangles.iter().map(|t|t.face).collect::<std::collections::BTreeSet<_>>();
                 let pending_faces=candidates.pending.iter().map(|p|p.face).collect::<std::collections::BTreeSet<_>>();

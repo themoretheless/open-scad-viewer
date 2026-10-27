@@ -530,7 +530,7 @@ fn nonplanar_filled_carrier_and_nonplanar_original_boundary_have_owned_global_g2
         construct_smooth_closed_with_ideal_atlas(
             &sweep,
             &[4],
-            33,
+            65,
             &material,
             1e-8,
             0.05,

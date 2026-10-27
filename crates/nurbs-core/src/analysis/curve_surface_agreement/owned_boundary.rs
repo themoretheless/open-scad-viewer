@@ -95,6 +95,16 @@ pub(super) fn verify(
         if reverse {
             actual.reverse();
         }
+        // A common positive weight on each polynomial row cancels exactly, but
+        // same-definition identity cannot prove that gauge. Let the existing
+        // natural-boundary proof handle it instead of returning MissingProof.
+        let polynomial_weight_gauge = actual[0][3] != target[0][3]
+            && actual.iter().zip(&target).all(|(a, b)| a[..3] == b[..3])
+            && actual.iter().all(|q| q[3] == actual[0][3])
+            && target.iter().all(|q| q[3] == target[0][3]);
+        if polynomial_weight_gauge {
+            return Ok(None);
+        }
         let mut values = actual
             .iter()
             .chain(&target)

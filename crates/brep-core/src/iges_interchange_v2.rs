@@ -8,7 +8,7 @@
 use crate::analytic_features::FeatureCertificate;
 use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::Vertex;
-use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const IGES_INTERCHANGE_V2_CAPABILITY: &str = "iges-interchange/2";
@@ -17,11 +17,118 @@ const MAX_RECORDS: usize = 131_072;
 const MAX_ENTITIES: usize = 65_536;
 const MAX_VALUES: usize = 1_000_000;
 const MAX_TOPOLOGY: usize = 32_768;
+const MAX_GRAPH_WORK: usize = 4_000_000;
+const MAX_COMPOSITE_DEPTH: usize = 64;
+const MAX_COMPOSITE_SEGMENTS: usize = 256;
+const MAX_COMPOSITE_CONTROLS: usize = 256;
+const MAX_COMPOSITE_WORK: usize = 4096;
 
 type TopologyMapping = Vec<(TopoKind, usize, usize)>;
 
 fn refuse(message: impl Into<String>) -> Error {
     Error::new("BREP_IGES_V2_REFUSED", message)
+}
+
+fn composite_error(code: &'static str, message: impl Into<String>) -> Error {
+    Error::new(code, message)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IgesLengthUnit {
+    Inch,
+    Millimeter,
+    Foot,
+    Mile,
+    Meter,
+    Kilometer,
+    Mil,
+    Micrometer,
+    Centimeter,
+    Microinch,
+}
+
+impl IgesLengthUnit {
+    pub fn from_flag(flag: usize) -> Option<Self> {
+        Some(match flag {
+            1 => Self::Inch,
+            2 => Self::Millimeter,
+            4 => Self::Foot,
+            5 => Self::Mile,
+            6 => Self::Meter,
+            7 => Self::Kilometer,
+            8 => Self::Mil,
+            9 => Self::Micrometer,
+            10 => Self::Centimeter,
+            11 => Self::Microinch,
+            _ => return None,
+        })
+    }
+
+    pub const fn flag(self) -> usize {
+        match self {
+            Self::Inch => 1,
+            Self::Millimeter => 2,
+            Self::Foot => 4,
+            Self::Mile => 5,
+            Self::Meter => 6,
+            Self::Kilometer => 7,
+            Self::Mil => 8,
+            Self::Micrometer => 9,
+            Self::Centimeter => 10,
+            Self::Microinch => 11,
+        }
+    }
+
+    pub const fn scale_to_mm(self) -> f64 {
+        match self {
+            Self::Inch => 25.4,
+            Self::Millimeter => 1.,
+            Self::Foot => 304.8,
+            Self::Mile => 1_609_344.,
+            Self::Meter => 1_000.,
+            Self::Kilometer => 1_000_000.,
+            Self::Mil => 0.0254,
+            Self::Micrometer => 0.001,
+            Self::Centimeter => 10.,
+            Self::Microinch => 25.4e-6,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct IgesV2ImportOptions {
+    pub unit_override: Option<IgesLengthUnit>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct IgesV2UnitReport {
+    pub declared_unit: IgesLengthUnit,
+    pub applied_unit: IgesLengthUnit,
+    pub declared_flag: usize,
+    pub declared_scale_to_mm: f64,
+    pub applied_scale_to_mm: f64,
+    pub overridden: bool,
+    pub warning: Option<String>,
+}
+
+impl IgesV2UnitReport {
+    fn export_millimeters() -> Self {
+        Self {
+            declared_unit: IgesLengthUnit::Millimeter,
+            applied_unit: IgesLengthUnit::Millimeter,
+            declared_flag: IgesLengthUnit::Millimeter.flag(),
+            declared_scale_to_mm: 1.,
+            applied_scale_to_mm: 1.,
+            overridden: false,
+            warning: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct IgesV2DiscardReport {
+    pub blanked: usize,
+    pub dependent_without_owner: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -30,6 +137,32 @@ pub struct IgesV2Report {
     pub ignored_metadata: Vec<String>,
     pub entity_count: usize,
     pub topology_count: usize,
+    pub units: IgesV2UnitReport,
+    pub discarded: IgesV2DiscardReport,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Subordinate {
+    Independent,
+    Physical,
+    Logical,
+    Both,
+}
+
+impl Subordinate {
+    fn requires_physical(self) -> bool {
+        matches!(self, Self::Physical | Self::Both)
+    }
+
+    fn requires_logical(self) -> bool {
+        matches!(self, Self::Logical | Self::Both)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct DirectoryStatus {
+    blanked: bool,
+    subordinate: Subordinate,
 }
 
 #[derive(Clone, Debug)]
@@ -40,6 +173,7 @@ struct Directory {
     color: i32,
     form: usize,
     label: String,
+    status: DirectoryStatus,
 }
 
 #[derive(Clone, Debug)]
@@ -47,6 +181,50 @@ struct Entity {
     directory: Directory,
     values: Vec<String>,
     canonical: String,
+}
+
+fn parse_directory_status(de: usize, text: &str) -> Result<DirectoryStatus> {
+    if text.len() != 8 || !text.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(refuse(format!(
+            "Invalid IGES DE {de} status field: expected exactly 8 digits"
+        )));
+    }
+    let blanked = match &text[0..2] {
+        "00" => false,
+        "01" => true,
+        code => {
+            return Err(refuse(format!(
+                "Invalid IGES DE {de} blank status code {code}"
+            )));
+        }
+    };
+    let subordinate = match &text[2..4] {
+        "00" => Subordinate::Independent,
+        "01" => Subordinate::Physical,
+        "02" => Subordinate::Logical,
+        "03" => Subordinate::Both,
+        code => {
+            return Err(refuse(format!(
+                "Invalid IGES DE {de} subordinate status code {code}"
+            )));
+        }
+    };
+    let entity_use = &text[4..6];
+    if !matches!(entity_use, "00" | "01" | "02" | "03" | "04" | "05" | "06") {
+        return Err(refuse(format!(
+            "Invalid IGES DE {de} entity-use status code {entity_use}"
+        )));
+    }
+    let hierarchy = &text[6..8];
+    if !matches!(hierarchy, "00" | "01" | "02") {
+        return Err(refuse(format!(
+            "Invalid IGES DE {de} hierarchy status code {hierarchy}"
+        )));
+    }
+    Ok(DirectoryStatus {
+        blanked,
+        subordinate,
+    })
 }
 
 fn field(line: &str, start: usize, end: usize) -> &str {
@@ -129,7 +307,7 @@ fn tokenize(text: &str, parameter_delimiter: char, record_delimiter: char) -> Re
     Ok(out)
 }
 
-fn parse_global(text: &str) -> Result<(char, char, f64)> {
+fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64)> {
     let mut parameter = ',';
     let mut record = ';';
     let provisional = tokenize(text, ',', ';')?;
@@ -143,27 +321,36 @@ fn parse_global(text: &str) -> Result<(char, char, f64)> {
         return Err(refuse("Invalid IGES global delimiters"));
     }
     let values = tokenize(text, parameter, record)?;
+    for index in [6, 7, 8, 9, 10, 12, 15, 16, 18, 19, 22, 23] {
+        if let Some(value) = values.get(index).filter(|value| !value.is_empty()) {
+            real(value, &format!("global numeric value {index}"))?;
+        }
+    }
     let unit_flag = values
         .get(13)
-        .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(2);
-    let scale = match unit_flag {
-        1 => 25.4,
-        2 => 1.,
-        4 => 304.8,
-        5 => 1609344.,
-        6 => 1000.,
-        7 => 1_000_000.,
-        8 => 0.0254,
-        9 => 0.001,
-        10 => 10.,
-        11 => 1e-3,
-        _ => return Err(refuse(format!("Unsupported IGES unit flag {unit_flag}"))),
-    };
-    Ok((parameter, record, scale))
+        .ok_or_else(|| refuse("Missing IGES unit flag"))?;
+    if unit_flag.is_empty() {
+        return Err(refuse("Missing IGES unit flag"));
+    }
+    let unit_flag = unit_flag
+        .parse::<usize>()
+        .map_err(|_| refuse(format!("Invalid IGES unit flag {unit_flag}")))?;
+    let unit = IgesLengthUnit::from_flag(unit_flag)
+        .ok_or_else(|| refuse(format!("Unsupported IGES unit flag {unit_flag}")))?;
+    let resolution = real(
+        values
+            .get(18)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| refuse("Missing IGES global minimum resolution (parameter 19)"))?,
+        "global minimum resolution (parameter 19)",
+    )?;
+    if resolution <= 0. {
+        return Err(refuse("IGES global minimum resolution must be positive"));
+    }
+    Ok((parameter, record, unit, resolution))
 }
 
-fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, f64)> {
+fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
     if text.len() > MAX_BYTES {
         return Err(refuse("IGES payload exceeds 16 MiB"));
     }
@@ -215,7 +402,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, f64)> {
         .iter()
         .map(|(_, l)| field(l, 0, 72))
         .collect::<String>();
-    let (pd, rd, scale) = parse_global(&global)?;
+    let (pd, rd, unit, resolution) = parse_global(&global)?;
     let directory = &sections[&'D'];
     if !directory.len().is_multiple_of(2) {
         return Err(refuse("IGES directory section must contain record pairs"));
@@ -241,6 +428,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, f64)> {
                 color: integer(field(b, 16, 24), "color")? as i32,
                 form: positive(field(b, 32, 40), "form")?,
                 label: field(b, 56, 64).trim().to_string(),
+                status: parse_directory_status(de, field(a, 64, 72))?,
             },
         );
         if directories.len() > MAX_ENTITIES {
@@ -292,7 +480,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, f64)> {
             },
         );
     }
-    Ok((entities, scale))
+    Ok((entities, unit, resolution))
 }
 
 fn entity(entities: &BTreeMap<usize, Entity>, de: usize, ty: usize) -> Result<&Entity> {
@@ -318,6 +506,272 @@ fn f(v: &[String], at: usize, what: &str) -> Result<f64> {
         v.get(at).ok_or_else(|| refuse(format!("Missing {what}")))?,
         what,
     )
+}
+
+#[derive(Clone, Copy, Debug)]
+struct EntityReference {
+    target: usize,
+    role: &'static str,
+}
+
+fn entity_references(de: usize, entity: &Entity) -> Result<Vec<EntityReference>> {
+    let v = &entity.values;
+    let exact_count = |base: usize, n: usize, stride: usize, what: &str| -> Result<()> {
+        let expected = n
+            .checked_mul(stride)
+            .and_then(|count| count.checked_add(base))
+            .ok_or_else(|| refuse(format!("IGES DE {de} {what} size overflow")))?;
+        if v.len() != expected {
+            return Err(refuse(format!("Malformed IGES DE {de} {what}")));
+        }
+        Ok(())
+    };
+    let mut refs = Vec::new();
+    let mut push = |at: usize, role: &'static str| -> Result<()> {
+        refs.push(EntityReference {
+            target: u(v, at, role)?,
+            role,
+        });
+        Ok(())
+    };
+    match entity.directory.ty {
+        100 | 502 | 110 | 124 | 126 | 128 | 141 | 142 | 143 | 314 => {}
+        102 => {
+            let n = u(v, 1, "composite segment count")?;
+            exact_count(2, n, 1, "composite curve")?;
+            for i in 0..n {
+                push(2 + i, "composite segment")?;
+            }
+        }
+        504 => {
+            let n = u(v, 1, "edge count")?;
+            exact_count(2, n, 5, "edge list")?;
+            for i in 0..n {
+                let at = 2 + 5 * i;
+                push(at, "edge curve")?;
+                push(at + 1, "start vertex list")?;
+                push(at + 3, "end vertex list")?;
+            }
+        }
+        508 => {
+            let n = u(v, 1, "loop member count")?;
+            exact_count(2, n, 7, "loop")?;
+            for i in 0..n {
+                let at = 2 + 7 * i;
+                push(at + 1, "loop edge list")?;
+                push(at + 6, "loop pcurve")?;
+            }
+        }
+        510 => {
+            let n = u(v, 2, "face loop count")?;
+            exact_count(4, n, 1, "face")?;
+            push(1, "face surface")?;
+            for i in 0..n {
+                push(4 + i, "face loop")?;
+            }
+        }
+        514 => {
+            let n = u(v, 1, "shell face count")?;
+            exact_count(2, n, 2, "shell")?;
+            for i in 0..n {
+                push(2 + 2 * i, "shell face")?;
+            }
+        }
+        186 => {
+            let n = u(v, 3, "solid void count")?;
+            exact_count(4, n, 2, "solid")?;
+            push(1, "solid outer shell")?;
+            for i in 0..n {
+                push(4 + 2 * i, "solid void shell")?;
+            }
+        }
+        402 => match entity.directory.form {
+            1 | 14 => {
+                return Err(refuse(format!(
+                    "Unsupported IGES DE {de} associativity form {}: back-pointer parameters are not safely separable",
+                    entity.directory.form
+                )));
+            }
+            7 | 15 => {
+                let n = u(v, 1, "associativity member count")?;
+                exact_count(2, n, 1, "associativity group")?;
+                for i in 0..n {
+                    push(2 + i, "associativity member")?;
+                }
+            }
+            _ => {}
+        },
+        406 if entity.directory.form == 15 && v.len() == 4 => {
+            push(3, "identity target")?;
+        }
+        _ => {}
+    }
+    Ok(refs)
+}
+
+fn graph_work(work: &mut usize, amount: usize) -> Result<()> {
+    *work = work
+        .checked_add(amount)
+        .ok_or_else(|| refuse("IGES directory graph work budget overflow"))?;
+    if *work > MAX_GRAPH_WORK {
+        return Err(refuse("IGES directory graph work budget exceeded"));
+    }
+    Ok(())
+}
+
+fn filter_discarded_entities(
+    entities: &mut BTreeMap<usize, Entity>,
+) -> Result<IgesV2DiscardReport> {
+    let mut work = 0;
+    let mut live = BTreeSet::new();
+    let mut blanked = 0;
+    for (&de, entity) in entities.iter() {
+        graph_work(&mut work, 1)?;
+        if entity.directory.status.blanked {
+            blanked += 1;
+        } else {
+            live.insert(de);
+        }
+    }
+
+    let mut references = BTreeMap::new();
+    let mut physical_owners = BTreeMap::<usize, BTreeSet<usize>>::new();
+    let mut logical_owners = BTreeMap::<usize, BTreeSet<usize>>::new();
+    let mut dependents_by_owner = BTreeMap::<usize, BTreeSet<usize>>::new();
+    for &de in &live {
+        let entity = &entities[&de];
+        let refs = entity_references(de, entity)?;
+        graph_work(&mut work, refs.len())?;
+        for reference in &refs {
+            let owners = if entity.directory.ty == 402 {
+                Some(&mut logical_owners)
+            } else if entity.directory.ty == 406 {
+                None
+            } else {
+                Some(&mut physical_owners)
+            };
+            if let Some(owners) = owners {
+                owners.entry(reference.target).or_default().insert(de);
+                dependents_by_owner
+                    .entry(de)
+                    .or_default()
+                    .insert(reference.target);
+            }
+        }
+        references.insert(de, refs);
+    }
+
+    let mut worklist = live
+        .iter()
+        .copied()
+        .filter(|&de| entities[&de].directory.status.subordinate != Subordinate::Independent)
+        .collect::<BTreeSet<_>>();
+    let mut dependent_without_owner = 0;
+    while let Some(de) = worklist.pop_first() {
+        graph_work(&mut work, 1)?;
+        if !live.contains(&de) {
+            continue;
+        }
+        let subordinate = entities[&de].directory.status.subordinate;
+        let no_physical = physical_owners.get(&de).is_none_or(BTreeSet::is_empty);
+        let no_logical = logical_owners.get(&de).is_none_or(BTreeSet::is_empty);
+        if !(subordinate.requires_physical() && no_physical)
+            && !(subordinate.requires_logical() && no_logical)
+        {
+            continue;
+        }
+        live.remove(&de);
+        dependent_without_owner += 1;
+        let dependents = dependents_by_owner.get(&de).cloned().unwrap_or_default();
+        for dependent in dependents {
+            graph_work(&mut work, 1)?;
+            if let Some(owners) = physical_owners.get_mut(&dependent) {
+                owners.remove(&de);
+            }
+            if let Some(owners) = logical_owners.get_mut(&dependent) {
+                owners.remove(&de);
+            }
+            worklist.insert(dependent);
+        }
+    }
+
+    for &de in &live {
+        for reference in &references[&de] {
+            graph_work(&mut work, 1)?;
+            if !live.contains(&reference.target) {
+                let state = if entities.contains_key(&reference.target) {
+                    "discarded"
+                } else {
+                    "missing"
+                };
+                let message = format!(
+                    "Retained IGES DE {de} references {state} DE {} as {}",
+                    reference.target, reference.role
+                );
+                return Err(if entities[&de].directory.ty == 102 {
+                    composite_error("BREP_IGES_V2_COMPOSITE_DANGLING", message)
+                } else {
+                    refuse(message)
+                });
+            }
+        }
+    }
+
+    let group_nodes = live
+        .iter()
+        .copied()
+        .filter(|&de| entities[&de].directory.ty == 402)
+        .collect::<BTreeSet<_>>();
+    let mut indegree = group_nodes
+        .iter()
+        .map(|&de| (de, 0usize))
+        .collect::<BTreeMap<_, _>>();
+    let mut outgoing = BTreeMap::<usize, Vec<usize>>::new();
+    for &de in &group_nodes {
+        for reference in &references[&de] {
+            if group_nodes.contains(&reference.target) {
+                graph_work(&mut work, 1)?;
+                *indegree.get_mut(&reference.target).unwrap() += 1;
+                outgoing.entry(de).or_default().push(reference.target);
+            }
+        }
+    }
+    let mut ready = indegree
+        .iter()
+        .filter(|(_, count)| **count == 0)
+        .map(|(&de, _)| de)
+        .collect::<BTreeSet<_>>();
+    let mut processed = 0;
+    while let Some(de) = ready.pop_first() {
+        graph_work(&mut work, 1)?;
+        processed += 1;
+        if let Some(targets) = outgoing.get(&de) {
+            for &target in targets {
+                graph_work(&mut work, 1)?;
+                let count = indegree.get_mut(&target).unwrap();
+                *count -= 1;
+                if *count == 0 {
+                    ready.insert(target);
+                }
+            }
+        }
+    }
+    if processed != group_nodes.len() {
+        let de = indegree
+            .iter()
+            .find(|(_, count)| **count > 0)
+            .map(|(&de, _)| de)
+            .unwrap();
+        return Err(refuse(format!(
+            "IGES 402 associativity cycle involving DE {de}"
+        )));
+    }
+
+    entities.retain(|de, _| live.contains(de));
+    Ok(IgesV2DiscardReport {
+        blanked,
+        dependent_without_owner,
+    })
 }
 
 fn curve126(
@@ -377,6 +831,349 @@ fn curve126(
     };
     c.validate()?;
     Ok(c)
+}
+
+#[derive(Clone)]
+struct CompositeSegment {
+    de: usize,
+    curve: Curve,
+}
+
+enum CompositeVisit {
+    Enter(usize, usize),
+    Exit(usize, usize),
+}
+
+struct CurveDispatcher<'a> {
+    entities: &'a BTreeMap<usize, Entity>,
+    dim: usize,
+    scale: f64,
+    tolerance_mm: f64,
+    work: usize,
+}
+
+impl<'a> CurveDispatcher<'a> {
+    fn budget(&mut self, composite: usize, amount: usize) -> Result<()> {
+        self.work = self.work.checked_add(amount).ok_or_else(|| {
+            composite_error(
+                "BREP_IGES_V2_COMPOSITE_BUDGET",
+                format!("IGES composite DE {composite} work budget overflow"),
+            )
+        })?;
+        if self.work > MAX_COMPOSITE_WORK {
+            return Err(composite_error(
+                "BREP_IGES_V2_COMPOSITE_BUDGET",
+                format!("IGES composite DE {composite} work budget exceeded"),
+            ));
+        }
+        Ok(())
+    }
+
+    fn base_curve(&mut self, composite: usize, de: usize, linear: bool) -> Result<Curve> {
+        let entity = self.entities.get(&de).ok_or_else(|| {
+            composite_error(
+                "BREP_IGES_V2_COMPOSITE_DANGLING",
+                format!("IGES composite DE {composite} has missing segment DE {de}"),
+            )
+        })?;
+        let curve = match entity.directory.ty {
+            100 => {
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
+                    format!("IGES circular arc DE {de} is unsupported in curve dispatch"),
+                ));
+            }
+            110 => {
+                let values = &entity.values;
+                if values.len() != 7 {
+                    return Err(composite_error(
+                        "BREP_IGES_V2_COMPOSITE_DANGLING",
+                        format!("Malformed IGES line DE {de} in composite DE {composite}"),
+                    ));
+                }
+                let mut points = Vec::with_capacity(2);
+                for endpoint in 0..2 {
+                    let at = 1 + 3 * endpoint;
+                    let mut point = vec![f(values, at, "line X")?, f(values, at + 1, "line Y")?];
+                    if self.dim == 3 {
+                        point.push(f(values, at + 2, "line Z")?);
+                    }
+                    for coordinate in &mut point {
+                        *coordinate *= self.scale;
+                    }
+                    points.push(point);
+                }
+                Curve::from_polyline(points)?
+            }
+            126 => curve126(self.entities, de, self.dim, self.scale)?,
+            102 => {
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_CYCLE",
+                    format!("Unexpected nested dispatch at IGES composite DE {de}"),
+                ));
+            }
+            _ => {
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_DANGLING",
+                    format!(
+                        "IGES composite DE {composite} segment DE {de} has non-curve type {}",
+                        entity.directory.ty
+                    ),
+                ));
+            }
+        };
+        if !linear {
+            return Ok(curve);
+        }
+        let uniform_weights = curve
+            .weights
+            .first()
+            .is_some_and(|first| curve.weights.iter().all(|weight| weight == first));
+        if curve.degree != 1 || curve.periodic || !uniform_weights {
+            return Err(composite_error(
+                "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
+                format!(
+                    "IGES composite DE {composite} segment DE {de} requires nonlinear or nonuniform-rational join"
+                ),
+            ));
+        }
+        if curve.control_points.len() > MAX_COMPOSITE_CONTROLS {
+            return Err(composite_error(
+                "BREP_IGES_V2_COMPOSITE_BUDGET",
+                format!("IGES composite DE {composite} control budget exceeded at DE {de}"),
+            ));
+        }
+        Ok(Curve::from_polyline(curve.control_points.clone())?)
+    }
+
+    fn endpoints(curve: &Curve) -> Result<(Vec<f64>, Vec<f64>)> {
+        let domain = curve.domain();
+        Ok((
+            curve.evaluate(domain[0])?.point,
+            curve.evaluate(domain[1])?.point,
+        ))
+    }
+
+    fn distance(a: &[f64], b: &[f64]) -> Result<f64> {
+        if a.len() != b.len() {
+            return Err(composite_error(
+                "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
+                "IGES composite segments have inconsistent dimensions",
+            ));
+        }
+        let distance = a
+            .iter()
+            .zip(b)
+            .fold(0., |sum, (x, y)| sum + (x - y) * (x - y))
+            .sqrt();
+        if !distance.is_finite() {
+            return Err(composite_error(
+                "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
+                "Non-finite IGES composite endpoint distance",
+            ));
+        }
+        Ok(distance)
+    }
+
+    fn join_segments(
+        composite: usize,
+        segments: &[CompositeSegment],
+        tolerance_mm: f64,
+    ) -> Result<Curve> {
+        let Some(first) = segments.first() else {
+            return Err(composite_error(
+                "BREP_IGES_V2_COMPOSITE_DANGLING",
+                format!("IGES composite DE {composite} has no segments"),
+            ));
+        };
+        let mut joined = Curve::from_polyline(first.curve.control_points.clone())?;
+        let mut previous = first.de;
+        for (index, segment) in segments.iter().enumerate().skip(1) {
+            let (mut current_start, mut current_end) = Self::endpoints(&joined)?;
+            let (segment_start, segment_end) = Self::endpoints(&segment.curve)?;
+            let mut end_start = Self::distance(&current_end, &segment_start)?;
+            let mut end_end = Self::distance(&current_end, &segment_end)?;
+            let mut start_start = Self::distance(&current_start, &segment_start)?;
+            let mut start_end = Self::distance(&current_start, &segment_end)?;
+            let mut forward =
+                usize::from(end_start <= tolerance_mm) + usize::from(end_end <= tolerance_mm);
+            let mut backward =
+                usize::from(start_start <= tolerance_mm) + usize::from(start_end <= tolerance_mm);
+            if index == 1 && forward == 0 && backward > 0 {
+                joined = joined.reverse()?;
+                (current_start, current_end) = Self::endpoints(&joined)?;
+                end_start = Self::distance(&current_end, &segment_start)?;
+                end_end = Self::distance(&current_end, &segment_end)?;
+                start_start = Self::distance(&current_start, &segment_start)?;
+                start_end = Self::distance(&current_start, &segment_end)?;
+                forward =
+                    usize::from(end_start <= tolerance_mm) + usize::from(end_end <= tolerance_mm);
+                backward = usize::from(start_start <= tolerance_mm)
+                    + usize::from(start_end <= tolerance_mm);
+            }
+            if forward == 0 {
+                if backward > 0 {
+                    return Err(composite_error(
+                        "BREP_IGES_V2_COMPOSITE_AMBIGUOUS",
+                        format!(
+                            "IGES composite DE {composite} requires reordering at segments DE {previous} and DE {}",
+                            segment.de
+                        ),
+                    ));
+                }
+                let gap = end_start.min(end_end).min(start_start).min(start_end);
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_GAP",
+                    format!(
+                        "IGES composite DE {composite}, segments DE {previous} -> DE {}, gap_mm={gap:.17e}, tolerance_mm={tolerance_mm:.17e}",
+                        segment.de
+                    ),
+                ));
+            }
+            if forward > 1 || backward > 0 {
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_AMBIGUOUS",
+                    format!(
+                        "IGES composite DE {composite} has ambiguous orientation at segments DE {previous} and DE {}",
+                        segment.de
+                    ),
+                ));
+            }
+            let candidate = if end_end <= tolerance_mm {
+                segment.curve.reverse()?
+            } else {
+                segment.curve.clone()
+            };
+            let (candidate_start, _) = Self::endpoints(&candidate)?;
+            let snap = current_end
+                .iter()
+                .zip(&candidate_start)
+                .map(|(a, b)| (a + b) * 0.5)
+                .collect::<Vec<_>>();
+            let mut points = joined.control_points.clone();
+            let mut candidate_points = candidate.control_points.clone();
+            let (Some(joined_end), Some(candidate_end)) =
+                (points.last_mut(), candidate_points.first_mut())
+            else {
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_DANGLING",
+                    format!("IGES composite DE {composite} has an empty segment"),
+                ));
+            };
+            *joined_end = snap.clone();
+            *candidate_end = snap;
+            if points.len() + candidate_points.len() - 1 > MAX_COMPOSITE_CONTROLS {
+                return Err(composite_error(
+                    "BREP_IGES_V2_COMPOSITE_BUDGET",
+                    format!("IGES composite DE {composite} control budget exceeded"),
+                ));
+            }
+            points.extend(candidate_points.into_iter().skip(1));
+            joined = Curve::from_polyline(points)?;
+            previous = segment.de;
+        }
+        joined.validate()?;
+        Ok(joined)
+    }
+
+    fn composite(&mut self, root: usize) -> Result<Curve> {
+        let mut stack = vec![CompositeVisit::Enter(root, 0)];
+        let mut active = BTreeSet::new();
+        let mut memo = BTreeMap::<usize, Curve>::new();
+        let mut segments = Vec::<CompositeSegment>::new();
+        let mut result = None;
+        while let Some(visit) = stack.pop() {
+            self.budget(root, 1)?;
+            match visit {
+                CompositeVisit::Enter(de, depth) => {
+                    if active.contains(&de) {
+                        return Err(composite_error(
+                            "BREP_IGES_V2_COMPOSITE_CYCLE",
+                            format!("IGES composite cycle at DE {de}"),
+                        ));
+                    }
+                    if let Some(curve) = memo.get(&de) {
+                        if segments.len() >= MAX_COMPOSITE_SEGMENTS {
+                            return Err(composite_error(
+                                "BREP_IGES_V2_COMPOSITE_BUDGET",
+                                format!("IGES composite DE {root} segment budget exceeded"),
+                            ));
+                        }
+                        segments.push(CompositeSegment {
+                            de,
+                            curve: curve.clone(),
+                        });
+                        continue;
+                    }
+                    let entity = self.entities.get(&de).ok_or_else(|| {
+                        composite_error(
+                            "BREP_IGES_V2_COMPOSITE_DANGLING",
+                            format!("Missing IGES composite segment DE {de}"),
+                        )
+                    })?;
+                    if entity.directory.ty != 102 {
+                        let curve = self.base_curve(root, de, true)?;
+                        if segments.len() >= MAX_COMPOSITE_SEGMENTS {
+                            return Err(composite_error(
+                                "BREP_IGES_V2_COMPOSITE_BUDGET",
+                                format!("IGES composite DE {root} segment budget exceeded"),
+                            ));
+                        }
+                        segments.push(CompositeSegment { de, curve });
+                        continue;
+                    }
+                    if depth >= MAX_COMPOSITE_DEPTH {
+                        return Err(composite_error(
+                            "BREP_IGES_V2_COMPOSITE_BUDGET",
+                            format!("IGES composite DE {root} depth budget exceeded at DE {de}"),
+                        ));
+                    }
+                    let refs = entity_references(de, entity)?;
+                    if refs.is_empty() {
+                        return Err(composite_error(
+                            "BREP_IGES_V2_COMPOSITE_DANGLING",
+                            format!("IGES composite DE {de} has no segments"),
+                        ));
+                    }
+                    active.insert(de);
+                    stack.push(CompositeVisit::Exit(de, segments.len()));
+                    for reference in refs.iter().rev() {
+                        self.budget(root, 1)?;
+                        stack.push(CompositeVisit::Enter(reference.target, depth + 1));
+                    }
+                }
+                CompositeVisit::Exit(de, start) => {
+                    active.remove(&de);
+                    let curve = Self::join_segments(de, &segments[start..], self.tolerance_mm)?;
+                    memo.insert(de, curve.clone());
+                    if de == root {
+                        result = Some(curve);
+                    }
+                }
+            }
+        }
+        result.ok_or_else(|| {
+            composite_error(
+                "BREP_IGES_V2_COMPOSITE_DANGLING",
+                format!("IGES composite DE {root} produced no curve"),
+            )
+        })
+    }
+
+    fn dispatch(mut self, de: usize) -> Result<Curve> {
+        let is_composite = self
+            .entities
+            .get(&de)
+            .ok_or_else(|| refuse(format!("Missing IGES curve DE {de}")))?
+            .directory
+            .ty
+            == 102;
+        if is_composite {
+            self.composite(de)
+        } else {
+            self.base_curve(de, de, false)
+        }
+    }
 }
 
 fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Result<Surface> {
@@ -474,6 +1271,7 @@ fn verify_correspondence(
 struct Builder<'a> {
     e: &'a BTreeMap<usize, Entity>,
     scale: f64,
+    merge_tolerance_mm: f64,
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,
     loops: Vec<Loop>,
@@ -488,6 +1286,17 @@ struct Builder<'a> {
     body_de: Vec<usize>,
 }
 impl<'a> Builder<'a> {
+    fn curve(&self, de: usize, dim: usize) -> Result<Curve> {
+        CurveDispatcher {
+            entities: self.e,
+            dim,
+            scale: if dim == 3 { self.scale } else { 1. },
+            tolerance_mm: self.merge_tolerance_mm,
+            work: 0,
+        }
+        .dispatch(de)
+    }
+
     fn vertex_list(&mut self, de: usize) -> Result<Vec<usize>> {
         let v = &entity(self.e, de, 502)?.values;
         let n = u(v, 1, "vertex count")?;
@@ -528,7 +1337,7 @@ impl<'a> Builder<'a> {
             }
             for i in 0..n {
                 let at = 2 + 5 * i;
-                let curve = curve126(self.e, u(v, at, "edge curve")?, 3, self.scale)?;
+                let curve = self.curve(u(v, at, "edge curve")?, 3)?;
                 let vl0 = u(v, at + 1, "start vertex list")?;
                 let vi0 = u(v, at + 2, "start vertex index")?;
                 let vl1 = u(v, at + 3, "end vertex list")?;
@@ -575,15 +1384,11 @@ impl<'a> Builder<'a> {
                 if iso > 1 {
                     return Err(refuse("Invalid IGES isoparametric flag"));
                 }
-                let pcurve = curve126(self.e, u(v, at + 6, "loop pcurve")?, 2, 1.)?;
+                let pcurve = self.curve(u(v, at + 6, "loop pcurve")?, 2)?;
                 let edge = *edge_lists
                     .get(&(el, ei))
                     .ok_or_else(|| refuse("Invalid IGES edge-list reference"))?;
-                coedges.push(Coedge::new(
-                    edge,
-                    reversed,
-                    pcurve,
-                ));
+                coedges.push(Coedge::new(edge, reversed, pcurve));
                 at += 7;
             }
             if at != v.len() {
@@ -838,9 +1643,88 @@ fn restore_identity(
     })
 }
 
+/// Conservative maximum axis-aligned extent of vertices and 3D control hulls.
+/// Two-dimensional pcurve control points are deliberately not included.
+fn geometric_extent_mm(model: &Model) -> f64 {
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    let mut include = |point: &[f64]| {
+        for axis in 0..3 {
+            min[axis] = min[axis].min(point[axis]);
+            max[axis] = max[axis].max(point[axis]);
+        }
+    };
+    for vertex in &model.vertices {
+        include(&vertex.point);
+    }
+    for edge in &model.edges {
+        for point in &edge.curve.control_points {
+            include(point);
+        }
+    }
+    for face in &model.faces {
+        for point in face.surface.control_points.iter().flatten() {
+            include(point);
+        }
+    }
+    (0..3).map(|axis| max[axis] - min[axis]).fold(0., f64::max)
+}
+
+/// Broad diagnostic band for mechanical parts: 1 micrometre through 10 metres.
+/// It never selects or changes units; it only gates an inch/millimeter warning.
+fn reasonable_mechanical_extent(extent_mm: f64) -> bool {
+    (1e-3..=1e4).contains(&extent_mm)
+}
+
+fn unit_mismatch_warning(
+    model: &Model,
+    declared: IgesLengthUnit,
+    applied: IgesLengthUnit,
+) -> Option<String> {
+    let alternative = match declared {
+        IgesLengthUnit::Inch => IgesLengthUnit::Millimeter,
+        IgesLengthUnit::Millimeter => IgesLengthUnit::Inch,
+        _ => return None,
+    };
+    let raw_extent = geometric_extent_mm(model) / applied.scale_to_mm();
+    let declared_extent = raw_extent * declared.scale_to_mm();
+    let alternative_extent = raw_extent * alternative.scale_to_mm();
+    if reasonable_mechanical_extent(declared_extent)
+        || !reasonable_mechanical_extent(alternative_extent)
+    {
+        return None;
+    }
+    Some(format!(
+        "Possible IGES unit mismatch: declared {:?} (scale {} mm/unit) gives control-hull/vertex extent {} mm, outside the mechanical-part band [0.001, 10000] mm; alternative {:?} (scale {} mm/unit) gives extent {} mm inside the band. Diagnostic only; units are not changed automatically.",
+        declared,
+        declared.scale_to_mm(),
+        declared_extent,
+        alternative,
+        alternative.scale_to_mm(),
+        alternative_extent,
+    ))
+}
+
 pub fn import_iges_v2(text: &str) -> Result<(Model, FeatureCertificate, IgesV2Report)> {
-    let (entities, scale) = parse(text)?;
-    const GEOMETRIC: &[usize] = &[124, 126, 128, 141, 142, 143, 186, 502, 504, 508, 510, 514];
+    import_iges_v2_with_options(text, IgesV2ImportOptions::default())
+}
+
+pub fn import_iges_v2_with_options(
+    text: &str,
+    options: IgesV2ImportOptions,
+) -> Result<(Model, FeatureCertificate, IgesV2Report)> {
+    let (mut entities, declared_unit, resolution) = parse(text)?;
+    let entity_count = entities.len();
+    let discarded = filter_discarded_entities(&mut entities)?;
+    let applied_unit = options.unit_override.unwrap_or(declared_unit);
+    let scale = applied_unit.scale_to_mm();
+    let merge_tolerance_mm = resolution * scale;
+    if !merge_tolerance_mm.is_finite() || merge_tolerance_mm <= 0. {
+        return Err(refuse("Invalid scaled IGES composite merge tolerance"));
+    }
+    const GEOMETRIC: &[usize] = &[
+        100, 102, 110, 124, 126, 128, 141, 142, 143, 186, 502, 504, 508, 510, 514,
+    ];
     const METADATA: &[usize] = &[314, 402, 406];
     let mut ignored = BTreeSet::new();
     for e in entities.values() {
@@ -868,6 +1752,7 @@ pub fn import_iges_v2(text: &str) -> Result<(Model, FeatureCertificate, IgesV2Re
     let builder = Builder {
         e: &entities,
         scale,
+        merge_tolerance_mm,
         vertices: vec![],
         edges: vec![],
         loops: vec![],
@@ -884,6 +1769,7 @@ pub fn import_iges_v2(text: &str) -> Result<(Model, FeatureCertificate, IgesV2Re
     let (mut model, map) = builder.build()?;
     let identity = restore_identity(&entities, &map, &mut model)?;
     let topology_count = map.len();
+    let warning = unit_mismatch_warning(&model, declared_unit, applied_unit);
     Ok((
         model,
         FeatureCertificate {
@@ -900,8 +1786,18 @@ pub fn import_iges_v2(text: &str) -> Result<(Model, FeatureCertificate, IgesV2Re
         IgesV2Report {
             identity,
             ignored_metadata: ignored.into_iter().collect(),
-            entity_count: entities.len(),
+            entity_count,
             topology_count,
+            units: IgesV2UnitReport {
+                declared_unit,
+                applied_unit,
+                declared_flag: declared_unit.flag(),
+                declared_scale_to_mm: declared_unit.scale_to_mm(),
+                applied_scale_to_mm: applied_unit.scale_to_mm(),
+                overridden: applied_unit != declared_unit,
+                warning,
+            },
+            discarded,
         },
     ))
 }
@@ -1046,17 +1942,16 @@ fn render(mut w: Writer) -> Result<String> {
         72,
     )?];
     let global = format!(
-        "1H,,1H;,{} ,{} ,{} ,{} ,{} ,{},32,38,6,308,15,{},1.0,2,2HMM,1,0.001,{},{} ,11,0,{} ,{};",
+        "1H,,1H;,{} ,{} ,{} ,{} ,32,38,6,308,15,{},1.0,2,2HMM,1,0.001,{},0.001,{},{},{},11,0,{};",
         hollerith("OpenSCAD Viewer"),
         hollerith("open-scad-viewer"),
         hollerith("OpenSCAD Viewer"),
         hollerith("open-scad-viewer"),
-        hollerith(""),
-        hollerith(""),
         hollerith("IGES2"),
-        number(1e-7),
         hollerith("20260917.000000"),
         number(1e-7),
+        hollerith(""),
+        hollerith(""),
         hollerith("20260917.000000")
     );
     for (i, chunk) in global.as_bytes().chunks(72).enumerate() {
@@ -1262,6 +2157,8 @@ pub fn export_iges_v2(model: &Model) -> Result<(String, FeatureCertificate, Iges
             ignored_metadata: vec![],
             entity_count,
             topology_count,
+            units: IgesV2UnitReport::export_millimeters(),
+            discarded: IgesV2DiscardReport::default(),
         },
     ))
 }
@@ -1319,6 +2216,371 @@ mod tests {
             }));
     }
 
+    fn base_text() -> String {
+        let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+        export_iges_v2(&model).unwrap().0
+    }
+
+    fn composite_base_text() -> String {
+        let model = crate::cuboid([0., 0., 0.], [2., 3., 4.]).unwrap();
+        export_iges_v2(&model).unwrap().0
+    }
+
+    fn directory_entity(text: &str, ty: usize, ordinal: usize) -> usize {
+        text.lines()
+            .filter(|line| {
+                line.as_bytes()[72] == b'D'
+                    && line[..8].trim().parse::<usize>().unwrap() == ty
+                    && line[73..80].trim().parse::<usize>().unwrap() % 2 == 1
+            })
+            .nth(ordinal)
+            .map(|line| line[73..80].trim().parse().unwrap())
+            .unwrap()
+    }
+
+    fn set_status(text: &str, de: usize, status: &str) -> String {
+        let mut lines = text.lines().map(str::to_string).collect::<Vec<_>>();
+        let line = lines
+            .iter_mut()
+            .find(|line| {
+                line.as_bytes()[72] == b'D' && line[73..80].trim().parse::<usize>().unwrap() == de
+            })
+            .unwrap();
+        line.replace_range(64..72, status);
+        lines.join("\n") + "\n"
+    }
+
+    fn append_entity(
+        text: &str,
+        ty: usize,
+        form: usize,
+        status: &str,
+        values: impl FnOnce(usize) -> Vec<String>,
+    ) -> (String, usize) {
+        let mut lines = text.lines().map(str::to_string).collect::<Vec<_>>();
+        let mut terminate = lines.pop().unwrap();
+        let old_d = lines
+            .iter()
+            .filter(|line| line.as_bytes()[72] == b'D')
+            .count()
+            / 2;
+        let old_p = lines
+            .iter()
+            .filter(|line| line.as_bytes()[72] == b'P')
+            .count();
+        let de = 2 * old_d + 1;
+        let p_start = old_p + 1;
+        let a = format!(
+            "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{status}",
+            ty, p_start, 0, 0, 0, 0, 0, 0
+        );
+        let b = format!(
+            "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:<8}{:>8}",
+            ty, 0, 0, 0, form, 0, 0, "", 0
+        );
+        let d_first = lines
+            .iter()
+            .position(|line| line.as_bytes()[72] == b'P')
+            .unwrap();
+        lines.splice(
+            d_first..d_first,
+            [
+                pad_record(&a, 'D', de, 72).unwrap(),
+                pad_record(&b, 'D', de + 1, 72).unwrap(),
+            ],
+        );
+        let parameter = format!("{};", values(de).join(","));
+        let mut p_count = 0;
+        for chunk in parameter.as_bytes().chunks(64) {
+            let sequence = old_p + p_count + 1;
+            let payload = std::str::from_utf8(chunk).unwrap();
+            lines.push(format!("{payload:<64}{de:>8}P{sequence:>7}",));
+            p_count += 1;
+        }
+        terminate.replace_range(16..24, &format!("D{:>7}", old_d + 1));
+        terminate.replace_range(24..32, &format!("P{:>7}", old_p + p_count));
+        lines.push(terminate);
+        (lines.join("\n") + "\n", de)
+    }
+
+    fn replace_parameters(text: &str, de: usize, values: Vec<String>) -> String {
+        let mut lines = text.lines().map(str::to_string).collect::<Vec<_>>();
+        let rows = lines
+            .iter()
+            .enumerate()
+            .filter(|(_, line)| {
+                line.as_bytes()[72] == b'P' && line[64..72].trim().parse::<usize>().unwrap() == de
+            })
+            .map(|(index, _)| index)
+            .collect::<Vec<_>>();
+        let parameter = format!("{};", values.join(","));
+        let chunks = parameter.as_bytes().chunks(64).collect::<Vec<_>>();
+        assert_eq!(chunks.len(), rows.len());
+        for (row, chunk) in rows.into_iter().zip(chunks) {
+            let payload = std::str::from_utf8(chunk).unwrap();
+            lines[row].replace_range(..64, &format!("{payload:<64}"));
+        }
+        lines.join("\n") + "\n"
+    }
+
+    fn refresh_identity_for(text: &str, target: usize) -> String {
+        let (entities, _, _) = parse(text).unwrap();
+        let mut updates = Vec::new();
+        for (&de, entity) in &entities {
+            if entity.directory.ty != 406 || entity.directory.form != 15 || entity.values.len() != 4
+            {
+                continue;
+            }
+            if u(&entity.values, 3, "identity target").unwrap() != target {
+                continue;
+            }
+            let payload = entity.values[2].strip_prefix("OSCAD_TOPO/IGES2|").unwrap();
+            let parts = payload.split('|').collect::<Vec<_>>();
+            let mut values = entity.values.clone();
+            values[2] = hollerith(&format!(
+                "OSCAD_TOPO/IGES2|{}|{}|{}|{}",
+                parts[0],
+                parts[1],
+                topology_digest(&entities[&target]),
+                parts[3]
+            ));
+            updates.push((de, values));
+        }
+        updates
+            .into_iter()
+            .fold(text.to_string(), |text, (de, values)| {
+                replace_parameters(&text, de, values)
+            })
+    }
+
+    fn rewire_reference(text: &str, owner: usize, at: usize, target: usize) -> String {
+        let (entities, _, _) = parse(text).unwrap();
+        let mut values = entities[&owner].values.clone();
+        values[at] = target.to_string();
+        refresh_identity_for(&replace_parameters(text, owner, values), owner)
+    }
+
+    fn append_line(text: &str, a: Vec<f64>, b: Vec<f64>, bspline: bool) -> (String, usize) {
+        if bspline {
+            let curve = Curve::from_polyline(vec![a, b]).unwrap();
+            let dim = curve.control_points[0].len();
+            append_entity(text, 126, 0, "00000000", |_| curve_values(&curve, dim))
+        } else {
+            let mut values = vec!["110".into()];
+            for point in [a, b] {
+                values.push(number(point[0]));
+                values.push(number(point[1]));
+                values.push(number(if point.len() == 3 { point[2] } else { 0. }));
+            }
+            append_entity(text, 110, 0, "00000000", |_| values)
+        }
+    }
+
+    fn append_composite(text: &str, members: &[usize]) -> (String, usize) {
+        let members = members.to_vec();
+        append_entity(text, 102, 0, "00000000", |_| {
+            let mut values = vec!["102".into(), members.len().to_string()];
+            values.extend(members.into_iter().map(|de| de.to_string()));
+            values
+        })
+    }
+
+    fn first_edge_curve(text: &str) -> (usize, Curve) {
+        let (entities, _, _) = parse(text).unwrap();
+        let edge_list = directory_entity(text, 504, 0);
+        let curve = u(&entities[&edge_list].values, 2, "edge curve").unwrap();
+        (edge_list, curve126(&entities, curve, 3, 1.).unwrap())
+    }
+
+    fn split_edge_fixture(
+        base: &str,
+        count: usize,
+        gap: f64,
+        reversed: &[bool],
+    ) -> (String, usize, Vec<usize>) {
+        let (edge_list, curve) = first_edge_curve(base);
+        let (entities, _, _) = parse(base).unwrap();
+        let loop_de = directory_entity(base, 508, 0);
+        let pcurve_de = u(&entities[&loop_de].values, 8, "loop pcurve").unwrap();
+        let pcurve = curve126(&entities, pcurve_de, 2, 1.).unwrap();
+        let domain = curve.domain();
+        let pdomain = pcurve.domain();
+        let start = curve.evaluate(domain[0]).unwrap().point;
+        let end = curve.evaluate(domain[1]).unwrap().point;
+        let length = start
+            .iter()
+            .zip(&end)
+            .map(|(a, b)| (b - a) * (b - a))
+            .sum::<f64>()
+            .sqrt();
+        let tangent = start
+            .iter()
+            .zip(&end)
+            .map(|(a, b)| (b - a) / length)
+            .collect::<Vec<_>>();
+        let point = |fraction: f64| {
+            curve
+                .evaluate(domain[0] + fraction * (domain[1] - domain[0]))
+                .unwrap()
+                .point
+        };
+        let ppoint = |fraction: f64| {
+            pcurve
+                .evaluate(pdomain[0] + fraction * (pdomain[1] - pdomain[0]))
+                .unwrap()
+                .point
+        };
+        let mut text = base.to_string();
+        let mut members = Vec::new();
+        for i in 0..count {
+            let mut a = point(i as f64 / count as f64);
+            let mut b = point((i + 1) as f64 / count as f64);
+            if i > 0 {
+                for axis in 0..3 {
+                    a[axis] += tangent[axis] * gap * 0.5;
+                }
+            }
+            if i + 1 < count {
+                for axis in 0..3 {
+                    b[axis] -= tangent[axis] * gap * 0.5;
+                }
+            }
+            if reversed.get(i).copied().unwrap_or(false) {
+                std::mem::swap(&mut a, &mut b);
+            }
+            let (next, de) = append_line(&text, a, b, i % 2 == 1);
+            text = next;
+            members.push(de);
+        }
+        let (text, composite) = append_composite(&text, &members);
+        let mut text = rewire_reference(&text, edge_list, 2, composite);
+        let mut pmembers = Vec::new();
+        for i in 0..count {
+            let mut a = ppoint(i as f64 / count as f64);
+            let mut b = ppoint((i + 1) as f64 / count as f64);
+            if reversed.get(i).copied().unwrap_or(false) {
+                std::mem::swap(&mut a, &mut b);
+            }
+            let (next, de) = append_line(&text, a, b, i % 2 == 1);
+            text = next;
+            pmembers.push(de);
+        }
+        let (text, pcomposite) = append_composite(&text, &pmembers);
+        (
+            rewire_reference(&text, loop_de, 8, pcomposite),
+            composite,
+            members,
+        )
+    }
+
+    fn rewrite_global_value(text: &str, search: &str, replacement: &str) -> String {
+        let lines = text.lines().collect::<Vec<_>>();
+        let first = lines
+            .iter()
+            .position(|line| line.as_bytes()[72] == b'G')
+            .unwrap();
+        let last = lines
+            .iter()
+            .rposition(|line| line.as_bytes()[72] == b'G')
+            .unwrap();
+        let global = lines[first..=last]
+            .iter()
+            .map(|line| &line[..72])
+            .collect::<String>();
+        let updated = global.replace(search, replacement);
+        assert_ne!(updated, global);
+        let mut output = lines[..first]
+            .iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        let mut global_lines = updated
+            .as_bytes()
+            .chunks(72)
+            .enumerate()
+            .map(|(i, chunk)| {
+                pad_record(std::str::from_utf8(chunk).unwrap(), 'G', i + 1, 72).unwrap()
+            })
+            .collect::<Vec<_>>();
+        let global_count = global_lines.len();
+        output.append(&mut global_lines);
+        output.extend(lines[last + 1..].iter().map(|line| line.to_string()));
+        let terminate = output.last_mut().unwrap();
+        terminate.replace_range(8..16, &format!("G{:>7}", global_count));
+        output.join("\n") + "\n"
+    }
+
+    fn rewrite_global(text: &str, replacement: &str) -> String {
+        rewrite_global_value(text, ",2,2HMM,", replacement)
+    }
+
+    fn rewrite_resolution(text: &str, resolution: f64) -> String {
+        let max_coordinate = number(1e-7);
+        rewrite_global_value(
+            text,
+            &format!(",0.001,{max_coordinate},"),
+            &format!(",{},{max_coordinate},", number(resolution)),
+        )
+    }
+
+    fn scaled_geometry(mut model: Model, factor: f64) -> Model {
+        for vertex in &mut model.vertices {
+            for coordinate in &mut vertex.point {
+                *coordinate *= factor;
+            }
+        }
+        for edge in &mut model.edges {
+            for point in &mut edge.curve.control_points {
+                for coordinate in point {
+                    *coordinate *= factor;
+                }
+            }
+        }
+        for face in &mut model.faces {
+            for point in face.surface.control_points.iter_mut().flatten() {
+                for coordinate in point {
+                    *coordinate *= factor;
+                }
+            }
+        }
+        model.validate().unwrap();
+        model
+    }
+
+    fn fixture_with_unit(size_mm: f64, unit: IgesLengthUnit) -> String {
+        let model = freeform_cuboid_solid([0., 0., 0.], [size_mm; 3]).unwrap();
+        let model = scaled_geometry(model, 1. / unit.scale_to_mm());
+        let (text, _, _) = export_iges_v2(&model).unwrap();
+        rewrite_global(&text, &format!(",{},2HIN,", unit.flag()))
+    }
+
+    fn assert_geometry_eq(left: &Model, right: &Model) {
+        for (a, b) in left.vertices.iter().zip(&right.vertices) {
+            for axis in 0..3 {
+                assert!((a.point[axis] - b.point[axis]).abs() < 1e-9);
+            }
+        }
+        for (a, b) in left.edges.iter().zip(&right.edges) {
+            for (pa, pb) in a.curve.control_points.iter().zip(&b.curve.control_points) {
+                for axis in 0..3 {
+                    assert!((pa[axis] - pb[axis]).abs() < 1e-9);
+                }
+            }
+        }
+        for (a, b) in left.faces.iter().zip(&right.faces) {
+            for (pa, pb) in a
+                .surface
+                .control_points
+                .iter()
+                .flatten()
+                .zip(b.surface.control_points.iter().flatten())
+            {
+                for axis in 0..3 {
+                    assert!((pa[axis] - pb[axis]).abs() < 1e-9);
+                }
+            }
+        }
+    }
+
     #[test]
     fn direct_roundtrip_is_80_column_and_preserves_graph_identity() {
         let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
@@ -1341,6 +2603,16 @@ mod tests {
         );
         assert_eq!(back.1.faces, model.1.faces);
         assert_eq!(report.topology_count, 34);
+        assert_eq!(report.units.declared_unit, IgesLengthUnit::Millimeter);
+        assert_eq!(report.units.applied_unit, IgesLengthUnit::Millimeter);
+        assert_eq!(report.units.declared_flag, 2);
+        assert_eq!(report.units.declared_scale_to_mm, 1.);
+        assert_eq!(report.units.applied_scale_to_mm, 1.);
+        assert!(!report.units.overridden);
+        assert!(report.units.warning.is_none());
+        assert_eq!(identity.units, report.units);
+        assert_eq!(report.discarded, IgesV2DiscardReport::default());
+        assert_eq!(identity.discarded, IgesV2DiscardReport::default());
     }
 
     #[test]
@@ -1366,6 +2638,412 @@ mod tests {
         let (text, _, _) = export_iges_v2(&model).unwrap();
         assert!(import_iges_v2(&text.replacen("     128", "     999", 1)).is_err());
         assert!(parse(&" ".repeat(MAX_BYTES + 1)).is_err());
+    }
+
+    #[test]
+    fn inch_mm_and_meter_flags_produce_identical_mm_geometry() {
+        let (expected, _, _) =
+            import_iges_v2(&fixture_with_unit(10., IgesLengthUnit::Millimeter)).unwrap();
+        for unit in [IgesLengthUnit::Inch, IgesLengthUnit::Meter] {
+            let (actual, _, report) = import_iges_v2(&fixture_with_unit(10., unit)).unwrap();
+            assert_geometry_eq(&expected, &actual);
+            assert_eq!(report.units.declared_unit, unit);
+            assert_eq!(report.units.applied_unit, unit);
+            assert_eq!(report.units.declared_flag, unit.flag());
+            assert_eq!(report.units.applied_scale_to_mm, unit.scale_to_mm());
+            assert!(!report.units.overridden);
+        }
+    }
+
+    #[test]
+    fn misdeclared_inch_warns_but_default_and_override_are_explicit() {
+        let model = freeform_cuboid_solid([0., 0., 0.], [1000.; 3]).unwrap();
+        let (mm_text, _, _) = export_iges_v2(&model).unwrap();
+        let text = rewrite_global(&mm_text, ",1,2HIN,");
+        let (default, _, report) = import_iges_v2(&text).unwrap();
+        assert_eq!(
+            default
+                .vertices
+                .iter()
+                .map(|v| v.point[0])
+                .fold(0., f64::max),
+            25400.
+        );
+        assert_eq!(report.units.declared_unit, IgesLengthUnit::Inch);
+        assert_eq!(report.units.applied_unit, IgesLengthUnit::Inch);
+        let warning = report.units.warning.as_deref().unwrap();
+        for evidence in ["25.4", "scale 1 mm/unit", "25400", "1000"] {
+            assert!(warning.contains(evidence), "missing {evidence}: {warning}");
+        }
+
+        let (corrected, _, override_report) = import_iges_v2_with_options(
+            &text,
+            IgesV2ImportOptions {
+                unit_override: Some(IgesLengthUnit::Millimeter),
+            },
+        )
+        .unwrap();
+        assert_geometry_eq(&model, &corrected);
+        assert_eq!(corrected.1.vertices, model.1.vertices);
+        assert_eq!(corrected.1.edges, model.1.edges);
+        assert_eq!(override_report.units.declared_unit, IgesLengthUnit::Inch);
+        assert_eq!(
+            override_report.units.applied_unit,
+            IgesLengthUnit::Millimeter
+        );
+        assert_eq!(override_report.units.declared_scale_to_mm, 25.4);
+        assert_eq!(override_report.units.applied_scale_to_mm, 1.);
+        assert!(override_report.units.overridden);
+    }
+
+    #[test]
+    fn equally_reasonable_or_unreasonable_alternatives_do_not_warn() {
+        for size_mm in [10., 1e-5] {
+            let model = freeform_cuboid_solid([0., 0., 0.], [size_mm; 3]).unwrap();
+            let (mm_text, _, _) = export_iges_v2(&model).unwrap();
+            let (_, _, report) = import_iges_v2(&rewrite_global(&mm_text, ",1,2HIN,")).unwrap();
+            assert!(report.units.warning.is_none());
+        }
+    }
+
+    #[test]
+    fn microinch_flag_uses_iges_scale() {
+        let (model, _, report) =
+            import_iges_v2(&fixture_with_unit(1., IgesLengthUnit::Microinch)).unwrap();
+        assert_eq!(IgesLengthUnit::Microinch.scale_to_mm(), 25.4e-6);
+        assert_eq!(report.units.applied_scale_to_mm, 25.4e-6);
+        assert_eq!(
+            model.vertices.iter().map(|v| v.point[0]).fold(0., f64::max),
+            1.
+        );
+    }
+
+    #[test]
+    fn malformed_missing_and_unknown_unit_flags_are_typed_refusals() {
+        let model = freeform_cuboid_solid([0., 0., 0.], [1.; 3]).unwrap();
+        let (text, _, _) = export_iges_v2(&model).unwrap();
+        for replacement in [",NaN,2HMM,", ",,2HMM,", ",3,2HMM,"] {
+            let error = import_iges_v2(&rewrite_global(&text, replacement)).unwrap_err();
+            assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+        }
+    }
+
+    #[test]
+    fn blanked_malformed_curve_is_discarded_before_geometry() {
+        let base = base_text();
+        let source_count = parse(&base).unwrap().0.len();
+        let (text, _) = append_entity(&base, 126, 0, "01010000", |_| vec!["126".into()]);
+        let (_, _, report) = import_iges_v2(&text).unwrap();
+        assert_eq!(report.entity_count, source_count + 1);
+        assert_eq!(report.discarded.blanked, 1);
+        assert_eq!(report.discarded.dependent_without_owner, 0);
+    }
+
+    #[test]
+    fn retained_face_rejects_blanked_surface_with_both_des() {
+        let base = base_text();
+        let surface = directory_entity(&base, 128, 0);
+        let face = directory_entity(&base, 510, 0);
+        let error = import_iges_v2(&set_status(&base, surface, "01000000")).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+        assert!(error.message.contains(&format!("DE {face}")));
+        assert!(error.message.contains(&format!("DE {surface}")));
+        assert!(error.message.contains("discarded"));
+    }
+
+    #[test]
+    fn physical_logical_and_both_orphans_are_counted() {
+        let (text, _) = append_entity(&base_text(), 126, 0, "00010000", |_| vec!["126".into()]);
+        let (text, _) = append_entity(&text, 126, 0, "00020000", |_| vec!["126".into()]);
+        let (text, _) = append_entity(&text, 126, 0, "00030000", |_| vec!["126".into()]);
+        let (_, _, report) = import_iges_v2(&text).unwrap();
+        assert_eq!(report.discarded.blanked, 0);
+        assert_eq!(report.discarded.dependent_without_owner, 3);
+    }
+
+    #[test]
+    fn dependents_with_live_physical_and_logical_owners_survive() {
+        let base = base_text();
+        let physical = directory_entity(&base, 126, 0);
+        let both = directory_entity(&base, 126, 1);
+        let text = set_status(&base, physical, "00010000");
+        let text = set_status(&text, both, "00030000");
+        let (text, logical) = append_entity(&text, 126, 0, "00020000", |_| vec!["126".into()]);
+        let (text, _) = append_entity(&text, 402, 15, "00000000", |_| {
+            vec![
+                "402".into(),
+                "2".into(),
+                both.to_string(),
+                logical.to_string(),
+            ]
+        });
+        let (_, _, report) = import_iges_v2(&text).unwrap();
+        assert_eq!(report.discarded.dependent_without_owner, 0);
+    }
+
+    #[test]
+    fn discarded_group_owner_cascades_to_a_fixpoint() {
+        let (text, _) = append_entity(&base_text(), 402, 15, "01000000", |de| {
+            vec!["402".into(), "1".into(), (de + 2).to_string()]
+        });
+        let (text, _) = append_entity(&text, 402, 15, "00020000", |de| {
+            vec!["402".into(), "1".into(), (de + 2).to_string()]
+        });
+        let (text, _) = append_entity(&text, 402, 15, "00020000", |_| {
+            vec!["402".into(), "0".into()]
+        });
+        let (_, _, report) = import_iges_v2(&text).unwrap();
+        assert_eq!(report.discarded.blanked, 1);
+        assert_eq!(report.discarded.dependent_without_owner, 2);
+    }
+
+    #[test]
+    fn retained_group_rejects_missing_member_with_source_and_role() {
+        let (text, group) = append_entity(&base_text(), 402, 15, "00000000", |_| {
+            vec!["402".into(), "1".into(), "999999".into()]
+        });
+        let error = import_iges_v2(&text).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+        assert!(error.message.contains(&format!("DE {group}")));
+        assert!(error.message.contains("DE 999999"));
+        assert!(error.message.contains("missing"));
+        assert!(error.message.contains("associativity member"));
+    }
+
+    #[test]
+    fn malformed_directory_status_is_a_typed_refusal() {
+        let base = base_text();
+        let de = directory_entity(&base, 128, 0);
+        for status in ["0A000000", "02000000", "00040000", "00000700", "00000003"] {
+            let error = import_iges_v2(&set_status(&base, de, status)).unwrap_err();
+            assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+            assert!(error.message.contains(&format!("DE {de}")));
+        }
+    }
+
+    #[test]
+    fn self_and_multi_node_402_cycles_are_bounded_typed_refusals() {
+        let (self_text, self_de) = append_entity(&base_text(), 402, 15, "00000000", |de| {
+            vec!["402".into(), "1".into(), de.to_string()]
+        });
+        let error = import_iges_v2(&self_text).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+        assert!(error.message.contains("cycle"));
+        assert!(error.message.contains(&format!("DE {self_de}")));
+
+        let (text, a) = append_entity(&base_text(), 402, 15, "00000000", |de| {
+            vec!["402".into(), "1".into(), (de + 2).to_string()]
+        });
+        let (text, b) = append_entity(&text, 402, 15, "00000000", |_| {
+            vec!["402".into(), "1".into(), a.to_string()]
+        });
+        let error = import_iges_v2(&text).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+        assert!(error.message.contains("cycle"));
+        assert!(
+            error.message.contains(&format!("DE {b}"))
+                || error.message.contains(&format!("DE {a}"))
+        );
+    }
+
+    #[test]
+    fn back_pointer_402_forms_are_explicitly_unsupported() {
+        for form in [1, 14] {
+            let (text, de) = append_entity(&base_text(), 402, form, "00000000", |_| {
+                vec!["402".into(), "0".into()]
+            });
+            let error = import_iges_v2(&text).unwrap_err();
+            assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
+            assert!(error.message.contains(&format!("DE {de}")));
+            assert!(error.message.contains("back-pointer"));
+        }
+    }
+
+    #[test]
+    fn global_parameter_19_is_the_exported_minimum_resolution() {
+        let text = base_text();
+        let global = text
+            .lines()
+            .filter(|line| line.as_bytes()[72] == b'G')
+            .map(|line| &line[..72])
+            .collect::<String>();
+        let values = tokenize(&global, ',', ';').unwrap();
+        assert_eq!(values[14], "MM");
+        assert_eq!(values[18], "0.001");
+        assert_eq!(parse_global(&global).unwrap().3, 0.001);
+    }
+
+    #[test]
+    fn composite_mixed_lines_and_linear_bsplines_join_in_an_existing_wire() {
+        let (text, _, _) = split_edge_fixture(&composite_base_text(), 3, 0., &[true, true, false]);
+        let (model, _, _) = import_iges_v2(&text).unwrap();
+        model.validate().unwrap();
+        assert_eq!(model.edges.len(), 12);
+        assert_eq!(model.edges[0].curve.degree, 1);
+        assert_eq!(model.edges[0].curve.control_points.len(), 4);
+    }
+
+    #[test]
+    fn composite_gap_zero_below_and_equal_tolerance_snaps_shared_endpoint() {
+        let tolerance = 0.0009765625;
+        for gap in [0., tolerance * 0.5, tolerance] {
+            let base = rewrite_resolution(&composite_base_text(), tolerance);
+            let (text, _, _) = split_edge_fixture(&base, 2, gap, &[false, false]);
+            let (model, _, _) = import_iges_v2(&text).unwrap();
+            model.validate().unwrap();
+            let (_, original) = first_edge_curve(&base);
+            let domain = original.domain();
+            let a = original.evaluate(domain[0]).unwrap().point;
+            let b = original.evaluate(domain[1]).unwrap().point;
+            let points = &model.edges[0].curve.control_points;
+            assert_eq!(points.len(), 3);
+            for axis in 0..3 {
+                assert!((points[1][axis] - (a[axis] + b[axis]) * 0.5).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn composite_gap_defect_has_des_and_measurements() {
+        let (text, composite, members) =
+            split_edge_fixture(&composite_base_text(), 2, 0.01, &[false, false]);
+        let error = import_iges_v2(&text).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_GAP");
+        assert!(error.message.contains(&format!("DE {composite}")));
+        assert!(error.message.contains(&format!("DE {}", members[0])));
+        assert!(error.message.contains(&format!("DE {}", members[1])));
+        assert!(error.message.contains("gap_mm="));
+        assert!(error.message.contains("tolerance_mm="));
+    }
+
+    #[test]
+    fn composite_reordering_and_orientation_ambiguity_are_refused() {
+        let (text, a) = append_line(&base_text(), vec![0., 0., 0.], vec![1., 0., 0.], false);
+        let (text, b) = append_line(&text, vec![2., 0., 0.], vec![0., 0., 0.], false);
+        let (text, c) = append_line(&text, vec![1., 0., 0.], vec![2., 0., 0.], false);
+        let (text, composite) = append_composite(&text, &[a, b, c]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_AMBIGUOUS");
+
+        let (text, a) = append_line(&base_text(), vec![0., 0., 0.], vec![1., 0., 0.], false);
+        let (text, b) = append_line(&text, vec![1., 0., 0.], vec![1., 0., 0.], false);
+        let (text, composite) = append_composite(&text, &[a, b]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_AMBIGUOUS");
+    }
+
+    #[test]
+    fn composite_dangling_and_wrong_type_are_typed_defects() {
+        let (text, composite) = append_composite(&base_text(), &[999_999]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_DANGLING");
+
+        let base = base_text();
+        let surface = directory_entity(&base, 128, 0);
+        let (text, composite) = append_composite(&base, &[surface]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_DANGLING");
+    }
+
+    #[test]
+    fn composite_self_and_multi_node_cycles_are_typed_defects() {
+        let (text, composite) = append_entity(&base_text(), 102, 0, "00000000", |de| {
+            vec!["102".into(), "1".into(), de.to_string()]
+        });
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_CYCLE");
+
+        let (text, a) = append_entity(&base_text(), 102, 0, "00000000", |de| {
+            vec!["102".into(), "1".into(), (de + 2).to_string()]
+        });
+        let (text, _) = append_entity(&text, 102, 0, "00000000", |_| {
+            vec!["102".into(), "1".into(), a.to_string()]
+        });
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, a)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_CYCLE");
+    }
+
+    #[test]
+    fn composite_empty_and_depth_budget_are_typed_defects() {
+        let (text, composite) = append_composite(&base_text(), &[]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_DANGLING");
+
+        let (mut text, mut child) =
+            append_line(&base_text(), vec![0., 0., 0.], vec![1., 0., 0.], false);
+        for _ in 0..=MAX_COMPOSITE_DEPTH {
+            let (next, parent) = append_composite(&text, &[child]);
+            text = next;
+            child = parent;
+        }
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, child)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_BUDGET");
+    }
+
+    #[test]
+    fn composite_tolerance_uses_applied_unit_scale() {
+        let (mm_text, _, _) = split_edge_fixture(&composite_base_text(), 2, 0.002, &[false, false]);
+        assert_eq!(
+            import_iges_v2(&mm_text).unwrap_err().code,
+            "BREP_IGES_V2_COMPOSITE_GAP"
+        );
+        let inch_base = rewrite_global(&composite_base_text(), ",1,2HIN,");
+        let (inch_text, _, _) = split_edge_fixture(&inch_base, 2, 0.0001, &[false, false]);
+        import_iges_v2(&inch_text).unwrap();
+    }
+
+    #[test]
+    fn composite_2d_pcurve_and_3d_edge_pass_face_correspondence() {
+        let base = composite_base_text();
+        let (text, _, _) = split_edge_fixture(&base, 2, 0., &[false, false]);
+        let (entities, _, _) = parse(&base).unwrap();
+        let loop_de = directory_entity(&text, 508, 0);
+        let pcurve_de = u(&entities[&loop_de].values, 8, "loop pcurve").unwrap();
+        let pcurve = curve126(&entities, pcurve_de, 2, 1.).unwrap();
+        let domain = pcurve.domain();
+        let a = pcurve.evaluate(domain[0]).unwrap().point;
+        let b = pcurve.evaluate(domain[1]).unwrap().point;
+        let mid = pcurve
+            .evaluate((domain[0] + domain[1]) * 0.5)
+            .unwrap()
+            .point;
+        let (text, first) = append_line(&text, a, mid.clone(), false);
+        let (text, second) = append_line(&text, mid, b, true);
+        let (text, composite) = append_composite(&text, &[first, second]);
+        let text = rewire_reference(&text, loop_de, 8, composite);
+        let (model, _, _) = import_iges_v2(&text).unwrap();
+        model.validate().unwrap();
+        assert_eq!(model.loops[0].coedges[0].pcurve.control_points.len(), 3);
+    }
+
+    #[test]
+    fn composite_arc_and_general_rational_join_are_explicitly_unsupported() {
+        let (text, arc) = append_entity(&base_text(), 100, 0, "00000000", |_| vec!["100".into()]);
+        let (text, composite) = append_composite(&text, &[arc]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
+
+        let curve =
+            Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]])
+                .unwrap()
+                .elevate(2)
+                .unwrap();
+        let (text, spline) = append_entity(&base_text(), 126, 0, "00000000", |_| {
+            curve_values(&curve, 3)
+        });
+        let (text, composite) = append_composite(&text, &[spline]);
+        let (edge_list, _) = first_edge_curve(&text);
+        let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
+        assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
     }
 
     #[test]

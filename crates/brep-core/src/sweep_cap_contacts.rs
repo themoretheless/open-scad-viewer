@@ -205,9 +205,9 @@ fn oblique_plane_contact(
 /// Invalid topology is refused. Unproved geometry or exhausted budgets preserve
 /// unresolved face IDs and never promote allowed contact.
 pub fn inspect(model: &Model, cap: usize, caps: &[usize], budget: Budgets) -> Result<Report> {
-    inspect_with_separation(model,cap,caps,budget,&mut |_|false)
+    inspect_with_separation(model,cap,caps,budget,None,false,&mut |_|false)
 }
-pub(crate) fn inspect_with_separation(model:&Model,cap:usize,caps:&[usize],budget:Budgets,separated:&mut dyn FnMut(usize)->bool)->Result<Report> {
+pub(crate) fn inspect_with_separation(model:&Model,cap:usize,caps:&[usize],budget:Budgets,whole_chart_injective:Option<bool>,joint_exact_domain:bool,separated:&mut dyn FnMut(usize)->bool)->Result<Report> {
     model.validate()?;
     if caps.is_empty()
         || caps.len() > 16
@@ -248,9 +248,13 @@ pub(crate) fn inspect_with_separation(model:&Model,cap:usize,caps:&[usize],budge
     let face = &model.faces[cap];
     out.planar_control_hull_certified =
         planar_control_hull(&face.surface, &mut out.exact_work, budget.max_exact_work);
+    let injective = match whole_chart_injective {
+        Some(proven) => proven,
+        None => nurbs_core::surface_injectivity::certify(&face.surface, 1)?.proven,
+    };
     if !nurbs_core::surface_regularity::inspect(&face.surface, budget.max_chart_cells)?
         .spanwise_regular
-        || !nurbs_core::surface_injectivity::certify(&face.surface, 1)?.proven
+        || !injective
     {
         return Ok(out);
     }
@@ -306,9 +310,15 @@ pub(crate) fn inspect_with_separation(model:&Model,cap:usize,caps:&[usize],budge
         let other: Vec<_> = incidents.iter().filter(|(f, _)| *f != cap).collect();
         if incidents.len() != 2
             || other.len() != 1
-            || !walls.contains(&other[0].0)
             || !opposite(model, cap, other[0].0, c.reversed, other[0].1.reversed)
             || !exact(c, cap, &mut out.exact_work)?
+        {
+            return Ok(out);
+        }
+        let (other_face, other_use) = (other[0].0, other[0].1);
+        if !walls.contains(&other_face)
+            && (!caps.contains(&other_face)
+                || !exact(other_use, other_face, &mut out.exact_work)?)
         {
             return Ok(out);
         }
@@ -365,7 +375,13 @@ pub(crate) fn inspect_with_separation(model:&Model,cap:usize,caps:&[usize],budge
         }
         if allowed {
             out.allowed_boundaries.push([wall, shared[0].edge]);
-        } else {
+            continue;
+        }
+        let vertex = shared.is_empty()
+            && joint_exact_domain
+            && crate::boundary_hull_contact::certify(model, [cap, wall])
+                .is_some_and(|c| c.edges.is_empty() && c.vertex.is_some());
+        if !vertex {
             out.unresolved_walls.push(wall);
             out.reason = Some("cap-wall-contact-unproved");
         }

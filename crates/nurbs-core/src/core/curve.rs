@@ -5,7 +5,7 @@ mod knot_ops;
 #[cfg(feature = "codec")]
 mod serialization;
 use crate::{Result, check, numeric, numeric_err, resource};
-use basis::continuity_meta;
+pub(crate) use basis::continuity_meta;
 pub use basis::{Basis, LocalBasis, basis, basis_funs_ders, find_span, find_span_hinted};
 pub use decompose::Segment;
 pub use knot_ops::{clamped, merge_near_knots, multiplicity_eps, normalize_knots};
@@ -42,20 +42,20 @@ pub struct Evaluation {
 /// control-point sums. `value()` is identical to naive summation whenever
 /// every partial sum is exact and is never less accurate; the classic error
 /// bound is `2·u·Σ|terms|` with `u = f64::EPSILON`.
-struct CompensatedSum {
+pub(crate) struct CompensatedSum {
     sum: f64,
     compensation: f64,
     magnitude: f64,
 }
 impl CompensatedSum {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             sum: 0.,
             compensation: 0.,
             magnitude: 0.,
         }
     }
-    fn add(&mut self, term: f64) {
+    pub(crate) fn add(&mut self, term: f64) {
         let t = self.sum + term;
         self.compensation += if self.sum.abs() >= term.abs() {
             (self.sum - t) + term
@@ -65,14 +65,14 @@ impl CompensatedSum {
         self.sum = t;
         self.magnitude += term.abs();
     }
-    fn value(&self) -> f64 {
+    pub(crate) fn value(&self) -> f64 {
         self.sum + self.compensation
     }
 }
 /// Accuracy evidence shared by both evaluation paths: `c·u·Σ|terms|` with
 /// `c = 2` (Neumaier) on the largest post-division coordinate magnitude, plus
 /// one `u` on the quotient itself, outward-rounded twice.
-fn rounding_bound(axes: &[CompensatedSum], weight: f64) -> f64 {
+pub(crate) fn rounding_bound(axes: &[CompensatedSum], weight: f64) -> f64 {
     let magnitude = axes.iter().map(|a| a.magnitude / weight).fold(0., f64::max);
     (2. * f64::EPSILON * magnitude + f64::EPSILON * magnitude)
         .next_up()

@@ -1276,7 +1276,7 @@ fn layered_fillet_bridge_checks_chain_and_cavity() {
 
 #[test]
 fn expression_shell_dispatch_rebuilds_closed_incidence_without_solid_admission() {
-    let request: Value = value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    let request: Value = value_codec::from_str(include_str!("../../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
     fn js_integer_transport(value: &mut Value) {
         match value {
             Value::Number(value_codec::Number::Float(f)) if f.is_finite() && f.fract()==0. && f.abs()<=9_007_199_254_740_991. && f.to_bits()!=(-0_f64).to_bits() => {
@@ -1356,7 +1356,7 @@ fn expression_shell_dispatch_rebuilds_closed_incidence_without_solid_admission()
 
 #[test]
 fn expression_mesh_replays_native_trim_and_deviation() {
-    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    let mut request:Value=value_codec::from_str(include_str!("../../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
     request["meshLimits"]=json!({"maxDeviationMm":0.05,"cells":8192,"controlsPerEnclosure":1000,
         "spans":100000,"toleranceUv":1e-8,"domainCells":30000,"domainCellsPerCell":256,"maxDepth":14});
     let result=dispatch(request.clone()).unwrap();
@@ -1405,7 +1405,7 @@ fn expression_mesh_replays_native_trim_and_deviation() {
 
 #[test]
 fn expression_shell_inspection_recomputes_contacts_and_volume() {
-    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    let mut request:Value=value_codec::from_str(include_str!("../../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
     request["op"]=json!("cad_expression_shell_inspect");
     request["inspectionLimits"]=json!({
         "projectedRegion":{"toleranceUv":1e-8,"exactWork":20000000,"driverCells":10000},
@@ -1457,7 +1457,7 @@ fn expression_shell_inspection_recomputes_contacts_and_volume() {
 
 #[test]
 fn expression_triangle_refinement_dispatch_preserves_pending_coverage() {
-    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    let mut request:Value=value_codec::from_str(include_str!("../../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
     request["boundaryMeshLimits"]=json!({"maxDeviationMm":0.05,"cells":4096,"spans":100000,"maxDepth":24,
         "refinement":{"maxDeviationMm":0.05,"cells":64,"spans":8192,"spansPerQuery":64,"controls":1000,
             "domainCells":10000,"domainCellsPerTriangle":128,"toleranceUv":1e-8,"maxDepth":4,"regionalSpans":2048}});
@@ -1504,7 +1504,7 @@ fn expression_triangle_refinement_dispatch_preserves_pending_coverage() {
 
 #[test]
 fn expression_radius_dispatch_distinguishes_admission_violation_and_unproven() {
-    let mut request:Value=value_codec::from_str(include_str!("../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
+    let mut request:Value=value_codec::from_str(include_str!("../../../../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json")).unwrap();
     request["op"]=json!("cad_expression_shell_restore");
     let authored=brep_core::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
     let centers=authored.centers.reverse().unwrap();
@@ -1548,7 +1548,10 @@ fn expression_radius_dispatch_distinguishes_admission_violation_and_unproven() {
     assert_eq!(unproven["shell"]["supportTangencyCheck"]["spans"],json!(0));
     if let Ok(path)=std::env::var("EXPRESSION_RADIUS_DISPATCH_FIXTURE") {
         std::fs::write(path,value_codec::to_string_pretty(&json!({"admitted":admitted,"violation":violation,"unproven":unproven})).unwrap()).unwrap();
-    #[test]
+    }
+}
+
+#[test]
 fn native_section_preserves_legacy_input_error_code() {
     let error = dispatch(
         json!({"op":"mesh_section","mesh":{"positions":[0.,0.,0.],"indices":[0,1,2]},"z":0.}),

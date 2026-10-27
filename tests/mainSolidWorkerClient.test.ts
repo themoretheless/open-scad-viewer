@@ -1,6 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
+import type {MainSolidJob,MainSolidRequest} from '../src/services/mainSolidProtocol'
 import type {TrussModel, TrussResponse} from '../src/services/trussAnalysis'
 
 class Port implements MainSolidPort {
@@ -108,6 +108,30 @@ it('times out, clears timers and does not time out a later successful job',async
   const next=client.run({kind:'truss',model:model()})
   ports[1].reply({ok:true,result:response()});await next
   expect(vi.getTimerCount()).toBe(0)
+})
+
+const manifoldCancellationJobs=():MainSolidJob[]=>{
+  const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0,0,0,1]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3,2,0,3])}
+  return [
+    {kind:'manifoldMetrics',mesh},
+    {kind:'meshManifold',objects:[{id:'a',mesh}]},
+    {kind:'meshRepair',mesh},
+    {kind:'meshBoolean',a:mesh,b:mesh,operation:'union'},
+  ]
+}
+it.each(manifoldCancellationJobs())('cancels $kind without retaining callbacks or blocking its retry',async job=>{
+  const {client,ports}=setup()
+  const first=client.run(job as never),rejected=expect(first).rejects.toMatchObject({code:'CAD_CANCELLED'})
+  const stale=ports[0].onmessage!
+  client.cancel();await rejected
+  expect(ports[0].terminate).toHaveBeenCalledOnce()
+  expect(ports[0].onmessage).toBeNull();expect(ports[0].onerror).toBeNull();expect(ports[0].onmessageerror).toBeNull()
+  const retry=client.run(job as never),retryRejected=expect(retry).rejects.toMatchObject({code:'CAD_CANCELLED'})
+  expect(ports).toHaveLength(2)
+  expect(ports.map(port=>port.postMessage.mock.calls[0][0].id)).toEqual([1,2])
+  stale({data:{version:1,id:1,kind:job.kind,ok:true,result:{}}} as MessageEvent)
+  client.cancel();await retryRejected
+  expect(ports[1].terminate).toHaveBeenCalledOnce()
 })
 
 it('rejects pre-aborted and invalid deadline calls without superseding active work',async()=>{

@@ -953,12 +953,14 @@ pub(crate) fn export_step_direct(
     capability: &'static str,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
     let mut canonical = canonical_face_senses(model)?;
-    // Canonicalization mirrors reversed faces into a forward chart. Keep the
-    // authored uses in the exchange so import can apply the inverse mirror;
-    // discarding them loses the original control-net parameterization.
-    for (target, source) in canonical.shells.iter_mut().zip(&model.shells) {
-        for (target, source) in target.faces.iter_mut().zip(&source.faces) {
-            target.reversed = source.reversed;
+    if capability == STEP_INTERCHANGE_V6_CAPABILITY {
+        // /6 preserves the exact authored chart: retain the original face uses
+        // so the self-authored import route applies the inverse mirror. Other
+        // routes exchange the canonical forward chart directly.
+        for (target, source) in canonical.shells.iter_mut().zip(&model.shells) {
+            for (target, source) in target.faces.iter_mut().zip(&source.faces) {
+                target.reversed = source.reversed;
+            }
         }
     }
     let model = &canonical;

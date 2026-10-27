@@ -518,6 +518,52 @@ mod cooperative_tests {
     }
 
     #[test]
+    fn cancellation_at_every_cooperative_step_leaves_no_jobs_or_results() {
+        let id = sphere();
+        let result_baseline = live_result_count();
+        let completed = start(id);
+        let mut steps = 0;
+        let handle = loop {
+            steps += 1;
+            assert!(
+                steps < 10_000,
+                "analysis did not finish within its step budget"
+            );
+            let result = step_solid_analysis(completed).unwrap();
+            if result != 0 {
+                break result;
+            }
+        };
+        assert!(steps > 2, "test requires distinct BVH and edge phases");
+        free(handle);
+        assert_eq!(live_result_count(), result_baseline);
+
+        // Every prefix ends before the completing poll. This covers admission,
+        // every BVH slice, the inter-phase yield and every edge-extraction slice.
+        for completed_steps in 0..steps {
+            let job = start(id);
+            for _ in 0..completed_steps {
+                assert_eq!(step_solid_analysis(job).unwrap(), 0);
+            }
+            assert_eq!(live(), 1);
+            cancel_solid_analysis(job);
+            cancel_solid_analysis(job); // idempotent, including stale IDs
+            assert_eq!(live(), 0, "cancel after {completed_steps} steps");
+            assert_eq!(live_result_count(), result_baseline);
+            assert!(step_solid_analysis(job).is_err());
+            let next = start(id);
+            assert!(next > job, "job IDs must not be recycled");
+            cancel_solid_analysis(job);
+            assert_eq!(live(), 1, "stale cancellation removed a newer job");
+            cancel_solid_analysis(next);
+            assert_eq!(live(), 0);
+            assert_eq!(live_result_count(), result_baseline);
+        }
+        eprintln!("verified cancellation at all {steps} cooperative-step prefixes");
+        delete(id);
+    }
+
+    #[test]
     fn cancellation_after_bvh_drops_edge_scratch_and_releases_admission() {
         use std::future::Future;
         let id = sphere();

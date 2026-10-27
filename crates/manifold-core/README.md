@@ -1,6 +1,13 @@
 # manifold-core
 
 Single public home for mesh manifoldness in `open-scad-viewer`.
+See the [user guide](../../docs/manifold-user-guide.md) for check, repair,
+metrics, boolean, TypeScript examples, and geometric limitations. The
+[developer guide](../../docs/manifold-developer-guide.md) defines layer
+ownership and the change/review workflow. The
+[benchmarking guide](../../docs/manifold-benchmarking.md) documents rbench,
+regression comparisons, and the external `manifold-3d` sidecars. The
+[changelog](../../docs/manifold-changelog.md) records crate and ABI contracts.
 
 A triangle mesh is a 2-manifold ("watertight") surface when every edge is
 shared by exactly two consistently oriented triangles, every vertex link is
@@ -30,17 +37,36 @@ and slicers require this property.
 Edge incidence statistics are computed by the canonical packed-edge kernel
 in `mesh-topology` (`EdgeUses`); vertex links and repair live here.
 
-Zero dependencies. `positions` are f64 xyz triples, `indices` are triangle
-corners.
+`mesh-topology` is the only runtime dependency; there is no polygon, host,
+bridge, or WASM dependency. `positions` are f64 xyz triples, `indices` are
+triangle corners.
 
 ## WASM / TypeScript
 
 Exposed through `geometry-bridge` (`abi_manifold_check`,
-`abi_manifold_repair`, results via `abi_array_field`) and re-exported by
-`geometry-wasm`. TypeScript wrappers live in
-`src/services/geometry/meshAnalysis.ts` (`checkManifoldInKernel`,
-`repairManifoldInKernel`).
+`abi_manifold_repair`, `abi_manifold_metrics`, results via `abi_array_field`)
+and re-exported by `geometry-wasm`. TypeScript wrappers live in
+`src/services/geometry/manifoldAnalysis.ts`.
 
 Previously this logic was scattered: private `vertex_manifold` in
 `polygon-core` boolean, `close_topology` in `brep-core`, and the TS
 `meshTopology` service.
+
+## Required green checks
+
+From the repository root, build the packaged WASM once with
+`npm run build:geometry`, then run `npm run test:manifold`. This is the same
+required contract used by CI: all `manifold-core`/`manifold-ops` tests, the
+native manifold ABI smoke suite, fixed-seed property tests, and the focused
+TypeScript/worker integration suite. The individual `test:manifold:core`,
+`test:manifold:abi`, `test:manifold:property`, and `test:manifold:ts` commands
+are reusable without duplicating their test selections in CI.
+
+Required manifold tests must not be skipped, focused, marked as todo, or
+ignored as pre-existing failures. `npm run test:architecture` audits this
+policy and verifies that all four commands remain wired into CI. CI also runs
+property and transport fuzz tests with a logged random seed, differential
+tests, the native/WASM precision matrix, and the complete native test
+partition. After a native-`wasm-opt` build, `npm run test:manifold:artifact`
+verifies the packaged byte identity and manifold exports, then exercises
+check, Full repair, metrics, and boolean on tetrahedra.

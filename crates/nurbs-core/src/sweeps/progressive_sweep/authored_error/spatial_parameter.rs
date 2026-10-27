@@ -165,18 +165,25 @@ pub(super) fn section_interpolation(
         out.reason = Some("retained-section-basis-correspondence-unproved");
         return Ok(out);
     }
-    if transport.status == Status::Certified {
+    if sweep.spatial_rmf_error_limits.is_none() && max_cells <= 10000 {
+        // An unconfigured default-sized allowance supports one first-image
+        // cover. Explicit sweep policies and larger direct ledgers retain both
+        // bounds below, including every profile's remaining-work subledger.
         return super::spatial_first::section_interpolation(
-            sweep,
-            count,
-            transport,
-            &qs,
-            &sections,
-            max_cells,
-            out,
-            shared_pose,
+            sweep, count, transport, &qs, &sections, max_cells, out, shared_pose,
         );
     }
+    let first = super::spatial_first::section_interpolation(
+        sweep,
+        count,
+        transport,
+        &qs,
+        &sections,
+        max_cells,
+        out.clone(),
+        shared_pose.as_deref_mut(),
+    )?;
+    out.cells = first.cells;
     let (work, source_values) = SourceValues::new(sweep.path, max_cells - out.cells)?;
     out.cells += work;
     let Some(source_values) = source_values else {
@@ -332,6 +339,17 @@ pub(super) fn section_interpolation(
     out.endpoint_displacement_upper = Some(endpoint);
     out.cap_endpoint_displacement_upper = Some(caps);
     out.reason = None;
+    if first.status == Status::Certified {
+        out.error_upper = out.error_upper.zip(first.error_upper).map(|(a, b)| a.min(b));
+        out.endpoint_displacement_upper = out
+            .endpoint_displacement_upper
+            .zip(first.endpoint_displacement_upper)
+            .map(|(a, b)| a.min(b));
+        out.cap_endpoint_displacement_upper = out
+            .cap_endpoint_displacement_upper
+            .zip(first.cap_endpoint_displacement_upper)
+            .map(|(a, b)| [a[0].min(b[0]), a[1].min(b[1])]);
+    }
     Ok(out)
 }
 

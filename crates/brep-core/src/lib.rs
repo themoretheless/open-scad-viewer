@@ -190,7 +190,8 @@ pub use close_topology::{
     import_complex_iges, import_complex_step,
 };
 pub use iges_interchange_v2::{
-    IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
+    IGES_INTERCHANGE_V2_CAPABILITY, IgesLengthUnit, IgesV2DiscardReport, IgesV2ImportOptions,
+    IgesV2Report, IgesV2UnitReport, export_iges_v2, import_iges_v2, import_iges_v2_with_options,
 };
 pub use nurbs_ss_g6::{
     BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,

@@ -55,13 +55,17 @@ jobs:
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
       - name: Test remaining native workspace cases
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
+      - name: Test required manifold library and ABI smoke
+        run: |
+          npm run test:manifold:core
+          npm run test:manifold:abi
       - name: Test manifold properties with fixed seeds
-        run: cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core -p manifold-ops --test property -- --nocapture
+        run: npm run test:manifold:property
       - name: Test manifold properties with a random reproducible seed
         run: |
           seed="$(od -An -N8 -tu8 /dev/urandom | tr -d '[:space:]')"
           echo "MANIFOLD_PROPERTY_SEED=$seed"
-          MANIFOLD_PROPERTY_SEED="$seed" cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core -p manifold-ops --test property -- --nocapture
+          MANIFOLD_PROPERTY_SEED="$seed" npm run test:manifold:property
       - name: Fuzz malformed manifold transport with fixed seeds
         run: |
           cargo test --locked --manifest-path crates/Cargo.toml -p manifold-core --test transport_fuzz -- --nocapture
@@ -81,6 +85,39 @@ jobs:
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math-compute --features gpu,tensor --all-targets -- -D warnings
+
+  manifold-performance:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check out the comparison base
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before }}
+          path: baseline
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+      - name: Test the rbench regression comparator
+        working-directory: tools/manifold-bench
+        run: npm run test:rbench
+      # Both revisions run on this same machine; never compare absolute times
+      # from a developer workstation with a hosted runner.
+      - name: Measure base manifold kernels
+        run: cargo run --quiet --locked --release --manifest-path baseline/crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile quick --json --output "$RUNNER_TEMP/manifold-rbench-base"
+      - name: Measure current manifold kernels
+        run: cargo run --quiet --locked --release --manifest-path crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile quick --json --output "$RUNNER_TEMP/manifold-rbench-current"
+      - name: Block manifold performance regressions over 25 percent
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs compare --baseline "$RUNNER_TEMP/manifold-rbench-base/run.json" --current "$RUNNER_TEMP/manifold-rbench-current/run.json" --max-regression 0.25 --report "$RUNNER_TEMP/manifold-rbench-comparison.json"
+      - name: Upload the manifold performance comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifold-rbench-comparison
+          path: ${{ runner.temp }}/manifold-rbench-comparison.json
+          if-no-files-found: warn
 
   check:
     runs-on: ubuntu-latest
@@ -115,11 +152,36 @@ jobs:
             crates/target
           key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
+      - name: Install checksummed native Binaryen 116
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/binaryen-version_116-x86_64-linux.tar.gz"
+          curl --fail --location --retry 3 "https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz" --output "$archive"
+          echo "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          wasm_opt="$RUNNER_TEMP/binaryen-version_116/bin/wasm-opt"
+          "$wasm_opt" --version
+          echo "OSV_WASM_OPT_NATIVE=$wasm_opt" >> "$GITHUB_ENV"
+          echo "OSV_TEST_WASM_OPT_NATIVE=$wasm_opt" >> "$GITHUB_ENV"
       - run: npm run test:architecture
       - run: npm run audit:architecture
       - run: npm run test:wasm-optimize
       - run: npm run test:qualification-drift
       - run: npm run build:geometry
+      - name: Verify manifold exports and tetrahedron on the packaged artifact
+        run: npm run test:manifold:artifact
+      - name: Test required manifold TypeScript integration
+        run: npm run test:manifold:ts
+      - name: Compare native and WASM manifold kernels across f64 and f32
+        run: node --import tsx tools/manifold-bench/environment-matrix.mts
+      - name: Upload the manifold environment matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifold-environment-matrix-node-${{ matrix.node-version }}
+          path: tools/manifold-bench/tmp/environment-matrix.json
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: geometry-kernels-node-${{ matrix.node-version }}

@@ -186,6 +186,34 @@ it('runs the shipped entry with real WASM, reuses it and preserves typed errors'
   } finally {clearInterval(timer)}
 },30000)
 
+it('runs every manifold wrapper on the packaged WASM in one real worker',async()=>{
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const tetra={positions:new Float64Array([0,0,0,1,0,0,0,1,0,0,0,1]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3,2,0,3])}
+  const before=structuredClone(tetra)
+  const metrics=await client.run({kind:'manifoldMetrics',mesh:tetra})
+  expect(metrics).toMatchObject({vertexCount:4,triangleCount:4,edgeCount:6,eulerCharacteristic:2,componentCount:1,watertight:true})
+  expect(metrics.signedVolume).toBeCloseTo(1/6,10)
+  expect(metrics.surfaceArea).toBeCloseTo((3+Math.sqrt(3))/2,10)
+  expect(metrics.components[0].genus).toBe(0)
+
+  const open={positions:tetra.positions.slice(),indices:tetra.indices.slice(0,9)}
+  const checks=await client.run({kind:'meshManifold',objects:[{id:'closed',mesh:tetra},{id:'open',mesh:open}]})
+  expect(checks.map(entry=>[entry.id,entry.report.isManifold])).toEqual([['closed',true],['open',false]])
+  const repairProgress:unknown[]=[]
+  const repaired=await client.run({kind:'meshRepair',mesh:open},{onProgress:progress=>repairProgress.push(progress)})
+  expect(repaired.repair).toMatchObject({mode:1,filledHoles:1,filledTriangles:1,isManifold:true})
+  expect(repaired.after.isManifold).toBe(true)
+  expect(repairProgress).toEqual([{phase:'check',completed:0,total:3},{phase:'repair',completed:1,total:3},{phase:'verify',completed:2,total:3}])
+
+  const {createBoxMesh,transformMesh}=await import('../src/services/meshEditing')
+  const a=createBoxMesh([2,2,2]),b=transformMesh(a,[1,0,0],0,1),booleanProgress:unknown[]=[]
+  const united=await client.run({kind:'meshBoolean',a,b,operation:'union'},{onProgress:progress=>booleanProgress.push(progress)})
+  expect(united.report).toMatchObject({operation:'union',operandRepaired:[false,false],isManifold:true})
+  expect(booleanProgress).toEqual([{phase:'boolean',completed:0,total:1}])
+  expect((await client.run({kind:'manifoldMetrics',mesh:united.mesh})).signedVolume).toBeCloseTo(12,8)
+  expect(tetra).toEqual(before);expect(workers).toHaveLength(1)
+},30_000)
+
 it('runs the public scenario API in the shared real worker and returns the exact input snapshot',async()=>{
   vi.stubGlobal('Worker',class {constructor(){return realWorker()}})
   const {computeTrussScenario}=await import('../src/services/mainSolidWorker')

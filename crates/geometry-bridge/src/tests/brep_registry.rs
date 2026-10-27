@@ -497,7 +497,7 @@ fn shared_edge_registry_gives_identical_indices_to_adjacent_faces() {
 
 #[test]
 fn rotated_concave_holed_boolean_retains_closed_mesh() {
-    let text=include_str!("../../../tests/fixtures/rotated-concave-holed-intersection.json");
+    let text=include_str!("../../tests/fixtures/rotated-concave-holed-intersection.json");
     let v:value_codec::Value=value_codec::from_str(text).unwrap();
     let model:brep_core::Model=value_codec::from_value(v).unwrap();
     // These retained faces are planar; their exact planar certificate is valid

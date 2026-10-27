@@ -164,7 +164,15 @@ fn inspect_impl(
         // Recompute even when another stage is unresolved so diagnostics remain
         // observable, but never authorize a pair without joint prerequisites.
         for &cap in caps {
-            let report = crate::sweep_cap_contacts::inspect(model, cap, caps, budget)?;
+            let report = crate::sweep_cap_contacts::inspect_with_separation(
+                model,
+                cap,
+                caps,
+                budget,
+                Some(faces.faces[cap].absence_proven()),
+                exact_domain,
+                &mut |_| false,
+            )?;
             if exact_domain && report.cap_certified {
                 for &[wall, edge] in &report.allowed_boundaries {
                     allowed_caps.push([cap, wall, edge]);
@@ -205,11 +213,15 @@ fn inspect_impl(
         faces,
         pairs,
     };
+    let caps_proven = cap_contacts
+        .iter()
+        .all(|(_, r)| r.cap_certified && r.all_cap_wall_contacts_certified);
     let proven = agreement.all_equal
         && agreement.all_joins_exact
         && trim.all_valid
         && winding
-        && intersections.absence_proven;
+        && intersections.absence_proven
+        && caps_proven;
     Ok(Report {
         proven,
         hull_contacts,
@@ -338,8 +350,8 @@ mod tests {
         )
         .unwrap();
         assert!(
-            short.proven,
-            "independent complete face proofs remain admissible"
+            !short.proven,
+            "selected caps require complete contact evidence"
         );
         assert!(short.cap_contacts.iter().all(|(_, r)| !r.cap_certified));
         assert!(!short.intersections.pairs.pairs.iter().any(|p| matches!(
@@ -691,6 +703,8 @@ impl Inspector {
                     cap,
                     caps,
                     *budget,
+                    Some(self.faces.as_ref().unwrap().faces[cap].absence_proven()),
+                    self.exact_domain,
                     &mut |wall| {
                         if !self.exact_domain || self.cover_cells >= self.limits.contacts.cells {
                             return false;
@@ -746,11 +760,16 @@ impl Inspector {
             };
             let agreement = self.agreement.take().unwrap();
             let trim = self.trim.take().unwrap();
+            let caps_proven = self
+                .cap_contacts
+                .iter()
+                .all(|(_, r)| r.cap_certified && r.all_cap_wall_contacts_certified);
             let proven = agreement.all_equal
                 && agreement.all_joins_exact
                 && trim.all_valid
                 && self.winding
-                && intersections.absence_proven;
+                && intersections.absence_proven
+                && caps_proven;
             self.result = Some(Report {
                 proven,
                 hull_contacts: std::mem::take(&mut self.hull_contacts),
@@ -861,6 +880,8 @@ fn frozen_inspect_impl(
                 cap,
                 caps,
                 budget,
+                Some(faces.faces[cap].absence_proven()),
+                exact_domain,
                 &mut |wall| {
                     if !exact_domain || cover_cells >= limits.contacts.cells {
                         return false;
@@ -913,11 +934,15 @@ fn frozen_inspect_impl(
         faces,
         pairs,
     };
+    let caps_proven = cap_contacts
+        .iter()
+        .all(|(_, r)| r.cap_certified && r.all_cap_wall_contacts_certified);
     let proven = agreement.all_equal
         && agreement.all_joins_exact
         && trim.all_valid
         && winding
-        && intersections.absence_proven;
+        && intersections.absence_proven
+        && caps_proven;
     Ok(Report {
         proven,
         hull_contacts,
@@ -1192,12 +1217,11 @@ mod incremental_tests {
             },
         )
         .unwrap();
-        // Exhausting the optional cap prover cannot invalidate independent
-        // original-face hull proofs; it must never manufacture a cap receipt.
-        if short.proven {
-            assert!(full.proven);
-            assert!(short.intersections.pairs.next_pair.is_none());
-        }
+        // Independent hull proofs remain visible, but cannot replace the
+        // explicitly selected cap evidence or manufacture a cap receipt.
+        assert!(!short.proven);
+        assert!(full.proven);
+        assert!(short.intersections.pairs.next_pair.is_none());
         assert!(short.cap_contacts.iter().all(|(_, r)| !r.cap_certified));
         assert!(!short.intersections.pairs.pairs.iter().any(|p| matches!(
             p.boundary,

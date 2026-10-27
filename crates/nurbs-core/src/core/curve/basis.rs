@@ -73,7 +73,7 @@ pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Ba
 
 /// Shared continuity/derivative metadata for `basis`, `LocalBasis::scatter`
 /// and `CurveEvaluator` so all evaluation paths report identical status.
-pub(super) fn continuity_meta(
+pub(crate) fn continuity_meta(
     p: usize,
     k: &[f64],
     domain: [f64; 2],

@@ -1897,7 +1897,8 @@ impl<'a> DirectBuilder<'a> {
             }
         }
         let same_sense = boolean(&a[3], "ADVANCED_FACE same_sense")?;
-        if !same_sense && self.ap242_composition {
+        let authored_mirror = name(a).is_some_and(|name| name.starts_with("OSCAD_TOPO/3|"));
+        if !same_sense && (self.ap242_composition || authored_mirror) {
             let sum = surface.knots_u[surface.degree_u]
                 + surface.knots_u[surface.knots_u.len() - surface.degree_u - 1];
             surface.control_points.reverse();
@@ -1911,10 +1912,14 @@ impl<'a> DirectBuilder<'a> {
                     for point in &mut coedge.pcurve.control_points {
                         point[0] = sum - point[0]
                     }
-                    coedge.pcurve = coedge.pcurve.reverse()?;
-                    coedge.reversed = !coedge.reversed;
+                    if authored_mirror {
+                        coedge.pcurve = coedge.pcurve.reverse()?;
+                        coedge.reversed = !coedge.reversed;
+                    }
                 }
-                self.loops[loop_index].coedges.reverse();
+                if authored_mirror {
+                    self.loops[loop_index].coedges.reverse();
+                }
             }
         }
         let index = self.faces.len();

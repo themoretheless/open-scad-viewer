@@ -547,7 +547,7 @@ mod tests {
             )
             .unwrap();
         }
-        let id=field::<String>(&begin_sweep_volume(request).unwrap(),"session").unwrap();
+        let id=field::<String>(&begin_sweep_volume(volume_request(&model)).unwrap(),"session").unwrap();
         assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));
     }
     #[test]

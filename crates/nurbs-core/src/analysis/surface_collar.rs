@@ -247,6 +247,10 @@ fn original_span(s: &Surface, p: &Curve, direction: [f64; 2], axis: usize) -> Re
     for point in &p.control_points {
         let end = if direction[axis] == 0. {
             I::point(point[axis])
+        } else if let Some(exact) =
+            crate::exact_curve_segments::exact_add(point[axis], direction[axis])
+        {
+            I::point(exact)
         } else {
             I::point(point[axis]).add(I::point(direction[axis]))?
         };

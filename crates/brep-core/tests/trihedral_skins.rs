@@ -117,10 +117,22 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
             .boundaries
             .iter()
             .map(|c| {
+                let report = &c.g2.report;
+                let g2_upper = report.geometric.orientation.and_then(|orientation| {
+                    let branch = &report.geometric.branches[match orientation {
+                        nurbs_core::surface_g2::Orientation::Same => 0,
+                        nurbs_core::surface_g2::Orientation::Opposite => 1,
+                    }];
+                    Some([
+                        report.positions.upper?,
+                        branch.normal_upper?,
+                        branch.tensor_upper?,
+                    ])
+                });
                 value_codec::json!({
                     "curve":c.curve,"surface":c.surface,"originalSurface":c.original_surface,
                     "originalPcurve":c.original_pcurve,"direction":c.direction,
-                    "g2Upper":c.g2.upper,"positionUpperMm":c.positions.upper
+                    "g2Upper":g2_upper,"positionUpperMm":report.positions.upper
                 })
             })
             .collect::<Vec<_>>();

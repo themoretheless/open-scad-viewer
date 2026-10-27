@@ -1,7 +1,11 @@
 # manifold-ops
 
 Boolean operations with a manifoldness guarantee — the operation layer of
-the manifold library.
+the manifold library. See the [user guide](../../docs/manifold-user-guide.md),
+[developer guide](../../docs/manifold-developer-guide.md), the
+[error catalog](../../docs/manifold-error-catalog.md), the
+[changelog](../../docs/manifold-changelog.md), and the runnable
+`examples/user_guide.rs`.
 
 `boolean_manifold(a_pos, a_idx, b_pos, b_idx, op)`:
 

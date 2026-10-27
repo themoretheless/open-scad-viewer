@@ -1,0 +1,646 @@
+{
+  "schema": 1,
+  "id": "1793046975722777000-31419",
+  "status": "complete",
+  "environment": {
+    "arch": "aarch64",
+    "os": "macos"
+  },
+  "provenance": {
+    "rbench_version": "0.1.0",
+    "samples": "8",
+    "warmup_ns": "10000000"
+  },
+  "cases": [
+    {
+      "id": "manifold-core/kernels/check/icosphere-1280",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "1280",
+        "sample_target_ns": "1000000",
+        "samples": "8",
+        "warmup_ns": "10000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "manifold-core/kernels/check/icosphere-5120",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "5120",
+        "sample_target_ns": "1000000",
+        "samples": "8",
+        "warmup_ns": "10000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "1280",
+        "sample_target_ns": "1000000",
+        "samples": "8",
+        "warmup_ns": "10000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "1281",
+        "sample_target_ns": "1000000",
+        "samples": "8",
+        "warmup_ns": "10000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "manifold-core/kernels/metrics/icosphere-5120",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "5120",
+        "sample_target_ns": "1000000",
+        "samples": "8",
+        "warmup_ns": "10000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "1685041",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "1774958",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "1648625",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "1630500",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "1694709",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "1718625",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "1680166",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "1635375",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "817584",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "845459",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "852250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "971542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "993291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "896625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "875750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/check/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "882583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "1271459",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "1214625",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "1373625",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "1202791",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "1178417",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "1358375",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "1275500",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "1232625",
+      "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "1163166",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "1360875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "1200167",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "1166750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "1117458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "1110833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "1093584",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "1069917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "1880375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "1844250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "1844708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "1820084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "1741959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "1890584",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "1937208",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "manifold-core/kernels/metrics/icosphere-5120",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "1837834",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    }
+  ],
+  "notes": [
+    "Raw batches are not independent process replications. Batch averages are not individual-operation latency. CPU frequency and background load are uncontrolled."
+  ]
+}

@@ -129,7 +129,11 @@ fn exact_affine_plane(surface: &Surface) -> bool {
         || surface.periodic_v
         || surface.control_points.len() != 2
         || surface.control_points.iter().any(|row| row.len() != 2)
-        || surface.control_points.iter().flatten().any(|point| point.len() != 3)
+        || surface
+            .control_points
+            .iter()
+            .flatten()
+            .any(|point| point.len() != 3)
         || surface.weights.iter().flatten().any(|weight| *weight != 1.)
     {
         return false;
@@ -187,17 +191,22 @@ fn fit_plane(surface: &Surface, budget: CanonicalCastBudget) -> Result<PlaneFit>
         ));
     }
     let PrimitiveParams::Plane { normal, offset } = candidate.params else {
-        return Err(fail(CANONICAL_CAST_NO_FIT, "Plane detector returned another primitive"));
+        return Err(fail(
+            CANONICAL_CAST_NO_FIT,
+            "Plane detector returned another primitive",
+        ));
     };
-    let normal = unit(normal).ok_or_else(|| {
-        fail(CANONICAL_CAST_NO_FIT, "Best-fit plane normal is degenerate")
-    })?;
+    let normal = unit(normal)
+        .ok_or_else(|| fail(CANONICAL_CAST_NO_FIT, "Best-fit plane normal is degenerate"))?;
     let max_deviation_mm = points
         .iter()
         .map(|point| (dot(*point, normal) + offset).abs())
         .fold(0., f64::max);
     if !max_deviation_mm.is_finite() {
-        return Err(fail(CANONICAL_CAST_NO_FIT, "Non-finite control-net deviation"));
+        return Err(fail(
+            CANONICAL_CAST_NO_FIT,
+            "Non-finite control-net deviation",
+        ));
     }
     if max_deviation_mm >= budget.tolerance_mm {
         return Err(fail(
@@ -208,27 +217,24 @@ fn fit_plane(surface: &Surface, budget: CanonicalCastBudget) -> Result<PlaneFit>
             ),
         ));
     }
-    Ok(PlaneFit { normal, offset, max_deviation_mm })
+    Ok(PlaneFit {
+        normal,
+        offset,
+        max_deviation_mm,
+    })
 }
 
 fn source_normal(surface: &Surface) -> Option<[f64; 3]> {
-    let u = (surface.knots_u[surface.degree_u]
-        + surface.knots_u[surface.control_points.len()])
-        * 0.5;
-    let v = (surface.knots_v[surface.degree_v]
-        + surface.knots_v[surface.control_points[0].len()])
+    let u =
+        (surface.knots_u[surface.degree_u] + surface.knots_u[surface.control_points.len()]) * 0.5;
+    let v = (surface.knots_v[surface.degree_v] + surface.knots_v[surface.control_points[0].len()])
         * 0.5;
     let evaluation = surface.evaluate(u, v).ok()?;
     let (du, dv) = evaluation.first_derivatives()?;
     unit(cross(du, dv))
 }
 
-fn target_plane(
-    model: &Model,
-    face: usize,
-    fit: PlaneFit,
-    tolerance_mm: f64,
-) -> Result<Surface> {
+fn target_plane(model: &Model, face: usize, fit: PlaneFit, tolerance_mm: f64) -> Result<Surface> {
     let surface = &model.faces[face].surface;
     let points = control_points(surface)?;
     let centroid = points.iter().fold([0.; 3], |sum, point| {
@@ -241,22 +247,25 @@ fn target_plane(
         offset = -offset;
     }
     let origin = sub(centroid, mul(normal, dot(centroid, normal) + offset));
-    let u = (surface.knots_u[surface.degree_u]
-        + surface.knots_u[surface.control_points.len()])
+    let u =
+        (surface.knots_u[surface.degree_u] + surface.knots_u[surface.control_points.len()]) * 0.5;
+    let v = (surface.knots_v[surface.degree_v] + surface.knots_v[surface.control_points[0].len()])
         * 0.5;
-    let v = (surface.knots_v[surface.degree_v]
-        + surface.knots_v[surface.control_points[0].len()])
-        * 0.5;
-    let derivatives = surface.evaluate(u, v).ok().and_then(|evaluation| {
-        evaluation.first_derivatives().map(|(du, dv)| (du, dv))
-    });
+    let derivatives = surface
+        .evaluate(u, v)
+        .ok()
+        .and_then(|evaluation| evaluation.first_derivatives().map(|(du, dv)| (du, dv)));
     let axis_u = derivatives
         .and_then(|(du, dv)| {
             unit(sub(du, mul(normal, dot(du, normal))))
                 .or_else(|| unit(sub(dv, mul(normal, dot(dv, normal)))))
         })
         .or_else(|| {
-            let seed = if normal[0].abs() < 0.9 { [1., 0., 0.] } else { [0., 1., 0.] };
+            let seed = if normal[0].abs() < 0.9 {
+                [1., 0., 0.]
+            } else {
+                [0., 1., 0.]
+            };
             unit(cross(normal, seed))
         })
         .ok_or_else(|| fail(CANONICAL_CAST_NO_FIT, "Cannot construct a plane UV frame"))?;
@@ -283,7 +292,10 @@ fn target_plane(
         }
     }
     let span = [maximum[0] - minimum[0], maximum[1] - minimum[1]];
-    if span.iter().any(|value| !value.is_finite() || *value <= 1e-12) {
+    if span
+        .iter()
+        .any(|value| !value.is_finite() || *value <= 1e-12)
+    {
         return Err(fail(
             CANONICAL_CAST_UNSUPPORTED,
             "Trim control hull has a degenerate planar extent",
@@ -327,7 +339,10 @@ fn reproject_trims(
             let edge = &model.edges[coedge.edge];
             let oriented = if coedge.reversed {
                 edge.curve.reverse().map_err(|error| {
-                    fail(CANONICAL_CAST_PROJECTION, format!("Edge reversal failed: {}", error.message))
+                    fail(
+                        CANONICAL_CAST_PROJECTION,
+                        format!("Edge reversal failed: {}", error.message),
+                    )
                 })?
             } else {
                 edge.curve.clone()
@@ -343,18 +358,31 @@ fn reproject_trims(
                 },
             )
             .map_err(|error| {
-                fail(CANONICAL_CAST_PROJECTION, format!("Pcurve projection failed: {}", error.message))
+                fail(
+                    CANONICAL_CAST_PROJECTION,
+                    format!("Pcurve projection failed: {}", error.message),
+                )
             })?;
             if !projection.within_tolerance {
                 return Err(fail(
                     CANONICAL_CAST_PROJECTION,
-                    format!("Full-interval projection of edge {} was not certified", coedge.edge),
+                    format!(
+                        "Full-interval projection of edge {} was not certified",
+                        coedge.edge
+                    ),
                 ));
             }
             let pcurve = projection.pcurve.ok_or_else(|| {
-                fail(CANONICAL_CAST_PROJECTION, "Certified projection has no pcurve")
+                fail(
+                    CANONICAL_CAST_PROJECTION,
+                    "Certified projection has no pcurve",
+                )
             })?;
-            replacements.push((wire, index, Coedge::new(coedge.edge, coedge.reversed, pcurve)));
+            replacements.push((
+                wire,
+                index,
+                Coedge::new(coedge.edge, coedge.reversed, pcurve),
+            ));
         }
     }
     Ok(replacements)
@@ -364,7 +392,9 @@ fn unsupported_rotational(class: SurfaceClass) -> Result<()> {
     if matches!(class, SurfaceClass::Cylinder | SurfaceClass::Cone) {
         Err(fail(
             CANONICAL_CAST_UNSUPPORTED,
-            format!("Near-{class:?} canonical cast is not implemented; no pcurves or topology were changed"),
+            format!(
+                "Near-{class:?} canonical cast is not implemented; no pcurves or topology were changed"
+            ),
         ))
     } else {
         Ok(())
@@ -374,7 +404,10 @@ fn unsupported_rotational(class: SurfaceClass) -> Result<()> {
 fn check_area_delta(before: f64, after: f64, cap: f64) -> Result<f64> {
     let delta = after - before;
     if !delta.is_finite() || !before.is_finite() || !after.is_finite() {
-        return Err(fail(CANONICAL_CAST_AREA_DELTA, "Non-finite trimmed-face area"));
+        return Err(fail(
+            CANONICAL_CAST_AREA_DELTA,
+            "Non-finite trimmed-face area",
+        ));
     }
     if delta > cap {
         return Err(fail(
@@ -385,7 +418,10 @@ fn check_area_delta(before: f64, after: f64, cap: f64) -> Result<f64> {
     if delta.abs() > cap {
         return Err(fail(
             CANONICAL_CAST_AREA_DELTA,
-            format!("Absolute face-area delta {} mm^2 exceeds cap {cap} mm^2; cast rolled back", delta.abs()),
+            format!(
+                "Absolute face-area delta {} mm^2 exceeds cap {cap} mm^2; cast rolled back",
+                delta.abs()
+            ),
         ));
     }
     Ok(delta)
@@ -411,7 +447,10 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         ));
     }
     model.validate().map_err(|error| {
-        fail(CANONICAL_CAST_VALIDATION, format!("Invalid source model: {}", error.message))
+        fail(
+            CANONICAL_CAST_VALIDATION,
+            format!("Invalid source model: {}", error.message),
+        )
     })?;
 
     let mut candidates = Vec::new();
@@ -435,7 +474,11 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
     if candidates.len() > budget.max_candidates {
         return Err(fail(
             CANONICAL_CAST_BUDGET,
-            format!("Canonical-cast candidates {} exceed budget {}", candidates.len(), budget.max_candidates),
+            format!(
+                "Canonical-cast candidates {} exceed budget {}",
+                candidates.len(),
+                budget.max_candidates
+            ),
         ));
     }
 
@@ -452,7 +495,13 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         let previous_surface = std::mem::replace(&mut staged.faces[face].surface, target);
         let previous_pcurves = replacements
             .iter()
-            .map(|(wire, index, _)| (*wire, *index, staged.loops[*wire].coedges[*index].pcurve.clone()))
+            .map(|(wire, index, _)| {
+                (
+                    *wire,
+                    *index,
+                    staged.loops[*wire].coedges[*index].pcurve.clone(),
+                )
+            })
             .collect::<Vec<_>>();
         for (wire, index, replacement) in replacements {
             staged.loops[wire].coedges[index] = replacement;
@@ -469,7 +518,10 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         };
         let delta = check_area_delta(area_before, area_after, budget.area_delta_cap_mm2)?;
         staged.validate().map_err(|error| {
-            fail(CANONICAL_CAST_VALIDATION, format!("Canonical cast validation failed: {}", error.message))
+            fail(
+                CANONICAL_CAST_VALIDATION,
+                format!("Canonical cast validation failed: {}", error.message),
+            )
         })?;
         let target_normal = fit.normal;
         let post = staged.faces[face]
@@ -480,7 +532,10 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
             .map(|point| (dot([point[0], point[1], point[2]], target_normal) + fit.offset).abs())
             .fold(0., f64::max);
         if !post.is_finite() {
-            return Err(fail(CANONICAL_CAST_VALIDATION, "Non-finite post-cast deviation"));
+            return Err(fail(
+                CANONICAL_CAST_VALIDATION,
+                "Non-finite post-cast deviation",
+            ));
         }
         after_deviation = after_deviation.max(post);
         conversions.push(HealingConversion {
@@ -495,7 +550,10 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
     }
 
     staged.validate().map_err(|error| {
-        fail(CANONICAL_CAST_VALIDATION, format!("Final canonical-cast validation failed: {}", error.message))
+        fail(
+            CANONICAL_CAST_VALIDATION,
+            format!("Final canonical-cast validation failed: {}", error.message),
+        )
     })?;
     let fixed = conversions.len();
     if fixed == 0 {
@@ -507,7 +565,10 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         output_hash: model_hash(&staged),
         status: HealingStatus::Complete,
         operations: Vec::new(),
-        gaps: HealingGapSummary { before_mm: before_deviation, after_mm: after_deviation },
+        gaps: HealingGapSummary {
+            before_mm: before_deviation,
+            after_mm: after_deviation,
+        },
         sewn_edges: Vec::new(),
         conversions,
         displacement: Vec::new(),
@@ -526,7 +587,10 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         }],
     };
     report.validate()?;
-    Ok(HealingRun { model: staged, report })
+    Ok(HealingRun {
+        model: staged,
+        report,
+    })
 }
 
 #[cfg(test)]
@@ -560,8 +624,8 @@ mod tests {
                             let interior = matches!((i, j), (1, 1) | (1, 2) | (2, 1) | (2, 2));
                             let sign = if (i + j) % 2 == 0 { 1. } else { -1. };
                             vec![
-                                2. * i as f64 / 3.,
                                 2. * j as f64 / 3.,
+                                2. * i as f64 / 3.,
                                 if interior { sign * amplitude } else { 0. },
                             ]
                         })
@@ -584,16 +648,6 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
-        for coedge in &model.loops[model.faces[0].outer].coedges {
-            for i in 0..=8 {
-                let t = i as f64 / 8.;
-                let uv = crate::curve_point(&coedge.pcurve, t).unwrap();
-                let p = model.faces[0].surface.evaluate(uv[0], uv[1]).unwrap().point;
-                let edge = &model.edges[coedge.edge];
-                let q = crate::curve_point(&edge.curve, if coedge.reversed { 1. - t } else { t }).unwrap();
-                assert!(crate::distance(&p, &q) <= model.tolerance_mm, "uv={uv:?} p={p:?} q={q:?}");
-            }
-        }
         model.validate().unwrap();
         model
     }
@@ -606,12 +660,15 @@ mod tests {
         let vertices = model.vertices.clone();
         let old_pcurves = model.loops[model.faces[0].outer].coedges.clone();
         let area_before = face_area(&model, 0, &CanonicalCastBudget::default().work).unwrap();
-        let run = cast_canonical_surfaces(&model, options(1e-3, 1.)).unwrap();
+        let run = cast_canonical_surfaces(&model, options(1e-3, 1e-6)).unwrap();
         let area_after = face_area(&run.model, 0, &CanonicalCastBudget::default().work).unwrap();
 
         assert!(exact_affine_plane(&run.model.faces[0].surface));
-        assert!((area_after - area_before).abs() < 1.);
-        assert!(area_after <= area_before + 1e-9, "{area_before} -> {area_after}");
+        assert!((area_after - area_before).abs() < 1e-6);
+        assert!(
+            area_after <= area_before + 1e-9,
+            "{area_before} -> {area_after}"
+        );
         assert_eq!(run.model.1, ids);
         assert_eq!(run.model.edges, edges);
         assert_eq!(run.model.vertices, vertices);
@@ -622,11 +679,13 @@ mod tests {
         assert_eq!(run.report.stages[0].fixed, 1);
         assert!(run.report.gaps.before_mm >= 1e-4);
         assert!(run.report.gaps.after_mm <= 1e-12);
-        assert!(run.model.loops[run.model.faces[0].outer]
-            .coedges
-            .iter()
-            .zip(&old_pcurves)
-            .any(|(after, before)| after.pcurve != before.pcurve));
+        assert!(
+            run.model.loops[run.model.faces[0].outer]
+                .coedges
+                .iter()
+                .zip(&old_pcurves)
+                .any(|(after, before)| after.pcurve != before.pcurve)
+        );
         run.model.validate().unwrap();
         run.model.validate_continuous(100_000).unwrap();
         assert_eq!(HEALING_REPORT_VERSION, 3);
@@ -670,8 +729,14 @@ mod tests {
         // Orthogonal reprojection of a graph-like near-plane cannot grow its
         // trimmed area. Exercise the shared growth branch directly; the real
         // measured before/after integration gate is covered above.
-        assert_eq!(check_area_delta(4., 4.1, 0.01).unwrap_err().code, CANONICAL_CAST_AREA_GREW);
-        assert_eq!(check_area_delta(4., f64::NAN, 1.).unwrap_err().code, CANONICAL_CAST_AREA_DELTA);
+        assert_eq!(
+            check_area_delta(4., 4.1, 0.01).unwrap_err().code,
+            CANONICAL_CAST_AREA_GREW
+        );
+        assert_eq!(
+            check_area_delta(4., f64::NAN, 1.).unwrap_err().code,
+            CANONICAL_CAST_AREA_DELTA
+        );
         let model = near_plane(1e-4, 1.);
         let error = cast_canonical_surfaces(&model, options(f64::NAN, 1.)).unwrap_err();
         assert_eq!(error.code, CANONICAL_CAST_BUDGET);

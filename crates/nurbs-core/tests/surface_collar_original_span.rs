@@ -79,3 +79,11 @@ fn crossing_original_knot_interval_is_refused() {
     let pc = Curve::from_polyline(vec![vec![0.4, 0.2], vec![0.6, 0.3]]).unwrap();
     assert!(surface_collar::construct(&original(), &pc, [0., 0.01], 1e-7, 2000000).is_err());
 }
+
+#[test]
+fn exact_collar_endpoint_on_an_original_knot_is_not_a_crossing() {
+    let pc = Curve::from_polyline(vec![vec![0.125, 0.25], vec![0.25, 0.25]]).unwrap();
+    let out = surface_collar::construct(&original(), &pc, [0.25, 0.25], 1e-7, 2000000)
+        .unwrap();
+    assert!(out.position_error_upper_mm <= 1e-7);
+}

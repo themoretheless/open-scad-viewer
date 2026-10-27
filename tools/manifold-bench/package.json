@@ -7,6 +7,9 @@
   "scripts": {
     "bench:cpu": "node bench-cpu.mjs",
     "bench:memory": "node --expose-gc bench-memory.mjs",
+    "bench:kernel:record": "node rbench-regression.mjs record",
+    "bench:kernel:check": "node rbench-regression.mjs check",
+    "test:rbench": "node --test rbench-regression.test.mjs",
     "test:differential": "node differential.mjs"
   },
   "engines": {
