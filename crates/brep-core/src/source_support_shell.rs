@@ -514,6 +514,28 @@ mod tests {
             &body, atlas_limits(atlas.exact_work - 1, 100000)).unwrap();
         assert!(short_work.certificate.is_none());
         assert_eq!(short_work.completed_poles, 0);
+        let transverse_limits = |columns| crate::source_pole_tangency::TransverseLimits {
+            atlas: atlas_limits(100000000, 100000), columns,
+        };
+        let transverse = crate::source_pole_tangency::qualify_body_transverse_pole_atlas(
+            &body, transverse_limits(100000)).unwrap();
+        let t = transverse.certificate.expect(transverse.reason);
+        assert!(std::ptr::eq(t.atlas().body(), &body));
+        assert_eq!(t.projections().len(), polar.collars().len());
+        assert_eq!(transverse.completed_poles, t.projections().len());
+        assert_eq!(transverse.exact_work, atlas.exact_work);
+        assert_eq!(transverse.cells, atlas.cells);
+        for (i, (address, projection)) in t.projections().iter().enumerate() {
+            assert_eq!(*address, body.geometry().shell().poles()[i].0);
+            assert!(std::ptr::eq(projection.surface(), body.geometry().shell().poles()[i].1.source().surface()));
+            assert_eq!(projection.axis(), 2);
+            let b = projection.component_bounds(); assert!(b[0] > 0. || b[1] < 0.);
+        }
+        let short_columns = crate::source_pole_tangency::qualify_body_transverse_pole_atlas(
+            &body, transverse_limits(transverse.columns - 1)).unwrap();
+        assert!(short_columns.certificate.is_none());
+        assert!(short_columns.completed_poles < transverse.completed_poles);
+        assert_eq!(short_columns.columns, transverse.columns - 1);
         let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
         let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
             crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,

@@ -37,7 +37,7 @@ impl PoleOrientation {
         self.positive
     }
 }
-fn oriented_component(bounds: [f64; 2], winding: i32, reverse: bool) -> Option<bool> {
+pub(super) fn oriented_component(bounds: [f64; 2], winding: i32, reverse: bool) -> Option<bool> {
     if winding != 1 && winding != -1 {
         return None;
     }
@@ -50,17 +50,17 @@ fn oriented_component(bounds: [f64; 2], winding: i32, reverse: bool) -> Option<b
     };
     Some(positive ^ (winding == -1) ^ reverse)
 }
-impl<E: Carrier> BodyPoleAtlas<'_, E> {
+impl<'a, E: Carrier> BodyPoleAtlas<'a, E> {
     pub fn body(&self) -> &Body<E> {
         self.planes.body()
     }
-    pub fn planes(&self) -> &BodyPlaneLimits<'_, E> {
+    pub fn planes(&self) -> &BodyPlaneLimits<'a, E> {
         &self.planes
     }
     pub fn orientations(&self) -> &[PoleOrientation] {
         &self.orientations
     }
-    pub fn collars(&self) -> &[(Address, PolarCollar<'_>)] {
+    pub fn collars(&self) -> &[(Address, PolarCollar<'a>)] {
         &self.collars
     }
 }

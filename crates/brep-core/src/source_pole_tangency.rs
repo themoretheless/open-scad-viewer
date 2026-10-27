@@ -10,11 +10,11 @@ pub struct PolePlane<'a> {
     pole: &'a CollapsedBoundary,
     limit: normals::PlaneLimit<'a>,
 }
-impl PolePlane<'_> {
+impl<'a> PolePlane<'a> {
     pub fn pole(&self) -> &CollapsedBoundary {
         self.pole
     }
-    pub fn limit(&self) -> &normals::PlaneLimit<'_> {
+    pub fn limit(&self) -> &normals::PlaneLimit<'a> {
         &self.limit
     }
 }
@@ -144,11 +144,11 @@ pub struct BodyPlaneLimits<'a, E: Carrier> {
     poles: Vec<(Address, PolePlane<'a>)>,
     vertices: Vec<usize>,
 }
-impl<E: Carrier> BodyPlaneLimits<'_, E> {
+impl<'a, E: Carrier> BodyPlaneLimits<'a, E> {
     pub fn body(&self) -> &Body<E> {
         self.body
     }
-    pub fn poles(&self) -> &[(Address, PolePlane<'_>)] {
+    pub fn poles(&self) -> &[(Address, PolePlane<'a>)] {
         &self.poles
     }
     pub fn vertices(&self) -> &[usize] {
@@ -285,3 +285,6 @@ mod tests;
 
 mod fan;
 pub use fan::{BodyPoleAtlas, FanLimits, FanReport, PoleOrientation, qualify_body_pole_atlas};
+
+mod projection;
+pub use projection::{TransverseBodyPoleAtlas, TransverseLimits, TransverseReport, qualify_body_transverse_pole_atlas};

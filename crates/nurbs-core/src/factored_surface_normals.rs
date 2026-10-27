@@ -511,3 +511,5 @@ pub use pole_plane::{PlaneLimit, PlaneLimitReport, PlanePairReport, prepare_plan
 
 mod pole_neighborhood;
 pub use pole_neighborhood::{TangentPoleCollar, TangentPoleCollarReport, prepare_tangent_pole_collar};
+
+pub use pole_plane::{ProjectionCollar, ProjectionReport};

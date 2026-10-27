@@ -1,5 +1,5 @@
 use super::*;
-fn source(m: usize, weighted: bool) -> Surface {
+pub(super) fn source(m: usize, weighted: bool) -> Surface {
     let p = 2 * m;
     let choose = |n: usize, k: usize| {
         if n < k {
@@ -39,7 +39,7 @@ fn source(m: usize, weighted: bool) -> Surface {
         periodic_v: false,
     }
 }
-fn oriented(mut s: Surface, b: Boundary) -> Surface {
+pub(super) fn oriented(mut s: Surface, b: Boundary) -> Surface {
     let (axis, end) = axes(b);
     if end {
         s.control_points.reverse();

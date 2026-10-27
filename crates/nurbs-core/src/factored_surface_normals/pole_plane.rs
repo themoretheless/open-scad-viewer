@@ -12,6 +12,9 @@ pub struct PlaneLimit<'a> {
     order: usize,
     normal: [[f64; 2]; 3],
     reference: [[f64; 2]; 3],
+    // Complete original normal numerator after removing only exact zero rows.
+    // This remains distinct from the legacy U²-only Certificate.
+    net: Net,
 }
 impl PlaneLimit<'_> {
     pub fn surface(&self) -> &Surface {
@@ -257,6 +260,7 @@ pub fn prepare_plane_limit(
         order,
         normal,
         reference: net[0][0].map(|x| [x.lo, x.hi]),
+        net,
     });
     out.reason = "pole-plane-uniform-limit-qualified";
     Ok(out)
@@ -304,3 +308,6 @@ pub fn compare_plane_limits(
 }
 #[cfg(test)]
 mod tests;
+
+mod projection;
+pub use projection::{ProjectionCollar, ProjectionReport};
