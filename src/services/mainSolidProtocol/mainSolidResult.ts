@@ -21,7 +21,7 @@ import type { SolidBrepToolResult } from '../solidBrepTool'
 import type { StructuralSections } from '../structuralSections'
 import type { SurfaceBoundaryReport } from '../solidSurfaceDiagnostics'
 import type { TrussResponse } from '../trussAnalysis'
-import { isAxialScreeningRows, isStructuralProfileCatalog, isTrussFieldMeshes, isTrussTopologyResponse } from '../mechanicsProtocol'
+import { isAxialScreeningRows, isStructuralProfileCatalog, isThermalStrengthResult, isTrussFieldMeshes, isTrussTopologyResponse, isValidatedPrintProfile } from '../mechanicsProtocol'
 import { arrayOf, distanceWitnessConsistent, numericSequenceOf } from './mainSolidExpectation'
 import { isBondedSolidResult } from '../bondedSolidProtocol'
 import { isBoundaryConnectivity, isMaterialAudit } from '../structuralSectionsValidation'
@@ -569,6 +569,8 @@ if(job.kind==='drawingSheets')return Array.isArray(value)&&value.length>0&&value
   }
   if(job.kind==='trussField')return isTrussFieldMeshes(value,job.members)
   if(job.kind==='trussScreening')return isAxialScreeningRows(value,job.members,job.responses)
+  if(job.kind==='printStrengthProfile')return isValidatedPrintProfile(value,job.profile)
+  if(job.kind==='thermalStrength')return isThermalStrengthResult(value)
   if(job.kind==='trussTopology')return isTrussTopologyResponse(value,job.nodes,job.members,job.cases)
   if(job.kind==='structuralProfiles')return isStructuralProfileCatalog(value)
   if (job.kind==='truss') {

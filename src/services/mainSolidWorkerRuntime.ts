@@ -55,7 +55,7 @@ import {cadOperation} from './cadWorkbench'
 import {mainOperation} from './mainModeling'
 import {optimizeTrussTopology,solveTruss} from './trussAnalysis'
 import {trussFieldMeshes} from './trussFieldMeshes'
-import {screenTrussMembers} from './trussScreening'
+import {evaluateThermalStrength,screenTrussMembers,validatePrintStrengthProfile} from './trussScreening'
 import {listStructuralProfiles,lookupStructuralProfile} from './structuralProfiles'
 import {spatialGraph} from './solidLightening'
 import {flattenGroupGeometry} from './meshFlatten'
@@ -153,6 +153,8 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'truss':return solveTruss(job.model)
     case 'trussField':return trussFieldMeshes(job.model,job.result,job.markerMm)
     case 'trussScreening':return screenTrussMembers(job.model,job.responses,job.limits)
+    case 'printStrengthProfile':return validatePrintStrengthProfile(job.profile)
+    case 'thermalStrength':return evaluateThermalStrength(job.request)
     case 'trussTopology':return optimizeTrussTopology(job.model,job.cases,job.options)
     case 'structuralProfiles':return listStructuralProfiles().map(profile=>lookupStructuralProfile(profile.designation))
     case 'latticeGraph': {

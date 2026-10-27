@@ -860,3 +860,19 @@ it('generates force markers and axial screening through the worker handler',asyn
  await handle({version:1,id:3,job:{kind:'trussScreening',model,responses:[solved],limits:{tensionMpa:80,compressionMpa:40,safetyFactor:2}}})
  expect(messages[2]).toMatchObject({kind:'trussScreening',ok:true,result:[{memberIndex:0,utilization:1.25,governingResponse:0,stressMpa:50,status:'overloaded'}]})
 })
+
+it('validates print conditions and evaluates measured thermal properties through the worker handler',async()=>{
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ const profile={material:'PETG',grade:'Synthetic specimen',propertySource:'Regression only',nozzleMm:.4,lineWidthMm:.45,layerHeightMm:.2,nozzleTempC:240,bedTempC:80}
+ await handle({version:1,id:1,job:{kind:'printStrengthProfile',profile}})
+ expect(messages[0]).toMatchObject({id:1,kind:'printStrengthProfile',ok:true,result:{profile,warnings:[],propertyModel:'user-supplied-isotropic-axial'}})
+ const request={profile,calibrationProfile:{...profile},serviceTempC:40,samples:[
+  {nozzleTempC:240,serviceTempC:20,youngMpa:2000,tensionMpa:40,compressionMpa:60},
+  {nozzleTempC:240,serviceTempC:60,youngMpa:1000,tensionMpa:20,compressionMpa:30},
+ ]}
+ await handle({version:1,id:2,job:{kind:'thermalStrength',request}})
+ expect(messages[1]).toMatchObject({id:2,kind:'thermalStrength',ok:true,result:{
+  modelKind:'measured-bilinear-isotropic-axial-v1',youngMpa:1500,tensionMpa:30,compressionMpa:45,
+  nozzleBracketC:[240,240],serviceBracketC:[20,60],
+ }})
+})

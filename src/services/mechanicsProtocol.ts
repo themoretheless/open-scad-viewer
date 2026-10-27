@@ -1,7 +1,7 @@
 import type {MeshData} from '../core/mesh'
 import type {StructuralProfileFamily,StructuralProfileProperties} from './structuralProfiles'
 import type {TrussTopologyResponse} from './trussAnalysis'
-import type {AxialScreeningRow} from './trussScreening'
+import type {AxialScreeningRow,PrintStrengthProfile,ThermalStrengthResult,ValidatedPrintProfile} from './trussScreening'
 import {isMeshData} from './geometryWorkerProtocol/isRecord'
 
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)
@@ -74,4 +74,24 @@ export function isAxialScreeningRows(value:unknown,members:number,responses:numb
       :item.status==='low-demand'?item.utilization<.3
       :item.status==='within-axial-limit'&&item.utilization>=.3&&item.utilization<=1
   })
+}
+
+export function isValidatedPrintProfile(value:unknown,expected:PrintStrengthProfile):value is ValidatedPrintProfile {
+  const result=value as ValidatedPrintProfile
+  if(!result||typeof result!=='object'||result.propertyModel!=='user-supplied-isotropic-axial'
+    ||!result.profile||typeof result.profile!=='object'||!Array.isArray(result.warnings)||result.warnings.length>2)return false
+  const keys=['material','grade','propertySource','nozzleMm','lineWidthMm','layerHeightMm','nozzleTempC','bedTempC'] as const
+  const warnings=new Set<ValidatedPrintProfile['warnings'][number]>()
+  return keys.every(key=>result.profile[key]===expected[key])&&result.warnings.every(warning=>{
+    if(warning!=='layer-above-80-percent-nozzle'&&warning!=='line-width-not-greater-than-layer'||warnings.has(warning))return false
+    warnings.add(warning);return true
+  })
+}
+
+export function isThermalStrengthResult(value:unknown):value is ThermalStrengthResult {
+  const result=value as ThermalStrengthResult
+  const bracket=(input:unknown)=>arrayOf(input,2,finite)&&(input as number[])[0]<=(input as number[])[1]
+  return !!result&&typeof result==='object'&&result.modelKind==='measured-bilinear-isotropic-axial-v1'
+    &&positive(result.youngMpa)&&positive(result.tensionMpa)&&positive(result.compressionMpa)
+    &&bracket(result.nozzleBracketC)&&bracket(result.serviceBracketC)
 }

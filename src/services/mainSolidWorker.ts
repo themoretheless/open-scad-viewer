@@ -5,7 +5,7 @@ import type {PickHit} from './rendererContracts'
 import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
 import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopologyOptions} from './trussAnalysis'
-import type {AxialLimits} from './trussScreening'
+import type {AxialLimits,PrintStrengthProfile,ThermalStrengthRequest} from './trussScreening'
 import {resolveTrussScenario, type TrussScenario} from './trussScenario'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, type LatticeGraphMesh} from './latticeGraphProtocol'
 import type {LighteningOptions} from './solidLightening'
@@ -40,6 +40,14 @@ export function computeTrussField(model:TrussInput,result:TrussResponse,markerMm
 
 export function computeTrussScreening(model:TrussInput,responses:TrussResponse[],limits:AxialLimits,options:MainSolidRunOptions={}){
  return shared.run({kind:'trussScreening',model,responses,limits},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computePrintStrengthProfile(profile:PrintStrengthProfile,options:MainSolidRunOptions={}){
+ return shared.run({kind:'printStrengthProfile',profile},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computeThermalStrength(request:ThermalStrengthRequest,options:MainSolidRunOptions={}){
+ return shared.run({kind:'thermalStrength',request},{...options,timeoutMs:options.timeoutMs??30000})
 }
 
 export function computeTrussTopology(model:Omit<TrussModel,'forcesN'>,cases:TrussTopologyLoadCase[],options:TrussTopologyOptions={},runOptions:MainSolidRunOptions={}){

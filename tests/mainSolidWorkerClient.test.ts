@@ -295,3 +295,36 @@ it('accepts ranked axial screening and rejects inconsistent rows',async()=>{
   await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
  }
 })
+
+const printProfile=()=>({material:'PETG',grade:'Synthetic specimen',propertySource:'Regression only',nozzleMm:.4,lineWidthMm:.45,layerHeightMm:.2,nozzleTempC:240,bedTempC:80})
+const validatedPrintProfile=()=>({profile:printProfile(),warnings:[] as string[],propertyModel:'user-supplied-isotropic-axial'})
+it('binds validated print conditions to their request and rejects malformed warnings',async()=>{
+ const {client,ports}=setup(),job={kind:'printStrengthProfile' as const,profile:printProfile()}
+ const valid=client.run(job);ports[0].reply({ok:true,result:validatedPrintProfile()});await expect(valid).resolves.toEqual(validatedPrintProfile())
+ for(const result of [
+  {...validatedPrintProfile(),profile:{...printProfile(),nozzleTempC:250}},
+  {...validatedPrintProfile(),warnings:['layer-above-80-percent-nozzle','layer-above-80-percent-nozzle']},
+  {...validatedPrintProfile(),warnings:['unknown-warning']},
+ ]){
+  const task=client.run(job);ports.at(-1)!.reply({ok:true,result})
+  await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ }
+})
+
+const thermalResult=()=>({modelKind:'measured-bilinear-isotropic-axial-v1',youngMpa:1500,tensionMpa:30,compressionMpa:45,nozzleBracketC:[240,240],serviceBracketC:[20,60]})
+it('accepts measured thermal properties and rejects inconsistent results',async()=>{
+ const {client,ports}=setup(),profile=printProfile(),job={kind:'thermalStrength' as const,request:{profile,calibrationProfile:{...profile},serviceTempC:40,samples:[
+  {nozzleTempC:240,serviceTempC:20,youngMpa:2000,tensionMpa:40,compressionMpa:60},
+  {nozzleTempC:240,serviceTempC:60,youngMpa:1000,tensionMpa:20,compressionMpa:30},
+ ]}}
+ const valid=client.run(job);ports[0].reply({ok:true,result:thermalResult()});await expect(valid).resolves.toEqual(thermalResult())
+ for(const result of [
+  {...thermalResult(),youngMpa:NaN},
+  {...thermalResult(),modelKind:'unmeasured-model'},
+  {...thermalResult(),serviceBracketC:[60,20]},
+  {...thermalResult(),nozzleBracketC:[NaN,240]},
+ ]){
+  const task=client.run(job);ports.at(-1)!.reply({ok:true,result})
+  await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ }
+})

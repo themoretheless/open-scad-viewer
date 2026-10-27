@@ -4,8 +4,8 @@ import type {MeshData} from '../core/mesh'
 import type {LighteningOptions} from '../services/solidLightening'
 import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
 import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
-import {computeNominalLatticeGraph,computeStructuralProfileCatalog,computeTrussField,computeTrussScenario,computeTrussScreening,computeTrussTopology} from '../services/mainSolidWorker'
-import {validatePrintStrengthProfile,type AxialScreeningRow,type ValidatedPrintProfile,type ThermalEditorState,type ThermalEvaluation} from '../services/trussScreening'
+import {computeNominalLatticeGraph,computePrintStrengthProfile,computeStructuralProfileCatalog,computeTrussField,computeTrussScenario,computeTrussScreening,computeTrussTopology} from '../services/mainSolidWorker'
+import type {AxialScreeningRow,ValidatedPrintProfile,ThermalEditorState,ThermalEvaluation} from '../services/trussScreening'
 import type {StructuralProfileProperties} from '../services/structuralProfiles'
 import type {TrussTopologyResponse} from '../services/trussAnalysis'
 import ThermalStrengthEditor from './ThermalStrengthEditor.vue'
@@ -187,9 +187,6 @@ function remove(){if(entries.value.length>1){entries.value.splice(active.value,1
 async function solve(){
   invalidateResult()
   if(!graph.value||!binding||!current.value)return
-  let profile:ValidatedPrintProfile
-  try{profile=validatePrintStrengthProfile(printProfile.value)}
-  catch(cause){error.value=String(cause);return}
   const thermal=thermalState.value.enabled?thermalState.value.evaluation:null
   if(thermalState.value.enabled&&!thermal){error.value=thermalState.value.error;return}
   const modulus=effectiveYoung.value
@@ -202,6 +199,8 @@ async function solve(){
     activeId:mode.value==='combination'?'combination':current.value.id}
   const ticket=revision,abort=new AbortController();controller=abort;phase.value='solve'
   try{
+    const profile=await computePrintStrengthProfile({...printProfile.value},{signal:abort.signal})
+    if(ticket!==revision)return
     const value=await computeTrussScenario(scenario,{signal:abort.signal})
     if(ticket!==revision)return
     solvedPrintProfile.value=profile

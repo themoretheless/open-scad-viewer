@@ -116,6 +116,7 @@ if(job.kind==='g2RunoutSurface')return {kind:job.kind,maxCells:job.options.maxCe
   }
   if(job.kind==='trussField')return {kind:job.kind,members:job.model.members.length}
   if(job.kind==='trussScreening')return {kind:job.kind,members:job.model.members.length,responses:job.responses.length}
+  if(job.kind==='printStrengthProfile')return {kind:job.kind,profile:{...job.profile}}
   if(job.kind==='trussTopology')return {kind:job.kind,nodes:job.model.nodesMm.length,members:job.model.members.length,cases:job.cases.length}
   return job.kind==='truss' ? {kind:job.kind,nodes:job.model.nodesMm.length,members:job.model.members.length} : job.kind==='structuralSections'?{kind:job.kind,axis:job.axis,stations:[...job.stations]}:{kind:job.kind}
 }
