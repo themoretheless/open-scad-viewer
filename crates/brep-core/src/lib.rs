@@ -474,6 +474,7 @@ pub mod source_body_model;
 pub mod source_body_topology;
 
 pub mod source_seam_tangency;
+pub mod source_pole_tangency;
 
 pub mod source_inverse_shear;
 

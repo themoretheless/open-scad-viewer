@@ -476,6 +476,17 @@ mod tests {
         .unwrap();
         let body = volume.body.expect(volume.reason);
         assert!(!body.geometry().shell().poles().is_empty());
+        let planes=crate::source_pole_tangency::qualify_body_plane_limits(&body,100000000).unwrap();
+        let proof=planes.certificate.expect(planes.reason);
+        assert!(std::ptr::eq(proof.body(),&body));
+        assert_eq!(proof.poles().len(),body.geometry().shell().poles().len());
+        assert_eq!(proof.vertices().len(),2);
+        assert_eq!(planes.comparisons,proof.poles().len()-2);
+        for (i,(_,plane)) in proof.poles().iter().enumerate() {
+            assert!(std::ptr::eq(plane.pole(),&body.geometry().shell().poles()[i].1));
+        }
+        let short=crate::source_pole_tangency::qualify_body_plane_limits(&body,planes.work-1).unwrap();
+        assert!(short.certificate.is_none());assert!(short.work<planes.work);
         let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
         let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
             crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
