@@ -84,6 +84,61 @@ pub fn qualify(pole: &CollapsedBoundary, max_work: u64) -> Result<Report<'_>> {
     out.reason = "source-pole-uniform-plane-limit-qualified";
     Ok(out)
 }
+/// A retained original collapsed restriction with an injective local source
+/// collar and a uniform plane limit. This is not a whole incident-fan disk or
+/// a proof that another face cannot intersect the collar.
+pub struct LocalPole<'a> {
+    plane: PolePlane<'a>,
+    quotient: nurbs_core::surface_quotient_injectivity::PolarCollar<'a>,
+}
+impl LocalPole<'_> {
+    pub fn plane(&self) -> &PolePlane<'_> {
+        &self.plane
+    }
+    pub fn quotient(&self) -> &nurbs_core::surface_quotient_injectivity::PolarCollar<'_> {
+        &self.quotient
+    }
+}
+pub struct LocalReport<'a> {
+    pub certificate: Option<LocalPole<'a>>,
+    pub work: u64,
+    pub cells: usize,
+    pub reason: &'static str,
+}
+/// Derive both facts from this actual owned source. The collar covers the full
+/// natural side, hence also the retained root/parameter subinterval of it.
+pub fn qualify_local(
+    pole: &CollapsedBoundary,
+    inward_extent: f64,
+    subdivisions: usize,
+    max_work: u64,
+    max_cells: usize,
+) -> Result<LocalReport<'_>> {
+    let prepared = qualify(pole, max_work)?;
+    let mut out = LocalReport {
+        certificate: None,
+        work: prepared.work,
+        cells: 0,
+        reason: prepared.reason,
+    };
+    let Some(plane) = prepared.certificate else {
+        return Ok(out);
+    };
+    let quotient = nurbs_core::surface_quotient_injectivity::certify_polar_collar(
+        pole.source().surface(),
+        plane.limit.boundary(),
+        inward_extent,
+        subdivisions,
+        max_cells,
+    )?;
+    out.cells = quotient.cells;
+    out.reason = quotient.reason;
+    if let Some(quotient) = quotient.certificate {
+        out.certificate = Some(LocalPole { plane, quotient });
+        out.reason = "source-pole-local-quotient-and-plane-qualified";
+    }
+    Ok(out)
+}
 pub struct BodyPlaneLimits<'a, E: Carrier> {
     body: &'a Body<E>,
     poles: Vec<(Address, PolePlane<'a>)>,

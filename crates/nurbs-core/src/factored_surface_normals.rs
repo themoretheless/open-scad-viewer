@@ -508,3 +508,6 @@ mod tests {
 
 mod pole_plane;
 pub use pole_plane::{PlaneLimit, PlaneLimitReport, PlanePairReport, prepare_plane_limit, compare_plane_limits};
+
+mod pole_neighborhood;
+pub use pole_neighborhood::{TangentPoleCollar, TangentPoleCollarReport, prepare_tangent_pole_collar};

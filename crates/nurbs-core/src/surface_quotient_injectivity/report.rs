@@ -156,10 +156,28 @@ pub fn certify_polar_source_frame(
     subdivisions: usize,
     max_cells: usize,
 ) -> Result<PolarReport> {
+    certify_polar_collar_inner(s, end, 1., subdivisions, max_cells)
+}
+
+// Restrict interval polynomials derived from the ORIGINAL controls. In
+// particular, never extract a rounded rational patch and relabel it as source.
+pub(super) fn certify_polar_collar_inner(
+    s: &Surface,
+    end: usize,
+    inward_extent: f64,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<PolarReport> {
     s.validate()?;
     check(
-        end <= 1 && (1..=64).contains(&subdivisions) && (1..=100000).contains(&max_cells),
-        "Choose bounded polar chart work",
+        s.control_points[0][0].len() == 3
+            && end <= 1
+            && inward_extent.is_finite()
+            && inward_extent > 0.
+            && inward_extent <= 1.
+            && (1..=64).contains(&subdivisions)
+            && (1..=100000).contains(&max_cells),
+        "Choose bounded original 3D polar collar work",
     )?;
     let mut out = PolarReport {
         proven: false,
@@ -259,8 +277,8 @@ pub fn certify_polar_source_frame(
         for j in 0..subdivisions {
             let domain = [
                 [
-                    i as f64 / subdivisions as f64,
-                    (i + 1) as f64 / subdivisions as f64,
+                    inward_extent * (i as f64 / subdivisions as f64),
+                    inward_extent * ((i + 1) as f64 / subdivisions as f64),
                 ],
                 [
                     j as f64 / subdivisions as f64,

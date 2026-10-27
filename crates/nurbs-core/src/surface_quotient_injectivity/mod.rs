@@ -7,3 +7,6 @@ mod report;
 #[cfg(test)]
 mod tests;
 pub use report::*;
+
+mod collar;
+pub use collar::{PolarCollar, PolarCollarReport, certify_polar_collar};

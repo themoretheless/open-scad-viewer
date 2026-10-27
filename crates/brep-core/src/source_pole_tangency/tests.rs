@@ -65,3 +65,30 @@ fn collapse_identity_alone_cannot_supply_a_common_plane() {
         .unwrap();
     assert!(qualify(&p, 100000000).unwrap().certificate.is_none());
 }
+
+#[test]
+fn owned_partial_pole_gets_local_quotient_without_losing_source_binding() {
+    let p = pole();
+    let before = p.source().definition();
+    let report = qualify_local(&p, 0.125, 8, 100000000, 64).unwrap();
+    let token = report.certificate.expect(report.reason);
+    assert!(std::ptr::eq(token.plane().pole(), &p));
+    assert!(std::ptr::eq(
+        token.quotient().surface(),
+        p.source().surface()
+    ));
+    assert_eq!(p.source().definition(), before);
+    assert_eq!(report.cells, 64);
+    assert!(
+        qualify_local(&p, 0.125, 8, report.work - 1, 64)
+            .unwrap()
+            .certificate
+            .is_none()
+    );
+    assert!(
+        qualify_local(&p, 0.125, 8, 100000000, 63)
+            .unwrap()
+            .certificate
+            .is_none()
+    );
+}
