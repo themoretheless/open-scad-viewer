@@ -3326,6 +3326,21 @@ mod tests {
             curve_spans: 200,
             normal_spans: 200,
         };
+        let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
+        let collection = crate::source_seam_tangency::qualify_collection(&body, &classes, seam_limits()).unwrap();
+        let certificate = collection.certificate.expect("Explicit sharp joins preserve C0");
+        assert!(std::ptr::eq(certificate.body(), &body));
+        assert_eq!(certificate.classes(), classes);
+        assert!(certificate.seams().is_empty());
+        assert!(!certificate.all_edges_tangent());
+        assert_eq!(certificate.max_sine_squared(), 1e-6);
+        assert_eq!(collection.completed_edges, classes.len());
+        assert_eq!((collection.cells, collection.curve_spans, collection.normal_spans), (0, 0, 0));
+        assert!(crate::source_seam_tangency::qualify_collection(&body, &classes[..classes.len()-1], seam_limits()).is_err());
+        let mut demanded = classes.clone(); demanded[0] = crate::source_seam_tangency::Class::TangentPlanes;
+        let refused = crate::source_seam_tangency::qualify_collection(&body, &demanded, seam_limits()).unwrap();
+        assert!(refused.certificate.is_none());
+        assert_eq!(refused.uncertain_edge, Some(0));
         // A valid tetrahedron is intentionally sharp; volume admission must
         // not silently label its selected shared edge tangent.
         assert!(

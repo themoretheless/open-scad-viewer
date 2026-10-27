@@ -475,6 +475,14 @@ mod tests {
         )
         .unwrap();
         let body = volume.body.expect(volume.reason);
+        assert!(!body.geometry().shell().poles().is_empty());
+        let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
+        let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
+            crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
+                cells: 1000, curve_spans: 1000, normal_spans: 1000 }).unwrap();
+        assert!(refused.certificate.is_none());
+        assert_eq!(refused.completed_edges, 0);
+        assert_eq!(refused.reason, "source-seam-collection-pole-limits-unproven");
         let r = [0.5_f64, 1.25];
         let length = 8.;
         let slope = (r[1] - r[0]) / length;
@@ -665,6 +673,24 @@ mod tests {
             admitted.reason,
             admitted.next_pair
         );
+        let volume = crate::source_volume::qualify(admitted.geometry.unwrap(), crate::source_volume::Limits {
+            axis: 2, origin: 0., absolute_error: 0.1, tolerance_uv: 1e-8,
+            cells: 50000, spans: 100000, domain_cells: 100000,
+        }).unwrap();
+        let body = volume.body.expect(volume.reason);
+        let classes = body.geometry().shell().uses().iter().map(|pair| {
+            if pair.iter().all(|use_| use_.face < 4) { crate::source_seam_tangency::Class::TangentPlanes }
+            else { crate::source_seam_tangency::Class::C0 }
+        }).collect::<Vec<_>>();
+        let collection = crate::source_seam_tangency::qualify_collection(&body, &classes,
+            crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
+                cells: 10000, curve_spans: 10000, normal_spans: 10000 }).unwrap();
+        let certificate = collection.certificate.expect(collection.reason);
+        assert!(std::ptr::eq(certificate.body(), &body));
+        assert_eq!(certificate.seams().len(), 4);
+        assert_eq!(certificate.classes().iter().filter(|c| **c == crate::source_seam_tangency::Class::C0).count(), 8);
+        assert!(!certificate.all_edges_tangent());
+        assert_eq!(collection.completed_edges, 12);
     }
     #[test]
     fn partial_canonical_carrier_replays_a_body_and_keeps_owned_chord_maps() {

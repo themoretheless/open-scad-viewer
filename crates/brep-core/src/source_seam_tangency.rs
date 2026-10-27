@@ -1,5 +1,7 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
+mod collection;
+pub use collection::{Class, Collection, CollectionReport, qualify_collection};
 use crate::source_shared_edge::SharedEdge;
 use nurbs_core::{Error, Result, interval_eval::Interval as I};
 pub struct Limits {
@@ -402,7 +404,7 @@ mod tests {
         assert!(crate::source_projective_edge::restore(wrong,10000,100000000,10000).unwrap().edge.is_none());
     }
 
-    fn limits() -> Limits {
+    pub(super) fn limits() -> Limits {
         Limits {
             max_sine_squared: 1e-3,
             cells: 10000,
@@ -474,7 +476,7 @@ mod tests {
             periodic_v: false,
         }
     }
-    fn shared(crease: bool) -> SharedEdge {
+    pub(super) fn shared(crease: bool) -> SharedEdge {
         let mut a = patch(false);
         for row in &mut a.control_points {
             for (v, p) in row.iter_mut().enumerate() {
