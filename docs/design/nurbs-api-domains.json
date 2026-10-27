@@ -14,7 +14,8 @@
     "interval_newton",
     "sturm",
     "core",
-    "numerics"
+    "numerics",
+    "bernstein_interpolation"
   ],
   "curves": [
     "primitives",
@@ -116,7 +117,8 @@
     "surface_g2_pcurves",
     "surface_g1_pcurves",
     "corner_blend",
-    "radius_transition"
+    "radius_transition",
+    "profile_section_bridge"
   ],
   "offsets": [
     "curve_offset",
@@ -177,7 +179,10 @@
     "surface_coordinate_flow",
     "surface_normal_trace",
     "curve_secant_trace",
-    "surface_collar"
+    "surface_collar",
+    "polar_surface_differential",
+    "rational_pole_differential",
+    "surface_boundary_secant"
   ],
   "parameterization": [
     "curve_pullback",
@@ -238,7 +243,14 @@
     "surface_self_chord",
     "surface_self_chord_coverage",
     "certificates",
-    "skin_radius"
+    "skin_radius",
+    "profile_projection_jacobian",
+    "profile_projected_jordan",
+    "factored_surface_normals",
+    "profile_expression_radius",
+    "profile_expression_bernstein",
+    "surface_weight_profile",
+    "synchronized_boundary_normals"
   ],
   "meshing": [
     "curve_tessellation",

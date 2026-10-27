@@ -18,6 +18,7 @@ pub mod geometry {
     pub use crate::robust_solvers;
     pub use crate::interval_newton;
     pub use crate::sturm;
+    pub use crate::bernstein_interpolation;
 }
 
 /// Existing modules for curves.
@@ -130,6 +131,7 @@ pub mod joining {
     pub use crate::ellipse_transition;
     pub use crate::circle_rectangle_transition;
     pub use crate::sweep_seam_set;
+    pub use crate::profile_section_bridge;
 }
 
 /// Existing modules for offsets.
@@ -195,6 +197,9 @@ pub mod queries {
     pub use crate::distance;
     pub use crate::surface_occlusion;
     pub use crate::surface_collar;
+    pub use crate::polar_surface_differential;
+    pub use crate::rational_pole_differential;
+    pub use crate::surface_boundary_secant;
 }
 
 /// Existing modules for parameterization.
@@ -261,6 +266,13 @@ pub mod validation {
     pub use crate::surface_self_chord;
     pub use crate::surface_self_chord_coverage;
     pub use crate::skin_radius;
+    pub use crate::profile_projection_jacobian;
+    pub use crate::profile_projected_jordan;
+    pub use crate::factored_surface_normals;
+    pub use crate::profile_expression_radius;
+    pub use crate::profile_expression_bernstein;
+    pub use crate::surface_weight_profile;
+    pub use crate::synchronized_boundary_normals;
 }
 
 /// Existing modules for meshing.
