@@ -691,6 +691,45 @@ mod tests {
         assert_eq!(certificate.classes().iter().filter(|c| **c == crate::source_seam_tangency::Class::C0).count(), 8);
         assert!(!certificate.all_edges_tangent());
         assert_eq!(collection.completed_edges, 12);
+        let mut mixed = classes.clone();
+        let mut curved = 0;
+        for class in &mut mixed {
+            if *class == crate::source_seam_tangency::Class::TangentPlanes && curved < 2 {
+                *class = crate::source_seam_tangency::Class::Curvature {
+                    normal_distance:1e-8, curvature_distance:1e-6 };
+                curved += 1;
+            }
+        }
+        let work = || crate::source_seam_tangency::Limits { max_sine_squared:1e-8,
+            cells:10000,curve_spans:10000,normal_spans:10000 };
+        let mixed_report=crate::source_seam_tangency::qualify_collection(&body,&mixed,work()).unwrap();
+        let mixed_certificate=mixed_report.certificate.expect(mixed_report.reason);
+        assert_eq!(mixed_certificate.seams().len(),2);
+        assert_eq!(mixed_certificate.curvature_seams().len(),2);
+        assert_eq!(mixed_report.completed_edges,12);
+        assert!(!mixed_certificate.all_edges_curvature());
+        for dimension in 0..3 {
+            let mut short=work();
+            match dimension { 0=>short.cells=mixed_report.cells-1,
+                1=>short.curve_spans=mixed_report.curve_spans-1,
+                _=>short.normal_spans=mixed_report.normal_spans-1 }
+            let refused=crate::source_seam_tangency::qualify_collection(&body,&mixed,short).unwrap();
+            assert!(refused.certificate.is_none());
+            assert!(refused.completed_edges<12);
+        }
+        let all_curved=classes.iter().map(|class|if *class==crate::source_seam_tangency::Class::TangentPlanes {
+            crate::source_seam_tangency::Class::Curvature {normal_distance:1e-8,curvature_distance:1e-6}
+        }else{*class}).collect::<Vec<_>>();
+        let full=crate::source_seam_tangency::qualify_collection(&body,&all_curved,work()).unwrap();
+        let full=full.certificate.expect(full.reason);
+        assert!(full.seams().is_empty());assert_eq!(full.curvature_seams().len(),4);
+        assert_eq!(full.classes().iter().filter(|class|**class==crate::source_seam_tangency::Class::C0).count(),8);
+        let mut false_cap=all_curved.clone();
+        let cap_edge=false_cap.iter().position(|class|*class==crate::source_seam_tangency::Class::C0).unwrap();
+        false_cap[cap_edge]=crate::source_seam_tangency::Class::Curvature {normal_distance:1e-8,curvature_distance:1e-6};
+        let refused=crate::source_seam_tangency::qualify_collection(&body,&false_cap,work()).unwrap();
+        assert!(refused.certificate.is_none(), "A sharp cap cannot inherit G2 from smooth wall joins");
+        assert_eq!(refused.uncertain_edge,Some(cap_edge));
     }
     #[test]
     fn partial_canonical_carrier_replays_a_body_and_keeps_owned_chord_maps() {

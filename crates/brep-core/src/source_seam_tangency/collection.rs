@@ -1,15 +1,21 @@
 //! Complete ordinary-edge coverage on one privately admitted original body.
-//! This composes tolerance G1 seam proofs, not face regularity, G2 or pole limits.
-use super::{Carrier, Limits, Seam};
+//! This composes tolerance G1/G2 seam proofs, not face interiors or pole limits.
+use super::{Carrier, CurvatureSeam, Limits, Seam};
 use crate::source_volume::Body;
 use nurbs_core::{Error, Result};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Class {
     /// Explicit authored sharp join; positional ownership comes from the body.
     C0,
     /// Require tangent planes within the common angular allowance everywhere.
     TangentPlanes,
+    /// Require normal AND signed curvature tensor agreement under one coherent
+    /// orientation on this complete original carrier. Tolerances are explicit.
+    Curvature {
+        normal_distance: f64,
+        curvature_distance: f64,
+    },
 }
 
 /// Cannot be assembled from caller reports, partial coverage or another body.
@@ -17,6 +23,7 @@ pub struct Collection<'a, E: Carrier> {
     body: &'a Body<E>,
     classes: Vec<Class>,
     seams: Vec<(usize, Seam<E>)>,
+    curvature_seams: Vec<(usize, CurvatureSeam<E>)>,
     max_sine_squared: f64,
 }
 impl<E: Carrier> Collection<'_, E> {
@@ -29,18 +36,32 @@ impl<E: Carrier> Collection<'_, E> {
     pub fn seams(&self) -> &[(usize, Seam<E>)] {
         &self.seams
     }
+    pub fn curvature_seams(&self) -> &[(usize, CurvatureSeam<E>)] {
+        &self.curvature_seams
+    }
+    /// Angular allowance for TangentPlanes entries; Curvature entries retain
+    /// their own explicit normal-distance and curvature-distance allowances.
     pub fn max_sine_squared(&self) -> f64 {
         self.max_sine_squared
     }
     /// Ordinary shared edges only. This does not assert global surface G1/G2.
     pub fn all_edges_tangent(&self) -> bool {
-        self.classes.iter().all(|c| *c == Class::TangentPlanes)
+        self.classes.iter().all(|c| *c != Class::C0)
+    }
+}
+impl<E: Carrier> Collection<'_, E> {
+    /// All ordinary edges at their declared curvature tolerances; not face G2.
+    pub fn all_edges_curvature(&self) -> bool {
+        self.classes
+            .iter()
+            .all(|c| matches!(c, Class::Curvature { .. }))
     }
 }
 pub struct CollectionReport<'a, E: Carrier> {
     pub certificate: Option<Collection<'a, E>>,
     pub cells: usize,
     pub curve_spans: usize,
+    /// Shared source-surface work, including normal and curvature knot cells.
     pub normal_spans: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
@@ -49,12 +70,34 @@ pub struct CollectionReport<'a, E: Carrier> {
 
 struct Work<E> {
     seams: Vec<(usize, Seam<E>)>,
+    curvature_seams: Vec<(usize, CurvatureSeam<E>)>,
     cells: usize,
     curve_spans: usize,
     normal_spans: usize,
     completed_edges: usize,
     uncertain_edge: Option<usize>,
     reason: &'static str,
+}
+fn validate_classes(classes: &[Class]) -> Result<()> {
+    for class in classes {
+        if let Class::Curvature {
+            normal_distance,
+            curvature_distance,
+        } = class
+        {
+            if !normal_distance.is_finite()
+                || !(0. ..1.).contains(normal_distance)
+                || !curvature_distance.is_finite()
+                || *curvature_distance < 0.
+            {
+                return Err(Error::new(
+                    "BREP_SOURCE_SEAM_COLLECTION",
+                    "Choose finite original curvature tolerances",
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> Result<Work<E>> {
     super::validate_limits(&limits)?;
@@ -64,7 +107,9 @@ fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> 
             "Classify every original edge exactly once",
         ));
     }
+    validate_classes(classes)?;
     let mut out = Work {
+        curvature_seams: Vec::new(),
         seams: Vec::new(),
         cells: 0,
         curve_spans: 0,
@@ -85,6 +130,33 @@ fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> 
         {
             out.reason = "source-seam-collection-work-limit";
             return Ok(out);
+        }
+        if let Class::Curvature {
+            normal_distance,
+            curvature_distance,
+        } = *class
+        {
+            let report = super::qualify_curvature(
+                edge,
+                super::CurvatureLimits {
+                    normal_distance,
+                    curvature_distance,
+                    cells: limits.cells - out.cells,
+                    curve_spans: limits.curve_spans - out.curve_spans,
+                    shape_cells: limits.normal_spans - out.normal_spans,
+                },
+            )?;
+            out.cells += report.cells;
+            out.curve_spans += report.curve_spans;
+            out.normal_spans += report.shape_cells;
+            let Some(seam) = report.seam else {
+                out.reason = report.reason;
+                return Ok(out);
+            };
+            out.curvature_seams.push((index, seam));
+            out.completed_edges += 1;
+            out.uncertain_edge = None;
+            continue;
         }
         let report = super::qualify(
             edge,
@@ -127,6 +199,7 @@ pub fn qualify_collection<'a, E: Carrier>(
             "Classify every original edge exactly once",
         ));
     }
+    validate_classes(classes)?;
     if !shell.poles().is_empty() {
         return Ok(CollectionReport {
             certificate: None,
@@ -146,6 +219,7 @@ pub fn qualify_collection<'a, E: Carrier>(
         classes: classes.to_vec(),
         max_sine_squared,
         seams: work.seams,
+        curvature_seams: work.curvature_seams,
     });
     Ok(CollectionReport {
         certificate,
