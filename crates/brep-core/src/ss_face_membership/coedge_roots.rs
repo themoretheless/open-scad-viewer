@@ -3,6 +3,12 @@ use super::*;
 use nurbs_core::ss_intersection::{
     self as ss, QualifiedGraphBoundaryBindings, QualifiedQuadraticGraphSS,
 };
+mod cuts;
+pub use cuts::{
+    CutNode, CutPartitionLimits, CutRepresentative, CutRepresentativeLimits, PartitionedCutVertex,
+    QualifiedCutPartitions, QualifiedCutRepresentatives, partition_cut_representatives,
+    qualify_cut_representatives,
+};
 #[cfg(test)]
 mod tests;
 #[derive(Clone, Copy, Debug)]

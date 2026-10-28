@@ -12,8 +12,11 @@ mod coedge_roots;
 #[cfg(test)]
 mod tests;
 pub use coedge_roots::{
-    CoedgeBoundaryRole, CoedgeRootAddress, CoedgeRootEvent, CoedgeRootLimits, QualifiedCoedgeRoots,
-    QualifiedFacePairRoots, qualify_coedge_roots,
+    CoedgeBoundaryRole, CoedgeRootAddress, CoedgeRootEvent, CoedgeRootLimits, CutNode,
+    CutPartitionLimits, CutRepresentative, CutRepresentativeLimits, PartitionedCutVertex,
+    QualifiedCoedgeRoots, QualifiedCutPartitions, QualifiedCutRepresentatives,
+    QualifiedFacePairRoots, partition_cut_representatives, qualify_coedge_roots,
+    qualify_cut_representatives,
 };
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
