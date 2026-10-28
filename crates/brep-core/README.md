@@ -15,6 +15,13 @@ for native geometry, operations and typed reports without `value-codec`. The
 default `codec` feature preserves serialized models, JSON report adapters and
 snapshot/history APIs; workspace application consumers enable it explicitly.
 
+Qualification gap (2026-10-28): the full minimal configuration is currently
+unqualified: 80 source-definition-layer codec-reference errors remain. Native
+journal capture/replay and typed defeaturing reports have been separated from
+their optional serialization children. Full minimal support remains required;
+it is not waived by the passing default-feature tests. See the
+[qualification protocol](../../docs/qualification/nurbs-native-codec-boundary-2026-10-28/README.md).
+
 `nurbs_ss_general::branch_graph_from_surface_intersection` consumes the native
 NURBS surface-intersection report directly. Branch kinds, contact classes,
 coedge trims, UV traces and correspondence are typed; graph construction and

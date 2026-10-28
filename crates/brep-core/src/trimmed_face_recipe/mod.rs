@@ -8,10 +8,8 @@ use nurbs_core::{
 };
 
 mod boundary;
-#[cfg(feature = "codec")]
 mod locate_source_contact_points;
 #[cfg(test)]
 mod tests;
 pub use boundary::*;
-#[cfg(feature = "codec")]
 pub use locate_source_contact_points::*;

@@ -1,0 +1,92 @@
+{
+  "base_commit": "370fbf4881c9dddcea62862e2b1d6c58f8982ec0",
+  "branch": "codex/nurbs-plan-recovery-20261028",
+  "sources": {
+    "crates/brep-core/src/direct_edit/defeature_report.rs": "4d006bcb0c8aa2ab6fbaf56717a8d00a5c1498113a3021c70a7df883f3b68cb9",
+    "crates/brep-core/src/direct_edit/defeature_report/serialization.rs": "115a1df0b903db4b07905de68323ecef8f3cb870af668bd1285451933119c95e",
+    "crates/brep-core/src/journal.rs": "b26dffe00457a09b770be99e61a0e0532f71068fd4495c8a680affec6d64bc97",
+    "crates/brep-core/src/journal/serialization.rs": "746119e9beda184c7520941d2532eb8b7e8d480bfe24a3cd3a7b427c75fadb9f",
+    "crates/brep-core/src/source_inverse_shear.rs": "f0d02b04415dbeb49fa6fcbd5a0a96413a6540b5ea03a63d21138047e86e5278",
+    "crates/brep-core/src/trimmed_face_recipe/boundary.rs": "7388c5ee153de3c84bf91042955caf3bb09b829d2dfe933381cbd1899027e412",
+    "crates/brep-core/src/trimmed_face_recipe/mod.rs": "1590433f36e4ce4f5fde316afd750ea79a993aee5b72208a5bd41b924f9e032e"
+  },
+  "full_library_tests": {
+    "brep-core": {
+      "passed": 1998,
+      "failed": 0,
+      "ignored": 5,
+      "seconds": 95.02
+    },
+    "cad-predicates": {
+      "passed": 100,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.01
+    },
+    "nurbs-core": {
+      "passed": 1996,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 8.77
+    },
+    "nurbs-intersect": {
+      "passed": 108,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    }
+  },
+  "total": {
+    "passed": 4202,
+    "failed": 0,
+    "ignored": 6
+  },
+  "default_check": "passed",
+  "minimal_check": {
+    "status": "failed",
+    "initial_errors": 121,
+    "remaining_errors": 80,
+    "complete": false,
+    "no_math_modules_disabled": true,
+    "no_mandatory_codec_added": true
+  },
+  "wire_equivalence": {
+    "baseline": "370fbf488",
+    "method": "Original wire implementation tokens preserved in optional child modules; string literals and escapes retained",
+    "checks": {
+      "defeature_all_wire_bodies": true,
+      "journal_decode": true,
+      "journal_record_codecs": true,
+      "journal_jsonl_methods": true,
+      "journal_line_helpers": true,
+      "journal_hash_parser": true
+    }
+  },
+  "logs": {
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-check-r1.log": "2361fdd54c717fcad6c358bbe4ffd54852e14891dfaf2b61df2102e07d1df884",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-check-r2.log": "686215e22a67e46d7842583f02ebf07318bc3e096023ed49078ead6e0ba3ac5e",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-default-check.log": "492b6b6c6147369f2dedaaec5e4817ef61fa9f7b73283f5cf97b06abbeaf8fa8",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-format.log": "849b5308ba7bcccd173022e0041ad23d29f0c18d9443404c8beff30520eed937",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-codec-boundary-full.log": "a2d0b0c1065224503afaf1e44248450bce7238d640b2ce0727a0999ca03a4718"
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "whitespace": "passed",
+    "git_diff": "passed",
+    "staged_source_match": true,
+    "api": {
+      "public_modules": 239,
+      "catalogue_entries": 200
+    },
+    "architecture": {
+      "existing_violations": 71,
+      "new_violations": 0,
+      "limits_raised": false
+    }
+  },
+  "snapshot": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/qualified-native-codec-boundary-20261028.tar.gz",
+  "complete_plan": false,
+  "delivery": "cohesive local checkpoint; actual commit in external receipt; no main push"
+}
