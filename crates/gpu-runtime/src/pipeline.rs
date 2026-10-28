@@ -5,7 +5,8 @@ use crate::{
     Buffer, BufferAddress, BufferSize, ColorWrites, Label, Sampler, ShaderStages, Texture,
     TextureFormat, TextureView,
 };
-use naga::back::msl::BindingMap;
+use gpu_shader as naga;
+use gpu_shader::back::msl::BindingMap;
 use std::borrow::Cow;
 use std::num::NonZeroU32;
 use std::sync::Arc;

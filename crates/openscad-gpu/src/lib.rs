@@ -29,13 +29,15 @@ pub mod uma_duma;
 
 pub use asd::*;
 pub use cad_kernels::*;
-pub use shader_compiler::*;
-pub use uma_duma::*;
-pub use wgpu::opengl::{GlProfile, OpenGlDevice};
-pub use wgpu::rtx::{
+pub use gpu_runtime;
+pub use gpu_runtime::opengl::{GlProfile, OpenGlDevice};
+pub use gpu_runtime::rtx::{
     Blas, BlasGeometryDescriptor, BlasGeometryKind, RtxCapabilities, RtxTier, Tlas, TlasInstance,
 };
-pub use wgpu::vulkan::{VkMemoryPropertyFlags, VulkanDevice};
+pub use gpu_runtime::vulkan::{VkMemoryPropertyFlags, VulkanDevice};
+pub use gpu_shader;
+pub use shader_compiler::*;
+pub use uma_duma::*;
 
 pub mod cad {
     pub use crate::children_selection;
@@ -66,7 +68,7 @@ mod tests {
 
     #[test]
     fn unified_transfer_plan_selects_asd_uma_and_duma_appropriately() {
-        let asd_plan = UnifiedTransferPlan::for_payload(wgpu::Backend::Metal, 65536, true);
+        let asd_plan = UnifiedTransferPlan::for_payload(gpu_runtime::Backend::Metal, 65536, true);
         if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
             assert_eq!(asd_plan.memory_architecture, MemoryArchitecture::Uma);
             assert_eq!(
@@ -79,14 +81,14 @@ mod tests {
         }
 
         let duma_rebar =
-            UnifiedTransferPlan::for_payload(wgpu::Backend::Vulkan, 1024 * 1024, false);
+            UnifiedTransferPlan::for_payload(gpu_runtime::Backend::Vulkan, 1024 * 1024, false);
         assert_eq!(duma_rebar.memory_architecture, MemoryArchitecture::Duma);
         assert_eq!(duma_rebar.tech, TransferStrategy::DumaRebarWindow);
         assert!(duma_rebar.uses_rebar_aperture);
         assert_eq!(duma_rebar.staging_ring_chunks, 1);
 
         let duma_dma =
-            UnifiedTransferPlan::for_payload(wgpu::Backend::Cuda, 64 * 1024 * 1024, false);
+            UnifiedTransferPlan::for_payload(gpu_runtime::Backend::Cuda, 64 * 1024 * 1024, false);
         assert_eq!(duma_dma.memory_architecture, MemoryArchitecture::Duma);
         assert_eq!(duma_dma.tech, TransferStrategy::DumaStagedDmaRing);
         assert!(!duma_dma.uses_rebar_aperture);
@@ -141,11 +143,11 @@ mod tests {
         );
         assert_eq!(tlas.instances.len(), 1);
 
-        let rtx_vk = RtxCapabilities::for_backend(wgpu::Backend::Vulkan);
+        let rtx_vk = RtxCapabilities::for_backend(gpu_runtime::Backend::Vulkan);
         assert_eq!(rtx_vk.tier, RtxTier::HardwareRtxPipeline);
         assert!(rtx_vk.supports_inline_ray_query);
 
-        let rtx_cuda = RtxCapabilities::for_backend(wgpu::Backend::Cuda);
+        let rtx_cuda = RtxCapabilities::for_backend(gpu_runtime::Backend::Cuda);
         assert_eq!(rtx_cuda.tier, RtxTier::HardwareRtxPipeline);
 
         let rtx_shader = generate_wgsl_rtx_raytracing_shader(8, 8);

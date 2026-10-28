@@ -25,7 +25,7 @@ impl AsdPageBuffer {
     /// Returns the OS/hardware physical VM page size (`16 KiB` on Apple Silicon, `4 KiB` on x86_64/other).
     #[inline]
     pub const fn host_os_page_size() -> usize {
-        wgpu::platform::TargetPlatform::current().default_page_size()
+        gpu_runtime::platform::TargetPlatform::current().default_page_size()
     }
 
     /// Returns the allocation alignment used by [`AsdPageBuffer`] (`16 KiB`, a multiple of both `4 KiB` and `16 KiB`).
@@ -85,8 +85,12 @@ impl AsdPageBuffer {
         unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.logical_len) }
     }
 
-    /// Binds this page-aligned ASD memory region directly to a GPU `wgpu::Buffer` with zero copies (`newBufferWithBytesNoCopy:`).
-    pub fn bind_to_gpu(&self, device: &wgpu::Device, usage: wgpu::BufferUsages) -> wgpu::Buffer {
+    /// Binds this page-aligned ASD memory region directly to a GPU `gpu_runtime::Buffer` with zero copies (`newBufferWithBytesNoCopy:`).
+    pub fn bind_to_gpu(
+        &self,
+        device: &gpu_runtime::Device,
+        usage: gpu_runtime::BufferUsages,
+    ) -> gpu_runtime::Buffer {
         unsafe {
             device
                 .create_buffer_no_copy(
@@ -96,8 +100,8 @@ impl AsdPageBuffer {
                     usage,
                 )
                 .unwrap_or_else(|| {
-                    use wgpu::util::DeviceExt;
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    use gpu_runtime::util::DeviceExt;
+                    device.create_buffer_init(&gpu_runtime::util::BufferInitDescriptor {
                         label: Some("asd-fallback-buffer"),
                         contents: self.as_slice(),
                         usage,

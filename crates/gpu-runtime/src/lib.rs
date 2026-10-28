@@ -42,7 +42,8 @@ pub use texture::*;
 pub use types::*;
 
 use metal::MetalDevice;
-use naga::back::msl::BindingMap;
+use gpu_shader as naga;
+use gpu_shader::back::msl::BindingMap;
 use std::ffi::c_void;
 use std::future::Future;
 use std::num::NonZeroU64;

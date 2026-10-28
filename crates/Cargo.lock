@@ -417,9 +417,9 @@ name = "compute-core"
 version = "0.1.0"
 dependencies = [
  "gpu-compute",
- "naga",
+ "gpu-runtime",
+ "gpu-shader",
  "tensor-core",
- "wgpu",
 ]
 
 [[package]]
@@ -825,9 +825,20 @@ name = "gpu-compute"
 version = "0.1.0"
 dependencies = [
  "cudarc",
+ "gpu-runtime",
  "openscad-gpu",
- "wgpu",
 ]
+
+[[package]]
+name = "gpu-runtime"
+version = "0.1.0"
+dependencies = [
+ "gpu-shader",
+]
+
+[[package]]
+name = "gpu-shader"
+version = "0.1.0"
 
 [[package]]
 name = "half"
@@ -1272,10 +1283,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "naga"
-version = "30.0.0"
-
-[[package]]
 name = "nalgebra"
 version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1391,8 +1398,8 @@ name = "openscad-gpu"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
- "naga",
- "wgpu",
+ "gpu-runtime",
+ "gpu-shader",
 ]
 
 [[package]]
@@ -1600,8 +1607,8 @@ name = "raster-core"
 version = "0.1.0"
 dependencies = [
  "gpu-compute",
- "naga",
- "wgpu",
+ "gpu-runtime",
+ "gpu-shader",
 ]
 
 [[package]]
@@ -2526,13 +2533,6 @@ name = "weezl"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
-
-[[package]]
-name = "wgpu"
-version = "30.0.0"
-dependencies = [
- "naga",
-]
 
 [[package]]
 name = "wide"

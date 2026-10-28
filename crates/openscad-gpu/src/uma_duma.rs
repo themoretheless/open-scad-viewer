@@ -1,11 +1,11 @@
 //! **UMA** (Unified Memory Architecture), **dUMA** (Discrete / Decoupled Unified Memory Architecture),
 //! and orthogonal **ASD** (Accelerated Storage Direct) hardware topology & transfer planners.
 //!
-//! Re-exports the single-source-of-truth hardware topology types from [`wgpu::platform`] (DRY principle)
+//! Re-exports the single-source-of-truth hardware topology types from [`gpu_runtime::platform`] (DRY principle)
 //! and provides higher-level memory transfer planning across physical topology (`UMA` vs `dUMA`)
 //! combined with storage/page direct I/O (`StorageDirectCapability` / `ASD`).
 
-pub use wgpu::platform::{
+pub use gpu_runtime::platform::{
     backend_label, recommend_workgroup_shape_2d, tuned_workgroup_size, ApiEnvironment, BackendKind,
     BackendReport, BackendShaderIr, HardwareExecutionTopology, MemoryArchitecture,
     MemoryArchitectureProfile, StorageDirectCapability, SubgroupReport, TargetPlatform,
@@ -51,7 +51,11 @@ pub struct UnifiedTransferPlan {
 
 impl UnifiedTransferPlan {
     /// Computes the optimal transfer plan for `byte_len` bytes on the given `backend`.
-    pub const fn for_payload(backend: wgpu::Backend, byte_len: u64, page_aligned: bool) -> Self {
+    pub const fn for_payload(
+        backend: gpu_runtime::Backend,
+        byte_len: u64,
+        page_aligned: bool,
+    ) -> Self {
         let report = BackendReport::from_wgpu(backend);
         let memory_architecture = report.memory_architecture();
         let storage_direct = report.storage_direct_capability();

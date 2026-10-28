@@ -7,5 +7,5 @@ publish.workspace = true
 
 [dependencies]
 geometry-ops = { workspace = true }
-naga = { workspace = true }
-wgpu = { workspace = true }
+gpu-shader = { workspace = true }
+gpu-runtime = { workspace = true }

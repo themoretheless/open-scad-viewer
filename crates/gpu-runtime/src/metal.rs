@@ -1075,7 +1075,7 @@ impl MetalDevice {
                 let layouts = f_get_obj(vd, s.layouts);
                 for (slot_idx, vb_opt) in desc.vertex.buffers.iter().enumerate() {
                     let Some(vb) = vb_opt else { continue };
-                    let mtl_buf_idx = naga::back::msl::MSL_VERTEX_BUFFER_BASE_SLOT as usize + slot_idx;
+                    let mtl_buf_idx = gpu_shader::back::msl::MSL_VERTEX_BUFFER_BASE_SLOT as usize + slot_idx;
                     let layout = f_sub(layouts, s.object_at_indexed_subscript, mtl_buf_idx);
                     f_set_u64(layout, s.set_stride, vb.array_stride);
                     let step_fn = match vb.step_mode {

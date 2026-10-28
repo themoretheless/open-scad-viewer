@@ -34,48 +34,48 @@ pub fn compile_wgsl_for_target(
     wgsl_source: &str,
     target: ComputeShaderTarget,
 ) -> Result<String, String> {
-    let module = naga::front::wgsl::parse_str(wgsl_source).map_err(|e| e.to_string())?;
-    let mut validator = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::all(),
+    let module = gpu_shader::front::wgsl::parse_str(wgsl_source).map_err(|e| e.to_string())?;
+    let mut validator = gpu_shader::valid::Validator::new(
+        gpu_shader::valid::ValidationFlags::all(),
+        gpu_shader::valid::Capabilities::all(),
     );
     let info = validator.validate(&module).map_err(|e| e.to_string())?;
     match target {
         ComputeShaderTarget::MetalMsl => {
-            let (msl, _) = naga::back::msl::write_string(
+            let (msl, _) = gpu_shader::back::msl::write_string(
                 &module,
                 &info,
-                &naga::back::msl::Options::default(),
-                &naga::back::msl::PipelineOptions::default(),
+                &gpu_shader::back::msl::Options::default(),
+                &gpu_shader::back::msl::PipelineOptions::default(),
             )?;
             Ok(msl)
         }
         ComputeShaderTarget::VulkanSpirv => {
-            let words = naga::back::spv::write_words(
+            let words = gpu_shader::back::spv::write_words(
                 &module,
                 &info,
-                &naga::back::spv::Options::default(),
+                &gpu_shader::back::spv::Options::default(),
                 None,
             )?;
             Ok(format!("SPIR-V words: {}", words.len()))
         }
-        ComputeShaderTarget::Dx12Hlsl => naga::back::hlsl::write_string(
+        ComputeShaderTarget::Dx12Hlsl => gpu_shader::back::hlsl::write_string(
             &module,
             &info,
-            &naga::back::hlsl::Options::default(),
-            &naga::back::hlsl::PipelineOptions::default(),
+            &gpu_shader::back::hlsl::Options::default(),
+            &gpu_shader::back::hlsl::PipelineOptions::default(),
         ),
-        ComputeShaderTarget::CudaPtx => naga::back::cuda::write_ptx(
+        ComputeShaderTarget::CudaPtx => gpu_shader::back::cuda::write_ptx(
             &module,
             &info,
-            &naga::back::cuda::Options { sm_version: (8, 9) },
-            &naga::back::cuda::PipelineOptions::default(),
+            &gpu_shader::back::cuda::Options { sm_version: (8, 9) },
+            &gpu_shader::back::cuda::PipelineOptions::default(),
         ),
-        ComputeShaderTarget::OpenGlGlsl => naga::back::glsl::write_string(
+        ComputeShaderTarget::OpenGlGlsl => gpu_shader::back::glsl::write_string(
             &module,
             &info,
-            &naga::back::glsl::Options::default(),
-            &naga::back::glsl::PipelineOptions::default(),
+            &gpu_shader::back::glsl::Options::default(),
+            &gpu_shader::back::glsl::PipelineOptions::default(),
         ),
         ComputeShaderTarget::BrowserWgsl => Ok(module.raw_source),
     }
@@ -83,41 +83,41 @@ pub fn compile_wgsl_for_target(
 
 /// Compiles a single WGSL shader into all 6 backend representations simultaneously.
 pub fn compile_shader_multi_target(wgsl_source: &str) -> Result<MultiTargetShaderArtifact, String> {
-    let module = naga::front::wgsl::parse_str(wgsl_source).map_err(|e| e.to_string())?;
-    let mut validator = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::all(),
+    let module = gpu_shader::front::wgsl::parse_str(wgsl_source).map_err(|e| e.to_string())?;
+    let mut validator = gpu_shader::valid::Validator::new(
+        gpu_shader::valid::ValidationFlags::all(),
+        gpu_shader::valid::Capabilities::all(),
     );
     let info = validator.validate(&module).map_err(|e| e.to_string())?;
-    let (msl, _) = naga::back::msl::write_string(
+    let (msl, _) = gpu_shader::back::msl::write_string(
         &module,
         &info,
-        &naga::back::msl::Options::default(),
-        &naga::back::msl::PipelineOptions::default(),
+        &gpu_shader::back::msl::Options::default(),
+        &gpu_shader::back::msl::PipelineOptions::default(),
     )?;
-    let spirv_words = naga::back::spv::write_words(
+    let spirv_words = gpu_shader::back::spv::write_words(
         &module,
         &info,
-        &naga::back::spv::Options::default(),
+        &gpu_shader::back::spv::Options::default(),
         None,
     )?;
-    let hlsl = naga::back::hlsl::write_string(
+    let hlsl = gpu_shader::back::hlsl::write_string(
         &module,
         &info,
-        &naga::back::hlsl::Options::default(),
-        &naga::back::hlsl::PipelineOptions::default(),
+        &gpu_shader::back::hlsl::Options::default(),
+        &gpu_shader::back::hlsl::PipelineOptions::default(),
     )?;
-    let cuda_ptx = naga::back::cuda::write_ptx(
+    let cuda_ptx = gpu_shader::back::cuda::write_ptx(
         &module,
         &info,
-        &naga::back::cuda::Options { sm_version: (8, 9) },
-        &naga::back::cuda::PipelineOptions::default(),
+        &gpu_shader::back::cuda::Options { sm_version: (8, 9) },
+        &gpu_shader::back::cuda::PipelineOptions::default(),
     )?;
-    let glsl = naga::back::glsl::write_string(
+    let glsl = gpu_shader::back::glsl::write_string(
         &module,
         &info,
-        &naga::back::glsl::Options::default(),
-        &naga::back::glsl::PipelineOptions::default(),
+        &gpu_shader::back::glsl::Options::default(),
+        &gpu_shader::back::glsl::PipelineOptions::default(),
     )?;
     Ok(MultiTargetShaderArtifact {
         msl,

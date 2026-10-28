@@ -10,7 +10,7 @@ use crate::{
     Origin3d, QuerySet, RenderPipeline, TexelCopyBufferInfo, TexelCopyTextureInfo, Texture,
     TextureView,
 };
-use naga::back::msl::{
+use gpu_shader::back::msl::{
     msl_buffer_slot, msl_sampler_slot, msl_texture_slot, MSL_ARRAY_LENGTHS_BUFFER_SLOT,
     MSL_IMMEDIATE_BUFFER_SLOT, MSL_VERTEX_BUFFER_BASE_SLOT,
 };

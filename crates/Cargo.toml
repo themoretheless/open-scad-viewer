@@ -11,8 +11,8 @@ members = [
     "mesh-section",
     "mesh-io",
     "cad-predicates",
-    "naga",
-    "wgpu",
+    "gpu-shader",
+    "gpu-runtime",
     "openscad-gpu",
     "gpu-compute",
     "compute-core",
@@ -104,14 +104,16 @@ subdivision-core = { version = "0.1.0", path = "subdivision-core", default-featu
 sdf-core = { version = "0.1.0", path = "sdf-core", default-features = false }
 mechanical-core = { version = "0.1.0", path = "mechanical-core", default-features = false }
 tensor-core = { version = "0.1.0", path = "tensor-core" }
+gpu-shader = { version = "0.1.0", path = "gpu-shader", features = ["wgsl-in"] }
+gpu-runtime = { version = "0.1.0", path = "gpu-runtime", default-features = false, features = ["wgsl", "std"] }
 openscad-gpu = { version = "0.1.0", path = "openscad-gpu" }
 gpu-compute = { version = "0.1.0", path = "gpu-compute" }
 compute-core = { version = "0.1.0", path = "compute-core" }
 compute-cuda = { version = "0.1.0", path = "compute-cuda" }
 compute-mlx = { version = "0.1.0", path = "compute-mlx" }
 
-wgpu = { version = "30.0.0", path = "wgpu", default-features = false, features = ["wgsl", "std"] }
-naga = { version = "30.0.0", path = "naga", features = ["wgsl-in"] }
+wgpu = { package = "gpu-runtime", version = "0.1.0", path = "gpu-runtime", default-features = false, features = ["wgsl", "std"] }
+naga = { package = "gpu-shader", version = "0.1.0", path = "gpu-shader", features = ["wgsl-in"] }
 # Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
 rbench = { version = "0.1.0", git = "https://github.com/themoretheless/rbench", branch = "release" }
 
@@ -171,10 +173,10 @@ opt-level = 3
 [profile.release.package.subdivision-core]
 opt-level = 3
 
-[profile.release.package.naga]
+[profile.release.package.gpu-shader]
 opt-level = 3
 
-[profile.release.package.wgpu]
+[profile.release.package.gpu-runtime]
 opt-level = 3
 
 [profile.release.package.openscad-gpu]
