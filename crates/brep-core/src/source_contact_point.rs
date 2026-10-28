@@ -19,6 +19,17 @@ pub struct SourcePoint {
     world_box: [[f64; 2]; 3],
 }
 impl SourcePoint {
+    /// Fresh admission from original equations and selector; cached bounds are ignored.
+    pub fn requalify(&self, max_mapping_cells: usize) -> Result<Report> {
+        qualify(
+            &self.surface,
+            &self.boundary,
+            &self.contact,
+            self.selector,
+            max_mapping_cells,
+        )
+    }
+
     /// Original equations and selector only. Cached roots/bounds are not identity
     /// or renewed authority. No geometric approximation or serialization occurs.
     pub fn same_definition(&self, other: &Self) -> bool {
@@ -215,6 +226,10 @@ mod tests {
         cached.world_box = [[-100., 100.]; 3];
         assert!(point.same_definition(&cached));
         assert_eq!(point.definition(), cached.definition());
+        let fresh = cached.requalify(16).unwrap().point.unwrap();
+        assert_eq!(fresh.root_parameters(), point.root_parameters());
+        assert_eq!(fresh.uv_box(), point.uv_box());
+        assert_eq!(fresh.world_box(), point.world_box());
         let mut changed = point.clone();
         changed.selector[0][0] = 0.25;
         assert!(!point.same_definition(&changed));

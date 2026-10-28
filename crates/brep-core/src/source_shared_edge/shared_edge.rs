@@ -672,3 +672,7 @@ fn same_normalized_parameter(
     out.work_used += r.work_used;
     Ok(r.outcome == ParameterIdentity::Equal)
 }
+
+#[path = "replay.rs"]
+mod replay;
+pub use replay::ReplayLimits;

@@ -157,6 +157,12 @@ pub fn restore_projective(value:Value,limits:source_shared_edge_restore::Limits)
 }
 #[cfg(test)]
 pub(crate) fn assert_replay(edge: &SharedEdge) {
+    let limits=||source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100_000_000,driver_cells:10000};
+    let native=edge.requalify(limits()).unwrap();
+    let wire=source_shared_edge_restore::restore(edge.definition(),limits()).unwrap();
+    assert_eq!((native.work_used,native.root_checks,native.driver_cells,native.reason),(wire.work_used,wire.root_checks,wire.driver_cells,wire.reason));
+    assert!(native.edge.as_ref().unwrap().same_definition(wire.edge.as_ref().unwrap()));
+
     let restriction = Restriction::from_edge(edge);
     let bytes = value_codec::to_string(&restriction.definition()).unwrap();
     let recovered = restore(

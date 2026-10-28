@@ -520,6 +520,9 @@ mod fraction_tests {
             10000,
         )
         .unwrap();
+        let native=edge.requalify(crate::source_shared_edge::ReplayLimits {mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
+        assert_eq!((native.exact_work,native.root_checks,native.driver_cells,native.reason),(replay.exact_work,replay.root_checks,replay.driver_cells,replay.reason));
+        assert_eq!(native.edge.unwrap().definition(),definition);
         let replay = replay.edge.expect(replay.reason);
         assert_eq!(replay.definition(), definition);
         for source in [&edge, &replay] {
@@ -604,3 +607,6 @@ mod fraction_tests {
         );
     }
 }
+
+#[path = "source_projective_edge/replay.rs"]
+mod replay;

@@ -1,13 +1,9 @@
 //! Restore original root-owned shared edges by fresh native qualification.
+pub use crate::source_shared_edge::ReplayLimits as Limits;
 use crate::{source_boundary_fragment, source_shared_edge};
 use nurbs_core::{Error, Result, curve::Curve};
 use value_codec::{Deserialize, Value};
-pub struct Limits {
-    /// Root mapping restoration budget independently for each original use.
-    pub mapping_cells_per_use: usize,
-    pub exact_work: u64,
-    pub driver_cells: usize,
-}
+
 fn invalid() -> Error {
     Error::new(
         "BREP_SOURCE_EDGE_RESTORE",

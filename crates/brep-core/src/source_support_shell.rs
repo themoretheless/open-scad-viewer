@@ -2935,6 +2935,10 @@ mod tests {
                     crate::source_boundary_fragment::restore(fragment.definition(), 100).unwrap();
                 assert_eq!(restored.definition(), fragment.definition());
                 assert_eq!(restored.reversed(), fragment.reversed());
+                let native=fragment.requalify(100).unwrap();
+                assert!(native.same_definition(&restored));
+                assert_eq!(native.parameter_bounds(),restored.parameter_bounds());
+                assert!(fragment.requalify(1).is_err());
                 assert!(
                     crate::source_boundary_fragment::restore(fragment.definition(), 1).is_err()
                 );
@@ -7567,6 +7571,11 @@ mod tests {
                 crate::source_carrier_point::restore(definition, restore_limits()).unwrap();
             let restored = restored.point.expect(restored.reason);
             assert_eq!(restored.definition(), carrier.definition());
+            let native=carrier.requalify(restore_limits()).unwrap().point.unwrap();
+            assert!(native.same_definition(&restored));
+            assert_eq!(native.canonical_bounds(),restored.canonical_bounds());
+            assert_eq!(native.parameter_bounds(),restored.parameter_bounds());
+            assert_eq!(native.world_bounds(),restored.world_bounds());
             let mut foreign = carrier.definition();
             foreign["sourceSide"] = value_codec::json!(1 - side);
             assert!(

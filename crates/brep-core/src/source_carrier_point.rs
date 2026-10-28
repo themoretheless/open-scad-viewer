@@ -13,6 +13,37 @@ pub struct Point {
     world: [[f64; 2]; 3],
 }
 impl Point {
+    /// Recheck original parent compositions and crossing before transporting it.
+    pub fn requalify(&self, limits: RestoreLimits) -> Result<Report> {
+        if self.edge.uses().iter().any(|u| {
+            u.endpoints()
+                .iter()
+                .any(|e| matches!(e, crate::source_boundary_fragment::Endpoint::Carrier { .. }))
+        }) {
+            return Err(Error::new(
+                "BREP_CARRIER_ROOT",
+                "Nested carrier parents are unsupported",
+            ));
+        }
+        let edge = self.edge.requalify(limits.edge)?;
+        let Some(edge) = edge.edge else {
+            return Ok(Report {
+                point: None,
+                spans: 0,
+                reason: edge.reason,
+            });
+        };
+        let root = self.root.requalify(limits.root_mapping_cells)?;
+        let Some(root) = root.point else {
+            return Ok(Report {
+                point: None,
+                spans: 0,
+                reason: root.reason,
+            });
+        };
+        qualify(&edge, &root, self.source_side, limits.spans)
+    }
+
     pub fn same_definition(&self, other: &Self) -> bool {
         self.source_side == other.source_side
             && self.edge.same_definition(&other.edge)

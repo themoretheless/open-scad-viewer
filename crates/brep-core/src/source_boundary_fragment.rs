@@ -701,3 +701,6 @@ mod tests {
         assert!(Fragment::new(&s, &c, Endpoint::Parameter(0.), Endpoint::Parameter(1.)).is_err());
     }
 }
+
+#[path = "source_boundary_fragment/replay.rs"]
+mod replay;
