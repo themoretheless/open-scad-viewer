@@ -31,6 +31,8 @@ def main():
     packages = {p["name"]: p for p in metadata["packages"]}
     problems = []
     for name, allowed in ALLOWED.items():
+        if name not in packages:
+            continue
         # Build dependencies also affect the production build; dev-only
         # integration tests may compose multiple otherwise independent layers.
         dependencies = [d for d in packages[name]["dependencies"] if d["kind"] != "dev"]
@@ -53,13 +55,16 @@ def main():
         "raster-core", "cudarc",
     }
     for name in ("osv-math", "tensor-core"):
+        if name not in packages:
+            continue
         forbidden = normal_dependencies(name) & gpu_dependencies
         for dependency in sorted(forbidden):
             problems.append(f"CPU-only {name} unexpectedly includes {dependency}")
     # MLX owns its native runtime; pulling wgpu/CUDA through another layer would
     # defeat independent backend loading and the small tensor contract crate.
-    for dependency in sorted(normal_dependencies("compute-mlx") & (gpu_dependencies - {"compute-mlx"})):
-        problems.append(f"MLX adapter unexpectedly includes {dependency}")
+    if "compute-mlx" in packages:
+        for dependency in sorted(normal_dependencies("compute-mlx") & (gpu_dependencies - {"compute-mlx"})):
+            problems.append(f"MLX adapter unexpectedly includes {dependency}")
     for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor") & gpu_dependencies):
         problems.append(f"Tensor geometry contracts unexpectedly include {dependency}")
     for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor-mlx") & (gpu_dependencies - {"compute-mlx"})):

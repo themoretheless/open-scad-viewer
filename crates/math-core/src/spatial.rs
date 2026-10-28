@@ -443,9 +443,7 @@ impl Ray3 {
             if i0 >= vertices.len() || i1 >= vertices.len() || i2 >= vertices.len() {
                 continue;
             }
-            if let Some((t, u, v)) =
-                ray_triangle_intersect_moller_trumbore(self, vertices[i0], vertices[i1], vertices[i2])
-            {
+            if let Some((t, u, v)) = ray_triangle_intersect_moller_trumbore(self, vertices[i0], vertices[i1], vertices[i2]) {
                 if t < closest_t {
                     closest_t = t;
                     best = Some((tri_idx, t, u, v));

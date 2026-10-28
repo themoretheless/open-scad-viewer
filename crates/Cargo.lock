@@ -415,6 +415,7 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 [[package]]
 name = "compute-core"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 dependencies = [
  "gpu-compute",
  "gpu-runtime",
@@ -425,6 +426,7 @@ dependencies = [
 [[package]]
 name = "compute-cuda"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 dependencies = [
  "gpu-compute",
  "tensor-core",
@@ -433,8 +435,8 @@ dependencies = [
 [[package]]
 name = "compute-mlx"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 dependencies = [
- "half",
  "libloading 0.8.9",
  "tensor-core",
 ]
@@ -487,12 +489,6 @@ checksum = "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78"
 dependencies = [
  "cfg-if",
 ]
-
-[[package]]
-name = "crunchy"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "crypto-common"
@@ -823,6 +819,7 @@ checksum = "e762b9b188634fc508d4ec54b62ea3d352c43fd431d18d05d46f559f217f4725"
 [[package]]
 name = "gpu-compute"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 dependencies = [
  "cudarc",
  "gpu-runtime",
@@ -832,6 +829,7 @@ dependencies = [
 [[package]]
 name = "gpu-runtime"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 dependencies = [
  "gpu-shader",
 ]
@@ -839,17 +837,7 @@ dependencies = [
 [[package]]
 name = "gpu-shader"
 version = "0.1.0"
-
-[[package]]
-name = "half"
-version = "2.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ea2d84b969582b4b1864a92dc5d27cd2b77b622a8d79306834f1be5ba20d84b"
-dependencies = [
- "cfg-if",
- "crunchy",
- "zerocopy",
-]
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 
 [[package]]
 name = "heck"
@@ -2142,6 +2130,7 @@ dependencies = [
 [[package]]
 name = "tensor-core"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 
 [[package]]
 name = "themoretheless-tokenizer-core"
@@ -2708,26 +2697,6 @@ dependencies = [
  "quote",
  "syn 2.0.119",
  "synstructure",
-]
-
-[[package]]
-name = "zerocopy"
-version = "0.8.57"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d35102a9f36d089ccae9e4c6802bc118be4487b80aaffc0ab4e0cf5ce92d2873"
-dependencies = [
- "zerocopy-derive",
-]
-
-[[package]]
-name = "zerocopy-derive"
-version = "0.8.57"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "146c01f5ab44258da43cf276c74a2763db2ff3969c9c652c3f2de07041d0b2bc"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]

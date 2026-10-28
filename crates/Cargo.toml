@@ -11,13 +11,6 @@ members = [
     "mesh-section",
     "mesh-io",
     "cad-predicates",
-    "gpu-shader",
-    "gpu-runtime",
-    "gpu-compute",
-    "compute-core",
-    "tensor-core",
-    "compute-cuda",
-    "compute-mlx",
     "raster-core",
     "rush-runtime",
     "rush-frontend",
@@ -102,16 +95,15 @@ sketch-core = { version = "0.1.0", path = "sketch-core", default-features = fals
 subdivision-core = { version = "0.1.0", path = "subdivision-core", default-features = false }
 sdf-core = { version = "0.1.0", path = "sdf-core", default-features = false }
 mechanical-core = { version = "0.1.0", path = "mechanical-core", default-features = false }
-tensor-core = { version = "0.1.0", path = "tensor-core" }
-gpu-shader = { version = "0.1.0", path = "gpu-shader", features = ["wgsl-in"] }
-gpu-runtime = { version = "0.1.0", path = "gpu-runtime", default-features = false, features = ["wgsl", "std"] }
-gpu-compute = { version = "0.1.0", path = "gpu-compute" }
-compute-core = { version = "0.1.0", path = "compute-core" }
-compute-cuda = { version = "0.1.0", path = "compute-cuda" }
-compute-mlx = { version = "0.1.0", path = "compute-mlx" }
+# Always the latest released Forma GPU/compute/tensor stack (moving `release` branch).
+tensor-core = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
+gpu-compute = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
+compute-core = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
+compute-cuda = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
+compute-mlx = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
 
-wgpu = { package = "gpu-runtime", version = "0.1.0", path = "gpu-runtime", default-features = false, features = ["wgsl", "std"] }
-naga = { package = "gpu-shader", version = "0.1.0", path = "gpu-shader", features = ["wgsl-in"] }
+wgpu = { package = "gpu-runtime", version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release", default-features = false, features = ["wgsl", "std"] }
+naga = { package = "gpu-shader", version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release", features = ["wgsl-in"] }
 # Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
 rbench = { version = "0.1.0", git = "https://github.com/themoretheless/rbench", branch = "release" }
 
