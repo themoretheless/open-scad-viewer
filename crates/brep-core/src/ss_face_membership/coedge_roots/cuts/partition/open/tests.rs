@@ -625,3 +625,44 @@ fn endpoints_on_different_operands_still_have_a_complete_source_geometry_path() 
     assert_eq!(input.models()[0].faces.len(), 1);
     assert_eq!(input.models()[1].faces.len(), 1);
 }
+
+#[test]
+fn exact_elevated_query_identity_routes_and_authors_both_original_ss_faces() {
+    let c = curves(0.0625);
+    let mut m = [
+        model(c.original().source().first(), Some(HOLE)),
+        model(c.original().source().second(), Some(HOLE)),
+    ];
+    super::super::tests::elevated_boundary_clocks(&mut m[1]);
+    let before = m.clone();
+    let roots = roots(&c, &m);
+    let reps = qualify_cut_representatives(&roots, Default::default()).unwrap();
+    let input = partition_cut_representatives(&reps, Default::default()).unwrap();
+    for reverse in [false, true] {
+        let first =
+            qualify_open_ss_path(&input, request(&input, reverse), Default::default()).unwrap();
+        let mut other = request(&input, reverse);
+        other.side = 1;
+        let second = qualify_open_ss_path(&input, other, Default::default()).unwrap();
+        assert!(
+            first
+                .segments()
+                .iter()
+                .zip(second.segments())
+                .all(|(a, b)| a.curve == b.curve)
+        );
+        let pair = partition_open_ss_pair(&first, Default::default()).unwrap();
+        assert_eq!(pair.models()[0].faces.len(), 2);
+        assert_eq!(pair.models()[1].faces.len(), 2);
+        for side in 0..2 {
+            let independent = partition_open_ss_path(
+                if side == 0 { &first } else { &second },
+                Default::default(),
+            )
+            .unwrap();
+            assert_eq!(pair.models()[side], independent.models()[side]);
+        }
+        pair.reverify().unwrap();
+    }
+    assert_eq!(m, before);
+}

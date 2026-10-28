@@ -404,3 +404,132 @@ fn numerically_equal_pcurves_in_different_native_frames_never_prove_boundary_coi
     );
     precise.reverify().unwrap();
 }
+
+#[test]
+fn original_nonuniform_rational_support_reaches_actual_roots_cuts_and_both_faces() {
+    let base = curves(0.0625);
+    let b = base.original().source().second().clone();
+    let x = [0., 0.0625, 0.5, 0.9375, 1.];
+    let square = [0., 0., 1., 26.25, 30.];
+    let vy = [0., -15., 0.];
+    let a = nurbs_core::surface::Surface {
+        degree_u: 4,
+        degree_v: 2,
+        knots_u: vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: (0..5)
+            .map(|i| {
+                (0..3)
+                    .map(|j| {
+                        vec![
+                            x[i],
+                            j as f64 * 0.5,
+                            square[i] - 30. * x[i] + vy[j] + 13.125,
+                        ]
+                    })
+                    .collect()
+            })
+            .collect(),
+        weights: [1., 4., 5., 4., 1.]
+            .into_iter()
+            .map(|w| vec![w; 3])
+            .collect(),
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let sources = ss::FiberSources::new(&a, &b).unwrap();
+    let original = ss::qualify_quadratic_graph_ss(
+        &sources,
+        ss::QuadraticGraphSSLimits {
+            max_operations: 4096,
+        },
+    )
+    .unwrap();
+    let m = [model(&a, Some(HOLE)), model(&b, Some(HOLE))];
+    let before = m.clone();
+    let roots = qualify_coedge_roots(
+        &original,
+        [(&m[0], 0), (&m[1], 0)],
+        1e-8,
+        Default::default(),
+    )
+    .unwrap();
+    let reps = qualify_cut_representatives(&roots, Default::default()).unwrap();
+    assert_eq!(reps.nodes().len(), 2);
+    assert_eq!(reps.cuts().len(), 4);
+    let input = partition_cut_representatives(&reps, Default::default()).unwrap();
+    let upper = reps
+        .nodes()
+        .iter()
+        .position(|n| n.position[1] > 0.5)
+        .unwrap();
+    let lower = reps
+        .nodes()
+        .iter()
+        .position(|n| n.position[1] < 0.5)
+        .unwrap();
+    let steps = (0..4)
+        .map(|q| OpenPathStep {
+            original_edge: original
+                .edges()
+                .iter()
+                .position(|e| e.geometry == ss::OriginalGraphSSEdgeGeometry::EllipseQuarter(q))
+                .unwrap(),
+            reversed: false,
+        })
+        .collect();
+    let path = qualify_open_ss_path(
+        &input,
+        OpenSSPathRequest {
+            side: 0,
+            start_node: upper,
+            end_node: lower,
+            steps,
+        },
+        Default::default(),
+    )
+    .unwrap();
+    let pair = partition_open_ss_pair(&path, Default::default()).unwrap();
+    for side in 0..2 {
+        assert_eq!(pair.models()[side].faces.len(), 2);
+    }
+    assert_eq!(pair.models()[0].faces[0].surface, a);
+    pair.reverify().unwrap();
+    assert_eq!(m, before);
+    // A full internal closed branch with no boundary events must also author
+    // real closed trim cycles on the unchanged rational support.
+    let closed_models = [model(&a, None), model(&b, None)];
+    let saved_closed = closed_models.clone();
+    let curves = ss::construct_graph_curves(
+        &original,
+        ss::GraphCurveTolerances {
+            world: closed_models[0].tolerance_mm,
+            uv: 1e-9,
+        },
+        Default::default(),
+    )
+    .unwrap();
+    let membership = crate::ss_face_membership::qualify(
+        &curves,
+        [(&closed_models[0], 0), (&closed_models[1], 0)],
+        1e-8,
+        Default::default(),
+    )
+    .unwrap();
+    let closed =
+        crate::ss_face_membership::partition_closed_branches(&membership, Default::default())
+            .unwrap();
+    assert_eq!(closed.regions().len(), 2);
+    assert_eq!(closed.model_for_side(0).unwrap().faces.len(), 2);
+    assert_eq!(closed.model_for_side(1).unwrap().faces.len(), 2);
+    assert!(
+        closed
+            .model_for_side(0)
+            .unwrap()
+            .faces
+            .iter()
+            .all(|f| f.surface == a)
+    );
+    closed.reverify().unwrap();
+    assert_eq!(closed_models, saved_closed);
+}

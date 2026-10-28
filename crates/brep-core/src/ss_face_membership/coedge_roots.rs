@@ -4,6 +4,7 @@ use nurbs_core::ss_intersection::{
     self as ss, QualifiedGraphBoundaryBindings, QualifiedQuadraticGraphSS,
 };
 mod cuts;
+mod query_identity;
 pub use cuts::{
     CutNode, CutPartitionLimits, CutRepresentative, CutRepresentativeLimits, OpenPathStep,
     OpenSSFaceLimits, OpenSSNetworkCut, OpenSSNetworkPort, OpenSSPairSide, OpenSSPathLimits,
@@ -167,7 +168,7 @@ fn edge_parameter(domain: [f64; 2], clock: [f64; 2], reversed: bool) -> Result<[
         .intersect(domain[0], domain[1])?;
     Ok([p.lo, p.hi])
 }
-fn literal_boundary(
+fn identical_boundary(
     query: &nurbs_core::curve::Curve,
     model: &Model,
     face: usize,
@@ -178,7 +179,7 @@ fn literal_boundary(
     for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
         for (coedge, c) in model.loops[wire].coedges.iter().enumerate() {
             spend(operations, max, 1)?;
-            if c.pcurve == *query {
+            if query_identity::relation(query, &c.pcurve, operations, max)?.is_some() {
                 return Ok(Some((wire, coedge)));
             }
         }
@@ -357,7 +358,7 @@ pub fn qualify_coedge_roots<'a>(
                         classify(&domains[other], other_face_uv, &mut work, face_limits)?;
                     let other_boundary =
                         if other_face_location == Location::Unresolved && same_native {
-                            literal_boundary(
+                            identical_boundary(
                                 &c.pcurve,
                                 faces[other].0,
                                 faces[other].1,

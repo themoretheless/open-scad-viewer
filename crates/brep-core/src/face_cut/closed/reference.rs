@@ -1,7 +1,7 @@
 //! Compare every authored orientation directly with its immutable saved curve.
 use super::*;
 use num_rational::BigRational as Q;
-fn exact_reversal(candidate: &Curve, source: &Curve) -> bool {
+pub(super) fn exact_reversal(candidate: &Curve, source: &Curve) -> bool {
     if candidate.degree != source.degree
         || candidate.domain() != source.domain()
         || candidate.knots.len() != source.knots.len()

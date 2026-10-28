@@ -1,6 +1,7 @@
 //! Multiple source-owned SS cuts with current-sector inference on both sides.
 use super::*;
 mod bridges;
+mod graph;
 #[derive(Clone, Debug, PartialEq)]
 pub struct OpenSSNetworkCut {
     pub path: usize,
@@ -90,6 +91,9 @@ pub fn partition_open_ss_network<'s, 'i, 'p, 'r, 'a>(
         return Err(unproven(
             "SS network requires distinct actual operand faces",
         ));
+    }
+    if let Some(result) = graph::try_batch(paths, limits)? {
+        return Ok(result);
     }
     if let Some(result) = bridges::try_pair(paths, limits)? {
         return Ok(result);

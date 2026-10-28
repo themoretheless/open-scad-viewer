@@ -338,3 +338,111 @@ fn rational_original_queries_and_independent_world_knots_survive_actual_subdivis
     );
     out.reverify().unwrap();
 }
+
+pub(super) fn elevated_boundary_clocks(m: &mut Model) {
+    let outer = m.faces[0].outer;
+    for c in &mut m.loops[outer].coedges {
+        elevate_query(&mut c.pcurve);
+    }
+    for wire in m.faces[0].holes.clone() {
+        for c in &mut m.loops[wire].coedges {
+            elevate_query(&mut c.pcurve);
+        }
+    }
+}
+fn elevate_query(c: &mut nurbs_core::curve::Curve) {
+    assert_eq!(c.degree, 1);
+    let middle = c.control_points[0]
+        .iter()
+        .zip(&c.control_points[1])
+        .map(|(a, b)| (a + b) * 0.5)
+        .collect();
+    c.control_points.insert(1, middle);
+    c.degree = 2;
+    c.knots = vec![10., 10., 10., 18., 18., 18.];
+    c.weights = vec![2.; 3];
+}
+#[test]
+fn exact_elevated_common_queries_share_nodes_and_partition_actual_original_clocks() {
+    let c = curves(0.0625);
+    let mut m = [
+        model(c.original().source().first(), Some(HOLE)),
+        model(c.original().source().second(), Some(HOLE)),
+    ];
+    elevated_boundary_clocks(&mut m[1]);
+    let before = m.clone();
+    let r = roots(&c, &m);
+    let cuts = qualify_cut_representatives(&r, Default::default()).unwrap();
+    assert_eq!(cuts.cuts().len(), 4);
+    assert_eq!(cuts.nodes().len(), 2);
+    for cut in cuts.cuts() {
+        if r.records[cut.record].address.side == 1 {
+            assert!(cut.pcurve_parameter > 10.);
+        }
+    }
+    let out = partition_cut_representatives(&cuts, Default::default()).unwrap();
+    assert_eq!(out.vertices().len(), 4);
+    for node in 0..2 {
+        let points: Vec<_> = out
+            .vertices()
+            .iter()
+            .filter(|v| v.node == node)
+            .map(|v| {
+                out.models()[v.model].vertices[v.vertex]
+                    .point
+                    .map(f64::to_bits)
+            })
+            .collect();
+        assert_eq!(points.len(), 2);
+        assert_eq!(points[0], points[1]);
+    }
+    out.reverify().unwrap();
+    assert_eq!(m, before);
+}
+#[test]
+fn opposite_query_clocks_pair_all_roots_in_reverse_order_without_welding() {
+    let c = curves(0.0625);
+    let rect = [[0.125, 0.875], [0.4375, 0.5625]];
+    // First operand has a hole, second operand is its complementary material
+    // rectangle: their valid material boundaries traverse the same image in
+    // opposite directions. Each horizontal edge has two distinct roots.
+    let mut m = [
+        model(c.original().source().first(), Some(rect)),
+        crate::ss_face_membership::tests::region(c.original().source().second(), rect, None),
+    ];
+    elevated_boundary_clocks(&mut m[1]);
+    let before = m.clone();
+    let r = roots(&c, &m);
+    let cuts = qualify_cut_representatives(&r, Default::default()).unwrap();
+    assert_eq!(cuts.cuts().len(), 8);
+    assert_eq!(cuts.nodes().len(), 4);
+    for node in 0..4 {
+        let uses: Vec<_> = cuts.cuts().iter().filter(|v| v.node == node).collect();
+        assert_eq!(uses.len(), 2);
+        let a = &r.records[uses[0].record];
+        let b = &r.records[uses[1].record];
+        assert_ne!(a.address.side, b.address.side);
+        assert_eq!(
+            a.events[uses[0].event].original_root + b.events[uses[1].event].original_root,
+            1
+        );
+    }
+    let out = partition_cut_representatives(&cuts, Default::default()).unwrap();
+    assert_eq!(out.vertices().len(), 8);
+    for node in 0..4 {
+        let points: Vec<_> = out
+            .vertices()
+            .iter()
+            .filter(|v| v.node == node)
+            .map(|v| {
+                out.models()[v.model].vertices[v.vertex]
+                    .point
+                    .map(f64::to_bits)
+            })
+            .collect();
+        assert_eq!(points.len(), 2);
+        assert_eq!(points[0], points[1]);
+    }
+    out.reverify().unwrap();
+    assert_eq!(m, before);
+}

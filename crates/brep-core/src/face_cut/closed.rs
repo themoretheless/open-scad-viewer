@@ -1,6 +1,9 @@
 //! Divide a retained face by a certified simple closed saved-curve contour.
 use super::*;
 mod bridge;
+mod path_graph;
+pub(crate) use path_graph::partition_path_graph_with_tolerances;
+pub use path_graph::{PathGraphPartition, partition_path_graph};
 mod hole;
 pub(crate) use bridge::partition_bridges_with_tolerances;
 pub use bridge::{BridgePartition, BridgePath, partition_bridges};

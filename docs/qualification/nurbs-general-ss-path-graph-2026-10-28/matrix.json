@@ -1,0 +1,102 @@
+{
+  "last_verified_base_commit": "7b1cac0768c6cc77879a3a4ae650bac6f2ad404a",
+  "last_verified_branch": "codex/nurbs-plan-recovery-20261028",
+  "workspace": "/Users/themoretheless/.codex/worktrees/nurbs-plan-recovery/open-scad-viewer",
+  "scope": "Complete bounded saved-path graphs and source-owned SS cross-loop batches; all material sectors retained; no automatic Boolean or Solid authority",
+  "sources": {
+    "crates/brep-core/src/face_cut.rs": "94ecc5a071d77eadc5a98b02246bc1988f8c9f87b0fc3940e457006513294f31",
+    "crates/brep-core/src/face_cut/closed.rs": "1ecb7fad71c76ad37b3734a45635072c1e8876ec9f8b10e0e251c67d8b647c4b",
+    "crates/brep-core/src/face_cut/closed/path_graph.rs": "0af4b6ed007cc65964b63cab75a52f8f8c931f8640e9610e30c3f0d5e1621501",
+    "crates/brep-core/src/face_cut/closed/path_graph/author.rs": "a4909330b0939cc3206030f6f53f0cf54d15deffb02db8f84890fd3c76de23b5",
+    "crates/brep-core/src/face_cut/closed/path_graph/cycles.rs": "71b3516cb61164a7e907d993fd3c471d4ed695f4eb07063b17a6c7c1f95822b4",
+    "crates/brep-core/src/face_cut/closed/path_graph/prepare.rs": "88ae2e9ec99d1811ca502d444c98c36e66599bcaf5e4f382c4eb74ec23a1187a",
+    "crates/brep-core/src/face_cut/closed/path_graph/tests.rs": "03cc5984fdc52318abf2ef568eca91f64042cb1eb52d21b7a385151d3d1db919",
+    "crates/brep-core/src/face_cut/closed/reference.rs": "ee6cb998b89e78de203ae240d04ae77562a30ff7df8826543f2e80ffca9ea63a",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network.rs": "450435a586cb925c3d851602102393aa4252423c5228db81f1230caa414813be",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/graph.rs": "6e1b18d7235bb6d09f9f29e4a13bf5a22c4bbf2b67f7bede7aa4d5eaae9f5a0f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/graph/tests.rs": "4b9cbe06d5a092546fb05a2da2b3ffdca20489982bacb82328a7ab695740a3e1"
+  },
+  "logs": {
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-brep-recovered-r2.log": "6af13a2b1b2723b1f7bb3f81e84a495c5ef78f24121e323c2c33f3ac35d44940",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-brep-recovered.log": "8eae1f331761f9bc081aaf60561b5efa607b79a15f9154c4c1e2988f5a278669",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/general-graph-format-direct.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "recovery_scripts": {
+    "01-create.py": "21298fced766d150f6da79b0d29caa0f8d8dd9a5a4e63363c7441790c34dec9b",
+    "02-tests-dispatch.py": "0185a97aa4bb87f26da610b2ff59f7de44b2754d597fcf48c60d33d02696d72c",
+    "03-owner-fix.py": "469423690c14d14a31f688b7472d2d7b3fcc8ca88ae5b18a7b138ccbe58f2040"
+  },
+  "recovered_patch": {
+    "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/restored.patch",
+    "sha256": "44d2dd9b94fcfb9a06c6a0c6d97ecd1b12841d86139f1d117ac827b694911585"
+  },
+  "historical_failure_excerpt": {
+    "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/initial-run-session-excerpts.json",
+    "sha256": "441b0c77cedd9ebb8348ec4cd38a5694ea01131c1aa39ed572d57c43c47a1cd4",
+    "full_old_log_available": false
+  },
+  "results": {
+    "initial_before_owner_fix": {
+      "passed": 1979,
+      "failed": 6,
+      "ignored": 5,
+      "evidence": "Captured own-session tool-output excerpts, not a recovered full log",
+      "reason": "Wrong outer/hole ownership trial on exactly shared new boundary caused loop-separation-unproven"
+    },
+    "lost_tmp_second_run": "Unverified; process and redirected log were unavailable after temporary checkout deletion",
+    "fresh_recovery_compile": {
+      "exit_code": 101,
+      "reason": "E0061: stale eight-argument call after builder became five arguments; corrected call, no geometry gates weakened"
+    },
+    "fresh_full": {
+      "passed": 1987,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "new_native_graph_tests": 7,
+    "new_original_ss_graph_tests": 2,
+    "api": {
+      "modules": 239,
+      "catalogue": 200,
+      "exit_code": 0
+    },
+    "format_direct": {
+      "exit_code": 0
+    },
+    "direct_source_whitespace": {
+      "files": 11,
+      "violations": 0
+    },
+    "architecture": {
+      "violations": 71,
+      "exit_code": 1,
+      "limits_unchanged": true
+    },
+    "git_diff_status_commit": "Pending: common object database directory reads return Interrupted system call; no commit or clean-tree claim"
+  },
+  "ignored": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+  ],
+  "remaining": [
+    "cross-loop graphs combined with unresolved internal/shared endpoint junctions",
+    "nonexact native UV reversal and periodic chart windows",
+    "general rational/multispan original SS supports, contacts/coincidences",
+    "automatic Boolean roles, sewing and Solid admission",
+    "central G2 corner, offsets/shells, simplification",
+    "WASM/Rush/UI/edited-body STEP delivery and release gates"
+  ],
+  "no_existing_limits_raised": true,
+  "snapshot": {
+    "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/qualified-path-graph-1987.tar.gz",
+    "hash_sidecar": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/qualified-path-graph-1987.tar.gz.sha256"
+  }
+}

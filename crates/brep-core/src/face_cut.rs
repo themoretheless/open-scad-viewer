@@ -62,11 +62,12 @@ pub(crate) mod endpoint_loop;
 mod policy;
 use endpoint_loop::owned_boundary;
 mod closed;
-pub(crate) use closed::partition_bridges_with_tolerances;
 pub use closed::{
     BridgePartition, BridgePath, ClosedCutLimits, ClosedPartition, HolePartition,
-    partition_bridges, partition_closed, partition_same_hole,
+    PathGraphPartition, partition_bridges, partition_closed, partition_path_graph,
+    partition_same_hole,
 };
+pub(crate) use closed::{partition_bridges_with_tolerances, partition_path_graph_with_tolerances};
 
 pub struct Segment {
     pub curve: Curve,

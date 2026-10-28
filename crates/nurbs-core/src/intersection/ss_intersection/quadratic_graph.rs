@@ -8,6 +8,7 @@ mod curves;
 mod diagonalize;
 mod line_clip;
 mod ranges;
+mod rational_graph;
 pub use curves::{
     GraphBoundaryRoot, GraphBoundaryRootLimits, GraphCurveBuildLimits, GraphCurveTolerances,
     GraphCurveVertex, GraphEdgeCurves, GraphRootBinding, GraphRootEdgeClock, GraphRootLocation,
@@ -179,6 +180,11 @@ fn power(values: &[f64], w: &mut Work) -> Result<[f64; 3]> {
     Ok([values[0], linear, w.add(a, values[2])?])
 }
 fn graph(s: &Surface, w: &mut Work) -> Result<([f64; 4], [[f64; 2]; 2], Poly)> {
+    s.validate()?;
+    if s.degree_u > 2 || s.degree_v > 2 || s.weights.iter().flatten().any(|x| *x != s.weights[0][0])
+    {
+        return rational_graph::graph(s, w);
+    }
     check(
         (1..=2).contains(&s.degree_u)
             && (1..=2).contains(&s.degree_v)

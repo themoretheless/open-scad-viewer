@@ -114,16 +114,28 @@ fn canonical_records(
     roots: &QualifiedFacePairRoots<'_>,
     used: &mut usize,
     max: usize,
-) -> Result<Vec<usize>> {
-    let mut out = Vec::new();
+) -> Result<Vec<(usize, bool)>> {
+    let mut out: Vec<(usize, bool)> = Vec::new();
     for (i, r) in roots.records.iter().enumerate() {
-        let mut first = i;
+        let mut first = (i, false);
         for (j, s) in roots.records[..i].iter().enumerate() {
             spend(used, max, 1)?;
-            if same_frame(roots, r.address.side, s.address.side)
-                && r.bindings.census().boundary() == s.bindings.census().boundary()
-            {
-                first = out[j];
+            if !same_frame(roots, r.address.side, s.address.side) {
+                continue;
+            }
+            if let Some(reversed) = query_identity::relation(
+                r.bindings.census().boundary(),
+                s.bindings.census().boundary(),
+                used,
+                max,
+            )? {
+                // Both immutable censuses cover every simple root, sorted by
+                // normalized clock. An exact map identifies all roots in order
+                // (opposite order for a reversed query), not by proximity.
+                if r.bindings.census().roots().len() != s.bindings.census().roots().len() {
+                    return Err(unproven("Identical boundary root censuses disagree"));
+                }
+                first = (out[j].0, out[j].1 ^ reversed);
                 break;
             }
         }
@@ -131,7 +143,7 @@ fn canonical_records(
     }
     Ok(out)
 }
-fn key(r: &QualifiedCoedgeRoots, canonical: usize, event: &CoedgeRootEvent) -> Result<Key> {
+fn key(r: &QualifiedCoedgeRoots, canonical: (usize, bool), event: &CoedgeRootEvent) -> Result<Key> {
     let binding = r
         .bindings
         .bindings()
@@ -142,12 +154,24 @@ fn key(r: &QualifiedCoedgeRoots, canonical: usize, event: &CoedgeRootEvent) -> R
         GraphRootLocation::Vertex {
             original_vertex, ..
         } => Key::Vertex(original_vertex),
-        GraphRootLocation::Interior(_) => Key::Interior(canonical, event.original_root),
+        GraphRootLocation::Interior(_) => {
+            let ordinal = if canonical.1 {
+                r.bindings
+                    .census()
+                    .roots()
+                    .len()
+                    .checked_sub(event.original_root + 1)
+                    .ok_or_else(|| unproven("Invalid reversed original root ordinal"))?
+            } else {
+                event.original_root
+            };
+            Key::Interior(canonical.0, ordinal)
+        }
     })
 }
 /// Every retained event gets independent actual edge and pcurve parameters.
-/// Node identity uses an original vertex or literally identical query/frame/root
-/// ordinal; distance is never an equivalence relation. Outside events remain in
+/// Node identity uses an original vertex or an exact rational query identity
+/// in the same native frame with a complete ordered root correspondence; distance is never an equivalence relation. Outside events remain in
 /// the input owner and do not create cut requests. Zero cuts do not prove no SS.
 pub fn qualify_cut_representatives<'r, 'a>(
     roots: &'r QualifiedFacePairRoots<'a>,
