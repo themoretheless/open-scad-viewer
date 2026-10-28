@@ -4,7 +4,9 @@
 //! in normalized coordinates. One common positive homogeneous weight factor
 //! cancels from the rational quotient. With the same Cartesian controls this
 //! proves equality of the entire maps and every existing normalized jet,
-//! including one-sided jets at knots. No rounded normalized knots, quotients,
+//! including one-sided jets at knots. A second exact owner also compares
+//! different degrees/nets on the complete common original knot partition.
+//! No rounded normalized knots, quotients,
 //! inserted controls, sampled values or supplied equality flags enter this proof.
 use super::*;
 use cad_predicates::{
@@ -20,10 +22,23 @@ impl Identity<'_> {
     }
 }
 
+mod tensor;
+pub(super) fn certify<'a>(
+    caps: [&'a Surface; 2],
+    out: &mut IdealVolumeReport,
+    max_cells: usize,
+    max_work: u64,
+) -> Option<Identity<'a>> {
+    if let Some(proof) = affine(caps, out, max_cells, max_work) {
+        return Some(proof);
+    }
+    tensor::certify(caps, out, max_cells, max_work).then_some(Identity { caps })
+}
+
 /// Inputs are the already validated immutable original carriers. A failed
 /// trial retains all spent work in the owning volume ledger; open moving-cap
 /// proofs may still use the remaining budget without assuming any identity.
-pub(super) fn certify<'a>(
+fn affine<'a>(
     caps: [&'a Surface; 2],
     out: &mut IdealVolumeReport,
     max_cells: usize,
@@ -134,3 +149,6 @@ mod tests;
 
 #[cfg(test)]
 mod closed_tests;
+
+#[cfg(test)]
+mod tensor_tests;

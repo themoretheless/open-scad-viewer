@@ -21,6 +21,8 @@ mod bspline_projective_correspondence;
 pub use bspline_projective_correspondence::*;
 mod bezier_projective_correspondence;
 pub use bezier_projective_correspondence::*;
+mod tensor_identity;
+pub use tensor_identity::*;
 mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;
