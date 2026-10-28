@@ -1,0 +1,13 @@
+# Original-source single-sheeted pole graph neighborhoods
+
+`source_pole_tangency::qualify_body_pole_graphs` freshly derives the private projected-chart atlas, checks complete natural-rectangle material faces and the exact owned vertex-link cycle, and transports every collar cut through the original qualified canonical shared-edge maps. Rational UV weights are inverted before transport; a normalized surface coordinate is never mistaken for an original curve parameter.
+
+Both directions of every shared-meridian cut are enclosed outward. The other chart's proved radial lower bound then separates any unmatched collar tail from the projected pole. Together with all outer radial boundaries, this yields a strictly positive lower separation of the complete compact star boundary. Half that bound is the reported open projected disk radius. All rectangle checks and directed cut transports share one whole-body boundary-step allowance; any incomplete star yields no atlas token.
+
+The proof in `THEOREM.md` uses the already private embedded body, common oriented transverse projections, exact shared-edge gluing and native projected-pole fiber exclusion. Proper local covering and vertical height ordering imply one sheet over the open disk. The common exact pole-plane limits then give differentiability at the pole. This does not assert G1 on ordinary punctured seams, a whole C1 neighborhood, or pole G2 curvature.
+
+The generated cap body is restored from binary original definitions and freshly admitted through source topology, original charts, all face contacts and volume. Qualification checks both complete polar stars, positive graph radii, original source identity and one-short shared boundary work. A separate original rational UV test uses unequal weights and nonunit curve parameters, verifies the inverse cut formula, reversed traversal and refusal of partial original edges. Independent original surface evaluations inside both graph disks check tangent approach; these samples are regression observations, not admission authority. Existing exact-work/cell/column refusals and sharp C0 policy remain intact.
+
+## Remaining scope
+
+This covers the supported fully polar stars with complete natural rectangular source faces and positive first-order projected-polar proofs. Root-trimmed/mixed-corner stars and unsupported higher-order/periodic layouts still refuse. Unique pole G2 curvature limits, applicable ordinary-seam G1/G2, complete ideal loft/sweep source-law guarantees, broader general-frame/cap/closed-seam qualification and release/semantic G1 delivery remain open. No TypeScript geometry or WASM package change is made. Publication remains held by the general architecture audit.

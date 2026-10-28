@@ -1,5 +1,5 @@
-//! Source-bound uniform pole-plane limits. These do not assert regular quotient
-//! charts, G2 curvature, or replace the ordinary seam collection's pole refusal.
+//! Original-source pole planes, atlases, transverse projections and graph stars.
+//! Pole G2 and ordinary-seam smoothness remain independent proof obligations.
 use crate::{
     source_collapsed_boundary::CollapsedBoundary, source_seam_tangency::Carrier,
     source_shell_incidence::Address, source_volume::Body,
@@ -291,3 +291,7 @@ pub use projection::{TransverseBodyPoleAtlas, TransverseLimits, TransverseReport
 
 mod projected_chart;
 pub use projected_chart::{ProjectedChartAtlas, ProjectedChartLimits, ProjectedChartReport, qualify_body_projected_chart_atlas};
+
+mod star_boundary;
+mod graph;
+pub use graph::{GraphLimits, GraphReport, PoleGraphAtlas, PoleGraphStar, qualify_body_pole_graphs};

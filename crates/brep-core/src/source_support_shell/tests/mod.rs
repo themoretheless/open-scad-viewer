@@ -428,6 +428,54 @@
         assert!(short_projected.certificate.is_none());
         assert!(short_projected.completed_poles < projected.completed_poles);
         assert!(short_projected.projected_cells <= projected.projected_cells-1);
+        let graph_limits = |steps| crate::source_pole_tangency::GraphLimits {
+            charts: projected_limits(100000), boundary_steps: steps,
+        };
+        let graphs = crate::source_pole_tangency::qualify_body_pole_graphs(&body, graph_limits(100000)).unwrap();
+        let g = graphs.certificate.expect(graphs.reason);
+        assert_eq!(g.stars().len(), 2);
+        assert_eq!(graphs.completed_stars, 2);
+        eprintln!("pole-graph metrics: stars={} boundary_steps={} radii={:?}", g.stars().len(), graphs.boundary_steps,
+            g.stars().iter().map(|s|(s.vertex(),s.dropped_axis(),s.projected_radius_lower())).collect::<Vec<_>>());
+        assert_eq!(graphs.exact_work, projected.exact_work);
+        assert_eq!(graphs.projected_cells, projected.projected_cells);
+        for star in g.stars() {
+            assert_eq!(star.dropped_axis(), 2);
+            assert!(star.projected_radius_lower()>0.);
+            assert!(!star.faces().is_empty());
+            assert!(g.charts().outer_radius_bounds().iter().any(|(v,r)| *v==star.vertex() && *r>star.projected_radius_lower()));
+        }
+        // Independent original-source evaluations inside the proved graph
+        // disks approach the horizontal tangent at both physical poles.
+        for (address, chart) in g.charts().charts() {
+            let vertex=body.geometry().shell().vertices()[address.face][address.wire][address.edge][0];
+            let star=g.stars().iter().find(|s|s.vertex()==vertex).unwrap();
+            let surface=chart.surface();
+            let du=[surface.knots_u[surface.degree_u],surface.knots_u[surface.control_points.len()]];
+            let dv=[surface.knots_v[surface.degree_v],surface.knots_v[surface.control_points[0].len()]];
+            for angular in [0.25,0.5,0.75] {
+                let mut ratios=Vec::new();
+                for inward in [1e-4,5e-5] {
+                    use nurbs_core::surface_join::Boundary;
+                    let uv=match chart.boundary() {
+                        Boundary::UMin=>[du[0]+(du[1]-du[0])*inward,dv[0]+(dv[1]-dv[0])*angular],
+                        Boundary::UMax=>[du[1]-(du[1]-du[0])*inward,dv[0]+(dv[1]-dv[0])*angular],
+                        Boundary::VMin=>[du[0]+(du[1]-du[0])*angular,dv[0]+(dv[1]-dv[0])*inward],
+                        Boundary::VMax=>[du[0]+(du[1]-du[0])*angular,dv[1]-(dv[1]-dv[0])*inward],
+                    };
+                    let point=surface.evaluate(uv[0],uv[1]).unwrap().point;
+                    let pole=star.point();let radial=(point[0]-pole[0]).hypot(point[1]-pole[1]);
+                    assert!(radial>0. && radial<star.projected_radius_lower());
+                    ratios.push((point[2]-pole[2]).abs()/radial);
+                }
+                assert!(ratios[1]<=0.6*ratios[0]+1e-10, "{ratios:?}");
+            }
+        }
+        let short_graph = crate::source_pole_tangency::qualify_body_pole_graphs(
+            &body, graph_limits(graphs.boundary_steps-1)).unwrap();
+        assert!(short_graph.certificate.is_none());
+        assert!(short_graph.completed_stars<graphs.completed_stars);
+        assert_eq!(short_graph.boundary_steps, graphs.boundary_steps-1);
         let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
         let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
             crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
