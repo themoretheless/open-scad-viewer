@@ -460,3 +460,23 @@ fn capped_canal_body_admits_native_geometry_and_independent_volume_without_codec
     assert!(volume[0] > 0. && volume[1] - volume[0] <= 0.25);
     assert!(body.geometry().contacts().all_pairs_qualified);
 }
+
+#[test]
+fn exact_graph_body_roles_bind_actual_model_and_original_surfaces_without_codec() {
+    let body = cube(0.);
+    let model = brep_core::source_body_model::convert(&body, 1e-7).unwrap();
+    let saved = model.clone();
+    let limits = brep_core::graph_body::Limits {
+        operations: 1000000,
+        body: body_limits(),
+    };
+    let proof = brep_core::graph_body::qualify(&model, 1, 0, &limits).unwrap();
+    assert_eq!(proof.roof_support().source(), &model.faces[1].surface);
+    assert_eq!(proof.floor_support().source(), &model.faces[0].surface);
+    assert_eq!(proof.footprint(), [[0., 1.], [0., 1.]]);
+    assert_eq!(proof.equivalences().len(), 6);
+    proof.reverify().unwrap();
+    assert_eq!(model, saved);
+    let volume = proof.equivalent_body().volume();
+    assert!(volume[0] <= 1. && volume[1] >= 1.);
+}

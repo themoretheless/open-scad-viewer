@@ -765,3 +765,7 @@ pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersectio
 pub use quadratic_graph::{GraphCurveTolerances, GraphCurveBuildLimits, GraphCurveVertex, GraphEdgeCurves, QualifiedGraphCurves, construct_graph_curves};
 
 pub use quadratic_graph::{GraphRootEdgeClock, GraphRootLocation, GraphRootBinding, QualifiedGraphBoundaryBindings, bind_graph_boundary_roots, GraphBoundaryRoot, GraphBoundaryRootLimits, QualifiedGraphBoundaryRoots, qualify_graph_boundary_roots};
+
+pub use quadratic_graph::{QualifiedGraphSupport,qualify_graph_support};
+
+pub use quadratic_graph::{QualifiedPolynomialSurface,qualify_polynomial_surface};

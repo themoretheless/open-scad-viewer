@@ -9,6 +9,10 @@ mod diagonalize;
 mod line_clip;
 mod ranges;
 mod rational_graph;
+mod support;
+mod polynomial;
+pub use polynomial::{QualifiedPolynomialSurface,qualify_polynomial_surface};
+pub use support::{QualifiedGraphSupport,qualify_graph_support};
 mod zero_trace;
 pub use curves::{
     GraphBoundaryRoot, GraphBoundaryRootLimits, GraphCurveBuildLimits, GraphCurveTolerances,

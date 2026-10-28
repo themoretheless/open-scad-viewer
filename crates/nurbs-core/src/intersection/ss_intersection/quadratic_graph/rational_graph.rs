@@ -18,7 +18,7 @@ pub(super) fn power(values: &[f64], w: &mut Work) -> Result<Vec<f64>> {
     }
     Ok(out)
 }
-fn homogeneous(s: &Surface, axis: usize, w: &mut Work) -> Result<Grid> {
+pub(super) fn homogeneous(s: &Surface, axis: usize, w: &mut Work) -> Result<Grid> {
     let mut rows = Vec::new();
     for i in 0..=s.degree_u {
         let values = (0..=s.degree_v)
@@ -83,7 +83,7 @@ fn verify(numerator: &Grid, den: &Grid, q: &Poly, w: &mut Work) -> Result<()> {
     }
     Ok(())
 }
-fn quotient(numerator: &Grid, den: &Grid, w: &mut Work) -> Result<Poly> {
+pub(super) fn quotient(numerator: &Grid, den: &Grid, w: &mut Work) -> Result<Poly> {
     check(
         den[0][0] > 0.,
         "Original rational graph corner denominator must be positive",
