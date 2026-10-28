@@ -317,3 +317,6 @@ pub use quadratic_jet::{QuadraticJet, QuadraticJetReport, QuadraticPairReport, p
 
 mod normal_rectangles;
 pub use normal_rectangles::DesingularizedPairReport;
+
+mod graph_shape;
+pub use graph_shape::{PolarGraphShape, PolarGraphShapeReport, PolarGraphBounds, PolarGraphBoundsReport};

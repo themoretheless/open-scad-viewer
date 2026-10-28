@@ -516,3 +516,4 @@ pub use pole_plane::{ProjectionCollar, ProjectionReport};
 
 pub use pole_plane::{QuadraticJet, QuadraticJetReport, QuadraticPairReport, prepare_quadratic_jet, compare_quadratic_jets};
 pub use pole_plane::DesingularizedPairReport;
+pub use pole_plane::{PolarGraphShape, PolarGraphShapeReport, PolarGraphBounds, PolarGraphBoundsReport};

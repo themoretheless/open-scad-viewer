@@ -482,6 +482,31 @@
         // sphere's G2 claim merely from their common limiting tangent plane.
         assert!(curvature.certificate.is_none());
         eprintln!("represented-sphere pole jet refusal: {} work={}",curvature.reason,curvature.jet_work);
+        use crate::source_seam_tangency::{self as seams,Class,PoleRequirement,PoleStrata};
+        let cap_faces=body.geometry().shell().poles().iter().map(|(a,_)|a.face).collect::<std::collections::BTreeSet<_>>();
+        let cap_classes=body.geometry().shell().uses().iter().map(|pair| {
+            if pair.iter().all(|a|cap_faces.contains(&a.face)) {Class::TangentPlanes}else {Class::C0}
+        }).collect::<Vec<_>>();
+        let seam_work=||seams::Limits {max_sine_squared:1e-4,cells:100000,curve_spans:100000,normal_spans:100000};
+        let cap_tangency=seams::qualify_boundary_with_polar_seams(&body,&cap_classes,
+            PoleRequirement::TangentGraph(graph_limits(100000)),seam_work(),100000000).unwrap();
+        let cap_proof=cap_tangency.certificate.expect(cap_tangency.reason);
+        assert!(std::ptr::eq(cap_proof.body(),&body));
+        assert!(matches!(cap_proof.poles(),PoleStrata::TangentGraph(_)));
+        let requested=cap_classes.iter().filter(|c|**c==Class::TangentPlanes).count();
+        assert!(requested>=8);
+        assert_eq!(cap_proof.ordinary().polar_seams().len(),requested);
+        assert_eq!(cap_tangency.completed_edges,cap_classes.len());
+        assert!(cap_proof.ordinary().polar_seams().iter().all(|(_,p)|p.sine_squared_bounds()[1]<=1e-4));
+        assert!(!cap_proof.ordinary().all_edges_tangent());
+        let short=seams::qualify_boundary_with_polar_seams(&body,&cap_classes,
+            PoleRequirement::TangentGraph(graph_limits(100000)),seam_work(),cap_tangency.polar_normal_coefficients-1).unwrap();
+        assert!(short.certificate.is_none());assert!(short.completed_edges<cap_classes.len());
+        let no_false_g2=seams::qualify_boundary_with_polar_seams(&body,&cap_classes,
+            PoleRequirement::FacewiseCurvature(crate::source_pole_tangency::PoleCurvatureLimits{graphs:graph_limits(100000),jet_work:100000000}),seam_work(),100000000).unwrap();
+        assert!(no_false_g2.certificate.is_none());assert_eq!(no_false_g2.completed_edges,0);
+        eprintln!("nonflat-cap tangent metrics: seams={} cells={} coefficients={}",requested,cap_tangency.ordinary_cells,cap_tangency.polar_normal_coefficients);
+
         let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
         let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
             crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
