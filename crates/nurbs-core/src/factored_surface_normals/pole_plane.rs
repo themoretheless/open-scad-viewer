@@ -311,3 +311,6 @@ mod tests;
 
 mod projection;
 pub use projection::{ProjectionCollar, ProjectionReport};
+
+mod quadratic_jet;
+pub use quadratic_jet::{QuadraticJet, QuadraticJetReport, QuadraticPairReport, prepare_quadratic_jet, compare_quadratic_jets};

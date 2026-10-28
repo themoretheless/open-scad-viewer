@@ -513,3 +513,5 @@ mod pole_neighborhood;
 pub use pole_neighborhood::{TangentPoleCollar, TangentPoleCollarReport, prepare_tangent_pole_collar};
 
 pub use pole_plane::{ProjectionCollar, ProjectionReport};
+
+pub use pole_plane::{QuadraticJet, QuadraticJetReport, QuadraticPairReport, prepare_quadratic_jet, compare_quadratic_jets};

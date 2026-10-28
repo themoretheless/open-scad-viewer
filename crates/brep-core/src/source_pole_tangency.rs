@@ -295,3 +295,6 @@ pub use projected_chart::{ProjectedChartAtlas, ProjectedChartLimits, ProjectedCh
 mod star_boundary;
 mod graph;
 pub use graph::{GraphLimits, GraphReport, PoleGraphAtlas, PoleGraphStar, qualify_body_pole_graphs};
+
+mod curvature;
+pub use curvature::{PoleCurvatureAtlas, PoleCurvatureLimits, PoleCurvatureReport, qualify_body_pole_curvature};

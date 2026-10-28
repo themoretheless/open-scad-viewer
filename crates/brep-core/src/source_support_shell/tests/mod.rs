@@ -476,6 +476,12 @@
         assert!(short_graph.certificate.is_none());
         assert!(short_graph.completed_stars<graphs.completed_stars);
         assert_eq!(short_graph.boundary_steps, graphs.boundary_steps-1);
+        let curvature=crate::source_pole_tangency::qualify_body_pole_curvature(&body,
+            crate::source_pole_tangency::PoleCurvatureLimits{graphs:graph_limits(100000),jet_work:100000000}).unwrap();
+        // Rounded represented spherical supports must not inherit an ideal
+        // sphere's G2 claim merely from their common limiting tangent plane.
+        assert!(curvature.certificate.is_none());
+        eprintln!("represented-sphere pole jet refusal: {} work={}",curvature.reason,curvature.jet_work);
         let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
         let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
             crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
@@ -9674,4 +9680,65 @@
         let mut low = limits();
         low.faces = 26;
         assert!(prepare(&model, low).is_err());
+    }
+
+    #[test]
+    fn flattened_canal_caps_qualify_exact_common_pole_curvature() {
+        use std::collections::{BTreeMap,BTreeSet};
+        use nurbs_core::curve::Curve;
+        let spans=crate::linear_canal::construct([[0.,0.,0.],[0.,0.,8.]],[1.,1.],[1.,0.,0.],std::f64::consts::TAU).unwrap();
+        let mut model=crate::linear_canal::to_capped_region(&spans,1e-7).unwrap();
+        let mut moved=BTreeMap::new();let mut linear_edges=BTreeSet::new();let mut pole_edges=BTreeMap::new();
+        for face in 0..model.faces.len() {
+            let old=model.faces[face].surface.clone();let n=old.control_points.len();
+            let pole_end=(0..2).find(|&e|{let row=&old.control_points[if e==0 {0}else{n-1}];row.iter().all(|p|p==&row[0])});
+            let Some(end)=pole_end else{continue;};
+            assert_eq!(old.degree_u,2);
+            let pole=old.control_points[if end==0 {0}else{n-1}][0].clone();
+            let far=old.control_points[if end==0 {n-1}else{0}].clone();
+            let height=far[0][2];assert!(far.iter().all(|p|p[2]==height));
+            let target=[pole[0],pole[1],height];
+            let weights=old.weights[if end==0 {n-1}else{0}].clone();
+            let mut surface=old.clone();
+            for i in 0..n {let u=if end==0 {i as f64/2.}else{1.-i as f64/2.};
+                for j in 0..far.len() {surface.control_points[i][j]=vec![pole[0]+u*(far[j][0]-pole[0]),pole[1]+u*(far[j][1]-pole[1]),height];}
+                surface.weights[i]=weights.clone();
+            }
+            model.faces[face].surface=surface;
+            let fixed=old.knots_u[if end==0 {old.degree_u}else{n}];
+            let outer=model.faces[face].outer;
+            for coedge in &model.loops[outer].coedges {
+                let c=&coedge.pcurve;let edge=&model.edges[coedge.edge];
+                if c.control_points.iter().all(|p|p[0]==fixed) {
+                    for v in edge.vertices {moved.insert(v,target);}
+                    pole_edges.insert(coedge.edge,target);
+                } else if c.control_points[0][0]!=c.control_points[1][0] {linear_edges.insert(coedge.edge);}
+            }
+        }
+        assert!(!moved.is_empty());
+        for (v,p) in moved {model.vertices[v].point=p;}
+        for (e,p) in pole_edges {for q in &mut model.edges[e].curve.control_points {*q=p.to_vec();}}
+        for e in linear_edges {let [a,b]=model.edges[e].vertices;
+            model.edges[e].curve=Curve::from_polyline(vec![model.vertices[a].point.to_vec(),model.vertices[b].point.to_vec()]).unwrap();
+        }
+        model.validate().unwrap();
+        let s=prepare_projective(&model,limits()).unwrap();let shell=s.shell.expect(s.reason);
+        let g=crate::source_shell_geometry::qualify_projective(shell,geometry_limits()).unwrap();let geometry=g.geometry.expect(g.reason);
+        let v=crate::source_volume::qualify(geometry,crate::source_volume::Limits{axis:2,origin:0.,absolute_error:0.25,tolerance_uv:1e-8,cells:50000,spans:100000,domain_cells:100000}).unwrap();
+        let body=v.body.expect(v.reason);
+        let limits=|work| crate::source_pole_tangency::PoleCurvatureLimits {
+            graphs:crate::source_pole_tangency::GraphLimits {
+                charts:crate::source_pole_tangency::ProjectedChartLimits {
+                    transverse:crate::source_pole_tangency::TransverseLimits {
+                        atlas:crate::source_pole_tangency::FanLimits{inward_extent:0.125,subdivisions:8,exact_work:100000000,cells:100000},columns:100000},subdivisions:8,cells:100000},boundary_steps:100000},jet_work:work};
+        let r=crate::source_pole_tangency::qualify_body_pole_curvature(&body,limits(100000000)).unwrap();
+        let proof=r.certificate.expect(r.reason);
+        assert!(std::ptr::eq(proof.graphs().charts().transverse().atlas().body(),&body));
+        assert_eq!(proof.graphs().stars().len(),2);
+        assert_eq!(proof.jets().len(),body.geometry().shell().poles().len());
+        assert_eq!(r.comparisons,proof.jets().len()-2);
+        for (_,jet) in proof.jets() {for b in jet.coefficient_bounds() {assert!(b[0]<=0.&&b[1]>=0.);}}
+        let short=crate::source_pole_tangency::qualify_body_pole_curvature(&body,limits(r.jet_work-1)).unwrap();
+        assert!(short.certificate.is_none());assert!(short.completed_poles<r.completed_poles);
+        eprintln!("pole-curvature metrics: poles={} comparisons={} exact_work={}",r.completed_poles,r.comparisons,r.jet_work);
     }

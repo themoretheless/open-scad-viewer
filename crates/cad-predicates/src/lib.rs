@@ -1213,3 +1213,6 @@ pub fn barycentric_in_triangle_2d_exact(
     };
     (orient(2, 4, 6), orient(4, 0, 6), orient(0, 2, 6))
 }
+
+mod pole_quadratic_jet;
+pub use pole_quadratic_jet::{PoleQuadraticJet, PoleQuadraticJetDecision, rational_surface_pole_quadratic_jet, compare_pole_quadratic_jets};
