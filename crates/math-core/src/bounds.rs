@@ -98,12 +98,12 @@ pub fn point_bounds_accelerated(
             "point_bounds_accelerated expects finite point coordinates",
         ));
     }
-    if acceleration.is_gpu()
-        && acceleration != Acceleration::Auto
-        && let Some(bounds) =
+    if acceleration.is_gpu() && acceleration != Acceleration::Auto {
+        if let Some(bounds) =
             crate::device::kernels().and_then(|kernels| kernels.point_bounds(acceleration, points))
-    {
-        return Ok(bounds);
+        {
+            return Ok(bounds);
+        }
     }
     point_bounds(points)
 }
@@ -129,11 +129,12 @@ pub fn transformed_point_bounds_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_transformed_point_bounds(points.len());
-    if acceleration.is_gpu()
-        && let Some(bounds) = crate::device::kernels()
+    if acceleration.is_gpu() {
+        if let Some(bounds) = crate::device::kernels()
             .and_then(|kernels| kernels.transformed_point_bounds(acceleration, points, m, t))
-    {
-        return Ok(bounds);
+        {
+            return Ok(bounds);
+        }
     }
     transformed_point_bounds(points, m, t)
 }

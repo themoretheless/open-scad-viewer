@@ -36,11 +36,12 @@ pub fn nearest_two_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    if acceleration.is_gpu()
-        && let Some(values) = crate::device::kernels()
+    if acceleration.is_gpu() {
+        if let Some(values) = crate::device::kernels()
             .and_then(|kernels| kernels.nearest_two(acceleration, queries, targets))
-    {
-        return values;
+        {
+            return values;
+        }
     }
     nearest_two(queries, targets)
 }

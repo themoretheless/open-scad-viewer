@@ -33,11 +33,12 @@ pub fn directed_chamfer_distance(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    if acceleration.is_gpu()
-        && let Some(summary) = crate::device::kernels()
+    if acceleration.is_gpu() {
+        if let Some(summary) = crate::device::kernels()
             .and_then(|kernels| kernels.directed_chamfer(acceleration, queries, targets))
-    {
-        return Ok(summary);
+        {
+            return Ok(summary);
+        }
     }
     let distances = nearest_neighbor_accelerated(queries, targets, acceleration);
     let mut sum = 0.;

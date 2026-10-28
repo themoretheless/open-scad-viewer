@@ -80,11 +80,12 @@ pub fn point_cloud_stats_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_point_cloud_stats(points.len());
-    if acceleration.is_gpu()
-        && let Some(stats) = crate::device::kernels()
+    if acceleration.is_gpu() {
+        if let Some(stats) = crate::device::kernels()
             .and_then(|kernels| kernels.point_cloud_stats(acceleration, points))
-    {
-        return Ok(stats);
+        {
+            return Ok(stats);
+        }
     }
     point_cloud_stats(points)
 }

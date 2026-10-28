@@ -14,10 +14,10 @@ pub(crate) struct Device;
 macro_rules! cuda_then_gpu {
     ($acceleration:expr, $cuda:ident, $gpu:ident($($arg:expr),*)) => {{
         #[cfg(feature = "cuda")]
-        if $acceleration == Acceleration::Cuda
-            && let Some(value) = crate::cuda::$cuda($($arg),*)
-        {
-            return Some(value);
+        if $acceleration == Acceleration::Cuda {
+            if let Some(value) = crate::cuda::$cuda($($arg),*) {
+                return Some(value);
+            }
         }
         let _ = $acceleration;
         gpu::$gpu($($arg),*)

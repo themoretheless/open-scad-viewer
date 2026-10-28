@@ -194,12 +194,12 @@ pub fn point_moments_accelerated(
             "point_moments_accelerated expects finite point coordinates",
         ));
     }
-    if acceleration.is_gpu()
-        && acceleration != Acceleration::Auto
-        && let Some(moments) =
+    if acceleration.is_gpu() && acceleration != Acceleration::Auto {
+        if let Some(moments) =
             crate::device::kernels().and_then(|kernels| kernels.point_moments(acceleration, points))
-    {
-        return Ok(moments);
+        {
+            return Ok(moments);
+        }
     }
     point_moments(points)
 }

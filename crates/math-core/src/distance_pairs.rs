@@ -39,11 +39,12 @@ pub fn squared_distance_pairs_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_distance_pairs(a.len());
-    if acceleration.is_gpu()
-        && let Some(values) = crate::device::kernels()
+    if acceleration.is_gpu() {
+        if let Some(values) = crate::device::kernels()
             .and_then(|kernels| kernels.squared_distance_pairs(acceleration, a, b))
-    {
-        return Ok(values);
+        {
+            return Ok(values);
+        }
     }
     squared_distance_pairs(a, b)
 }
@@ -65,11 +66,12 @@ pub fn squared_distance_pair_sum_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_distance_pairs(a.len());
-    if acceleration.is_gpu()
-        && let Some(value) = crate::device::kernels()
+    if acceleration.is_gpu() {
+        if let Some(value) = crate::device::kernels()
             .and_then(|kernels| kernels.squared_distance_pair_sum(acceleration, a, b))
-    {
-        return Ok(value);
+        {
+            return Ok(value);
+        }
     }
     squared_distance_pair_sum(a, b)
 }
