@@ -31,6 +31,7 @@ pub use memory::{
 };
 pub use profiling::{GpuTimer, GpuTimestamp, TimestampError, TimestampReadback};
 pub use readback::{ByteReadback, ReadbackError, try_read_buffer, try_read_buffer_with};
+pub use openscad_gpu;
 pub use wgpu;
 
 #[cfg(feature = "cuda")]

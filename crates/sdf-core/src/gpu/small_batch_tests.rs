@@ -403,3 +403,102 @@ fn paired_large_polygonize() {
         .write_all(csv.as_bytes())
         .unwrap();
 }
+
+
+#[test]
+#[ignore = "stage profile; explicit idle observer required"]
+fn profile_large_stages() {
+    let c = GpuContext::new().expect("GPU required");
+    let sampler = Rc::new(GpuSdf::new(&c));
+    use_sampler(&sampler);
+    for (name, field) in [("sphere", sphere()), ("tetra", tetra())] {
+        let grid = Grid { min: [-2.; 3], max: [2.; 3], cells: [64; 3] };
+        for _ in 0..8 { black_box(polygonize_accelerated(&field, &grid, Acceleration::Gpu).unwrap()); }
+        for repeat in 0..32 {
+            let start = Instant::now();
+            let flat = field.to_flat().unwrap();
+            let flatten = start.elapsed().as_nanos();
+            let start = Instant::now();
+            let values = sampler.run(&flat, &grid);
+            let sample_read = start.elapsed().as_nanos();
+            crate::TEST_STAGE_TIMES.with(|s| *s.borrow_mut() = Some(Vec::new()));
+            let start = Instant::now();
+            black_box(crate::polygonize_with_values(&field, &grid, &values).unwrap());
+            let extract = start.elapsed().as_nanos();
+            let stages = crate::TEST_STAGE_TIMES.with(|s| s.borrow_mut().take().unwrap());
+            println!("PROFILE,{name},{repeat},{flatten},{sample_read},{extract},{stages:?}");
+        }
+    }
+    TEST_SDF.with(|s| *s.borrow_mut() = None);
+}
+
+#[test]
+#[ignore = "full extraction candidate qualification; explicit CSV required"]
+fn paired_empty_cells() {
+    let c = GpuContext::new().expect("GPU required");
+    assert_eq!(c.backend, wgpu::Backend::Metal);
+    let sampler = Rc::new(GpuSdf::new(&c));
+    use_sampler(&sampler);
+    let name = std::env::var("METAL_SMALL_SDF_CASE").unwrap();
+    let (field, cells, mode) = match name.as_str() {
+        "sphere-gpu-64" => (sphere(), 64, Acceleration::Gpu),
+        "tetra-auto-49" => (tetra(), 49, Acceleration::Auto),
+        "tetra-auto-64" => (tetra(), 64, Acceleration::Auto),
+        "sphere-auto-64" => (sphere(), 64, Acceleration::Auto),
+        "tetra-auto-48" => (tetra(), 48, Acceleration::Auto),
+        "negative-gpu-8" => (sphere(), 8, Acceleration::Gpu),
+        "negative-cpu-8" => (sphere(), 8, Acceleration::Cpu),
+        _ => panic!("unknown case"),
+    };
+    let grid = Grid { min: [-2.; 3], max: [2.; 3], cells: [cells; 3] };
+    crate::TEST_SKIP_EMPTY.with(|s| s.set(false));
+    let reference = mesh_bits(&polygonize_accelerated(&field, &grid, mode).unwrap());
+    crate::TEST_SKIP_EMPTY.with(|s| s.set(true));
+    assert_eq!(reference, mesh_bits(&polygonize_accelerated(&field, &grid, mode).unwrap()));
+    let controls = std::env::var("METAL_SMALL_SDF_PHASE").unwrap() == "controls";
+    let mut csv = String::from("case,field,cells,round,a_ns,b_ns,start_unix_ns,end_unix_ns\n");
+    for control in if controls { &[true][..] } else { &[false,true][..] } {
+        let sample = |second: bool| {
+            crate::TEST_SKIP_EMPTY.with(|s| s.set(second && !control));
+            let start = Instant::now();
+            black_box(polygonize_accelerated(black_box(&field), black_box(&grid), mode).unwrap());
+            start.elapsed().as_nanos() as f64
+        };
+        let warm = Instant::now();
+        while warm.elapsed() < Duration::from_millis(3000) { sample(false); sample(true); }
+        for round in 0..48 {
+            let order = if round % 2 == 0 { [false,true,true,false] } else { [true,false,false,true] };
+            let wall = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+            let start = wall();
+            let mut v = [0.;4];
+            for _ in 0..8 { for (i,second) in order.iter().enumerate() { v[i] += sample(*second)/8.; } }
+            let end = wall();
+            let (a,b) = if round%2==0 { ((v[0]+v[3])/2.,(v[1]+v[2])/2.) } else { ((v[1]+v[2])/2.,(v[0]+v[3])/2.) };
+            csv.push_str(&format!("{},{name},{cells},{round},{a},{b},{start},{end}\n",if *control {"aa"} else {"batch"}));
+        }
+    }
+    crate::TEST_SKIP_EMPTY.with(|s| s.set(false));
+    TEST_SDF.with(|s| *s.borrow_mut() = None);
+    use std::io::Write;
+    std::fs::OpenOptions::new().write(true).create_new(true).open(std::env::var("METAL_SMALL_SDF_CSV").unwrap()).unwrap().write_all(csv.as_bytes()).unwrap();
+}
+
+#[test]
+fn empty_cell_candidate_preserves_reference_mesh_and_errors() {
+    let grid = Grid { min: [-2.;3], max:[2.;3], cells:[32;3] };
+    for field in [sphere(), tetra(), Field::Union { a:Box::new(sphere()), b:Box::new(tetra()) }] {
+        crate::TEST_SKIP_EMPTY.with(|s|s.set(false));
+        let a = crate::polygonize(&field,&grid).unwrap();
+        crate::TEST_SKIP_EMPTY.with(|s|s.set(true));
+        assert_eq!(mesh_bits(&a),mesh_bits(&crate::polygonize(&field,&grid).unwrap()));
+    }
+    for value in [0., -0., f64::NAN, -1., 1.] {
+        crate::TEST_SKIP_EMPTY.with(|s|s.set(false));
+        let a=crate::polygonize_with(|_|value,&grid);
+        crate::TEST_SKIP_EMPTY.with(|s|s.set(true));
+        let b=crate::polygonize_with(|_|value,&grid);
+        assert_eq!(a.is_err(),b.is_err());
+        if let (Ok(a),Ok(b))=(a,b) { assert_eq!(mesh_bits(&a),mesh_bits(&b)); }
+    }
+    crate::TEST_SKIP_EMPTY.with(|s|s.set(false));
+}

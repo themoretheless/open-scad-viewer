@@ -15,16 +15,11 @@
 #![allow(unused_features)]
 #![forbid(unsafe_code)]
 
-pub mod extrude_slices;
-pub mod extrusion_plan;
-pub mod offset_plan;
-pub mod children_selection;
-pub mod fragments;
-pub mod primitive_plan;
-pub mod indexed_primitive;
-pub mod transform_plan;
-pub mod resize;
-pub mod degree_math;
+pub use openscad_gpu as gpu;
+pub use openscad_gpu::{
+    children_selection, degree_math, extrude_slices, extrusion_plan, fragments, indexed_primitive,
+    offset_plan, primitive_plan, resize, transform_plan,
+};
 pub mod ast;
 pub mod builtins;
 pub mod eval;

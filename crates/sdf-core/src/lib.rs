@@ -41,6 +41,12 @@ pub use wgsl::{SDF_WGSL, generate_wgsl_tetrahedral_normal_and_raymarch_fn};
 use field_eval::{point, triangles_closed, triangles_ok};
 use field_eval::{finish_triangles, positive};
 
+// Qualification switches are test-only; production remains the reference until measured.
+#[cfg(test)]
+thread_local! {
+    static TEST_SKIP_EMPTY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static TEST_STAGE_TIMES: std::cell::RefCell<Option<Vec<(&'static str, u128)>>> = const { std::cell::RefCell::new(None) };
+}
 pub type Point = V3;
 use math_core::{cross, dot, norm as length, sub};
 #[derive(Clone, Debug)]
@@ -223,6 +229,12 @@ pub fn polygonize_tile(
             "Invalid grid: each axis requires 1..64 cells and ordered finite bounds",
         ));
     }
+    #[cfg(test)]
+    let stage_start = std::time::Instant::now();
+    #[cfg(test)]
+    let skip_empty = TEST_SKIP_EMPTY.with(|v| v.get()) && grid.cells.iter().all(|&n| n >= 32);
+    #[cfg(not(test))]
+    let skip_empty = false;
     let [nx, ny, nz] = grid.cells;
     let index = |x: usize, y: usize, z: usize| (z * (ny + 1) + y) * (nx + 1) + x;
     let sample_count = (nx + 1) * (ny + 1) * (nz + 1);
@@ -259,6 +271,11 @@ pub fn polygonize_tile(
             }
         }
     }
+    #[cfg(test)]
+    let extraction_start = {
+        TEST_STAGE_TIMES.with(|slot| { if let Some(v) = slot.borrow_mut().as_mut() { v.push(("materialize_validate", stage_start.elapsed().as_nanos())); } });
+        std::time::Instant::now()
+    };
     let cell_estimate = (nx * ny + ny * nz + nz * nx) * 2;
     let mut mesh = Triangles {
         positions: Vec::with_capacity(cell_estimate * 3),
@@ -284,6 +301,14 @@ pub fn polygonize_tile(
                     index(x + 1, y + 1, z + 1),
                     index(x, y + 1, z + 1),
                 ];
+                // Every tetrahedron uses these eight vertices. Identical signs
+                // imply no crossing, including the reference's zero-as-outside rule.
+                if skip_empty {
+                    let inside = values[cube[0]] < 0.;
+                    if cube[1..].iter().all(|&i| (values[i] < 0.) == inside) {
+                        continue;
+                    }
+                }
                 for tet in [
                     [0, 1, 2, 6],
                     [0, 2, 3, 6],
@@ -394,6 +419,8 @@ pub fn polygonize_tile(
             }
         }
     }
+    #[cfg(test)]
+    TEST_STAGE_TIMES.with(|slot| { if let Some(v) = slot.borrow_mut().as_mut() { v.push(("marching", extraction_start.elapsed().as_nanos())); } });
     finish_triangles(mesh)
 }
 /// Budget and field validation shared by every extraction path.

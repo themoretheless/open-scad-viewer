@@ -1,0 +1,11 @@
+[package]
+name = "openscad-gpu"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+geometry-ops = { workspace = true }
+naga = { workspace = true }
+wgpu = { workspace = true }
