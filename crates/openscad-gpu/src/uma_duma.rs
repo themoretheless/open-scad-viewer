@@ -6,35 +6,31 @@
 //! combined with storage/page direct I/O (`StorageDirectCapability` / `ASD`).
 
 pub use wgpu::platform::{
-    backend_label, recommend_workgroup_shape_2d, tuned_workgroup_size, BackendKind, BackendReport,
-    HardwareExecutionTopology, MemoryArchitecture, MemoryArchitectureProfile,
-    StorageDirectCapability, SubgroupReport, TargetPlatform,
+    backend_label, recommend_workgroup_shape_2d, tuned_workgroup_size, ApiEnvironment, BackendKind,
+    BackendReport, BackendShaderIr, HardwareExecutionTopology, MemoryArchitecture,
+    MemoryArchitectureProfile, StorageDirectCapability, SubgroupReport, TargetPlatform,
 };
 
-/// Transfer mode chosen for a specific buffer/storage operation, combining the physical
-/// [`MemoryArchitecture`] (`Uma` vs `Duma`) with optional [`StorageDirectCapability`] (`ASD`).
+/// Transfer mechanism chosen for a specific buffer/storage operation, cleanly separating
+/// the adapter's physical [`MemoryArchitecture`] (`Uma` vs `Duma`) from how a specific transfer is performed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ModernMemoryTech {
+pub enum TransferStrategy {
     /// **ASD** (Accelerated Storage Direct / Apple Silicon Direct / GPUDirect Storage / DirectStorage / `VK_EXT_external_memory_host`):
     /// Zero-copy page-aligned storage or `mmap` mapped directly into GPU virtual address space (works on top of both `UMA` and `dUMA`).
-    Asd,
+    AsdPageNoCopy,
     /// **UMA** (Unified Memory Architecture):
-    /// Shared physical DRAM between CPU and GPU cores with coherent cache / zero staging copies.
-    Uma,
-    /// **dUMA** (Discrete / Decoupled Unified Memory Architecture):
-    /// Discrete VRAM coupled with Resizable BAR (ReBAR / SAM) direct host-visible aperture and async DMA ring buffers.
-    Duma,
+    /// Direct CPU read/write into shared physical DRAM (`MTLStorageModeShared` / `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT`).
+    UmaSharedPointer,
+    /// **dUMA ReBAR** (Discrete Unified Memory Architecture via Resizable BAR / Smart Access Memory):
+    /// Direct CPU write into host-visible PCIe BAR aperture window (`<= 16 MiB`) backed by discrete VRAM.
+    DumaRebarWindow,
+    /// **dUMA Pinned DMA Ring** (Discrete VRAM with multi-buffered asynchronous DMA staging ring):
+    /// High-bandwidth streaming (`> 16 MiB`) across PCIe via 4-way double-buffered pinned host memory.
+    DumaStagedDmaRing,
 }
 
-impl From<MemoryArchitecture> for ModernMemoryTech {
-    #[inline]
-    fn from(arch: MemoryArchitecture) -> Self {
-        match arch {
-            MemoryArchitecture::Uma => Self::Uma,
-            MemoryArchitecture::Duma => Self::Duma,
-        }
-    }
-}
+/// Backwards-compatible alias for [`TransferStrategy`].
+pub type ModernMemoryTech = TransferStrategy;
 
 /// Transfer planner selecting the fastest path by combining the adapter's physical [`MemoryArchitecture`]
 /// (`Uma` vs `Duma`) with its orthogonal [`StorageDirectCapability`] (`ASD`) for a given payload.
@@ -65,7 +61,7 @@ impl UnifiedTransferPlan {
             return Self {
                 memory_architecture,
                 storage_direct,
-                tech: ModernMemoryTech::Asd,
+                tech: TransferStrategy::AsdPageNoCopy,
                 zero_copy_cpu_write: true,
                 zero_copy_gpu_read: true,
                 uses_page_aligned_no_copy: true,
@@ -78,7 +74,7 @@ impl UnifiedTransferPlan {
             MemoryArchitecture::Uma => Self {
                 memory_architecture,
                 storage_direct,
-                tech: ModernMemoryTech::Uma,
+                tech: TransferStrategy::UmaSharedPointer,
                 zero_copy_cpu_write: true,
                 zero_copy_gpu_read: true,
                 uses_page_aligned_no_copy: false,
@@ -92,7 +88,11 @@ impl UnifiedTransferPlan {
                 Self {
                     memory_architecture,
                     storage_direct,
-                    tech: ModernMemoryTech::Duma,
+                    tech: if fits_rebar {
+                        TransferStrategy::DumaRebarWindow
+                    } else {
+                        TransferStrategy::DumaStagedDmaRing
+                    },
                     zero_copy_cpu_write: fits_rebar,
                     zero_copy_gpu_read: true,
                     uses_page_aligned_no_copy: false,

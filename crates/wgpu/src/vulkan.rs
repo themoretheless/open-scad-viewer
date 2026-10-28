@@ -47,10 +47,11 @@ impl VulkanDevice {
     /// Probes the Vulkan 1.3 adapter across Linux, Windows, Android, or MoltenVK.
     pub fn probe_available() -> Option<Self> {
         let platform = TargetPlatform::current();
-        let unified_memory = matches!(
-            platform,
-            TargetPlatform::Android | TargetPlatform::MacOs | TargetPlatform::Ios
-        );
+        let unified_memory = match platform {
+            TargetPlatform::Android | TargetPlatform::Ios => true,
+            TargetPlatform::MacOs => cfg!(target_arch = "aarch64"),
+            TargetPlatform::Windows | TargetPlatform::Linux | TargetPlatform::BrowserWebGpu => false,
+        };
         Some(Self {
             name: "Vulkan 1.3 Direct Native + KHR RayTracing Adapter".to_string(),
             api_version: (1, 3, 280),

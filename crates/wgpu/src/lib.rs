@@ -276,10 +276,23 @@ impl Device {
     }
 
     pub fn create_buffer(&self, desc: &BufferDescriptor<'_>) -> Buffer {
-        if desc.usage.is_empty() || desc.size > self.limits.max_buffer_size {
+        let missing_ray_query = desc
+            .usage
+            .intersects(BufferUsages::BLAS_INPUT | BufferUsages::TLAS_INPUT)
+            && !self.features.contains(Features::EXPERIMENTAL_RAY_QUERY);
+        let missing_mappable_primary = !self.features.contains(Features::MAPPABLE_PRIMARY_BUFFERS)
+            && ((desc.usage.contains(BufferUsages::MAP_READ)
+                && !(desc.usage - BufferUsages::MAP_READ - BufferUsages::COPY_DST).is_empty())
+                || (desc.usage.contains(BufferUsages::MAP_WRITE)
+                    && !(desc.usage - BufferUsages::MAP_WRITE - BufferUsages::COPY_SRC).is_empty()));
+        if desc.usage.is_empty()
+            || desc.size > self.limits.max_buffer_size
+            || missing_ray_query
+            || missing_mappable_primary
+        {
             let msg = format!(
-                "Invalid buffer descriptor: size={}, usage={:?}",
-                desc.size, desc.usage
+                "Invalid buffer descriptor: size={}, usage={:?}, enabled_features={:?}",
+                desc.size, desc.usage, self.features
             );
             self.record_error(Error::Validation {
                 source: Arc::new(std::io::Error::new(

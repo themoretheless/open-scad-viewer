@@ -68,19 +68,27 @@ mod tests {
     fn unified_transfer_plan_selects_asd_uma_and_duma_appropriately() {
         let asd_plan = UnifiedTransferPlan::for_payload(wgpu::Backend::Metal, 65536, true);
         if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-            assert_eq!(asd_plan.tech, ModernMemoryTech::Asd);
+            assert_eq!(asd_plan.memory_architecture, MemoryArchitecture::Uma);
+            assert_eq!(
+                asd_plan.storage_direct,
+                StorageDirectCapability::MetalPageNoCopy
+            );
+            assert_eq!(asd_plan.tech, TransferStrategy::AsdPageNoCopy);
             assert!(asd_plan.uses_page_aligned_no_copy);
             assert!(asd_plan.zero_copy_cpu_write);
         }
 
-        let duma_rebar = UnifiedTransferPlan::for_payload(wgpu::Backend::Vulkan, 1024 * 1024, false);
-        assert_eq!(duma_rebar.tech, ModernMemoryTech::Duma);
+        let duma_rebar =
+            UnifiedTransferPlan::for_payload(wgpu::Backend::Vulkan, 1024 * 1024, false);
+        assert_eq!(duma_rebar.memory_architecture, MemoryArchitecture::Duma);
+        assert_eq!(duma_rebar.tech, TransferStrategy::DumaRebarWindow);
         assert!(duma_rebar.uses_rebar_aperture);
         assert_eq!(duma_rebar.staging_ring_chunks, 1);
 
         let duma_dma =
             UnifiedTransferPlan::for_payload(wgpu::Backend::Cuda, 64 * 1024 * 1024, false);
-        assert_eq!(duma_dma.tech, ModernMemoryTech::Duma);
+        assert_eq!(duma_dma.memory_architecture, MemoryArchitecture::Duma);
+        assert_eq!(duma_dma.tech, TransferStrategy::DumaStagedDmaRing);
         assert!(!duma_dma.uses_rebar_aperture);
         assert_eq!(duma_dma.staging_ring_chunks, 4);
     }

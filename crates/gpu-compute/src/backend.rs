@@ -11,8 +11,9 @@ use crate::GpuContext;
 
 pub use openscad_gpu::{
     backend_label, generate_wgsl_parallel_reduction_shader, generate_wgsl_tiled_matmul_shader,
-    recommend_workgroup_shape_2d, tuned_workgroup_size, BackendKind, BackendReport,
-    HardwareExecutionTopology, MemoryArchitecture, MemoryArchitectureProfile, SubgroupReport,
+    recommend_workgroup_shape_2d, tuned_workgroup_size, ApiEnvironment, BackendKind, BackendReport,
+    BackendShaderIr, HardwareExecutionTopology, MemoryArchitecture, MemoryArchitectureProfile,
+    StorageDirectCapability, SubgroupReport,
 };
 
 /// Probes the preferred portable compute backend without constructing a
@@ -48,6 +49,8 @@ mod tests {
             BackendReport {
                 kind: BackendKind::Metal,
                 label: "metal",
+                environment: ApiEnvironment::NativeDriver,
+                shader_ir: BackendShaderIr::Msl,
                 native_api: true,
                 browser_api: false,
                 metal: true,

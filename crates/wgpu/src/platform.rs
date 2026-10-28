@@ -84,11 +84,14 @@ impl TargetPlatform {
     #[inline]
     pub const fn supported_backends(self) -> Backends {
         match self {
-            Self::MacOs | Self::Ios => Backends::METAL,
-            Self::Windows => Backends(Backends::DX12.0 | Backends::VULKAN.0 | Backends::CUDA.0),
-            Self::Linux => Backends(Backends::VULKAN.0 | Backends::CUDA.0),
+            Self::MacOs => Backends(Backends::METAL.0 | Backends::VULKAN.0 | Backends::GL.0),
+            Self::Ios => Backends(Backends::METAL.0 | Backends::VULKAN.0),
+            Self::Windows => {
+                Backends(Backends::DX12.0 | Backends::VULKAN.0 | Backends::CUDA.0 | Backends::GL.0)
+            }
+            Self::Linux => Backends(Backends::VULKAN.0 | Backends::CUDA.0 | Backends::GL.0),
             Self::Android => Backends(Backends::VULKAN.0 | Backends::GL.0),
-            Self::BrowserWebGpu => Backends::BROWSER_WEBGPU,
+            Self::BrowserWebGpu => Backends(Backends::BROWSER_WEBGPU.0 | Backends::GL.0),
         }
     }
 
@@ -188,10 +191,42 @@ pub enum BackendKind {
     Cuda,
 }
 
+/// Host/API execution environment of a GPU backend (Native OS driver vs Browser Sandbox vs Noop).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ApiEnvironment {
+    /// Direct native OS/driver runtime (`Metal`, `Vulkan`, `Dx12`, `Cuda`, `OpenGL`).
+    NativeDriver,
+    /// Sandboxed W3C WebGPU browser runtime (`navigator.gpu`).
+    BrowserSandbox,
+    /// Headless / null stub backend (`Noop`).
+    NoopStub,
+}
+
+/// Shader Intermediate Representation (IR) / Shading Language consumed by a GPU backend.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum BackendShaderIr {
+    /// Apple Metal Shading Language (`MSL` C++14)
+    Msl,
+    /// Khronos `SPIR-V` binary words (Vulkan 1.3)
+    Spirv,
+    /// Microsoft `HLSL` / `DXIL` Shader Model 6.6 (DirectX 12)
+    Hlsl,
+    /// NVIDIA `PTX` (`Parallel Thread Execution` ISA for CUDA Driver API)
+    Ptx,
+    /// Khronos `GLSL` `#version 460 core` / `#version 320 es` (OpenGL / OpenGL ES)
+    Glsl,
+    /// W3C `WGSL` text (Browser WebGPU)
+    Wgsl,
+    /// None (`Noop` backend)
+    None,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BackendReport {
     pub kind: BackendKind,
     pub label: &'static str,
+    pub environment: ApiEnvironment,
+    pub shader_ir: BackendShaderIr,
     pub native_api: bool,
     pub browser_api: bool,
     pub metal: bool,
@@ -302,6 +337,8 @@ impl BackendReport {
             Backend::Noop => Self {
                 kind: BackendKind::Noop,
                 label: "noop",
+                environment: ApiEnvironment::NoopStub,
+                shader_ir: BackendShaderIr::None,
                 native_api: false,
                 browser_api: false,
                 metal: false,
@@ -309,6 +346,8 @@ impl BackendReport {
             Backend::Vulkan => Self {
                 kind: BackendKind::Vulkan,
                 label: "vulkan",
+                environment: ApiEnvironment::NativeDriver,
+                shader_ir: BackendShaderIr::Spirv,
                 native_api: true,
                 browser_api: false,
                 metal: false,
@@ -316,6 +355,8 @@ impl BackendReport {
             Backend::Metal => Self {
                 kind: BackendKind::Metal,
                 label: "metal",
+                environment: ApiEnvironment::NativeDriver,
+                shader_ir: BackendShaderIr::Msl,
                 native_api: true,
                 browser_api: false,
                 metal: true,
@@ -323,6 +364,8 @@ impl BackendReport {
             Backend::Dx12 => Self {
                 kind: BackendKind::Dx12,
                 label: "dx12",
+                environment: ApiEnvironment::NativeDriver,
+                shader_ir: BackendShaderIr::Hlsl,
                 native_api: true,
                 browser_api: false,
                 metal: false,
@@ -330,6 +373,8 @@ impl BackendReport {
             Backend::Gl => Self {
                 kind: BackendKind::Gl,
                 label: "gl",
+                environment: ApiEnvironment::NativeDriver,
+                shader_ir: BackendShaderIr::Glsl,
                 native_api: true,
                 browser_api: false,
                 metal: false,
@@ -337,6 +382,8 @@ impl BackendReport {
             Backend::BrowserWebGpu => Self {
                 kind: BackendKind::WebGpu,
                 label: "webgpu",
+                environment: ApiEnvironment::BrowserSandbox,
+                shader_ir: BackendShaderIr::Wgsl,
                 native_api: false,
                 browser_api: true,
                 metal: false,
@@ -344,6 +391,8 @@ impl BackendReport {
             Backend::Cuda => Self {
                 kind: BackendKind::Cuda,
                 label: "cuda",
+                environment: ApiEnvironment::NativeDriver,
+                shader_ir: BackendShaderIr::Ptx,
                 native_api: true,
                 browser_api: false,
                 metal: false,
@@ -351,12 +400,16 @@ impl BackendReport {
         }
     }
 
+    /// Returns the default physical memory architecture (`Uma` vs `Duma`) for this backend on the current target OS.
+    /// For explicit per-adapter unified-memory overriding (e.g. Android Vulkan UMA, Intel/AMD Integrated APU, NVIDIA Grace Hopper),
+    /// use [`Self::memory_architecture_for_device`].
     #[inline]
     pub const fn memory_architecture(&self) -> MemoryArchitecture {
         match self.kind {
-            BackendKind::Metal if cfg!(all(target_os = "macos", target_arch = "aarch64")) => {
+            BackendKind::Metal if cfg!(all(any(target_os = "macos", target_os = "ios"), target_arch = "aarch64")) => {
                 MemoryArchitecture::Uma
             }
+            BackendKind::Vulkan if cfg!(target_os = "android") => MemoryArchitecture::Uma,
             BackendKind::Metal
             | BackendKind::Vulkan
             | BackendKind::Dx12
@@ -364,6 +417,16 @@ impl BackendReport {
             | BackendKind::Gl
             | BackendKind::WebGpu
             | BackendKind::Noop => MemoryArchitecture::Duma,
+        }
+    }
+
+    /// Resolves the physical memory architecture (`Uma` vs `Duma`) given the hardware adapter's actual `unified_memory` flag.
+    #[inline]
+    pub const fn memory_architecture_for_device(&self, adapter_has_unified_memory: bool) -> MemoryArchitecture {
+        if adapter_has_unified_memory {
+            MemoryArchitecture::Uma
+        } else {
+            self.memory_architecture()
         }
     }
 
@@ -418,14 +481,14 @@ impl BackendReport {
             }
             BackendKind::WebGpu | BackendKind::Gl | BackendKind::Noop => {
                 HardwareExecutionTopology {
-                    memory_architecture: MemoryArchitecture::Duma,
-                    scalar_unit_label: "CUDA Core / Streaming Processor",
+                    memory_architecture: self.memory_architecture(),
+                    scalar_unit_label: "Portable Shader Execution Unit",
                     simd_width: 32,
-                    simd_group_label: "Warp (32 threads)",
+                    simd_group_label: "Subgroup (32 lanes)",
                     max_threads_per_block: 1024,
-                    local_sram_label: "__shared__ memory",
+                    local_sram_label: "workgroup shared memory",
                     default_local_sram_bytes: 32768,
-                    matrix_coprocessor_label: "Tensor Cores (wmma 16x16)",
+                    matrix_coprocessor_label: "Tiled Workgroup Matrix (16x16)",
                     matrix_tile_shape: [16, 16, 16],
                     optimal_1d_workgroup_size: 256,
                     optimal_2d_tile_size: [16, 16],

@@ -18,17 +18,20 @@ impl AsdPageBuffer {
     pub const APPLE_SILICON_PAGE_SIZE: usize = 16384;
     pub const X86_64_PAGE_SIZE: usize = 4096;
 
+    /// Universal page alignment (`16 KiB`) that satisfies both Apple Silicon (`16 KiB` pages)
+    /// and x86_64 / ARM64 Linux/Windows/Android (`4 KiB` pages, since `16384 = 4 * 4096`).
+    pub const UNIVERSAL_PAGE_ALIGNMENT: usize = 16384;
+
+    /// Returns the OS/hardware physical VM page size (`16 KiB` on Apple Silicon, `4 KiB` on x86_64/other).
+    #[inline]
+    pub const fn host_os_page_size() -> usize {
+        wgpu::platform::TargetPlatform::current().default_page_size()
+    }
+
+    /// Returns the allocation alignment used by [`AsdPageBuffer`] (`16 KiB`, a multiple of both `4 KiB` and `16 KiB`).
     #[inline]
     pub const fn native_page_size() -> usize {
-        if cfg!(all(
-            any(target_os = "macos", target_os = "ios"),
-            target_arch = "aarch64"
-        )) {
-            Self::APPLE_SILICON_PAGE_SIZE
-        } else {
-            // Use 16 KiB alignment everywhere so buffers are compatible with both 4 KiB and 16 KiB MMUs
-            Self::APPLE_SILICON_PAGE_SIZE
-        }
+        Self::UNIVERSAL_PAGE_ALIGNMENT
     }
 
     pub fn new_zeroed(byte_len: usize) -> Self {

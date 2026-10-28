@@ -13,10 +13,10 @@ mod profiling;
 mod readback;
 
 pub use backend::{
-    BackendKind, BackendReport, HardwareExecutionTopology, MemoryArchitecture,
-    MemoryArchitectureProfile, SubgroupReport, available_backend_report,
-    available_execution_topology, available_subgroup_report, backend_label,
-    generate_wgsl_parallel_reduction_shader, generate_wgsl_tiled_matmul_shader,
+    ApiEnvironment, BackendKind, BackendReport, BackendShaderIr, HardwareExecutionTopology,
+    MemoryArchitecture, MemoryArchitectureProfile, StorageDirectCapability, SubgroupReport,
+    available_backend_report, available_execution_topology, available_subgroup_report,
+    backend_label, generate_wgsl_parallel_reduction_shader, generate_wgsl_tiled_matmul_shader,
     recommend_workgroup_shape_2d, tuned_workgroup_size,
 };
 pub use buffer::{

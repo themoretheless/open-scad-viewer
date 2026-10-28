@@ -43,10 +43,21 @@ impl OpenGlDevice {
     pub fn probe_available() -> Option<Self> {
         let platform = TargetPlatform::current();
         let (profile, arch) = match platform {
-            TargetPlatform::Android | TargetPlatform::Ios | TargetPlatform::BrowserWebGpu => {
+            TargetPlatform::Android | TargetPlatform::Ios => {
                 (GlProfile::Es32, MemoryArchitecture::Uma)
             }
-            TargetPlatform::MacOs => (GlProfile::Core46, MemoryArchitecture::Uma),
+            TargetPlatform::BrowserWebGpu => {
+                // Browser WebGL2 / WebGPU runs in a sandboxed process with a staging boundary (dUMA semantics)
+                (GlProfile::Es32, MemoryArchitecture::Duma)
+            }
+            TargetPlatform::MacOs => (
+                GlProfile::Core46,
+                if cfg!(target_arch = "aarch64") {
+                    MemoryArchitecture::Uma
+                } else {
+                    MemoryArchitecture::Duma
+                },
+            ),
             TargetPlatform::Windows | TargetPlatform::Linux => {
                 (GlProfile::Core46, MemoryArchitecture::Duma)
             }
