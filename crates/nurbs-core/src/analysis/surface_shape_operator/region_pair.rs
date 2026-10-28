@@ -29,13 +29,12 @@ pub fn compare_rectangles(
         bounds: None,
         cells: a.cells + b.cells,
     };
-    let (Some(an), Some(at), Some(bn), Some(bt)) = (
-        a.shape.normal,
-        a.shape.tensor,
-        b.shape.normal,
-        b.shape.tensor,
-    ) else {
-        return Ok(out);
+    out.bounds = compare_reports(a.shape, b.shape)?;
+    Ok(out)
+}
+pub(crate) fn compare_reports(a: Report, b: Report) -> Result<Option<[ShapeDifference; 2]>> {
+    let (Some(an), Some(at), Some(bn), Some(bt)) = (a.normal, a.tensor, b.normal, b.tensor) else {
+        return Ok(None);
     };
     let values = |n: [[f64; 2]; 3], t: [[[f64; 2]; 3]; 3]| -> Result<[Vec<I>; 2]> {
         Ok([
@@ -75,6 +74,5 @@ pub fn compare_rectangles(
             tensor: differences[1],
         };
     }
-    out.bounds = Some(bounds);
-    Ok(out)
+    Ok(Some(bounds))
 }

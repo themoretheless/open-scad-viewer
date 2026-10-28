@@ -340,3 +340,6 @@ impl PolarGraphShape<'_> {
 }
 #[cfg(test)]
 mod tests;
+
+mod pair;
+pub use pair::{PolarShapePairReport, compare_polar_shape_rectangles};

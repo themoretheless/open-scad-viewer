@@ -320,3 +320,4 @@ pub use normal_rectangles::DesingularizedPairReport;
 
 mod graph_shape;
 pub use graph_shape::{PolarGraphShape, PolarGraphShapeReport, PolarGraphBounds, PolarGraphBoundsReport};
+pub use graph_shape::{PolarShapePairReport, compare_polar_shape_rectangles};

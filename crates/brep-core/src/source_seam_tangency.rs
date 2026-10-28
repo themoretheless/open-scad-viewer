@@ -1,11 +1,11 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
 mod curvature;
-pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature};
+pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature};
 mod polar;
 pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
 mod body;
-pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams};
+pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams, PolarBudgets, qualify_boundary_with_polar_curvature};
 mod collection;
 pub use collection::{Class, Collection, CollectionReport, qualify_collection};
 use crate::source_shared_edge::SharedEdge;

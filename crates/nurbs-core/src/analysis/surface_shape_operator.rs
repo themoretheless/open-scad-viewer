@@ -430,3 +430,5 @@ mod tests {
 
 mod region_pair;
 pub use region_pair::{RegionPairReport, ShapeDifference, compare_rectangles};
+
+pub(crate) use region_pair::compare_reports;

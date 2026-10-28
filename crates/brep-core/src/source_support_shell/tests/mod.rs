@@ -9839,6 +9839,33 @@
         let changed_plane=nurbs_core::factored_surface_normals::prepare_plane_limit(&changed,b,1000000).unwrap().certificate.unwrap();
         assert!(seams::qualify_polar_tangency(e,[&changed_plane,&changed_plane],edge_limits(),100000).is_err());
         eprintln!("polar-seam metrics: seams={} coefficients={} cells={}",8,polar.polar_normal_coefficients,polar.ordinary_cells);
+        let curvature_classes=polar_classes.iter().map(|c|if *c==Class::TangentPlanes {
+            Class::Curvature {normal_distance:1e-7,curvature_distance:1e-6}
+        }else{*c}).collect::<Vec<_>>();
+        let budget=||seams::PolarBudgets{normal_coefficients:100000000,shape_products:100000000,shape_coefficients:100000000};
+        let complete=seams::qualify_boundary_with_polar_curvature(&body,&curvature_classes,
+            limits(100000000),edge_limits(),budget()).unwrap();
+        let proof=complete.certificate.expect(complete.reason);
+        assert!(std::ptr::eq(proof.body(),&body));
+        assert!(matches!(proof.poles(),PoleStrata::FacewiseCurvature(_)));
+        assert_eq!(proof.ordinary().polar_curvature_seams().len(),8);
+        assert_eq!(proof.ordinary().curvature_seams().len(),0);
+        assert_eq!(proof.ordinary().classes(),curvature_classes);
+        assert_eq!(complete.completed_edges,20);assert_eq!(complete.polar_normal_coefficients,0);
+        for (_,seam) in proof.ordinary().polar_curvature_seams() {
+            assert!(seam.normal_upper()<=1e-7 && seam.curvature_upper()<=1e-6);
+        }
+        for dimension in 0..2 {
+            let mut low=budget();
+            if dimension==0 {low.shape_products=complete.polar_shape_products-1;}else {low.shape_coefficients=complete.polar_shape_coefficients-1;}
+            let r=seams::qualify_boundary_with_polar_curvature(&body,&curvature_classes,
+                limits(100000000),edge_limits(),low).unwrap();
+            assert!(r.certificate.is_none());assert!(r.completed_edges<20);
+        }
+        assert!(!proof.ordinary().all_edges_curvature());
+        eprintln!("complete-polar G2 metrics: seams={} cells={} products={} coefficients={}",8,
+            complete.ordinary_cells,complete.polar_shape_products,complete.polar_shape_coefficients);
+
 
 
     }

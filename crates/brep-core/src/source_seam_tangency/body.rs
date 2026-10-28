@@ -11,6 +11,13 @@ pub enum PoleRequirement {
     TangentGraph(poles::GraphLimits),
     FacewiseCurvature(poles::PoleCurvatureLimits),
 }
+/// Additional aggregate work for every polar seam of this body.
+#[derive(Clone, Copy)]
+pub struct PolarBudgets {
+    pub normal_coefficients: usize,
+    pub shape_products: u64,
+    pub shape_coefficients: usize,
+}
 /// Native proofs, never caller flags. Facewise curvature limits at poles do
 /// not assert G2 on incident ordinary seams or a C2 neighborhood.
 pub enum PoleStrata<'a, E: Carrier> {
@@ -41,6 +48,8 @@ pub struct BoundaryReport<'a, E: Carrier> {
     pub ordinary_curve_spans: usize,
     pub ordinary_normal_spans: usize,
     pub polar_normal_coefficients: usize,
+    pub polar_shape_products: u64,
+    pub polar_shape_coefficients: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
     pub pole_graph_exact_work: u64,
@@ -58,7 +67,7 @@ pub fn qualify_boundary<'a, E: Carrier>(
     requirement: PoleRequirement,
     limits: Limits,
 ) -> Result<BoundaryReport<'a, E>> {
-    qualify_boundary_impl(body, classes, requirement, limits, None)
+    qualify_boundary_impl(body, classes, requirement, limits, None, None)
 }
 /// Additionally qualify meridian tangent planes on the full closed carrier
 /// using native factored-normal polynomials from this freshly admitted pole
@@ -83,6 +92,34 @@ pub fn qualify_boundary_with_polar_seams<'a, E: Carrier>(
         requirement,
         limits,
         Some(normal_coefficients),
+        None,
+    )
+}
+/// Complete declared polar G2 carriers require this body's freshly admitted
+/// common exact pole jets AND graph atlas, not only leading tangent planes.
+pub fn qualify_boundary_with_polar_curvature<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    poles: poles::PoleCurvatureLimits,
+    limits: Limits,
+    budgets: PolarBudgets,
+) -> Result<BoundaryReport<'a, E>> {
+    if !(1..=100000000).contains(&budgets.normal_coefficients)
+        || !(1..=100000000).contains(&budgets.shape_products)
+        || !(1..=100000000).contains(&budgets.shape_coefficients)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_BOUNDARY_SMOOTHNESS",
+            "Choose bounded aggregate polar work",
+        ));
+    }
+    qualify_boundary_impl(
+        body,
+        classes,
+        PoleRequirement::FacewiseCurvature(poles),
+        limits,
+        Some(budgets.normal_coefficients),
+        Some(budgets),
     )
 }
 fn qualify_boundary_impl<'a, E: Carrier>(
@@ -91,6 +128,7 @@ fn qualify_boundary_impl<'a, E: Carrier>(
     requirement: PoleRequirement,
     limits: Limits,
     polar_coefficients: Option<usize>,
+    curvature_budgets: Option<PolarBudgets>,
 ) -> Result<BoundaryReport<'a, E>> {
     super::validate_limits(&limits)?;
     let shell = body.geometry().shell();
@@ -107,6 +145,8 @@ fn qualify_boundary_impl<'a, E: Carrier>(
         ordinary_curve_spans: 0,
         ordinary_normal_spans: 0,
         polar_normal_coefficients: 0,
+        polar_shape_products: 0,
+        polar_shape_coefficients: 0,
         completed_edges: 0,
         uncertain_edge: None,
         pole_graph_exact_work: 0,
@@ -144,7 +184,11 @@ fn qualify_boundary_impl<'a, E: Carrier>(
         PoleStrata::FacewiseCurvature(p) => Some(p.graphs().charts().transverse().atlas().planes()),
         _ => None,
     };
-    let r = if let (Some(planes), Some(coefficients)) = (plane_atlas, polar_coefficients) {
+    let r = if let (PoleStrata::FacewiseCurvature(atlas), Some(budgets)) =
+        (&strata, curvature_budgets)
+    {
+        collection::qualify_owned_edges_with_polar_curvature(body, classes, limits, atlas, budgets)?
+    } else if let (Some(planes), Some(coefficients)) = (plane_atlas, polar_coefficients) {
         collection::qualify_owned_edges_with_poles(body, classes, limits, planes, coefficients)?
     } else {
         collection::qualify_owned_edges(body, classes, limits)?
@@ -155,6 +199,8 @@ fn qualify_boundary_impl<'a, E: Carrier>(
         curve_spans,
         normal_spans,
         polar_coefficients,
+        polar_shape_products,
+        polar_shape_coefficients,
         completed_edges,
         uncertain_edge,
         reason,
@@ -163,6 +209,8 @@ fn qualify_boundary_impl<'a, E: Carrier>(
     out.ordinary_curve_spans = curve_spans;
     out.ordinary_normal_spans = normal_spans;
     out.polar_normal_coefficients = polar_coefficients;
+    out.polar_shape_products = polar_shape_products;
+    out.polar_shape_coefficients = polar_shape_coefficients;
     out.completed_edges = completed_edges;
     out.uncertain_edge = uncertain_edge;
     out.reason = reason;

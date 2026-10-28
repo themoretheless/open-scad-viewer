@@ -25,6 +25,7 @@ pub struct Collection<'a, E: Carrier> {
     seams: Vec<(usize, Seam<E>)>,
     curvature_seams: Vec<(usize, CurvatureSeam<E>)>,
     polar_seams: Vec<(usize, super::PolarSeam<E>)>,
+    polar_curvature_seams: Vec<(usize, super::PolarCurvatureSeam<E>)>,
     max_sine_squared: f64,
 }
 impl<E: Carrier> Collection<'_, E> {
@@ -34,6 +35,9 @@ impl<E: Carrier> Collection<'_, E> {
     /// Complete carriers including collapsed-endpoint limit planes.
     pub fn polar_seams(&self) -> &[(usize, super::PolarSeam<E>)] {
         &self.polar_seams
+    }
+    pub fn polar_curvature_seams(&self) -> &[(usize, super::PolarCurvatureSeam<E>)] {
+        &self.polar_curvature_seams
     }
     pub fn classes(&self) -> &[Class] {
         &self.classes
@@ -69,6 +73,8 @@ pub struct CollectionReport<'a, E: Carrier> {
     /// Shared source-surface work, including normal and curvature knot cells.
     pub normal_spans: usize,
     pub polar_coefficients: usize,
+    pub polar_shape_products: u64,
+    pub polar_shape_coefficients: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
     pub reason: &'static str,
@@ -78,10 +84,13 @@ struct Work<E: Carrier> {
     seams: Vec<(usize, Seam<E>)>,
     curvature_seams: Vec<(usize, CurvatureSeam<E>)>,
     polar_seams: Vec<(usize, super::PolarSeam<E>)>,
+    polar_curvature_seams: Vec<(usize, super::PolarCurvatureSeam<E>)>,
     cells: usize,
     curve_spans: usize,
     normal_spans: usize,
     polar_coefficients: usize,
+    polar_shape_products: u64,
+    polar_shape_coefficients: usize,
     completed_edges: usize,
     uncertain_edge: Option<usize>,
     reason: &'static str,
@@ -114,6 +123,7 @@ type PolarContext<'p, 's, E> = (
     &'p crate::source_pole_tangency::BodyPlaneLimits<'s, E>,
     &'p [[crate::source_shell_incidence::Address; 2]],
     usize,
+    Option<(u64, usize)>,
 );
 fn inspect_with_poles<E: Carrier>(
     edges: &[E],
@@ -132,11 +142,14 @@ fn inspect_with_poles<E: Carrier>(
     let mut out = Work {
         curvature_seams: Vec::new(),
         polar_seams: Vec::new(),
+        polar_curvature_seams: Vec::new(),
         seams: Vec::new(),
         cells: 0,
         curve_spans: 0,
         normal_spans: 0,
         polar_coefficients: 0,
+        polar_shape_products: 0,
+        polar_shape_coefficients: 0,
         completed_edges: 0,
         uncertain_edge: None,
         reason: "source-seam-collection-qualified",
@@ -155,7 +168,7 @@ fn inspect_with_poles<E: Carrier>(
             return Ok(out);
         }
         if *class == Class::TangentPlanes {
-            if let Some((atlas, uses, budget)) = polar {
+            if let Some((atlas, uses, budget, _)) = polar {
                 let proof = |side: usize| {
                     atlas
                         .poles()
@@ -198,6 +211,49 @@ fn inspect_with_poles<E: Carrier>(
             curvature_distance,
         } = *class
         {
+            if let Some((atlas, uses, _, Some((products, coefficients)))) = polar {
+                let proof = |side: usize| {
+                    atlas
+                        .poles()
+                        .iter()
+                        .find(|(a, _)| a.face == uses[index][side].face)
+                        .map(|(_, p)| p.limit())
+                };
+                if let (Some(a), Some(b)) = (proof(0), proof(1)) {
+                    if out.polar_shape_products == products
+                        || out.polar_shape_coefficients == coefficients
+                    {
+                        out.reason = "source-polar-curvature-collection-work-limit";
+                        return Ok(out);
+                    }
+                    let r = super::qualify_polar_curvature(
+                        edge,
+                        [a, b],
+                        super::CurvatureLimits {
+                            normal_distance,
+                            curvature_distance,
+                            cells: limits.cells - out.cells,
+                            curve_spans: limits.curve_spans - out.curve_spans,
+                            shape_cells: limits.normal_spans - out.normal_spans,
+                        },
+                        products - out.polar_shape_products,
+                        coefficients - out.polar_shape_coefficients,
+                    )?;
+                    out.cells += r.cells;
+                    out.curve_spans += r.curve_spans;
+                    out.normal_spans += r.regular_queries;
+                    out.polar_shape_products += r.products;
+                    out.polar_shape_coefficients += r.coefficients;
+                    let Some(seam) = r.seam else {
+                        out.reason = r.reason;
+                        return Ok(out);
+                    };
+                    out.polar_curvature_seams.push((index, seam));
+                    out.completed_edges += 1;
+                    out.uncertain_edge = None;
+                    continue;
+                }
+            }
             let report = super::qualify_curvature(
                 edge,
                 super::CurvatureLimits {
@@ -269,6 +325,8 @@ pub fn qualify_collection<'a, E: Carrier>(
             curve_spans: 0,
             normal_spans: 0,
             polar_coefficients: 0,
+            polar_shape_products: 0,
+            polar_shape_coefficients: 0,
             completed_edges: 0,
             uncertain_edge: None,
             reason: "source-seam-collection-pole-limits-unproven",
@@ -293,11 +351,43 @@ pub(super) fn qualify_owned_edges_with_poles<'a, E: Carrier>(
     planes: &crate::source_pole_tangency::BodyPlaneLimits<'_, E>,
     coefficients: usize,
 ) -> Result<CollectionReport<'a, E>> {
+    if !std::ptr::eq(planes.body(), body) {
+        return Err(Error::new(
+            "BREP_SOURCE_BOUNDARY_SMOOTHNESS",
+            "Use this original body's pole atlas",
+        ));
+    }
     qualify_owned_edges_impl(
         body,
         classes,
         limits,
-        Some((planes, body.geometry().shell().uses(), coefficients)),
+        Some((planes, body.geometry().shell().uses(), coefficients, None)),
+    )
+}
+pub(super) fn qualify_owned_edges_with_polar_curvature<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    limits: Limits,
+    atlas: &crate::source_pole_tangency::PoleCurvatureAtlas<'_, E>,
+    budgets: super::PolarBudgets,
+) -> Result<CollectionReport<'a, E>> {
+    let planes = atlas.graphs().charts().transverse().atlas().planes();
+    if !std::ptr::eq(planes.body(), body) {
+        return Err(Error::new(
+            "BREP_SOURCE_BOUNDARY_SMOOTHNESS",
+            "Use this original body's curvature atlas",
+        ));
+    }
+    qualify_owned_edges_impl(
+        body,
+        classes,
+        limits,
+        Some((
+            planes,
+            body.geometry().shell().uses(),
+            budgets.normal_coefficients,
+            Some((budgets.shape_products, budgets.shape_coefficients)),
+        )),
     )
 }
 fn qualify_owned_edges_impl<'a, E: Carrier>(
@@ -321,6 +411,7 @@ fn qualify_owned_edges_impl<'a, E: Carrier>(
         seams: work.seams,
         curvature_seams: work.curvature_seams,
         polar_seams: work.polar_seams,
+        polar_curvature_seams: work.polar_curvature_seams,
     });
     Ok(CollectionReport {
         certificate,
@@ -328,6 +419,8 @@ fn qualify_owned_edges_impl<'a, E: Carrier>(
         curve_spans: work.curve_spans,
         normal_spans: work.normal_spans,
         polar_coefficients: work.polar_coefficients,
+        polar_shape_products: work.polar_shape_products,
+        polar_shape_coefficients: work.polar_shape_coefficients,
         completed_edges: work.completed_edges,
         uncertain_edge: work.uncertain_edge,
         reason: work.reason,

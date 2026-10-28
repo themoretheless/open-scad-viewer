@@ -54,12 +54,12 @@ struct Cell {
     range: [f64; 2],
     bounds: Option<[ShapeDifference; 2]>,
 }
-fn evaluate<E: Carrier>(
+fn rectangles<E: Carrier>(
     edge: &E,
     range: [f64; 2],
     limits: &CurvatureLimits,
     out: &mut CurvatureReport<E>,
-) -> Result<Option<Cell>> {
+) -> Result<Option<[[[f64; 2]; 2]; 2]>> {
     out.uncertain_canonical = Some(range);
     if out.cells == limits.cells {
         return Ok(None);
@@ -94,6 +94,17 @@ fn evaluate<E: Carrier>(
             query[side][axis] = [q.lo, q.hi];
         }
     }
+    Ok(Some(query))
+}
+fn evaluate<E: Carrier>(
+    edge: &E,
+    range: [f64; 2],
+    limits: &CurvatureLimits,
+    out: &mut CurvatureReport<E>,
+) -> Result<Option<Cell>> {
+    let Some(query) = rectangles(edge, range, limits, out)? else {
+        return Ok(None);
+    };
     if out.shape_cells == limits.shape_cells {
         return Ok(None);
     }
@@ -117,6 +128,12 @@ pub fn qualify_curvature<E: Carrier>(
     edge: &E,
     limits: CurvatureLimits,
 ) -> Result<CurvatureReport<E>> {
+    validate_limits(&limits)?;
+    qualify_using(edge, limits, |range, limits, out| {
+        evaluate(edge, range, limits, out)
+    })
+}
+fn validate_limits(limits: &CurvatureLimits) -> Result<()> {
     if !limits.normal_distance.is_finite()
         || !(0. ..1.).contains(&limits.normal_distance)
         || !limits.curvature_distance.is_finite()
@@ -130,6 +147,16 @@ pub fn qualify_curvature<E: Carrier>(
             "Choose finite shape tolerances and bounded original seam work",
         ));
     }
+    Ok(())
+}
+fn qualify_using<E: Carrier, F>(
+    edge: &E,
+    limits: CurvatureLimits,
+    mut evaluate: F,
+) -> Result<CurvatureReport<E>>
+where
+    F: FnMut([f64; 2], &CurvatureLimits, &mut CurvatureReport<E>) -> Result<Option<Cell>>,
+{
     let ends = edge.fragment(0).parameter_bounds();
     let lo = ends.iter().map(|r| r[0]).fold(f64::INFINITY, f64::min);
     let hi = ends.iter().map(|r| r[1]).fold(f64::NEG_INFINITY, f64::max);
@@ -142,7 +169,7 @@ pub fn qualify_curvature<E: Carrier>(
         uncertain_canonical: None,
         reason: "source-seam-curvature-work-limit",
     };
-    let Some(first) = evaluate(edge, [coverage.lo, coverage.hi], &limits, &mut out)? else {
+    let Some(first) = evaluate([coverage.lo, coverage.hi], &limits, &mut out)? else {
         return Ok(out);
     };
     let mut cells = vec![first];
@@ -222,10 +249,10 @@ pub fn qualify_curvature<E: Carrier>(
             out.reason = "source-seam-curvature-resolution-limit";
             return Ok(out);
         }
-        let Some(left) = evaluate(edge, [range[0], mid], &limits, &mut out)? else {
+        let Some(left) = evaluate([range[0], mid], &limits, &mut out)? else {
             return Ok(out);
         };
-        let Some(right) = evaluate(edge, [mid, range[1]], &limits, &mut out)? else {
+        let Some(right) = evaluate([mid, range[1]], &limits, &mut out)? else {
             return Ok(out);
         };
         cells[index] = left;
@@ -235,3 +262,6 @@ pub fn qualify_curvature<E: Carrier>(
 
 #[cfg(test)]
 mod tests;
+
+mod polar;
+pub use polar::{PolarCurvatureReport, PolarCurvatureSeam, qualify_polar_curvature};
