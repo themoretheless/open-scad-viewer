@@ -11,4 +11,3 @@ crate-type = ["rlib"]
 [dependencies]
 geometry-ops = { workspace = true }
 value-codec = { workspace = true }
-openscad-gpu = { workspace = true }

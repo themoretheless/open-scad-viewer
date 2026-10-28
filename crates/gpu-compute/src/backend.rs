@@ -4,16 +4,21 @@
 //! `BackendReport`, `SubgroupReport`, `MemoryArchitecture`, `MemoryArchitectureProfile`,
 //! `HardwareExecutionTopology`, `backend_label`, `recommend_workgroup_shape_2d`, `tuned_workgroup_size`)
 //! and portable WGSL compute shader generators (`generate_wgsl_tiled_matmul_shader`,
-//! `generate_wgsl_parallel_reduction_shader`) live in [`openscad_gpu`] / [`wgpu::platform`] and are
+//! `generate_wgsl_parallel_reduction_shader`) live in [`wgpu::platform`] / [`gpu_shader`] and are
 //! re-exported here with runtime `GpuContext` probing.
 
 use crate::GpuContext;
 
-pub use openscad_gpu::{
-    backend_label, generate_wgsl_parallel_reduction_shader, generate_wgsl_tiled_matmul_shader,
-    recommend_workgroup_shape_2d, tuned_workgroup_size, ApiEnvironment, BackendKind, BackendReport,
-    BackendShaderIr, HardwareExecutionTopology, MemoryArchitecture, MemoryArchitectureProfile,
-    StorageDirectCapability, SubgroupReport,
+pub use gpu_shader::{
+    compile_shader_multi_target, compile_wgsl_for_target, generate_wgsl_cad_vertex_transform_shader,
+    generate_wgsl_parallel_reduction_shader, generate_wgsl_rtx_raytracing_shader,
+    generate_wgsl_tiled_matmul_shader, ComputeShaderTarget, MultiTargetShaderArtifact,
+};
+pub use wgpu::{
+    backend_label, recommend_workgroup_shape_2d, tuned_workgroup_size, ApiEnvironment,
+    AsdPageBuffer, BackendKind, BackendReport, BackendShaderIr, HardwareExecutionTopology,
+    MemoryArchitecture, MemoryArchitectureProfile, ModernMemoryTech, StorageDirectCapability,
+    SubgroupReport, TargetPlatform, TransferStrategy, UnifiedTransferPlan,
 };
 
 /// Probes the preferred portable compute backend without constructing a
@@ -175,5 +180,106 @@ mod tests {
         assert!(reduce_wgsl.contains("var<workgroup> shared_data: array<f32, 256>;"));
         assert!(reduce_wgsl.contains("workgroupBarrier();"));
         assert!(reduce_wgsl.contains("shared_data[tid] + shared_data[tid + stride]"));
+    }
+
+    #[test]
+    fn asd_page_buffer_aligns_to_16k_and_preserves_data() {
+        let payload = [1u8, 2, 3, 4, 5, 6, 7, 8];
+        let buf = AsdPageBuffer::from_slice(&payload);
+        assert_eq!(buf.page_size(), 16384);
+        assert_eq!(buf.aligned_capacity(), 16384);
+        assert_eq!(buf.len(), 8);
+        assert_eq!(buf.as_slice(), &payload);
+    }
+
+    #[test]
+    fn unified_transfer_plan_selects_asd_uma_and_duma_appropriately() {
+        let asd_plan = UnifiedTransferPlan::for_payload(wgpu::Backend::Metal, 65536, true);
+        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+            assert_eq!(asd_plan.memory_architecture, MemoryArchitecture::Uma);
+            assert_eq!(
+                asd_plan.storage_direct,
+                StorageDirectCapability::MetalPageNoCopy
+            );
+            assert_eq!(asd_plan.tech, TransferStrategy::AsdPageNoCopy);
+            assert!(asd_plan.uses_page_aligned_no_copy);
+            assert!(asd_plan.zero_copy_cpu_write);
+        }
+
+        let duma_rebar =
+            UnifiedTransferPlan::for_payload(wgpu::Backend::Vulkan, 1024 * 1024, false);
+        assert_eq!(duma_rebar.memory_architecture, MemoryArchitecture::Duma);
+        assert_eq!(duma_rebar.tech, TransferStrategy::DumaRebarWindow);
+        assert!(duma_rebar.uses_rebar_aperture);
+        assert_eq!(duma_rebar.staging_ring_chunks, 1);
+
+        let duma_dma =
+            UnifiedTransferPlan::for_payload(wgpu::Backend::Cuda, 64 * 1024 * 1024, false);
+        assert_eq!(duma_dma.memory_architecture, MemoryArchitecture::Duma);
+        assert_eq!(duma_dma.tech, TransferStrategy::DumaStagedDmaRing);
+        assert!(!duma_dma.uses_rebar_aperture);
+        assert_eq!(duma_dma.staging_ring_chunks, 4);
+    }
+
+    #[test]
+    fn multi_target_shader_compiler_emits_msl_spirv_hlsl_ptx_glsl_and_wgsl() {
+        let wgsl = generate_wgsl_parallel_reduction_shader(128);
+        let artifact = compile_shader_multi_target(&wgsl).expect("valid multi-target compilation");
+        assert!(artifact.msl.contains("kernel void"));
+        assert!(!artifact.spirv_words.is_empty());
+        assert!(artifact.hlsl.contains("[numthreads(128, 1, 1)]"));
+        assert!(artifact.cuda_ptx.contains(".target sm_89"));
+        assert!(artifact.glsl.contains("#version 460 core"));
+        assert!(artifact.glsl.contains("layout(local_size_x = 128"));
+        assert!(artifact.wgsl.contains("@compute @workgroup_size(128, 1, 1)"));
+    }
+
+    #[test]
+    fn opengl_vulkan_and_rtx_raytracing_subsystems_work() {
+        let gl = wgpu::opengl::OpenGlDevice::probe_available().expect("OpenGL device profile");
+        assert!(gl.supports_compute_shaders);
+        assert!(gl.supports_persistent_coherent_mapping);
+        assert_ne!(gl.recommended_buffer_storage_flags(), 0);
+
+        let vk = wgpu::vulkan::VulkanDevice::probe_available().expect("Vulkan 1.3 device profile");
+        assert_eq!(vk.api_version.0, 1);
+        assert_eq!(vk.api_version.1, 3);
+        assert!(vk.supports_ray_tracing_pipeline);
+        assert!(vk.supports_ray_query);
+        assert!(vk.supports_external_memory_host_asd);
+        assert_eq!(
+            vk.storage_direct_capability(),
+            StorageDirectCapability::VulkanExternalMemoryHost
+        );
+
+        let blas = wgpu::rtx::Blas::new(
+            Some("cad-csg-blas"),
+            vec![wgpu::rtx::BlasGeometryDescriptor {
+                kind: wgpu::rtx::BlasGeometryKind::Triangles,
+                vertex_count: 1024,
+                primitive_count: 512,
+                opaque: true,
+                allow_compaction: true,
+            }],
+        );
+        assert!(blas.compacted_size_bytes >= 512 * 64);
+        let tlas = wgpu::rtx::Tlas::new(
+            Some("cad-scene-tlas"),
+            vec![wgpu::rtx::TlasInstance::identity(blas.device_address, 0)],
+        );
+        assert_eq!(tlas.instances.len(), 1);
+
+        let rtx_vk = wgpu::rtx::RtxCapabilities::for_backend(wgpu::Backend::Vulkan);
+        assert_eq!(rtx_vk.tier, wgpu::rtx::RtxTier::HardwareRtxPipeline);
+        assert!(rtx_vk.supports_inline_ray_query);
+
+        let rtx_cuda = wgpu::rtx::RtxCapabilities::for_backend(wgpu::Backend::Cuda);
+        assert_eq!(rtx_cuda.tier, wgpu::rtx::RtxTier::HardwareRtxPipeline);
+
+        let rtx_shader = generate_wgsl_rtx_raytracing_shader(8, 8);
+        let rtx_artifact =
+            compile_shader_multi_target(&rtx_shader).expect("RTX WGSL compiles to all 6 backends");
+        assert!(rtx_artifact.msl.contains("kernel void"));
+        assert!(rtx_artifact.glsl.contains("layout(local_size_x = 8, local_size_y = 8"));
     }
 }

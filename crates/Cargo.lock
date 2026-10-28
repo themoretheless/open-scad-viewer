@@ -826,7 +826,7 @@ version = "0.1.0"
 dependencies = [
  "cudarc",
  "gpu-runtime",
- "openscad-gpu",
+ "gpu-shader",
 ]
 
 [[package]]
@@ -1389,17 +1389,7 @@ name = "openscad-core"
 version = "0.1.0"
 dependencies = [
  "geometry-ops",
- "openscad-gpu",
  "value-codec",
-]
-
-[[package]]
-name = "openscad-gpu"
-version = "0.1.0"
-dependencies = [
- "geometry-ops",
- "gpu-runtime",
- "gpu-shader",
 ]
 
 [[package]]

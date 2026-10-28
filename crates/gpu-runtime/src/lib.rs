@@ -15,6 +15,7 @@
 //! - [`rtx`]: Hardware Ray Tracing (`Blas`, `Tlas`, `RtxCapabilities`, `RtxTier`).
 //! - [`metal`], [`vulkan`], [`dx12`], [`cuda`], [`opengl`], [`webgpu`]: Hardware backend runtimes.
 
+pub mod asd;
 pub mod buffer;
 pub mod command;
 pub mod cuda;
@@ -27,10 +28,12 @@ pub mod platform;
 pub mod rtx;
 pub mod texture;
 pub mod types;
+pub mod uma_duma;
 pub mod util;
 pub mod vulkan;
 pub mod webgpu;
 
+pub use asd::*;
 pub use buffer::*;
 pub use command::*;
 pub use flags::*;
@@ -40,6 +43,7 @@ pub use platform::*;
 pub use rtx::*;
 pub use texture::*;
 pub use types::*;
+pub use uma_duma::*;
 
 use metal::MetalDevice;
 use gpu_shader as naga;

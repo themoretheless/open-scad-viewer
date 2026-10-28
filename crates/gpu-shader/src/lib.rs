@@ -1,7 +1,12 @@
 pub mod back;
+pub mod cad_kernels;
+pub mod compiler;
 pub mod front;
 pub mod proc;
 pub mod valid;
+
+pub use cad_kernels::*;
+pub use compiler::*;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;

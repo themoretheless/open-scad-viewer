@@ -15,17 +15,22 @@
 #![allow(unused_features)]
 #![forbid(unsafe_code)]
 
-pub use openscad_gpu as gpu;
-pub use openscad_gpu::{
-    children_selection, degree_math, extrude_slices, extrusion_plan, fragments, indexed_primitive,
-    offset_plan, primitive_plan, resize, transform_plan,
-};
 pub mod ast;
 pub mod builtins;
+pub mod children_selection;
+pub mod degree_math;
 pub mod eval;
+pub mod extrude_slices;
+pub mod extrusion_plan;
+pub mod fragments;
+pub mod indexed_primitive;
 pub mod lexer;
+pub mod offset_plan;
 pub mod parser;
+pub mod primitive_plan;
+pub mod resize;
 pub mod serialize;
+pub mod transform_plan;
 pub mod value;
 
 pub use ast::{ExpressionArgument, ModuleParam, Statement, ViewportModifier};

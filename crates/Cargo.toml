@@ -13,7 +13,6 @@ members = [
     "cad-predicates",
     "gpu-shader",
     "gpu-runtime",
-    "openscad-gpu",
     "gpu-compute",
     "compute-core",
     "tensor-core",
@@ -106,7 +105,6 @@ mechanical-core = { version = "0.1.0", path = "mechanical-core", default-feature
 tensor-core = { version = "0.1.0", path = "tensor-core" }
 gpu-shader = { version = "0.1.0", path = "gpu-shader", features = ["wgsl-in"] }
 gpu-runtime = { version = "0.1.0", path = "gpu-runtime", default-features = false, features = ["wgsl", "std"] }
-openscad-gpu = { version = "0.1.0", path = "openscad-gpu" }
 gpu-compute = { version = "0.1.0", path = "gpu-compute" }
 compute-core = { version = "0.1.0", path = "compute-core" }
 compute-cuda = { version = "0.1.0", path = "compute-cuda" }
@@ -177,9 +175,6 @@ opt-level = 3
 opt-level = 3
 
 [profile.release.package.gpu-runtime]
-opt-level = 3
-
-[profile.release.package.openscad-gpu]
 opt-level = 3
 
 [profile.release.package.gpu-compute]

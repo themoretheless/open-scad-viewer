@@ -17,7 +17,7 @@ repository = "https://github.com/themoretheless/open-scad-viewer"
 cuda = ["dep:cudarc"]
 
 [dependencies]
-openscad-gpu = { workspace = true }
+gpu-shader = { workspace = true }
 wgpu = { workspace = true, features = ["metal", "vulkan"] }
 cudarc = { version = "0.19", default-features = false, features = ["std", "driver", "nvrtc", "cublas", "dynamic-loading", "cuda-12080"], optional = true }
 
