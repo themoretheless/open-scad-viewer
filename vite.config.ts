@@ -62,6 +62,9 @@ export default defineConfig({
             // WASM host plumbing is shared by every kernel. Grouped with the
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
+            // Keep the two worker result protocols as separate shared contracts.
+            { name: 'cad-result-protocol', test: /src[\\/]services[\\/](mainSolidProtocol(?:[\\/]|\.ts$)|mainSolidWorker(Client|Transport)\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'geometry-result-protocol', test: /src[\\/]services[\\/]geometryWorkerProtocol(?:[\\/]|\.ts$)/, includeDependenciesRecursively: false },
             { name: 'direct-commands', test: /src[\\/]features[\\/]directModeler[\\/]use(CommandPalette|Primitives)\.ts$/, includeDependenciesRecursively: false },
             { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.vue(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
             { name: 'sweep-viewport-evidence', test: /src[\\/]services[\\/]sweepViewportEvidence\.ts$/, includeDependenciesRecursively: false },

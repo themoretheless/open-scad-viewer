@@ -18,6 +18,8 @@ use crate::{
 use math_core::{dot, norm, next_down, next_up};
 
 mod deviation;
+mod continuous;
+pub use continuous::*;
 mod validity;
 pub use validity::{OffsetValidityReport, offset_validity};
 use deviation::sampled_deviation;

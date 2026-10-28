@@ -1,57 +1,40 @@
 #!/usr/bin/env node
-import {execFileSync} from 'node:child_process'
+// Append exact observed native integration inputs; historical records are immutable.
 import {createHash} from 'node:crypto'
-import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {readFileSync,writeFileSync,existsSync,mkdirSync} from 'node:fs'
+import {execFileSync} from 'node:child_process'
 import {resolve} from 'node:path'
-const root=resolve(import.meta.dirname,'..'),bytes=p=>readFileSync(resolve(root,p)),sha=v=>createHash('sha256').update(v).digest('hex')
-if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v70.json')))throw new Error('Historical own-rust-cad-v70 evidence already exists; publish a new version instead of overwriting it')
-const previousPath='docs/qualification/own-rust-cad-v69.json',previous=JSON.parse(bytes(previousPath))
-const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
-const additions=changed.filter(path=>existsSync(resolve(root,path))).filter(path=>['vite.config.ts','vite.qualification.config.ts','scripts/qualificationKernelModuleDelivery.mjs','src/workers/manifoldPlanQualification.worker.ts'].includes(path)||/^(crates\/.*\.(rs|toml)|src\/(?:services|mcp|core)\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
-const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
-const paths=[...new Set([...previous.sourceBundle.paths.filter(p=>existsSync(resolve(root,p))),...additions,...deliveryPaths,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src','crates/bridge-cam/src','crates/bridge-analysis/src','crates/bridge-svg/src','crates/cad-step/src','crates/nurbs-intersect/src','crates/brep-intersect/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].sort()
-
-const wasm=bytes('public/wasm/geometry-kernel.wasm'),wasmSha256=sha(wasm)
-const wasmPath=`docs/qualification/artifacts/geometry-${wasmSha256}.wasm`
+const root=resolve(import.meta.dirname,'..'),read=p=>readFileSync(resolve(root,p))
+const sha=b=>createHash('sha256').update(b).digest('hex')
+const previousPath='docs/qualification/own-rust-cad-v69.json',output='docs/qualification/own-rust-cad-v70.json'
+if(existsSync(resolve(root,output)))throw new Error('Historical OwnRust70 already exists; publish a successor')
+const previous=JSON.parse(read(previousPath)),next=structuredClone(previous)
+const reportPath='docs/qualification/merged-main-geometry-2026-10-14/summary.json',report=JSON.parse(read(reportPath))
+if(report.native.status!=='passed'||report.architecture.status!=='passed'||report.node.status!=='passed'||report.browser.status!=='passed')throw new Error('Native checks and architecture audit must pass before publication')
+const wasm=read('public/wasm/geometry-kernel.wasm'),wasmSha=sha(wasm),artifact=`docs/qualification/artifacts/geometry-${wasmSha}.wasm`
+if(report.wasm.sha256!==wasmSha||report.wasm.byteLength!==wasm.length)throw new Error('Report does not bind current packaged WASM')
+for(const record of report.logs){if(sha(read(record.path))!==record.sha256)throw new Error(`Evidence log digest mismatch: ${record.path}`)}
+for(const kind of ['node','browser']){
+ const observed=JSON.parse(read(report[kind].path))
+ if(observed.passed!==72||observed.refused!==24||observed.intersections.length!==5||observed.artifact.geometryWasmSha256!==wasmSha||observed.artifact.geometryWasmByteLength!==wasm.length)throw new Error(`Incomplete or stale ${kind} qualification`)
+}
 mkdirSync(resolve(root,'docs/qualification/artifacts'),{recursive:true})
-if(existsSync(resolve(root,wasmPath))) {
-  if(sha(bytes(wasmPath))!==wasmSha256)throw new Error('Archived release binary changed')
-} else writeFileSync(resolve(root,wasmPath),wasm,{flag:'wx'})
-const dependencyFingerprints={
-  noticesSha256:sha(bytes('THIRD_PARTY_NOTICES.md')),
-  npmLockfileSha256:sha(bytes('package-lock.json')),
-  rustLockfileSha256:sha(bytes('crates/Cargo.lock')),
-}
-const observedVariant={sha256:wasmSha256,byteLength:wasm.byteLength,builder:`${process.platform}-${process.arch}`,evidence:`Observed local rebuild. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host artifact is inferred.`}
-const variants=[...(previous.wasm.variants??[]).filter(v=>v.sha256!==wasmSha256),observedVariant]
-
-
-writeFileSync(resolve(root,'src/core/ownRustCadEvidence.ts'),`// Recorded exact artifacts; no cross-host byte identity or clean qualification is claimed.
-import packagedArtifact from '../generated/geometry-kernels/identity'
-export const OWN_RUST_CAD_ARTIFACTS = Object.freeze(${JSON.stringify(variants.map(({sha256,byteLength})=>({sha256,byteLength})),null,2)})
-export function recordedOwnRustCadFingerprint(artifact: {sha256:string;byteLength:number}): string|null {
-  if (!Number.isSafeInteger(artifact.byteLength) || artifact.byteLength <= 0 || artifact.byteLength > 16 * 1024 * 1024) return null
-  return OWN_RUST_CAD_ARTIFACTS.find(item => item.sha256 === artifact.sha256 && (item.byteLength === null || item.byteLength === artifact.byteLength))?.sha256 ?? null
-}
-export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
-  // Runtime identity follows packaged bytes; qualification freezing separately rejects unrecorded artifacts.
-  "wasmSha256": packagedArtifact.sha256,
-  "noticesSha256": "${dependencyFingerprints.noticesSha256}",
-  "lockfileSha256": "${dependencyFingerprints.npmLockfileSha256}",
-  "rustLockfileSha256": "${dependencyFingerprints.rustLockfileSha256}"
-})
-`)
-const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
-writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v70.json'),JSON.stringify({
-  id:'own-rust-cad-v70',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-21',
-  purpose:'Original-span collar G2 verification, restored geodesic/wing capabilities, cap UV ownership, bounded RMF refinement and coherent runtime v6 delivery',qualificationClaim:'none',
-  wasm:{path:wasmPath,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha256,byteLength:wasm.byteLength,variants},
-  sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
-  dependencyFingerprints,
-  claimBoundary:[
-    'This enumerates exact observed build artifacts; compiler hosts are not assumed to produce identical bytes. It is not an external clean qualification run.',
-    'It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.',
-    'It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology.',
-  ],
-},null,2)+'\n')
-console.log('Recorded docs/qualification/own-rust-cad-v70.json and refreshed src/core/ownRustCadEvidence.ts')
+if(existsSync(resolve(root,artifact))) {if(sha(read(artifact))!==wasmSha)throw new Error('Archived artifact differs')}
+else writeFileSync(resolve(root,artifact),wasm,{flag:'wx'})
+next.id='own-rust-cad-v70';next.successorOf=previousPath;next.previousSha256=sha(read(previousPath));next.recordedAt='2026-10-15'
+next.purpose='Integrate main 7fb7db944 while retaining native module owners, exact pole-map intersection restrictions and cap/regularity proof budgets. Add the incoming bounded correlated Bernstein minor fallback after cheap outward-jet decisions for original rational ruled spans and preserve both immutable qualification histories. Allow the complete native-smoke job 150 minutes after the observed Windows 90-minute cutoff and measured full matrices, preserving every individual test deadline and mathematical work budget. Bind freshly rebuilt geometry and language WASM, fresh finite native/Node/Chromium evidence, and the unchanged strict snapshot fixtures. G1v102 starts at zero and imports no result from completed G1v100 or cancelled G1v101.'
+next.dependencyFingerprints={noticesSha256:sha(read('THIRD_PARTY_NOTICES.md')),npmLockfileSha256:sha(read('package-lock.json')),rustLockfileSha256:sha(read('crates/Cargo.lock'))}
+next.wasm={path:artifact,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha,byteLength:wasm.length,variants:[{sha256:wasmSha,byteLength:wasm.length,builder:'macos-aarch64',evidence:`Complete merged-source build pipeline executed successfully with Native Binaryen 116; the exact observed packaged artifact below is newly bound. Cross-builder byte identity is not asserted. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host identity or clean semantic qualification inferred.`}]}
+const runtimePath='src/core/ownRustCadEvidence.ts',runtime=read(runtimePath).toString()
+let updated=runtime.replace(previous.dependencyFingerprints.rustLockfileSha256,next.dependencyFingerprints.rustLockfileSha256)
+updated=updated.replace(/export const OWN_RUST_CAD_ARTIFACTS = Object.freeze\([\s\S]*?\)\nexport function/,`export const OWN_RUST_CAD_ARTIFACTS = Object.freeze(${JSON.stringify([{sha256:wasmSha,byteLength:wasm.length}],null,2)})\nexport function`)
+if(!updated.includes(wasmSha))throw new Error('Runtime identity refresh failed')
+writeFileSync(resolve(root,runtimePath),updated)
+execFileSync(process.execPath,['scripts/audit-algorithm-owners.mjs','--write'],{cwd:root,stdio:'inherit'})
+const tracked=execFileSync('git',['ls-files','crates','src','scripts'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>/\.(rs|toml|ts|mjs|mts)$/.test(p))
+const evidence=execFileSync('git',['ls-files','docs/qualification/global-geometry-2026-10-14','docs/qualification/parallel-main-history-2026-10-14','docs/qualification/rush-emitter-snapshot-2026-10-14','docs/qualification/main-history-7fb7db944','docs/qualification/merged-main-geometry-2026-10-14'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>/\.(json|md|mjs|ts|mts|log)$/.test(p))
+next.sourceBundle.paths=[...new Set([...previous.sourceBundle.paths,...tracked,...evidence,...report.logs.map(record=>record.path),'docs/qualification/rush-emitter-snapshot-2026-10-14/verify-payloads.py','docs/qualification/g1-v100-clean-matrix-2026-10-14/manifest.json',runtimePath,'.gitattributes','tests/g0ToolchainFingerprints.test.ts','tests/g1GithubActionsQualification.test.ts','crates/Cargo.lock','architecture-baseline.json','scripts/release-own-rust-v70.mjs','docs/qualification/environment-freeze/g1-github-actions-v37.json','docs/qualification/g0-v85-g1-v102-refreeze-review.md','crates/nurbs-core/src/analysis/surface_linear_monotonicity/three_cavity_face.json','crates/geometry-bridge/tests/fixtures/golden_numeric.txt','crates/rush-runtime/tests/fixtures/emitter-snapshot.tsv','crates/rush-runtime/tests/fixtures/emitter-parity.json','.github/workflows/ci.yml','tests/quinticPolygonBody.test.ts','tests/solidSelfIntersection.test.ts','tests/nurbsClosedPlanarRmfSweep.test.ts','tests/nurbsClosedAuthoredSweepBound.test.ts',reportPath,'docs/design/algorithm-owners.json','docs/qualification/algorithm-owners-2026-10-14.json'])].filter(p=>existsSync(resolve(root,p))).sort()
+next.sourceBundle.sha256=sha(Buffer.concat(next.sourceBundle.paths.flatMap(p=>[Buffer.from(p+'\0'),read(p),Buffer.from('\n')])))
+next.finiteEvidenceSummary={path:reportPath,sha256:sha(read(reportPath))}
+writeFileSync(resolve(root,output),JSON.stringify(next,null,2)+'\n',{flag:'wx'})
+console.log(`Published OwnRust70: ${wasmSha} (${wasm.length} bytes)`)

@@ -16,6 +16,19 @@ describe('own NURBS through the MCP protocol', () => {
   let close: () => Promise<void>
   const tool = async (name: string, arguments_: RpcValue) => await request('tools/call', { name, arguments: arguments_ }) as unknown as ToolResult
 
+  it('checks saved graph offset deviation through MCP and its real disposable Rust process',async()=>{
+    const document={language:'rush/nurbs-1',units:'mm',nodes:[
+      {id:'a',op:'plane_patch',origin:[0,0,0],axis_u:[1,0,0],axis_v:[0,1,0]},
+      {id:'b',op:'transform',input:'a',matrix:[[1,0,0,0],[0,1,0,0],[0,0,1,.25],[0,0,0,1]]},
+    ],root:'b'};
+    const input={document,source:'a',candidate:'b',distance:.25,tolerance:1e-8,maxCells:1000,maxDepth:24};
+    const accepted=await tool('rush_nurbs_offset_deviation',input);
+    expect(accepted.isError,JSON.stringify(accepted)).not.toBe(true);
+    expect(accepted.structuredContent).toMatchObject({ok:true,offsetDeviation:{decision:'within_tolerance',continuousBound:true,topologyAuthority:false}});
+    const limited=await tool('rush_nurbs_offset_deviation',{...input,maxCells:0});
+    expect(limited.structuredContent).toMatchObject({ok:true,offsetDeviation:{decision:'unresolved',errorUpper:null,continuousBound:false}});
+  });
+
   it('accepts mesh_boolean over MCP and skips previews for an empty result', async () => {
     const base = structuredClone(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE)
     const document = { ...base, nodes: [...base.nodes, {id:'empty',op:'mesh_boolean',inputs:[base.root,base.root],operation:'difference'}], root:'empty' }
@@ -58,7 +71,7 @@ describe('own NURBS through the MCP protocol', () => {
 
   it('discovers the own-kernel tools and provides a language resource with precise export limits', async () => {
     const listed = await request('tools/list') as { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> }
-    expect(listed.tools.map(tool => tool.name).sort()).toEqual(['rush_nurbs_build', 'rush_nurbs_compile', 'rush_nurbs_evaluate', 'rush_nurbs_export', 'rush_nurbs_intersect', 'rush_nurbs_language'])
+    expect(listed.tools.map(tool => tool.name).sort()).toEqual(['rush_nurbs_build', 'rush_nurbs_compile', 'rush_nurbs_evaluate', 'rush_nurbs_export', 'rush_nurbs_intersect', 'rush_nurbs_language', 'rush_nurbs_offset_deviation'])
     expect(listed.tools.every(tool => tool.annotations.readOnlyHint)).toBe(true)
     const resources = await request('resources/list') as { resources: Array<{ uri: string }> }
     expect(resources.resources.map(resource => resource.uri)).toContain('openscad://language/rush-nurbs-1')

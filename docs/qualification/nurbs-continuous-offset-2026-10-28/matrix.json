@@ -1,0 +1,79 @@
+{
+  "timestampUtc": "2026-10-28T00:08:32.362327+00:00",
+  "scope": "Preserved continuous normal-offset native/application source and qualified c8 artifact; task snapshot also includes separately pending SS roots and wire mapper extraction.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/offset/surface_offset.rs": "6a8a52d2b4b5ccae552957e7aabfac167cb019bedbfa84759fe981d0d3feafbb",
+    "crates/nurbs-core/src/offset/surface_offset/continuous.rs": "dba0db8679a01586d689560b339f721885237ada398b3dfa1c2d85dfdcb3aae7",
+    "crates/nurbs-core/src/offset/surface_offset/continuous/cell.rs": "1af61a81e0b9c26c363b0c05a5317aaad8e74183fc4cd91d73cd65cdc4d01ef6",
+    "crates/nurbs-core/src/transport/dispatch.rs": "449346623974109e78b5c7ef6f405d220b6022eb003f8b35fb479ac3af462165",
+    "crates/nurbs-core/src/transport/mod.rs": "38dd98d11794c664f3660ee5f390d7a05dc73d76920152b64bb4c871c2dadba4",
+    "crates/nurbs-core/src/transport/offset_requests.rs": "85e88c475bbb8611cf3659179ff619a13dd2578128ebfcd32305fe861200ce96",
+    "crates/nurbs-core/tests/surface_offset_continuous.rs": "54ad402a4c86088d1e3d8b9b4e72fdd1dfde65460ea20758ff74da36ad862e29",
+    "src/components/OffsetDeviationCheck.vue": "f46dec032a97f148a35d6a8966fb8a7812825b61eab2c6a6bf95830a5b83f8e7",
+    "src/components/SurfaceDistanceCheck.vue": "9bf2a7f200127d1d05e0b7a3d1b4369347e52c59adc882d30472407bdcb0d281",
+    "src/components/SurfacePairChecks.vue": "1d8814a5b4a6a2fd97001aaede680c6e1143cd1803c3517ab61836c63c9754de",
+    "src/features/DirectModeler.vue": "42f8e9c495ddbd4a13cd885b3d05c90f2d8315e3d229048a1a8f8bce23e201cb",
+    "src/mcp/rawSourceLoader.mjs": "9ebba2e5a09cd3a0328bb0984801e9994eeaf0b4e6a6d7c1d8f813cfb8511932",
+    "src/mcp/registerRawSourceImports.mjs": "b9b92e4ecf037e584bfd7cf4974a3e7e2ac1192fa9efd79c36e5f44ac3b073bf",
+    "src/mcp/rushGraphNurbsRuntime.ts": "2f520b17a0aa1d8757d657cba426445a6db42bb98c0ecc3c8d1be83db5f7817d",
+    "src/mcp/rushGraphNurbsTools.ts": "97094fe2e7d3be97597a434f6319e17b3033969c35bcd4f13569c26f2c939703",
+    "src/services/mainSolidProtocol.ts": "060298ac1a9d656dc0cf957a2144196919fb0299cd806b77d05db4997149dd8f",
+    "src/services/mainSolidProtocol/mainSolidExpectation.ts": "d191bc433455ac4fae66882d1d66e43927dcf7eab1ba3d65956217a88254667a",
+    "src/services/mainSolidProtocol/mainSolidResult.ts": "5bf36cec1776e2e48a3bbca08ad7d2e04f3f3ee2c9ff5c3948f39ba78d4ddd06",
+    "src/services/mainSolidProtocol/results/offsetContact.ts": "f68c2931c8a523828ffe5b428ab2b16172d7637248ddab6d2fe94120012e56b4",
+    "src/services/mainSolidWorkerRuntime.ts": "0cbf2cf1ff44ad164f0578d799125b26b3a5d0b069ad00feded32733b29819d8",
+    "src/services/nurbsOffsetDeviation.ts": "35b2847acf8e823b2857121b6afab636523eb9b201d64d0f7008fdb0a5a83e41",
+    "src/services/rushGraphNurbsKernel.ts": "39ae5f627c8092d0a42fd2f52645e9e250674c4cea6a55c016331086ab863298",
+    "src/services/rushGraphNurbsKernel/buildOwnNurbsResolved.ts": "ea74ae243052414cbf8428d7801b03c6d1dfdbd016cd9d3b24f9ed29dfabe5ff",
+    "src/services/rushGraphOffsetDeviation.ts": "04732c01534b7c232876088f77a67c116b2ca65cd58703f1afafe13f2aab5ac1",
+    "src/services/useOffsetDeviationInspection.ts": "8f20da713fcce686bc9c99d46eac9d9fcff20ac18f5962f85a934a543a706292",
+    "tests/mcpServer.test.ts": "7519d9bb8ce999a4fc500c4bfdd8fbc352e1da29f0dbc429790a4e39b7d715f4",
+    "tests/nurbsOffsetDeviation.test.ts": "1e636d0514391fd4ec1eedba32b9360abb8d76c9523eb566e830ec69bcf569a2",
+    "tests/offsetDeviationPanel.test.ts": "b261924227b974cc54c8a7439983639b0d76b3e9474dc198fffda5dea5428925",
+    "tests/rushGraphNurbsMcp.test.ts": "3e4d5b84e3a2162a2f61482fb9bdf2fead6fbe6499f51e37eefb5eec46287735",
+    "tests/rushOffsetDeviation.test.ts": "2777bc4866dbf6b5aa8b198313ea8fdaec8f50896ba5ac19831a57482500de32",
+    "tools/browser-qualification/offset-deviation.mjs": "9e9b0f1d68481260358e2c9113ce015b83d749754173928ef6ef6262452b0e37",
+    "vite.config.ts": "f522c4e02590b478620b30676b7c5c8ca5a38429992601381868f2af790fb4bd",
+    "vitest.config.ts": "b7994ea10ff1a7e0da84e5d4283e0f83c660909e2adccf476a09281961909f76"
+  },
+  "artifact": {
+    "path": "public/wasm/geometry-kernel.wasm",
+    "bytes": 15811953,
+    "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992",
+    "includesNewSsBoundaryRootApi": false
+  },
+  "freshChecks": {
+    "vueTypecheck": {
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mcpTypecheck": {
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mcpAndOffsetTests": {
+      "exitCode": 0,
+      "suites": 8,
+      "passed": 62,
+      "failed": 0,
+      "logSha256": "d73ae6d4d0e8aaa89eccfb1d7f2a79e4ab392fad1b12b4691c881405a55c77f1"
+    },
+    "nativeContinuousOffset": {
+      "passed": 7,
+      "failed": 0,
+      "parentLogSha256": "8b58ccec34c007f6aa9166bd05b2df046e425c288099187931b6e448e758f7da"
+    },
+    "frozenArchives": {
+      "checked": 807,
+      "mismatches": 0,
+      "expectationsChanged": false
+    }
+  },
+  "priorBrowserQualification": "application-evidence.json (earlier dev and production runs; not rerun at this preservation checkpoint)",
+  "fullPlanComplete": false,
+  "remainingReleaseGates": [
+    "72 architecture diagnostics in current complete task worktree",
+    "distribution size gate remains open",
+    "new SS extensions not integrated through WASM/editor/STEP"
+  ]
+}

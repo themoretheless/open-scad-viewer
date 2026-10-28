@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build && node scripts/verify-dist.mjs",
-    "mcp": "node --import tsx src/mcp/server.ts",
+    "mcp": "node --import tsx --import ./src/mcp/registerRawSourceImports.mjs src/mcp/server.ts",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit && tsc --noEmit -p tsconfig.mcp.json",
     "test": "vitest run",

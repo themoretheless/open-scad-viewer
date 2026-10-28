@@ -28,6 +28,7 @@ pub(super) fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> 
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op == "surface_offset_continuous_deviation" { return super::offset_requests::inspect(&v); }
     if op=="profile_section_bridge_chords" {return super::profile_bridge_chord_transport::inspect(&v);}
     if op == "sweep_filled_cap_error_upper" {
         let p=sweeps::filled_cap_error::Premises {

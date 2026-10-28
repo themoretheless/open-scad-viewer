@@ -37,8 +37,8 @@
   "processAmendment": {
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v95",
-    "previousPlanSha256": "dc3ec339b8fd9273afb81296b3d78e2c5c285ef2d0a8ddb3c3bc32d56a5ace39",
-    "reason": "Correct metadata predecessor regression assertion after append-only advancement; preserve native execution evidence and unchanged rebuilt WASM without importing historical semantic results.",
+    "previousPlanSha256": "b1c07be83d5fdebe4126264cc0ad295d643967cfb8dcf2e093baf89d138b3407",
+    "reason": "Append-only re-freeze after merging codex/integrate-available-20261013 (closed-profile G2 quintic bodies, quintic STEP round trips, memory diagnostics); preserve ownRust61.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -248,8 +248,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "46edfa1d46e15645ce210e34cf8faec8a249cdcf4973afe7a60ee4f6e01d9474",
-          "byteLength": 8652,
+          "value": "1b63d612d266c4c8984f875834b8e7018c103fc8e7b2a2392c27d1f25cb79adf",
+          "byteLength": 8477,
           "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
         }
       },
@@ -284,8 +284,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "0ae46e510054f2640373da19ae7a53644e6de80451f6c9bef1caf1b6fd7aad06",
-          "byteLength": 1089,
+          "value": "8e5792a0c9195f2d92033ff8357a77b655b011415cd01bc20c2bb76f4ba517d0",
+          "byteLength": 1027,
           "verifiedBy": "qualification artifact validator recomputes exact file bytes"
         }
       },
@@ -308,8 +308,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "b01e62ef39063f0f4d746f5aed548a5e3079e27de5cc9b32fa6a37e35f821484",
-          "byteLength": 584,
+          "value": "152a5a210d111f1455bd97fcd257a4d3214075e40c40bc6437cba8c3ae3d9ae0",
+          "byteLength": 522,
           "verifiedBy": "qualification artifact validator recomputes bytes and checks every bound text file for CR"
         }
       },
@@ -467,7 +467,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "b761cee6abe98c98db0cd749d09cbcb7e60e1fde1aa3c43371bafd9a017aab29",
+          "value": "381d803051ec1b78b13811902e48cf17f22365ae1ff5276b79c382d8e335ad0c",
           "byteLength": 3560,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -490,7 +490,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "622f304b2c6987bc5ecca362f4786e1777c2717189a2a7dcd8192a9dd8f1383f",
+          "value": "4ee98a1cf3ee7d701038fa4d58398b4a1b470cae4ba8d646be181e7345cb4ded",
           "byteLength": 977,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -500,6 +500,7 @@
         "paths": [
           ".gitattributes",
           ".github/workflows/g1-qualification-clean.yml",
+          "crates/geometry-bridge/examples/polygon-station-step.rs",
           "examples/rush/closed-profile-planar-10.r",
           "examples/rush/closed-profile-spatial-6.r",
           "examples/rush/spatial-bishop-g2-surface-6.r",
@@ -508,10 +509,8 @@
           "scripts/build-vr.mjs",
           "scripts/build-wasm-brotli.mjs",
           "scripts/check-profile-solid-browser.mjs",
-          "scripts/check-sweep-miter-matrix-browser.mjs",
           "scripts/diagnose-g1-webkit-memory.mjs",
           "scripts/export-profile-solid-step.mts",
-          "scripts/export-sweep-step-oracle.mts",
           "scripts/g1-github-actions.mjs",
           "scripts/g1RuntimeIdentity.mjs",
           "scripts/materialize-qualification-kernels.mjs",
@@ -527,10 +526,8 @@
           "scripts/run-g1-candidate-clean-fragment.mjs",
           "scripts/run-g1-ubuntu-docker-fragment.mjs",
           "scripts/run-manifold-g1-memory-qualification.mjs",
-          "scripts/sweep-browser-surface-evidence.mjs",
-          "scripts/sweep-browser-worker-probe.mjs",
-          "scripts/sweep-step-miter-fixtures.mts",
-          "scripts/sweep-step-profile-fixtures.mts",
+          "scripts/step_rational_basis.py",
+          "scripts/verify-polygon-station-step.py",
           "scripts/verify-profile-solid-step.py",
           "tests/browserMemoryQualificationRunner.test.ts",
           "tests/browserQualificationRunner.test.ts",
@@ -545,6 +542,8 @@
           "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
           "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
           "tests/fixtures/mcp-shadow-stdio-server.ts",
+          "tests/fixtures/quintic-polygon-rmf-source.json",
+          "tests/fixtures/quintic-polygon-stations-6.json",
           "tests/fixtures/web-worker-node-harness.ts",
           "tests/geometryKernelModuleDelivery.test.ts",
           "tests/geometryWorkerRealBoundary.test.ts",
@@ -557,6 +556,7 @@
           "tests/profileFramePremises.test.ts",
           "tests/profileSolidAdmission.test.ts",
           "tests/profileSolidRush.test.ts",
+          "tests/quinticPolygonBody.test.ts",
           "tests/spatialBishopSurface.test.ts",
           "vite.qualification.config.ts"
         ],
@@ -564,8 +564,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "414d2739fca7db3e17e7353f7ef14435ccf3c7e222aee4fdb27add30ede1d8ec",
-          "byteLength": 6418,
+          "value": "b612fcda63392a7d4f3522ae13c0cb1df3b27aa8d62b6f466a7c50b61eb10790",
+          "byteLength": 6429,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },
@@ -585,7 +585,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "a523cf13ab398270786550ac1e0e6901333e03d1dc3757e51692e66bbc6905b3",
+          "value": "0e4bf7fff3502d3e782477f20e064f79a4a38c26d684ee8af1c750edd8f0fae5",
           "byteLength": 723,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -607,7 +607,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "d45c6483e2ad6a5e25cf272a4a1b7c08884898f9e536992a1d88e45e9ae79d75",
+          "value": "6110b72f6e76eb045100f32a14ecb31f0f5105ea0017564d656dac6c9149c1f6",
           "byteLength": 858,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
