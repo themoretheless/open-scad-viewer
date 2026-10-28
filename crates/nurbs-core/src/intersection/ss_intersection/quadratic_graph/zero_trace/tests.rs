@@ -161,3 +161,28 @@ fn explicit_proposal_mode_preserves_the_ordinary_constructor_and_sealed_replay()
         );
     }
 }
+
+#[test]
+fn batch_zero_traces_share_one_source_replay_and_retain_exact_work_cutoff() {
+    let (o, c) = fixture(false, true);
+    let traces: Vec<_> = c
+        .edges()
+        .iter()
+        .flat_map(|e| (0..2).map(move |s| (&e.pcurves[s], s)))
+        .collect();
+    let work = o.prove_zero_traces(&traces, 4096).unwrap();
+    let individual: usize = traces
+        .iter()
+        .map(|&(c, s)| o.prove_zero_trace(c, s, 4096).unwrap())
+        .sum();
+    assert_eq!(individual - work, (traces.len() - 1) * o.operations());
+    assert_eq!(o.prove_zero_traces(&traces, work).unwrap(), work);
+    assert!(o.prove_zero_traces(&traces, work - 1).is_err());
+    assert!(o.prove_zero_traces(&[], 4096).is_err());
+    let mut changed = traces[0].0.clone();
+    changed.weights[1] = changed.weights[1].next_up();
+    assert!(
+        o.prove_zero_traces(&[traces[1], (&changed, traces[0].1)], 4096)
+            .is_err()
+    );
+}

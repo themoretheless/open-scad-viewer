@@ -28,6 +28,7 @@ pub enum SharedBoundary {
     PlanarFace(crate::shared_boundary::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
     BilinearGraph(crate::shared_boundary::bilinear_graph::Certificate),
+    ClosedGraph(crate::shared_boundary::closed_graph::Certificate),
     JoinedSourceCharts(boundary_stitched_contact::Certificate),
     SourceVolumeBoundary(source_volume_contact::Certificate),
     OwnedVertex(crate::trimmed_vertex_contact::Certificate),
@@ -505,13 +506,20 @@ impl Inspector {
                     .map(SharedBoundary::OppositeSides)
             };
             let mut boundary_cells = 0;
+            if boundary.is_none() && joint_exact_domain {
+                let allowance = (limits.cells - out.cells).min(limits.cells_per_pair);
+                let (certificate, used) = crate::shared_boundary::closed_graph::certify(model, [a,b], allowance);
+                boundary_cells += used;
+                out.cells += used;
+                boundary = certificate.map(SharedBoundary::ClosedGraph);
+            }
             if boundary.is_none() && sweep_hulls && joint_exact_domain {
                 let allowance = (limits.cells - out.cells)
-                    .min(limits.cells_per_pair)
+                    .min(limits.cells_per_pair.saturating_sub(boundary_cells))
                     .min(100000);
                 let (certificate, used) =
                     crate::shared_boundary::certify_opposite_with_budget(model, [a, b], allowance);
-                boundary_cells = used;
+                boundary_cells += used;
                 out.cells += used;
                 if let Some(c) = certificate {
                     boundary = Some(SharedBoundary::OppositeSides(c));
