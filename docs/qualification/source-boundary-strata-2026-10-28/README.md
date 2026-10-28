@@ -1,0 +1,13 @@
+# Complete declared boundary-stratum qualification
+
+The Rust `source_seam_tangency::qualify_boundary` factory composes existing ordinary-edge smoothness certificates with fresh collapsed-pole certificates on one privately admitted original source body. Every ordinary edge must be classified exactly once. Every collapsed pole receives the same explicit requirement: C0, an admitted single-sheeted tangent graph, or an admitted exact quadratic jet with common facewise curvature limits.
+
+The private complete token retains the same original `Body`, the entire ordinary collection and the actual pole atlas. Callers cannot assemble a complete token from flags, reports, a different body or partial coverage. The legacy ordinary-only `qualify_collection` continues to refuse bodies with unresolved poles. Its internal edge helper is visible only to the parent module for this explicit composition.
+
+Sharp joins are authored C0. A failed tangent/curvature query is never downgraded. Ordinary edge cells, curve spans and normal/shape spans share their existing aggregate allowances. Pole graph work and exact jet work have separate explicit budgets. No partial boundary token is returned when either stage fails.
+
+The cylinder regression covers mixed ordinary G1/G2/C0 with no poles, source identity, exactly preserved work counters and refusal at one-short ordinary budgets. The flat-capped original source fixture covers all eight polar charts, two complete pole stars, exact curvature-jet work, the tangent-graph and explicit C0 policies, malformed requests, aggregate pole-budget exhaustion, preservation of the ordinary-only refusal and rejection of an incorrectly smooth sharp rim.
+
+This certificate covers declared boundary strata only. Ordinary seam checks are tolerance bounds, not exact G1/G2 identities. Pole curvature is a common facewise limit, not a C2 neighborhood. Face-interior smoothness and binding the complete ideal loft/sweep law remain separate obligations. No whole-body G1/G2, arbitrary-frame/cap completeness, closed-seam completion, WASM release or TypeScript geometry is claimed.
+
+The frozen final run passed 101 native tests with unchanged source hashes, plus 10 audit-tool tests. The complete polar fixture has 20 ordinary edges and eight pole jets; exact jet work is 113474. The repository architecture audit still fails with 82 diagnostics, unchanged by this implementation; publication remains held. The first development run exposed an overly narrow test expectation: sharp-rim refusal may be the existing `NURBS_NUMERIC_ERROR` rather than a negative report. The corrected regression accepts only that specific error or a negative report at the expected rim, never a positive certificate.

@@ -78,7 +78,7 @@ struct Work<E> {
     uncertain_edge: Option<usize>,
     reason: &'static str,
 }
-fn validate_classes(classes: &[Class]) -> Result<()> {
+pub(super) fn validate_classes(classes: &[Class]) -> Result<()> {
     for class in classes {
         if let Class::Curvature {
             normal_distance,
@@ -211,6 +211,17 @@ pub fn qualify_collection<'a, E: Carrier>(
             reason: "source-seam-collection-pole-limits-unproven",
         });
     }
+    qualify_owned_edges(body, classes, limits)
+}
+
+// Only the sibling complete-boundary factory may compose this with freshly
+// proved pole strata. Public ordinary collection admission still refuses poles.
+pub(super) fn qualify_owned_edges<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    limits: Limits,
+) -> Result<CollectionReport<'a, E>> {
+    let shell = body.geometry().shell();
     let max_sine_squared = limits.max_sine_squared;
     let work = inspect_edges(shell.edges(), classes, limits)?;
     let complete = work.completed_edges == classes.len() && work.uncertain_edge.is_none();

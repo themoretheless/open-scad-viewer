@@ -714,6 +714,23 @@
         assert_eq!(mixed_certificate.curvature_seams().len(),2);
         assert_eq!(mixed_report.completed_edges,12);
         assert!(!mixed_certificate.all_edges_curvature());
+        let boundary=crate::source_seam_tangency::qualify_boundary(&body,&mixed,
+            crate::source_seam_tangency::PoleRequirement::C0,work()).unwrap();
+        let complete=boundary.certificate.expect(boundary.reason);
+        assert!(std::ptr::eq(complete.body(),&body));
+        assert!(matches!(complete.poles(),crate::source_seam_tangency::PoleStrata::Absent));
+        assert_eq!(complete.ordinary().seams().len(),2);
+        assert_eq!(complete.ordinary().curvature_seams().len(),2);
+        assert_eq!(boundary.ordinary_cells,mixed_report.cells);
+        assert_eq!(boundary.ordinary_curve_spans,mixed_report.curve_spans);
+        assert_eq!(boundary.ordinary_normal_spans,mixed_report.normal_spans);
+        for dimension in 0..3 {
+            let mut short=work();
+            match dimension {0=>short.cells=mixed_report.cells-1,1=>short.curve_spans=mixed_report.curve_spans-1,_=>short.normal_spans=mixed_report.normal_spans-1}
+            let refused=crate::source_seam_tangency::qualify_boundary(&body,&mixed,crate::source_seam_tangency::PoleRequirement::C0,short).unwrap();
+            assert!(refused.certificate.is_none());assert!(refused.completed_edges<12);
+        }
+
         for dimension in 0..3 {
             let mut short=work();
             match dimension { 0=>short.cells=mixed_report.cells-1,
@@ -9741,4 +9758,38 @@
         let short=crate::source_pole_tangency::qualify_body_pole_curvature(&body,limits(r.jet_work-1)).unwrap();
         assert!(short.certificate.is_none());assert!(short.completed_poles<r.completed_poles);
         eprintln!("pole-curvature metrics: poles={} comparisons={} exact_work={}",r.completed_poles,r.comparisons,r.jet_work);
+        use crate::source_seam_tangency::{self as seams,Carrier,Class,PoleRequirement,PoleStrata};
+        let edge_limits=|| seams::Limits {max_sine_squared:1e-10,cells:1000,curve_spans:10000,normal_spans:10000};
+        let classes=vec![Class::C0;body.geometry().shell().edges().len()];
+        // Legacy ordinary-only admission must still refuse unresolved poles.
+        assert!(seams::qualify_collection(&body,&classes,edge_limits()).unwrap().certificate.is_none());
+        let complete=seams::qualify_boundary(&body,&classes,PoleRequirement::FacewiseCurvature(limits(100000000)),edge_limits()).unwrap();
+        let boundary=complete.certificate.expect(complete.reason);
+        assert!(std::ptr::eq(boundary.body(),&body));
+        assert!(std::ptr::eq(boundary.ordinary().body(),&body));
+        assert_eq!(boundary.ordinary().classes(),classes);
+        assert!(!boundary.ordinary().all_edges_tangent());
+        match boundary.poles() {PoleStrata::FacewiseCurvature(p)=>assert_eq!(p.jets().len(),8),_=>panic!("missing owned pole curvature")}
+        assert_eq!(complete.completed_edges,classes.len());
+        assert_eq!(complete.pole_jet_work,r.jet_work);
+        let low=seams::qualify_boundary(&body,&classes,PoleRequirement::FacewiseCurvature(limits(r.jet_work-1)),edge_limits()).unwrap();
+        assert!(low.certificate.is_none());assert_eq!(low.completed_edges,0);
+        let graph=seams::qualify_boundary(&body,&classes,PoleRequirement::TangentGraph(limits(1).graphs),edge_limits()).unwrap();
+        assert!(matches!(graph.certificate.unwrap().poles(),PoleStrata::TangentGraph(_)));
+        let sharp=seams::qualify_boundary(&body,&classes,PoleRequirement::C0,edge_limits()).unwrap();
+        assert!(matches!(sharp.certificate.unwrap().poles(),PoleStrata::C0));
+        assert!(seams::qualify_boundary(&body,&classes[..1],PoleRequirement::C0,edge_limits()).is_err());
+        let mut malformed=classes.clone();malformed[0]=Class::Curvature{normal_distance:f64::NAN,curvature_distance:0.};
+        assert!(seams::qualify_boundary(&body,&malformed,PoleRequirement::C0,edge_limits()).is_err());
+        let rim=body.geometry().shell().edges().iter().position(|e| {
+            let flat=|side| {let s=e.fragment(side).surface();let z=s.control_points[0][0][2];s.control_points.iter().flatten().all(|p|p[2]==z)};
+            flat(0)!=flat(1)
+        }).expect("sharp wall/cap rim");
+        let mut incorrectly_smooth=classes.clone();incorrectly_smooth[rim]=Class::TangentPlanes;
+        match seams::qualify_boundary(&body,&incorrectly_smooth,PoleRequirement::C0,edge_limits()) {
+            Ok(refused)=>{assert!(refused.certificate.is_none());assert_eq!(refused.uncertain_edge,Some(rim));},
+            Err(e)=>assert_eq!(e.code,"NURBS_NUMERIC_ERROR"),
+        }
+        eprintln!("complete-boundary metrics: edges={} pole_jets={} sharp_rim={}",complete.completed_edges,8,rim);
+
     }
