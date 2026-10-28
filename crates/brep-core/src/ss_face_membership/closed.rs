@@ -1,6 +1,10 @@
 //! Author full internal closed SS contours from complete source membership.
 use super::*;
 use crate::face_cut::{self, Segment};
+mod material;
+pub use material::{
+    GraphMaterialFace, QualifiedClosedGraphMaterial, qualify_closed_graph_material,
+};
 mod paths;
 mod roles;
 use paths::*;

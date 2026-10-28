@@ -72,10 +72,15 @@ fn boundaries(s: &Surface) -> [crate::circular_blend::CircularBlendBoundary; 4] 
     })
 }
 fn model(rational: bool) -> Model {
-    let top = roof(rational);
+    column(roof(rational))
+}
+pub(crate) fn column(top: Surface) -> Model {
+    column_at_floor(top, 0.)
+}
+pub(crate) fn column_at_floor(top: Surface, floor: f64) -> Model {
     let mut bottom = top.clone();
     for p in bottom.control_points.iter_mut().flatten() {
-        p[2] = 0.;
+        p[2] = floor;
     }
     let bottom = nurbs_core::surface_edit::reverse(&bottom, Axis::V).unwrap();
     let mut surfaces = vec![top.clone(), bottom];
@@ -86,9 +91,9 @@ fn model(rational: bool) -> Model {
             .iter()
             .map(|p| {
                 let mut low = p.clone();
-                low[2] = 0.;
+                low[2] = floor;
                 let mut middle = p.clone();
-                middle[2] *= 0.5;
+                middle[2] = (middle[2] + floor) * 0.5;
                 vec![low, middle, p.clone()]
             })
             .collect();
@@ -123,7 +128,7 @@ fn model(rational: bool) -> Model {
     model.validate().unwrap();
     model
 }
-fn limits() -> Limits {
+pub(crate) fn limits() -> Limits {
     Limits {
         operations: 1000000,
         body: source_body_restore::Limits {

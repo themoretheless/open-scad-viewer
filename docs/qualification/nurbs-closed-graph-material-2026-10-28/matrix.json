@@ -1,0 +1,29 @@
+{
+  "milestone": "original closed SS material roles",
+  "native_tests": {
+    "passed": 4217,
+    "failed": 0,
+    "ignored": 6
+  },
+  "minimal_library_check": "passed",
+  "minimal_full_unit_tests": "not qualified; previous 412 compile errors",
+  "architecture_existing_violations": 70,
+  "api_modules": 239,
+  "catalog_entries": 200,
+  "logs": {
+    "graph-material-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-material-full.log",
+      "sha256": "75c4846ed034b87c9f32903eebd794c4b1d4b9f330cd77927a8f96e34efbf2ec"
+    },
+    "graph-material-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-material-minimal-check.log",
+      "sha256": "bab67d81353a640dd1c335c0c6c9b08f04e3f83cdaeaef2979d96a30cd35cade"
+    },
+    "graph-material-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-material-architecture.log",
+      "sha256": "60e1a0d4c854d38c8b7472d6f1792d21d5eb29464751086bfdd3faf30cf48097"
+    }
+  },
+  "general_boolean_result": "not authored or qualified",
+  "plan_complete": false
+}

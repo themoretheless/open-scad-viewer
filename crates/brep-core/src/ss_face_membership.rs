@@ -11,7 +11,8 @@ use nurbs_core::{
 mod closed;
 pub use closed::{
     ClosedBranchFaces, ClosedBranchLimits, ClosedGraphSideLimits, ClosedSourceEdge, GraphFaceSide,
-    QualifiedClosedBranches, QualifiedClosedGraphSides, partition_closed_branches,
+    GraphMaterialFace, QualifiedClosedBranches, QualifiedClosedGraphMaterial,
+    QualifiedClosedGraphSides, partition_closed_branches, qualify_closed_graph_material,
     qualify_closed_graph_sides,
 };
 mod coedge_roots;

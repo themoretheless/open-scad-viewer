@@ -5,7 +5,7 @@ use nurbs_core::ss_intersection::{
     QuadraticGraphSSLimits, QualifiedGraphSupport, qualify_graph_support,
 };
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 mod topology;
 pub struct Limits {
     /// Shared structural/coefficient work, with each core graph query <=4096.
