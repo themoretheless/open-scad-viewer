@@ -9802,6 +9802,7 @@
         let graph=seams::qualify_boundary(&body,&classes,PoleRequirement::TangentGraph(limits(1).graphs),edge_limits()).unwrap();
         assert!(matches!(graph.certificate.unwrap().poles(),PoleStrata::TangentGraph(_)));
         let sharp=seams::qualify_boundary(&body,&classes,PoleRequirement::C0,edge_limits()).unwrap();
+        assert!(seams::qualify_c2_pole_neighborhoods(sharp.certificate.as_ref().unwrap(),100000).unwrap().certificate.is_none());
         assert!(matches!(sharp.certificate.unwrap().poles(),PoleStrata::C0));
         assert!(seams::qualify_boundary(&body,&classes[..1],PoleRequirement::C0,edge_limits()).is_err());
         let mut malformed=classes.clone();malformed[0]=Class::Curvature{normal_distance:f64::NAN,curvature_distance:0.};
@@ -9865,6 +9866,9 @@
         assert!(!proof.ordinary().all_edges_curvature());
         eprintln!("complete-polar G2 metrics: seams={} cells={} products={} coefficients={}",8,
             complete.ordinary_cells,complete.polar_shape_products,complete.polar_shape_coefficients);
+        let only_tolerance=seams::qualify_c2_pole_neighborhoods(&proof,100000).unwrap();
+        assert!(only_tolerance.certificate.is_none());
+        assert_eq!(only_tolerance.reason,"pole-c2-exact-meridian-unproven");
         let exact_classes=curvature_classes.iter().map(|c|if matches!(c,Class::Curvature{..}) {
             Class::Curvature{normal_distance:0.,curvature_distance:0.}
         }else{*c}).collect::<Vec<_>>();
@@ -9881,8 +9885,37 @@
         assert!(short.certificate.is_none());assert!(short.completed_edges<20);
         eprintln!("complete-exact-polar G2 metrics: seams={} cells={} exact_work={} coefficients={}",8,
             strict.ordinary_cells,strict.polar_exact_work,strict.polar_shape_coefficients);
+        let c2=seams::qualify_c2_pole_neighborhoods(&proof,100000).unwrap();
+        let neighborhoods=c2.certificate.expect(c2.reason);
+        assert!(std::ptr::eq(neighborhoods.boundary(),&proof));
+        assert_eq!(neighborhoods.neighborhoods().len(),2);
+        for n in neighborhoods.neighborhoods() {
+            assert_eq!(n.faces().len(),4);assert_eq!(n.seams().len(),4);
+            assert!(n.projected_radius_lower()>0.);assert_eq!(n.dropped_axis(),2);
+            for b in n.coefficient_bounds() {assert!(b[0]<=0. && b[1]>=0.);}
+            let star=match proof.poles() {PoleStrata::FacewiseCurvature(p)=>p.graphs().stars().iter().find(|s|s.vertex()==n.vertex()).unwrap(),_=>unreachable!()};
+            assert_eq!(n.point(),star.point());assert_eq!(n.projected_radius_lower(),star.projected_radius_lower());
+        }
+        let low=seams::qualify_c2_pole_neighborhoods(&proof,c2.steps-1).unwrap();
+        assert!(low.certificate.is_none());assert!(low.completed_neighborhoods<2);
+        assert_eq!(low.reason,"pole-c2-incidence-work-limit");
+        assert!(seams::qualify_c2_pole_neighborhoods(&proof,0).is_err());
+        let bad_edge=proof.ordinary().polar_curvature_seams()[0].0;
+        let mut retained_c0=exact_classes.clone();retained_c0[bad_edge]=Class::C0;
+        let retained=seams::qualify_boundary_with_exact_polar_curvature(&body,&retained_c0,
+            limits(100000000),edge_limits(),budget(),100000000).unwrap();
+        let retained=retained.certificate.expect(retained.reason);
+        assert_eq!(retained.ordinary().classes()[bad_edge],Class::C0);
+        let refused=seams::qualify_c2_pole_neighborhoods(&retained,100000).unwrap();
+        assert!(refused.certificate.is_none());assert_eq!(refused.uncertain_edge,Some(bad_edge));
+        assert_eq!(refused.reason,"pole-c2-exact-meridian-unproven");
+        eprintln!("pole-C2 neighborhoods: count={} steps={} radii={:?}",2,c2.steps,
+            neighborhoods.neighborhoods().iter().map(|n|(n.vertex(),n.projected_radius_lower())).collect::<Vec<_>>());
+
 
 
 
 
     }
+
+mod c2_bowl;
