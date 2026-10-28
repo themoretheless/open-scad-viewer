@@ -1,0 +1,35 @@
+{
+  "timestampUtc": "2026-10-28T00:10:49.405449+00:00",
+  "baseCommit": "06062f90fc351f4edf566b53eca81a4498ea9f74",
+  "scope": "Move official reference-runtime wire conversions into a separate module; retain old facade exports and literal function bodies",
+  "sourceSha256": {
+    "src/mcp/server/wireMappers.ts": "2a234666873c91323f95613d7ea1c596bc8c97e35fef74ef2e1581f05cc6e19e",
+    "src/mcp/server/officialWireMappers.ts": "1bbabe0a8b2ef1f2ba110fd120bda9fe36c035ac14db8a47e12816ec4915edce",
+    "tests/mcpServer.test.ts": "7519d9bb8ce999a4fc500c4bfdd8fbc352e1da29f0dbc429790a4e39b7d715f4",
+    "architecture-baseline.json": "e9d4b370b69ef4e8fedeb5c9cd328412684162ad77fb5e131e666724bcd49259"
+  },
+  "beforeLines": 515,
+  "afterLines": 380,
+  "newModuleLines": 147,
+  "typecheck": {
+    "exitCode": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "tests": {
+    "exitCode": 0,
+    "suites": 8,
+    "passed": 62,
+    "failed": 0,
+    "logSha256": "d73ae6d4d0e8aaa89eccfb1d7f2a79e4ab392fad1b12b4691c881405a55c77f1"
+  },
+  "initialMcpInventoryFailure": "Expected list omitted the existing rush_nurbs_offset_deviation tool; strict expected inventory was updated with its offset implementation in parent commit 0742853ab.",
+  "architecture": {
+    "exitCode": 1,
+    "diagnostics": 72,
+    "sizeLimitsRaised": false,
+    "baselinePinsAdded": false,
+    "logSha256": "ed8cd84e2c8b12d2b5856d7df7057c815de534200804ef7197c19280eb49ae6b"
+  },
+  "fullPlanComplete": false,
+  "movedBlockIgnoringTrailingWhitespaceSha256": "4ffbfa27541d95e75f63d14d5a8a76f6c1e3e6b87652768c5183f0ee35246ff7"
+}
