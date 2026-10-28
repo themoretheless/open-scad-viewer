@@ -273,3 +273,7 @@ SourceRegion хранит Original/Cut/SplitRoot/SplitParameter как Rust enum
 ## Минимальная native-библиотека без кодека · 28.10.2026
 
 Закрыты 54 оставшиеся ошибки минимальной library-сборки. Inverse-region transport и принадлежность exchange-подготовки исходному Body используют типизированные оригиналы; wire-адаптеры и метаинформация отделены без отключения вычислений. Открыты native capped-canal body и исходная capped-shell сборка. Default четыре библиотеки: 4208 прошли, 0 отказов, 6 пропусков; публичные integration paths с codec и без него: по 2/2. Минимальная normal dependency tree не содержит value-codec. Полный minimal unit-test target, WASM/UI/STEP и все оставшиеся геометрические требования пяти направлений не объявляются завершёнными. [Протокол](../qualification/nurbs-native-source-boundary-2026-10-28/README.md).
+
+## Разделение полного minimal unit-test target · 28.10.2026
+
+Дополнительная проверка полного unit-test target без codec выявила 571 ошибку смешанного тестового кода. Native и wire части точек, фрагментов, рациональных root-параметров и общих replay helpers разделены с сохранением математических assertions; ошибок осталось 492. Target пока не собирается. Default-проверки сохранили 4208 успешных тестов, 0 отказов, 6 пропусков; публичные native integration paths без codec — 2/2. Это не завершение ни полной минимальной unit-матрицы, ни оставшихся пяти геометрических направлений. [Протокол и остаток](../qualification/nurbs-native-unit-separation-2026-10-28/README.md).

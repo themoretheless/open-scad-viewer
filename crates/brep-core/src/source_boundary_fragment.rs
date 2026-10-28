@@ -564,9 +564,11 @@ mod tests {
         b.parameter_bounds = [[0.25, 0.75]; 2];
         b.reversed = !a.reversed;
         assert!(a.same_definition(&b));
+        #[cfg(feature = "codec")]
         assert_eq!(a.definition(), b.definition());
         b.endpoints[0] = Endpoint::Parameter(0.125);
         assert!(!a.same_definition(&b));
+        #[cfg(feature = "codec")]
         assert_ne!(a.definition(), b.definition());
         let left = Fragment::new(
             &surface,
@@ -668,14 +670,26 @@ mod tests {
             },
         )
         .unwrap();
-        let restored = restore(f.definition(), 16).unwrap();
-        assert_eq!(restored.definition(), f.definition());
-        let mut forged = f.definition();
-        forged["curve"]["controlPoints"][0][0] = json!(0.1);
-        assert!(restore(forged, 16).is_err());
-        let mut forged = f.definition();
-        forged["endpoints"][0]["value"] = json!(0.5);
-        assert!(restore(forged, 16).is_err());
+        let native = f.requalify(16).unwrap();
+        assert!(native.same_definition(&f));
+        assert_eq!(native.parameter_bounds(), f.parameter_bounds());
+        let mut changed = f.clone();
+        changed.curve.control_points[0][0] = 0.1;
+        assert!(changed.requalify(16).is_err());
+        changed = f.clone();
+        changed.endpoints[0] = Endpoint::Parameter(0.5);
+        assert!(changed.requalify(16).is_err());
+        #[cfg(feature = "codec")]
+        {
+            let restored = restore(f.definition(), 16).unwrap();
+            assert_eq!(restored.definition(), f.definition());
+            let mut forged = f.definition();
+            forged["curve"]["controlPoints"][0][0] = json!(0.1);
+            assert!(restore(forged, 16).is_err());
+            let mut forged = f.definition();
+            forged["endpoints"][0]["value"] = json!(0.5);
+            assert!(restore(forged, 16).is_err());
+        }
     }
     #[test]
     fn source_chart_containment_is_not_inferred_from_two_inside_endpoints() {

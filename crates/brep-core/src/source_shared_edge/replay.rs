@@ -120,14 +120,12 @@ mod tests {
     fn direct_and_mapped_native_replay_match_wire_work_and_ignore_cached_maps() {
         for mapped in [false, true] {
             let mut edge = fixture(mapped);
-            let original = edge.definition();
+            let original = edge.clone();
             edge.reversed = [true; 2];
             edge.ranges = Some([[[99.; 2]; 2]; 2]);
             for work in [1, 100000000] {
                 let native = edge.requalify(limits(work)).unwrap();
-                let wire =
-                    crate::source_shared_edge_restore::restore(original.clone(), limits(work))
-                        .unwrap();
+                let pristine = original.requalify(limits(work)).unwrap();
                 assert_eq!(
                     (
                         native.work_used,
@@ -136,16 +134,42 @@ mod tests {
                         native.reason
                     ),
                     (
-                        wire.work_used,
-                        wire.driver_cells,
-                        wire.root_checks,
-                        wire.reason
+                        pristine.work_used,
+                        pristine.driver_cells,
+                        pristine.root_checks,
+                        pristine.reason
                     )
                 );
-                assert_eq!(
-                    native.edge.as_ref().map(SharedEdge::definition),
-                    wire.edge.as_ref().map(SharedEdge::definition)
-                );
+                assert_eq!(native.edge.is_some(), pristine.edge.is_some());
+                if let (Some(a), Some(b)) = (&native.edge, &pristine.edge) {
+                    assert!(a.same_definition(b));
+                }
+                #[cfg(feature = "codec")]
+                {
+                    let wire = crate::source_shared_edge_restore::restore(
+                        original.definition(),
+                        limits(work),
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        (
+                            native.work_used,
+                            native.driver_cells,
+                            native.root_checks,
+                            native.reason
+                        ),
+                        (
+                            wire.work_used,
+                            wire.driver_cells,
+                            wire.root_checks,
+                            wire.reason
+                        )
+                    );
+                    assert_eq!(
+                        native.edge.as_ref().map(SharedEdge::definition),
+                        wire.edge.as_ref().map(SharedEdge::definition)
+                    );
+                }
                 if let Some(fresh) = native.edge {
                     assert_ne!(fresh.reversed(), edge.reversed());
                 }

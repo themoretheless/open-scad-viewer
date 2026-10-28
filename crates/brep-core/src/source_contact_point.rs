@@ -228,6 +228,7 @@ mod tests {
         cached.uv_box = [[0., 1.]; 2];
         cached.world_box = [[-100., 100.]; 3];
         assert!(point.same_definition(&cached));
+        #[cfg(feature = "codec")]
         assert_eq!(point.definition(), cached.definition());
         let fresh = cached.requalify(16).unwrap().point.unwrap();
         assert_eq!(fresh.root_parameters(), point.root_parameters());
@@ -236,10 +237,12 @@ mod tests {
         let mut changed = point.clone();
         changed.selector[0][0] = 0.25;
         assert!(!point.same_definition(&changed));
+        #[cfg(feature = "codec")]
         assert_ne!(point.definition(), changed.definition());
         changed = point.clone();
         changed.contact.control_points[0][0] = 0.125;
         assert!(!point.same_definition(&changed));
+        #[cfg(feature = "codec")]
         assert_ne!(point.definition(), changed.definition());
     }
     #[test]
@@ -250,14 +253,23 @@ mod tests {
         for (i, x) in [2., 3.5, 3.].into_iter().enumerate() {
             assert!(p.world_box()[i][0] <= x && p.world_box()[i][1] >= x);
         }
-        let mut value = p.definition();
-        value["claimedQualified"] = json!(true);
-        value["worldBounds"] = [[999., 999.]; 3].to_value();
-        let restored = restore(value.clone(), 16).unwrap().point.unwrap();
-        assert_eq!(restored.definition(), p.definition());
-        assert_eq!(restored.world_box(), p.world_box());
-        value["selector"] = [[0., 0.25]; 2].to_value();
-        assert!(restore(value, 16).unwrap().point.is_none());
+        let native = p.requalify(16).unwrap().point.unwrap();
+        assert!(native.same_definition(&p));
+        assert_eq!(native.world_box(), p.world_box());
+        let mut changed = p.clone();
+        changed.selector = [[0., 0.25]; 2];
+        assert!(changed.requalify(16).unwrap().point.is_none());
+        #[cfg(feature = "codec")]
+        {
+            let mut value = p.definition();
+            value["claimedQualified"] = json!(true);
+            value["worldBounds"] = [[999., 999.]; 3].to_value();
+            let restored = restore(value.clone(), 16).unwrap().point.unwrap();
+            assert_eq!(restored.definition(), p.definition());
+            assert_eq!(restored.world_box(), p.world_box());
+            value["selector"] = [[0., 0.25]; 2].to_value();
+            assert!(restore(value, 16).unwrap().point.is_none());
+        }
     }
     #[test]
     fn original_chart_membership_is_required_before_surface_enclosure_clipping() {

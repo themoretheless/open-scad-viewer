@@ -180,10 +180,9 @@ fn replay(value: Value, l: &Limits, remaining: usize) -> Result<SourceRegion> {
 }
 
 #[cfg(test)]
-#[cfg(feature = "codec")]
 pub(crate) fn test_limits() -> Limits {
     Limits {
-        region: RegionLimits {
+        region: crate::trimmed_face_recipe::Limits {
             pairs: 100000,
             region_cells: 100000,
             domain_cells: 100000,
@@ -201,7 +200,7 @@ pub(crate) fn test_limits() -> Limits {
 }
 #[cfg(test)]
 #[cfg(feature = "codec")]
-pub(crate) fn assert_replay(region: &SourceRegion) {
+fn assert_wire_replay(region: &SourceRegion) {
     let encoded = value_codec::to_string(&region.definition()).unwrap();
     let value: Value = value_codec::from_str(&encoded).unwrap();
     let replay = restore(value, &test_limits()).unwrap();
@@ -251,4 +250,46 @@ pub(crate) fn assert_replay(region: &SourceRegion) {
         assert!(limited.tiles.is_empty());
         assert_eq!(limited.unresolved.len(), 16);
     }
+}
+
+#[cfg(test)]
+pub(crate) fn assert_replay(region: &crate::source_contour_proposal::SourceRegion) {
+    let replay = region.requalify(&test_limits()).unwrap();
+    assert!(replay.same_definition(region));
+    assert_eq!(replay.chart_winding(), region.chart_winding());
+    assert_eq!(replay.whole_chart_material(), region.whole_chart_material());
+    assert_eq!(replay.source_loop_indices(), region.source_loop_indices());
+    assert_eq!(replay.loops().len(), region.loops().len());
+    assert!(
+        replay
+            .loops()
+            .iter()
+            .zip(region.loops())
+            .all(|(a, b)| a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.same_definition(b)))
+    );
+    let preview = crate::source_region_display::prepare(region, 4, 1e-8, 10000).unwrap();
+    assert_eq!(
+        preview,
+        crate::source_region_display::prepare(&replay, 4, 1e-8, 10000).unwrap()
+    );
+    assert_eq!(
+        preview.tiles.len() + preview.unresolved.len() + preview.outside,
+        16
+    );
+    assert!(preview.domain_cells <= 10000);
+    assert!(crate::source_region_display::prepare(region, 0, 1e-8, 10000).is_err());
+    assert!(crate::source_region_display::prepare(region, 65, 1e-8, 10000).is_err());
+    assert!(crate::source_region_display::prepare(region, 4, 1e-8, 0).is_err());
+    if region.whole_chart_material() {
+        assert_eq!(preview.tiles.len(), 16);
+        assert!(preview.unresolved.is_empty());
+    } else {
+        assert!(!preview.unresolved.is_empty());
+        let limited = crate::source_region_display::prepare(region, 4, 1e-8, 1).unwrap();
+        assert!(limited.domain_cells <= 1);
+        assert!(limited.tiles.is_empty());
+        assert_eq!(limited.unresolved.len(), 16);
+    }
+    #[cfg(feature = "codec")]
+    assert_wire_replay(region);
 }

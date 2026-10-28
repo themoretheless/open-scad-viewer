@@ -188,8 +188,8 @@ pub fn restore_projective(
     .edge
     .map(|edge| Restriction { edge }))
 }
-#[cfg(test)]
-pub(crate) fn assert_replay(edge: &SharedEdge) {
+#[cfg(all(test, feature = "codec"))]
+fn assert_wire_replay(edge: &SharedEdge) {
     let limits = || source_shared_edge_restore::Limits {
         mapping_cells_per_use: 10000,
         exact_work: 100_000_000,
@@ -267,4 +267,56 @@ pub(crate) fn assert_replay(edge: &SharedEdge) {
             }
         }
     }
+}
+
+#[cfg(test)]
+pub(crate) fn assert_replay(edge: &SharedEdge) {
+    let fresh = edge
+        .requalify(crate::source_shared_edge::ReplayLimits {
+            mapping_cells_per_use: 10000,
+            exact_work: 100000000,
+            driver_cells: 10000,
+        })
+        .unwrap();
+    let fresh = fresh.edge.expect(fresh.reason);
+    assert!(fresh.same_definition(edge));
+    let restriction = Restriction::from_edge(edge);
+    let recovered = Restriction::from_edge(&fresh);
+    assert_eq!(
+        restriction.parameter_bounds().unwrap(),
+        recovered.parameter_bounds().unwrap()
+    );
+    assert_eq!(
+        restriction.endpoint_boxes(10000).unwrap(),
+        recovered.endpoint_boxes(10000).unwrap()
+    );
+    assert!(restriction.endpoint_boxes(0).is_err());
+    assert!(restriction.display_segments(0).is_err());
+    assert!(restriction.display_segments(4097).is_err());
+    let display = restriction.display_segments(16).unwrap();
+    assert_eq!(display.len(), 16);
+    assert_eq!(display, recovered.display_segments(16).unwrap());
+    assert_eq!(
+        display[0].0[0],
+        restriction.parameter_bounds().unwrap()[0][0]
+    );
+    assert_eq!(
+        display[15].0[1],
+        restriction.parameter_bounds().unwrap()[1][1]
+    );
+    for pair in display.windows(2) {
+        assert_eq!(pair[0].0[1], pair[1].0[0]);
+        assert_eq!(pair[0].1[1], pair[1].1[0]);
+    }
+    for (range, _, bounds) in &display {
+        for i in 0..=8 {
+            let t = range[0] + (range[1] - range[0]) * i as f64 / 8.;
+            let point = restriction.edge.world().evaluate(t).unwrap().point;
+            for axis in 0..3 {
+                assert!(bounds[axis][0] <= point[axis] && point[axis] <= bounds[axis][1]);
+            }
+        }
+    }
+    #[cfg(feature = "codec")]
+    assert_wire_replay(edge);
 }

@@ -147,6 +147,7 @@ mod product_tests {
         assert!(!rectangle_contains(outer, [[f64::NAN, 1.], [0.25, 0.5]]));
         assert!(!rectangle_contains(outer, [[0., f64::INFINITY], [0.25, 0.5]]));
     }
+    #[cfg(feature="codec")]
     #[test]
     fn diagnostic_wire_preserves_domains_reasons_and_support_scope() {
         let report=ExpressionWallReport {
