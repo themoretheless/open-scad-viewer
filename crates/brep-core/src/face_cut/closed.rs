@@ -1,5 +1,7 @@
 //! Divide a retained face by a certified simple closed saved-curve contour.
 use super::*;
+mod hole;
+pub use hole::{HolePartition, partition_same_hole};
 mod proof;
 mod reference;
 use proof::{Work, audit, lift};
@@ -37,6 +39,32 @@ pub struct ClosedPartition {
     pub face_identities: [TopoId; 2],
     pub cells: usize,
     pub pairs: usize,
+}
+pub(super) fn verify_uv_reference(
+    candidate: &Curve,
+    source: &Curve,
+    reversed: bool,
+    tolerance_uv: f64,
+    cells: &mut usize,
+    max_cells: usize,
+) -> Result<bool> {
+    let mut work = Work {
+        cells: *cells,
+        pairs: 0,
+    };
+    let exact = reference::reference(
+        candidate,
+        source,
+        reversed,
+        tolerance_uv,
+        &mut work,
+        ClosedCutLimits {
+            cells: max_cells,
+            pairs: 1,
+        },
+    )?;
+    *cells = work.cells;
+    Ok(exact)
 }
 fn reverse(path: &[Segment]) -> Result<Vec<Segment>> {
     path.iter()
@@ -288,16 +316,7 @@ pub fn partition_closed(
         reversed: uses[0].1,
     });
     model.inherit_topology_ids(&[source]);
-    for (&id, &tol) in &source.1.local_tolerances_mm {
-        if model.1.vertices.contains(&id) || model.1.edges.contains(&id) {
-            model.1.local_tolerances_mm.insert(id, tol);
-        }
-    }
-    for &id in &source.1.sewed_edges {
-        if model.1.edges.contains(&id) {
-            model.1.sewed_edges.insert(id);
-        }
-    }
+    super::policy::preserve(&mut model, source);
     let source_identity = source.1.faces[face_id];
     let face_identities = [model.1.faces[face_id], model.1.faces[inner]];
     model.1.lineage.push(TopologyLineageRecord {

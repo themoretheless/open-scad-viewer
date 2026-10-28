@@ -58,8 +58,13 @@ pub use fiber_network::{
     trim_fiber_and_cap,
 };
 
+mod endpoint_loop;
+mod policy;
+use endpoint_loop::owned_boundary;
 mod closed;
-pub use closed::{ClosedCutLimits, ClosedPartition, partition_closed};
+pub use closed::{
+    ClosedCutLimits, ClosedPartition, HolePartition, partition_closed, partition_same_hole,
+};
 
 pub struct Segment {
     pub curve: Curve,
@@ -92,8 +97,8 @@ fn clamped(c: &Curve) -> bool {
 /// Project authored 3D cuts into the immutable original face chart, then split
 /// with fresh saved-curve agreement and region audits. Projection only proposes
 /// pcurves: snapping to owned endpoint UVs never inherits its proof. Endpoints
-/// must already be bound on shared source edges. No nearest-vertex welding or
-/// choice of the material sector to discard is performed here.
+/// must already be bound on one shared outer or hole boundary. No nearest-vertex
+/// welding or choice of the material sector to discard is performed here.
 pub fn partition_projected(
     source: &Model,
     face_id: usize,
@@ -137,20 +142,13 @@ fn projected_with_budget(
         .faces
         .get(face_id)
         .ok_or_else(|| invalid("Missing source face"))?;
-    let outer = &source.loops[face.outer].coedges;
-    let mut endpoint_uv = Vec::new();
-    for vertex in endpoints {
-        let hits = outer
-            .iter()
-            .filter(|c| source.edges[c.edge].vertices[usize::from(c.reversed)] == vertex)
-            .collect::<Vec<_>>();
-        if hits.len() != 1 {
-            return Err(invalid(
-                "Projected cut needs uniquely owned outer endpoints",
-            ));
-        }
-        endpoint_uv.push(hits[0].pcurve.control_points[0].clone());
-    }
+    let (wire, indices) = owned_boundary(source, face_id, endpoints).ok_or_else(|| {
+        invalid("Projected cut needs unique endpoints on one original boundary loop")
+    })?;
+    let endpoint_uv: Vec<_> = indices
+        .iter()
+        .map(|&i| source.loops[wire].coedges[i].pcurve.control_points[0].clone())
+        .collect();
     let mut path: Vec<Segment> = Vec::with_capacity(curves.len());
     let mut cells = 0;
     for (i, curve) in curves.iter().enumerate() {
@@ -334,15 +332,7 @@ pub fn partition_projected_network(
             .faces
             .iter()
             .copied()
-            .filter(|&f| {
-                let ring = &out.model.loops[out.model.faces[f].outer].coedges;
-                cut.endpoints.iter().all(|&v| {
-                    ring.iter()
-                        .filter(|c| out.model.edges[c.edge].vertices[usize::from(c.reversed)] == v)
-                        .count()
-                        == 1
-                })
-            })
+            .filter(|&f| owned_boundary(&out.model, f, cut.endpoints).is_some())
             .collect::<Vec<_>>();
         if candidates.len() != 1 {
             return Err(unproven(
@@ -398,7 +388,8 @@ fn audit(
         r.valid
     })
 }
-/// Split along a simple open path between two existing outer-loop vertices.
+/// Split along a simple open path between two vertices on one original loop.
+/// Same-hole paths retain an outer sector and a bounded material cap.
 /// Original surfaces, outer boundary definitions and hole definitions are kept.
 /// Both sectors and the actual reversed cut pcurves are independently verified.
 /// Existing holes are assigned automatically only after full-loop trim audits;
@@ -479,6 +470,29 @@ fn partition_with_budget(
         if owners != 1 {
             return Err(invalid("Source trim loops must have unique face ownership"));
         }
+    }
+    if owned_boundary(source, face_id, endpoints).is_some_and(|(wire, _)| wire != face.outer) {
+        let result = partition_same_hole(
+            source,
+            face_id,
+            endpoints,
+            path,
+            tolerance_uv,
+            ClosedCutLimits {
+                cells: max_cells,
+                pairs: 10000,
+            },
+        )?;
+        return Ok(Partition {
+            model: result.model,
+            faces: result.faces,
+            edges: result.edges,
+            source_identity: result.source_identity,
+            face_identities: result.face_identities,
+            cells: result.cells,
+            exact_work: 0,
+            trim_pairs: result.pairs,
+        });
     }
     let outer = &source.loops[face.outer].coedges;
     let mut indices = [0; 2];
@@ -606,6 +620,14 @@ fn partition_with_budget(
         .filter(|c| c.edge >= edge_start)
     {
         let segment = &path[c.edge - edge_start];
+        closed::verify_uv_reference(
+            &c.pcurve,
+            &segment.pcurve,
+            c.reversed,
+            tolerance_uv,
+            &mut cells,
+            max_cells,
+        )?;
         let mut proven = false;
         if exact_work < max_exact {
             if let Some(r) = curve_surface_agreement::verify_exact(
@@ -673,6 +695,7 @@ fn partition_with_budget(
         reversed: uses[0].1,
     });
     model.inherit_topology_ids(&[source]);
+    policy::preserve(&mut model, source);
     let source_identity = source.1.faces[face_id];
     let face_identities = [model.1.faces[face_id], model.1.faces[second]];
     model.1.lineage.push(TopologyLineageRecord {
