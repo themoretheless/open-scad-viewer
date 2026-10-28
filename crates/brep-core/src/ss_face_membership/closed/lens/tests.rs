@@ -100,6 +100,48 @@ fn actual_inner_difference_sews_original_ss_edges_into_a_closed_lens() {
     let audit = crate::solid_audit::audit_solid(lens.model()).unwrap();
     assert!(audit.ok && audit.sew.complete);
     assert_eq!(models, saved);
+    let (contact, work) = crate::shared_boundary::closed_graph::certify(lens.model(), [0, 1], 1000);
+    let contact = contact.expect("original coefficient census admits the complete shared cycle");
+    assert_eq!(contact.operations(), work);
+    assert_eq!(contact.faces(), [0, 1]);
+    assert_eq!(contact.edges().len(), lens.model().edges.len());
+    assert!(
+        crate::shared_boundary::closed_graph::certify(lens.model(), [0, 1], work)
+            .0
+            .is_some()
+    );
+    let exhausted = crate::shared_boundary::closed_graph::certify(lens.model(), [0, 1], work - 1);
+    assert!(exhausted.0.is_none());
+    assert_eq!(exhausted.1, work - 1);
+    for (point, inside) in [
+        ([0.5, 0.5, 1.96875], true),
+        ([0.5, 0.5, 1.875], false),
+        ([0.5, 0.5, 2.125], false),
+        ([0.125, 0.125, 1.96875], false),
+    ] {
+        let parity = crate::ray_parity::classify_point(
+            lens.model(),
+            point,
+            &[[0., 0., 1.]],
+            1e-8,
+            10000,
+            100000,
+        )
+        .unwrap();
+        assert_eq!(parity.parity, Some(inside), "{point:?}: {parity:?}");
+    }
+    let mut damaged = lens.model().clone();
+    let pole = &mut damaged.0.loops[0].coedges[0].pcurve.control_points[1][0];
+    *pole = pole.next_up();
+    damaged.rebuild_topology_ids();
+    damaged.validate().unwrap();
+    let invalid =
+        crate::boundary_embedding::inspect(&damaged, 1e-8, volume_limits().boundary).unwrap();
+    assert!(!invalid.proven && !invalid.agreement.all_equal);
+    assert!(invalid.intersections.pairs.pairs.iter().all(|p| !matches!(
+        p.boundary,
+        Some(crate::face_contacts::SharedBoundary::ClosedGraph(_))
+    )));
     let report = lens.audit_volume(1e-8, volume_limits()).unwrap();
     assert!(
         report.report().proven,
@@ -109,4 +151,8 @@ fn actual_inner_difference_sews_original_ss_edges_into_a_closed_lens() {
         report.report().boundary.intersections.absence_proven,
         report.report().boundary.intersections
     );
+    let admitted = report
+        .into_qualified()
+        .unwrap_or_else(|_| panic!("unproven result acquired volume authority"));
+    assert_eq!(admitted.model().faces.len(), 2);
 }

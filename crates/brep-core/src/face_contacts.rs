@@ -506,13 +506,6 @@ impl Inspector {
                     .map(SharedBoundary::OppositeSides)
             };
             let mut boundary_cells = 0;
-            if boundary.is_none() && joint_exact_domain {
-                let allowance = (limits.cells - out.cells).min(limits.cells_per_pair);
-                let (certificate, used) = crate::shared_boundary::closed_graph::certify(model, [a,b], allowance);
-                boundary_cells += used;
-                out.cells += used;
-                boundary = certificate.map(SharedBoundary::ClosedGraph);
-            }
             if boundary.is_none() && sweep_hulls && joint_exact_domain {
                 let allowance = (limits.cells - out.cells)
                     .min(limits.cells_per_pair.saturating_sub(boundary_cells))
@@ -584,6 +577,13 @@ impl Inspector {
                 (false, 0)
             };
             out.cells += hull_cells;
+            if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain {
+                let allowance = (limits.cells - out.cells).min(limits.cells_per_pair.saturating_sub(boundary_cells + source_chart_cells + hull_cells));
+                let (certificate, used) = crate::shared_boundary::closed_graph::certify(model, [a,b], allowance);
+                boundary_cells += used;
+                out.cells += used;
+                boundary = certificate.map(SharedBoundary::ClosedGraph);
+            }
             let result = if boundary.is_some()
                 || hull_disjoint
                 || volume_separation.is_some()

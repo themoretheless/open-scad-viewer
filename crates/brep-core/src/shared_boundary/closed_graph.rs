@@ -33,7 +33,15 @@ pub(crate) fn certify(
     let Some(b) = model.faces.get(faces[1]) else {
         return (None, 0);
     };
-    if faces[0] == faces[1] || !a.holes.is_empty() || !b.holes.is_empty() || max == 0 {
+    if faces[0] == faces[1]
+        || !a.holes.is_empty()
+        || !b.holes.is_empty()
+        || max == 0
+        || a.surface.periodic_u
+        || a.surface.periodic_v
+        || b.surface.periodic_u
+        || b.surface.periodic_v
+    {
         return (None, 0);
     }
     let loops = [&model.loops[a.outer].coedges, &model.loops[b.outer].coedges];
@@ -76,40 +84,12 @@ pub(crate) fn certify(
         {
             return None;
         }
-        let domain = |s: &nurbs_core::surface::Surface| {
-            [
-                [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
-                [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
-            ]
-        };
-        let same_domains = domain(&a.surface) == domain(&b.surface);
-        let mut traces = Vec::new();
-        for (side, wire) in loops.iter().enumerate() {
-            for c in wire.iter() {
-                // Original graph qualification proves identical normalized XY
-                // frames. Equal native domains therefore give identical zero
-                // equations in literal UV. Only identical full curve records
-                // share work; proximity and samples never deduplicate a trace.
-                let side = if same_domains { 0 } else { side };
-                if !traces
-                    .iter()
-                    .any(|&(curve, s)| s == side && curve == &c.pcurve)
-                {
-                    traces.push((&c.pcurve, side));
-                }
-            }
-        }
-        if used == max {
-            return None;
-        }
-        let allowance = (max - used).min(4096);
-        match original.prove_zero_traces(&traces, allowance) {
-            Ok(n) => used += n,
-            Err(_) => {
-                used += allowance;
-                return None;
-            }
-        }
+        // Joint exact lift identity already proves that every complete shared
+        // world edge lies on BOTH original surfaces. Whole-chart injectivity
+        // transfers the independently audited simple UV cycles to simple world
+        // cycles. Repeating pcurve residual algebra here would re-prove the
+        // same identity, not strengthen it. The complete original SS census
+        // therefore places those actual cycles on its unique ellipse.
         // A complete simple positive disk cycle lying on the one nonsingular
         // ellipse must be that entire ellipse. Both disk interiors are the
         // bounded ellipse interior. The original complete SS census contains
