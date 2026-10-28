@@ -35,11 +35,10 @@ fn full_partition(
     {
         return false;
     }
-    let definition = source.definition();
-    parts[0].definition()["endpoints"][0] == definition["endpoints"][0]
-        && parts[2].definition()["endpoints"][1] == definition["endpoints"][1]
-        && parts[0].definition()["endpoints"][1] == parts[1].definition()["endpoints"][0]
-        && parts[1].definition()["endpoints"][1] == parts[2].definition()["endpoints"][0]
+    parts[0].endpoints()[0].same_definition(&source.endpoints()[0])
+        && parts[2].endpoints()[1].same_definition(&source.endpoints()[1])
+        && parts[0].endpoints()[1].same_definition(&parts[1].endpoints()[0])
+        && parts[1].endpoints()[1].same_definition(&parts[2].endpoints()[0])
         && parts[0].joins(&parts[1])
         && parts[1].joins(&parts[2])
 }
@@ -81,7 +80,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 }
                 let fragments = replacement.unwrap_or(std::slice::from_ref(fragment));
                 for expected_fragment in fragments {
-                    if !matches!(wire.get(cursor),Some(ShellUse::Source(actual)) if actual.definition()==expected_fragment.definition())
+                    if !matches!(wire.get(cursor),Some(ShellUse::Source(actual)) if actual.same_definition(expected_fragment))
                     {
                         return None;
                     }
@@ -677,8 +676,10 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         // The changed profile always keeps its full positive control hull.
         // Only the complete unchanged neighbor may receive a fresh original
         // planar material bound; never substitute the selected old trim.
-        let raw_side=if ids[0]==root.face {0} else {1};
-        let report = crate::source_hull_separation::certify_shell_with_raw_side(shell,ids,raw_side,max_work)?;
+        let raw_side = if ids[0] == root.face { 0 } else { 1 };
+        let report = crate::source_hull_separation::certify_shell_with_raw_side(
+            shell, ids, raw_side, max_work,
+        )?;
         out.exact_work = report.exact_work;
         out.reason = report.reason;
         if let Some(source) = report.certificate {

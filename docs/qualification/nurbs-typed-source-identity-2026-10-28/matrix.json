@@ -1,0 +1,44 @@
+{
+  "default_native": {
+    "passed": 4204,
+    "failed": 0,
+    "ignored": 6
+  },
+  "typed_filter": {
+    "passed": 29,
+    "failed": 0
+  },
+  "minimal": {
+    "status": "incomplete",
+    "errors": 59,
+    "value_codec_errors": 58,
+    "restore_adapter_import_errors": 1
+  },
+  "architecture": {
+    "violations": 70,
+    "previous": 71,
+    "gate": "failed"
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200
+  },
+  "logs": {
+    "typed-source-final-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-source-final-full.log",
+      "sha256": "12298aefa4689292234248945d740d213d430d3ad546b763aa5d33df018192a4"
+    },
+    "typed-source-identity-regressions-r2.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-source-identity-regressions-r2.log",
+      "sha256": "06d3aad0b8d88b06d57bb2ada9e5c33975714dd08a6a44fb8c0270a64a19f58b"
+    },
+    "typed-source-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-source-minimal-check.log",
+      "sha256": "34b76364e775a68a53e60484f161ba2ad9670d60680c959dbbdd9b59853fbd7e"
+    },
+    "typed-source-architecture-r2.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-source-architecture-r2.log",
+      "sha256": "eb0c983d86bbb1de657cd8e90823ff77e246732c4454f58799de8fa17bb380c9"
+    }
+  }
+}

@@ -102,6 +102,7 @@ impl<'p, 'b> RootEndedSeam<'p, 'b> {
         &self.restricted
     }
     /// Persist authored cuts and their exact owner; carrier roots are rebuilt.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Result<value_codec::Value> {
         let end = |parameter| {
             value_codec::json!({"version":1,"kind":"owned-profile-section-end",
@@ -224,7 +225,7 @@ impl<'p, 'b> RootEndedSeam<'p, 'b> {
             let mut loops = regions[address.face].loops().to_vec();
             let source = &loops[address.wire][address.edge];
             let owned = &self.points[0].edge().uses()[side];
-            if source.definition() != owned.definition() {
+            if !source.same_definition(owned) {
                 out.reason = "profile-incident-contour-source-unproven";
                 return Ok(out);
             }
@@ -345,6 +346,7 @@ pub struct TransitionBoundary<'s, 'p, 'b> {
     rooted: [&'s RootEndedSeam<'p, 'b>; 2],
 }
 impl<'s, 'p, 'b> TransitionBoundary<'s, 'p, 'b> {
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Result<value_codec::Value> {
         Ok(
             value_codec::json!({"version":1,"kind":"owned-profile-transition-boundary",
@@ -436,7 +438,9 @@ impl<'s, 'p, 'b> TransitionBoundary<'s, 'p, 'b> {
                 || endpoint.parameter != recipe.parameters[index]
                 || endpoint.high != (rail == 1)
                 || endpoint.edge != self.rooted[rail].restricted.edge
-                || part.point.definition() != self.rooted[rail].points[index].root().definition()
+                || !part
+                    .point
+                    .same_definition(self.rooted[rail].points[index].root())
             {
                 return Ok(out);
             }
@@ -1241,9 +1245,7 @@ impl<'a, 's, 'p, 'b> TransitionFace<'a, 's, 'p, 'b> {
             orientation = Some(reverse);
             let neighbor_contour = &contours.contours[neighbor];
             let [wire, index] = neighbor_contour.middle;
-            if neighbor_contour.loops[wire][index].definition()
-                != edge.uses()[neighbor].definition()
-            {
+            if !neighbor_contour.loops[wire][index].same_definition(&edge.uses()[neighbor]) {
                 return Ok(out);
             }
             rails.push(TransitionRail {
@@ -1331,10 +1333,8 @@ impl<'f, 'a, 's, 'p, 'b> TransitionRailIncidence<'f, 'a, 's, 'p, 'b> {
             }
             for end in 0..2 {
                 let rail = if kept_descending { 1 - end } else { end };
-                let expected = self.face.boundary.rooted[rail].points[index]
-                    .root()
-                    .definition();
-                if !matches!(&contact.endpoints()[end],Endpoint::Crossing{point,role:Role::Contact} if point.definition()==expected)
+                let expected = self.face.boundary.rooted[rail].points[index].root();
+                if !matches!(&contact.endpoints()[end],Endpoint::Crossing{point,role:Role::Contact} if point.same_definition(expected))
                 {
                     out.reason = "profile-transition-section-incidence-root-unproven";
                     return Ok(out);
@@ -1397,16 +1397,13 @@ impl<'i, 'f, 'a, 's, 'p, 'b> TransitionPatchIncidence<'i, 'f, 'a, 's, 'p, 'b> {
             faces
         };
         for end in 0..2 {
-            if faces[end]
-                .exterior
-                .kept_loop()
-                .iter()
-                .map(|f| f.definition())
-                .collect::<Vec<_>>()
-                != self.retained[end]
+            if faces[end].exterior.kept_loop().len() != self.retained[end].len()
+                || !faces[end]
+                    .exterior
+                    .kept_loop()
                     .iter()
-                    .map(|f| f.definition())
-                    .collect::<Vec<_>>()
+                    .zip(&self.retained[end])
+                    .all(|(a, b)| a.same_definition(b))
             {
                 return Ok(out);
             }
@@ -1422,13 +1419,13 @@ impl<'i, 'f, 'a, 's, 'p, 'b> TransitionPatchIncidence<'i, 'f, 'a, 's, 'p, 'b> {
             for end in 0..2 {
                 let point = &root.points[end];
                 let candidates=self.retained[end].iter().filter(|fragment|fragment.surface()==original.uses()[selected].surface() && fragment.curve()==original.uses()[selected].curve()
-                    && fragment.endpoints().iter().any(|e|matches!(e,Endpoint::Crossing{point:p,role:Role::Boundary} if p.definition()==point.root().definition()))).collect::<Vec<_>>();
+                    && fragment.endpoints().iter().any(|e|matches!(e,Endpoint::Crossing{point:p,role:Role::Boundary} if p.same_definition(point.root())))).collect::<Vec<_>>();
                 if candidates.len() != 1 {
                     out.reason = "profile-outer-edge-selected-use-unproven";
                     return Ok(out);
                 }
                 let neighbors=[&contour.loops[wire][index-1],&contour.loops[wire][index+1]].into_iter().filter(|fragment|
-                    fragment.endpoints().iter().any(|e|matches!(e,Endpoint::Carrier{point:p,side} if *side==neighbor && p.definition()==point.definition()))).collect::<Vec<_>>();
+                    fragment.endpoints().iter().any(|e|matches!(e,Endpoint::Carrier{point:p,side} if *side==neighbor && p.same_definition(point)))).collect::<Vec<_>>();
                 if neighbors.len() != 1 {
                     out.reason = "profile-outer-edge-neighbor-use-unproven";
                     return Ok(out);
@@ -1579,37 +1576,64 @@ impl CutPartition<'_, '_, '_> {
     /// Transport the existing selected root through its admitted original
     /// carrier, then freshly prove both restricted compositions and endpoints.
     /// No independently rounded neighbor cutter or root parameter is authored.
-    pub fn qualify_transported_neighbor(&self, max_spans: usize, max_work: u64,
-        max_driver: usize) -> Result<NeighborPartitionReport> {
+    pub fn qualify_transported_neighbor(
+        &self,
+        max_spans: usize,
+        max_work: u64,
+        max_driver: usize,
+    ) -> Result<NeighborPartitionReport> {
         if !(1..=100000000).contains(&max_work) || max_driver > 100000 {
-            return Err(Error::new("BREP_PROFILE_CUT", "Bound transported neighbor work"));
+            return Err(Error::new(
+                "BREP_PROFILE_CUT",
+                "Bound transported neighbor work",
+            ));
         }
         let shell = self.endpoint.proposal.body.geometry().shell();
         let edge = &shell.edges()[self.endpoint.edge];
         let addresses = &shell.uses()[self.endpoint.edge];
         let side = usize::from(addresses[0].face != self.endpoint.face);
-        let transport = crate::source_carrier_point::qualify(edge,&self.point,side,max_spans)?;
-        let mut out = NeighborPartitionReport { partition:None, carrier_spans:transport.spans,
-            mapping_cells:0, exact_work:0, root_checks:0, driver_cells:0, reason:transport.reason };
-        let Some(point) = transport.point else { return Ok(out); };
-        let fragments = edge.uses()[1-side].split_at_carrier(&point,1-side)?;
+        let transport = crate::source_carrier_point::qualify(edge, &self.point, side, max_spans)?;
+        let mut out = NeighborPartitionReport {
+            partition: None,
+            carrier_spans: transport.spans,
+            mapping_cells: 0,
+            exact_work: 0,
+            root_checks: 0,
+            driver_cells: 0,
+            reason: transport.reason,
+        };
+        let Some(point) = transport.point else {
+            return Ok(out);
+        };
+        let fragments = edge.uses()[1 - side].split_at_carrier(&point, 1 - side)?;
         let ranges = crate::source_seam_tangency::ranges(edge);
         let mut halves = Vec::new();
         for piece in 0..2 {
             if out.exact_work == max_work {
-                out.reason = "profile-cut-neighbor-work-limit"; return Ok(out);
+                out.reason = "profile-cut-neighbor-work-limit";
+                return Ok(out);
             }
-            let checked = crate::source_mapped_edge::qualify(edge.world(),
-                [&self.selected[piece],&fragments[1-piece]], [ranges[side],ranges[1-side]],
-                [None,None], max_work-out.exact_work, max_driver-out.driver_cells)?;
+            let checked = crate::source_mapped_edge::qualify(
+                edge.world(),
+                [&self.selected[piece], &fragments[1 - piece]],
+                [ranges[side], ranges[1 - side]],
+                [None, None],
+                max_work - out.exact_work,
+                max_driver - out.driver_cells,
+            )?;
             out.exact_work += checked.work_used;
             out.root_checks += checked.root_checks;
             out.driver_cells += checked.driver_cells;
             out.reason = checked.reason;
-            let Some(half) = checked.edge else { return Ok(out); };
+            let Some(half) = checked.edge else {
+                return Ok(out);
+            };
             halves.push(half);
         }
-        out.partition = Some(NeighborPartition {fragments,edges:[halves.remove(0),halves.remove(0)]});
+        out.partition = Some(NeighborPartition {
+            fragments,
+            edges: [halves.remove(0), halves.remove(0)],
+        });
         out.reason = "profile-cut-transported-neighbor-qualified";
         Ok(out)
     }
@@ -1948,6 +1972,7 @@ impl<'p, 'b> CutEndpoint<'p, 'b> {
     pub fn world_bounds(&self) -> [[f64; 2]; 3] {
         self.world
     }
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
         value_codec::json!({"version":1,"kind":"owned-profile-section-end","face":self.face,
             "edge":self.edge,"axis":self.axis,"parameter":self.parameter,"highFreeEnd":self.high})
@@ -2031,8 +2056,10 @@ impl<'a> Proposal<'a> {
             .intersect(d[0], d[1])?;
         let canonical = crate::source_seam_tangency::map(edge, side, t)?.intersect(0., 1.)?;
         if !edge.maps_complete_canonical_source()
-            && !edge.covers_retained_canonical_interval([canonical.lo,canonical.hi])? {
-            out.reason="profile-cut-retained-parameter-unproven";return Ok(out);
+            && !edge.covers_retained_canonical_interval([canonical.lo, canonical.hi])?
+        {
+            out.reason = "profile-cut-retained-parameter-unproven";
+            return Ok(out);
         }
         for current in 0..2 {
             let t = crate::source_seam_tangency::inverse(edge, current, canonical)?;
@@ -2286,59 +2313,139 @@ impl<'a> Proposal<'a> {
     /// The interval covers their exact transported enclosures; it is not made
     /// from independently rounded canonical endpoint scalars.
     pub fn qualify_root_ended_seam<'p>(
-        &'p self,parts:[&CutPartition<'_, 'p,'a>;2],threshold:f64,cells:usize,spans:usize,
-    )->Result<RootEndedSeamReport<'p,'a>> {
-        if spans>100000 || !(1..=100000).contains(&cells) || !threshold.is_finite() || !(0. ..1.).contains(&threshold) {
-            return Err(Error::new("BREP_PROFILE_SEAM","Bound root-ended seam angular and carrier work"));
+        &'p self,
+        parts: [&CutPartition<'_, 'p, 'a>; 2],
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<RootEndedSeamReport<'p, 'a>> {
+        if spans > 100000
+            || !(1..=100000).contains(&cells)
+            || !threshold.is_finite()
+            || !(0. ..1.).contains(&threshold)
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Bound root-ended seam angular and carrier work",
+            ));
         }
-        let mut out=RootEndedSeamReport{seam:None,carrier_spans:0,angular:None,reason:"profile-root-seam-ownership-unproven"};
-        let ends=[parts[0].endpoint,parts[1].endpoint];
-        if ends.iter().any(|e|!std::ptr::eq(e.proposal,self))
-            || ends[0].edge!=ends[1].edge || ends[0].face!=ends[1].face
-            || ends[0].neighbor!=ends[1].neighbor || ends[0].axis!=ends[1].axis
-            || ends[0].high!=ends[1].high || ends[0].parameter==ends[1].parameter {
+        let mut out = RootEndedSeamReport {
+            seam: None,
+            carrier_spans: 0,
+            angular: None,
+            reason: "profile-root-seam-ownership-unproven",
+        };
+        let ends = [parts[0].endpoint, parts[1].endpoint];
+        if ends.iter().any(|e| !std::ptr::eq(e.proposal, self))
+            || ends[0].edge != ends[1].edge
+            || ends[0].face != ends[1].face
+            || ends[0].neighbor != ends[1].neighbor
+            || ends[0].axis != ends[1].axis
+            || ends[0].high != ends[1].high
+            || ends[0].parameter == ends[1].parameter
+        {
             return Ok(out);
         }
-        let shell=self.body.geometry().shell();let edge=&shell.edges()[ends[0].edge];
-        let side=usize::from(shell.uses()[ends[0].edge][0].face!=ends[0].face);
-        let mut points=Vec::new();
+        let shell = self.body.geometry().shell();
+        let edge = &shell.edges()[ends[0].edge];
+        let side = usize::from(shell.uses()[ends[0].edge][0].face != ends[0].face);
+        let mut points = Vec::new();
         for part in parts {
-            if out.carrier_spans==spans {out.reason="profile-root-seam-carrier-work-limit";return Ok(out);}
-            let checked=crate::source_carrier_point::qualify(edge,&part.point,side,spans-out.carrier_spans)?;
-            out.carrier_spans+=checked.spans;out.reason=checked.reason;
-            let Some(point)=checked.point else {return Ok(out);};points.push(point);
+            if out.carrier_spans == spans {
+                out.reason = "profile-root-seam-carrier-work-limit";
+                return Ok(out);
+            }
+            let checked = crate::source_carrier_point::qualify(
+                edge,
+                &part.point,
+                side,
+                spans - out.carrier_spans,
+            )?;
+            out.carrier_spans += checked.spans;
+            out.reason = checked.reason;
+            let Some(point) = checked.point else {
+                return Ok(out);
+            };
+            points.push(point);
         }
-        let ranges=[points[0].canonical_bounds(),points[1].canonical_bounds()];
-        if !(ranges[0][1]<ranges[1][0] || ranges[1][1]<ranges[0][0]) {
-            out.reason="profile-root-seam-order-unproven";return Ok(out);
+        let ranges = [points[0].canonical_bounds(), points[1].canonical_bounds()];
+        if !(ranges[0][1] < ranges[1][0] || ranges[1][1] < ranges[0][0]) {
+            out.reason = "profile-root-seam-order-unproven";
+            return Ok(out);
         }
-        let canonical=[ranges[0][0].min(ranges[1][0]),ranges[0][1].max(ranges[1][1])];
-        if out.carrier_spans==spans {out.reason="profile-root-seam-angular-work-limit";return Ok(out);}
-        let angular=self.qualify_edge_interval(ends[0].edge,canonical,threshold,cells,spans-out.carrier_spans)?;
-        out.reason=angular.angular.reason;
-        if let Some(restricted)=angular.seam {
-            out.seam=Some(RootEndedSeam{restricted,points:[points.remove(0),points.remove(0)],face:ends[0].face,axis:ends[0].axis,parameters:[ends[0].parameter,ends[1].parameter],high:ends[0].high});
-            out.reason="profile-root-ended-seam-qualified";
+        let canonical = [
+            ranges[0][0].min(ranges[1][0]),
+            ranges[0][1].max(ranges[1][1]),
+        ];
+        if out.carrier_spans == spans {
+            out.reason = "profile-root-seam-angular-work-limit";
+            return Ok(out);
         }
-        out.angular=Some(angular.angular);Ok(out)
+        let angular = self.qualify_edge_interval(
+            ends[0].edge,
+            canonical,
+            threshold,
+            cells,
+            spans - out.carrier_spans,
+        )?;
+        out.reason = angular.angular.reason;
+        if let Some(restricted) = angular.seam {
+            out.seam = Some(RootEndedSeam {
+                restricted,
+                points: [points.remove(0), points.remove(0)],
+                face: ends[0].face,
+                axis: ends[0].axis,
+                parameters: [ends[0].parameter, ends[1].parameter],
+                high: ends[0].high,
+            });
+            out.reason = "profile-root-ended-seam-qualified";
+        }
+        out.angular = Some(angular.angular);
+        Ok(out)
     }
     /// Qualify only the requested interval of an owned original carrier.
     /// UVs are freshly enclosed from both original pcurves and canonical maps.
     pub fn qualify_edge_interval<'p>(
-        &'p self,edge:usize,canonical:[f64;2],threshold:f64,cells:usize,spans:usize,
-    )->Result<RestrictedSeamReport<'p,'a>> {
-        let uses=self.body.geometry().shell().uses().get(edge)
-            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an owned interval edge"))?;
-        let mut faces=[uses[0].face,uses[1].face];
-        if self.profile(faces[0]).is_none() {faces.reverse();}
+        &'p self,
+        edge: usize,
+        canonical: [f64; 2],
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<RestrictedSeamReport<'p, 'a>> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(edge)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned interval edge"))?;
+        let mut faces = [uses[0].face, uses[1].face];
         if self.profile(faces[0]).is_none() {
-            return Err(Error::new("BREP_PROFILE_SEAM","Require an owned corrected face"));
+            faces.reverse();
         }
-        let angular=self.inspect_curved_edge_interval(faces[0],faces[1],edge,threshold,cells,spans,canonical)?;
-        let seam=if angular.aligned==Some(true) {
-            Some(RestrictedSeam{proposal:self,faces,edge,canonical,threshold,upper:angular.upper_sine_squared.unwrap()})
-        }else{None};
-        Ok(RestrictedSeamReport{seam,angular})
+        if self.profile(faces[0]).is_none() {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Require an owned corrected face",
+            ));
+        }
+        let angular = self.inspect_curved_edge_interval(
+            faces[0], faces[1], edge, threshold, cells, spans, canonical,
+        )?;
+        let seam = if angular.aligned == Some(true) {
+            Some(RestrictedSeam {
+                proposal: self,
+                faces,
+                edge,
+                canonical,
+                threshold,
+                upper: angular.upper_sine_squared.unwrap(),
+            })
+        } else {
+            None
+        };
+        Ok(RestrictedSeamReport { seam, angular })
     }
     /// Original nonlinear pcurves remain source-owned; inverse canonical maps
     /// and complete curve-span enclosures replace manually supplied UV lines.
@@ -2351,41 +2458,117 @@ impl<'a> Proposal<'a> {
         max_cells: usize,
         max_spans: usize,
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
-        self.inspect_curved_edge_interval(face,neighbor,index,threshold,max_cells,max_spans,[0.,1.])
+        self.inspect_curved_edge_interval(
+            face,
+            neighbor,
+            index,
+            threshold,
+            max_cells,
+            max_spans,
+            [0., 1.],
+        )
     }
     fn inspect_curved_edge_interval(
-        &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],
-    )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
-        self.inspect_curved_edge_interval_policy(face,neighbor,index,threshold,max_cells,max_spans,canonical,None,false)
+        &self,
+        face: usize,
+        neighbor: usize,
+        index: usize,
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+        canonical: [f64; 2],
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        self.inspect_curved_edge_interval_policy(
+            face, neighbor, index, threshold, max_cells, max_spans, canonical, None, false,
+        )
     }
-    pub(crate) fn inspect_original_neighbor_interval(&self,face:usize,neighbor:usize,index:usize,
-        threshold:f64,cells:usize,spans:usize,canonical:[f64;2],
-    )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
-        let uses=self.body.geometry().shell().uses().get(index)
-            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an owned edge"))?;
-        if face==neighbor || !uses.iter().any(|u|u.face==face) || !uses.iter().any(|u|u.face==neighbor) {
-            return Err(Error::new("BREP_PROFILE_SEAM","Require the actual incident neighbor"));
+    pub(crate) fn inspect_original_neighbor_interval(
+        &self,
+        face: usize,
+        neighbor: usize,
+        index: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+        canonical: [f64; 2],
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(index)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned edge"))?;
+        if face == neighbor
+            || !uses.iter().any(|u| u.face == face)
+            || !uses.iter().any(|u| u.face == neighbor)
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Require the actual incident neighbor",
+            ));
         }
-        self.inspect_curved_edge_interval_policy(face,neighbor,index,threshold,cells,spans,canonical,None,true)
+        self.inspect_curved_edge_interval_policy(
+            face, neighbor, index, threshold, cells, spans, canonical, None, true,
+        )
     }
     /// Diagnostic full-edge limit angles on the owned nonlinear pcurve map.
     /// This does not issue a regular seam or admit a collapsed vertex.
-    pub fn inspect_edge_pole_limit_angles(&self,face:usize,index:usize,high:bool,
-        threshold:f64,cells:usize,spans:usize)->Result<nurbs_core::normal_alignment::ProfilePathReport> {
-        let uses=self.body.geometry().shell().uses().get(index)
-            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an owned edge"))?;
-        let side=uses.iter().position(|u|u.face==face)
-            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an incident proposed face"))?;
-        if self.profile(face).is_none() || self.profile(uses[1-side].face).is_some() {
-            return Err(Error::new("BREP_PROFILE_SEAM","Require proposed face and unchanged neighbor"));
+    pub fn inspect_edge_pole_limit_angles(
+        &self,
+        face: usize,
+        index: usize,
+        high: bool,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(index)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned edge"))?;
+        let side = uses
+            .iter()
+            .position(|u| u.face == face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an incident proposed face"))?;
+        if self.profile(face).is_none() || self.profile(uses[1 - side].face).is_some() {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Require proposed face and unchanged neighbor",
+            ));
         }
-        self.inspect_curved_edge_interval_policy(face,uses[1-side].face,index,threshold,cells,spans,[0.,1.],Some(high),false)
+        self.inspect_curved_edge_interval_policy(
+            face,
+            uses[1 - side].face,
+            index,
+            threshold,
+            cells,
+            spans,
+            [0., 1.],
+            Some(high),
+            false,
+        )
     }
     fn inspect_curved_edge_interval_policy(
-        &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],pole:Option<bool>,original_neighbor:bool,
-    )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        &self,
+        face: usize,
+        neighbor: usize,
+        index: usize,
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+        canonical: [f64; 2],
+        pole: Option<bool>,
+        original_neighbor: bool,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
         use nurbs_core::{interval_eval::Interval as I, normal_alignment::ProfilePathReport};
-        if !canonical.iter().all(|x|x.is_finite()) || canonical[0]<0. || canonical[1]>1. || canonical[0]>=canonical[1]
+        if !canonical.iter().all(|x| x.is_finite())
+            || canonical[0] < 0.
+            || canonical[1] > 1.
+            || canonical[0] >= canonical[1]
             || !(1..=100000).contains(&max_cells)
             || !(1..=100000).contains(&max_spans)
             || !threshold.is_finite()
@@ -2414,7 +2597,8 @@ impl<'a> Proposal<'a> {
             reason: "profile-seam-carrier-unproven",
         };
         let regions = shell.regions().unwrap();
-        if (!edge.maps_complete_canonical_source() && !edge.covers_retained_canonical_interval(canonical)?)
+        if (!edge.maps_complete_canonical_source()
+            && !edge.covers_retained_canonical_interval(canonical)?)
             || [face, neighbor].iter().enumerate().any(|(side, &f)| {
                 !same(
                     edge.uses()[order[side]].surface(),
@@ -2427,8 +2611,8 @@ impl<'a> Proposal<'a> {
         let profile = self.profile(face).unwrap();
         // Singular literal source endpoints are explicitly inspected before
         // repeatedly subdividing an interval that contains a zero normal.
-        out.pending.push([canonical[1];2]);
-        out.pending.push([canonical[0];2]);
+        out.pending.push([canonical[1]; 2]);
+        out.pending.push([canonical[0]; 2]);
         out.reason = "profile-path-work-limit";
         let mut upper = 0_f64;
         while let Some(q) = out.pending.pop() {
@@ -2468,23 +2652,34 @@ impl<'a> Proposal<'a> {
                 out.pending.push(q);
                 return Ok(out);
             }
-            let r = if let Some(high)=pole {
-                profile.inspect_original_factored_pole_normals(edge.uses()[order[1]].surface(),rectangles,high,
-                    threshold,max_spans-out.spans)?
-            } else {match if original_neighbor {None} else {self.profile(neighbor)} {
-                Some(other) => profile.inspect_profile_normals(
-                    other,
-                    rectangles,
-                    threshold,
-                    max_spans - out.spans,
-                )?,
-                None => profile.inspect_original_normals(
+            let r = if let Some(high) = pole {
+                profile.inspect_original_factored_pole_normals(
                     edge.uses()[order[1]].surface(),
                     rectangles,
+                    high,
                     threshold,
                     max_spans - out.spans,
-                )?,
-            }};
+                )?
+            } else {
+                match if original_neighbor {
+                    None
+                } else {
+                    self.profile(neighbor)
+                } {
+                    Some(other) => profile.inspect_profile_normals(
+                        other,
+                        rectangles,
+                        threshold,
+                        max_spans - out.spans,
+                    )?,
+                    None => profile.inspect_original_normals(
+                        edge.uses()[order[1]].surface(),
+                        rectangles,
+                        threshold,
+                        max_spans - out.spans,
+                    )?,
+                }
+            };
             out.spans += r.spans;
             if r.aligned == Some(true) {
                 upper = upper.max(r.sine_squared_interval.unwrap()[1]);
@@ -2517,7 +2712,11 @@ impl<'a> Proposal<'a> {
         }
         out.aligned = Some(true);
         out.upper_sine_squared = Some(upper);
-        out.reason = if pole.is_some() {"profile-edge-factored-limit-angles-qualified"}else{"profile-path-tangent-planes-qualified"};
+        out.reason = if pole.is_some() {
+            "profile-edge-factored-limit-angles-qualified"
+        } else {
+            "profile-path-tangent-planes-qualified"
+        };
         Ok(out)
     }
     pub fn original_body(&self) -> &'a Body {
@@ -2537,6 +2736,7 @@ impl<'a> Proposal<'a> {
     }
     /// Persist source and exact factor recipes, never flattened target weights or
     /// claimed geometry certificates. Restoration must rerun all admission gates.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Result<value_codec::Value> {
         Ok(
             value_codec::json!({"version":1,"kind":"boundary-preserving-weight-profiles",
@@ -2574,73 +2774,7 @@ pub struct TransitionBoundaryReplayReport<T> {
 }
 /// Rebuild owners within one call, then inspect without exporting borrowed proof.
 /// The callback may run fresh face/shell gates while all exact owners are alive.
-pub fn with_restored_transition_boundary<'p, 'b, T, F>(
-    proposal: &'p Proposal<'b>,
-    definition: value_codec::Value,
-    limits: TransitionBoundaryReplayLimits,
-    inspect: F,
-) -> Result<TransitionBoundaryReplayReport<T>>
-where
-    F: for<'s> FnOnce(&TransitionBoundary<'s, 'p, 'b>) -> Result<T>,
-{
-    let invalid = || {
-        Error::new(
-            "BREP_PROFILE_TRANSITION_RESTORE",
-            "Require an owned transition boundary recipe and bounded replay work",
-        )
-    };
-    if definition["version"].as_u64() != Some(1)
-        || definition["kind"].as_str() != Some("owned-profile-transition-boundary")
-        || limits.controls > 1000000
-        || limits.side_cells > 100000
-        || limits.side_spans > 100000
-    {
-        return Err(invalid());
-    }
-    let recipes = definition["sides"].as_array().ok_or_else(invalid)?;
-    if recipes.len() != 2 {
-        return Err(invalid());
-    }
-    let pending = |reason| TransitionBoundaryReplayReport {
-        result: None,
-        reason,
-    };
-    let first = restore_root_ended_seam(proposal, recipes[0].clone(), limits.seam)?;
-    let Some(a) = first.seam else {
-        return Ok(pending(first.reason));
-    };
-    let second = restore_root_ended_seam(proposal, recipes[1].clone(), limits.seam)?;
-    let Some(b) = second.seam else {
-        return Ok(pending(second.reason));
-    };
-    if a.face != b.face || a.axis != b.axis || a.parameters != b.parameters || a.high == b.high {
-        return Err(invalid());
-    }
-    let profile = proposal.profile(a.face).ok_or_else(invalid)?;
-    let width = a.parameters[1] - a.parameters[0];
-    let bridge = nurbs_core::normal_alignment::ProfileSectionBridge::new(
-        profile.section(a.axis, a.parameters[0])?,
-        profile.section(a.axis, a.parameters[1])?,
-        [width; 2],
-    )?;
-    let (bridge, _) = bridge.constrain_original_rails(limits.controls)?;
-    let Some(bridge) = bridge else {
-        return Ok(pending("profile-transition-replay-rail-recipe-unproven"));
-    };
-    let first = a.qualify_transition_side(&bridge, limits.side_cells, limits.side_spans)?;
-    let Some(first) = first.side else {
-        return Ok(pending(first.reason));
-    };
-    let second = b.qualify_transition_side(&bridge, limits.side_cells, limits.side_spans)?;
-    let Some(second) = second.side else {
-        return Ok(pending(second.reason));
-    };
-    let boundary = propose_transition_boundary([&first, &second])?;
-    Ok(TransitionBoundaryReplayReport {
-        result: Some(inspect(&boundary)?),
-        reason: "profile-transition-boundary-replayed",
-    })
-}
+
 /// Replayed incident contours and their fresh common 3D carrier.
 /// This is a boundary assembly, not closed-shell or volume admission.
 pub struct RootedContourReplay<'p, 'b> {
@@ -2655,52 +2789,7 @@ pub struct RootedContourReplayReport<'p, 'b> {
     pub driver_cells: usize,
     pub reason: &'static str,
 }
-pub fn restore_incident_contours<'p, 'b>(
-    proposal: &'p Proposal<'b>,
-    definition: value_codec::Value,
-    seam_limits: RootSeamReplayLimits,
-    max_fragments: usize,
-    max_exact_work: u64,
-    max_driver_cells: usize,
-) -> Result<RootedContourReplayReport<'p, 'b>> {
-    if max_fragments > 100000 || max_exact_work > 100000000 || max_driver_cells > 100000 {
-        return Err(Error::new(
-            "BREP_PROFILE_CONTOUR_RESTORE",
-            "Bound incident contour and shared carrier replay work",
-        ));
-    }
-    let rooted = restore_root_ended_seam(proposal, definition, seam_limits)?;
-    let mut out = RootedContourReplayReport {
-        assembly: None,
-        fragments: 0,
-        exact_work: 0,
-        driver_cells: 0,
-        reason: rooted.reason,
-    };
-    let Some(seam) = rooted.seam else {
-        return Ok(out);
-    };
-    let contours = seam.propose_incident_contours(max_fragments)?;
-    out.fragments = contours.fragments;
-    out.reason = contours.reason;
-    let Some(contours) = contours.proposal else {
-        return Ok(out);
-    };
-    let carrier = seam.qualify_incident_edge(max_exact_work, max_driver_cells)?;
-    out.exact_work = carrier.work_used;
-    out.driver_cells = carrier.driver_cells;
-    out.reason = carrier.reason;
-    let Some(edge) = carrier.edge else {
-        return Ok(out);
-    };
-    out.assembly = Some(RootedContourReplay {
-        seam,
-        contours,
-        edge,
-    });
-    out.reason = "profile-incident-contours-and-carrier-replayed";
-    Ok(out)
-}
+
 #[derive(Clone, Copy)]
 pub struct RootSeamReplayLimits {
     pub cut_spans: usize,
@@ -2711,184 +2800,16 @@ pub struct RootSeamReplayLimits {
 }
 /// Re-isolate both original crossing roots and requalify shared carrier/tangency.
 /// Returned seams borrow only the proposal, never temporary decoded bounds.
-pub fn restore_root_ended_seam<'p, 'b>(
-    proposal: &'p Proposal<'b>,
-    definition: value_codec::Value,
-    limits: RootSeamReplayLimits,
-) -> Result<RootEndedSeamReport<'p, 'b>> {
-    let invalid = || {
-        Error::new(
-            "BREP_PROFILE_SEAM_RESTORE",
-            "Require an owned root-ended seam recipe and bounded replay work",
-        )
-    };
-    if definition["version"].as_u64() != Some(1)
-        || definition["kind"].as_str() != Some("owned-root-ended-profile-seam")
-        || !same_recipe(&definition["proposal"], &proposal.definition()?)
-        || limits.cut_spans > 100000
-        || limits.mapping_cells > 100000
-        || limits.seam_spans > 100000
-        || !(1..=100000).contains(&limits.angular_cells)
-        || !limits.max_sine_squared.is_finite()
-        || !(0. ..1.).contains(&limits.max_sine_squared)
-    {
-        return Err(invalid());
-    }
-    let ends = definition["ends"].as_array().ok_or_else(invalid)?;
-    if ends.len() != 2 {
-        return Err(invalid());
-    }
-    let pending = |reason| RootEndedSeamReport {
-        seam: None,
-        carrier_spans: 0,
-        angular: None,
-        reason,
-    };
-    let first = restore_cut_endpoint(proposal, ends[0].clone(), limits.cut_spans)?;
-    let Some(a) = first.endpoint else {
-        return Ok(pending(first.reason));
-    };
-    let second = restore_cut_endpoint(
-        proposal,
-        ends[1].clone(),
-        limits.cut_spans.saturating_sub(first.spans),
-    )?;
-    let Some(b) = second.endpoint else {
-        return Ok(pending(second.reason));
-    };
-    if limits.mapping_cells == 0 {
-        return Ok(pending("profile-root-seam-mapping-work-limit"));
-    }
-    let first = a.split_source_use(limits.mapping_cells)?;
-    let Some(pa) = first.partition else {
-        return Ok(pending(first.reason));
-    };
-    let remaining_mapping = limits.mapping_cells.saturating_sub(first.mapping_cells);
-    if remaining_mapping == 0 {
-        return Ok(pending("profile-root-seam-mapping-work-limit"));
-    }
-    let second = b.split_source_use(remaining_mapping)?;
-    let Some(pb) = second.partition else {
-        return Ok(pending(second.reason));
-    };
-    proposal.qualify_root_ended_seam(
-        [&pa, &pb],
-        limits.max_sine_squared,
-        limits.angular_cells,
-        limits.seam_spans,
-    )
-}
+
 /// Restore an authored section end by fresh original-pcurve enclosure.
-pub fn restore_cut_endpoint<'p, 'b>(
-    proposal: &'p Proposal<'b>,
-    definition: value_codec::Value,
-    max_spans: usize,
-) -> Result<CutEndpointReport<'p, 'b>> {
-    use value_codec::Deserialize;
-    let invalid = || {
-        Error::new(
-            "BREP_PROFILE_CUT_RESTORE",
-            "Require an owned profile section-end recipe",
-        )
-    };
-    if definition["version"].as_u64() != Some(1)
-        || definition["kind"].as_str() != Some("owned-profile-section-end")
-    {
-        return Err(invalid());
-    }
-    proposal.cut_endpoint(
-        usize::from_value(definition["face"].clone()).map_err(|_| invalid())?,
-        usize::from_value(definition["axis"].clone()).map_err(|_| invalid())?,
-        f64::from_value(definition["parameter"].clone()).map_err(|_| invalid())?,
-        bool::from_value(definition["highFreeEnd"].clone()).map_err(|_| invalid())?,
-        usize::from_value(definition["edge"].clone()).map_err(|_| invalid())?,
-        max_spans,
-    )
-}
+
 /// Reconstruct an authored two-section Hermite expression on this proposal.
 /// The recipe binds source profiles, section axes and exact binary64 scales;
 /// regularity, sewing, embedding and wall admission remain fresh later gates.
-pub fn restore_section_bridge<'p, 'b>(
-    proposal: &'p Proposal<'b>,
-    definition: value_codec::Value,
-) -> Result<nurbs_core::normal_alignment::ProfileSectionBridge<'p, 'b, 'p, 'b>> {
-    use value_codec::Deserialize;
-    let invalid = || {
-        Error::new(
-            "BREP_PROFILE_BRIDGE_RESTORE",
-            "Require an owned two-section profile bridge recipe",
-        )
-    };
-    if definition["version"].as_u64() != Some(1)
-        || definition["kind"].as_str() != Some("exact-profile-section-bridge")
-        || !same_recipe(&definition["proposal"], &proposal.definition()?)
-    {
-        return Err(invalid());
-    }
-    let rows = definition["sections"].as_array().ok_or_else(invalid)?;
-    if rows.len() != 2 {
-        return Err(invalid());
-    }
-    let section = |row: &value_codec::Value| {
-        let face = usize::from_value(row["face"].clone()).map_err(|_| invalid())?;
-        let axis = usize::from_value(row["axis"].clone()).map_err(|_| invalid())?;
-        let parameter = f64::from_value(row["parameter"].clone()).map_err(|_| invalid())?;
-        proposal
-            .profile(face)
-            .ok_or_else(invalid)?
-            .section(axis, parameter)
-    };
-    let scales = <[f64; 2]>::from_value(definition["scales"].clone()).map_err(|_| invalid())?;
-    nurbs_core::normal_alignment::ProfileSectionBridge::new(
-        section(&rows[0])?,
-        section(&rows[1])?,
-        scales,
-    )
-}
+
 /// Rebuild exact retained profiles against a freshly admitted original body.
 /// Serialized diagnostic fields never replace native preparation or budgets.
-pub fn restore<'a>(
-    body: &'a Body,
-    definition: value_codec::Value,
-    limits: Limits,
-) -> Result<Report<'a>> {
-    use value_codec::Deserialize;
-    let invalid = || {
-        Error::new(
-            "BREP_PROFILE_BODY_RESTORE",
-            "Require an owned original body and a valid exact profile recipe",
-        )
-    };
-    if definition["version"].as_u64() != Some(1)
-        || definition["kind"].as_str() != Some("boundary-preserving-weight-profiles")
-        || !same_recipe(&definition["originalBody"], &body.definition()?)
-    {
-        return Err(invalid());
-    }
-    let tolerance =
-        f64::from_value(definition["positionTolerance"].clone()).map_err(|_| invalid())?;
-    if !tolerance.is_finite()
-        || tolerance < 0.
-        || tolerance.to_bits() != limits.position_tolerance.to_bits()
-    {
-        return Err(invalid());
-    }
-    let rows = definition["profiles"].as_array().ok_or_else(invalid)?;
-    let face_count = body.geometry().shell().faces().len();
-    if rows.is_empty() || rows.len() > face_count {
-        return Err(invalid());
-    }
-    let specs = rows
-        .iter()
-        .map(|row| {
-            Ok(FaceSpec {
-                face: usize::from_value(row["face"].clone()).map_err(|_| invalid())?,
-                anchor: <[usize; 2]>::from_value(row["anchor"].clone()).map_err(|_| invalid())?,
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    prepare(body, &specs, limits)
-}
+
 pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result<Report<'a>> {
     let regions = body
         .geometry()
@@ -3059,13 +2980,15 @@ pub use assembled_shell::{ExpressionSegmentCandidate, ExpressionSegmentReport};
 pub use assembled_shell::{ExpressionVolumeQualification, OrientedExpressionVolume};
 pub use assembled_shell::{TransitionCoordinateContact, TransitionCoordinateReport};
 
+#[cfg(feature = "codec")]
 #[path = "source_profile_shell_replay.rs"]
 mod shell_replay;
+#[cfg(feature = "codec")]
 pub use shell_replay::{ShellReplayLimits, ShellReplayReport, with_restored_expression_shell};
 
+#[cfg(feature = "codec")]
 #[path = "source_profile_recipe_identity.rs"]
 mod recipe_identity;
-use recipe_identity::same_recipe;
 
 pub use assembled_shell::{
     ExpressionDisplayCell, ExpressionDisplayLimits, ExpressionDisplayReport,
@@ -3086,3 +3009,11 @@ pub use assembled_shell::{
 };
 
 pub use assembled_shell::{AdaptiveInteriorLimits, InteriorBisectionReport};
+
+#[cfg(feature = "codec")]
+mod serialization;
+#[cfg(feature = "codec")]
+pub use serialization::{
+    restore, restore_cut_endpoint, restore_incident_contours, restore_root_ended_seam,
+    restore_section_bridge, with_restored_transition_boundary,
+};

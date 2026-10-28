@@ -19,6 +19,14 @@ pub struct SourcePoint {
     world_box: [[f64; 2]; 3],
 }
 impl SourcePoint {
+    /// Original equations and selector only. Cached roots/bounds are not identity
+    /// or renewed authority. No geometric approximation or serialization occurs.
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.surface == other.surface
+            && self.boundary == other.boundary
+            && self.contact == other.contact
+            && self.selector == other.selector
+    }
     pub fn surface(&self) -> &Surface {
         &self.surface
     }
@@ -193,6 +201,28 @@ mod tests {
         let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
         let b = Curve::from_polyline(vec![vec![0., 1.], vec![1., 0.]]).unwrap();
         (surface, a, b)
+    }
+    #[test]
+    fn typed_identity_matches_wire_and_excludes_cached_enclosures() {
+        let (surface, boundary, contact) = fixture();
+        let point = qualify(&surface, &boundary, &contact, [[0., 1.]; 2], 16)
+            .unwrap()
+            .point
+            .unwrap();
+        let mut cached = point.clone();
+        cached.root_parameters = [[0.25, 0.75]; 2];
+        cached.uv_box = [[0., 1.]; 2];
+        cached.world_box = [[-100., 100.]; 3];
+        assert!(point.same_definition(&cached));
+        assert_eq!(point.definition(), cached.definition());
+        let mut changed = point.clone();
+        changed.selector[0][0] = 0.25;
+        assert!(!point.same_definition(&changed));
+        assert_ne!(point.definition(), changed.definition());
+        changed = point.clone();
+        changed.contact.control_points[0][0] = 0.125;
+        assert!(!point.same_definition(&changed));
+        assert_ne!(point.definition(), changed.definition());
     }
     #[test]
     fn immutable_source_point_roundtrip_and_forged_claims_are_rechecked() {

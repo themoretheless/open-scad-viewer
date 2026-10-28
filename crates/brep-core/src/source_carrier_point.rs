@@ -13,6 +13,11 @@ pub struct Point {
     world: [[f64; 2]; 3],
 }
 impl Point {
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.source_side == other.source_side
+            && self.edge.same_definition(&other.edge)
+            && self.root.same_definition(&other.root)
+    }
     pub fn edge(&self) -> &SharedEdge {
         &self.edge
     }
@@ -89,7 +94,7 @@ impl Restriction<'_> {
         self.half == 0
             && next.half == 1
             && self.side == next.side
-            && self.point.definition() == next.point.definition()
+            && self.point.same_definition(next.point)
     }
     pub fn definition(&self) -> value_codec::Value {
         value_codec::json!({"version":1,"kind":"carrier-root-restriction",
@@ -154,11 +159,11 @@ pub(crate) fn same_mapped_endpoint(
     }
     let own_index = 1 - other;
     let other_side = match ends[other] {
-        Endpoint::Carrier { point, side } if point.definition() == carrier.definition() => *side,
+        Endpoint::Carrier { point, side } if point.same_definition(carrier) => *side,
         Endpoint::Crossing {
             point,
             role: Role::Boundary,
-        } if point.definition() == carrier.root.definition() => carrier.source_side,
+        } if point.same_definition(&carrier.root) => carrier.source_side,
         _ => return false,
     };
     if own == other_side {

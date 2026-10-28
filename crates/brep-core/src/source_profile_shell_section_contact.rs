@@ -78,11 +78,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         let ShellUse::Source(contact) = &owners[0].loops[address.wire][address.edge] else {
             return Ok(out);
         };
-        if contact.definition()
-            != self.assembly.patch.retained[end]
-                .last()
-                .unwrap()
-                .definition()
+        if !contact.same_definition(self.assembly.patch.retained[end].last().unwrap())
             || contact.surface() != profile.source()
         {
             return Ok(out);
@@ -123,7 +119,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         for endpoint in 0..2 {
             let rail = if descending { 1 - endpoint } else { endpoint };
             let point = &boundary.rooted[rail].points[end];
-            if !matches!(&contact.endpoints()[endpoint],Endpoint::Crossing {point:p,role:Role::Contact} if p.definition()==point.root().definition())
+            if !matches!(&contact.endpoints()[endpoint],Endpoint::Crossing {point:p,role:Role::Contact} if p.same_definition(point.root()))
             {
                 return Ok(out);
             }

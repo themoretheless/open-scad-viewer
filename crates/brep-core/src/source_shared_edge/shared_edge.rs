@@ -6,9 +6,20 @@ pub struct SharedEdge {
     uses: [Fragment; 2],
     reversed: [bool; 2],
     ranges: Option<[[[f64; 2]; 2]; 2]>,
-    recipe: value_codec::Value,
+    recipe: Recipe,
 }
 impl SharedEdge {
+    /// Same original definitions and proposal inputs, never proximity or cached
+    /// direction/range/interval equality. Mirrors the existing wire identity.
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.world == other.world
+            && self.recipe == other.recipe
+            && self
+                .uses
+                .iter()
+                .zip(&other.uses)
+                .all(|(a, b)| a.same_definition(b))
+    }
     pub fn world(&self) -> &Curve {
         &self.world
     }
@@ -47,13 +58,13 @@ impl SharedEdge {
     }
     /// Sufficient retained-domain coverage, checked before an inverse could
     /// clip away unsupported canonical tails. Interval overlap is not authority.
-    pub(crate) fn covers_retained_canonical_interval(&self,canonical:[f64;2])->Result<bool> {
+    pub(crate) fn covers_retained_canonical_interval(&self, canonical: [f64; 2]) -> Result<bool> {
         use nurbs_core::interval_eval::Interval as I;
-        let q=I::new(canonical[0],canonical[1])?;
+        let q = I::new(canonical[0], canonical[1])?;
         for side in 0..2 {
-            let t=crate::source_seam_tangency::inverse_unclipped(self,side,q)?;
-            let ends=self.uses()[side].parameter_bounds();
-            if t.lo<ends[0][1].min(ends[1][1]) || t.hi>ends[0][0].max(ends[1][0]) {
+            let t = crate::source_seam_tangency::inverse_unclipped(self, side, q)?;
+            let ends = self.uses()[side].parameter_bounds();
+            if t.lo < ends[0][1].min(ends[1][1]) || t.hi > ends[0][0].max(ends[1][0]) {
                 return Ok(false);
             }
         }
@@ -69,14 +80,18 @@ impl SharedEdge {
             uses: [uses[0].fragment().clone(), uses[1].fragment().clone()],
             reversed: [uses[0].reversed(), uses[1].reversed()],
             ranges: Some([uses[0].range(), uses[1].range()]),
-            recipe: value_codec::json!({"kind":"mapped","ranges":[uses[0].range(),uses[1].range()],"planes":planes,"candidates":candidates}),
+            recipe: Recipe::Mapped {
+                ranges: [uses[0].range(), uses[1].range()],
+                planes,
+                candidates,
+            },
         }
     }
     /// Original definitions and proposal inputs only; restoration recomputes authority.
     pub fn definition(&self) -> value_codec::Value {
         use value_codec::Serialize;
         value_codec::json!({"version":1,"world":self.world.to_value(),
-            "uses":self.uses.each_ref().map(|f|f.definition()),"recipe":self.recipe.clone()})
+            "uses":self.uses.each_ref().map(|f|f.definition()),"recipe":self.recipe.definition()})
     }
     /// Direction of each directed fragment relative to the canonical world curve.
     pub fn reversed(&self) -> [bool; 2] {
@@ -173,6 +188,21 @@ fn qualify_impl(
         return Err(Error::new(
             "BREP_SOURCE_SHARED_EDGE",
             "Choose bounded exact identity work",
+        ));
+    }
+    for cutter in cutters.iter().flatten() {
+        cutter.validate()?;
+    }
+    if planes
+        .iter()
+        .flatten()
+        .flatten()
+        .flatten()
+        .any(|v| !v.is_finite())
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_SHARED_EDGE",
+            "Original plane proposals must be finite",
         ));
     }
     world.validate()?;
@@ -384,8 +414,11 @@ fn qualify_impl(
         uses: [uses[0].clone(), uses[1].clone()],
         reversed: effective,
         ranges: None,
-        recipe: value_codec::json!({"kind":"direct","worldReversed":world_reversed,
-            "cutters":cutters.map(|c|c.cloned()),"planes":planes}),
+        recipe: Recipe::Direct {
+            world_reversed,
+            cutters: cutters.map(|c| c.cloned()),
+            planes,
+        },
     });
     out.reason = "source-shared-world-edge-qualified";
     Ok(out)
@@ -407,14 +440,21 @@ pub(crate) fn common_plane_root(
     unique_world_plane(world, plane, out, max_work, max_driver_cells)
 }
 pub(crate) fn common_plane_root_in_domain(
-    world:&Curve,plane:[[f64;3];3],points:[(&crate::source_contact_point::SourcePoint,Role);2],
-    domain:[f64;2],out:&mut Report,max_work:u64,max_driver_cells:usize,
-)->Result<bool> {
-    out.root_checks+=1;
-    for (point,role) in points {
-        if !source_point_cut_plane(point,role,plane,out,max_work)? {return Ok(false);}
+    world: &Curve,
+    plane: [[f64; 3]; 3],
+    points: [(&crate::source_contact_point::SourcePoint, Role); 2],
+    domain: [f64; 2],
+    out: &mut Report,
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<bool> {
+    out.root_checks += 1;
+    for (point, role) in points {
+        if !source_point_cut_plane(point, role, plane, out, max_work)? {
+            return Ok(false);
+        }
     }
-    unique_world_plane_domain(world,plane,Some(domain),out,max_work,max_driver_cells)
+    unique_world_plane_domain(world, plane, Some(domain), out, max_work, max_driver_cells)
 }
 pub(crate) fn source_point_cut_plane(
     point: &crate::source_contact_point::SourcePoint,
@@ -482,16 +522,27 @@ pub(crate) fn unique_world_plane(
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<bool> {
-    unique_world_plane_domain(world,plane,None,out,max_work,max_driver_cells)
+    unique_world_plane_domain(world, plane, None, out, max_work, max_driver_cells)
 }
 pub(crate) fn unique_world_plane_domain(
-    world:&Curve,plane:[[f64;3];3],domain:Option<[f64;2]>,out:&mut Report,max_work:u64,max_driver_cells:usize,
-)->Result<bool> {
-    if let Some(domain)=domain {
-        if out.driver_cells==max_driver_cells {return Ok(false);}
-        let report=nurbs_core::curve_axis_driver::certify_plane_domain(
-            world,plane,domain,max_driver_cells-out.driver_cells)?;
-        out.driver_cells+=report.visited;
+    world: &Curve,
+    plane: [[f64; 3]; 3],
+    domain: Option<[f64; 2]>,
+    out: &mut Report,
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<bool> {
+    if let Some(domain) = domain {
+        if out.driver_cells == max_driver_cells {
+            return Ok(false);
+        }
+        let report = nurbs_core::curve_axis_driver::certify_plane_domain(
+            world,
+            plane,
+            domain,
+            max_driver_cells - out.driver_cells,
+        )?;
+        out.driver_cells += report.visited;
         return Ok(report.monotonic_proven);
     }
     // Restricting an oblique plane to the original world curve must give a
@@ -551,9 +602,13 @@ pub(crate) fn unique_world_plane_domain(
     // original coordinates vary. Keep the exact coordinate path above for
     // endpoint-zero derivatives and use only its remaining driver budget.
     if out.driver_cells < max_driver_cells && !world.periodic {
-        let report=nurbs_core::curve_axis_driver::certify_plane_domain(
-            world,plane,world.domain(),max_driver_cells-out.driver_cells)?;
-        out.driver_cells+=report.visited;
+        let report = nurbs_core::curve_axis_driver::certify_plane_domain(
+            world,
+            plane,
+            world.domain(),
+            max_driver_cells - out.driver_cells,
+        )?;
+        out.driver_cells += report.visited;
         return Ok(report.monotonic_proven);
     }
     Ok(false)

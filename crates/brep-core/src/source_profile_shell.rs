@@ -406,12 +406,11 @@ fn key(a: Address) -> (usize, usize, usize) {
     (a.face, a.wire, a.edge)
 }
 fn locate(faces: &[ShellFace], ids: &[usize], fragment: &Fragment) -> Option<Address> {
-    let definition = fragment.definition();
     let mut found = None;
     for &face in ids {
         for (wire, loop_) in faces[face].loops.iter().enumerate() {
             for (edge, use_) in loop_.iter().enumerate() {
-                if matches!(use_,ShellUse::Source(f) if f.definition()==definition) {
+                if matches!(use_,ShellUse::Source(f) if f.same_definition(fragment)) {
                     if found.is_some() {
                         return None;
                     }
