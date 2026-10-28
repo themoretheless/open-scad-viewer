@@ -63,7 +63,8 @@ mod policy;
 use endpoint_loop::owned_boundary;
 mod closed;
 pub use closed::{
-    ClosedCutLimits, ClosedPartition, HolePartition, partition_closed, partition_same_hole,
+    BridgePartition, BridgePath, ClosedCutLimits, ClosedPartition, HolePartition,
+    partition_bridges, partition_closed, partition_same_hole,
 };
 
 pub struct Segment {

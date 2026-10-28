@@ -1,0 +1,98 @@
+{
+  "base_commit": "9dbe822a28d8b26b9024af30f11dfce073f42296",
+  "scope": "Native saved-path two-bridge actual face partitions and continuous ordinary shared-support STEP pcurve association; source-owned SS bridge dispatch remains open",
+  "sources": {
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/brep-core/src/face_cut.rs": "b338e2ecd749ada830a7a0755b024092d834490b6210f6cf36b667ed7bde517c",
+    "crates/brep-core/src/face_cut/closed.rs": "65e17cdf0c8b3948ebb513939fa6f9f66ff90dba9601f938bfa03bbdedfdd876",
+    "crates/brep-core/src/face_cut/closed/bridge.rs": "5ca2f84ed9bc689c8df950b4d1e555dc7c6efede3e444f474ec8e52687d32ffc",
+    "crates/brep-core/src/face_cut/closed/bridge/prepare.rs": "205c323bd9192599b51da4f5d8b4adeec981c200f1f3f737b4a703d7fb442ec3",
+    "crates/brep-core/src/face_cut/closed/bridge/tests.rs": "51fc43525a8a86c779fdaa55771ed0781927a576ef3d51d802b4ccdf68b26615",
+    "crates/brep-core/src/step_interchange_v3.rs": "99469c4a614bbe0bfa37964f81db35a411ffc98d8a3f3fc58ba7849fca6c2143",
+    "crates/brep-core/src/step_interchange_v3/pcurve_binding.rs": "28d451c07c08be58a75de11df6abcebf3752134f8487763fa05d333bbd81e8a5"
+  },
+  "logs": {
+    "/tmp/osv-plan-loop-bridges-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-loop-bridges-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-loop-bridges-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-loop-bridges-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-loop-bridges-brep-final.log": "50d75ea1dd9d41d8aa47e0d57560b0efc24afe63968986b826c67e67bd447d57",
+    "/tmp/osv-plan-loop-bridges-brep-full.log": "697c2809a998aa87b95ca42311160fa53508a0e57b3820fea26043519f3d01c5",
+    "/tmp/osv-plan-loop-bridges-focused.log": "1270ab5f891800e7f16c576f8474ae7028ec7101450f340f45b92ad7f34ec137",
+    "/tmp/osv-plan-loop-bridges-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "results": {
+    "initial_bridge_focused": {
+      "passed": 5,
+      "failed": 1,
+      "exit_code": 101,
+      "reason": "Actual edited two-rational-bridge body export passed; STEP /9 import refused old edge #321 on shared support #29 with 4.000e0 correspondence error; use-order association did not follow redistributed loops"
+    },
+    "first_full_after_continuous_binding": {
+      "passed": 1972,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "final_full_after_shared_candidate_budget_and_seam_capacity_refinement": {
+      "passed": 1974,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "bridge_cases": 6,
+    "pcurve_binding_cases": 4,
+    "api": {
+      "modules": 239,
+      "catalogue": 200,
+      "exit_code": 0
+    },
+    "format": {
+      "exit_code": 0
+    },
+    "architecture": {
+      "violations": 71,
+      "exit_code": 1,
+      "limits_unchanged": true
+    }
+  },
+  "ignored": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+  ],
+  "cases": [
+    "two outer-hole bridges create two positive actual outer cycles",
+    "two hole-hole bridges create one positive cap and one negative merged hole",
+    "both native path directions and either path order",
+    "remaining holes assigned by complete region proofs to either sector",
+    "literal source geometry, policy and sewing mark preservation",
+    "crossed, gapped, malformed and repeated slit paths refuse",
+    "shared cells and pair exhaustion preserve the input",
+    "edited two-rational-bridge body STEP /9 round trip, complete certificates, watertight topology, native world [10,14] and both pcurve [-3,5] clocks",
+    "ordinary association order independence and consumed-candidate accounting",
+    "sub-tolerance and differing-native-clock ambiguity refuses",
+    "a continuously unresolved competitor is not discarded to authorize a unique binding",
+    "one matching seam pcurve cannot be reused for a second oriented use"
+  ],
+  "remaining": [
+    "source-owned SS two-bridge dispatch with original root/branch ownership",
+    "general bridge graphs and unresolved source junctions",
+    "automatic Boolean material roles, sewing and Solid admission",
+    "general rational/multispan SS source supports, contacts and coincidences",
+    "central G2 corner, offsets/shells, simplification",
+    "WASM/Rush/UI and edited-body STEP delivery for all new contracts",
+    "architecture and distribution release gates"
+  ],
+  "limits": {
+    "bridge_total_segments": 256,
+    "face_cells": 1000000,
+    "face_pairs": 100000,
+    "step_import_independent_world_threshold": 1e-05,
+    "continuous_binding_cells_shared_across_candidates": 100000
+  },
+  "no_existing_limits_raised": true
+}

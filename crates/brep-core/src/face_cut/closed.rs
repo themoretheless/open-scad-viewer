@@ -1,6 +1,8 @@
 //! Divide a retained face by a certified simple closed saved-curve contour.
 use super::*;
+mod bridge;
 mod hole;
+pub use bridge::{BridgePartition, BridgePath, partition_bridges};
 pub use hole::{HolePartition, partition_same_hole};
 mod proof;
 mod reference;

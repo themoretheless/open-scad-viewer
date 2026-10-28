@@ -22,6 +22,7 @@ use brep_topology::{CoedgeTrim, Vertex};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
+mod pcurve_binding;
 
 pub const STEP_INTERCHANGE_V3_CAPABILITY: &str = "step-interchange/3";
 pub const STEP_INTERCHANGE_V4_CAPABILITY: &str = "step-interchange/4";
@@ -1627,6 +1628,7 @@ struct DirectBuilder<'a> {
     edges: Vec<Edge>,
     edge_map: BTreeMap<usize, usize>,
     seam_use: BTreeMap<(usize, usize), usize>,
+    pcurve_use: BTreeMap<(usize, usize), BTreeSet<usize>>,
     loops: Vec<Loop>,
     loop_entity: Vec<usize>,
     faces: Vec<Face>,
@@ -1696,60 +1698,12 @@ impl<'a> DirectBuilder<'a> {
                 self.scale,
             )?
         };
-        let mut matching = Vec::new();
-        for p in list(&ga[2], "SURFACE_CURVE pcurves")? {
-            let (_, pa) = call(self.entities, one_ref(p, "SURFACE_CURVE pcurve")?)?;
-            if pa.len() != 3 {
-                return Err(refuse("Malformed PCURVE"));
-            }
-            if one_ref(&pa[1], "PCURVE surface")? == surface_id {
-                let mut curve_id = one_ref(&pa[2], "PCURVE reference_to_curve")?;
-                if self.ap242_composition {
-                    let (reference_type, reference_args) = call(self.entities, curve_id)?;
-                    if reference_type != "DEFINITIONAL_REPRESENTATION" || reference_args.len() != 3
-                    {
-                        return Err(refuse(
-                            "AP242 PCURVE reference_to_curve must be a DEFINITIONAL_REPRESENTATION",
-                        ));
-                    }
-                    let items = list(&reference_args[1], "DEFINITIONAL_REPRESENTATION items")?;
-                    if items.len() != 1 {
-                        return Err(refuse(
-                            "PCURVE definitional representation must contain one curve",
-                        ));
-                    }
-                    curve_id = one_ref(&items[0], "DEFINITIONAL_REPRESENTATION curve")?;
-                }
-                matching.push(if self.ap242_composition {
-                    curve_v5(
-                        self.entities,
-                        curve_id,
-                        2,
-                        1.,
-                        self.interior_point_selectors,
-                    )?
-                } else {
-                    curve(self.entities, curve_id, 2, 1.)?
-                });
-            }
-        }
-        if matching.is_empty() {
-            return Err(refuse("No PCURVE corresponds to ADVANCED_FACE surface"));
-        }
-        let mut pc = if gty == "SEAM_CURVE" || matching.len() > 1 {
-            let use_index = self.seam_use.entry((id, surface_id)).or_insert(0);
-            if *use_index >= matching.len() {
-                return Err(refuse("Surface curve has fewer pcurves than oriented uses"));
-            }
-            let selected = matching[*use_index].clone();
-            *use_index += 1;
-            selected
-        } else {
-            matching.pop().unwrap()
-        };
+        let mut matching = self.matching_pcurves(&ga[2], surface_id)?;
         if !same_sense {
             c3 = c3.reverse()?;
-            pc = pc.reverse()?;
+            for pc in &mut matching {
+                *pc = pc.reverse()?;
+            }
         }
         let curve_domain = c3.domain();
         let curve_start = c3.evaluate(curve_domain[0])?.point;
@@ -1777,22 +1731,27 @@ impl<'a> DirectBuilder<'a> {
                 .control_points
                 .iter()
                 .all(|point| point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b));
-        verify_correspondence(
-            &c3,
-            &pc,
-            surface,
-            reversed,
-            self.whole_domain_proofs,
-            degenerate
-                && self.interior_point_selectors
-                && certify_periodic_surface(surface)?.is_none(),
-        )
-        .map_err(|e| {
-            refuse(format!(
-                "EDGE_CURVE #{id} on surface #{surface_id}: {}",
-                e.message
-            ))
-        })?;
+        let require_exact = degenerate
+            && self.interior_point_selectors
+            && certify_periodic_surface(surface)?.is_none();
+        let pc = self
+            .select_pcurve(
+                id,
+                surface_id,
+                gty,
+                matching,
+                &c3,
+                surface,
+                reversed,
+                degenerate,
+                require_exact,
+            )
+            .map_err(|e| {
+                refuse(format!(
+                    "EDGE_CURVE #{id} on surface #{surface_id}: {}",
+                    e.message
+                ))
+            })?;
         if degenerate && !self.allow_degenerate {
             return Err(refuse(
                 "Pole/degenerate edges are typed-refused before STEP /6",
@@ -1845,11 +1804,7 @@ impl<'a> DirectBuilder<'a> {
                 reversed,
                 surface,
             )?;
-            coedges.push(Coedge::new(
-                edge,
-                reversed,
-                pcurve,
-            ));
+            coedges.push(Coedge::new(edge, reversed, pcurve));
         }
         if coedges.is_empty() {
             return Err(refuse("EDGE_LOOP cannot be empty"));
@@ -2100,6 +2055,7 @@ fn build_direct_roots(
         edges: vec![],
         edge_map: BTreeMap::new(),
         seam_use: BTreeMap::new(),
+        pcurve_use: BTreeMap::new(),
         loops: vec![],
         loop_entity: vec![],
         faces: vec![],
@@ -3165,11 +3121,10 @@ fn import_step_direct(
         let mut aggregate_map = Vec::new();
         for occurrence in occurrences {
             let scale = length_scale(&entities, &occurrence.linked, false)?;
-            let tolerance_mm = uncertainty_mm(&entities, &occurrence.linked)?
-                .unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
-            aggregate_tolerance = Some(
-                aggregate_tolerance.map_or(tolerance_mm, |current| current.min(tolerance_mm)),
-            );
+            let tolerance_mm =
+                uncertainty_mm(&entities, &occurrence.linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
+            aggregate_tolerance =
+                Some(aggregate_tolerance.map_or(tolerance_mm, |current| current.min(tolerance_mm)));
             let (mut component, map) = build_direct_roots(
                 &entities,
                 &occurrence.bodies,
@@ -3197,8 +3152,7 @@ fn import_step_direct(
         (aggregate, aggregate_map)
     } else {
         let scale = length_scale(&entities, &linked, true)?;
-        let tolerance_mm =
-            uncertainty_mm(&entities, &linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
+        let tolerance_mm = uncertainty_mm(&entities, &linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
         let placement = reachable_transform(&entities, &linked, scale, false)?;
         let (mut model, map) = build_direct_roots(
             &entities,
