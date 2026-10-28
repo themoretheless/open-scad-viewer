@@ -6,11 +6,12 @@ use nurbs_core::ss_intersection::{
 mod cuts;
 pub use cuts::{
     CutNode, CutPartitionLimits, CutRepresentative, CutRepresentativeLimits, OpenPathStep,
-    OpenSSFaceLimits, OpenSSPairSide, OpenSSPathLimits, OpenSSPathRequest, OpenSSRootGuard,
-    OpenSSSegment, PartitionedCutVertex, QualifiedCutPartitions, QualifiedCutRepresentatives,
-    QualifiedOpenSSFace, QualifiedOpenSSPair, QualifiedOpenSSPath, partition_cut_representatives,
-    partition_open_ss_pair, partition_open_ss_path, qualify_cut_representatives,
-    qualify_open_ss_path,
+    OpenSSFaceLimits, OpenSSNetworkCut, OpenSSNetworkPort, OpenSSPairSide, OpenSSPathLimits,
+    OpenSSPathRequest, OpenSSRootGuard, OpenSSSegment, PartitionedCutVertex,
+    QualifiedCutPartitions, QualifiedCutRepresentatives, QualifiedOpenSSFace,
+    QualifiedOpenSSNetwork, QualifiedOpenSSPair, QualifiedOpenSSPath,
+    partition_cut_representatives, partition_open_ss_network, partition_open_ss_pair,
+    partition_open_ss_path, qualify_cut_representatives, qualify_open_ss_path,
 };
 #[cfg(test)]
 mod tests;

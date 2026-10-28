@@ -91,6 +91,7 @@ pub fn partition_open_ss_pair<'s, 'i, 'p, 'r, 'a>(
         let r = apply::construct(
             path,
             side,
+            path.input.source.roots.faces[side].1,
             &models[slot],
             endpoints[side],
             limits,

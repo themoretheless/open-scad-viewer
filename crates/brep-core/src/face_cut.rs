@@ -58,7 +58,7 @@ pub use fiber_network::{
     trim_fiber_and_cap,
 };
 
-mod endpoint_loop;
+pub(crate) mod endpoint_loop;
 mod policy;
 use endpoint_loop::owned_boundary;
 mod closed;

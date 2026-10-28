@@ -1,6 +1,6 @@
 //! Resolve literal endpoint topology without assuming the original outer loop.
 use crate::Model;
-pub(super) fn owned_boundary(
+pub(crate) fn owned_boundary(
     source: &Model,
     face: usize,
     endpoints: [usize; 2],

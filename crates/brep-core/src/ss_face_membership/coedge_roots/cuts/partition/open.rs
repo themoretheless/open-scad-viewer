@@ -2,7 +2,11 @@
 use super::*;
 mod apply;
 mod geometry;
+mod network;
 mod pair;
+pub use network::{
+    OpenSSNetworkCut, OpenSSNetworkPort, QualifiedOpenSSNetwork, partition_open_ss_network,
+};
 pub use pair::{OpenSSPairSide, QualifiedOpenSSPair, partition_open_ss_pair};
 mod route;
 pub use apply::{OpenSSFaceLimits, QualifiedOpenSSFace, partition_open_ss_path};

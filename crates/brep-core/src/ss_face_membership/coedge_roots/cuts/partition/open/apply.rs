@@ -99,6 +99,7 @@ pub fn partition_open_ss_path<'s, 'i, 'p, 'r, 'a>(
     let result = construct(
         path,
         path.request.side,
+        path.input.source.roots.faces[path.request.side].1,
         source,
         endpoints,
         limits,
@@ -131,6 +132,7 @@ pub(super) struct Construction {
 pub(super) fn construct(
     path: &QualifiedOpenSSPath<'_, '_, '_, '_>,
     side: usize,
+    face: usize,
     source: &Model,
     endpoints: [usize; 2],
     limits: OpenSSFaceLimits,
@@ -138,21 +140,49 @@ pub(super) fn construct(
     pairs: &mut usize,
     operations: &mut usize,
 ) -> Result<Construction> {
-    let face = path.input.source.roots.faces[side].1;
+    construct_range(
+        path,
+        side,
+        face,
+        source,
+        endpoints,
+        0..path.segments.len(),
+        limits,
+        cells,
+        pairs,
+        operations,
+    )
+}
+pub(super) fn construct_range(
+    path: &QualifiedOpenSSPath<'_, '_, '_, '_>,
+    side: usize,
+    face: usize,
+    source: &Model,
+    endpoints: [usize; 2],
+    range: std::ops::Range<usize>,
+    limits: OpenSSFaceLimits,
+    cells: &mut usize,
+    pairs: &mut usize,
+    operations: &mut usize,
+) -> Result<Construction> {
+    let saved = path
+        .segments
+        .get(range)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| invalid("Need a nonempty qualified SS segment range"))?;
     if *cells == limits.cells || *pairs == limits.pairs {
         return Err(unproven(
             "No actual SS face trim construction budget remains",
         ));
     }
-    let segments: Vec<_> = path
-        .segments
+    let segments: Vec<_> = saved
         .iter()
         .map(|s| crate::face_cut::Segment {
             curve: s.curve.clone(),
             pcurve: s.pcurves[side].clone(),
         })
         .collect();
-    spend(operations, limits.operations, path.segments.len())?;
+    spend(operations, limits.operations, saved.len())?;
     let result = crate::face_cut::partition_with_shared_limits(
         source,
         face,
@@ -175,7 +205,7 @@ pub(super) fn construct(
     let mut vertices = vec![endpoints[0]];
     for (i, &edge) in result.edges.iter().enumerate() {
         let e = &model.edges[edge];
-        if e.curve != path.segments[i].curve || e.vertices[0] != *vertices.last().unwrap() {
+        if e.curve != saved[i].curve || e.vertices[0] != *vertices.last().unwrap() {
             return Err(unproven(
                 "Actual SS cut lost its qualified source curve or directed ports",
             ));
@@ -194,9 +224,9 @@ pub(super) fn construct(
     }
     for (i, &v) in vertices.iter().enumerate() {
         let p = if i == 0 {
-            &path.segments[0].curve.control_points[0]
+            &saved[0].curve.control_points[0]
         } else {
-            path.segments[i - 1].curve.control_points.last().unwrap()
+            saved[i - 1].curve.control_points.last().unwrap()
         };
         if model.vertices[v].point.as_slice() != p {
             return Err(unproven("Actual SS cut changed a canonical path vertex"));

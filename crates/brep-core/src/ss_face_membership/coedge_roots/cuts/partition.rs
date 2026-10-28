@@ -4,8 +4,9 @@ use crate::edge_partition::PcurveCut;
 use nurbs_core::surface::Surface;
 mod open;
 pub use open::{
-    OpenPathStep, OpenSSFaceLimits, OpenSSPairSide, OpenSSPathLimits, OpenSSPathRequest,
-    OpenSSRootGuard, OpenSSSegment, QualifiedOpenSSFace, QualifiedOpenSSPair, QualifiedOpenSSPath,
+    OpenPathStep, OpenSSFaceLimits, OpenSSNetworkCut, OpenSSNetworkPort, OpenSSPairSide,
+    OpenSSPathLimits, OpenSSPathRequest, OpenSSRootGuard, OpenSSSegment, QualifiedOpenSSFace,
+    QualifiedOpenSSNetwork, QualifiedOpenSSPair, QualifiedOpenSSPath, partition_open_ss_network,
     partition_open_ss_pair, partition_open_ss_path, qualify_open_ss_path,
 };
 mod proof;
