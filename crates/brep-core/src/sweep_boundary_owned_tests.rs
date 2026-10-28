@@ -696,3 +696,5 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
     let mut omitted=source.clone();omitted.trims.pop();
     assert!(matches!(construct_with_ideal(&sweep,&[4,4],5,[&omitted,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap(),Attempt::Refused(_)));
 }
+
+mod weighted;

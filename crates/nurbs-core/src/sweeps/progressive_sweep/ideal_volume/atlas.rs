@@ -9,6 +9,7 @@
 //! the owner has independently established continuity across the source knots.
 use super::{cell::Enclosed, *};
 use std::collections::BTreeMap;
+mod weighted;
 
 fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     let mut p = [[I::point(0.); 3]; 3];
@@ -29,15 +30,22 @@ fn frobenius_upper(m:[[I;3];3])->Result<f64>{
     let values=m.iter().flatten().copied().collect::<Vec<_>>();
     Ok(crate::distance_bounds::box_distance(&values,&[I::point(0.);9])?.1)
 }
+/// Two sufficient whole-interval proofs under one fixed positive coordinate
+/// scale: verified weighted infinity residual, then the Frobenius bound.
+/// Rounded proposals authorize neither branch without outward verification.
+fn uniformly_invertible(columns:[V3;3])->Result<bool>{
+    let Some(scale)=coordinate_scale(columns) else{return Ok(false);};
+    let a=scaled(columns,scale)?;
+    let Some(r)=inverse_proposal(a) else{return Ok(false);};
+    if weighted::certify(a,r)? {return Ok(true);}
+    frobenius_invertible(a,r)
+}
 /// ALL matrices A in the original whole-hull interval box satisfy
 /// ||I-R A S||2 <= ||I-R Ac||F + ||R||2 ||A S-Ac||F < 1.
 /// Neumann's theorem makes EVERY such matrix invertible, including any
 /// averaged Jacobian. R/Ac/S are only rounded proposals; all residuals, Gram
 /// bounds and perturbations are independently enclosed with outward arithmetic.
-fn uniformly_invertible(columns:[V3;3])->Result<bool>{
-    let Some(scale)=coordinate_scale(columns) else{return Ok(false);};
-    let a=scaled(columns,scale)?;
-    let Some(r)=inverse_proposal(a) else{return Ok(false);};
+fn frobenius_invertible(a:[V3;3],r:[[f64;3];3])->Result<bool>{
     let center=a.map(|col|col.map(|x|crate::distance_bounds::midpoint(x.lo,x.hi)));
     let mut perturb=[[I::point(0.);3];3];let mut residual=perturb;let mut gram=perturb;
     for i in 0..3 {for j in 0..3 {
