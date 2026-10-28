@@ -5,7 +5,10 @@ mod arithmetic;
 mod partition;
 use arithmetic::*;
 pub use partition::{
-    CutPartitionLimits, PartitionedCutVertex, QualifiedCutPartitions, partition_cut_representatives,
+    CutPartitionLimits, OpenPathStep, OpenSSFaceLimits, OpenSSPathLimits, OpenSSPathRequest,
+    OpenSSRootGuard, OpenSSSegment, PartitionedCutVertex, QualifiedCutPartitions,
+    QualifiedOpenSSFace, QualifiedOpenSSPath, partition_cut_representatives,
+    partition_open_ss_path, qualify_open_ss_path,
 };
 #[cfg(test)]
 mod tests;

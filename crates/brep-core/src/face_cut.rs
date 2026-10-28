@@ -368,12 +368,13 @@ fn audit(
     cells: &mut usize,
     pairs: &mut usize,
     max: usize,
+    max_pairs: usize,
 ) -> Result<Option<bool>> {
-    if max - *cells < 2 || *pairs == 10000 {
+    if max - *cells < 2 || *pairs == max_pairs {
         return Err(unproven("Shared trim budget exhausted"));
     }
     let stage = ((max - *cells) / 2).min(100000);
-    let r = nurbs_core::trim_region_audit::inspect(loops, uv, 10000 - *pairs, stage, stage)?;
+    let r = nurbs_core::trim_region_audit::inspect(loops, uv, max_pairs - *pairs, stage, stage)?;
     *cells += r.cells + r.domain_cells;
     *pairs += r.pairs;
     if r.valid.is_none() {
@@ -423,10 +424,32 @@ fn partition_with_budget(
     max_cells: usize,
     max_exact: u64,
 ) -> Result<Partition> {
+    partition_with_shared_limits(
+        source,
+        face_id,
+        endpoints,
+        path,
+        tolerance_uv,
+        max_cells,
+        max_exact,
+        10000,
+    )
+}
+pub(crate) fn partition_with_shared_limits(
+    source: &Model,
+    face_id: usize,
+    endpoints: [usize; 2],
+    path: &[Segment],
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_exact: u64,
+    max_pairs: usize,
+) -> Result<Partition> {
     source.validate()?;
     if !source.persistent_naming_complete()
         || !(1..=256).contains(&path.len())
         || !(1..=1000000).contains(&max_cells)
+        || !(1..=10000).contains(&max_pairs)
         || !tolerance_uv.is_finite()
         || tolerance_uv <= 0.
         || endpoints[0] == endpoints[1]
@@ -480,7 +503,7 @@ fn partition_with_budget(
             tolerance_uv,
             ClosedCutLimits {
                 cells: max_cells,
-                pairs: 10000,
+                pairs: max_pairs,
             },
         )?;
         return Ok(Partition {
@@ -580,6 +603,7 @@ fn partition_with_budget(
         &mut cells,
         &mut pairs,
         max_cells,
+        max_pairs,
     )? != Some(true)
     {
         return Err(unproven(
@@ -587,7 +611,15 @@ fn partition_with_budget(
         ));
     }
     for region in &regions {
-        if audit(region, tolerance_uv, &mut cells, &mut pairs, max_cells)? != Some(true) {
+        if audit(
+            region,
+            tolerance_uv,
+            &mut cells,
+            &mut pairs,
+            max_cells,
+            max_pairs,
+        )? != Some(true)
+        {
             return Err(unproven(
                 "Cut sectors are not both proven simple positive trim regions",
             ));
@@ -600,7 +632,14 @@ fn partition_with_budget(
         for side in 0..2 {
             let mut trial = regions[side].clone();
             trial.push(h.clone());
-            valid[side] = audit(&trial, tolerance_uv, &mut cells, &mut pairs, max_cells)?;
+            valid[side] = audit(
+                &trial,
+                tolerance_uv,
+                &mut cells,
+                &mut pairs,
+                max_cells,
+                max_pairs,
+            )?;
         }
         let side = match valid {
             [Some(true), Some(false)] => 0,
