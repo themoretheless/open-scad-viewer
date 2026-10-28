@@ -285,3 +285,7 @@ Affine/mapped и projective Shell::requalify повторно допускают
 ## Native повторный допуск полного Body · 28.10.2026
 
 Affine/mapped и projective Body::requalify заново проверяет оболочку, embedding/контакты и объём; inverse-shear допускается заново по исходным axes/coefficient. Подменённые volume/orientation-кэши не дают разрешения, бюджеты фаз сохранены. Default четыре библиотеки: 4208 прошли, 0 отказов, 6 пропусков; изменённый incidence-модуль после очистки guard: 13/13; публичные native сценарии без codec: 2/2. Минимальный unit-test target пока не собирается: 456 ошибок вместо 468. Новая общая Boolean/Solid-геометрия и остальные требования пяти направлений не объявляются завершёнными. [Протокол](../qualification/nurbs-native-body-requalification-2026-10-28/README.md).
+
+## Разделение проверок native Body и wire payload · 28.10.2026
+
+Capped-canal и incidence-тесты проверяют объём, ориентацию, Model/STEP, provenance и отказы по бюджету native-путём; прежние serialized-payload проверки сохранены при codec. Default четыре библиотеки: 4208 прошли, 0 отказов, 6 пропусков. Минимальный unit-test target не собирается: 412 ошибок вместо 456, в primary diagnostics этих двух модулей ошибок нет. Все ограничения общего плана остаются. Следующий основной геометрический рубеж — точный guard исходного graph body и Boolean authoring из квалифицированных замкнутых SS-разбиений; допусковый canonical_graph_frame_cell его не заменяет. [Проверки и границы](../qualification/nurbs-body-unit-separation-2026-10-28/README.md).

@@ -2891,7 +2891,7 @@ mod tests {
                     let refined =
                         crate::source_root_refinement::qualify(point, 1e-7, 16, 10000).unwrap();
                     let proof = refined.refinement.expect(refined.reason);
-                    assert_eq!(proof.original().definition(), point.definition());
+                    assert!(proof.original().same_definition(point));
                     assert!(proof.diameter_bound()[1] <= 1e-7);
                 }
             }
@@ -2901,6 +2901,7 @@ mod tests {
                 embedding.exact_work,
                 embedding.spans
             );
+            #[cfg(feature="codec")]
             assert_eq!(
                 body.definition().unwrap()["inverseShear"],
                 value_codec::json!({"axes":[0,2],"coefficient":0.25})
@@ -2951,6 +2952,8 @@ mod tests {
             )
             .unwrap();
             let endpoints = prepared.prepared.expect(prepared.reason);
+            assert!(endpoints.belongs_to(&body));
+            #[cfg(feature="codec")]
             assert_eq!(endpoints.original(), &body.definition().unwrap());
             assert_eq!(endpoints.vertices().len(), 5);
             assert_eq!(endpoints.restrictions().len(), 7);
@@ -3008,6 +3011,8 @@ mod tests {
             if let Ok(path) = std::env::var("CAD_SOURCE_CURVED_STEP_OUTPUT") {
                 std::fs::write(path, step.text).unwrap();
             }
+            #[cfg(feature="codec")]
+            {
             let definition = body.definition().unwrap();
             let restored =
                 crate::source_body_restore::restore(definition.clone(), replay_body_limits())
@@ -3045,6 +3050,7 @@ mod tests {
                     .body()
                     .is_none()
             );
+            }
 
             return;
         }
@@ -3287,10 +3293,7 @@ mod tests {
         for (face, region) in shell.regions().unwrap().iter().enumerate() {
             assert_eq!(region.source_loop_indices(), &[0]);
             for (i, edge) in region.loops()[0].iter().enumerate() {
-                assert_eq!(
-                    edge.definition(),
-                    shell.faces()[face][0].edges()[i].definition()
-                );
+                assert!(edge.same_definition(&shell.faces()[face][0].edges()[i]));
             }
         }
         assert_eq!(shell.edges().len(), 7);
@@ -3351,19 +3354,20 @@ mod tests {
         let body = volume.body.unwrap();
         assert!(crate::source_body_model::convert(&body, 1e-7).is_err());
         let source_model = crate::source_body_topology::convert(&body, 1e-7, 14, 14).unwrap();
+        #[cfg(feature="codec")]
         assert_eq!(source_model.definition(), &body.definition().unwrap());
         let indexed = source_model.topology();
         assert_eq!(indexed.vertices.len(), 5);
         assert_eq!(indexed.edges.len(), 7);
         for (i,edge) in indexed.edges.iter().enumerate() {
             let crate::source_body_topology::Carrier::Edge(restriction) = &edge.curve else { panic!("Unexpected pole"); };
-            assert_eq!(restriction.definition(), body.edge_restriction(i).unwrap().definition());
+            assert!(restriction.edge().same_definition(body.edge_restriction(i).unwrap().edge()));
         }
         for (face,wires) in body.geometry().shell().faces().iter().enumerate() {
             for (wire,source) in wires.iter().enumerate() {
                 let loop_index = if wire == 0 { indexed.faces[face].outer } else { indexed.faces[face].holes[wire-1] };
                 for (edge,fragment) in source.edges().iter().enumerate() {
-                    assert_eq!(indexed.loops[loop_index].coedges[edge].pcurve.definition(), fragment.definition());
+                    assert!(indexed.loops[loop_index].coedges[edge].pcurve.same_definition(fragment));
                 }
             }
         }
@@ -3409,6 +3413,7 @@ mod tests {
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());
+        #[cfg(feature="codec")]
         if mapped {
             if let Some(path)=std::env::var_os("CAD_MAPPED_ROOT_BODY_FIXTURE_OUTPUT") {
                 let template=std::env::var_os("CAD_MAPPED_ROOT_BODY_FIXTURE_TEMPLATE").unwrap();
@@ -3417,6 +3422,7 @@ mod tests {
                 std::fs::write(path,value_codec::to_string(&request).unwrap()).unwrap();
             }
         }
+        #[cfg(feature="codec")]
         if irrational {
             if let Some(path) = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_OUTPUT") {
                 let template = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_TEMPLATE").unwrap();
