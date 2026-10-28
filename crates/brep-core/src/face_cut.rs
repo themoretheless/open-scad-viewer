@@ -9,10 +9,14 @@ use nurbs_core::{
 
 #[path = "face_cut/retention_network.rs"]
 mod retention_network;
-pub use retention_network::{FaceRetention, RetentionNetwork, RetentionRegion, plan_retention_network};
+pub use retention_network::{
+    FaceRetention, RetentionNetwork, RetentionRegion, plan_retention_network,
+};
 #[path = "face_cut/rooted_retention.rs"]
 mod rooted_retention;
-pub use rooted_retention::{RootEnd, RootedCut, RootedFace, RootedRetention, plan_rooted_retention};
+pub use rooted_retention::{
+    RootEnd, RootedCut, RootedFace, RootedRetention, plan_rooted_retention,
+};
 #[path = "face_cut/intersection_curve.rs"]
 mod intersection_curve;
 pub use intersection_curve::{IntersectionCurve, generate_intersection_curve};
@@ -53,6 +57,9 @@ pub use fiber_network::{
     FiberCap, FiberCapRequest, FiberFaceRequest, FiberNetwork, partition_fiber_network,
     trim_fiber_and_cap,
 };
+
+mod closed;
+pub use closed::{ClosedCutLimits, ClosedPartition, partition_closed};
 
 pub struct Segment {
     pub curve: Curve,

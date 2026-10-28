@@ -8,6 +8,11 @@ use nurbs_core::{
     trim_domain::Location,
     trim_region_audit,
 };
+mod closed;
+pub use closed::{
+    ClosedBranchFaces, ClosedBranchLimits, ClosedSourceEdge, QualifiedClosedBranches,
+    partition_closed_branches,
+};
 mod coedge_roots;
 #[cfg(test)]
 mod tests;
