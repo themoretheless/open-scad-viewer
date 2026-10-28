@@ -1,0 +1,43 @@
+{
+  "default_check": "passed",
+  "native_libraries": {
+    "passed": 4207,
+    "failed": 0,
+    "ignored": 6
+  },
+  "minimal_build": {
+    "status": "incomplete",
+    "errors": 55,
+    "previous": 59,
+    "codec_errors": 54,
+    "restore_adapter_import_errors": 1
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "logs": {
+    "typed-region-default-check-r2.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-region-default-check-r2.log",
+      "sha256": "b3f53d3ce068d180c935c8c80ab102cd6de0be39e203079a5fd404b2b47e55dd"
+    },
+    "typed-region-final-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-region-final-full.log",
+      "sha256": "e2eecac341a54a6cf437f7250a70f86658d3618bd4395e9779627756a7720d71"
+    },
+    "typed-region-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-region-minimal-check.log",
+      "sha256": "899d594fb794d24893e560e28512b78cd1f44bf6db9ba7436650092e44e05117"
+    },
+    "typed-region-final-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-region-final-architecture.log",
+      "sha256": "eb0c983d86bbb1de657cd8e90823ff77e246732c4454f58799de8fa17bb380c9"
+    }
+  }
+}

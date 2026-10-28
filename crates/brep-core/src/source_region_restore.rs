@@ -1,22 +1,12 @@
 //! Replay original region construction; serialized outcomes never admit material.
+pub use crate::source_contour_proposal::ReplayLimits as Limits;
 use crate::{
     source_contour_proposal::{self, SourceRegion},
     trimmed_face_recipe::{Boundary, Limits as RegionLimits},
 };
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use value_codec::{Deserialize, Serialize, Value, json};
-pub struct Limits {
-    /// Audit limits apply independently to every replay step.
-    pub region: RegionLimits,
-    pub search_cells: usize,
-    pub point_checks: usize,
-    pub mapping_cells: usize,
-    pub driver_cells: usize,
-    pub membership_cells: usize,
-    pub controls: usize,
-    pub winding_cells: usize,
-    pub steps: usize,
-}
+
 fn error(message: &str) -> Error {
     Error::new("BREP_SOURCE_REGION_RESTORE", message)
 }
@@ -203,6 +193,18 @@ pub(crate) fn assert_replay(region: &SourceRegion) {
     let encoded = value_codec::to_string(&region.definition()).unwrap();
     let value: Value = value_codec::from_str(&encoded).unwrap();
     let replay = restore(value, &test_limits()).unwrap();
+    let native = region.requalify(&test_limits()).unwrap();
+    assert_eq!(native.definition(), replay.definition());
+    assert_eq!(native.chart_winding(), replay.chart_winding());
+    assert_eq!(native.whole_chart_material(), replay.whole_chart_material());
+    assert_eq!(native.source_loop_indices(), replay.source_loop_indices());
+    assert!(
+        native
+            .loops()
+            .iter()
+            .zip(replay.loops())
+            .all(|(a, b)| a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.same_definition(b)))
+    );
     assert_eq!(replay.definition(), region.definition());
     assert_eq!(replay.chart_winding(), region.chart_winding());
     assert_eq!(replay.whole_chart_material(), region.whole_chart_material());

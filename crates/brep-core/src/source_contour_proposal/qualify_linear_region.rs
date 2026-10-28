@@ -266,7 +266,14 @@ pub fn qualify_linear_region(
             .map(|&i| loops[i].clone())
             .collect::<Vec<_>>();
         out.region = Some(SourceRegion {
-            recipe: crate::source_region_restore::cut_definition(context,"linear",surface,wires,contact,[loop_index,start_edge,end_edge],tolerance_uv,target_width,driver_axis),
+            recipe: Recipe::Cut {
+                original: Original::new(context, surface, wires, tolerance_uv),
+                kind: CutKind::Linear,
+                contact: contact.clone(),
+                address: [loop_index, start_edge, end_edge],
+                target_width,
+                axis: driver_axis,
+            },
             chart_winding: winding,
             whole_chart: false,
             loops: qualified.clone(),
@@ -412,7 +419,14 @@ pub fn qualify_curved_region(
         .map(|&i| loops[i].clone())
         .collect::<Vec<_>>();
     out.region = Some(SourceRegion {
-        recipe: crate::source_region_restore::cut_definition(context,"curved",surface,wires,contact,[loop_index,start_edge,end_edge],tolerance_uv,target_width,driver_axis),
+        recipe: Recipe::Cut {
+            original: Original::new(context, surface, wires, tolerance_uv),
+            kind: CutKind::Curved,
+            contact: contact.clone(),
+            address: [loop_index, start_edge, end_edge],
+            target_width,
+            axis: driver_axis,
+        },
         chart_winding: out.interior.proposal.search.search.original.region.winding[0].unwrap(),
         whole_chart: false,
         loops: qualified.clone(),

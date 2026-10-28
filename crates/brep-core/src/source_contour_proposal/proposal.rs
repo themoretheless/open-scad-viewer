@@ -269,10 +269,13 @@ pub struct SourceRegion {
     pub(super) whole_chart: bool,
     pub(super) loops: Vec<Vec<Fragment>>,
     pub(super) source_loop_indices: Vec<usize>,
-    pub(super) recipe: value_codec::Value,
+    pub(super) recipe: Recipe,
 }
 impl SourceRegion {
-    pub fn definition(&self) -> value_codec::Value { self.recipe.clone() }
+    #[cfg(feature = "codec")]
+    pub fn definition(&self) -> value_codec::Value {
+        self.recipe.definition()
+    }
     /// Material orientation relative to the unchanged original UV chart.
     pub fn chart_winding(&self) -> i32 {
         self.chart_winding
@@ -371,7 +374,7 @@ pub fn qualify_original_region(
             })
         });
     out.region = Some(SourceRegion {
-        recipe: crate::source_region_restore::original_definition(context,surface,wires,tolerance_uv),
+        recipe: Recipe::Original(Original::new(context, surface, wires, tolerance_uv)),
         whole_chart,
         chart_winding: out.audit.region.winding[0].unwrap(),
         loops,
@@ -395,21 +398,44 @@ impl SourceRegion {
             .get(loop_index)
             .and_then(|w| w.get(edge_index))
             .ok_or_else(|| Error::new("BREP_SOURCE_REGION", "Unknown source boundary address"))?;
-        let mut out=self.partition_boundary(loop_index,edge_index,edge.split_at(point,role)?)?;
-        out.recipe=value_codec::json!({"version":1,"kind":"splitRoot","parent":self.definition(),
-            "address":[loop_index,edge_index],"point":point.definition(),"role":match role {Role::Boundary=>"boundary",Role::Contact=>"contact"}});
+        let mut out =
+            self.partition_boundary(loop_index, edge_index, edge.split_at(point, role)?)?;
+        out.recipe = Recipe::SplitRoot {
+            parent: Box::new(self.recipe.clone()),
+            address: [loop_index, edge_index],
+            point: point.clone(),
+            role,
+        };
         Ok(out)
     }
     /// Preserve the qualified region while partitioning an original boundary
     /// at an explicit parameter. This never approximates a crossing root.
-    pub fn split_boundary_parameter(&self,loop_index:usize,edge_index:usize,t:f64) -> Result<Self> {
-        let edge=self.loops.get(loop_index).and_then(|w|w.get(edge_index))
-            .ok_or_else(||Error::new("BREP_SOURCE_REGION","Unknown source boundary address"))?;
-        let mut out=self.partition_boundary(loop_index,edge_index,edge.split_at_parameter(t)?)?;
-        out.recipe=value_codec::json!({"version":1,"kind":"splitParameter","parent":self.definition(),"address":[loop_index,edge_index],"parameter":t});
+    pub fn split_boundary_parameter(
+        &self,
+        loop_index: usize,
+        edge_index: usize,
+        t: f64,
+    ) -> Result<Self> {
+        let edge = self
+            .loops
+            .get(loop_index)
+            .and_then(|w| w.get(edge_index))
+            .ok_or_else(|| Error::new("BREP_SOURCE_REGION", "Unknown source boundary address"))?;
+        let mut out =
+            self.partition_boundary(loop_index, edge_index, edge.split_at_parameter(t)?)?;
+        out.recipe = Recipe::SplitParameter {
+            parent: Box::new(self.recipe.clone()),
+            address: [loop_index, edge_index],
+            parameter: t,
+        };
         Ok(out)
     }
-    fn partition_boundary(&self,loop_index:usize,edge_index:usize,parts:[Fragment;2]) -> Result<Self> {
+    fn partition_boundary(
+        &self,
+        loop_index: usize,
+        edge_index: usize,
+        parts: [Fragment; 2],
+    ) -> Result<Self> {
         let mut out = self.clone();
         out.loops[loop_index].splice(edge_index..edge_index + 1, parts);
         if out.loops[loop_index].len() > 256 {
