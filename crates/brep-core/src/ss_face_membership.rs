@@ -19,11 +19,12 @@ mod tests;
 pub use coedge_roots::{
     CoedgeBoundaryRole, CoedgeRootAddress, CoedgeRootEvent, CoedgeRootLimits, CutNode,
     CutPartitionLimits, CutRepresentative, CutRepresentativeLimits, OpenPathStep, OpenSSFaceLimits,
-    OpenSSPathLimits, OpenSSPathRequest, OpenSSRootGuard, OpenSSSegment, PartitionedCutVertex,
-    QualifiedCoedgeRoots, QualifiedCutPartitions, QualifiedCutRepresentatives,
-    QualifiedFacePairRoots, QualifiedOpenSSFace, QualifiedOpenSSPath,
-    partition_cut_representatives, partition_open_ss_path, qualify_coedge_roots,
-    qualify_cut_representatives, qualify_open_ss_path,
+    OpenSSPairSide, OpenSSPathLimits, OpenSSPathRequest, OpenSSRootGuard, OpenSSSegment,
+    PartitionedCutVertex, QualifiedCoedgeRoots, QualifiedCutPartitions,
+    QualifiedCutRepresentatives, QualifiedFacePairRoots, QualifiedOpenSSFace, QualifiedOpenSSPair,
+    QualifiedOpenSSPath, partition_cut_representatives, partition_open_ss_pair,
+    partition_open_ss_path, qualify_coedge_roots, qualify_cut_representatives,
+    qualify_open_ss_path,
 };
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {

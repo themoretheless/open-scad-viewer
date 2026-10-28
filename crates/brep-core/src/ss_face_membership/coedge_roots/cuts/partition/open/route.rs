@@ -1,5 +1,5 @@
 use super::*;
-fn anchor(
+pub(super) fn anchor(
     input: &QualifiedCutPartitions<'_, '_, '_>,
     node: usize,
     side: usize,

@@ -2,6 +2,8 @@
 use super::*;
 mod apply;
 mod geometry;
+mod pair;
+pub use pair::{OpenSSPairSide, QualifiedOpenSSPair, partition_open_ss_pair};
 mod route;
 pub use apply::{OpenSSFaceLimits, QualifiedOpenSSFace, partition_open_ss_path};
 use geometry::*;

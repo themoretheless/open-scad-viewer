@@ -439,6 +439,47 @@ fn literal_common_boundaries_anchor_both_actual_sides_to_the_same_world_path() {
     assert_eq!(b.models()[0], input.models[0]);
     a.reverify().unwrap();
     b.reverify().unwrap();
+    let pair = partition_open_ss_pair(&first, Default::default()).unwrap();
+    assert_eq!(pair.models()[0], a.models()[0]);
+    assert_eq!(pair.models()[1], b.models()[1]);
+    pair.reverify().unwrap();
+    assert!(
+        partition_open_ss_pair(
+            &first,
+            OpenSSFaceLimits {
+                operations: pair.operations() - 1,
+                ..Default::default()
+            }
+        )
+        .is_err()
+    );
+    let mut snapshot = pair.models().to_vec();
+    snapshot[0].vertices[0].point[0] += 1.;
+    assert_ne!(snapshot.as_slice(), pair.models());
+    pair.reverify().unwrap();
+    let reverse = qualify_open_ss_path(&input, request(&input, true), Default::default()).unwrap();
+    partition_open_ss_pair(&reverse, Default::default())
+        .unwrap()
+        .reverify()
+        .unwrap();
+    for limits in [
+        OpenSSFaceLimits {
+            cells: 1,
+            ..Default::default()
+        },
+        OpenSSFaceLimits {
+            pairs: 1,
+            ..Default::default()
+        },
+        OpenSSFaceLimits {
+            operations: 1,
+            ..Default::default()
+        },
+    ] {
+        assert!(partition_open_ss_pair(&first, limits).is_err());
+    }
+    assert_eq!(input.models()[0].faces.len(), 1);
+    assert_eq!(input.models()[1].faces.len(), 1);
 }
 #[test]
 fn one_model_keeps_the_other_selected_face_and_shell_unchanged() {
@@ -493,6 +534,20 @@ fn one_model_keeps_the_other_selected_face_and_shell_unchanged() {
         assert_eq!(result.models()[0].loops[wire], input.models[0].loops[wire]);
     }
     result.reverify().unwrap();
+    let pair = partition_open_ss_pair(&path, Default::default()).unwrap();
+    assert_eq!(pair.models().len(), 1);
+    assert_eq!(pair.models()[0].faces.len(), 4);
+    assert_eq!(pair.sides()[0].model, pair.sides()[1].model);
+    assert_ne!(pair.sides()[0].edges, pair.sides()[1].edges);
+    for &f in &pair.sides()[0].faces {
+        assert_eq!(pair.models()[0].faces[f], result.models()[0].faces[f]);
+        for w in std::iter::once(result.models()[0].faces[f].outer)
+            .chain(result.models()[0].faces[f].holes.iter().copied())
+        {
+            assert_eq!(pair.models()[0].loops[w], result.models()[0].loops[w]);
+        }
+    }
+    pair.reverify().unwrap();
     assert_eq!(m, before);
 }
 
@@ -566,6 +621,7 @@ fn endpoints_on_different_operands_still_have_a_complete_source_geometry_path() 
         .err()
         .unwrap();
     assert!(error.message.contains("network"));
+    assert!(partition_open_ss_pair(&path, Default::default()).is_err());
     assert_eq!(input.models()[0].faces.len(), 1);
     assert_eq!(input.models()[1].faces.len(), 1);
 }

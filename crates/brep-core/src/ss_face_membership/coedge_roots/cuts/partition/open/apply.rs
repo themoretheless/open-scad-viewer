@@ -96,8 +96,50 @@ pub fn partition_open_ss_path<'s, 'i, 'p, 'r, 'a>(
     path.reverify()?;
     let slot = path.input.side_model[path.request.side];
     let source = &path.input.models[slot];
-    let face = path.input.source.roots.faces[path.request.side].1;
-    if cells == limits.cells || pairs == limits.pairs {
+    let result = construct(
+        path,
+        path.request.side,
+        source,
+        endpoints,
+        limits,
+        &mut cells,
+        &mut pairs,
+        &mut operations,
+    )?;
+    let mut models = path.input.models.clone();
+    models[slot] = result.model;
+    Ok(QualifiedOpenSSFace {
+        path,
+        limits,
+        models,
+        model: slot,
+        faces: result.faces,
+        edges: result.edges,
+        vertices: result.vertices,
+        cells,
+        pairs,
+        operations,
+    })
+}
+
+pub(super) struct Construction {
+    pub model: Model,
+    pub faces: [usize; 2],
+    pub edges: Vec<usize>,
+    pub vertices: Vec<usize>,
+}
+pub(super) fn construct(
+    path: &QualifiedOpenSSPath<'_, '_, '_, '_>,
+    side: usize,
+    source: &Model,
+    endpoints: [usize; 2],
+    limits: OpenSSFaceLimits,
+    cells: &mut usize,
+    pairs: &mut usize,
+    operations: &mut usize,
+) -> Result<Construction> {
+    let face = path.input.source.roots.faces[side].1;
+    if *cells == limits.cells || *pairs == limits.pairs {
         return Err(unproven(
             "No actual SS face trim construction budget remains",
         ));
@@ -107,28 +149,28 @@ pub fn partition_open_ss_path<'s, 'i, 'p, 'r, 'a>(
         .iter()
         .map(|s| crate::face_cut::Segment {
             curve: s.curve.clone(),
-            pcurve: s.pcurves[path.request.side].clone(),
+            pcurve: s.pcurves[side].clone(),
         })
         .collect();
-    spend(&mut operations, limits.operations, path.segments.len())?;
+    spend(operations, limits.operations, path.segments.len())?;
     let result = crate::face_cut::partition_with_shared_limits(
         source,
         face,
         endpoints,
         &segments,
         path.uv_tolerance,
-        limits.cells - cells,
-        (limits.operations - operations) as u64,
-        (limits.pairs - pairs).min(10000),
+        limits.cells - *cells,
+        (limits.operations - *operations) as u64,
+        (limits.pairs - *pairs).min(10000),
     )?;
     spend(
-        &mut operations,
+        operations,
         limits.operations,
         usize::try_from(result.exact_work)
             .map_err(|_| unproven("SS face coefficient work overflow"))?,
     )?;
-    spend(&mut cells, limits.cells, result.cells)?;
-    spend(&mut pairs, limits.pairs, result.trim_pairs)?;
+    spend(cells, limits.cells, result.cells)?;
+    spend(pairs, limits.pairs, result.trim_pairs)?;
     let mut model = result.model;
     let mut vertices = vec![endpoints[0]];
     for (i, &edge) in result.edges.iter().enumerate() {
@@ -169,18 +211,10 @@ pub fn partition_open_ss_path<'s, 'i, 'p, 'r, 'a>(
     }
     model.validate()?;
     model.refresh_change_set(&[source]);
-    let mut models = path.input.models.clone();
-    models[slot] = model;
-    Ok(QualifiedOpenSSFace {
-        path,
-        limits,
-        models,
-        model: slot,
+    Ok(Construction {
+        model,
         faces: result.faces,
         edges: result.edges,
         vertices,
-        cells,
-        pairs,
-        operations,
     })
 }
