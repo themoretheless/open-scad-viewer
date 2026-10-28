@@ -8,8 +8,13 @@ use nurbs_core::{
     trim_domain::Location,
     trim_region_audit,
 };
+mod coedge_roots;
 #[cfg(test)]
 mod tests;
+pub use coedge_roots::{
+    CoedgeBoundaryRole, CoedgeRootAddress, CoedgeRootEvent, CoedgeRootLimits, QualifiedCoedgeRoots,
+    QualifiedFacePairRoots, qualify_coedge_roots,
+};
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
     pub cells: usize,

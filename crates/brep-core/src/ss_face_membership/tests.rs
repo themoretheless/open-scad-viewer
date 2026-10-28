@@ -7,7 +7,7 @@ use nurbs_core::{
     surface::{Axis, Surface},
 };
 
-fn surface(circle: bool, r2: f64) -> Surface {
+pub(super) fn surface(circle: bool, r2: f64) -> Surface {
     let q = [0.25, -0.25, 0.25];
     Surface {
         degree_u: 2,
@@ -65,7 +65,7 @@ fn wire(s: &Surface, rect: [[f64; 2]; 2], reverse: bool) -> Vec<recipe::Boundary
         })
         .collect()
 }
-fn model(s: &Surface, hole: Option<[[f64; 2]; 2]>) -> Model {
+pub(super) fn model(s: &Surface, hole: Option<[[f64; 2]; 2]>) -> Model {
     let natural = [
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
@@ -113,7 +113,7 @@ fn model(s: &Surface, hole: Option<[[f64; 2]; 2]>) -> Model {
     model.validate().unwrap();
     model
 }
-fn curves(r2: f64) -> ss::QualifiedGraphCurves {
+pub(super) fn curves(r2: f64) -> ss::QualifiedGraphCurves {
     let sources = ss::FiberSources::new(&surface(true, r2), &surface(false, 0.)).unwrap();
     let original = ss::qualify_quadratic_graph_ss(&sources, Default::default()).unwrap();
     ss::construct_graph_curves(
@@ -126,7 +126,7 @@ fn curves(r2: f64) -> ss::QualifiedGraphCurves {
     )
     .unwrap()
 }
-fn fixtures(c: &ss::QualifiedGraphCurves, hole: Option<[[f64; 2]; 2]>) -> [Model; 2] {
+pub(super) fn fixtures(c: &ss::QualifiedGraphCurves, hole: Option<[[f64; 2]; 2]>) -> [Model; 2] {
     [
         model(c.original().source().first(), hole),
         model(c.original().source().second(), None),
