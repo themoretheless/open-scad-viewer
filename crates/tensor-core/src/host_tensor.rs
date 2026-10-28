@@ -573,13 +573,13 @@ impl Tensor {
         options.padding_after[0] = padding;
         let plan = crate::ConvPlan::new(&self.shape, &weight.shape, &options)?;
         let out_channels = weight.shape.dims()[0];
-        if let Some(b) = bias
-            && b.len() != out_channels
-        {
-            return Err(TensorError::ElementCountMismatch {
-                expected: out_channels,
-                actual: b.len(),
-            });
+        if let Some(b) = bias {
+            if b.len() != out_channels {
+                return Err(TensorError::ElementCountMismatch {
+                    expected: out_channels,
+                    actual: b.len(),
+                });
+            }
         }
         if plan.output.numel() == 0 {
             return Ok(Self {
@@ -777,21 +777,21 @@ impl Tensor {
                 actual: running_var.len(),
             });
         }
-        if let Some(w) = weight
-            && w.len() != channels
-        {
-            return Err(TensorError::ElementCountMismatch {
-                expected: channels,
-                actual: w.len(),
-            });
+        if let Some(w) = weight {
+            if w.len() != channels {
+                return Err(TensorError::ElementCountMismatch {
+                    expected: channels,
+                    actual: w.len(),
+                });
+            }
         }
-        if let Some(b) = bias
-            && b.len() != channels
-        {
-            return Err(TensorError::ElementCountMismatch {
-                expected: channels,
-                actual: b.len(),
-            });
+        if let Some(b) = bias {
+            if b.len() != channels {
+                return Err(TensorError::ElementCountMismatch {
+                    expected: channels,
+                    actual: b.len(),
+                });
+            }
         }
         if self.data.is_empty() {
             return Ok(self.clone());

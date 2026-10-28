@@ -197,10 +197,10 @@ impl FusionGraph {
             .iter()
             .enumerate()
             .filter_map(|(i, n)| {
-                if live[i]
-                    && let Node::Input(slot) = n
-                {
-                    return Some(*slot);
+                if live[i] {
+                    if let Node::Input(slot) = n {
+                        return Some(*slot);
+                    }
                 }
                 None
             })

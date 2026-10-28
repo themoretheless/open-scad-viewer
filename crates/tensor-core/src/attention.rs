@@ -126,13 +126,13 @@ impl AttentionPlan {
         dims.extend_from_slice(batch.dims());
         dims.extend([query_heads, queries, keys]);
         let scores = Shape::new(dims)?;
-        if let Some(mask) = mask
-            && mask.broadcast(&scores)? != scores
-        {
-            return Err(TensorError::IncompatibleBroadcast {
-                left: mask.dims().to_vec(),
-                right: scores.dims().to_vec(),
-            });
+        if let Some(mask) = mask {
+            if mask.broadcast(&scores)? != scores {
+                return Err(TensorError::IncompatibleBroadcast {
+                    left: mask.dims().to_vec(),
+                    right: scores.dims().to_vec(),
+                });
+            }
         }
         let mut dims = Vec::with_capacity(batch.rank() + 3);
         dims.extend_from_slice(batch.dims());
