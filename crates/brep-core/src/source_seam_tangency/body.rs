@@ -40,6 +40,7 @@ pub struct BoundaryReport<'a, E: Carrier> {
     pub ordinary_cells: usize,
     pub ordinary_curve_spans: usize,
     pub ordinary_normal_spans: usize,
+    pub polar_normal_coefficients: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
     pub pole_graph_exact_work: u64,
@@ -57,6 +58,40 @@ pub fn qualify_boundary<'a, E: Carrier>(
     requirement: PoleRequirement,
     limits: Limits,
 ) -> Result<BoundaryReport<'a, E>> {
+    qualify_boundary_impl(body, classes, requirement, limits, None)
+}
+/// Additionally qualify meridian tangent planes on the full closed carrier
+/// using native factored-normal polynomials from this freshly admitted pole
+/// atlas. A separate shared coefficient allowance covers every polar query.
+/// Curvature-class ordinary seams still require their own regular G2 proof.
+pub fn qualify_boundary_with_polar_seams<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    requirement: PoleRequirement,
+    limits: Limits,
+    normal_coefficients: usize,
+) -> Result<BoundaryReport<'a, E>> {
+    if !(1..=100000000).contains(&normal_coefficients) {
+        return Err(Error::new(
+            "BREP_SOURCE_BOUNDARY_SMOOTHNESS",
+            "Choose bounded polar seam coefficients",
+        ));
+    }
+    qualify_boundary_impl(
+        body,
+        classes,
+        requirement,
+        limits,
+        Some(normal_coefficients),
+    )
+}
+fn qualify_boundary_impl<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    requirement: PoleRequirement,
+    limits: Limits,
+    polar_coefficients: Option<usize>,
+) -> Result<BoundaryReport<'a, E>> {
     super::validate_limits(&limits)?;
     let shell = body.geometry().shell();
     if classes.is_empty() || classes.len() != shell.edges().len() || classes.len() > 100_000 {
@@ -71,6 +106,7 @@ pub fn qualify_boundary<'a, E: Carrier>(
         ordinary_cells: 0,
         ordinary_curve_spans: 0,
         ordinary_normal_spans: 0,
+        polar_normal_coefficients: 0,
         completed_edges: 0,
         uncertain_edge: None,
         pole_graph_exact_work: 0,
@@ -103,18 +139,30 @@ pub fn qualify_boundary<'a, E: Carrier>(
             }
         }
     };
+    let plane_atlas = match &strata {
+        PoleStrata::TangentGraph(p) => Some(p.charts().transverse().atlas().planes()),
+        PoleStrata::FacewiseCurvature(p) => Some(p.graphs().charts().transverse().atlas().planes()),
+        _ => None,
+    };
+    let r = if let (Some(planes), Some(coefficients)) = (plane_atlas, polar_coefficients) {
+        collection::qualify_owned_edges_with_poles(body, classes, limits, planes, coefficients)?
+    } else {
+        collection::qualify_owned_edges(body, classes, limits)?
+    };
     let CollectionReport {
         certificate,
         cells,
         curve_spans,
         normal_spans,
+        polar_coefficients,
         completed_edges,
         uncertain_edge,
         reason,
-    } = collection::qualify_owned_edges(body, classes, limits)?;
+    } = r;
     out.ordinary_cells = cells;
     out.ordinary_curve_spans = curve_spans;
     out.ordinary_normal_spans = normal_spans;
+    out.polar_normal_coefficients = polar_coefficients;
     out.completed_edges = completed_edges;
     out.uncertain_edge = uncertain_edge;
     out.reason = reason;

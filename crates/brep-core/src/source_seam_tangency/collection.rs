@@ -24,11 +24,16 @@ pub struct Collection<'a, E: Carrier> {
     classes: Vec<Class>,
     seams: Vec<(usize, Seam<E>)>,
     curvature_seams: Vec<(usize, CurvatureSeam<E>)>,
+    polar_seams: Vec<(usize, super::PolarSeam<E>)>,
     max_sine_squared: f64,
 }
 impl<E: Carrier> Collection<'_, E> {
     pub fn body(&self) -> &Body<E> {
         self.body
+    }
+    /// Complete carriers including collapsed-endpoint limit planes.
+    pub fn polar_seams(&self) -> &[(usize, super::PolarSeam<E>)] {
+        &self.polar_seams
     }
     pub fn classes(&self) -> &[Class] {
         &self.classes
@@ -63,17 +68,20 @@ pub struct CollectionReport<'a, E: Carrier> {
     pub curve_spans: usize,
     /// Shared source-surface work, including normal and curvature knot cells.
     pub normal_spans: usize,
+    pub polar_coefficients: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
     pub reason: &'static str,
 }
 
-struct Work<E> {
+struct Work<E: Carrier> {
     seams: Vec<(usize, Seam<E>)>,
     curvature_seams: Vec<(usize, CurvatureSeam<E>)>,
+    polar_seams: Vec<(usize, super::PolarSeam<E>)>,
     cells: usize,
     curve_spans: usize,
     normal_spans: usize,
+    polar_coefficients: usize,
     completed_edges: usize,
     uncertain_edge: Option<usize>,
     reason: &'static str,
@@ -100,6 +108,19 @@ pub(super) fn validate_classes(classes: &[Class]) -> Result<()> {
     Ok(())
 }
 fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> Result<Work<E>> {
+    inspect_with_poles(edges, classes, limits, None)
+}
+type PolarContext<'p, 's, E> = (
+    &'p crate::source_pole_tangency::BodyPlaneLimits<'s, E>,
+    &'p [[crate::source_shell_incidence::Address; 2]],
+    usize,
+);
+fn inspect_with_poles<E: Carrier>(
+    edges: &[E],
+    classes: &[Class],
+    limits: Limits,
+    polar: Option<PolarContext<'_, '_, E>>,
+) -> Result<Work<E>> {
     super::validate_limits(&limits)?;
     if edges.is_empty() || edges.len() > 100_000 || classes.len() != edges.len() {
         return Err(Error::new(
@@ -110,10 +131,12 @@ fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> 
     validate_classes(classes)?;
     let mut out = Work {
         curvature_seams: Vec::new(),
+        polar_seams: Vec::new(),
         seams: Vec::new(),
         cells: 0,
         curve_spans: 0,
         normal_spans: 0,
+        polar_coefficients: 0,
         completed_edges: 0,
         uncertain_edge: None,
         reason: "source-seam-collection-qualified",
@@ -130,6 +153,45 @@ fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> 
         {
             out.reason = "source-seam-collection-work-limit";
             return Ok(out);
+        }
+        if *class == Class::TangentPlanes {
+            if let Some((atlas, uses, budget)) = polar {
+                let proof = |side: usize| {
+                    atlas
+                        .poles()
+                        .iter()
+                        .find(|(a, _)| a.face == uses[index][side].face)
+                        .map(|(_, p)| p.limit())
+                };
+                if let (Some(a), Some(b)) = (proof(0), proof(1)) {
+                    if out.polar_coefficients == budget {
+                        out.reason = "source-polar-seam-collection-work-limit";
+                        return Ok(out);
+                    }
+                    let r = super::qualify_polar_tangency(
+                        edge,
+                        [a, b],
+                        Limits {
+                            max_sine_squared: limits.max_sine_squared,
+                            cells: limits.cells - out.cells,
+                            curve_spans: limits.curve_spans - out.curve_spans,
+                            normal_spans: limits.normal_spans - out.normal_spans,
+                        },
+                        budget - out.polar_coefficients,
+                    )?;
+                    out.cells += r.cells;
+                    out.curve_spans += r.curve_spans;
+                    out.polar_coefficients += r.normal_coefficients;
+                    let Some(seam) = r.seam else {
+                        out.reason = r.reason;
+                        return Ok(out);
+                    };
+                    out.polar_seams.push((index, seam));
+                    out.completed_edges += 1;
+                    out.uncertain_edge = None;
+                    continue;
+                }
+            }
         }
         if let Class::Curvature {
             normal_distance,
@@ -206,6 +268,7 @@ pub fn qualify_collection<'a, E: Carrier>(
             cells: 0,
             curve_spans: 0,
             normal_spans: 0,
+            polar_coefficients: 0,
             completed_edges: 0,
             uncertain_edge: None,
             reason: "source-seam-collection-pole-limits-unproven",
@@ -221,9 +284,35 @@ pub(super) fn qualify_owned_edges<'a, E: Carrier>(
     classes: &[Class],
     limits: Limits,
 ) -> Result<CollectionReport<'a, E>> {
+    qualify_owned_edges_impl(body, classes, limits, None)
+}
+pub(super) fn qualify_owned_edges_with_poles<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    limits: Limits,
+    planes: &crate::source_pole_tangency::BodyPlaneLimits<'_, E>,
+    coefficients: usize,
+) -> Result<CollectionReport<'a, E>> {
+    qualify_owned_edges_impl(
+        body,
+        classes,
+        limits,
+        Some((planes, body.geometry().shell().uses(), coefficients)),
+    )
+}
+fn qualify_owned_edges_impl<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    limits: Limits,
+    polar: Option<PolarContext<'_, '_, E>>,
+) -> Result<CollectionReport<'a, E>> {
     let shell = body.geometry().shell();
     let max_sine_squared = limits.max_sine_squared;
-    let work = inspect_edges(shell.edges(), classes, limits)?;
+    let work = if polar.is_some() {
+        inspect_with_poles(shell.edges(), classes, limits, polar)?
+    } else {
+        inspect_edges(shell.edges(), classes, limits)?
+    };
     let complete = work.completed_edges == classes.len() && work.uncertain_edge.is_none();
     let certificate = complete.then(|| Collection {
         body,
@@ -231,12 +320,14 @@ pub(super) fn qualify_owned_edges<'a, E: Carrier>(
         max_sine_squared,
         seams: work.seams,
         curvature_seams: work.curvature_seams,
+        polar_seams: work.polar_seams,
     });
     Ok(CollectionReport {
         certificate,
         cells: work.cells,
         curve_spans: work.curve_spans,
         normal_spans: work.normal_spans,
+        polar_coefficients: work.polar_coefficients,
         completed_edges: work.completed_edges,
         uncertain_edge: work.uncertain_edge,
         reason: work.reason,

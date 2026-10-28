@@ -2,8 +2,10 @@
 //! from privately qualified native edge types; angular bounds cover original charts.
 mod curvature;
 pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature};
+mod polar;
+pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
 mod body;
-pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary};
+pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams};
 mod collection;
 pub use collection::{Class, Collection, CollectionReport, qualify_collection};
 use crate::source_shared_edge::SharedEdge;

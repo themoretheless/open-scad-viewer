@@ -9791,5 +9791,29 @@
             Err(e)=>assert_eq!(e.code,"NURBS_NUMERIC_ERROR"),
         }
         eprintln!("complete-boundary metrics: edges={} pole_jets={} sharp_rim={}",complete.completed_edges,8,rim);
+        let flat_face=|side: &nurbs_core::surface::Surface| {let z=side.control_points[0][0][2];side.control_points.iter().flatten().all(|p|p[2]==z)};
+        let polar_classes=body.geometry().shell().edges().iter().map(|e| {
+            if flat_face(e.fragment(0).surface()) && flat_face(e.fragment(1).surface()) {Class::TangentPlanes}else {Class::C0}
+        }).collect::<Vec<_>>();
+        let polar=seams::qualify_boundary_with_polar_seams(&body,&polar_classes,PoleRequirement::FacewiseCurvature(limits(100000000)),edge_limits(),100000000).unwrap();
+        let polar_proof=polar.certificate.expect(polar.reason);
+        assert_eq!(polar_proof.ordinary().polar_seams().len(),8);
+        assert_eq!(polar_proof.ordinary().seams().len(),0);
+        assert_eq!(polar.completed_edges,20);
+        assert!(matches!(polar_proof.poles(),PoleStrata::FacewiseCurvature(_)));
+        assert!(polar_proof.ordinary().polar_seams().iter().all(|(_,p)|p.sine_squared_bounds()[1]<=1e-10 && p.factor_orders()==[1,1]));
+        let short=seams::qualify_boundary_with_polar_seams(&body,&polar_classes,PoleRequirement::FacewiseCurvature(limits(100000000)),edge_limits(),polar.polar_normal_coefficients-1).unwrap();
+        assert!(short.certificate.is_none());assert!(short.completed_edges<20);
+        // A private plane proof from a changed source must not authorize this
+        // carrier, even if both surfaces have the same limiting tangent plane.
+        let (index,_)=&polar_proof.ordinary().polar_seams()[0];
+        let e=&body.geometry().shell().edges()[*index];
+        let mut changed=e.fragment(0).surface().clone();
+        for p in changed.control_points.iter_mut().flatten() {p[0]+=1.;}
+        let b=match polar_proof.poles() {PoleStrata::FacewiseCurvature(p)=>p.graphs().charts().transverse().atlas().planes().poles().iter().find(|(a,_)|a.face==body.geometry().shell().uses()[*index][0].face).unwrap().1.limit().boundary(),_=>unreachable!()};
+        let changed_plane=nurbs_core::factored_surface_normals::prepare_plane_limit(&changed,b,1000000).unwrap().certificate.unwrap();
+        assert!(seams::qualify_polar_tangency(e,[&changed_plane,&changed_plane],edge_limits(),100000).is_err());
+        eprintln!("polar-seam metrics: seams={} coefficients={} cells={}",8,polar.polar_normal_coefficients,polar.ordinary_cells);
+
 
     }
