@@ -15,12 +15,13 @@ for native geometry, operations and typed reports without `value-codec`. The
 default `codec` feature preserves serialized models, JSON report adapters and
 snapshot/history APIs; workspace application consumers enable it explicitly.
 
-Qualification gap (2026-10-28): the full minimal configuration is currently
-unqualified: 80 source-definition-layer codec-reference errors remain. Native
-journal capture/replay and typed defeaturing reports have been separated from
-their optional serialization children. Full minimal support remains required;
-it is not waived by the passing default-feature tests. See the
-[qualification protocol](../../docs/qualification/nurbs-native-codec-boundary-2026-10-28/README.md).
+Verified source boundary (2026-10-28): both default and minimal library checks
+pass. The minimal normal dependency tree contains no `value-codec`; two public
+integration tests pass with and without `codec`, covering source replay, an
+admitted cube, exchange provenance and a capped-canal volume oracle. All four
+default native library suites pass (4208 tests, 6 existing ignores). This does
+not qualify every minimal unit-test module or the full application artifact.
+See the [qualification protocol](../../docs/qualification/nurbs-native-source-boundary-2026-10-28/README.md).
 
 `nurbs_ss_general::branch_graph_from_surface_intersection` consumes the native
 NURBS surface-intersection report directly. Branch kinds, contact classes,
@@ -332,7 +333,7 @@ anchor and affine laws; open/periodic topology and face budgets are retained.
 JSON/TS/Rush body APIs expose these optional fields. Contact remains sampled;
 continuous contact and global embedding are uncertified.
 
-Canonical source-definition restore/replay and exchange snapshots require the
-`codec` feature because their API accepts retained structured definitions. Raw
-`Model` construction, boundary agreement, regularity and interval intersection
-kernels remain usable without JSON serialization.
+Serialized source-definition restore and exchange snapshots require the
+`codec` feature. Typed source `requalify`, inverse-region transport, exchange
+preparation, raw `Model` construction, boundary agreement, regularity and
+interval intersection kernels remain usable without JSON serialization.

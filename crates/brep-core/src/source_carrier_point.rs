@@ -71,6 +71,7 @@ impl Point {
         self.world
     }
     /// Original definitions only. Cached coordinates and flags grant no authority.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
         value_codec::json!({"version":1,"kind":"original-carrier-root","edge":self.edge.definition(),
             "root":self.root.definition(),"sourceSide":self.source_side})
@@ -127,6 +128,7 @@ impl Restriction<'_> {
             && self.side == next.side
             && self.point.same_definition(next.point)
     }
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
         value_codec::json!({"version":1,"kind":"carrier-root-restriction",
             "point":self.point.definition(),"side":self.side,"half":self.half})
@@ -313,6 +315,7 @@ pub struct RestoreLimits {
     pub root_mapping_cells: usize,
     pub spans: usize,
 }
+#[cfg(feature = "codec")]
 pub fn restore(value: value_codec::Value, limits: RestoreLimits) -> Result<Report> {
     if value["version"].as_u64() != Some(1)
         || value["kind"].as_str() != Some("original-carrier-root")

@@ -3,6 +3,7 @@
 use crate::{source_allowed_contact, source_boundary_fragment::Fragment};
 use cad_predicates::{BezierIdentity, Sign};
 use nurbs_core::{Error, Result, curve::Curve, interval_eval::Interval as I};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone)]
 pub struct ProjectiveUse {
@@ -14,6 +15,7 @@ pub struct ProjectiveUse {
 }
 impl ProjectiveUse {
     /// Save original definitions only. Authority is reconstructed on restore.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         json!({"version":1,"world":self.world.to_value(),"fragment":self.fragment.definition(),
             "range":self.range,"weights":self.weights})
@@ -28,44 +30,60 @@ impl ProjectiveUse {
     pub fn range(&self) -> [[f64; 2]; 2] {
         self.range
     }
-    pub fn weights(&self) -> [f64; 2] { self.weights }
+    pub fn weights(&self) -> [f64; 2] {
+        self.weights
+    }
     pub fn reversed(&self) -> bool {
         self.reversed
     }
     /// Map an original source interval to normalized canonical parameters.
-    pub fn map_normalized(&self,parameter:I)->Result<I> {
-        let d=self.fragment.curve().domain();
-        let t=parameter.sub(I::point(d[0]))?.div(I::point(d[1]).sub(I::point(d[0]))?)?.intersect(0.,1.)?;
-        let a=I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
-        let b=I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
-        let low=I::point(1.).sub(t)?.mul(I::point(self.weights[0]))?;
-        let high=t.mul(I::point(self.weights[1]))?;
-        let den=low.add(high)?.intersect(self.weights[0].min(self.weights[1]),self.weights[0].max(self.weights[1]))?;
-        a.mul(low)?.add(b.mul(high)?)?.div(den)?.intersect(0.,1.)
+    pub fn map_normalized(&self, parameter: I) -> Result<I> {
+        let d = self.fragment.curve().domain();
+        let t = parameter
+            .sub(I::point(d[0]))?
+            .div(I::point(d[1]).sub(I::point(d[0]))?)?
+            .intersect(0., 1.)?;
+        let a = I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
+        let b = I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
+        let low = I::point(1.).sub(t)?.mul(I::point(self.weights[0]))?;
+        let high = t.mul(I::point(self.weights[1]))?;
+        let den = low.add(high)?.intersect(
+            self.weights[0].min(self.weights[1]),
+            self.weights[0].max(self.weights[1]),
+        )?;
+        a.mul(low)?.add(b.mul(high)?)?.div(den)?.intersect(0., 1.)
     }
     /// Unclipped inverse: unsupported canonical tails remain visible to the
     /// caller. Clipping here would hide missing retained-domain coverage.
-    pub fn inverse_normalized_unclipped(&self,canonical:I)->Result<I> {
-        let a=I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
-        let b=I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
-        let q=canonical.sub(a)?.div_signed(b.sub(a)?)?;
-        let numerator=q.mul(I::point(self.weights[0]))?;
-        let mut denominator=I::point(1.).sub(q)?.mul(I::point(self.weights[1]))?.add(numerator)?;
-        if q.lo>=0. && q.hi<=1. {
-            denominator=denominator.intersect(self.weights[0].min(self.weights[1]),self.weights[0].max(self.weights[1]))?;
+    pub fn inverse_normalized_unclipped(&self, canonical: I) -> Result<I> {
+        let a = I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
+        let b = I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
+        let q = canonical.sub(a)?.div_signed(b.sub(a)?)?;
+        let numerator = q.mul(I::point(self.weights[0]))?;
+        let mut denominator = I::point(1.)
+            .sub(q)?
+            .mul(I::point(self.weights[1]))?
+            .add(numerator)?;
+        if q.lo >= 0. && q.hi <= 1. {
+            denominator = denominator.intersect(
+                self.weights[0].min(self.weights[1]),
+                self.weights[0].max(self.weights[1]),
+            )?;
         }
-        let t=numerator.div_signed(denominator)?;
-        let d=self.fragment.curve().domain();
+        let t = numerator.div_signed(denominator)?;
+        let d = self.fragment.curve().domain();
         I::point(d[0]).add(t.mul(I::point(d[1]).sub(I::point(d[0]))?)?)
     }
     /// Outward enclosures only: root expressions and original domains remain
     /// authoritative. These bounds must never replace a root by a fixed vertex.
     pub fn parameter_bounds(&self) -> Result<[[f64; 2]; 2]> {
-        let target=self.world.domain();
-        let map=|r:[f64;2]|->Result<[f64;2]> {
-            let q=self.map_normalized(I::new(r[0],r[1])?)?;
-            let t=I::point(target[0]).add(q.mul(I::point(target[1]).sub(I::point(target[0]))?)?)?.intersect(target[0],target[1])?;
-            Ok([t.lo,t.hi])
+        let target = self.world.domain();
+        let map = |r: [f64; 2]| -> Result<[f64; 2]> {
+            let q = self.map_normalized(I::new(r[0], r[1])?)?;
+            let t = I::point(target[0])
+                .add(q.mul(I::point(target[1]).sub(I::point(target[0]))?)?)?
+                .intersect(target[0], target[1])?;
+            Ok([t.lo, t.hi])
         };
         let b = self.fragment.parameter_bounds();
         Ok([map(b[0])?, map(b[1])?])
@@ -139,6 +157,7 @@ pub fn qualify(
 
 /// Restore roots from original equations/selectors, then freshly prove the
 /// projective composition and orientation. Cached bounds have no authority.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, max_mapping_cells: usize, max_work: u64) -> Result<Report> {
     let invalid = || {
         Error::new(

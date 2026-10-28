@@ -140,6 +140,7 @@ impl ShellContactAudit<'_> {
         )
     }
     /// Transport diagnostics only; this Value never restores geometric authority.
+    #[cfg(feature = "codec")]
     pub fn diagnostics(&self) -> value_codec::Value {
         let kind = |face: &ShellFace| match face.kind() {
             ShellFaceKind::Original(_) => "original",

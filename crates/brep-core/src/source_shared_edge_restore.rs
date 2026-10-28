@@ -1,20 +1,26 @@
 //! Restore original root-owned shared edges by fresh native qualification.
 pub use crate::source_shared_edge::ReplayLimits as Limits;
+#[cfg(feature = "codec")]
 use crate::{source_boundary_fragment, source_shared_edge};
+#[cfg(feature = "codec")]
 use nurbs_core::{Error, Result, curve::Curve};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Value};
 
+#[cfg(feature = "codec")]
 fn invalid() -> Error {
     Error::new(
         "BREP_SOURCE_EDGE_RESTORE",
         "Invalid original shared-edge definition or budget",
     )
 }
+#[cfg(feature = "codec")]
 fn decode<T: for<'de> Deserialize<'de>>(value: Value) -> Result<T> {
     T::from_value(value).map_err(|_| invalid())
 }
 /// Cached bounds, direction flags and certificate outcomes grant no authority.
 /// Original UV root equations/selectors and all raw mapping proposals are rechecked.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, limits: Limits) -> Result<source_shared_edge::Report> {
     if value["version"].as_u64() != Some(1)
         || !(1..=100000).contains(&limits.mapping_cells_per_use)

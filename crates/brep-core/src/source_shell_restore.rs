@@ -1,11 +1,12 @@
 //! Original shell definitions replay material regions and every ownership gate.
-use crate::{
-    source_region_restore,
-    source_shell_incidence::{
-        self, Address, AffineMaps, Pair, Pole, RootCandidates, RootPlanes, Shell,
-    },
+use crate::source_region_restore;
+#[cfg(feature = "codec")]
+use crate::source_shell_incidence::{
+    self, Address, AffineMaps, Pair, Pole, RootCandidates, RootPlanes, Shell,
 };
+#[cfg(feature = "codec")]
 use nurbs_core::{Error, Result};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Value, json};
 pub struct Limits {
     /// Region audit budgets are independent per face/replay step.
@@ -13,19 +14,24 @@ pub struct Limits {
     pub exact_work: u64,
     pub driver_cells: usize,
 }
+#[cfg(feature = "codec")]
 fn invalid(message: &str) -> Error {
     Error::new("BREP_SOURCE_SHELL_RESTORE", message)
 }
+#[cfg(feature = "codec")]
 fn decode<T: for<'de> Deserialize<'de>>(v: Value) -> Result<T> {
     T::from_value(v).map_err(|_| invalid("Invalid source shell field"))
 }
+#[cfg(feature = "codec")]
 fn address(a: Address) -> [usize; 3] {
     [a.face, a.wire, a.edge]
 }
+#[cfg(feature = "codec")]
 fn read_address(v: Value) -> Result<Address> {
     let [face, wire, edge] = decode(v)?;
     Ok(Address { face, wire, edge })
 }
+#[cfg(feature = "codec")]
 pub(crate) fn definition(shell: &Shell) -> Result<Value> {
     let regions = shell
         .regions()
@@ -45,6 +51,7 @@ pub(crate) fn definition(shell: &Shell) -> Result<Value> {
         json!({"version":1,"regions":regions.iter().map(|r|r.definition()).collect::<Vec<_>>(),"pairs":pairs,"poles":poles}),
     )
 }
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::Report> {
     if value["version"].as_u64() != Some(1)
         || !(1..=100_000_000).contains(&limits.exact_work)
@@ -162,6 +169,7 @@ pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::
 }
 
 #[cfg(test)]
+#[cfg(feature = "codec")]
 pub(crate) fn assert_replay(shell: &Shell) {
     let definition = shell.definition().unwrap();
     let encoded = value_codec::to_string(&definition).unwrap();

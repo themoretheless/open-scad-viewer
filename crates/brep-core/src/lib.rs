@@ -447,7 +447,6 @@ pub mod offset_edge_supports;
 
 pub mod linear_canal;
 
-#[cfg(feature = "codec")]
 pub mod linear_canal_body;
 
 pub mod source_root_parameter;

@@ -7,6 +7,7 @@ use nurbs_core::{
     surface::Surface,
     uv_curve_crossings as crossings,
 };
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone)]
 pub struct SourcePoint {
@@ -60,6 +61,7 @@ impl SourcePoint {
         self.world_box
     }
     /// Persist only original definitions and root selector, never cached proof.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         json!({"version":1,"surface":self.surface.to_value(),"boundary":self.boundary.to_value(),
             "contact":self.contact.to_value(),"selector":self.selector})
@@ -178,6 +180,7 @@ pub fn qualify(
     Ok(out)
 }
 /// Imported data supplies definitions/selector only. Proof and bounds are fresh.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Report> {
     if value["version"].as_u64() != Some(1) {
         return Err(Error::new(

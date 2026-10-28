@@ -8,6 +8,8 @@ use cad_predicates::ToleranceContext;
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 
 mod recipe;
+mod inverse_shear;
+mod identity;
 mod replay;
 use recipe::{CutKind, Original, Recipe};
 pub use replay::ReplayLimits;

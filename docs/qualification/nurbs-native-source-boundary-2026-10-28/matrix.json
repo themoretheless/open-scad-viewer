@@ -1,0 +1,66 @@
+{
+  "default_check": "passed",
+  "minimal_check": {
+    "status": "passed",
+    "errors": 0,
+    "previous": 54
+  },
+  "default_native_libraries": {
+    "passed": 4208,
+    "failed": 0,
+    "ignored": 6
+  },
+  "public_integration": {
+    "minimal": {
+      "passed": 2,
+      "failed": 0
+    },
+    "codec": {
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "normal_dependency_tree": {
+    "value_codec_present": false
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "logs": {
+    "native-wire-final-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-final-minimal-check.log",
+      "sha256": "d02e57d2cb58c28438eb4c3a7e5404247f21ba947e8fd00521a1ba77967dda24"
+    },
+    "native-wire-final-default-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-final-default-check.log",
+      "sha256": "0350281932c1f458b9d70b854f73800ae5929bc92a853d32e5153d9c38661013"
+    },
+    "native-wire-final-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-final-full.log",
+      "sha256": "5fea2fe9ef546acdc0631d9ec030171c1ec57e322e62bc7b322f9673c80653f8"
+    },
+    "native-wire-final-minimal-integration-r2.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-final-minimal-integration-r2.log",
+      "sha256": "ee961a77d512f55a850b0947b4b303701080cf8b45cfaefff3c2edbe371c40b9"
+    },
+    "native-wire-final-default-integration.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-final-default-integration.log",
+      "sha256": "73f0017e4d125b92af9d23e23163a213d6462f049ddc3918aa0a336017407500"
+    },
+    "native-wire-normal-tree.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-normal-tree.log",
+      "sha256": "9f3a7dff9cfce422e79536f412fd80ceddb5af4d015dc20491a1bca99079e6f8"
+    },
+    "native-wire-final-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-wire-final-architecture.log",
+      "sha256": "b91f2832e81065259b1d63c0aaf885ee3b63524be08441ec8113adc4455d0edf"
+    }
+  }
+}

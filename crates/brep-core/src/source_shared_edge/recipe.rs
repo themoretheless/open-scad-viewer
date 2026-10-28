@@ -14,6 +14,7 @@ pub(super) enum Recipe {
     },
 }
 impl Recipe {
+    #[cfg(feature = "codec")]
     pub(super) fn definition(&self) -> value_codec::Value {
         match self {
             Self::Direct {

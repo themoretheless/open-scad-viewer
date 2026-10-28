@@ -88,6 +88,7 @@ impl SharedEdge {
         }
     }
     /// Original definitions and proposal inputs only; restoration recomputes authority.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
         use value_codec::Serialize;
         value_codec::json!({"version":1,"world":self.world.to_value(),

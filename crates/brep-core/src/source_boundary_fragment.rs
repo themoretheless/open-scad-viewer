@@ -2,6 +2,7 @@
 //! No rounded Curve::trim, Cartesian vertex welding or Model admission.
 use crate::source_contact_point::{self, SourcePoint};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
@@ -415,6 +416,7 @@ impl Fragment {
             _ => false,
         }
     }
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         let encode = |end: &Endpoint| match end {
             Endpoint::Carrier { point, side } => {
@@ -432,6 +434,7 @@ impl Fragment {
 }
 /// Restore each root by fresh original-definition qualification. Mapping work is
 /// shared across both endpoints; cached direction/order/bounds are ignored.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
     if value["version"].as_u64() != Some(1) || !(1..=100000).contains(&max_mapping_cells) {
         return Err(error("Unsupported fragment definition or mapping budget"));

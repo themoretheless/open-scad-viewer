@@ -17,7 +17,7 @@ pub struct Body<E = crate::source_shared_edge::SharedEdge> {
     volume: [f64; 2],
     reverse_orientation: bool,
 }
-impl<E:crate::source_seam_tangency::Carrier> Body<E> {
+impl<E: crate::source_seam_tangency::Carrier> Body<E> {
     pub fn geometry(&self) -> &Geometry<E> {
         &self.geometry
     }
@@ -115,18 +115,23 @@ impl<E:crate::source_seam_tangency::Carrier> Body<E> {
 }
 impl Body {
     /// Persist original definitions; admission is recomputed during restoration.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Result<value_codec::Value> {
-        let mut value=value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?});
-        if let Some(proof)=self.geometry.inverse_shear() {
-            value["inverseShear"]=value_codec::json!({"axes":proof.axes(),"coefficient":proof.coefficient()});
+        let mut value =
+            value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?});
+        if let Some(proof) = self.geometry.inverse_shear() {
+            value["inverseShear"] =
+                value_codec::json!({"axes":proof.axes(),"coefficient":proof.coefficient()});
         }
         Ok(value)
     }
-
 }
 impl Body<crate::source_projective_edge::Edge> {
-    pub fn definition(&self)->Result<value_codec::Value> {
-        Ok(value_codec::json!({"version":1,"kind":"projective-body","shell":self.geometry.shell().definition()?}))
+    #[cfg(feature = "codec")]
+    pub fn definition(&self) -> Result<value_codec::Value> {
+        Ok(
+            value_codec::json!({"version":1,"kind":"projective-body","shell":self.geometry.shell().definition()?}),
+        )
     }
 }
 pub struct Report<E = crate::source_shared_edge::SharedEdge> {
@@ -246,7 +251,10 @@ fn evaluate<E>(
 /// root-valued trims use original winding classification. Unknown rectangles
 /// keep a complete [0,1] material-mask enclosure; no area is silently omitted.
 /// Only a requested-width interval excluding zero authorizes this native body.
-pub fn qualify<E:crate::source_planar_flux::FluxSupport>(geometry: Geometry<E>, limits: Limits) -> Result<Report<E>> {
+pub fn qualify<E: crate::source_planar_flux::FluxSupport>(
+    geometry: Geometry<E>,
+    limits: Limits,
+) -> Result<Report<E>> {
     if limits.axis >= 3
         || !limits.origin.is_finite()
         || !limits.absolute_error.is_finite()

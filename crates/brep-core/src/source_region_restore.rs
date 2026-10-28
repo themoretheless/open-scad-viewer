@@ -1,18 +1,24 @@
 //! Replay original region construction; serialized outcomes never admit material.
 pub use crate::source_contour_proposal::ReplayLimits as Limits;
+#[cfg(feature = "codec")]
 use crate::{
     source_contour_proposal::{self, SourceRegion},
     trimmed_face_recipe::{Boundary, Limits as RegionLimits},
 };
+#[cfg(feature = "codec")]
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, json};
 
+#[cfg(feature = "codec")]
 fn error(message: &str) -> Error {
     Error::new("BREP_SOURCE_REGION_RESTORE", message)
 }
+#[cfg(feature = "codec")]
 fn decode<T: for<'de> Deserialize<'de>>(v: Value) -> Result<T> {
     T::from_value(v).map_err(|_| error("Invalid original region field"))
 }
+#[cfg(feature = "codec")]
 pub(crate) fn original_definition(
     context: &cad_predicates::ToleranceContext,
     surface: &Surface,
@@ -22,6 +28,7 @@ pub(crate) fn original_definition(
     let wires=wires.iter().map(|w|w.iter().map(|b|json!({"curve":b.curve.to_value(),"pcurve":b.pcurve.to_value(),"reversed":b.reversed})).collect::<Vec<_>>()).collect::<Vec<_>>();
     json!({"version":1,"kind":"original","context":context.to_value(),"surface":surface.to_value(),"wires":wires,"toleranceUV":tolerance})
 }
+#[cfg(feature = "codec")]
 pub(crate) fn cut_definition(
     context: &cad_predicates::ToleranceContext,
     kind: &str,
@@ -41,6 +48,7 @@ pub(crate) fn cut_definition(
     value["driverAxis"] = json!(axis);
     value
 }
+#[cfg(feature = "codec")]
 fn region_limits(l: &Limits) -> RegionLimits {
     RegionLimits {
         pairs: l.region.pairs,
@@ -49,12 +57,14 @@ fn region_limits(l: &Limits) -> RegionLimits {
         agreement_cells: l.region.agreement_cells,
     }
 }
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, limits: &Limits) -> Result<SourceRegion> {
     if !(1..=64).contains(&limits.steps) {
         return Err(error("Bound region replay depth to 1..64"));
     }
     replay(value, limits, limits.steps)
 }
+#[cfg(feature = "codec")]
 fn replay(value: Value, l: &Limits, remaining: usize) -> Result<SourceRegion> {
     if remaining == 0 || value["version"].as_u64() != Some(1) {
         return Err(error("Region replay depth or version refused"));
@@ -170,6 +180,7 @@ fn replay(value: Value, l: &Limits, remaining: usize) -> Result<SourceRegion> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "codec")]
 pub(crate) fn test_limits() -> Limits {
     Limits {
         region: RegionLimits {
@@ -189,6 +200,7 @@ pub(crate) fn test_limits() -> Limits {
     }
 }
 #[cfg(test)]
+#[cfg(feature = "codec")]
 pub(crate) fn assert_replay(region: &SourceRegion) {
     let encoded = value_codec::to_string(&region.definition()).unwrap();
     let value: Value = value_codec::from_str(&encoded).unwrap();

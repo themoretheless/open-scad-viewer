@@ -1,11 +1,15 @@
 //! Restore a native body only by replaying all original geometry gates.
-use crate::{linear_canal_body, source_shell_geometry, source_shell_restore, source_volume};
+#[cfg(feature = "codec")]
+use crate::linear_canal_body;
+use crate::{source_shell_geometry, source_shell_restore, source_volume};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Value};
 pub struct Limits {
     pub shell: source_shell_restore::Limits,
     pub embedding: source_shell_geometry::Limits,
     pub volume: source_volume::Limits,
 }
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, limits: Limits) -> crate::Result<linear_canal_body::Report> {
     if value["version"].as_u64() != Some(1) {
         return Err(crate::Error::new(

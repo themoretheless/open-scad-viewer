@@ -47,6 +47,7 @@ pub struct Shell<E = SharedEdge> {
     regions: Option<Vec<crate::source_contour_proposal::SourceRegion>>,
 }
 impl Shell {
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Result<value_codec::Value> {
         crate::source_shell_restore::definition(self)
     }

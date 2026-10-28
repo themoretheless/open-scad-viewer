@@ -33,6 +33,7 @@ pub struct Replay<E> {
 }
 /// Native sealed carriers replay original compositions after root refinement.
 pub trait ExchangeCarrier: crate::source_edge_restriction::RestrictionCarrier {
+    #[cfg(feature = "codec")]
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value>;
     fn replay_refined(
         &self,
@@ -40,8 +41,13 @@ pub trait ExchangeCarrier: crate::source_edge_restriction::RestrictionCarrier {
         limits: crate::source_shared_edge_restore::Limits,
     ) -> Result<Replay<Self>>;
     fn same_mapping(&self, other: &Self) -> bool;
+    fn same_source_definition(&self, other: &Self) -> bool;
 }
 impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
+    fn same_source_definition(&self, other: &Self) -> bool {
+        self.same_definition(other)
+    }
+    #[cfg(feature = "codec")]
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> {
         body.definition()
     }
@@ -66,6 +72,10 @@ impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
     }
 }
 impl ExchangeCarrier for crate::source_projective_edge::Edge {
+    fn same_source_definition(&self, other: &Self) -> bool {
+        self.same_definition(other)
+    }
+    #[cfg(feature = "codec")]
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> {
         body.definition()
     }
@@ -92,12 +102,20 @@ impl ExchangeCarrier for crate::source_projective_edge::Edge {
             })
     }
 }
+mod source_identity;
+use source_identity::BodySource;
 pub struct Prepared<E = crate::source_shared_edge::SharedEdge> {
+    source: BodySource<E>,
+    #[cfg(feature = "codec")]
     original: value_codec::Value,
     restrictions: Vec<Restriction<E>>,
     vertices: Vec<Vertex>,
 }
-impl<E> Prepared<E> {
+impl<E: ExchangeCarrier> Prepared<E> {
+    pub(crate) fn belongs_to(&self, body: &crate::source_volume::Body<E>) -> bool {
+        self.source.matches(body)
+    }
+    #[cfg(feature = "codec")]
     pub fn original(&self) -> &value_codec::Value {
         &self.original
     }
@@ -305,7 +323,9 @@ pub fn prepare<E: ExchangeCarrier>(
         });
     }
     out.prepared = Some(Prepared {
+        #[cfg(feature = "codec")]
         original: E::body_definition(body)?,
+        source: BodySource::capture(body)?,
         restrictions,
         vertices,
     });

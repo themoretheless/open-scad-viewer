@@ -5,6 +5,7 @@ use crate::{
     source_projective_use::{self, ProjectiveUse},
 };
 use nurbs_core::{Error, Result, curve::Curve};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Value, json};
 type Plane = [[f64; 3]; 3];
 type Candidates = [[Option<[f64; 2]>; 2]; 2];
@@ -17,6 +18,18 @@ pub struct Edge {
     fraction_candidates: Option<FractionCandidates>,
 }
 impl Edge {
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.planes == other.planes
+            && self.candidates == other.candidates
+            && self.fraction_candidates == other.fraction_candidates
+            && self.uses.iter().zip(&other.uses).all(|(a, b)| {
+                a.world() == b.world()
+                    && a.range() == b.range()
+                    && a.weights() == b.weights()
+                    && a.fragment().same_definition(b.fragment())
+            })
+    }
+
     pub fn world(&self) -> &Curve {
         self.uses[0].world()
     }
@@ -50,6 +63,7 @@ impl Edge {
     ) -> Result<crate::source_shared_edge::BoundaryMeshReport> {
         crate::source_shared_edge::mesh::prepare_boundary_mesh(self, limits)
     }
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         let mut definition = json!({"version":1,"uses":self.uses.each_ref().map(|u|u.definition()),
             "planes":self.planes,"candidates":self.candidates});
@@ -310,6 +324,7 @@ fn qualify_impl(
 }
 /// Restore each original fragment/root under a bounded mapping allowance,
 /// then repeat composition, orientation and shared-endpoint qualification.
+#[cfg(feature = "codec")]
 pub fn restore(
     value: Value,
     max_mapping_cells_per_use: usize,
@@ -520,9 +535,28 @@ mod fraction_tests {
             10000,
         )
         .unwrap();
-        let native=edge.requalify(crate::source_shared_edge::ReplayLimits {mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap();
-        assert_eq!((native.exact_work,native.root_checks,native.driver_cells,native.reason),(replay.exact_work,replay.root_checks,replay.driver_cells,replay.reason));
-        assert_eq!(native.edge.unwrap().definition(),definition);
+        let native = edge
+            .requalify(crate::source_shared_edge::ReplayLimits {
+                mapping_cells_per_use: 10000,
+                exact_work: 100000000,
+                driver_cells: 10000,
+            })
+            .unwrap();
+        assert_eq!(
+            (
+                native.exact_work,
+                native.root_checks,
+                native.driver_cells,
+                native.reason
+            ),
+            (
+                replay.exact_work,
+                replay.root_checks,
+                replay.driver_cells,
+                replay.reason
+            )
+        );
+        assert_eq!(native.edge.unwrap().definition(), definition);
         let replay = replay.edge.expect(replay.reason);
         assert_eq!(replay.definition(), definition);
         for source in [&edge, &replay] {

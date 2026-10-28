@@ -5,25 +5,37 @@ use nurbs_core::{
     Error, Result,
     interval_eval::{self, Interval as I},
 };
+#[cfg(feature = "codec")]
 use value_codec::Value;
 /// Only native admitted carriers retain exact source endpoint ownership.
-pub trait RestrictionCarrier:crate::source_seam_tangency::Carrier {
-    fn restriction_definition(&self)->Value;
-    fn restriction_reversed(&self,side:usize)->bool;
+pub trait RestrictionCarrier: crate::source_seam_tangency::Carrier {
+    #[cfg(feature = "codec")]
+    fn restriction_definition(&self) -> Value;
+    fn restriction_reversed(&self, side: usize) -> bool;
 }
 impl RestrictionCarrier for SharedEdge {
-    fn restriction_definition(&self)->Value {self.definition()}
-    fn restriction_reversed(&self,side:usize)->bool {self.reversed()[side]}
+    #[cfg(feature = "codec")]
+    fn restriction_definition(&self) -> Value {
+        self.definition()
+    }
+    fn restriction_reversed(&self, side: usize) -> bool {
+        self.reversed()[side]
+    }
 }
 impl RestrictionCarrier for crate::source_projective_edge::Edge {
-    fn restriction_definition(&self)->Value {self.definition()}
-    fn restriction_reversed(&self,side:usize)->bool {self.uses()[side].reversed()}
+    #[cfg(feature = "codec")]
+    fn restriction_definition(&self) -> Value {
+        self.definition()
+    }
+    fn restriction_reversed(&self, side: usize) -> bool {
+        self.uses()[side].reversed()
+    }
 }
 #[derive(Clone)]
 pub struct Restriction<E = SharedEdge> {
     edge: E,
 }
-impl<E:RestrictionCarrier> Restriction<E> {
+impl<E: RestrictionCarrier> Restriction<E> {
     pub fn from_edge(edge: &E) -> Self {
         Self { edge: edge.clone() }
     }
@@ -32,6 +44,7 @@ impl<E:RestrictionCarrier> Restriction<E> {
     }
     /// Persistence contains original carriers, roots and mapping proposals.
     /// It contains no rounded parameter, vertex or cached admission authority.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         self.edge.restriction_definition()
     }
@@ -41,11 +54,20 @@ impl<E:RestrictionCarrier> Restriction<E> {
         let target = self.edge.world().domain();
         let mut bounds = [[[0.; 2]; 2]; 2];
         for slot in 0..2 {
-            let fragment=self.edge.fragment(slot);
-            for (end,r) in fragment.parameter_bounds().iter().enumerate() {
-                let q=self.edge.map_parameter(slot,I::new(r[0],r[1])?)?.intersect(0.,1.)?;
-                let t=I::point(target[0]).add(q.mul(I::point(target[1]).sub(I::point(target[0]))?)?)?.intersect(target[0],target[1])?;
-                bounds[slot][if self.edge.restriction_reversed(slot) {1-end}else{end}]=[t.lo,t.hi];
+            let fragment = self.edge.fragment(slot);
+            for (end, r) in fragment.parameter_bounds().iter().enumerate() {
+                let q = self
+                    .edge
+                    .map_parameter(slot, I::new(r[0], r[1])?)?
+                    .intersect(0., 1.)?;
+                let t = I::point(target[0])
+                    .add(q.mul(I::point(target[1]).sub(I::point(target[0]))?)?)?
+                    .intersect(target[0], target[1])?;
+                bounds[slot][if self.edge.restriction_reversed(slot) {
+                    1 - end
+                } else {
+                    end
+                }] = [t.lo, t.hi];
             }
         }
         let common = std::array::from_fn(|i| {
@@ -142,6 +164,7 @@ impl<E:RestrictionCarrier> Restriction<E> {
     }
 }
 /// Restoration reruns the original cross-face identity and endpoint gates.
+#[cfg(feature = "codec")]
 pub fn restore(
     value: Value,
     limits: source_shared_edge_restore::Limits,
@@ -151,17 +174,50 @@ pub fn restore(
         .map(|edge| Restriction { edge }))
 }
 /// Projective restoration replays both source compositions and root identities.
-pub fn restore_projective(value:Value,limits:source_shared_edge_restore::Limits)
-    ->Result<Option<Restriction<crate::source_projective_edge::Edge>>> {
-    Ok(crate::source_projective_edge::restore(value,limits.mapping_cells_per_use,limits.exact_work,limits.driver_cells)?.edge.map(|edge|Restriction{edge}))
+#[cfg(feature = "codec")]
+pub fn restore_projective(
+    value: Value,
+    limits: source_shared_edge_restore::Limits,
+) -> Result<Option<Restriction<crate::source_projective_edge::Edge>>> {
+    Ok(crate::source_projective_edge::restore(
+        value,
+        limits.mapping_cells_per_use,
+        limits.exact_work,
+        limits.driver_cells,
+    )?
+    .edge
+    .map(|edge| Restriction { edge }))
 }
 #[cfg(test)]
 pub(crate) fn assert_replay(edge: &SharedEdge) {
-    let limits=||source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100_000_000,driver_cells:10000};
-    let native=edge.requalify(limits()).unwrap();
-    let wire=source_shared_edge_restore::restore(edge.definition(),limits()).unwrap();
-    assert_eq!((native.work_used,native.root_checks,native.driver_cells,native.reason),(wire.work_used,wire.root_checks,wire.driver_cells,wire.reason));
-    assert!(native.edge.as_ref().unwrap().same_definition(wire.edge.as_ref().unwrap()));
+    let limits = || source_shared_edge_restore::Limits {
+        mapping_cells_per_use: 10000,
+        exact_work: 100_000_000,
+        driver_cells: 10000,
+    };
+    let native = edge.requalify(limits()).unwrap();
+    let wire = source_shared_edge_restore::restore(edge.definition(), limits()).unwrap();
+    assert_eq!(
+        (
+            native.work_used,
+            native.root_checks,
+            native.driver_cells,
+            native.reason
+        ),
+        (
+            wire.work_used,
+            wire.root_checks,
+            wire.driver_cells,
+            wire.reason
+        )
+    );
+    assert!(
+        native
+            .edge
+            .as_ref()
+            .unwrap()
+            .same_definition(wire.edge.as_ref().unwrap())
+    );
 
     let restriction = Restriction::from_edge(edge);
     let bytes = value_codec::to_string(&restriction.definition()).unwrap();

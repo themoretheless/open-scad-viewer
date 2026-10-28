@@ -101,11 +101,13 @@ pub struct ExpressionWallCell {
     pub domains: [[[f64; 2]; 2]; 2],
     pub pending_reason: Option<ExpressionWallPendingReason>,
 }
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for ExpressionWallPendingReason {
     fn to_value(&self) -> value_codec::Value {
         value_codec::Serialize::to_value(self.as_str())
     }
 }
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for ExpressionWallCell {
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({"faces":self.faces,"domains":self.domains,"pending_reason":self.pending_reason})
@@ -253,6 +255,7 @@ pub struct ExpressionWallReport {
 }
 /// Diagnostic transport only. The geometry-owned qualification certificate
 /// deliberately has no wire decoder or serialization-based admission path.
+#[cfg(feature = "codec")]
 impl value_codec::Serialize for ExpressionWallReport {
     fn to_value(&self) -> value_codec::Value {
         value_codec::json!({

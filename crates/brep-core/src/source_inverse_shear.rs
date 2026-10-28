@@ -265,10 +265,8 @@ pub struct FragmentReport {
     pub root_checks: usize,
     pub reason: &'static str,
 }
-#[cfg(feature = "codec")]
+#[cfg(all(test, feature = "codec"))]
 mod replay;
-#[cfg(feature = "codec")]
-pub use replay::*;
 pub fn transport_fragment(
     certificate: &Certificate,
     original: &crate::source_boundary_fragment::Fragment,
@@ -359,123 +357,35 @@ pub fn transport_region(
         mapping_cells: 0,
         reason: "source-inverse-shear-region-recipe-unproven",
     };
-    let Some(value) = rewrite_region(
-        certificate,
-        original.definition(),
-        limits.steps,
-        limits.mapping_cells,
-        max_exact_work,
-        &mut out,
-    )?
+    let Some(region) = original.inverse_requalify(certificate, limits, max_exact_work, &mut out)?
     else {
         return Ok(out);
     };
-    out.region = Some(crate::source_region_restore::restore(value, limits)?);
+    out.region = Some(region);
     out.reason = "source-inverse-shear-region-qualified";
+    #[cfg(all(test, feature = "codec"))]
+    {
+        let legacy = replay::transport_region(certificate, original, limits, max_exact_work)?;
+        assert_eq!(
+            (
+                out.exact_work,
+                out.root_checks,
+                out.mapping_cells,
+                out.reason
+            ),
+            (
+                legacy.exact_work,
+                legacy.root_checks,
+                legacy.mapping_cells,
+                legacy.reason
+            )
+        );
+        assert_eq!(
+            out.region.as_ref().map(|r| r.definition()),
+            legacy.region.as_ref().map(|r| r.definition())
+        );
+    }
     Ok(out)
-}
-fn rewrite_region(
-    certificate: &Certificate,
-    mut value: value_codec::Value,
-    remaining: usize,
-    max_mapping: usize,
-    max_work: u64,
-    out: &mut RegionReport,
-) -> Result<Option<value_codec::Value>> {
-    use value_codec::{Deserialize, Serialize};
-    if remaining == 0 {
-        return Ok(None);
-    }
-    match value["kind"].as_str() {
-        Some("splitRoot") | Some("splitParameter") => {
-            let Some(parent) = rewrite_region(
-                certificate,
-                value["parent"].clone(),
-                remaining - 1,
-                max_mapping,
-                max_work,
-                out,
-            )?
-            else {
-                return Ok(None);
-            };
-            value["parent"] = parent;
-            if value["kind"].as_str() == Some("splitRoot") {
-                let source =
-                    crate::source_contact_point::restore(value["point"].clone(), max_mapping)?;
-                let Some(point) = source.point else {
-                    return Ok(None);
-                };
-                if point.surface() != certificate.source() || out.mapping_cells == max_mapping {
-                    return Ok(None);
-                }
-                let inverse = crate::source_contact_point::qualify(
-                    certificate.inverse(),
-                    point.boundary(),
-                    point.contact(),
-                    point.selector(),
-                    max_mapping - out.mapping_cells,
-                )?;
-                out.mapping_cells += inverse.mapping_cells;
-                out.root_checks += 1;
-                let Some(point) = inverse.point else {
-                    return Ok(None);
-                };
-                value["point"] = point.definition();
-            }
-        }
-        Some("original") => {
-            let source = Surface::from_value(value["surface"].clone()).map_err(|_| {
-                Error::new(
-                    "BREP_SOURCE_INVERSE_SHEAR",
-                    "Invalid original region surface",
-                )
-            })?;
-            if &source != certificate.source() {
-                return Ok(None);
-            }
-            let wires = value["wires"]
-                .as_array_mut()
-                .ok_or_else(|| Error::new("BREP_SOURCE_INVERSE_SHEAR", "Missing original wires"))?;
-            for wire in wires {
-                for boundary in wire.as_array_mut().ok_or_else(|| {
-                    Error::new("BREP_SOURCE_INVERSE_SHEAR", "Invalid original wire")
-                })? {
-                    let pcurve = nurbs_core::curve::Curve::from_value(boundary["pcurve"].clone())
-                        .map_err(|_| {
-                        Error::new("BREP_SOURCE_INVERSE_SHEAR", "Invalid original pcurve")
-                    })?;
-                    let mut world = pcurve.clone();
-                    let mut points = Vec::new();
-                    for p in &pcurve.control_points {
-                        points.push(certificate.inverse().evaluate(p[0], p[1])?.point.to_vec());
-                    }
-                    world.control_points = points;
-                    if out.exact_work == max_work {
-                        return Ok(None);
-                    }
-                    let Some(proof) = nurbs_core::curve_surface_agreement::verify_exact_algebraic(
-                        &world,
-                        &pcurve,
-                        certificate.inverse(),
-                        false,
-                        (max_work - out.exact_work).min(cad_predicates::MAX_WORK),
-                    )?
-                    else {
-                        return Ok(None);
-                    };
-                    out.exact_work += proof.work_used;
-                    if proof.outcome != cad_predicates::BezierIdentity::Equal {
-                        return Ok(None);
-                    }
-                    boundary["curve"] = world.to_value();
-                }
-            }
-            value["surface"] = certificate.inverse().to_value();
-        }
-        _ => return Ok(None),
-    }
-    Ok(Some(value))
 }
 pub struct ShellReport {
     pub shell: Option<crate::source_shell_incidence::Shell>,
