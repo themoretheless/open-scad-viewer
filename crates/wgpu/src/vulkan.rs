@@ -4,7 +4,7 @@
 //! with **ASD** (`VK_EXT_external_memory_host`), **UMA** / **dUMA** (Resizable BAR / SAM),
 //! and hardware **Ray Tracing** (`VK_KHR_acceleration_structure`, `VK_KHR_ray_tracing_pipeline`, `VK_KHR_ray_query`).
 
-use crate::platform::{MemoryArchitecture, TargetPlatform};
+use crate::platform::{MemoryArchitecture, StorageDirectCapability, TargetPlatform};
 
 /// Vulkan memory property bitflags (`VkMemoryPropertyFlags`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,15 +68,24 @@ impl VulkanDevice {
         })
     }
 
-    /// Selects the optimal `MemoryArchitecture` (`Asd`, `Uma`, or `Duma`) for this Vulkan adapter.
+    /// Returns the physical memory topology (`Uma` on mobile/Apple SoCs vs `Duma` on discrete PCIe GPUs).
     #[inline]
-    pub const fn memory_architecture(&self, use_host_pointer_asd: bool) -> MemoryArchitecture {
-        if use_host_pointer_asd && self.supports_external_memory_host_asd {
-            MemoryArchitecture::Asd
-        } else if self.unified_memory {
+    pub const fn memory_architecture(&self) -> MemoryArchitecture {
+        if self.unified_memory {
             MemoryArchitecture::Uma
         } else {
             MemoryArchitecture::Duma
+        }
+    }
+
+    /// Returns the orthogonal **ASD** (Accelerated Storage Direct) capability (`VK_EXT_external_memory_host`)
+    /// that can operate on top of either `Uma` or `Duma`.
+    #[inline]
+    pub const fn storage_direct_capability(&self) -> StorageDirectCapability {
+        if self.supports_external_memory_host_asd {
+            StorageDirectCapability::VulkanExternalMemoryHost
+        } else {
+            StorageDirectCapability::None
         }
     }
 }

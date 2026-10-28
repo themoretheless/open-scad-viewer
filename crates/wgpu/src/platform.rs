@@ -106,26 +106,40 @@ impl TargetPlatform {
     }
 }
 
-/// Physical and logical GPU memory & storage architecture:
-/// - [`MemoryArchitecture::Uma`] (Unified Memory Architecture, e.g. Apple Silicon Metal):
+/// Physical and logical GPU memory architecture (`UMA` vs `dUMA`):
+/// - [`MemoryArchitecture::Uma`] (Unified Memory Architecture, e.g. Apple Silicon Metal / Mobile SoCs / Integrated APUs):
 ///   CPU and GPU share a single coherent physical DRAM pool (`StorageModeShared`).
 ///   Host-to-device uploads map primary buffers directly (`MAP_WRITE | STORAGE`) with zero PCIe staging copies.
 /// - [`MemoryArchitecture::Duma`] (Discrete / Decoupled Memory Architecture, e.g. NVIDIA CUDA / PCIe Vulkan / DX12 / WebGPU):
 ///   CPU RAM and GPU VRAM are physically or logically separated across a bus/staging boundary.
-///   Uploads use explicit staging ring buffers (`queue.write_buffer` / `cudaMemcpyAsync`) and device-local VRAM (`StorageModePrivate`).
-/// - [`MemoryArchitecture::Asd`] (Accelerated Storage Direct / Apple Silicon Direct / GPUDirect Storage / DirectStorage):
-///   Zero-copy page-aligned storage or `mmap` mapped directly into the GPU virtual address space (`newBufferWithBytesNoCopy:` / `cuFile`).
+///   Uploads use Resizable BAR (`ReBAR` / `SAM`) or explicit staging ring buffers (`queue.write_buffer` / `cudaMemcpyAsync`) and device-local VRAM (`StorageModePrivate`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MemoryArchitecture {
     /// Unified Memory Architecture (Apple Silicon Metal `StorageModeShared`, zero-copy CPU/GPU DRAM).
     Uma,
-    /// Discrete / Decoupled Memory Architecture (dedicated VRAM + PCIe/staging transfer).
+    /// Discrete / Decoupled Memory Architecture (dedicated VRAM + ReBAR/PCIe/staging transfer).
     Duma,
-    /// Accelerated Storage Direct / Apple Silicon Direct / GPUDirect Storage (`newBufferWithBytesNoCopy:` / `cuFile`).
-    Asd,
 }
 
-/// Strategy for uploading, storing, and reading back GPU buffers under [`MemoryArchitecture::Uma`], [`MemoryArchitecture::Duma`], and [`MemoryArchitecture::Asd`].
+/// Orthogonal **ASD** (Accelerated Storage Direct) I/O & Zero-Copy Page Mapping capability that operates
+/// *on top of* either [`MemoryArchitecture::Uma`] or [`MemoryArchitecture::Duma`]:
+/// - On `UMA` (macOS / iOS Apple Silicon): `MTLDevice::newBufferWithBytesNoCopy:` maps 16 KiB page-aligned `mmap`/RAM directly into the GPU address space.
+/// - On `dUMA` (Linux / Windows / Android): `cuFile` (GPUDirect Storage), `DirectStorage` (DX12), or `VK_EXT_external_memory_host` (Vulkan) streams storage pages straight into GPU buffers without CPU staging copies.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum StorageDirectCapability {
+    /// Standard buffer allocation path without direct page/storage mapping.
+    None,
+    /// Apple Silicon Direct / Metal `newBufferWithBytesNoCopy:` zero-copy VM page mapping (`16 KiB` pages).
+    MetalPageNoCopy,
+    /// Vulkan `VK_EXT_external_memory_host` / `VK_KHR_external_memory_fd` direct host/storage page import.
+    VulkanExternalMemoryHost,
+    /// NVIDIA GPUDirect Storage (`cuFileRead` / `cuFileWrite` direct NVMe -> VRAM DMA).
+    NvidiaGpuDirectStorage,
+    /// Microsoft DirectStorage (`IDStorageQueue` direct NVMe -> DX12 heap decompression).
+    MicrosoftDirectStorage,
+}
+
+/// Strategy for uploading, storing, and reading back GPU buffers under [`MemoryArchitecture::Uma`] and [`MemoryArchitecture::Duma`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MemoryArchitectureProfile {
     pub architecture: MemoryArchitecture,
@@ -158,15 +172,6 @@ impl MemoryArchitecture {
                 requires_explicit_staging_ring: true,
                 preferred_upload_strategy: "staging_ring_to_device_local_vram",
                 preferred_readback_strategy: "dma_copy_to_staging_then_map",
-            },
-            Self::Asd => MemoryArchitectureProfile {
-                architecture: Self::Asd,
-                label: "ASD (Accelerated Storage Direct / Zero-Copy Page Mapping)",
-                unified_physical_ram: true,
-                zero_copy_primary_upload: true,
-                requires_explicit_staging_ring: false,
-                preferred_upload_strategy: "page_aligned_no_copy_direct_storage",
-                preferred_readback_strategy: "zero_copy_page_mapped_view",
             },
         }
     }
@@ -365,6 +370,19 @@ impl BackendReport {
     #[inline]
     pub const fn memory_profile(&self) -> MemoryArchitectureProfile {
         self.memory_architecture().profile()
+    }
+
+    #[inline]
+    pub const fn storage_direct_capability(&self) -> StorageDirectCapability {
+        match self.kind {
+            BackendKind::Metal => StorageDirectCapability::MetalPageNoCopy,
+            BackendKind::Vulkan => StorageDirectCapability::VulkanExternalMemoryHost,
+            BackendKind::Cuda => StorageDirectCapability::NvidiaGpuDirectStorage,
+            BackendKind::Dx12 => StorageDirectCapability::MicrosoftDirectStorage,
+            BackendKind::Gl | BackendKind::WebGpu | BackendKind::Noop => {
+                StorageDirectCapability::None
+            }
+        }
     }
 
     #[inline]

@@ -111,7 +111,10 @@ mod tests {
         assert!(vk.supports_ray_tracing_pipeline);
         assert!(vk.supports_ray_query);
         assert!(vk.supports_external_memory_host_asd);
-        assert_eq!(vk.memory_architecture(true), MemoryArchitecture::Asd);
+        assert_eq!(
+            vk.storage_direct_capability(),
+            StorageDirectCapability::VulkanExternalMemoryHost
+        );
 
         let blas = Blas::new(
             Some("cad-csg-blas"),
