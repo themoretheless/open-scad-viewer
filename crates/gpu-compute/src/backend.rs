@@ -281,5 +281,14 @@ mod tests {
             compile_shader_multi_target(&rtx_shader).expect("RTX WGSL compiles to all 6 backends");
         assert!(rtx_artifact.msl.contains("kernel void"));
         assert!(rtx_artifact.glsl.contains("layout(local_size_x = 8, local_size_y = 8"));
+
+        let webgpu =
+            wgpu::webgpu::WebGpuDevice::probe_available().expect("Browser WebGPU profile");
+        assert_eq!(webgpu.backend_report().environment, ApiEnvironment::BrowserSandbox);
+        assert_eq!(webgpu.backend_report().shader_ir, BackendShaderIr::Wgsl);
+        assert_eq!(webgpu.storage_direct_capability(), StorageDirectCapability::None);
+        let webgpu_plan = webgpu.transfer_plan(1024 * 1024);
+        assert_eq!(webgpu_plan.memory_architecture, MemoryArchitecture::Duma);
+        assert_eq!(webgpu_plan.tech, TransferStrategy::DumaRebarWindow);
     }
 }

@@ -48,6 +48,7 @@ pub use texture::*;
 pub use transfer::*;
 pub use types::*;
 pub use uma::*;
+pub use webgpu::*;
 
 use metal::MetalDevice;
 use gpu_shader as naga;
