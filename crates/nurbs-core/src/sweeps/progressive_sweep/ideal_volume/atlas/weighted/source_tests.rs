@@ -108,6 +108,7 @@ fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificat
     let c = cell::Context {
         s,
         caps: [&cap, &cap],
+        cap_identity: cap_identity::certify([&cap, &cap], &mut report(), 0, 0),
         basis,
         start: [I::point(0.); 3],
         zero,

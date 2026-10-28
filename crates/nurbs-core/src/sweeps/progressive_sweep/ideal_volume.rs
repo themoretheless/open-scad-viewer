@@ -33,6 +33,7 @@ pub(super) mod arc;
 pub(super) mod arc_frames;
 pub(crate) mod atlas;
 pub(crate) mod cell;
+mod cap_identity;
 pub(crate) mod charts;
 mod closed;
 mod intrinsic;
@@ -64,8 +65,8 @@ impl MultiSweep<'_> {
     /// All pair visits, failed trials and source restrictions share the ledger.
     /// `monotonicity_lower` stays None; this method does not prove monotonicity.
     /// Closed traversals require exact native endpoint ownership and ONE
-    /// literal traversal-independent carrier. Wrapped charts then certify the
-    /// UV x S1 quotient, not injectivity of the duplicated endpoint cube.
+    /// exactly identical normalized traversal-independent carrier. Wrapped
+    /// charts then certify UV x S1, not injection of duplicated endpoints.
     /// Invalid/unowned trim regions are not admitted.
     /// The explicit aggregate budget may be up to 1,000,000 cells. Individual
     /// source stages retain their 100,000-cell ceiling; no implicit work is added.
@@ -125,16 +126,21 @@ impl MultiSweep<'_> {
             out.reason = Some("ideal-volume-source-continuity-unproved");
             return Ok(out);
         }
+        let cap_identity = cap_identity::certify(caps, &mut out, max_cells, max_exact_work);
         // This proves frame continuity independently of cell subdivision. The
         // scalar and positional C0 premises above suffice for the piecewise
         // segment integral; the stronger frame C1 gate is conservative.
         if closed {
-            if !closed::premises(s, caps, &mut out, max_cells.min(100000), max_exact_work)? {
+            if !closed::premises(
+                s, caps, cap_identity.as_ref(), &mut out,
+                max_cells.min(100000), max_exact_work,
+            )? {
                 return Ok(out);
             }
         } else {
-            let smooth =
-                s.certify_original_frame_smoothness(1, max_cells.min(100000), max_exact_work)?;
+            let smooth = s.certify_original_frame_smoothness(
+                1, (max_cells - out.cells).min(100000), max_exact_work - out.exact_work,
+            )?;
             out.cells += smooth.cells;
             out.exact_work += smooth.exact_work;
             if !smooth.source_frame_smoothness_certified {
@@ -256,6 +262,7 @@ impl MultiSweep<'_> {
         let context = cell::Context {
             s,
             caps,
+            cap_identity,
             basis,
             start,
             zero,
@@ -293,7 +300,7 @@ impl MultiSweep<'_> {
             if out.cells == max_cells {
                 return Ok(out);
             }
-            if caps[0] != caps[1] {
+            if !context.same_cap() {
                 let axis = (0..3)
                     .max_by(|&i, &j| (b[i][1] - b[i][0]).total_cmp(&(b[j][1] - b[j][0])))
                     .unwrap();

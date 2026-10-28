@@ -22,6 +22,7 @@ pub(crate) enum Enclosed {
 pub(super) struct Context<'a, 'b> {
     pub(super) s: &'b Sweep<'a>,
     pub(super) caps: [&'b Surface; 2],
+    pub(super) cap_identity: Option<cap_identity::Identity<'b>>,
     pub(super) basis: [V3; 3],
     pub(super) start: V3,
     pub(super) zero: Curve,
@@ -36,6 +37,9 @@ pub(super) struct Context<'a, 'b> {
     pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::PairedPose>>>,
 }
 impl Context<'_, '_> {
+    pub(super) fn same_cap(&self) -> bool {
+        self.cap_identity.as_ref().is_some_and(|p| p.matches(self.caps))
+    }
     pub(super) fn bound(
         &self,
         b: Box3,
@@ -71,7 +75,7 @@ impl Context<'_, '_> {
         let Some(a) = cap_jets(caps[0], [b[0], b[1]], &mut out.cells, max_cells)? else {
             return Ok(Enclosed::Unavailable(None));
         };
-        let z = if caps[0] == caps[1] {
+        let z = if self.same_cap() {
             a
         } else {
             let Some(z) = cap_jets(caps[1], [b[0], b[1]], &mut out.cells, max_cells)? else {
@@ -84,9 +88,9 @@ impl Context<'_, '_> {
         let mut q = [[I::point(0.); 3]; 3];
         let mut world_q = q;
         for j in 0..3 {
-            // Literal source identity preserves correlation. Independent
+            // Exact normalized source identity preserves correlation. Independent
             // boxes for (1-t)C+tC or C-C would invent a moving carrier.
-            let blended = if caps[0] == caps[1] {
+            let blended = if self.same_cap() {
                 a[j]
             } else {
                 iv::add(iv::scale(a[j], one)?, iv::scale(z[j], t)?)?
@@ -97,12 +101,12 @@ impl Context<'_, '_> {
         // q[0] is an affine position, q[1..] are linear differential vectors.
         q[0] = iv::sub(q[0], local(start, basis)?)?;
         world_q[0] = iv::sub(world_q[0], start)?;
-        let world_qt = if caps[0] == caps[1] {
+        let world_qt = if self.same_cap() {
             [I::point(0.); 3]
         } else {
             iv::sub(z[0], a[0])?
         };
-        let qt = if caps[0] == caps[1] {
+        let qt = if self.same_cap() {
             [I::point(0.); 3]
         } else {
             local(iv::sub(z[0], a[0])?, basis)?

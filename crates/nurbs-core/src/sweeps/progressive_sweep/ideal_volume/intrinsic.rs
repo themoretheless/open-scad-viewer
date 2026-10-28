@@ -34,7 +34,7 @@ impl Tube {
         closed: bool,
     ) -> Result<Option<Self>> {
         let s = c.s;
-        if c.arc.is_none() || (closed && c.caps[0] != c.caps[1]) || s.contact_point.is_some() {
+        if c.arc.is_none() || (closed && !c.same_cap()) || s.contact_point.is_some() {
             return Ok(None);
         }
         let path = s.path;
@@ -70,7 +70,7 @@ impl Tube {
         {
             return Ok(None);
         }
-        if c.caps[0] != c.caps[1]
+        if !c.same_cap()
             && !plane::certify_frame(
                 path,
                 c.caps[1],
@@ -98,7 +98,7 @@ impl Tube {
         // This global contraction proves BOTH injectivity and rank two over
         // the complete natural carrier rectangle, including one-sided knots.
         // Validity and binding of its material trims remain BRep obligations.
-        if c.caps[0] == c.caps[1] {
+        if c.same_cap() {
             let cover = crate::surface_injectivity::certify_contraction(
                 cap,
                 (max - out.cells).min(100000),
@@ -117,7 +117,7 @@ impl Tube {
             .collect::<Vec<_>>();
         let mut radius = 0_f64;
         for (i, cap) in c.caps.iter().enumerate() {
-            if i == 1 && c.caps[0] == c.caps[1] {
+            if i == 1 && c.same_cap() {
                 continue;
             }
             for q in cap.control_points.iter().flatten() {

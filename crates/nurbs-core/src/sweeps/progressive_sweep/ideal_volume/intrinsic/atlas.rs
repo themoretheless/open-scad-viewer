@@ -96,18 +96,17 @@ pub(super) fn certify(
         if local(&[box_for(h)], out)? {
             continue;
         }
-        if out.cells == max {
-            return Ok(());
-        }
+        // This pair visit is already paid. Even at the exact limit, an
+        // existing wrapped chart or two cached source boxes may finish it
+        // without any new source work. Uncached queries guard their own
+        // ledger before arithmetic; failure still reaches the limit gate
+        // below, and the next pair always requires its own paid visit.
         if closed && a != b {
             let (early, late) = if a[0] <= b[0] { (a, b) } else { (b, a) };
             if early[1] < late[0] && local(&[box_for([late[0], 1.]), box_for([0., early[1]])], out)?
             {
                 continue;
             }
-        }
-        if out.cells == max {
-            return Ok(());
         }
         if a != b {
             if let (Some(x), Some(y)) = (value(a, out)?, value(b, out)?) {

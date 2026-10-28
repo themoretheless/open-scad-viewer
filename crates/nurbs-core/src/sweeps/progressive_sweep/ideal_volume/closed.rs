@@ -19,11 +19,12 @@ fn endpoint_identity(c: &Curve, spent: &mut usize, max: usize) -> bool {
 pub(super) fn premises(
     s: &Sweep<'_>,
     caps: [&Surface; 2],
+    identity: Option<&cap_identity::Identity<'_>>,
     out: &mut IdealVolumeReport,
     max_cells: usize,
     max_work: u64,
 ) -> Result<bool> {
-    if caps[0] != caps[1] {
+    if !identity.is_some_and(|p| p.matches(caps)) {
         out.reason = Some("ideal-volume-closed-common-carrier-required");
         return Ok(false);
     }
