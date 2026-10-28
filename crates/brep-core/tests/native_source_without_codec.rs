@@ -148,6 +148,39 @@ fn cube(shift: f64) -> brep_core::source_volume::Body {
     .unwrap();
     r.body.expect(r.reason)
 }
+fn body_limits() -> brep_core::source_body_restore::Limits {
+    brep_core::source_body_restore::Limits {
+        shell: brep_core::source_shell_restore::Limits {
+            regions: replay_limits(),
+            exact_work: 100000000,
+            driver_cells: 100000,
+        },
+        embedding: brep_core::source_shell_geometry::Limits {
+            tolerance_uv: 1e-8,
+            corners: 100,
+            spans: 100000,
+            linear_cells: 100000,
+            pairs: brep_core::face_contacts::Limits {
+                pairs: 15,
+                cells: 100000,
+                domain_cells: 100000,
+                cells_per_pair: 10000,
+                domain_cells_per_pair: 10000,
+            },
+            exact_work: 100000000,
+            driver_cells: 100000,
+        },
+        volume: brep_core::source_volume::Limits {
+            axis: 2,
+            origin: 0.,
+            absolute_error: 0.01,
+            tolerance_uv: 1e-8,
+            cells: 10000,
+            spans: 100000,
+            domain_cells: 1000000,
+        },
+    }
+}
 fn edge_limits() -> brep_core::source_shared_edge::ReplayLimits {
     brep_core::source_shared_edge::ReplayLimits {
         mapping_cells_per_use: 10000,
@@ -158,6 +191,24 @@ fn edge_limits() -> brep_core::source_shared_edge::ReplayLimits {
 #[test]
 fn source_body_replay_and_exchange_keep_native_provenance_without_wire_values() {
     let body = cube(0.);
+    let replay = body.requalify(&body_limits()).unwrap();
+    let replay = replay.body().expect(replay.reason());
+    assert_eq!(
+        replay.geometry().shell().vertices(),
+        body.geometry().shell().vertices()
+    );
+    assert_eq!(replay.volume(), body.volume());
+    let mut exhausted = body_limits();
+    exhausted.shell.exact_work = 1;
+    let stopped = body.requalify(&exhausted).unwrap();
+    assert!(stopped.body().is_none());
+    assert!(stopped.embedding.is_none());
+    assert!(stopped.volume.is_none());
+    let mut exhausted = body_limits();
+    exhausted.embedding.pairs.pairs = 1;
+    let stopped = body.requalify(&exhausted).unwrap();
+    assert!(stopped.body().is_none());
+    assert!(stopped.volume.is_none());
     let volume = body.volume();
     assert!(volume[0] <= 1. && volume[1] >= 1.);
     let shell = body.geometry().shell();
@@ -219,6 +270,24 @@ fn source_body_replay_and_exchange_keep_native_provenance_without_wire_values() 
     assert_eq!(replay.vertices(), projective.vertices());
     assert_eq!(replay.uses(), projective.uses());
     assert!(projective.requalify(&exhausted).unwrap().shell.is_none());
+    let geometry =
+        brep_core::source_shell_geometry::qualify_projective(projective, body_limits().embedding)
+            .unwrap();
+    let geometry = geometry.geometry.expect(geometry.reason);
+    let volume = brep_core::source_volume::qualify(geometry, body_limits().volume).unwrap();
+    let projected = volume.body.expect(volume.reason);
+    let fresh = projected.requalify(&body_limits()).unwrap();
+    let fresh = fresh.body().expect(fresh.reason());
+    assert_eq!(
+        fresh.geometry().shell().vertices(),
+        projected.geometry().shell().vertices()
+    );
+    assert_eq!(fresh.volume(), projected.volume());
+    let mut exhausted = body_limits();
+    exhausted.embedding.pairs.pairs = 1;
+    let stopped = projected.requalify(&exhausted).unwrap();
+    assert!(stopped.body().is_none());
+    assert!(stopped.volume.is_none());
 
     let original = &shell.regions().unwrap()[0];
     let split = original.split_boundary_parameter(0, 0, 0.5).unwrap();
@@ -345,6 +414,37 @@ fn capped_canal_body_admits_native_geometry_and_independent_volume_without_codec
     )
     .unwrap();
     let body = report.body().expect(report.reason());
+    let mut replay_limits = body_limits();
+    replay_limits.shell.driver_cells = 10000;
+    replay_limits.embedding.corners = 10000;
+    replay_limits.embedding.spans = 20000;
+    replay_limits.embedding.linear_cells = 10000;
+    replay_limits.embedding.pairs = brep_core::face_contacts::Limits {
+        pairs: 10000,
+        cells: 10000,
+        domain_cells: 100000,
+        cells_per_pair: 32,
+        domain_cells_per_pair: 512,
+    };
+    replay_limits.embedding.exact_work = 10000000;
+    replay_limits.embedding.driver_cells = 10000;
+    replay_limits.volume.origin = 5.;
+    replay_limits.volume.absolute_error = 0.25;
+    replay_limits.volume.cells = 50000;
+    replay_limits.volume.domain_cells = 100000;
+    let replay = body.requalify(&replay_limits).unwrap();
+    let replayed = replay.body().expect(replay.reason());
+    assert_eq!(
+        replayed.geometry().shell().vertices(),
+        body.geometry().shell().vertices()
+    );
+    assert_eq!(replayed.volume(), body.volume());
+    replay_limits.volume.cells = 1;
+    let stopped = body.requalify(&replay_limits).unwrap();
+    assert!(stopped.body().is_none());
+    assert!(stopped.embedding.is_some());
+    assert!(stopped.volume.is_some());
+
     let radii = [0.5_f64, 1.25];
     let length = 13.;
     let slope = (radii[1] - radii[0]) / length;

@@ -281,3 +281,7 @@ SourceRegion хранит Original/Cut/SplitRoot/SplitParameter как Rust enum
 ## Native replay всей материальной оболочки · 28.10.2026
 
 Affine/mapped и projective Shell::requalify повторно допускают области, записанные uses, общие рёбра, vertex ownership и полюса без JSON. Exact/driver work остаются общими для всех пар; старые пределы сохранены. Native/wire counters и topology сравниваются, подменённые кэши не дают разрешения, пропущенные uses/полюса отвергаются. Default четыре библиотеки: 4208 прошли, 0 отказов, 6 пропусков; публичные сценарии без codec: 2/2. Минимальный unit target пока не собирается: 468 ошибок вместо 492. Это не разрешение нового общего Boolean/Solid и не завершение остальных пяти направлений. [Контракт](../qualification/nurbs-native-material-shell-replay-2026-10-28/README.md).
+
+## Native повторный допуск полного Body · 28.10.2026
+
+Affine/mapped и projective Body::requalify заново проверяет оболочку, embedding/контакты и объём; inverse-shear допускается заново по исходным axes/coefficient. Подменённые volume/orientation-кэши не дают разрешения, бюджеты фаз сохранены. Default четыре библиотеки: 4208 прошли, 0 отказов, 6 пропусков; изменённый incidence-модуль после очистки guard: 13/13; публичные native сценарии без codec: 2/2. Минимальный unit-test target пока не собирается: 456 ошибок вместо 468. Новая общая Boolean/Solid-геометрия и остальные требования пяти направлений не объявляются завершёнными. [Протокол](../qualification/nurbs-native-body-requalification-2026-10-28/README.md).
