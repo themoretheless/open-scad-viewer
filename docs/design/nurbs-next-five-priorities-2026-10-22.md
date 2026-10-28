@@ -277,3 +277,7 @@ SourceRegion хранит Original/Cut/SplitRoot/SplitParameter как Rust enum
 ## Разделение полного minimal unit-test target · 28.10.2026
 
 Дополнительная проверка полного unit-test target без codec выявила 571 ошибку смешанного тестового кода. Native и wire части точек, фрагментов, рациональных root-параметров и общих replay helpers разделены с сохранением математических assertions; ошибок осталось 492. Target пока не собирается. Default-проверки сохранили 4208 успешных тестов, 0 отказов, 6 пропусков; публичные native integration paths без codec — 2/2. Это не завершение ни полной минимальной unit-матрицы, ни оставшихся пяти геометрических направлений. [Протокол и остаток](../qualification/nurbs-native-unit-separation-2026-10-28/README.md).
+
+## Native replay всей материальной оболочки · 28.10.2026
+
+Affine/mapped и projective Shell::requalify повторно допускают области, записанные uses, общие рёбра, vertex ownership и полюса без JSON. Exact/driver work остаются общими для всех пар; старые пределы сохранены. Native/wire counters и topology сравниваются, подменённые кэши не дают разрешения, пропущенные uses/полюса отвергаются. Default четыре библиотеки: 4208 прошли, 0 отказов, 6 пропусков; публичные сценарии без codec: 2/2. Минимальный unit target пока не собирается: 468 ошибок вместо 492. Это не разрешение нового общего Boolean/Solid и не завершение остальных пяти направлений. [Контракт](../qualification/nurbs-native-material-shell-replay-2026-10-28/README.md).

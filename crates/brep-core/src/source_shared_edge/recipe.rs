@@ -1,7 +1,7 @@
 //! Original mapping inputs, without cached proof or dynamic wire values.
 use nurbs_core::curve::Curve;
 #[derive(Clone, Debug, PartialEq)]
-pub(super) enum Recipe {
+pub(crate) enum Recipe {
     Direct {
         world_reversed: [bool; 2],
         cutters: [Option<Curve>; 2],

@@ -9,6 +9,7 @@ mod same_linear_parameter;
 pub(crate) mod sample;
 mod shared_edge;
 use recipe::Recipe;
+pub(crate) use recipe::Recipe as OriginalRecipe;
 pub use sample::{BoundaryChainPoint, BoundaryChainReport, BoundarySample, BoundarySampleReport};
 #[path = "../source_shared_edge_endpoint.rs"]
 pub(crate) mod endpoint;

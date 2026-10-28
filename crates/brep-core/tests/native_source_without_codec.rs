@@ -161,6 +161,65 @@ fn source_body_replay_and_exchange_keep_native_provenance_without_wire_values() 
     let volume = body.volume();
     assert!(volume[0] <= 1. && volume[1] >= 1.);
     let shell = body.geometry().shell();
+    let shell_limits = brep_core::source_shell_restore::Limits {
+        regions: replay_limits(),
+        exact_work: 100000000,
+        driver_cells: 100000,
+    };
+    let replay = shell.requalify(&shell_limits).unwrap();
+    let replay = replay.shell.expect(replay.reason);
+    assert_eq!(replay.vertices(), shell.vertices());
+    assert_eq!(replay.uses(), shell.uses());
+    let exhausted = brep_core::source_shell_restore::Limits {
+        regions: replay_limits(),
+        exact_work: 1,
+        driver_cells: 100000,
+    };
+    assert!(shell.requalify(&exhausted).unwrap().shell.is_none());
+    let projective_pairs = shell
+        .edges()
+        .iter()
+        .enumerate()
+        .map(|(i, e)| incidence::Pair {
+            uses: shell.uses()[i],
+            world: e.world().clone(),
+            world_reversed: [false; 2],
+            cutters: [None, None],
+        })
+        .collect::<Vec<_>>();
+    let projective_maps = shell
+        .edges()
+        .iter()
+        .enumerate()
+        .map(|(i, e)| incidence::ProjectiveMaps {
+            pair: i,
+            ranges: std::array::from_fn(|side| {
+                if e.reversed()[side] ^ e.uses()[side].reversed() {
+                    [[1., 1.], [0., 1.]]
+                } else {
+                    [[0., 1.], [1., 1.]]
+                }
+            }),
+            weights: [[1.; 2]; 2],
+        })
+        .collect::<Vec<_>>();
+    let projective = incidence::assemble_regions_projective(
+        shell.regions().unwrap(),
+        &projective_pairs,
+        &[],
+        &projective_maps,
+        &[],
+        100000000,
+        100000,
+    )
+    .unwrap();
+    let projective = projective.shell.expect(projective.reason);
+    let replay = projective.requalify(&shell_limits).unwrap();
+    let replay = replay.shell.expect(replay.reason);
+    assert_eq!(replay.vertices(), projective.vertices());
+    assert_eq!(replay.uses(), projective.uses());
+    assert!(projective.requalify(&exhausted).unwrap().shell.is_none());
+
     let original = &shell.regions().unwrap()[0];
     let split = original.split_boundary_parameter(0, 0, 0.5).unwrap();
     assert!(split.same_definition(&split.requalify(&replay_limits()).unwrap()));

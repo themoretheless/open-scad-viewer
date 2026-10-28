@@ -1697,18 +1697,25 @@ mod tests {
                 .unwrap()
                 .shell
                 .unwrap();
-        let definition = material.definition().unwrap();
-        let text = value_codec::to_string(&definition).unwrap();
-        let decoded = value_codec::from_str_strict(&text).unwrap();
         let limits = crate::source_projective_shell_restore::Limits {
             regions: crate::source_region_restore::test_limits(),
             exact_work: 100000000,
             driver_cells: 10000,
         };
-        let replay = crate::source_projective_shell_restore::restore(decoded, &limits)
-            .unwrap()
-            .shell
-            .unwrap();
+        let native=material.requalify(&limits).unwrap();
+        let native_counts=(native.work_used,native.root_checks,native.driver_cells,native.uncertain_pair,native.reason);
+        let native=native.shell.expect(native.reason);
+        assert_eq!(native.vertices(),material.vertices());
+        assert_eq!(native.uses(),material.uses());
+        #[cfg(feature="codec")]
+        let definition=material.definition().unwrap();
+        #[cfg(feature="codec")]
+        let (replay,binary_replay)={
+        let text = value_codec::to_string(&definition).unwrap();
+        let decoded = value_codec::from_str_strict(&text).unwrap();
+        let report=crate::source_projective_shell_restore::restore(decoded,&limits).unwrap();
+        assert_eq!(native_counts,(report.work_used,report.root_checks,report.driver_cells,report.uncertain_pair,report.reason));
+        let replay=report.shell.unwrap();
         assert_eq!(replay.definition().unwrap(), definition);
         let bytes = value_codec::encode_binary(&definition).unwrap();
         let binary = value_codec::decode_binary(&bytes).unwrap();
@@ -1718,6 +1725,12 @@ mod tests {
             .unwrap();
         assert_eq!(binary_replay.definition().unwrap(), definition);
         assert_eq!(binary_replay.vertices(), material.vertices());
+
+        assert_eq!(native.vertices(),binary_replay.vertices());
+        (replay,binary_replay)
+        };
+        #[cfg(not(feature="codec"))]
+        let (replay,binary_replay)={let again=material.requalify(&limits).unwrap();(native,again.shell.expect(again.reason))};
 
         assert_eq!(replay.vertices(), material.vertices());
         assert_eq!(replay.uses(), material.uses());
@@ -1783,10 +1796,12 @@ mod tests {
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(bounds[1] - bounds[0] <= 0.01);
         assert!(!body.reverse_orientation());
+        #[cfg(feature="codec")]
         assert_eq!(
             body.definition().unwrap()["kind"].as_str(),
             Some("projective-body")
         );
+        #[cfg(feature="codec")]
         let restore_limits = |pair_budget| crate::source_projective_body_restore::Limits {
             shell: crate::source_projective_shell_restore::Limits {
                 regions: crate::source_region_restore::test_limits(),
@@ -1826,6 +1841,8 @@ mod tests {
         let (imported, _, _) = crate::import_step_v6(&step).unwrap();
         crate::source_body_model::assert_step_identity(&transferred, &imported);
 
+        #[cfg(feature="codec")]
+        {
         let body_definition = body.definition().unwrap();
         let body_bytes = value_codec::encode_binary(&body_definition).unwrap();
         let restored = crate::source_projective_body_restore::restore(
@@ -1857,11 +1874,9 @@ mod tests {
                 .is_none()
         );
 
-        let incomplete =
-            crate::source_projective_shell_restore::restore(definition.clone(), &limits)
-                .unwrap()
-                .shell
-                .unwrap();
+        }
+        let incomplete=material.requalify(&limits).unwrap();
+        let incomplete=incomplete.shell.expect(incomplete.reason);
         let refused = crate::source_shell_geometry::qualify_projective(
             incomplete,
             crate::source_shell_geometry::Limits {
@@ -1885,6 +1900,8 @@ mod tests {
         assert_eq!(refused.pairs, 1);
         assert_eq!(refused.next_pair, Some([0, 2]));
 
+        #[cfg(feature="codec")]
+        {
         let mut forged = definition.clone();
         forged["pairs"][0]["edge"]["uses"][0]["weights"] = value_codec::json!([1., 1.]);
         forged["certificateQualified"] = value_codec::json!(true);
@@ -1897,6 +1914,7 @@ mod tests {
         let mut missing = definition.clone();
         missing["pairs"].as_array_mut().unwrap().pop();
         assert!(crate::source_projective_shell_restore::restore(missing, &limits).is_err());
+        }
         maps[0].weights[0][1] += 1.;
         assert!(
             assemble_projective(&faces, &pairs, &[], &maps, &[], 100000000, 10000)
@@ -3551,3 +3569,6 @@ mod tests {
         assert_eq!(r.uncertain_pair, Some(0));
     }
 }
+
+#[path = "source_shell_incidence/replay.rs"]
+mod replay;

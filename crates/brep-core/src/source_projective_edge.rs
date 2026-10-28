@@ -18,6 +18,37 @@ pub struct Edge {
     fraction_candidates: Option<FractionCandidates>,
 }
 impl Edge {
+    pub(crate) fn original_inputs(
+        &self,
+    ) -> Result<([Option<Plane>; 2], Candidates, Option<FractionCandidates>)> {
+        if self
+            .planes
+            .iter()
+            .flatten()
+            .flatten()
+            .flatten()
+            .any(|v| !v.is_finite())
+            || self
+                .candidates
+                .iter()
+                .flatten()
+                .flatten()
+                .flatten()
+                .any(|v| !v.is_finite())
+            || self
+                .fraction_candidates
+                .iter()
+                .flatten()
+                .flatten()
+                .flatten()
+                .flatten()
+                .flatten()
+                .any(|v| !v.is_finite())
+        {
+            return Err(invalid());
+        }
+        Ok((self.planes, self.candidates, self.fraction_candidates))
+    }
     pub fn same_definition(&self, other: &Self) -> bool {
         self.planes == other.planes
             && self.candidates == other.candidates

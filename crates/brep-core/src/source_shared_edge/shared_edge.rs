@@ -9,6 +9,9 @@ pub struct SharedEdge {
     recipe: Recipe,
 }
 impl SharedEdge {
+    pub(crate) fn original_recipe(&self) -> &super::OriginalRecipe {
+        &self.recipe
+    }
     /// Same original definitions and proposal inputs, never proximity or cached
     /// direction/range/interval equality. Mirrors the existing wire identity.
     pub fn same_definition(&self, other: &Self) -> bool {

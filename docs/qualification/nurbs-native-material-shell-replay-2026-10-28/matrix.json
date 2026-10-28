@@ -1,0 +1,84 @@
+{
+  "library_checks": {
+    "minimal": "passed",
+    "codec": "passed"
+  },
+  "default_native_libraries": {
+    "passed": 4208,
+    "failed": 0,
+    "ignored": 6
+  },
+  "minimal_public_integration": {
+    "passed": 2,
+    "failed": 0
+  },
+  "minimal_unit_target": {
+    "status": "incomplete",
+    "errors": 468,
+    "previous": 492,
+    "primary_errors_by_file": {
+      "source_support_shell.rs": 228,
+      "source_shell_incidence.rs": 43,
+      "source_projective_use.rs": 25,
+      "source_shared_edge/tests/mod.rs": 22,
+      "source_mapped_edge/tests_extra.rs": 20,
+      "tests/step_interchange_v3.rs": 18,
+      "analytic/../tests/analytic_tests.rs": 17,
+      "source_projective_edge.rs": 17,
+      "source_seam_tangency.rs": 14,
+      "linear_canal_body.rs": 13,
+      "source_mapped_edge/tests.rs": 12,
+      "analytic_features/../tests/analytic_features.rs": 4,
+      "linear_canal.rs": 4,
+      "source_profile_shell_audit.rs": 3,
+      "source_body_model.rs": 2,
+      "circular_blend/tests/mod.rs": 2,
+      "edge_tangency.rs": 2,
+      "face_injectivity.rs": 2,
+      "operations/tests.rs": 2,
+      "profile_region.rs": 2,
+      "source_collapsed_boundary.rs": 2,
+      "source_root_refinement.rs": 2,
+      "source_profile_shell_refinement.rs": 2,
+      "analysis/tests/mod.rs": 1,
+      "body_edit.rs": 1,
+      "spatial_rmf_qualification.rs": 1
+    }
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "logs": {
+    "native-shell-final-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-shell-final-minimal-check.log",
+      "sha256": "7a1e5f4d59b2e44acf3c6a711a24a2b4e9b49b6f1d79a693a56bd44003f8cddd"
+    },
+    "native-shell-final-default-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-shell-final-default-check.log",
+      "sha256": "4a375bce59251718d804b7f13de861df180931c28d46a72862bbeb48c6d69348"
+    },
+    "native-shell-default-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-shell-default-full.log",
+      "sha256": "226a06b4c6d3b88a2a10c154bf13c42fc66aabfded51b2df6f284b05c71a92c2"
+    },
+    "native-shell-public-integration.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-shell-public-integration.log",
+      "sha256": "057cbc63e2ce0c2b4fad24a2077884ee030ba2188fc66f105ebf4989456542f4"
+    },
+    "native-shell-final-unit-no-run.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-shell-final-unit-no-run.log",
+      "sha256": "aedf14d8d6c5cc3867fae77a9e125f29a967482572d602e4724d0a0cf9dc421c"
+    },
+    "native-shell-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-shell-architecture.log",
+      "sha256": "5e2ef92632010d20fd26739a2f5a58aa06aef5a4091f0d68cc55bf001ec7c791"
+    }
+  }
+}
