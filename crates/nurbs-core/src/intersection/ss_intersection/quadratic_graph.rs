@@ -10,8 +10,9 @@ mod line_clip;
 mod ranges;
 pub use curves::{
     GraphBoundaryRoot, GraphBoundaryRootLimits, GraphCurveBuildLimits, GraphCurveTolerances,
-    GraphCurveVertex, GraphEdgeCurves, QualifiedGraphBoundaryRoots, QualifiedGraphCurves,
-    construct_graph_curves, qualify_graph_boundary_roots,
+    GraphCurveVertex, GraphEdgeCurves, GraphRootBinding, GraphRootEdgeClock, GraphRootLocation,
+    QualifiedGraphBoundaryBindings, QualifiedGraphBoundaryRoots, QualifiedGraphCurves,
+    bind_graph_boundary_roots, construct_graph_curves, qualify_graph_boundary_roots,
 };
 pub use ranges::OriginalGraphSSRange;
 #[path = "quadratic_graph/linear_factors.rs"]

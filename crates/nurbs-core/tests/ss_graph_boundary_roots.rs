@@ -197,3 +197,340 @@ fn actual_boundary_domain_and_shared_operation_limits_are_mandatory() {
     partial.knots[0] = 9.;
     assert!(ss::qualify_graph_boundary_roots(&o, &partial, 0, Default::default()).is_err());
 }
+
+fn bound(c: &ss::QualifiedGraphBoundaryRoots) -> ss::QualifiedGraphBoundaryBindings {
+    ss::bind_graph_boundary_roots(c, 1000000).unwrap()
+}
+fn interior(b: &ss::GraphRootBinding) -> &ss::GraphRootEdgeClock {
+    let ss::GraphRootLocation::Interior(ref edge) = b.location else {
+        panic!("expected a strict original edge interior")
+    };
+    edge
+}
+fn cardinal(original: &ss::QualifiedQuadraticGraphSS, b: &ss::GraphRootBinding, quarter: usize) {
+    let ss::GraphRootLocation::Vertex {
+        original_vertex,
+        ref incidences,
+    } = b.location
+    else {
+        panic!("expected an exact original vertex")
+    };
+    assert_eq!(
+        original.vertices()[original_vertex].point,
+        ss::OriginalGraphSSPoint::EllipseCardinal(quarter)
+    );
+    assert_eq!(incidences.len(), 2);
+    for port in incidences {
+        let end = port.clock[0] as usize;
+        assert_eq!(port.clock, [end as f64; 2]);
+        assert_eq!(
+            original.edges()[port.original_edge].vertices[end],
+            original_vertex
+        );
+        assert!(
+            original.branches()[port.original_branch]
+                .edges
+                .contains(&port.original_edge)
+        );
+    }
+}
+fn mixed_owner() -> ss::QualifiedQuadraticGraphSS {
+    let mut a = surface(true, [[0., 1.], [0., 1.]]);
+    let mut b = surface(false, [[0., 1.], [0., 1.]]);
+    let q = [0.25, -0.25, 0.25];
+    for i in 0..3 {
+        for j in 0..3 {
+            let u = i as f64 / 2.;
+            let v = j as f64 / 2.;
+            let common = if i == 2 && j == 2 { 1. } else { 0. };
+            a.control_points[i][j][2] = q[i] + q[j] - (u - 0.5) * (v - 0.5) - 0.015625 + common;
+            b.control_points[i][j][2] = common;
+        }
+    }
+    let source = ss::FiberSources::new(&a, &b).unwrap();
+    ss::qualify_quadratic_graph_ss(&source, Default::default()).unwrap()
+}
+fn factor_owner(crossing: bool) -> ss::QualifiedQuadraticGraphSS {
+    let mut a = surface(true, [[0., 1.], [0., 1.]]);
+    let b = surface(false, [[0., 1.], [0., 1.]]);
+    let q = [0.25, -0.25, 0.25];
+    for i in 0..3 {
+        for j in 0..3 {
+            a.control_points[i][j][2] = q[i] - if crossing { q[j] } else { 0.0625 };
+        }
+    }
+    let source = ss::FiberSources::new(&a, &b).unwrap();
+    ss::qualify_quadratic_graph_ss(&source, Default::default()).unwrap()
+}
+#[test]
+fn original_quarter_inverse_binds_rational_boundary_roots_in_query_order() {
+    let o = unit_owner();
+    let c = boundary(vec![vec![0., 0.5625], vec![1., 0.5625]], vec![1., 2.]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    let cos = 0.9375f64.sqrt();
+    let expected = [cos / 1.25, 0.25 / (1. + cos)];
+    assert_eq!(b.bindings().len(), 2);
+    for i in 0..2 {
+        let edge = interior(&b.bindings()[i]);
+        assert_eq!(b.bindings()[i].original_root, i);
+        assert_eq!(
+            o.edges()[edge.original_edge].geometry,
+            ss::OriginalGraphSSEdgeGeometry::EllipseQuarter([1, 0][i])
+        );
+        contains(edge.clock, expected[i]);
+        assert!(edge.clock[0] > 0. && edge.clock[1] < 1.);
+    }
+    b.reverify().unwrap();
+}
+#[test]
+fn exact_cardinal_roots_keep_both_closed_loop_ports_without_snapping() {
+    let o = unit_owner();
+    let c = boundary(vec![vec![0., 0.5], vec![1., 0.5]], vec![1., 2.]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    cardinal(&o, &b.bindings()[0], 2);
+    cardinal(&o, &b.bindings()[1], 0);
+    b.reverify().unwrap();
+}
+#[test]
+fn irrational_tilted_cardinal_vertices_follow_exact_carriers_and_original_incidence() {
+    let o = mixed_owner();
+    let c = boundary(vec![vec![0.25, 0.], vec![0.75, 1.]], vec![1., 2.]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    assert_eq!(b.bindings().len(), 2);
+    cardinal(&o, &b.bindings()[0], 3);
+    cardinal(&o, &b.bindings()[1], 1);
+    let r = (1f64 / 48.).sqrt();
+    for (i, s) in [-r, r].into_iter().enumerate() {
+        contains(census.roots()[i].world[0], 0.5 + 0.5 * s);
+        contains(census.roots()[i].world[1], 0.5 + s);
+    }
+    b.reverify().unwrap();
+}
+#[test]
+fn mixed_basis_inverse_retains_original_quartic_world_height() {
+    let o = mixed_owner();
+    let c = boundary(vec![vec![0., 0.53125], vec![1., 0.53125]], vec![1.; 2]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    let delta = 0.0595703125f64.sqrt() / 2.;
+    let radius = (1f64 / 48.).sqrt();
+    for (i, s) in [-delta, delta].into_iter().enumerate() {
+        let u = 0.5 + 0.015625 + s;
+        let v = 0.53125;
+        let x = s / 0.125;
+        let y = 0.03125 / radius;
+        let expected = if i == 0 { -x / (1. + y) } else { y / (1. + x) };
+        contains(interior(&b.bindings()[i]).clock, expected);
+        contains(census.roots()[i].world[2], u * u * v * v);
+    }
+    b.reverify().unwrap();
+}
+#[test]
+fn distinct_query_events_on_one_ss_vertex_are_preserved_even_with_zero_query_chord() {
+    let o = unit_owner();
+    let c = boundary(
+        vec![vec![0., 0.5], vec![1.75, 0.5], vec![0., 0.5]],
+        vec![1.; 3],
+    );
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    assert_eq!(b.bindings().len(), 4);
+    for (i, q) in [2, 0, 0, 2].into_iter().enumerate() {
+        assert_eq!(b.bindings()[i].original_root, i);
+        cardinal(&o, &b.bindings()[i], q);
+    }
+    b.reverify().unwrap();
+}
+#[test]
+fn near_cardinal_roots_inside_world_tolerance_remain_strict_interiors() {
+    let o = unit_owner();
+    let y = 0.5 + 2f64.powi(-30);
+    let c = boundary(vec![vec![0., y], vec![1., y]], vec![1.; 2]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    assert!(census.roots().iter().all(|r| r.world[1][0] > 0.5));
+    assert!(
+        b.bindings()
+            .iter()
+            .all(|b| matches!(b.location, ss::GraphRootLocation::Interior(_)))
+    );
+    b.reverify().unwrap();
+}
+#[test]
+fn complete_factor_graph_excludes_other_carriers_before_admitting_one_interior_edge() {
+    for crossing in [false, true] {
+        let o = factor_owner(crossing);
+        let c = boundary(vec![vec![0., 0.5625], vec![1., 0.5625]], vec![1., 2.]);
+        let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+        let b = bound(&census);
+        let xs = if crossing {
+            [0.4375, 0.5625]
+        } else {
+            [0.25, 0.75]
+        };
+        for (i, x) in xs.into_iter().enumerate() {
+            let edge = interior(&b.bindings()[i]);
+            let ss::OriginalGraphSSEdgeGeometry::Segment(p) =
+                o.edges()[edge.original_edge].geometry
+            else {
+                panic!()
+            };
+            let axis = if p[0][0] != p[1][0] { 0 } else { 1 };
+            let point = [x, 0.5625];
+            contains(
+                edge.clock,
+                (point[axis] - p[0][axis]) / (p[1][axis] - p[0][axis]),
+            );
+            assert!(
+                o.branches()[edge.original_branch]
+                    .edges
+                    .contains(&edge.original_edge)
+            );
+        }
+        b.reverify().unwrap();
+    }
+}
+#[test]
+fn exact_natural_rail_roots_bind_owned_segment_end_vertices() {
+    let o = factor_owner(false);
+    let c = boundary(vec![vec![0., 0.], vec![1., 0.]], vec![1.; 2]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    for (i, x) in [0.25, 0.75].into_iter().enumerate() {
+        let ss::GraphRootLocation::Vertex {
+            original_vertex,
+            ref incidences,
+        } = b.bindings()[i].location
+        else {
+            panic!()
+        };
+        assert_eq!(
+            o.vertices()[original_vertex].point,
+            ss::OriginalGraphSSPoint::Normalized([x, 0.])
+        );
+        assert_eq!(incidences.len(), 1);
+        let port = &incidences[0];
+        assert_eq!(
+            o.edges()[port.original_edge].vertices[port.clock[0] as usize],
+            original_vertex
+        );
+    }
+    b.reverify().unwrap();
+}
+#[test]
+fn native_domain_and_support_swap_do_not_change_original_branch_clock_identity() {
+    let o = owner([[[2., 6.], [-4., 4.]], [[-3., 5.], [7., 11.]]]);
+    let c0 = boundary(vec![vec![2., 0.5], vec![6., 0.5]], vec![1.; 2]);
+    let c1 = boundary(vec![vec![-3., 9.25], vec![5., 9.25]], vec![1.; 2]);
+    let a = ss::qualify_graph_boundary_roots(&o, &c0, 0, Default::default()).unwrap();
+    let b = ss::qualify_graph_boundary_roots(&o, &c1, 1, Default::default()).unwrap();
+    let ba = bound(&a);
+    let bb = bound(&b);
+    for i in 0..2 {
+        let a = interior(&ba.bindings()[i]);
+        let b = interior(&bb.bindings()[i]);
+        assert_eq!(a.original_edge, b.original_edge);
+        assert!(a.clock[0] <= b.clock[1] && b.clock[0] <= a.clock[1]);
+    }
+    let sources = ss::FiberSources::new(o.source().second(), o.source().first()).unwrap();
+    let swapped = ss::qualify_quadratic_graph_ss(&sources, Default::default()).unwrap();
+    let r = ss::qualify_graph_boundary_roots(&swapped, &c1, 0, Default::default()).unwrap();
+    let reverse = bound(&r);
+    for i in 0..2 {
+        assert_eq!(a.roots()[i].crossing_sign, -r.roots()[i].crossing_sign);
+        assert_eq!(
+            interior(&ba.bindings()[i]).original_edge,
+            interior(&reverse.bindings()[i]).original_edge
+        );
+    }
+    reverse.reverify().unwrap();
+}
+#[test]
+fn binding_work_is_shared_exact_and_empty_census_stays_empty() {
+    let o = unit_owner();
+    let c = boundary(vec![vec![0., 0.5625], vec![1., 0.5625]], vec![1.; 2]);
+    let census = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&census);
+    let used = b.operations();
+    assert!(ss::bind_graph_boundary_roots(&census, used).is_ok());
+    assert!(ss::bind_graph_boundary_roots(&census, used - 1).is_err());
+    assert!(ss::bind_graph_boundary_roots(&census, 0).is_err());
+    assert!(ss::bind_graph_boundary_roots(&census, 1000001).is_err());
+    let c = boundary(vec![vec![0., 0.875], vec![1., 0.875]], vec![1.; 2]);
+    let empty = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let binding = ss::bind_graph_boundary_roots(&empty, 1).unwrap();
+    assert!(binding.bindings().is_empty());
+    assert_eq!(binding.operations(), 1);
+}
+
+#[test]
+fn exact_native_domain_contacts_with_outside_poles_do_not_admit_a_tolerance_expansion() {
+    let o = unit_owner();
+    for (pole, weights) in [(2., vec![1.; 3]), (1.5, vec![1., 2., 1.])] {
+        let c = boundary(vec![vec![0., 0.5], vec![pole, 0.5], vec![0., 0.5]], weights);
+        // Both actual rational images lie in [0,1] and touch x=1 internally.
+        let r = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+        assert_eq!(r.roots().len(), 4);
+        let b = bound(&r);
+        for (i, q) in [2, 0, 0, 2].into_iter().enumerate() {
+            cardinal(&o, &b.bindings()[i], q);
+        }
+        let mut outside = c;
+        outside.control_points[1][0] += 2f64.powi(-30);
+        assert!(ss::qualify_graph_boundary_roots(&o, &outside, 0, Default::default()).is_err());
+    }
+}
+#[test]
+fn nonrepresentable_native_width_does_not_lose_an_exact_natural_rail_identity() {
+    let original = factor_owner(false);
+    let mut a = original.source().first().clone();
+    let mut b = original.source().second().clone();
+    a.knots_u = vec![1e-6, 1e-6, 1e-6, 1., 1., 1.];
+    a.knots_v = vec![-4., -4., -4., 4., 4., 4.];
+    b.knots_u = vec![2., 2., 2., 6., 6., 6.];
+    b.knots_v = vec![7., 7., 7., 11., 11., 11.];
+    let sources = ss::FiberSources::new(&a, &b).unwrap();
+    let o = ss::qualify_quadratic_graph_ss(&sources, Default::default()).unwrap();
+    let c = boundary(vec![vec![1e-6, -4.], vec![1., -4.]], vec![1., 2.]);
+    let roots = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&roots);
+    for (i, x) in [0.25, 0.75].into_iter().enumerate() {
+        let ss::GraphRootLocation::Vertex {
+            original_vertex,
+            ref incidences,
+        } = b.bindings()[i].location
+        else {
+            panic!()
+        };
+        assert_eq!(
+            o.vertices()[original_vertex].point,
+            ss::OriginalGraphSSPoint::Normalized([x, 0.])
+        );
+        assert_eq!(incidences.len(), 1);
+    }
+    b.reverify().unwrap();
+}
+#[test]
+fn native_endpoint_facts_preserve_a_diagonal_vertex_carrier_across_nonrepresentable_widths() {
+    let mut a = surface(true, [[1e-6, 1.], [3., 9.]]);
+    let b = surface(false, [[-3., 5.], [7., 11.]]);
+    let q = [0.25, -0.25, 0.25];
+    for i in 0..3 {
+        for j in 0..3 {
+            let u = i as f64 / 2.;
+            let v = j as f64 / 2.;
+            a.control_points[i][j][2] = q[i] + 2. * q[j] - 2. * (u - 0.5) * (v - 0.5) - 0.015625;
+        }
+    }
+    let sources = ss::FiberSources::new(&a, &b).unwrap();
+    let o = ss::qualify_quadratic_graph_ss(&sources, Default::default()).unwrap();
+    let c = boundary(vec![vec![1e-6, 3.], vec![1., 9.]], vec![1., 2.]);
+    let roots = ss::qualify_graph_boundary_roots(&o, &c, 0, Default::default()).unwrap();
+    let b = bound(&roots);
+    cardinal(&o, &b.bindings()[0], 3);
+    cardinal(&o, &b.bindings()[1], 1);
+    b.reverify().unwrap();
+}

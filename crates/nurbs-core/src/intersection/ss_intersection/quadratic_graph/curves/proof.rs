@@ -39,8 +39,13 @@ fn split(p: &P, b: &mut B) -> Result<(P, P)> {
         row = row
             .windows(2)
             .map(|v| {
-                let sum = b.add(v[0], v[1])?;
-                b.mul(sum, I::point(0.5))
+                b.tick(2)?;
+                if v[0].lo == v[0].hi && v[1].lo == v[1].hi {
+                    if let Some(a) = exact_add(v[0].lo, v[1].lo).and_then(|s| exact_mul(s, 0.5)) {
+                        return Ok(I::point(a));
+                    }
+                }
+                v[0].add(v[1])?.mul(I::point(0.5))
             })
             .collect::<Result<P>>()?;
         left.push(row[0]);
@@ -49,7 +54,24 @@ fn split(p: &P, b: &mut B) -> Result<(P, P)> {
     right.reverse();
     Ok((left, right))
 }
+// W is positive. Proving N-lower*W >= 0 and upper*W-N >= 0 avoids
+// losing exact source boundary contacts through independently rounded N/W.
+fn margin(a: f64, c: f64, weight: f64, b: &mut B) -> Result<I> {
+    b.tick(2)?;
+    if let Some(v) = exact_add(a, -c).and_then(|d| exact_mul(d, weight)) {
+        return Ok(I::point(v));
+    }
+    I::point(a).sub(I::point(c))?.mul(I::point(weight))
+}
 pub(super) fn domain(curve: &Curve, domain: [[f64; 2]; 2], b: &mut B) -> Result<()> {
+    curve.validate()?;
+    check(
+        curve.control_points[0].len() == 2
+            && domain
+                .iter()
+                .all(|d| d.iter().all(|x| x.is_finite()) && d[0] <= d[1]),
+        "Native pcurve domain needs finite ordered 2D bounds",
+    )?;
     if curve
         .control_points
         .iter()
@@ -57,46 +79,51 @@ pub(super) fn domain(curve: &Curve, domain: [[f64; 2]; 2], b: &mut B) -> Result<
     {
         return Ok(());
     }
-    let original = super::expressions::actual(curve, b)?;
-    let mut pending = vec![(original, 0)];
-    while let Some((p, depth)) = pending.pop() {
-        let mut inside = true;
-        for i in 0..p.denominator.len() {
-            check(
-                p.denominator[i].lo > 0.,
-                "Native pcurve weight positivity unresolved",
-            )?;
-            for a in 0..2 {
-                let q = b.div(p.numerator[a][i], p.denominator[i])?;
-                inside &= q.lo >= domain[a][0] && q.hi <= domain[a][1];
-            }
-        }
-        if inside {
+    // Also validate the complete unit Bezier clock before using its coefficients.
+    super::expressions::actual(curve, b)?;
+    let mut margins = Vec::new();
+    for a in 0..2 {
+        margins.push(
+            curve
+                .control_points
+                .iter()
+                .zip(&curve.weights)
+                .map(|(p, w)| margin(p[a], domain[a][0], *w, b))
+                .collect::<Result<P>>()?,
+        );
+        margins.push(
+            curve
+                .control_points
+                .iter()
+                .zip(&curve.weights)
+                .map(|(p, w)| margin(domain[a][1], p[a], *w, b))
+                .collect::<Result<P>>()?,
+        );
+    }
+    let mut pending = vec![(margins, 0)];
+    while let Some((polynomials, depth)) = pending.pop() {
+        b.tick(1)?;
+        let unresolved: Vec<_> = polynomials
+            .into_iter()
+            .filter(|p| !p.iter().all(|v| v.lo >= 0.))
+            .collect();
+        if unresolved.is_empty() {
             continue;
         }
+        check(
+            !unresolved.iter().any(|p| p.iter().all(|v| v.hi < 0.)),
+            "Actual pcurve leaves the original native domain",
+        )?;
         check(depth < 16, "Native pcurve domain containment unresolved")?;
-        let (ld, rd) = split(&p.denominator, b)?;
-        let mut ln = Vec::new();
-        let mut rn = Vec::new();
-        for n in &p.numerator {
-            let (l, r) = split(n, b)?;
-            ln.push(l);
-            rn.push(r);
+        let mut left = Vec::new();
+        let mut right = Vec::new();
+        for p in unresolved {
+            let (l, r) = split(&p, b)?;
+            left.push(l);
+            right.push(r);
         }
-        pending.push((
-            Rational {
-                numerator: rn,
-                denominator: rd,
-            },
-            depth + 1,
-        ));
-        pending.push((
-            Rational {
-                numerator: ln,
-                denominator: ld,
-            },
-            depth + 1,
-        ));
+        pending.push((right, depth + 1));
+        pending.push((left, depth + 1));
     }
     Ok(())
 }

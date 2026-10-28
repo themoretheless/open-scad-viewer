@@ -1,6 +1,11 @@
 //! Original graph equation on an actual rational native-UV trim definition.
 use super::*;
 use arithmetic::P;
+mod bindings;
+pub use bindings::{
+    GraphRootBinding, GraphRootEdgeClock, GraphRootLocation, QualifiedGraphBoundaryBindings,
+    bind_graph_boundary_roots,
+};
 #[derive(Clone, Copy, Debug)]
 pub struct GraphBoundaryRootLimits {
     pub max_operations: usize,
@@ -20,6 +25,7 @@ impl Default for GraphBoundaryRootLimits {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct GraphBoundaryRoot {
+    pub normalized_uv: [[f64; 2]; 2],
     /// Unit clock on the original complete clamped boundary definition.
     pub clock: [f64; 2],
     /// Outward transport, never a snapped representative parameter.
@@ -256,6 +262,7 @@ pub fn qualify_graph_boundary_roots(
                         .add(I::point(domain[0]), parameter)?
                         .intersect(domain[0], domain[1])?;
                     roots.push(GraphBoundaryRoot {
+                        normalized_uv: station.normalized_uv,
                         clock: root,
                         boundary_parameter: [parameter.lo, parameter.hi],
                         native_uv: [station.first_uv, station.second_uv],

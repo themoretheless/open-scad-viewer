@@ -5,8 +5,9 @@ use crate::curve::Curve;
 mod arithmetic;
 mod boundary_roots;
 pub use boundary_roots::{
-    GraphBoundaryRoot, GraphBoundaryRootLimits, QualifiedGraphBoundaryRoots,
-    qualify_graph_boundary_roots,
+    GraphBoundaryRoot, GraphBoundaryRootLimits, GraphRootBinding, GraphRootEdgeClock,
+    GraphRootLocation, QualifiedGraphBoundaryBindings, QualifiedGraphBoundaryRoots,
+    bind_graph_boundary_roots, qualify_graph_boundary_roots,
 };
 mod expressions;
 mod proof;
