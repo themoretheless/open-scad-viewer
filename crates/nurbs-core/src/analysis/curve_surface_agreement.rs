@@ -272,6 +272,7 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     c.validate()?;p.validate()?;s.validate()?;
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
     if require_chart {
+        if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
     }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
@@ -461,6 +462,7 @@ fn exact_natural_nurbs_boundary(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_w
 mod tests;
 
 mod owned_boundary;
+mod bspline_trace;
 mod correspondence;
 pub use correspondence::{CorrespondenceReport, verify_correspondence, verify_oriented_correspondence};
 

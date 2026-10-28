@@ -13,6 +13,7 @@ pub use serialization::{
 };
 mod bounds;
 mod exact_strip;
+mod bspline_strip;
 mod projective_collection;
 pub use exact_strip::{
     ExactStripJetReport, inspect_surface_exact_strip_jets, inspect_surface_projective_strip_jets,

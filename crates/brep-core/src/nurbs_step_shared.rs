@@ -1050,10 +1050,16 @@ pub(crate) fn surface_from_b_spline_args(
     let v_knot_vals = parse_f64_list(&parts[13]).ok_or_else(|| refuse("Bad v knots"))?;
 
     let expand_knots = |mults: &[usize], vals: &[f64]| -> Result<Vec<f64>> {
+        const MAX_EXPANDED_KNOTS: usize = 4096;
         if mults.len() != vals.len() {
             return Err(refuse("Knot multiplicity length mismatch"));
         }
-        let mut out = Vec::new();
+        let expanded = mults
+            .iter()
+            .try_fold(0usize, |total, &multiplicity| total.checked_add(multiplicity))
+            .filter(|count| *count <= MAX_EXPANDED_KNOTS)
+            .ok_or_else(|| refuse("Expanded knot vector exceeds the 4096-entry budget"))?;
+        let mut out = Vec::with_capacity(expanded);
         for (m, v) in mults.iter().zip(vals.iter()) {
             for _ in 0..*m {
                 out.push(*v);
@@ -1075,7 +1081,7 @@ pub(crate) fn surface_from_b_spline_args(
     for i in 0..nu {
         weights.push(weights_flat[i * nv..(i + 1) * nv].to_vec());
     }
-    Ok(Surface {
+    let surface = Surface {
         degree_u,
         degree_v,
         knots_u,
@@ -1084,7 +1090,9 @@ pub(crate) fn surface_from_b_spline_args(
         weights,
         periodic_u: false,
         periodic_v: false,
-    })
+    };
+    surface.validate()?;
+    Ok(surface)
 }
 
 pub(crate) fn refuse_mesh_payloads_common(text: &str) -> Result<()> {

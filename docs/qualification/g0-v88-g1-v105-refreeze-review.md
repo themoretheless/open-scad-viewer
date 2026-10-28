@@ -1,3 +1,20 @@
-# G0 v88 / G1 v105 re-freeze review
+# Merged general boundary certificate: G0 88 / G1 105
 
-Append a successor to the preserved v87/v104 records because the profile Solid Rush regression is part of the bound harness. Tests now require the actual stronger continuous original RMF bounds and retain explicit strict-tolerance and exhausted-budget refusal checks. The ownRust70 native source bundle and exact runtime v6 WASM are unchanged; all 7343 native tests passed, and a full kernel rebuild preserved every packaged byte. No former results are imported into G1: all 4740 work units remain incomplete, qualificationClaim is none, and this is not G0/G1 approval or production cutover. Runtime v6 delivery evidence is recorded separately from the clean-environment matrix.
+This amendment binds the resolved main integration and its new Rust/WASM artifact.
+OwnRust 74 must verify the current whole-workspace native results, new Node and
+Chromium protocol checks, previous 96-case matrix, independent exact-volume STEP
+oracle and a stable source/build input snapshot before these records are emitted.
+
+All existing OwnRust 73 / G0 87 / G1 104 records and executors are immutable.
+All 124 differing incoming main archives are retained under a separately pinned
+manifest. The new freeze imports zero work from either parent, including the
+successful 132-fragment/4740-unit G1 104 run. G1 105 requires a fresh exact-source
+run of every fragment, unchanged oracle, mutations, environments and budgets.
+The hosted environment remains V38; no unobserved identity change is admitted.
+
+The general frame/cap certificate and admission are Rust-owned. Main's unrelated
+GPU reference modules remain explicitly marked as pending native migration and
+receive no Rust certificate credit. Moving-frame error plus retained-body proof
+still does not grant ideal-body embedding, G1/G2 or universal acceptance. Unknown
+or exhausted proof work refuses; sharp seams remain C0. Qualification approval
+remains not-approved and production cutover remains forbidden.

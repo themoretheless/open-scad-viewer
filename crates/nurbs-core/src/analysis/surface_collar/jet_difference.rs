@@ -525,6 +525,31 @@ fn shape(j: &[[[Coupled; 3]; 3]; 3], w: &mut Work) -> Result<Option<(Vec<Coupled
     }
     Ok(Some((n.to_vec(), tensor)))
 }
+/// Correlated graph fields in the exact orthogonal integer chart
+/// X=x-y, Y=x+y-2z, Z=x+y+z. The inputs are whole-cell enclosures,
+/// not samples; this helper establishes no position or trim correspondence.
+pub(crate) fn graph_difference_bounds(base: [I;5], delta: [I;5], max_work: usize)
+    -> Result<(Option<[f64;2]>,usize)>
+{
+    let mut w=Work{used:0,max:max_work};
+    let mut jets=[[[Coupled::zero();3];3];3];
+    let third=I::point(1.).div(I::point(3.))?;
+    let sixth=I::point(1.).div(I::point(6.))?;
+    let dual=[[I::point(0.5),I::point(-0.5),I::point(0.)],
+        [sixth,sixth,sixth.mul(I::point(-2.))?]];
+    for (index,[u,v]) in [[1,0],[0,1],[2,0],[1,1],[0,2]].into_iter().enumerate() {
+        for k in 0..3 {
+            let mut x=Coupled{base:base[index].mul(third)?,delta:delta[index].mul(third)?};
+            if index<2 { x.base=x.base.add(dual[index][k])?; }
+            jets[u][v][k]=x;
+        }
+    }
+    let bound=if let Some((n,b))=shape(&jets,&mut w)? {
+        Some([norm(&n.iter().map(|x|x.delta).collect::<Vec<_>>(),&mut w)?.hi,
+            norm(&b.iter().map(|x|x.delta).collect::<Vec<_>>(),&mut w)?.hi])
+    } else {None};
+    Ok((bound,w.used))
+}
 pub struct G2Report {
     pub decision: crate::surface_join::Decision,
     pub orientation: Option<crate::surface_g2::Orientation>,

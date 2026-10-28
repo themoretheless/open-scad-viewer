@@ -140,9 +140,9 @@
 ### Группа G. Обмен STEP/IGES + healing/импорт
 
 167. IGES 126/128 — entity 126: рациональная B-сплайн-кривая [реализовано: ядро 126/128 + round-trip; NIST-корпус открыт]
-168. IGES 144/143 — Trimmed/Bounded Surface [TODO]
-169. STEP: b_spline_surface_with_knots — AP203/AP214: `b_spline_surface`, `rational_b_spline_surface`, `uniform/quasi_uniform/bezier_surface` [TODO]
-170. STEP: тримминг и грани — `trimmed_curve`, `surface_curve`, `curve_bounded_surface`, `advanced_face` с p-кривыми [TODO]
+168. IGES 144/143 — Trimmed/Bounded Surface [реализовано в brep-core: 143/142 loops, outer/inner; 141/3D-only/natural outer typed unsupported]
+169. STEP: b_spline_surface_with_knots — AP203/AP214: `b_spline_surface`, `rational_b_spline_surface`, `uniform/quasi_uniform/bezier_surface` [реализовано в brep-core: 5 forms, AP242 complexes, validation/budgets]
+170. STEP: тримминг и грани — `trimmed_curve`, `surface_curve`, `curve_bounded_surface`, `advanced_face` с p-кривыми [реализовано в brep-core: safe curve-bounded subset + existing face/pcurve/sense/seam support]
 171. STEP: единицы и допуски — всегда читайте `si_unit` и `uncertainty_measure_with_unit` [реализовано]
 172. Экспорт STL — только меш [реализовано: binary STL]
 792. STEP AP203 vs AP214 vs AP242: семантика — AP203 — конфигурационно-управляемое проектирование (aerospace), AP214 — автомобильные процессы с… [TODO]

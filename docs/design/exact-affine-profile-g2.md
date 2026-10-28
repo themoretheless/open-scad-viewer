@@ -99,3 +99,40 @@ The unresolved prefix includes neighboring curved profile charts [0,1], [0,3],
 qualification `probes/` and the failed diagnostic log; it is not in the passing
 feature matrix and supplies no Solid credit. The candidate API has no Solid
 success flag. Complete-boundary G2 remains tested independently.
+
+## Original nonclamped and periodic B-spline joins
+
+The 2026-10-28 successor removes the transverse Bezier-only restriction from
+the native projective strip audit. Formal rational de Boor series compute
+one-sided homogeneous jets from the original knots and coefficients. No
+rounded knot insertion, fitted surface, or sampled derivative supplies proof.
+The along bases must agree under an exactly proved affine domain map; cross
+degrees and original cross domains may differ. Unrelated along bases still
+return unproved rather than undergoing implicit fitting.
+
+Every exceptional internal knot and declared periodic closure is independently
+checked over the entire other basis. A positive rational velocity ratio can
+propose a geometric transition, but whole-strip projective jet identities and
+outward normal covers remain mandatory. Periodic storage validation alone,
+including its existing exterior-knot tolerance, never grants exact closure.
+Identical original surfaces share their completed source audit; different
+definitions cannot reuse it. An identical source also keeps one normal ledger.
+
+The existing limits remain: 1M exact work per seam, the existing shared
+collection allowance, 33 strip controls per direction, and 4096 normal cells
+with depth 12. Original surface-to-world-edge trace checks use a separate
+shared exact ledger. Nonclamped/periodic isoparametric traces now bind the
+actual curve basis, pcurve traversal, original support coefficients and exact
+periodic endpoint images. Failure of a sufficient constant homogeneous gauge
+is unresolved, not a claimed mismatch witness.
+
+The topology validator now distinguishes `(edge, end)` in vertex links. This
+admits the ordinary one-vertex, two-closed-edge torus representation while
+retaining degree, connectivity, edge-incidence and orientation refusals.
+Complete-boundary G2 still requires exact world traces, every owned edge,
+regular faces and connected vertex links. It supplies no global volume,
+intersection, nesting or Solid certificate by itself.
+
+Native qualification and archived source inputs are recorded under
+`docs/qualification/sweep-bspline-joins-2026-10-28`. This source qualification
+does not update the previously published WASM or substitute for STEP/UI gates.

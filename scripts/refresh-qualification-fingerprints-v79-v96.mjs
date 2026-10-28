@@ -10,7 +10,7 @@ import { REFREEZE_CORE, digest, jsonBytes, shaRecord, bundleBytes, ordinaryBytes
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v79-g1-v96-refreeze-review.md'
-export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v63.json'
+const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v62.json'
 const MODULE_DELIVERY_PATHS = [
   'src/services/geometry/kernel.ts',
   'src/services/geometry/kernelCompilation.ts',
@@ -22,12 +22,6 @@ export const REFRESH_EXECUTORS = Object.freeze([
   '.gitattributes',
   'scripts/qualificationFrozenArchives.mjs',
   'scripts/browserMemoryErrors.mjs',
-  'scripts/check-sweep-miter-matrix-browser.mjs',
-  'scripts/sweep-browser-surface-evidence.mjs',
-  'scripts/sweep-browser-worker-probe.mjs',
-  'scripts/export-sweep-step-oracle.mts',
-  'scripts/sweep-step-miter-fixtures.mts',
-  'scripts/sweep-step-profile-fixtures.mts',
   '.github/workflows/g1-qualification-clean.yml',
   'scripts/materialize-qualification-kernels.mjs',
   'scripts/pack-geometry-kernel.mjs',
@@ -45,6 +39,12 @@ export const REFRESH_EXECUTORS = Object.freeze([
   'tests/profileSolidRush.test.ts',
   'tests/profileFramePremises.test.ts',
   'tests/spatialBishopSurface.test.ts',
+  'tests/quinticPolygonBody.test.ts',
+  'tests/fixtures/quintic-polygon-stations-6.json',
+  'tests/fixtures/quintic-polygon-rmf-source.json',
+  'scripts/verify-polygon-station-step.py',
+  'scripts/step_rational_basis.py',
+  'crates/geometry-bridge/examples/polygon-station-step.rs',
   'examples/rush/spatial-bishop-g2-surface-6.r',
   'scripts/check-profile-solid-browser.mjs',
   'examples/rush/closed-profile-planar-10.r',
@@ -67,23 +67,6 @@ const oldReview = 'docs/qualification/g0-v78-g1-v95-refreeze-review.md'
 const githubEnvironment = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
 import {FROZEN_ARCHIVES} from './qualificationFrozenArchives.mjs'
 export {FROZEN_ARCHIVES}
-
-export function artifactBindingChanges(kind, before, after) {
-  const changes=[]
-    const nextById = new Map(after.map(item => [item.id, item]))
-    for (const item of before) {
-      const next = nextById.get(item.id)
-      const oldHash = typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value
-      const nextHash = next ? typeof next.sha256 === 'string' ? next.sha256 : next.sha256.value : null
-      if (oldHash !== nextHash) changes.push({ kind, id: item.id, previousSha256: oldHash, currentSha256: nextHash })
-    }
-    const previousIds = new Set(before.map(item => item.id))
-    for (const item of after.filter(item => !previousIds.has(item.id))) {
-      changes.push({kind, id:item.id, previousSha256:null,
-        currentSha256:typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value})
-    }
-  return changes
-}
 
 export function refreshInputPaths(root = defaultRoot) {
   const fingerprint = JSON.parse(ordinaryBytes(root, oldFingerprint))
@@ -199,7 +182,7 @@ export function prepareQualificationRefresh({
     .map(item => /^geometry-v3-source-(\d+)$/u.exec(item.id)?.[1])
     .filter(Boolean).map(Number))
   const geometryArtifacts = [
-    { id: 'own-rust-cad-v63-evidence', path: OWN_RUST_EVIDENCE },
+    { id: 'own-rust-cad-v62-evidence', path: OWN_RUST_EVIDENCE },
     ...ownRust.sourceBundle.paths
       .filter(path => !existingArtifactPaths.has(path))
       .map(path => ({
@@ -300,11 +283,34 @@ export function prepareQualificationRefresh({
   assert(plan.matrix.every(row => row.evidenceState === 'not-executed-clean-post-freeze'))
 
   const artifactBytes = { fingerprint: jsonBytes(fingerprint), plan: jsonBytes(plan) }
-  const changes = [
+  const changes = []
+  for (const [kind, before, after] of [
     ['g0-artifact', previousFingerprint.artifacts, fingerprint.artifacts],
     ['g1-artifact', previousPlan.bindings.artifacts, plan.bindings.artifacts],
     ['g1-bundle', previousPlan.bindings.bundles, plan.bindings.bundles],
-  ].flatMap(([kind,before,after])=>artifactBindingChanges(kind,before,after))
+  ]) {
+    before.forEach((item, index) => {
+      const oldHash = typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value
+      const nextHash = typeof after[index].sha256 === 'string' ? after[index].sha256 : after[index].sha256.value
+      if (oldHash !== nextHash) changes.push({ kind, id: item.id, previousSha256: oldHash, currentSha256: nextHash })
+    })
+  }
+  for (const artifact of fingerprint.artifacts.slice(previousFingerprint.artifacts.length)) {
+    changes.push({
+      kind: 'g0-artifact',
+      id: artifact.id,
+      previousSha256: null,
+      currentSha256: artifact.sha256,
+    })
+  }
+  for (const artifact of plan.bindings.artifacts.slice(previousPlan.bindings.artifacts.length)) {
+    changes.push({
+      kind: 'g1-artifact',
+      id: artifact.id,
+      previousSha256: null,
+      currentSha256: artifact.sha256.value,
+    })
+  }
   const status = {
     schema: 'open-scad-viewer/qualification-refreeze-status', schemaVersion: 1,
     statusId: 'g0-v79-g1-v96-refreeze-status-v1', recordedAt, reason: reason.trim(),

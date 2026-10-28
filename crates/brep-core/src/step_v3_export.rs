@@ -952,18 +952,12 @@ pub(crate) fn export_step_direct(
     allow_degenerate: bool,
     capability: &'static str,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
-    let mut canonical = canonical_face_senses(model)?;
-    if capability == STEP_INTERCHANGE_V6_CAPABILITY {
-        // /6 preserves the exact authored chart: retain the original face uses
-        // so the self-authored import route applies the inverse mirror. Other
-        // routes exchange the canonical forward chart directly.
-        for (target, source) in canonical.shells.iter_mut().zip(&model.shells) {
-            for (target, source) in target.faces.iter_mut().zip(&source.faces) {
-                target.reversed = source.reversed;
-            }
-        }
-    }
-    let model = &canonical;
+    // /6 exchanges the authored chart directly, including its original face
+    // senses. Other routes mirror reversed faces into canonical forward charts.
+    let canonical = (capability != STEP_INTERCHANGE_V6_CAPABILITY)
+        .then(|| canonical_face_senses(model))
+        .transpose()?;
+    let model = canonical.as_ref().unwrap_or(model);
     let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
     if (!allow_open_shells && model.bodies.is_empty())
         || (!allow_open_shells && model.shells.iter().any(|s| !s.closed))

@@ -4,6 +4,8 @@ use crate::{Error, Model, Result};
 use nurbs_core::trim_domain::{Classification, TrimDomain};
 
 mod rectangle_closure;
+mod box_containment;
+pub use box_containment::{BoxDecision,BoxContainment,inspect_box_containment};
 
 pub struct FaceDomain {
     pub(crate) region: TrimDomain,

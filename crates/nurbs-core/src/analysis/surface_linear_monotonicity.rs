@@ -5,6 +5,7 @@ use crate::{
 };
 mod bernstein_minors;
 mod bernstein_symmetric;
+mod polynomial_projection;
 
 #[derive(Clone, Debug)]
 pub struct ProfileParameterization {
@@ -176,6 +177,13 @@ fn inspect_metric_impl(s:&Surface,projection:[[i8;3];2],row_weights:[f64;2],rate
     {
         out.reason = Some("continuous-rectangle-domain-unproved");
         return Ok(out);
+    }
+    // A closed coefficient hull proves one fixed positive symmetric metric
+    // over the WHOLE rectangle, including continuous knot joins. Along every
+    // segment, integral(delta^T J delta)>0 gives global injectivity. This
+    // optional polynomial bound grants no success on arithmetic failure.
+    if max_cells>0 && matches!(polynomial_projection::certify(s,projection,row_weights,rates),Ok(true)) {
+        out.cells=1;out.certified=true;out.reason=None;return Ok(out);
     }
     // Gale--Nikaido, Math. Ann. 159 (1965), Theorem 4: a C1 map whose
     // Jacobian is a P-matrix everywhere on a rectangle is globally injective.

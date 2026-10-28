@@ -10,19 +10,19 @@
 - **Зависимости:** 16 (сравнение узлов с epsilon), 35 (валидация вектора узлов).
 - **Критерии приёмки:** round-trip набора 126/128-сущностей (экспорт → импорт → совпадение контрольных точек/узлов/весов в допуске); корректный импорт 5+ файлов из публичных IGES-корпусов (NIST); отказ с типизированной ошибкой на битом PD.
 
-#### 168. IGES 144/143 — Trimmed/Bounded Surface [статус: TODO] [трудоёмкость: L]
+#### 168. IGES 144/143 — Trimmed/Bounded Surface [статус: реализовано в brep-core; безопасный 143/142 subset] [трудоёмкость: L]
 - **Суть:** Импорт trimmed surface (144: поверхность + граничные кривые 143/141/142). Построение pcurve-петель из Boundary Curves (143) и Curve on Parametric Surface (142), сшивка контуров, классификация вложенности (outer/inner). Подводные камни: разрывы между сегментами граничных кривых, несогласованные направления, кривые, заданные только в 3D (preference flag).
 - **Где в коде:** `crates/brep-core/src/iges_interchange_v2.rs` + новый модуль `iges_trimmed.rs`; переиспользовать трим-инфраструктуру из `nurbs_step_trimmed.rs`.
 - **Зависимости:** 167, 802 (composite curve), 1020–1021 (ремонт pcurve).
-- **Критерии приёмки:** импорт trimmed-сущностей из NIST IGES-корпуса без «необрезанных» поверхностей; петли замкнуты в допуске заголовка файла; диагностика с id сущности при незамкнутом контуре.
+- **Критерии приёмки:** импорт trimmed-сущностей из NIST IGES-корпуса без «необрезанных» поверхностей; петли замкнуты в допуске заголовка файла; диагностика с id сущности при незамкнутом контуре. Локальные fixtures и 35 IGES-тестов зелёные; NIST-корпус отдельно не прогонялся. 141, 3D-only и natural outer — typed unsupported.
 
-#### 169. STEP: b_spline_surface_with_knots [статус: TODO] [трудоёмкость: M]
+#### 169. STEP: b_spline_surface_with_knots [статус: реализовано в brep-core] [трудоёмкость: M]
 - **Суть:** Поддержка семейства B-сплайн-поверхностей STEP: `b_spline_surface_with_knots`, `rational_b_spline_surface`, `uniform/quasi_uniform/bezier_surface`. Чтение/запись узлов с кратностями (knot multiplicities), весов для rational-варианта. Камни: uniform/quasi-uniform/bezier_surface не несут явных узлов — вектор восстанавливается по правилам схемы; индексация массивов control_points_list по [i][j] против ожиданий по [j][i].
 - **Где в коде:** `crates/brep-core/src/nurbs_step_interchange.rs`, `nurbs_step_shared.rs`, `step_interchange_v3.rs`.
 - **Зависимости:** 16, 35; для export — 34 (нормализация узлов).
-- **Критерии приёмки:** round-trip всех 5 подтипов; валидация m = n+p+1 при импорте; дифф против референс-импортёра (geomdl/OCCT) по контрольной сетке ≤ 1e-9.
+- **Критерии приёмки:** round-trip всех 5 подтипов; валидация m = n+p+1 при импорте; дифф против референс-импортёра (geomdl/OCCT) по контрольной сетке ≤ 1e-9. Локальные round-trip/validation тесты зелёные; внешний дифф не выполнялся.
 
-#### 170. STEP: тримминг и грани [статус: TODO] [трудоёмкость: L]
+#### 170. STEP: тримминг и грани [статус: реализовано в brep-core; safe curve-bounded subset] [трудоёмкость: L]
 - **Суть:** `trimmed_curve`, `surface_curve`, `curve_bounded_surface`, `advanced_face` с p-кривыми: построение face-bound из `edge_loop`/`edge_curve` + `surface_curve` (два представления одной кромки: 3D и pcurve). Выбор источника истины по согласованности (см. 1019). Камни: same_sense-флаги, degenerate_curve, seam-кривые на замкнутых поверхностях.
 - **Где в коде:** `crates/brep-core/src/step_interchange.rs` (`advanced_face*`), `nurbs_step_trimmed.rs`, `step_interchange_v3.rs`.
 - **Зависимости:** 169, 1019–1021 (доверие/ремонт/направления pcurve), 1016 (швы).

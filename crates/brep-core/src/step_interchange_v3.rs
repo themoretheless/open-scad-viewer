@@ -46,6 +46,7 @@ struct DirectBuildOptions {
     whole_domain_proofs: bool,
     interior_point_selectors: bool,
     allow_open_shells: bool,
+    preserve_authored_charts: bool,
 }
 
 pub(crate) fn refuse(message: impl Into<String>) -> Error {
@@ -919,43 +920,91 @@ fn surface_v4(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Resu
         surface(entities, id, scale)
     }
 }
+fn implicit_surface_knots(form: &str, degree: usize, control_count: usize) -> Result<Vec<f64>> {
+    let length = control_count
+        .checked_add(degree)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| refuse("Implicit B-spline knot count overflow"))?;
+    match form {
+        // ISO 10303-42 uniform_surface: every distinct knot has multiplicity
+        // one. The other two forms are clamped; quasi-uniform additionally
+        // admits multiple uniformly spaced interior spans.
+        "UNIFORM_SURFACE" => Ok((0..length).map(|value| value as f64).collect()),
+        "QUASI_UNIFORM_SURFACE" | "BEZIER_SURFACE" => {
+            if control_count <= degree {
+                return Err(refuse(
+                    "Clamped implicit B-spline has more degrees than control spans",
+                ));
+            }
+            if form == "BEZIER_SURFACE" && control_count != degree + 1 {
+                return Err(refuse(
+                    "BEZIER_SURFACE requires exactly degree+1 control points per axis",
+                ));
+            }
+            let interior = control_count - degree - 1;
+            let end = control_count - degree;
+            let mut knots = Vec::with_capacity(length);
+            knots.extend(std::iter::repeat_n(0., degree + 1));
+            knots.extend((1..=interior).map(|value| value as f64));
+            knots.extend(std::iter::repeat_n(end as f64, degree + 1));
+            Ok(knots)
+        }
+        _ => Err(refuse("Unknown implicit B-spline surface knot form")),
+    }
+}
+
 fn surface_v5(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Result<Surface> {
     let parts = components(entities, id)?;
-    if parts.len() == 1 && !matches!(parts[0].0, "B_SPLINE_SURFACE_WITH_KNOTS") {
-        return surface_v4(entities, id, scale);
+    let knot_forms = [
+        "B_SPLINE_SURFACE_WITH_KNOTS",
+        "UNIFORM_SURFACE",
+        "QUASI_UNIFORM_SURFACE",
+        "BEZIER_SURFACE",
+    ];
+    let selected = knot_forms
+        .iter()
+        .filter(|name| component(&parts, name).is_some())
+        .collect::<Vec<_>>();
+    if selected.is_empty() {
+        if parts.len() == 1 {
+            return surface_v4(entities, id, scale);
+        }
+        return Err(refuse(
+            "B-spline surface complex lacks an explicit or implicit knot form",
+        ));
     }
-    let (du, dv, net, pu, pv, mu, mv, ku, kv, weight_value) = if parts.len() == 1 {
-        let a = parts[0].1;
-        if a.len() != 13 {
+    if selected.len() != 1 {
+        return Err(refuse(
+            "B-spline surface declares multiple mutually exclusive knot forms",
+        ));
+    }
+    let form = *selected[0];
+    let explicit_simple = parts.len() == 1 && form == "B_SPLINE_SURFACE_WITH_KNOTS";
+    let base = if explicit_simple {
+        parts[0].1
+    } else {
+        component(&parts, "B_SPLINE_SURFACE").ok_or_else(|| {
+            refuse(format!(
+                "{form} complex requires a B_SPLINE_SURFACE component"
+            ))
+        })?
+    };
+    let (du, dv, net, pu, pv) = if explicit_simple {
+        if base.len() != 13 {
             return Err(refuse(
                 "AP242 B_SPLINE_SURFACE_WITH_KNOTS requires thirteen inherited/explicit attributes",
             ));
         }
         (
-            usize_value(&a[1], "surface U degree")?,
-            usize_value(&a[2], "surface V degree")?,
-            &a[3],
-            boolean(&a[5], "surface U closed flag")?,
-            boolean(&a[6], "surface V closed flag")?,
-            &a[8],
-            &a[9],
-            &a[10],
-            &a[11],
-            None,
+            usize_value(&base[1], "surface U degree")?,
+            usize_value(&base[2], "surface V degree")?,
+            &base[3],
+            boolean(&base[5], "surface U closed flag")?,
+            boolean(&base[6], "surface V closed flag")?,
         )
     } else {
-        let base = component(&parts, "B_SPLINE_SURFACE").ok_or_else(|| {
-            refuse("RATIONAL_B_SPLINE_SURFACE complex lacks B_SPLINE_SURFACE component")
-        })?;
-        let knots = component(&parts, "B_SPLINE_SURFACE_WITH_KNOTS")
-            .ok_or_else(|| refuse("RATIONAL_B_SPLINE_SURFACE complex lacks knot component"))?;
-        let rational = component(&parts, "RATIONAL_B_SPLINE_SURFACE").ok_or_else(|| {
-            refuse("Complex B-spline surface lacks RATIONAL_B_SPLINE_SURFACE component")
-        })?;
-        if base.len() != 7 || knots.len() != 5 || rational.len() != 1 {
-            return Err(refuse(
-                "Malformed AP242 rational B-spline surface composition",
-            ));
+        if base.len() != 7 {
+            return Err(refuse("Malformed AP242 B_SPLINE_SURFACE component"));
         }
         (
             usize_value(&base[0], "surface U degree")?,
@@ -963,11 +1012,6 @@ fn surface_v5(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Resu
             &base[2],
             boolean(&base[4], "surface U closed flag")?,
             boolean(&base[5], "surface V closed flag")?,
-            &knots[0],
-            &knots[1],
-            &knots[2],
-            &knots[3],
-            Some(&rational[0]),
         )
     };
     let cps = list(net, "surface control net")?
@@ -984,8 +1028,12 @@ fn surface_v5(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Resu
     if nu == 0 || nv == 0 || cps.iter().any(|row| row.len() != nv) {
         return Err(refuse("Surface control net is empty or ragged"));
     }
+    let weight_value = component(&parts, "RATIONAL_B_SPLINE_SURFACE");
     let weights = if let Some(value) = weight_value {
-        let rows = list(value, "surface weights")?;
+        if value.len() != 1 {
+            return Err(refuse("Malformed RATIONAL_B_SPLINE_SURFACE component"));
+        }
+        let rows = list(&value[0], "surface weights")?;
         if rows.len() != nu {
             return Err(refuse(
                 "RATIONAL_B_SPLINE_SURFACE weight row count mismatch",
@@ -1002,17 +1050,33 @@ fn surface_v5(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Resu
             "RATIONAL_B_SPLINE_SURFACE weight/control-net shape mismatch",
         ));
     }
+    let (knots_u, knots_v) = if form == "B_SPLINE_SURFACE_WITH_KNOTS" {
+        let knots = component(&parts, form).unwrap();
+        let offset = if explicit_simple { 8 } else { 0 };
+        if knots.len() != offset + 5 {
+            return Err(refuse("Malformed B_SPLINE_SURFACE_WITH_KNOTS component"));
+        }
+        (
+            expand(
+                &ints(&knots[offset], "surface U multiplicities")?,
+                &values(&knots[offset + 2], "surface U knots")?,
+            )?,
+            expand(
+                &ints(&knots[offset + 1], "surface V multiplicities")?,
+                &values(&knots[offset + 3], "surface V knots")?,
+            )?,
+        )
+    } else {
+        (
+            implicit_surface_knots(form, du, nu)?,
+            implicit_surface_knots(form, dv, nv)?,
+        )
+    };
     let s = Surface {
         degree_u: du,
         degree_v: dv,
-        knots_u: expand(
-            &ints(mu, "surface U multiplicities")?,
-            &values(ku, "surface U knots")?,
-        )?,
-        knots_v: expand(
-            &ints(mv, "surface V multiplicities")?,
-            &values(kv, "surface V knots")?,
-        )?,
+        knots_u,
+        knots_v,
         control_points: cps,
         weights,
         periodic_u: pu,
@@ -1613,6 +1677,34 @@ fn verify_correspondence(
     Ok(trim)
 }
 
+fn curve_bounded_basis(
+    entities: &BTreeMap<usize, Entity>,
+    id: usize,
+) -> Result<Option<(usize, BTreeSet<usize>)>> {
+    let (ty, args) = call(entities, id)?;
+    if ty != "CURVE_BOUNDED_SURFACE" {
+        return Ok(None);
+    }
+    if args.len() != 4 {
+        return Err(refuse("CURVE_BOUNDED_SURFACE argument count mismatch"));
+    }
+    boolean(&args[3], "CURVE_BOUNDED_SURFACE implicit_outer")?;
+    let mut boundaries = BTreeSet::new();
+    for boundary in list(&args[2], "CURVE_BOUNDED_SURFACE boundaries")? {
+        let boundary = one_ref(boundary, "CURVE_BOUNDED_SURFACE boundary")?;
+        if !boundaries.insert(boundary) {
+            return Err(refuse("CURVE_BOUNDED_SURFACE has duplicate boundaries"));
+        }
+    }
+    if boundaries.is_empty() {
+        return Err(refuse("CURVE_BOUNDED_SURFACE has no boundaries"));
+    }
+    Ok(Some((
+        one_ref(&args[1], "CURVE_BOUNDED_SURFACE basis")?,
+        boundaries,
+    )))
+}
+
 struct DirectBuilder<'a> {
     entities: &'a BTreeMap<usize, Entity>,
     scale: f64,
@@ -1622,11 +1714,14 @@ struct DirectBuilder<'a> {
     whole_domain_proofs: bool,
     interior_point_selectors: bool,
     allow_open_shells: bool,
+    preserve_authored_charts: bool,
     vertices: Vec<Vertex>,
     vertex_map: BTreeMap<usize, usize>,
     edges: Vec<Edge>,
     edge_map: BTreeMap<usize, usize>,
     seam_use: BTreeMap<(usize, usize), usize>,
+    curve_bounded_expected: Option<BTreeSet<usize>>,
+    curve_bounded_used: BTreeSet<usize>,
     loops: Vec<Loop>,
     loop_entity: Vec<usize>,
     faces: Vec<Face>,
@@ -1680,10 +1775,12 @@ impl<'a> DirectBuilder<'a> {
         if ga.len() < 3 {
             return Err(refuse("SURFACE_CURVE argument count mismatch"));
         }
+        let curve_3d = one_ref(&ga[1], "SURFACE_CURVE 3D curve")?;
+        self.curve_bounded_used.insert(curve_3d);
         let mut c3 = if self.ap242_composition {
             curve_v5(
                 self.entities,
-                one_ref(&ga[1], "SURFACE_CURVE 3D curve")?,
+                curve_3d,
                 3,
                 self.scale,
                 self.interior_point_selectors,
@@ -1864,7 +1961,11 @@ impl<'a> DirectBuilder<'a> {
         if ty != "ADVANCED_FACE" || a.len() != 4 {
             return Err(refuse("CLOSED_SHELL member is not ADVANCED_FACE"));
         }
-        let sid = one_ref(&a[2], "ADVANCED_FACE surface")?;
+        let referenced_surface = one_ref(&a[2], "ADVANCED_FACE surface")?;
+        let bounded = curve_bounded_basis(self.entities, referenced_surface)?;
+        let sid = bounded.as_ref().map_or(referenced_surface, |(basis, _)| *basis);
+        self.curve_bounded_expected = bounded.map(|(_, boundaries)| boundaries);
+        self.curve_bounded_used.clear();
         let mut surface = if self.ap242_composition {
             surface_v5(self.entities, sid, self.scale)?
         } else if self.analytic_surfaces {
@@ -1896,9 +1997,23 @@ impl<'a> DirectBuilder<'a> {
                 holes.push(loop_index);
             }
         }
+        if self
+            .curve_bounded_expected
+            .take()
+            .is_some_and(|expected| expected != self.curve_bounded_used)
+        {
+            return Err(refuse(
+                "CURVE_BOUNDED_SURFACE boundaries disagree with ADVANCED_FACE edge curves",
+            ));
+        }
         let same_sense = boolean(&a[3], "ADVANCED_FACE same_sense")?;
-        let authored_mirror = name(a).is_some_and(|name| name.starts_with("OSCAD_TOPO/3|"));
-        if !same_sense && (self.ap242_composition || authored_mirror) {
+        let self_authored = name(a).is_some_and(|name| name.starts_with("OSCAD_TOPO/3|"));
+        let preserve_authored_chart = self_authored && self.preserve_authored_charts;
+        let authored_mirror = self_authored && !self.preserve_authored_charts;
+        if !same_sense
+            && !preserve_authored_chart
+            && (self.ap242_composition || authored_mirror)
+        {
             let sum = surface.knots_u[surface.degree_u]
                 + surface.knots_u[surface.knots_u.len() - surface.degree_u - 1];
             surface.control_points.reverse();
@@ -2085,6 +2200,7 @@ fn build_direct_roots(
         whole_domain_proofs,
         interior_point_selectors,
         allow_open_shells,
+        preserve_authored_charts,
     } = options;
     let mut builder = DirectBuilder {
         entities,
@@ -2095,11 +2211,14 @@ fn build_direct_roots(
         whole_domain_proofs,
         interior_point_selectors,
         allow_open_shells,
+        preserve_authored_charts,
         vertices: vec![],
         vertex_map: BTreeMap::new(),
         edges: vec![],
         edge_map: BTreeMap::new(),
         seam_use: BTreeMap::new(),
+        curve_bounded_expected: None,
+        curve_bounded_used: BTreeSet::new(),
         loops: vec![],
         loop_entity: vec![],
         faces: vec![],
@@ -3075,6 +3194,7 @@ fn import_step_direct(
         "SPHERICAL_SURFACE",
         "TOROIDAL_SURFACE",
         "B_SPLINE_SURFACE_WITH_KNOTS",
+        "CURVE_BOUNDED_SURFACE",
         "GEOMETRIC_REPRESENTATION_CONTEXT",
         "GLOBAL_UNIT_ASSIGNED_CONTEXT",
         "SI_UNIT",
@@ -3186,6 +3306,7 @@ fn import_step_direct(
                     ),
                     interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
                     allow_open_shells,
+                    preserve_authored_charts: capability == STEP_INTERCHANGE_V6_CAPABILITY,
                 },
             )?;
             component.tolerance_mm = tolerance_mm;
@@ -3216,6 +3337,7 @@ fn import_step_direct(
                 ),
                 interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
                 allow_open_shells,
+                preserve_authored_charts: capability == STEP_INTERCHANGE_V6_CAPABILITY,
             },
         )?;
         model.tolerance_mm = tolerance_mm;

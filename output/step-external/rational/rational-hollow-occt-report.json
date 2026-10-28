@@ -1,0 +1,1947 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-10-28T13:18:22.788498+00:00",
+  "environment": {
+    "python": "3.12.15",
+    "ocp": "8.0.1.0",
+    "ocpModule": "/Users/themoretheless/Documents/Sources/open-scad-viewer/.venv-cad-step/lib/python3.12/site-packages/OCP/__init__.py"
+  },
+  "method": {
+    "exporterImported": false,
+    "sectionSamplesPerEdgeOrFace": 65,
+    "sections": "Direct stored-surface sampling is authoritative; BRepAlgoAPI_Section is retained as an approximation diagnostic",
+    "bounds": "BRepBndLib.AddOptimal_s without triangulation or shape-tolerance enlargement; comparison permits documented Precision::Confusion padding",
+    "manifold": "Every unique IsSame edge has two face occurrences and every shell is closed"
+  },
+  "ocpBindingCompatibility": [
+    {
+      "version": "8.0.1.0",
+      "api": "Bnd_Box.Get()",
+      "observed": "TypeError: Unregistered type: Bnd_Box::Limits",
+      "probableLayer": "OCP Python binding return-value registration",
+      "workaround": "CornerMin() and CornerMax()"
+    },
+    {
+      "version": "8.0.1.0",
+      "api": "TopoDS.Edge_s",
+      "observed": "AttributeError; not exposed",
+      "probableLayer": "OCP Python binding API spelling",
+      "workaround": "TopoDS.Edge(shape)"
+    }
+  ],
+  "expected": {
+    "solids": 1,
+    "faces": 10,
+    "uniqueEdges": 24,
+    "uniqueVertices": 16,
+    "volume": 586.4306286700947,
+    "area": 515.5742644725772,
+    "bounds": [
+      -6.0,
+      6.0,
+      -6.0,
+      6.0,
+      0.0,
+      10.0
+    ],
+    "sections": [
+      {
+        "z": 0.0,
+        "innerRadius": 1.0,
+        "outerRadius": 3.0
+      },
+      {
+        "z": 5.0,
+        "innerRadius": 1.5,
+        "outerRadius": 4.5
+      },
+      {
+        "z": 10.0,
+        "innerRadius": 2.0,
+        "outerRadius": 6.0
+      }
+    ]
+  },
+  "tolerances": {
+    "volumeAbsolute": 1e-07,
+    "areaAbsolute": 1e-07,
+    "boundsAbsolute": 1e-07,
+    "sectionRadiusAbsolute": 1e-07,
+    "sectionAxialAbsolute": 1e-07
+  },
+  "results": [
+    {
+      "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/output/step-external/rational/rational-hollow-v5.step",
+      "sha256": "e4101b90f37b4f8fb59b736ea27164b03143134f746db3d54a28c9718eeecbb8",
+      "sizeBytes": 59194,
+      "readStatus": "IFSelect_ReturnStatus.IFSelect_RetDone",
+      "readDone": true,
+      "transferredRoots": 1,
+      "transferredShapes": 1,
+      "bRepCheckValid": true,
+      "topology": {
+        "counts": {
+          "solids": 1,
+          "shells": 1,
+          "faces": 10,
+          "uniqueEdges": 24,
+          "uniqueVertices": 16,
+          "faceEdgeOccurrences": 48
+        },
+        "identityComparison": "TopoDS_Shape.IsSame",
+        "shellClosed": [
+          true
+        ],
+        "closed2Manifold": true,
+        "edgesWithoutExactlyTwoFaceOccurrences": [],
+        "eulerCharacteristicVEPlusF": 2
+      },
+      "volume": 586.4306286646402,
+      "area": 515.5742644677815,
+      "volumeError": -5.4545807870454155e-09,
+      "areaError": -4.795651875610929e-09,
+      "bounds": [
+        -6.000000100000001,
+        6.000000100000001,
+        -6.0000001,
+        6.000000100000001,
+        -1e-07,
+        10.0000001
+      ],
+      "boundsErrors": [
+        -1.0000000116860974e-07,
+        1.0000000116860974e-07,
+        -1.0000000028043132e-07,
+        1.0000000116860974e-07,
+        -1e-07,
+        9.99999993922529e-08
+      ],
+      "occtConfusion": 1e-07,
+      "sections": [
+        {
+          "z": 0.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.0000000000000002,
+          "measuredOuterRadius": 3.0000000000000004,
+          "sampledInnerRadiusRange": [
+            1.0,
+            1.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            2.9999999999999996,
+            3.0000000000000013
+          ],
+          "maximumAbsZError": 0.0,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            }
+          ],
+          "innerRadiusError": 2.220446049250313e-16,
+          "outerRadiusError": 4.440892098500626e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.3322676295501878e-15,
+          "passed": true
+        },
+        {
+          "z": 5.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.5000000000000002,
+          "measuredOuterRadius": 4.500000000000001,
+          "sampledInnerRadiusRange": [
+            1.5,
+            1.5000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            4.5,
+            4.500000000000002
+          ],
+          "maximumAbsZError": 8.881784197001252e-16,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            }
+          ],
+          "innerRadiusError": 2.220446049250313e-16,
+          "outerRadiusError": 8.881784197001252e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true
+        },
+        {
+          "z": 10.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 2.0,
+          "measuredOuterRadius": 6.000000000000001,
+          "sampledInnerRadiusRange": [
+            1.9999999999999998,
+            2.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            6.0,
+            6.000000000000002
+          ],
+          "maximumAbsZError": 1.7763568394002505e-15,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 8.881784197001252e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true
+        }
+      ],
+      "planarSectionDiagnostics": [
+        {
+          "z": 0.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.0,
+          "measuredOuterRadius": 3.0,
+          "sampledInnerRadiusRange": [
+            0.9999999999999999,
+            1.0000000000000002
+          ],
+          "sampledOuterRadiusRange": [
+            2.9999999999999996,
+            3.000000000000001
+          ],
+          "maximumAbsZError": 0.0,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 0.0,
+          "maximumSampleInnerRadiusError": 2.220446049250313e-16,
+          "maximumSampleOuterRadiusError": 8.881784197001252e-16,
+          "passed": true,
+          "diagnosticOnly": true
+        },
+        {
+          "z": 5.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.4999997003474757,
+          "measuredOuterRadius": 4.499999101042428,
+          "sampledInnerRadiusRange": [
+            1.4999994880301455,
+            1.5000000000000002
+          ],
+          "sampledOuterRadiusRange": [
+            4.499998464090437,
+            4.500000000000002
+          ],
+          "maximumAbsZError": 8.881784197001252e-16,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            }
+          ],
+          "innerRadiusError": -2.996525243492698e-07,
+          "outerRadiusError": -8.989575723816756e-07,
+          "maximumSampleInnerRadiusError": 5.11969854510852e-07,
+          "maximumSampleOuterRadiusError": 1.5359095630884667e-06,
+          "passed": false,
+          "diagnosticOnly": true
+        },
+        {
+          "z": 10.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 2.0,
+          "measuredOuterRadius": 6.0,
+          "sampledInnerRadiusRange": [
+            1.9999999999999998,
+            2.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            5.999999999999999,
+            6.000000000000002
+          ],
+          "maximumAbsZError": 1.7763568394002505e-15,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 0.0,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true,
+          "diagnosticOnly": true
+        }
+      ],
+      "checks": {
+        "readDone": true,
+        "oneSolid": true,
+        "bRepCheckValid": true,
+        "faceCount": true,
+        "uniqueEdgeCount": true,
+        "uniqueVertexCount": true,
+        "closed2Manifold": true,
+        "volume": true,
+        "area": true,
+        "bounds": true,
+        "sections": true
+      },
+      "passed": true
+    },
+    {
+      "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/output/step-external/rational/rational-hollow-v6.step",
+      "sha256": "057b7c9eb5f49e90e4b5d18b5fe0def836ed3076afb0737cedf6e6d42fa1cca6",
+      "sizeBytes": 57582,
+      "readStatus": "IFSelect_ReturnStatus.IFSelect_RetDone",
+      "readDone": true,
+      "transferredRoots": 1,
+      "transferredShapes": 1,
+      "bRepCheckValid": true,
+      "topology": {
+        "counts": {
+          "solids": 1,
+          "shells": 1,
+          "faces": 10,
+          "uniqueEdges": 24,
+          "uniqueVertices": 16,
+          "faceEdgeOccurrences": 48
+        },
+        "identityComparison": "TopoDS_Shape.IsSame",
+        "shellClosed": [
+          true
+        ],
+        "closed2Manifold": true,
+        "edgesWithoutExactlyTwoFaceOccurrences": [],
+        "eulerCharacteristicVEPlusF": 2
+      },
+      "volume": 586.4306286646402,
+      "area": 515.5742644705274,
+      "volumeError": -5.4545807870454155e-09,
+      "areaError": -2.049773684120737e-09,
+      "bounds": [
+        -6.000000100000001,
+        6.000000100000001,
+        -6.0000001,
+        6.000000100000001,
+        -1e-07,
+        10.0000001
+      ],
+      "boundsErrors": [
+        -1.0000000116860974e-07,
+        1.0000000116860974e-07,
+        -1.0000000028043132e-07,
+        1.0000000116860974e-07,
+        -1e-07,
+        9.99999993922529e-08
+      ],
+      "occtConfusion": 1e-07,
+      "sections": [
+        {
+          "z": 0.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.0000000000000002,
+          "measuredOuterRadius": 3.0000000000000004,
+          "sampledInnerRadiusRange": [
+            1.0,
+            1.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            2.9999999999999996,
+            3.0000000000000013
+          ],
+          "maximumAbsZError": 0.0,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            }
+          ],
+          "innerRadiusError": 2.220446049250313e-16,
+          "outerRadiusError": 4.440892098500626e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.3322676295501878e-15,
+          "passed": true
+        },
+        {
+          "z": 5.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.5000000000000002,
+          "measuredOuterRadius": 4.500000000000001,
+          "sampledInnerRadiusRange": [
+            1.5,
+            1.5000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            4.5,
+            4.500000000000002
+          ],
+          "maximumAbsZError": 8.881784197001252e-16,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            }
+          ],
+          "innerRadiusError": 2.220446049250313e-16,
+          "outerRadiusError": 8.881784197001252e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true
+        },
+        {
+          "z": 10.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 2.0,
+          "measuredOuterRadius": 6.000000000000001,
+          "sampledInnerRadiusRange": [
+            1.9999999999999998,
+            2.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            6.0,
+            6.000000000000002
+          ],
+          "maximumAbsZError": 1.7763568394002505e-15,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 8.881784197001252e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true
+        }
+      ],
+      "planarSectionDiagnostics": [
+        {
+          "z": 0.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.0,
+          "measuredOuterRadius": 3.0,
+          "sampledInnerRadiusRange": [
+            0.9999999999999999,
+            1.0000000000000002
+          ],
+          "sampledOuterRadiusRange": [
+            2.9999999999999996,
+            3.000000000000001
+          ],
+          "maximumAbsZError": 0.0,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 0.0,
+          "maximumSampleInnerRadiusError": 2.220446049250313e-16,
+          "maximumSampleOuterRadiusError": 8.881784197001252e-16,
+          "passed": true,
+          "diagnosticOnly": true
+        },
+        {
+          "z": 5.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.4999997003474757,
+          "measuredOuterRadius": 4.499999101042427,
+          "sampledInnerRadiusRange": [
+            1.4999994880301455,
+            1.5000000000000002
+          ],
+          "sampledOuterRadiusRange": [
+            4.499998464090437,
+            4.500000000000002
+          ],
+          "maximumAbsZError": 8.881784197001252e-16,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042427,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042427,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042427,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            }
+          ],
+          "innerRadiusError": -2.996525243492698e-07,
+          "outerRadiusError": -8.98957573269854e-07,
+          "maximumSampleInnerRadiusError": 5.11969854510852e-07,
+          "maximumSampleOuterRadiusError": 1.5359095630884667e-06,
+          "passed": false,
+          "diagnosticOnly": true
+        },
+        {
+          "z": 10.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 2.0,
+          "measuredOuterRadius": 6.0,
+          "sampledInnerRadiusRange": [
+            1.9999999999999998,
+            2.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            5.999999999999999,
+            6.000000000000002
+          ],
+          "maximumAbsZError": 1.7763568394002505e-15,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 0.0,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true,
+          "diagnosticOnly": true
+        }
+      ],
+      "checks": {
+        "readDone": true,
+        "oneSolid": true,
+        "bRepCheckValid": true,
+        "faceCount": true,
+        "uniqueEdgeCount": true,
+        "uniqueVertexCount": true,
+        "closed2Manifold": true,
+        "volume": true,
+        "area": true,
+        "bounds": true,
+        "sections": true
+      },
+      "passed": true
+    },
+    {
+      "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/output/step-external/rational/rational-hollow-v9.step",
+      "sha256": "e4101b90f37b4f8fb59b736ea27164b03143134f746db3d54a28c9718eeecbb8",
+      "sizeBytes": 59194,
+      "readStatus": "IFSelect_ReturnStatus.IFSelect_RetDone",
+      "readDone": true,
+      "transferredRoots": 1,
+      "transferredShapes": 1,
+      "bRepCheckValid": true,
+      "topology": {
+        "counts": {
+          "solids": 1,
+          "shells": 1,
+          "faces": 10,
+          "uniqueEdges": 24,
+          "uniqueVertices": 16,
+          "faceEdgeOccurrences": 48
+        },
+        "identityComparison": "TopoDS_Shape.IsSame",
+        "shellClosed": [
+          true
+        ],
+        "closed2Manifold": true,
+        "edgesWithoutExactlyTwoFaceOccurrences": [],
+        "eulerCharacteristicVEPlusF": 2
+      },
+      "volume": 586.4306286646402,
+      "area": 515.5742644677815,
+      "volumeError": -5.4545807870454155e-09,
+      "areaError": -4.795651875610929e-09,
+      "bounds": [
+        -6.000000100000001,
+        6.000000100000001,
+        -6.0000001,
+        6.000000100000001,
+        -1e-07,
+        10.0000001
+      ],
+      "boundsErrors": [
+        -1.0000000116860974e-07,
+        1.0000000116860974e-07,
+        -1.0000000028043132e-07,
+        1.0000000116860974e-07,
+        -1e-07,
+        9.99999993922529e-08
+      ],
+      "occtConfusion": 1e-07,
+      "sections": [
+        {
+          "z": 0.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.0000000000000002,
+          "measuredOuterRadius": 3.0000000000000004,
+          "sampledInnerRadiusRange": [
+            1.0,
+            1.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            2.9999999999999996,
+            3.0000000000000013
+          ],
+          "maximumAbsZError": 0.0,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.0000000000000013,
+              "meanRadius": 3.0000000000000004,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.0,
+              "maximumRadius": 1.0000000000000004,
+              "meanRadius": 1.0000000000000002,
+              "maximumAbsZError": 0.0
+            }
+          ],
+          "innerRadiusError": 2.220446049250313e-16,
+          "outerRadiusError": 4.440892098500626e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.3322676295501878e-15,
+          "passed": true
+        },
+        {
+          "z": 5.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.5000000000000002,
+          "measuredOuterRadius": 4.500000000000001,
+          "sampledInnerRadiusRange": [
+            1.5,
+            1.5000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            4.5,
+            4.500000000000002
+          ],
+          "maximumAbsZError": 8.881784197001252e-16,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 4.5,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.500000000000001,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.5,
+              "maximumRadius": 1.5000000000000004,
+              "meanRadius": 1.5000000000000002,
+              "maximumAbsZError": 8.881784197001252e-16
+            }
+          ],
+          "innerRadiusError": 2.220446049250313e-16,
+          "outerRadiusError": 8.881784197001252e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true
+        },
+        {
+          "z": 10.0,
+          "method": "Direct stored-surface evaluation; bisection in V at fixed U",
+          "lateralFaceCount": 8,
+          "samplesPerFace": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 2.0,
+          "measuredOuterRadius": 6.000000000000001,
+          "sampledInnerRadiusRange": [
+            1.9999999999999998,
+            2.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            6.0,
+            6.000000000000002
+          ],
+          "maximumAbsZError": 1.7763568394002505e-15,
+          "faces": [
+            {
+              "face": 0,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 1,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 2,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 3,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 6.0,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.000000000000001,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 4,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 5,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 6,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "face": 7,
+              "surfaceType": "GeomAbs_SurfaceType.GeomAbs_BSplineSurface",
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 8.881784197001252e-16,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true
+        }
+      ],
+      "planarSectionDiagnostics": [
+        {
+          "z": 0.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.0,
+          "measuredOuterRadius": 3.0,
+          "sampledInnerRadiusRange": [
+            0.9999999999999999,
+            1.0000000000000002
+          ],
+          "sampledOuterRadiusRange": [
+            2.9999999999999996,
+            3.000000000000001
+          ],
+          "maximumAbsZError": 0.0,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 2.9999999999999996,
+              "maximumRadius": 3.000000000000001,
+              "meanRadius": 3.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 0.9999999999999999,
+              "maximumRadius": 1.0000000000000002,
+              "meanRadius": 1.0,
+              "maximumAbsZError": 0.0
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 0.0,
+          "maximumSampleInnerRadiusError": 2.220446049250313e-16,
+          "maximumSampleOuterRadiusError": 8.881784197001252e-16,
+          "passed": true,
+          "diagnosticOnly": true
+        },
+        {
+          "z": 5.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 1.4999997003474757,
+          "measuredOuterRadius": 4.499999101042428,
+          "sampledInnerRadiusRange": [
+            1.4999994880301455,
+            1.5000000000000002
+          ],
+          "sampledOuterRadiusRange": [
+            4.499998464090437,
+            4.500000000000002
+          ],
+          "maximumAbsZError": 8.881784197001252e-16,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 4.499998464090437,
+              "maximumRadius": 4.500000000000002,
+              "meanRadius": 4.499999101042428,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 1.4999994880301455,
+              "maximumRadius": 1.5000000000000002,
+              "meanRadius": 1.4999997003474757,
+              "maximumAbsZError": 8.881784197001252e-16
+            }
+          ],
+          "innerRadiusError": -2.996525243492698e-07,
+          "outerRadiusError": -8.989575723816756e-07,
+          "maximumSampleInnerRadiusError": 5.11969854510852e-07,
+          "maximumSampleOuterRadiusError": 1.5359095630884667e-06,
+          "passed": false,
+          "diagnosticOnly": true
+        },
+        {
+          "z": 10.0,
+          "sectionEdgeCount": 8,
+          "samplesPerEdge": 65,
+          "sampleCount": 520,
+          "measuredInnerRadius": 2.0,
+          "measuredOuterRadius": 6.0,
+          "sampledInnerRadiusRange": [
+            1.9999999999999998,
+            2.0000000000000004
+          ],
+          "sampledOuterRadiusRange": [
+            5.999999999999999,
+            6.000000000000002
+          ],
+          "maximumAbsZError": 1.7763568394002505e-15,
+          "edges": [
+            {
+              "edge": 0,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 1,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 2,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 3,
+              "samples": 65,
+              "minimumRadius": 5.999999999999999,
+              "maximumRadius": 6.000000000000002,
+              "meanRadius": 6.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 4,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 5,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 6,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            },
+            {
+              "edge": 7,
+              "samples": 65,
+              "minimumRadius": 1.9999999999999998,
+              "maximumRadius": 2.0000000000000004,
+              "meanRadius": 2.0,
+              "maximumAbsZError": 1.7763568394002505e-15
+            }
+          ],
+          "innerRadiusError": 0.0,
+          "outerRadiusError": 0.0,
+          "maximumSampleInnerRadiusError": 4.440892098500626e-16,
+          "maximumSampleOuterRadiusError": 1.7763568394002505e-15,
+          "passed": true,
+          "diagnosticOnly": true
+        }
+      ],
+      "checks": {
+        "readDone": true,
+        "oneSolid": true,
+        "bRepCheckValid": true,
+        "faceCount": true,
+        "uniqueEdgeCount": true,
+        "uniqueVertexCount": true,
+        "closed2Manifold": true,
+        "volume": true,
+        "area": true,
+        "bounds": true,
+        "sections": true
+      },
+      "passed": true
+    }
+  ],
+  "passed": true
+}

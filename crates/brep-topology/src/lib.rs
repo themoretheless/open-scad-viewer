@@ -797,7 +797,10 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 s.faces.len() * 4,
                 Default::default(),
             );
-            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::with_capacity_and_hasher(
+            // A closed edge has two distinct ends in the vertex link even
+            // when both reference the same authored vertex (periodic seams).
+            type LinkNode = (usize, usize);
+            let mut links = FxHashMap::<usize, Vec<(LinkNode, LinkNode)>>::with_capacity_and_hasher(
                 s.faces.len() * 4,
                 Default::default(),
             );
@@ -834,7 +837,10 @@ impl<C, S, P, V> Model<C, S, P, V> {
                             .push((u.face, c.reversed ^ u.reversed));
                         let next = &cs[(i + 1) % cs.len()];
                         let vertex = self.edges[c.edge].vertices[usize::from(!c.reversed)];
-                        links.entry(vertex).or_default().push((c.edge, next.edge));
+                        links.entry(vertex).or_default().push((
+                            (c.edge, usize::from(!c.reversed)),
+                            (next.edge, usize::from(next.reversed)),
+                        ));
                     }
                 }
             }
@@ -876,7 +882,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 "Shell has disconnected face components",
             )?;
             for fan in links.values() {
-                let mut graph = FxHashMap::<usize, Vec<usize>>::default();
+                let mut graph = FxHashMap::<LinkNode, Vec<LinkNode>>::default();
                 for (a, b) in fan {
                     graph.entry(*a).or_default().push(*b);
                     graph.entry(*b).or_default().push(*a);
@@ -1191,4 +1197,7 @@ impl<T: RevisionState> RevisionCheckout<T> {
 #[cfg(test)]
 #[path = "tests/tests_integration.rs"]
 mod tests;
+
+#[cfg(test)]
+mod periodic_vertex_links;
 

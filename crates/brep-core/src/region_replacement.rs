@@ -572,3 +572,18 @@ pub use spatial_rim::{SpatialRimReport, inspect_spatial_rim};
 #[path = "region_replacement/trihedral_collars.rs"]
 mod trihedral_collars;
 pub use trihedral_collars::{CornerCollar, CornerCollars, prepare_trihedral_collars};
+
+#[path = "region_replacement/central_graph.rs"]
+mod central_graph;
+#[path = "region_replacement/trihedral_graft.rs"]
+mod trihedral_graft;
+pub use trihedral_graft::{TrihedralGraftCandidate,propose_trihedral_graft};
+pub use central_graph::{
+    CentralGraph, CentralGraphInspection, GraphOptions, GraphGuide, inspect_central_graph, propose_central_graph,
+    propose_central_graph_guided,
+    propose_central_graph_fair,
+    propose_central_graph_refined,
+    propose_central_graph_constrained,
+    inspect_central_graph_correlated,
+    trim_central_graph,
+};

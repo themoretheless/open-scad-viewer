@@ -16,6 +16,8 @@ value-codec = { workspace = true, optional = true }
 geometry-ops = { workspace = true }
 brep-topology = { workspace = true }
 cad-predicates = { workspace = true }
+num-rational = "0.4.2"
+num-traits = "0.2.19"
 
 [[example]]
 name = "bounded_curve_offset"

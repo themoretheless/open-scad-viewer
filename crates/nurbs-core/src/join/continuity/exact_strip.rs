@@ -324,6 +324,9 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
     // Cross directions remain Bezier so their normalized jet factors stay exact.
     if !bezier_direction(r.cross(a)) || !bezier_direction(e.cross(b))
         || !(common_bezier || common_multispan || common_linear || common_chain) {
+        if projective {
+            return super::bspline_strip::inspect(a,b,r,e,order,scale,max_work,scalar);
+        }
         return Ok(out);
     }
     if common_chain {

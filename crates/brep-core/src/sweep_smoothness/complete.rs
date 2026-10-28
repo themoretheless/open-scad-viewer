@@ -19,42 +19,10 @@ pub struct Report {
     pub g1_certified: bool,
     pub g2_certified: bool,
     pub exact_work: u64,
+    pub parameter_work: u64,
 }
-// Reverse only a literal single Bezier along direction. Copying its poles and
-// weights is exact even on non-dyadic domains; no a+b-k knot arithmetic/refit.
-fn reverse_along(s: &mut Surface, label: &str) -> bool {
-    let free = usize::from(label.starts_with('u'));
-    let (p, n, k, periodic) = if free == 0 {
-        (s.degree_u, s.control_points.len(), &s.knots_u, s.periodic_u)
-    } else {
-        (
-            s.degree_v,
-            s.control_points[0].len(),
-            &s.knots_v,
-            s.periodic_v,
-        )
-    };
-    if periodic
-        || n != p + 1
-        || k.len() != 2 * n
-        || !k[..n].iter().all(|x| *x == k[p])
-        || !k[n..].iter().all(|x| *x == k[n])
-    {
-        return false;
-    }
-    if free == 0 {
-        s.control_points.reverse();
-        s.weights.reverse();
-    } else {
-        for r in &mut s.control_points {
-            r.reverse();
-        }
-        for r in &mut s.weights {
-            r.reverse();
-        }
-    }
-    true
-}
+mod reversal;
+use reversal::reverse_along;
 // Every oriented face corner connects two (edge,end) nodes in the link
 // of its authored vertex. One connected degree-two graph is mandatory;
 // merely counting two uses per edge would admit pinched vertex neighborhoods.
@@ -124,6 +92,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     let mut seams = Vec::new();
     let mut edge_ids = Vec::new();
     let mut unresolved_edges = Vec::new();
+    let mut parameter_work = 0;
     for (edge, owned) in uses.iter().enumerate() {
         let [(a, Some(ab), Some(ad)), (b, Some(bb), Some(bd))] = owned.as_slice() else {
             unresolved_edges.push(edge);
@@ -131,9 +100,14 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         };
         let left = model.faces[*a].surface.clone();
         let mut right = model.faces[*b].surface.clone();
-        if ad != bd && !reverse_along(&mut right, bb) {
-            unresolved_edges.push(edge);
-            continue;
+        if ad != bd {
+            let (reversed, work) =
+                reverse_along(&mut right, bb, limits.exact_work - parameter_work)?;
+            parameter_work += work;
+            if !reversed {
+                unresolved_edges.push(edge);
+                continue;
+            }
         }
         let start = patches.len();
         patches.push(left);
@@ -168,11 +142,11 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     let proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
         &patches,
         &seams,
-        limits.exact_work,
+        limits.exact_work - parameter_work,
     )?;
     let g1_certified = complete && regularity.all_faces_regular && proof.certified;
     let g2_certified = g1_certified && limits.order == 2;
-    let work = proof.exact_work;
+    let work = parameter_work + proof.exact_work;
     Ok(Report {
         extraction_complete: complete,
         edge_ids,
@@ -184,8 +158,11 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         g1_certified,
         g2_certified,
         exact_work: work,
+        parameter_work,
     })
 }
+#[cfg(test)]
+mod reversal_tests;
 #[cfg(test)]
 mod tests {
     use super::*;

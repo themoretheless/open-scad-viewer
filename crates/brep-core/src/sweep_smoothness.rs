@@ -8,7 +8,6 @@ use nurbs_core::{
     continuity::{self, ProjectiveSeam, ProjectiveSeamCollectionReport},
     curve::Curve,
     surface::Surface,
-    sweep_cap_wall::{self, Boundary},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -51,6 +50,7 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static st
         || p.weights[0] <= 0.
         || p.control_points.iter().any(|v| v.len() != 2)
         || s.validate().is_err()
+        || p.validate().is_err()
     {
         return None;
     }
@@ -75,16 +75,15 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static st
     } else {
         return None;
     };
-    let (label, side) = match (axis, end) {
-        (Axis::Profile, 0) => ("uMin", Boundary::UMin),
-        (Axis::Profile, _) => ("uMax", Boundary::UMax),
-        (Axis::Station, 0) => ("vMin", Boundary::VMin),
-        (Axis::Station, _) => ("vMax", Boundary::VMax),
-    };
-    sweep_cap_wall::covers_boundary(s, p, side)
-        .ok()
-        .filter(|&v| v)
-        .map(|_| label)
+    // This classifies an exact full parameter-side use, including a
+    // nonclamped or periodic side. It grants no world-edge correspondence,
+    // regularity or closure credit: each audit proves those independently.
+    Some(match (axis, end) {
+        (Axis::Profile, 0) => "uMin",
+        (Axis::Profile, _) => "uMax",
+        (Axis::Station, 0) => "vMin",
+        (Axis::Station, _) => "vMax",
+    })
 }
 pub fn inspect_axis(
     model: &Model,

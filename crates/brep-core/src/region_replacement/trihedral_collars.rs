@@ -51,33 +51,6 @@ fn direction(s: &Surface, p: &Curve, width: f64) -> Result<[f64; 2]> {
         "No proposed transverse collar stays in original natural chart",
     ))
 }
-// Trim is a rounded proposal only. The returned collar is always checked
-// directly against the complete original support, not this extracted patch.
-fn local_proposal(s: &Surface, p: &Curve, direction: [f64; 2]) -> Result<Surface> {
-    let mut ranges = [[0.; 2]; 2];
-    for axis in 0..2 {
-        let low = p
-            .control_points
-            .iter()
-            .map(|p| p[axis].min(p[axis] + direction[axis]))
-            .fold(f64::INFINITY, f64::min);
-        let high = p
-            .control_points
-            .iter()
-            .map(|p| p[axis].max(p[axis] + direction[axis]))
-            .fold(f64::NEG_INFINITY, f64::max);
-        let (knots, degree, count) = if axis == 0 {
-            (&s.knots_u, s.degree_u, s.control_points.len())
-        } else {
-            (&s.knots_v, s.degree_v, s.control_points[0].len())
-        };
-        let found = (degree..count)
-            .find(|&i| knots[i] < knots[i + 1] && knots[i] <= low && high <= knots[i + 1]);
-        let i = found.ok_or_else(|| refuse("Collar proposal crosses an original knot line"))?;
-        ranges[axis] = [knots[i], knots[i + 1]];
-    }
-    s.trim([ranges[0][0], ranges[0][1], ranges[1][0], ranges[1][1]])
-}
 /// All six boundary curves, support membership and original-support G2 are
 /// freshly inspected. No supplied certificate or mutable admission flag is used.
 /// Width is a fraction of the smaller original natural chart span.
@@ -152,9 +125,8 @@ pub fn prepare_trihedral_collars(
         if remaining == 0 {
             return Err(refuse("Collar construction work exhausted"));
         }
-        let local = local_proposal(&s, &p, direction)?;
         let built = surface_collar::construct(
-            &local,
+            &s,
             &p,
             direction,
             tolerances[0] / 4.,

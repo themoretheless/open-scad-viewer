@@ -130,7 +130,7 @@ pub(super) fn construct(
             "retainedVolume":r.volume.as_ref().map(|p|{let mut v=atlas(p);v["proofMethod"]=json!("coefficient-owned-filled-volume-atlas");v}),
             "orientation":r.orientation.as_ref().map(|p|json!({"sign":p.sign,"determinant":p.determinant,"cells":r.orientation_cells,"reason":p.reason})),
             "smoothness":r.smoothness.as_ref().map(|s|json!({"extractionComplete":s.extraction_complete,"vertexLinksComplete":s.vertex_links_complete,
-                "edgeIds":s.edge_ids,"unresolvedEdges":s.unresolved_edges,"exactWork":s.exact_work,
+                "edgeIds":s.edge_ids,"unresolvedEdges":s.unresolved_edges,"exactWork":s.exact_work,"parameterWork":s.parameter_work,
                 "edgeCorrespondenceCertified":s.edge_correspondence.as_ref().is_some_and(|p|p.all_equal&&p.all_joins_exact),
                 "agreementWork":s.edge_correspondence.as_ref().map_or(0,|p|p.work),"allFacesRegular":s.regularity.all_faces_regular,
                 "regularityCells":s.regularity.cells,"fullBoundaryG1Certified":s.g1_certified,"fullBoundaryG2Certified":s.g2_certified,

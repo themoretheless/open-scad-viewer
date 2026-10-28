@@ -4,6 +4,7 @@ use crate::{Error, Result, curve::Curve, interval_eval::Interval as I, surface::
 type Poly = Vec<Vec<I>>;
 mod jet_difference;
 pub use jet_difference::{G2Report, JetReport, inspect_g2, inspect_g2_opposite_cross, inspect_g2_cross_frame, inspect_jets};
+pub(crate) use jet_difference::graph_difference_bounds;
 struct Work {
     used: usize,
     max: usize,

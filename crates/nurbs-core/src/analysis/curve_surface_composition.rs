@@ -3,6 +3,10 @@
 //! degrees or knot layouts leave the general interval verifier in charge.
 use crate::{Result, curve::Curve, distance_bounds::Interval, surface::Surface};
 type Poly = Vec<Interval>;
+#[path = "curve_surface_composition/exact_trace.rs"]
+mod exact_trace;
+#[path = "curve_surface_composition/graph_trace.rs"]
+pub(crate) mod graph_trace;
 fn choose(n: usize, k: usize) -> f64 {
     // n <= 50: all integer intermediates and results fit u64, and the result
     // is below 2^53, hence exactly representable as binary64.
@@ -12,19 +16,42 @@ fn choose(n: usize, k: usize) -> f64 {
     }
     v as f64
 }
+fn binomials(n: usize) -> Result<Vec<Interval>> {
+    if n <= 48 {
+        return Ok((0..=n).map(|k| Interval::point(choose(n, k))).collect());
+    }
+    // Above the exactly representable integer range, retain each division
+    // and product as an outward interval. Never round a large binomial into
+    // an allegedly exact authored scalar, or overflow the old u64 recurrence.
+    let mut out = vec![Interval::point(1.); n + 1];
+    for k in 1..=n / 2 {
+        out[k] = out[k - 1]
+            .mul(Interval::point((n - k + 1) as f64))?
+            .div(Interval::point(k as f64))?;
+        out[n - k] = out[k];
+    }
+    Ok(out)
+}
 pub(crate) fn mul(a: &[Interval], b: &[Interval]) -> Result<Poly> {
     let (p, q) = (a.len() - 1, b.len() - 1);
+    // Position composition keeps degree <=160; graph jet residuals need <=256.
+    crate::check(
+        p + q <= 256,
+        "Correlated composition polynomial work exceeds degree 256",
+    )?;
+    let ca = binomials(p)?;
+    let cb = binomials(q)?;
+    let cc = binomials(p + q)?;
     let mut out = vec![Interval::point(0.); p + q + 1];
     for (i, &x) in a.iter().enumerate() {
         for (j, &y) in b.iter().enumerate() {
-            let factor = Interval::point(choose(p, i))
-                .mul(Interval::point(choose(q, j)))?
-                .div(Interval::point(choose(p + q, i + j)))?;
+            let factor = ca[i].mul(cb[j])?.div(cc[i + j])?;
             out[i + j] = out[i + j].add(x.mul(y)?.mul(factor)?)?;
         }
     }
     Ok(out)
 }
+
 fn powers(p: &Poly, n: usize) -> Result<Vec<Poly>> {
     let mut out = vec![vec![Interval::point(1.)]];
     for i in 0..n {
@@ -59,10 +86,9 @@ fn homogeneous(c: &Curve, reversed: bool) -> Result<Vec<Poly>> {
 pub(crate) fn upper(c: &Curve, p: &Curve, s: &Surface, reversed: bool) -> Result<Option<f64>> {
     let (du, dv) = (s.degree_u, s.degree_v);
     let degree = p.degree.saturating_mul(du.saturating_add(dv));
-    // The composed lift has degree <=32 and the source degree <=16, so
-    // every cross-multiplied polynomial remains within choose()'s exact <=48
-    // binomial range. Tensor degree alone need not exclude a 6x6 surface.
-    if degree > 32
+    // Composed lift plus source degree keeps cross products <=160.
+    // Large binomials use outward intervals rather than the old u64 path.
+    if degree > 144
         || c.degree > 16
         || !bezier(&c.knots, c.degree, c.control_points.len())
         || !bezier(&p.knots, p.degree, p.control_points.len())
@@ -347,7 +373,7 @@ pub(crate) fn upper_mapped_cell(
     pcurve_ends: [Interval; 2],
 ) -> Result<Option<f64>> {
     let (du, dv) = (s.degree_u, s.degree_v);
-    if p.degree.saturating_mul(du.saturating_add(dv)) > 32
+    if p.degree.saturating_mul(du.saturating_add(dv)) > 144
         || c.degree > 16
     {
         return Ok(None);

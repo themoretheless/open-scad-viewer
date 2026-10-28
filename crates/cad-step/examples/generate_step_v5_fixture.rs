@@ -28,6 +28,20 @@ fn main() {
         open_shell()
     } else if kind == "multiple-void" {
         multiple_void_model()
+    } else if kind == "rational-hollow" {
+        fn circles(z: f64, scale: f64) -> Vec<Vec<nurbs_core::curve::Curve>> {
+            vec![
+                vec![nurbs_core::primitives::circle([0., 0., z], [0., 0., 1.], 3. * scale).unwrap()],
+                vec![
+                    nurbs_core::primitives::circle([0., 0., z], [0., 0., 1.], scale)
+                        .unwrap()
+                        .reverse()
+                        .unwrap(),
+                ],
+            ]
+        }
+        brep_core::rational_section_loft(&[circles(0., 1.), circles(10., 2.)])
+            .expect("fixture model")
     } else {
         match base_kind {
             "cylinder" => cylinder(2., 3.),

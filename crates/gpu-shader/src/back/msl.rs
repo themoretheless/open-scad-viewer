@@ -1874,6 +1874,11 @@ fn translate_call(
             }
         }
 
+        // Escape user identifiers named distance, but preserve the WGSL builtin.
+        "distance" if !module.functions.iter().any(|(_, f)| f.name.as_deref() == Some(ident)) => {
+            format!("metal::distance({})", args.join(", "))
+        }
+
         // Struct constructor or user helper function call
         _ => {
             // Check if `ident` is a struct constructor
@@ -1973,4 +1978,23 @@ fn find_stmt_semicolon(s: &str) -> Option<usize> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod distance_builtin_regression {
+    #[test]
+    fn distance_builtin_and_local_identifier_translate_separately() {
+        let module = crate::front::wgsl::parse_str(r#"
+            @group(0) @binding(0) var<storage, read_write> output: array<f32>;
+            @compute @workgroup_size(1) fn main() {
+                let distance = distance(vec3f(1.0, 2.0, 3.0), vec3f(0.0));
+                output[0] = distance;
+            }
+        "#).unwrap();
+        let info = crate::valid::Validator::new(crate::valid::ValidationFlags::all(), crate::valid::Capabilities::all()).validate(&module).unwrap();
+        let (msl, _) = super::write_string(&module, &info, &super::Options::default(), &super::PipelineOptions::default()).unwrap();
+        assert!(msl.contains("metal::distance("), "{msl}");
+        assert!(msl.contains("const auto _wgpu_ident_distance ="), "{msl}");
+        assert!(!msl.contains("_wgpu_ident_distance("), "{msl}");
+    }
 }

@@ -10,6 +10,9 @@ use crate::{
 };
 #[path = "surface_g2_pcurves/trace_mean_value.rs"]
 mod trace_mean_value;
+#[path = "surface_g2_pcurves/graph_owned.rs"]
+mod graph_owned;
+pub use graph_owned::{OwnedGraphInspection,inspect_owned_graph};
 #[derive(Clone)]
 pub struct PositionEvidence {
     pub exact: Option<cad_predicates::BezierIdentityDecision>,
