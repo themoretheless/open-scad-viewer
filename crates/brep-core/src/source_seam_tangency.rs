@@ -1,11 +1,11 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
 mod curvature;
-pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature};
+pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature, qualify_polar_curvature_exact};
 mod polar;
 pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
 mod body;
-pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams, PolarBudgets, qualify_boundary_with_polar_curvature};
+pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams, PolarBudgets, qualify_boundary_with_polar_curvature, qualify_boundary_with_exact_polar_curvature};
 mod collection;
 pub use collection::{Class, Collection, CollectionReport, qualify_collection};
 use crate::source_shared_edge::SharedEdge;
@@ -53,6 +53,9 @@ pub trait Carrier: Clone + sealed::Sealed {
     fn map_parameter(&self,side:usize,parameter:I)->Result<I>;
     fn inverse_parameter(&self,side:usize,canonical:I)->Result<I>;
     fn literal_endpoints(&self)->bool;
+    /// Complete parameter correspondence from sealed original carrier data;
+    /// exact natural-boundary layout still needs fresh qualification.
+    fn exact_parameter_curve(&self,_side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {None}
 }
 impl Carrier for SharedEdge {
     fn world(&self)->&nurbs_core::curve::Curve {SharedEdge::world(self)}
@@ -60,6 +63,7 @@ impl Carrier for SharedEdge {
     fn map_parameter(&self,side:usize,parameter:I)->Result<I> {map(self,side,parameter)}
     fn inverse_parameter(&self,side:usize,canonical:I)->Result<I> {inverse(self,side,canonical)}
     fn literal_endpoints(&self)->bool {self.ranges().is_none()}
+    fn exact_parameter_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {<Self as SynchronizedCarrier>::synchronized_curve(self,side)}
 }
 impl Carrier for crate::source_projective_edge::Edge {
     fn world(&self)->&nurbs_core::curve::Curve {crate::source_projective_edge::Edge::world(self)}
@@ -70,6 +74,7 @@ impl Carrier for crate::source_projective_edge::Edge {
         self.uses()[side].inverse_normalized_unclipped(canonical)?.intersect(d[0],d[1])
     }
     fn literal_endpoints(&self)->bool {false}
+    fn exact_parameter_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {<Self as SynchronizedCarrier>::synchronized_curve(self,side)}
 }
 pub(crate) fn ranges(edge: &SharedEdge) -> [[[f64; 2]; 2]; 2] {
     edge.ranges().unwrap_or_else(|| {

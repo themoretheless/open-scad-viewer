@@ -264,3 +264,138 @@ fn changing_projection_uses_original_regular_jets_without_cropping_the_far_end()
         r.cells, r.regular_queries, r.coefficients
     );
 }
+
+#[test]
+fn strict_zero_tolerance_uses_exact_jets_and_complete_regularity_coverage() {
+    for weighted in [false, true] {
+        let a = bowl(1., weighted, 2.);
+        let b = bowl(-1., weighted, 2.);
+        let edge = shared(&a, &b);
+        let pa = plane(&a);
+        let pb = plane(&b);
+        let strict = || CurvatureLimits {
+            normal_distance: 0.,
+            curvature_distance: 0.,
+            cells: 1000,
+            curve_spans: 4000,
+            shape_cells: 4000,
+        };
+        let r = qualify_polar_curvature_exact(
+            &edge,
+            [&pa, &pb],
+            strict(),
+            100000000,
+            100000000,
+            100000000,
+        )
+        .unwrap();
+        let seam = r.seam.expect(r.reason);
+        assert!(seam.is_exact());
+        assert_eq!(seam.orientation(), Orientation::Opposite);
+        assert_eq!(seam.normal_upper(), 0.);
+        assert_eq!(seam.curvature_upper(), 0.);
+        assert!(
+            qualify_polar_curvature_exact(
+                &edge,
+                [&pa, &pb],
+                strict(),
+                100000000,
+                100000000,
+                r.exact_work - 1
+            )
+            .unwrap()
+            .seam
+            .is_none()
+        );
+        assert!(
+            qualify_polar_curvature_exact(
+                &edge,
+                [&pa, &pb],
+                strict(),
+                100000000,
+                r.coefficients - 1,
+                100000000
+            )
+            .unwrap()
+            .seam
+            .is_none()
+        );
+        let mut low = strict();
+        low.cells = r.cells - 1;
+        assert!(
+            qualify_polar_curvature_exact(&edge, [&pa, &pb], low, 100000000, 100000000, 100000000)
+                .unwrap()
+                .seam
+                .is_none()
+        );
+        eprintln!(
+            "strict-polar G2 metrics: weighted={} exact_work={} cells={} coefficients={}",
+            weighted, r.exact_work, r.cells, r.coefficients
+        );
+    }
+    let a = bowl(1., false, 2.);
+    let b = bowl(-1., false, 3.);
+    let edge = shared(&a, &b);
+    let pa = plane(&a);
+    let pb = plane(&b);
+    let r =
+        qualify_polar_curvature_exact(&edge, [&pa, &pb], limits(), 100000000, 100000000, 100000000)
+            .unwrap();
+    assert!(r.seam.is_none());
+    assert_eq!(r.reason, "exact-original-meridian-graph-jets-different");
+    assert_eq!(r.cells, 0);
+}
+#[test]
+fn strict_identity_still_requires_far_endpoint_regularity_and_orientation() {
+    let source = |sign: f64| Surface {
+        degree_u: 2,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 1., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: (0..3)
+            .map(|i| {
+                (0..2)
+                    .map(|j| {
+                        vec![
+                            [0., 0.5, 0.5][i],
+                            sign * (i * j) as f64 / 2.,
+                            f64::from(i == 2),
+                        ]
+                    })
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1.; 2]; 3],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let a = source(1.);
+    let b = source(-1.);
+    let edge = shared(&a, &b);
+    let pa = plane(&a);
+    let pb = plane(&b);
+    let strict = || CurvatureLimits {
+        normal_distance: 0.,
+        curvature_distance: 0.,
+        cells: 1000,
+        curve_spans: 4000,
+        shape_cells: 4000,
+    };
+    let r =
+        qualify_polar_curvature_exact(&edge, [&pa, &pb], strict(), 100000000, 100000000, 100000000)
+            .unwrap();
+    assert!(r.seam.expect(r.reason).is_exact());
+    assert!(r.regular_queries > 0);
+    let mut low = strict();
+    low.shape_cells = r.regular_queries - 1;
+    assert!(
+        qualify_polar_curvature_exact(&edge, [&pa, &pb], low, 100000000, 100000000, 100000000)
+            .unwrap()
+            .seam
+            .is_none()
+    );
+    eprintln!(
+        "strict-changing-projection G2 metrics: exact_work={} cells={} regular_queries={}",
+        r.exact_work, r.cells, r.regular_queries
+    );
+}

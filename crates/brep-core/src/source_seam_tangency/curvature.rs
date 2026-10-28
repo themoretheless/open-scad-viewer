@@ -264,4 +264,4 @@ where
 mod tests;
 
 mod polar;
-pub use polar::{PolarCurvatureReport, PolarCurvatureSeam, qualify_polar_curvature};
+pub use polar::{PolarCurvatureReport, PolarCurvatureSeam, qualify_polar_curvature, qualify_polar_curvature_exact};

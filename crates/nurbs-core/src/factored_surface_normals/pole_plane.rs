@@ -321,3 +321,6 @@ pub use normal_rectangles::DesingularizedPairReport;
 mod graph_shape;
 pub use graph_shape::{PolarGraphShape, PolarGraphShapeReport, PolarGraphBounds, PolarGraphBoundsReport};
 pub use graph_shape::{PolarShapePairReport, compare_polar_shape_rectangles};
+
+mod exact_meridian;
+pub use exact_meridian::{ExactMeridianJets, ExactMeridianReport, prepare_exact_meridian_jets};

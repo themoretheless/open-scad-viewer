@@ -49,6 +49,7 @@ pub struct BoundaryReport<'a, E: Carrier> {
     pub ordinary_normal_spans: usize,
     pub polar_normal_coefficients: usize,
     pub polar_shape_products: u64,
+    pub polar_exact_work: u64,
     pub polar_shape_coefficients: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
@@ -67,7 +68,7 @@ pub fn qualify_boundary<'a, E: Carrier>(
     requirement: PoleRequirement,
     limits: Limits,
 ) -> Result<BoundaryReport<'a, E>> {
-    qualify_boundary_impl(body, classes, requirement, limits, None, None)
+    qualify_boundary_impl(body, classes, requirement, limits, None, None, None)
 }
 /// Additionally qualify meridian tangent planes on the full closed carrier
 /// using native factored-normal polynomials from this freshly admitted pole
@@ -92,6 +93,7 @@ pub fn qualify_boundary_with_polar_seams<'a, E: Carrier>(
         requirement,
         limits,
         Some(normal_coefficients),
+        None,
         None,
     )
 }
@@ -120,6 +122,37 @@ pub fn qualify_boundary_with_polar_curvature<'a, E: Carrier>(
         limits,
         Some(budgets.normal_coefficients),
         Some(budgets),
+        None,
+    )
+}
+/// Exact original meridian jets plus full native regularity/limit coverage.
+/// Exact work is one additional aggregate allowance for all polar G2 edges.
+pub fn qualify_boundary_with_exact_polar_curvature<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    poles: poles::PoleCurvatureLimits,
+    limits: Limits,
+    budgets: PolarBudgets,
+    max_exact_work: u64,
+) -> Result<BoundaryReport<'a, E>> {
+    if !(1..=100000000).contains(&max_exact_work)
+        || !(1..=100000000).contains(&budgets.normal_coefficients)
+        || !(1..=100000000).contains(&budgets.shape_products)
+        || !(1..=100000000).contains(&budgets.shape_coefficients)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_BOUNDARY_SMOOTHNESS",
+            "Choose bounded exact polar work",
+        ));
+    }
+    qualify_boundary_impl(
+        body,
+        classes,
+        PoleRequirement::FacewiseCurvature(poles),
+        limits,
+        Some(budgets.normal_coefficients),
+        Some(budgets),
+        Some(max_exact_work),
     )
 }
 fn qualify_boundary_impl<'a, E: Carrier>(
@@ -129,6 +162,7 @@ fn qualify_boundary_impl<'a, E: Carrier>(
     limits: Limits,
     polar_coefficients: Option<usize>,
     curvature_budgets: Option<PolarBudgets>,
+    exact_work: Option<u64>,
 ) -> Result<BoundaryReport<'a, E>> {
     super::validate_limits(&limits)?;
     let shell = body.geometry().shell();
@@ -146,6 +180,7 @@ fn qualify_boundary_impl<'a, E: Carrier>(
         ordinary_normal_spans: 0,
         polar_normal_coefficients: 0,
         polar_shape_products: 0,
+        polar_exact_work: 0,
         polar_shape_coefficients: 0,
         completed_edges: 0,
         uncertain_edge: None,
@@ -187,7 +222,9 @@ fn qualify_boundary_impl<'a, E: Carrier>(
     let r = if let (PoleStrata::FacewiseCurvature(atlas), Some(budgets)) =
         (&strata, curvature_budgets)
     {
-        collection::qualify_owned_edges_with_polar_curvature(body, classes, limits, atlas, budgets)?
+        collection::qualify_owned_edges_with_polar_curvature(
+            body, classes, limits, atlas, budgets, exact_work,
+        )?
     } else if let (Some(planes), Some(coefficients)) = (plane_atlas, polar_coefficients) {
         collection::qualify_owned_edges_with_poles(body, classes, limits, planes, coefficients)?
     } else {
@@ -200,6 +237,7 @@ fn qualify_boundary_impl<'a, E: Carrier>(
         normal_spans,
         polar_coefficients,
         polar_shape_products,
+        polar_exact_work,
         polar_shape_coefficients,
         completed_edges,
         uncertain_edge,
@@ -210,6 +248,7 @@ fn qualify_boundary_impl<'a, E: Carrier>(
     out.ordinary_normal_spans = normal_spans;
     out.polar_normal_coefficients = polar_coefficients;
     out.polar_shape_products = polar_shape_products;
+    out.polar_exact_work = polar_exact_work;
     out.polar_shape_coefficients = polar_shape_coefficients;
     out.completed_edges = completed_edges;
     out.uncertain_edge = uncertain_edge;

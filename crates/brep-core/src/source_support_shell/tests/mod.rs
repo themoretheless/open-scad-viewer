@@ -9865,6 +9865,23 @@
         assert!(!proof.ordinary().all_edges_curvature());
         eprintln!("complete-polar G2 metrics: seams={} cells={} products={} coefficients={}",8,
             complete.ordinary_cells,complete.polar_shape_products,complete.polar_shape_coefficients);
+        let exact_classes=curvature_classes.iter().map(|c|if matches!(c,Class::Curvature{..}) {
+            Class::Curvature{normal_distance:0.,curvature_distance:0.}
+        }else{*c}).collect::<Vec<_>>();
+        let strict=seams::qualify_boundary_with_exact_polar_curvature(&body,&exact_classes,
+            limits(100000000),edge_limits(),budget(),100000000).unwrap();
+        let proof=strict.certificate.expect(strict.reason);
+        assert_eq!(proof.ordinary().polar_curvature_seams().len(),8);
+        for (_,seam) in proof.ordinary().polar_curvature_seams() {
+            assert!(seam.is_exact());assert_eq!(seam.normal_upper(),0.);assert_eq!(seam.curvature_upper(),0.);
+        }
+        assert_eq!(proof.ordinary().classes(),exact_classes);assert_eq!(strict.completed_edges,20);
+        let short=seams::qualify_boundary_with_exact_polar_curvature(&body,&exact_classes,
+            limits(100000000),edge_limits(),budget(),strict.polar_exact_work-1).unwrap();
+        assert!(short.certificate.is_none());assert!(short.completed_edges<20);
+        eprintln!("complete-exact-polar G2 metrics: seams={} cells={} exact_work={} coefficients={}",8,
+            strict.ordinary_cells,strict.polar_exact_work,strict.polar_shape_coefficients);
+
 
 
 

@@ -3,8 +3,12 @@ use super::*;
 use nurbs_core::factored_surface_normals::{PlaneLimit, compare_polar_shape_rectangles};
 pub struct PolarCurvatureSeam<E: Carrier> {
     inner: CurvatureSeam<E>,
+    exact: bool,
 }
 impl<E: Carrier> PolarCurvatureSeam<E> {
+    pub fn is_exact(&self) -> bool {
+        self.exact
+    }
     pub fn edge(&self) -> &E {
         self.inner.edge()
     }
@@ -27,6 +31,7 @@ impl<E: Carrier> PolarCurvatureSeam<E> {
 pub struct PolarCurvatureReport<E: Carrier> {
     pub seam: Option<PolarCurvatureSeam<E>>,
     pub products: u64,
+    pub exact_work: u64,
     pub coefficients: usize,
     pub cells: usize,
     pub curve_spans: usize,
@@ -59,6 +64,7 @@ pub fn qualify_polar_curvature<E: Carrier>(
     let mut out = PolarCurvatureReport {
         seam: None,
         products: 0,
+        exact_work: 0,
         coefficients: 0,
         cells: 0,
         curve_spans: 0,
@@ -132,7 +138,10 @@ pub fn qualify_polar_curvature<E: Carrier>(
     out.regular_queries = report.shape_cells;
     out.uncertain_canonical = report.uncertain_canonical;
     out.reason = exhausted_reason.unwrap_or(report.reason);
-    out.seam = report.seam.map(|inner| PolarCurvatureSeam { inner });
+    out.seam = report.seam.map(|inner| PolarCurvatureSeam {
+        inner,
+        exact: false,
+    });
     if out.seam.is_some() {
         out.reason = "original-polar-carrier-curvature-limits-qualified";
     }
@@ -140,3 +149,6 @@ pub fn qualify_polar_curvature<E: Carrier>(
 }
 #[cfg(test)]
 mod tests;
+
+mod exact;
+pub use exact::qualify_polar_curvature_exact;
