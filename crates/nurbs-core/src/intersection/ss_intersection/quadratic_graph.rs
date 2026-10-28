@@ -9,8 +9,9 @@ mod diagonalize;
 mod line_clip;
 mod ranges;
 pub use curves::{
-    GraphCurveBuildLimits, GraphCurveTolerances, GraphCurveVertex, GraphEdgeCurves,
-    QualifiedGraphCurves, construct_graph_curves,
+    GraphBoundaryRoot, GraphBoundaryRootLimits, GraphCurveBuildLimits, GraphCurveTolerances,
+    GraphCurveVertex, GraphEdgeCurves, QualifiedGraphBoundaryRoots, QualifiedGraphCurves,
+    construct_graph_curves, qualify_graph_boundary_roots,
 };
 pub use ranges::OriginalGraphSSRange;
 #[path = "quadratic_graph/linear_factors.rs"]

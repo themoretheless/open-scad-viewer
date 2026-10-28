@@ -3,6 +3,11 @@
 use super::*;
 use crate::curve::Curve;
 mod arithmetic;
+mod boundary_roots;
+pub use boundary_roots::{
+    GraphBoundaryRoot, GraphBoundaryRootLimits, QualifiedGraphBoundaryRoots,
+    qualify_graph_boundary_roots,
+};
 mod expressions;
 mod proof;
 use arithmetic::{Arithmetic, Rational};

@@ -763,3 +763,5 @@ mod qualified_dispatch;
 pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_ss_branches};
 
 pub use quadratic_graph::{GraphCurveTolerances, GraphCurveBuildLimits, GraphCurveVertex, GraphEdgeCurves, QualifiedGraphCurves, construct_graph_curves};
+
+pub use quadratic_graph::{GraphBoundaryRoot, GraphBoundaryRootLimits, QualifiedGraphBoundaryRoots, qualify_graph_boundary_roots};
