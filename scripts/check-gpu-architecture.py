@@ -65,10 +65,11 @@ def main():
     if "compute-mlx" in packages:
         for dependency in sorted(normal_dependencies("compute-mlx") & (gpu_dependencies - {"compute-mlx"})):
             problems.append(f"MLX adapter unexpectedly includes {dependency}")
-    for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor") & gpu_dependencies):
-        problems.append(f"Tensor geometry contracts unexpectedly include {dependency}")
-    for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor-mlx") & (gpu_dependencies - {"compute-mlx"})):
-        problems.append(f"MLX-only tensor geometry unexpectedly includes {dependency}")
+    if "osv-math-compute" in packages:
+        for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor") & gpu_dependencies):
+            problems.append(f"Tensor geometry contracts unexpectedly include {dependency}")
+        for dependency in sorted(normal_dependencies("osv-math-compute", "--features", "tensor-mlx") & (gpu_dependencies - {"compute-mlx"})):
+            problems.append(f"MLX-only tensor geometry unexpectedly includes {dependency}")
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1

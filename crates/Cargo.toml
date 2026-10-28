@@ -2,8 +2,6 @@
 members = [
     "vr-core",
     "value-codec",
-    "math-core",
-    "math-compute",
     "manifold-core",
     "manifold-ops",
     "mesh-topology",
@@ -11,7 +9,6 @@ members = [
     "mesh-section",
     "mesh-io",
     "cad-predicates",
-    "raster-core",
     "rush-runtime",
     "rush-frontend",
     "sketch-core",
@@ -82,7 +79,7 @@ printer-core = { version = "0.1.0", path = "printer-core" }
 slicer-core = { version = "0.1.0", path = "slicer-core" }
 # Internal crate paths and versions have one owner. Adapters opt into codecs.
 polygon-core = { version = "0.1.0", path = "polygon-core", default-features = false }
-math-core = { package = "osv-math", version = "0.1.0", path = "math-core" }
+math-core = { package = "osv-math", version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
 value-codec = { version = "0.1.0", path = "value-codec" }
 geometry-ops = { version = "0.1.0", path = "geometry-ops", default-features = false }
 planar-geometry = { version = "0.1.0", path = "planar-geometry" }
@@ -96,14 +93,8 @@ subdivision-core = { version = "0.1.0", path = "subdivision-core", default-featu
 sdf-core = { version = "0.1.0", path = "sdf-core", default-features = false }
 mechanical-core = { version = "0.1.0", path = "mechanical-core", default-features = false }
 # Always the latest released Forma GPU/compute/tensor stack (moving `release` branch).
-tensor-core = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
 gpu-compute = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
 compute-core = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
-compute-cuda = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
-compute-mlx = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release" }
-
-wgpu = { package = "gpu-runtime", version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release", default-features = false, features = ["wgsl", "std"] }
-naga = { package = "gpu-shader", version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release", features = ["wgsl-in"] }
 # Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
 rbench = { version = "0.1.0", git = "https://github.com/themoretheless/rbench", branch = "release" }
 
@@ -113,7 +104,7 @@ bridge-cam = { version = "0.1.0", path = "bridge-cam", default-features = false 
 bridge-codec = { version = "0.1.0", path = "bridge-codec", default-features = false }
 bridge-svg = { version = "0.1.0", path = "bridge-svg", default-features = false }
 cad-step = { version = "0.1.0", path = "cad-step", default-features = false }
-math-compute = { version = "0.1.0", path = "math-compute", default-features = false, package = "osv-math-compute" }
+math-compute = { version = "0.1.0", git = "https://github.com/themoretheless/forma", branch = "release", default-features = false, package = "osv-math-compute" }
 nurbs-intersect = { version = "0.1.0", path = "nurbs-intersect", default-features = false }
 
 [profile.release]
@@ -173,9 +164,6 @@ opt-level = 3
 opt-level = 3
 
 [profile.release.package.compute-core]
-opt-level = 3
-
-[profile.release.package.raster-core]
 opt-level = 3
 
 # Separate compression bootstrap: opt-level 2 measured faster and smaller than

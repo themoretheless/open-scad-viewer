@@ -424,24 +424,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "compute-cuda"
-version = "0.1.0"
-source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
-dependencies = [
- "gpu-compute",
- "tensor-core",
-]
-
-[[package]]
-name = "compute-mlx"
-version = "0.1.0"
-source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
-dependencies = [
- "libloading 0.8.9",
- "tensor-core",
-]
-
-[[package]]
 name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -505,7 +487,7 @@ version = "0.19.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "804764d10e844da09765a7b2ca9641a0851523d1702efb0d7299d73e31b86e80"
 dependencies = [
- "libloading 0.9.0",
+ "libloading",
 ]
 
 [[package]]
@@ -1106,16 +1088,6 @@ checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
 name = "libloading"
-version = "0.8.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
-dependencies = [
- "cfg-if",
- "windows-link",
-]
-
-[[package]]
-name = "libloading"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
@@ -1389,20 +1361,16 @@ checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 [[package]]
 name = "osv-math"
 version = "0.1.0"
-dependencies = [
- "rbench",
-]
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 
 [[package]]
 name = "osv-math-compute"
 version = "0.1.0"
+source = "git+https://github.com/themoretheless/forma?branch=release#2fe6a7bb10da93b8fc1421281daf1e42de204cb8"
 dependencies = [
  "compute-core",
- "compute-cuda",
- "compute-mlx",
  "gpu-compute",
  "osv-math",
- "rbench",
  "tensor-core",
 ]
 
@@ -1579,15 +1547,6 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
-
-[[package]]
-name = "raster-core"
-version = "0.1.0"
-dependencies = [
- "gpu-compute",
- "gpu-runtime",
- "gpu-shader",
-]
 
 [[package]]
 name = "rawpointer"
