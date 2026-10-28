@@ -1,11 +1,14 @@
 //! Multiple source-owned SS cuts with current-sector inference on both sides.
 use super::*;
+mod bridges;
 #[derive(Clone, Debug, PartialEq)]
 pub struct OpenSSNetworkCut {
     pub path: usize,
     /// Half-open range in the original qualified path's saved segments.
     pub segments: [usize; 2],
     pub sides: [OpenSSPairSide; 2],
+    /// Side-local joint bridge batch IDs; these contributions split together.
+    pub bridge_groups: [Option<usize>; 2],
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct OpenSSNetworkPort {
@@ -87,6 +90,9 @@ pub fn partition_open_ss_network<'s, 'i, 'p, 'r, 'a>(
         return Err(unproven(
             "SS network requires distinct actual operand faces",
         ));
+    }
+    if let Some(result) = bridges::try_pair(paths, limits)? {
+        return Ok(result);
     }
     let mut cells = 0;
     let mut pairs = 0;
@@ -212,6 +218,7 @@ pub fn partition_open_ss_network<'s, 'i, 'p, 'r, 'a>(
                 path: path_index,
                 segments: [start, end],
                 sides,
+                bridge_groups: [None; 2],
             });
         }
     }

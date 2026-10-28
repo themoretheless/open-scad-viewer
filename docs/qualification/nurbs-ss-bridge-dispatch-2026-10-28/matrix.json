@@ -1,0 +1,86 @@
+{
+  "base_commit": "1cc2be6a63150f9f1193c9fd3f3a4be6ef7f0c7f",
+  "scope": "Original-source SS two-path bridge dispatch on each actual operand, including mixed per-side topology and one-model aliasing; no automatic Boolean deletion or Solid admission",
+  "sources": {
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/brep-core/src/face_cut.rs": "2cda6b026eb06da29d8e0997a4d9268a7edc3ed4398417e1525cd0f4eaad93ad",
+    "crates/brep-core/src/face_cut/closed.rs": "aca60849ef923d4ea8cd16f8e262824a84b41dfb5d5c3374165d94aa23da7630",
+    "crates/brep-core/src/face_cut/closed/bridge.rs": "f2e9fbae3f408f9b396f6c42863fcc7f3148075bd4171c845fcd74f3c897a52f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network.rs": "3ea917bfc725ed7425358fd6d906cb3cb3f83e529c4dd9baa73a3e4cd3cd86f9",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/bridges.rs": "c12aac32d7bb6d231e96ee47f33342763ca0a7de0cc053d28a39fc93f69d4273",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/bridges/tests.rs": "d050949c07134d1703c001a32a1d5ce2150619095c1f86d5e897db95c5e4aaeb",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/tests.rs": "0b98bcc48909cebb71a0efa078568a52ec114fbe8829aadda238857fdd34cea2",
+    "crates/brep-core/src/ss_face_membership/tests.rs": "92f0c5de1b1af9ab2488a79db7b75235f81f274195255e1634fca3e5b16394ae"
+  },
+  "logs": {
+    "/tmp/osv-plan-ss-bridge-dispatch-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-bridge-dispatch-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-bridge-dispatch-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-bridge-dispatch-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-bridge-dispatch-brep-final.log": "120a472ba3cf76bb5fce33ece1186ed0e179e7f16858c76a2d9c8c7f2b3d22c1",
+    "/tmp/osv-plan-ss-bridge-dispatch-brep-full.log": "2ea293f70cfc6bc3e49ff955d727aaf878c425f0255ddde61512633023be77c4",
+    "/tmp/osv-plan-ss-bridge-dispatch-focused.log": "f38c16d5f216c86183c55c387c592058a74e14fd747905d8670c065c1f4c6129",
+    "/tmp/osv-plan-ss-bridge-dispatch-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "results": {
+    "initial_focused_before_step_group_mutation_and_hole_hole": {
+      "passed": 18,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "full_with_edited_step_and_group_mutation": {
+      "passed": 1977,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "final_full_including_source_owned_hole_hole": {
+      "passed": 1978,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "new_bridge_dispatch_tests": 4,
+    "api": {
+      "modules": 239,
+      "catalogue": 200,
+      "exit_code": 0
+    },
+    "format": {
+      "exit_code": 0
+    },
+    "architecture": {
+      "violations": 71,
+      "exit_code": 1,
+      "limits_unchanged": true
+    }
+  },
+  "ignored": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+  ],
+  "cases": [
+    "four original ellipse roots bind actual outer/hole bridge ports on both operands",
+    "mixed outer/hole bridge batch and two same-hole caps on opposite operand",
+    "either source path order and reversed traversal",
+    "one Model with two shells retains all actual side edits",
+    "grouping metadata mutation refuses sealed replay",
+    "shared cells, trim pairs and late-operation exhaustion preserve original inputs",
+    "actual mixed SS edited result STEP /9 export/import preserves changed topology, each new source world curve and both pcurve clocks",
+    "source-owned hole/hole bridge batch creates a positive cap and one negative merged-hole boundary on both sides"
+  ],
+  "remaining": [
+    "general bridge graphs with more paths or mismatched loop-pair groups",
+    "interior endpoints without proven original/native ports",
+    "automatic Boolean material roles, sewing and Solid admission",
+    "general rational/multispan source supports, unresolved contacts/coincidences",
+    "central G2 corner, offsets/shells, simplification",
+    "WASM/Rush/UI/edited-body STEP delivery of all new contracts",
+    "architecture and distribution release gates"
+  ],
+  "no_existing_limits_raised": true
+}

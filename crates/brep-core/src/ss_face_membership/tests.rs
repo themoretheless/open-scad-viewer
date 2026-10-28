@@ -34,13 +34,16 @@ pub(super) fn surface(circle: bool, r2: f64) -> Surface {
 }
 fn wire(s: &Surface, rect: [[f64; 2]; 2], reverse: bool) -> Vec<recipe::Boundary> {
     let [[u0, u1], [v0, v1]] = rect;
-    let mut points = vec![[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+    let points = vec![[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+    polygon_wire(s, points, reverse)
+}
+fn polygon_wire(s: &Surface, mut points: Vec<[f64; 2]>, reverse: bool) -> Vec<recipe::Boundary> {
     if reverse {
         points.reverse();
     }
-    (0..4)
+    (0..points.len())
         .map(|i| {
-            let [a, b] = [points[i], points[(i + 1) % 4]];
+            let [a, b] = [points[i], points[(i + 1) % points.len()]];
             let (axis, fixed, lo, hi) = if a[0] == b[0] {
                 (Axis::U, a[0], a[1], b[1])
             } else {
@@ -70,10 +73,28 @@ pub(super) fn model(s: &Surface, hole: Option<[[f64; 2]; 2]>) -> Model {
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
     ];
-    let mut wires = vec![wire(s, natural, false)];
+    region(s, natural, hole)
+}
+pub(super) fn region(s: &Surface, outer: [[f64; 2]; 2], hole: Option<[[f64; 2]; 2]>) -> Model {
+    let mut wires = vec![wire(s, outer, false)];
     if let Some(h) = hole {
         wires.push(wire(s, h, true));
     }
+    assemble_region(s, wires)
+}
+pub(super) fn polygon_region(s: &Surface, outer: Vec<[f64; 2]>, hole: Vec<[f64; 2]>) -> Model {
+    polygon_regions(s, outer, vec![hole])
+}
+pub(super) fn polygon_regions(
+    s: &Surface,
+    outer: Vec<[f64; 2]>,
+    holes: Vec<Vec<[f64; 2]>>,
+) -> Model {
+    let mut wires = vec![polygon_wire(s, outer, false)];
+    wires.extend(holes.into_iter().map(|h| polygon_wire(s, h, true)));
+    assemble_region(s, wires)
+}
+fn assemble_region(s: &Surface, wires: Vec<Vec<recipe::Boundary>>) -> Model {
     let context = ToleranceContext::default_valid();
     let report = recipe::assemble(
         &context,

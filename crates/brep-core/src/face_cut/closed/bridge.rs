@@ -58,6 +58,26 @@ pub fn partition_bridges(
     tolerance_uv: f64,
     limits: ClosedCutLimits,
 ) -> Result<BridgePartition> {
+    partition_bridges_with_tolerances(
+        source,
+        face_id,
+        paths,
+        tolerance_uv,
+        [source.tolerance_mm; 2],
+        limits,
+    )
+}
+pub(crate) fn partition_bridges_with_tolerances(
+    source: &Model,
+    face_id: usize,
+    paths: &[BridgePath; 2],
+    tolerance_uv: f64,
+    world_tolerances: [f64; 2],
+    limits: ClosedCutLimits,
+) -> Result<BridgePartition> {
+    if world_tolerances.iter().any(|t| !t.is_finite() || *t <= 0.) {
+        return Err(invalid("Need finite positive bridge lift tolerances"));
+    }
     let mut work = Work::default();
     let p = prepare::prepare(source, face_id, paths, tolerance_uv, limits, &mut work)?;
     let face = &source.faces[face_id];
@@ -159,7 +179,7 @@ pub fn partition_bridges(
             &c.pcurve,
             &face.surface,
             c.reversed,
-            source.tolerance_mm,
+            source.tolerance_mm.min(world_tolerances[index]),
             &mut work,
             limits,
         )?;

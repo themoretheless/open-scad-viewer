@@ -62,6 +62,7 @@ pub(crate) mod endpoint_loop;
 mod policy;
 use endpoint_loop::owned_boundary;
 mod closed;
+pub(crate) use closed::partition_bridges_with_tolerances;
 pub use closed::{
     BridgePartition, BridgePath, ClosedCutLimits, ClosedPartition, HolePartition,
     partition_bridges, partition_closed, partition_same_hole,

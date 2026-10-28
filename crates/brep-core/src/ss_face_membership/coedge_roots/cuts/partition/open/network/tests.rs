@@ -1,7 +1,10 @@
 use super::*;
 use crate::ss_face_membership::tests::{curves, model};
 const STRIP: [[f64; 2]; 2] = [[0.125, 0.875], [0.4375, 0.5625]];
-fn request(input: &QualifiedCutPartitions<'_, '_, '_>, upper: bool) -> OpenSSPathRequest {
+pub(super) fn request(
+    input: &QualifiedCutPartitions<'_, '_, '_>,
+    upper: bool,
+) -> OpenSSPathRequest {
     let node = |right: bool| {
         input
             .source
@@ -31,7 +34,7 @@ fn request(input: &QualifiedCutPartitions<'_, '_, '_>, upper: bool) -> OpenSSPat
             .collect(),
     }
 }
-fn combined(a: &Model, b: &Model) -> Model {
+pub(super) fn combined(a: &Model, b: &Model) -> Model {
     let mut m = a.clone();
     let vo = m.vertices.len();
     let eo = m.edges.len();
