@@ -64,6 +64,10 @@ pub type BufferSize = NonZeroU64;
 pub type DynamicOffset = u32;
 pub type Label<'a> = Option<&'a str>;
 
+pub const COPY_BUFFER_ALIGNMENT: u64 = 4;
+pub const COPY_BYTES_PER_ROW_ALIGNMENT: u32 = 256;
+pub const MAP_ALIGNMENT: u64 = 8;
+
 #[derive(Clone)]
 pub struct Instance {
     desc: InstanceDescriptor,
@@ -100,6 +104,13 @@ impl Instance {
             Err(RequestAdapterError("No supported GPU adapter found".to_string()))
         };
         std::future::ready(res)
+    }
+
+    pub fn create_surface<'a, W>(&self, _target: W) -> Result<Surface<'a>, RequestDeviceError> {
+        Ok(Surface {
+            config: Arc::new(Mutex::new(None)),
+            _marker: std::marker::PhantomData,
+        })
     }
 }
 
@@ -242,6 +253,18 @@ impl Device {
         ErrorScopeGuard {
             stack: self.error_stack.clone(),
         }
+    }
+
+    pub fn on_uncaptured_error(&self, _handler: Arc<dyn Fn(Error) + Send + Sync + 'static>) {}
+
+    pub fn set_device_lost_callback(
+        &self,
+        _callback: impl Fn(DeviceLostReason, String) + Send + Sync + 'static,
+    ) {
+    }
+
+    pub fn generate_allocator_report(&self) -> Option<AllocatorReport> {
+        None
     }
 
     pub(crate) fn record_error(&self, err: Error) {

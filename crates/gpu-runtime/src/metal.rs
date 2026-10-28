@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 #[cfg(target_os = "macos")]
 #[link(name = "objc")]
-unsafe extern "C" {
+extern "C" {
     pub fn objc_getClass(name: *const c_char) -> *mut c_void;
     pub fn sel_registerName(name: *const c_char) -> *mut c_void;
     pub fn objc_msgSend();
@@ -14,17 +14,17 @@ unsafe extern "C" {
 
 #[cfg(target_os = "macos")]
 #[link(name = "Metal", kind = "framework")]
-unsafe extern "C" {
+extern "C" {
     pub fn MTLCreateSystemDefaultDevice() -> *mut c_void;
 }
 
 #[cfg(target_os = "macos")]
 #[link(name = "CoreGraphics", kind = "framework")]
-unsafe extern "C" {}
+extern "C" {}
 
 #[cfg(target_os = "macos")]
 #[link(name = "Foundation", kind = "framework")]
-unsafe extern "C" {}
+extern "C" {}
 
 #[derive(Clone, Copy)]
 pub struct Selectors {
@@ -1626,6 +1626,51 @@ impl MetalDevice {
                                     f_obj(cmd_buf.as_ptr(), s.compute_command_encoder);
                             }
                             encode_compute_dispatches(active_compute_enc, &dispatches);
+                        }
+                        RecordedOp::RenderPass(mut rp) => {
+                            if !active_compute_enc.is_null() {
+                                f_void(active_compute_enc, s.end_encoding);
+                                active_compute_enc = ptr::null_mut();
+                            }
+                            let start_ts = rp.start_ts.take();
+                            let end_ts = rp.end_ts.take();
+                            if start_ts.is_some() || end_ts.is_some() {
+                                let sub_cmd_ptr = f_obj(self.queue.as_ptr(), s.command_buffer);
+                                crate::encode_render_pass(sub_cmd_ptr, rp);
+                                f_void(sub_cmd_ptr, s.commit);
+                                f_void(sub_cmd_ptr, s.wait_until_completed);
+
+                                let f_f64: unsafe extern "C" fn(*mut c_void, *mut c_void) -> f64 =
+                                    std::mem::transmute(objc_msgSend as *const c_void);
+                                let t_start_s = f_f64(sub_cmd_ptr, s.gpu_start_time);
+                                let t_end_s = f_f64(sub_cmd_ptr, s.gpu_end_time);
+                                let now_ns = std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .map(|d| d.as_nanos() as u64)
+                                    .unwrap_or(0);
+                                let (start_ns, end_ns) =
+                                    if t_start_s > 0.0 && t_end_s > t_start_s {
+                                        ((t_start_s * 1e9) as u64, (t_end_s * 1e9) as u64)
+                                    } else {
+                                        (now_ns, now_ns + 1000)
+                                    };
+                                if let Some((qs, i)) = start_ts {
+                                    if let Ok(mut ts) = qs.timestamps_ns.lock() {
+                                        if (i as usize) < ts.len() {
+                                            ts[i as usize] = start_ns;
+                                        }
+                                    }
+                                }
+                                if let Some((qs, i)) = end_ts {
+                                    if let Ok(mut ts) = qs.timestamps_ns.lock() {
+                                        if (i as usize) < ts.len() {
+                                            ts[i as usize] = end_ns;
+                                        }
+                                    }
+                                }
+                                continue;
+                            }
+                            crate::encode_render_pass(cmd_buf.as_ptr(), rp);
                         }
                         other => {
                             if !active_compute_enc.is_null() {

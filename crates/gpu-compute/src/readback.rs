@@ -165,11 +165,12 @@ impl ByteReadback {
     fn release_mapping(&mut self) {
         let mut cancelled = self.cancelled.lock().expect("readback cancellation lock");
         *cancelled = true;
-        if let Some(receiver) = self.receiver.take()
-            && let Ok(Ok(())) = receiver.try_recv()
-            && let Some(buffer) = &self.buffer
-        {
-            buffer.unmap();
+        if let Some(receiver) = self.receiver.take() {
+            if let Ok(Ok(())) = receiver.try_recv() {
+                if let Some(buffer) = &self.buffer {
+                    buffer.unmap();
+                }
+            }
         }
         // A later callback sees the disconnected channel and unmaps itself.
     }

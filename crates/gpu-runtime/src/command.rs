@@ -187,6 +187,8 @@ pub(crate) struct RenderPassOp {
     pub(crate) color_attachments: Vec<Option<OwnedColorAttachment>>,
     pub(crate) depth_stencil_attachment: Option<OwnedDepthAttachment>,
     pub(crate) commands: Vec<RenderCommand>,
+    pub(crate) start_ts: Option<(QuerySet, u32)>,
+    pub(crate) end_ts: Option<(QuerySet, u32)>,
 }
 
 pub(crate) enum RecordedOp {
@@ -320,11 +322,21 @@ impl CommandEncoder {
                     view: d.view.clone(),
                     depth_ops: d.depth_ops,
                 });
+        let start_timestamp = desc.timestamp_writes.as_ref().and_then(|tw| {
+            tw.beginning_of_pass_write_index
+                .map(|i| (tw.query_set.clone(), i))
+        });
+        let end_timestamp = desc
+            .timestamp_writes
+            .as_ref()
+            .and_then(|tw| tw.end_of_pass_write_index.map(|i| (tw.query_set.clone(), i)));
         RenderPass {
             encoder: self,
             color_attachments,
             depth_stencil_attachment,
             commands: Vec::with_capacity(32),
+            start_timestamp,
+            end_timestamp,
         }
     }
 
@@ -522,6 +534,8 @@ pub struct RenderPass<'a> {
     color_attachments: Vec<Option<OwnedColorAttachment>>,
     depth_stencil_attachment: Option<OwnedDepthAttachment>,
     commands: Vec<RenderCommand>,
+    start_timestamp: Option<(QuerySet, u32)>,
+    end_timestamp: Option<(QuerySet, u32)>,
 }
 
 impl<'a> RenderPass<'a> {
@@ -626,10 +640,14 @@ impl<'a> Drop for RenderPass<'a> {
         let color_attachments = std::mem::take(&mut self.color_attachments);
         let depth_stencil_attachment = self.depth_stencil_attachment.take();
         let commands = std::mem::take(&mut self.commands);
+        let start_ts = self.start_timestamp.take();
+        let end_ts = self.end_timestamp.take();
         self.encoder.ops.push(RecordedOp::RenderPass(RenderPassOp {
             color_attachments,
             depth_stencil_attachment,
             commands,
+            start_ts,
+            end_ts,
         }));
     }
 }

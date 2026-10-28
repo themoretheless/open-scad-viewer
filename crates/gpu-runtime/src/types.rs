@@ -70,6 +70,10 @@ impl InstanceDescriptor {
     pub fn new_without_display_handle() -> Self {
         Self::default()
     }
+
+    pub fn new_with_display_handle(_display: Box<dyn std::any::Any>) -> Self {
+        Self::default()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -166,7 +170,167 @@ impl Default for Limits {
 pub struct RequestAdapterOptions<'a, 'b> {
     pub power_preference: PowerPreference,
     pub force_fallback_adapter: bool,
-    pub compatible_surface: Option<&'a &'b ()>,
+    pub compatible_surface: Option<&'a Surface<'b>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PresentMode {
+    #[default]
+    Fifo,
+    FifoRelaxed,
+    Immediate,
+    Mailbox,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CompositeAlphaMode {
+    #[default]
+    Auto,
+    Opaque,
+    PreMultiplied,
+    PostMultiplied,
+    Inherit,
+}
+
+#[derive(Debug, Clone)]
+pub struct SurfaceCapabilities {
+    pub formats: Vec<crate::TextureFormat>,
+    pub present_modes: Vec<PresentMode>,
+    pub alpha_modes: Vec<CompositeAlphaMode>,
+    pub usages: crate::TextureUsages,
+}
+
+#[derive(Debug, Clone)]
+pub struct SurfaceConfiguration {
+    pub usage: crate::TextureUsages,
+    pub format: crate::TextureFormat,
+    pub width: u32,
+    pub height: u32,
+    pub present_mode: PresentMode,
+    pub desired_maximum_frame_latency: u32,
+    pub alpha_mode: CompositeAlphaMode,
+    pub view_formats: Vec<crate::TextureFormat>,
+}
+
+pub struct SurfaceTexture {
+    pub texture: crate::Texture,
+    pub suboptimal: bool,
+}
+
+impl SurfaceTexture {
+    pub fn present(self) {}
+}
+
+pub enum CurrentSurfaceTexture {
+    Success(SurfaceTexture),
+    Suboptimal(SurfaceTexture),
+    Timeout,
+    Occluded,
+    Outdated,
+    Lost,
+    Validation,
+}
+
+impl std::fmt::Debug for CurrentSurfaceTexture {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Success(_) => write!(f, "Success"),
+            Self::Suboptimal(_) => write!(f, "Suboptimal"),
+            Self::Timeout => write!(f, "Timeout"),
+            Self::Occluded => write!(f, "Occluded"),
+            Self::Outdated => write!(f, "Outdated"),
+            Self::Lost => write!(f, "Lost"),
+            Self::Validation => write!(f, "Validation"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Surface<'a> {
+    pub(crate) config: Arc<Mutex<Option<(crate::Device, SurfaceConfiguration)>>>,
+    pub(crate) _marker: std::marker::PhantomData<&'a ()>,
+}
+
+impl<'a> Surface<'a> {
+    pub fn get_capabilities(&self, _adapter: &crate::Adapter) -> SurfaceCapabilities {
+        SurfaceCapabilities {
+            formats: vec![
+                crate::TextureFormat::Bgra8Unorm,
+                crate::TextureFormat::Rgba8Unorm,
+                crate::TextureFormat::Bgra8UnormSrgb,
+                crate::TextureFormat::Rgba8UnormSrgb,
+            ],
+            present_modes: vec![PresentMode::Fifo, PresentMode::Immediate, PresentMode::Mailbox],
+            alpha_modes: vec![
+                CompositeAlphaMode::Auto,
+                CompositeAlphaMode::Opaque,
+                CompositeAlphaMode::PostMultiplied,
+            ],
+            usages: crate::TextureUsages::RENDER_ATTACHMENT | crate::TextureUsages::COPY_SRC | crate::TextureUsages::COPY_DST,
+        }
+    }
+
+    pub fn get_default_config(
+        &self,
+        _adapter: &crate::Adapter,
+        width: u32,
+        height: u32,
+    ) -> Option<SurfaceConfiguration> {
+        Some(SurfaceConfiguration {
+            usage: crate::TextureUsages::RENDER_ATTACHMENT,
+            format: crate::TextureFormat::Bgra8Unorm,
+            width: width.max(1),
+            height: height.max(1),
+            present_mode: PresentMode::Fifo,
+            desired_maximum_frame_latency: 2,
+            alpha_mode: CompositeAlphaMode::Auto,
+            view_formats: Vec::new(),
+        })
+    }
+
+    pub fn configure(&self, device: &crate::Device, config: &SurfaceConfiguration) {
+        if let Ok(mut guard) = self.config.lock() {
+            *guard = Some((device.clone(), config.clone()));
+        }
+    }
+
+    pub fn get_current_texture(&self) -> CurrentSurfaceTexture {
+        let Some((device, cfg)) = self.config.lock().ok().and_then(|g| g.clone()) else {
+            return CurrentSurfaceTexture::Outdated;
+        };
+        let texture = device.create_texture(&crate::TextureDescriptor {
+            label: Some("Surface drawable texture"),
+            size: crate::Extent3d {
+                width: cfg.width.max(1),
+                height: cfg.height.max(1),
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: crate::TextureDimension::D2,
+            format: cfg.format,
+            usage: cfg.usage | crate::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        });
+        CurrentSurfaceTexture::Success(SurfaceTexture {
+            texture,
+            suboptimal: false,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeviceLostReason {
+    Unknown,
+    Destroyed,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AllocatorReport {
+    pub total_allocated_bytes: u64,
+    pub total_reserved_bytes: u64,
+    pub allocations: Vec<()>,
+    pub blocks: Vec<()>,
 }
 
 #[derive(Debug, Clone, Default)]

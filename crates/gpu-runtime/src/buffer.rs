@@ -242,7 +242,7 @@ impl Buffer {
         &self,
         bounds: S,
     ) -> Result<BufferView<'_>, BufferAccessError> {
-        self.slice(bounds).get_mapped_range()
+        Ok(self.slice(bounds).get_mapped_range())
     }
 
     #[inline]
@@ -250,7 +250,7 @@ impl Buffer {
         &self,
         bounds: S,
     ) -> Result<WriteOnly<'_, [u8]>, BufferAccessError> {
-        self.slice(bounds).get_mapped_range_mut()
+        Ok(self.slice(bounds).get_mapped_range_mut())
     }
 
     #[inline]
@@ -326,7 +326,7 @@ impl<'a> BufferSlice<'a> {
     }
 
     #[inline]
-    pub fn get_mapped_range(&self) -> Result<BufferView<'a>, BufferAccessError> {
+    pub fn get_mapped_range(&self) -> BufferView<'a> {
         if !self.buffer.inner.device.is_last_cmd_completed() {
             self.buffer.inner.device.wait_idle();
         }
@@ -336,11 +336,11 @@ impl<'a> BufferSlice<'a> {
                 self.size as usize,
             )
         };
-        Ok(BufferView { slice })
+        BufferView { slice }
     }
 
     #[inline]
-    pub fn get_mapped_range_mut(&self) -> Result<WriteOnly<'a, [u8]>, BufferAccessError> {
+    pub fn get_mapped_range_mut(&self) -> WriteOnly<'a, [u8]> {
         if !self.buffer.inner.device.is_last_cmd_completed() {
             self.buffer.inner.device.wait_idle();
         }
@@ -350,7 +350,7 @@ impl<'a> BufferSlice<'a> {
                 self.size as usize,
             )
         };
-        Ok(WriteOnly::new(slice))
+        WriteOnly::new(slice)
     }
 }
 

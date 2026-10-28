@@ -58,6 +58,10 @@ impl TextureFormat {
             Self::Rgba32Float => 16,
         }
     }
+
+    pub const fn is_srgb(self) -> bool {
+        matches!(self, Self::Rgba8UnormSrgb | Self::Bgra8UnormSrgb)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -154,6 +158,15 @@ impl Texture {
     }
 
     pub fn destroy(&self) {}
+
+    pub fn as_image_copy(&self) -> TexelCopyTextureInfo<'_> {
+        TexelCopyTextureInfo {
+            texture: self,
+            mip_level: 0,
+            origin: Origin3d::ZERO,
+            aspect: TextureAspect::All,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

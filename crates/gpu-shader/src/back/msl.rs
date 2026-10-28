@@ -1645,6 +1645,7 @@ fn msl_escape_ident(ident: &str) -> &str {
         "coord" => "_wgpu_ident_coord",
         "compare_func" => "_wgpu_ident_compare_func",
         "access" => "_wgpu_ident_access",
+        "distance" => "_wgpu_ident_distance",
         _ => ident,
     }
 }
