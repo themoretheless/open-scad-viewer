@@ -167,6 +167,55 @@ fn closed_split_prism_owns_every_exact_regular_g2_carrier_and_aggregate_budget()
         Class::TangentPlanes
     );
     assert!(!mixed_proof.regular_seams().iter().any(|(i, _)| *i == first));
+    let smooth_limits = || seams::ExactSmoothLimits {
+        incidence_steps: 1000000,
+        exact_work: 100000000,
+        cells: 100000,
+        curve_spans: 100000,
+        source_spans: 100000,
+    };
+    let smooth =
+        seams::qualify_exact_smooth_collection(&mixed_collection, &axes, smooth_limits()).unwrap();
+    let smooth_proof = smooth.certificate.expect(smooth.reason);
+    assert_eq!(smooth_proof.tangent_seams().len(), 1);
+    assert_eq!(smooth_proof.curvature_seams().len(), 2);
+    assert_eq!(smooth_proof.tangent_seams()[0].0, first);
+    assert_eq!(smooth_proof.original().classes(), mixed);
+    assert!(
+        smooth_proof.polar_tangent_edges().is_empty()
+            && smooth_proof.polar_curvature_edges().is_empty()
+    );
+    assert!(!smooth_proof.all_edges_exact_tangent() && !smooth_proof.all_edges_exact_curvature());
+    let tight = || seams::ExactSmoothLimits {
+        incidence_steps: smooth.steps,
+        exact_work: smooth.exact_work,
+        cells: smooth.cells,
+        curve_spans: smooth.curve_spans,
+        source_spans: smooth.source_spans,
+    };
+    assert!(
+        seams::qualify_exact_smooth_collection(&mixed_collection, &axes, tight())
+            .unwrap()
+            .certificate
+            .is_some()
+    );
+    for dim in 0..5 {
+        let mut l = tight();
+        match dim {
+            0 => l.incidence_steps -= 1,
+            1 => l.exact_work -= 1,
+            2 => l.cells -= 1,
+            3 => l.curve_spans -= 1,
+            _ => l.source_spans -= 1,
+        }
+        let denied = seams::qualify_exact_smooth_collection(&mixed_collection, &axes, l).unwrap();
+        assert!(denied.certificate.is_none());
+    }
+    eprintln!(
+        "mixed exact G1/G2: g1=1 g2=2 steps={} work={} cells={} source_spans={}",
+        smooth.steps, smooth.exact_work, smooth.cells, smooth.source_spans
+    );
+
     assert_eq!(body.definition().unwrap(), original);
     eprintln!(
         "owned exact regular G2: seams={} steps={} work={} cells={} curve_spans={} shape_cells={}",

@@ -363,6 +363,30 @@ fn folded_quadratic_closed_caps_have_c1_neighborhoods_without_c2_credit() {
     assert!(denied.certificate.is_none());
     assert_eq!(denied.uncertain_edge, Some(sharp_edge));
     assert_eq!(denied.reason, "pole-c1-explicit-c0-meridian");
+    let smooth = smooth::qualify_exact_smooth_collection(
+        boundary.ordinary(),
+        &vec![2; classes.len()],
+        smooth::ExactSmoothLimits {
+            incidence_steps: 1000000,
+            exact_work: 100000000,
+            cells: 100000,
+            curve_spans: 100000,
+            source_spans: 100000,
+        },
+    )
+    .unwrap();
+    let exact = smooth.certificate.expect(smooth.reason);
+    assert_eq!(exact.polar_tangent_edges().len(), 8);
+    assert!(exact.polar_curvature_edges().is_empty());
+    assert!(exact.tangent_seams().is_empty() && exact.curvature_seams().is_empty());
+    assert_eq!(smooth.cells, 0);
+    assert_eq!(smooth.steps, 28);
+    assert!(smooth.exact_work > 0);
+    assert!(std::ptr::eq(exact.original(), boundary.ordinary()));
+    eprintln!(
+        "mixed collection exact polar G1: edges=8 steps={} work={}",
+        smooth.steps, smooth.exact_work
+    );
     let curvature =
         crate::source_pole_tangency::qualify_body_pole_curvature(&body, pole_limits()).unwrap();
     assert!(curvature.certificate.is_none());

@@ -505,6 +505,10 @@
         // their original coefficient gradients are not exactly identical.
         assert!(c1.certificate.is_none());assert!(c1.uncertain_edge.is_some());
         assert_eq!(c1.reason,"exact-original-meridian-gradients-different");
+        let mixed=seams::qualify_exact_smooth_collection(cap_proof.ordinary(),&vec![2;cap_classes.len()],
+            seams::ExactSmoothLimits{incidence_steps:1000000,exact_work:100000000,cells:100000,curve_spans:100000,source_spans:100000}).unwrap();
+        assert!(mixed.certificate.is_none());assert_eq!(mixed.reason,"exact-original-meridian-gradients-different");
+
         eprintln!("represented-cap exact C1 refusal: {} work={}",c1.reason,c1.exact_work);
         let short=seams::qualify_boundary_with_polar_seams(&body,&cap_classes,
             PoleRequirement::TangentGraph(graph_limits(100000)),seam_work(),cap_tangency.polar_normal_coefficients-1).unwrap();
@@ -9881,6 +9885,10 @@
         let collection_axes=vec![2;curvature_classes.len()];
         let no_upgrade=seams::qualify_exact_curvature_collection(proof.ordinary(),&collection_axes,exact_collection_limits()).unwrap();
         assert!(no_upgrade.certificate.is_none());assert_eq!(no_upgrade.reason,"exact-collection-polar-g2-unproven");
+        let smooth_limits=||seams::ExactSmoothLimits{incidence_steps:1000000,exact_work:100000000,cells:100000,curve_spans:100000,source_spans:100000};
+        let refused_mixed=seams::qualify_exact_smooth_collection(proof.ordinary(),&collection_axes,smooth_limits()).unwrap();
+        assert!(refused_mixed.certificate.is_none());assert_eq!(refused_mixed.reason,"exact-smooth-polar-g2-unproven");
+
 
         let exact_classes=curvature_classes.iter().map(|c|if matches!(c,Class::Curvature{..}) {
             Class::Curvature{normal_distance:0.,curvature_distance:0.}
@@ -9898,6 +9906,11 @@
         assert_eq!(reused_proof.polar_edges().len(),8);assert!(reused_proof.regular_seams().is_empty());
         assert_eq!(reused.exact_work,0);assert_eq!(reused.cells,0);
         assert_eq!(reused.steps,28);assert!(!reused_proof.all_edges_exact_curvature());
+        let smooth=seams::qualify_exact_smooth_collection(proof.ordinary(),&collection_axes,smooth_limits()).unwrap();
+        let smooth_proof=smooth.certificate.expect(smooth.reason);
+        assert_eq!(smooth_proof.polar_curvature_edges().len(),8);assert!(smooth_proof.polar_tangent_edges().is_empty());
+        assert_eq!(smooth.exact_work,0);assert_eq!(smooth.steps,28);assert_eq!(smooth.cells,0);
+
         assert!(std::ptr::eq(reused_proof.original(),proof.ordinary()));
 
         let short=seams::qualify_boundary_with_exact_polar_curvature(&body,&exact_classes,
@@ -9941,3 +9954,5 @@
 mod c2_bowl;
 
 mod exact_regular;
+
+mod exact_g1;

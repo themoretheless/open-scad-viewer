@@ -741,3 +741,9 @@ pub use pole_c1::{C1PoleNeighborhood,C1PoleAtlas,C1PoleReport,C1PoleLimits,quali
 
 mod exact_collection;
 pub use exact_collection::{ExactCurvatureCollection, ExactCollectionLimits, ExactCollectionReport, qualify_exact_curvature_collection};
+
+mod exact_tangency;
+pub use exact_tangency::{ExactTangencySeam,ExactTangencyReport,qualify_tangency_exact};
+
+mod exact_smooth;
+pub use exact_smooth::{ExactSmoothCollection,ExactSmoothLimits,ExactSmoothReport,qualify_exact_smooth_collection};
