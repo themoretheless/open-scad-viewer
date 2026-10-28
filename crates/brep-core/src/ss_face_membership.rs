@@ -10,8 +10,9 @@ use nurbs_core::{
 };
 mod closed;
 pub use closed::{
-    ClosedBranchFaces, ClosedBranchLimits, ClosedSourceEdge, QualifiedClosedBranches,
-    partition_closed_branches,
+    ClosedBranchFaces, ClosedBranchLimits, ClosedGraphSideLimits, ClosedSourceEdge, GraphFaceSide,
+    QualifiedClosedBranches, QualifiedClosedGraphSides, partition_closed_branches,
+    qualify_closed_graph_sides,
 };
 mod coedge_roots;
 #[cfg(test)]

@@ -1,0 +1,112 @@
+{
+  "base_commit": "691bcd66096b57aaa69dc65eb03a617d23c6b46f",
+  "branch": "codex/nurbs-plan-recovery-20261028",
+  "scope": "Complete actual closed SS sector height sides relative to the opposite original support; no opposite trim/body material/Solid authority",
+  "sources": {
+    "crates/brep-core/src/ss_face_membership.rs": "2c4a6d71a858b465ed4fa5b78bb23f8ef0d3fbc3a4c58c2944ce7aa5a1b416c3",
+    "crates/brep-core/src/ss_face_membership/closed.rs": "9de9940f8f84ddf972526bc199de9b2e5129e76d2a08390bea6b27f5c566a02e",
+    "crates/brep-core/src/ss_face_membership/closed/roles.rs": "a35bcf6852dc9d78dfe226ef494440a5a94ea032220ced67169ec55041c2220b",
+    "crates/brep-core/src/ss_face_membership/closed/roles/tests.rs": "741befc9c83bbec7791b490b6c1bd08bdeee219e6c859f84de49dac9b4d74ac0",
+    "crates/brep-core/src/ss_face_membership/closed/tests.rs": "d28d0ffcf8b803866b82dbbd7eb6055dd4b4cc760274a609a5fa06345cd4066c",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/tests.rs": "d0f535614a4bc6de374bae06e062609d4a648f32a2f44d61cadbe86fcdb301a3",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "da353b225392eee1e342df1d9ece355e6617d49753ad150e79cec186a3dddaa0",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/arithmetic.rs": "1b373ed6972ccb79ccd9131afc4710790bc0838fcc86abf6f646bda730dbea18",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/mod.rs": "e8a9457db15512fcf29399b9da33572d094d214f1e2fc0a19809bdc581d8c315",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/rational_graph.rs": "e9dc52c5a46c107df83bde5e106a372f2cd7f3ee632559de6d89dc9d591696c2",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/zero_trace.rs": "04a0cfaefa6fde98fae3af6d799d8f2a9a6dfc6131b290ad6e2623ed1238b612",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/zero_trace/tests.rs": "f4d05138087c25c4b830806dbe660d5a9c6d81825dd46e72bfcd5f83fdb47ed6"
+  },
+  "full_library_tests": {
+    "brep-core": {
+      "passed": 1997,
+      "failed": 0,
+      "ignored": 5,
+      "seconds": 83.71
+    },
+    "cad-predicates": {
+      "passed": 100,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    "nurbs-core": {
+      "passed": 1996,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 7.92
+    },
+    "nurbs-intersect": {
+      "passed": 108,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    }
+  },
+  "total": {
+    "passed": 4201,
+    "failed": 0,
+    "ignored": 6
+  },
+  "ignored_tests": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement",
+    "test normal_alignment::tests::benchmark_closed_rational_restriction ... ignored, native restriction microbenchmark; no production speed claim"
+  ],
+  "focused": {
+    "core": 3,
+    "ss_brep": 74
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "whitespace": "passed",
+    "git_diff": "passed",
+    "staged_source_match": true,
+    "api": {
+      "public_modules": 239,
+      "catalogue_entries": 200
+    },
+    "architecture": {
+      "existing_violations": 71,
+      "new_violations": 0,
+      "limits_raised": false
+    }
+  },
+  "no_default_features": {
+    "nurbs_core": "passed",
+    "combined_brep_check": "failed",
+    "brep_compiler_errors": 121,
+    "diagnostic_files_and_manifests_unchanged_from_base": true,
+    "baseline_build_executed": false
+  },
+  "proposal_policy": {
+    "ordinary_constructor": "midpoint; original output and operation behavior preserved",
+    "optional_method": "construct_graph_curves_with_dyadic_proposals",
+    "policy_flag_grants_exactness": false
+  },
+  "logs": {
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-api-final-r2.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-architecture-final-r2.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-architecture-git.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-architecture.log": "17eb66d6924b61180da497b66cbd794b819fc3e1902dfe8462ddd2993511508e",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-brep-focused-r2.log": "af11a969df1d10afe74cc77ea9f04dea223db279ed1136341e98ee8711f2cfd3",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-brep-focused-r3.log": "2014e8bec82264e1df4665265671e9319c64a71fb588051bb6b06d921d1cc148",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-core-focused-r2.log": "c7c90ef965c8a447d2729c00d425bb6be5362580cef8a5e7957658b2d869149a",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-core-focused-r3.log": "c4aec22c6231c68b5b32c0e4fe5917dfefa5a661de4ae1105763ae42338ece45",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-core-focused.log": "6327bda243e39457d76ba9f847530791141b6bad925ae02c2f16f2370acb6a98",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-format-final.log": "849b5308ba7bcccd173022e0041ad23d29f0c18d9443404c8beff30520eed937",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-format.log": "849b5308ba7bcccd173022e0041ad23d29f0c18d9443404c8beff30520eed937",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-native-full-r2.log": "8718c5d6b6c989c21e7d94e9bcf7b9bbc89b9e66af1cc8f7d80531589e8cb0e3",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-native-full.log": "9a98aa3c136a50397953bd35d95fc0ef769bb2dd96d36cc5ce189e2e11f218c8",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-no-default-features.log": "012b156d921de44aac60b7267eb353a5128915238335538fca1953252a8b3654",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-nurbs-minimal.log": "711d94598af75eb037d397d934aab0ae26ca8fbc18d9902c0ef1f9b55919ce59",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/closed-roles-whitespace.log": "66fb840db9ac8fa107d2925afc9c629ad45361533c5f37d9c14c98231a4c274b"
+  },
+  "snapshot": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/qualified-closed-height-sides-20261028.tar.gz",
+  "delivery": "cohesive local checkpoint; external receipt records actual commit; no main push",
+  "complete_plan": false
+}

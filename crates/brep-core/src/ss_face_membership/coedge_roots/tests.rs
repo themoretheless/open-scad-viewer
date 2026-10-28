@@ -500,15 +500,15 @@ fn original_nonuniform_rational_support_reaches_actual_roots_cuts_and_both_faces
     // real closed trim cycles on the unchanged rational support.
     let closed_models = [model(&a, None), model(&b, None)];
     let saved_closed = closed_models.clone();
-    let curves = ss::construct_graph_curves(
-        &original,
-        ss::GraphCurveTolerances {
-            world: closed_models[0].tolerance_mm,
-            uv: 1e-9,
-        },
-        Default::default(),
-    )
-    .unwrap();
+    let curves = original
+        .construct_graph_curves_with_dyadic_proposals(
+            ss::GraphCurveTolerances {
+                world: closed_models[0].tolerance_mm,
+                uv: 1e-9,
+            },
+            Default::default(),
+        )
+        .unwrap();
     let membership = crate::ss_face_membership::qualify(
         &curves,
         [(&closed_models[0], 0), (&closed_models[1], 0)],
@@ -531,5 +531,9 @@ fn original_nonuniform_rational_support_reaches_actual_roots_cuts_and_both_faces
             .all(|f| f.surface == a)
     );
     closed.reverify().unwrap();
+    let sides =
+        crate::ss_face_membership::qualify_closed_graph_sides(&closed, Default::default()).unwrap();
+    assert_eq!(sides.faces().len(), 4);
+    sides.reverify().unwrap();
     assert_eq!(closed_models, saved_closed);
 }

@@ -151,6 +151,16 @@ fn original_closed_membership_replay_and_shared_budgets_are_mandatory() {
 #[test]
 fn two_support_faces_in_one_model_keep_two_sectors_each_in_original_shells() {
     let c = curves(0.0625);
+    let c = c
+        .original()
+        .construct_graph_curves_with_dyadic_proposals(
+            ss::GraphCurveTolerances {
+                world: 1e-7,
+                uv: 1e-9,
+            },
+            Default::default(),
+        )
+        .unwrap();
     let mut m = model(c.original().source().first(), None);
     let other = model(c.original().source().second(), None);
     let vo = m.vertices.len();
@@ -189,6 +199,19 @@ fn two_support_faces_in_one_model_keep_two_sectors_each_in_original_shells() {
     assert_eq!(out.models()[0].faces.len(), 4);
     assert!(out.models()[0].shells.iter().all(|s| s.faces.len() == 2));
     out.reverify().unwrap();
+    let sides = qualify_closed_graph_sides(&out, Default::default()).unwrap();
+    assert_eq!(sides.faces().len(), 4);
+    assert!(sides.faces().iter().all(|f| f.model == 0));
+    assert_eq!(
+        sides
+            .faces()
+            .iter()
+            .map(|f| f.face)
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        4
+    );
+    sides.reverify().unwrap();
     assert_eq!(m, before);
 }
 
@@ -207,15 +230,15 @@ fn nonplanar_original_intersection_keeps_its_actual_3d_curve() {
     let source = ss::FiberSources::new(&first, &second).unwrap();
     let original = ss::qualify_quadratic_graph_ss(&source, Default::default()).unwrap();
     assert_eq!(original.kind(), QuadraticGraphSSKind::ClosedEllipse);
-    let c = ss::construct_graph_curves(
-        &original,
-        ss::GraphCurveTolerances {
-            world: 1e-7,
-            uv: 1e-9,
-        },
-        Default::default(),
-    )
-    .unwrap();
+    let c = original
+        .construct_graph_curves_with_dyadic_proposals(
+            ss::GraphCurveTolerances {
+                world: 1e-7,
+                uv: 1e-9,
+            },
+            Default::default(),
+        )
+        .unwrap();
     let m = fixtures(&c, None);
     let member = membership(&c, &m);
     let out = partition_closed_branches(&member, Default::default()).unwrap();
@@ -245,5 +268,8 @@ fn nonplanar_original_intersection_keeps_its_actual_3d_curve() {
             );
         }
     }
+    let sides = qualify_closed_graph_sides(&out, Default::default()).unwrap();
+    assert_eq!(sides.faces().iter().filter(|f| f.above).count(), 2);
+    sides.reverify().unwrap();
     out.reverify().unwrap();
 }

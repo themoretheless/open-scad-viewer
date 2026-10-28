@@ -2,7 +2,11 @@
 use super::*;
 use crate::face_cut::{self, Segment};
 mod paths;
+mod roles;
 use paths::*;
+pub use roles::{
+    ClosedGraphSideLimits, GraphFaceSide, QualifiedClosedGraphSides, qualify_closed_graph_sides,
+};
 #[cfg(test)]
 mod tests;
 #[derive(Clone, Copy, Debug)]

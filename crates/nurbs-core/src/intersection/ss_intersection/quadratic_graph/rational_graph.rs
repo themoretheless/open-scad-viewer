@@ -3,7 +3,7 @@
 use super::*;
 type Grid = Vec<Vec<f64>>;
 
-fn power(values: &[f64], w: &mut Work) -> Result<Vec<f64>> {
+pub(super) fn power(values: &[f64], w: &mut Work) -> Result<Vec<f64>> {
     let n = values.len() - 1;
     let mut row = values.to_vec();
     let mut out = vec![row[0]];

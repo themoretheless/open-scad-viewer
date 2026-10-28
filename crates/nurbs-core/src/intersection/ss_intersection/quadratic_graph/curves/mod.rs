@@ -54,6 +54,7 @@ pub struct QualifiedGraphCurves {
     vertices: Vec<GraphCurveVertex>,
     edges: Vec<GraphEdgeCurves>,
     operations: usize,
+    dyadic_proposals: bool,
 }
 impl QualifiedGraphCurves {
     pub fn original(&self) -> &QualifiedQuadraticGraphSS {
@@ -68,11 +69,19 @@ impl QualifiedGraphCurves {
     pub fn operations(&self) -> usize {
         self.operations
     }
+    pub fn uses_dyadic_proposals(&self) -> bool {
+        self.dyadic_proposals
+    }
     /// Rebuild from original supports, prove actual saved poles/weights, then
     /// match this snapshot. A mutable public report cannot create this owner.
     pub fn reverify(&self) -> Result<()> {
         self.original.reverify()?;
-        let fresh = construct_graph_curves(&self.original, self.tolerance, self.limits)?;
+        let fresh = construct_with_proposals(
+            &self.original,
+            self.tolerance,
+            self.limits,
+            self.dyadic_proposals,
+        )?;
         check(
             self.vertices == fresh.vertices
                 && self.edges == fresh.edges
@@ -81,15 +90,15 @@ impl QualifiedGraphCurves {
         )
     }
 }
-fn proposal(r: &Rational, b: &mut Arithmetic) -> Result<Curve> {
+fn proposal(r: &Rational, b: &mut Arithmetic, dyadic: bool) -> Result<Curve> {
     let mut weights = Vec::new();
     let mut control_points = Vec::new();
     for i in 0..r.denominator.len() {
-        let weight = b.midpoint(r.denominator[i])?;
+        let weight = b.proposal(r.denominator[i], dyadic)?;
         check(weight > 0., "SS curve proposed nonpositive weight")?;
         let mut point = Vec::new();
         for axis in 0..r.numerator.len() {
-            let numerator = b.midpoint(r.numerator[axis][i])?;
+            let numerator = b.proposal(r.numerator[axis][i], dyadic)?;
             b.tick(1)?;
             point.push(numerator / weight);
         }
@@ -114,6 +123,27 @@ pub fn construct_graph_curves(
     original: &QualifiedQuadraticGraphSS,
     tolerance: GraphCurveTolerances,
     limits: GraphCurveBuildLimits,
+) -> Result<QualifiedGraphCurves> {
+    construct_with_proposals(original, tolerance, limits, false)
+}
+impl QualifiedQuadraticGraphSS {
+    /// Optional proposal policy for representable exact conic coordinates.
+    /// Original deviation/lift gates remain mandatory; this mode alone does
+    /// not prove a zero trace. The ordinary constructor keeps midpoint output
+    /// and its existing work behavior. The sealed owner replays this choice.
+    pub fn construct_graph_curves_with_dyadic_proposals(
+        &self,
+        tolerance: GraphCurveTolerances,
+        limits: GraphCurveBuildLimits,
+    ) -> Result<QualifiedGraphCurves> {
+        construct_with_proposals(self, tolerance, limits, true)
+    }
+}
+fn construct_with_proposals(
+    original: &QualifiedQuadraticGraphSS,
+    tolerance: GraphCurveTolerances,
+    limits: GraphCurveBuildLimits,
+    dyadic: bool,
 ) -> Result<QualifiedGraphCurves> {
     check(
         tolerance.world.is_finite()
@@ -142,13 +172,13 @@ pub fn construct_graph_curves(
         let mut world = [0.; 3];
         let mut native_uv = [[0.; 2]; 2];
         for axis in 0..3 {
-            world[axis] = b.midpoint(I::new(v.world[axis][0], v.world[axis][1])?)?;
+            world[axis] = b.proposal(I::new(v.world[axis][0], v.world[axis][1])?, dyadic)?;
         }
         for (side, uv) in [v.first_uv, v.second_uv].into_iter().enumerate() {
             for axis in 0..2 {
                 let d = original.data.domains[side][axis];
                 native_uv[side][axis] = b
-                    .midpoint(I::new(uv[axis][0], uv[axis][1])?)?
+                    .proposal(I::new(uv[axis][0], uv[axis][1])?, dyadic)?
                     .clamp(d[0], d[1]);
             }
         }
@@ -208,7 +238,7 @@ pub fn construct_graph_curves(
             expressions::preferred_height(original),
             &mut b,
         )?;
-        let mut world = proposal(&world_expression, &mut b)?;
+        let mut world = proposal(&world_expression, &mut b, dyadic)?;
         if let Some(height) = expressions::constant_height(original) {
             for p in &mut world.control_points {
                 p[2] = height;
@@ -229,7 +259,7 @@ pub fn construct_graph_curves(
         )?;
         for side in 0..2 {
             let expression = expressions::native(original, &uv, side, &mut b)?;
-            let mut curve = proposal(&expression, &mut b)?;
+            let mut curve = proposal(&expression, &mut b, dyadic)?;
             let last = curve.control_points.len() - 1;
             for (end, pole) in [0, last].into_iter().enumerate() {
                 curve.control_points[pole] = vertices[ids[end]].native_uv[side].to_vec();
@@ -261,6 +291,7 @@ pub fn construct_graph_curves(
         vertices,
         edges,
         operations: b.used,
+        dyadic_proposals: dyadic,
     })
 }
 #[cfg(test)]

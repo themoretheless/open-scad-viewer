@@ -9,6 +9,7 @@ mod diagonalize;
 mod line_clip;
 mod ranges;
 mod rational_graph;
+mod zero_trace;
 pub use curves::{
     GraphBoundaryRoot, GraphBoundaryRootLimits, GraphCurveBuildLimits, GraphCurveTolerances,
     GraphCurveVertex, GraphEdgeCurves, GraphRootBinding, GraphRootEdgeClock, GraphRootLocation,

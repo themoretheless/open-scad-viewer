@@ -41,6 +41,41 @@ impl Arithmetic {
         self.tick(3)?;
         Ok(a.lo * 0.5 + a.hi * 0.5)
     }
+    /// Prefer a simple dyadic inside an already certified enclosure. This is
+    /// only a proposal: all original deviation/lift checks still run, and an
+    /// exact zero relation requires its separate full coefficient proof.
+    pub fn dyadic_proposal(&mut self, a: I) -> Result<f64> {
+        self.tick(3)?;
+        if a.lo == a.hi {
+            return Ok(a.lo);
+        }
+        if a.lo <= 0. && a.hi >= 0. {
+            return Ok(0.);
+        }
+        self.tick(8)?;
+        let mid = a.lo * 0.5 + a.hi * 0.5;
+        let magnitude = a.lo.abs().max(a.hi.abs());
+        let mut step = 2f64.powi((magnitude.log2().ceil() as i32).clamp(-1074, 1023));
+        for _ in 0..2100 {
+            self.tick(6)?;
+            let p = (mid / step).round() * step;
+            if p.is_finite() && a.lo <= p && p <= a.hi {
+                return Ok(p);
+            }
+            step *= 0.5;
+            if step == 0. {
+                break;
+            }
+        }
+        Ok(mid.clamp(a.lo, a.hi))
+    }
+    pub fn proposal(&mut self, a: I, dyadic: bool) -> Result<f64> {
+        if dyadic {
+            self.dyadic_proposal(a)
+        } else {
+            self.midpoint(a)
+        }
+    }
     pub fn scale(&mut self, a: &P, b: I) -> Result<P> {
         a.iter().map(|&a| self.mul(a, b)).collect()
     }
