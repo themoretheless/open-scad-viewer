@@ -1,7 +1,7 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
 mod curvature;
-pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature, qualify_polar_curvature_exact};
+pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, ExactCurvatureReport, qualify_curvature_exact, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature, qualify_polar_curvature_exact};
 mod polar;
 pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
 mod body;
@@ -738,3 +738,6 @@ mod tests {
 
 mod pole_c1;
 pub use pole_c1::{C1PoleNeighborhood,C1PoleAtlas,C1PoleReport,C1PoleLimits,qualify_c1_pole_neighborhoods};
+
+mod exact_collection;
+pub use exact_collection::{ExactCurvatureCollection, ExactCollectionLimits, ExactCollectionReport, qualify_exact_curvature_collection};

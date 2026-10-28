@@ -15,6 +15,7 @@ pub struct CurvatureLimits {
     pub shape_cells: usize,
 }
 pub struct CurvatureSeam<E> {
+    exact: bool,
     edge: E,
     orientation: Orientation,
     normal_upper: f64,
@@ -23,6 +24,7 @@ pub struct CurvatureSeam<E> {
     curvature_tolerance: f64,
 }
 impl<E> CurvatureSeam<E> {
+    pub fn is_exact(&self) -> bool { self.exact }
     pub fn edge(&self) -> &E {
         &self.edge
     }
@@ -195,6 +197,7 @@ where
                 u[k][0] <= limits.normal_distance && u[k][1] <= limits.curvature_distance
             }) {
                 out.seam = Some(CurvatureSeam {
+                    exact: false,
                     edge: edge.clone(),
                     orientation: if sign == 0 {
                         Orientation::Same
@@ -265,3 +268,6 @@ mod tests;
 
 mod polar;
 pub use polar::{PolarCurvatureReport, PolarCurvatureSeam, qualify_polar_curvature, qualify_polar_curvature_exact};
+
+mod exact;
+pub use exact::{ExactCurvatureReport, qualify_curvature_exact};

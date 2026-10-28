@@ -9876,6 +9876,12 @@
         let only_tolerance=seams::qualify_c2_pole_neighborhoods(&proof,100000).unwrap();
         assert!(only_tolerance.certificate.is_none());
         assert_eq!(only_tolerance.reason,"pole-c2-exact-meridian-unproven");
+        let exact_collection_limits=||seams::ExactCollectionLimits {incidence_steps:100000,
+            exact_work:100000000,cells:100000,curve_spans:100000,shape_cells:100000};
+        let collection_axes=vec![2;curvature_classes.len()];
+        let no_upgrade=seams::qualify_exact_curvature_collection(proof.ordinary(),&collection_axes,exact_collection_limits()).unwrap();
+        assert!(no_upgrade.certificate.is_none());assert_eq!(no_upgrade.reason,"exact-collection-polar-g2-unproven");
+
         let exact_classes=curvature_classes.iter().map(|c|if matches!(c,Class::Curvature{..}) {
             Class::Curvature{normal_distance:0.,curvature_distance:0.}
         }else{*c}).collect::<Vec<_>>();
@@ -9887,6 +9893,13 @@
             assert!(seam.is_exact());assert_eq!(seam.normal_upper(),0.);assert_eq!(seam.curvature_upper(),0.);
         }
         assert_eq!(proof.ordinary().classes(),exact_classes);assert_eq!(strict.completed_edges,20);
+        let reused=seams::qualify_exact_curvature_collection(proof.ordinary(),&collection_axes,exact_collection_limits()).unwrap();
+        let reused_proof=reused.certificate.expect(reused.reason);
+        assert_eq!(reused_proof.polar_edges().len(),8);assert!(reused_proof.regular_seams().is_empty());
+        assert_eq!(reused.exact_work,0);assert_eq!(reused.cells,0);
+        assert_eq!(reused.steps,28);assert!(!reused_proof.all_edges_exact_curvature());
+        assert!(std::ptr::eq(reused_proof.original(),proof.ordinary()));
+
         let short=seams::qualify_boundary_with_exact_polar_curvature(&body,&exact_classes,
             limits(100000000),edge_limits(),budget(),strict.polar_exact_work-1).unwrap();
         assert!(short.certificate.is_none());assert!(short.completed_edges<20);
@@ -9926,3 +9939,5 @@
     }
 
 mod c2_bowl;
+
+mod exact_regular;
