@@ -45,6 +45,7 @@ fn jets(
 fn graph(
     h: &[Vec<[Expansion; 4]>],
     axis: usize,
+    order: usize,
     c: &mut PredicateContext<'_>,
 ) -> Result<Vec<Fraction>, Reason> {
     let w = jets(h, 3, c)?;
@@ -80,6 +81,12 @@ fn graph(
     }
     let gx = minor(&a[2], &b[1], &b[2], &a[1], c)?;
     let gy = minor(&a[0], &b[2], &b[0], &a[2], c)?;
+    if order == 1 {
+        return Ok(vec![
+            Fraction::new(gx, d.clone(), c)?,
+            Fraction::new(gy, d, c)?,
+        ]);
+    }
     let mut r = Vec::new();
     for i in 0..3 {
         r.push(add(
@@ -139,12 +146,33 @@ fn graph(
 /// and original UV-line weights C,D. No rounded composed weight is accepted.
 /// Reversed canonical maps use (DA,CB), forward maps (CB,DA) as inverse factors.
 /// Identity is checked on ALL coefficients, not a station/sample collection.
+/// Exact graph gradients alone. This does not assert Hessian compatibility,
+/// positional ownership, regularity, or finite endpoint limits.
+pub fn rational_natural_meridian_g1(
+    ctx: &mut PredicateContext<'_>,
+    surfaces: [&[Vec<[LeafRef; 4]>]; 2],
+    maps: [[LeafRef; 4]; 2],
+    reversed: [bool; 2],
+    axis: usize,
+) -> Result<BezierIdentityDecision, InputError> {
+    identity(ctx, surfaces, maps, reversed, axis, 1)
+}
 pub fn rational_natural_meridian_g2(
     ctx: &mut PredicateContext<'_>,
     surfaces: [&[Vec<[LeafRef; 4]>]; 2],
     maps: [[LeafRef; 4]; 2],
     reversed: [bool; 2],
     axis: usize,
+) -> Result<BezierIdentityDecision, InputError> {
+    identity(ctx, surfaces, maps, reversed, axis, 2)
+}
+fn identity(
+    ctx: &mut PredicateContext<'_>,
+    surfaces: [&[Vec<[LeafRef; 4]>]; 2],
+    maps: [[LeafRef; 4]; 2],
+    reversed: [bool; 2],
+    axis: usize,
+    order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
     if axis > 2
         || surfaces.iter().any(|s| {
@@ -227,7 +255,7 @@ pub fn rational_natural_meridian_g2(
                         .collect()
                 })
                 .collect();
-            fields.push(graph(&h, axis, ctx)?);
+            fields.push(graph(&h, axis, order, ctx)?);
             offset += s.len() * s[0].len() * 4;
         }
         for (a, b) in fields[0].iter().zip(&fields[1]) {

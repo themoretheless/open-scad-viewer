@@ -499,6 +499,13 @@
         assert_eq!(cap_tangency.completed_edges,cap_classes.len());
         assert!(cap_proof.ordinary().polar_seams().iter().all(|(_,p)|p.sine_squared_bounds()[1]<=1e-4));
         assert!(!cap_proof.ordinary().all_edges_tangent());
+        let c1=seams::qualify_c1_pole_neighborhoods(&cap_proof,
+            seams::C1PoleLimits{incidence_steps:100000,exact_work:100000000}).unwrap();
+        // Rounded sphere-like charts pass bounded angular comparison but
+        // their original coefficient gradients are not exactly identical.
+        assert!(c1.certificate.is_none());assert!(c1.uncertain_edge.is_some());
+        assert_eq!(c1.reason,"exact-original-meridian-gradients-different");
+        eprintln!("represented-cap exact C1 refusal: {} work={}",c1.reason,c1.exact_work);
         let short=seams::qualify_boundary_with_polar_seams(&body,&cap_classes,
             PoleRequirement::TangentGraph(graph_limits(100000)),seam_work(),cap_tangency.polar_normal_coefficients-1).unwrap();
         assert!(short.certificate.is_none());assert!(short.completed_edges<cap_classes.len());

@@ -170,3 +170,68 @@ fn exact_work_cancellation_and_foreign_sources_never_admit() {
     let mut c = PredicateContext::new(&arena, &t, Limits::default(), None);
     assert!(rational_natural_meridian_g2(&mut c, [&s[0], &foreign[1]], m, [false; 2], 2).is_err());
 }
+#[test]
+fn exact_first_order_identity_does_not_require_or_infer_hessian_identity() {
+    let a = bowl(1., false);
+    let mut b = a.clone();
+    b[2][2][2] += 0.125;
+    let maps = [[1.; 4]; 2];
+    let (arena, s, m) = input(&a, &b, maps);
+    let t = ToleranceContext::default_valid();
+    let mut c = PredicateContext::new(&arena, &t, Limits::default(), None);
+    let full = rational_natural_meridian_g1(&mut c, [&s[0], &s[1]], m, [false; 2], 2).unwrap();
+    assert!(matches!(full.outcome, BezierIdentity::Equal));
+    assert!(matches!(
+        run(&a, &b, maps, [false; 2]).outcome,
+        BezierIdentity::Different
+    ));
+    let mut c = PredicateContext::new(
+        &arena,
+        &t,
+        Limits {
+            max_work: full.work_used - 1,
+            ..Limits::default()
+        },
+        None,
+    );
+    assert!(!matches!(
+        rational_natural_meridian_g1(&mut c, [&s[0], &s[1]], m, [false; 2], 2)
+            .unwrap()
+            .outcome,
+        BezierIdentity::Equal
+    ));
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    let mut c = PredicateContext::new(&arena, &t, Limits::default(), Some(&cancel));
+    assert!(!matches!(
+        rational_natural_meridian_g1(&mut c, [&s[0], &s[1]], m, [false; 2], 2)
+            .unwrap()
+            .outcome,
+        BezierIdentity::Equal
+    ));
+    let (_, foreign, _) = input(&a, &b, maps);
+    let mut c = PredicateContext::new(&arena, &t, Limits::default(), None);
+    assert!(rational_natural_meridian_g1(&mut c, [&s[0], &foreign[1]], m, [false; 2], 2).is_err());
+    // An actual first-derivative jump must still refuse even though C0 agrees.
+    b[2][1][2] += 0.125;
+    let (arena, s, m) = input(&a, &b, maps);
+    let mut c = PredicateContext::new(&arena, &t, Limits::default(), None);
+    assert!(matches!(
+        rational_natural_meridian_g1(&mut c, [&s[0], &s[1]], m, [false; 2], 2)
+            .unwrap()
+            .outcome,
+        BezierIdentity::Different
+    ));
+    // A zero projected Jacobian cannot prove identity through 0/0.
+    let mut flat = a.clone();
+    for p in flat.iter_mut().flatten() {
+        p[2] = 0.;
+    }
+    let (arena, s, m) = input(&flat, &flat, maps);
+    let mut c = PredicateContext::new(&arena, &t, Limits::default(), None);
+    assert!(!matches!(
+        rational_natural_meridian_g1(&mut c, [&s[0], &s[1]], m, [false; 2], 0)
+            .unwrap()
+            .outcome,
+        BezierIdentity::Equal
+    ));
+}

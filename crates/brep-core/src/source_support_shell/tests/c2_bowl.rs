@@ -10,6 +10,9 @@ fn cardinal(p: &[f64]) -> [f64; 2] {
     }
 }
 fn model() -> crate::Model {
+    model_with_folded_curvature(false)
+}
+fn model_with_folded_curvature(folded: bool) -> crate::Model {
     let spans = crate::linear_canal::construct(
         [[0., 0., 0.], [0., 0., 8.]],
         [1., 1.],
@@ -37,6 +40,11 @@ fn model() -> crate::Model {
                 [(1. - v) * a[0] + v * b[0], (1. - v) * a[1] + v * b[1]]
             })
             .collect::<Vec<_>>();
+        let lift = if folded {
+            [a[0] + a[1], 0., b[0] + b[1]]
+        } else {
+            [1., 0., 1.]
+        };
         let mut s = old.clone();
         s.weights = vec![vec![1.; 3]; n];
         if let Some(end) = pole {
@@ -52,7 +60,7 @@ fn model() -> crate::Model {
                     s.control_points[i][j] = vec![
                         r * angular[j][0],
                         r * angular[j][1],
-                        base + if r == 1. { [1., 0., 1.][j] } else { 0. },
+                        base + if r == 1. { lift[j] } else { 0. },
                     ];
                 }
             }
@@ -61,8 +69,7 @@ fn model() -> crate::Model {
                 let base = old.control_points[i][0][2];
                 assert!(old.control_points[i].iter().all(|p| p[2] == base));
                 for j in 0..3 {
-                    s.control_points[i][j] =
-                        vec![angular[j][0], angular[j][1], base + [1., 0., 1.][j]];
+                    s.control_points[i][j] = vec![angular[j][0], angular[j][1], base + lift[j]];
                 }
             }
         }
@@ -82,7 +89,7 @@ fn model() -> crate::Model {
             [0., 0., base]
         } else {
             let p = cardinal(&old);
-            [p[0], p[1], base + 1.]
+            [p[0], p[1], base + if folded { p[0] + p[1] } else { 1. }]
         };
     }
     let mut done = BTreeSet::new();
@@ -248,5 +255,129 @@ fn parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods() {
             .iter()
             .map(|n| (n.vertex(), n.projected_radius_lower()))
             .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn folded_quadratic_closed_caps_have_c1_neighborhoods_without_c2_credit() {
+    // Exact piecewise polynomial graph f=x*abs(x)+y*abs(y). Its first
+    // derivatives glue on all four meridians; second derivatives do not.
+    let model = model_with_folded_curvature(true);
+    let r = prepare_projective(&model, limits()).unwrap();
+    let shell = r.shell.expect(r.reason);
+    let r = crate::source_shell_geometry::qualify_projective(shell, geometry_limits()).unwrap();
+    let geometry = r.geometry.expect(r.reason);
+    let r = crate::source_volume::qualify(
+        geometry,
+        crate::source_volume::Limits {
+            axis: 2,
+            origin: 0.,
+            absolute_error: 0.25,
+            tolerance_uv: 1e-8,
+            cells: 50000,
+            spans: 100000,
+            domain_cells: 100000,
+        },
+    )
+    .unwrap();
+    let body = r.body.expect(r.reason);
+    assert!(body.volume()[0] <= 16. && body.volume()[1] >= 16.);
+    let faces = body
+        .geometry()
+        .shell()
+        .poles()
+        .iter()
+        .map(|(a, _)| a.face)
+        .collect::<BTreeSet<_>>();
+    let classes = body
+        .geometry()
+        .shell()
+        .uses()
+        .iter()
+        .map(|pair| {
+            if pair.iter().all(|a| faces.contains(&a.face)) {
+                Class::TangentPlanes
+            } else {
+                Class::C0
+            }
+        })
+        .collect::<Vec<_>>();
+    let r = smooth::qualify_boundary_with_polar_seams(
+        &body,
+        &classes,
+        smooth::PoleRequirement::TangentGraph(pole_limits().graphs),
+        smooth::Limits {
+            max_sine_squared: 1e-4,
+            cells: 100000,
+            curve_spans: 100000,
+            normal_spans: 100000,
+        },
+        100000000,
+    )
+    .unwrap();
+    let boundary = r.certificate.expect(r.reason);
+    let lim = |steps, work| smooth::C1PoleLimits {
+        incidence_steps: steps,
+        exact_work: work,
+    };
+    let r = smooth::qualify_c1_pole_neighborhoods(&boundary, lim(100000, 100000000)).unwrap();
+    let c1 = r.certificate.expect(r.reason);
+    assert_eq!(c1.neighborhoods().len(), 2);
+    for n in c1.neighborhoods() {
+        assert_eq!(n.dropped_axis(), 2);
+        assert!(n.projected_radius_lower() > 0.);
+        assert_eq!(n.faces().len(), 4);
+        assert_eq!(n.seams().len(), 4);
+    }
+    assert!(
+        smooth::qualify_c1_pole_neighborhoods(&boundary, lim(r.steps, r.exact_work))
+            .unwrap()
+            .certificate
+            .is_some()
+    );
+    for limits in [lim(r.steps - 1, 100000000), lim(100000, r.exact_work - 1)] {
+        let short = smooth::qualify_c1_pole_neighborhoods(&boundary, limits).unwrap();
+        assert!(short.certificate.is_none());
+        assert!(short.completed_neighborhoods < 2);
+    }
+    assert!(std::ptr::eq(c1.boundary(), &boundary));
+    assert!(smooth::qualify_c1_pole_neighborhoods(&boundary, lim(0, 1)).is_err());
+    let sharp_edge = c1.neighborhoods()[0].seams()[0];
+    let mut sharp_classes = classes.clone();
+    sharp_classes[sharp_edge] = Class::C0;
+    let sharp = smooth::qualify_boundary_with_polar_seams(
+        &body,
+        &sharp_classes,
+        smooth::PoleRequirement::TangentGraph(pole_limits().graphs),
+        smooth::Limits {
+            max_sine_squared: 1e-4,
+            cells: 100000,
+            curve_spans: 100000,
+            normal_spans: 100000,
+        },
+        100000000,
+    )
+    .unwrap();
+    let sharp = sharp.certificate.expect(sharp.reason);
+    let denied = smooth::qualify_c1_pole_neighborhoods(&sharp, lim(100000, 100000000)).unwrap();
+    assert!(denied.certificate.is_none());
+    assert_eq!(denied.uncertain_edge, Some(sharp_edge));
+    assert_eq!(denied.reason, "pole-c1-explicit-c0-meridian");
+    let curvature =
+        crate::source_pole_tangency::qualify_body_pole_curvature(&body, pole_limits()).unwrap();
+    assert!(curvature.certificate.is_none());
+    assert!(
+        smooth::qualify_c2_pole_neighborhoods(&boundary, 100000)
+            .unwrap()
+            .certificate
+            .is_none()
+    );
+    eprintln!(
+        "folded-cap C1: neighborhoods={} steps={} exact_work={} volume={:?}; C2 refused: {}",
+        c1.neighborhoods().len(),
+        r.steps,
+        r.exact_work,
+        body.volume(),
+        curvature.reason
     );
 }

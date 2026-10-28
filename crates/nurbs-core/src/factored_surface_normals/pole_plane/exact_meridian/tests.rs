@@ -71,6 +71,16 @@ fn original_natural_axes_nonunit_domains_rational_lines_and_reversed_maps_agree_
                     100000000,
                 )
                 .unwrap();
+                let first = prepare_exact_meridian_tangency(
+                    [&a, &b],
+                    [&pa, &pb],
+                    [false, reverse],
+                    maps,
+                    2,
+                    100000000,
+                )
+                .unwrap();
+                assert!(first.certificate.is_some(), "{}", first.reason);
                 let proof = r.certificate.expect(r.reason);
                 assert!(std::ptr::eq(proof.surfaces()[1], &b));
                 assert!(std::ptr::eq(proof.curves()[1], &pb));
@@ -112,4 +122,45 @@ fn unsupported_truncated_layout_and_insufficient_exact_work_do_not_admit() {
     .unwrap();
     assert!(r.certificate.is_none());
     assert_eq!(r.work, 0);
+}
+#[test]
+fn first_order_token_owns_original_sources_without_granting_second_order() {
+    let a = bowl(1.);
+    let mut b = a.clone();
+    b.control_points[2][2][2] += 0.125;
+    let p = Curve::from_polyline(vec![vec![2., -4.], vec![5., -4.]]).unwrap();
+    let saved = b.clone();
+    let r =
+        prepare_exact_meridian_tangency([&a, &b], [&p, &p], [false; 2], [[1.; 2]; 2], 2, 100000000)
+            .unwrap();
+    let proof = r.certificate.expect(r.reason);
+    assert!(std::ptr::eq(proof.surfaces()[1], &b));
+    assert_eq!(proof.dropped_axis(), 2);
+    let second =
+        prepare_exact_meridian_jets([&a, &b], [&p, &p], [false; 2], [[1.; 2]; 2], 2, 100000000)
+            .unwrap();
+    assert!(second.certificate.is_none());
+    assert!(matches!(second.outcome, BezierIdentity::Different));
+    let short = prepare_exact_meridian_tangency(
+        [&a, &b],
+        [&p, &p],
+        [false; 2],
+        [[1.; 2]; 2],
+        2,
+        r.work - 1,
+    )
+    .unwrap();
+    assert!(short.certificate.is_none());
+    assert_eq!(b, saved);
+    let truncated = Curve::from_polyline(vec![vec![2., -4.], vec![4., -4.]]).unwrap();
+    let r = prepare_exact_meridian_tangency(
+        [&a, &b],
+        [&p, &truncated],
+        [false; 2],
+        [[1.; 2]; 2],
+        2,
+        100000000,
+    )
+    .unwrap();
+    assert!(r.certificate.is_none());
 }

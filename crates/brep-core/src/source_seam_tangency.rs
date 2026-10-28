@@ -735,3 +735,6 @@ mod tests {
         assert!(uncertain[0] <= 0. && uncertain[1] >= 0.);
     }
 }
+
+mod pole_c1;
+pub use pole_c1::{C1PoleNeighborhood,C1PoleAtlas,C1PoleReport,C1PoleLimits,qualify_c1_pole_neighborhoods};

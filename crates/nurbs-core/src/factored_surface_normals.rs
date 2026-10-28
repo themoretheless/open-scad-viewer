@@ -518,4 +518,4 @@ pub use pole_plane::{QuadraticJet, QuadraticJetReport, QuadraticPairReport, prep
 pub use pole_plane::DesingularizedPairReport;
 pub use pole_plane::{PolarGraphShape, PolarGraphShapeReport, PolarGraphBounds, PolarGraphBoundsReport};
 pub use pole_plane::{PolarShapePairReport, compare_polar_shape_rectangles};
-pub use pole_plane::{ExactMeridianJets, ExactMeridianReport, prepare_exact_meridian_jets};
+pub use pole_plane::{ExactMeridianJets, ExactMeridianReport, prepare_exact_meridian_jets, ExactMeridianTangency, ExactMeridianTangencyReport, prepare_exact_meridian_tangency};

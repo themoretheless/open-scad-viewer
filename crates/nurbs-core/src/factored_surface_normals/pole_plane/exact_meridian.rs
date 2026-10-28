@@ -113,6 +113,17 @@ pub fn prepare_exact_meridian_jets<'a>(
     axis: usize,
     max_work: u64,
 ) -> Result<ExactMeridianReport<'a>> {
+    prepare(surfaces, curves, reverse, forward, axis, max_work, 2)
+}
+fn prepare<'a>(
+    surfaces: [&'a Surface; 2],
+    curves: [&'a Curve; 2],
+    reverse: [bool; 2],
+    forward: [[f64; 2]; 2],
+    axis: usize,
+    max_work: u64,
+    order: usize,
+) -> Result<ExactMeridianReport<'a>> {
     check(
         axis < 3
             && (1..=100000000).contains(&max_work)
@@ -193,14 +204,12 @@ pub fn prepare_exact_meridian_jets<'a>(
         },
         None,
     );
-    let r = cad_predicates::rational_natural_meridian_g2(
-        &mut ctx,
-        [&leaves[0], &leaves[1]],
-        maps,
-        reverse,
-        axis,
-    )
-    .unwrap();
+    let predicate = if order == 1 {
+        cad_predicates::rational_natural_meridian_g1
+    } else {
+        cad_predicates::rational_natural_meridian_g2
+    };
+    let r = predicate(&mut ctx, [&leaves[0], &leaves[1]], maps, reverse, axis).unwrap();
     out.work = r.work_used;
     out.outcome = r.outcome;
     out.reason = match out.outcome {
@@ -222,3 +231,47 @@ pub fn prepare_exact_meridian_jets<'a>(
 
 #[cfg(test)]
 mod tests;
+
+/// A first-order identity only; no Hessian token can be obtained from it.
+pub struct ExactMeridianTangency<'a> {
+    identity: ExactMeridianJets<'a>,
+}
+impl<'a> ExactMeridianTangency<'a> {
+    pub fn surfaces(&self) -> [&'a Surface; 2] {
+        self.identity.surfaces()
+    }
+    pub fn dropped_axis(&self) -> usize {
+        self.identity.dropped_axis()
+    }
+}
+pub struct ExactMeridianTangencyReport<'a> {
+    pub certificate: Option<ExactMeridianTangency<'a>>,
+    pub outcome: BezierIdentity,
+    pub work: u64,
+    pub reason: &'static str,
+}
+/// Exact original gradient identities, independent of pole quadratic jets.
+/// Position, whole-carrier regularity and limit continuity are separate.
+pub fn prepare_exact_meridian_tangency<'a>(
+    surfaces: [&'a Surface; 2],
+    curves: [&'a Curve; 2],
+    reverse: [bool; 2],
+    forward: [[f64; 2]; 2],
+    axis: usize,
+    max_work: u64,
+) -> Result<ExactMeridianTangencyReport<'a>> {
+    let r = prepare(surfaces, curves, reverse, forward, axis, max_work, 1)?;
+    let reason = match r.outcome {
+        BezierIdentity::Equal => "exact-original-meridian-gradients-qualified",
+        BezierIdentity::Different => "exact-original-meridian-gradients-different",
+        _ => "exact-original-meridian-gradients-unproven",
+    };
+    Ok(ExactMeridianTangencyReport {
+        certificate: r
+            .certificate
+            .map(|identity| ExactMeridianTangency { identity }),
+        outcome: r.outcome,
+        work: r.work,
+        reason,
+    })
+}

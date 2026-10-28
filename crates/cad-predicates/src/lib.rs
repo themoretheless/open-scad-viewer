@@ -1218,4 +1218,4 @@ mod pole_quadratic_jet;
 pub use pole_quadratic_jet::{PoleQuadraticJet, PoleQuadraticJetDecision, rational_surface_pole_quadratic_jet, compare_pole_quadratic_jets};
 
 mod natural_meridian_g2;
-pub use natural_meridian_g2::rational_natural_meridian_g2;
+pub use natural_meridian_g2::{rational_natural_meridian_g1, rational_natural_meridian_g2};
