@@ -1,0 +1,43 @@
+{
+  "timestampUtc": "2026-10-27T22:25:14.201899+00:00",
+  "baseCommit": "aa96c7595",
+  "scope": "Native original-source mixed quadratic strata, not general Boolean authorship or release qualification",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "5715bfea7eb736e693a260c64b69ac11fe916d057c8195e8fa767c5af1539aab",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/linear_factors.rs": "42c91c811c0b1f826c4e9ae4dc24e8346c2a1c9f1b4fd24e8dfb327fa77afd39",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/diagonalize.rs": "49a8c896091274ecb164d39529273a425b1631d87048e018c3fb5ff5309f2197",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/line_clip.rs": "33d44e67c8aa1d2c7bec9bcc0a00e01bf18c4bff0257a7533dd065c55e415faa",
+    "crates/nurbs-core/tests/ss_closed_degenerate.rs": "90b7af51f37cdbf2f1b571b0996a945bd12da4bbf6628fc0d40cf00cc3df5aa5",
+    "crates/nurbs-core/tests/ss_mixed_quadratic_graph.rs": "38dd274b3b7717e62042c6f9d1b8537c26f87da50d4121a449c79c4cd77e2b4c"
+  },
+  "broadBeforeFinalRegression": {
+    "exitCode": 0,
+    "resultSummaries": 167,
+    "passed": 3024,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0,
+    "logSha256": "efcbdca86863307a1d5586f9bc22e730454a931652c19d1a8e36b2fe4ead3f56"
+  },
+  "finalFocused": {
+    "exitCode": 0,
+    "resultSummaries": 2,
+    "passed": 25,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0,
+    "logSha256": "d13a4c479e858079f60e563e6280991caaffb92015cf2b164c89d896b3423e85"
+  },
+  "brepSsCompatibility": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 53,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 1836,
+    "logSha256": "c1e10558f36a4722157d3de823af8ab2439668853411a0bf8f2f3103c74243f0"
+  },
+  "existingSsRegressionsUnmodified": true,
+  "wasmRebuiltForThisExtension": false,
+  "fullPlanComplete": false
+}

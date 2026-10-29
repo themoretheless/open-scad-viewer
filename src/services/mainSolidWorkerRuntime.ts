@@ -1,3 +1,4 @@
+import {inspectNurbsOffsetDeviation} from './nurbsOffsetDeviation'
 import {createG2RunoutSurface} from './geometricG2'
 import {executeDirectTransaction} from './directTransactions'
 import {inspectProfileBridgeChords} from './nurbsProfileBridgeChords'
@@ -104,6 +105,7 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'offsetContactTangent':return certifyNurbsOffsetContactTangent(job.options)
     case 'offsetSourceBoundary':return certifyNurbsOffsetSourceBoundary(job.options)
     case 'trimmedOffsetContactBand':return certifyTrimmedNurbsOffsetContactBand(job.options)
+    case 'offsetDeviation':return inspectNurbsOffsetDeviation(job.options)
     case 'offsetContactBand':return certifyNurbsOffsetContactBand(job.options)
     case 'surfaceDistance':return measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells)
     case 'curveDistance':return measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells)

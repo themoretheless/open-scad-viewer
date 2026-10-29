@@ -100,7 +100,6 @@ impl<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p,
             // Canonical carrier tails do not enlarge either retained use;
             // requiring the whole canonical carrier would reject valid
             // affine partial charts without adding contact authority.
-            let definitions = edge.uses().each_ref().map(|f| f.definition());
             for (slot, address) in pair.uses.iter().copied().enumerate() {
                 let ShellUse::Source(fragment) =
                     &self.faces[address.face].loops[address.wire][address.edge]
@@ -108,18 +107,18 @@ impl<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p,
                     out.reason = "profile-paired-source-use-unproven";
                     return Ok(out);
                 };
-                if definitions[slot] != fragment.definition() {
+                if !edge.uses()[slot].same_definition(fragment) {
                     out.reason = "profile-paired-current-source-use-unproven";
                     return Ok(out);
                 }
             }
-            original_edges.push(edge.definition());
+            original_edges.push(edge);
             shared.push(pair.uses);
         }
         if source
             .edges()
             .iter()
-            .any(|edge| !original_edges.contains(&edge.definition()))
+            .any(|edge| !original_edges.iter().any(|original| original.same_definition(edge)))
         {
             out.reason = "profile-paired-complete-contact-edge-cover-unproven";
             return Ok(out);

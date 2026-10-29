@@ -36,6 +36,7 @@ export function distanceWitnessConsistent(points:number[][],bounds:number[][][],
 }
 
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
+  if(job.kind==='offsetDeviation')return {kind:job.kind,options:{tolerance:job.options.tolerance,maxCells:job.options.maxCells}}
   if(job.kind==='minkowski3d')return {kind:job.kind,createdId:job.options.createdId,bodyIds:job.document.bodies.map(b=>b.id),sourceKinds:job.options.ids.map(id=>job.document.bodies.find(b=>b.id===id)?.brep?'brep':'mesh'),sourceSizes:job.options.ids.map(id=>{const m=job.document.bodies.find(b=>b.id===id)?.mesh;return [m?.positions.length??0,m?.indices.length??0]})}
 if(job.kind==='surfaceBuild')return {kind:job.kind,...job.options.kind==='nurbs-runout'?{runoutId:job.options.id}:{}}
 if(job.kind==='g2RunoutSurface')return {kind:job.kind,maxCells:job.options.maxCells??100000,maxExactWork:job.options.maxExactWork??1000000,maxPatches:job.options.maxPatches??256,tolerances:job.options.tolerances??[1e-7,1e-5,1e-4]}

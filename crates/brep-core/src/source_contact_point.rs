@@ -7,6 +7,7 @@ use nurbs_core::{
     surface::Surface,
     uv_curve_crossings as crossings,
 };
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone)]
 pub struct SourcePoint {
@@ -19,6 +20,25 @@ pub struct SourcePoint {
     world_box: [[f64; 2]; 3],
 }
 impl SourcePoint {
+    /// Fresh admission from original equations and selector; cached bounds are ignored.
+    pub fn requalify(&self, max_mapping_cells: usize) -> Result<Report> {
+        qualify(
+            &self.surface,
+            &self.boundary,
+            &self.contact,
+            self.selector,
+            max_mapping_cells,
+        )
+    }
+
+    /// Original equations and selector only. Cached roots/bounds are not identity
+    /// or renewed authority. No geometric approximation or serialization occurs.
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.surface == other.surface
+            && self.boundary == other.boundary
+            && self.contact == other.contact
+            && self.selector == other.selector
+    }
     pub fn surface(&self) -> &Surface {
         &self.surface
     }
@@ -41,6 +61,7 @@ impl SourcePoint {
         self.world_box
     }
     /// Persist only original definitions and root selector, never cached proof.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         json!({"version":1,"surface":self.surface.to_value(),"boundary":self.boundary.to_value(),
             "contact":self.contact.to_value(),"selector":self.selector})
@@ -159,6 +180,7 @@ pub fn qualify(
     Ok(out)
 }
 /// Imported data supplies definitions/selector only. Proof and bounds are fresh.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Report> {
     if value["version"].as_u64() != Some(1) {
         return Err(Error::new(
@@ -195,6 +217,35 @@ mod tests {
         (surface, a, b)
     }
     #[test]
+    fn typed_identity_matches_wire_and_excludes_cached_enclosures() {
+        let (surface, boundary, contact) = fixture();
+        let point = qualify(&surface, &boundary, &contact, [[0., 1.]; 2], 16)
+            .unwrap()
+            .point
+            .unwrap();
+        let mut cached = point.clone();
+        cached.root_parameters = [[0.25, 0.75]; 2];
+        cached.uv_box = [[0., 1.]; 2];
+        cached.world_box = [[-100., 100.]; 3];
+        assert!(point.same_definition(&cached));
+        #[cfg(feature = "codec")]
+        assert_eq!(point.definition(), cached.definition());
+        let fresh = cached.requalify(16).unwrap().point.unwrap();
+        assert_eq!(fresh.root_parameters(), point.root_parameters());
+        assert_eq!(fresh.uv_box(), point.uv_box());
+        assert_eq!(fresh.world_box(), point.world_box());
+        let mut changed = point.clone();
+        changed.selector[0][0] = 0.25;
+        assert!(!point.same_definition(&changed));
+        #[cfg(feature = "codec")]
+        assert_ne!(point.definition(), changed.definition());
+        changed = point.clone();
+        changed.contact.control_points[0][0] = 0.125;
+        assert!(!point.same_definition(&changed));
+        #[cfg(feature = "codec")]
+        assert_ne!(point.definition(), changed.definition());
+    }
+    #[test]
     fn immutable_source_point_roundtrip_and_forged_claims_are_rechecked() {
         let (s, a, b) = fixture();
         let r = qualify(&s, &a, &b, [[0., 1.]; 2], 16).unwrap();
@@ -202,14 +253,23 @@ mod tests {
         for (i, x) in [2., 3.5, 3.].into_iter().enumerate() {
             assert!(p.world_box()[i][0] <= x && p.world_box()[i][1] >= x);
         }
-        let mut value = p.definition();
-        value["claimedQualified"] = json!(true);
-        value["worldBounds"] = [[999., 999.]; 3].to_value();
-        let restored = restore(value.clone(), 16).unwrap().point.unwrap();
-        assert_eq!(restored.definition(), p.definition());
-        assert_eq!(restored.world_box(), p.world_box());
-        value["selector"] = [[0., 0.25]; 2].to_value();
-        assert!(restore(value, 16).unwrap().point.is_none());
+        let native = p.requalify(16).unwrap().point.unwrap();
+        assert!(native.same_definition(&p));
+        assert_eq!(native.world_box(), p.world_box());
+        let mut changed = p.clone();
+        changed.selector = [[0., 0.25]; 2];
+        assert!(changed.requalify(16).unwrap().point.is_none());
+        #[cfg(feature = "codec")]
+        {
+            let mut value = p.definition();
+            value["claimedQualified"] = json!(true);
+            value["worldBounds"] = [[999., 999.]; 3].to_value();
+            let restored = restore(value.clone(), 16).unwrap().point.unwrap();
+            assert_eq!(restored.definition(), p.definition());
+            assert_eq!(restored.world_box(), p.world_box());
+            value["selector"] = [[0., 0.25]; 2].to_value();
+            assert!(restore(value, 16).unwrap().point.is_none());
+        }
     }
     #[test]
     fn original_chart_membership_is_required_before_surface_enclosure_clipping() {

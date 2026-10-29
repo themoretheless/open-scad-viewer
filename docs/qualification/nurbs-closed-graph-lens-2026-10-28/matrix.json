@@ -1,0 +1,51 @@
+{
+  "milestone": "closed inner graph-body difference with fresh result-volume admission",
+  "tests": {
+    "native_passed": 4219,
+    "native_failed": 0,
+    "native_ignored": 6,
+    "node_contracts_passed": 10
+  },
+  "minimal_library_check": "passed",
+  "minimal_unit_target": "not qualified; previous 412 compile errors",
+  "contact_pair_limit_unchanged": 1000,
+  "architecture_existing_violations": 70,
+  "api_modules": 239,
+  "catalog_entries": 200,
+  "rust_source_sha256": {
+    "crates/brep-core/src/face_contacts.rs": "ecb0cfe58061a39d4e9d23743874a6659f0732c17c7324d7cc6a68a977976646",
+    "crates/brep-core/src/shared_boundary/closed_graph.rs": "d0b867a0eda36bae72b74691db362da5ada723bba0caf4ed98d8239b914d4596",
+    "crates/brep-core/src/ss_face_membership/closed/lens.rs": "65a83e45dc866f04f95161b015e97eca60550b41a9110b89489e0ee6f1601a77",
+    "crates/brep-core/src/ss_face_membership/closed/lens/tests.rs": "2853f516b3e0f0b71ad501015c496863408ec047828dc7780448ec0bc535e828",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/zero_trace.rs": "29ace6d132d43f441e1224b867917e135893e9b5fb1a5d374928f8222756c043",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/zero_trace/tests.rs": "0deaa46141ecb35e74eb54ae9c118bd4abcf2d778a2377400fce0d5fa0fa0625"
+  },
+  "logs": {
+    "graph-lens-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-lens-full.log",
+      "sha256": "5efa2aaa771473085e3b7c65ad0a5db743ae360b4b4995995be1447cb4cc8c44"
+    },
+    "graph-lens-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-lens-minimal-check.log",
+      "sha256": "91e3fbd03fb2c51ff8d017f1af18c87648e444945e32af65e2bb45e6e9b56dc5"
+    },
+    "graph-lens-node-contracts.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-lens-node-contracts.log",
+      "sha256": "f76f28b53fa140b575cd44c7b62d9948ccad578c32f0ba6746f935cec7bf8022"
+    },
+    "graph-lens-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/graph-lens-architecture.log",
+      "sha256": "60e1a0d4c854d38c8b7472d6f1792d21d5eb29464751086bfdd3faf30cf48097"
+    }
+  },
+  "remaining": [
+    "union/intersection with original walls",
+    "annular difference wall strips",
+    "general rational/multispan/periodic Boolean",
+    "central G2 fill and sewn corner",
+    "continuous offset and shell cleanup",
+    "general simplification",
+    "WASM Rush UI edited-body STEP and distribution gates"
+  ],
+  "plan_complete": false
+}

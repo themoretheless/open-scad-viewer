@@ -1,0 +1,86 @@
+{
+  "minimal_unit_target": {
+    "status": "incomplete",
+    "errors_before": 571,
+    "errors_after": 492,
+    "errors_intermediate": 524,
+    "command": "cargo test --manifest-path crates/Cargo.toml -p brep-core --offline --locked --no-default-features --lib --no-run"
+  },
+  "default_libraries": {
+    "passed": 4208,
+    "failed": 0,
+    "ignored": 6
+  },
+  "minimal_public_integration": {
+    "passed": 2,
+    "failed": 0
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "remaining_primary_error_files": {
+    "source_support_shell.rs": 228,
+    "source_shell_incidence.rs": 67,
+    "source_projective_use.rs": 25,
+    "source_shared_edge/tests/mod.rs": 22,
+    "source_mapped_edge/tests_extra.rs": 20,
+    "tests/step_interchange_v3.rs": 18,
+    "analytic/../tests/analytic_tests.rs": 17,
+    "source_projective_edge.rs": 17,
+    "source_seam_tangency.rs": 14,
+    "linear_canal_body.rs": 13,
+    "source_mapped_edge/tests.rs": 12,
+    "analytic_features/../tests/analytic_features.rs": 4,
+    "linear_canal.rs": 4,
+    "source_profile_shell_audit.rs": 3,
+    "source_body_model.rs": 2,
+    "circular_blend/tests/mod.rs": 2,
+    "edge_tangency.rs": 2,
+    "face_injectivity.rs": 2,
+    "operations/tests.rs": 2,
+    "profile_region.rs": 2,
+    "source_collapsed_boundary.rs": 2,
+    "source_root_refinement.rs": 2,
+    "source_profile_shell_refinement.rs": 2,
+    "analysis/tests/mod.rs": 1,
+    "body_edit.rs": 1,
+    "spatial_rmf_qualification.rs": 1
+  },
+  "logs": {
+    "minimal-unit-no-run-r1.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-no-run-r1.log",
+      "sha256": "c9e6c22efb5bf7fdb847e738c86a2bde21ab85494e6b2bcf4449b393c7dd2c60"
+    },
+    "minimal-unit-no-run-r2.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-no-run-r2.log",
+      "sha256": "15885b4cd0b0c54dbe783207681155d94796aabefccde5a40e9fb6ee0b50d224"
+    },
+    "minimal-unit-no-run-r3.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-no-run-r3.log",
+      "sha256": "7a3472b6dfb3d94153cfecb25955754b726ab070a69499b72b796e49bd208db0"
+    },
+    "minimal-unit-default-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-default-full.log",
+      "sha256": "bcd12841bfcb915975a656a61368fc3855950d4fc8cd2acf31a26d9cdc35d415"
+    },
+    "minimal-unit-public-integration.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-public-integration.log",
+      "sha256": "1e0a955236a9e778e69ea6bd6b8e57250d8a8fb25161b38231ed75052f4f5747"
+    },
+    "minimal-unit-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-architecture.log",
+      "sha256": "670856303c00d80218b39aba431e81e98f35e7a8b688b07425d98c5b6a1d706c"
+    },
+    "minimal-unit-remaining-files.json": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/minimal-unit-remaining-files.json",
+      "sha256": "7804945f02904987a61cdb497a81a0052c923ab5ccfcc58953df8e9086b40b86"
+    }
+  }
+}

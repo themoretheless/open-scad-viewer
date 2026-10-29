@@ -6,6 +6,7 @@ use crate::{
 };
 use nurbs_core::{Error, Result, surface::Surface};
 use std::collections::BTreeMap;
+#[cfg(feature = "codec")]
 use value_codec::Value;
 #[derive(Clone)]
 pub enum Carrier {
@@ -21,6 +22,7 @@ pub struct Vertex {
 pub type Topology = brep_topology::Model<Carrier, Surface, Fragment, Vertex>;
 pub struct SourceModel {
     topology: Topology,
+    #[cfg(feature = "codec")]
     definition: Value,
 }
 impl SourceModel {
@@ -28,6 +30,7 @@ impl SourceModel {
         &self.topology
     }
     /// Restore this original Body definition through native admission, not this projection.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> &Value {
         &self.definition
     }
@@ -113,11 +116,7 @@ pub fn convert(
                 .enumerate()
                 .map(|(edge, fragment)| {
                     let (index, reversed) = uses[&(face, wire, edge)];
-                    brep_topology::Coedge::new(
-                        index,
-                        reversed,
-                        fragment.clone(),
-                    )
+                    brep_topology::Coedge::new(index, reversed, fragment.clone())
                 })
                 .collect();
             loops.push(brep_topology::Loop { coedges });
@@ -169,6 +168,7 @@ pub fn convert(
         .map_err(|e| error(&e.message))?;
     Ok(SourceModel {
         topology,
+        #[cfg(feature = "codec")]
         definition: body.definition()?,
     })
 }

@@ -1,0 +1,83 @@
+{
+  "timestampUtc": "2026-10-28T00:10:34.442948+00:00",
+  "baseCommit": "0742853abf10932034d8dabc07890eb60cf158a0",
+  "scope": "Original SS equation simple-root census on original native-UV rational Bezier query boundaries; no branch-clock binding or topology authorship",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "3874ae4568929dd549953dfc71efbbb20aab243d38df1de1fbd220c031fc1681",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "19c974c5f26fddd92cc47c8b1148dde21a46a9c5cf739548ba399722b86558e7",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/mod.rs": "7f645f42b7dfda8b6877b12b693f46f8a262e5cdf5200245808c56d11deafde5",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/boundary_roots.rs": "c0997c9cb61d5357300830bda023ee586d848df3d1873234ecae9c01b364c46e",
+    "crates/nurbs-core/tests/ss_graph_boundary_roots.rs": "3870f0d292fe8cbc2974eae08c303d0fd462c6af79d34ec10b64f088f4de467c",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+  },
+  "native": {
+    "exitCode": 0,
+    "resultSummaries": 169,
+    "passed": 3046,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0,
+    "logSha256": "8b58ccec34c007f6aa9166bd05b2df046e425c288099187931b6e448e758f7da"
+  },
+  "rootReplay": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 1987,
+    "logSha256": "d59fb1888f09b35b799e140712c29244d20c62d7fb05122b7ead4a65aaa84e35"
+  },
+  "focusedBeforePrivateReplay": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 5,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0,
+    "logSha256": "99cab449cb28984f01325b906b309bf074e3025f3bdf4cca8f56fea765279d8e"
+  },
+  "brepFaceMembership": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 9,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 1889,
+    "logSha256": "37b39191a6422ae5604859d6ec3c2b067b317fdbfd2361a0c786bd5e499eed61"
+  },
+  "brepSsBoolean": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 53,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 1845,
+    "logSha256": "7dd90e6153f2c4c070be1430580377411566de3285bc1cf85e8a3dfb130146e4"
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "diffWhitespace": "passed",
+    "apiMapping": {
+      "exitCode": 0,
+      "publicModules": 239,
+      "catalogEntries": 200,
+      "logSha256": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1"
+    },
+    "architecture": {
+      "exitCode": 1,
+      "diagnostics": 72,
+      "limitsRaised": false,
+      "logSha256": "ed8cd84e2c8b12d2b5856d7df7057c815de534200804ef7197c19280eb49ae6b",
+      "taskSourceSha256": {
+        "architecture-baseline.json": "e9d4b370b69ef4e8fedeb5c9cd328412684162ad77fb5e131e666724bcd49259",
+        "scripts/audit-architecture.mjs": "00aeddadedd3b4017aee4bf45d0ecf0d7c668ab84f38066990b91fc698dc8f1b",
+        "src/mcp/server/wireMappers.ts": "2a234666873c91323f95613d7ea1c596bc8c97e35fef74ef2e1581f05cc6e19e",
+        "src/mcp/server/officialWireMappers.ts": "faf524fb127db9fc2b03480bd04a51eb9e8e5e6e2ee73371c97397dc8cced6d3"
+      }
+    }
+  },
+  "wasmRebuiltForThisExtension": false,
+  "fullPlanComplete": false
+}

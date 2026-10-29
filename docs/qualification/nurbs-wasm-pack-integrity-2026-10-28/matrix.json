@@ -1,0 +1,185 @@
+{
+  "base_commit": "de3152007",
+  "scope": "WASM packaging integrity only. Existing c8 artifact is unchanged; no new Rust rebuild, runtime capability qualification or reduced delivery-size claim.",
+  "sources": {
+    "scripts/wasm-pack-stamp.mjs": "b0948a7a2903c3a7c05195d6fe525964352e50a19f38788be936b9a95b5354f8",
+    "scripts/pack-geometry-kernel.mjs": "198051b812647e39f1f255e2499c29dab0af4b62292f8770dba17ad86393a3fc",
+    "scripts/pack-language-kernel.mjs": "9d54b9c726688d9029e98c0185de0ee9066e128628d5743e72027dc863dcec92",
+    "scripts/pack-photogrammetry.mjs": "5f48f9326c3dec73aae7f867777cc9eeaa8a9424e6bcc9b7db9b697d2675097d",
+    "scripts/pack-harfbuzz.mjs": "7c0f64c9c02365f083efb51a04aeba9128eaa44afb594c8db85cbff972215e07",
+    "scripts/build-wasm-brotli.mjs": "d79de9245b6e116218b1c72d3c5b740d457a921fe9585da3c41274d190ca68b0",
+    "tests/wasmPackStamp.test.mjs": "92994e439e050b34f14854aa98e8d28dea6994ae23fe19483847f3822167c9d1",
+    "package.json": "dac17cb5f7bdadaa026a12edbf99705765207544a2e7d6eed6da2aeb1970a5b7"
+  },
+  "logs": {
+    "/tmp/osv-plan-pack-integrity-before.json": "267b095bcc912985b19a51d38878d774d391e93643ac51fe85649526de0022fc",
+    "/tmp/osv-plan-pack-integrity-focused.log": "26e6da46f697f559aedbaf1138fa77606386108bbd68f338e6ceb7d8ac7abb73",
+    "/tmp/osv-plan-pack-integrity-focused-final.log": "89fb69842d13b86c37a34cfb184db916f553e104cd00f02a8206a29515de1f88",
+    "/tmp/osv-plan-pack-integrity-real.log": "97f9f054e9e95d004d8b268b88e3a8c3923a8d7ff24b56eee7b77d3ec3cab3bd",
+    "/tmp/osv-plan-pack-integrity-real.json": "c30ddf92df62af8ff579012461ec6e7ea95ca053ebcad65e40720ce3720e3e67",
+    "/tmp/osv-plan-pack-integrity-harfbuzz.log": "e79f4f8dd5df60080dcd17f89cca0207580f2e85a199df6e0242b7fe4bbcd1a2",
+    "/tmp/osv-plan-pack-integrity-harfbuzz.json": "6aa81f34c70faef963e3047b6365601219914d3864896034df0fdd7b83adad56",
+    "/tmp/osv-plan-pack-integrity-runtime.log": "55ee823ee9ae4e6cf0e8000293b303cc0ab6c3c8600a6b3a8a4d01279654dc0a",
+    "/tmp/osv-plan-pack-integrity-fixture-recovery.json": "9fb0a592cb35a4cff5bd2ae33387518f272f6ae31a2c85645916711c5cc40bfa",
+    "/tmp/osv-plan-pack-integrity-runtime-final.log": "b9ebcd4d6b4fc21e71030e47e6d8b2820ab59273baca8f2932cfe0261c0cd641",
+    "/tmp/osv-plan-pack-integrity-vite.log": "e079377bf3d29c646b19c9b4ca0403acee125678f746a72676eb4286f5d5ee24",
+    "/tmp/osv-plan-pack-integrity-dist-final.log": "efe0093a7981c34518bd12b19862f9999f4d1d66215dd6f239faeceeb277af53"
+  },
+  "before": {
+    "scope": "real geometry packer with a valid tiny WASM; second publication after same-size payload corruption",
+    "bugReproduced": true,
+    "restoredExpectedPayload": false
+  },
+  "results": {
+    "node_packaging": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    "initial_runtime": {
+      "passed": 42,
+      "failed": 1,
+      "cause": "missing independently compiled photogrammetry raw artifact in this private checkout"
+    },
+    "fixture_recovery": {
+      "scope": "restore an independently compiled existing artifact for a missing runtime packaging test fixture; no rebuild or math qualification",
+      "source": "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm",
+      "published": "/private/tmp/osv-nurbs-plan-20261028/public/wasm/photogrammetry.wasm",
+      "restored": "/private/tmp/osv-nurbs-plan-20261028/crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm",
+      "sha256": "707f6b843bf43ffd1db4690d82d093738bc6344f71c66a68b4fc5d10a3eaa78f",
+      "byteLength": 737749
+    },
+    "final_runtime": {
+      "files": 7,
+      "passed": 43,
+      "failed": 0
+    },
+    "real_geometry_control": {
+      "scope": "Existing c8 artifact repack and integrity-cache hit; no native rebuild or runtime capability qualification",
+      "before": {
+        "/private/tmp/osv-nurbs-plan-20261028/src/generated/geometry-kernels/kernel_bg.wasm": {
+          "bytes": 15811953,
+          "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992"
+        },
+        "/private/tmp/osv-nurbs-plan-20261028/public/wasm/geometry-kernel.wasm": {
+          "bytes": 15811953,
+          "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992"
+        },
+        "/private/tmp/osv-nurbs-plan-20261028/src/generated/geometry-kernels/bytes.ts": {
+          "bytes": 5330959,
+          "sha256": "0728f5d16fb9734b7c27ded150d26ce7b3b05748fcbe6c9330a60a73a06c4185"
+        },
+        "/private/tmp/osv-nurbs-plan-20261028/src/generated/geometry-kernels/identity.ts": {
+          "bytes": 195,
+          "sha256": "1fc165c8f9e58e53ed40c2c87fda7e411ea370a79937e673fd7a488d84edf7a1"
+        }
+      },
+      "after": {
+        "/private/tmp/osv-nurbs-plan-20261028/src/generated/geometry-kernels/kernel_bg.wasm": {
+          "bytes": 15811953,
+          "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992"
+        },
+        "/private/tmp/osv-nurbs-plan-20261028/public/wasm/geometry-kernel.wasm": {
+          "bytes": 15811953,
+          "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992"
+        },
+        "/private/tmp/osv-nurbs-plan-20261028/src/generated/geometry-kernels/bytes.ts": {
+          "bytes": 5330959,
+          "sha256": "0728f5d16fb9734b7c27ded150d26ce7b3b05748fcbe6c9330a60a73a06c4185"
+        },
+        "/private/tmp/osv-nurbs-plan-20261028/src/generated/geometry-kernels/identity.ts": {
+          "bytes": 195,
+          "sha256": "1fc165c8f9e58e53ed40c2c87fda7e411ea370a79937e673fd7a488d84edf7a1"
+        }
+      },
+      "byteIdentical": true,
+      "sourceSha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992",
+      "firstMs": 33286.057042,
+      "secondMs": 22.86791699999594,
+      "timingClaim": "One observational run under uncontrolled concurrent host load; no performance qualification",
+      "stamp": {
+        "schema": "wasm-pack-stamp-v2",
+        "sourceSha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992",
+        "outputs": [
+          {
+            "path": "../../../public/wasm/geometry-kernel.wasm",
+            "byteLength": 15811953,
+            "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992"
+          },
+          {
+            "path": "bytes.ts",
+            "byteLength": 5330959,
+            "sha256": "0728f5d16fb9734b7c27ded150d26ce7b3b05748fcbe6c9330a60a73a06c4185"
+          },
+          {
+            "path": "identity.ts",
+            "byteLength": 195,
+            "sha256": "1fc165c8f9e58e53ed40c2c87fda7e411ea370a79937e673fd7a488d84edf7a1"
+          },
+          {
+            "path": "kernel_bg.wasm",
+            "byteLength": 15811953,
+            "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992"
+          }
+        ]
+      }
+    },
+    "real_harfbuzz_control": {
+      "path": "src/generated/harfbuzz/bytes.ts",
+      "sha256": "51e1153f390752f9a87fdc3bae5f4b31c8eabc235fe67285f8348a636687654e",
+      "byteIdentical": true,
+      "secondRunVerifiedHit": true
+    },
+    "production_vite": "pass; existing artifacts only",
+    "distribution_gate": {
+      "status": "failed; unchanged limits",
+      "geometry_chunk_bytes": 5330908,
+      "geometry_chunk_budget": 4680000,
+      "total_asset_bytes": 9999798,
+      "total_budget": 9090000
+    }
+  },
+  "checks": {
+    "scripts/wasm-pack-stamp.mjs": {
+      "syntax_exit": 0
+    },
+    "scripts/pack-geometry-kernel.mjs": {
+      "syntax_exit": 0
+    },
+    "scripts/pack-language-kernel.mjs": {
+      "syntax_exit": 0
+    },
+    "scripts/pack-photogrammetry.mjs": {
+      "syntax_exit": 0
+    },
+    "scripts/pack-harfbuzz.mjs": {
+      "syntax_exit": 0
+    },
+    "scripts/build-wasm-brotli.mjs": {
+      "syntax_exit": 0
+    },
+    "tests/wasmPackStamp.test.mjs": {
+      "syntax_exit": 0
+    },
+    "architecture": {
+      "exit": 1,
+      "stdout": "",
+      "stderr": "crates/brep-core/src/boundary_embedding.rs: 1297 lines exceeds limit 800; split it\ncrates/brep-core/src/boundary_hull_contact.rs: 1538 lines exceeds limit 800; split it\ncrates/brep-core/src/boundary_hull_contact/extended_support.rs: 878 lines exceeds limit 800; split it\ncrates/brep-core/src/feature_graph.rs: 982 lines exceeds limit 800; split it\ncrates/brep-core/src/feature_history.rs: 960 lines exceeds limit 800; split it\ncrates/brep-core/src/healing_report.rs: 1332 lines exceeds limit 800; split it\ncrates/brep-core/src/iges_interchange_v2.rs: grew to 3091 lines (pinned at 1413); oversized files may only shrink\ncrates/brep-core/src/imprint_assembly.rs: 887 lines exceeds limit 800; split it\ncrates/brep-core/src/minkowski3d/curved/atlas.rs: 922 lines exceeds limit 800; split it\ncrates/brep-core/src/model_identity.rs: 830 lines exceeds limit 800; split it\ncrates/brep-core/src/profile_certificate.rs: 1000 lines exceeds limit 800; split it\ncrates/brep-core/src/profile_certificate/span_intersections.rs: 931 lines exceeds limit 800; split it\ncrates/brep-core/src/source_face_contacts.rs: 855 lines exceeds limit 800; split it\ncrates/brep-core/src/source_fiber_contact.rs: 1811 lines exceeds limit 800; split it\ncrates/brep-core/src/source_mapped_edge.rs: 1362 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_body.rs: 3088 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_shell.rs: 1041 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_shell_refinement.rs: 957 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_shell_wall.rs: 942 lines exceeds limit 800; split it\ncrates/brep-core/src/source_projective_use.rs: 998 lines exceeds limit 800; split it\ncrates/brep-core/src/source_shell_incidence.rs: 3552 lines exceeds limit 800; split it\ncrates/brep-core/src/source_support_shell.rs: 9613 lines exceeds limit 800; split it\ncrates/brep-core/src/step_v3_export.rs: 1380 lines exceeds limit 800; split it\ncrates/brep-topology/src/lib.rs: grew to 1194 lines (pinned at 1039); oversized files may only shrink\ncrates/cad-predicates/src/lib.rs: 1215 lines exceeds limit 800; split it\ncrates/cad-predicates/src/projected_surface_jacobian.rs: 1218 lines exceeds limit 800; split it\ncrates/gcode-optimize/src/lib.rs: 1185 lines exceeds limit 800; split it\ncrates/geometry-bridge/src/cad_source_body.rs: 974 lines exceeds limit 800; split it\ncrates/math-core/src/spatial.rs: 1593 lines exceeds limit 800; split it\ncrates/mechanical-core/src/standard_parts.rs: 1078 lines exceeds limit 800; split it\ncrates/mechanics-core/src/lib.rs: 871 lines exceeds limit 800; split it\ncrates/nurbs-core/src/analysis/class_a.rs: 845 lines exceeds limit 800; split it\ncrates/nurbs-core/src/analysis/ray_surface.rs: 943 lines exceeds limit 800; split it\ncrates/nurbs-core/src/analysis/surface_injectivity.rs: 935 lines exceeds limit 800; split it\ncrates/nurbs-core/src/construct/curves/airfoil.rs: 1258 lines exceeds limit 800; split it\ncrates/nurbs-core/src/core/surface.rs: 1004 lines exceeds limit 800; split it\ncrates/nurbs-core/src/normal_alignment.rs: 1768 lines exceeds limit 800; split it\ncrates/nurbs-core/src/numerics/compensated.rs: 846 lines exceeds limit 800; split it\ncrates/nurbs-core/src/profile_expression_bernstein.rs: 870 lines exceeds limit 800; split it\ncrates/nurbs-core/src/profile_expression_radius.rs: 1760 lines exceeds limit 800; split it\ncrates/nurbs-core/src/profile_section_bridge.rs: 2122 lines exceeds limit 800; split it\ncrates/nurbs-core/src/rational_pole_differential.rs: 1094 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_quotient_injectivity/report.rs: 1234 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_self_chord.rs: 2180 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_self_chord_coverage.rs: 891 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_weight_profile.rs: 2674 lines exceeds limit 800; split it\ncrates/polygon-core/src/solid/primitives.rs: 934 lines exceeds limit 800; split it\ncrates/raster-core/src/postprocess.rs: 882 lines exceeds limit 800; split it\ncrates/sdf-core/src/differential_and_queries.rs: 801 lines exceeds limit 800; split it\ncrates/sdf-core/src/serialization.rs: 1046 lines exceeds limit 800; split it\ncrates/sketch-core/src/serialization.rs: 885 lines exceeds limit 800; split it\ncrates/slicer-core/src/lib.rs: 1015 lines exceeds limit 800; split it\ncrates/subdivision-core/src/lib.rs: 820 lines exceeds limit 800; split it\ncrates/tensor-core/src/host_tensor.rs: 1232 lines exceeds limit 800; split it\ncrates/vr-core/src/lib.rs: 972 lines exceeds limit 800; split it\nscripts/qualificationFrozenArchives.mjs: 583 lines exceeds limit 500; split it\nsrc/composables/useBuildAndRendererLifecycle.ts: 687 lines exceeds limit 500; split it\nsrc/features/MeshModeler.vue: grew to 1048 lines (pinned at 857); oversized files may only shrink\nsrc/features/directModeler/useViewportLayerAndPolygons.ts: 761 lines exceeds limit 500; split it\nsrc/importers/dxfImporter.ts: 555 lines exceeds limit 500; split it\nsrc/importers/xmlAndArchive.ts: 1208 lines exceeds limit 500; split it\nsrc/mcp/server/registerResourcesAndPrompts.ts: 548 lines exceeds limit 500; split it\nsrc/mcp/server/registerTools.ts: 936 lines exceeds limit 500; split it\nsrc/mcp/server/schemas.ts: 875 lines exceeds limit 500; split it\nsrc/parser/assetEvaluator.ts: 704 lines exceeds limit 500; split it\nsrc/parser/geometryEvaluator.ts: 1079 lines exceeds limit 500; split it\nsrc/renderer/framePassEncoder.ts: 597 lines exceeds limit 500; split it\nsrc/semantic/lowererBuilder.ts: 1056 lines exceeds limit 500; split it\nsrc/semantic/lowererGeometryOps.ts: 540 lines exceeds limit 500; split it\nsrc/semantic/occurrenceValidator.ts: 543 lines exceeds limit 500; split it\nsrc/semantic/schemaPrimitives.ts: 588 lines exceeds limit 500; split it\n"
+    },
+    "api_mapping": {
+      "exit": 0,
+      "stdout": "Mapped 239 public modules and 200 catalog entries\n",
+      "stderr": ""
+    },
+    "diff_whitespace": {
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  "limitations": [
+    "Integrity snapshots are not source compilation provenance, hostile-author authentication, or multi-publisher transactions.",
+    "Synchronous offline/native host contract is retained; external-binary delivery needs a deliberate bootstrap design before adoption.",
+    "All original five NURBS directions and release gates remain open."
+  ]
+}

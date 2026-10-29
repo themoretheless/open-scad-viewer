@@ -2,6 +2,7 @@
 //! No rounded Curve::trim, Cartesian vertex welding or Model admission.
 use crate::source_contact_point::{self, SourcePoint};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, json};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
@@ -19,6 +20,20 @@ pub enum Endpoint {
         point: SourcePoint,
         role: Role,
     },
+}
+impl Endpoint {
+    pub fn same_definition(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Parameter(a), Self::Parameter(b)) => a == b,
+            (Self::Carrier { point: a, side: sa }, Self::Carrier { point: b, side: sb }) => {
+                sa == sb && a.same_definition(b)
+            }
+            (Self::Crossing { point: a, role: ra }, Self::Crossing { point: b, role: rb }) => {
+                ra == rb && a.same_definition(b)
+            }
+            _ => false,
+        }
+    }
 }
 #[derive(Clone)]
 pub struct Fragment {
@@ -69,6 +84,17 @@ fn parameter(surface: &Surface, curve: &Curve, end: &Endpoint) -> Result<[f64; 2
     }
 }
 impl Fragment {
+    /// Exact original source fields, including endpoint roles and selectors.
+    /// Derived order, direction and enclosures are independently requalified.
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.surface == other.surface
+            && self.curve == other.curve
+            && self
+                .endpoints
+                .iter()
+                .zip(&other.endpoints)
+                .all(|(a, b)| a.same_definition(b))
+    }
     pub fn new(surface: &Surface, curve: &Curve, start: Endpoint, end: Endpoint) -> Result<Self> {
         surface.validate()?;
         curve.validate()?;
@@ -359,9 +385,9 @@ impl Fragment {
             (
                 Endpoint::Carrier { point: a, side: sa },
                 Endpoint::Carrier { point: b, side: sb },
-            ) => sa == sb && a.definition() == b.definition(),
+            ) => sa == sb && a.same_definition(b),
             (Endpoint::Crossing { point: a, .. }, Endpoint::Crossing { point: b, .. }) => {
-                a.definition() == b.definition()
+                a.same_definition(b)
             }
             (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
                 if self.curve == next.curve && a.to_bits() == b.to_bits() {
@@ -390,6 +416,7 @@ impl Fragment {
             _ => false,
         }
     }
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Value {
         let encode = |end: &Endpoint| match end {
             Endpoint::Carrier { point, side } => {
@@ -407,6 +434,7 @@ impl Fragment {
 }
 /// Restore each root by fresh original-definition qualification. Mapping work is
 /// shared across both endpoints; cached direction/order/bounds are ignored.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
     if value["version"].as_u64() != Some(1) || !(1..=100000).contains(&max_mapping_cells) {
         return Err(error("Unsupported fragment definition or mapping budget"));
@@ -419,8 +447,11 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
         .filter(|a| a.len() == 2)
         .ok_or_else(|| error("Fragment needs two endpoints"))?;
     let mut remaining = max_mapping_cells;
-    let mut carrier_left=ends.iter().filter(|end|end["kind"].as_str()==Some("carrier")).count();
-    let carrier_count=carrier_left.max(1);
+    let mut carrier_left = ends
+        .iter()
+        .filter(|end| end["kind"].as_str() == Some("carrier"))
+        .count();
+    let carrier_count = carrier_left.max(1);
     let mut endpoints = vec![];
     for end in ends {
         let endpoint = match end["kind"].as_str() {
@@ -430,7 +461,7 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
                     .ok_or_else(|| error("Missing original parameter"))?,
             ),
             Some("carrier") => {
-                let allowance=remaining/carrier_left;
+                let allowance = remaining / carrier_left;
                 if allowance == 0 {
                     return Err(error("Carrier restoration work exhausted"));
                 }
@@ -444,11 +475,11 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
                     crate::source_carrier_point::RestoreLimits {
                         edge: crate::source_shared_edge_restore::Limits {
                             mapping_cells_per_use: allowance,
-                            exact_work: 100_000_000/carrier_count as u64,
-                            driver_cells: 100000/carrier_count,
+                            exact_work: 100_000_000 / carrier_count as u64,
+                            driver_cells: 100000 / carrier_count,
                         },
                         root_mapping_cells: allowance,
-                        spans: 100000/carrier_count,
+                        spans: 100000 / carrier_count,
                     },
                 )?;
                 // Reserve disjoint budgets for the bounded two original
@@ -509,6 +540,68 @@ mod tests {
             .point
             .unwrap();
         (s, a, b, p)
+    }
+    #[test]
+    fn typed_endpoint_identity_preserves_role_and_strict_parameter_join() {
+        let (surface, curve, _, point) = fixture();
+        let boundary = Endpoint::Crossing {
+            point: point.clone(),
+            role: Role::Boundary,
+        };
+        let contact = Endpoint::Crossing {
+            point,
+            role: Role::Contact,
+        };
+        assert!(!boundary.same_definition(&contact));
+        let a = Fragment::new(
+            &surface,
+            &curve,
+            Endpoint::Parameter(0.),
+            Endpoint::Parameter(1.),
+        )
+        .unwrap();
+        let mut b = a.clone();
+        b.parameter_bounds = [[0.25, 0.75]; 2];
+        b.reversed = !a.reversed;
+        assert!(a.same_definition(&b));
+        #[cfg(feature = "codec")]
+        assert_eq!(a.definition(), b.definition());
+        b.endpoints[0] = Endpoint::Parameter(0.125);
+        assert!(!a.same_definition(&b));
+        #[cfg(feature = "codec")]
+        assert_ne!(a.definition(), b.definition());
+        let left = Fragment::new(
+            &surface,
+            &curve,
+            Endpoint::Parameter(1.),
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        let right = Fragment::new(
+            &surface,
+            &curve,
+            Endpoint::Parameter(-0.),
+            Endpoint::Parameter(1.),
+        )
+        .unwrap();
+        assert!(left.endpoints()[1].same_definition(&right.endpoints()[0]));
+        // The existing clamped-endpoint identity remains an exact fallback.
+        assert!(left.joins(&right));
+        let left = Fragment::new(
+            &surface,
+            &curve,
+            Endpoint::Parameter(0.),
+            Endpoint::Parameter(0.5),
+        )
+        .unwrap();
+        let right = Fragment::new(
+            &surface,
+            &curve,
+            Endpoint::Parameter(f64::from_bits(0.5f64.to_bits() + 1)),
+            Endpoint::Parameter(1.),
+        )
+        .unwrap();
+        assert!(!left.joins(&right));
     }
     #[test]
     fn root_valued_split_preserves_sources_and_joins_across_original_curves() {
@@ -577,14 +670,26 @@ mod tests {
             },
         )
         .unwrap();
-        let restored = restore(f.definition(), 16).unwrap();
-        assert_eq!(restored.definition(), f.definition());
-        let mut forged = f.definition();
-        forged["curve"]["controlPoints"][0][0] = json!(0.1);
-        assert!(restore(forged, 16).is_err());
-        let mut forged = f.definition();
-        forged["endpoints"][0]["value"] = json!(0.5);
-        assert!(restore(forged, 16).is_err());
+        let native = f.requalify(16).unwrap();
+        assert!(native.same_definition(&f));
+        assert_eq!(native.parameter_bounds(), f.parameter_bounds());
+        let mut changed = f.clone();
+        changed.curve.control_points[0][0] = 0.1;
+        assert!(changed.requalify(16).is_err());
+        changed = f.clone();
+        changed.endpoints[0] = Endpoint::Parameter(0.5);
+        assert!(changed.requalify(16).is_err());
+        #[cfg(feature = "codec")]
+        {
+            let restored = restore(f.definition(), 16).unwrap();
+            assert_eq!(restored.definition(), f.definition());
+            let mut forged = f.definition();
+            forged["curve"]["controlPoints"][0][0] = json!(0.1);
+            assert!(restore(forged, 16).is_err());
+            let mut forged = f.definition();
+            forged["endpoints"][0]["value"] = json!(0.5);
+            assert!(restore(forged, 16).is_err());
+        }
     }
     #[test]
     fn source_chart_containment_is_not_inferred_from_two_inside_endpoints() {
@@ -613,3 +718,6 @@ mod tests {
         assert!(Fragment::new(&s, &c, Endpoint::Parameter(0.), Endpoint::Parameter(1.)).is_err());
     }
 }
+
+#[path = "source_boundary_fragment/replay.rs"]
+mod replay;

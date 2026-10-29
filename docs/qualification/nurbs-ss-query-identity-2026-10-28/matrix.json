@@ -1,0 +1,58 @@
+{
+  "last_verified_base_commit": "7b1cac0768c6cc77879a3a4ae650bac6f2ad404a",
+  "scope": "Exact normalized/reversed original Bezier UV query maps, complete ordered original root correspondence, separate actual edge cuts and paired SS faces",
+  "sources": {
+    "crates/brep-core/src/face_cut.rs": "94ecc5a071d77eadc5a98b02246bc1988f8c9f87b0fc3940e457006513294f31",
+    "crates/brep-core/src/face_cut/closed.rs": "1ecb7fad71c76ad37b3734a45635072c1e8876ec9f8b10e0e251c67d8b647c4b",
+    "crates/brep-core/src/face_cut/closed/path_graph.rs": "0af4b6ed007cc65964b63cab75a52f8f8c931f8640e9610e30c3f0d5e1621501",
+    "crates/brep-core/src/face_cut/closed/path_graph/author.rs": "a4909330b0939cc3206030f6f53f0cf54d15deffb02db8f84890fd3c76de23b5",
+    "crates/brep-core/src/face_cut/closed/path_graph/cycles.rs": "71b3516cb61164a7e907d993fd3c471d4ed695f4eb07063b17a6c7c1f95822b4",
+    "crates/brep-core/src/face_cut/closed/path_graph/prepare.rs": "88ae2e9ec99d1811ca502d444c98c36e66599bcaf5e4f382c4eb74ec23a1187a",
+    "crates/brep-core/src/face_cut/closed/path_graph/tests.rs": "03cc5984fdc52318abf2ef568eca91f64042cb1eb52d21b7a385151d3d1db919",
+    "crates/brep-core/src/face_cut/closed/reference.rs": "ee6cb998b89e78de203ae240d04ae77562a30ff7df8826543f2e80ffca9ea63a",
+    "crates/brep-core/src/ss_face_membership/coedge_roots.rs": "376b361b48c8c9a16267d24399643e364bb5a0456a9960b165dcf3223d05ef26",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts.rs": "6f36c963d1f1f93c71d256e752926e80346989563c6608896ccd7ca84b9851df",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network.rs": "450435a586cb925c3d851602102393aa4252423c5228db81f1230caa414813be",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/graph.rs": "6e1b18d7235bb6d09f9f29e4a13bf5a22c4bbf2b67f7bede7aa4d5eaae9f5a0f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/graph/tests.rs": "4b9cbe06d5a092546fb05a2da2b3ffdca20489982bacb82328a7ab695740a3e1",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/tests.rs": "90f9f1fffa9e1b11c9864fece788549a71b9404ac6939c78fa88100faaa34e2f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/tests.rs": "18e5d33ca55e9989b0ee6a2c72ac36a8d7421cedb734ad9ca233f9e2cb5afd58",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/query_identity.rs": "8f5e6f2f6ea195cbfeee3072c5cf3cb0aa264c507b35368a0a06a6d585b59d87"
+  },
+  "logs": {
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/query-identity-focused.log": "4c94e56d83e223b9b36fee60d75f1c00fdd06179e715023f536e7192322063f9",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/query-identity-focused-r2.log": "e7f0bf7ab61a79404d369eeb8f5edb3a841aa001d49bd478322e0070876e4ede",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/query-identity-brep-full.log": "1ed3f8ca6f07232dbbbc1ef18001740e62964e48a3d24afee814cede0cccd6bc",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/query-identity-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/query-identity-architecture.log": "6db21e7911eff7f9a85db8096aeca191828c5664d4cdad3013177a605da2e921",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/query-identity-format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "qualification": "native-full-suite-passed",
+  "focused": {
+    "passed": 52,
+    "failed": 0,
+    "ignored": 0
+  },
+  "api": {
+    "public_modules": 239,
+    "catalogue_entries": 200
+  },
+  "architecture": {
+    "existing_violations": 71,
+    "new_violations": 0,
+    "limits_changed": false
+  },
+  "delivery": "common Git object reads still time out; not committed or pushed",
+  "full_plan_complete": false,
+  "full_brep": {
+    "passed": 1992,
+    "failed": 0,
+    "ignored": 5,
+    "duration_seconds": 121.76,
+    "exit_code": 0
+  },
+  "source_drift": false,
+  "format": "passed",
+  "whitespace": "passed",
+  "snapshot": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/qualified-ss-query-identity-1992.tar.gz"
+}

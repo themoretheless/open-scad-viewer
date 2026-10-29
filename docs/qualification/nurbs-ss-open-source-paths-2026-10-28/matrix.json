@@ -1,0 +1,85 @@
+{
+  "base_commit": "a847749d822e5692246fc7e809e4feb43e471e3f",
+  "scope": "Source-owned open SS paths and selected actual face subdivision; not atomic two-sided Boolean or Solid admission",
+  "sources": {
+    "crates/brep-core/src/face_cut.rs": "41ea16b51e4cedd0d5e0d8bcb27b6d81bec26dacf5426568bbb140d84975092b",
+    "crates/brep-core/src/ss_face_membership.rs": "152e326f4043ac6e2bef70e035754aba8b311c2adad816b9c3abadff10f740ae",
+    "crates/brep-core/src/ss_face_membership/coedge_roots.rs": "37f6d2f078bd8e6d52f55d886289ebe43cd0418acb1e78fdbc73032836e6de3f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts.rs": "8f50e8ae473314044f1a6ccf749450673f459f709c51755fa4635aba04355d6b",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition.rs": "47bcd9e76d4f98d29ecf2d153a264f122970b5166882bf0532306d4b76c6e9c9",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open.rs": "f2d7a576be2cf082ebf09bb705244e6a1332e4600cf8079a7c95ceb64077ce3f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/apply.rs": "e6a024a7b3f6f2661577cf8c80b3b30471afabcd8a85205d04edab1766f9bc3a",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/geometry.rs": "5be8709f0f789c639c1d5a2c617017b748ddc2b06a197d0ad72e29b3fd5e3778",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/route.rs": "22577dcb13f7d9fe472ed5c49a08d3075d9b8fe8bc585ba6b5d6823703d6039b",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/tests.rs": "d2ad3e94987f84ecd3c7135d0867bfac9154bf5ba54f503ba9f2a7b89765c6bc",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+  },
+  "logs": {
+    "/tmp/osv-plan-ss-open-path-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-open-path-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-open-path-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-open-path-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-open-path-brep-final.log": "94ad1e2c4111bff528ff3ea58ef67c6c5b71663307d7e5446ec5d2ed967e1d4a",
+    "/tmp/osv-plan-ss-open-path-brep-full.log": "8bf41c17318cc532f9de0df4fd5c27bb21bfb1d8b59042f3423ac92ec4b55bcb",
+    "/tmp/osv-plan-ss-open-path-focused-r2.log": "064127f7b1b495a37cfb146c5c934a34fb73527176c53a6ea8d1b371edb3b3a4",
+    "/tmp/osv-plan-ss-open-path-focused-r3.log": "e92e3a064c32bc1549ef331430b2884a6e02bbc5ef5ec784648f9b511f1ec593",
+    "/tmp/osv-plan-ss-open-path-focused-r4.log": "709dcaa085a4a15b650b3861908ecbb82c57f73c4de8befda8e804b10ea8949f",
+    "/tmp/osv-plan-ss-open-path-focused.log": "8bb875076b29f8e409c304c57ab97992d0199ab16966793cce6af2549c772c1d",
+    "/tmp/osv-plan-ss-open-path-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "results": {
+    "initial_compile": "Two test accesses to sibling private fields; corrected by checking public snapshot isolation, no production visibility widened",
+    "focused_r2": {
+      "passed": 8,
+      "failed": 0
+    },
+    "earlier_full": {
+      "passed": 1958,
+      "failed": 0,
+      "ignored": 5
+    },
+    "focused_r3": {
+      "passed": 11,
+      "failed": 0
+    },
+    "final_focused": {
+      "passed": 12,
+      "failed": 0
+    },
+    "final_full": {
+      "passed": 1960,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "api": {
+      "modules": 239,
+      "catalogue": 200,
+      "exit_code": 0
+    },
+    "format": {
+      "exit_code": 0
+    },
+    "architecture": {
+      "violations": 71,
+      "exit_code": 1,
+      "limits_unchanged": true
+    }
+  },
+  "ignored": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+  ],
+  "remaining": [
+    "junction/different-loop networks and atomic two-sided construction",
+    "automatic material roles, sewing and Solid admission",
+    "general rational/multispan supports, contacts/coincidences",
+    "central G2 corner, offsets/shells, simplification",
+    "WASM/Rush/UI/edited-body STEP integration",
+    "architecture and distribution release gates"
+  ]
+}

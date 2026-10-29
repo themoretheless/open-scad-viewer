@@ -143,6 +143,7 @@ describe('OpenSCAD MCP server', () => {
       'rush_nurbs_export',
       'rush_nurbs_intersect',
       'rush_nurbs_language',
+      'rush_nurbs_offset_deviation',
       'rush_report',
       'rush_set_parameters',
       'rush_svg_export',

@@ -1,0 +1,105 @@
+{
+  "base_commit": "23b901f8fca47d0100ceb354fdeeef5cb2f82230",
+  "scope": "Multiple original SS path contour networks on both actual operands, including exact original-vertex junction assembly; no automatic Boolean roles or Solid admission",
+  "sources": {
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/brep-core/src/face_cut.rs": "481907b7911e7ecf90f066c8461d554366593d610705b551476497a3b9182fd7",
+    "crates/brep-core/src/face_cut/endpoint_loop.rs": "ebd29d713614f67121081cd5be2bcc76e60160d542c8fff2c7785f716332ffd6",
+    "crates/brep-core/src/ss_face_membership.rs": "ea79aedf8404037623cd540a1f7c3c2581e583eee27c56000731c302147b9ff7",
+    "crates/brep-core/src/ss_face_membership/coedge_roots.rs": "cc8143ed2f094b3c85a7db61f1997ab9aa56999ce0a734acc490188d3a6140f0",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts.rs": "18a2645272c1dd43bad14fe8c01d995ba07ab166dc6471e78280ecf0efd9b939",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition.rs": "182a8c347ca97683f83d2357ab184d3baaadfc3e0f88e18a22733a6dd5a8e50d",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open.rs": "081af8ed9f1ad9b3c21c540337eb2b0132aefef2f1c82441dcf5f5fed6892517",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/apply.rs": "efd77c48eaaf5e9f6188d830ebe3b6940126658fec8d26a4da2ff062e6977758",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/geometry.rs": "5be8709f0f789c639c1d5a2c617017b748ddc2b06a197d0ad72e29b3fd5e3778",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network.rs": "e5f5c332c2a72e13f46dc262064a070e9a9232e5f35b07e4ed404728ecfa475a",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/tests.rs": "579f00eb538815729e1940bf6cabbc2b9321bfe17790e53a9199c776b2b8cf34",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/pair.rs": "8db2279d80004223bef05c840dca8050dbf7fd1c190a284d2925a5d3728533f8",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/route.rs": "1d9672864367c9822d6ddd105527d9ee887f88ee0b935515ef5b6e968d8b08a9",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/tests.rs": "407dcfd651c1156ffa00c8f13fe72f6107df15dc6363213c55f9832f52b46a2c"
+  },
+  "logs": {
+    "/tmp/osv-plan-ss-network-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-network-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-network-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-network-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-network-focused.log": "da6998a3bc39c3597d23e4eeff0b13a0fb6cf56786e358597c34fbce87dd86bb",
+    "/tmp/osv-plan-ss-network-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/tmp/osv-plan-ss-network-full.log": "71a1e7818a93e52d7092416c6c1665c534cafaf143c2084cbe0af1d5c481c4f6",
+    "/tmp/osv-plan-ss-network-junction-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-network-junction-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-network-junction-focused-r2.log": "637772e4d010f14d08833175df657b4926284a4e6deb70cb5fe2eec7ab2a2e4b",
+    "/tmp/osv-plan-ss-network-junction-focused.log": "04f9cb10c25cb97dd8d6d532f75e82c2985a7256dea9b4bea8ebcda3303ae0eb",
+    "/tmp/osv-plan-ss-network-junction-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/tmp/osv-plan-ss-network-junction-full.log": "783d0bc3e2288925eefebf2bc41a68067513cb273e9cf5eb4b09b9a501fdbc19"
+  },
+  "results": {
+    "initial_boundary_only_focused": {
+      "passed": 15,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "boundary_only_full_with_explicit_crossing_refusal": {
+      "passed": 1964,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "junction_initial_compile": {
+      "exit_code": 101,
+      "reason": "E0282 in test node-remapping closure; fixed explicit usize parameter, no production proof or geometry gate weakened"
+    },
+    "junction_focused_before_additional_reverse_and_port_mutation_regressions": {
+      "passed": 16,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "final_full_including_reverse_and_port_mutation": {
+      "passed": 1964,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "api": {
+      "modules": 239,
+      "catalogue": 200,
+      "exit_code": 0
+    },
+    "format": {
+      "exit_code": 0
+    },
+    "architecture": {
+      "violations": 71,
+      "exit_code": 1,
+      "limits_unchanged": true
+    }
+  },
+  "ignored": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+  ],
+  "cases": [
+    "four roots of original ellipse construct two retained caps on each operand",
+    "both orders of independent cuts",
+    "single-path network agrees with existing pair construction",
+    "all four independent cuts retained in one Model with two shells",
+    "exact original crossing-line junction gives four sectors on each operand",
+    "junction branch order and reversed traversal",
+    "junction in one aliased Model yields eight actual faces in two four-face shells",
+    "canonical SS/native port mapping mutation is rejected by sealed replay",
+    "duplicate paths, foreign immutable partition owners and empty requests refuse",
+    "shared cell, pair and late-operation exhaustion leave input models unchanged"
+  ],
+  "remaining": [
+    "general different-loop bridges and junctions without proven original/native ports",
+    "automatic Boolean material roles, welding/sewing and Solid admission",
+    "general rational/multispan source supports, contacts/coincidences",
+    "central G2 corner, offsets/shells, simplification",
+    "WASM/Rush/UI/edited-body STEP delivery for new contracts",
+    "architecture and distribution release gates"
+  ]
+}

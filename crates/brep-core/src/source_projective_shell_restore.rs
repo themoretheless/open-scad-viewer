@@ -1,5 +1,6 @@
 //! Replay projective shell incidence from qualified material regions.
 pub use crate::source_shell_restore::Limits;
+#[cfg(feature = "codec")]
 use crate::{
     source_projective_edge::Edge,
     source_region_restore,
@@ -8,17 +9,22 @@ use crate::{
         RootPlanes, Shell,
     },
 };
+#[cfg(feature = "codec")]
 use nurbs_core::{Error, Result, curve::Curve};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Value, json};
+#[cfg(feature = "codec")]
 fn invalid() -> Error {
     Error::new(
         "BREP_PROJECTIVE_SHELL_RESTORE",
         "Invalid original projective shell definition",
     )
 }
+#[cfg(feature = "codec")]
 fn decode<T: for<'a> Deserialize<'a>>(v: Value) -> Result<T> {
     T::from_value(v).map_err(|_| invalid())
 }
+#[cfg(feature = "codec")]
 impl Shell<Edge> {
     pub fn definition(&self) -> Result<Value> {
         let regions = self.regions().ok_or_else(invalid)?;
@@ -31,6 +37,7 @@ impl Shell<Edge> {
 }
 /// No serialized vertex IDs, bounds or admission flags grant authority.
 /// Original material regions, root selectors and all edge maps are replayed.
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::Report<Edge>> {
     if value["version"].as_u64() != Some(1)
         || value["kind"].as_str() != Some("projective-shell")

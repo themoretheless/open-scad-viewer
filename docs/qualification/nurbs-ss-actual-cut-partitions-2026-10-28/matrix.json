@@ -1,0 +1,85 @@
+{
+  "scope": "Original SS-boundary root representatives and actual candidate edge partitions; no face-cut or Solid authority",
+  "base_commit": "12405643c",
+  "sources": {
+    "crates/brep-core/src/ss_face_membership.rs": "dc9c5183ae4f3d2a418453950192e039c1828652930c07adde151ad9433afb17",
+    "crates/brep-core/src/ss_face_membership/coedge_roots.rs": "07ad322cd20eb16da8aba2882cfea67fed7d1d092e5e3135423611b4ecd19111",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts.rs": "6f8e897394c02f28ed1fbe7b22c9b2e20eeaeba3074891bc98156e28707b5f82",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/arithmetic.rs": "1771138c3f0c4e1a211ba203f25569ce16437d82dbfe52998ac92577a6a6662a",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition.rs": "374a6c0daf32fe91237dc38bfc7048fb4e629282521c3296bb18c8faeb87f38f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/proof.rs": "6600f988fa0e887a76fac746b8d4c2bf4841b0c2ff73403f5f32783e6a39409d",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/tests.rs": "66e1b8abc59c92d6e529f1071d2aad464a330be45f8509a64c38957a7a91f650",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/tests.rs": "d0acdff4038c7767f0bc01807b686bd265d3ce50414e745853654a841d1e137c",
+    "crates/brep-core/src/edge_partition.rs": "2d4bbdfcd27ea705545f58532eb561c1c49b171c8e680864514518c631af9a7f",
+    "crates/brep-core/src/edge_partition/authored.rs": "0c7963ffe2a418f75d0ea5eb7efac86d72c3bf620922190442d21ce999ac16f4",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+  },
+  "logs": {
+    "/tmp/osv-plan-ss-cut-representatives-focused.log": "78a7bd7433328c12a4e5825ee76ab6eaa44e911ba436658795a13bc2b4d6f024",
+    "/tmp/osv-plan-ss-cut-partitions-focused.log": "1ae73486178704e64ec498a7d56a8a8749a21aed0838b0a76dad7aae284e6d1e",
+    "/tmp/osv-plan-ss-cut-partitions-focused-r2.log": "1b4b309ad36f473c511ce0d7e6cb079c3747b15b5c0913d26b90b2b7fb27e828",
+    "/tmp/osv-plan-ss-cut-partitions-focused-final.log": "31841b777fff9adf6371f0dbadade387c1d638ef1ccd9a3bead90106788a58e9",
+    "/tmp/osv-plan-ss-cut-partitions-brep-full.log": "e517ae48bab48e275a3428eeba36b8d2361ad0d68dba920c139a8af120d364dd",
+    "/tmp/osv-plan-ss-cut-partitions-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-cut-partitions-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802"
+  },
+  "results": {
+    "initial_representatives": {
+      "passed": 6,
+      "failed": 0
+    },
+    "initial_partition_compile": "refused: test fixture mutable/immutable borrow; fixed before qualification",
+    "initial_partition_run": {
+      "passed": 13,
+      "failed": 1,
+      "reason": "fixture incorrectly put disconnected faces into one shell; corrected to two shells in the same model"
+    },
+    "final_focused": {
+      "passed": 14,
+      "failed": 0
+    },
+    "final_full_brep": {
+      "passed": 1922,
+      "failed": 0,
+      "ignored": 5
+    },
+    "ignored_reasons": [
+      "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+      "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+      "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+      "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+      "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+    ]
+  },
+  "checks": {
+    "rustfmt": {
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "diff_whitespace": {
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "api_mapping": {
+      "exit": 0,
+      "stdout": "Mapped 239 public modules and 200 catalog entries\n",
+      "stderr": ""
+    },
+    "architecture": {
+      "exit": 1,
+      "stdout": "",
+      "stderr": "crates/brep-core/src/boundary_embedding.rs: 1297 lines exceeds limit 800; split it\ncrates/brep-core/src/boundary_hull_contact.rs: 1538 lines exceeds limit 800; split it\ncrates/brep-core/src/boundary_hull_contact/extended_support.rs: 878 lines exceeds limit 800; split it\ncrates/brep-core/src/feature_graph.rs: 982 lines exceeds limit 800; split it\ncrates/brep-core/src/feature_history.rs: 960 lines exceeds limit 800; split it\ncrates/brep-core/src/healing_report.rs: 1332 lines exceeds limit 800; split it\ncrates/brep-core/src/iges_interchange_v2.rs: grew to 3091 lines (pinned at 1413); oversized files may only shrink\ncrates/brep-core/src/imprint_assembly.rs: 887 lines exceeds limit 800; split it\ncrates/brep-core/src/minkowski3d/curved/atlas.rs: 922 lines exceeds limit 800; split it\ncrates/brep-core/src/model_identity.rs: 830 lines exceeds limit 800; split it\ncrates/brep-core/src/profile_certificate.rs: 1000 lines exceeds limit 800; split it\ncrates/brep-core/src/profile_certificate/span_intersections.rs: 931 lines exceeds limit 800; split it\ncrates/brep-core/src/source_face_contacts.rs: 855 lines exceeds limit 800; split it\ncrates/brep-core/src/source_fiber_contact.rs: 1811 lines exceeds limit 800; split it\ncrates/brep-core/src/source_mapped_edge.rs: 1362 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_body.rs: 3088 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_shell.rs: 1041 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_shell_refinement.rs: 957 lines exceeds limit 800; split it\ncrates/brep-core/src/source_profile_shell_wall.rs: 942 lines exceeds limit 800; split it\ncrates/brep-core/src/source_projective_use.rs: 998 lines exceeds limit 800; split it\ncrates/brep-core/src/source_shell_incidence.rs: 3552 lines exceeds limit 800; split it\ncrates/brep-core/src/source_support_shell.rs: 9613 lines exceeds limit 800; split it\ncrates/brep-core/src/step_v3_export.rs: 1380 lines exceeds limit 800; split it\ncrates/brep-topology/src/lib.rs: grew to 1194 lines (pinned at 1039); oversized files may only shrink\ncrates/cad-predicates/src/lib.rs: 1215 lines exceeds limit 800; split it\ncrates/cad-predicates/src/projected_surface_jacobian.rs: 1218 lines exceeds limit 800; split it\ncrates/gcode-optimize/src/lib.rs: 1185 lines exceeds limit 800; split it\ncrates/geometry-bridge/src/cad_source_body.rs: 974 lines exceeds limit 800; split it\ncrates/math-core/src/spatial.rs: 1593 lines exceeds limit 800; split it\ncrates/mechanical-core/src/standard_parts.rs: 1078 lines exceeds limit 800; split it\ncrates/mechanics-core/src/lib.rs: 871 lines exceeds limit 800; split it\ncrates/nurbs-core/src/analysis/class_a.rs: 845 lines exceeds limit 800; split it\ncrates/nurbs-core/src/analysis/ray_surface.rs: 943 lines exceeds limit 800; split it\ncrates/nurbs-core/src/analysis/surface_injectivity.rs: 935 lines exceeds limit 800; split it\ncrates/nurbs-core/src/construct/curves/airfoil.rs: 1258 lines exceeds limit 800; split it\ncrates/nurbs-core/src/core/surface.rs: 1004 lines exceeds limit 800; split it\ncrates/nurbs-core/src/normal_alignment.rs: 1768 lines exceeds limit 800; split it\ncrates/nurbs-core/src/numerics/compensated.rs: 846 lines exceeds limit 800; split it\ncrates/nurbs-core/src/profile_expression_bernstein.rs: 870 lines exceeds limit 800; split it\ncrates/nurbs-core/src/profile_expression_radius.rs: 1760 lines exceeds limit 800; split it\ncrates/nurbs-core/src/profile_section_bridge.rs: 2122 lines exceeds limit 800; split it\ncrates/nurbs-core/src/rational_pole_differential.rs: 1094 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_quotient_injectivity/report.rs: 1234 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_self_chord.rs: 2180 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_self_chord_coverage.rs: 891 lines exceeds limit 800; split it\ncrates/nurbs-core/src/surface_weight_profile.rs: 2674 lines exceeds limit 800; split it\ncrates/polygon-core/src/solid/primitives.rs: 934 lines exceeds limit 800; split it\ncrates/raster-core/src/postprocess.rs: 882 lines exceeds limit 800; split it\ncrates/sdf-core/src/differential_and_queries.rs: 801 lines exceeds limit 800; split it\ncrates/sdf-core/src/serialization.rs: 1046 lines exceeds limit 800; split it\ncrates/sketch-core/src/serialization.rs: 885 lines exceeds limit 800; split it\ncrates/slicer-core/src/lib.rs: 1015 lines exceeds limit 800; split it\ncrates/subdivision-core/src/lib.rs: 820 lines exceeds limit 800; split it\ncrates/tensor-core/src/host_tensor.rs: 1232 lines exceeds limit 800; split it\ncrates/vr-core/src/lib.rs: 972 lines exceeds limit 800; split it\nscripts/qualificationFrozenArchives.mjs: 583 lines exceeds limit 500; split it\nsrc/composables/useBuildAndRendererLifecycle.ts: 687 lines exceeds limit 500; split it\nsrc/features/MeshModeler.vue: grew to 1048 lines (pinned at 857); oversized files may only shrink\nsrc/features/directModeler/useViewportLayerAndPolygons.ts: 761 lines exceeds limit 500; split it\nsrc/importers/dxfImporter.ts: 555 lines exceeds limit 500; split it\nsrc/importers/xmlAndArchive.ts: 1208 lines exceeds limit 500; split it\nsrc/mcp/server/registerResourcesAndPrompts.ts: 548 lines exceeds limit 500; split it\nsrc/mcp/server/registerTools.ts: 936 lines exceeds limit 500; split it\nsrc/mcp/server/schemas.ts: 875 lines exceeds limit 500; split it\nsrc/parser/assetEvaluator.ts: 704 lines exceeds limit 500; split it\nsrc/parser/geometryEvaluator.ts: 1079 lines exceeds limit 500; split it\nsrc/renderer/framePassEncoder.ts: 597 lines exceeds limit 500; split it\nsrc/semantic/lowererBuilder.ts: 1056 lines exceeds limit 500; split it\nsrc/semantic/lowererGeometryOps.ts: 540 lines exceeds limit 500; split it\nsrc/semantic/occurrenceValidator.ts: 543 lines exceeds limit 500; split it\nsrc/semantic/schemaPrimitives.ts: 588 lines exceeds limit 500; split it\n"
+    }
+  },
+  "remaining": [
+    "SS interior edges and retained face loops",
+    "closed SS loops with no boundary events",
+    "material roles and Solid sewing",
+    "general rational/multispan SS and unresolved contacts/windows",
+    "full original five-priority plan",
+    "WASM Rush UI edited STEP and release gates"
+  ]
+}

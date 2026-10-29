@@ -65,7 +65,7 @@ pub fn prepare<E: crate::source_exchange_endpoints::ExchangeCarrier>(
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. || !(1..=10_000_000).contains(&max_work) {
         return Err(invalid("Choose positive tolerance and bounded trim work"));
     }
-    if endpoints.original() != &E::body_definition(body)? {
+    if !endpoints.belongs_to(body) {
         return Err(invalid("Endpoint preparation belongs to another Body"));
     }
     let shell = body.geometry().shell();
@@ -121,7 +121,7 @@ pub fn prepare<E: crate::source_exchange_endpoints::ExchangeCarrier>(
         }
         let mut uses = [[0.; 2]; 2];
         for slot in 0..2 {
-            let fragment=shared.fragment(slot);
+            let fragment = shared.fragment(slot);
             uses[slot] = fragment.parameter_bounds().map(midpoint);
             if uses[slot][0] == uses[slot][1]
                 || ((uses[slot][0] > uses[slot][1]) != fragment.reversed())

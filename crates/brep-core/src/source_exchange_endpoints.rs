@@ -33,6 +33,7 @@ pub struct Replay<E> {
 }
 /// Native sealed carriers replay original compositions after root refinement.
 pub trait ExchangeCarrier: crate::source_edge_restriction::RestrictionCarrier {
+    #[cfg(feature = "codec")]
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value>;
     fn replay_refined(
         &self,
@@ -40,8 +41,13 @@ pub trait ExchangeCarrier: crate::source_edge_restriction::RestrictionCarrier {
         limits: crate::source_shared_edge_restore::Limits,
     ) -> Result<Replay<Self>>;
     fn same_mapping(&self, other: &Self) -> bool;
+    fn same_source_definition(&self, other: &Self) -> bool;
 }
 impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
+    fn same_source_definition(&self, other: &Self) -> bool {
+        self.same_definition(other)
+    }
+    #[cfg(feature = "codec")]
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> {
         body.definition()
     }
@@ -50,10 +56,7 @@ impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
         fragments: [Fragment; 2],
         limits: crate::source_shared_edge_restore::Limits,
     ) -> Result<Replay<Self>> {
-        let mut value = self.definition();
-        value["uses"] =
-            value_codec::Value::Array(fragments.iter().map(Fragment::definition).collect());
-        let r = crate::source_shared_edge_restore::restore(value, limits)?;
+        let r = self.requalify_with_uses(fragments.each_ref(), limits)?;
         Ok(Replay {
             edge: r.edge,
             work: r.work_used,
@@ -69,6 +72,10 @@ impl ExchangeCarrier for crate::source_shared_edge::SharedEdge {
     }
 }
 impl ExchangeCarrier for crate::source_projective_edge::Edge {
+    fn same_source_definition(&self, other: &Self) -> bool {
+        self.same_definition(other)
+    }
+    #[cfg(feature = "codec")]
     fn body_definition(body: &crate::source_volume::Body<Self>) -> Result<value_codec::Value> {
         body.definition()
     }
@@ -77,16 +84,7 @@ impl ExchangeCarrier for crate::source_projective_edge::Edge {
         fragments: [Fragment; 2],
         limits: crate::source_shared_edge_restore::Limits,
     ) -> Result<Replay<Self>> {
-        let mut value = self.definition();
-        for side in 0..2 {
-            value["uses"][side]["fragment"] = fragments[side].definition();
-        }
-        let r = crate::source_projective_edge::restore(
-            value,
-            limits.mapping_cells_per_use,
-            limits.exact_work,
-            limits.driver_cells,
-        )?;
+        let r = self.requalify_with_uses(fragments.each_ref(), limits)?;
         Ok(Replay {
             edge: r.edge,
             work: r.exact_work,
@@ -104,12 +102,20 @@ impl ExchangeCarrier for crate::source_projective_edge::Edge {
             })
     }
 }
+mod source_identity;
+use source_identity::BodySource;
 pub struct Prepared<E = crate::source_shared_edge::SharedEdge> {
+    source: BodySource<E>,
+    #[cfg(feature = "codec")]
     original: value_codec::Value,
     restrictions: Vec<Restriction<E>>,
     vertices: Vec<Vertex>,
 }
-impl<E> Prepared<E> {
+impl<E: ExchangeCarrier> Prepared<E> {
+    pub(crate) fn belongs_to(&self, body: &crate::source_volume::Body<E>) -> bool {
+        self.source.matches(body)
+    }
+    #[cfg(feature = "codec")]
     pub fn original(&self) -> &value_codec::Value {
         &self.original
     }
@@ -234,21 +240,19 @@ pub fn prepare<E: ExchangeCarrier>(
                 });
             }
             let mut endpoints = endpoints.into_iter();
-            uses.push(
-                Fragment::new(
-                    fragment.surface(),
-                    fragment.curve(),
-                    endpoints.next().unwrap(),
-                    endpoints.next().unwrap(),
-                )?,
-            );
+            uses.push(Fragment::new(
+                fragment.surface(),
+                fragment.curve(),
+                endpoints.next().unwrap(),
+                endpoints.next().unwrap(),
+            )?);
         }
         if out.exact_work == limits.exact_work {
             return Ok(out);
         }
-        let mut uses=uses.into_iter();
+        let mut uses = uses.into_iter();
         let replay = edge.replay_refined(
-            [uses.next().unwrap(),uses.next().unwrap()],
+            [uses.next().unwrap(), uses.next().unwrap()],
             crate::source_shared_edge_restore::Limits {
                 mapping_cells_per_use: limits.replay_mapping_per_use,
                 exact_work: limits.exact_work - out.exact_work,
@@ -319,7 +323,9 @@ pub fn prepare<E: ExchangeCarrier>(
         });
     }
     out.prepared = Some(Prepared {
+        #[cfg(feature = "codec")]
         original: E::body_definition(body)?,
+        source: BodySource::capture(body)?,
         restrictions,
         vertices,
     });

@@ -15,6 +15,14 @@ for native geometry, operations and typed reports without `value-codec`. The
 default `codec` feature preserves serialized models, JSON report adapters and
 snapshot/history APIs; workspace application consumers enable it explicitly.
 
+Verified source boundary (2026-10-28): both default and minimal library checks
+pass. The minimal normal dependency tree contains no `value-codec`; two public
+integration tests pass with and without `codec`, covering source replay, an
+admitted cube, exchange provenance and a capped-canal volume oracle. All four
+default native library suites pass (4208 tests, 6 existing ignores). This does
+not qualify every minimal unit-test module or the full application artifact.
+See the [qualification protocol](../../docs/qualification/nurbs-native-source-boundary-2026-10-28/README.md).
+
 `nurbs_ss_general::branch_graph_from_surface_intersection` consumes the native
 NURBS surface-intersection report directly. Branch kinds, contact classes,
 coedge trims, UV traces and correspondence are typed; graph construction and
@@ -325,7 +333,7 @@ anchor and affine laws; open/periodic topology and face budgets are retained.
 JSON/TS/Rush body APIs expose these optional fields. Contact remains sampled;
 continuous contact and global embedding are uncertified.
 
-Canonical source-definition restore/replay and exchange snapshots require the
-`codec` feature because their API accepts retained structured definitions. Raw
-`Model` construction, boundary agreement, regularity and interval intersection
-kernels remain usable without JSON serialization.
+Serialized source-definition restore and exchange snapshots require the
+`codec` feature. Typed source `requalify`, inverse-region transport, exchange
+preparation, raw `Model` construction, boundary agreement, regularity and
+interval intersection kernels remain usable without JSON serialization.

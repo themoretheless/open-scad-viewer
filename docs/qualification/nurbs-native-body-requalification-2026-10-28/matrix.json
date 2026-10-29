@@ -1,0 +1,92 @@
+{
+  "library_checks": {
+    "minimal": "passed",
+    "codec": "passed"
+  },
+  "default_native_libraries": {
+    "passed": 4208,
+    "failed": 0,
+    "ignored": 6
+  },
+  "final_changed_incidence_module": {
+    "passed": 13,
+    "failed": 0
+  },
+  "minimal_public_integration": {
+    "passed": 2,
+    "failed": 0
+  },
+  "minimal_unit_target": {
+    "status": "incomplete",
+    "errors": 456,
+    "previous": 468,
+    "primary_errors_by_file": {
+      "source_support_shell.rs": 228,
+      "source_shell_incidence.rs": 31,
+      "source_projective_use.rs": 25,
+      "source_shared_edge/tests/mod.rs": 22,
+      "source_mapped_edge/tests_extra.rs": 20,
+      "tests/step_interchange_v3.rs": 18,
+      "analytic/../tests/analytic_tests.rs": 17,
+      "source_projective_edge.rs": 17,
+      "source_seam_tangency.rs": 14,
+      "linear_canal_body.rs": 13,
+      "source_mapped_edge/tests.rs": 12,
+      "analytic_features/../tests/analytic_features.rs": 4,
+      "linear_canal.rs": 4,
+      "source_profile_shell_audit.rs": 3,
+      "source_body_model.rs": 2,
+      "circular_blend/tests/mod.rs": 2,
+      "edge_tangency.rs": 2,
+      "face_injectivity.rs": 2,
+      "operations/tests.rs": 2,
+      "profile_region.rs": 2,
+      "source_collapsed_boundary.rs": 2,
+      "source_root_refinement.rs": 2,
+      "source_profile_shell_refinement.rs": 2,
+      "analysis/tests/mod.rs": 1,
+      "body_edit.rs": 1,
+      "spatial_rmf_qualification.rs": 1
+    }
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "logs": {
+    "native-body-final-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-final-minimal-check.log",
+      "sha256": "cf0adb56485917937e525275dbc6f06c93080d0a5a14e7f0436018ad23e542f8"
+    },
+    "native-body-final-default-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-final-default-check.log",
+      "sha256": "6271636b05c7d0dcb75dec3905cffbe321f235af1ad06a61e7322f6dd72d59d9"
+    },
+    "native-body-public-integration.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-public-integration.log",
+      "sha256": "146dea881f5c187a68f69d214211d804bcd9f1c9306138e5d58448b2abd2d52d"
+    },
+    "native-body-default-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-default-full.log",
+      "sha256": "16eb45117ed0f3b12cc99d097c468b78c660ee158b8440972d7499896b427522"
+    },
+    "native-body-final-incidence-tests.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-final-incidence-tests.log",
+      "sha256": "c1f43cc173b8f93fab24a5869d6f946f186b8bb47f7e3c65e06309b8184f6d48"
+    },
+    "native-body-final-unit-no-run.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-final-unit-no-run.log",
+      "sha256": "b8f317768577da420c05d548290d4a6a8b9609e12844e889aace91d9bca8bb6d"
+    },
+    "native-body-final-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-final-architecture.log",
+      "sha256": "46cdc76fcaca034aa08efba4401d2a07ffffdad9ae8671e62a9f734f2caeaefd"
+    }
+  }
+}

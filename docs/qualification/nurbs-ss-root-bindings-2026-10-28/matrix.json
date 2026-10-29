@@ -1,0 +1,97 @@
+{
+  "timestampUtc": "2026-10-28T00:48:04.029208+00:00",
+  "baseCommit": "8b81e6d1b5d1b3b823f4c5485801b5d4b69ad699",
+  "scope": "Native original SS root edge-clock/shared-vertex binding and exact-contact continuous pcurve domain proof; no topology authorship",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "f338f1dc9af9f74b674c5edb122ea2233a77b15518f28c46124feda287370617",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "2305d169868522d6d6587679882a2f921441034b40d2eaf23996d254de832e3a",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/mod.rs": "cd8249ed15d861f3ea74e30e75ccf48aa38d6fe60a22babd45d08cc6eb4d3a27",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/boundary_roots.rs": "a6058ec653b29e1dfc25c5e0fdb12fc1c4962542dd92bf1917370d5fc50e1990",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/boundary_roots/bindings.rs": "033c10363696a71e2a32cd8d32d882a26b76e4f0e2ac1ced05a58e3cdad19971",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/boundary_roots/bindings/vertices.rs": "1f5938ef5fef8d227c87c68329d5eaeed13747abde36b08f579e7ff9306706ed",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/curves/proof.rs": "99a3f96f00ca1b7aa095796eaac9cba6bb671333ed8873305add4dd85a09526d",
+    "crates/nurbs-core/tests/ss_graph_boundary_roots.rs": "c2b56d4200fe31ba969558f54ae3b4ed3df05339673c1ea2bff4f372039f03a7",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+  },
+  "focused": {
+    "exitCode": 0,
+    "resultSummaries": 2,
+    "passed": 27,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0,
+    "logSha256": "d3fdaa2d2fda65aefbbac514a03500a39f3d4afe8619fa0d69fb699cbe2e4929"
+  },
+  "bindingReplay": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 1988,
+    "logSha256": "5134398d555d99f3ddcbafbfe585c1b5c2605b6b0216d30598651a3fb818a02f"
+  },
+  "native": {
+    "exitCode": 0,
+    "resultSummaries": 169,
+    "passed": 3060,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0,
+    "logSha256": "fdd962bdcb98437a9866617be5e1a22f27a91df51bc5b7f886d17be6f7d17d90"
+  },
+  "fullBrepLibrary": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 1893,
+    "failed": 0,
+    "ignored": 5,
+    "filtered": 0,
+    "logSha256": "c07755df7c9554caaa4855a692badb01d8419677edb44a3c9d6800220149ddf8"
+  },
+  "initialDomainRegression": {
+    "exitCode": 101,
+    "resultSummaries": 1,
+    "passed": 14,
+    "failed": 1,
+    "ignored": 0,
+    "filtered": 0,
+    "logSha256": "8b6ab836b3c2f06f76572d29dd8a5666b92c42801df67fe9ce3b85577c994ea4"
+  },
+  "initialFailureCorrection": "Replaced rounded N/W containment with homogeneous margin inequalities, exact checked dyadic coefficients and bounded subdivision; retained the original zero-chord test geometry and tolerances.",
+  "checks": {
+    "rustfmt": "passed",
+    "diffWhitespace": "passed",
+    "api": {
+      "exitCode": 0,
+      "publicModules": 239,
+      "catalogEntries": 200,
+      "logSha256": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1"
+    },
+    "architecture": {
+      "exitCode": 1,
+      "diagnostics": 71,
+      "limitsRaised": false,
+      "logSha256": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802"
+    },
+    "productionVite": {
+      "exitCode": 0,
+      "logSha256": "b2f72e6b166502950d7ee885c8bd00c04696c3002eabee64365527895218b8fc"
+    },
+    "distributionSize": {
+      "exitCode": 1,
+      "geometryChunkBytes": 5330908,
+      "geometryChunkBudget": 4680000,
+      "logSha256": "efe0093a7981c34518bd12b19862f9999f4d1d66215dd6f239faeceeb277af53"
+    },
+    "existingPackedArtifactIntegrity": {
+      "file": "geometry-kernel-bytes-BEvQsZlb.js",
+      "decodedBytes": 15811953,
+      "sha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992",
+      "packedAndStreamedMatch": true
+    }
+  },
+  "wasmRebuiltForThisExtension": false,
+  "fullPlanComplete": false
+}

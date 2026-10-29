@@ -1,0 +1,62 @@
+{
+  "removed": [
+    {
+      "path": "crates/brep-core/src/lib.rs",
+      "oldPin": 1642
+    },
+    {
+      "path": "crates/modelgraph-text/src/lower/compiler.rs",
+      "oldPin": 1856
+    },
+    {
+      "path": "crates/modelgraph-text/src/parser/parser.rs",
+      "oldPin": 1000
+    },
+    {
+      "path": "crates/openscad-core/src/eval/evaluator/evaluator.rs",
+      "oldPin": 2627
+    },
+    {
+      "path": "crates/rush-frontend/src/lower.rs",
+      "oldPin": 2195
+    },
+    {
+      "path": "crates/rush-frontend/src/parser.rs",
+      "oldPin": 1326
+    },
+    {
+      "path": "crates/rush-runtime/src/emit.rs",
+      "oldPin": 1838
+    },
+    {
+      "path": "crates/rush-runtime/src/eval.rs",
+      "oldPin": 1212
+    },
+    {
+      "path": "crates/rush-runtime/src/nurbs.rs",
+      "oldPin": 891
+    },
+    {
+      "path": "crates/rush-runtime/src/schema.rs",
+      "oldPin": 1245
+    }
+  ],
+  "added": [],
+  "raisedPins": [],
+  "timestampUtc": "2026-10-28T00:03:28.330315+00:00",
+  "baseCommit": "6ea95ae16fc822f376aa83db562d5b093c4b458a",
+  "beforeSha256": "567d5a88c9275ff13f6c81f1795a3516d1e9d19e1396d29fa997f5b756bd799b",
+  "afterSha256": "e9d4b370b69ef4e8fedeb5c9cd328412684162ad77fb5e131e666724bcd49259",
+  "auditScriptSha256": "00aeddadedd3b4017aee4bf45d0ecf0d7c668ab84f38066990b91fc698dc8f1b",
+  "tests": {
+    "passed": 4,
+    "failed": 0,
+    "logSha256": "f73aac071fbdb9ea4987475e30bcf134ee27167ffe356439ef94a16645f84f85"
+  },
+  "remainingAudit": {
+    "exitCode": 1,
+    "diagnostics": 73,
+    "logSha256": "d059f6da1d120b2adc4dbb6f571eb1f1c57874581df857b1ea5bdd074cd7a1c4"
+  },
+  "fullPlanComplete": false
+}

@@ -1,0 +1,42 @@
+{
+  "timestampUtc": "2026-10-28T00:37:11.412531+00:00",
+  "baseCommit": "deba90630af8d366198073ac9d3376e641c95638",
+  "scope": "Extract SVG editor exchange state/lifecycle and handlers; retain the file-exchange facade and native geometry ownership",
+  "sourceSha256": {
+    "src/features/directModeler/useFileExchange.ts": "926f4b85ee8062653658ad13f3c4dcf8bd6b8fdc378c0434cec49e8f04a5d4ee",
+    "src/features/directModeler/useSvgExchange.ts": "2bd0abcca39b2a9233b93e7f23bcb9e099232bebba7990842f9859ef2fad6c0b"
+  },
+  "beforeLines": 541,
+  "afterLines": 409,
+  "svgAdapterLines": 188,
+  "identicalMovedStateSha256": "6184a7922a80caa797d26abdd49c59d164eba58fdee3843d2931e912b503a8fe",
+  "identicalMovedFunctionsSha256": "65204152fc3aa4f2ce069155338b26c8f244f5063f9fbad716b5ae66b4d3ac07",
+  "identicalPublicReturnObjectSha256": "c1f007dcdfd304a808057791ab71245229b3e2cfa075b75ecdfaba1f4e96cc04",
+  "vueTypecheck": {
+    "exitCode": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "tests": {
+    "exitCode": 0,
+    "suites": 6,
+    "passed": 400,
+    "failed": 0,
+    "logSha256": "a569f19f409326fb3dd93f1388bb8fed6d9d360d8fa6e07876b9086e922fbe0a",
+    "files": [
+      "directModelerUi",
+      "svgWorker",
+      "svgWorkerRealBoundary",
+      "svgProjectionValidation",
+      "svgGeometry",
+      "solidStepExchange"
+    ]
+  },
+  "afterTestFormatting": "Type-only Pick and identical destructure list wrapped across lines; moved state and all handler bodies remain byte-identical.",
+  "architecture": {
+    "exitCode": 1,
+    "diagnostics": 71,
+    "sourceSizeLimitRaised": false,
+    "logSha256": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802"
+  },
+  "fullPlanComplete": false
+}

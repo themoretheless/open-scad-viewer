@@ -1,0 +1,62 @@
+{
+  "minimal_unit_target": {
+    "status": "incomplete",
+    "errors": 412,
+    "previous": 456,
+    "primary_errors_by_file": {
+      "source_support_shell.rs": 228,
+      "source_projective_use.rs": 25,
+      "source_shared_edge/tests/mod.rs": 22,
+      "source_mapped_edge/tests_extra.rs": 20,
+      "tests/step_interchange_v3.rs": 18,
+      "analytic/../tests/analytic_tests.rs": 17,
+      "source_projective_edge.rs": 17,
+      "source_seam_tangency.rs": 14,
+      "source_mapped_edge/tests.rs": 12,
+      "analytic_features/../tests/analytic_features.rs": 4,
+      "linear_canal.rs": 4,
+      "source_profile_shell_audit.rs": 3,
+      "source_body_model.rs": 2,
+      "circular_blend/tests/mod.rs": 2,
+      "edge_tangency.rs": 2,
+      "face_injectivity.rs": 2,
+      "operations/tests.rs": 2,
+      "profile_region.rs": 2,
+      "source_collapsed_boundary.rs": 2,
+      "source_root_refinement.rs": 2,
+      "source_profile_shell_refinement.rs": 2,
+      "analysis/tests/mod.rs": 1,
+      "body_edit.rs": 1,
+      "spatial_rmf_qualification.rs": 1
+    }
+  },
+  "default_native_libraries": {
+    "passed": 4208,
+    "failed": 0,
+    "ignored": 6
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "logs": {
+    "native-body-unit-separation-final-minimal.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-unit-separation-final-minimal.log",
+      "sha256": "cc9322b2cbeaf00e6c8b4d92db451eccfc1b874938815d9d7752323792f5e56e"
+    },
+    "native-body-unit-separation-default-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-unit-separation-default-full.log",
+      "sha256": "bf8fd793bc65c4f7ea1501ac958db70315ce6dfc7f81809fa1651f674dd9a1f4"
+    },
+    "native-body-unit-separation-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/native-body-unit-separation-architecture.log",
+      "sha256": "60e1a0d4c854d38c8b7472d6f1792d21d5eb29464751086bfdd3faf30cf48097"
+    }
+  }
+}

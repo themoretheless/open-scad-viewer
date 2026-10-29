@@ -5,7 +5,8 @@ import {primitiveCreationError} from '../services/primitiveCreationError'
 import RoundSolidOptions from '../components/RoundSolidOptions.vue'
 import {sourceBodyRecordInspectionOptions} from '../services/sourceBodyArchive'
 const ExpressionShellCheck=defineAsyncComponent(()=>import('../components/ExpressionShellCheck.vue'))
-const ProfileBridgeCheck=defineAsyncComponent(()=>import('../components/ProfileBridgeCheck.vue'))
+const SurfacePairChecks=defineAsyncComponent(()=>import('../components/SurfacePairChecks.vue'))
+const SurfaceDistanceCheck=defineAsyncComponent(()=>import('../components/SurfaceDistanceCheck.vue'))
 const SourceBodyFailureNotice=defineAsyncComponent(()=>import('../components/SourceBodyFailureNotice.vue'))
 import type {ExpressionDisplayReport} from '../services/expressionDisplay'
 import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
@@ -503,7 +504,7 @@ const selectedBrepBodies = computed(() => selectedBodies.value.filter(b=>b.brep)
 const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
-const profileBridgePanel=ref<InstanceType<typeof ProfileBridgeCheck>|null>(null)
+const profileBridgePanel=ref<InstanceType<typeof SurfacePairChecks>|null>(null)
 const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../services/nurbsSurface').NurbsSurface,import('../services/nurbsSurface').NurbsSurface]:null)
 type SolidTopology=import('../services/mainSolidProtocol').MainSolidResults['topology']
 const {
@@ -2710,21 +2711,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div v-if="pane==='3d' && selectedNurbs && (!commandActive || pointEditActive || nativeNurbsPending)" class="operation-card nurbs-card">
               <CurveOffsetConstructionInfo :value="selectedNurbsCurve?.offsetConstruction" :locale="locale" :curves="document.curves??[]" :ids="selectedIds" @result="currentChain=$event" />
               <button v-if="selectedCurvePair || selectedSurfacePair" class="primary" @click="matchSelectedG1">{{ selectedSurfacePair?label('G1/G2: A → B','G1/G2: A → B'):label('G1: вторую к первой','G1: match second to first') }}</button>
-              <ProfileBridgeCheck :ref="el => profileBridgePanel = el as InstanceType<typeof ProfileBridgeCheck> | null" v-if="profileBridgeSurfaces" :surfaces="profileBridgeSurfaces" :active="props.open&&!commandActive" :ru="ru" />
-              <section v-if="selectedSurfacePair" aria-label="surface-distance" class="body-diagnostics">
-                <button @click="surfaceDistanceOpen=!surfaceDistanceOpen" :aria-pressed="surfaceDistanceOpen">{{ label('Расстояние между поверхностями','Distance between surfaces') }}</button>
-                <template v-if="surfaceDistanceOpen">
-                  <label>{{ label('Объём расчёта','Calculation budget') }}<select v-model.number="surfaceDistanceBudget" :aria-label="label('Объём расчёта поверхностей','Surface calculation budget')"><option :value="10000">{{ label('Обычный','Standard') }}</option><option :value="100000">{{ label('Расширенный','Extended') }}</option></select></label>
-                  <small v-if="surfaceDistancePending" role="status">{{ label('Измеряю расстояние…','Measuring distance…') }} <button @click="surfaceDistanceOpen=false">Esc</button></small>
-                  <template v-if="surfaceDistance?.value">
-                    <output data-surface-distance>{{ surfaceDistance.value.distanceIntervalMm.map(v=>Number(v.toPrecision(12)).toString()).join(' … ') }} mm</output>
-                    <small v-if="surfaceDistance.value.converged">{{ label('Допуск расстояния достигнут: 0,001 мм.','Distance tolerance reached: 0.001 mm.') }}</small>
-                    <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта или проверьте меньшие участки поверхностей.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget or inspect smaller surface regions.') }}</p>
-                    <small>{{ label('Измерены полные выбранные NURBS-поверхности.','The complete selected NURBS surfaces are measured.') }}</small>
-                  </template>
-                  <p v-if="surfaceDistance?.error" role="alert">{{ surfaceDistance.error }}</p><button v-if="surfaceDistanceRetryVisible" @click="surfaceDistanceRevision++">{{ label('Повторить измерение поверхностей','Retry surface distance') }}</button>
-                </template>
-              </section>
+              <SurfacePairChecks :ref="el => profileBridgePanel = el as InstanceType<typeof SurfacePairChecks> | null" v-if="profileBridgeSurfaces" :surfaces="profileBridgeSurfaces" :active="props.open&&!commandActive" :ru="ru" />
+              <SurfaceDistanceCheck v-if="selectedSurfacePair" v-model:opened="surfaceDistanceOpen" v-model:budget="surfaceDistanceBudget" :value="surfaceDistance?.value??null" :error="surfaceDistance?.error??''" :pending="surfaceDistancePending" :retry-visible="surfaceDistanceRetryVisible" :ru="ru" @retry="surfaceDistanceRevision++" />
               <section v-if="selectedSurfacePair" aria-label="Surface boundary inspection" class="body-diagnostics">
                 <button @click="boundaryInspection=!boundaryInspection" :aria-pressed="boundaryInspection">{{ label('Проверить стык поверхностей','Inspect surface boundary') }}</button>
                 <template v-if="boundaryInspection">

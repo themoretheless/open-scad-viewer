@@ -1,11 +1,12 @@
 //! Original shell definitions replay material regions and every ownership gate.
-use crate::{
-    source_region_restore,
-    source_shell_incidence::{
-        self, Address, AffineMaps, Pair, Pole, RootCandidates, RootPlanes, Shell,
-    },
+use crate::source_region_restore;
+#[cfg(feature = "codec")]
+use crate::source_shell_incidence::{
+    self, Address, AffineMaps, Pair, Pole, RootCandidates, RootPlanes, Shell,
 };
+#[cfg(feature = "codec")]
 use nurbs_core::{Error, Result};
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Value, json};
 pub struct Limits {
     /// Region audit budgets are independent per face/replay step.
@@ -13,19 +14,24 @@ pub struct Limits {
     pub exact_work: u64,
     pub driver_cells: usize,
 }
+#[cfg(feature = "codec")]
 fn invalid(message: &str) -> Error {
     Error::new("BREP_SOURCE_SHELL_RESTORE", message)
 }
+#[cfg(feature = "codec")]
 fn decode<T: for<'de> Deserialize<'de>>(v: Value) -> Result<T> {
     T::from_value(v).map_err(|_| invalid("Invalid source shell field"))
 }
+#[cfg(feature = "codec")]
 fn address(a: Address) -> [usize; 3] {
     [a.face, a.wire, a.edge]
 }
+#[cfg(feature = "codec")]
 fn read_address(v: Value) -> Result<Address> {
     let [face, wire, edge] = decode(v)?;
     Ok(Address { face, wire, edge })
 }
+#[cfg(feature = "codec")]
 pub(crate) fn definition(shell: &Shell) -> Result<Value> {
     let regions = shell
         .regions()
@@ -45,6 +51,7 @@ pub(crate) fn definition(shell: &Shell) -> Result<Value> {
         json!({"version":1,"regions":regions.iter().map(|r|r.definition()).collect::<Vec<_>>(),"pairs":pairs,"poles":poles}),
     )
 }
+#[cfg(feature = "codec")]
 pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::Report> {
     if value["version"].as_u64() != Some(1)
         || !(1..=100_000_000).contains(&limits.exact_work)
@@ -162,7 +169,8 @@ pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::
 }
 
 #[cfg(test)]
-pub(crate) fn assert_replay(shell: &Shell) {
+#[cfg(feature = "codec")]
+fn assert_wire_replay(shell: &Shell) {
     let definition = shell.definition().unwrap();
     let encoded = value_codec::to_string(&definition).unwrap();
     let value: Value = value_codec::from_str(&encoded).unwrap();
@@ -205,4 +213,65 @@ pub(crate) fn assert_replay(shell: &Shell) {
         driver_cells: 100000,
     };
     assert!(restore(definition, &exhausted).unwrap().shell.is_none());
+}
+
+#[cfg(test)]
+pub(crate) fn assert_replay(shell: &crate::source_shell_incidence::Shell) {
+    let limits = Limits {
+        regions: crate::source_region_restore::test_limits(),
+        exact_work: 100000000,
+        driver_cells: 100000,
+    };
+    shell.assert_native_replay_cache_and_missing_ownership(&limits);
+    let fresh = shell.requalify(&limits).unwrap();
+    #[cfg(feature = "codec")]
+    {
+        let wire = restore(shell.definition().unwrap(), &limits).unwrap();
+        assert_eq!(
+            (
+                fresh.work_used,
+                fresh.root_checks,
+                fresh.driver_cells,
+                fresh.uncertain_pair,
+                fresh.reason
+            ),
+            (
+                wire.work_used,
+                wire.root_checks,
+                wire.driver_cells,
+                wire.uncertain_pair,
+                wire.reason
+            )
+        );
+        assert_eq!(
+            fresh.shell.as_ref().unwrap().definition().unwrap(),
+            wire.shell.as_ref().unwrap().definition().unwrap()
+        );
+    }
+    let fresh = fresh.shell.expect(fresh.reason);
+    assert_eq!(fresh.vertices(), shell.vertices());
+    assert_eq!(fresh.uses(), shell.uses());
+    assert_eq!(
+        crate::source_boundary_display::prepare(&fresh, 2, 100000, 100000).unwrap(),
+        crate::source_boundary_display::prepare(shell, 2, 100000, 100000).unwrap()
+    );
+    assert_eq!(
+        crate::source_boundary_network::inspect(&fresh, 100000, 100000).unwrap(),
+        crate::source_boundary_network::inspect(shell, 100000, 100000).unwrap()
+    );
+    assert!(
+        crate::source_vertex_links::inspect(&fresh, 100000)
+            .unwrap()
+            .all_manifold
+    );
+    for region in shell.regions().unwrap() {
+        crate::source_region_restore::assert_replay(region);
+    }
+    let exhausted = Limits {
+        exact_work: 1,
+        ..limits
+    };
+    assert!(shell.requalify(&exhausted).unwrap().shell.is_none());
+    #[cfg(feature = "codec")]
+    assert_wire_replay(shell);
 }

@@ -87,6 +87,7 @@ pub mod imprint_pipeline;
 pub mod intersections;
 pub mod nurbs_ss_g6;
 pub mod nurbs_ss_general;
+pub mod ss_face_membership;
 pub mod nurbs_step_interchange;
 mod nurbs_step_shared;
 pub mod nurbs_step_solid;
@@ -446,7 +447,6 @@ pub mod offset_edge_supports;
 
 pub mod linear_canal;
 
-#[cfg(feature = "codec")]
 pub mod linear_canal_body;
 
 pub mod source_root_parameter;
@@ -468,6 +468,7 @@ pub mod source_hull_separation;
 pub mod source_shell_geometry;
 
 pub mod source_volume;
+pub mod graph_body;
 
 pub mod source_body_model;
 

@@ -2,6 +2,7 @@
 mod sweep_requests;
 mod loft_requests;
 mod certificate_requests;
+mod offset_requests;
 use super::*;
 use crate::surface::Surface;
 #[path="../retained_body_coverage.rs"]

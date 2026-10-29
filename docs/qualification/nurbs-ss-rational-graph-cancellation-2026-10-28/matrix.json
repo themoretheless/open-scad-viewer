@@ -1,0 +1,103 @@
+{
+  "base_commit": "7b1cac0768c6cc77879a3a4ae650bac6f2ad404a",
+  "branch": "codex/nurbs-plan-recovery-20261028",
+  "scope": "Exact original positive-rational Bezier graph cancellation and source-bound closed/open SS construction; previous contour graphs and query identity retained",
+  "sources": {
+    "crates/brep-core/src/face_cut.rs": "94ecc5a071d77eadc5a98b02246bc1988f8c9f87b0fc3940e457006513294f31",
+    "crates/brep-core/src/face_cut/closed.rs": "1ecb7fad71c76ad37b3734a45635072c1e8876ec9f8b10e0e251c67d8b647c4b",
+    "crates/brep-core/src/face_cut/closed/path_graph.rs": "0af4b6ed007cc65964b63cab75a52f8f8c931f8640e9610e30c3f0d5e1621501",
+    "crates/brep-core/src/face_cut/closed/path_graph/author.rs": "a4909330b0939cc3206030f6f53f0cf54d15deffb02db8f84890fd3c76de23b5",
+    "crates/brep-core/src/face_cut/closed/path_graph/cycles.rs": "71b3516cb61164a7e907d993fd3c471d4ed695f4eb07063b17a6c7c1f95822b4",
+    "crates/brep-core/src/face_cut/closed/path_graph/prepare.rs": "88ae2e9ec99d1811ca502d444c98c36e66599bcaf5e4f382c4eb74ec23a1187a",
+    "crates/brep-core/src/face_cut/closed/path_graph/tests.rs": "03cc5984fdc52318abf2ef568eca91f64042cb1eb52d21b7a385151d3d1db919",
+    "crates/brep-core/src/face_cut/closed/reference.rs": "ee6cb998b89e78de203ae240d04ae77562a30ff7df8826543f2e80ffca9ea63a",
+    "crates/brep-core/src/ss_face_membership/coedge_roots.rs": "376b361b48c8c9a16267d24399643e364bb5a0456a9960b165dcf3223d05ef26",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts.rs": "6f36c963d1f1f93c71d256e752926e80346989563c6608896ccd7ca84b9851df",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network.rs": "450435a586cb925c3d851602102393aa4252423c5228db81f1230caa414813be",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/graph.rs": "6e1b18d7235bb6d09f9f29e4a13bf5a22c4bbf2b67f7bede7aa4d5eaae9f5a0f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/network/graph/tests.rs": "4b9cbe06d5a092546fb05a2da2b3ffdca20489982bacb82328a7ab695740a3e1",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/tests.rs": "90f9f1fffa9e1b11c9864fece788549a71b9404ac6939c78fa88100faaa34e2f",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/tests.rs": "18e5d33ca55e9989b0ee6a2c72ac36a8d7421cedb734ad9ca233f9e2cb5afd58",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/query_identity.rs": "8f5e6f2f6ea195cbfeee3072c5cf3cb0aa264c507b35368a0a06a6d585b59d87",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/tests.rs": "f094ca70780a5417a1289451c1eddbe0cc5c680be1a699a6ea549da9f1755ade",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph.rs": "f47d2aa844cd1314bb0600b7baf159982cf9c2d97821e87603c9fd9a5a9964e9",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/rational_graph.rs": "ce0b5fc4ab914dd6f6fb4ba8c5bf4f4fce213174a1c095927982d1bdb80decb3",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/rational_graph/tests.rs": "418fa9e6094d6e5d5cf65c661892f987b567565f38e4c1162d15fa77ff1f1144",
+    "crates/nurbs-core/src/intersection/ss_intersection/quadratic_graph/rational_graph/tests/coupled.rs": "f8861ac6d32b0a1e459c6e721e098163f3c27a4c3428215d0faa52f86d3f9a80"
+  },
+  "full_library_tests": {
+    "brep-core": {
+      "passed": 1993,
+      "failed": 0,
+      "ignored": 5,
+      "seconds": 130.99
+    },
+    "cad-predicates": {
+      "passed": 100,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.0
+    },
+    "nurbs-core": {
+      "passed": 1993,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 10.76
+    },
+    "nurbs-intersect": {
+      "passed": 108,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 0.02
+    }
+  },
+  "total": {
+    "passed": 4194,
+    "failed": 0,
+    "ignored": 6
+  },
+  "native_focused": {
+    "passed": 5,
+    "failed": 0
+  },
+  "brep_open_focused": {
+    "passed": 1,
+    "failed": 0
+  },
+  "logs": {
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-architecture-final.log": "4cbe47b35701e4532eb597a25b4b2b8215a422715147de6f57dfcd6444d233ca",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-architecture-git.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-architecture.log": "0fee834d12a4359840a30ec2103194933d3e6ef6b4c7fb58761464b095b6dc0f",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-brep-focused-r2.log": "c8730ca5f999cf5f22e75fc4c48a628af5c90847a71819b9c4cb54abc7246d31",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-brep-focused.log": "cec55debac436a7dfb79b18b8e78851061a9cef1dc73006820632604fb12b539",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-focused-r2.log": "c72d7160cd0534135657f13889805f8276c2c50a1ca2114e3e3859af2b2d2d60",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-focused-r3.log": "a45246d217b0eeb288826c87ab8456fa22dac506c0820184adbbe146af2de4f0",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-focused.log": "6c0aa10ca91a1e11845f23aa4e0ba6cf01e9b731627fb01cdf399029f78c628a",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-format-all.log": "849b5308ba7bcccd173022e0041ad23d29f0c18d9443404c8beff30520eed937",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-git-status.log": "31929d8cc24da2df6d38a10094b29b9cf9e6c32b767f3a9f5e2a2362f7ec4f0e",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-native-full.log": "ef58578ed6614accfc7e898b5712521d88db9f117d0e3f84d3805e1ea166ce8c",
+    "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/rational-graph-whitespace.log": "bb5b2a842506fb8a0d36d3f324bbb213d7f55650554881cfbbdfa3314ea8b9a3"
+  },
+  "checks": {
+    "rustfmt": "passed on all 21 sources",
+    "whitespace": "passed",
+    "git_diff_check": "passed",
+    "staged_sources_match": true,
+    "api": {
+      "public_modules": 239,
+      "catalogue_entries": 200
+    },
+    "architecture": {
+      "existing_violations": 71,
+      "new_violations": 0,
+      "limits_raised": false
+    }
+  },
+  "delivery": "Git recovered; cohesive local checkpoint; external receipt records its actual commit; main/push not qualified",
+  "snapshot": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/qualified-rational-ss-cancellation-20261028.tar.gz",
+  "complete_plan": false
+}

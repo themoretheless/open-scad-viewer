@@ -17,6 +17,15 @@ export function registerRushGraphNurbsTools(server: McpServer) {
     catch (error) {
         return failure(error);
     } });
+    server.registerTool('rush_nurbs_offset_deviation', {
+        description:'Check a saved surface node against the signed normal offset of a source surface node over their shared UV domain. Rust returns a continuous deviation bound, a mismatch witness or unresolved. This query does not modify the graph or authorize a solid.',
+        inputSchema:z.object({document:rushGraphNurbsSchema,source:z.string().max(32),candidate:z.string().max(32),
+            distance:z.number().finite(),tolerance:z.number().finite().positive(),maxCells:z.number().int().min(0).max(100000),maxDepth:z.number().int().min(0).max(40)}).strict(),annotations,
+    },async(input,context)=>{try{
+        const {document,...offsetDeviation}=input;
+        const result=await runOwnNurbs(document,{action:'evaluate',offsetDeviation},context.mcpReq.signal);
+        return text(result,!result.ok);
+    }catch(error){return failure(error)}});
     server.registerTool('rush_nurbs_evaluate', { description: 'Evaluate own rational curve/surface coordinates and first/second derivatives. Inspect derivative_status and null normals/curvatures at singularities.', inputSchema: z.object({ document: rushGraphNurbsSchema, evaluations: z.array(z.object({ node: z.string().max(32), u: z.number().finite(), v: z.number().finite().optional() }).strict()).min(1).max(64) }), annotations }, async (input, context) => { try {
         const r = await runOwnNurbs(input.document, { action: 'evaluate', evaluations: input.evaluations }, context.mcpReq.signal);
         return text(r, !r.ok);

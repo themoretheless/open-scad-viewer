@@ -13,6 +13,42 @@ pub struct Point {
     world: [[f64; 2]; 3],
 }
 impl Point {
+    /// Recheck original parent compositions and crossing before transporting it.
+    pub fn requalify(&self, limits: RestoreLimits) -> Result<Report> {
+        if self.edge.uses().iter().any(|u| {
+            u.endpoints()
+                .iter()
+                .any(|e| matches!(e, crate::source_boundary_fragment::Endpoint::Carrier { .. }))
+        }) {
+            return Err(Error::new(
+                "BREP_CARRIER_ROOT",
+                "Nested carrier parents are unsupported",
+            ));
+        }
+        let edge = self.edge.requalify(limits.edge)?;
+        let Some(edge) = edge.edge else {
+            return Ok(Report {
+                point: None,
+                spans: 0,
+                reason: edge.reason,
+            });
+        };
+        let root = self.root.requalify(limits.root_mapping_cells)?;
+        let Some(root) = root.point else {
+            return Ok(Report {
+                point: None,
+                spans: 0,
+                reason: root.reason,
+            });
+        };
+        qualify(&edge, &root, self.source_side, limits.spans)
+    }
+
+    pub fn same_definition(&self, other: &Self) -> bool {
+        self.source_side == other.source_side
+            && self.edge.same_definition(&other.edge)
+            && self.root.same_definition(&other.root)
+    }
     pub fn edge(&self) -> &SharedEdge {
         &self.edge
     }
@@ -35,6 +71,7 @@ impl Point {
         self.world
     }
     /// Original definitions only. Cached coordinates and flags grant no authority.
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
         value_codec::json!({"version":1,"kind":"original-carrier-root","edge":self.edge.definition(),
             "root":self.root.definition(),"sourceSide":self.source_side})
@@ -89,8 +126,9 @@ impl Restriction<'_> {
         self.half == 0
             && next.half == 1
             && self.side == next.side
-            && self.point.definition() == next.point.definition()
+            && self.point.same_definition(next.point)
     }
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
         value_codec::json!({"version":1,"kind":"carrier-root-restriction",
             "point":self.point.definition(),"side":self.side,"half":self.half})
@@ -154,11 +192,11 @@ pub(crate) fn same_mapped_endpoint(
     }
     let own_index = 1 - other;
     let other_side = match ends[other] {
-        Endpoint::Carrier { point, side } if point.definition() == carrier.definition() => *side,
+        Endpoint::Carrier { point, side } if point.same_definition(carrier) => *side,
         Endpoint::Crossing {
             point,
             role: Role::Boundary,
-        } if point.definition() == carrier.root.definition() => carrier.source_side,
+        } if point.same_definition(&carrier.root) => carrier.source_side,
         _ => return false,
     };
     if own == other_side {
@@ -277,6 +315,7 @@ pub struct RestoreLimits {
     pub root_mapping_cells: usize,
     pub spans: usize,
 }
+#[cfg(feature = "codec")]
 pub fn restore(value: value_codec::Value, limits: RestoreLimits) -> Result<Report> {
     if value["version"].as_u64() != Some(1)
         || value["kind"].as_str() != Some("original-carrier-root")

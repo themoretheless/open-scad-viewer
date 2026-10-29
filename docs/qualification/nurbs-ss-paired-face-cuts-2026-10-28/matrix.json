@@ -1,0 +1,83 @@
+{
+  "base_commit": "0b0fa8a1fb455cb5cc04000caf9783402211a6b5",
+  "scope": "Atomic two-operand actual-face partition using one qualified original SS path; both material sectors retained; not complete Boolean or Solid admission",
+  "sources": {
+    "crates/Cargo.lock": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+    "crates/Cargo.toml": "70c830679aeb109f53d026adb2a94140fde219dd2e28a7c8c4cf7154ffb28546",
+    "crates/brep-core/src/ss_face_membership.rs": "d83184711e372e2c231d683b8fe6ba1b6a9574da12c7945a99489ebe46f012b6",
+    "crates/brep-core/src/ss_face_membership/coedge_roots.rs": "ccc400539b4bc174806bc5991f06c952889c529e108b9fe112d5ad59d0bc4426",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts.rs": "7cb8de855ae1adb219e6809229e9503557496a5785fa07396316b6d2d44b3ff9",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition.rs": "c2fa0c71600045706c123dfaa95068529c89faa927e02075891dddbfd6450430",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open.rs": "146db481bb02b39735a45c192bf9c15d523f279b2b129c3b3ed3fd283835814e",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/apply.rs": "75b347b34a1a8c8b6a7158dcdbb46d9efd246f780864fdf2fb1d917e7ec98395",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/geometry.rs": "5be8709f0f789c639c1d5a2c617017b748ddc2b06a197d0ad72e29b3fd5e3778",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/pair.rs": "d3c7eddc0c252ae6cc3d3262119ab940099a20aed5590d3626b34fad2428e6f3",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/route.rs": "1d9672864367c9822d6ddd105527d9ee887f88ee0b935515ef5b6e968d8b08a9",
+    "crates/brep-core/src/ss_face_membership/coedge_roots/cuts/partition/open/tests.rs": "407dcfd651c1156ffa00c8f13fe72f6107df15dc6363213c55f9832f52b46a2c"
+  },
+  "logs": {
+    "/tmp/osv-plan-ss-pair-api-final.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-pair-api.log": "dea04e17041c0c305575e33df777d322fc2fe0c0afc7fc001d4d76781256d2f1",
+    "/tmp/osv-plan-ss-pair-architecture-final.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-pair-architecture.log": "0a088a07df4964da02b5ae8a116b73db234829552096eee39456630ca481f802",
+    "/tmp/osv-plan-ss-pair-focused-r2.log": "ebddebdad2bc34a9979e0f541e411a3fd41df9ef7162b0cab197622b699c7d7e",
+    "/tmp/osv-plan-ss-pair-focused.log": "2b4d0f1a59af13031c68e4c8d442179eb6fb42a81e707ea904a551887babe84a",
+    "/tmp/osv-plan-ss-pair-format-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/tmp/osv-plan-ss-pair-full.log": "40ee0a80229c5acec44c7cca79f76d5affc406b00bb6cd633f95435e333cdb7d"
+  },
+  "results": {
+    "initial_compile": {
+      "exit_code": 101,
+      "reason": "Missing intermediate reexport of new pair API; corrected without weakening geometry or widening sealed owner fields"
+    },
+    "focused_before_additional_snapshot_and_late_budget_regressions": {
+      "passed": 12,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "final_full_including_expanded_pair_cases": {
+      "passed": 1960,
+      "failed": 0,
+      "ignored": 5,
+      "exit_code": 0
+    },
+    "format": {
+      "exit_code": 0
+    },
+    "api": {
+      "modules": 239,
+      "catalogue": 200,
+      "exit_code": 0
+    },
+    "architecture": {
+      "violations": 71,
+      "exit_code": 1,
+      "limits_unchanged": true
+    }
+  },
+  "ignored": [
+    "test body_edit::tests::assembly_edit_timing ... ignored, explicit assembly edit timing",
+    "test face_injectivity::tests::diagnose_retained_model_shared_injectivity_work ... ignored, requires an explicitly supplied retained-model diagnostic fixture",
+    "test profile_certificate::span_intersections::translated::periodic_replay::tests::paired_actual_owned_chart_constructor_measurement ... ignored, Explicit alternating paired measurement, run separately from correctness tests",
+    "test source_contour_winding::tests::fixed_point_cache_repeated_station_benchmark ... ignored, manual repeated-source-station timing; not an end-to-end benchmark",
+    "test transform::tests::measure_affine_batch ... ignored, manual affine batching measurement"
+  ],
+  "cases": [
+    "identical world path on separate operands with complete actual trim/lift audits on both",
+    "reverse traversal",
+    "two selected faces and open shells in one Model, retaining both actual cuts",
+    "first side face and loop equality after second side cut",
+    "input immutability and independently mutable public result snapshot",
+    "one-cell, one-pair, one-operation exhaustion",
+    "one operation below complete paired result refuses, no partial output",
+    "mixed operand interior endpoints explicitly require complete network assembly"
+  ],
+  "remaining": [
+    "junction/different-loop/interior-endpoint networks",
+    "automatic Boolean material roles, welding/sewing and Solid admission",
+    "general rational/multispan source supports, contacts and coincidences",
+    "central G2 corner, offsets/shells, simplification",
+    "WASM/Rush/UI and edited-body STEP for new features",
+    "architecture and distribution release gates"
+  ]
+}

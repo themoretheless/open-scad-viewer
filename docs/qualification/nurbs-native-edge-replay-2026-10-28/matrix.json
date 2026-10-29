@@ -1,0 +1,43 @@
+{
+  "default_check": "passed",
+  "native_libraries": {
+    "passed": 4208,
+    "failed": 0,
+    "ignored": 6
+  },
+  "minimal": {
+    "status": "incomplete",
+    "errors": 54,
+    "previous": 55,
+    "codec_errors": 53,
+    "restore_adapter_import_errors": 1
+  },
+  "architecture": {
+    "violations": 70,
+    "gate": "failed",
+    "limits_unchanged": true
+  },
+  "api": {
+    "modules": 239,
+    "catalog": 200,
+    "check": "passed"
+  },
+  "logs": {
+    "typed-edge-default-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-edge-default-check.log",
+      "sha256": "f100d63febc126a858f42c646f6a96ad6064cc7699c3d273a534d1ef3855e190"
+    },
+    "typed-edge-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-edge-full.log",
+      "sha256": "89614e0856077531fa49354de52c169203c43ca22aa07821c3599118d51c11f5"
+    },
+    "typed-edge-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-edge-minimal-check.log",
+      "sha256": "3e0124d6afe9f33f01579b72d4fa666ef0102818ec74b1059764bec3797c5d22"
+    },
+    "typed-edge-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261028/typed-edge-architecture.log",
+      "sha256": "a97ec4980a5c663db52b92229572feb6bf5ed2315328e68f761193cf7d953fe1"
+    }
+  }
+}

@@ -47,6 +47,7 @@ pub struct Shell<E = SharedEdge> {
     regions: Option<Vec<crate::source_contour_proposal::SourceRegion>>,
 }
 impl Shell {
+    #[cfg(feature = "codec")]
     pub fn definition(&self) -> Result<value_codec::Value> {
         crate::source_shell_restore::definition(self)
     }
@@ -1696,18 +1697,25 @@ mod tests {
                 .unwrap()
                 .shell
                 .unwrap();
-        let definition = material.definition().unwrap();
-        let text = value_codec::to_string(&definition).unwrap();
-        let decoded = value_codec::from_str_strict(&text).unwrap();
         let limits = crate::source_projective_shell_restore::Limits {
             regions: crate::source_region_restore::test_limits(),
             exact_work: 100000000,
             driver_cells: 10000,
         };
-        let replay = crate::source_projective_shell_restore::restore(decoded, &limits)
-            .unwrap()
-            .shell
-            .unwrap();
+        let native=material.requalify(&limits).unwrap();
+        let native_counts=(native.work_used,native.root_checks,native.driver_cells,native.uncertain_pair,native.reason);
+        let native=native.shell.expect(native.reason);
+        assert_eq!(native.vertices(),material.vertices());
+        assert_eq!(native.uses(),material.uses());
+        #[cfg(feature="codec")]
+        let definition=material.definition().unwrap();
+        #[cfg(feature="codec")]
+        let (replay,binary_replay)={
+        let text = value_codec::to_string(&definition).unwrap();
+        let decoded = value_codec::from_str_strict(&text).unwrap();
+        let report=crate::source_projective_shell_restore::restore(decoded,&limits).unwrap();
+        assert_eq!(native_counts,(report.work_used,report.root_checks,report.driver_cells,report.uncertain_pair,report.reason));
+        let replay=report.shell.unwrap();
         assert_eq!(replay.definition().unwrap(), definition);
         let bytes = value_codec::encode_binary(&definition).unwrap();
         let binary = value_codec::decode_binary(&bytes).unwrap();
@@ -1717,6 +1725,12 @@ mod tests {
             .unwrap();
         assert_eq!(binary_replay.definition().unwrap(), definition);
         assert_eq!(binary_replay.vertices(), material.vertices());
+
+        assert_eq!(native.vertices(),binary_replay.vertices());
+        (replay,binary_replay)
+        };
+        #[cfg(not(feature="codec"))]
+        let (replay,binary_replay)={let again=material.requalify(&limits).unwrap();(native,again.shell.expect(again.reason))};
 
         assert_eq!(replay.vertices(), material.vertices());
         assert_eq!(replay.uses(), material.uses());
@@ -1782,6 +1796,7 @@ mod tests {
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(bounds[1] - bounds[0] <= 0.01);
         assert!(!body.reverse_orientation());
+        #[cfg(feature="codec")]
         assert_eq!(
             body.definition().unwrap()["kind"].as_str(),
             Some("projective-body")
@@ -1817,6 +1832,7 @@ mod tests {
                 domain_cells: 1000000,
             },
         };
+        body.assert_native_body_cache_revalidation(&restore_limits(100));
         let transferred = crate::source_body_model::convert(&body, 1e-7).unwrap();
         assert_eq!(transferred.bodies.len(), 1);
         assert!(transferred.shells[0].closed);
@@ -1825,6 +1841,8 @@ mod tests {
         let (imported, _, _) = crate::import_step_v6(&step).unwrap();
         crate::source_body_model::assert_step_identity(&transferred, &imported);
 
+        #[cfg(feature="codec")]
+        {
         let body_definition = body.definition().unwrap();
         let body_bytes = value_codec::encode_binary(&body_definition).unwrap();
         let restored = crate::source_projective_body_restore::restore(
@@ -1856,11 +1874,9 @@ mod tests {
                 .is_none()
         );
 
-        let incomplete =
-            crate::source_projective_shell_restore::restore(definition.clone(), &limits)
-                .unwrap()
-                .shell
-                .unwrap();
+        }
+        let incomplete=material.requalify(&limits).unwrap();
+        let incomplete=incomplete.shell.expect(incomplete.reason);
         let refused = crate::source_shell_geometry::qualify_projective(
             incomplete,
             crate::source_shell_geometry::Limits {
@@ -1884,6 +1900,8 @@ mod tests {
         assert_eq!(refused.pairs, 1);
         assert_eq!(refused.next_pair, Some([0, 2]));
 
+        #[cfg(feature="codec")]
+        {
         let mut forged = definition.clone();
         forged["pairs"][0]["edge"]["uses"][0]["weights"] = value_codec::json!([1., 1.]);
         forged["certificateQualified"] = value_codec::json!(true);
@@ -1896,6 +1914,7 @@ mod tests {
         let mut missing = definition.clone();
         missing["pairs"].as_array_mut().unwrap().pop();
         assert!(crate::source_projective_shell_restore::restore(missing, &limits).is_err());
+        }
         maps[0].weights[0][1] += 1.;
         assert!(
             assemble_projective(&faces, &pairs, &[], &maps, &[], 100000000, 10000)
@@ -2036,18 +2055,35 @@ mod tests {
         let shell=report.shell.expect(report.reason);assert_eq!(shell.edges().len(),4);assert_eq!(shell.vertices().len(),2);
         let links=crate::source_vertex_links::inspect(&shell,10000).unwrap();assert!(links.all_manifold);assert_eq!(links.genus,Some(0));assert_eq!(links.links.len(),4);
         // This is a coincident two-face incidence control, not an embedded solid.
-        let definition=shell.definition().unwrap();let bytes=value_codec::encode_binary(&definition).unwrap();
+        #[cfg(feature="codec")]
+        let definition=shell.definition().unwrap();
         let automatic=assemble_regions_projective_with_discovered_fraction_candidates(&regions,&pairs,&[],&maps,&[],&[],128,16,100000000,10000).unwrap();
         let automatic_work=automatic.work_used;
         let automatic=automatic.shell.expect(automatic.reason);
+        assert_eq!(automatic.uses(),shell.uses());
+        assert_eq!(automatic.edges().len(),shell.edges().len());
+        assert!(automatic.edges().iter().zip(shell.edges()).all(|(a,b)|a.same_definition(b)));
+        assert!(automatic.poles().is_empty());
+        #[cfg(feature="codec")]
         assert_eq!(automatic.definition().unwrap(),definition);
         assert_eq!(automatic.vertices(),shell.vertices());
         assert!(assemble_regions_projective_with_discovered_fraction_candidates(&regions,&pairs,&[],&maps,&[],&[],128,16,automatic_work-1,10000).unwrap().shell.is_none());
         let limits=crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000};
+        let native=shell.requalify(&limits).unwrap();
+        let counts=(native.work_used,native.root_checks,native.driver_cells,native.reason);
+        let native=native.shell.expect(native.reason);
+        assert_eq!(native.vertices(),shell.vertices());
+        assert_eq!(native.uses(),shell.uses());
+        assert!(native.edges().iter().zip(shell.edges()).all(|(a,b)|a.same_definition(b)));
+        #[cfg(feature="codec")]
+        {
+        let bytes=value_codec::encode_binary(&definition).unwrap();
         let replay=crate::source_projective_shell_restore::restore(value_codec::decode_binary(&bytes).unwrap(),&limits).unwrap();
+        assert_eq!((replay.work_used,replay.root_checks,replay.driver_cells,replay.reason),counts);
         let replay=replay.shell.expect(replay.reason);assert_eq!(replay.definition().unwrap(),definition);assert_eq!(replay.vertices(),shell.vertices());
         let mut wrong=definition;wrong["pairs"][0]["edge"]["fractionCandidates"][1][0]=value_codec::json!([[39.,49.],[1.,9.]]);
         assert!(crate::source_projective_shell_restore::restore(wrong,&limits).unwrap().shell.is_none());
+        }
         let duplicate=vec![RootFractionCandidates{pair:0,candidates:fractions[0].candidates},RootFractionCandidates{pair:0,candidates:fractions[0].candidates}];
         assert!(assemble_regions_projective_with_fraction_candidates(&regions,&pairs,&[],&maps,&[],&duplicate,&[],100000000,10000).is_err());
     }
@@ -2136,6 +2172,7 @@ mod tests {
         )
         .unwrap();
         let body = volume.body.expect(volume.reason);
+        #[cfg(feature="codec")]
         let original = body.definition().unwrap();
         assert!(crate::source_body_model::convert(&body, 1e-7).is_err());
         let preview =
@@ -2164,6 +2201,7 @@ mod tests {
                 .any(|p| (p[0] - 0.75).abs() < 1e-7 && p[1].abs() < 1e-7 && p[2].abs() < 1e-7)
         );
         assert!(crate::source_boundary_display::prepare(body.geometry().shell(), 8, 1, 1).is_err());
+        #[cfg(feature="codec")]
         assert_eq!(body.definition().unwrap(), original);
         let limits = || crate::source_exchange_endpoints::Limits {
             root_checks: 10000,
@@ -2178,6 +2216,8 @@ mod tests {
         let points = report.prepared.expect(report.reason);
         assert_eq!(points.vertices().len(), 5);
         assert_eq!(points.restrictions().len(), 7);
+        assert!(points.belongs_to(&body));
+        #[cfg(feature="codec")]
         assert_eq!(points.original(), &original);
         assert!(points.vertices().iter().all(|v| v.error_upper <= 1e-7));
         let trims = crate::source_exchange_trims::prepare(&body, &points, 1e-7, 1000000)
@@ -2193,6 +2233,7 @@ mod tests {
         );
         assert!(candidate.endpoint_error_upper <= 1e-7);
         assert!(candidate.text.contains("TRIMMED_CURVE"));
+        #[cfg(feature="codec")]
         assert_eq!(body.definition().unwrap(), original);
         let mut exhausted = limits();
         exhausted.exact_work = 1;
@@ -2775,10 +2816,7 @@ mod tests {
                     domain_cells: 1000000,
                 },
             };
-            let primary = crate::source_shell_restore::restore(
-                shell.definition().unwrap(),
-                &replay_body_limits().shell,
-            )
+            let primary = shell.requalify(&replay_body_limits().shell)
             .unwrap()
             .shell
             .unwrap();
@@ -2832,6 +2870,14 @@ mod tests {
             );
             let body = volume.body.unwrap();
             assert!(body.volume()[0] <= 1. / 6. && body.volume()[1] >= 1. / 6.);
+            body.assert_native_body_cache_revalidation(&replay_body_limits());
+            let native_replay=body.requalify(&replay_body_limits()).unwrap();
+            let native_body=native_replay.body().expect(native_replay.reason());
+            assert_eq!(native_body.volume(),body.volume());
+            assert_eq!(native_body.reverse_orientation(),body.reverse_orientation());
+            assert_eq!(native_body.geometry().shell().vertices(),body.geometry().shell().vertices());
+            assert!(native_body.geometry().inverse_shear().is_some());
+
             for endpoint in body
                 .geometry()
                 .shell()
@@ -2845,7 +2891,7 @@ mod tests {
                     let refined =
                         crate::source_root_refinement::qualify(point, 1e-7, 16, 10000).unwrap();
                     let proof = refined.refinement.expect(refined.reason);
-                    assert_eq!(proof.original().definition(), point.definition());
+                    assert!(proof.original().same_definition(point));
                     assert!(proof.diameter_bound()[1] <= 1e-7);
                 }
             }
@@ -2855,6 +2901,7 @@ mod tests {
                 embedding.exact_work,
                 embedding.spans
             );
+            #[cfg(feature="codec")]
             assert_eq!(
                 body.definition().unwrap()["inverseShear"],
                 value_codec::json!({"axes":[0,2],"coefficient":0.25})
@@ -2905,6 +2952,8 @@ mod tests {
             )
             .unwrap();
             let endpoints = prepared.prepared.expect(prepared.reason);
+            assert!(endpoints.belongs_to(&body));
+            #[cfg(feature="codec")]
             assert_eq!(endpoints.original(), &body.definition().unwrap());
             assert_eq!(endpoints.vertices().len(), 5);
             assert_eq!(endpoints.restrictions().len(), 7);
@@ -2962,11 +3011,16 @@ mod tests {
             if let Ok(path) = std::env::var("CAD_SOURCE_CURVED_STEP_OUTPUT") {
                 std::fs::write(path, step.text).unwrap();
             }
+            #[cfg(feature="codec")]
+            {
             let definition = body.definition().unwrap();
             let restored =
                 crate::source_body_restore::restore(definition.clone(), replay_body_limits())
                     .unwrap();
             let replayed = restored.body().expect(restored.reason());
+            assert_eq!((native_replay.incidence.work_used,native_replay.incidence.root_checks,native_replay.incidence.driver_cells,native_replay.incidence.reason),(restored.incidence.work_used,restored.incidence.root_checks,restored.incidence.driver_cells,restored.incidence.reason));
+            assert_eq!(native_body.definition().unwrap(),replayed.definition().unwrap());
+
             assert_eq!(replayed.definition().unwrap(), definition);
             assert!(replayed.geometry().inverse_shear().is_some());
             let mut damaged = definition.clone();
@@ -2996,6 +3050,7 @@ mod tests {
                     .body()
                     .is_none()
             );
+            }
 
             return;
         }
@@ -3238,10 +3293,7 @@ mod tests {
         for (face, region) in shell.regions().unwrap().iter().enumerate() {
             assert_eq!(region.source_loop_indices(), &[0]);
             for (i, edge) in region.loops()[0].iter().enumerate() {
-                assert_eq!(
-                    edge.definition(),
-                    shell.faces()[face][0].edges()[i].definition()
-                );
+                assert!(edge.same_definition(&shell.faces()[face][0].edges()[i]));
             }
         }
         assert_eq!(shell.edges().len(), 7);
@@ -3302,19 +3354,20 @@ mod tests {
         let body = volume.body.unwrap();
         assert!(crate::source_body_model::convert(&body, 1e-7).is_err());
         let source_model = crate::source_body_topology::convert(&body, 1e-7, 14, 14).unwrap();
+        #[cfg(feature="codec")]
         assert_eq!(source_model.definition(), &body.definition().unwrap());
         let indexed = source_model.topology();
         assert_eq!(indexed.vertices.len(), 5);
         assert_eq!(indexed.edges.len(), 7);
         for (i,edge) in indexed.edges.iter().enumerate() {
             let crate::source_body_topology::Carrier::Edge(restriction) = &edge.curve else { panic!("Unexpected pole"); };
-            assert_eq!(restriction.definition(), body.edge_restriction(i).unwrap().definition());
+            assert!(restriction.edge().same_definition(body.edge_restriction(i).unwrap().edge()));
         }
         for (face,wires) in body.geometry().shell().faces().iter().enumerate() {
             for (wire,source) in wires.iter().enumerate() {
                 let loop_index = if wire == 0 { indexed.faces[face].outer } else { indexed.faces[face].holes[wire-1] };
                 for (edge,fragment) in source.edges().iter().enumerate() {
-                    assert_eq!(indexed.loops[loop_index].coedges[edge].pcurve.definition(), fragment.definition());
+                    assert!(indexed.loops[loop_index].coedges[edge].pcurve.same_definition(fragment));
                 }
             }
         }
@@ -3375,6 +3428,7 @@ mod tests {
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());
+        #[cfg(feature="codec")]
         if mapped {
             if let Some(path)=std::env::var_os("CAD_MAPPED_ROOT_BODY_FIXTURE_OUTPUT") {
                 let template=std::env::var_os("CAD_MAPPED_ROOT_BODY_FIXTURE_TEMPLATE").unwrap();
@@ -3383,6 +3437,7 @@ mod tests {
                 std::fs::write(path,value_codec::to_string(&request).unwrap()).unwrap();
             }
         }
+        #[cfg(feature="codec")]
         if irrational {
             if let Some(path) = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_OUTPUT") {
                 let template = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_TEMPLATE").unwrap();
@@ -3565,3 +3620,6 @@ mod tests {
         assert_eq!(r.uncertain_pair, Some(0));
     }
 }
+
+#[path = "source_shell_incidence/replay.rs"]
+mod replay;

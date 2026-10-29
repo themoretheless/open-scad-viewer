@@ -1,0 +1,67 @@
+{
+  "timestampUtc": "2026-10-28T00:48:39.869441+00:00",
+  "scope": "Deterministic byte-size and byte-identity controls for the existing c8 geometry artifact; no code or packing parameters changed",
+  "artifactSha256": "c8a299c3e8e2bbccc5cc6a594b735bd27fb47daa5ea7aa7e45d2c027cf1af992",
+  "rawBytes": 15811953,
+  "settings": "All trials use Brotli quality11, window24, code/data sections; labels select baseline block16 FONT, default-block FONT, block20 FONT or default-block GENERIC.",
+  "results": [
+    {
+      "label": "baseline",
+      "bytes": 4564258,
+      "streams": [
+        4029932,
+        534326
+      ],
+      "compressionMs": 89340,
+      "allStreamsWithinDecoderCap": true,
+      "deltaBytes": 0,
+      "retained": true
+    },
+    {
+      "label": "auto-font",
+      "bytes": 4564794,
+      "streams": [
+        4029929,
+        534865
+      ],
+      "compressionMs": 59688,
+      "allStreamsWithinDecoderCap": true,
+      "deltaBytes": 536,
+      "retained": false
+    },
+    {
+      "label": "block20-font",
+      "bytes": 4567401,
+      "streams": [
+        4032880,
+        534521
+      ],
+      "compressionMs": 49572,
+      "allStreamsWithinDecoderCap": true,
+      "deltaBytes": 3143,
+      "retained": false
+    },
+    {
+      "label": "auto-generic",
+      "bytes": 4566355,
+      "streams": [
+        4031779,
+        534576
+      ],
+      "compressionMs": 42537,
+      "allStreamsWithinDecoderCap": true,
+      "deltaBytes": 2097,
+      "retained": false
+    }
+  ],
+  "identityVerifiedForEveryStream": true,
+  "perStreamDecoderInputLimit": 4194304,
+  "allCandidatesRespectDecoderInputLimit": true,
+  "timingQualification": "Single sequential observations during concurrent native qualification; not a controlled performance benchmark or speed claim.",
+  "selected": "baseline",
+  "conclusion": "All three alternatives increase total compressed bytes. Existing size gate remains failed; no limits increased.",
+  "packedGeometryChunkBytes": 5330908,
+  "packedGeometryBudget": 4680000,
+  "probeLogSha256": "755ad2abf97a16c754cbf25c999ce7e9f37d443c28e4aec99e15cd0e14a538d0",
+  "fullPlanComplete": false
+}

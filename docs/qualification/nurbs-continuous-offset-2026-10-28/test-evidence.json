@@ -1,0 +1,28 @@
+{
+  "broadBeforeTransportAddition": {
+    "exitCode": 0,
+    "resultSummaries": 166,
+    "passed": 3012,
+    "failed": 0,
+    "ignored": 1,
+    "logSha256": "81c549ab85da5691b2bcc462fee9a76f677c1841c8eefffc9ac8a41df3838669"
+  },
+  "finalFocusedWithTransport": {
+    "exitCode": 0,
+    "resultSummaries": 1,
+    "passed": 7,
+    "failed": 0,
+    "ignored": 0,
+    "logSha256": "11a5400ccd72d4c21ba371494b155f985e9fefb75071253fdab1af90dc193d90"
+  },
+  "finalSourceSha256": {
+    "crates/nurbs-core/src/offset/surface_offset.rs": "6a8a52d2b4b5ccae552957e7aabfac167cb019bedbfa84759fe981d0d3feafbb",
+    "crates/nurbs-core/src/offset/surface_offset/continuous.rs": "dba0db8679a01586d689560b339f721885237ada398b3dfa1c2d85dfdcb3aae7",
+    "crates/nurbs-core/src/offset/surface_offset/continuous/cell.rs": "1af61a81e0b9c26c363b0c05a5317aaad8e74183fc4cd91d73cd65cdc4d01ef6",
+    "crates/nurbs-core/src/transport/mod.rs": "38dd98d11794c664f3660ee5f390d7a05dc73d76920152b64bb4c871c2dadba4",
+    "crates/nurbs-core/src/transport/dispatch.rs": "449346623974109e78b5c7ef6f405d220b6022eb003f8b35fb479ac3af462165",
+    "crates/nurbs-core/src/transport/offset_requests.rs": "85e88c475bbb8611cf3659179ff619a13dd2578128ebfcd32305fe861200ce96",
+    "crates/nurbs-core/tests/surface_offset_continuous.rs": "54ad402a4c86088d1e3d8b9b4e72fdd1dfde65460ea20758ff74da36ad862e29"
+  },
+  "scope": "Native whole-domain offset deviation plus JSON diagnostics. Not complete shell, Boolean, WASM or UI qualification."
+}

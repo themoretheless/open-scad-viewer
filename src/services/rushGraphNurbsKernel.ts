@@ -42,6 +42,7 @@ export type Value = {kind:'profile';data:PolygonProfile} | {kind:'patches';data:
 };
 export type OwnNurbsRequest = {
     action: 'build' | 'evaluate' | 'export';
+    offsetDeviation?:import('./rushGraphOffsetDeviation').RushOffsetDeviationRequest;
     format?: 'json' | MeshExportFormat;
     /** Viewer-only derived display policy; does not change the authored graph. */
     display?: {segments:number;subdivisionLevels:number};

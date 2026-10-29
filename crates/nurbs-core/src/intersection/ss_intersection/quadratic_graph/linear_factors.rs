@@ -32,32 +32,18 @@ pub(super) fn crossing(data: &mut Data, work: &mut Work) -> Result<()> {
         singular: true,
     });
     for sign in [1., -1.] {
-        let delta = sign * slope;
-        let upper = work.add(1., -center[0])?;
+        let direction = line_clip::vector(data, [1., sign * slope], work)?;
+        let endpoints = line_clip::clip(data.center, direction, work)?
+            .ok_or_else(|| crate::input("Interior crossing factor lost its original rectangle"))?;
+        check(
+            endpoints[0] != endpoints[1],
+            "Crossing factor clipped to an isolated boundary point",
+        )?;
         let mut ids = [0; 2];
-        let mut endpoints = [[0.; 2]; 2];
-        for (end, t) in [-center[0], upper].into_iter().enumerate() {
-            let displacement = work.mul(delta, t)?;
-            let v = work.add(center[1], displacement)?;
-            // Clip only when the U-boundary point leaves the V interval. An
-            // unused V-boundary quotient may be non-dyadic even though both
-            // actual clipped endpoints are exactly representable.
-            let point = if !(0. ..=1.).contains(&v) {
-                let boundary = if v < 0. { 0. } else { 1. };
-                let numerator = work.add(boundary, -center[1])?;
-                let clipped = work.div(numerator, delta)?;
-                [work.add(center[0], clipped)?, boundary]
-            } else {
-                [work.add(center[0], t)?, v]
-            };
-            check(
-                point.iter().all(|v| (0. ..=1.).contains(v)),
-                "Exact factor endpoint leaves original graph rectangle",
-            )?;
+        for (end, point) in endpoints.iter().enumerate() {
             ids[end] = data.vertices.len();
-            endpoints[end] = point;
             data.vertices.push(OriginalGraphSSVertex {
-                point: OriginalGraphSSPoint::Normalized(point),
+                point: OriginalGraphSSPoint::Normalized(*point),
                 singular: false,
             });
         }
@@ -84,15 +70,23 @@ pub(super) fn parallel(data: &mut Data, work: &mut Work) -> Result<()> {
     let square = work.div(-data.diagonal[2], data.diagonal[axis])?;
     let radius = exact_sqrt(square, work)?;
     for sign in [-1., 1.] {
-        let value = work.add(data.center[axis], sign * radius)?;
-        if !(0. ..=1.).contains(&value) {
+        let mut fixed = [0.; 2];
+        fixed[axis] = sign * radius;
+        let displacement = line_clip::vector(data, fixed, work)?;
+        let mut anchor = [0.; 2];
+        for i in 0..2 {
+            anchor[i] = work.add(data.center[i], displacement[i])?;
+        }
+        let mut free = [0.; 2];
+        free[1 - axis] = 1.;
+        let direction = line_clip::vector(data, free, work)?;
+        let Some(endpoints) = line_clip::clip(anchor, direction, work)? else {
             continue;
-        }
-        let mut endpoints = [[0.; 2]; 2];
-        for end in 0..2 {
-            endpoints[end][axis] = value;
-            endpoints[end][1 - axis] = end as f64;
-        }
+        };
+        check(
+            endpoints[0] != endpoints[1],
+            "Simple parallel factor touches only an original rectangle corner",
+        )?;
         segment(data, endpoints, 1);
         data.kind = QuadraticGraphSSKind::ParallelLineFactors;
     }

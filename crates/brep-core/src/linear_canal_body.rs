@@ -156,13 +156,6 @@ mod tests {
             report.volume.as_ref().unwrap().cells,
             report.volume.as_ref().unwrap().spans
         );
-        let definition = body.definition().unwrap();
-        let bytes = value_codec::to_string(&definition).unwrap();
-        let mut value: value_codec::Value = value_codec::from_str(&bytes).unwrap();
-        // Saved claims cannot bypass any native gate.
-        value["success"] = value_codec::json!(true);
-        value["volume"] = value_codec::json!([1., 1.]);
-        value["reverseOrientation"] = value_codec::json!(false);
         let restore_limits = |cells| crate::source_body_restore::Limits {
             shell: crate::source_shell_restore::Limits {
                 regions: crate::source_region_restore::test_limits(),
@@ -172,10 +165,9 @@ mod tests {
             embedding: limits(cells).embedding,
             volume: limits(cells).volume,
         };
-        let replay =
-            crate::source_body_restore::restore(value.clone(), restore_limits(50000)).unwrap();
-        let recovered = replay.body().expect(replay.reason());
-        assert_eq!(recovered.definition().unwrap(), definition);
+        body.assert_native_body_cache_revalidation(&restore_limits(50000));
+        let native = body.requalify(&restore_limits(50000)).unwrap();
+        let recovered = native.body().expect(native.reason());
         assert_eq!(recovered.volume(), body.volume());
         assert_eq!(recovered.signed_volume(), body.signed_volume());
         assert_eq!(recovered.reverse_orientation(), body.reverse_orientation());
@@ -184,8 +176,7 @@ mod tests {
             recovered.geometry().shell().vertices(),
             body.geometry().shell().vertices()
         );
-        let exhausted_restore =
-            crate::source_body_restore::restore(value.clone(), restore_limits(1)).unwrap();
+        let exhausted_restore = body.requalify(&restore_limits(1)).unwrap();
         assert!(exhausted_restore.body().is_none());
         assert_eq!(
             exhausted_restore.reason(),
@@ -193,9 +184,62 @@ mod tests {
         );
         let mut small = restore_limits(1);
         small.shell.exact_work = 1;
-        let exhausted_shell = crate::source_body_restore::restore(value, small).unwrap();
+        let exhausted_shell = body.requalify(&small).unwrap();
         assert!(exhausted_shell.body().is_none());
         assert!(exhausted_shell.embedding.is_none());
+        #[cfg(feature = "codec")]
+        {
+            let definition = body.definition().unwrap();
+            let bytes = value_codec::to_string(&definition).unwrap();
+            let mut value: value_codec::Value = value_codec::from_str(&bytes).unwrap();
+            // Saved claims cannot bypass any native gate.
+            value["success"] = value_codec::json!(true);
+            value["volume"] = value_codec::json!([1., 1.]);
+            value["reverseOrientation"] = value_codec::json!(false);
+            let replay =
+                crate::source_body_restore::restore(value.clone(), restore_limits(50000)).unwrap();
+            assert_eq!(
+                (
+                    native.incidence.work_used,
+                    native.incidence.root_checks,
+                    native.incidence.driver_cells,
+                    native.incidence.reason
+                ),
+                (
+                    replay.incidence.work_used,
+                    replay.incidence.root_checks,
+                    replay.incidence.driver_cells,
+                    replay.incidence.reason
+                )
+            );
+            let recovered = replay.body().expect(replay.reason());
+            assert_eq!(recovered.volume(), native.body().unwrap().volume());
+            assert_eq!(recovered.definition().unwrap(), definition);
+            assert_eq!(
+                crate::source_body_model::convert(body, 1e-7).unwrap(),
+                crate::source_body_model::convert(recovered, 1e-7).unwrap()
+            );
+            assert_eq!(recovered.volume(), body.volume());
+            assert_eq!(recovered.signed_volume(), body.signed_volume());
+            assert_eq!(recovered.reverse_orientation(), body.reverse_orientation());
+            assert_eq!(recovered.geometry().contacts().pairs.len(), 120);
+            assert_eq!(
+                recovered.geometry().shell().vertices(),
+                body.geometry().shell().vertices()
+            );
+            let exhausted_restore =
+                crate::source_body_restore::restore(value.clone(), restore_limits(1)).unwrap();
+            assert!(exhausted_restore.body().is_none());
+            assert_eq!(
+                exhausted_restore.reason(),
+                "source-volume-initial-work-limit"
+            );
+            let mut small = restore_limits(1);
+            small.shell.exact_work = 1;
+            let exhausted_shell = crate::source_body_restore::restore(value, small).unwrap();
+            assert!(exhausted_shell.body().is_none());
+            assert!(exhausted_shell.embedding.is_none());
+        }
         let model = crate::source_body_model::convert(body, 1e-7).unwrap();
         assert_eq!(
             model,
@@ -208,13 +252,16 @@ mod tests {
             model,
             crate::source_body_model::convert(body, 1e-7).unwrap()
         );
-        let encoded = value_codec::to_value(&model).unwrap();
-        let restored: crate::Model = value_codec::from_value(encoded).unwrap();
-        assert_eq!(restored, model);
-        // The STEP v6 identity round trip runs in cad-step
-        // (tests/source_body_step.rs) on the fixture this hook writes.
-        if let Some(path) = std::env::var_os("CAD_SOURCE_MODEL_JSON_OUTPUT") {
-            std::fs::write(path, value_codec::to_string(&model).unwrap()).unwrap();
+        #[cfg(feature = "codec")]
+        {
+            let encoded = value_codec::to_value(&model).unwrap();
+            let restored: crate::Model = value_codec::from_value(encoded).unwrap();
+            assert_eq!(restored, model);
+            // The STEP v6 identity round trip runs in cad-step
+            // (tests/source_body_step.rs) on the fixture this hook writes.
+            if let Some(path) = std::env::var_os("CAD_SOURCE_MODEL_JSON_OUTPUT") {
+                std::fs::write(path, value_codec::to_string(&model).unwrap()).unwrap();
+            }
         }
         let exhausted = qualify(&spans, limits(1)).unwrap();
         assert!(exhausted.body().is_none());

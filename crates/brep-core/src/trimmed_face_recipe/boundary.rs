@@ -206,11 +206,7 @@ pub fn assemble(
         let mut coedges = vec![];
         for (i, edge) in wire.iter().enumerate() {
             let ends = [start + i, start + (i + 1) % wire.len()];
-            coedges.push(Coedge::new(
-                edges.len(),
-                edge.reversed,
-                edge.pcurve.clone(),
-            ));
+            coedges.push(Coedge::new(edges.len(), edge.reversed, edge.pcurve.clone()));
             edges.push(Edge {
                 degenerate: false,
                 vertices: if edge.reversed {
@@ -577,14 +573,12 @@ pub fn locate_contact_boundaries(
     Ok(out)
 }
 
-#[cfg(feature = "codec")]
 pub struct AddressedSourcePoint {
     pub loop_index: usize,
     pub boundary_index: usize,
     pub crossing_cell: usize,
     pub report: Option<crate::source_contact_point::Report>,
 }
-#[cfg(feature = "codec")]
 pub struct SourcePointSearch {
     pub search: FaceCrossings,
     pub points: Vec<AddressedSourcePoint>,

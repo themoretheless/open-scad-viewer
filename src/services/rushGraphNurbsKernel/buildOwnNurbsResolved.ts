@@ -1,3 +1,4 @@
+import {inspectRushGraphOffsetDeviation} from '../rushGraphOffsetDeviation'
 import {readMiterAffineReplayRouting} from '../geometry/brep'
 import {packNativeGeometrySnapshot} from '../nativeGeometrySnapshot'
 import {readNativeSweepPlanarCapFaces} from '../geometry/brep'
@@ -57,7 +58,8 @@ export function buildOwnNurbsResolved(document: unknown, request: OwnNurbsReques
     const evaluations = (request.evaluations ?? []).map(q => { const v = get(q.node); if (v.kind === 'curve')
         return { node: q.node, ...evaluateNurbsCurve(v.data, q.u) }; if (v.kind === 'surface' && q.v !== undefined)
         return { node: q.node, ...evaluateNurbsSurface(v.data, q.u, q.v) }; throw new Error('Evaluation requires a curve or surface, and v for a surface.'); });
-    const base = { ok: true, document_sha256: compiled.document_sha256, execution_target: 'own-nurbs', automatic_fallback: false, report, evaluations };
+    const offsetDeviation=request.offsetDeviation?inspectRushGraphOffsetDeviation(request.offsetDeviation,get):undefined;
+    const base = { ...(offsetDeviation?{offsetDeviation}:{}), ok: true, document_sha256: compiled.document_sha256, execution_target: 'own-nurbs', automatic_fallback: false, report, evaluations };
     if (request.action === 'export') {
         if (request.format === 'json')
             return { ...base, artifact: { format: 'json', mime_type: 'application/json', text: stringifyMeshJson(compiled.document, 2) } };
