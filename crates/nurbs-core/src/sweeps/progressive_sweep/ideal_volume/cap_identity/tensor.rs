@@ -7,6 +7,24 @@ pub(super) fn certify(
     max_cells: usize,
     max_work: u64,
 ) -> bool {
+    query(&caps, None, out, max_cells, max_work)
+}
+pub(super) fn continuity(
+    cap: &Surface,
+    order: usize,
+    out: &mut IdealVolumeReport,
+    max_cells: usize,
+    max_work: u64,
+) -> bool {
+    query(&[cap], Some(order), out, max_cells, max_work)
+}
+fn query(
+    caps: &[&Surface],
+    order: Option<usize>,
+    out: &mut IdealVolumeReport,
+    max_cells: usize,
+    max_work: u64,
+) -> bool {
     if out.exact_work >= max_work
         || caps.iter().any(|s| {
             s.periodic_u
@@ -99,11 +117,12 @@ pub(super) fn certify(
         },
         None,
     );
-    let equal = matches!(
+    let proof = if let Some(order) = order {
+        cad_predicates::rational_bspline_tensor_knot_continuity(&mut ctx, source(0), order)
+    } else {
         cad_predicates::rational_bspline_tensor_normalized_identity(&mut ctx, source(0), source(1))
-            .map(|r| r.outcome),
-        Ok(BezierIdentity::Equal)
-    );
+    };
+    let equal = matches!(proof.map(|r| r.outcome), Ok(BezierIdentity::Equal));
     out.exact_work += ctx.work_used();
     equal
 }

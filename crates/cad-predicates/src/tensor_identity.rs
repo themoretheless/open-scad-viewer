@@ -8,6 +8,8 @@ use crate::{
     LeafRef, PredicateContext, Reason, Sign,
 };
 mod blossom;
+mod continuity;
+pub use continuity::rational_bspline_tensor_knot_continuity;
 
 /// Original Cartesian XYZ and positive weight per control. No rounded knot
 /// insertion, degree elevation or caller-authored normalized surrogate belongs

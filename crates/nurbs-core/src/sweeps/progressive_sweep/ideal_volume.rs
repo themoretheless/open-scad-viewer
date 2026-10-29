@@ -33,7 +33,7 @@ pub(super) mod arc;
 pub(super) mod arc_frames;
 pub(crate) mod atlas;
 pub(crate) mod cell;
-mod cap_identity;
+pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
 mod intrinsic;

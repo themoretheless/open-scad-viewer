@@ -1,18 +1,18 @@
 use super::*;
-pub(super) type P = Vec<Expansion>;
-pub(super) fn zero() -> Expansion {
+pub(crate) type P = Vec<Expansion>;
+pub(crate) fn zero() -> Expansion {
     Expansion::scalar(0.)
 }
-pub(super) fn trim(mut p: P) -> P {
+pub(crate) fn trim(mut p: P) -> P {
     while p.len() > 1 && p.last().unwrap().sign() == Sign::Zero {
         p.pop();
     }
     p
 }
-pub(super) fn choose(n: usize, k: usize) -> u64 {
+pub(crate) fn choose(n: usize, k: usize) -> u64 {
     (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
 }
-pub(super) fn add(a: &P, b: &P, sub: bool, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn add(a: &P, b: &P, sub: bool, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     let mut p = Vec::new();
     for i in 0..a.len().max(b.len()) {
         let z = zero();
@@ -22,7 +22,7 @@ pub(super) fn add(a: &P, b: &P, sub: bool, c: &mut PredicateContext<'_>) -> Resu
     }
     Ok(trim(p))
 }
-pub(super) fn mul(a: &P, b: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn mul(a: &P, b: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     if a.len() + b.len() > 258 {
         return Err(Reason::MissingProof);
     }
@@ -42,7 +42,7 @@ pub(super) fn mul(a: &P, b: &P, c: &mut PredicateContext<'_>) -> Result<P, Reaso
     }
     Ok(trim(p))
 }
-pub(super) fn times(a: &P, n: u64, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn times(a: &P, n: u64, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     let n = Expansion::integer(n, c)?;
     Ok(trim(
         a.iter()
@@ -50,7 +50,7 @@ pub(super) fn times(a: &P, n: u64, c: &mut PredicateContext<'_>) -> Result<P, Re
             .collect::<Result<P, Reason>>()?,
     ))
 }
-pub(super) fn derivative(p: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn derivative(p: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     if p.len() == 1 {
         return Ok(vec![zero()]);
     }
@@ -62,7 +62,7 @@ pub(super) fn derivative(p: &P, c: &mut PredicateContext<'_>) -> Result<P, Reaso
             .collect::<Result<P, Reason>>()?,
     ))
 }
-pub(super) fn power(b: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn power(b: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     let n = b.len() - 1;
     let mut p = vec![zero(); b.len()];
     for (i, a) in b.iter().enumerate() {
@@ -80,10 +80,10 @@ pub(super) fn power(b: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     }
     Ok(trim(p))
 }
-pub(super) fn minor(a: &P, b: &P, d: &P, e: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn minor(a: &P, b: &P, d: &P, e: &P, c: &mut PredicateContext<'_>) -> Result<P, Reason> {
     add(&mul(a, b, c)?, &mul(d, e, c)?, true, c)
 }
-pub(super) struct Fraction {
+pub(crate) struct Fraction {
     pub n: P,
     pub d: P,
 }

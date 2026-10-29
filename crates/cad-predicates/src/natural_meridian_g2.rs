@@ -4,7 +4,7 @@ use crate::{
     Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion, InputError,
     LeafRef, PredicateContext, Reason, Sign, exact_inputs,
 };
-mod algebra;
+pub(crate) mod algebra;
 use algebra::*;
 fn jets(
     h: &[Vec<[Expansion; 4]>],

@@ -31,6 +31,8 @@ pub use retained_smoothness::{RetainedSeamReport,RetainedSmoothnessReport,Retain
 mod endpoint_surface;
 pub(crate) mod ideal_volume;
 pub use ideal_volume::IdealVolumeReport;
+mod original_smooth_volume;
+pub use original_smooth_volume::{OriginalSmoothVolumeLimits,OriginalSmoothVolumeReport,OriginalSmoothVolume,OriginalSmoothVolumeAttempt};
 pub use endpoint_surface::EndpointSurfaceReport;
 mod profile_domain;
 pub use profile_domain::{IdealEndpointDomainsReport,IdealEndpointPlanesReport,EndpointCapProjectionReport};

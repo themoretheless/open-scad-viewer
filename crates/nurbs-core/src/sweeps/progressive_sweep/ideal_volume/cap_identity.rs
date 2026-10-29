@@ -152,3 +152,7 @@ mod closed_tests;
 
 #[cfg(test)]
 mod tensor_tests;
+
+pub(crate) fn certify_continuity(cap: &Surface, order: usize, out: &mut IdealVolumeReport, max_cells: usize, max_work: u64) -> bool {
+    tensor::continuity(cap, order, out, max_cells, max_work)
+}
