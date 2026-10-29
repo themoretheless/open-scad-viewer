@@ -1,0 +1,54 @@
+{
+  "milestone": "original graph-body union and intersection with unchanged source walls",
+  "native_tests": {
+    "passed": 4220,
+    "failed": 0,
+    "ignored": 6
+  },
+  "operator_order_variants": 4,
+  "node_contracts_passed": 10,
+  "minimal_library_check": "passed",
+  "minimal_unit_target": "not qualified; previous 412 compile errors not remeasured",
+  "api_modules": 239,
+  "catalog_entries": 200,
+  "architecture_existing_violations": 70,
+  "contact_pair_limit_unchanged": 1000,
+  "source_sha256": {
+    "crates/brep-core/src/shared_boundary/closed_graph.rs": "98cf4b64d227e9bfd484662af22e37ac53c65e106c5cc1f2ab8cd2f0cc4f18c4",
+    "crates/brep-core/src/ss_face_membership.rs": "141b182bdc433ae6cc8d17e59712b003a1873f75b58a944911ba63e033844bc9",
+    "crates/brep-core/src/ss_face_membership/closed.rs": "615cb6a1464d3c39c8123c53fda9b359bfbec8603667ea8648cbde75e8dbdfbf",
+    "crates/brep-core/src/ss_face_membership/closed/envelope.rs": "5dc4963e540452821f595238395e25715152d5444de6d6303c647731ccde8b28",
+    "crates/brep-core/src/ss_face_membership/closed/envelope/tests.rs": "06b5662133a74c62869c3b2fa979fe0f7f84a297cd5d4ff66830051509c6294d"
+  },
+  "logs": {
+    "graph-envelope-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-envelope-full.log",
+      "sha256": "710f7085d74a1adf2d87b8762dcedf43f395512357568443d2af40a69b46c65c"
+    },
+    "graph-envelope-focused.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-envelope-focused.log",
+      "sha256": "b6ef29a9979a089068f09889fbe7c3c45cf06ab26a13948e56a09f444749f347"
+    },
+    "graph-envelope-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-envelope-minimal-check.log",
+      "sha256": "c591c0c526d254b7ce87eafd64679b249c866d98ec3edf08bfc47d9e55e7980c"
+    },
+    "graph-envelope-node.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-envelope-node.log",
+      "sha256": "7d1afffb3e09ec6a32edbed045f375d0af6ec4bb34eac5fe805ea45a6e27c037"
+    },
+    "graph-envelope-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-envelope-architecture.log",
+      "sha256": "60e1a0d4c854d38c8b7472d6f1792d21d5eb29464751086bfdd3faf30cf48097"
+    }
+  },
+  "remaining": [
+    "annular difference with roof-to-roof wall strips",
+    "general rational/multispan/periodic Boolean",
+    "central G2 patch and sewn corner",
+    "continuous offset and shell cleanup",
+    "general exact simplification",
+    "WASM Rush UI edited-body STEP and distribution gates"
+  ],
+  "plan_complete": false
+}

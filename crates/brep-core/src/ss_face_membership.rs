@@ -10,10 +10,12 @@ use nurbs_core::{
 };
 mod closed;
 pub use closed::{
-    ClosedBranchFaces, ClosedBranchLimits, ClosedGraphLens, ClosedGraphSideLimits,
-    ClosedSourceEdge, GraphFaceSide, GraphLensLimits, GraphMaterialFace, QualifiedClosedBranches,
-    QualifiedClosedGraphMaterial, QualifiedClosedGraphSides, assemble_closed_graph_lens,
-    partition_closed_branches, qualify_closed_graph_material, qualify_closed_graph_sides,
+    ClosedBranchFaces, ClosedBranchLimits, ClosedGraphEnvelope, ClosedGraphLens,
+    ClosedGraphSideLimits, ClosedSourceEdge, GraphEnvelopeLimits, GraphEnvelopeOperation,
+    GraphFaceSide, GraphLensLimits, GraphMaterialFace, QualifiedClosedBranches,
+    QualifiedClosedGraphMaterial, QualifiedClosedGraphSides, assemble_closed_graph_envelope,
+    assemble_closed_graph_lens, partition_closed_branches, qualify_closed_graph_material,
+    qualify_closed_graph_sides,
 };
 mod coedge_roots;
 #[cfg(test)]

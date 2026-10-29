@@ -1,6 +1,6 @@
 //! Complete simple zero cycles of original graph surfaces meet only at their
 //! shared authored contour. Called only after exact lifts, simple positive trim
-//! disks and whole-chart injectivity are independently admitted.
+//! regions and whole-chart injectivity are independently admitted.
 use crate::Model;
 use nurbs_core::ss_intersection as ss;
 use std::collections::BTreeSet;
@@ -34,8 +34,6 @@ pub(crate) fn certify(
         return (None, 0);
     };
     if faces[0] == faces[1]
-        || !a.holes.is_empty()
-        || !b.holes.is_empty()
         || max == 0
         || a.surface.periodic_u
         || a.surface.periodic_v
@@ -44,17 +42,32 @@ pub(crate) fn certify(
     {
         return (None, 0);
     }
-    let loops = [&model.loops[a.outer].coedges, &model.loops[b.outer].coedges];
-    let edges: BTreeSet<_> = loops[0].iter().map(|c| c.edge).collect();
-    if edges.len() < 2
-        || loops[0].len() != edges.len()
-        || loops[1].len() != edges.len()
-        || edges != loops[1].iter().map(|c| c.edge).collect()
-        || loops
+    let wires = |f: &crate::Face| {
+        std::iter::once(f.outer)
+            .chain(f.holes.iter().copied())
+            .collect::<Vec<_>>()
+    };
+    let wire_edges = |w: usize| {
+        model.loops[w]
+            .coedges
             .iter()
-            .flat_map(|l| l.iter())
-            .any(|c| c.trim().is_some())
-    {
+            .map(|c| c.edge)
+            .collect::<BTreeSet<_>>()
+    };
+    let aw = wires(a);
+    let bw = wires(b);
+    let ae: BTreeSet<_> = aw.iter().flat_map(|&w| wire_edges(w)).collect();
+    let be: BTreeSet<_> = bw.iter().flat_map(|&w| wire_edges(w)).collect();
+    let edges: BTreeSet<_> = ae.intersection(&be).copied().collect();
+    let complete = |ws: &[usize]| {
+        ws.iter().any(|&w| {
+            let coedges = &model.loops[w].coedges;
+            coedges.len() == edges.len()
+                && wire_edges(w) == edges
+                && coedges.iter().all(|c| c.trim().is_none())
+        })
+    };
+    if edges.len() < 2 || !complete(&aw) || !complete(&bw) {
         return (None, 0);
     }
     let mut used = 0;
@@ -90,10 +103,11 @@ pub(crate) fn certify(
         // cycles. Repeating pcurve residual algebra here would re-prove the
         // same identity, not strengthen it. The complete original SS census
         // therefore places those actual cycles on its unique ellipse.
-        // A complete simple positive disk cycle lying on the one nonsingular
-        // ellipse must be that entire ellipse. Both disk interiors are the
-        // bounded ellipse interior. The original complete SS census contains
-        // no other contact, hence no interior intersection can remain.
+        // Any complete simple cycle lying on the one nonsingular ellipse is
+        // that entire ellipse, including a negatively oriented hole cycle.
+        // The complete original SS census contains no further contact. Both
+        // regions therefore meet only on their actual common boundary, whether
+        // the adjacent material occupies the inner or the outer component.
         Some(Certificate {
             faces,
             edges: edges.into_iter().collect(),

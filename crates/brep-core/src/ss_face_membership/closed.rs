@@ -1,6 +1,11 @@
 //! Author full internal closed SS contours from complete source membership.
 use super::*;
 use crate::face_cut::{self, Segment};
+mod envelope;
+pub use envelope::{
+    ClosedGraphEnvelope, GraphEnvelopeLimits, GraphEnvelopeOperation,
+    assemble_closed_graph_envelope,
+};
 mod lens;
 pub use lens::{ClosedGraphLens, GraphLensLimits, assemble_closed_graph_lens};
 mod material;
