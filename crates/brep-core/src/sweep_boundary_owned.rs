@@ -449,6 +449,8 @@ pub use closed::{
 };
 
 mod common_trim_region;
+mod smooth_original;
+pub use smooth_original::{construct_with_original_smooth_volume,OriginalSmoothBody,OriginalSmoothBodyAttempt,OriginalSmoothBodyRefusal,OriginalSmoothBodyWork};
 
 fn ideal_refused(
     mut body: Box<CertifiedBody>,

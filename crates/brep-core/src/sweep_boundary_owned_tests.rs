@@ -700,3 +700,5 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
 mod weighted;
 
 mod tensor;
+
+mod smooth_original;
