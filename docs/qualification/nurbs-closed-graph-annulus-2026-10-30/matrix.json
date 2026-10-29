@@ -1,0 +1,63 @@
+{
+  "milestone": "annular graph difference and unified native graph Boolean entry",
+  "native_tests": {
+    "passed": 4221,
+    "failed": 0,
+    "ignored": 6
+  },
+  "native_operator_order_variants": 8,
+  "node_contracts_passed": 10,
+  "minimal_library_check": "passed",
+  "minimal_full_unit_tests": "not qualified; previous 412 compile errors not remeasured",
+  "chart_work_cap_unchanged": 1000,
+  "chart_work_allocation": {
+    "contraction_spans": 100,
+    "monotonicity_cells": 900
+  },
+  "contact_pair_cap_unchanged": 1000,
+  "api_modules": 239,
+  "catalog_entries": 200,
+  "architecture_existing_violations": 70,
+  "rust_source_sha256": {
+    "crates/brep-core/src/ss_face_membership.rs": "174cf660157b6d01c017853d30f8f1f915850e62aa14dd0768af1cb1f6789679",
+    "crates/brep-core/src/ss_face_membership/closed.rs": "cffb11d7d862ca18efc00dbd2b450759b5da94f356b932a4e44cd08c82cde043",
+    "crates/brep-core/src/ss_face_membership/closed/lens.rs": "18cbe83476adfa942f5e2a8d89d2d5832f1ab04f327db7ac8ef898bc242b2278",
+    "crates/brep-core/src/ss_face_membership/closed/envelope.rs": "2ad455e43934e5ba4140fde790a51c3e5037ba22ef5a6fcc7a43ff69355034c5",
+    "crates/brep-core/src/ss_face_membership/closed/annulus.rs": "d4fb1e94801b50632494b2393bd217b7d472ea1a106909c619d484558f850158",
+    "crates/brep-core/src/ss_face_membership/closed/annulus/walls.rs": "3cbc5184c08307d914df2f5e62285a3f0423522584ea503b3dae5c184c9c1665",
+    "crates/brep-core/src/ss_face_membership/closed/annulus/tests.rs": "36c2ad976d54e68e0670b2af74c4a977ee5ff157e266dd01dfee657bcc19d060",
+    "crates/brep-core/src/ss_face_membership/closed/boolean.rs": "c67575a1c81ea93a3e9a0f7b7adb0a1c6d824b85e2e224188a61dedfddaff4b1",
+    "crates/brep-core/src/trimmed_shell_recipe.rs": "f33859379b73dd42402e2a30f4d993a3c8f33c3936726aae44169df59f436072"
+  },
+  "logs": {
+    "graph-annulus-full.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-annulus-full.log",
+      "sha256": "0d0a0747ad49aa5f8759f63716fcdb8d7e2ce2b5947fb2d7bfc86ebed0f05bdc"
+    },
+    "graph-annulus-focused-r3.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-annulus-focused-r3.log",
+      "sha256": "18028f36315d639a9a8cbc70b8990da9f89a7829fd31915b5b1d15d0b44f5c4e"
+    },
+    "graph-annulus-minimal-check.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-annulus-minimal-check.log",
+      "sha256": "348318f37786e2c3698300f5656d0cd51db45520fe08c9a474a4f86e4405990b"
+    },
+    "graph-annulus-node.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-annulus-node.log",
+      "sha256": "2ab6f6d396423b495549492611a146e5f2e02b35b6581050dddf6bef0cda60f7"
+    },
+    "graph-annulus-architecture.log": {
+      "path": "/Users/themoretheless/.codex/tmp/nurbs-plan-recovery-commands-20261030/graph-annulus-architecture.log",
+      "sha256": "60e1a0d4c854d38c8b7472d6f1792d21d5eb29464751086bfdd3faf30cf48097"
+    }
+  },
+  "remaining": [
+    "general SS strata and rational multispan periodic Boolean",
+    "central G2 fill and sewn corner",
+    "continuous offset and shell cleanup",
+    "general exact simplification",
+    "full minimal unit-test target",
+    "WASM Rush UI edited-body STEP and distribution gates"
+  ],
+  "plan_complete": false
+}

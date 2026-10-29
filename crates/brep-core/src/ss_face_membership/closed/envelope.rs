@@ -22,6 +22,10 @@ pub struct ClosedGraphEnvelope {
     operations: usize,
 }
 impl ClosedGraphEnvelope {
+    pub(super) fn into_boundary(self) -> shell::ClosedBoundary {
+        self.boundary
+    }
+
     pub fn model(&self) -> &Model {
         self.boundary.model()
     }

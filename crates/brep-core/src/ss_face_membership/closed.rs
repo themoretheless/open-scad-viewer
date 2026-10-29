@@ -1,6 +1,13 @@
 //! Author full internal closed SS contours from complete source membership.
 use super::*;
 use crate::face_cut::{self, Segment};
+mod boolean;
+pub use boolean::{
+    ClosedGraphBoolean, GraphBooleanComponent, GraphBooleanLimits, GraphBooleanOperation,
+    assemble_closed_graph_boolean,
+};
+mod annulus;
+pub use annulus::{ClosedGraphAnnulus, GraphAnnulusLimits, assemble_closed_graph_annulus};
 mod envelope;
 pub use envelope::{
     ClosedGraphEnvelope, GraphEnvelopeLimits, GraphEnvelopeOperation,

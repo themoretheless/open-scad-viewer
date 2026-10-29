@@ -10,10 +10,12 @@ use nurbs_core::{
 };
 mod closed;
 pub use closed::{
-    ClosedBranchFaces, ClosedBranchLimits, ClosedGraphEnvelope, ClosedGraphLens,
-    ClosedGraphSideLimits, ClosedSourceEdge, GraphEnvelopeLimits, GraphEnvelopeOperation,
-    GraphFaceSide, GraphLensLimits, GraphMaterialFace, QualifiedClosedBranches,
-    QualifiedClosedGraphMaterial, QualifiedClosedGraphSides, assemble_closed_graph_envelope,
+    ClosedBranchFaces, ClosedBranchLimits, ClosedGraphAnnulus, ClosedGraphBoolean,
+    ClosedGraphEnvelope, ClosedGraphLens, ClosedGraphSideLimits, ClosedSourceEdge,
+    GraphAnnulusLimits, GraphBooleanComponent, GraphBooleanLimits, GraphBooleanOperation,
+    GraphEnvelopeLimits, GraphEnvelopeOperation, GraphFaceSide, GraphLensLimits, GraphMaterialFace,
+    QualifiedClosedBranches, QualifiedClosedGraphMaterial, QualifiedClosedGraphSides,
+    assemble_closed_graph_annulus, assemble_closed_graph_boolean, assemble_closed_graph_envelope,
     assemble_closed_graph_lens, partition_closed_branches, qualify_closed_graph_material,
     qualify_closed_graph_sides,
 };

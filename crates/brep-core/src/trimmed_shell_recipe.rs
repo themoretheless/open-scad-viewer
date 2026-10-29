@@ -20,6 +20,25 @@ impl ClosedBoundary {
     pub fn model(&self) -> &Model {
         &self.model
     }
+    /// Fresh result audit with an explicit independently bounded monotonicity
+    /// phase. The ordinary contraction-only admission path is unchanged.
+    pub fn audit_volume_with_linear(
+        self,
+        tolerance_uv: f64,
+        limits: crate::volume_validity::Limits,
+        max_linear_cells: usize,
+    ) -> Result<VolumeReport> {
+        let report = crate::volume_validity::inspect_with_linear(
+            &self.model,
+            tolerance_uv,
+            limits,
+            max_linear_cells,
+        )?;
+        Ok(VolumeReport {
+            candidate: self,
+            report,
+        })
+    }
 }
 /// Fresh immutable geometry audit of the same assembled boundary snapshot.
 /// A work stop retains the candidate and diagnostics without solid authority.
