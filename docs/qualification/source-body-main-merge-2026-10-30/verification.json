@@ -2,8 +2,6 @@
   "implementationCommit": "b846ca701effcb9502f3ea203a77b8a168c65c8e",
   "mainCommit": "4d065b3b60f969f72ea7645911ab832eb1fbefe5",
   "sourceUnchanged": true,
-  "uniqueNativePassed": 230,
-  "uniqueNativeFailed": 1,
   "architectureDiagnostics": 68,
   "checks": [
     {
@@ -557,5 +555,7 @@
       "log": "original-smooth-volume.log.gz"
     }
   ],
-  "published": false
+  "published": false,
+  "nativePassed": 232,
+  "nativeFailed": 1
 }
