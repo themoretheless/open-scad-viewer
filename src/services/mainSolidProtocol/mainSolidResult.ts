@@ -1,3 +1,5 @@
+import {validExpressionShell} from '../expressionShell'
+import {validExpressionInspection} from '../expressionShellInspection'
 import {validOffsetDeviation} from '../nurbsOffsetDeviation'
 import {validOffsetContact} from './results/offsetContact'
 import {validOffsetEnvelope} from './results/offsetEnvelope'
@@ -79,6 +81,8 @@ function validManifoldRepair(value:unknown,mesh:PolygonMesh,after:KernelManifold
 
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
+  if(job.kind==='expressionShellRestore')return validExpressionShell(job,value)
+  if(job.kind==='expressionShellInspect')return validExpressionInspection(job,value)
   if(job.kind==='sourceBodyRestore')return validSourceBody(job,value)
   if(job.kind==='profileBridgeChords')return validProfileBridgeChordReport(job,value)
   if (!value || typeof value!=='object') return false

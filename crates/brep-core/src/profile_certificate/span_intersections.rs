@@ -263,116 +263,8 @@ fn width(a: &Cell, b: &Cell, w: f64) -> Q {
             .max(&b.domain[1] - &b.domain[0])
             .max(Q::one())
 }
-fn witness(
-    a: &Cell,
-    b: &Cell,
-    i: usize,
-    j: usize,
-    diagonal: bool,
-    w: f64,
-) -> Result<SpanPairCertificate> {
-    let mut p = SpanPairCertificate {
-        first: i,
-        second: j,
-        kind: String::new(),
-        axis: 0,
-        shear: 0,
-        factors: Vec::new(),
-        relation: Vec::new(),
-        branches: None,
-    };
-    for axis in 0..2 {
-        if separated(a, b, axis) {
-            p.kind = "separate".into();
-            p.axis = axis as u8;
-            return Ok(p);
-        }
-        if diagonal && arithmetic::monotone(&a.net, axis)? {
-            p.kind = "stationary".into();
-            p.axis = axis as u8;
-            p.factors = encode_factors(&engine::stationary(&a.net, &width(a, b, w))?);
-            return Ok(p);
-        }
-        if !diagonal && let Ok((lo, hi, _)) = range(a, b, axis) {
-            if lo >= hi {
-                p.kind = "range".into();
-                p.axis = axis as u8;
-                return Ok(p);
-            }
-            if let Ok(h) = arithmetic::bivariate::partial_relation(&a.net, &b.net, axis) {
-                p.kind = "overlap".into();
-                p.axis = axis as u8;
-                p.relation = h
-                    .iter()
-                    .map(|row| row.iter().map(ratio).collect())
-                    .collect();
-                return Ok(p);
-            }
-        }
-    }
-    if let Some((h, residual)) = arithmetic::bivariate::component_system(&a.net, &b.net, diagonal)?
-    {
-        if h.is_empty() {
-            p.kind = "whole-square".into();
-            return Ok(p);
-        }
-        let (k, f) = engine::produce_system(&residual, diagonal, &width(a, b, w))?;
-        p.kind = "locus".into();
-        p.shear = k;
-        p.factors = encode_factors(&f);
-        p.relation = h
-            .iter()
-            .map(|row| row.iter().map(ratio).collect())
-            .collect();
-        return Ok(p);
-    }
-    let (k, f) = engine::produce(&a.net, &b.net, diagonal, &width(a, b, w))?;
-    p.kind = "events".into();
-    p.shear = k;
-    p.factors = encode_factors(&f);
-    Ok(p)
-}
-pub fn certify_span_intersections(
-    a: &Curve,
-    b: &Curve,
-    self_pair: bool,
-    w: f64,
-) -> Result<SpanIntersectionCertificate> {
-    let source = source(a, b, self_pair, w)?;
-    let x = cells(a)?;
-    let y = cells(b)?;
-    let mut pairs = Vec::new();
-    for i in 0..x.len() {
-        for j in 0..y.len() {
-            if self_pair && i > j {
-                continue;
-            }
-            let mut pair = witness(&x[i], &y[j], i, j, self_pair && i == j, w)?;
-            if matches!(pair.kind.as_str(), "overlap" | "locus" | "whole-square") {
-                let h = if pair.kind == "whole-square" {
-                    Vec::new()
-                } else {
-                    decode_locus(&pair.relation)?
-                };
-                pair.branches = Some(branches::decompose(
-                    &h,
-                    self_pair.then(|| local_diagonal(&x[i], &y[j])),
-                    &width(&x[i], &y[j], w),
-                )?);
-            }
-            pairs.push(pair);
-        }
-    }
-    let c = SpanIntersectionCertificate {
-        version: 3,
-        source,
-        self_pair,
-        maximum_parameter_width: w,
-        pairs,
-    };
-    verify_span_intersections(a, b, &c)?;
-    Ok(c)
-}
+
+
 pub fn verify_span_intersections(
     a: &Curve,
     b: &Curve,
@@ -390,225 +282,7 @@ pub fn verify_span_intersections(
     let y = cells(b)?;
     verify_cells(&x, &y, c)
 }
-fn verify_cells(x: &[Cell], y: &[Cell], c: &SpanIntersectionCertificate) -> Result<VerifiedSpanIntersections> {
-    if c.pairs.len() > 4096 {
-        return Err(refused("Translated span pair census exceeds allowance"));
-    }
-    let mut n = 0;
-    let mut out = VerifiedSpanIntersections {
-        events: Vec::new(),
-        singular: Vec::new(),
-        overlaps: Vec::new(),
-        algebraic_loci: Vec::new(),
-        stationary_spans: Vec::new(),
-        branch_decompositions: Vec::new(),
-    };
-    for i in 0..x.len() {
-        for j in 0..y.len() {
-            if c.self_pair && i > j {
-                continue;
-            }
-            let p = c
-                .pairs
-                .get(n)
-                .ok_or_else(|| refused("Multi-span intersection pair is missing"))?;
-            n += 1;
-            if p.first != i || p.second != j || p.axis > 1 {
-                return Err(refused(
-                    "Multi-span intersection pairs are reordered or false",
-                ));
-            }
-            let a = &x[i];
-            let b = &y[j];
-            let diagonal = c.self_pair && i == j;
-            if !matches!(p.kind.as_str(), "events" | "locus") && p.shear != 0
-                || !matches!(p.kind.as_str(), "overlap" | "locus") && !p.relation.is_empty()
-                || !matches!(p.kind.as_str(), "events" | "stationary" | "locus")
-                    && !p.factors.is_empty()
-            {
-                return Err(refused("Extraneous multi-span pair proof claims"));
-            }
-            let events = match p.kind.as_str() {
-                "locus" | "whole-square" => {
-                    if c.version < 2 {
-                        return Err(refused(
-                            "Algebraic parameter loci require span certificate version >=2",
-                        ));
-                    }
-                    let (h, residual) =
-                        arithmetic::bivariate::component_system(&a.net, &b.net, diagonal)?
-                            .ok_or_else(|| refused("False common parameter locus"))?;
-                    let whole = h.is_empty();
-                    if whole != (p.kind == "whole-square")
-                        || (!whole && decode_locus(&p.relation)? != h)
-                    {
-                        return Err(refused("Incomplete or false common parameter component"));
-                    }
-                    let domain = |cell: &Cell| -> Result<[f64; 2]> {
-                        Ok([
-                            outward(&cell.domain[0], false)?,
-                            outward(&cell.domain[1], true)?,
-                        ])
-                    };
-                    out.algebraic_loci.push(VerifiedParameterLocus {
-                        first_span: i,
-                        second_span: j,
-                        first_domain: domain(a)?,
-                        second_domain: domain(b)?,
-                        whole_square: whole,
-                        diagonal_excluded: c.self_pair,
-                        relation: p.relation.clone(),
-                    });
-                    if whole && diagonal {
-                        out.stationary_spans.push(domain(a)?)
-                    }
-                    if whole {
-                        Vec::new()
-                    } else {
-                        let w = width(a, b, c.maximum_parameter_width);
-                        let mut events = engine::verify_system(
-                            &residual,
-                            diagonal,
-                            &w,
-                            p.shear,
-                            &decode_factors(&p.factors)?,
-                        )?;
-                        if diagonal {
-                            let stationary = engine::stationary(&a.net, &w)?;
-                            events.extend(engine::verify_stationary(&a.net, &w, &stationary)?);
-                        }
-                        events
-                    }
-                }
-                "separate" => {
-                    if !separated(a, b, p.axis as usize) {
-                        return Err(refused("False exact source hull separation"));
-                    }
-                    Vec::new()
-                }
-                "stationary" => {
-                    if !diagonal || !arithmetic::monotone(&a.net, p.axis as usize)? {
-                        return Err(refused("False diagonal injectivity claim"));
-                    }
-                    engine::verify_stationary(
-                        &a.net,
-                        &width(a, b, c.maximum_parameter_width),
-                        &decode_factors(&p.factors)?,
-                    )?
-                }
-                "range" => {
-                    if diagonal {
-                        return Err(refused("Self diagonal needs a stationary census"));
-                    }
-                    let (lo, hi, events) = range(a, b, p.axis as usize)?;
-                    if lo < hi {
-                        return Err(refused("False separated image ranges"));
-                    }
-                    events
-                }
-                "overlap" => {
-                    if diagonal {
-                        return Err(refused("A self diagonal cannot become a common component"));
-                    }
-                    let (lo, hi, _) = range(a, b, p.axis as usize)?;
-                    let h = nonlinear::decode(&p.relation)?;
-                    if lo >= hi
-                        || !arithmetic::bivariate::verify_partial_relation(
-                            &a.net,
-                            &b.net,
-                            p.axis as usize,
-                            &h,
-                        )?
-                    {
-                        return Err(refused(
-                            "Common curve component or its image coverage is false",
-                        ));
-                    }
-                    let domain = |c: &Cell| {
-                        [
-                            outward(&c.domain[0], false).unwrap(),
-                            outward(&c.domain[1], true).unwrap(),
-                        ]
-                    };
-                    out.overlaps.push(VerifiedCurveOverlap {
-                        first_span: i,
-                        second_span: j,
-                        first_domain: domain(a),
-                        second_domain: domain(b),
-                        axis: p.axis,
-                        image_range: [ratio(&lo), ratio(&hi)],
-                        relation: p.relation.clone(),
-                    });
-                    Vec::new()
-                }
-                "events" => engine::verify(
-                    &a.net,
-                    &b.net,
-                    diagonal,
-                    &width(a, b, c.maximum_parameter_width),
-                    p.shear,
-                    &decode_factors(&p.factors)?,
-                )?,
-                _ => return Err(refused("Unknown multi-span pair proof kind")),
-            };
-            if matches!(p.kind.as_str(), "overlap" | "locus" | "whole-square") && c.version == 3 {
-                let h = if p.kind == "whole-square" {
-                    Vec::new()
-                } else {
-                    decode_locus(&p.relation)?
-                };
-                let graph = branches::decompose(
-                    &h,
-                    c.self_pair.then(|| local_diagonal(a, b)),
-                    &width(a, b, c.maximum_parameter_width),
-                )?;
-                if p.branches.as_ref() != Some(&graph) {
-                    return Err(refused("False or incomplete parameter branch graph"));
-                }
-                out.branch_decompositions.push(VerifiedBranchGraph {
-                    first_span: i,
-                    second_span: j,
-                    decomposition: graph,
-                });
-            } else if p.branches.is_some() {
-                return Err(refused("Extraneous parameter branch graph"));
-            }
-            let global = |c: &Cell, p: &[Q; 2]| -> Result<[f64; 2]> {
-                let f = |t: &Q| &c.domain[0] + (&c.domain[1] - &c.domain[0]) * t;
-                Ok([outward(&f(&p[0]), false)?, outward(&f(&p[1]), true)?])
-            };
-            for e in events {
-                if e.singular {
-                    out.singular.push(global(a, &e.first)?);
-                    continue;
-                }
-                if (e.first == [Q::one(), Q::one()] && i + 1 < x.len())
-                    || (e.second == [Q::one(), Q::one()] && j + 1 < y.len())
-                {
-                    continue;
-                }
-                let first = global(a, &e.first)?;
-                let second = global(b, &e.second)?;
-                if c.self_pair && first[0] == first[1] && first == second {
-                    continue;
-                }
-                out.events.push([first, second]);
-            }
-        }
-    }
-    if n != c.pairs.len() {
-        return Err(refused("Multi-span intersection census has extra pairs"));
-    }
-    out.events.sort_by(|a, b| {
-        a[0][0]
-            .total_cmp(&b[0][0])
-            .then(a[1][0].total_cmp(&b[1][0]))
-    });
-    out.events.dedup();
-    out.singular.sort_by(|a, b| a[0].total_cmp(&b[0]));
-    out.singular.dedup();
-    Ok(out)
-}
+
 #[cfg(feature = "codec")]
 mod serialization {
     use super::*;
@@ -705,29 +379,8 @@ mod serialization {
     }
 }
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn complete_multi_span_components_and_isolated_knots() {
-        let a = Curve::from_polyline(vec![vec![0., 0.], vec![4., 0.], vec![4., 4.], vec![0., 4.]])
-            .unwrap();
-        let b = Curve::from_polyline(vec![vec![2., 0.], vec![4., 0.], vec![4., 2.], vec![4., 4.]])
-            .unwrap();
-        let c = certify_span_intersections(&a, &b, false, 1e-12).unwrap();
-        let r = verify_span_intersections(&a, &b, &c).unwrap();
-        assert!(r.overlaps.len() >= 3);
-        let mut bad = c;
-        bad.pairs.pop();
-        assert!(verify_span_intersections(&a, &b, &bad).is_err());
-        let a = Curve::from_polyline(vec![vec![0., 0.], vec![3., 3.], vec![6., 0.]]).unwrap();
-        let b = Curve::from_polyline(vec![vec![0., 1.], vec![6., 1.]]).unwrap();
-        let c = certify_span_intersections(&a, &b, false, 1e-12).unwrap();
-        assert_eq!(
-            verify_span_intersections(&a, &b, &c).unwrap().events.len(),
-            2
-        );
-    }
-}
+#[path = "span_intersections/tests/mod.rs"]
+mod tests;
 
 #[cfg(test)]
 mod locus_tests;
@@ -929,3 +582,13 @@ pub use translated::{
     OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces, PeriodicSewnFaceLimits,
     own_periodic_sewn_faces,
 };
+
+#[path="span_intersections/algorithm_witness.rs"]
+mod algorithm_witness;
+use algorithm_witness::witness;
+#[path="span_intersections/algorithm_certify_span_intersections.rs"]
+mod algorithm_certify_span_intersections;
+pub use algorithm_certify_span_intersections::certify_span_intersections;
+#[path="span_intersections/algorithm_verify_cells.rs"]
+mod algorithm_verify_cells;
+use algorithm_verify_cells::verify_cells;

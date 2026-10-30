@@ -23,6 +23,8 @@ export interface BrepTopologyIds {
  faces:TopoId[]
  shells:TopoId[]
  bodies:TopoId[]
+ localTolerancesMm?:Record<string,number>
+ sewedEdges?:TopoId[]
  lineage?:BrepTopologyLineageRecord[]
  changeSet?:RustChangeSet
 }

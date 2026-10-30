@@ -11,10 +11,8 @@ import {
   computeLinearPatternOffsets,
   computeCircularPatternTransforms,
 } from '../src/services/directModelingTools'
-import {
-  computeLinearPatternOffsets as computeLinearPatternOffsetsFromVue,
-  computeCircularPatternTransforms as computeCircularPatternTransformsFromVue,
-} from '../src/components/LiveBodyPatternControls.vue'
+import {expandLiveBodyPatterns} from '../src/services/liveBodyPattern'
+import type {DirectDocument} from '../src/services/directModeling'
 import { formatEngineeringSummaryMarkdown } from '../src/mcp/rushGraphReport'
 
 describe('Tier IV Wave 3 Improvements', () => {
@@ -200,12 +198,13 @@ describe('Tier IV Wave 3 Improvements', () => {
     })
   })
 
-  describe('LiveBodyPatternControls & directModelingTools pattern helpers', () => {
+  describe('native live body patterns & directModelingTools pattern helpers', () => {
     it('computes 2D grid linear pattern offsets in row-major order', () => {
-      expect(computeLinearPatternOffsetsFromVue).toBe(computeLinearPatternOffsets)
-      expect(computeCircularPatternTransformsFromVue).toBe(computeCircularPatternTransforms)
 
       const offsets = computeLinearPatternOffsets(3, 2, 15, 25)
+      const source:DirectDocument={version:1,sketches:[],bodies:[{id:'seed',name:'Seed',mesh:{positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]},livePattern:{kind:'grid',rows:2,columns:3,spacing:[15,25]}}]}
+      const expanded=expandLiveBodyPatterns(source)
+      expect(expanded.bodies.slice(1).map(b=>b.instance!.matrix.slice(0,3).map(row=>row[3]))).toEqual(offsets.slice(1))
       expect(offsets).toEqual([
         [0, 0, 0],
         [15, 0, 0],

@@ -96,8 +96,9 @@ type Internal = Record<string, unknown> & {
   buildPipelines(): void
   buildSceneUB(): void
   buildGrid(): void
-  getRenderPipeline(id: string, flavor?: { variant?: string }): FakePipeline
+  dev: GPUDevice
   pipelines: {
+    getRenderPipeline(device:GPUDevice,id:string,flavor?:{variant?:string}):FakePipeline
     pipelineCache: Map<string, FakePipeline>
     objBGL: FakeBindGroupLayout
     matcapBGL: FakeBindGroupLayout
@@ -159,7 +160,7 @@ describe('WebGPURenderer bind-group validation', () => {
     const declaredGroup2: Record<string, FakeBindGroupLayout> = { meshMatcap: matcapBGL, meshPbr: envBGL }
     for (const spec of listShaders()) {
       for (const variant of spec.supportsVariants ? ['uniform', 'instanced'] : ['uniform']) {
-        const pipeline = internal.getRenderPipeline(spec.id, { variant })
+        const pipeline = internal.pipelines.getRenderPipeline(internal.dev,spec.id, { variant })
         const declared = [...pipeline.code.matchAll(/@group\((\d+)\)/g)].map(match => Number(match[1]))
         const label = `${spec.id}/${variant}`
         expect(pipeline.layout.groups.length, label).toBeGreaterThanOrEqual(Math.max(...declared) + 1)

@@ -66,106 +66,8 @@ fn separates(a: &[P], b: &[P], n: &P) -> bool {
     let (b0, b1) = bounds(b, n);
     a1 < b0 || b1 < a0
 }
-/// A deliberately small set of exact separating axes. Failure only requests
-/// subdivision; no axis or floating-point proximity is treated as evidence.
-fn separated(a: &[P], b: &[P], work: &mut Work) -> Result<bool> {
-    for k in 0..3 {
-        if separates(
-            a,
-            b,
-            &std::array::from_fn(|i| if i == k { Q::one() } else { Q::zero() }),
-        ) {
-            return Ok(true);
-        }
-    }
-    let center = |p: &[P]| {
-        std::array::from_fn(|i| p.iter().map(|p| p[i].clone()).sum::<Q>() / integer(p.len() as i64))
-    };
-    if separates(a, b, &sub(&center(a), &center(b))) {
-        return Ok(true);
-    }
-    // Corner triangle face normals and crossed edge directions are cheap
-    // exact witnesses for the usual near-linear chart hulls.
-    if a.len() >= 3 && b.len() >= 3 {
-        for p in [a, b] {
-            let n = cross(&sub(&p[1], &p[0]), &sub(&p[2], &p[0]));
-            if separates(a, b, &n) {
-                return Ok(true);
-            }
-            for k in 0..3 {
-                work.charge(1)?;
-                if separates(a, b, &cross(&n, &sub(&p[(k + 1) % 3], &p[k]))) {
-                    return Ok(true);
-                }
-            }
-        }
-        for i in 0..3 {
-            for j in 0..3 {
-                work.charge(1)?;
-                if separates(
-                    a,
-                    b,
-                    &cross(&sub(&a[(i + 1) % 3], &a[i]), &sub(&b[(j + 1) % 3], &b[j])),
-                ) {
-                    return Ok(true);
-                }
-            }
-        }
-    }
-    // Convex hull face normals are useful even for spatially rotated charts.
-    for p in [a, b] {
-        for i in 0..p.len().min(6) {
-            for j in i + 1..p.len().min(6) {
-                for k in j + 1..p.len().min(6) {
-                    work.charge(1)?;
-                    if separates(a, b, &cross(&sub(&p[j], &p[i]), &sub(&p[k], &p[i]))) {
-                        return Ok(true);
-                    }
-                }
-            }
-        }
-    }
-    Ok(false)
-}
-fn disjoint(a: &[Net; 2], b: &[Net; 2], depth: u8, work: &mut Work) -> Result<bool> {
-    work.charge(1)?;
-    let pa = a.iter().flat_map(points).collect::<Vec<_>>();
-    let pb = b.iter().flat_map(points).collect::<Vec<_>>();
-    if separated(&pa, &pb, work)? {
-        return Ok(true);
-    }
-    if depth == 4 {
-        return Ok(false);
-    }
-    // Split the larger swept box; every child covers its full time interval.
-    let diameter = |p: &[P]| {
-        (0..3)
-            .map(|k| {
-                p.iter().map(|p| p[k].clone()).max().unwrap()
-                    - p.iter().map(|p| p[k].clone()).min().unwrap()
-            })
-            .max()
-            .unwrap()
-    };
-    let (first, other, swap) = if diameter(&pa) >= diameter(&pb) {
-        (a, b, false)
-    } else {
-        (b, a, true)
-    };
-    let x = bernstein::subdivide(&first[0], work)?;
-    let y = bernstein::subdivide(&first[1], work)?;
-    for (x, y) in x.into_iter().zip(y) {
-        let child = [x, y];
-        if !(if swap {
-            disjoint(other, &child, depth + 1, work)?
-        } else {
-            disjoint(&child, other, depth + 1, work)?
-        }) {
-            return Ok(false);
-        }
-    }
-    Ok(true)
-}
+
+
 fn scalar_dot(p: &[Scalar], n: &P) -> Scalar {
     p[0].iter()
         .enumerate()
@@ -184,98 +86,7 @@ fn positive_sum(a: &Scalar, b: &Scalar, sign: i64) -> bool {
             .all(|(x, y)| x + y * integer(sign) > Q::zero())
     })
 }
-fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
-    let c = bernstein::corners(&p.h);
-    let (e, f) = (sub(&c[1], &c[0]), sub(&c[2], &c[0]));
-    let det = dot(n, &cross(&e, &f));
-    if det <= Q::zero() {
-        return Ok(false);
-    }
-    // Both duals share the positive factor det. Keeping them unnormalized
-    // preserves every sign/interval criterion and avoids a large denominator.
-    let a = cross(&f, n);
-    let b = cross(n, &e);
-    let au = scalar_dot(&p.derivatives[0], &a);
-    let av = scalar_dot(&p.derivatives[1], &a);
-    let bu = scalar_dot(&p.derivatives[0], &b);
-    let bv = scalar_dot(&p.derivatives[1], &b);
-    // For J_t=(1-t)J+tI, det J_t=(1-t)^2 det J+t(1-t)tr J+t².
-    // Either exact positive diagonal dominance or positive determinant and
-    // trace therefore prove the complete time homotopy, including skew charts.
-    if positive_sum(&au, &av, 1)
-        && positive_sum(&au, &av, -1)
-        && positive_sum(&bv, &bu, 1)
-        && positive_sum(&bv, &bu, -1)
-    {
-        return Ok(true);
-    }
-    if !positive_sum(&au, &bv, 1) && !p.h.iter().flatten().any(|p| p[3].is_zero()) {
-        return Ok(false);
-    }
-    let range = |p: &Scalar| {
-        [
-            p.iter().flatten().min().unwrap().clone(),
-            p.iter().flatten().max().unwrap().clone(),
-        ]
-    };
-    let times = |a: [Q; 2], b: [Q; 2]| {
-        let products = [&a[0] * &b[0], &a[0] * &b[1], &a[1] * &b[0], &a[1] * &b[1]];
-        [
-            products.iter().min().unwrap().clone(),
-            products.iter().max().unwrap().clone(),
-        ]
-    };
-    if times(range(&au), range(&bv))[0] > times(range(&av), range(&bu))[1] {
-        return Ok(true);
-    }
-    if 2 * (au.len() - 1) > 33 {
-        return Ok(false);
-    }
-    let det = bernstein::difference(
-        &bernstein::product(&au, &bv, work)?,
-        &bernstein::product(&av, &bu, work)?,
-    );
-    if p.h.iter().flatten().any(|p| p[3].is_zero()) {
-        // At a certified removable homogeneous vertex, strict coefficient
-        // positivity is impossible. Positivity in the open triangle plus the
-        // separately proved Jordan boundary still gives projected degree one.
-        let trace = au
-            .iter()
-            .zip(&bv)
-            .flat_map(|(a, b)| a.iter().zip(b).map(|(a, b)| a + b))
-            .collect::<Vec<_>>();
-        if !(trace.iter().all(|q| *q >= Q::zero())
-            && det.iter().flatten().all(|q| *q >= Q::zero())
-            && det.iter().flatten().any(|q| *q > Q::zero()))
-        {
-            return Ok(false);
-        }
-        // Prove the boundary of each singular chart, including internal star
-        // edges. Interior positivity alone must not authorize an edge collapse.
-        let edges = [
-            bernstein::edges(&p.motion[0]),
-            bernstein::edges(&p.motion[1]),
-        ];
-        let curves = (0..3)
-            .map(|i| [edges[0][i].clone(), edges[1][i].clone()])
-            .collect::<Vec<_>>();
-        for curve in &curves {
-            if !monotone(curve, n, work)? {
-                return Ok(false);
-            }
-        }
-        for i in 0..3 {
-            for j in i + 1..3 {
-                let shared = if (i + 1) % 3 == j { &c[j] } else { &c[i] };
-                if !curve_pair(&curves[i], &curves[j], Some(shared), n, work)? {
-                    return Ok(false);
-                }
-            }
-        }
-        return Ok(true);
-    }
-    Ok(det.iter().flatten().all(|q| *q > Q::zero()))
-}
+
 type Curve = [Vec<sb::H>; 2];
 fn projected(p: &P, n: &P) -> P {
     let t = dot(p, n) / dot(n, n);
@@ -352,72 +163,7 @@ fn curve_pair(a: &Curve, b: &Curve, shared: Option<&P>, n: &P, work: &mut Work) 
     }
     plane_separated(&pa, &pb, n, work)
 }
-fn star(
-    vertex: u32,
-    incident: &[usize],
-    patches: &[Patch],
-    positions: &[P],
-    work: &mut Work,
-) -> Result<usize> {
-    let mut links = BTreeMap::<u32, (u32, Curve)>::new();
-    let mut n: P = std::array::from_fn(|_| Q::zero());
-    for &i in incident {
-        let p = &patches[i];
-        let k = p.ids.iter().position(|v| *v == vertex).unwrap();
-        let c = bernstein::corners(&p.h);
-        n = add(&n, &cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0])));
-        let e = (k + 1) % 3;
-        let curve = [
-            bernstein::edges(&p.motion[0])[e].clone(),
-            bernstein::edges(&p.motion[1])[e].clone(),
-        ];
-        if links
-            .insert(p.ids[e], (p.ids[(e + 1) % 3], curve))
-            .is_some()
-        {
-            return Err(fail("atlas vertex link branches"));
-        }
-    }
-    match star_projected(vertex, incident, patches, positions, &links, &n, work) {
-        Ok(count) => Ok(count),
-        Err(first) => {
-            // Area sums can lie exactly in a cap plane at a conical rim.
-            // Normalize/deduplicate directions, then reprove the entire disk.
-            let mut normals = BTreeSet::new();
-            for &i in incident {
-                let c = bernstein::corners(&patches[i].h);
-                let v = cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0]));
-                let norm: Q = v
-                    .iter()
-                    .map(|q| {
-                        if *q < Q::zero() {
-                            -q.clone()
-                        } else {
-                            q.clone()
-                        }
-                    })
-                    .sum();
-                if !norm.is_zero() {
-                    normals.insert(v.map(|q| q / &norm));
-                }
-            }
-            let n: P = std::array::from_fn(|k| normals.iter().map(|p| p[k].clone()).sum());
-            if let Ok(count) =
-                star_projected(vertex, incident, patches, positions, &links, &n, work)
-            {
-                return Ok(count);
-            }
-            for n in projection::directions(&normals, work)? {
-                if let Ok(count) =
-                    star_projected(vertex, incident, patches, positions, &links, &n, work)
-                {
-                    return Ok(count);
-                }
-            }
-            Err(first)
-        }
-    }
-}
+
 #[allow(clippy::too_many_arguments)]
 fn star_projected(
     _vertex: u32,
@@ -920,3 +666,16 @@ fn segment_seam(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<bool> {
     Ok(monotone(&[a.to_vec(), a.to_vec()], &n, work)?
         && monotone(&[b.to_vec(), b.to_vec()], &n, work)?)
 }
+
+#[path="atlas/algorithm_separated.rs"]
+mod algorithm_separated;
+use algorithm_separated::separated;
+#[path="atlas/algorithm_disjoint.rs"]
+mod algorithm_disjoint;
+use algorithm_disjoint::disjoint;
+#[path="atlas/algorithm_regular.rs"]
+mod algorithm_regular;
+use algorithm_regular::regular;
+#[path="atlas/algorithm_star.rs"]
+mod algorithm_star;
+use algorithm_star::star;

@@ -1,7 +1,6 @@
 {
   "sizes": {
     "crates/brep-core/src/analytic_ss.rs": 933,
-    "crates/brep-core/src/iges_interchange_v2.rs": 1413,
     "crates/brep-core/src/intersections.rs": 5225,
     "crates/brep-core/src/intersections/cone_cone.rs": 839,
     "crates/brep-core/src/intersections/cone_torus.rs": 1184,
@@ -17,7 +16,6 @@
     "crates/brep-core/src/nurbs_step_shared.rs": 1202,
     "crates/brep-core/src/step_interchange_v3.rs": 5274,
     "crates/brep-core/src/step_interchange.rs": 2208,
-    "crates/brep-topology/src/lib.rs": 1039,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1128,
     "crates/modelgraph-runtime/src/eval/evaluator.rs": 1018,
     "crates/sdf-core/src/lib.rs": 1541,
@@ -39,7 +37,6 @@
     "src/components/SceneOutliner.vue": 480,
     "src/core/openScad2021Contract.ts": 506,
     "src/features/DirectModeler.vue": 3491,
-    "src/features/MeshModeler.vue": 857,
     "src/mcp/createServer.ts": 963,
     "src/mcp/createServer/createOpenScadMcpServer.ts": 1333,
     "src/mcp/directGeometrySupervisor.ts": 740,

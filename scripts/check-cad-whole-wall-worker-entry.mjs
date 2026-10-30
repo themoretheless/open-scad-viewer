@@ -1,3 +1,4 @@
+import '../src/mcp/registerRawSourceImports.mjs'
 import {parentPort,workerData} from 'node:worker_threads'
 import assert from 'node:assert/strict'
 import {register} from 'tsx/esm/api'

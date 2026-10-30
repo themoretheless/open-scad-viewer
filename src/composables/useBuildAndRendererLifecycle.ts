@@ -1,3 +1,4 @@
+import {createRendererOperations} from './useBuildAndRendererLifecycle/rendererOperations'
 import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'vue'
 import type { GeometryQuality } from '../core/build'
 import { meshTransferables, type MeshData } from '../core/mesh'
@@ -92,12 +93,38 @@ export interface UseBuildAndRendererLifecycleOptions {
   translate: (key: string) => string
 }
 
-interface RendererRecoveryNavigationSnapshot {
+export interface RendererRecoveryNavigationSnapshot {
   camera: CameraState
   history: ReturnType<WebGPURenderer['getCameraHistorySnapshot']>
 }
 
 export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecycleOptions) {
+  const {initializeViewportRenderer, bindRendererCallbacks, recoverRenderer, handleGeometryResponse} = createRendererOperations({
+    get options() { return options },
+    get renderer() { return renderer },
+    set renderer(value: typeof renderer) { renderer = value },
+    get mainPreviewActive() { return mainPreviewActive },
+    set mainPreviewActive(value: typeof mainPreviewActive) { mainPreviewActive = value },
+    get mainPreserveGroup() { return mainPreserveGroup },
+    set mainPreserveGroup(value: typeof mainPreserveGroup) { mainPreserveGroup = value },
+    get pendingPerformanceFrame() { return pendingPerformanceFrame },
+    set pendingPerformanceFrame(value: typeof pendingPerformanceFrame) { pendingPerformanceFrame = value },
+    get performanceHistory() { return performanceHistory },
+    get performanceSamples() { return performanceSamples },
+    get handleRendererStatus() { return handleRendererStatus },
+    get rendererRecoveryGate() { return rendererRecoveryGate },
+    get autoBuildScheduler() { return autoBuildScheduler },
+    get buildGeneration() { return buildGeneration },
+    set buildGeneration(value: typeof buildGeneration) { buildGeneration = value },
+    get clearSweepViewportPreview() { return clearSweepViewportPreview },
+    get nextPerformanceFrameToken() { return nextPerformanceFrameToken },
+    set nextPerformanceFrameToken(value: typeof nextPerformanceFrameToken) { nextPerformanceFrameToken = value },
+    get mainEditSelection() { return mainEditSelection },
+    set mainEditSelection(value: typeof mainEditSelection) { mainEditSelection = value },
+    get fitNextRender() { return fitNextRender },
+    set fitNextRender(value: typeof fitNextRender) { fitNextRender = value },
+  })
+
   let renderer: WebGPURenderer | null = null
   let buildCoordinator: BuildCoordinator | null = null
   let buildGeneration = 0
@@ -224,98 +251,6 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
     if (options.isComponentActive() && options.autoRender.value) autoBuildScheduler.flush()
   }
 
-  async function initializeViewportRenderer() {
-    const canvas = options.canvasRef.value
-    if (!canvas || !options.isComponentActive() || !options.sourceViewportVisible.value || options.rendererInitializing.value) return
-    options.rendererInitializing.value = true
-    options.rendererUnavailableMessage.value = ''
-    const nextRenderer = new WebGPURenderer()
-    const ok = await nextRenderer.init(canvas)
-    if (!options.isComponentActive() || !options.sourceViewportVisible.value) {
-      nextRenderer.destroy()
-      options.rendererInitializing.value = false
-      return
-    }
-    if (!ok) {
-      const status = nextRenderer.currentStatus
-      options.rendererUnavailableMessage.value = status.status === 'unavailable'
-        ? status.message
-        : status.status === 'error' ? status.error.message : options.translate('noGpu')
-      nextRenderer.destroy()
-      renderer = null
-      options.gpuOk.value = false
-      options.rendererInitializing.value = false
-      return
-    }
-
-    renderer?.destroy()
-    renderer = nextRenderer
-    bindRendererCallbacks(nextRenderer)
-    nextRenderer.setDisplayMode(options.displayMode.value)
-    nextRenderer.setDefaultShadingModel(options.shadingModel.value)
-    nextRenderer.setDefaultMaterial(options.defaultMaterialState())
-    void nextRenderer.setMatcapTexture(options.matcapId.value).catch(() => {})
-    void nextRenderer.setEnvMap(options.envId.value).catch(() => {})
-    nextRenderer.setShadowsEnabled(options.shadowsEnabled.value)
-    nextRenderer.setBackgroundColor(options.effectiveCanvasColor())
-    // Applied after the app-theme background so a theme backgroundColor wins.
-    nextRenderer.setTheme(options.renderThemeId.value)
-    nextRenderer.setSelectionMode(options.selectionMode.value)
-    nextRenderer.setGridVisible(options.gridVisible.value)
-    nextRenderer.setGridStep(options.gridStep.value)
-    if (options.sceneMeshes.value.length) {
-      nextRenderer.setMeshes(options.sceneMeshes.value)
-      nextRenderer.setMeshVisibilityBatch(options.meshVisibility.value)
-      if (options.selectedMesh.value !== null) nextRenderer.selectMesh(options.selectedMesh.value)
-      options.applySection()
-      options.syncSourceHighlightFromEditor()
-      nextRenderer.fitView()
-    }
-    options.gpuOk.value = true
-    options.rendererInitializing.value = false
-  }
-
-  function bindRendererCallbacks(instance: WebGPURenderer) {
-    instance.onSelectionChange = (index, isIsolated, hit) => {
-      if (options.viewportController.isRecovering || mainPreviewActive) return
-      if (options.mainShiftSelection.value && index !== null) {
-        const ids = new Set(options.mainSelectedIndices.value)
-        ids.has(index) ? ids.delete(index) : ids.add(index)
-        options.mainSelectedIndices.value = [...ids]
-        if (!ids.has(index)) {
-          index = options.mainSelectedIndices.value.at(-1) ?? null
-          hit = null
-        }
-      } else if (!mainPreserveGroup) {
-        options.mainSelectedIndices.value = index === null ? [] : [index]
-      }
-      options.mainShiftSelection.value = false
-      options.sceneController.applyRendererSelection(index, isIsolated, hit)
-    }
-    instance.onHoverChange = hit => {
-      if (options.viewportController.isRecovering || mainPreviewActive) return
-      options.sceneController.applyRendererHover(hit)
-    }
-    instance.onMeasurementChange = (value, active) => {
-      if (options.viewportController.isRecovering || mainPreviewActive) return
-      options.sceneController.applyRendererMeasurement(value, active)
-    }
-    instance.onCameraHistoryChange = available => {
-      options.viewportController.applyHistoryAvailability(available)
-    }
-    instance.onFrameSubmitted = (token, at) => {
-      if (instance !== renderer) return
-      if (!pendingPerformanceFrame || pendingPerformanceFrame.frameToken !== token) return
-      if (performanceHistory.submitted(pendingPerformanceFrame.historyToken, at)) {
-        performanceSamples.value = performanceHistory.snapshot()
-      }
-    }
-    instance.onCameraChange = options.syncCameraState
-    instance.onStatusChange = event => handleRendererStatus(instance, event)
-    options.viewportController.applyHistoryAvailability(instance.canGoToPreviousView)
-    options.syncCameraState(instance.getCameraState())
-  }
-
   function handleRendererStatus(instance: WebGPURenderer, event: RendererLifecycleEvent) {
     if (renderer !== instance) return
     if (event.status === 'device-lost') {
@@ -327,105 +262,6 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
     } else if (event.status === 'ready' && rendererErrorMessage && options.error.value === rendererErrorMessage) {
       options.error.value = ''
       rendererErrorMessage = ''
-    }
-  }
-
-  async function recoverRenderer(
-    instance: WebGPURenderer,
-    navigation: RendererRecoveryNavigationSnapshot = {
-      camera: instance.getCameraState(),
-      history: instance.getCameraHistorySnapshot(),
-    },
-  ) {
-    const canvas = options.canvasRef.value
-    if (!canvas || renderer !== instance) {
-      rendererRecoveryGate.reset()
-      return
-    }
-    const token = options.viewportController.beginRecovery()
-    // Triangle identities and hover ownership are renderer-local. Object
-    // selection can be restored by scene identity, but stale surface hits cannot.
-    options.selectedHit.value = null
-    options.sceneController.applyRendererHover(null)
-    let ready = false
-    let failureMessage = options.translate('gpuRecoverFailed')
-
-    try {
-      const recovered = await instance.init(canvas)
-      if (!options.viewportController.isCurrentRecovery(token) || renderer !== instance) return
-      if (!recovered) return
-      if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
-        rendererRecoveryGate.registerDeviceLoss()
-      }
-      if (rendererRecoveryGate.mustDeferReady) return
-
-      instance.setDisplayMode(options.displayMode.value)
-      instance.setDefaultShadingModel(options.shadingModel.value)
-      instance.setDefaultMaterial(options.defaultMaterialState())
-      void instance.setMatcapTexture(options.matcapId.value).catch(() => {})
-      void instance.setEnvMap(options.envId.value).catch(() => {})
-      instance.setShadowsEnabled(options.shadowsEnabled.value)
-      instance.setBackgroundColor(options.effectiveCanvasColor())
-      instance.setTheme(options.renderThemeId.value)
-      instance.setSelectionMode(options.selectionMode.value)
-      instance.setGridVisible(options.gridVisible.value)
-      instance.setGridStep(options.gridStep.value)
-      // Builds can complete while adapter/device acquisition is pending. The CPU
-      // scene and Vue state are authoritative, so re-read them after the await.
-      const currentVisibility = [...options.meshVisibility.value]
-      const selectionCandidate = options.selectedMesh.value
-      const currentSelection = selectionCandidate !== null
-        && Number.isInteger(selectionCandidate)
-        && selectionCandidate >= 0
-        && selectionCandidate < options.sceneMeshes.value.length
-        && currentVisibility[selectionCandidate] !== false
-        ? selectionCandidate
-        : null
-      const currentIsolation = currentSelection !== null && options.isolated.value
-      const currentMeasurement = options.measurement.value
-      const currentMeasureActive = options.measureActive.value
-      options.selectedMesh.value = currentSelection
-      options.isolated.value = currentIsolation
-      if (options.sceneMeshes.value.length) {
-        instance.setMeshes(options.sceneMeshes.value)
-        instance.setMeshVisibilityBatch(currentVisibility)
-        if (currentSelection !== null) {
-          instance.selectMesh(currentSelection)
-          if (currentIsolation) instance.toggleIsolateSelection()
-        }
-      }
-      instance.restoreCameraState(navigation.camera)
-      if (!instance.restoreCameraHistory(navigation.history)) throw new Error(options.translate('gpuRecoverFailed'))
-      instance.restoreMeasurement(currentMeasurement, currentMeasureActive)
-      options.applySection()
-      options.syncSourceHighlightFromEditor()
-      if (instance.currentStatus.status === 'device-lost' && !rendererRecoveryGate.mustDeferReady) {
-        rendererRecoveryGate.registerDeviceLoss()
-      }
-      if (!rendererRecoveryGate.mustDeferReady) ready = true
-    } catch (caught) {
-      failureMessage = caught instanceof Error ? caught.message : options.translate('gpuRecoverFailed')
-    } finally {
-      options.viewportController.completeRecovery(token)
-      if (!options.viewportController.isCurrentRecovery(token) || renderer !== instance) return
-
-      const completion = rendererRecoveryGate.completeAttempt()
-      if (completion === 'retry') {
-        void recoverRenderer(instance, navigation)
-        return
-      }
-
-      if (!ready || completion === 'exhausted' || instance.currentStatus.status === 'device-lost') {
-        options.gpuOk.value = false
-        options.error.value = failureMessage
-        return
-      }
-
-      options.selectedHit.value = null
-      options.sceneController.applyRendererHover(null)
-      options.gpuOk.value = true
-      if (options.error.value === options.translate('gpuRecoverFailed')) options.error.value = ''
-      options.showNotice(options.translate('gpuRecovered'))
     }
   }
 
@@ -530,125 +366,6 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
     autoBuildScheduler.cancel()
     buildCoordinator?.cancel('user')
     options.showNotice(options.translate('buildCancelled'))
-  }
-
-  function handleGeometryResponse(response: PublishedGeometryBuild) {
-    if (response.status === 'succeeded') autoBuildScheduler.observe(response.quality, response.durationMs)
-    // The editor revision advances before its debounced preview is submitted.
-    // Never publish an older build during that window, even if the coordinator
-    // has not seen the replacement job yet.
-    if (response.documentRevision !== buildGeneration) return
-    clearSweepViewportPreview()
-    options.renderDuration.value = response.durationMs
-    const source = buildSources.get(response.documentRevision) ?? options.code.value
-    for (const revision of buildSources.keys()) {
-      if (revision < response.documentRevision) buildSources.delete(revision)
-    }
-
-    if (response.status === 'failed') {
-      options.error.value = response.error.code === 'WORKER_TIMEOUT' ? options.translate('buildTimeout') : response.error.message
-      options.editorDiagnostic.value = diagnosticFromBuildError(source, response.error)
-      return
-    }
-
-    const publicationPlan = planGeometryPublication({
-      buildGeneration: response.documentRevision,
-      source,
-      quality: response.quality,
-      reduced: response.reduced,
-    }, { buildGeneration, source: options.code.value })
-    if (!publicationPlan.publish) return
-    const effectiveQuality = publicationPlan.effectiveQuality
-
-    try {
-      const publicationStartedAt = performance.now()
-      const displayMeshes = response.meshes.map(withSelectionSurfaces)
-      options.mainSelectedIndices.value = []
-      const sameSourceSnapshot = options.renderedSource.value !== '' && options.renderedSource.value === source
-      const previousFaceHit = renderer?.currentHit
-      const previousMeshes = options.sceneMeshes.value
-      const previousVisibility = options.meshVisibility.value
-      const previousMeasurement = options.measurement.value
-      const previousMeasureActive = options.measureActive.value
-      const publication = planScenePublication({
-        previousMeshes,
-        previousVisibility,
-        previousSelectedIndex: options.selectedMesh.value,
-        previousIsolated: options.isolated.value,
-        nextMeshes: displayMeshes,
-        sameSourceSnapshot,
-      })
-
-      const frameToken = nextPerformanceFrameToken++
-      renderer?.setMeshes(displayMeshes, {
-        frameToken,
-        animate: options.renderedSource.value !== '' && !sameSourceSnapshot,
-        preserveMeasurement: publication.measurementMayBePreserved,
-      })
-      options.sceneController.publish({
-        meshes: displayMeshes,
-        visibility: publication.nextVisibility,
-        selectedIndex: publication.nextSelectedIndex,
-        isolated: publication.nextIsolated,
-      })
-      renderer?.setMeshVisibilityBatch(options.meshVisibility.value)
-      options.sceneController.applyRendererHover(null)
-      if (publication.nextSelectedIndex !== null) {
-        const faceRestored = previousFaceHit && previousMeshes[previousFaceHit.meshIndex]
-          && renderer?.restoreNativeFaceSelection(previousMeshes[previousFaceHit.meshIndex], previousFaceHit, publication.nextSelectedIndex)
-        if (!faceRestored) renderer?.selectMesh(publication.nextSelectedIndex)
-        if (publication.nextIsolated) renderer?.toggleIsolateSelection()
-      } else {
-        options.sceneController.applyRendererSelection(null, false, null)
-      }
-      if (mainEditSelection?.source === source) {
-        const index = mainEditSelection.index < 0
-          ? displayMeshes.length - 1
-          : Math.min(mainEditSelection.index, displayMeshes.length - 1)
-        mainEditSelection = null
-        if (index >= 0) renderer?.selectMesh(index)
-      }
-      if (publication.measurementMayBePreserved) {
-        // The renderer may rebuild this overlay; retaining the UI value avoids a
-        // preview → full flash and lets it restore the exact world-space points.
-        options.sceneController.setMeasurement(previousMeasurement, previousMeasureActive)
-      } else {
-        options.sceneController.setMeasurement(null, false)
-      }
-      if (fitNextRender) {
-        renderer?.fitView()
-        fitNextRender = false
-      }
-      options.meshCount.value = response.meshes.length
-      options.triangleCount.value = response.meshes.reduce((sum, mesh) => sum + mesh.indices.length / 3, 0)
-      options.volume.value = response.volume
-      options.surfaceArea.value = response.surfaceArea
-      options.warnings.value = response.warnings
-      options.renderedSource.value = source
-      options.renderedQuality.value = effectiveQuality
-      options.syncSourceHighlightFromEditor()
-      options.syncSectionRange()
-      const publishedAt = performance.now()
-      const historyToken = performanceHistory.record({
-        revision: response.documentRevision,
-        quality: response.quality,
-        phases: response.timings,
-        workerMs: response.durationMs,
-        hostMs: response.hostElapsedMs ?? null,
-        publicationMs: publishedAt - publicationStartedAt,
-        transferBytes: meshTransferables(response.meshes).reduce((sum, buffer) => sum + buffer.byteLength, 0),
-        upload: renderer?.currentStatus.status === 'ready' ? renderer.sceneUploadMetrics : null,
-      }, publishedAt)
-      pendingPerformanceFrame = { frameToken, historyToken }
-      performanceSamples.value = performanceHistory.snapshot()
-      // Auto builds are sequential: request full only after preview proves it
-      // used a reduced quality decision. Equivalent models therefore compile
-      // exactly once and reduced models retain the warm Worker for their full
-      // continuation.
-      if (publicationPlan.requestFull && options.autoRender.value) autoBuildScheduler.promote()
-    } catch (caught) {
-      options.error.value = caught instanceof Error ? caught.message : String(caught)
-    }
   }
 
   function handleWorkerError(caught?: unknown) {

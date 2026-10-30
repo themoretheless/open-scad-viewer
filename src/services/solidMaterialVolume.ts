@@ -1,3 +1,4 @@
+import {brepSourceSnapshot} from './geometry/brep/sourceSnapshot'
 import type {NurbsBrep} from './geometry/brep'
 import type {VolumeValidityLimits} from './solidDistance'
 import {callGeometryRust} from './geometry/kernel'
@@ -21,14 +22,14 @@ const interval=(x:unknown):x is Interval=>Array.isArray(x)&&x.length===2&&x.ever
 const work=(x:unknown,max:number)=>typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=max
 const bool=(x:unknown)=>x===null||typeof x==='boolean'
 export function materialExpectation(options:MaterialOptions,mode:'segment'|'chord') {
- return {mode,normalAudit:structuredClone(options.normalAudit??null),source:snapshot(options.model),origin:snapshot(options.origin),direction:snapshot(options.direction),toleranceUv:options.toleranceUv,limits:structuredClone(options.limits),
+ return {mode,normalAudit:structuredClone(options.normalAudit??null),source:brepSourceSnapshot(options.model),origin:snapshot(options.origin),direction:snapshot(options.direction),toleranceUv:options.toleranceUv,limits:structuredClone(options.limits),
   shells:options.model.shells.map((_,i)=>!options.model.bodies.some(b=>b.innerShells.includes(i))),
   normalSpans:options.model.faces.map(({surface:s})=>[s.knotsU.slice(s.degreeU,s.controlPoints.length+1),s.knotsV.slice(s.degreeV,s.controlPoints[0].length+1)]),
   domains:options.model.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0].length]]] as [Interval,Interval])}
 }
 export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unknown):value is MaterialResult {
  const r=value as MaterialResult
- if(!r||r.method!==`continuous-material-${e.mode}`||r.scope!==(e.mode==='segment'?'strict-interior-authored-parametric-segment':'material-between-original-transverse-boundary-roots')||snapshot(r.sourceModel)!==e.source||snapshot(r.origin)!==e.origin||snapshot(r.direction)!==e.direction||snapshot(r.parameterInterval)!=='[0,1]'||r.toleranceUv!==e.toleranceUv||snapshot(r.limits)!==snapshot(e.limits)||typeof r.proven!=='boolean')return false
+ if(!r||r.method!==`continuous-material-${e.mode}`||r.scope!==(e.mode==='segment'?'strict-interior-authored-parametric-segment':'material-between-original-transverse-boundary-roots')||brepSourceSnapshot(r.sourceModel)!==e.source||snapshot(r.origin)!==e.origin||snapshot(r.direction)!==e.direction||snapshot(r.parameterInterval)!=='[0,1]'||r.toleranceUv!==e.toleranceUv||snapshot(r.limits)!==snapshot(e.limits)||typeof r.proven!=='boolean')return false
  const v=r.validity
  if(!v||!['proven','boundaryProven','exactAgreement','exactJoins','trimValid','selfIntersectionAbsent'].every(k=>typeof v[k as keyof Validity]==='boolean')||!bool(v.nestingRolesConsistent)||!Array.isArray(v.orientations)||v.orientations.length!==e.shells.length)return false
  if(v.boundaryProven&&!(v.exactAgreement&&v.exactJoins&&v.trimValid&&v.selfIntersectionAbsent))return false

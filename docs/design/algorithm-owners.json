@@ -169,6 +169,7 @@
         "src/features/MainModelingOverlay.vue",
         "src/features/MainSketchTools.vue",
         "src/features/MeshModeler.vue",
+        "src/features/MeshModeler/useMeshModeler/meshInteraction.ts",
         "src/features/MainModelingTools.vue",
         "src/features/directModeler/helpers.ts"
       ],

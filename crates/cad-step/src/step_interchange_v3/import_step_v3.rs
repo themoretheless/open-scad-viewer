@@ -381,8 +381,10 @@ pub(super) fn import_step_direct(
         }
         (model, map)
     };
-    let identity = if capability == STEP_INTERCHANGE_V9_CAPABILITY
-        || allow_degenerate && occurrence_count > 1
+    // Only repeated occurrences need new instance identities. A single STEP /9
+    // product can restore the authored topology metadata just like earlier versions.
+    let identity = if occurrence_count > 1
+        && (capability == STEP_INTERCHANGE_V9_CAPABILITY || allow_degenerate)
     {
         crate::step_interchange::StepIdentityReport {
             preserved: false,

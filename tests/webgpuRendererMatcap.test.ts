@@ -1,3 +1,4 @@
+import type {PipelineFactory} from '../src/services/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
 import { WebGPURenderer } from '../src/services/webgpuRenderer'
 import {
@@ -85,10 +86,9 @@ describe('WebGPURenderer matcap texture binding', () => {
     // The matcap pipeline uses the three-group layout; plain mesh does not.
     // (meshMatcap pipelines are created lazily, so request one explicitly.)
     const internalLayouts = renderer as unknown as {
-      pipelines: Record<string, unknown>
-      getRenderPipeline(id: string): unknown
+      pipelines: PipelineFactory
     }
-    internalLayouts.getRenderPipeline('meshMatcap')
+    internalLayouts.pipelines.getRenderPipeline(internal.dev as GPUDevice,'meshMatcap')
     expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.matcapObjectLayout)).toBe(true)
     expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.objectLayout)).toBe(true)
   })

@@ -1,3 +1,4 @@
+import type {PipelineFactory} from '../src/services/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
 import { WebGPURenderer } from '../src/services/webgpuRenderer'
 import {
@@ -85,10 +86,9 @@ describe('WebGPURenderer environment-map binding', () => {
     expect(envGroup!.entries).toHaveLength(4)
     // The PBR pipeline uses the three-group env layout; plain mesh does not.
     const internalLayouts = renderer as unknown as {
-      pipelines: Record<string, unknown>
-      getRenderPipeline(id: string): unknown
+      pipelines: PipelineFactory
     }
-    internalLayouts.getRenderPipeline('meshPbr')
+    internalLayouts.pipelines.getRenderPipeline(internal.dev as GPUDevice,'meshPbr')
     expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.envObjectLayout)).toBe(true)
     expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.objectLayout)).toBe(true)
   })

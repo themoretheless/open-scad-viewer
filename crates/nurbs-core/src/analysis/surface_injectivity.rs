@@ -61,42 +61,7 @@ pub(crate) fn section_jacobian(
     let net=crate::curve_surface_composition::surface_net_on_centered(s,span,domain,[origin[0],origin[1],origin[2]])?;
     jacobian_from_net(&net, [p, q], domain)
 }
-fn homogeneous_section_jacobian(net:&[Vec<[I;4]>],degrees:[usize;2],domain:[[f64;2];2])->Result<[[I;2];3]>{
-    let [p,q]=degrees;
-    let values: [I; 4] = std::array::from_fn(|k| hull(net.iter().flatten().map(|h| h[k])));
-    let denominator = values[3].mul(values[3])?;
-    let mut result = [[I::point(0.); 2]; 3];
-    for axis in 0..2 {
-        let degree = [p, q][axis];
-        if domain[axis][0] == domain[axis][1] {
-            continue;
-        }
-        let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
-        let mut diffs = Vec::new();
-        for i in 0..=p {
-            for j in 0..=q {
-                if (axis == 0 && i == p) || (axis == 1 && j == q) {
-                    continue;
-                }
-                let a = net[i][j];
-                let b = net[i + usize::from(axis == 0)][j + usize::from(axis == 1)];
-                let mut d = [I::point(0.); 4];
-                for k in 0..4 {
-                    d[k] = b[k].sub(a[k])?.mul(I::point(degree as f64))?.div(width)?;
-                }
-                diffs.push(d);
-            }
-        }
-        let d: [I; 4] = std::array::from_fn(|k| hull(diffs.iter().map(|h| h[k])));
-        for k in 0..3 {
-            result[k][axis] = d[k]
-                .mul(values[3])?
-                .sub(values[k].mul(d[3])?)?
-                .div(denominator)?;
-        }
-    }
-    Ok(result)
-}
+
 pub(crate) fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
     let a = j.map(|row| row.map(|v| v.lo * 0.5 + v.hi * 0.5));
     let det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
@@ -124,84 +89,7 @@ pub(crate) fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
     }
     Ok(Some(maximum))
 }
-/// Failure of this sufficient condition is unresolved, never evidence of an
-/// intersection. This certifies the whole natural chart, hence any trimmed
-/// subset, but does not compare it with other faces or certify a whole solid.
-pub fn certify_contraction(s: &Surface, max_spans: usize) -> Result<Report> {
-    s.validate()?;
-    check(
-        max_spans > 0 && max_spans <= 100_000,
-        "Injectivity span budget must be in 1..100000",
-    )?;
-    let mut report = Report {
-        proven: false,
-        projection: None,
-        linear_projection: None,
-        projective_projection: None,
-        polar_projection: None,
-        polar_p_matrix: None,
-        contraction_upper: None,
-        spans: 0,
-        reason: "projection-not-proven",
-    };
-    if s.periodic_u || s.periodic_v {
-        report.reason = "periodic-domain";
-        return Ok(report);
-    }
-    // A clamped boundary with identical Euclidean controls maps a whole
-    // parameter edge to one point, even with different positive weights.
-    // Strict rectangular-chart injectivity cannot certify that pole. A future
-    // proof on the quotient domain must handle it explicitly.
-    let collapsed_u = [0, s.control_points.len()-1].into_iter().any(|i| {
-        let knots = if i == 0 { &s.knots_u[..=s.degree_u] }
-            else { &s.knots_u[s.control_points.len()..] };
-        knots.iter().all(|k| *k == knots[0]) &&
-            s.control_points[i].iter().all(|p| *p == s.control_points[i][0])
-    });
-    let collapsed_v = [0, s.control_points[0].len()-1].into_iter().any(|j| {
-        let knots = if j == 0 { &s.knots_v[..=s.degree_v] }
-            else { &s.knots_v[s.control_points[0].len()..] };
-        knots.iter().all(|k| *k == knots[0]) &&
-            s.control_points.iter().all(|row| row[j] == s.control_points[0][j])
-    });
-    if collapsed_u || collapsed_v {
-        report.reason = "collapsed-boundary-requires-quotient-proof";
-        return Ok(report);
-    }
-    let mut j = [[I {
-        lo: f64::INFINITY,
-        hi: f64::NEG_INFINITY,
-    }; 2]; 3];
-    let us = crate::certificates::audit::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
-    let vs = crate::certificates::audit::nonempty_spans(&s.knots_v, s.degree_v, s.control_points[0].len());
-    for &u in &us {
-        for &v in &vs {
-            if report.spans == max_spans {
-                report.reason = "work-limit";
-                return Ok(report);
-            }
-            let next = jacobian(s, [u, v])?;
-            report.spans += 1;
-            for k in 0..3 {
-                for axis in 0..2 {
-                    j[k][axis] = hull([j[k][axis], next[k][axis]].into_iter());
-                }
-            }
-        }
-    }
-    for axes in [[0, 1], [0, 2], [1, 2]] {
-        if let Some(q) = contraction([j[axes[0]], j[axes[1]]])? {
-            if q < 1. {
-                report.proven = true;
-                report.projection = Some(axes);
-                report.contraction_upper = Some(q);
-                report.reason = "global-projection-contraction";
-                return Ok(report);
-            }
-        }
-    }
-    Ok(report)
-}
+
 /// Enclose (dS/du cross dS/dv) dot direction over the requested rectangle.
 /// At a knot, include both one-sided derivatives. A point rectangle uses a
 /// non-collapsed knot span for derivative bounds, never a zero column.
@@ -213,43 +101,7 @@ pub use boundary_normals::boundary_normal_direction_bounds;
 pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64;3], max_spans: usize) -> Result<Option<[f64;2]>> {
     Ok(normal_direction_bounds_detailed(s,domain,direction,max_spans)?.bounds)
 }
-/// Same conservative rectangle query, retaining all charged span work.
-pub fn normal_direction_bounds_detailed(s: &Surface, domain: [[f64;2];2], direction: [f64;3], max_spans: usize) -> Result<NormalDirectionReport> {
-    s.validate()?;
-    let knots = [&s.knots_u,&s.knots_v];
-    let degrees = [s.degree_u,s.degree_v];
-    let counts = [s.control_points.len(),s.control_points[0].len()];
-    check(max_spans > 0 && max_spans <= 100000 && direction.iter().all(|x|x.is_finite()), "Normal bounds require a finite direction and bounded positive span budget")?;
-    for axis in 0..2 {
-        let d=domain[axis];
-        check(d.iter().all(|x|x.is_finite()) && d[0]<=d[1] && d[0]>=knots[axis][degrees[axis]] && d[1]<=knots[axis][counts[axis]], "Normal rectangle must be inside the natural surface domain")?;
-    }
-    let mut spans = 0;
-    let mut bounds = [f64::INFINITY,f64::NEG_INFINITY];
-    for u in crate::certificates::audit::nonempty_spans(knots[0],degrees[0],counts[0]) { for v in crate::certificates::audit::nonempty_spans(knots[1],degrees[1],counts[1]) {
-        let indices=[u,v];
-        let mut section=[[0.;2];2];
-        let mut outside=false;
-        for axis in 0..2 {
-            let k=indices[axis];let lo=knots[axis][k];let hi=knots[axis][k+1];
-            if domain[axis][1]<lo || domain[axis][0]>hi {outside=true;break;}
-            section[axis]=[lo.max(domain[axis][0]),hi.min(domain[axis][1])];
-            if section[axis][0]==section[axis][1] {section[axis]=[lo,hi];}
-        }
-        if outside {continue;}
-        if spans==max_spans {return Ok(NormalDirectionReport{bounds:None,spans});}
-        spans+=1;
-        let j=section_jacobian(s,indices,section)?;
-        let mut dot=I::point(0.);
-        for axis in 0..3 {
-            let b=(axis+1)%3;let c=(axis+2)%3;
-            let component=j[b][0].mul(j[c][1])?.sub(j[c][0].mul(j[b][1])?)?;
-            dot=dot.add(component.mul(I::point(direction[axis]))?)?;
-        }
-        bounds[0]=bounds[0].min(dot.lo);bounds[1]=bounds[1].max(dot.hi);
-    }}
-    Ok(NormalDirectionReport{bounds:Some(bounds),spans})
-}
+
 #[cfg(test)]
 #[path = "surface_injectivity/tests/tests_integration.rs"]
 mod tests;
@@ -291,73 +143,7 @@ fn linear_projection_work(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<
     Ok((contraction(global)?.filter(|q|*q<1.),cells))
 }
 
-/// Compatibility entry point: every contraction and refinement cell consumes
-/// the original shared span budget. Explicit sweep stages use contraction only.
-pub fn certify(s:&Surface,max_spans:usize)->Result<Report> {
-    let mut report=certify_contraction(s,max_spans)?;
-    if report.proven || report.reason=="collapsed-boundary-requires-quotient-proof" || report.reason=="periodic-domain" || report.reason=="work-limit" {return Ok(report);}
-    if s.control_points.iter().flatten().all(|p|p==&s.control_points[0][0]) {return Ok(report);}
-    // A reflected/rotated parameter chart may move the useful projective
-    // origin away from control[0][0]. Corner data only selects ONE proposal;
-    // the complete original interval-Jacobian proof still supplies admission.
-    let hint=affine_corner_projective_hint(s);
-    if let Some(projection)=hint {
-        if report.spans==max_spans {report.reason="work-limit";return Ok(report);}
-        let(q,cells)=projective_projection_work(s,[projection[0],projection[1]],projection[2],max_spans-report.spans)?;
-        report.spans+=cells;
-        if let Some(q)=q {report.proven=true;report.projective_projection=Some(projection);report.contraction_upper=Some(q);report.reason="global-projective-projection-contraction";return Ok(report);}
-    }
-    for basis in LINEAR_PROJECTIONS {
-        if report.spans==max_spans { report.reason="work-limit"; return Ok(report); }
-        let (q,cells)=linear_projection_work(s,basis,max_spans-report.spans)?;
-        report.spans+=cells;
-        if let Some(q)=q {report.proven=true;report.linear_projection=Some(basis);report.contraction_upper=Some(q);report.reason="global-linear-projection-contraction";return Ok(report);}
-    }
-    for projection in projective_projections(s){
-        if hint==Some(projection) {continue;}
-        if report.spans==max_spans{report.reason="work-limit";return Ok(report);}
-        let (q,cells)=projective_projection_work(s,[projection[0],projection[1]],projection[2],max_spans-report.spans)?;
-        report.spans+=cells;
-        if let Some(q)=q{
-            report.proven=true;report.projective_projection=Some(projection);report.contraction_upper=Some(q);
-            report.reason="global-projective-projection-contraction";return Ok(report);
-        }
-    }
-    let cells = polar_cells(s,16);
-    if s.degree_u <= 8 && s.degree_v <= 8 && cells <= max_spans-report.spans {
-        for coordinates in polar_projection_candidates(s)? {
-            if cells > max_spans-report.spans { break; }
-            let proof = certify_polar_projection(s,coordinates,16,cells)?;
-            // Reserve the complete coverage cost even if a candidate is
-            // rejected early. The shared budget never understates work.
-            report.spans += cells;
-            if let Some(q) = proof {
-                report.proven=true;report.polar_projection=Some(coordinates);report.contraction_upper=Some(q);
-                report.reason="global-polar-projection-contraction";return Ok(report);
-            }
-        }
-    }
-    // Axis frames merely propose one continuous polar branch; every original
-    // cell must pass the global P-matrix proof before injectivity is admitted.
-    if s.degree_u <= 8 && s.degree_v <= 8 && cells <= max_spans-report.spans {
-        'frames: for axis in 0..3 { for sign in [1.,-1.] { for zsign in [1.,-1.] {
-            if cells > max_spans-report.spans { break 'frames; }
-            let mut coordinates=[[0.;4];3];
-            coordinates[0][axis]=sign;
-            coordinates[1][(axis+1)%3]=sign;
-            coordinates[2][(axis+2)%3]=zsign;
-            let proof=certify_polar_p_matrix(s,coordinates,16,cells)?;
-            report.spans+=cells;
-            if let Some(proof)=proof {
-                report.proven=true;report.polar_projection=Some(coordinates);
-                report.polar_p_matrix=Some(proof);
-                report.reason="global-polar-p-matrix";return Ok(report);
-            }
-        }}}
-    }
-    if report.spans==max_spans {report.reason="work-limit";}
-    Ok(report)
-}
+
 
 pub fn certify_projective_projection(s:&Surface,numerators:[[f64;4];2],denominator:[f64;4],max_cells:usize)->Result<Option<f64>>{
     Ok(projective_projection_work(s,numerators,denominator,max_cells)?.0)
@@ -377,62 +163,7 @@ pub fn certify_polar_projection(
     Ok(contraction(global)?.filter(|q| *q < 1.))
 }
 
-/// Positive principal minors on one global Jacobian enclosure suffice for
-/// univalence of this C1 projected map on the complete closed rectangle.
-/// Nonzero determinant alone is insufficient. A polar branch is proven in
-/// every original cell by the same strictly positive X enclosure as above.
-pub fn certify_polar_p_matrix(
-    s: &Surface,
-    coordinates: [[f64; 4]; 3],
-    subdivisions: usize,
-    max_cells: usize,
-) -> Result<Option<PolarPMatrix>> {
-    s.validate()?;
-    let Some(global) = polar_projection_jacobian(s, coordinates, subdivisions, max_cells)? else {
-        return Ok(None);
-    };
-    for (knots, degree, count) in [
-        (&s.knots_u, s.degree_u, s.control_points.len()),
-        (&s.knots_v, s.degree_v, s.control_points[0].len()),
-    ] {
-        if knots
-            .iter()
-            .filter(|k| **k > knots[degree] && **k < knots[count])
-            .any(|k| knots.iter().filter(|x| *x == k).count() >= degree)
-        {
-            return Ok(None);
-        }
-    }
-    let mut oriented = global;
-    let mut signs = [1.; 2];
-    for row in 0..2 {
-        if global[row][row].lo > 0. {
-        } else if global[row][row].hi < 0. {
-            signs[row] = -1.;
-            for axis in 0..2 {
-                oriented[row][axis] = I::point(-1.).mul(global[row][axis])?;
-            }
-        } else {
-            return Ok(None);
-        }
-    }
-    if oriented[0][0].lo <= 0. || oriented[1][1].lo <= 0. {
-        return Ok(None);
-    }
-    let determinant = oriented[0][0]
-        .mul(oriented[1][1])?
-        .sub(oriented[0][1].mul(oriented[1][0])?)?;
-    if determinant.lo <= 0. {
-        return Ok(None);
-    }
-    Ok(Some(PolarPMatrix {
-        coordinates,
-        jacobian: global.map(|r| r.map(|v| [v.lo, v.hi])),
-        row_signs: signs,
-        diagonal_lower: [oriented[0][0].lo, oriented[1][1].lo],
-        determinant_lower: determinant.lo,
-    }))
-}
+
 
 /// Continuous union of two original single-Bezier charts, joined at v=max.
 /// The second chart is traversed backward. One global interval Jacobian
@@ -933,3 +664,19 @@ fn affine_corner_projective_hint(s:&Surface)->Option<[[f64;4];3]> {
     }
     best.map(|(_,p)|p)
 }
+
+#[path="surface_injectivity/algorithm_homogeneous_section_jacobian.rs"]
+mod algorithm_homogeneous_section_jacobian;
+use algorithm_homogeneous_section_jacobian::homogeneous_section_jacobian;
+#[path="surface_injectivity/algorithm_certify_contraction.rs"]
+mod algorithm_certify_contraction;
+pub use algorithm_certify_contraction::certify_contraction;
+#[path="surface_injectivity/algorithm_normal_direction_bounds_detailed.rs"]
+mod algorithm_normal_direction_bounds_detailed;
+pub use algorithm_normal_direction_bounds_detailed::normal_direction_bounds_detailed;
+#[path="surface_injectivity/algorithm_certify.rs"]
+mod algorithm_certify;
+pub use algorithm_certify::certify;
+#[path="surface_injectivity/algorithm_certify_polar_p_matrix.rs"]
+mod algorithm_certify_polar_p_matrix;
+pub use algorithm_certify_polar_p_matrix::certify_polar_p_matrix;

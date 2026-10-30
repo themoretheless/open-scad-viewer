@@ -1,3 +1,4 @@
+import {createViewportOperations} from './useViewportLayerAndPolygons/viewportOperations'
 import {
   computed,
   nextTick,
@@ -60,6 +61,50 @@ export interface UseViewportLayerAndPolygonsOptions {
 }
 
 export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygonsOptions) {
+  const {hasDragNodes, setDragNodes, fpsTick, applyDragPreviewTransform, clearDragPreview, settleAfterDrag, triangleNormals, displayMeshFor, shadeFromNormal, stopGpuLayer, retryGpuLayer, mountGpuCanvas, refreshDisplayPreparation, vrSnapshot, meshPolygons, polygonColor, surfacePolygons} = createViewportOperations({
+    get fpsPrevious() { return fpsPrevious },
+    set fpsPrevious(value: typeof fpsPrevious) { fpsPrevious = value },
+    get fpsIntervals() { return fpsIntervals },
+    set fpsIntervals(value: typeof fpsIntervals) { fpsIntervals = value },
+    get fpsSince() { return fpsSince },
+    set fpsSince(value: typeof fpsSince) { fpsSince = value },
+    get fps() { return fps },
+    get frameMs() { return frameMs },
+    get drawMs() { return drawMs },
+    get gpuLayer() { return gpuLayer },
+    set gpuLayer(value: typeof gpuLayer) { gpuLayer = value },
+    get fpsHandle() { return fpsHandle },
+    set fpsHandle(value: typeof fpsHandle) { fpsHandle = value },
+    get dragNodes() { return dragNodes },
+    set dragNodes(value: typeof dragNodes) { dragNodes = value },
+    get dragOffsetIds() { return dragOffsetIds },
+    set dragOffsetIds(value: typeof dragOffsetIds) { dragOffsetIds = value },
+    get settling() { return settling },
+    get settleHandle() { return settleHandle },
+    set settleHandle(value: typeof settleHandle) { settleHandle = value },
+    get displayVersion() { return displayVersion },
+    get options() { return options },
+    get smoothDisplay() { return smoothDisplay },
+    get displayQueue() { return displayQueue },
+    get gpuGeneration() { return gpuGeneration },
+    set gpuGeneration(value: typeof gpuGeneration) { gpuGeneration = value },
+    get gpuResize() { return gpuResize },
+    set gpuResize(value: typeof gpuResize) { gpuResize = value },
+    get gpuActive() { return gpuActive },
+    get gpuInitializing() { return gpuInitializing },
+    get gpuCanvas() { return gpuCanvas },
+    set gpuCanvas(value: typeof gpuCanvas) { gpuCanvas = value },
+    get gpuRetryVisible() { return gpuRetryVisible },
+    get gpuFailureNotice() { return gpuFailureNotice },
+    get gpuInitStarted() { return gpuInitStarted },
+    set gpuInitStarted(value: typeof gpuInitStarted) { gpuInitStarted = value },
+    get cancelDisplayPreparation() { return cancelDisplayPreparation },
+    get displayGeneration() { return displayGeneration },
+    set displayGeneration(value: typeof displayGeneration) { displayGeneration = value },
+    get displayPending() { return displayPending },
+    get polygons() { return polygons },
+  })
+
   /**
    * Frame rate of the viewport, sampled over half-second windows.
    *
@@ -99,93 +144,11 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
   const settling = ref(false)
   let settleHandle = 0
 
-  function fpsTick(now: number) {
-    if (fpsPrevious) fpsIntervals.push(now - fpsPrevious)
-    fpsPrevious = now
-    const elapsed = now - fpsSince
-    if (elapsed >= 500 && fpsIntervals.length) {
-      fps.value = Math.round((fpsIntervals.length * 1000) / elapsed)
-      const sorted = [...fpsIntervals].sort((a, b) => a - b)
-      frameMs.value = Math.round(sorted[sorted.length >> 1] * 10) / 10
-      drawMs.value = Math.round((gpuLayer?.drawMs ?? 0) * 10) / 10
-      fpsIntervals = []
-      fpsSince = now
-    }
-    fpsHandle = requestAnimationFrame(fpsTick)
-  }
 
-  function hasDragNodes(): boolean {
-    return dragNodes.length > 0
-  }
-
-  function setDragNodes(nodes: SVGElement[]) {
-    dragNodes = nodes
-  }
-
-  function applyDragPreviewTransform(offset: string, ids: string[], worldDelta: [number, number, number]) {
-    for (const node of dragNodes) node.setAttribute('transform', offset)
-    dragOffsetIds = ids
-    gpuLayer?.setDragOffset(dragOffsetIds, worldDelta)
-  }
-
-  function clearDragPreview() {
-    for (const node of dragNodes) node.removeAttribute?.('transform')
-    dragNodes = []
-    if (dragOffsetIds.length) {
-      gpuLayer?.setDragOffset(dragOffsetIds, [0, 0, 0])
-      dragOffsetIds = []
-    }
-  }
-
-  function settleAfterDrag() {
-    // The committed document normally rebuilds the GPU buffer, but never rely on that: a
-    // commit that changes nothing leaves the buffer, and with it a stale offset, in place.
-    if (dragOffsetIds.length) {
-      gpuLayer?.setDragOffset(dragOffsetIds, [0, 0, 0])
-      dragOffsetIds = []
-    }
-    if (typeof setTimeout !== 'function') {
-      clearDragPreview()
-      return
-    }
-    settling.value = true
-    clearTimeout(settleHandle)
-    settleHandle = setTimeout(() => {
-      settling.value = false
-      clearDragPreview()
-    }, 140) as unknown as number
-  }
 
   const smoothDisplay = ref(true)
   // Exact geometry keys survive history clones and include retained B-rep changes.
   const displayCache = new SolidDisplayCache()
-
-  function triangleNormals(mesh: PolygonMesh) {
-    const indices = mesh.indices
-    const pos = mesh.positions
-    const count = indices.length / 3
-    const normals = new Array<number[]>(count)
-    for (let t = 0, o = 0; t < count; t++, o += 3) {
-      const i0 = indices[o] * 3
-      const i1 = indices[o + 1] * 3
-      const i2 = indices[o + 2] * 3
-      const ax = pos[i0]
-      const ay = pos[i0 + 1]
-      const az = pos[i0 + 2]
-      const ux = pos[i1] - ax
-      const uy = pos[i1 + 1] - ay
-      const uz = pos[i1 + 2] - az
-      const wx = pos[i2] - ax
-      const wy = pos[i2 + 1] - ay
-      const wz = pos[i2 + 2] - az
-      const nx = uy * wz - uz * wy
-      const ny = uz * wx - ux * wz
-      const nz = ux * wy - uy * wx
-      const len = (nx * nx + ny * ny + nz * nz) ** 0.5 || 1
-      normals[t] = [nx / len, ny / len, nz / len]
-    }
-    return normals
-  }
 
   const displayWorker = createSolidPreviewWorker()
   const displayQueue = new SolidDisplayQueue(displayWorker, displayCache)
@@ -203,91 +166,7 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
     displayWorker.dispose()
   })
 
-  function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
-    void displayVersion.value
-    const transforming =
-      options.previewingTransform.value &&
-      (options.selectedIds.value.includes(b.id) || (!!b.instance && options.selectedIds.value.includes(b.instance.sourceId)))
-    if (
-      !transforming &&
-      !(options.heightDragging.value && b === options.previewBody.value) &&
-      smoothDisplay.value &&
-      b.brep &&
-      options.kernelReady.value
-    ) {
-      const cached = displayQueue.get(b)
-      if (cached) return cached
-    }
-    return { mesh: b.mesh, map: null, normals: triangleNormals(b.mesh) }
-  }
-
-  function shadeFromNormal(n: number[], projectPoint?: (p: number[]) => [number, number, number]): number {
-    const light = projectPoint ? projectPoint(n) : projectDirectPoint([n[0], n[1], n[2]], options.camera.value)
-    return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
-  }
-
   watch(gpuActive, value => options.emitBackend(value), { immediate: true })
-
-  function stopGpuLayer() {
-    gpuGeneration++
-    gpuResize?.disconnect()
-    gpuResize = null
-    gpuLayer?.destroy()
-    gpuLayer = null
-    gpuActive.value = false
-    gpuInitializing.value = false
-  }
-
-  function retryGpuLayer() {
-    if (gpuInitializing.value || !gpuCanvas || !options.props.open) return
-    stopGpuLayer()
-    const generation = gpuGeneration
-    const canvas = gpuCanvas
-    gpuInitializing.value = true
-    const unavailable = () => {
-      if (generation !== gpuGeneration) return
-      gpuInitializing.value = false
-      gpuActive.value = false
-      gpuRetryVisible.value = true
-      gpuResize?.disconnect()
-      gpuResize = null
-      gpuFailureNotice.value = options.label(
-        'WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.',
-        'WebGPU stopped. Work continues on CPU; you can save the project.',
-      )
-      options.setNotice(gpuFailureNotice.value)
-    }
-    const layer = new SolidGpuLayer(canvas, unavailable)
-    gpuLayer = layer
-    void layer.init().then(ok => {
-      if (generation !== gpuGeneration) {
-        layer.destroy()
-        return
-      }
-      if (!ok || !layer.ready) {
-        layer.destroy()
-        unavailable()
-        return
-      }
-      const wrap = canvas.parentElement
-      if (wrap) {
-        gpuResize = new ResizeObserver(() => layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1))
-        gpuResize.observe(wrap)
-        layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1)
-      }
-      gpuInitializing.value = false
-      gpuRetryVisible.value = false
-      gpuActive.value = true
-      if (options.getNotice() === gpuFailureNotice.value) options.setNotice('')
-    })
-  }
-
-  function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
-    if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported()) return
-    gpuInitStarted = true
-    gpuCanvas = el
-    retryGpuLayer()
-  }
 
   watch(
     () => options.props.open,
@@ -340,42 +219,6 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
     },
     { flush: 'sync' },
   )
-
-  function refreshDisplayPreparation(advDoc: DirectDocument | null | undefined) {
-    cancelDisplayPreparation()
-    if (!options.props.open || !options.kernelReady.value) return
-    const generation = displayGeneration
-    const bodies = [
-      ...options.renderBodies.value,
-      ...(options.previewBody.value ? [options.previewBody.value] : []),
-      ...(advDoc?.bodies ?? []),
-    ].filter(
-      b =>
-        (smoothDisplay.value || (b.brep?.shells.some(s => s.closed) && b.brep.shells.some(s => !s.closed))) &&
-        !(
-          options.previewingTransform.value &&
-          (options.selectedIds.value.includes(b.id) || (!!b.instance && options.selectedIds.value.includes(b.instance.sourceId)))
-        ),
-    )
-    displayPending.value = true
-    void displayQueue
-      .prepare(bodies)
-      .then(changed => {
-        if (generation === displayGeneration && changed) displayVersion.value++
-      })
-      .finally(() => {
-        if (generation === displayGeneration) displayPending.value = false
-      })
-  }
-
-  function vrSnapshot() {
-    return prepareVrPolygons(
-      options.renderBodies.value.map(body => ({
-        ...displayMeshFor(body).mesh,
-        color: body.material ? solidMaterialRgb(body.material.color) : undefined,
-      })),
-    )
-  }
 
   let surfaceGpuCache = new Map<PolygonMesh, ReturnType<typeof smoothTriangleList>>()
   onUnmounted(() => surfaceGpuCache.clear())
@@ -477,70 +320,6 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
   watch(gpuActive, active => {
     if (active && gpuLayer) gpuLayer.setBodies(gpuBodies.value)
   })
-
-  function meshPolygons(
-    b: ReturnType<typeof directExtrusionTool>,
-    preview = 0,
-    projectPoint = createDirectProjector(options.camera.value),
-    world = false,
-  ) {
-    const display: DisplayMesh =
-      options.cameraDragging.value || gpuActive.value
-        ? { ...COARSE_DISPLAY, mesh: b.mesh, normals: world ? triangleNormals(b.mesh) : [] }
-        : displayMeshFor(b)
-    const closed = display.closed ?? (b.brep?.shells.some(s => !s.closed) ? displayQueue.get(b)?.workClosed : null)
-    const allClosed = !!b.brep?.shells.length && b.brep.shells.every(s => s.closed)
-    const mesh = display.mesh
-    const pos = mesh.positions
-    const vertCount = pos.length / 3
-    const points = new Array<[number, number, number]>(vertCount)
-    for (let v = 0, o = 0; v < vertCount; v++, o += 3) points[v] = projectPoint([pos[o], pos[o + 1], pos[o + 2]])
-    const indices = mesh.indices
-    const triCount = indices.length / 3
-    const out: Array<{
-      preview: number
-      surface: boolean
-      normal: number[]
-      closed: boolean
-      vertices: [number, number, number][]
-      id: string
-      material: typeof b.material
-      triangle: number
-      key: string
-      points: string
-      shade: number
-      depth: number
-    }> = []
-    const checkBackface = !world && !preview && (b.material?.opacity ?? 1) === 1
-    for (let i = 0, o = 0; i < triCount; i++, o += 3) {
-      const p0 = points[indices[o]]
-      const p1 = points[indices[o + 1]]
-      const p2 = points[indices[o + 2]]
-      const isClosed = closed?.[i] ?? allClosed
-      if (checkBackface && isClosed && (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) <= 0) continue
-      const triangle = display.map ? display.map[i] : i
-      const face = [p0, p1, p2]
-      out.push({
-        preview,
-        surface: false,
-        normal: display.normals[i],
-        closed: isClosed,
-        vertices: face,
-        id: b.id,
-        material: b.material,
-        triangle,
-        key: b.id + ':' + i,
-        points: `${p0[0]},${p0[1]} ${p1[0]},${p1[1]} ${p2[0]},${p2[1]}`,
-        shade: world
-          ? 0
-          : display.map
-            ? shadeFromNormal(display.normals[i], projectPoint)
-            : directFaceShade(mesh, i, options.camera.value, projectPoint),
-        depth: p0[2] + p1[2] + p2[2],
-      })
-    }
-    return out
-  }
 
   /**
    * While the GPU layer draws the scene, these thousands of polygons are transparent hit
@@ -653,45 +432,6 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
   const cpuOrbitReady = ref(false)
   const cpuOrbitActive = computed(() => !gpuActive.value && options.cameraDragging.value && polygons.value.length > 1200)
 
-  function polygonColor(p: (typeof polygons.value)[number]) {
-    const subtract = options.getSubtract()
-    return p.preview
-      ? p.preview === 2
-        ? options.extrusionMode.value === 'difference'
-          ? '#ff647c'
-          : '#75e4b8'
-        : p.id === 'preview-split'
-          ? '#ffc977'
-          : '#77eac5'
-      : p.surface
-        ? options.selectedIds.value.includes(p.id)
-          ? '#8061bd'
-          : '#315f72'
-        : p.material &&
-            !options.selectedIds.value.includes(p.id) &&
-            options.hovered.value !== p.id &&
-            !subtract?.a.includes(p.id) &&
-            !subtract?.b.includes(p.id)
-          ? `rgb(${solidMaterialRgb(p.material.color)
-              .map(c => (c * 255 * p.shade) / 78)
-              .join(' ')})`
-          : `hsl(${
-              options.selectedBody.value?.id === p.id &&
-              options.selectedFaceTriangles.value.has(p.triangle) &&
-              options.pickMode.value === 'face'
-                ? 40
-                : subtract?.a.includes(p.id)
-                  ? 45
-                  : subtract?.b.includes(p.id)
-                    ? 350
-                    : options.selectedIds.value.includes(p.id)
-                      ? 266
-                      : options.hovered.value === p.id
-                        ? 190
-                        : 220
-            } 45% ${p.shade}%)`
-  }
-
   const cpuOrbitTriangles = computed(() =>
     cpuOrbitActive.value
       ? polygons.value.map(p => ({
@@ -702,12 +442,6 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
         }))
       : [],
   )
-
-  function surfacePolygons(item: SolidNurbsSurface) {
-    void options.surfaceDisplayVersion.value
-    const mesh = options.surfaceDisplayQueue.get(item)
-    return mesh ? meshPolygons({ id: item.id, name: item.name, mesh }) : []
-  }
 
   let restingSurfacePolygons: ReturnType<typeof meshPolygons> = []
   const nurbsSurfacePolygons = computed(() => {

@@ -135,96 +135,9 @@ pub fn sphere(radius: f64, n: usize) -> Result<Mesh> {
     clean(m)
 }
 
-/// Closed watertight torus primitive centered at the origin in the XY plane with major radius
-/// `major_radius` and tube radius `minor_radius`.
-pub fn torus(
-    major_radius: f64,
-    minor_radius: f64,
-    major_segments: usize,
-    minor_segments: usize,
-) -> Mesh {
-    let maj = major_segments.clamp(3, 256);
-    let min = minor_segments.clamp(3, 128);
-    if !major_radius.is_finite()
-        || !minor_radius.is_finite()
-        || minor_radius <= 0.0
-        || major_radius <= minor_radius
-    {
-        return empty();
-    }
-    let mut m = Mesh {
-        positions: Vec::with_capacity(maj * min * 3),
-        indices: Vec::with_capacity(maj * min * 6),
-        uv: None,
-    };
-    for i in 0..maj {
-        let u = std::f64::consts::TAU * (i as f64 / maj as f64);
-        let (su, cu) = u.sin_cos();
-        for j in 0..min {
-            let v = std::f64::consts::TAU * (j as f64 / min as f64);
-            let (sv, cv) = v.sin_cos();
-            let r = major_radius + minor_radius * cv;
-            m.positions.extend([r * cu, r * su, minor_radius * sv]);
-        }
-    }
-    for i in 0..maj {
-        let i_next = (i + 1) % maj;
-        for j in 0..min {
-            let j_next = (j + 1) % min;
-            let a = i * min + j;
-            let b = i_next * min + j;
-            let c = i_next * min + j_next;
-            let d = i * min + j_next;
-            m.indices.extend([a, b, c, a, c, d]);
-        }
-    }
-    clean(m).unwrap_or_else(|_| empty())
-}
 
-/// Closed watertight capsule (cylindrical shaft of length `height` centered at the origin along Z
-/// capped by two hemispheres of `radius`).
-pub fn capsule(radius: f64, height: f64, segments: usize) -> Mesh {
-    let n = segments.clamp(4, 256);
-    if !radius.is_finite() || radius <= 0.0 || !height.is_finite() || height < 0.0 {
-        return empty();
-    }
-    let hemi_rings = (n / 4).max(2);
-    let half_h = 0.5 * height;
-    let has_cyl = half_h > 1e-12;
-    let total_rings = 2 * hemi_rings + usize::from(has_cyl);
-    let mut m = Mesh {
-        positions: Vec::with_capacity((total_rings + 1) * n * 3),
-        indices: Vec::with_capacity(total_rings * n * 6),
-        uv: None,
-    };
-    for j in 0..=total_rings {
-        let (r, z) = if j == 0 {
-            (0.0, half_h + radius)
-        } else if j == total_rings {
-            (0.0, -half_h - radius)
-        } else if j <= hemi_rings {
-            let theta = std::f64::consts::FRAC_PI_2 * (j as f64 / hemi_rings as f64);
-            (radius * theta.sin(), half_h + radius * theta.cos())
-        } else {
-            let k = j - hemi_rings - usize::from(has_cyl);
-            let theta =
-                std::f64::consts::FRAC_PI_2 * (1.0 + k as f64 / hemi_rings as f64);
-            (radius * theta.sin(), -half_h + radius * theta.cos())
-        };
-        for i in 0..n {
-            let phi = std::f64::consts::TAU * (i as f64 / n as f64);
-            m.positions.extend([r * phi.cos(), r * phi.sin(), z]);
-        }
-    }
-    for j in 0..total_rings {
-        for i in 0..n {
-            let a = j * n + i;
-            let b = j * n + (i + 1) % n;
-            m.indices.extend([a, a + n, b + n, a, b + n, b]);
-        }
-    }
-    clean(m).unwrap_or_else(|_| empty())
-}
+
+
 
 /// Closed watertight cone or truncated cone frustum along $+Z \in [0, \text{height}]$ with base
 /// radius `bottom_radius` at $z = 0$ and top radius `top_radius` at $z = \text{height}$.
@@ -796,139 +709,16 @@ pub fn join_touching(a: &Mesh, b: &Mesh) -> Result<Option<Mesh>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn primitives_closed() {
-        for m in [
-            cube([2., 3., 4.], false).unwrap(),
-            sphere(3., 24).unwrap(),
-            cylinder(4., 2., 0., 24, false).unwrap(),
-            torus(5., 1.5, 24, 16),
-            capsule(2., 6., 24),
-            cone_frustum(3., 1.5, 5., 24),
-            cone_frustum(3., 0., 5., 24),
-            ellipsoid(4., 2.5, 1.5, 16, 24),
-        ] {
-            let r = m.inspect().unwrap();
-            assert!(r.closed, "{r:?}");
-            assert_eq!(r.degenerate_triangles, 0);
-            assert!(r.signed_volume_mm3 > 0.)
-        }
-    }
-
-    #[test]
-    fn hull_box() {
-        let m = cube([2., 3., 4.], false).unwrap();
-        let h = hull3(&[m]).unwrap();
-        let r = h.inspect().unwrap();
-        assert!(r.closed);
-        assert!((r.signed_volume_mm3 - 24.).abs() < 1e-8)
-    }
-
-    #[test]
-    fn prism_difference_accepts_a_cutter_that_spans_the_base() {
-        let plate = cube([10., 10., 2.], true).unwrap();
-        let hole = cylinder(4., 1., 1., 32, true).unwrap();
-        let drilled = prism_boolean(&plate, &hole, "difference")
-            .unwrap()
-            .expect("a spanning vertical cutter keeps the result a prism");
-        let report = drilled.inspect().unwrap();
-        assert!(report.closed);
-        let hole_area = 16. * (std::f64::consts::PI / 16.).sin();
-        assert!((report.signed_volume_mm3 - (200. - 2. * hole_area)).abs() < 1e-6);
-
-        // A cutter that stops inside the plate makes a pocket, not a prism.
-        let pocket = cylinder(1., 1., 1., 32, false).unwrap();
-        assert!(
-            prism_boolean(&plate, &pocket, "difference")
-                .unwrap()
-                .is_none()
-        );
-        // Union still needs coincident end planes.
-        assert!(prism_boolean(&plate, &hole, "union").unwrap().is_none());
-        // Intersection uses the overlap of both ranges.
-        let tall = cube([4., 4., 10.], false).unwrap();
-        let overlap = prism_boolean(&plate, &tall, "intersection")
-            .unwrap()
-            .unwrap();
-        assert!((overlap.inspect().unwrap().signed_volume_mm3 - 16.).abs() < 1e-8);
-        // A cutter covering the whole base leaves nothing.
-        let everything = cube([20., 20., 4.], true).unwrap();
-        assert!(
-            prism_boolean(&plate, &everything, "difference")
-                .unwrap()
-                .unwrap()
-                .indices
-                .is_empty()
-        );
-    }
-
-    /// Regression for the aligned 4x4 bridge failure and the former 2048-vertex
-    /// ceiling. These valid profiles must stay on the exact prism path.
-    #[test]
-    fn prism_difference_grid_of_holes_preserves_closed_volume() {
-        let plate = cube([86., 86., 8.], true).unwrap();
-        let hole = cylinder(12., 3., 3., 32, true).unwrap();
-        let grid = |count: usize| -> Mesh {
-            let side = (count as f64).sqrt().ceil() as usize;
-            let step = 80. / side as f64;
-            let holes: Vec<Mesh> = (0..count)
-                .map(|i| {
-                    let x = -40. + step / 2. + (i % side) as f64 * step;
-                    let y = -40. + step / 2. + (i / side) as f64 * step;
-                    hole.transform([
-                        [1., 0., 0., x],
-                        [0., 1., 0., y],
-                        [0., 0., 1., 0.],
-                        [0., 0., 0., 1.],
-                    ])
-                    .unwrap()
-                })
-                .collect();
-            join(&holes).unwrap()
-        };
-        for count in [4, 16, 36, 64, 100] {
-            let result = prism_boolean(&plate, &grid(count), "difference")
-                .unwrap()
-                .unwrap();
-            let report = result.inspect().unwrap();
-            assert!(report.closed, "{count} holes");
-            let expected =
-                86. * 86. * 8. - count as f64 * 16. * 9. * (std::f64::consts::PI / 16.).sin() * 8.;
-            assert!(
-                (report.signed_volume_mm3 - expected).abs() < expected * 1e-10,
-                "{count} holes"
-            );
-        }
-    }
-}
+#[path = "primitives/tests/mod.rs"]
+mod tests;
 
 #[cfg(test)]
-mod minimal_sphere_tests {
-    #[test]
-    fn three_segments_form_a_closed_positive_volume_mesh() {
-        let mesh = super::sphere(2., 3).unwrap();
-        assert_eq!(mesh.indices.len(), 18);
-        let mut edges = std::collections::BTreeMap::new();
-        for triangle in mesh.indices.chunks_exact(3) {
-            for (a, b) in [
-                (triangle[0], triangle[1]),
-                (triangle[1], triangle[2]),
-                (triangle[2], triangle[0]),
-            ] {
-                let entry = edges.entry((a.min(b), a.max(b))).or_insert((0, 0));
-                entry.0 += 1;
-                entry.1 += if a < b { 1 } else { -1 };
-            }
-        }
-        assert!(
-            edges
-                .values()
-                .all(|&(count, orientation)| count == 2 && orientation == 0)
-        );
-        assert!(mesh.inspect().unwrap().signed_volume_mm3 > 0.);
-        assert!(super::sphere(2., 2).is_err());
-    }
-}
+#[path="primitives/tests/minimal_sphere_tests.rs"]
+mod minimal_sphere_tests;
+
+#[path="primitives/algorithm_torus.rs"]
+mod algorithm_torus;
+pub use algorithm_torus::torus;
+#[path="primitives/algorithm_capsule.rs"]
+mod algorithm_capsule;
+pub use algorithm_capsule::capsule;

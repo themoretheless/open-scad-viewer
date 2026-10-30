@@ -1,3 +1,4 @@
+import {brepSourceSnapshot} from './geometry/brep/sourceSnapshot'
 import {axisPolarFrames,sameFrame,validPolarProofEvidence,type PolarProofEvidence} from './polarProofProtocol'
 import type {NurbsBrep} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
@@ -8,7 +9,6 @@ export interface FaceInjectivity {
 }
 export interface BoundaryAuditLimits {exactWork:number;trimPairs:number;trimCells:number;trimDomainCells:number}
 export interface BoundaryEmbeddingEvidence {proven:boolean;exactAgreement:boolean;exactJoins:boolean;exactWork:number;trimValid:boolean;positiveTrimWinding:boolean;trimPairs:number;trimCells:number;trimDomainCells:number;limits:BoundaryAuditLimits;sourceModel:NurbsBrep}
-function sourceSnapshot(value:unknown):string {return JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v)}
 export interface SelfIntersection extends Omit<FaceContacts,'scope'> {
  boundaryEmbedding?:BoundaryEmbeddingEvidence
  scope:'within-face-and-distinct-face-pairs';absenceProven:boolean;allFacesInjective:boolean
@@ -33,7 +33,7 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
    return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
   })
  })
- return {surfaces:model.faces.map(f=>structuredClone(f.surface)),pMatrixSupported:model.faces.map(f=>f.surface.degreeU<=8&&f.surface.degreeV<=8),faceEvidence:model.faces.map(f=>surfaceEvidence(f.surface)),boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {surfaces:model.faces.map(f=>structuredClone(f.surface)),pMatrixSupported:model.faces.map(f=>f.surface.degreeU<=8&&f.surface.degreeV<=8),faceEvidence:model.faces.map(f=>surfaceEvidence(f.surface)),boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?brepSourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
 }
 function quotientExpectation(model:NurbsBrep,face:number){
  const f=model.faces[face],s=f.surface,p=s.controlPoints,u=[s.knotsU[s.degreeU],s.knotsU[p.length]],v=[s.knotsV[s.degreeV],s.knotsV[p[0].length]]
@@ -88,7 +88,7 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
  if(e.boundaryAudit){
   const d=r?.boundaryEmbedding,l=e.boundaryAudit
   const work=(n:unknown,max:number)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0&&n<=max
-  if(!d||sourceSnapshot(d.sourceModel)!==e.sourceSnapshot||!d.limits||!Object.keys(l).every(k=>d.limits[k as keyof BoundaryAuditLimits]===l[k as keyof BoundaryAuditLimits])||![d.proven,d.exactAgreement,d.exactJoins,d.trimValid,d.positiveTrimWinding].every(n=>typeof n==='boolean')||!work(d.exactWork,l.exactWork)||!work(d.trimPairs,l.trimPairs)||!work(d.trimCells,l.trimCells)||!work(d.trimDomainCells,l.trimDomainCells))return false
+  if(!d||brepSourceSnapshot(d.sourceModel)!==e.sourceSnapshot||!d.limits||!Object.keys(l).every(k=>d.limits[k as keyof BoundaryAuditLimits]===l[k as keyof BoundaryAuditLimits])||![d.proven,d.exactAgreement,d.exactJoins,d.trimValid,d.positiveTrimWinding].every(n=>typeof n==='boolean')||!work(d.exactWork,l.exactWork)||!work(d.trimPairs,l.trimPairs)||!work(d.trimCells,l.trimCells)||!work(d.trimDomainCells,l.trimDomainCells))return false
   admitted=d.exactAgreement&&d.exactJoins&&d.trimValid&&d.positiveTrimWinding&&r.allFacesInjective
   if(d.proven&&(!admitted||!r.absenceProven))return false
  }else if(r?.boundaryEmbedding!==undefined)return false
@@ -102,7 +102,7 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
   const periodic=e.domains[i].periodic,pole=e.collapsed[i],remaining=e.maxSpans-used,base=periodic||pole?0:Math.min(e.faceSpans[i],remaining)
   if(x.spans<base||x.spans>remaining)return false
   used+=x.spans
-  const nativeWitness=()=>{try{return callGeometryRust<boolean>('cad_client_geometry',{operation:'faceInjectivityWitness',surface:e.surfaces[i],maxSpans:remaining,report:x})}catch{return false}}
+  const nativeWitness=()=>{try{return callGeometryRust<boolean>('cad_client_geometry',{operation:'faceInjectivityWitness',surface:e.surfaces[i],maxSpans:remaining,report:{proven:x.proven,projection:x.projection,linearProjection:x.linearProjection,projectiveProjection:x.projectiveProjection,polarProjection:x.polarProjection,contractionUpper:x.contractionUpper,spans:x.spans,reason:x.reason}})}catch{return false}}
   if(x.proven){
    if(x.reason==='global-polar-p-matrix'){
     const p=x.polarPMatrix

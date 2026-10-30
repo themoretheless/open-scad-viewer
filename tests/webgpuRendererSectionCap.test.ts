@@ -1,3 +1,4 @@
+import type {PipelineFactory} from '../src/services/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
 import { WebGPURenderer } from '../src/services/webgpuRenderer'
 
@@ -27,7 +28,7 @@ interface FakeInternals {
   meshes: unknown[]
   render(): void
   buildPipelines(): void
-  getRenderPipeline(id: string): unknown
+  pipelines: PipelineFactory
 }
 
 function fakeMesh() {
@@ -99,8 +100,8 @@ function harness() {
   internal.sectionNormal = [0, 0, 1]
   internal.sectionOffset = 0
   // Pipeline stand-ins as set during the warmup; identity marks the pass role.
-  const meshPipe = internal.getRenderPipeline('mesh')
-  const capPipe = internal.getRenderPipeline('meshSectionCap')
+  const meshPipe = internal.pipelines.getRenderPipeline(internal.dev as GPUDevice,'mesh')
+  const capPipe = internal.pipelines.getRenderPipeline(internal.dev as GPUDevice,'meshSectionCap')
   return { internal, pipelines, meshPipe, capPipe }
 }
 

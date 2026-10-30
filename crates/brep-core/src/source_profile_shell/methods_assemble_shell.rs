@@ -1,0 +1,379 @@
+//! source profile shell operations: assemble_shell.
+use super::*;
+impl<'o, 'i, 'f, 'a, 's, 'p, 'b> OuterEdgeAssembly<'o, 'i, 'f, 'a, 's, 'p, 'b> {
+pub fn assemble_shell<'x>(
+        &'x self,
+        max_uses: usize,
+    ) -> Result<ShellAssemblyReport<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
+        if max_uses > 100000 {
+            return Err(Error::new(
+                "BREP_PROFILE_SHELL",
+                "Bound expression shell uses",
+            ));
+        }
+        let mut out = ShellAssemblyReport {
+            shell: None,
+            uses: 0,
+            reason: "profile-shell-work-limit",
+        };
+        let patch = self.patch;
+        let boundary = patch.rails.face.boundary;
+        let selected = boundary.rooted[0].face;
+        let original = boundary.rooted[0]
+            .restricted
+            .proposal
+            .body
+            .geometry()
+            .shell();
+        let regions = original.regions().unwrap();
+        let retained_ids = [selected, regions.len()];
+        let transition_id = regions.len() + 1;
+        let cost: usize = regions
+            .iter()
+            .enumerate()
+            .filter(|(face, _)| *face != selected)
+            .map(|(_, r)| r.loops().iter().map(Vec::len).sum::<usize>())
+            .sum::<usize>()
+            + patch.retained.iter().map(Vec::len).sum::<usize>()
+            + 8;
+        if cost > max_uses {
+            return Ok(out);
+        }
+        out.uses = cost;
+        let mut replacements = BTreeMap::new();
+        for rail in 0..2 {
+            let root = boundary.rooted[rail];
+            let neighbor = 1 - root.points[0].source_side();
+            let address = original.uses()[root.restricted.edge][neighbor];
+            let contour = &patch.rails.rails[rail].neighbor_contour;
+            let [wire, index] = contour.middle;
+            if replacements
+                .insert(
+                    key(address),
+                    contour.loops[wire][index - 1..=index + 1].to_vec(),
+                )
+                .is_some()
+            {
+                out.reason = "profile-shell-replacement-conflict";
+                return Ok(out);
+            }
+        }
+        let mut faces = Vec::new();
+        let mut unchanged = BTreeMap::new();
+        for (face, region) in regions.iter().enumerate() {
+            if face == selected {
+                faces.push(ShellFace {
+                    kind: ShellFaceKind::Retained(0),
+                    loops: vec![patch.retained[0]
+                        .iter()
+                        .cloned()
+                        .map(ShellUse::Source)
+                        .collect()],
+                });
+                continue;
+            }
+            let mut loops = Vec::new();
+            for (wire, source) in region.loops().iter().enumerate() {
+                let mut loop_ = Vec::new();
+                for (edge, fragment) in source.iter().enumerate() {
+                    let address = Address { face, wire, edge };
+                    if let Some(replacement) = replacements.get(&key(address)) {
+                        loop_.extend(replacement.iter().cloned().map(ShellUse::Source));
+                    } else {
+                        unchanged.insert(
+                            key(address),
+                            Address {
+                                face,
+                                wire,
+                                edge: loop_.len(),
+                            },
+                        );
+                        loop_.push(ShellUse::Source(fragment.clone()));
+                    }
+                }
+                loops.push(loop_);
+            }
+            faces.push(ShellFace {
+                kind: ShellFaceKind::Original(face),
+                loops,
+            });
+        }
+        faces.push(ShellFace {
+            kind: ShellFaceKind::Retained(1),
+            loops: vec![patch.retained[1]
+                .iter()
+                .cloned()
+                .map(ShellUse::Source)
+                .collect()],
+        });
+        let order = if patch.rails.reverse_face {
+            [3, 2, 1, 0]
+        } else {
+            [0, 1, 2, 3]
+        };
+        faces.push(ShellFace {
+            kind: ShellFaceKind::Transition,
+            loops: vec![order.into_iter().map(ShellUse::Transition).collect()],
+        });
+        for face in &faces {
+            if face.kind == ShellFaceKind::Transition {
+                continue;
+            }
+            for loop_ in &face.loops {
+                for i in 0..loop_.len() {
+                    let (ShellUse::Source(a), ShellUse::Source(b)) =
+                        (&loop_[i], &loop_[(i + 1) % loop_.len()])
+                    else {
+                        unreachable!()
+                    };
+                    if !a.joins(b) {
+                        out.reason = "profile-shell-loop-joins-unproven";
+                        return Ok(out);
+                    }
+                }
+            }
+        }
+        let map_original = |address: Address| -> Option<Address> {
+            if address.face == selected {
+                locate(
+                    &faces,
+                    &retained_ids,
+                    &regions[selected].loops()[address.wire][address.edge],
+                )
+            } else {
+                unchanged.get(&key(address)).copied()
+            }
+        };
+        let mut pairs = Vec::new();
+        for (edge, uses) in original.uses().iter().enumerate() {
+            if boundary.rooted.iter().any(|r| r.restricted.edge == edge) {
+                continue;
+            }
+            let [Some(a), Some(b)] = uses.map(map_original) else {
+                out.reason = "profile-shell-original-use-unmapped";
+                return Ok(out);
+            };
+            pairs.push(ShellPair {
+                uses: [a, b],
+                reversed: original.edges()[edge].reversed(),
+                kind: ShellPairKind::Original(edge),
+            });
+        }
+        for rail in 0..2 {
+            let root = boundary.rooted[rail];
+            let neighbor = 1 - root.points[0].source_side();
+            let neighbor_face = original.uses()[root.restricted.edge][neighbor].face;
+            for end in 0..2 {
+                let edge = &self.edges[rail * 2 + end];
+                let a = locate(&faces, &[retained_ids[end]], &edge.uses()[0]);
+                let b = locate(&faces, &[neighbor_face], &edge.uses()[1]);
+                let (Some(a), Some(b)) = (a, b) else {
+                    out.reason = "profile-shell-outer-use-unmapped";
+                    return Ok(out);
+                };
+                pairs.push(ShellPair {
+                    uses: [a, b],
+                    reversed: edge.reversed(),
+                    kind: ShellPairKind::Outer(rail * 2 + end),
+                });
+            }
+            let certified = &patch.rails.rails[rail];
+            let edge_index = if rail == 0 { 0 } else { 2 };
+            let transition = Address {
+                face: transition_id,
+                wire: 0,
+                edge: order.iter().position(|e| *e == edge_index).unwrap(),
+            };
+            let Some(neighbor_use) =
+                locate(&faces, &[neighbor_face], &certified.edge.uses()[neighbor])
+            else {
+                out.reason = "profile-shell-rail-use-unmapped";
+                return Ok(out);
+            };
+            pairs.push(ShellPair {
+                uses: [transition, neighbor_use],
+                reversed: [
+                    certified.transition_reversed ^ patch.rails.reverse_face,
+                    certified.edge.reversed()[neighbor],
+                ],
+                kind: ShellPairKind::Rail(rail),
+            });
+        }
+        for end in 0..2 {
+            let fragment = patch.retained[end].last().unwrap();
+            let Some(retained) = locate(&faces, &[retained_ids[end]], fragment) else {
+                unreachable!()
+            };
+            let edge_index = if end == 0 { 3 } else { 1 };
+            let transition = Address {
+                face: transition_id,
+                wire: 0,
+                edge: order.iter().position(|e| *e == edge_index).unwrap(),
+            };
+            let axis = boundary.rooted[0].axis;
+            let descending = fragment.curve().control_points[1][1 - axis]
+                < fragment.curve().control_points[0][1 - axis];
+            pairs.push(ShellPair {
+                uses: [retained, transition],
+                reversed: [
+                    descending ^ fragment.reversed(),
+                    (end == 0) ^ patch.rails.reverse_face,
+                ],
+                kind: ShellPairKind::Section(end),
+            });
+        }
+        let mut poles = Vec::new();
+        for (address, pole) in original.poles() {
+            let mapped = if address.face == selected {
+                locate(&faces, &retained_ids, pole.source())
+            } else {
+                unchanged.get(&key(*address)).copied()
+            };
+            let Some(mapped) = mapped else {
+                out.reason = "profile-shell-pole-unmapped";
+                return Ok(out);
+            };
+            poles.push(mapped);
+        }
+        let mut indices = BTreeMap::new();
+        let mut n = 0;
+        for (face, f) in faces.iter().enumerate() {
+            for (wire, w) in f.loops.iter().enumerate() {
+                for edge in 0..w.len() {
+                    indices.insert((face, wire, edge), n);
+                    n += 1;
+                }
+            }
+        }
+        if n != cost {
+            out.reason = "profile-shell-use-accounting-conflict";
+            return Ok(out);
+        }
+        let next = |a: Address| Address {
+            edge: (a.edge + 1) % faces[a.face].loops[a.wire].len(),
+            ..a
+        };
+        let mut union = Union {
+            parents: (0..n).collect(),
+        };
+        let mut owned = vec![false; n];
+        let mut pair_ids = BTreeMap::new();
+        for (id, pair) in pairs.iter().enumerate() {
+            if pair.uses[0].face == pair.uses[1].face || pair.reversed[0] == pair.reversed[1] {
+                out.reason = "profile-shell-opposite-use-unproven";
+                return Ok(out);
+            }
+            for address in pair.uses {
+                let i = indices[&key(address)];
+                if owned[i] {
+                    out.reason = "profile-shell-duplicate-use";
+                    return Ok(out);
+                }
+                owned[i] = true;
+                pair_ids.insert(key(address), id);
+            }
+            union.join(
+                indices[&key(pair.uses[0])],
+                indices[&key(next(pair.uses[1]))],
+            );
+            union.join(
+                indices[&key(next(pair.uses[0]))],
+                indices[&key(pair.uses[1])],
+            );
+        }
+        let pole_set = poles.iter().map(|a| key(*a)).collect::<BTreeSet<_>>();
+        for &address in &poles {
+            let i = indices[&key(address)];
+            if owned[i] {
+                out.reason = "profile-shell-pole-use-conflict";
+                return Ok(out);
+            }
+            owned[i] = true;
+            union.join(i, indices[&key(next(address))]);
+        }
+        if owned.iter().any(|x| !*x) {
+            out.reason = "profile-shell-open-use";
+            return Ok(out);
+        }
+        let mut links: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
+        for (face, f) in faces.iter().enumerate() {
+            for (wire, w) in f.loops.iter().enumerate() {
+                let regular = (0..w.len())
+                    .filter(|edge| !pole_set.contains(&(face, wire, *edge)))
+                    .collect::<Vec<_>>();
+                if regular.len() < 2 {
+                    out.reason = "profile-shell-degenerate-link";
+                    return Ok(out);
+                }
+                for i in 0..regular.len() {
+                    let a = Address {
+                        face,
+                        wire,
+                        edge: regular[i],
+                    };
+                    let previous = Address {
+                        face,
+                        wire,
+                        edge: regular[(i + regular.len() - 1) % regular.len()],
+                    };
+                    let vertex = union.root(indices[&key(a)]);
+                    links
+                        .entry(vertex)
+                        .or_default()
+                        .push((pair_ids[&key(previous)], pair_ids[&key(a)]));
+                }
+            }
+        }
+        for edges in links.values() {
+            if let Err(reason) = qualify_vertex_link(edges) {
+                out.reason = reason;
+                return Ok(out);
+            }
+        }
+        let vertices = (0..n).map(|i| union.root(i)).collect::<BTreeSet<_>>().len();
+        let original_vertices = original
+            .vertices()
+            .iter()
+            .flatten()
+            .flatten()
+            .flat_map(|ends| ends.iter().copied())
+            .collect::<BTreeSet<_>>()
+            .len();
+        let components = component_count(
+            faces.len(),
+            &pairs.iter().map(|p| p.uses).collect::<Vec<_>>(),
+        );
+        if vertices != original_vertices + 4
+            || pairs.len() != original.edges().len() + 6
+            || components != component_count(regions.len(), original.uses())
+        {
+            out.reason = "profile-shell-topology-change-unproven";
+            return Ok(out);
+        }
+        // Preserve the already qualified endpoint equivalence classes for
+        // conforming boundary meshes. Dense IDs are deterministic in address
+        // order; discarded union representatives never become geometry.
+        let mut representatives = BTreeMap::new();
+        let mut vertex_ids = BTreeMap::new();
+        for (address, index) in &indices {
+            let root = union.root(*index);
+            let next_id = representatives.len();
+            let id = *representatives.entry(root).or_insert(next_id);
+            vertex_ids.insert(*address, id);
+        }
+        if representatives.len() != vertices {
+            return Err(Error::new("BREP_PROFILE_SHELL", "Vertex incidence accounting conflict"));
+        }
+        out.shell = Some(ExpressionShell {
+            assembly: self,
+            faces,
+            pairs,
+            poles,
+            vertices,
+            vertex_ids,
+            components,
+        });
+        out.reason = "profile-shell-closed-oriented-incidence-qualified";
+        Ok(out)
+    }
+}
