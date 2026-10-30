@@ -10,6 +10,7 @@ use cad_predicates::{
 pub struct ExactStripJetReport {
     pub certified: bool,
     pub exact_identity: bool,
+    pub affine_parameter_identity:bool,
     pub regularity_certified: bool,
     pub work: u64,
     pub reason: &'static str,
@@ -266,14 +267,14 @@ pub(crate) fn inspect_proposed_station_projective_strip_jets(a:&Surface,b:&Surfa
     Ok(proof)
 }
 fn inspect_strip_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64,projective:bool)->Result<ExactStripJetReport>{
-    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,projective,None)
+    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,projective,None,projective)
 }
 /// An exact rational proposal still requires independent whole-strip identity
 /// and regularity. The approximate value is used only for option validation.
 pub(crate) fn inspect_station_projective_strip_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,scalar:AuthoredScalar,max_work:u64)->Result<ExactStripJetReport>{
-    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,true,Some(scalar))
+    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,true,Some(scalar),false)
 }
-fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64,projective:bool,scalar:Option<AuthoredScalar>)->Result<ExactStripJetReport>{
+fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64,projective:bool,scalar:Option<AuthoredScalar>,nonlinear:bool)->Result<ExactStripJetReport>{
     a.validate()?;
     b.validate()?;
     check(
@@ -290,7 +291,7 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
     let e = Boundary::parse(bb)?;
     let mut out = ExactStripJetReport {
         certified: false,
-        exact_identity: false,
+        exact_identity: false, affine_parameter_identity:false,
         regularity_certified: false,
         work: 0,
         reason: "unsupported-bezier-strip-basis",
@@ -325,7 +326,7 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
     if !bezier_direction(r.cross(a)) || !bezier_direction(e.cross(b))
         || !(common_bezier || common_multispan || common_linear || common_chain) {
         if projective {
-            return super::bspline_strip::inspect(a,b,r,e,order,scale,max_work,scalar);
+            return super::bspline_strip::inspect(a,b,r,e,order,scale,max_work,scalar,nonlinear);
         }
         return Ok(out);
     }
@@ -358,7 +359,7 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
     let knots_start=values.len();
     if common_linear {values.extend_from_slice(aa.2);}
     let mut authored = values.into_iter().map(|v| AuthoredScalar::Binary64Bits(v.to_bits())).collect::<Vec<_>>();
-    if let Some(scalar)=scalar {authored[scale_index]=scalar;}
+    if let Some(scalar)=scalar.clone() {authored[scale_index]=scalar;}
     let source = SourceArena::authored(
         if projective {"surface-projective-strip-jets"}else{"surface-exact-strip-jets"},
         1,
@@ -412,15 +413,14 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
                 Limits {max_work:max_work-out.work,..Limits::default()},None);
         }
     }
-    let predicate=if projective {cad_predicates::rational_projective_strip_jet_identity}else{rational_bezier_strip_jet_identity};
-    let decision = predicate(
-        &mut ctx,
-        &refs(&strips[0]),
-        &refs(&strips[1]),
-        source.leaf(scale_index).unwrap(),
-        order,
-    )
-    .map_err(|e| crate::input(e.to_string()))?;
+    let (decision,position_bound)=if projective {
+        cad_predicates::rational_projective_strip_jet_identity_with_position(
+            &mut ctx,&refs(&strips[0]),&refs(&strips[1]),source.leaf(scale_index).unwrap(),order)
+    }else{
+        rational_bezier_strip_jet_identity(&mut ctx,&refs(&strips[0]),&refs(&strips[1]),source.leaf(scale_index).unwrap(),order)
+            .map(|p|(p,false))
+    }.map_err(|e|crate::input(e.to_string()))?;
+    out.affine_parameter_identity=position_bound;
     out.work += decision.work_used;
     out.exact_identity = decision.outcome == BezierIdentity::Equal;
     out.reason = match decision.outcome {
@@ -439,5 +439,19 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
                 else { "exact-regular-bspline-strip-jets" };
         }
     }
+    if projective && nonlinear && !out.affine_parameter_identity && !out.exact_identity && out.work < max_work
+        && !super::identical_boundary_rows(a,b,r,e) {
+        let mut nonlinear=super::bspline_strip::inspect(a,b,r,e,order,scale,max_work-out.work,scalar,true)?;
+        nonlinear.work+=out.work;
+        if nonlinear.certified {return Ok(nonlinear);}
+        // Failed proposals spend the same remaining ledger and keep the prior
+        // refusal classification. No attempted work is refunded.
+        out.work=nonlinear.work;
+    }
     Ok(out)
+}
+
+/// Last-stage parameter-map search, after all cheaper exact normal-scale proposals.
+pub(crate) fn inspect_nonlinear_station_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,scalar:AuthoredScalar,max_work:u64)->Result<ExactStripJetReport>{
+    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,true,Some(scalar),true)
 }

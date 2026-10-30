@@ -136,3 +136,60 @@ intersection, nesting or Solid certificate by itself.
 Native qualification and archived source inputs are recorded under
 `docs/qualification/sweep-bspline-joins-2026-10-28`. This source qualification
 does not update the previously published WASM or substitute for STEP/UI gates.
+
+## Independent original along bases and fractional-linear seam maps
+
+The 2026-10-30 successor compares exact original homogeneous jets on the union
+of active along-knot intervals, allowing different degrees, control counts and
+nonclamped knot partitions. An exact formal de Boor recurrence produces all
+power coefficients on each interval. Equality is coefficient-wise over the
+complete interval, including both one-sided limits; a fitted or rounded
+extraction is never a premise. Source interior/periodic joins, interval normals
+and all existing work ceilings remain mandatory.
+
+After an unsuccessful affine correspondence, original interior knots can
+propose a positive fractional-linear along map. Its exact inverse partitions
+both original bases. Homogeneous numerator de Boor recurrences remove only a
+strictly positive denominator independent of transverse coordinates. Every
+projective G1/G2 coefficient identity remains mandatory. Arbitrary nonlinear
+maps, missing proposals and unrelated projective gauges remain unproved.
+
+Independent world-curve/support bases have a separate original coefficient
+proof. Authored linear pcurves permit affine correspondence only: geometric
+point-set equality under a fractional-linear map cannot issue a curve ownership
+certificate. Either periodic declaration requires an independent exact
+world-curve endpoint closure proof, including when the equivalent other basis
+is stored as a clamped closed chain. Full-boundary regularity, vertex links,
+all owned seams and global volume prerequisites retain separate proof owners.
+
+The frozen native audit, exact scope and remaining coverage are recorded under
+`docs/qualification/sweep-independent-bases-2026-10-30`. Passing this finite
+native audit supplies neither universal sweep coverage nor WASM/STEP/UI credit.
+
+## Nonlinear source charts and joint continuous/global admission
+
+The next 2026-10-30 continuation proves original rational polynomial
+compositions using positive denominators, strictly positive whole-interval
+Bernstein derivative bounds, exact endpoint images and complete ordered source
+coverage. Local Cartesian/projective charts admit periodic one-lap maps; a
+second lap cannot acquire the same correspondence certificate. Exact linear
+elimination supplies projective chart proposals for nondegenerate conics and
+full-rank spatial cubics. Every polynomial position/jet identity and the
+independent source joins/normal covers remain mandatory.
+
+Existing zeroth-jet comparisons now expose an affine parameter-identity fact
+for proposal routing. This adds no arithmetic work or differential proof
+credit. Nominal and exact normal-scale proposals retain priority; nonlinear
+search uses only the remaining owner budget. A common parameterization cannot
+be promoted into regularity or G1/G2 evidence.
+
+Four immutable constructor-owned body families expose joint certificate tokens
+for the complete distance bound, original and retained global validity and,
+when actually owned, both boundary G1/G2 proofs. Tokens borrow the same actual
+model and cannot be constructed from caller reports. Native joint flags are
+computed from these tokens. Sharp C0 and G1-only cases retain their respective
+higher-order refusals; a retained G2 result alone cannot grant original G2.
+
+The final source/qualification record and the remaining unproved families are
+under `docs/qualification/sweep-nonlinear-joint-2026-10-30`. This does not imply
+universal reparameterization coverage or WASM/UI/independent STEP delivery.

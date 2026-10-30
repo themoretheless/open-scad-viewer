@@ -78,6 +78,10 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
             limits,
         )?
     };
+    let joint=match &attempt {
+        owned::RationalClosedAttempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),
+        owned::RationalClosedAttempt::Refused(_)=>[false;3],
+    };
     let (model, r) = match &attempt {
         owned::RationalClosedAttempt::Certified(b) => (Some(b.model()), b.report()),
         owned::RationalClosedAttempt::Refused(r) => (None, r.as_ref()),
@@ -85,7 +89,7 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
     let g1 = r.certified && r.source_g1;
     let g2 = r.certified && r.source_g2;
     Ok(json!({
-        "model":model,"certified":r.certified,"solidGeometryCertified":r.certified,
+        "model":model,"jointContinuousGlobalCertified":joint[0],"jointContinuousGlobalG1Certified":joint[1],"jointContinuousGlobalG2Certified":joint[2],"certified":r.certified,"solidGeometryCertified":r.certified,
         "scope":"original-rational-frames-and-filled-annular-caps",
         "continuousBound":r.certified && r.source_boundary_exact,"boundaryErrorUpper":r.boundary_error_upper,
         "sourceBoundaryExact":r.source_boundary_exact,"topologyPreserved":r.topology_preserved,

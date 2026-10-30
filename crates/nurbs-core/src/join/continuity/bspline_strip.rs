@@ -36,8 +36,10 @@ fn identity(
     order: usize,
     scalar: AuthoredScalar,
     propose_exact_scale: bool,
+    independent_basis: bool,
+    allow_nonlinear: bool,
     max_work: u64,
-) -> Result<(BezierIdentity, u64)> {
+) -> Result<(BezierIdentity, u64, bool)> {
     let mut values = Vec::new();
     let mut offsets = [0; 2];
     let mut ks = [0; 2];
@@ -52,6 +54,15 @@ fn identity(
         }
         ks[side] = values.len();
         values.extend_from_slice(boundary.cross(s).2);
+    }
+    let mut along_at = [0; 2];
+    for (side, (s, boundary)) in [(a, ab), (b, bb)]
+        .into_iter()
+        .enumerate()
+        .filter(|_| !propose_exact_scale)
+    {
+        along_at[side] = values.len();
+        values.extend_from_slice(boundary.along(s).2);
     }
     let si = values.len();
     values.push(1.);
@@ -100,18 +111,75 @@ fn identity(
         },
         None,
     );
-    let proof = cad_predicates::rational_bspline_projective_strip_jet_identity(
-        &mut ctx,
-        [&a_refs, &b_refs],
-        [&ak, &bk],
-        [ab.cross(a).0, bb.cross(b).0],
-        ls,
-        source.leaf(si).unwrap(),
-        order,
-        propose_exact_scale,
-    )
+    let mut affine_position = false;
+    let mut proof = if independent_basis {
+        let along_refs = [(a, ab), (b, bb)]
+            .into_iter()
+            .enumerate()
+            .map(|(side, (s, boundary))| {
+                (0..boundary.along(s).2.len())
+                    .map(|i| source.leaf(along_at[side] + i).unwrap())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        cad_predicates::rational_bspline_independent_strip_jet_identity(
+            &mut ctx,
+            [&a_refs, &b_refs],
+            [&ak, &bk],
+            [ab.cross(a).0, bb.cross(b).0],
+            ls,
+            source.leaf(si).unwrap(),
+            order,
+            [&along_refs[0], &along_refs[1]],
+            [ab.along(a).0, bb.along(b).0],
+        )
+    } else {
+        cad_predicates::rational_bspline_projective_strip_jet_identity_with_position(
+            &mut ctx,
+            [&a_refs, &b_refs],
+            [&ak, &bk],
+            [ab.cross(a).0, bb.cross(b).0],
+            ls,
+            source.leaf(si).unwrap(),
+            order,
+            propose_exact_scale,
+        )
+        .map(|(p, position)| {
+            affine_position = position;
+            p
+        })
+    }
     .map_err(|e| crate::input(e.to_string()))?;
-    Ok((proof.outcome, proof.work_used))
+    if allow_nonlinear
+        && !affine_position
+        && !independent_basis
+        && !propose_exact_scale
+        && proof.outcome != BezierIdentity::Equal
+        && !super::identical_boundary_rows(a, b, ab, bb)
+    {
+        let along_refs = [(a, ab), (b, bb)]
+            .into_iter()
+            .enumerate()
+            .map(|(side, (s, boundary))| {
+                (0..boundary.along(s).2.len())
+                    .map(|i| source.leaf(along_at[side] + i).unwrap())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        proof = cad_predicates::rational_bspline_independent_strip_jet_identity(
+            &mut ctx,
+            [&a_refs, &b_refs],
+            [&ak, &bk],
+            [ab.cross(a).0, bb.cross(b).0],
+            ls,
+            source.leaf(si).unwrap(),
+            order,
+            [&along_refs[0], &along_refs[1]],
+            [ab.along(a).0, bb.along(b).0],
+        )
+        .map_err(|e| crate::input(e.to_string()))?;
+    }
+    Ok((proof.outcome, proof.work_used, affine_position))
 }
 
 fn same_basis(
@@ -258,7 +326,7 @@ fn source_joins(
             ]);
         }
         for pair in pairs {
-            let (proof, used) = identity(
+            let (proof, used, _) = identity(
                 s,
                 s,
                 b,
@@ -267,6 +335,8 @@ fn source_joins(
                 order,
                 AuthoredScalar::Binary64Bits(1f64.to_bits()),
                 true,
+                false,
+                false,
                 max_work - *work,
             )?;
             *work += used;
@@ -290,10 +360,12 @@ pub(super) fn inspect(
     scale: f64,
     max_work: u64,
     scalar: Option<AuthoredScalar>,
+    allow_nonlinear: bool,
 ) -> Result<ExactStripJetReport> {
     let mut out = ExactStripJetReport {
         certified: false,
         exact_identity: false,
+        affine_parameter_identity: false,
         regularity_certified: false,
         work: 0,
         reason: "unsupported-common-bspline-basis",
@@ -306,9 +378,12 @@ pub(super) fn inspect(
     }
     let (common, used) = same_basis(a, b, ab, bb, max_work)?;
     out.work += used;
-    if !common {
+    if !common && !allow_nonlinear {
         return Ok(out);
     }
+    // A non-common basis now goes through original piecewise coefficients.
+    // A failed basis comparison contributes work and grants no proof credit.
+
     let mut cells = [0; 2];
     for (i, s) in [a, b].into_iter().enumerate() {
         // A self-seam has one original surface, not two independent sources.
@@ -323,7 +398,7 @@ pub(super) fn inspect(
         }
     }
     let locations = [ends(a, ab), ends(b, bb)];
-    let (proof, used) = identity(
+    let (proof, used, position) = identity(
         a,
         b,
         ab,
@@ -332,8 +407,11 @@ pub(super) fn inspect(
         order,
         scalar.unwrap_or(AuthoredScalar::Binary64Bits(scale.to_bits())),
         false,
+        !common,
+        allow_nonlinear,
         max_work - out.work,
     )?;
+    out.affine_parameter_identity = position;
     out.work += used;
     out.exact_identity = proof == BezierIdentity::Equal;
     out.reason = match proof {

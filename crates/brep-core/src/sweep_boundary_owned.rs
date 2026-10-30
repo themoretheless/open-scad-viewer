@@ -472,3 +472,6 @@ fn ideal_refused(
     });
     Attempt::Refused(Box::new(body.report))
 }
+
+/// Immutable joint continuous/global/differential certificate admission.
+pub mod joint;

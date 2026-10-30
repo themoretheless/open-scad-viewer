@@ -502,3 +502,31 @@ fn empty_cell_candidate_preserves_reference_mesh_and_errors() {
     }
     crate::TEST_SKIP_EMPTY.with(|s|s.set(false));
 }
+
+#[test]
+#[ignore = "export reference meshes for non-test production parity"]
+fn export_empty_cell_reference_meshes() {
+    let c = GpuContext::new().expect("GPU required");
+    use_sampler(&Rc::new(GpuSdf::new(&c)));
+    crate::TEST_SKIP_EMPTY.with(|s| s.set(false));
+    let root = std::path::PathBuf::from(std::env::var("SDF_REFERENCE_DIR").unwrap());
+    std::fs::create_dir_all(&root).unwrap();
+    for (name, field, cells, mode) in [
+        ("sphere-gpu-64",sphere(),64,Acceleration::Gpu),
+        ("sphere-auto-64",sphere(),64,Acceleration::Auto),
+        ("tetra-auto-48",tetra(),48,Acceleration::Auto),
+        ("tetra-auto-49",tetra(),49,Acceleration::Auto),
+        ("tetra-auto-64",tetra(),64,Acceleration::Auto),
+        ("negative-gpu-8",sphere(),8,Acceleration::Gpu),
+        ("negative-cpu-8",sphere(),8,Acceleration::Cpu),
+    ] {
+        let mesh=polygonize_accelerated(&field,&Grid{min:[-2.;3],max:[2.;3],cells:[cells;3]},mode).unwrap();
+        let mut bytes=Vec::new();
+        bytes.extend((mesh.positions.len() as u64).to_le_bytes());
+        bytes.extend((mesh.indices.len() as u64).to_le_bytes());
+        for p in mesh.positions {bytes.extend(p.to_bits().to_le_bytes());}
+        for i in mesh.indices {bytes.extend((i as u64).to_le_bytes());}
+        std::fs::write(root.join(format!("{name}.bin")),bytes).unwrap();
+    }
+    TEST_SDF.with(|s| *s.borrow_mut()=None);
+}

@@ -6,6 +6,21 @@ use crate::{
     LeafRef, ParameterDecision, ParameterIdentity, PredicateContext, Reason, Sign, exact_inputs,
 };
 
+/// An authored scalar rational B-spline on its complete active domain.
+/// Values are normalized A parameters; its own parameter is normalized to B.
+#[derive(Clone, Copy)]
+pub struct BsplineParameterMap<'a> {
+    pub controls: &'a [[LeafRef; 2]], // [Cartesian scalar, positive weight]
+    pub knots: &'a [LeafRef],
+    pub degree: usize,
+}
+#[derive(Clone, Copy)]
+struct AlongProof<'a> {
+    knots: [&'a [LeafRef]; 2],
+    degrees: [usize; 2],
+    map: Option<BsplineParameterMap<'a>>,
+}
+
 /// One-sided jet on a specified original, nonempty knot span.
 #[derive(Clone, Copy)]
 pub struct BsplineStripLocation {
@@ -80,8 +95,160 @@ pub fn rational_bspline_projective_strip_jet_identity(
     order: usize,
     propose_exact_scale: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
+    strip_identity(
+        ctx,
+        strips,
+        knots,
+        degrees,
+        locations,
+        scale,
+        order,
+        propose_exact_scale,
+        None,
+        &mut false,
+    )
+}
+
+/// Common-basis zeroth-jet fact, without a second evaluation or work refund.
+pub fn rational_bspline_projective_strip_jet_identity_with_position(
+    ctx: &mut PredicateContext<'_>,
+    strips: [&[Vec<[LeafRef; 4]>]; 2],
+    knots: [&[LeafRef]; 2],
+    degrees: [usize; 2],
+    locations: [BsplineStripLocation; 2],
+    scale: LeafRef,
+    order: usize,
+    propose: bool,
+) -> Result<(BezierIdentityDecision, bool), InputError> {
+    let mut position = false;
+    let proof = strip_identity(
+        ctx,
+        strips,
+        knots,
+        degrees,
+        locations,
+        scale,
+        order,
+        propose,
+        None,
+        &mut position,
+    )?;
+    let position = position || proof.outcome == BezierIdentity::Equal;
+    Ok((proof, position))
+}
+
+/// Exact comparison on every original span of two independent along bases.
+/// Tries affine active-domain correspondence, then a positive fractional-linear
+/// map proposed from original interior knots. Every whole-span coefficient is
+/// checked; fitting, sampled equality and rounded conversion grant no credit.
+pub fn rational_bspline_independent_strip_jet_identity(
+    ctx: &mut PredicateContext<'_>,
+    strips: [&[Vec<[LeafRef; 4]>]; 2],
+    knots: [&[LeafRef]; 2],
+    degrees: [usize; 2],
+    locations: [BsplineStripLocation; 2],
+    scale: LeafRef,
+    order: usize,
+    along_knots: [&[LeafRef]; 2],
+    along_degrees: [usize; 2],
+) -> Result<BezierIdentityDecision, InputError> {
+    for side in 0..2 {
+        if !(1..=32).contains(&along_degrees[side])
+            || strips[side].len() <= along_degrees[side]
+            || along_knots[side].len() != strips[side].len() + along_degrees[side] + 1
+        {
+            return Err(InputError::InvalidInput(
+                "Invalid independent along B-spline basis",
+            ));
+        }
+    }
+    strip_identity(
+        ctx,
+        strips,
+        knots,
+        degrees,
+        locations,
+        scale,
+        order,
+        false,
+        Some(AlongProof {
+            knots: along_knots,
+            degrees: along_degrees,
+            map: None,
+        }),
+        &mut false,
+    )
+}
+
+/// Exact whole-span geometric jets under a caller's AUTHORED map. This avoids
+/// inverse-chart inference, but never trusts a proposed map, samples or flags.
+pub fn rational_bspline_mapped_strip_jet_identity(
+    ctx: &mut PredicateContext<'_>,
+    strips: [&[Vec<[LeafRef; 4]>]; 2],
+    knots: [&[LeafRef]; 2],
+    degrees: [usize; 2],
+    locations: [BsplineStripLocation; 2],
+    scale: LeafRef,
+    order: usize,
+    along_knots: [&[LeafRef]; 2],
+    along_degrees: [usize; 2],
+    map: BsplineParameterMap<'_>,
+) -> Result<BezierIdentityDecision, InputError> {
+    for side in 0..2 {
+        if !(1..=32).contains(&along_degrees[side])
+            || strips[side].len() <= along_degrees[side]
+            || along_knots[side].len() != strips[side].len() + along_degrees[side] + 1
+        {
+            return Err(InputError::InvalidInput("Invalid mapped along basis"));
+        }
+    }
+    if !(1..=32).contains(&map.degree)
+        || !(map.degree + 1..=33).contains(&map.controls.len())
+        || map.knots.len() != map.controls.len() + map.degree + 1
+    {
+        return Err(InputError::InvalidInput(
+            "Invalid authored B-spline parameter map",
+        ));
+    }
+    for leaf in map.controls.iter().flatten().chain(map.knots) {
+        ctx.resolve(*leaf)?;
+    }
+    strip_identity(
+        ctx,
+        strips,
+        knots,
+        degrees,
+        locations,
+        scale,
+        order,
+        false,
+        Some(AlongProof {
+            knots: along_knots,
+            degrees: along_degrees,
+            map: Some(map),
+        }),
+        &mut false,
+    )
+}
+
+fn strip_identity(
+    ctx: &mut PredicateContext<'_>,
+    strips: [&[Vec<[LeafRef; 4]>]; 2],
+    knots: [&[LeafRef]; 2],
+    degrees: [usize; 2],
+    locations: [BsplineStripLocation; 2],
+    scale: LeafRef,
+    order: usize,
+    propose_exact_scale: bool,
+    along: Option<AlongProof<'_>>,
+    position: &mut bool,
+) -> Result<BezierIdentityDecision, InputError> {
     let [a, b] = strips;
-    if !matches!(order, 1 | 2) || !(2..=33).contains(&a.len()) || a.len() != b.len() {
+    if !matches!(order, 1 | 2)
+        || !(2..=33).contains(&a.len())
+        || !(2..=33).contains(&b.len())
+        || (along.is_none() && a.len() != b.len())
+    {
         return Err(InputError::InvalidInput(
             "Invalid B-spline projective strip",
         ));
@@ -126,7 +293,7 @@ pub fn rational_bspline_projective_strip_jet_identity(
         let x = exact_inputs(&values, ctx)?;
         let unit = x.last().unwrap();
         let homogeneous_unit = Q::scalar(unit.mul(unit, ctx)?);
-        let mut scale = Q::scalar(x[si].clone()).div_positive(&Q::scalar(unit.clone()), ctx)?;
+        let scale = Q::scalar(x[si].clone()).div_positive(&Q::scalar(unit.clone()), ctx)?;
         if scale.n.sign() != Sign::Positive {
             return Err(Reason::MissingProof);
         }
@@ -157,7 +324,7 @@ pub fn rational_bspline_projective_strip_jet_identity(
             };
             let width = Q::scalar(signed);
             let mut side_jets = Vec::new();
-            for row in 0..a.len() {
+            for row in 0..strips[side].len() {
                 let at = starts[side] + row * n * 4;
                 let controls = &x[at..at + n * 4];
                 if controls
@@ -193,121 +360,175 @@ pub fn rational_bspline_projective_strip_jet_identity(
             }
             jets.push(side_jets);
         }
-        let gauges = [jets[1][0][0][3].clone(), jets[0][0][0][3].clone()];
-        for side in 0..2 {
-            for row in &mut jets[side] {
-                for q in row {
-                    for c in q {
-                        *c = c.mul(&gauges[side], ctx)?;
-                    }
-                }
+        if let Some(along) = along {
+            if let Some(map) = along.map {
+                return super::bspline_strip_map::compare(
+                    ctx,
+                    &jets,
+                    along.knots,
+                    along.degrees,
+                    map,
+                    &scale,
+                    order,
+                );
             }
+            return super::bspline_strip_spans::compare(
+                ctx,
+                &jets,
+                along.knots,
+                along.degrees,
+                scale,
+                order,
+                propose_exact_scale,
+            );
         }
-        let [a, b] = [&jets[0], &jets[1]];
-        if propose_exact_scale {
-            // Original one-sided Cartesian velocity numerators supply only a
-            // positive rational proposal. Every coefficient is still checked
-            // below; neither one point nor a derivative ratio issues credit.
-            let mut ratio = None;
-            for k in 0..3 {
-                let va = a[0][1][k]
-                    .mul(&a[0][0][3], ctx)?
-                    .sub(&a[0][0][k].mul(&a[0][1][3], ctx)?, ctx)?;
-                if va.n.sign() == Sign::Zero {
-                    continue;
-                }
-                let vb = b[0][1][k]
-                    .mul(&b[0][0][3], ctx)?
-                    .sub(&b[0][0][k].mul(&b[0][1][3], ctx)?, ctx)?;
-                let sign = Q::scalar(Expansion::scalar(if va.n.sign() == Sign::Positive {
-                    1.
-                } else {
-                    -1.
-                }));
-                let numerator = Q::zero()
-                    .sub(&vb, ctx)?
-                    .mul(&sign, ctx)?
-                    .mul(&a[0][0][3].mul(&a[0][0][3], ctx)?, ctx)?;
-                let denominator = va
-                    .mul(&sign, ctx)?
-                    .mul(&b[0][0][3].mul(&b[0][0][3], ctx)?, ctx)?;
-                let candidate = numerator.div_positive(&denominator, ctx)?;
-                if candidate.n.sign() != Sign::Positive {
-                    return Err(Reason::MissingProof);
-                }
-                ratio = Some(candidate);
-                break;
-            }
-            scale = ratio.ok_or(Reason::MissingProof)?;
-        }
-        let scale2 = scale.mul(&scale, ctx)?;
-        let mut r1 = Vec::new();
-        let mut r2 = Vec::new();
-        for row in 0..a.len() {
-            let mut first = std::array::from_fn::<_, 4, _>(|_| Q::zero());
-            let mut second = std::array::from_fn::<_, 4, _>(|_| Q::zero());
-            for k in 0..4 {
-                if !a[row][0][k].equal(&b[row][0][k], ctx)? {
-                    return Ok(BezierIdentity::Different);
-                }
-                first[k] = b[row][1][k].add(&a[row][1][k].mul(&scale, ctx)?, ctx)?;
-                if order == 2 {
-                    second[k] = b[row][2][k].sub(&a[row][2][k].mul(&scale2, ctx)?, ctx)?;
-                }
-            }
-            r1.push(first);
-            r2.push(second);
-        }
-        for row in 0..a.len() {
-            for k in 0..4 {
-                if !r1[row][k]
-                    .mul(&a[0][0][3], ctx)?
-                    .equal(&a[row][0][k].mul(&r1[0][3], ctx)?, ctx)?
-                {
-                    return Ok(BezierIdentity::Different);
-                }
-            }
-        }
-        if order == 1 {
-            return Ok(BezierIdentity::Equal);
-        }
-        let mut solution = None;
-        'find: for row in 0..a.len() {
-            for k in 0..3 {
-                let h = &a[row][0];
-                let j = &a[row][1];
-                let r = &r2[row];
-                let d = h[3].mul(&j[k], ctx)?.sub(&h[k].mul(&j[3], ctx)?, ctx)?;
-                if d.n.sign() != Sign::Zero {
-                    let mu = r[3].mul(&j[k], ctx)?.sub(&r[k].mul(&j[3], ctx)?, ctx)?;
-                    let nu = h[3].mul(&r[k], ctx)?.sub(&h[k].mul(&r[3], ctx)?, ctx)?;
-                    solution = Some((d, mu, nu));
-                    break 'find;
-                }
-            }
-        }
-        let Some((d, mu, nu)) = solution else {
-            return Err(Reason::MissingProof);
-        };
-        for row in 0..a.len() {
-            for k in 0..4 {
-                let v = r2[row][k]
-                    .mul(&d, ctx)?
-                    .sub(&a[row][0][k].mul(&mu, ctx)?, ctx)?
-                    .sub(&a[row][1][k].mul(&nu, ctx)?, ctx)?;
-                if v.n.sign() != Sign::Zero {
-                    return Ok(BezierIdentity::Different);
-                }
-            }
-        }
-        ctx.charge(0)?;
-        Ok(BezierIdentity::Equal)
+        verify_jets_position(ctx, jets, scale, order, propose_exact_scale, position)
     })();
     Ok(BezierIdentityDecision {
         outcome: result.unwrap_or_else(BezierIdentity::Indeterminate),
         work_used: ctx.work_used(),
         context: ctx.identity(),
     })
+}
+
+pub(crate) fn verify_jets(
+    ctx: &mut PredicateContext<'_>,
+    jets: Vec<Vec<crate::bspline_internal_jets::Series>>,
+    scale: Q,
+    order: usize,
+    propose_exact_scale: bool,
+) -> Result<BezierIdentity, Reason> {
+    verify_jets_position(ctx, jets, scale, order, propose_exact_scale, &mut false)
+}
+fn verify_jets_position(
+    ctx: &mut PredicateContext<'_>,
+    mut jets: Vec<Vec<crate::bspline_internal_jets::Series>>,
+    mut scale: Q,
+    order: usize,
+    propose_exact_scale: bool,
+    position: &mut bool,
+) -> Result<BezierIdentity, Reason> {
+    let gauges = [jets[1][0][0][3].clone(), jets[0][0][0][3].clone()];
+    for side in 0..2 {
+        for row in &mut jets[side] {
+            for q in row {
+                for c in q {
+                    *c = c.mul(&gauges[side], ctx)?;
+                }
+            }
+        }
+    }
+    let [a, b] = [&jets[0], &jets[1]];
+    if propose_exact_scale {
+        // Original one-sided Cartesian velocity numerators supply only a
+        // positive rational proposal. Every coefficient is still checked
+        // below; neither one point nor a derivative ratio issues credit.
+        let mut ratio = None;
+        for k in 0..3 {
+            let va = a[0][1][k]
+                .mul(&a[0][0][3], ctx)?
+                .sub(&a[0][0][k].mul(&a[0][1][3], ctx)?, ctx)?;
+            if va.n.sign() == Sign::Zero {
+                continue;
+            }
+            let vb = b[0][1][k]
+                .mul(&b[0][0][3], ctx)?
+                .sub(&b[0][0][k].mul(&b[0][1][3], ctx)?, ctx)?;
+            let sign = Q::scalar(Expansion::scalar(if va.n.sign() == Sign::Positive {
+                1.
+            } else {
+                -1.
+            }));
+            let numerator = Q::zero()
+                .sub(&vb, ctx)?
+                .mul(&sign, ctx)?
+                .mul(&a[0][0][3].mul(&a[0][0][3], ctx)?, ctx)?;
+            let denominator = va
+                .mul(&sign, ctx)?
+                .mul(&b[0][0][3].mul(&b[0][0][3], ctx)?, ctx)?;
+            let candidate = numerator.div_positive(&denominator, ctx)?;
+            if candidate.n.sign() != Sign::Positive {
+                return Err(Reason::MissingProof);
+            }
+            ratio = Some(candidate);
+            break;
+        }
+        scale = ratio.ok_or(Reason::MissingProof)?;
+    }
+    if order == 0 {
+        for row in 0..a.len() {
+            for k in 0..4 {
+                if !a[row][0][k].equal(&b[row][0][k], ctx)? {
+                    return Err(Reason::MissingProof);
+                }
+            }
+        }
+        ctx.charge(0)?;
+        return Ok(BezierIdentity::Equal);
+    }
+    let scale2 = scale.mul(&scale, ctx)?;
+    let mut r1 = Vec::new();
+    let mut r2 = Vec::new();
+    for row in 0..a.len() {
+        let mut first = std::array::from_fn::<_, 4, _>(|_| Q::zero());
+        let mut second = std::array::from_fn::<_, 4, _>(|_| Q::zero());
+        for k in 0..4 {
+            if !a[row][0][k].equal(&b[row][0][k], ctx)? {
+                return Ok(BezierIdentity::Different);
+            }
+            first[k] = b[row][1][k].add(&a[row][1][k].mul(&scale, ctx)?, ctx)?;
+            if order == 2 {
+                second[k] = b[row][2][k].sub(&a[row][2][k].mul(&scale2, ctx)?, ctx)?;
+            }
+        }
+        r1.push(first);
+        r2.push(second);
+    }
+    *position = true;
+    for row in 0..a.len() {
+        for k in 0..4 {
+            if !r1[row][k]
+                .mul(&a[0][0][3], ctx)?
+                .equal(&a[row][0][k].mul(&r1[0][3], ctx)?, ctx)?
+            {
+                return Ok(BezierIdentity::Different);
+            }
+        }
+    }
+    if order == 1 {
+        return Ok(BezierIdentity::Equal);
+    }
+    let mut solution = None;
+    'find: for row in 0..a.len() {
+        for k in 0..3 {
+            let h = &a[row][0];
+            let j = &a[row][1];
+            let r = &r2[row];
+            let d = h[3].mul(&j[k], ctx)?.sub(&h[k].mul(&j[3], ctx)?, ctx)?;
+            if d.n.sign() != Sign::Zero {
+                let mu = r[3].mul(&j[k], ctx)?.sub(&r[k].mul(&j[3], ctx)?, ctx)?;
+                let nu = h[3].mul(&r[k], ctx)?.sub(&h[k].mul(&r[3], ctx)?, ctx)?;
+                solution = Some((d, mu, nu));
+                break 'find;
+            }
+        }
+    }
+    let Some((d, mu, nu)) = solution else {
+        return Err(Reason::MissingProof);
+    };
+    for row in 0..a.len() {
+        for k in 0..4 {
+            let v = r2[row][k]
+                .mul(&d, ctx)?
+                .sub(&a[row][0][k].mul(&mu, ctx)?, ctx)?
+                .sub(&a[row][1][k].mul(&nu, ctx)?, ctx)?;
+            if v.n.sign() != Sign::Zero {
+                return Ok(BezierIdentity::Different);
+            }
+        }
+    }
+    ctx.charge(0)?;
+    Ok(BezierIdentity::Equal)
 }
 
 #[cfg(test)]

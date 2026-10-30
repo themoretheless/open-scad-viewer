@@ -460,3 +460,22 @@ pub fn match_surface_jets_checked_report(
 #[cfg(test)]
 #[path = "continuity/tests.rs"]
 mod tests;
+
+// Proposal routing only: callers have already established the common along
+// basis. Identical original endpoint rows need no nonlinear parameter search;
+// preserve the nominal -> exact normal-scale proposal priority and its budget.
+fn identical_boundary_rows(a:&Surface,b:&Surface,ab:Boundary,bb:Boundary)->bool {
+    if ab.along(a).0!=bb.along(b).0 || ab.along(a).1!=bb.along(b).1 {return false;}
+    for (s,boundary) in [(a,ab),(b,bb)] {
+        let (p,n,k,_)=boundary.cross(s);
+        let clamped=if boundary.max {k[n..].iter().all(|&v|v==k[n])}
+            else {k[..=p].iter().all(|&v|v==k[p])};
+        if !clamped{return false;}
+    }
+    let ac=if ab.max {ab.cross(a).1-1}else{0};
+    let bc=if bb.max {bb.cross(b).1-1}else{0};
+    (0..ab.along(a).1).all(|i|{
+        let (au,av)=ab.index(a,i,ac);let (bu,bv)=bb.index(b,i,bc);
+        a.control_points[au][av]==b.control_points[bu][bv]&&a.weights[au][av]==b.weights[bu][bv]
+    })
+}

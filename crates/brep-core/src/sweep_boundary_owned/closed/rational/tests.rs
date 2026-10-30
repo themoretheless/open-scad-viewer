@@ -201,6 +201,10 @@ fn original_and_actual_rational_body_own_full_filled_planar_and_nonplanar_cap_g2
         );
         let r = b.report();
         assert!(r.certified && r.source_boundary_exact && r.source_g2 && r.topology_preserved);
+        let joint=b.joint_certificate(2).unwrap();
+        assert!(std::ptr::eq(joint.model(),b.model()));
+        assert_eq!(joint.boundary_error_upper(),0.);
+        assert_eq!(joint.order(),2);
         assert_eq!(b.model().faces.len(), 32);
         assert_eq!(r.caps.len(), 2);
         assert!(
@@ -253,6 +257,8 @@ fn curvature_jump_preserves_explicit_g1_and_refuses_strict_cap_g2() {
         .unwrap(),
     );
     assert!(b.report().source_g1 && !b.report().source_g2);
+    assert!(b.joint_certificate(1).is_ok());
+    assert!(matches!(b.joint_certificate(2),Err(crate::sweep_boundary_owned::joint::Refusal::OriginalG2)));
 }
 
 #[test]
@@ -322,6 +328,8 @@ fn sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection(
         .unwrap(),
     );
     assert!(b.report().certified && !b.report().source_g1 && !b.report().source_g2);
+    assert!(b.joint_certificate(0).is_ok());
+    assert!(b.joint_certificate(1).is_err());
     assert_eq!(b.report().seam_continuity, "C0");
     assert!(b.report().c0_regularity.as_ref().unwrap().all_faces_regular);
     assert!(b.report().c0_agreement.as_ref().unwrap().all_equal);

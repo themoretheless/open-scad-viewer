@@ -93,3 +93,11 @@ fn exact_aware_closure_does_not_trust_partial_identity_or_shell_flags() {
     assert!(!bad.exact.all_equal);
     assert_eq!(bad.closure.status, brep_core::watertight::Closure::Mismatch);
 }
+
+#[test]
+fn explicit_zero_exact_budget_uses_interval_proofs_and_never_a_hidden_budget() {
+    let (source,face,patch,boundary)=fixture::build().unwrap();let before=source.clone();
+    let out=face_window::replace_with_exact_limit(&source,face,&patch,&boundary,1e-8,1000000,0).unwrap();
+    assert_eq!(source,before);assert_eq!(out.exact_work,0);assert!(out.cells>0);
+    assert!(face_window::replace_with_exact_limit(&source,face,&patch,&boundary,1e-8,1000000,1000001).is_err());
+}

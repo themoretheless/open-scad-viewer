@@ -3,13 +3,18 @@
 //! prescribed deformation. Local projected vertex disks and all disjoint chart
 //! pairs are checked throughout S -> its actual corner triangulation.
 use super::*;
+pub(super) mod algebraic;
 mod bernstein;
+mod conform;
 mod conical;
+pub(super) mod domains;
 mod graph_pole;
 mod linear;
 mod nonlinear;
+mod nonlinear_cancel;
 mod planar_pole;
 mod projection;
+pub(super) mod pullback;
 mod transport;
 mod trim;
 use bernstein::{Net, Scalar};
@@ -185,6 +190,14 @@ fn positive_sum(a: &Scalar, b: &Scalar, sign: i64) -> bool {
     })
 }
 fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
+    regular_parameter_disk(p, n, work, false)
+}
+fn regular_parameter_disk(
+    p: &Patch,
+    n: &P,
+    work: &mut Work,
+    stationary_boundary: bool,
+) -> Result<bool> {
     let c = bernstein::corners(&p.h);
     let (e, f) = (sub(&c[1], &c[0]), sub(&c[2], &c[0]));
     let det = dot(n, &cross(&e, &f));
@@ -209,7 +222,10 @@ fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
     {
         return Ok(true);
     }
-    if !positive_sum(&au, &bv, 1) && !p.h.iter().flatten().any(|p| p[3].is_zero()) {
+    if !positive_sum(&au, &bv, 1)
+        && !stationary_boundary
+        && !p.h.iter().flatten().any(|p| p[3].is_zero())
+    {
         return Ok(false);
     }
     let range = |p: &Scalar| {
@@ -235,7 +251,7 @@ fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
         &bernstein::product(&au, &bv, work)?,
         &bernstein::product(&av, &bu, work)?,
     );
-    if p.h.iter().flatten().any(|p| p[3].is_zero()) {
+    if stationary_boundary || p.h.iter().flatten().any(|p| p[3].is_zero()) {
         // At a certified removable homogeneous vertex, strict coefficient
         // positivity is impossible. Positivity in the open triangle plus the
         // separately proved Jordan boundary still gives projected degree one.
@@ -260,7 +276,7 @@ fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
             .map(|i| [edges[0][i].clone(), edges[1][i].clone()])
             .collect::<Vec<_>>();
         for curve in &curves {
-            if !monotone(curve, n, work)? {
+            if !monotone_parameter(curve, n, work, stationary_boundary)? {
                 return Ok(false);
             }
         }
@@ -303,6 +319,9 @@ fn plane_separated(a: &[P], b: &[P], n: &P, work: &mut Work) -> Result<bool> {
     Ok(false)
 }
 fn monotone(c: &Curve, n: &P, work: &mut Work) -> Result<bool> {
+    monotone_parameter(c, n, work, false)
+}
+fn monotone_parameter(c: &Curve, n: &P, work: &mut Work, stationary: bool) -> Result<bool> {
     let h = &c[0];
     let d = h.len() - 1;
     let a = projected(&sb::point(&h[0]), n);
@@ -334,7 +353,13 @@ fn monotone(c: &Curve, n: &P, work: &mut Work) -> Result<bool> {
     };
     let a = product(&deriv(&x), &w, work)?;
     let b = product(&x, &deriv(&w), work)?;
-    Ok(a.iter().zip(b).all(|(x, y)| x > &y))
+    // Nonnegative Bernstein coefficients with one positive coefficient give
+    // a strictly positive derivative in (0,1), permitting stationary endpoints.
+    Ok(if stationary {
+        a.iter().zip(&b).all(|(x, y)| x >= y) && a.iter().zip(&b).any(|(x, y)| x > y)
+    } else {
+        a.iter().zip(&b).all(|(x, y)| x > y)
+    })
 }
 fn curve_pair(a: &Curve, b: &Curve, shared: Option<&P>, n: &P, work: &mut Work) -> Result<bool> {
     let (pa, pb) = (curve_points(a, n), curve_points(b, n));
@@ -644,8 +669,12 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
     Ok((positions, patches))
 }
 pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
+    checked_charts(m, depth).map(|(certificate, _)| certificate)
+}
+fn checked_charts(m: &Model, depth: u8) -> Result<(Certificate, Vec<Patch>)> {
     let mut work = Work::default();
     let (mut positions, mut patches) = build(m, depth, &mut work)?;
+    conform::synchronize(&positions, &mut patches, &mut work)?;
     let mut original = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
     for p in &patches {
         for (k, mut e) in bernstein::edges(&p.h).into_iter().enumerate() {
@@ -771,7 +800,7 @@ pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
             pairs += 1;
         }
     }
-    Ok(Certificate {
+    let certificate = Certificate {
         version: 1,
         source: source_id(&Source::Brep(m.clone()))?,
         depth,
@@ -783,7 +812,8 @@ pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
             disjoint_pairs: pairs,
             boundary_pairs,
         },
-    })
+    };
+    Ok((certificate, patches))
 }
 /// Bind the proved PL endpoint to the exact chain actually decomposed by the
 /// Minkowski code. Equality includes orientations and multiplicities.

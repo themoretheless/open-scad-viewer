@@ -587,3 +587,9 @@ pub use central_graph::{
     inspect_central_graph_correlated,
     trim_central_graph,
 };
+
+mod interior_lift;
+pub use interior_lift::{InteriorLift, InteriorLiftProposal, propose_interior_lift};
+
+mod interior_tile;
+pub use interior_tile::{InteriorTileLimits, InteriorTileProposal, propose_interior_tile, propose_curvature_limited_tile};

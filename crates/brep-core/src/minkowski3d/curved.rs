@@ -4,8 +4,23 @@
 use super::surface_bounds as sb;
 use super::*;
 use crate::Model;
-use value_codec::{Deserialize, Serialize, Value, error, json};
+use value_codec::{error, json, Deserialize, Serialize, Value};
 mod atlas;
+pub use atlas::algebraic::{
+    certify_algebraic_knot_parameters, certify_algebraic_seam_parameters,
+    verify_algebraic_knot_parameters, verify_algebraic_seam_parameters, AtlasAlgebraicParameters,
+    AtlasAlgebraicRoot,
+};
+pub use atlas::domains::{
+    certify_algebraic_domain_atlas, verify_algebraic_domain_atlas, AlgebraicDomainAtlas,
+    DomainEdge, DomainEdgeKind, DomainFace, DomainPartition, DomainPolynomial, DomainSeam,
+    DomainVertex,
+};
+pub use atlas::pullback::{
+    certify_algebraic_surface_pullback, certify_algebraic_triangle_pullback,
+    verify_algebraic_surface_pullback, verify_algebraic_triangle_pullback, AtlasAlgebraicPullback,
+    AtlasExactTriangle,
+};
 mod atlas_legacy;
 mod prismatic;
 pub use atlas::Certificate as SourceAtlasCertificate;
@@ -485,7 +500,9 @@ fn region(s: &Source, depth: u8, limit: &Q, work: &mut Work, version: u32) -> Re
                 (None, None)
             };
             if version >= 4 && atlas.is_none() {
-                atlas = atlas::nominal_report(m, depth, &input).ok().map(SourceAtlasTopologyReport::Rational);
+                atlas = atlas::nominal_report(m, depth, &input)
+                    .ok()
+                    .map(SourceAtlasTopologyReport::Rational);
             }
             let (inner, outer) = if version == 1 {
                 enclose(&nominal, &tubes, work)?
@@ -624,7 +641,10 @@ pub fn certify(a: &Source, b: &Source, maximum: f64, f32_mesh: bool) -> Result<V
     let mut c = derive(a, b, [find(a)?, find(b)?], maximum, 4)?;
     // Preserve the existing v3 wire format when its old proof recipes suffice.
     // Only the general rational atlas requires the new reconstruction recipe.
-    if c.source_atlas_topology.iter().all(|r| !matches!(r, Some(SourceAtlasTopologyReport::Rational(_)))) {
+    if c.source_atlas_topology
+        .iter()
+        .all(|r| !matches!(r, Some(SourceAtlasTopologyReport::Rational(_))))
+    {
         c.version = 3;
     }
     let nominal = display_precision(&c.nominal, if f32_mesh { "f32" } else { "f64" })?;

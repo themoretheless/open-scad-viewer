@@ -501,9 +501,72 @@ pub(super) fn compose(h: &sb::Net, uv: &Net, work: &mut Work) -> Result<Net> {
     Ok(out)
 }
 
+/// Remove only exact degree elevations. This permits high authored degrees
+/// with a low effective degree without enlarging the predicate arithmetic cap.
+fn reduce_degree(h: &Net, work: &mut Work) -> Result<Net> {
+    let mut h = h.clone();
+    while h.len() > 2 {
+        let n = h.len() - 1;
+        if n > 64 {
+            return Err(fail("degree reduction input budget exceeded"));
+        }
+        let mut q = (0..n)
+            .map(|i| vec![std::array::from_fn(|_| Q::zero()); n - i])
+            .collect::<Net>();
+        for i in 0..n {
+            for j in 0..n - i {
+                for k in 0..4 {
+                    work.charge(1)?;
+                    let mut v = integer(n as i64) * &h[i][j][k];
+                    if i > 0 {
+                        v -= integer(i as i64) * &q[i - 1][j][k];
+                    }
+                    if j > 0 {
+                        v -= integer(j as i64) * &q[i][j - 1][k];
+                    }
+                    q[i][j][k] = v / integer((n - i - j) as i64);
+                }
+            }
+        }
+        let mut same = true;
+        for i in 0..=n {
+            for j in 0..=n - i {
+                for k in 0..4 {
+                    work.charge(1)?;
+                    let mut v = Q::zero();
+                    if i + j < n {
+                        v += integer((n - i - j) as i64) * &q[i][j][k];
+                    }
+                    if i > 0 {
+                        v += integer(i as i64) * &q[i - 1][j][k];
+                    }
+                    if j > 0 {
+                        v += integer(j as i64) * &q[i][j - 1][k];
+                    }
+                    same &= v == integer(n as i64) * &h[i][j][k];
+                }
+            }
+        }
+        if !same {
+            break;
+        }
+        transport::check(&q)?;
+        h = q;
+    }
+    Ok(h)
+}
 /// Compose two rational triangular maps. The inner coordinates are barycentric
 /// (1-u-v,u,v); all homogeneous controls must lie in the closed source triangle.
 pub(super) fn compose_triangle(h: &Net, uv: &Net, work: &mut Work) -> Result<Net> {
+    let reduced_h;
+    let reduced_uv;
+    let (h, uv) = if (h.len() - 1).saturating_mul(uv.len() - 1) > 16 {
+        reduced_h = reduce_degree(h, work)?;
+        reduced_uv = reduce_degree(uv, work)?;
+        (&reduced_h, &reduced_uv)
+    } else {
+        (h, uv)
+    };
     let (n, d) = (h.len() - 1, uv.len() - 1);
     if n * d > 16 {
         return Err(fail("nonlinear chart composition degree budget exceeded"));
@@ -544,4 +607,34 @@ pub(super) fn compose_triangle(h: &Net, uv: &Net, work: &mut Work) -> Result<Net
     }
     transport::check(&out)?;
     Ok(out)
+}
+
+#[cfg(test)]
+mod degree_reduction_tests {
+    use super::*;
+    #[test]
+    fn authored_degree_seventeen_composes_without_relaxing_exact_budget() {
+        let n = 17;
+        let h = (0..=n)
+            .map(|i| {
+                (0..=n - i)
+                    .map(|j| {
+                        [
+                            Q::new(i.into(), n.into()),
+                            Q::new(j.into(), n.into()),
+                            Q::zero(),
+                            Q::one(),
+                        ]
+                    })
+                    .collect()
+            })
+            .collect::<Net>();
+        let reduced = reduce_degree(&h, &mut Work::default()).unwrap();
+        assert_eq!(reduced.len(), 2);
+        let result = compose_triangle(&h, &reduced, &mut Work::default()).unwrap();
+        assert_eq!(result, reduced);
+        let mut bad = h;
+        bad[8][3][2] += Q::new(1.into(), 1024.into());
+        assert!(compose_triangle(&bad, &reduced, &mut Work::default()).is_err());
+    }
 }

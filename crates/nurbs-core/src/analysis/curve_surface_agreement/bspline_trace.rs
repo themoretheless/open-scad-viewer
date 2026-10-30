@@ -37,11 +37,7 @@ pub(super) fn verify(
         let forward = a[free] == knots[free][degrees[free]] && b[free] == knots[free][counts[free]];
         let backward =
             b[free] == knots[free][degrees[free]] && a[free] == knots[free][counts[free]];
-        if (!forward && !backward)
-            || c.degree != degrees[free]
-            || c.control_points.len() != counts[free]
-            || c.periodic != periodic[free]
-        {
+        if !forward && !backward {
             continue;
         }
         let clamped = knots[fixed][..=degrees[fixed]]
@@ -50,9 +46,21 @@ pub(super) fn verify(
             && knots[fixed][counts[fixed]..]
                 .iter()
                 .all(|&v| v == knots[fixed][counts[fixed]]);
-        if clamped && !periodic[0] && !periodic[1] && !c.periodic {
+        let original_bezier = |k: &[f64], p: usize, n: usize| {
+            n == p + 1 && k[..=p].iter().all(|&x| x == k[p]) && k[n..].iter().all(|&x| x == k[n])
+        };
+        if clamped
+            && !periodic[0]
+            && !periodic[1]
+            && !c.periodic
+            && ((original_bezier(&c.knots, c.degree, c.control_points.len())
+                && original_bezier(knots[free], degrees[free], counts[free]))
+                || (c.degree == degrees[free]
+                    && c.control_points.len() == counts[free]
+                    && c.knots == *knots[free]))
+        {
             continue;
-        } // preserve all existing Bezier paths
+        } // preserve existing Bezier composition and exact mismatch witnesses
         let reverse = backward ^ reversed;
         let mut values = Vec::new();
         for i in 0..c.control_points.len() {
@@ -101,7 +109,7 @@ pub(super) fn verify(
                 .map(|i| source.leaf(at + i).unwrap())
                 .collect::<Vec<_>>()
         };
-        let curve = (0..counts[free])
+        let curve = (0..c.control_points.len())
             .map(|i| std::array::from_fn(|k| source.leaf(4 * i + k).unwrap()))
             .collect::<Vec<_>>();
         let strip = (0..counts[free])
@@ -128,17 +136,17 @@ pub(super) fn verify(
             },
             None,
         );
-        let basis =
+        let common = if c.degree == degrees[free] && c.control_points.len() == counts[free] {
             cad_predicates::affine_bspline_knot_basis_identity(&mut ctx, [&ck, &ak], c.degree)
-                .map_err(|e| crate::input(e.to_string()))?;
-        if basis.outcome != ParameterIdentity::Equal {
-            return Ok(Some(BezierIdentityDecision {
-                outcome: BezierIdentity::Indeterminate(Reason::MissingProof),
-                work_used: ctx.work_used(),
-                context: ctx.identity(),
-            }));
-        }
-        if c.periodic {
+                .map_err(|e| crate::input(e.to_string()))?
+                .outcome
+                == ParameterIdentity::Equal
+        } else {
+            false
+        };
+        // Either declaration requires ORIGINAL endpoint closure, even if the
+        // equivalent other representation stores a clamped closed chain.
+        if c.periodic || periodic[free] {
             let closure = cad_predicates::rational_bspline_cartesian_endpoint_jet_identity(
                 &mut ctx, &curve, &ck, c.degree, 0,
             )
@@ -159,21 +167,100 @@ pub(super) fn verify(
             (degrees[fixed]..counts[fixed]).find(|&i| knots[fixed][i] < knots[fixed][i + 1])
         }
         .unwrap();
-        let proof = cad_predicates::rational_bspline_isoparametric_trace_identity(
-            &mut ctx,
-            &curve,
-            &strip,
-            &k,
-            degrees[fixed],
-            BsplineStripLocation {
-                span,
-                parameter: source.leaf(ti).unwrap(),
-                inward_positive: true,
-            },
-            periodic[fixed],
-        )
+        let location = BsplineStripLocation {
+            span,
+            parameter: source.leaf(ti).unwrap(),
+            inward_positive: true,
+        };
+        let proof = if common {
+            cad_predicates::rational_bspline_isoparametric_trace_identity(
+                &mut ctx,
+                &curve,
+                &strip,
+                &k,
+                degrees[fixed],
+                location,
+                periodic[fixed],
+            )
+        } else {
+            cad_predicates::rational_bspline_independent_trace_identity(
+                &mut ctx,
+                &curve,
+                &strip,
+                &k,
+                degrees[fixed],
+                location,
+                periodic[fixed],
+                [&ck, &ak],
+                [c.degree, degrees[free]],
+            )
+        }
         .map_err(|e| crate::input(e.to_string()))?;
         return Ok(Some(proof));
     }
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cad_predicates::BezierIdentity;
+    #[test]
+    fn independent_original_world_curve_binds_periodic_cross_trace_and_budget() {
+        let xy = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
+        let s = Surface {
+            degree_u: 1,
+            degree_v: 2,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: (0..9).map(|i| i as f64).collect(),
+            control_points: (0..2)
+                .map(|z| {
+                    (0..6)
+                        .map(|j| vec![xy[j % 4][0], xy[j % 4][1], z as f64])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 6]; 2],
+            periodic_u: false,
+            periodic_v: true,
+        };
+        let p = Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![0., 2.], vec![1., 2.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let c = Curve {
+            degree: 2,
+            knots: vec![4., 4., 4., 5., 6., 6., 6.],
+            control_points: [0., 0.25, 0.75, 1.]
+                .iter()
+                .map(|&z| vec![0.5, 0.5, z])
+                .collect(),
+            weights: vec![3.; 4],
+            periodic: false,
+        };
+        let saved = (c.clone(), p.clone(), s.clone());
+        let run = |c: &Curve, rev, budget| {
+            super::super::verify_exact(c, &p, &s, rev, budget)
+                .unwrap()
+                .unwrap()
+        };
+        let proof = run(&c, false, 1000000);
+        assert_eq!(proof.outcome, BezierIdentity::Equal, "{proof:?}");
+        assert_ne!(
+            run(&c, false, proof.work_used - 1).outcome,
+            BezierIdentity::Equal
+        );
+        assert_ne!(run(&c, false, 0).outcome, BezierIdentity::Equal);
+        let mut reverse = c.clone();
+        reverse.control_points.reverse();
+        reverse.weights.reverse();
+        assert_eq!(run(&reverse, true, 1000000).outcome, BezierIdentity::Equal);
+        let mut bad = c.clone();
+        bad.control_points[1][0] = f64::from_bits(0.5f64.to_bits() + 1);
+        assert_ne!(run(&bad, false, 1000000).outcome, BezierIdentity::Equal);
+        assert_eq!((c, p, s), saved);
+    }
 }

@@ -1,3 +1,5 @@
+#[path = "../tests/fixtures/trihedral_candidate.rs"]
+mod saved;
 use brep_core::region_replacement as r;
 fn main() {
     let m = brep_core::cuboid([0.; 3], [10.; 3]).unwrap();
@@ -32,6 +34,17 @@ fn main() {
         1000000,
     )
     .unwrap();
+    if let Some(path) = std::env::var_os("OSV_CENTRAL_GRAPH_FIXTURE_EXPORT") {
+        let candidate = saved::candidate(&collars);
+        let boundaries=collars.boundaries.iter().zip(&candidate.pcurves).map(|(c,p)|value_codec::json!({
+            "curve":c.curve,"originalSurface":c.original_surface,"originalPcurve":c.original_pcurve,"candidatePcurve":p
+        })).collect::<Vec<_>>();
+        let data = value_codec::json!({"surface":candidate.surface,"boundaries":boundaries,
+            "source":"offline-rounded-boundary-only-fixture","closedBody":false,"admitted":false});
+        std::fs::write(path, value_codec::to_string(&data).unwrap()).unwrap();
+        println!("exported diagnostic fixture; no G2 or material receipt inherited");
+        return;
+    }
     if let Some(path) = std::env::var_os("OSV_CENTRAL_GRAPH_CANDIDATE") {
         let path = std::path::PathBuf::from(path);
         let data: value_codec::Value =

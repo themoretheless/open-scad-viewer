@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { resolveFormaTokens } from '../forma/tokens'
 import type { Language } from '../i18n/appStrings'
 import { storageGet, storageGetEnum, storageSet } from '../services/safeStorage'
 import { customizeTokens, normalizeHex } from '../services/themeCustomization'
@@ -39,7 +40,8 @@ export function useAppearance(options: AppearanceOptions) {
     document.documentElement.lang = lang.value
     document.documentElement.style.colorScheme = theme.scheme
     const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-    for (const [token, value] of Object.entries(tokens)) {
+    const formaTokens = resolveFormaTokens(theme.scheme, tokens)
+    for (const [token, value] of Object.entries({ ...tokens, ...formaTokens })) {
       document.documentElement.style.setProperty(token, value)
     }
     if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)

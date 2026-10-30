@@ -64,6 +64,53 @@ struct Jet {
     knots: [Vec<f64>; 2],
     poles: Grid,
 }
+// Exact separable tensor contraction. In particular, identity/triangular
+// extraction matrices must not perform thousands of zero BigRational products.
+// Reassociation changes neither rational coefficients nor final enclosures.
+fn extract_tensor_net(
+    jet: &Jet,
+    span: [usize; 2],
+    u: &[Vec<Q>],
+    v: &[Vec<Q>],
+    w: &mut Work,
+) -> Result<Net> {
+    let offset = [span[0] - jet.degrees[0], span[1] - jet.degrees[1]];
+    let mut intermediate: Grid = vec![vec![std::array::from_fn(|_| Q::zero()); v.len()]; u.len()];
+    for i in 0..u.len() {
+        for t in 0..v.len() {
+            for r in 0..u.len() {
+                if u[i][r].is_zero() {
+                    continue;
+                }
+                for k in 0..4 {
+                    let pole = &jet.poles[offset[0] + r][offset[1] + t][k];
+                    if pole.is_zero() {
+                        continue;
+                    }
+                    intermediate[i][t][k] += &u[i][r] * pole;
+                    w.charge(&intermediate[i][t][k])?;
+                }
+            }
+        }
+    }
+    let mut net = vec![vec![[I::point(0.); 4]; v.len()]; u.len()];
+    for i in 0..u.len() {
+        for j in 0..v.len() {
+            for k in 0..4 {
+                let mut q = Q::zero();
+                for t in 0..v.len() {
+                    if v[j][t].is_zero() || intermediate[i][t][k].is_zero() {
+                        continue;
+                    }
+                    q += &v[j][t] * &intermediate[i][t][k];
+                    w.charge(&q)?;
+                }
+                net[i][j][k] = enclosure(&q)?;
+            }
+        }
+    }
+    Ok(net)
+}
 /// All homogeneous derivatives, projected onto the exact integer orthogonal
 /// chart (x-y, x+y-2z, x+y+z). Projection precedes differencing.
 type Net = Vec<Vec<[I; 4]>>;
@@ -209,24 +256,7 @@ impl Support {
             } else {
                 let u = extraction(&jet.knots[0], jet.degrees[0], span[0], w)?;
                 let v = extraction(&jet.knots[1], jet.degrees[1], span[1], w)?;
-                let mut net = vec![vec![[I::point(0.); 4]; v.len()]; u.len()];
-                for i in 0..u.len() {
-                    for j in 0..v.len() {
-                        for k in 0..4 {
-                            let mut q = Q::zero();
-                            for r in 0..u.len() {
-                                for t in 0..v.len() {
-                                    q += &u[i][r]
-                                        * &v[j][t]
-                                        * &jet.poles[span[0] - jet.degrees[0] + r]
-                                            [span[1] - jet.degrees[1] + t][k];
-                                    w.charge(&q)?;
-                                }
-                            }
-                            net[i][j][k] = enclosure(&q)?;
-                        }
-                    }
-                }
+                let net = extract_tensor_net(jet, span, &u, &v, w)?;
                 // The cache belongs to this immutable authored support, never to
                 // a receipt or a rounded construction proxy. Eviction drops only
                 // an optimization; the next visit recomputes original coefficients.
@@ -534,5 +564,71 @@ mod tests {
             };
             assert!(jets[1][2][i].lo <= 1. + 2. * u && jets[1][2][i].hi >= 1. + 2. * u);
         }
+    }
+}
+
+#[cfg(test)]
+mod tensor_contraction_tests {
+    use super::*;
+    #[test]
+    fn separable_extraction_matches_dense_rationals_and_binary_enclosures() {
+        let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+        let u = vec![
+            vec![q(1, 1), q(0, 1), q(0, 1)],
+            vec![q(1, 3), q(2, 3), q(0, 1)],
+            vec![q(1, 9), q(4, 9), q(4, 9)],
+        ];
+        let v = vec![
+            vec![q(4, 9), q(4, 9), q(1, 9)],
+            vec![q(0, 1), q(2, 3), q(1, 3)],
+            vec![q(0, 1), q(0, 1), q(1, 1)],
+        ];
+        let poles = (0..3)
+            .map(|i| {
+                (0..3)
+                    .map(|j| {
+                        std::array::from_fn(|k| {
+                            q(i as i64 * 7 - j as i64 * 11 + k as i64 * 3, (k + 1) as i64)
+                        })
+                    })
+                    .collect()
+            })
+            .collect();
+        let jet = Jet {
+            degrees: [2, 2],
+            knots: [vec![], vec![]],
+            poles,
+        };
+        let mut fast = Work {
+            used: 0,
+            limit: 1_000_000,
+        };
+        let net = extract_tensor_net(&jet, [2, 2], &u, &v, &mut fast).unwrap();
+        let mut dense = Work {
+            used: 0,
+            limit: 1_000_000,
+        };
+        for i in 0..3 {
+            for j in 0..3 {
+                for k in 0..4 {
+                    let mut sum = Q::zero();
+                    for r in 0..3 {
+                        for t in 0..3 {
+                            sum += &u[i][r] * &v[j][t] * &jet.poles[r][t][k];
+                            dense.charge(&sum).unwrap();
+                        }
+                    }
+                    let expected = enclosure(&sum).unwrap();
+                    assert_eq!(
+                        (net[i][j][k].lo.to_bits(), net[i][j][k].hi.to_bits()),
+                        (expected.lo.to_bits(), expected.hi.to_bits())
+                    );
+                }
+            }
+        }
+        assert!(fast.used < dense.used, "{} vs {}", fast.used, dense.used);
+        let mut exhausted = Work { used: 0, limit: 0 };
+        assert!(extract_tensor_net(&jet, [2, 2], &u, &v, &mut exhausted).is_err());
+        assert_eq!(exhausted.used, 0);
     }
 }

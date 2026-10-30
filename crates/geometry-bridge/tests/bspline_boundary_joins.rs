@@ -168,3 +168,64 @@ fn periodic_flags_approximate_knots_and_mutated_world_edges_cannot_forge_g2() {
         }
     }
 }
+
+#[test]
+fn full_periodic_body_binds_a_clamped_degree_elevated_world_edge_without_fitting() {
+    let mut model = periodic_torus();
+    let xy = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
+    let mut points = Vec::new();
+    for j in 0..4 {
+        let a = xy[j];
+        let b = xy[(j + 1) % 4];
+        let c = xy[(j + 2) % 4];
+        // Original quadratic uniform span, elevated with exact dyadic results.
+        // No runtime preparation or fitted curve supplies the certificate.
+        let start = [2.25 * (a[0] + b[0]), 2.25 * (a[1] + b[1]), 0.5];
+        let end = [2.25 * (b[0] + c[0]), 2.25 * (b[1] + c[1]), 0.5];
+        if j == 0 {
+            points.push(start.to_vec());
+        }
+        points.push(vec![
+            0.75 * (a[0] + 5. * b[0]),
+            0.75 * (a[1] + 5. * b[1]),
+            0.5,
+        ]);
+        points.push(vec![
+            0.75 * (5. * b[0] + c[0]),
+            0.75 * (5. * b[1] + c[1]),
+            0.5,
+        ]);
+        points.push(end.to_vec());
+    }
+    model.edges[0].curve = Curve {
+        degree: 3,
+        knots: [
+            vec![0.; 4],
+            vec![1.; 3],
+            vec![2.; 3],
+            vec![3.; 3],
+            vec![4.; 4],
+        ]
+        .concat(),
+        control_points: points,
+        weights: vec![1.; 13],
+        periodic: false,
+    };
+    model.validate().unwrap();
+    let before = model.clone();
+    let request = json!({"op":"brep_complete_boundary_smoothness_audit","model":model,"order":2,
+        "maxExactWork":2000000,"maxAgreementWork":1000000,"maxRegularityCells":100000});
+    let report = dispatch(request.clone()).unwrap();
+    assert_eq!(report["edgeCorrespondenceCertified"], true, "{report:?}");
+    assert_eq!(report["fullBoundaryG2Certified"], true, "{report:?}");
+    assert_eq!(report["solidCertified"], false);
+    assert_eq!(model, before);
+    model.edges[0].curve.control_points[2][0] =
+        f64::from_bits(model.edges[0].curve.control_points[2][0].to_bits() + 1);
+    let bad = json!({"op":"brep_complete_boundary_smoothness_audit","model":model,"order":2,
+        "maxExactWork":2000000,"maxAgreementWork":1000000,"maxRegularityCells":100000});
+    match dispatch(bad) {
+        Ok(r) => assert_eq!(r["fullBoundaryG2Certified"], false, "{r:?}"),
+        Err(e) => assert_eq!(e.code, "BREP_INVALID_TOPOLOGY"),
+    }
+}

@@ -12,22 +12,23 @@ use num_traits::{One, Zero};
 
 mod agreement;
 pub use agreement::{
-    ProjectiveCurveAgreementCertificate, certify_projective_curve_agreement,
-    verify_projective_curve_agreement,
+    certify_projective_curve_agreement, verify_projective_curve_agreement,
+    ProjectiveCurveAgreementCertificate,
 };
 mod algebraic_intersections;
 mod arithmetic;
+pub(crate) mod atlas_roots;
 mod intersections;
 pub use algebraic_intersections::{
-    AlgebraicFactorWitness, AlgebraicIntersectionCertificate, AlgebraicRootWitness,
-    ExactPolynomial, ExactRatio, VerifiedAlgebraicIntersections, certify_algebraic_intersections,
-    verify_algebraic_intersections,
+    certify_algebraic_intersections, verify_algebraic_intersections, AlgebraicFactorWitness,
+    AlgebraicIntersectionCertificate, AlgebraicRootWitness, ExactPolynomial, ExactRatio,
+    VerifiedAlgebraicIntersections,
 };
 mod image_agreement;
 mod multispan;
 pub use image_agreement::{
-    CurveImageCertificate, ImageCoverageWitness, ImageRelationWitness, VerifiedCurveImage,
-    certify_curve_image_agreement, verify_curve_image_agreement,
+    certify_curve_image_agreement, verify_curve_image_agreement, CurveImageCertificate,
+    ImageCoverageWitness, ImageRelationWitness, VerifiedCurveImage,
 };
 mod branches;
 mod span_intersections;
@@ -42,10 +43,30 @@ pub(crate) fn exact_polynomial_nonnegative(p: &[Q]) -> Result<bool> {
         .all(|x| arithmetic::at(p, x) >= Q::zero()))
 }
 pub use span_intersections::{
-    AlgebraicEventNode, AlgebraicEventPosition, BranchNeighbourhoodLimits,
-    BranchNeighbourhoodRecord, ContactAtlasLimits, ContactOccurrence, ContactPortOrderLimits,
-    CurveEventNodes, EventParameterRef, LeadingBranchRay, OriginalAtlasPair,
-    OriginalAtlasPairLimits, OriginalAtlasPairProof, OriginalAtomicCarrier,
+    assemble_original_contact_atlas, assemble_original_filled_boundaries,
+    assemble_original_filled_regions, assemble_original_physical_faces,
+    bind_original_periodic_pieces_to_surface, bind_original_seams_to_surface,
+    certify_span_intersections, classify_original_shore_carrier, compare_event_parameters,
+    own_branch_neighbourhood, own_curve_event_nodes, own_event_branch, own_original_atlas_pairs,
+    own_original_boundary_winding, own_original_carrier_cycles, own_original_carrier_graph,
+    own_original_carrier_sides, own_original_carrier_sides_automatically, own_original_carriers,
+    own_original_chart_events, own_original_chart_intervals, own_original_chart_vertices,
+    own_original_common_clips, own_original_common_dictionary, own_original_common_partition,
+    own_original_contact_port_order, own_original_filled_boundaries, own_original_filled_regions,
+    own_original_global_chart_embedding, own_original_injective_chart_atlas,
+    own_original_overlap_components, own_original_overlap_contacts, own_original_overlap_partition,
+    own_original_pair_cuts, own_original_periodic_embedding, own_original_periodic_pieces,
+    own_original_periodic_topology, own_original_periodic_wires, own_original_physical_faces,
+    own_original_point_pullback, own_original_regular_trim_surface, own_original_seam_dictionary,
+    own_original_shore_carrier, own_original_shore_pair, own_original_source_carriers,
+    own_original_trim_chart_coverage, own_original_unified_boundary_winding,
+    own_original_unified_cycles, own_original_unified_filled, own_original_unified_graph,
+    own_original_unified_ports, own_original_unified_regions, own_original_unified_rotation,
+    own_original_unified_sides, own_original_unified_sides_automatically, try_own_event_branch,
+    verify_span_intersections, AlgebraicEventNode, AlgebraicEventPosition,
+    BranchNeighbourhoodLimits, BranchNeighbourhoodRecord, ContactAtlasLimits, ContactOccurrence,
+    ContactPortOrderLimits, CurveEventNodes, EventParameterRef, LeadingBranchRay,
+    OriginalAtlasPair, OriginalAtlasPairLimits, OriginalAtlasPairProof, OriginalAtomicCarrier,
     OriginalBoundaryAssemblyLimits, OriginalCarrierCut, OriginalCarrierIncidence,
     OriginalCarrierVertex, OriginalChartCoverageCell, OriginalChartCut, OriginalChartCutOrigin,
     OriginalChartInterval, OriginalChartRegion, OriginalChartShoreCell, OriginalChartShoreEvent,
@@ -83,46 +104,25 @@ pub use span_intersections::{
     OwnedOriginalUnifiedPorts, OwnedOriginalUnifiedRegions, OwnedOriginalUnifiedRotation,
     OwnedOriginalUnifiedSides, ParameterOrderLimits, QualifiedParameterOrder,
     SourceContactParameter, SpanIntersectionCertificate, SpanPairCertificate, VerifiedCurveOverlap,
-    VerifiedSpanIntersections, assemble_original_contact_atlas,
-    assemble_original_filled_boundaries, assemble_original_filled_regions,
-    assemble_original_physical_faces, bind_original_periodic_pieces_to_surface,
-    bind_original_seams_to_surface, certify_span_intersections, classify_original_shore_carrier,
-    compare_event_parameters, own_branch_neighbourhood, own_curve_event_nodes, own_event_branch,
-    own_original_atlas_pairs, own_original_boundary_winding, own_original_carrier_cycles,
-    own_original_carrier_graph, own_original_carrier_sides,
-    own_original_carrier_sides_automatically, own_original_carriers, own_original_chart_events,
-    own_original_chart_intervals, own_original_chart_vertices, own_original_common_clips,
-    own_original_common_dictionary, own_original_common_partition, own_original_contact_port_order,
-    own_original_filled_boundaries, own_original_filled_regions,
-    own_original_global_chart_embedding, own_original_injective_chart_atlas,
-    own_original_overlap_components, own_original_overlap_contacts, own_original_overlap_partition,
-    own_original_pair_cuts, own_original_periodic_embedding, own_original_periodic_pieces,
-    own_original_periodic_topology, own_original_periodic_wires, own_original_physical_faces,
-    own_original_point_pullback, own_original_regular_trim_surface, own_original_seam_dictionary,
-    own_original_shore_carrier, own_original_shore_pair, own_original_source_carriers,
-    own_original_trim_chart_coverage, own_original_unified_boundary_winding,
-    own_original_unified_cycles, own_original_unified_filled, own_original_unified_graph,
-    own_original_unified_ports, own_original_unified_regions, own_original_unified_rotation,
-    own_original_unified_sides, own_original_unified_sides_automatically, try_own_event_branch,
-    verify_span_intersections,
+    VerifiedSpanIntersections,
 };
 pub use span_intersections::{VerifiedBranchGraph, VerifiedParameterLocus};
 mod nonlinear;
 pub use agreement::{
-    CurveAgreementCertificate, VerifiedCurveAgreement, certify_curve_agreement,
-    verify_curve_agreement,
+    certify_curve_agreement, verify_curve_agreement, CurveAgreementCertificate,
+    VerifiedCurveAgreement,
 };
 pub use intersections::{
-    CurveIntersectionCertificate, VerifiedCurveIntersections, certify_curve_intersections,
-    verify_curve_intersections,
+    certify_curve_intersections, verify_curve_intersections, CurveIntersectionCertificate,
+    VerifiedCurveIntersections,
 };
 pub use multispan::{
-    MultispanAgreementCertificate, SpanAgreementWitness, certify_multispan_agreement,
-    verify_multispan_agreement,
+    certify_multispan_agreement, verify_multispan_agreement, MultispanAgreementCertificate,
+    SpanAgreementWitness,
 };
 pub use nonlinear::{
-    NonlinearCurveAgreementCertificate, certify_nonlinear_curve_agreement,
-    verify_nonlinear_curve_agreement,
+    certify_nonlinear_curve_agreement, verify_nonlinear_curve_agreement,
+    NonlinearCurveAgreementCertificate,
 };
 mod contact;
 mod extraction;
@@ -131,23 +131,23 @@ mod minkowski;
 mod offset;
 mod offset_regions;
 pub use minkowski::{
-    ExactRegionRings, MinkowskiRegionCertificate, VerifiedMinkowskiRegion,
     certify_minkowski_disk_offset, certify_minkowski_sum, verify_minkowski_region,
+    ExactRegionRings, MinkowskiRegionCertificate, VerifiedMinkowskiRegion,
 };
 mod offset_wire;
 pub use contact::{
-    EndpointContactCertificate, VerifiedEndpointContacts, certify_endpoint_contacts,
-    verify_endpoint_contacts,
+    certify_endpoint_contacts, verify_endpoint_contacts, EndpointContactCertificate,
+    VerifiedEndpointContacts,
 };
 pub use offset::{
-    OffsetCurveCertificate, VerifiedOffsetCurve, certify_offset_curve, verify_offset_curve,
+    certify_offset_curve, verify_offset_curve, OffsetCurveCertificate, VerifiedOffsetCurve,
 };
 pub use offset_regions::{
-    OffsetRegionCertificate, VerifiedOffsetRegions, certify_offset_regions, verify_offset_regions,
+    certify_offset_regions, verify_offset_regions, OffsetRegionCertificate, VerifiedOffsetRegions,
 };
 pub use offset_wire::{
-    OffsetWireCertificate, OffsetWirePart, VerifiedOffsetWire, certify_offset_wire,
-    verify_offset_wire,
+    certify_offset_wire, verify_offset_wire, OffsetWireCertificate, OffsetWirePart,
+    VerifiedOffsetWire,
 };
 
 pub(crate) fn nonstationary_span(c: &Curve, axis: usize) -> Result<bool> {
@@ -159,8 +159,8 @@ pub(crate) fn nonstationary_span(c: &Curve, axis: usize) -> Result<bool> {
     Ok(nets.len() == 1 && arithmetic::no_stationary(&nets[0].1, axis))
 }
 pub use measure::{
-    ExactAreaInterval, ProfileMeasureCertificate, VerifiedMeasuredProfile, certify_measure,
-    verify_measure,
+    certify_measure, verify_measure, ExactAreaInterval, ProfileMeasureCertificate,
+    VerifiedMeasuredProfile,
 };
 #[cfg(test)]
 mod extended_tests;
@@ -172,28 +172,28 @@ mod point_winding;
 mod producer;
 pub(crate) mod topology_prisms;
 mod winding;
-pub use linear_arrangement::{LinearWindingArrangement, regularize_linear_winding_arrangement};
+pub use linear_arrangement::{regularize_linear_winding_arrangement, LinearWindingArrangement};
 pub use point_winding::{
-    PointWindingCertificate, RayCellWitness, RayRootWitness, VerifiedPointWinding,
     certify_point_winding, certify_rational_point_winding, verify_point_winding,
-    verify_rational_point_winding,
+    verify_rational_point_winding, PointWindingCertificate, RayCellWitness, RayRootWitness,
+    VerifiedPointWinding,
 };
 pub use winding::{
-    ApproximatePeriodicWindingRegions, CoherentPeriodicWindingRegions, PeriodicWindingRegions,
-    SurfacePeriodicRegions, WindingComponent, WindingRegularization,
+    assemble_clock_mapped_surface_faces, assemble_multispan_periodic_surface_faces,
+    assemble_periodic_surface_faces, bind_clock_mapped_regions_to_surface,
+    bind_multispan_regions_to_surface, regularize_clock_mapped_periodic_winding,
+    regularize_exact_periodic_contacts, regularize_linear_periodic_contacts,
+    regularize_multispan_periodic_winding, ClockMappedPeriodicRegions, ClockMappedSurfaceRegions,
+    ExactPeriodicContactRegions, LinearPeriodicContactRegions, MultispanChartAlias,
+    MultispanPeriodicRegions, MultispanSurfaceRegions, OwnedClockMappedFaces,
+    OwnedMultispanPeriodicFaces, OwnedPeriodicFaces, PeriodicFaceLimits,
+};
+pub use winding::{
     bind_periodic_regions_to_surface, regularize_approximated_periodic_winding,
     regularize_coherent_periodic_winding, regularize_nonzero_winding, regularize_periodic_winding,
-    regularize_projective_coherent_periodic_winding,
-};
-pub use winding::{
-    ClockMappedPeriodicRegions, ClockMappedSurfaceRegions, ExactPeriodicContactRegions,
-    LinearPeriodicContactRegions, MultispanChartAlias, MultispanPeriodicRegions,
-    MultispanSurfaceRegions, OwnedClockMappedFaces, OwnedMultispanPeriodicFaces,
-    OwnedPeriodicFaces, PeriodicFaceLimits, assemble_clock_mapped_surface_faces,
-    assemble_multispan_periodic_surface_faces, assemble_periodic_surface_faces,
-    bind_clock_mapped_regions_to_surface, bind_multispan_regions_to_surface,
-    regularize_clock_mapped_periodic_winding, regularize_exact_periodic_contacts,
-    regularize_linear_periodic_contacts, regularize_multispan_periodic_winding,
+    regularize_projective_coherent_periodic_winding, ApproximatePeriodicWindingRegions,
+    CoherentPeriodicWindingRegions, PeriodicWindingRegions, SurfacePeriodicRegions,
+    WindingComponent, WindingRegularization,
 };
 #[cfg(feature = "codec")]
 mod serialization;
@@ -487,10 +487,8 @@ fn polygon_winding(poly: &[&[Q; 2]], point: &[Q; 2]) -> Result<i32> {
         let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
         let c = cross(a, b, point);
         if c.is_zero()
-            && (*(&a[0]).min(&b[0]) <= point[0]
-                && point[0] <= *(&a[0]).max(&b[0]))
-            && (*(&a[1]).min(&b[1]) <= point[1]
-                && point[1] <= *(&a[1]).max(&b[1]))
+            && (*(&a[0]).min(&b[0]) <= point[0] && point[0] <= *(&a[0]).max(&b[0]))
+            && (*(&a[1]).min(&b[1]) <= point[1] && point[1] <= *(&a[1]).max(&b[1]))
         {
             return Err(refused(
                 "Certificate nesting query lies on a polygon boundary",
@@ -798,203 +796,204 @@ mod tests {
     }
 }
 
-pub use span_intersections::{OwnedTranslatedSpanIntersections, own_translated_span_intersections};
+pub use span_intersections::{own_translated_span_intersections, OwnedTranslatedSpanIntersections};
 
 pub use span_intersections::{
-    OriginalPieceEvent, OriginalPieceEventLocation, OwnedPeriodicPairEvents,
-    own_periodic_pair_events,
+    own_periodic_pair_events, OriginalPieceEvent, OriginalPieceEventLocation,
+    OwnedPeriodicPairEvents,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicCommonClip, OwnedPeriodicCommonClips, own_periodic_common_clips,
+    own_periodic_common_clips, OriginalPeriodicCommonClip, OwnedPeriodicCommonClips,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicArrangementCut, OriginalPeriodicArrangementInterval,
-    OriginalPeriodicArrangementOrigin, OriginalPeriodicArrangementUse,
-    OwnedPeriodicArrangementCuts, own_periodic_arrangement_cuts,
+    own_periodic_arrangement_cuts, OriginalPeriodicArrangementCut,
+    OriginalPeriodicArrangementInterval, OriginalPeriodicArrangementOrigin,
+    OriginalPeriodicArrangementUse, OwnedPeriodicArrangementCuts,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicAlignedCut, OriginalPeriodicAlignedOrigin, OriginalPeriodicIntervalAlias,
-    OriginalPeriodicIntervalBinding, OwnedPeriodicAlignedIntervals, own_periodic_aligned_intervals,
+    own_periodic_aligned_intervals, OriginalPeriodicAlignedCut, OriginalPeriodicAlignedOrigin,
+    OriginalPeriodicIntervalAlias, OriginalPeriodicIntervalBinding, OwnedPeriodicAlignedIntervals,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicChartCarrier, OriginalPeriodicChartCutRef, OriginalPeriodicChartEdge,
-    OriginalPeriodicChartIncidence, OriginalPeriodicChartRelation,
+    own_periodic_chart_graph, OriginalPeriodicChartCarrier, OriginalPeriodicChartCutRef,
+    OriginalPeriodicChartEdge, OriginalPeriodicChartIncidence, OriginalPeriodicChartRelation,
     OriginalPeriodicChartRelationOrigin, OriginalPeriodicChartVertex, OwnedPeriodicChartGraph,
-    own_periodic_chart_graph,
 };
 
 pub use span_intersections::own_periodic_pair_events_translated;
 
 pub use span_intersections::{
-    OriginalPeriodicSeamNode, OriginalPeriodicSeamPair, OwnedPeriodicSeamContacts,
-    own_periodic_seam_contacts,
+    own_periodic_seam_contacts, OriginalPeriodicSeamNode, OriginalPeriodicSeamPair,
+    OwnedPeriodicSeamContacts,
 };
 
 pub use span_intersections::own_periodic_quotient_arrangement_cuts;
 
-pub use span_intersections::{OwnedPeriodicQuotientGraph, own_periodic_quotient_graph};
+pub use span_intersections::{own_periodic_quotient_graph, OwnedPeriodicQuotientGraph};
 
 pub use span_intersections::{
-    OriginalPeriodicVertexChart, OriginalPeriodicVertexChartUse, OwnedPeriodicVertexCharts,
-    own_periodic_vertex_charts,
+    own_periodic_vertex_charts, OriginalPeriodicVertexChart, OriginalPeriodicVertexChartUse,
+    OwnedPeriodicVertexCharts,
 };
 
-pub use span_intersections::{OriginalPeriodicPort, OwnedPeriodicPorts, own_periodic_ports};
+pub use span_intersections::{own_periodic_ports, OriginalPeriodicPort, OwnedPeriodicPorts};
 
 pub use span_intersections::{
-    OriginalPeriodicTangentWitness, OwnedPeriodicRotation, own_periodic_rotation,
+    own_periodic_rotation, OriginalPeriodicTangentWitness, OwnedPeriodicRotation,
 };
 
-pub use span_intersections::{OwnedPeriodicCycles, own_periodic_cycles};
+pub use span_intersections::{own_periodic_cycles, OwnedPeriodicCycles};
 
 pub use span_intersections::{
-    OriginalPeriodicBoundaryPart, OriginalPeriodicBoundaryWalk, OwnedPeriodicBoundaryLifts,
-    own_periodic_boundary_lifts,
-};
-
-pub use span_intersections::{
-    OriginalPeriodicBalanceTerm, OriginalPeriodicEdgeJump, OriginalPeriodicVertexBalance,
-    OriginalPeriodicWireContribution, OriginalPeriodicWireFlux, OriginalPeriodicWireJump,
-    OwnedPeriodicWireJumps, own_periodic_wire_jumps,
+    own_periodic_boundary_lifts, OriginalPeriodicBoundaryPart, OriginalPeriodicBoundaryWalk,
+    OwnedPeriodicBoundaryLifts,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicPathCrossing, OwnedPeriodicRelativeWinding, own_periodic_relative_winding,
+    own_periodic_wire_jumps, OriginalPeriodicBalanceTerm, OriginalPeriodicEdgeJump,
+    OriginalPeriodicVertexBalance, OriginalPeriodicWireContribution, OriginalPeriodicWireFlux,
+    OriginalPeriodicWireJump, OwnedPeriodicWireJumps,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicBooleanOp, OriginalPeriodicFillRule, OriginalPeriodicOperand,
-    OriginalPeriodicOperandPeriods, OwnedPeriodicMaterialRule, OwnedPeriodicMaterialSample,
-    own_periodic_material_rule, own_periodic_material_sample,
+    own_periodic_relative_winding, OriginalPeriodicPathCrossing, OwnedPeriodicRelativeWinding,
 };
 
 pub use span_intersections::{
-    OwnedPeriodicChartSideProbes, OwnedPeriodicMaterialSides, own_periodic_chart_side_probes,
-    own_periodic_material_sides,
+    own_periodic_material_rule, own_periodic_material_sample, OriginalPeriodicBooleanOp,
+    OriginalPeriodicFillRule, OriginalPeriodicOperand, OriginalPeriodicOperandPeriods,
+    OwnedPeriodicMaterialRule, OwnedPeriodicMaterialSample,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicSelectedEdge, OwnedPeriodicBoundarySelection, own_periodic_boundary_selection,
+    own_periodic_chart_side_probes, own_periodic_material_sides, OwnedPeriodicChartSideProbes,
+    OwnedPeriodicMaterialSides,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicSideView, OwnedPeriodicSideProbes, own_periodic_physical_side_probes,
+    own_periodic_boundary_selection, OriginalPeriodicSelectedEdge, OwnedPeriodicBoundarySelection,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicMaterialSector, OwnedPeriodicMaterialCycles, own_periodic_material_cycles,
-};
-
-pub use span_intersections::{OwnedPeriodicMaterialLifts, own_periodic_material_lifts};
-
-pub use span_intersections::{
-    OriginalNaturalBoundaryCurve, OriginalPeriodicNaturalBoundary, OriginalPeriodicSupportWireRole,
-    OwnedPeriodicSupportBoundaries, own_periodic_support_boundaries,
+    own_periodic_physical_side_probes, OriginalPeriodicSideView, OwnedPeriodicSideProbes,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicNaturalCarrier, OwnedPeriodicSupportMaterialRule,
-    OwnedPeriodicSupportSelection, OwnedPeriodicSupportSideProbes, OwnedPeriodicSupportSides,
+    own_periodic_material_cycles, OriginalPeriodicMaterialSector, OwnedPeriodicMaterialCycles,
+};
+
+pub use span_intersections::{own_periodic_material_lifts, OwnedPeriodicMaterialLifts};
+
+pub use span_intersections::{
+    own_periodic_support_boundaries, OriginalNaturalBoundaryCurve, OriginalPeriodicNaturalBoundary,
+    OriginalPeriodicSupportWireRole, OwnedPeriodicSupportBoundaries,
+};
+
+pub use span_intersections::{
     own_periodic_support_material_rule, own_periodic_support_selection,
-    own_periodic_support_side_probes, own_periodic_support_sides,
+    own_periodic_support_side_probes, own_periodic_support_sides, OriginalPeriodicNaturalCarrier,
+    OwnedPeriodicSupportMaterialRule, OwnedPeriodicSupportSelection,
+    OwnedPeriodicSupportSideProbes, OwnedPeriodicSupportSides,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicSupportSector, OriginalPeriodicSupportVertex, OwnedPeriodicSupportCycles,
-    OwnedPeriodicSupportLifts, own_periodic_support_cycles, own_periodic_support_lifts,
+    own_periodic_support_cycles, own_periodic_support_lifts, OriginalPeriodicSupportSector,
+    OriginalPeriodicSupportVertex, OwnedPeriodicSupportCycles, OwnedPeriodicSupportLifts,
 };
 
-pub use span_intersections::{OwnedPeriodicSupportPath, own_periodic_support_path};
+pub use span_intersections::{own_periodic_support_path, OwnedPeriodicSupportPath};
 
 pub use span_intersections::{
-    OriginalPeriodicCochainTerm, OriginalPeriodicMaterialComponent, OriginalPeriodicRegionProbe,
+    own_periodic_support_regions, own_periodic_support_signatures, OriginalPeriodicCochainTerm,
+    OriginalPeriodicMaterialComponent, OriginalPeriodicRegionProbe,
     OriginalPeriodicSeparatingCochain, OwnedPeriodicSupportRegions, OwnedPeriodicSupportSignatures,
-    own_periodic_support_regions, own_periodic_support_signatures,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicSurfaceTrace, OriginalPeriodicSurfaceTraceEndpoint,
-    OriginalPeriodicSurfaceTracePoint, OwnedPeriodicSupportTraces, own_periodic_support_traces,
+    construct_periodic_support_regions, PeriodicRegionSearchLimits, PeriodicRegionSearchReport,
+    PeriodicRegionSearchStop,
 };
 pub use span_intersections::{
-    PeriodicRegionSearchLimits, PeriodicRegionSearchReport, PeriodicRegionSearchStop,
-    construct_periodic_support_regions,
-};
-
-pub use span_intersections::{
-    OriginalPeriodicSurfaceBoundaryFan, OriginalPeriodicSurfaceEndpointUse,
-    OriginalPeriodicSurfaceIncidenceEdge, OriginalPeriodicSurfaceIncidenceLoop,
-    OriginalPeriodicSurfaceIncidenceVertex, OwnedPeriodicSupportIncidence,
-    own_periodic_support_incidence,
+    own_periodic_support_traces, OriginalPeriodicSurfaceTrace,
+    OriginalPeriodicSurfaceTraceEndpoint, OriginalPeriodicSurfaceTracePoint,
+    OwnedPeriodicSupportTraces,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicSourceChartCopy, OriginalPeriodicSourceChartWorldPoint,
-    OwnedPeriodicSourceChartCopies, PeriodicSourceChartCopyLimits,
-    own_periodic_source_chart_copies,
+    own_periodic_support_incidence, OriginalPeriodicSurfaceBoundaryFan,
+    OriginalPeriodicSurfaceEndpointUse, OriginalPeriodicSurfaceIncidenceEdge,
+    OriginalPeriodicSurfaceIncidenceLoop, OriginalPeriodicSurfaceIncidenceVertex,
+    OwnedPeriodicSupportIncidence,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicNativeChartCorner, OriginalPeriodicNativeCornerVertex,
-    OwnedPeriodicNativeChartCorners, own_periodic_native_chart_corners,
+    own_periodic_source_chart_copies, OriginalPeriodicSourceChartCopy,
+    OriginalPeriodicSourceChartWorldPoint, OwnedPeriodicSourceChartCopies,
+    PeriodicSourceChartCopyLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicNativeShore, OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShoreRole,
-    OwnedPeriodicNativeChartShores, PeriodicNativeShoreLimits, own_periodic_native_chart_shores,
+    own_periodic_native_chart_corners, OriginalPeriodicNativeChartCorner,
+    OriginalPeriodicNativeCornerVertex, OwnedPeriodicNativeChartCorners,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicShoreMaterialSample, OriginalPeriodicShoreSampleOrigin,
-    OwnedPeriodicShoreMaterialSamples, PeriodicShoreMaterialSampleLimits,
-    own_periodic_shore_material_samples,
+    own_periodic_native_chart_shores, OriginalPeriodicNativeShore,
+    OriginalPeriodicNativeShorePoint, OriginalPeriodicNativeShoreRole,
+    OwnedPeriodicNativeChartShores, PeriodicNativeShoreLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicShoreContact, OriginalPeriodicShoreContactKind,
-    OwnedPeriodicShoreMaterialIntervals, PeriodicShoreMaterialIntervalLimits,
-    own_periodic_shore_material_intervals,
+    own_periodic_shore_material_samples, OriginalPeriodicShoreMaterialSample,
+    OriginalPeriodicShoreSampleOrigin, OwnedPeriodicShoreMaterialSamples,
+    PeriodicShoreMaterialSampleLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicChartCycleEdge, OriginalPeriodicChartCycleEdgeKind,
+    own_periodic_shore_material_intervals, OriginalPeriodicShoreContact,
+    OriginalPeriodicShoreContactKind, OwnedPeriodicShoreMaterialIntervals,
+    PeriodicShoreMaterialIntervalLimits,
+};
+
+pub use span_intersections::{
+    own_periodic_chart_cycles, OriginalPeriodicChartCycleEdge, OriginalPeriodicChartCycleEdgeKind,
     OriginalPeriodicChartCycleVertex, OriginalPeriodicChartVertexKey, OwnedPeriodicChartCycles,
-    PeriodicChartCycleLimits, own_periodic_chart_cycles,
+    PeriodicChartCycleLimits,
 };
 
 pub use span_intersections::{
-    OwnedPeriodicChartWinding, PeriodicChartWindingLimits, construct_periodic_chart_winding,
-    own_periodic_chart_winding,
+    construct_periodic_chart_winding, own_periodic_chart_winding, OwnedPeriodicChartWinding,
+    PeriodicChartWindingLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicChartCycleSides, OwnedPeriodicChartCycleSides, PeriodicChartCycleOrientation,
-    PeriodicChartCycleSideLimits, own_periodic_chart_cycle_sides,
+    own_periodic_chart_cycle_sides, OriginalPeriodicChartCycleSides, OwnedPeriodicChartCycleSides,
+    PeriodicChartCycleOrientation, PeriodicChartCycleSideLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicChartStrictPatch, OwnedPeriodicChartStrictPatches,
-    PeriodicChartStrictPatchLimits, own_periodic_chart_strict_patches,
+    own_periodic_chart_strict_patches, OriginalPeriodicChartStrictPatch,
+    OwnedPeriodicChartStrictPatches, PeriodicChartStrictPatchLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicChartBoundaryLoop, OriginalPeriodicChartLoopContact,
-    OwnedPeriodicChartBoundaryLoops, PeriodicChartBoundaryLoopLimits,
-    own_periodic_chart_boundary_loops,
+    own_periodic_chart_boundary_loops, OriginalPeriodicChartBoundaryLoop,
+    OriginalPeriodicChartLoopContact, OwnedPeriodicChartBoundaryLoops,
+    PeriodicChartBoundaryLoopLimits,
 };
 
-pub use span_intersections::{OwnedPeriodicChartLoopWinding, own_periodic_chart_loop_winding};
+pub use span_intersections::{own_periodic_chart_loop_winding, OwnedPeriodicChartLoopWinding};
 
 pub use span_intersections::{
-    OwnedPeriodicChartFanPatches, PeriodicChartFanPatchLimits, own_periodic_chart_fan_patches,
+    own_periodic_chart_fan_patches, OwnedPeriodicChartFanPatches, PeriodicChartFanPatchLimits,
 };
 
 pub use span_intersections::{
-    OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge, OriginalPeriodicSewnFace,
-    OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces, PeriodicSewnFaceLimits,
-    own_periodic_sewn_faces,
+    own_periodic_sewn_faces, OriginalPeriodicSewnCoedge, OriginalPeriodicSewnEdge,
+    OriginalPeriodicSewnFace, OriginalPeriodicSewnVertex, OwnedPeriodicSewnFaces,
+    PeriodicSewnFaceLimits,
 };

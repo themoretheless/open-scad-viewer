@@ -13,6 +13,22 @@ pub fn rational_projective_strip_jet_identity(
     scale: LeafRef,
     order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
+    Ok(rational_projective_strip_jet_identity_with_position(ctx,a,b,scale,order)?.0)
+}
+/// The second result is an exact common-basis zeroth-jet identity, used only
+/// for proposal routing; it grants no regularity or differential certificate.
+pub fn rational_projective_strip_jet_identity_with_position(
+    ctx:&mut PredicateContext<'_>,a:&[Vec<[LeafRef;4]>],b:&[Vec<[LeafRef;4]>],scale:LeafRef,order:usize,
+)->Result<(BezierIdentityDecision,bool),InputError>{
+    let mut position=false;
+    let proof=projective_strip_impl(ctx,a,b,scale,order,&mut position)?;
+    let position=position || proof.outcome==BezierIdentity::Equal;
+    Ok((proof,position))
+}
+fn projective_strip_impl(
+    ctx:&mut PredicateContext<'_>,a:&[Vec<[LeafRef;4]>],b:&[Vec<[LeafRef;4]>],scale:LeafRef,order:usize,
+    position:&mut bool,
+)->Result<BezierIdentityDecision,InputError>{
     if !(1..=2).contains(&order)
         || !(2..=33).contains(&a.len())
         || a.len() != b.len()
@@ -166,6 +182,7 @@ pub fn rational_projective_strip_jet_identity(
             residual1.push(first);
             residual2.push(second);
         }
+        *position=true;
         // R1=lambda H, with one constant lambda across the entire seam.
         let lambda_n = &residual1[0][3];
         let lambda_d = &aa[0][0][3];

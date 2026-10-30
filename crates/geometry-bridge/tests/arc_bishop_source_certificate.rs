@@ -26,6 +26,9 @@ fn full(r: &Value) {
         "certified",
         "solidGeometryCertified",
         "continuousBound",
+        "jointContinuousGlobalCertified",
+        "jointContinuousGlobalG1Certified",
+        "jointContinuousGlobalG2Certified",
         "withinBudget",
         "topologyPreserved",
         "shellRolesCertified",
@@ -88,6 +91,8 @@ fn original_arc_clock_g2_body_json_and_step_recompute_full_certificates() {
         let mut refused = request.clone();
         refused["model"] = result["model"].clone();
         refused["certified"] = json!(true);
+        refused["jointContinuousGlobalCertified"]=json!(true);
+        refused["jointContinuousGlobalG2Certified"]=json!(true);
         refused["idealSourceBoundaryG2Certified"] = json!(true);
         if parameter {
             refused["source"]["spacing"] = json!("parameter");
@@ -96,6 +101,8 @@ fn original_arc_clock_g2_body_json_and_step_recompute_full_certificates() {
         }
         let r = dispatch(refused).unwrap();
         assert_eq!(r["certified"], false);
+        assert_eq!(r["jointContinuousGlobalCertified"],false);
+        assert_eq!(r["jointContinuousGlobalG2Certified"],false);
         assert_eq!(r["solidGeometryCertified"], false);
         assert!(r["model"].is_null());
     }

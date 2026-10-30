@@ -15,8 +15,65 @@ pub fn rational_bspline_isoparametric_trace_identity(
     location: BsplineStripLocation,
     periodic_cross: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
+    trace_identity(
+        ctx,
+        curve,
+        strip,
+        knots,
+        degree,
+        location,
+        periodic_cross,
+        None,
+    )
+}
+
+/// Exact original curve/trace binding with independently represented along bases.
+/// Both complete domains correspond affinely; reverse the original curve first
+/// when traversal requires it. Failure remains MissingProof, not a mismatch.
+pub fn rational_bspline_independent_trace_identity(
+    ctx: &mut PredicateContext<'_>,
+    curve: &[[LeafRef; 4]],
+    strip: &[Vec<[LeafRef; 4]>],
+    knots: &[LeafRef],
+    degree: usize,
+    location: BsplineStripLocation,
+    periodic_cross: bool,
+    along_knots: [&[LeafRef]; 2],
+    along_degrees: [usize; 2],
+) -> Result<BezierIdentityDecision, InputError> {
+    for side in 0..2 {
+        let n = if side == 0 { curve.len() } else { strip.len() };
+        if !(1..=32).contains(&along_degrees[side])
+            || n <= along_degrees[side]
+            || along_knots[side].len() != n + along_degrees[side] + 1
+        {
+            return Err(InputError::InvalidInput("Invalid independent trace basis"));
+        }
+    }
+    trace_identity(
+        ctx,
+        curve,
+        strip,
+        knots,
+        degree,
+        location,
+        periodic_cross,
+        Some((along_knots, along_degrees)),
+    )
+}
+fn trace_identity(
+    ctx: &mut PredicateContext<'_>,
+    curve: &[[LeafRef; 4]],
+    strip: &[Vec<[LeafRef; 4]>],
+    knots: &[LeafRef],
+    degree: usize,
+    location: BsplineStripLocation,
+    periodic_cross: bool,
+    along: Option<([&[LeafRef]; 2], [usize; 2])>,
+) -> Result<BezierIdentityDecision, InputError> {
     if !(2..=33).contains(&curve.len())
-        || curve.len() != strip.len()
+        || !(2..=33).contains(&strip.len())
+        || (along.is_none() && curve.len() != strip.len())
         || !(1..=32).contains(&degree)
         || strip.iter().any(|r| r.len() != strip[0].len())
         || !(degree + 1..=33).contains(&strip[0].len())
@@ -35,7 +92,7 @@ pub fn rational_bspline_isoparametric_trace_identity(
         .chain(knots)
         .copied()
         .collect::<Vec<_>>();
-    let ki = count * 4 + count * n * 4;
+    let ki = count * 4 + strip.len() * n * 4;
     let ti = leaves.len();
     leaves.push(location.parameter);
     let mut values = leaves
@@ -99,6 +156,8 @@ pub fn rational_bspline_isoparametric_trace_identity(
                     Q::scalar(x[4 * i + 3].mul(if k == 3 { unit } else { &x[4 * i + k] }, ctx)?)
                         .div_positive(&homogeneous_unit, ctx)?;
             }
+        }
+        for i in 0..strip.len() {
             let h = point(i, location.span, t, ctx)?;
             if periodic_cross {
                 let start = point(i, first, &u[degree], ctx)?;
@@ -110,7 +169,7 @@ pub fn rational_bspline_isoparametric_trace_identity(
             target.push(h);
         }
         if periodic_cross {
-            for i in 0..count {
+            for i in 0..strip.len() {
                 for k in 0..4 {
                     if !target[i][k]
                         .mul(&starts[0][3], ctx)?
@@ -120,6 +179,21 @@ pub fn rational_bspline_isoparametric_trace_identity(
                     }
                 }
             }
+        }
+        if let Some((along_knots, along_degrees)) = along {
+            let jets = [actual, target]
+                .into_iter()
+                .map(|h| h.into_iter().map(|p| vec![p]).collect())
+                .collect::<Vec<_>>();
+            return super::bspline_strip_spans::compare(
+                ctx,
+                &jets,
+                along_knots,
+                along_degrees,
+                Q::scalar(Expansion::scalar(1.)),
+                0,
+                false,
+            );
         }
         for i in 0..count {
             for k in 0..4 {

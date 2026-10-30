@@ -1,5 +1,6 @@
 //! Embedded curvilinear triangular UV domains, without radial signed fans.
 use super::*;
+mod cells;
 fn choose(n: usize, k: usize) -> Q {
     (0..k).fold(Q::one(), |x, i| {
         x * integer((n - i) as i64) / integer((i + 1) as i64)
@@ -34,34 +35,24 @@ pub(super) fn chart(m: &Model, face: usize, work: &mut Work) -> Result<Net> {
     disk(m, face, curves, work)
 }
 fn disk(m: &Model, face: usize, curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Net> {
-    let f = &m.faces[face];
-    let mut uv = disk_uv(curves, work)?;
-    let s = &f.surface;
-    let lo = [
-        Q::from_float(s.knots_u[s.degree_u]).unwrap(),
-        Q::from_float(s.knots_v[s.degree_v]).unwrap(),
-    ];
-    let hi = [
-        Q::from_float(s.knots_u[s.control_points.len()]).unwrap(),
-        Q::from_float(s.knots_v[s.control_points[0].len()]).unwrap(),
-    ];
-    let tensor = sb::cell(
-        s,
-        [lo[0].clone(), hi[0].clone()],
-        [lo[1].clone(), hi[1].clone()],
-    )?;
-    for p in uv.iter_mut().flatten() {
-        for k in 0..2 {
-            p[k] = (&p[k] - &lo[k] * &p[3]) / (&hi[k] - &lo[k]);
-            if p[k] < Q::zero() || p[k] > p[3] {
-                return Err(fail("trimmed atlas UV control hull leaves tensor cell"));
-            }
-        }
+    let mut charts = disks(m, face, curves, work)?;
+    if charts.len() != 1 {
+        return Err(fail("trim chart needs a conforming multi-cell partition"));
     }
-    bernstein::compose(&tensor, &uv, work)
+    Ok(charts.remove(0))
+}
+fn disks(m: &Model, face: usize, curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Vec<Net>> {
+    cells::charts(&m.faces[face].surface, disk_uv(curves, work)?, work)
 }
 
-pub(super) fn disk_uv(mut curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Net> {
+pub(super) fn disk_uv(curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Net> {
+    disk_uv_parameter(curves, work, false)
+}
+pub(super) fn disk_uv_parameter(
+    mut curves: Vec<Vec<sb::H>>,
+    work: &mut Work,
+    stationary: bool,
+) -> Result<Net> {
     if curves.len() != 3 {
         return Err(fail("UV disk needs three edges"));
     }
@@ -152,7 +143,7 @@ pub(super) fn disk_uv(mut curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Ne
         motion,
     };
     let n = [Q::zero(), Q::zero(), Q::one()];
-    if !regular(&p, &n, work)? {
+    if !regular_parameter_disk(&p, &n, work, stationary)? {
         return Err(fail("trimmed atlas UV disk Jacobian is unproved"));
     }
     let edge0 = bernstein::edges(&p.motion[0]);
@@ -161,7 +152,7 @@ pub(super) fn disk_uv(mut curves: Vec<Vec<sb::H>>, work: &mut Work) -> Result<Ne
         .map(|i| [edge0[i].clone(), edge1[i].clone()])
         .collect::<Vec<_>>();
     for i in 0..3 {
-        if !monotone(&curves[i], &n, work)? {
+        if !monotone_parameter(&curves[i], &n, work, stationary)? {
             return Err(fail("trimmed atlas UV boundary monotonicity is unproved"));
         }
         for j in i + 1..3 {

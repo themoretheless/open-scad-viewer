@@ -76,6 +76,21 @@ pub fn replace(
     tolerance_uv: f64,
     max_cells: usize,
 ) -> Result<Replacement> {
+    replace_with_exact_limit(
+        source, face_id, replacement, boundary, tolerance_uv, max_cells, 1000000,
+    )
+}
+/// Window replacement with a caller-owned shared exact-predicate limit.
+/// A zero exact limit still requires complete interval lift verification.
+pub fn replace_with_exact_limit(
+    source: &Model,
+    face_id: usize,
+    replacement: &Surface,
+    boundary: &[Boundary],
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<Replacement> {
     source.validate()?;
     replacement.validate()?;
     if !source.persistent_naming_complete()
@@ -83,6 +98,7 @@ pub fn replace(
         || !tolerance_uv.is_finite()
         || tolerance_uv <= 0.
         || !(1..=1000000).contains(&max_cells)
+        || max_exact > 1000000
     {
         return Err(invalid(
             "Window replacement needs complete identities, 2..256 boundaries and bounded proof work",
@@ -166,13 +182,13 @@ pub fn replace(
             (&hole_curves[boundary.len() - 1 - i], &face.surface, true),
             (&b.replacement_pcurve, replacement, false),
         ] {
-            if exact_work < 1000000 {
+            if exact_work < max_exact {
                 if let Some(exact) = curve_surface_agreement::verify_exact(
                     &b.curve,
                     pc,
                     surface,
                     reverse,
-                    1000000 - exact_work,
+                    max_exact - exact_work,
                 )? {
                     exact_work += exact.work_used;
                     if exact.outcome == cad_predicates::BezierIdentity::Equal {

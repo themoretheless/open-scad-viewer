@@ -41,7 +41,7 @@ pub use wgsl::{SDF_WGSL, generate_wgsl_tetrahedral_normal_and_raymarch_fn};
 use field_eval::{point, triangles_closed, triangles_ok};
 use field_eval::{finish_triangles, positive};
 
-// Qualification switches are test-only; production remains the reference until measured.
+// Test-only reference switch retains the unoptimized path for paired qualification.
 #[cfg(test)]
 thread_local! {
     static TEST_SKIP_EMPTY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -234,7 +234,7 @@ pub fn polygonize_tile(
     #[cfg(test)]
     let skip_empty = TEST_SKIP_EMPTY.with(|v| v.get()) && grid.cells.iter().all(|&n| n >= 32);
     #[cfg(not(test))]
-    let skip_empty = false;
+    let skip_empty = grid.cells.iter().all(|&n| n >= 32);
     let [nx, ny, nz] = grid.cells;
     let index = |x: usize, y: usize, z: usize| (z * (ny + 1) + y) * (nx + 1) + x;
     let sample_count = (nx + 1) * (ny + 1) * (nz + 1);
