@@ -9,6 +9,14 @@ impl CentralLoftCandidate<'_, '_, '_> {
         band: f64,
         max_cells: usize,
     ) -> Result<Vec<nurbs_core::surface_shape_operator::FlatPoleInspection<'_>>> {
+        self.inspect_surface_pole_limits(&self.surface, band, max_cells)
+    }
+    pub(super) fn inspect_surface_pole_limits<'a>(
+        &self,
+        surface: &'a Surface,
+        band: f64,
+        max_cells: usize,
+    ) -> Result<Vec<nurbs_core::surface_shape_operator::FlatPoleInspection<'a>>> {
         require(
             band.is_finite() && band > 0. && band <= 1. && (2..=100000).contains(&max_cells),
             "Bound original central pole neighborhoods",
@@ -17,11 +25,11 @@ impl CentralLoftCandidate<'_, '_, '_> {
         let mut reports = Vec::new();
         for (i, end) in [false, true].into_iter().enumerate() {
             let row = if end {
-                self.surface.control_points.len() - 1
+                surface.control_points.len() - 1
             } else {
                 0
             };
-            let p = &self.surface.control_points[row][0];
+            let p = &surface.control_points[row][0];
             let axis = (0..3)
                 .min_by(|&a, &b| {
                     let distance = |k: usize| {
@@ -48,7 +56,7 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 "Original central pole does not meet a stock support",
             )?;
             let proof = nurbs_core::surface_shape_operator::inspect_original_flat_pole(
-                &self.surface,
+                surface,
                 end,
                 axis,
                 band,

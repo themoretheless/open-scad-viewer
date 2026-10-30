@@ -514,14 +514,24 @@ pub fn replace(
     let trims = crate::face_domain::audit_trim_regions(&model, tolerance_uv, 10000, stage, stage)?;
     let mut cells = trims.cells + trims.domain_cells;
     if !trims.all_valid || cells >= max_cells {
-        let problem=trims.faces.iter().enumerate().find(|(_,r)|
-            !r.as_ref().is_some_and(|r|r.valid==Some(true)));
-        let detail=problem.map(|(face,r)|match r {
-            Some(r)=>format!("face {face}: {}, loops {:?}",r.reason,
-                r.loops.iter().map(|l|l.outcome()).collect::<Vec<_>>()),
-            None=>format!("face {face}: unvisited"),
-        }).unwrap_or_else(||"shared work exhausted".into());
-        return Err(refused(&format!("Replacement trim regions remain unproven ({detail})")));
+        let problem = trims
+            .faces
+            .iter()
+            .enumerate()
+            .find(|(_, r)| !r.as_ref().is_some_and(|r| r.valid == Some(true)));
+        let detail = problem
+            .map(|(face, r)| match r {
+                Some(r) => format!(
+                    "face {face}: {}, loops {:?}",
+                    r.reason,
+                    r.loops.iter().map(|l| l.outcome()).collect::<Vec<_>>()
+                ),
+                None => format!("face {face}: unvisited"),
+            })
+            .unwrap_or_else(|| "shared work exhausted".into());
+        return Err(refused(&format!(
+            "Replacement trim regions remain unproven ({detail})"
+        )));
     }
     let closure = crate::watertight::inspect_with_exact(&model, max_cells - cells, max_exact)?;
     cells += closure.closure.agreement.cells;
@@ -575,4 +585,8 @@ pub use trihedral_collars::{CornerCollar, CornerCollars, prepare_trihedral_colla
 
 #[path = "region_replacement/central_loft.rs"]
 mod central_loft;
-pub use central_loft::{CentralLoftCandidate, CentralLoftOptions, propose_trihedral_center};
+pub use central_loft::{
+    CentralLoftCandidate, CentralLoftOptions, ContactReport, CornerAuditLimits, CornerBodyAudit,
+    CornerSewLimits, FluxLimits, FluxReport, MaterialReport, ProjectionDiskReport,
+    QualifiedSewnCorner, SewnCornerCandidate, StripFitReport, propose_trihedral_center,
+};

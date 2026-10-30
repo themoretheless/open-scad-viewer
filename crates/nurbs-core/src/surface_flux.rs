@@ -19,7 +19,10 @@ pub fn bound_expression(
     origin: f64,
     reversed: bool,
 ) -> Result<Bound> {
-    check(axis < 3 && origin.is_finite(), "Choose a finite expression flux axis and origin")?;
+    check(
+        axis < 3 && origin.is_finite(),
+        "Choose a finite expression flux axis and origin",
+    )?;
     let mut area = I::point(1.);
     for range in domain {
         I::new(range[0], range[1])?;
@@ -28,16 +31,29 @@ pub fn bound_expression(
     let p = position.map(|r| I::new(r[0], r[1]));
     let d = derivatives.map(|row| row.map(|r| I::new(r[0], r[1])));
     // Validate every component, including coordinates absent from this axis.
-    for value in &p { value.clone()?; }
-    for row in &d { for value in row { value.clone()?; } }
+    for value in &p {
+        value.clone()?;
+    }
+    for row in &d {
+        for value in row {
+            value.clone()?;
+        }
+    }
     let k = (axis + 1) % 3;
     let l = (axis + 2) % 3;
-    let normal = d[0][k].clone()?.mul(d[1][l].clone()?)?
+    let normal = d[0][k]
+        .clone()?
+        .mul(d[1][l].clone()?)?
         .sub(d[0][l].clone()?.mul(d[1][k].clone()?)?)?;
     let mut density = p[axis].clone()?.sub(I::point(origin))?.mul(normal)?;
-    if reversed { density = density.mul(I::point(-1.))?; }
+    if reversed {
+        density = density.mul(I::point(-1.))?;
+    }
     let integral = density.mul(area)?;
-    Ok(Bound { density: [density.lo, density.hi], integral: [integral.lo, integral.hi] })
+    Ok(Bound {
+        density: [density.lo, density.hi],
+        integral: [integral.lo, integral.hi],
+    })
 }
 
 #[cfg(test)]
@@ -46,7 +62,10 @@ mod expression_tests {
     #[test]
     fn expression_flux_preserves_parameter_area_and_orientation() {
         let p = [[0., 2.], [0., 3.], [5., 5.]];
-        let d = [[[1., 1.], [0., 0.], [0., 0.]], [[0., 0.], [1., 1.], [0., 0.]]];
+        let d = [
+            [[1., 1.], [0., 0.], [0., 0.]],
+            [[0., 0.], [1., 1.], [0., 0.]],
+        ];
         let domain = [[0., 2.], [0., 3.]];
         for reversed in [false, true] {
             let b = bound_expression(p, d, domain, 2, 1., reversed).unwrap();
@@ -56,7 +75,8 @@ mod expression_tests {
         }
         assert!(bound_expression(p, d, [[2., 0.], [0., 3.]], 2, 1., false).is_err());
         assert!(bound_expression(p, d, domain, 3, 1., false).is_err());
-        let mut invalid = p; invalid[0] = [f64::NAN; 2];
+        let mut invalid = p;
+        invalid[0] = [f64::NAN; 2];
         assert!(bound_expression(invalid, d, domain, 2, 1., false).is_err());
     }
 }
@@ -131,19 +151,16 @@ fn taylor_integral(
     let offset = I::point(s.control_points[span[0] - s.degree_u][span[1] - s.degree_v][axis])
         .sub(I::point(origin))?;
     let f = flux_derivative(&center, axis, offset, [0, 0])?;
-    let hessian = [[2, 0], [1, 1], [0, 2]].map(|d| flux_derivative(&jets, axis, offset, d));
+    let hessian = [[2, 0], [0, 2]].map(|d| flux_derivative(&jets, axis, offset, d));
     let error = I::point(magnitude(hessian[0].clone()?))
         .mul(widths[0])?
         .mul(widths[0])?
         .div(I::point(24.))?
+        // Tensor midpoint integration is the composition of two 1D midpoint
+        // rules. Their Peano bounds use only F_uu and F_vv over the rectangle;
+        // no mixed derivative is needed in this iterated error bound.
         .add(
             I::point(magnitude(hessian[1].clone()?))
-                .mul(widths[0])?
-                .mul(widths[1])?
-                .div(I::point(16.))?,
-        )?
-        .add(
-            I::point(magnitude(hessian[2].clone()?))
                 .mul(widths[1])?
                 .mul(widths[1])?
                 .div(I::point(24.))?,
@@ -366,3 +383,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "surface_flux/tensor_midpoint_tests.rs"]
+mod tensor_midpoint_tests;

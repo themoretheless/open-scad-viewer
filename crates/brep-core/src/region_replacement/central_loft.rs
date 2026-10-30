@@ -324,4 +324,12 @@ mod span_coverage;
 #[path = "central_loft/poles.rs"]
 mod poles;
 
-#[path="central_loft/exterior.rs"] mod exterior;
+#[path = "central_loft/exterior.rs"]
+mod exterior;
+
+#[path = "central_loft/sewing.rs"]
+mod sewing;
+pub use sewing::{
+    ContactReport, CornerAuditLimits, CornerBodyAudit, CornerSewLimits, FluxLimits, FluxReport,
+    MaterialReport, ProjectionDiskReport, QualifiedSewnCorner, SewnCornerCandidate, StripFitReport,
+};

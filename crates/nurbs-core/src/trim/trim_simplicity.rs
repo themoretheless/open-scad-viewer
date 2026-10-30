@@ -333,37 +333,163 @@ fn adjacent_separated(a: &Curve, b: &Curve, join: &[f64]) -> bool {
 
 // Positive rational Bernstein coefficients prove a strict open-curve side
 // even when additional endpoint controls lie on the supporting line.
-fn adjacent_supported(a:&Curve,b:&Curve,join:&[f64],second_join:bool,cells:&mut usize,max_cells:usize)->bool {
-    use cad_predicates::{AuthoredScalar,Limits,Outcome,PredicateContext,Sign,SourceArena,ToleranceContext};
-    if [a,b].iter().any(|c|!bezier(c) || c.degree==0 || c.degree>32 || c.weights.iter().any(|w|*w<=0.)) {return false;}
-    let side=|anchor:&[f64],point:&[f64],cells:&mut usize|->Option<Sign> {
-        if point==join {return Some(Sign::Zero);}
-        if *cells==max_cells {return None;}*cells+=1;
-        let raw=[join[0],join[1],anchor[0],anchor[1],point[0],point[1]];
-        let arena=SourceArena::authored("original-adjacent-support-line",1,raw.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).ok()?;
-        let tolerance=ToleranceContext::default_valid();
+fn adjacent_supported(
+    a: &Curve,
+    b: &Curve,
+    join: &[f64],
+    second_join: bool,
+    cells: &mut usize,
+    max_cells: usize,
+) -> bool {
+    use cad_predicates::{
+        AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
+    };
+    let spans = |c: &Curve| -> Option<Vec<usize>> {
+        let p = c.degree;
+        let n = c.control_points.len();
+        let d = c.domain();
+        if c.periodic
+            || p == 0
+            || p > 32
+            || n > 256
+            || c.weights.iter().any(|w| *w <= 0.)
+            || !c.knots[..=p].iter().all(|&u| u == d[0])
+            || !c.knots[n..].iter().all(|&u| u == d[1])
+        {
+            return None;
+        }
+        let spans = (p..n)
+            .filter(|&i| c.knots[i] < c.knots[i + 1])
+            .collect::<Vec<_>>();
+        if spans
+            .iter()
+            .skip(1)
+            .any(|&i| c.knots.iter().filter(|&&u| u == c.knots[i]).count() != p)
+        {
+            return None;
+        }
+        Some(spans)
+    };
+    if spans(a).is_none() || spans(b).is_none() {
+        return false;
+    }
+    let side = |anchor: &[f64], point: &[f64], cells: &mut usize| -> Option<Sign> {
+        if point == join {
+            return Some(Sign::Zero);
+        }
+        if *cells == max_cells {
+            return None;
+        }
+        *cells += 1;
+        let raw = [join[0], join[1], anchor[0], anchor[1], point[0], point[1]];
+        let arena = SourceArena::authored(
+            "original-adjacent-support-line",
+            1,
+            raw.into_iter()
+                .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+                .collect(),
+        )
+        .ok()?;
+        let tolerance = ToleranceContext::default_valid();
         // One charged cell permits at most 256 exact predicate work units.
-        let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:256,..Limits::default()},None);
-        match cad_predicates::orient2d(&mut ctx,[arena.leaf(0).ok()?,arena.leaf(1).ok()?],
-            [arena.leaf(2).ok()?,arena.leaf(3).ok()?],[arena.leaf(4).ok()?,arena.leaf(5).ok()?]).ok()?.outcome {
-            Outcome::Sign(s)=>Some(s),Outcome::Indeterminate(_)=>None,
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tolerance,
+            Limits {
+                max_work: 256,
+                ..Limits::default()
+            },
+            None,
+        );
+        match cad_predicates::orient2d(
+            &mut ctx,
+            [arena.leaf(0).ok()?, arena.leaf(1).ok()?],
+            [arena.leaf(2).ok()?, arena.leaf(3).ok()?],
+            [arena.leaf(4).ok()?, arena.leaf(5).ok()?],
+        )
+        .ok()?
+        .outcome
+        {
+            Outcome::Sign(s) => Some(s),
+            Outcome::Indeterminate(_) => None,
         }
     };
-    for (strict,closed) in [(a,b),(b,a)] {
-        let endpoint=if strict.control_points[0].as_slice()==join {strict.control_points.last().unwrap()}
-            else if strict.control_points.last().unwrap().as_slice()==join {&strict.control_points[0]}else{return false;};
-        for anchor in closed.control_points.iter().filter(|p|p.as_slice()!=join) {
-            let Some(sa)=strict.control_points.iter().map(|p|side(anchor,p,cells)).collect::<Option<Vec<_>>>() else {return false;};
-            let Some(sb)=closed.control_points.iter().map(|p|side(anchor,p,cells)).collect::<Option<Vec<_>>>() else {return false;};
-            for sign in [Sign::Positive,Sign::Negative] {
-                let opposite=if sign==Sign::Positive {Sign::Negative}else{Sign::Positive};
-                if !sa.iter().all(|s|*s==Sign::Zero || *s==sign) || !sa.contains(&sign)
-                    || !sb.iter().all(|s|*s==Sign::Zero || *s==opposite) {continue;}
-                let index=if strict.control_points[0].as_slice()==join {sa.len()-1}else{0};
-                let far_is_shared=second_join && [closed.control_points.first().unwrap(),closed.control_points.last().unwrap()].contains(&endpoint);
-                let far_is_separated=(0..2).any(|axis|closed.control_points.iter().all(|p|endpoint[axis]<p[axis])
-                    || closed.control_points.iter().all(|p|endpoint[axis]>p[axis]));
-                if sa[index]==sign || far_is_shared || far_is_separated {return true;}
+    for (strict, closed) in [(a, b), (b, a)] {
+        let endpoint = if strict.control_points[0].as_slice() == join {
+            strict.control_points.last().unwrap()
+        } else if strict.control_points.last().unwrap().as_slice() == join {
+            &strict.control_points[0]
+        } else {
+            return false;
+        };
+        for anchor in closed
+            .control_points
+            .iter()
+            .filter(|p| p.as_slice() != join)
+        {
+            let Some(sa) = strict
+                .control_points
+                .iter()
+                .map(|p| side(anchor, p, cells))
+                .collect::<Option<Vec<_>>>()
+            else {
+                return false;
+            };
+            let Some(sb) = closed
+                .control_points
+                .iter()
+                .map(|p| side(anchor, p, cells))
+                .collect::<Option<Vec<_>>>()
+            else {
+                return false;
+            };
+            for sign in [Sign::Positive, Sign::Negative] {
+                let opposite = if sign == Sign::Positive {
+                    Sign::Negative
+                } else {
+                    Sign::Positive
+                };
+                if !sa.iter().all(|s| *s == Sign::Zero || *s == sign)
+                    || !sa.contains(&sign)
+                    || !sb.iter().all(|s| *s == Sign::Zero || *s == opposite)
+                {
+                    continue;
+                }
+                // Literal C0 Bernstein pieces retain positive open-span bases.
+                // Every piece needs a strict pole, and every INTERNAL endpoint
+                // must itself be strict: a tangency there is an extra contact.
+                let pieces = spans(strict).unwrap();
+                if pieces
+                    .iter()
+                    .any(|&i| !sa[i - strict.degree..=i].contains(&sign))
+                    || pieces.iter().take(pieces.len() - 1).any(|&i| sa[i] != sign)
+                {
+                    continue;
+                }
+                let index = if strict.control_points[0].as_slice() == join {
+                    sa.len() - 1
+                } else {
+                    0
+                };
+                let far_is_shared = second_join
+                    && [
+                        closed.control_points.first().unwrap(),
+                        closed.control_points.last().unwrap(),
+                    ]
+                    .contains(&endpoint);
+                let far_is_separated = (0..2).any(|axis| {
+                    closed
+                        .control_points
+                        .iter()
+                        .all(|p| endpoint[axis] < p[axis])
+                        || closed
+                            .control_points
+                            .iter()
+                            .all(|p| endpoint[axis] > p[axis])
+                });
+                if sa[index] == sign || far_is_shared || far_is_separated {
+                    return true;
+                }
             }
         }
     }
@@ -417,9 +543,16 @@ pub fn inspect(
     )?;
     let exact_joins = trim_domain::exact_loop_joins(curves)?;
     let mut cells = 0;
-    let injective = curves.iter().map(|c| {
-        if injective(c) { Ok(true) } else { monotone_spans(c, &mut cells, max_cells) }
-    }).collect::<Result<Vec<_>>>()?;
+    let injective = curves
+        .iter()
+        .map(|c| {
+            if injective(c) {
+                Ok(true)
+            } else {
+                monotone_spans(c, &mut cells, max_cells)
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
     let n = curves.len();
     let total_pairs = n * (n - 1) / 2;
     let mut out = Report {
@@ -441,15 +574,21 @@ pub fn inspect(
             let adjacent = b == a + 1 || (a == 0 && b == n - 1);
             let proven = if n == 2 {
                 let join = curves[b].control_points[0].as_slice();
-                adjacent_supported(&curves[a], &curves[b], join, true, &mut out.cells, max_cells)
-                    || (out.cells < max_cells
-                        && bezier(&curves[a])
-                        && bezier(&curves[b])
-                        && lens_separated(&curves[a], &curves[b])
-                        && {
-                            out.cells += 1;
-                            true
-                        })
+                adjacent_supported(
+                    &curves[a],
+                    &curves[b],
+                    join,
+                    true,
+                    &mut out.cells,
+                    max_cells,
+                ) || (out.cells < max_cells
+                    && bezier(&curves[a])
+                    && bezier(&curves[b])
+                    && lens_separated(&curves[a], &curves[b])
+                    && {
+                        out.cells += 1;
+                        true
+                    })
             } else if adjacent {
                 let join = if b == a + 1 {
                     curves[b].control_points[0].as_slice()
@@ -457,7 +596,14 @@ pub fn inspect(
                     curves[0].control_points[0].as_slice()
                 };
                 (n > 2 && adjacent_separated(&curves[a], &curves[b], join))
-                    || adjacent_supported(&curves[a], &curves[b], join, false, &mut out.cells, max_cells)
+                    || adjacent_supported(
+                        &curves[a],
+                        &curves[b],
+                        join,
+                        false,
+                        &mut out.cells,
+                        max_cells,
+                    )
             } else if out.cells < max_cells && control_boxes_separated(&curves[a], &curves[b]) {
                 out.cells += 1;
                 true
@@ -544,3 +690,7 @@ fn monotone_spans(c: &Curve, cells: &mut usize, max_cells: usize) -> Result<bool
 #[cfg(test)]
 #[path = "trim_simplicity/tests/multispan_regressions_integration.rs"]
 mod multispan_regressions;
+
+#[cfg(test)]
+#[path = "trim_simplicity/tests/c0_support_tests.rs"]
+mod c0_support_tests;

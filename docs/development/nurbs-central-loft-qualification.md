@@ -1,6 +1,8 @@
 # Central trihedral loft qualification
 
-The central corner remains **a proposal**, not an admitted sewn G2 fillet.
+The standalone central loft remains a proposal. Native sewing, embedding,
+material and volume admission are tracked separately in
+[native sewn corner qualification](nurbs-sewn-corner-qualification.md).
 This work continues the five-part NURBS plan; it does not close SS/Boolean,
 central G2 corners, general offsets, simplification, or editor/STEP delivery.
 
@@ -34,7 +36,11 @@ curve/surface bounds compare the original and candidate supports against the
 same rim, each at half the requested positional tolerance. A large interior
 handle is rejected, never clipped into stock to manufacture admission.
 
-## Still required
+## Gates tracked separately
+
+These gates were open at the initial proposal milestone. The bounded native
+sewing result and its current evidence are recorded in the linked qualification
+document; broader adapter and general-geometry gates remain separate.
 
 - Fresh full original-support G2 inspection, including singular endpoints.
 - A quotient or regular atlas proof at the collapsed poles.

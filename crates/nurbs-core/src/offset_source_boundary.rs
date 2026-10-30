@@ -393,13 +393,23 @@ mod tests {
     }
     #[test]
     fn multispan_boundaries_keep_tolerance_and_exact_identity_separate() {
-        let r = query(0., true, false, 100000);
-        assert!(r.within_tolerance && !r.exact_identity, "{}", r.reason);
-        assert_eq!(r.checked_coedges, 8);
-        assert_eq!(r.audits[0].exact_status, "unsupported");
-        assert_eq!(r.audits[0].agreement_status, "within-tolerance");
-        let r = query(1e-3, true, false, 1);
-        assert!(!r.within_tolerance);
-        assert!(r.agreement_cells <= 1);
+        for reversed in [false, true] {
+            let exact = query(0., true, reversed, 100000);
+            assert!(exact.within_tolerance && exact.exact_identity, "{}", exact.reason);
+            assert_eq!(exact.checked_coedges, 8);
+            assert_eq!(exact.agreement_cells, 0);
+            assert_eq!(exact.audits[0].exact_status, "equal");
+            assert_eq!(exact.audits[0].agreement_status, "exact");
+            let approximate = query(1e-12, true, reversed, 100000);
+            assert!(approximate.within_tolerance && !approximate.exact_identity, "{}", approximate.reason);
+            assert_ne!(approximate.audits[0].exact_status, "equal");
+            assert_eq!(approximate.audits[0].agreement_status, "within-tolerance");
+        }
+        let exhausted = query_limited(0., true, false, 100000, 0);
+        assert!(exhausted.within_tolerance && !exhausted.exact_identity);
+        assert_eq!(exhausted.exact_work, 0);
+        let damaged = query(1e-3, true, false, 1);
+        assert!(!damaged.within_tolerance && !damaged.exact_identity);
+        assert!(damaged.agreement_cells <= 1);
     }
 }

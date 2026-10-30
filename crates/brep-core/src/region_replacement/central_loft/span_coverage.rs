@@ -117,11 +117,18 @@ impl CentralLoftCandidate<'_, '_, '_> {
         &self,
         max_cells: usize,
     ) -> Result<Vec<(f64, nurbs_core::surface_g2_pcurves::SpanJoinReport)>> {
+        self.inspect_surface_internal_span_joins(&self.surface, max_cells)
+    }
+    pub(super) fn inspect_surface_internal_span_joins(
+        &self,
+        surface: &Surface,
+        max_cells: usize,
+    ) -> Result<Vec<(f64, nurbs_core::surface_g2_pcurves::SpanJoinReport)>> {
         require(
             (1..=100000).contains(&max_cells),
             "Bound correlated internal join work",
         )?;
-        let s = &self.surface;
+        let s = surface;
         let domain = [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]];
         let mut knots: Vec<_> = s
             .knots_u

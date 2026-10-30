@@ -9,11 +9,19 @@ impl CentralLoftCandidate<'_, '_, '_> {
         max_cells: usize,
         max_exact: u64,
     ) -> Result<Vec<nurbs_core::surface_g2_pcurves::ExtrusionBoundaryReport>> {
+        self.inspect_surface_exterior_jets(&self.surface, max_cells, max_exact)
+    }
+    pub(super) fn inspect_surface_exterior_jets(
+        &self,
+        surface: &Surface,
+        max_cells: usize,
+        max_exact: u64,
+    ) -> Result<Vec<nurbs_core::surface_g2_pcurves::ExtrusionBoundaryReport>> {
         require(
             (18..=100000).contains(&max_cells) && max_exact <= 1000000,
             "Bound central exterior jet work",
         )?;
-        let poles = self.inspect_pole_limits(1. / 64., max_cells / 3)?;
+        let poles = self.inspect_surface_pole_limits(surface, 1. / 64., max_cells / 3)?;
         require(
             poles.iter().all(|p| p.report.proven),
             "Central exterior endpoints need both original pole quotient proofs",
@@ -22,7 +30,7 @@ impl CentralLoftCandidate<'_, '_, '_> {
         let mut used = poles.iter().map(|p| p.report.cells).sum::<usize>();
         let mut exact = 0;
         let mut reports = Vec::new();
-        let s = &self.surface;
+        let s = surface;
         let p = s.degree_u;
         let q = s.degree_v;
         for i in 0..6 {

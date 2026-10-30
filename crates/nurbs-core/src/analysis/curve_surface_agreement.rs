@@ -245,7 +245,8 @@ pub fn verify_on(
     Ok(report)
 }
 
-/// Exact identity on one Bezier chart, over normalized curve traversal.
+/// Exact identity over normalized traversal, including supported literal C0
+/// boundary restrictions and signed coordinate identity planes.
 /// None means this representation or its chart-domain inclusion is unproven.
 /// A returned decision distinguishes exact equality, difference and work limits.
 pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work: u64)
@@ -272,6 +273,7 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     c.validate()?;p.validate()?;s.validate()?;
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
     if require_chart {
+        if let Some(identity)=structured_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
     }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
@@ -621,3 +623,5 @@ pub fn lift(
     }
     Ok(out)
 }
+
+mod structured_boundary;
