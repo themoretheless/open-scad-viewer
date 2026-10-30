@@ -135,6 +135,46 @@ fn compute(
 ) -> Result<Decision, InputError> {
     compute_weights(ctx, surface, axes, row, column, with_bounds, None)
 }
+fn determinant_grid(ctx: &mut PredicateContext<'_>, h: &[Poly], degrees: [usize;2],
+    row: Option<usize>, column: Option<usize>) -> Result<Poly,Reason> {
+    let u = h
+        .iter()
+        .map(|p| derivative(p, 0, ctx))
+        .collect::<Result<Vec<_>, _>>()?;
+    let v = h
+        .iter()
+        .map(|p| derivative(p, 1, ctx))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut determinant = zeros(3 * (degrees[0]), 3 * (degrees[1]));
+    for axis in 0..3 {
+        let a = (axis + 1) % 3;
+        let b = (axis + 2) % 3;
+        // Only minor coefficients whose indices can contribute through H
+        // to the requested determinant coefficient/row are needed.
+        let selected = [row, column];
+        let window = std::array::from_fn(|axis| {
+            selected[axis].map_or([0, 2 * degrees[axis] - 1], |i| {
+                [
+                    i.saturating_sub(degrees[axis]),
+                    i.min(2 * degrees[axis] - 1),
+                ]
+            })
+        });
+        let minors = difference(
+            mul_window(&u[a], &v[b], window, ctx)?,
+            mul_window(&u[b], &v[a], window, ctx)?,
+            ctx,
+        )?;
+        let term = mul(&h[axis], &minors, [row, column], ctx)?;
+        for (i, row) in term.iter().enumerate() {
+            for (j, value) in row.iter().enumerate() {
+                determinant[i][j] = determinant[i][j].add(value, ctx)?;
+            }
+        }
+    }
+    Ok(determinant)
+}
+
 fn compute_weights(
     ctx: &mut PredicateContext<'_>,
     surface: &[Vec<[LeafRef; 4]>],
@@ -238,42 +278,7 @@ fn compute_weights(
                 h[2][u][v] = unit.mul(w, ctx)?;
             }
         }
-        let u = h
-            .iter()
-            .map(|p| derivative(p, 0, ctx))
-            .collect::<Result<Vec<_>, _>>()?;
-        let v = h
-            .iter()
-            .map(|p| derivative(p, 1, ctx))
-            .collect::<Result<Vec<_>, _>>()?;
-        let mut determinant = zeros(3 * (surface.len() - 1), 3 * (surface[0].len() - 1));
-        for axis in 0..3 {
-            let a = (axis + 1) % 3;
-            let b = (axis + 2) % 3;
-            // Only minor coefficients whose indices can contribute through H
-            // to the requested determinant coefficient/row are needed.
-            let degrees = [surface.len() - 1, surface[0].len() - 1];
-            let selected = [row, column];
-            let window = std::array::from_fn(|axis| {
-                selected[axis].map_or([0, 2 * degrees[axis] - 1], |i| {
-                    [
-                        i.saturating_sub(degrees[axis]),
-                        i.min(2 * degrees[axis] - 1),
-                    ]
-                })
-            });
-            let minors = difference(
-                mul_window(&u[a], &v[b], window, ctx)?,
-                mul_window(&u[b], &v[a], window, ctx)?,
-                ctx,
-            )?;
-            let term = mul(&h[axis], &minors, [row, column], ctx)?;
-            for (i, row) in term.iter().enumerate() {
-                for (j, value) in row.iter().enumerate() {
-                    determinant[i][j] = determinant[i][j].add(value, ctx)?;
-                }
-            }
-        }
+        let determinant = determinant_grid(ctx,&h,[surface.len()-1,surface[0].len()-1],row,column)?;
         let selected = row.map_or(&determinant[..], |r| &determinant[r..r + 1]);
         let signs = selected
             .iter()
@@ -1216,3 +1221,6 @@ mod tests {
 #[path = "projected_surface_jacobian_filter.rs"]
 mod interval_filter;
 pub use interval_filter::factorized_surface_projected_jacobian_filter;
+
+mod normal_line;
+pub use normal_line::{NormalLineDecision, rational_surface_normal_row_line, rational_surface_normal_rows_parallel};

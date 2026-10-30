@@ -475,6 +475,25 @@ mod tests {
         )
         .unwrap();
         let body = volume.body.expect(volume.reason);
+        assert!(!body.geometry().shell().poles().is_empty());
+        let planes=crate::source_pole_tangency::qualify_body_plane_limits(&body,100000000).unwrap();
+        let proof=planes.certificate.expect(planes.reason);
+        assert!(std::ptr::eq(proof.body(),&body));
+        assert_eq!(proof.poles().len(),body.geometry().shell().poles().len());
+        assert_eq!(proof.vertices().len(),2);
+        assert_eq!(planes.comparisons,proof.poles().len()-2);
+        for (i,(_,plane)) in proof.poles().iter().enumerate() {
+            assert!(std::ptr::eq(plane.pole(),&body.geometry().shell().poles()[i].1));
+        }
+        let short=crate::source_pole_tangency::qualify_body_plane_limits(&body,planes.work-1).unwrap();
+        assert!(short.certificate.is_none());assert!(short.work<planes.work);
+        let classes = vec![crate::source_seam_tangency::Class::C0; body.geometry().shell().edges().len()];
+        let refused = crate::source_seam_tangency::qualify_collection(&body, &classes,
+            crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
+                cells: 1000, curve_spans: 1000, normal_spans: 1000 }).unwrap();
+        assert!(refused.certificate.is_none());
+        assert_eq!(refused.completed_edges, 0);
+        assert_eq!(refused.reason, "source-seam-collection-pole-limits-unproven");
         let r = [0.5_f64, 1.25];
         let length = 8.;
         let slope = (r[1] - r[0]) / length;
@@ -665,6 +684,63 @@ mod tests {
             admitted.reason,
             admitted.next_pair
         );
+        let volume = crate::source_volume::qualify(admitted.geometry.unwrap(), crate::source_volume::Limits {
+            axis: 2, origin: 0., absolute_error: 0.1, tolerance_uv: 1e-8,
+            cells: 50000, spans: 100000, domain_cells: 100000,
+        }).unwrap();
+        let body = volume.body.expect(volume.reason);
+        let classes = body.geometry().shell().uses().iter().map(|pair| {
+            if pair.iter().all(|use_| use_.face < 4) { crate::source_seam_tangency::Class::TangentPlanes }
+            else { crate::source_seam_tangency::Class::C0 }
+        }).collect::<Vec<_>>();
+        let collection = crate::source_seam_tangency::qualify_collection(&body, &classes,
+            crate::source_seam_tangency::Limits { max_sine_squared: 1e-8,
+                cells: 10000, curve_spans: 10000, normal_spans: 10000 }).unwrap();
+        let certificate = collection.certificate.expect(collection.reason);
+        assert!(std::ptr::eq(certificate.body(), &body));
+        assert_eq!(certificate.seams().len(), 4);
+        assert_eq!(certificate.classes().iter().filter(|c| **c == crate::source_seam_tangency::Class::C0).count(), 8);
+        assert!(!certificate.all_edges_tangent());
+        assert_eq!(collection.completed_edges, 12);
+        let mut mixed = classes.clone();
+        let mut curved = 0;
+        for class in &mut mixed {
+            if *class == crate::source_seam_tangency::Class::TangentPlanes && curved < 2 {
+                *class = crate::source_seam_tangency::Class::Curvature {
+                    normal_distance:1e-8, curvature_distance:1e-6 };
+                curved += 1;
+            }
+        }
+        let work = || crate::source_seam_tangency::Limits { max_sine_squared:1e-8,
+            cells:10000,curve_spans:10000,normal_spans:10000 };
+        let mixed_report=crate::source_seam_tangency::qualify_collection(&body,&mixed,work()).unwrap();
+        let mixed_certificate=mixed_report.certificate.expect(mixed_report.reason);
+        assert_eq!(mixed_certificate.seams().len(),2);
+        assert_eq!(mixed_certificate.curvature_seams().len(),2);
+        assert_eq!(mixed_report.completed_edges,12);
+        assert!(!mixed_certificate.all_edges_curvature());
+        for dimension in 0..3 {
+            let mut short=work();
+            match dimension { 0=>short.cells=mixed_report.cells-1,
+                1=>short.curve_spans=mixed_report.curve_spans-1,
+                _=>short.normal_spans=mixed_report.normal_spans-1 }
+            let refused=crate::source_seam_tangency::qualify_collection(&body,&mixed,short).unwrap();
+            assert!(refused.certificate.is_none());
+            assert!(refused.completed_edges<12);
+        }
+        let all_curved=classes.iter().map(|class|if *class==crate::source_seam_tangency::Class::TangentPlanes {
+            crate::source_seam_tangency::Class::Curvature {normal_distance:1e-8,curvature_distance:1e-6}
+        }else{*class}).collect::<Vec<_>>();
+        let full=crate::source_seam_tangency::qualify_collection(&body,&all_curved,work()).unwrap();
+        let full=full.certificate.expect(full.reason);
+        assert!(full.seams().is_empty());assert_eq!(full.curvature_seams().len(),4);
+        assert_eq!(full.classes().iter().filter(|class|**class==crate::source_seam_tangency::Class::C0).count(),8);
+        let mut false_cap=all_curved.clone();
+        let cap_edge=false_cap.iter().position(|class|*class==crate::source_seam_tangency::Class::C0).unwrap();
+        false_cap[cap_edge]=crate::source_seam_tangency::Class::Curvature {normal_distance:1e-8,curvature_distance:1e-6};
+        let refused=crate::source_seam_tangency::qualify_collection(&body,&false_cap,work()).unwrap();
+        assert!(refused.certificate.is_none(), "A sharp cap cannot inherit G2 from smooth wall joins");
+        assert_eq!(refused.uncertain_edge,Some(cap_edge));
     }
     #[test]
     fn partial_canonical_carrier_replays_a_body_and_keeps_owned_chord_maps() {

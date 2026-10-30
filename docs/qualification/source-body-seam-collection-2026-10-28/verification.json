@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-28",
+  "baseCommit": "aa96c7595e70a8c05feaaf01692dae5a4573ba23",
+  "claim": "finite native original-body ordinary-seam collection qualification",
+  "fullGoalComplete": false,
+  "releaseQualification": false,
+  "wasmRebuilt": false,
+  "typescriptChanged": false,
+  "testsPassed": 25,
+  "testsFailed": 0,
+  "checks": [
+    {
+      "name": "seams",
+      "selector": "source_seam_tangency::",
+      "exitCode": 0,
+      "seconds": 0.373,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 1881 filtered out; finished in 0.05s"
+      ],
+      "log": "seams.log.gz",
+      "logSha256": "9337274c16e2fd459dc1b145aaf2dcb3391a251a1f93546e82ed186cc305a54f"
+    },
+    {
+      "name": "incidence",
+      "selector": "source_shell_incidence::tests::",
+      "exitCode": 0,
+      "seconds": 1.757,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1878 filtered out; finished in 1.63s"
+      ],
+      "log": "incidence.log.gz",
+      "logSha256": "ad3485c43ade71e8d433a37b35aeb89f580a38a0a9f3a5cf523c0ada2247508b"
+    },
+    {
+      "name": "poles",
+      "selector": "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay",
+      "exitCode": 0,
+      "seconds": 3.236,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1890 filtered out; finished in 3.11s"
+      ],
+      "log": "poles.log.gz",
+      "logSha256": "e8d0af337d80a367c907f580e3b09e96034f0d3c3b0f597976d1388250722fb9"
+    },
+    {
+      "name": "cylinder",
+      "selector": "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact",
+      "exitCode": 0,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1890 filtered out; finished in 0.18s"
+      ],
+      "log": "cylinder.log.gz",
+      "logSha256": "473a94cf859f7f7e8c3f77a664c6be43ce9b9af05418bda4934b9911157a35da"
+    }
+  ],
+  "sourceInputs": [
+    {
+      "path": "crates/brep-core/src/source_seam_tangency.rs",
+      "sha256": "541c301a717a635462ba9d3974683800f2cbaf18f94d16151ba3e7d1b50d8f37"
+    },
+    {
+      "path": "crates/brep-core/src/source_seam_tangency/collection.rs",
+      "sha256": "18b84fa6b0b9b2aa5834734d9356f3816c02bf316f5d87171980411612ba08e8"
+    },
+    {
+      "path": "crates/brep-core/src/source_shell_incidence.rs",
+      "sha256": "0b5733c4cdbc6b0869e78fb57eedf72a25e950334f4ccf02b8fad443be8c71fb"
+    },
+    {
+      "path": "crates/brep-core/src/source_support_shell.rs",
+      "sha256": "213075133aa7c28046203f2ce16343b1d51321045ffbe12fe1e60f87f65b1e29"
+    },
+    {
+      "path": "crates/Cargo.lock",
+      "sha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a"
+    }
+  ],
+  "rustVersion": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "cargoVersion": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)",
+  "configuration": {
+    "CARGO_BUILD_JOBS": 2,
+    "RUST_TEST_THREADS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1
+  },
+  "remainingRequirements": [
+    "Global regularity, absence of extra contacts and topology preservation of ideal original loft/sweep laws across all claimed frame/cap combinations require broader proof and qualification.",
+    "This certificate composes tolerance tangent-plane bounds on ordinary original edges only; it does not prove face-interior regularity, vertex neighborhoods or G2 curvature.",
+    "Collapsed poles need separately admitted common tangent-limit proofs; they currently refuse this collection.",
+    "WASM/browser/STEP delivery and the complete semantic G1 release matrix are not established by these native checks."
+  ],
+  "implementationCommit": "7adf1eeeb72ec2331a7160c2b23eb20c208ba969"
+}

@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-28",
+  "baseCommit": "f4c3d07f5",
+  "implementationCommit": "257c469d05e1621435a8facc90118451a951b65c",
+  "claim": "finite native tolerance-G2 on original private carriers and mixed C0/G1/G2 ordinary-edge body collection",
+  "fullGoalComplete": false,
+  "releaseQualification": false,
+  "wasmRebuilt": false,
+  "typescriptChanged": false,
+  "testsPassed": 48,
+  "testsFailed": 0,
+  "checks": [
+    {
+      "name": "nurbs-g2",
+      "package": "nurbs-core",
+      "selector": "surface_g2",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_g2",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 114.197,
+      "summary": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1983 filtered out; finished in 0.00s"
+      ],
+      "log": "nurbs-g2.log.gz",
+      "logSha256": "2a954d0fd4909119cdd5b1967cea90276a868f2314fe6959e779d34335a85acd"
+    },
+    {
+      "name": "shape-operator",
+      "package": "nurbs-core",
+      "selector": "surface_shape_operator::",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_shape_operator::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.214,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1985 filtered out; finished in 0.01s"
+      ],
+      "log": "shape-operator.log.gz",
+      "logSha256": "3ef75ae5a780c9d975583fbb4337b3109368d19e57601abf8b522c9458621952"
+    },
+    {
+      "name": "core-integration",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "surface_g2",
+        "--test",
+        "surface_shape_operator",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 75.531,
+      "summary": [
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "log": "core-integration.log.gz",
+      "logSha256": "590c1faaf4d3fc5237b0c01f204a6ae48074c4baf5576e71e1898beb633d7258"
+    },
+    {
+      "name": "seams",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_seam_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 166.109,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 1881 filtered out; finished in 0.07s"
+      ],
+      "log": "seams.log.gz",
+      "logSha256": "9e17af25aa110c0fe2f2a7fd088df820a67b45d9bfae82e8d155e4194b6ebef7"
+    },
+    {
+      "name": "cylinder",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.471,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1896 filtered out; finished in 0.08s"
+      ],
+      "log": "cylinder.log.gz",
+      "logSha256": "9f3f7e81a764e9d7a8f03d33f6d7504a6f321f9231626d3c1304565c55fa1ba7"
+    },
+    {
+      "name": "incidence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_shell_incidence::tests::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.485,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1884 filtered out; finished in 1.36s"
+      ],
+      "log": "incidence.log.gz",
+      "logSha256": "f5ca0db1782403488e4a7dd09e964541869422ad5e17e6c4843fb2c87b141bef"
+    },
+    {
+      "name": "poles",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 3.108,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1896 filtered out; finished in 3.01s"
+      ],
+      "log": "poles.log.gz",
+      "logSha256": "86c316f8d73cb81c9b2eb1859b6307ef8c15547527710a32325995d7406eda12"
+    }
+  ],
+  "sourceInputsUnchangedDuringFinalChecks": true,
+  "sourceInputs": [
+    {
+      "path": "crates/brep-core/src/source_seam_tangency.rs",
+      "sha256": "adaa22b58f139abe12dce2f78c8ee5e8a4f437f7ffdaf39ebe60aa9d3505c644"
+    },
+    {
+      "path": "crates/brep-core/src/source_seam_tangency/collection.rs",
+      "sha256": "cd4ae60f10c425bc8017681eec39b3929f03f93f984eab234a0260eb997f1474"
+    },
+    {
+      "path": "crates/brep-core/src/source_seam_tangency/curvature.rs",
+      "sha256": "216e2dfb83f2aac6228f979e2df0e27b8614774455d004f937b31707d64b5d42"
+    },
+    {
+      "path": "crates/brep-core/src/source_seam_tangency/curvature/tests.rs",
+      "sha256": "751f8fa6d84aa7877c07842b8a1e7acd0a6cf618e3f865ab1712d4fdf13a051e"
+    },
+    {
+      "path": "crates/brep-core/src/source_shell_incidence.rs",
+      "sha256": "0b5733c4cdbc6b0869e78fb57eedf72a25e950334f4ccf02b8fad443be8c71fb"
+    },
+    {
+      "path": "crates/brep-core/src/source_support_shell.rs",
+      "sha256": "b4d6dff83b8ab2a17b1edf4b1d03f46b35ab45c36b4716aaf76fd2bfa7da1b6c"
+    },
+    {
+      "path": "crates/nurbs-core/src/analysis/surface_shape_operator.rs",
+      "sha256": "9d89d716330ef0696764be8e1f6e604dca53cf804aa6579fb0e39bc2328887f0"
+    },
+    {
+      "path": "crates/nurbs-core/src/analysis/surface_shape_operator/region_pair.rs",
+      "sha256": "96d92c90eb00b98a2c28fe2f90901defe1ac31815e47881c8911d2127760f457"
+    },
+    {
+      "path": "crates/Cargo.lock",
+      "sha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a"
+    }
+  ],
+  "rustVersion": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "cargoVersion": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)",
+  "configuration": {
+    "CARGO_BUILD_JOBS": 2,
+    "RUST_TEST_THREADS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1
+  },
+  "remainingRequirements": [
+    "Prove and qualify the full original ideal loft/sweep law binding, regularity, absence of self-intersections and topology preservation across every claimed frame/cap combination.",
+    "Admit actual common tangent and curvature limits at pole and vertex strata. This collection still explicitly refuses bodies with collapsed poles.",
+    "Supporting charts without proved C2 basis continuity, singular normals or supported nonperiodic original rectangles do not receive G2 from this method.",
+    "Complete moving-frame, cap and closed-seam qualification is not proved by these finite source-carrier and cylinder cases.",
+    "WASM/browser/STEP delivery and the complete semantic G1 release matrix are not established by this native receipt."
+  ]
+}

@@ -1,5 +1,9 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
+mod curvature;
+pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature};
+mod collection;
+pub use collection::{Class, Collection, CollectionReport, qualify_collection};
 use crate::source_shared_edge::SharedEdge;
 use nurbs_core::{Error, Result, interval_eval::Interval as I};
 pub struct Limits {
@@ -393,6 +397,9 @@ mod tests {
         let restored=restored.edge.expect(restored.reason);
         assert_eq!(restored.definition(),trimmed_definition);
         for source in [&trimmed,&restored] {
+            let g2=qualify_curvature(source, CurvatureLimits {normal_distance:0.01,curvature_distance:0.05,
+                cells:10000,curve_spans:40000,shape_cells:40000}).unwrap();
+            assert_eq!(g2.seam.expect(g2.reason).edge().definition(),trimmed_definition);
             let proof=qualify_with_synchronized_boundaries(source,
                 Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).unwrap();
             assert!(proof.report.seam.is_some());
@@ -402,7 +409,7 @@ mod tests {
         assert!(crate::source_projective_edge::restore(wrong,10000,100000000,10000).unwrap().edge.is_none());
     }
 
-    fn limits() -> Limits {
+    pub(super) fn limits() -> Limits {
         Limits {
             max_sine_squared: 1e-3,
             cells: 10000,
@@ -474,7 +481,7 @@ mod tests {
             periodic_v: false,
         }
     }
-    fn shared(crease: bool) -> SharedEdge {
+    pub(super) fn shared(crease: bool) -> SharedEdge {
         let mut a = patch(false);
         for row in &mut a.control_points {
             for (v, p) in row.iter_mut().enumerate() {
@@ -618,6 +625,11 @@ mod tests {
                 .edge
                 .unwrap();
         let before = [a.definition(), b.definition()];
+        let g2 = qualify_curvature(&edge, CurvatureLimits {normal_distance:1e-7,curvature_distance:1e-6,
+            cells:1000,curve_spans:4000,shape_cells:4000}).unwrap();
+        let g2 = g2.seam.expect(g2.reason);
+        assert_eq!(g2.edge().uses()[0].definition(), before[0]);
+        assert_eq!(g2.edge().uses()[1].definition(), before[1]);
         let r = qualify(&edge, limits()).unwrap();
         assert!(r.seam.is_some(), "{}", r.reason);
         let seam = r.seam.unwrap();
@@ -664,6 +676,11 @@ mod tests {
         .unwrap()
         .edge
         .unwrap();
+        for source in [&full, &partial] {
+            let g2=qualify_curvature(source, CurvatureLimits {normal_distance:1e-7,curvature_distance:1e-6,
+                cells:1000,curve_spans:4000,shape_cells:4000}).unwrap();
+            assert_eq!(g2.seam.expect(g2.reason).edge().definition(),source.definition());
+        }
         let report = qualify(&partial, limits()).unwrap();
         assert!(report.seam.is_some(), "{}", report.reason);
         assert_eq!(report.seam.unwrap().edge().ranges(), Some(ranges));
@@ -692,6 +709,11 @@ mod tests {
                 .unwrap()
                 .edge
                 .unwrap();
+        let curvature = qualify_curvature(&edge, CurvatureLimits {
+            normal_distance:1e-7,curvature_distance:1e-6,cells:32,curve_spans:128,shape_cells:128,
+        }).unwrap();
+        assert!(curvature.seam.is_none(), "A singular closed endpoint cannot inherit regular G2");
+        assert!(curvature.cells<=32 && curvature.curve_spans<=128 && curvature.shape_cells<=128);
         let mut budget = limits();
         budget.cells = 32;
         let report = qualify(&edge, budget).unwrap();

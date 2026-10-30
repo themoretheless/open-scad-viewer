@@ -182,7 +182,11 @@ fn restrict(row: &[[I; 3]], d: [I; 2], point: bool) -> Result<Vec<[I; 3]>> {
 /// Only exact original, clamped single Bezier charts are supported. All three
 /// normal grids and every leading coefficient must be covered by bounded work.
 pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
+    Ok(prepare_factor_data(s,end,2,max_work)?.0)
+}
+fn prepare_factor_data(s:&Surface,end:bool,order:usize,max_work:u64)->Result<(Report<'_>,Option<usize>)> {
     s.validate()?;
+    check(s.control_points[0][0].len()==3, "Factored normals require a 3D original surface")?;
     check(
         (1..=100_000_000).contains(&max_work),
         "Bound exact factored normal work",
@@ -230,7 +234,9 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
     let tolerance = ToleranceContext::default_valid();
     let nu = 3 * s.degree_u;
     let nv = 3 * s.degree_v;
-    let mut net = vec![vec![[I::point(0.); 3]; nv]; nu - 2];
+    check((1..nu).contains(&order), "Choose a proper original normal factor order")?;
+    let mut first_nonzero:Option<usize>=None;
+    let mut net = vec![vec![[I::point(0.); 3]; nv]; nu - order];
     let mut out = Report {
         certificate: None,
         work: 0,
@@ -239,7 +245,7 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
     for (axis, axes) in [[1, 2], [2, 0], [0, 1]].into_iter().enumerate() {
         for u in 0..nu {
             if out.work == max_work {
-                return Ok(out);
+                return Ok((out,first_nonzero));
             }
             let mut ctx = PredicateContext::new(
                 &arena,
@@ -261,7 +267,7 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
                         (b[0][v], signs[0][v])
                     } else {
                         if out.work == max_work {
-                            return Ok(out);
+                            return Ok((out,first_nonzero));
                         }
                         let mut ctx = PredicateContext::new(
                             &arena,
@@ -282,22 +288,28 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
                             .unwrap();
                         out.work += cell.work_used;
                         let (Some(b), Some(signs)) = (cell.coefficient_bounds, cell.signs) else {
-                            return Ok(out);
+                            return Ok((out,first_nonzero));
                         };
                         (b[0][0], signs[0][0])
                     };
-                if u < 2 {
+                if sign != Sign::Zero { first_nonzero=Some(first_nonzero.map_or(u,|i|i.min(u))); }
+                if u < order {
                     if sign != Sign::Zero {
                         out.reason = "factored-normal-boundary-factor-unproven";
-                        return Ok(out);
+                        return Ok((out,first_nonzero));
                     }
                 } else {
                     // B_i^n(t)/t² = n(n-1)/(i(i-1)) B_(i-2)^(n-2)(t).
                     let n = nu - 1;
-                    let scale =
-                        I::point((n * (n - 1)) as f64).div(I::point((u * (u - 1)) as f64))?;
+                    let scale = if order==2 {
+                        I::point((n * (n - 1)) as f64).div(I::point((u * (u - 1)) as f64))?
+                    } else {
+                        let mut factor=I::point(1.);
+                        for j in 0..order {factor=factor.mul(I::point((n-j) as f64).div(I::point((u-j) as f64))?)?;}
+                        factor
+                    };
                     let x = I::new(bounds[0], bounds[1])?.mul(scale)?;
-                    net[u - 2][v][axis] = if end { I::new(-x.hi, -x.lo)? } else { x };
+                    net[u - order][v][axis] = if end { I::new(-x.hi, -x.lo)? } else { x };
                 }
             }
         }
@@ -308,7 +320,7 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
         net,
     });
     out.reason = "factored-normal-original-grid-qualified";
-    Ok(out)
+    Ok((out,first_nonzero))
 }
 #[cfg(test)]
 mod tests {
@@ -493,3 +505,6 @@ mod tests {
         assert!(prepare(&s, false, 1_000_000).unwrap().certificate.is_none());
     }
 }
+
+mod pole_plane;
+pub use pole_plane::{PlaneLimit, PlaneLimitReport, PlanePairReport, prepare_plane_limit, compare_plane_limits};
