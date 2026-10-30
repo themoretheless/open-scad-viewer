@@ -469,6 +469,7 @@ pub mod source_shell_geometry;
 
 pub mod source_volume;
 pub mod graph_body;
+pub mod source_box;
 
 pub mod source_body_model;
 

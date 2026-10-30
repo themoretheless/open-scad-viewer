@@ -52,7 +52,7 @@ impl D {
 fn dot(a: [D; 3], b: [D; 3]) -> Result<D> {
     (0..3).try_fold(D::zero(), |x, k| x.add(a[k].mul(b[k])?))
 }
-fn shape_derivative(j: &jets::Jets, r: [I; 2]) -> Result<Option<Vec<I>>> {
+pub(super) fn shape_derivative(j: &jets::Jets, r: [I; 2]) -> Result<Option<Vec<I>>> {
     let field = |a: usize, b: usize| -> Result<[D; 3]> {
         let mut v = [D::zero(); 3];
         for k in 0..3 {
@@ -63,6 +63,9 @@ fn shape_derivative(j: &jets::Jets, r: [I; 2]) -> Result<Option<Vec<I>>> {
         }
         Ok(v)
     };
+    shape_derivative_fields(field)
+}
+fn shape_derivative_fields(field: impl Fn(usize, usize) -> Result<[D; 3]>) -> Result<Option<Vec<I>>> {
     let (u, v) = (field(1, 0)?, field(0, 1)?);
     let mut n = [D::zero(); 3];
     for k in 0..3 {
@@ -419,4 +422,11 @@ mod tests {
                 .is_none()
         );
     }
+}
+
+#[path = "trace_mean_value/graph.rs"]
+mod graph;
+pub(super) fn graph_shape_derivative(j: &jets::Jets, r: [I; 2], frame: ([usize; 3], [f64; 2]))
+    -> Result<Option<Vec<I>>> {
+    graph::bounds(j, r, frame)
 }

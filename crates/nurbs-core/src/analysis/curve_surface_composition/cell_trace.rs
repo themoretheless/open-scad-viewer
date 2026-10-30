@@ -41,11 +41,13 @@ pub(super) fn candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
     if support_constant {
         support.weights.iter_mut().for_each(|r| r.fill(1.));
     }
-    let net = surface_net(&support, cell)?;
+
     let domain = [
         [s.knots_u[cell[0]], s.knots_u[cell[0] + 1]],
         [s.knots_v[cell[1]], s.knots_v[cell[1] + 1]],
     ];
+    let origin = center(s, cell);
+    let net = surface_net_on_centered(&support, cell, domain, origin)?;
     let lift = match lift_coefficients(
         &homogeneous(&pc, false)?,
         &net,
@@ -68,7 +70,7 @@ pub(super) fn candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
     let points = (0..=degree)
         .map(|i| {
             (0..3)
-                .map(|k| middle(lift[k][i]) / denominators[i])
+                .map(|k| middle(lift[k][i]) / denominators[i] + origin[k])
                 .collect()
         })
         .collect();
@@ -84,4 +86,26 @@ pub(super) fn candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
         return Ok(None);
     }
     Ok(Some(c))
+}
+
+// An exact translation proposal shared by both constant and rational routes.
+pub(super) fn center(s: &Surface, cell: [usize; 2]) -> [f64; 3] {
+    std::array::from_fn(|axis| {
+        let mut counts = std::collections::BTreeMap::<u64, (usize, usize)>::new();
+        let mut index = 0;
+        for i in cell[0] - s.degree_u..=cell[0] {
+            for j in cell[1] - s.degree_v..=cell[1] {
+                let value = s.control_points[i][j][axis];
+                let key = if value == 0. { 0 } else { value.to_bits() };
+                let entry = counts.entry(key).or_insert((0, index));
+                entry.0 += 1;
+                index += 1;
+            }
+        }
+        let (&bits, _) = counts
+            .iter()
+            .max_by(|a, b| a.1.0.cmp(&b.1.0).then_with(|| b.1.1.cmp(&a.1.1)))
+            .unwrap();
+        f64::from_bits(bits)
+    })
 }

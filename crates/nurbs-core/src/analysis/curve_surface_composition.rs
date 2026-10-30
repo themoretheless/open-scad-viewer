@@ -18,9 +18,9 @@ pub(crate) fn mul(a: &[Interval], b: &[Interval]) -> Result<Poly> {
     for (i, &x) in a.iter().enumerate() {
         for (j, &y) in b.iter().enumerate() {
             let factor = Interval::point(choose(p, i))
-                .mul(Interval::point(choose(q, j)))?
-                .div(Interval::point(choose(p + q, i + j)))?;
-            out[i + j] = out[i + j].add(x.mul(y)?.mul(factor)?)?;
+                .exact_mul(Interval::point(choose(q, j)))?
+                .exact_div(Interval::point(choose(p + q, i + j)))?;
+            out[i + j] = out[i + j].exact_add(x.exact_mul(y)?.exact_mul(factor)?)?;
         }
     }
     Ok(out)
@@ -48,7 +48,7 @@ fn homogeneous(c: &Curve, reversed: bool) -> Result<Vec<Poly>> {
         };
         let w = Interval::point(c.weights[j]);
         for k in 0..dimension {
-            out[k].push(Interval::point(c.control_points[j][k]).mul(w)?);
+            out[k].push(Interval::point(c.control_points[j][k]).exact_mul(w)?);
         }
         out[dimension].push(w);
     }
@@ -88,9 +88,9 @@ pub(crate) fn upper(c: &Curve, p: &Curve, s: &Surface, reversed: bool) -> Result
                 .map(|j| {
                     let w = Interval::point(s.weights[i][j]);
                     Ok([
-                        Interval::point(s.control_points[i][j][0]).mul(w)?,
-                        Interval::point(s.control_points[i][j][1]).mul(w)?,
-                        Interval::point(s.control_points[i][j][2]).mul(w)?,
+                        Interval::point(s.control_points[i][j][0]).exact_mul(w)?,
+                        Interval::point(s.control_points[i][j][1]).exact_mul(w)?,
+                        Interval::point(s.control_points[i][j][2]).exact_mul(w)?,
                         w,
                     ])
                 })
@@ -128,11 +128,11 @@ fn bound(
         let b = mul(&lift[k], &curve[3])?;
         let mut maximum = 0_f64;
         for (&x, &y) in a.iter().zip(&b) {
-            let d = x.sub(y)?;
+            let d = x.exact_sub(y)?;
             maximum = maximum.max(d.lo.abs()).max(d.hi.abs());
         }
-        let ratio = Interval::point(maximum).div(Interval::point(minimum))?;
-        squared = squared.add(ratio.mul(ratio)?)?;
+        let ratio = Interval::point(maximum).exact_div(Interval::point(minimum))?;
+        squared = squared.exact_add(ratio.exact_mul(ratio)?)?;
     }
     Ok(Some(squared.hi.max(0.).sqrt().next_up()))
 }
@@ -154,7 +154,7 @@ fn restricted_ends(c: &Curve, ends: [Interval; 2]) -> Result<Option<Vec<Poly>>> 
         let w = Interval::point(c.weights[i]);
         let mut row = c.control_points[i]
             .iter()
-            .map(|&x| Interval::point(x).mul(w))
+            .map(|&x| Interval::point(x).exact_mul(w))
             .collect::<Result<Vec<_>>>()?;
         row.push(w);
         source.push(row);
@@ -167,18 +167,18 @@ fn restricted_ends(c: &Curve, ends: [Interval; 2]) -> Result<Option<Vec<Poly>>> 
             for j in (r..=c.degree).rev() {
                 let i = span - c.degree + j;
                 let alpha = parameter
-                    .sub(Interval::point(c.knots[i]))?
-                    .div(
+                    .exact_sub(Interval::point(c.knots[i]))?
+                    .exact_div(
                         Interval::point(c.knots[i + c.degree - r + 1])
-                            .sub(Interval::point(c.knots[i]))?,
+                            .exact_sub(Interval::point(c.knots[i]))?,
                     )?
                     .intersect(0., 1.)?;
-                let beta = Interval::point(1.).sub(alpha)?.intersect(0., 1.)?;
+                let beta = Interval::point(1.).exact_sub(alpha)?.intersect(0., 1.)?;
                 for axis in 0..=dim {
                     let (a, b) = (d[j - 1][axis], d[j][axis]);
                     d[j][axis] = a
-                        .mul(beta)?
-                        .add(b.mul(alpha)?)?
+                        .exact_mul(beta)?
+                        .exact_add(b.exact_mul(alpha)?)?
                         .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
                 }
             }
@@ -219,11 +219,11 @@ fn surface_homogeneous_controls_weighted(s: &Surface, span: [usize;2], origin:Op
             weights[1] = weights[1].max(w.hi);
             let cp = &s.control_points[i][j];
             let mut centered=[Interval::point(cp[0]),Interval::point(cp[1]),Interval::point(cp[2])];
-            if let Some(origin)=origin {for k in 0..3 {centered[k]=centered[k].sub(Interval::point(origin[k]))?;}}
+            if let Some(origin)=origin {for k in 0..3 {centered[k]=centered[k].exact_sub(Interval::point(origin[k]))?;}}
             row.push([
-                centered[0].mul(w)?,
-                centered[1].mul(w)?,
-                centered[2].mul(w)?,
+                centered[0].exact_mul(w)?,
+                centered[1].exact_mul(w)?,
+                centered[2].exact_mul(w)?,
                 w,
             ]);
         }
@@ -270,9 +270,29 @@ pub(crate) fn surface_net_on(
 /// Translate the original homogeneous poles before interval restriction.
 /// Subtraction and multiplication are outward; original surfaces stay intact.
 pub(crate) fn surface_net_on_centered(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:[f64;3])->Result<Vec<Vec<[Interval;4]>>> {
-    match surface_net_on_bernstein_with_origin(s,span,domain,Some(origin))? {
-        Some(net)=>Ok(net),None=>surface_net_on_with_origin(s,span,domain,Some(origin)),
+    let mut net=match surface_net_on_bernstein_with_origin(s,span,domain,Some(origin))? {
+        Some(net)=>net,None=>surface_net_on_with_origin(s,span,domain,Some(origin))?,
+    };
+    // Linear extraction preserves a literal zero coefficient row. Recognize
+    // that identity on original controls before outward arithmetic can create
+    // subnormal intervals around zero. No small nonzero value is discarded.
+    for axis in 0..2 {
+        let (degree,knots)=if axis==0 {(s.degree_u,&s.knots_u)}else{(s.degree_v,&s.knots_v)};
+        if !crate::surface_distance::complete_bernstein_span(degree,knots,span[axis])
+            || domain[axis]!=[knots[span[axis]],knots[span[axis]+1]] {continue;}
+        for i in 0..=degree {for k in 0..3 {
+            let fixed=span[axis]-degree+i;
+            let other_degree=if axis==0 {s.degree_v}else{s.degree_u};
+            let zero=(span[1-axis]-other_degree..=span[1-axis]).all(|j|{
+                let (u,v)=if axis==0 {(fixed,j)}else{(j,fixed)};
+                s.control_points[u][v][k]==origin[k]
+            });
+            if zero {for j in 0..=other_degree {
+                let (u,v)=if axis==0 {(i,j)}else{(j,i)};net[u][v][k]=Interval::point(0.);
+            }}
+        }}
     }
+    Ok(net)
 }
 fn surface_net_on_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Vec<Vec<[Interval;4]>>> {
     surface_net_on_weighted(s,span,domain,origin,|i,j|Ok(Interval::point(s.weights[i][j])))
@@ -384,7 +404,7 @@ pub(crate) fn upper_mapped_cell(
             for (k, shift) in [ushift, vshift].into_iter().enumerate() {
                 if shift.lo != 0. || shift.hi != 0. {
                     for j in 0..lifted[k].len() {
-                        lifted[k][j] = lifted[k][j].sub(shift.mul(h[2][j])?)?;
+                        lifted[k][j] = lifted[k][j].exact_sub(shift.exact_mul(h[2][j])?)?;
                     }
                 }
             }
@@ -427,7 +447,7 @@ pub(crate) fn upper_mapped_cell(
     Ok((branches > 0).then_some(maximum))
 }
 
-fn lift_coefficients(
+pub(crate) fn lift_coefficients(
     h: &[Poly],
     net: &[Vec<[Interval; 4]>],
     degrees: [usize; 2],
@@ -438,16 +458,16 @@ fn lift_coefficients(
     let mut basis = Vec::new();
     for (k, n) in [(0, du), (1, dv)] {
         let a = Interval::point(domains[k][0]);
-        let width = Interval::point(domains[k][1]).sub(a)?;
+        let width = Interval::point(domains[k][1]).exact_sub(a)?;
         let u = h[k]
             .iter()
             .zip(&h[2])
-            .map(|(&x, &w)| x.sub(a.mul(w)?)?.div(width))
+            .map(|(&x, &w)| x.exact_sub(a.exact_mul(w)?)?.exact_div(width))
             .collect::<Result<Poly>>()?;
         let complement = h[2]
             .iter()
             .zip(&u)
-            .map(|(&w, &x)| w.sub(x))
+            .map(|(&w, &x)| w.exact_sub(x))
             .collect::<Result<Poly>>()?;
         let up = powers(&u, n)?;
         let down = powers(&complement, n)?;
@@ -457,7 +477,7 @@ fn lift_coefficients(
             row.push(
                 mul(&up[i], &down[n - i])?
                     .into_iter()
-                    .map(|x| x.mul(factor))
+                    .map(|x| x.exact_mul(factor))
                     .collect::<Result<Poly>>()?,
             );
         }
@@ -472,7 +492,7 @@ fn lift_coefficients(
             for k in 0..4 {
                 let cp = net[i][j][k];
                 for (out, &b) in lift[k].iter_mut().zip(&coefficient) {
-                    *out = out.add(b.mul(cp)?)?;
+                    *out = out.exact_add(b.exact_mul(cp)?)?;
                 }
             }
         }
@@ -541,9 +561,9 @@ pub(crate) fn trace_candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
                 .map(|(p, &w)| {
                     let w = Interval::point(w);
                     Ok([
-                        Interval::point(p[0]).mul(w)?,
-                        Interval::point(p[1]).mul(w)?,
-                        Interval::point(p[2]).mul(w)?,
+                        Interval::point(p[0]).exact_mul(w)?,
+                        Interval::point(p[1]).exact_mul(w)?,
+                        Interval::point(p[2]).exact_mul(w)?,
                         w,
                     ])
                 })
@@ -591,9 +611,9 @@ fn original_surface_net_on(
             weights[1] = weights[1].max(w.hi);
             let cp = &s.control_points[i][j];
             row.push([
-                Interval::point(cp[0]).mul(w)?,
-                Interval::point(cp[1]).mul(w)?,
-                Interval::point(cp[2]).mul(w)?,
+                Interval::point(cp[0]).exact_mul(w)?,
+                Interval::point(cp[1]).exact_mul(w)?,
+                Interval::point(cp[2]).exact_mul(w)?,
                 w,
             ]);
         }
@@ -701,3 +721,7 @@ pub(crate) fn upper_cell_on(c:&Curve,p:&Curve,s:&Surface,reversed:bool,t:[f64;2]
         [mapped(c,Interval::point(t[0]),reversed)?,mapped(c,Interval::point(t[1]),reversed)?],
         [mapped_range(source_interval,Interval::point(t[0]),false)?,mapped_range(source_interval,Interval::point(t[1]),false)?])
 }
+
+#[path = "curve_surface_composition/exact.rs"]
+mod exact;
+use exact::ExactIdentities;

@@ -189,6 +189,11 @@ pub(crate) fn calculate_partial_stable_up_to(
 pub(crate) fn calculate_partial_stable_graph(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],frame:([usize;3],[f64;2]))->Result<Jets> {
     calculate_partial_stable_projected(s,span,domain,corner,2,Some(frame))
 }
+/// Third-order original projected jets for directional curvature bounds.
+/// The second-order graph query above retains its existing contract and cost.
+pub(crate) fn calculate_partial_stable_graph_third(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],frame:([usize;3],[f64;2]))->Result<Jets> {
+    calculate_partial_stable_projected(s,span,domain,corner,3,Some(frame))
+}
 fn calculate_partial_stable_projected(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],max_order:usize,frame:Option<([usize;3],[f64;2])>)->Result<Jets> {
     let full = [
         [s.knots_u[span[0]], s.knots_u[span[0] + 1]],
@@ -625,4 +630,24 @@ mod convex_evaluation_tests {
             assert!(result.iter().all(|b|0.<=b.lo&&b.hi<=4.));
         }
     }
+}
+
+/// Differentiate a prepared original homogeneous Bernstein net before its
+/// interval evaluation. Factored pole numerators retain the original W net.
+pub(crate) fn evaluate_homogeneous_jets(net:&[Vec<[I;4]>],parameter:[I;2],order:usize)->Result<Jets> {
+    crate::check(order<=3 && (2..=17).contains(&net.len())
+        && (2..=17).contains(&net[0].len()) && net.iter().all(|r|r.len()==net[0].len()),
+        "Prepared homogeneous jets need bounded rectangular original nets")?;
+    let mut h=[[[I::point(0.);4];4];4];
+    for total in 0..=order {for a in 0..=total {let b=total-a;
+        let mut d=net.to_vec();for _ in 0..a {d=difference(d,0)?;}for _ in 0..b {d=difference(d,1)?;}
+        let rows=d.iter().map(|r|evaluate_bernstein(r.clone(),parameter[1])).collect::<Result<Vec<_>>>()?;
+        let value=evaluate_bernstein(rows,parameter[0])?;
+        for k in 0..4 {
+            let lo=d.iter().flatten().map(|p|p[k].lo).fold(f64::INFINITY,f64::min);
+            let hi=d.iter().flatten().map(|p|p[k].hi).fold(f64::NEG_INFINITY,f64::max);
+            h[a][b][k]=value[k].intersect(lo,hi)?;
+        }
+    }}
+    quotient(h,order)
 }

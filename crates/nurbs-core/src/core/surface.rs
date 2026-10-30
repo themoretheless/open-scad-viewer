@@ -1,10 +1,7 @@
 #[path = "surface/serialization.rs"]
 #[cfg(feature = "codec")]
 mod serialization;
-use crate::curve::{
-    CompensatedSum, Curve, basis, basis_funs_ders, bounds, continuity_meta, find_span_hinted,
-    rounding_bound,
-};
+use crate::curve::{Curve, basis, bounds};
 use crate::{Result, check, numeric};
 use math_core::{cross, dot, norm};
 
@@ -176,7 +173,13 @@ impl Surface {
         let uj = [&bu.basis, &bu.d1, &bu.d2];
         let vj = [&bv.basis, &bv.d1, &bv.d2];
         let scale = self.weights.iter().flatten().copied().fold(0., f64::max);
-        let origin = &self.control_points[0][0];
+        // Use the same active-support origin as SurfaceEvaluator. An inactive
+        // corner can introduce cancellation on an otherwise exact boundary.
+        let first_u = bu.basis.iter().position(|value| *value > 0.)
+            .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
+        let first_v = bv.basis.iter().position(|value| *value > 0.)
+            .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
+        let origin = &self.control_points[first_u][first_v];
         let derivatives = [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2)];
         let mut homogeneous = [[0.; 4]; 6];
         for (out, (ou, ov)) in homogeneous.iter_mut().zip(derivatives) {
@@ -542,216 +545,9 @@ pub fn revolve(c: &Curve, origin: [f64; 3], axis: [f64; 3], angle: f64) -> Resul
     Ok(result)
 }
 
-/// Validate-once surface evaluator with cached U/V span hints and compensated
-/// local-basis accumulation. The borrowed definition is never copied.
-pub struct SurfaceEvaluator<'a> {
-    surface: &'a Surface,
-    domain_u: [f64; 2],
-    domain_v: [f64; 2],
-    scale: f64,
-    span_u: usize,
-    span_v: usize,
-}
-impl<'a> SurfaceEvaluator<'a> {
-    pub fn new(surface: &'a Surface) -> Result<Self> {
-        surface.validate()?;
-        Ok(Self {
-            surface,
-            domain_u: [
-                surface.knots_u[surface.degree_u],
-                surface.knots_u[surface.control_points.len()],
-            ],
-            domain_v: [
-                surface.knots_v[surface.degree_v],
-                surface.knots_v[surface.control_points[0].len()],
-            ],
-            scale: surface.weights.iter().flatten().copied().fold(0., f64::max),
-            span_u: surface.degree_u,
-            span_v: surface.degree_v,
-        })
-    }
-    pub fn definition(&self) -> &Surface {
-        self.surface
-    }
-    pub fn evaluate(&mut self, u: f64, v: f64) -> Result<Evaluation> {
-        check(
-            u.is_finite() && u >= self.domain_u[0] && u <= self.domain_u[1]
-                && v.is_finite()
-                && v >= self.domain_v[0]
-                && v <= self.domain_v[1],
-            "Parameter is outside the active knot domain",
-        )?;
-        let pu = self.surface.degree_u;
-        let pv = self.surface.degree_v;
-        let nu = self.surface.control_points.len();
-        let nv = self.surface.control_points[0].len();
-        let span_u = find_span_hinted(
-            pu,
-            &self.surface.knots_u,
-            nu,
-            u,
-            &mut self.span_u,
-        )?;
-        let span_v = find_span_hinted(
-            pv,
-            &self.surface.knots_v,
-            nv,
-            v,
-            &mut self.span_v,
-        )?;
-        let bu = basis_funs_ders(pu, &self.surface.knots_u, span_u, u, 2)?;
-        let bv = basis_funs_ders(pv, &self.surface.knots_v, span_v, v, 2)?;
-        let first_u = bu
-            .values
-            .iter()
-            .position(|value| *value > 0.)
-            .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
-        let first_v = bv
-            .values
-            .iter()
-            .position(|value| *value > 0.)
-            .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
-        let origin = &self.surface.control_points[span_u - pu + first_u]
-            [span_v - pv + first_v];
-        let uj = [&bu.values, &bu.d1, &bu.d2];
-        let vj = [&bv.values, &bv.d1, &bv.d2];
-        let derivatives = [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2)];
-        let mut homogeneous: [[CompensatedSum; 4]; 6] =
-            std::array::from_fn(|_| std::array::from_fn(|_| CompensatedSum::new()));
-        for (out, (ou, ov)) in homogeneous.iter_mut().zip(derivatives) {
-            for (j, basis_u) in uj[ou].iter().enumerate() {
-                let iu = span_u - pu + j;
-                for (k, basis_v) in vj[ov].iter().enumerate() {
-                    let iv = span_v - pv + k;
-                    let coefficient =
-                        basis_u * basis_v * (self.surface.weights[iu][iv] / self.scale);
-                    if coefficient == 0. {
-                        continue;
-                    }
-                    out[3].add(coefficient);
-                    for d in 0..3 {
-                        out[d].add(
-                            coefficient
-                                * (self.surface.control_points[iu][iv][d] - origin[d]),
-                        );
-                    }
-                }
-            }
-        }
-        let h: [[f64; 4]; 6] = std::array::from_fn(|i| {
-            std::array::from_fn(|j| homogeneous[i][j].value())
-        });
-        let [h, hu, hv, huu, huv, hvv] = h;
-        numeric(
-            h[3].is_finite() && h[3] > 0.,
-            "NURBS surface has an invalid rational denominator.",
-        )?;
-        let rounding = rounding_bound(&homogeneous[0][..3], h[3]);
-        let relative: [f64; 3] = std::array::from_fn(|i| h[i] / h[3]);
-        let point = std::array::from_fn(|i| relative[i] + origin[i]);
-        let du: [f64; 3] = std::array::from_fn(|i| (hu[i] - hu[3] * relative[i]) / h[3]);
-        let dv: [f64; 3] = std::array::from_fn(|i| (hv[i] - hv[3] * relative[i]) / h[3]);
-        let duu =
-            std::array::from_fn(|i| (huu[i] - 2. * hu[3] * du[i] - huu[3] * relative[i]) / h[3]);
-        let duv = std::array::from_fn(|i| {
-            (huv[i] - hu[3] * dv[i] - hv[3] * du[i] - huv[3] * relative[i]) / h[3]
-        });
-        let dvv =
-            std::array::from_fn(|i| (hvv[i] - 2. * hv[3] * dv[i] - hvv[3] * relative[i]) / h[3]);
-        numeric(
-            [point, du, dv, duu, duv, dvv]
-                .iter()
-                .flatten()
-                .all(|value| value.is_finite()),
-            "NURBS surface evaluation exceeded finite numeric bounds.",
-        )?;
-        let (su, _, side_u) = continuity_meta(
-            pu,
-            &self.surface.knots_u,
-            self.domain_u,
-            u,
-            self.surface.periodic_u,
-        );
-        let (sv, _, side_v) = continuity_meta(
-            pv,
-            &self.surface.knots_v,
-            self.domain_v,
-            v,
-            self.surface.periodic_v,
-        );
-        let su = su.unwrap_or(2);
-        let sv = sv.unwrap_or(2);
-        let first = su >= 1 && sv >= 1;
-        let second = su >= 2 && sv >= 2;
-        let (mut normal, mut gaussian, mut mean) = (None, None, None);
-        if first {
-            let direction = cross(du, dv);
-            let magnitude = norm(direction);
-            let speed_u = norm(du);
-            let speed_v = norm(dv);
-            if magnitude > 1e-12 * speed_u * speed_v && speed_u > 0. && speed_v > 0. {
-                let n = direction.map(|value| value / magnitude);
-                normal = Some(n);
-                if second {
-                    let e = dot(du, du);
-                    let f = dot(du, dv);
-                    let g = dot(dv, dv);
-                    let l = dot(n, duu);
-                    let m = dot(n, duv);
-                    let nn = dot(n, dvv);
-                    let determinant = magnitude * magnitude;
-                    let k = (l * nn - m * m) / determinant;
-                    let h = (e * nn - 2. * f * m + g * l) / (2. * determinant);
-                    gaussian = k.is_finite().then_some(k);
-                    mean = h.is_finite().then_some(h);
-                }
-            }
-        }
-        Ok(Evaluation {
-            point,
-            du: (su >= 1).then_some(du),
-            dv: (sv >= 1).then_some(dv),
-            duu: (su >= 2).then_some(duu),
-            duv: first.then_some(duv),
-            dvv: (sv >= 2).then_some(dvv),
-            normal,
-            gaussian_curvature: gaussian,
-            mean_curvature: mean,
-            derivative_status: if !first || !second {
-                "insufficient_continuity"
-            } else if normal.is_none() {
-                "singular"
-            } else {
-                "available"
-            },
-            derivative_side_u: side_u,
-            derivative_side_v: side_v,
-            domain_u: self.domain_u,
-            domain_v: self.domain_v,
-            rounding_bound: Some(rounding),
-        })
-    }
-}
-
-/// Validated immutable snapshot for repeated sampling by any downstream adapter.
-#[derive(Clone)]
-pub struct SurfaceSampler {
-    surface: Surface,
-}
-impl SurfaceSampler {
-    pub fn new(surface: &Surface) -> Result<Self> {
-        surface.validate()?;
-        Ok(Self {
-            surface: surface.clone(),
-        })
-    }
-    pub fn evaluate(&self, u: f64, v: f64) -> Result<Evaluation> {
-        self.surface.evaluate_validated(u, v)
-    }
-    pub fn definition(&self) -> &Surface {
-        &self.surface
-    }
-}
+#[path = "surface/evaluator.rs"]
+mod evaluator;
+pub use evaluator::{SurfaceEvaluator, SurfaceSampler};
 
 /// Exact translational sweep P(u)+Q(v)-Q(v_start). Profile orientation is fixed;
 /// this is not a Frenet-frame sweep. Rational data and both parameterizations survive.
@@ -892,113 +688,9 @@ impl Surface {
 }
 
 #[cfg(test)]
-mod construction_tests {
-    use super::*;
-    #[test]
-    fn clamped_iso_preserves_authored_coordinates_and_nonuniform_weights() {
-        let c=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.1,0.2,0.3],vec![0.7,-0.2,0.8],vec![1.1,0.4,-0.3]],weights:vec![0.7,1.3,0.9],periodic:false};
-        let mut other=c.clone();
-        for p in &mut other.control_points {p[2]+=2.;}
-        let surface=loft(&[c.clone(),other.clone()]).unwrap();
-        let before=surface.clone();
-        assert_eq!(surface.iso(Axis::V,0.).unwrap(),c);
-        assert_eq!(surface.iso(Axis::V,1.).unwrap(),other);
-        assert_eq!(surface,before);
-    }
-    #[test]
-    fn translational_sweep_retains_small_profile_at_distant_path_origin() {
-        let profile = Curve::from_polyline(vec![vec![1e-9, 0., 0.], vec![2e-9, 0., 0.]]).unwrap();
-        let path = Curve::from_polyline(vec![vec![1e9, 0., 0.], vec![1e9, 0., 5.]]).unwrap();
-        let surface = sweep(&profile, &path).unwrap();
-        for (i, p) in profile.control_points.iter().enumerate() {
-            assert_eq!(&surface.control_points[i][0], p);
-        }
-        for u in [0., 0.17, 0.5, 0.83, 1.] {
-            for v in [0., 0.23, 0.7, 1.] {
-                let p = surface.evaluate(u, v).unwrap().point;
-                assert!((p[0] - (1. + u) * 1e-9).abs() < 1e-23);
-                assert!((p[2] - 5. * v).abs() < 1e-12);
-            }
-        }
-    }
-    #[test]
-    fn translational_sweep_admits_extreme_common_weight_scales() {
-        let mut profile = Curve::from_polyline(vec![vec![1., 0., 0.], vec![2., 0., 0.]]).unwrap();
-        let mut path = Curve::from_polyline(vec![vec![0., 0., 0.], vec![0., 0., 5.]]).unwrap();
-        for scale in [1e-12, 1e12] {
-            profile.weights.fill(scale);
-            path.weights.fill(scale);
-            let surface = sweep(&profile, &path).unwrap();
-            assert!(surface.weights.iter().flatten().all(|w| *w == 1.));
-            let p = surface.evaluate(0.37, 0.61).unwrap().point;
-            assert!((p[0] - 1.37).abs() < 1e-12 && (p[2] - 3.05).abs() < 1e-12);
-        }
-        profile.weights = vec![1e-12, 1.];
-        path.weights = vec![1e-12, 1.];
-        assert!(sweep(&profile, &path).is_err());
-    }
-    #[test]
-    fn rational_sweep_matches_sum_of_curves() {
-        let p = Curve {
-            degree: 2,
-            knots: vec![0., 0., 0., 1., 1., 1.],
-            control_points: vec![vec![1., 0., 0.], vec![1., 1., 0.], vec![0., 1., 0.]],
-            weights: vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.],
-            periodic: false,
-        };
-        let q =
-            Curve::from_polyline(vec![vec![0.; 3], vec![0., 0., 2.], vec![3., 0., 4.]]).unwrap();
-        let s = sweep(&p, &q).unwrap();
-        for (u, v) in [(0.2, 0.3), (0.8, 1.5)] {
-            let actual = s.evaluate(u, v).unwrap().point;
-            let a = p.evaluate(u).unwrap().point;
-            let b = q.evaluate(v).unwrap().point;
-            for k in 0..3 {
-                assert!((actual[k] - a[k] - b[k]).abs() < 1e-10);
-            }
-        }
-    }
-    #[test]
-    fn loft_aligns_degrees_and_domains() {
-        let a = Curve::from_polyline(vec![vec![0.; 3], vec![1., 0., 0.]]).unwrap();
-        let mut b = a.elevate(2).unwrap();
-        for p in &mut b.control_points {
-            p[2] = 3.;
-        }
-        for k in &mut b.knots {
-            *k = 2. + *k * 4.;
-        }
-        let s = loft_aligned(&[a.clone(), b.clone()]).unwrap();
-        for u in [0., 0.2, 0.7, 1.] {
-            let x = s.evaluate(u, 0.).unwrap().point;
-            let y = s.evaluate(u, 1.).unwrap().point;
-            let expected = b.evaluate(2. + u * 4.).unwrap().point;
-            for k in 0..3 {
-                assert!((x[k] - a.evaluate(u).unwrap().point[k]).abs() < 1e-10);
-                assert!((y[k] - expected[k]).abs() < 1e-10);
-            }
-        }
-    }
-    #[test]
-    fn ruled_surface_interpolates_compatible_and_elevated_curves() {
-        let c0 = Curve::from_polyline(vec![vec![0., 0., 0.], vec![2., 0., 0.]]).unwrap();
-        let c1 = Curve::from_polyline(vec![vec![0., 3., 1.], vec![2., 3., 1.]]).unwrap();
-        let s = ruled_surface(&c0, &c1).unwrap();
-        assert_eq!(s.degree_v, 1);
-        assert_eq!(s.knots_v, vec![0., 0., 1., 1.]);
-        let mid = s.evaluate(0.5, 0.5).unwrap().point;
-        assert!((mid[0] - 1.0).abs() < 1e-12);
-        assert!((mid[1] - 1.5).abs() < 1e-12);
-        assert!((mid[2] - 0.5).abs() < 1e-12);
+#[path = "surface/construction_tests.rs"]
+mod construction_tests;
 
-        let c1_deg2 = c1.elevate(2).unwrap();
-        let s_compat = Surface::ruled_surface(&c0, &c1_deg2).unwrap();
-        assert_eq!(s_compat.degree_u, 2);
-        assert_eq!(s_compat.degree_v, 1);
-        assert_eq!(s_compat.knots_v, vec![0., 0., 1., 1.]);
-        let mid2 = s_compat.evaluate(0.5, 0.5).unwrap().point;
-        for k in 0..3 {
-            assert!((mid2[k] - mid[k]).abs() < 1e-12);
-        }
-    }
-}
+#[cfg(test)]
+#[path = "surface/numeric_tests.rs"]
+mod numeric_tests;

@@ -652,3 +652,13 @@ pub fn inspect_owned(
 #[path="surface_g2_pcurves/collar_owned.rs"]
 mod collar_owned;
 pub use collar_owned::{OwnedCollarInspection,inspect_owned_collar};
+
+#[path = "surface_g2_pcurves/span_fields.rs"]
+mod span_fields;
+pub use span_fields::{FieldCoverage, FieldDecision, inspect_span_fields};
+
+#[path = "surface_g2_pcurves/jet_join.rs"]
+mod jet_join;
+pub use jet_join::{SpanJoinReport, inspect_original_span_join};
+
+pub use jet_join::{ExtrusionBoundaryReport,inspect_extrusion_boundary,inspect_planar_boundary};

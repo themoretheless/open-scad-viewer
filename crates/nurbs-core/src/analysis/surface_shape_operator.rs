@@ -427,3 +427,11 @@ mod tests {
         }
     }
 }
+
+#[path = "surface_shape_operator/span.rs"]
+mod span;
+pub use span::span_rectangle_bounds;
+
+#[path = "surface_shape_operator/flat_pole.rs"]
+mod flat_pole;
+pub use flat_pole::{FlatPoleCertificate, FlatPoleInspection, FlatPoleReport, inspect_original_flat_pole};

@@ -154,7 +154,17 @@ pub(super) fn trace(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
             return Ok(None);
         };
         let line = Curve::from_polyline(vec![uv(ends[0]), uv(ends[1])])?;
-        let net = surface_net(&normalized, [iu, iv])?;
+        let cell = [iu, iv];
+        let origin = super::cell_trace::center(&normalized, cell);
+        let net = surface_net_on_centered(
+            &normalized,
+            cell,
+            [
+                [s.knots_u[iu], s.knots_u[iu + 1]],
+                [s.knots_v[iv], s.knots_v[iv + 1]],
+            ],
+            origin,
+        )?;
         let lift = lift_coefficients(
             &homogeneous(&line, false)?,
             &net,
@@ -167,7 +177,7 @@ pub(super) fn trace(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
         let mut poles: Vec<Vec<f64>> = (0..=degree)
             .map(|j| {
                 (0..3)
-                    .map(|k| lift[k][j].lo * 0.5 + lift[k][j].hi * 0.5)
+                    .map(|k| lift[k][j].lo * 0.5 + lift[k][j].hi * 0.5 + origin[k])
                     .collect()
             })
             .collect();
