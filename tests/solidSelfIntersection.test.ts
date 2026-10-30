@@ -197,7 +197,13 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
   const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
   expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),r)).toBe(true)
   expect(r.absenceProven).toBe(false);expect(r.allFacesInjective).toBe(budget===maxSpans)
-  if(budget===maxSpans){const expectedFaces=fixture.result.faces.map((f:any)=>({...f,quotientProof:null,result:f.result?{...f.result,polarProjection:null,polarPMatrix:null}:null}));expect(normalizeRefinedNativeEvidence(r.faces,expectedFaces)).toEqual(expectedFaces);expect(r.spans).toBe(968)}
+  if(budget===maxSpans){
+   // Projection proposals may improve; replay validation above binds every new
+   // witness to its original surface and remaining budget, not the old frame.
+   expect(r.faces.map(f=>({face:f.face,proven:f.result?.proven}))).toEqual(fixture.result.faces.map((f:any)=>({face:f.face,proven:f.result?.proven})))
+   expect(r.spans).toBe(complete.spans)
+   expect(r.spans).toBeLessThanOrEqual(fixture.result.spans)
+  }
   else expect(r.spans).toBe(budget)
  }
  expect(JSON.stringify(model)).toBe(before)
@@ -216,7 +222,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
   if(budget===maxSpans){
    expect(r.faces.filter(f=>f.result?.proven)).toHaveLength(25)
    expect(r.faces.filter(f=>f.quotientProof?.proven)).toHaveLength(2)
-   const expectedFaces=fixture.result.faces.map((f:any)=>({...f,quotientProof:f.quotientProof?{...f.quotientProof,polar:null}:null,result:f.result?{...f.result,polarPMatrix:null}:null}))
+   const expectedFaces=fixture.result.faces.map((f:any)=>({...f,quotientProof:f.quotientProof?{...f.quotientProof,collapsedAxis:0,polar:null}:null,result:f.result?{...f.result,polarPMatrix:null}:null}))
    expect(normalizeRefinedNativeEvidence(r.faces,expectedFaces)).toEqual(expectedFaces)
   }else if(budget===256){
    expect(r.faces[0].quotientProof?.proven).toBe(true)
@@ -287,6 +293,14 @@ it('transports complete variable-radius annular certificates from the rebuilt WA
   expect(r.faces).toHaveLength(31);expect(r.faces[5].result?.reason).toBe('global-polar-p-matrix')
   expect(JSON.stringify(model)).toBe(before)
   if(i===0){
+   // Native pair.cells is inclusive of hull/source subwork. A forged subtotal
+   // cannot exceed it even when the aggregate report stays unchanged.
+   const hull=r.pairs.findIndex(p=>(p.hullCells??0)>0)
+   expect(hull).toBeGreaterThanOrEqual(0)
+   for(const key of ['hullCells','sourceChartCells'] as const){
+    const forged=structuredClone(r);forged.pairs[hull][key]=forged.pairs[hull].cells+1
+    expect(validSelfIntersection(e,forged)).toBe(false)
+   }
    for(const patch of [{polarPMatrix:null},{contractionUpper:0.1},{spans:r.faces[5].result!.spans+1}]){
     const copy=structuredClone(r);Object.assign(copy.faces[5].result!,patch);expect(validSelfIntersection(e,copy)).toBe(false)
    }

@@ -40,8 +40,9 @@ export function validFaceContacts(e:ReturnType<typeof faceContactExpectation>,va
   if(!p||!Array.isArray(p.faces)||p.faces.length!==2||p.faces[0]!==a||p.faces[1]!==b||!integer(p.cells,e.limits.cellsPerPair)||!integer(p.domainCells,e.limits.domainCellsPerPair)||!integer(p.unresolvedBoxCount,p.cells+1)||!Array.isArray(p.unresolvedBoxes))return false
   const periodic=e.domains[a].periodic||e.domains[b].periodic
   const sourceCells=p.sourceChartCells??0,hullCells=p.hullCells??0
-  if(!integer(sourceCells,e.limits.cellsPerPair)||!integer(hullCells,e.limits.cellsPerPair)||p.cells+sourceCells+hullCells>e.limits.cellsPerPair)return false
-  const pairCells=p.cells+sourceCells+hullCells
+  if(!integer(sourceCells,e.limits.cellsPerPair)||!integer(hullCells,e.limits.cellsPerPair)||sourceCells+hullCells>p.cells)return false
+  // The native total already includes these independently reported subcounts.
+  const pairCells=p.cells
   if(p.volumeSeparation){
    const v=p.volumeSeparation
    if(!exactBoundaryAdmitted||v.certified!==true||p.status!=='pair-disjoint'||!Array.isArray(v.faces)||v.faces.length!==2||v.faces[0]!==a||v.faces[1]!==b||!Array.isArray(v.sourceFaces)||v.sourceFaces.length!==4||new Set(v.sourceFaces).size!==4||!v.sourceFaces.includes(a)||!v.sourceFaces.includes(b)||!v.sourceFaces.every(f=>integer(f,e.domains.length-1))||!integer(v.cells,sourceCells)||v.cells===0||!Array.isArray(v.projection)||v.projection.length!==3||!v.projection.every(row=>Array.isArray(row)&&row.length===3&&row.every(Number.isFinite))||!Array.isArray(v.principalMinorLower)||v.principalMinorLower.length!==3||!v.principalMinorLower.every(x=>Number.isFinite(x)&&x>0))return false

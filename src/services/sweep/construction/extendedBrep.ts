@@ -111,6 +111,7 @@ export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterP
 
 export interface NativeDirectMiterGeometry extends MiterBrepBody {
  report:MiterBrepBody['report'] & {
+  sweepMiterReplay:{sourceKind:'direct-annular';source:import('../../nurbsMiterOwnedBoundary').UnbudgetedDirectMiterSourceRequest}
   budget:null;boundaryErrorWithinBudget:null
   boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null
   boundaryCertificate:UnbudgetedAnnularMiterBoundaryReport['boundaryCertificate']
@@ -125,13 +126,14 @@ export interface NativeDirectMiterGeometry extends MiterBrepBody {
  * correction, cap selection and the complete numerical bound are Rust-owned.
  * The live Rush route must switch only with a matching qualified WASM. */
 export const createNativeDirectMiterGeometry=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):NativeDirectMiterGeometry=>{
- const owned=constructUnbudgetedDirectMiterBoundary({direct:true,loops,points,normal,closed,miterLimit,capCorrection},{smoothnessMaxWork:2000000})
+ const source={direct:true as const,loops,points,normal,closed,miterLimit,capCorrection}
+ const owned=constructUnbudgetedDirectMiterBoundary(source,{smoothnessMaxWork:2000000})
  if(owned.retainedSmoothness===null)throw new Error('Native direct miter retained smoothness report missing')
  const model=owned.model,retainedWallCharts=owned.retainedWallCharts
  const volume=inspectSweepVolume(model,owned.planarCapFaces,DEFAULT_SWEEP_VOLUME_BUDGETS)
  const profileRegularity=inspectSweepProfileRegularity(loops.flat(),10000)
  nativeSweepPlanarCapSelections.set(model,owned.planarCapFaces.slice())
- return {model,report:{method:'polyline-miter-sections',sections:owned.sections.length,closedPath:closed,
+ return {model,report:{sweepMiterReplay:{sourceKind:'direct-annular',source:structuredClone(source)},method:'polyline-miter-sections',sections:owned.sections.length,closedPath:closed,
   profileSmoothness:owned.retainedSmoothness.walls,globalEmbeddingCertified:false,roundingCertified:false,
   continuousBound:owned.boundaryCertificate.continuousBound,profileRegularityCertified:profileRegularity.spanwiseRegular,
   profileRegularity,wallRegularityCertified:retainedWallCharts.allChartsCertified,retainedWallCharts,volume,

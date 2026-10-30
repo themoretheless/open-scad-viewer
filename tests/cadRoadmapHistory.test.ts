@@ -1,3 +1,4 @@
+import {brepSourceSnapshot} from '../src/services/geometry/brep/sourceSnapshot'
 import {readFileSync,mkdirSync,writeFileSync,existsSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
@@ -148,7 +149,7 @@ it('matches native cap edits through the public WASM selection path',()=>{
  for(const fixture of fixtures){
   const request=fixture.request,source=request.body as DirectBody,before=stringifyMeshJson(source)
   const edited=pushPullFace(source,request.faces[0],request.amount)
-  expect(edited.brep).toEqual(fixture.response.value.brep)
+  expect(brepSourceSnapshot(edited.brep!)).toBe(brepSourceSnapshot(fixture.response.value.brep))
   expect(edited.id).toBe(source.id)
   expect(stringifyMeshJson(edited.mesh)).toBe(stringifyMeshJson(fixture.response.value.mesh))
   expect(stringifyMeshJson(source)).toBe(before)

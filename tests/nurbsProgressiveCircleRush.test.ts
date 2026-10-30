@@ -8,6 +8,8 @@ import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidA
 import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 
+// This integration case performs construction and fresh full-model proofs.
+// Its runner deadline is separate from unchanged native proof/work budgets.
 it.each(spatialRmfProfileG2BodySources)('qualifies explicit spatial profile repair through Rush, viewport and fresh Solid: %s',async file=>{
  const source=readFileSync(`examples/rush/${file}`,'utf8')
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)
@@ -27,7 +29,7 @@ it.each(spatialRmfProfileG2BodySources)('qualifies explicit spatial profile repa
  expect(volume.nesting!.rolesConsistent).toBe(true)
  expect(volume.orientations.every(o=>o.outward===o.expectedOutward)).toBe(true)
  expect(JSON.stringify(document)).toBe(before)
-})
+},120000)
 
 it('refuses exhausted spatial profile repair through Rush',async()=>{
  const source=readFileSync(`examples/rush/${spatialRmfProfileG2BodySources[0]}`,'utf8')

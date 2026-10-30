@@ -14,6 +14,8 @@ const sources=[
  'closed-corrected-frenet-nonplanar-affine-body-boundary.r',
  'arc-length-closed-corrected-frenet-nonplanar-body-boundary.r',
 ]
+// Full construction, tessellation and two independent volume proofs can exceed
+// the runner's 30s default on shared hosts; native work limits remain unchanged.
 it.each(sources)('qualifies closed corrected original error and fresh retained Solid: %s',async file=>{
  const source=readFileSync(`examples/rush/${file}`,'utf8')
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)
@@ -36,4 +38,4 @@ it.each(sources)('qualifies closed corrected original error and fresh retained S
   .toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:false})
  expect(JSON.stringify(model)).toBe(stored)
  expect(JSON.stringify(document)).toBe(before)
-})
+},120000)

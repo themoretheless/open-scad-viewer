@@ -1,0 +1,161 @@
+{
+  "schema": "frontend-recovery/1",
+  "state": "complete",
+  "scope": "Finite local frontend, exact-artifact runtime binding, worker and Chromium lifecycle verification. Not full native workspace, G0/G1 clean qualification, distribution approval or delivery to main.",
+  "sourceParentCommit": "ab995f1dc6cf787e824afe13de5cff955e12ca64",
+  "ownRustEvidence": "docs/qualification/own-rust-cad-v79.json",
+  "sourceBundleSha256": "d7578eed17b6365d4c42339beb507facff90c36566d56acec5ca7cfc41d677c6",
+  "wasm": {
+    "sha256": "91521ffbc32570cddc99b4555dcdd3f55fdaa902a806fccc215bf7afefab129f",
+    "bytes": 15900297
+  },
+  "frontend": {
+    "command": "node node_modules/vitest/vitest.mjs run --maxWorkers=2 --no-cache --reporter=default --reporter=json --outputFile=<report>",
+    "passed": 6540,
+    "failed": 0,
+    "skipped": 10,
+    "passedFiles": 718,
+    "skippedFiles": 5,
+    "totalFiles": 723
+  },
+  "native": {
+    "scope": "geometry-bridge library suite plus active cad-step identity regression; not full workspace",
+    "bridgePassed": 385,
+    "bridgeFailed": 0,
+    "bridgeIgnored": 1,
+    "cadStepIdentityPassed": 1
+  },
+  "node": {
+    "passed": 45,
+    "failed": 0,
+    "skipped": 1
+  },
+  "types": {
+    "frontend": true,
+    "mcp": true
+  },
+  "browser": {
+    "engine": "151.0.7922.34",
+    "cases": 4,
+    "checks": 36,
+    "failed": 0
+  },
+  "architecture": {
+    "failures": 0,
+    "retainedPreexistingPins": 52,
+    "newExceptions": 0
+  },
+  "G0G1": {
+    "qualificationClaim": "none",
+    "completedCleanRuns": 0,
+    "completedWorkUnits": 0,
+    "plannedWorkUnits": 4740
+  },
+  "delivery": {
+    "mainPushed": false,
+    "distributionVerified": false,
+    "reason": "Geometry payload is 5360574 bytes; unchanged delivery cap is 4680000 bytes."
+  },
+  "evidence": [
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/frontend-full-final.json.gz",
+      "sha256": "143291c5ccf502d0eeb5bf7fa46ca4b16bef61fd5c78559de765a63877cefaa2",
+      "uncompressedSha256": "946bb20a8975b4e3cc5e35f9c2650a2a05ccb11a0a2c6a7e901186e22e5619ed",
+      "uncompressedBytes": 2196379
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/frontend-full-final.log.gz",
+      "sha256": "2cf0b8ce00dd1f83a6b6bdab9f1434868e666604e89118591e3398c99de37726",
+      "uncompressedSha256": "52baa89ed1ff5b57ac9b45403df61cd28ec6b3f8d3a848fba035aa9250d495be",
+      "uncompressedBytes": 135305
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/fingerprint-tests.log.gz",
+      "sha256": "93120e475bac3ffc010b96ef6f976fe7f5b5fcc3377b95a29fe9a694f63fef76",
+      "uncompressedSha256": "3b33e5036bcf3306017e0142f6a078e3c00c01ccf4f297beadb079786880302a",
+      "uncompressedBytes": 264
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/runtime-v7-bindings.log.gz",
+      "sha256": "f51218a2ecab3cd83d8a4ea3d2c246443e07a43a434c91827146eebe08d52a0c",
+      "uncompressedSha256": "6b8cc04ebf42efbb5ba95b9121dec993e6fb666cde6465aa62f34cafea1059f7",
+      "uncompressedBytes": 262
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/runtime-v7-isolation.log.gz",
+      "sha256": "170e4c4f91c224ce3d204d298c4513c30c621f7daf58e5922f12b2cb48697970",
+      "uncompressedSha256": "73683c22fb31ac0f78546e27d9e27ab1a18f339f0e51878e8e4d385307c43bad",
+      "uncompressedBytes": 259
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/runtime-identity-v7.log.gz",
+      "sha256": "f77af5b67866c2c63f36bce67267ffd3ba33643ce4c40fb266823458b5d8bcf8",
+      "uncompressedSha256": "2325d53c93f8b2f36ad122bacd8c946c89f24f1aa5329012d81b721b0c23c0c1",
+      "uncompressedBytes": 1100
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/new-artifact-regressions.log.gz",
+      "sha256": "68cdb0766b0c1c496242e2b2c1cd81e4ad6b9f092ef1b9065258f61c51abbd32",
+      "uncompressedSha256": "168b910eae35633ed4059799dd8809a5e74bb338637fc5e706744b5268066ced",
+      "uncompressedBytes": 264
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/direct-replay-native.log.gz",
+      "sha256": "6abcbe434da59095ce526beacd17fac6b71a2bd9583dfa17a9759df7e397e5ca",
+      "uncompressedSha256": "423031bd81cb24dd4d5b9da4f3cc8dae49d58c8304fab475e4bf49855fbeb0e7",
+      "uncompressedBytes": 41000
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/cad-step-identity.log.gz",
+      "sha256": "178d91730b7f1d2effa7772af14398bb3c488f702f8646779c738a038ee5021a",
+      "uncompressedSha256": "cc7b0ff2412dc226e716568e2c0bd7d31f9e688bf9b894af482fa0baa91076ae",
+      "uncompressedBytes": 31418
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/bridge-native-full.log.gz",
+      "sha256": "a7443c4f7fec8b612ab0b40fd726d68c16a0fa2eaafdf741a247e18682b0f384",
+      "uncompressedSha256": "c4f73956b968ea3908e15fa90f0c3c00ee6be2280235fcb146566c89fb490801",
+      "uncompressedBytes": 72954
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/node-final-r3.log.gz",
+      "sha256": "8292003e3e44c680c062eddc1e9c52f36c7131bf76ec524f3de3354875e6bfe0",
+      "uncompressedSha256": "3ee7d340c2dd6b32ff6bb7835adc8ebaf32414b2a348dceae5b6ec48d1dbd661",
+      "uncompressedBytes": 10302
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/frontend-types-final.log.gz",
+      "sha256": "ac73670af3abed54ac6fb4695131f4099be9fbe39d6076c5d0264a6bbdae9d83",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/mcp-types-final.log.gz",
+      "sha256": "ac73670af3abed54ac6fb4695131f4099be9fbe39d6076c5d0264a6bbdae9d83",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/dist-v7.log.gz",
+      "sha256": "be515f6b9839aa39ae267d8652b9d2c83f4391fd09a42102dac087314a52d477",
+      "uncompressedSha256": "ab13742a0e4ba78b3e23b889063c3971c171ede8b83fd6482fd2499815debf3a",
+      "uncompressedBytes": 692
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/vite-v7.log.gz",
+      "sha256": "cf6d3bf5d742625fad8ddd02b1103be98176794c0279cc7deb6fb73c7c39f65a",
+      "uncompressedSha256": "6a8ba3c47192792f8108f87340bff149aeb010ac4f79f226f3de52931910819e",
+      "uncompressedBytes": 19377
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/profile-browser-v7.log.gz",
+      "sha256": "c6f61f047ecfca068a2e2944c45a8daf46b84f1ec522a748b72f5f358ade2666",
+      "uncompressedSha256": "10c1aefe57bb34248820753d15b0022ba565a53e0702e980208cfafcb5bb326c",
+      "uncompressedBytes": 37
+    },
+    {
+      "path": "docs/qualification/frontend-recovery-2026-10-31/browser-report.json.gz",
+      "sha256": "1d9b990544d8aa98b646d25958fc74bc9dc818f8bb0d8811e5add079c1663b0f"
+    }
+  ]
+}

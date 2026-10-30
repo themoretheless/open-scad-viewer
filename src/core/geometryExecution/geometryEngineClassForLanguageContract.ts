@@ -1,3 +1,4 @@
+import packagedGeometryIdentity from '../../generated/geometry-kernels/identity'
 import { ACTIVE_GEOMETRY_MANIFEST_VERSIONS, CURRENT_GEOMETRY_MANIFEST_VERSIONS, ENGINE_CLASS_BY_LANGUAGE_CONTRACT, GEOMETRY_MANIFEST_ARCHIVE } from '../geometryExecution'
 import type { GeometryBuildPurpose, GeometryEngineClass, GeometryEngineStaticManifest, GeometryExecutionDescriptor, GeometryProviderAdmissionDecision } from '../geometryExecution'
 import { parseGeometrySourceRoutingHeader } from '../geometryRouting'
@@ -200,14 +201,16 @@ export function qualifiedRuntimeManifestVersion(
 ): keyof typeof GEOMETRY_MANIFEST_ARCHIVE {
   const currentVersion = CURRENT_GEOMETRY_MANIFEST_VERSIONS[engineClass]
   const current = GEOMETRY_MANIFEST_ARCHIVE[currentVersion]
-  if (geometryProviderAdmissionForManifest(current).allowed) return currentVersion
+  const fingerprint=`sha256:${packagedGeometryIdentity.sha256}`
+  if (current.kernelFingerprint===fingerprint&&geometryProviderAdmissionForManifest(current).allowed) return currentVersion
 
   const fallback = Object.entries(GEOMETRY_MANIFEST_ARCHIVE)
     .reverse()
     .find(([, manifest]) => manifest.engineClass === engineClass
+      && manifest.kernelFingerprint===fingerprint
       && geometryProviderAdmissionForManifest(manifest).allowed)
   if (!fallback) {
-    throw new TypeError(`No qualified runtime manifest is available for ${engineClass}`)
+    throw new TypeError(`No qualified runtime manifest matches the packaged artifact for ${engineClass}`)
   }
   return fallback[0] as keyof typeof GEOMETRY_MANIFEST_ARCHIVE
 }

@@ -1,3 +1,4 @@
+export {isOpenScadBuiltinFunction,findClosestOpenScadBuiltinFunction} from './openScadBuiltinFunctions/discovery'
 /**
  * Host-independent implementations of the stable OpenSCAD 2021.01 built-in
  * function inventory.

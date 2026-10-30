@@ -71,7 +71,14 @@ it('preserves the pre-adoption hollow geometry and full native reports through t
  expect(native.boundaryCertificate).toEqual(integrated.boundaryCertificate)
  expect(native.levels).toEqual(integrated.approximation.levels)
  const baseline=JSON.parse(readFileSync(new URL('./fixtures/miter-owned-pre-adoption.json',import.meta.url),'utf8'))
- expect(createHash('sha256').update(JSON.stringify(native.model)).digest('hex')).toEqual(baseline.modelSha256)
+ // The historical digest predates these two serde defaults. Assert they
+ // carry no additional authored metadata before comparing the original bytes.
+ const legacyModel=structuredClone(native.model)
+ expect(legacyModel.topologyIds!.localTolerancesMm).toEqual({})
+ expect(legacyModel.topologyIds!.sewedEdges).toEqual([])
+ delete legacyModel.topologyIds!.localTolerancesMm
+ delete legacyModel.topologyIds!.sewedEdges
+ expect(createHash('sha256').update(JSON.stringify(legacyModel)).digest('hex')).toEqual(baseline.modelSha256)
  expect(native.boundaryCertificate).toEqual(baseline.boundary)
  expect(native.levels).toEqual(baseline.levels)
  expect(integrated.approximation.sections).toEqual(native.sourceSections)

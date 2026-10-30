@@ -1,3 +1,4 @@
+import {CURRENT_RUNTIME_GEOMETRY_EVIDENCE} from '../src/core/currentRuntimeGeometryEvidence'
 import {expect, it, vi} from 'vitest'
 import {GEOMETRY_MANIFEST_ARCHIVE} from '../src/core/geometryExecution'
 
@@ -26,4 +27,17 @@ it('keeps historical manifests byte-identical when current evidence changes', as
     vi.doUnmock('../src/core/ownRustCadEvidence')
     vi.resetModules()
   }
+})
+
+it('keeps both v6 runtime records immutable when current v7 evidence changes',async()=>{
+ const oldMesh=GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v6']
+ const oldBrep=GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v6']
+ vi.resetModules()
+ vi.doMock('../src/core/currentRuntimeGeometryEvidence',()=>({CURRENT_RUNTIME_GEOMETRY_EVIDENCE:{...CURRENT_RUNTIME_GEOMETRY_EVIDENCE,recordId:'candidate-test',corpusVersion:'candidate-test'}}))
+ try{
+  const {GEOMETRY_MANIFEST_ARCHIVE:refreshed}=await import('../src/core/geometryExecution')
+  expect(refreshed['own-rust-node-v6']).toEqual(oldMesh)
+  expect(refreshed['brep-closed-v6']).toEqual(oldBrep)
+  expect(refreshed['own-rust-node-v7'].qualification.recordId).toBe('candidate-test')
+ }finally{vi.doUnmock('../src/core/currentRuntimeGeometryEvidence');vi.resetModules()}
 })
