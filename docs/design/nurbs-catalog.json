@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 204,
-  "unallocatedCount": 796,
+  "specifiedCount": 210,
+  "unallocatedCount": 790,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -5768,6 +5768,114 @@
       "remainingQualification": [
         "sampled diagnostic only; no continuous Class-A or G2 certificate",
         "JSON, WASM, Rush, editor and export integration are not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0205",
+      "name": "точное распознавание аффинного носителя контрольной геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-exact-support",
+      "category": "Упрощение и распознавание",
+      "nativeApi": "nurbs_core::analysis::affine_support::curve",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/affine_support.rs",
+        "crates/nurbs-core/tests/affine_support.rs",
+        "docs/design/nurbs-affine-support.md",
+        "docs/qualification/nurbs-affine-support-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "containment only; no regularity, analytic replacement or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0206",
+      "name": "восстановление сферы по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_sphere",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0207",
+      "name": "восстановление кругового цилиндра по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_cylinder",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0208",
+      "name": "восстановление кругового конуса по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_cone",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0209",
+      "name": "восстановление кругового тора по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_torus",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0210",
+      "name": "аппроксимация плоскости по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_plane",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
   ],

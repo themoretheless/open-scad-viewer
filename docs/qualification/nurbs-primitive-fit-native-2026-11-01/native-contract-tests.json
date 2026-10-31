@@ -1,0 +1,38 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "status": "passed-native-contracts-only",
+  "contracts": [
+    "NURBS-0206",
+    "NURBS-0207",
+    "NURBS-0208",
+    "NURBS-0209",
+    "NURBS-0210"
+  ],
+  "baseCommit": "f91ea18f8b09bd8c558e7f612fb64bb769c23247",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/primitive_fit.rs": "f96dfb07ea1de925431de995fbdda73e7b565a5e94fac7b46e77ec2e0b198de2",
+    "crates/nurbs-core/tests/primitive_fit_contracts.rs": "6a015b324afa81ebe55cc472035438e82635551e895360df231fcc52b2b8c67b"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "logSha256": "cf06617e23d8701ba9cec9d4f4df55e81bd6fe0d0d34391e39980451d71bb3a7",
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/3a06123af011016c/out/primitive_fit_contracts-3a06123af011016c",
+      "sha256": "d12c3ddd1f4614752f435b53a2b670fc659f93425389de031966320acb4e6640"
+    }
+  ],
+  "testSuites": [
+    {
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "filteredOut": 0
+    }
+  ],
+  "command": "CARGO_BUILD_JOBS=1 CARGO_PROFILE_TEST_OPT_LEVEL=0 cargo test --manifest-path crates/Cargo.toml --target-dir /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target -p nurbs-core --test primitive_fit_contracts --locked --offline",
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "fullWorkspaceQualified": false,
+  "mainPushed": false,
+  "proofScope": "Five local least-squares point-cloud models checked on independent analytic samples, with invalid-input regressions. No global optimum, outlier robustness or continuous source-surface deviation guarantee."
+}

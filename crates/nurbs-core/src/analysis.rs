@@ -41,3 +41,6 @@ pub mod reference_deviation;
 pub(crate) mod curve_surface_composition;
 
 pub mod surface_occlusion;
+
+/// Exact affine support of nominal NURBS control geometry.
+pub mod affine_support;
