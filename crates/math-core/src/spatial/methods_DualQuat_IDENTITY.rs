@@ -48,6 +48,7 @@ pub const IDENTITY: Self = Self {
         Some(Self { real, dual })
     }
 #[inline]
+    #[expect(clippy::should_implement_trait, reason = "Preserve the public inherent mul API alongside the implemented std::ops::Mul operator")]
     pub fn mul(self, rhs: Self) -> Self {
         let r = self.real.mul(rhs.real);
         let d1 = self.real.mul(rhs.dual);

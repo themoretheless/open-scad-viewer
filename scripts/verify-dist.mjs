@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto'
+import {selectGeometryDeliveryBudget} from './geometry-delivery-budgets.mjs'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
@@ -15,6 +17,8 @@ function walk(directory) {
   }
 }
 walk(root)
+const geometryDelivery=selectGeometryDeliveryBudget(createHash('sha256')
+  .update(readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm',import.meta.url))).digest('hex'))
 
 const limits = new Map([
   ['.html', 10_000],
@@ -110,7 +114,7 @@ const limits = new Map([
 // Native lattice printability/strength screens and weak-spot markers: measured 4,113,186 bytes.
 // Runtime v6 manual integration: measured 4,667,382 packed bytes on macOS arm64.
 // Separate versioned delivery budget; frozen v5 evidence keeps its original budget.
-const geometryChunkBudget = 4_680_000
+const geometryChunkBudget = geometryDelivery.geometryChunkBytes
 const jsChunkBudgets = [
   // Runtime v6 retained-source replay and native boundary diagnostics: measured 110,536 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 111_000],
@@ -389,7 +393,7 @@ for (const [name, artifact, compression] of [
 // Keep a bounded margin for the existing Node 20/22 build variation.
 // Runtime v6 manual integration: measured 9,071,527 asset bytes.
 // This changes packaging limits only; native geometry, tolerance and work limits are unchanged.
-const totalBudget = 9_090_000
+const totalBudget = geometryDelivery.totalAssetBytes
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 

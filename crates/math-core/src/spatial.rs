@@ -676,12 +676,28 @@ pub fn morton3d_from_unit_point(p: V3) -> u32 {
 mod tests;
 
 #[path="spatial/methods_Quat_IDENTITY.rs"]
-mod methods_Quat_IDENTITY;
+mod methods_quat_identity;
 #[path="spatial/methods_DualQuat_IDENTITY.rs"]
-mod methods_DualQuat_IDENTITY;
+mod methods_dual_quat_identity;
 #[path="spatial/methods_Ray3_new.rs"]
-mod methods_Ray3_new;
+mod methods_ray3_new;
 #[path="spatial/methods_Frustum_from_view_proj_row_major.rs"]
-mod methods_Frustum_from_view_proj_row_major;
+mod methods_frustum_from_view_proj_row_major;
 #[path="spatial/methods_Aabb3_empty.rs"]
-mod methods_Aabb3_empty;
+mod methods_aabb3_empty;
+
+impl std::ops::Mul for Quat {
+    type Output = Self;
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        Quat::mul(self, rhs)
+    }
+}
+
+impl std::ops::Mul for DualQuat {
+    type Output = Self;
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        DualQuat::mul(self, rhs)
+    }
+}

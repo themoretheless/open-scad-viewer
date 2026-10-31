@@ -1,0 +1,145 @@
+{
+  "schema": "runtime-delivery-validation/1",
+  "state": "validated-for-push",
+  "sourceParentCommit": "f3ca574c95a7dee127e09baae476709b1042f196",
+  "sourceEvidence": "docs/qualification/own-rust-cad-v80.json",
+  "sourceBundleSha256": "e7064321cc67ec05afcd61615e3bb9d7cd8dd77ee965f6f0d3b0a2a140b4c285",
+  "wasmSha256": "91521ffbc32570cddc99b4555dcdd3f55fdaa902a806fccc215bf7afefab129f",
+  "wasmByteIdentical": true,
+  "distIndexSha256": "5217395cf4a1302f1cbdff7825a77f570b91d7939905818f6f221db1b2dcfcf8",
+  "distIndexByteIdentical": true,
+  "deliveryProfile": {
+    "version": 7,
+    "geometryChunkBytes": 5360574,
+    "geometryCapBytes": 5370000,
+    "totalAssetBytes": 10066845,
+    "totalAssetCapBytes": 10080000,
+    "unknownHashRefused": true,
+    "v6PolicyPreserved": true
+  },
+  "buildPassed": true,
+  "native": {
+    "scope": "19 selected library packages, not the full workspace",
+    "passed": 5091,
+    "failed": 0,
+    "ignored": 7
+  },
+  "frontend": {
+    "evidence": "docs/qualification/frontend-recovery-2026-10-31/receipt.json",
+    "passed": 6540,
+    "skipped": 10,
+    "basis": "Application src, public WASM and distribution index remain byte-identical; changed fingerprint/manifest tests are re-executed."
+  },
+  "changedFingerprintAndManifestTests": {
+    "passed": 38,
+    "failed": 0
+  },
+  "node": {
+    "passed": 48,
+    "failed": 0,
+    "skipped": 1
+  },
+  "strictClippy": {
+    "math": true,
+    "computeAndBackends": true,
+    "mathCompute": true,
+    "mathComputeGpuTensor": true
+  },
+  "audits": {
+    "architecture": true,
+    "libraryStructure": true,
+    "algorithmOwners": true,
+    "gpuArchitecture": true
+  },
+  "G0G1": {
+    "qualificationClaim": "none",
+    "completedCleanRuns": 0,
+    "completedWorkUnits": 0,
+    "plannedWorkUnits": 4740
+  },
+  "claimBoundary": [
+    "No binary reduction or numerical simplification is claimed.",
+    "No hosted CI, cross-host byte identity, GPU performance or complete Rust migration is claimed.",
+    "Remote delivery must be verified after push; this record only attests local validation."
+  ],
+  "evidence": [
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-build.log.gz",
+      "sha256": "9db3ef8ae0ffc38dd730d521af3c8ec227f120259947b982b35362a4df027372",
+      "uncompressedSha256": "2c2b22ceeaadbe09172aa44b4ad4bad76fe0d277f18d3c93d1f33ee98fd7a172",
+      "uncompressedBytes": 61201
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-kernel.log.gz",
+      "sha256": "0bbcd8dac39a92f634615011d90fd03ea73dba68471451aa0e9cc431021b8a79",
+      "uncompressedSha256": "a7f165cf8db254d333ba9a4eb05969b589a3bb5452c7a4729eeab4a2645c7f0d",
+      "uncompressedBytes": 38037
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-clippy-math-r3.log.gz",
+      "sha256": "bf6d8db8b658c8334c47883099115b6b068ebbadbeaaa88dfa85c29083757bc9",
+      "uncompressedSha256": "3268594314e692904f57bf5c3a9d3757087903a6565729f4c44ce5f99a361fe1",
+      "uncompressedBytes": 705
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-clippy-compute-r5.log.gz",
+      "sha256": "fcbf937de211b4756d1f448eb84fcc8b53fdf5eaf3858ed775ce8ba89f392b4f",
+      "uncompressedSha256": "be9bd8a9607582ad68e28db9611f9ecee8663d333d97aa5b1825d385d19db46f",
+      "uncompressedBytes": 712
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-clippy-mathcompute.log.gz",
+      "sha256": "f1ba2e7bfa6750967c41f8e57ff7480773d5b15f60fd7df626c9d207ddafa27c",
+      "uncompressedSha256": "6c8af70dfe612792334bed9fbb861da0fbe5a747a0664b8d817f4a16ab071c2f",
+      "uncompressedBytes": 716
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-clippy-mathcompute-features.log.gz",
+      "sha256": "a68207ecdd0f277195a71ce433d37329da950d0aefc4e51a8f4fc4f21819c03d",
+      "uncompressedSha256": "3dd28009e7ffafdda63d07d69cb6f9da41890752361b60daadb0497be9247f24",
+      "uncompressedBytes": 1323
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-native-final.log.gz",
+      "sha256": "3dd761fcd3666f44ef719f5271e77c5899d129458cab038ca9ed2074db842324",
+      "uncompressedSha256": "1a44f113a8927b9b972bd2738f0f278cc24818a2b1f429caa1297c14f9b5c497",
+      "uncompressedBytes": 575341
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-math-compute-tests.log.gz",
+      "sha256": "59dcaf174a1adf339dc4dbb294213f8f3c49c888df7833f02885b30fe1b0f4e2",
+      "uncompressedSha256": "fa3c1ff80c8ec3dd9796fa116afe4c057667074f97c73f51d0c04e545bae7b31",
+      "uncompressedBytes": 13834
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-node-tests.log.gz",
+      "sha256": "eef55138804ae59a34477c60651a1eb1ef078bf7f331ccfe91a343fccb51ad86",
+      "uncompressedSha256": "6ced4f4e6faa28f25c5965011f997daf76fe189e8b1b4c98672cb6fd5488cc05",
+      "uncompressedBytes": 10873
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-fingerprint-tests.log.gz",
+      "sha256": "aa4d27ec4edecbc335de87453dca6a78cb1142a18abdb74506e83b16853d022d",
+      "uncompressedSha256": "51551b0e4f3af2ab1c2a86ef265901915d71bfe2db98edf0014b5eb16895af88",
+      "uncompressedBytes": 264
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-mcp-types.log.gz",
+      "sha256": "ac73670af3abed54ac6fb4695131f4099be9fbe39d6076c5d0264a6bbdae9d83",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/delivery-gpu-architecture.log.gz",
+      "sha256": "3b7ce24fc3dadc8c4d4b675d00e2bf4e03bc22e8cd9f2471cd1f03867d7c4d6f",
+      "uncompressedSha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c",
+      "uncompressedBytes": 72
+    },
+    {
+      "path": "docs/qualification/runtime-v7-delivery-2026-10-31/snake-module-map.json.gz",
+      "sha256": "fc58b0312225358c261771e7dca0091f4d0b253198a94ec760701fc2fbdeb632",
+      "uncompressedSha256": "2b7c18dc708cd44f989790186164ce7c1f99c0130f6eebb2bf4e68708f9df682",
+      "uncompressedBytes": 3692
+    }
+  ]
+}

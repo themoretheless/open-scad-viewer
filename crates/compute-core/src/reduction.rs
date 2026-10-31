@@ -215,8 +215,7 @@ pub fn reduce_sum_f32_compensated(values: &[f32]) -> f32 {
         *sum = t;
     }
 
-    let chunks = values.chunks_exact(4);
-    let rem = chunks.remainder();
+    let (chunks, rem) = values.as_chunks::<4>();
     for chunk in chunks {
         neumaier_step(&mut s[0], &mut c[0], chunk[0] as f64);
         neumaier_step(&mut s[1], &mut c[1], chunk[1] as f64);
@@ -238,8 +237,7 @@ pub fn reduce_min_max_f32(values: &[f32]) -> Option<(f32, f32)> {
     let (&first, rest) = values.split_first()?;
     let mut min_val = first;
     let mut max_val = first;
-    let pairs = rest.chunks_exact(2);
-    let rem = pairs.remainder();
+    let (pairs, rem) = rest.as_chunks::<2>();
     for pair in pairs {
         let a = pair[0];
         let b = pair[1];

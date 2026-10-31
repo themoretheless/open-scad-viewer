@@ -27,6 +27,6 @@ impl HasShape for Tensor {
 mod tests;
 
 #[path="host_tensor/methods_Tensor_new.rs"]
-mod methods_Tensor_new;
+mod methods_tensor_new;
 #[path="host_tensor/methods_Tensor_conv1d.rs"]
-mod methods_Tensor_conv1d;
+mod methods_tensor_conv1d;

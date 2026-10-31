@@ -604,4 +604,4 @@ impl value_codec::Serialize for Solution {
 }
 
 #[path="serialization/methods_Constraint_to_value.rs"]
-mod methods_Constraint_to_value;
+mod methods_constraint_to_value;

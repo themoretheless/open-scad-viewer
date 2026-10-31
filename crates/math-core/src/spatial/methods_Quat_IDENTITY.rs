@@ -107,6 +107,7 @@ pub const IDENTITY: Self = Self {
         })
     }
 #[inline]
+    #[expect(clippy::should_implement_trait, reason = "Preserve the public inherent mul API alongside the implemented std::ops::Mul operator")]
     pub fn mul(self, rhs: Self) -> Self {
         Self {
             x: self.w * rhs.x + self.x * rhs.w + self.y * rhs.z - self.z * rhs.y,

@@ -685,7 +685,7 @@ pub fn qualify_rational_polar_rectangle<'a>(
 mod tests;
 
 #[path="surface_self_chord/methods_MeanMatrix____coordinate_path.rs"]
-mod methods_MeanMatrix____coordinate_path;
+mod methods_mean_matrix__coordinate_path;
 #[path="surface_self_chord/algorithm_cosine_upper.rs"]
 mod algorithm_cosine_upper;
 use algorithm_cosine_upper::cosine_upper;

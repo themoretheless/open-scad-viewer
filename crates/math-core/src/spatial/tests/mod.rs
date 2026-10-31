@@ -242,3 +242,13 @@ fn catmull_rom_spline_and_plane_from_points_pca_work() {
     assert_eq!(morton3d_from_unit_point([1.0, 1.0, 1.0]), 0x3FFF_FFFF);
     assert!(morton3d_from_unit_point([0.2, 0.2, 0.2]) < morton3d_from_unit_point([0.8, 0.8, 0.8]));
 }
+
+#[test]
+fn multiplication_operators_preserve_named_quaternion_products() {
+    let a = Quat::new(1., 2., 3., 4.);
+    let b = Quat::new(-2., 0., 3., 0.5);
+    assert_eq!(a * b, a.mul(b));
+    let a = DualQuat { real: a, dual: b };
+    let b = DualQuat { real: b, dual: a.real };
+    assert_eq!(a * b, a.mul(b));
+}

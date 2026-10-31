@@ -66,7 +66,7 @@ fn decode_f64(bytes: &[u8]) -> Vec<f64> {
 fn unpack_rgba(bytes: &[u8]) -> Vec<u8> {
     // 511 RGBA pixels: 2044 useful bytes in a 2048-byte padded row.
     let mut result = Vec::with_capacity(bytes.len() / 2048 * 2044);
-    for row in bytes.chunks_exact(2048) {
+    for row in bytes.as_chunks::<2048>().0 {
         result.extend_from_slice(&row[..2044]);
     }
     result
@@ -146,7 +146,6 @@ fn main() {
                 )
                 .unwrap();
                 ticket.submitted(context.queue.submit([encoder.finish()]));
-                let cpu_us;
                 // Return a fingerprint of output outside the decoder timing so correctness
                 // checking cannot dominate or be optimized away from just one variant.
                 enum Output {
@@ -200,7 +199,7 @@ fn main() {
                     };
                     (result, copy_us + micros(decode))
                 };
-                cpu_us = copy_us;
+                let cpu_us = copy_us;
                 let total_us = micros(started);
                 match result {
                     Output::F32(values) => assert_eq!(values, data),

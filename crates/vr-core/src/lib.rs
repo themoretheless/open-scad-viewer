@@ -629,7 +629,7 @@ mod tests;
 
 
 #[path="lib/methods_TwoHandTransform_solve.rs"]
-mod methods_TwoHandTransform_solve;
+mod methods_two_hand_transform_solve;
 #[path="lib/algorithm_prepare_scene_impl.rs"]
 mod algorithm_prepare_scene_impl;
 use algorithm_prepare_scene_impl::prepare_scene_impl;

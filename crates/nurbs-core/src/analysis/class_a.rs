@@ -652,7 +652,7 @@ pub fn gaussian_and_mean_curvature_grid(
 }
 
 #[path="class_a/methods_Field_sample.rs"]
-mod methods_Field_sample;
+mod methods_field_sample;
 #[path="class_a/algorithm_chain_segments.rs"]
 mod algorithm_chain_segments;
 use algorithm_chain_segments::chain_segments;

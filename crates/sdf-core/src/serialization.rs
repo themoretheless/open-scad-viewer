@@ -178,6 +178,6 @@ impl<'de> value_codec::Deserialize<'de> for SdfStroke {
 }
 
 #[path="serialization/methods_Field_to_value.rs"]
-mod methods_Field_to_value;
+mod methods_field_to_value;
 #[path="serialization/methods_Field_from_value.rs"]
-mod methods_Field_from_value;
+mod methods_field_from_value;

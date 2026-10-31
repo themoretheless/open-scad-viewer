@@ -26,7 +26,7 @@ fn update(
     if kind == "generated" {
         if candidate {
             let mut scratch = [0u8; 4096];
-            for (i, word) in scratch[..bytes].chunks_exact_mut(4).enumerate() {
+            for (i, word) in scratch[..bytes].as_chunks_mut::<4>().0.iter_mut().enumerate() {
                 word.copy_from_slice(&((i as f64 * 0.25) as f32).to_le_bytes());
             }
             c.queue.write_buffer(b, 0, &scratch[..bytes]);
@@ -86,7 +86,7 @@ fn main() {
                 let mut ticket = gpu_compute::ByteReadback::copy_buffer(
                     &c.device,
                     &mut encoder,
-                    &b,
+                    b,
                     0,
                     bytes as u64,
                 )

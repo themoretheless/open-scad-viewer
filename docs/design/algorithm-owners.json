@@ -75,7 +75,7 @@
         "src/services/openscadSemanticLowerer.ts",
         "src/services/openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments.ts",
         "src/services/openscadSemanticLowerer/evalPreparedNodes.ts",
-        "src/services/openScadStableGeometrySemantics/resolveOpenScadLinearExtrude.ts"
+        "src/services/openScadStableGeometrySemantics.ts"
       ],
       "reason": "Remaining norm, round, value operations and transform lowering duplicate native language semantics. Preserve profile differences, warning order and nonfinite/signed-zero behavior."
     },
@@ -115,9 +115,11 @@
         "src/services/solidNurbs.ts",
         "src/services/rushGraphNurbsKernel.ts",
         "src/services/rushGraphNurbsKernel/createOwnNurbsResolver.ts",
-        "src/services/modelGraphNurbsKernel/buildOwnNurbsResolved.ts"
+        "src/services/rushGraphNurbsKernel/buildOwnNurbsResolved.ts",
+        "src/services/nurbsCurve.ts",
+        "src/services/nurbsSurface.ts"
       ],
-      "reason": "Certified bound composition and geometric closure tests belong to native NURBS owner. Keep orchestration and decoding; preserve outward rounding, refusals and retained-profile contracts."
+      "reason": "Certified bound composition and geometric closure tests belong to native NURBS owner. Keep orchestration and decoding; preserve outward rounding, refusals and retained-profile contracts. Legacy curve/surface length, curvature, area and projection routines remain TypeScript migration work; listing their native owner is not migration completion."
     },
     {
       "id": "threshold-compatibility",
@@ -270,11 +272,12 @@
       "owner": "geometry-ops + mesh-query + mesh-io",
       "action": "migrate",
       "files": [
-        "src/services/meshEditing/parseMeshDocument.ts",
+        "src/services/meshEditing.ts",
         "src/services/meshInspection.ts",
-        "src/services/solidMeasurements.ts"
+        "src/services/solidMeasurements.ts",
+        "src/services/meshSurfaceGroups.ts"
       ],
-      "reason": "Preserve existing editing, inspection and measurement behavior while assigning remaining numerical routines to native mesh owners. Recording ownership is not evidence that migration is complete."
+      "reason": "Preserve existing editing, inspection and measurement behavior while assigning remaining numerical routines to native mesh owners. Recording ownership is not evidence that migration is complete. Surface-group triangle area and normal accumulation also remain explicit native migration work."
     },
     {
       "id": "joint-visualization",
@@ -302,6 +305,24 @@
         "src/services/svgDocument.ts"
       ],
       "reason": "Preserve document edits and SVG transform parsing; numerical persisted transforms belong to geometry-ops. This decision does not imply a completed migration."
+    },
+    {
+      "id": "remaining-cam-preview-numerics",
+      "owner": "gcode-core + application-preview",
+      "action": "migrate",
+      "files": [
+        "src/services/gcodePreviewGeometry.ts"
+      ],
+      "reason": "Legacy preview move-distance and toolpath numerical routines remain TypeScript. Native CAM is the intended owner; retain transport and presentation in the host. This review does not claim their migration or new geometric qualification."
+    },
+    {
+      "id": "remaining-drawing-standard-numerics",
+      "owner": "mechanical-core + application-drawing",
+      "action": "split",
+      "files": [
+        "src/services/drawingSheets.ts"
+      ],
+      "reason": "Drawing layout and SVG labels belong to the host; standard-fit formula calculations, including geometric-mean diameter, remain numerical migration work for the native mechanical owner. No migration completion is inferred."
     }
   ],
   "families": [
