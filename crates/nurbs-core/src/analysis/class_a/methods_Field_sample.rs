@@ -20,6 +20,7 @@ pub(super) fn sample(
         if nu.checked_mul(nv).map_or(true, |c| c > limits.max_segments) {
             return Err(resource("class_a grid cell count exceeds the sampling budget"));
         }
+        surface.validate()?;
         let (du, dv) = surface_domains(surface);
         let mut values = Vec::with_capacity((nu + 1) * (nv + 1));
         for j in 0..=nv {

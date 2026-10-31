@@ -241,6 +241,7 @@ pub fn reflection_lines(
     jump_threshold: f64,
     limits: &Limits,
 ) -> Result<(IsoLineReport, Vec<Defect>)> {
+    require_finite_f64(jump_threshold, "reflection jump threshold")?;
     check(jump_threshold > 0., "Reflection jump threshold must be positive")?;
     let light = direction(light)?;
     let view = direction(view)?;
@@ -321,6 +322,7 @@ pub fn isophote_analysis(
         cos_levels.iter().all(|c| (-1. ..=1.).contains(c)),
         "Isophote levels are cos(theta) and must lie in [-1, 1]",
     )?;
+    require_finite_f64(uneven_tol, "isophote unevenness tolerance")?;
     check(uneven_tol > 0., "Isophote unevenness tolerance must be positive")?;
     let light = direction(light)?;
     let mut levels = Vec::with_capacity(cos_levels.len());
@@ -426,6 +428,8 @@ pub fn dent_detection(
     threshold: f64,   // порог остатка гауссовой кривизны
     limits: &Limits,
 ) -> Result<DentReport> {
+    require_finite_f64(sigma_cells, "dent smoothing sigma")?;
+    require_finite_f64(threshold, "dent residual threshold")?;
     check(sigma_cells > 0., "Dent smoothing sigma must be positive")?;
     check(threshold >= 0., "Dent residual threshold must be non-negative")?;
     let field = Field::sample(
@@ -437,7 +441,10 @@ pub fn dent_detection(
         limits,
     )?;
     // Сепарабельное гауссово сглаживание; NaN-выборки исключаются из окна.
-    let radius = (3. * sigma_cells).ceil() as usize;
+    // Samples farther than either grid extent never contribute to a pass.
+    // Clipping the support to that extent preserves every contributing weight
+    // and bounds allocation/work even for very large finite sigma.
+    let radius = (3. * sigma_cells).ceil().min(field.nu.max(field.nv) as f64) as usize;
     let weights: Vec<f64> = (0..=radius)
         .map(|k| (-0.5 * (k as f64 / sigma_cells).powi(2)).exp())
         .collect();
