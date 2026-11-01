@@ -102,7 +102,7 @@ pub(crate) fn query(
         &arena,
         &tolerance,
         Limits {
-            max_work: max_work - out.exact_work,
+            max_work: (max_work - out.exact_work).min(cad_predicates::MAX_WORK),
             ..Default::default()
         },
         None,
