@@ -9,6 +9,8 @@ pub mod curve_deviation;
 pub mod curve_plane;
 pub mod curve_regularity;
 pub mod surface_regularity;
+pub mod surface_continuity;
+pub(crate) mod surface_tensor_identity;
 pub mod affine_volume;
 pub mod fibered_volume;
 pub mod implicit_quadric;

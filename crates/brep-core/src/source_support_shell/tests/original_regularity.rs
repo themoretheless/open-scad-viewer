@@ -48,5 +48,32 @@ fn material_body_owns_all_original_face_ranks_with_one_budget() {
     assert_eq!(zero.completed_faces, 0);
     assert_eq!(zero.cells, 0);
     assert!(regularity::qualify(&body, 100001).is_err());
+    let smooth = regularity::smooth::qualify(&proof, 2, 100000, 1000000).unwrap();
+    let (cells, work) = (smooth.cells, smooth.exact_work);
+    let interiors = smooth
+        .certificate
+        .expect("Every unchanged original box face is C2");
+    assert!(std::ptr::eq(interiors.regular(), &proof));
+    assert_eq!(interiors.order(), 2);
+    assert_eq!(interiors.faces().len(), 6);
+    for (face, source) in interiors
+        .faces()
+        .iter()
+        .zip(body.geometry().shell().faces())
+    {
+        assert!(std::ptr::eq(face.source(), source[0].edges()[0].surface()));
+    }
+    assert!(cells > 0 && work > 0);
+    assert!(
+        regularity::smooth::qualify(&proof, 2, cells, work)
+            .unwrap()
+            .certificate
+            .is_some()
+    );
+    for (cells, work) in [(cells - 1, work), (cells, work - 1), (0, work), (cells, 0)] {
+        let short = regularity::smooth::qualify(&proof, 2, cells, work).unwrap();
+        assert!(short.certificate.is_none());
+        assert!(short.cells <= cells && short.exact_work <= work);
+    }
     assert_eq!(body.definition().unwrap(), original);
 }
