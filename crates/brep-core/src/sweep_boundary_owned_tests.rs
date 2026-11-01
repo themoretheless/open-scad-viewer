@@ -693,8 +693,40 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
     let body=match attempt {Attempt::Certified(body)=>body,Attempt::Refused(r)=>panic!("Hollow source: {:?}",r.reason)};
     assert!(body.report().ideal_volume.as_ref().unwrap().parameter_topology_preserved);
     assert_eq!(body.model().bodies.len(),1);assert_eq!(body.model().faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
+    let strong=construct_with_original_smooth_volume(&sweep,&[4,4],5,[&source,&source],
+        [&source,&end],1e-8,0.01,limits(),ideal.projection,
+        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+            order:2,cells:100000,exact_work:1000000,products:1000000,
+        }).unwrap();
+    let strong=match strong {
+        OriginalSmoothBodyAttempt::Certified(b)=>b,
+        OriginalSmoothBodyAttempt::Refused(r)=>panic!("Hollow original C2 body: {}; original={:?}",r.reason,r.original),
+    };
+    assert!(strong.original().report().certified && strong.retained_report().volume.as_ref().unwrap().proven);
+    assert!(strong.original().report().volume.parameter_topology_preserved);
+    assert_eq!(strong.original().loop_sizes(),&[4,4]);
+    assert_eq!(strong.cap_wall_continuity(),"C0");
+    assert_eq!(strong.model(),body.model());
+    let boundary_limits=nurbs_core::progressive_sweep::OriginalProfileBoundaryLimits {
+        steps:100000,cells:1000000,exact_work:1000000,products:1000000,
+    };
+    let OriginalBoundaryBodyAttempt::Certified(boundary)=qualify_original_smooth_boundary(&strong,
+        &[nurbs_core::progressive_sweep::OriginalProfileClass::C0;8],boundary_limits).unwrap()
+        else {panic!("hole profile closure/class coverage refused")};
+    assert_eq!(boundary.profiles().report().inspected_joins,8);
+    assert_eq!(boundary.profiles().report().smooth_joins,0);
+    let OriginalBoundaryBodyAttempt::Refused(missing)=qualify_original_smooth_boundary(&strong,
+        &[nurbs_core::progressive_sweep::OriginalProfileClass::C0;4],boundary_limits).unwrap()
+        else {panic!("inner material boundary classes omitted")};
+    assert_eq!(missing.profiles.unwrap().uncertain_join,Some([1,0]));
+
     let mut omitted=source.clone();omitted.trims.pop();
     assert!(matches!(construct_with_ideal(&sweep,&[4,4],5,[&omitted,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap(),Attempt::Refused(_)));
+    assert!(matches!(construct_with_original_smooth_volume(&sweep,&[4,4],5,[&omitted,&source],
+        [&source,&end],1e-8,0.01,limits(),ideal.projection,
+        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+            order:2,cells:100000,exact_work:1000000,products:1000000,
+        }).unwrap(),OriginalSmoothBodyAttempt::Refused(_)));
 }
 
 mod weighted;
@@ -702,3 +734,5 @@ mod weighted;
 mod tensor;
 
 mod smooth_original;
+
+mod smooth_boundary;

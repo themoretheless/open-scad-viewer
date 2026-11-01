@@ -89,6 +89,32 @@ pub fn construct_with_original_smooth_volume<'s, 'a>(
     projection: [[f64; 3]; 3],
     original_limits: OriginalSmoothVolumeLimits,
 ) -> Result<OriginalSmoothBodyAttempt<'s, 'a>> {
+    validate(sweep, loop_sizes, projection, original_limits)?;
+    let attempt = construct(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+    )?;
+    finish(
+        sweep,
+        loop_sizes,
+        source_caps,
+        projection,
+        original_limits,
+        attempt,
+    )
+}
+fn validate(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    projection: [[f64; 3]; 3],
+    original_limits: OriginalSmoothVolumeLimits,
+) -> Result<()> {
     let l = original_limits;
     if !matches!(l.order, 1 | 2)
         || l.cells > 1000000
@@ -104,16 +130,18 @@ pub fn construct_with_original_smooth_volume<'s, 'a>(
             "Invalid original smooth filled-body limits or partition",
         ));
     }
-    let body = match construct(
-        sweep,
-        loop_sizes,
-        sections,
-        source_caps,
-        retained_caps,
-        tolerance_uv,
-        error_budget,
-        limits,
-    )? {
+    Ok(())
+}
+fn finish<'s, 'a>(
+    sweep: &'s MultiSweep<'a>,
+    loop_sizes: &[usize],
+    source_caps: [&'s LoftCap; 2],
+    projection: [[f64; 3]; 3],
+    original_limits: OriginalSmoothVolumeLimits,
+    attempt: Attempt,
+) -> Result<OriginalSmoothBodyAttempt<'s, 'a>> {
+    let l = original_limits;
+    let body = match attempt {
         Attempt::Certified(body) => body,
         Attempt::Refused(r) => {
             let reason = r.reason.unwrap_or("retained-boundary-unproved");
@@ -184,4 +212,54 @@ pub fn construct_with_original_smooth_volume<'s, 'a>(
             work,
         },
     )))
+}
+
+/// Construct a coherent exact retained affine packet for general source frames
+/// and filled caps. Complete original and retained proofs are freshly run;
+/// candidate station corrections enter the full wall/cap error bound.
+/// Here `affine.matrix_cells` is shared by fresh UV, actual filled-atlas and
+/// orientation visits. `affine.work` includes candidate preparation and fresh
+/// source/actual identities; no successful report from another model is used.
+pub fn construct_affine_with_original_smooth_volume<'s, 'a>(
+    sweep: &'s MultiSweep<'a>,
+    loop_sizes: &[usize],
+    sections: usize,
+    source_caps: [&'s LoftCap; 2],
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: Limits,
+    projection: [[f64; 3]; 3],
+    original_limits: OriginalSmoothVolumeLimits,
+    affine: crate::AffineStationLimits,
+) -> Result<OriginalSmoothBodyAttempt<'s, 'a>> {
+    validate(sweep, loop_sizes, projection, original_limits)?;
+    if affine.work > 1000000
+        || affine.matrix_cells > 100000
+        || !affine.quantum.is_normal()
+        || affine.quantum <= 0.
+        || affine.quantum.to_bits() & ((1u64 << 52) - 1) != 0
+        || !affine.tolerance.is_finite()
+        || affine.tolerance < 0.
+    {
+        return Err(fail("Invalid coherent affine boundary limits"));
+    }
+    let attempt = super::construct_impl(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        source_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+        Some((affine, projection)),
+    )?;
+    finish(
+        sweep,
+        loop_sizes,
+        source_caps,
+        projection,
+        original_limits,
+        attempt,
+    )
 }

@@ -125,72 +125,10 @@ impl<'a> MultiSweep<'a> {
         projection: [[f64; 3]; 3],
         limits: OriginalSmoothVolumeLimits,
     ) -> Result<OriginalSmoothVolumeAttempt<'s, 'a>> {
-        check(
-            matches!(limits.order, 1 | 2)
-                && limits.cells <= 1000000
-                && limits.exact_work <= 1000000
-                && limits.products <= 1000000
-                && !loop_sizes.is_empty()
-                && loop_sizes.len() <= 64
-                && loop_sizes.iter().all(|&n| n > 0 && n <= 64)
-                && loop_sizes.iter().sum::<usize>() == self.sweeps.len(),
-            "Invalid original smooth volume limits or profile partition",
-        )?;
-        let volume =
-            self.certify_ideal_volume_atlas(caps, projection, limits.cells, limits.exact_work)?;
-        let mut out = OriginalSmoothVolumeReport {
-            certified: false,
-            order: limits.order,
-            cells: volume.cells,
-            exact_work: volume.exact_work,
-            volume,
-            cap_continuity_certified: false,
-            motion_continuity_certified: false,
-            closed_boundary: None,
-            products: 0,
-            reason: None,
-        };
-        if !(out.volume.embedding_certified
-            && out.volume.regularity_certified
-            && out.volume.parameter_topology_preserved)
-        {
-            out.reason = out.volume.reason;
+        let out = certify_charts(self, caps, loop_sizes, projection, limits, true)?;
+        if !out.certified {
             return Ok(OriginalSmoothVolumeAttempt::Refused(Box::new(out)));
         }
-        if !caps_smooth(caps, &mut out, limits) {
-            out.reason = Some("original-filled-cap-continuity-unproved");
-            return Ok(OriginalSmoothVolumeAttempt::Refused(Box::new(out)));
-        }
-        out.cap_continuity_certified = true;
-        if self.sweeps[0].contact_point.is_some() {
-            out.reason = Some("original-smooth-volume-contact-motion-unproved");
-            return Ok(OriginalSmoothVolumeAttempt::Refused(Box::new(out)));
-        }
-        if self.source_is_closed()? {
-            let proof = self.certify_original_closed_boundary_smoothness(
-                loop_sizes,
-                OriginalBoundarySmoothnessLimits {
-                    order: limits.order,
-                    cells: (limits.cells - out.cells).min(100000),
-                    exact_work: limits.exact_work - out.exact_work,
-                    products: limits.products - out.products,
-                },
-            )?;
-            out.cells += proof.cells;
-            out.exact_work += proof.exact_work;
-            out.products += proof.products;
-            let certified = proof.differential_compatibility_certified;
-            out.reason = proof.reason;
-            out.closed_boundary = Some(proof);
-            if !certified {
-                return Ok(OriginalSmoothVolumeAttempt::Refused(Box::new(out)));
-            }
-        } else if !motion::open(&self.sweeps[0], &mut out, limits)? {
-            return Ok(OriginalSmoothVolumeAttempt::Refused(Box::new(out)));
-        }
-        out.motion_continuity_certified = true;
-        out.certified = true;
-        out.reason = None;
         Ok(OriginalSmoothVolumeAttempt::Certified(Box::new(
             OriginalSmoothVolume {
                 sweep: self,
@@ -200,6 +138,88 @@ impl<'a> MultiSweep<'a> {
             },
         )))
     }
+}
+/// Shared fresh chart proof. The classified owner separately checks its exact
+/// declared profile classes; the legacy owner retains uniform closed Gk.
+pub(super) fn certify_charts(
+    sweep: &MultiSweep<'_>,
+    caps: [&Surface; 2],
+    loop_sizes: &[usize],
+    projection: [[f64; 3]; 3],
+    limits: OriginalSmoothVolumeLimits,
+    strict_profiles: bool,
+) -> Result<OriginalSmoothVolumeReport> {
+    check(
+        matches!(limits.order, 1 | 2)
+            && limits.cells <= 1000000
+            && limits.exact_work <= 1000000
+            && limits.products <= 1000000
+            && !loop_sizes.is_empty()
+            && loop_sizes.len() <= 64
+            && loop_sizes.iter().all(|&n| n > 0 && n <= 64)
+            && loop_sizes.iter().sum::<usize>() == sweep.sweeps.len(),
+        "Invalid original smooth volume limits or profile partition",
+    )?;
+    let volume =
+        sweep.certify_ideal_volume_atlas(caps, projection, limits.cells, limits.exact_work)?;
+    let mut out = OriginalSmoothVolumeReport {
+        certified: false,
+        order: limits.order,
+        cells: volume.cells,
+        exact_work: volume.exact_work,
+        volume,
+        cap_continuity_certified: false,
+        motion_continuity_certified: false,
+        closed_boundary: None,
+        products: 0,
+        reason: None,
+    };
+    if !(out.volume.embedding_certified
+        && out.volume.regularity_certified
+        && out.volume.parameter_topology_preserved)
+    {
+        out.reason = out.volume.reason;
+        return Ok(out);
+    }
+    if !caps_smooth(caps, &mut out, limits) {
+        out.reason = Some("original-filled-cap-continuity-unproved");
+        return Ok(out);
+    }
+    out.cap_continuity_certified = true;
+    if sweep.sweeps[0].contact_point.is_some() {
+        out.reason = Some("original-smooth-volume-contact-motion-unproved");
+        return Ok(out);
+    }
+    if sweep.source_is_closed()? {
+        let motion_limits = OriginalBoundarySmoothnessLimits {
+            order: limits.order,
+            cells: (limits.cells - out.cells).min(100000),
+            exact_work: limits.exact_work - out.exact_work,
+            products: limits.products - out.products,
+        };
+        let proof = if strict_profiles {
+            sweep.certify_original_closed_boundary_smoothness(loop_sizes, motion_limits)?
+        } else {
+            sweep.certify_closed_motion(motion_limits)?
+        };
+        out.cells += proof.cells;
+        out.exact_work += proof.exact_work;
+        out.products += proof.products;
+        let certified = proof.laws_certified
+            && proof.frame_certified
+            && (!strict_profiles || proof.differential_compatibility_certified);
+        out.reason = proof.reason;
+        out.closed_boundary = Some(proof);
+        if !certified {
+            return Ok(out);
+        }
+    } else if !motion::open(&sweep.sweeps[0], &mut out, limits)? {
+        return Ok(out);
+    }
+    out.motion_continuity_certified = true;
+    out.certified = true;
+    out.reason = None;
+    Ok(out)
 }
 #[cfg(test)]
 mod tests;

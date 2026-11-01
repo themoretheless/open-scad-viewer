@@ -780,3 +780,5 @@ mod closed_planar_rmf_boundary_tests;
 #[path = "rational_loft/owned_progressive_body.rs"]
 mod owned_progressive_body;
 use owned_progressive_body::progressive_profile_body_internal;
+
+pub(crate) use affine_stations::affine_station_controls;

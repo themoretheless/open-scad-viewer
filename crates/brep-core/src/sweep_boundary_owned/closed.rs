@@ -106,20 +106,28 @@ fn refused_source(mut report: ClosedReport, reason: &'static str) -> PreparedAtt
     report.reason = Some(reason);
     PreparedAttempt::Refused(Box::new(report))
 }
-fn prepare_closed_source(
+struct PreparedMaterial {
+    report: ClosedReport,
+    profiles: Vec<Vec<Curve>>,
+    material: LoftCap,
+}
+enum PreparedMaterialAttempt {
+    Ready(Box<PreparedMaterial>),
+    Refused(Box<ClosedReport>),
+}
+fn refused_material(mut report: ClosedReport, reason: &'static str) -> PreparedMaterialAttempt {
+    report.reason = Some(reason);
+    PreparedMaterialAttempt::Refused(Box::new(report))
+}
+fn prepare_closed_material(
     sweep: &MultiSweep<'_>,
     loop_sizes: &[usize],
-    sections: usize,
     material: &LoftCap,
     tolerance_uv: f64,
-    error_budget: f64,
     limits: OriginalClosedLimits,
-) -> Result<PreparedAttempt> {
+) -> Result<PreparedMaterialAttempt> {
     let b = limits;
-    if !(4..=1025).contains(&sections)
-        || !error_budget.is_finite()
-        || error_budget <= 0.
-        || !tolerance_uv.is_finite()
+    if !tolerance_uv.is_finite()
         || tolerance_uv <= 0.
         || b.source_cells > 100000
         || b.source_products > 1000000
@@ -195,7 +203,7 @@ fn prepare_closed_source(
         reason: None,
     };
     if !sweep.source_is_closed()? {
-        return Ok(refused_source(out, "original-closed-source-required"));
+        return Ok(refused_material(out, "original-closed-source-required"));
     }
     // The exact original UV chain may itself be multispan or one closed
     // curve. Normalize only through exact coefficient decomposition; rounded
@@ -210,7 +218,7 @@ fn prepare_closed_source(
                 .count()
                 * (curve.degree + 1);
             if rows > b.source_products - out.source_products {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-uv-decomposition-work-limit",
                 ));
@@ -219,14 +227,14 @@ fn prepare_closed_source(
             let Some(parts) =
                 retained_wall_coefficients::exact_bezier_controls(curve, rows.min(4096))
             else {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-exact-uv-decomposition-unproved",
                 ));
             };
             trim_count += parts.len();
             if trim_count > 256 {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-trim-complexity-unproved",
                 ));
@@ -237,7 +245,7 @@ fn prepare_closed_source(
     }
     if limits.material.pairs == 0 || limits.material.cells == 0 || limits.material.domain_cells == 0
     {
-        return Ok(refused_source(out, "original-material-region-work-limit"));
+        return Ok(refused_material(out, "original-material-region-work-limit"));
     }
     let trim = trim_region_audit::inspect(
         &trims,
@@ -249,7 +257,7 @@ fn prepare_closed_source(
     let valid = trim.valid == Some(true);
     out.material.trim = Some(trim);
     if !valid {
-        return Ok(refused_source(out, "original-material-region-unproved"));
+        return Ok(refused_material(out, "original-material-region-unproved"));
     }
     let mut original_profiles = Vec::with_capacity(loop_sizes.len());
     let mut offset = 0;
@@ -261,7 +269,7 @@ fn prepare_closed_source(
             let proven = regular.spanwise_regular;
             out.material.profiles.push(regular);
             if !proven {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-profile-regularity-unproved",
                 ));
@@ -271,7 +279,7 @@ fn prepare_closed_source(
                 .count()
                 * (profile.degree + 1);
             if rows > b.source_products - out.source_products {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-decomposition-work-limit",
                 ));
@@ -280,7 +288,7 @@ fn prepare_closed_source(
             let Some(parts) =
                 retained_wall_coefficients::exact_bezier_controls(profile, rows.min(4096))
             else {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-exact-decomposition-unproved",
                 ));
@@ -289,7 +297,7 @@ fn prepare_closed_source(
         }
         offset += size;
         if spans.len() != trims[ring].len() {
-            return Ok(refused_source(
+            return Ok(refused_material(
                 out,
                 "original-material-contour-count-mismatch",
             ));
@@ -306,18 +314,50 @@ fn prepare_closed_source(
             else {
                 out.ownership_exact_work = b.source_exact_work;
                 out.material.exact_work = out.ownership_exact_work;
-                return Ok(refused_source(out, "original-material-boundary-unproved"));
+                return Ok(refused_material(out, "original-material-boundary-unproved"));
             };
             out.ownership_exact_work += proof.work_used;
             out.material.exact_work = out.ownership_exact_work;
             if proof.outcome != cad_predicates::BezierIdentity::Equal {
-                return Ok(refused_source(out, "original-material-boundary-unproved"));
+                return Ok(refused_material(out, "original-material-boundary-unproved"));
             }
             out.material.bound_spans += 1;
         }
         original_profiles.push(spans);
     }
     out.material.certified = true;
+    Ok(PreparedMaterialAttempt::Ready(Box::new(PreparedMaterial {
+        report: out,
+        profiles: original_profiles,
+        material: LoftCap {
+            surface: material.surface.clone(),
+            trims,
+        },
+    })))
+}
+
+fn prepare_closed_source(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    material: &LoftCap,
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: OriginalClosedLimits,
+) -> Result<PreparedAttempt> {
+    if !(4..=1025).contains(&sections) || !error_budget.is_finite() || error_budget <= 0. {
+        return Err(fail("Invalid closed material sweep limits"));
+    }
+    let PreparedMaterial {
+        report: mut out,
+        profiles: original_profiles,
+        material: bound_material,
+    } = match prepare_closed_material(sweep, loop_sizes, material, tolerance_uv, limits)? {
+        PreparedMaterialAttempt::Ready(p) => *p,
+        PreparedMaterialAttempt::Refused(r) => return Ok(PreparedAttempt::Refused(r)),
+    };
+    let b = limits;
+    let profiles = sweep.source_profiles();
     let Some(faces) = out.material.bound_spans.checked_mul(sections - 1) else {
         return Err(fail("Closed periodic face count overflow"));
     };
@@ -409,10 +449,7 @@ fn prepare_closed_source(
     Ok(PreparedAttempt::Ready(Box::new(PreparedSource {
         report: out,
         profiles: original_profiles,
-        material: LoftCap {
-            surface: material.surface.clone(),
-            trims,
-        },
+        material: bound_material,
         sections: retained,
     })))
 }
@@ -542,4 +579,11 @@ pub use smooth::{
     BindingReport as AffineWallBindingReport, OriginalReport as OriginalClosedReport,
     SmoothClosedAttempt, SmoothClosedBody, SmoothClosedLimits, SmoothClosedReport,
     construct_smooth_closed_with_ideal_atlas, verify_smooth_closed_with_ideal_atlas,
+};
+
+mod classified_material;
+pub use classified_material::{
+    OriginalClassifiedClosedMaterial, OriginalClassifiedClosedMaterialAttempt,
+    OriginalClassifiedClosedMaterialLimits, OriginalClassifiedClosedMaterialRefusal,
+    OriginalClassifiedClosedMaterialWork, certify_original_classified_closed_material,
 };

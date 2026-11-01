@@ -177,10 +177,21 @@ fn geometric_arc_original_global_filled_volume_atlas() {
     let r=sweep.certify_ideal_volume_atlas([&material,&material],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],1000000,1000000).unwrap();
     assert!(r.embedding_certified && r.regularity_certified && r.parameter_topology_preserved,"{r:?}");
     eprintln!("original geometric-clock tube atlas: {r:?}");
-    for (cells,exact) in [(0,1000000),(r.cells-1,1000000),(1000000,0),(1000000,r.exact_work-1)] {
+    // A completed adaptive route need not be minimal: a smaller allowance may
+    // select a different complete cover. Genuine exhausted budgets must refuse.
+    for (cells,exact) in [(0,1000000),(1,1000000),(1000000,0),(1000000,1)] {
         let short=sweep.certify_ideal_volume_atlas([&material,&material],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],cells,exact).unwrap();
         assert!(!short.embedding_certified && !short.regularity_certified && !short.parameter_topology_preserved,"{short:?}");
         assert!(short.cells<=cells && short.exact_work<=exact);
+    }
+    for (cells,exact) in [(r.cells,1000000),(r.cells-1,1000000),(1000000,r.exact_work-1)] {
+        let bounded=sweep.certify_ideal_volume_atlas([&material,&material],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],cells,exact).unwrap();
+        assert!(bounded.cells<=cells && bounded.exact_work<=exact,"{bounded:?}");
+        assert_eq!(bounded.embedding_certified,bounded.regularity_certified,"{bounded:?}");
+        assert_eq!(bounded.embedding_certified,bounded.parameter_topology_preserved,"{bounded:?}");
+        if bounded.embedding_certified {
+            assert!(bounded.reason.is_none() && bounded.boxes>0,"{bounded:?}");
+        }
     }
 
 }

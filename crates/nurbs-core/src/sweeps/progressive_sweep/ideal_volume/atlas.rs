@@ -20,7 +20,7 @@ fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     }
     Ok(p)
 }
-fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
+pub(super) fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
     let c = projected(columns, projection)?;
     let det = iv::dot_tight(c[0], iv::cross(c[1], c[2])?)?;
     if det.lo>0. || det.hi<0. {return Ok(true);}
@@ -255,7 +255,17 @@ pub(super) fn certify(
     let tube=if regular(identity,projection)? {
         intrinsic::Tube::prepare(context,out,max_cells,max_exact_work,closed)?
     }else {None};
-    if let Some(tube)=tube {return tube.certify(context,out,max_cells,closed);}
+    if let Some(tube)=tube {
+        if tube.transverse_carrier { return tube.certify(context,out,max_cells,closed); }
+        // A full spatial section ball supplies separation only. Local credit
+        // must come from the actual complete UV/time map, never the disk
+        // theorem. Keep a bounded trial so UV refinement remains available.
+        // A fixed ceiling preserves replay at the observed exact work count;
+        // a fraction of the caller budget could select a different proof.
+        let trial = out.cells + (max_cells-out.cells).min(750000);
+        tube.certify(context,out,trial,closed)?;
+        if out.embedding_certified || out.cells==max_cells { return Ok(()); }
+    }
     certify_map(|b,out,max|context.enclose(b,out,max),projection,out,max_cells,closed)
 }
 /// One complete original UV/time chart, also usable as a fallback when a

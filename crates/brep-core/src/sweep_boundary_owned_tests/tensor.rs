@@ -186,6 +186,16 @@ fn different_original_cap_degrees_and_gauges_bind_the_complete_owned_saddle_body
             && total.exact_work <= strong_limits.exact_work
             && total.products <= strong_limits.products
     );
+    let exact_budget = strong_run(nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+        cells: total.cells,
+        exact_work: total.exact_work,
+        products: total.products,
+        ..strong_limits
+    });
+    assert!(matches!(
+        exact_budget,
+        OriginalSmoothBodyAttempt::Certified(_)
+    ));
     let prefix_cells = total.cells - strong.original().report().cells;
     let prefix_work = total.exact_work - strong.original().report().exact_work;
     assert!(prefix_cells > 0 && prefix_work > 0);

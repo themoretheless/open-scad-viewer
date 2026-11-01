@@ -2,6 +2,7 @@
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
 type P = [f64; 3];
+mod cap_reference;
 fn err(message: impl Into<String>) -> Error {
     Error::new("BREP_RATIONAL_SWEEP_REFUSED", message)
 }
@@ -71,8 +72,8 @@ fn supplied_cap(definition: &LoftCap, sections: &[Vec<Curve>]) -> Result<Cap> {
     if audit.valid != Some(true) || audit.winding.first() != Some(&Some(1)) {
         return Err(err("Authored cap trim region must have a resolved positive outer winding"));
     }
-    let u=s.knots_u[s.degree_u]*0.5+s.knots_u[s.control_points.len()]*0.5;
-    let v=s.knots_v[s.degree_v]*0.5+s.knots_v[s.control_points[0].len()]*0.5;
+    let u=cap_reference::parameter(&s.knots_u,s.degree_u,s.control_points.len())?;
+    let v=cap_reference::parameter(&s.knots_v,s.degree_v,s.control_points[0].len())?;
     let sample = s.evaluate(u,v)?;
     let (u,v) = sample.first_derivatives().ok_or_else(|| err("Cap reference derivatives are unavailable"))?;
     let normal = unit(cross(u,v))?;

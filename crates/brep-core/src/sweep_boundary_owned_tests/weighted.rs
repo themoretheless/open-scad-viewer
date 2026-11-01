@@ -90,6 +90,49 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
     assert!(r.regularity.as_ref().unwrap().all_faces_regular && r.volume.as_ref().unwrap().proven);
     assert_eq!(body.model().bodies.len(), 1);
     assert!(r.boundary_error_upper.unwrap() <= 0.05);
+    let strong = construct_with_original_smooth_volume(
+        &sweep,
+        &[4],
+        5,
+        [&source, &source],
+        [&retained[0], &retained[1]],
+        1e-8,
+        0.05,
+        limits(),
+        ideal.projection,
+        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+            order: 2,
+            cells: 100000,
+            exact_work: 1000000,
+            products: 1000000,
+        },
+    )
+    .unwrap();
+    let strong = match strong {
+        OriginalSmoothBodyAttempt::Certified(body) => body,
+        OriginalSmoothBodyAttempt::Refused(r) => panic!(
+            "moving tilted original smooth body: {}; original={:?}",
+            r.reason, r.original
+        ),
+    };
+    assert!(strong.retained_report().certified && strong.original().report().certified);
+    assert_eq!(strong.original().report().order, 2);
+    assert_eq!(strong.cap_wall_continuity(), "C0");
+    assert!(
+        strong
+            .original()
+            .report()
+            .volume
+            .parameter_topology_preserved
+    );
+    assert!(strong.retained_report().volume.as_ref().unwrap().proven);
+    assert_eq!(strong.model(), body.model());
+    eprintln!(
+        "moving tilted original C2 body: cells={} exact={} boundary_error={:?}",
+        strong.work().cells,
+        strong.work().exact_work,
+        strong.retained_report().boundary_error_upper
+    );
     // Independent authored cap representation: exact positive affine UV
     // domains, a common homogeneous weight scale, and correspondingly authored
     // trims. The owner must establish BOTH the trim pullback and the normalized

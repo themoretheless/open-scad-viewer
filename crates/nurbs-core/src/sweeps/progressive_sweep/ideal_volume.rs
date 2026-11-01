@@ -361,3 +361,5 @@ impl MultiSweep<'_> {
         Ok(out)
     }
 }
+
+pub(super) mod normalized_identity;

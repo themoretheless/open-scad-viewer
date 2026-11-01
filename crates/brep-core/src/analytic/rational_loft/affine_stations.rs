@@ -235,6 +235,14 @@ pub fn affine_station_walls(
     closed: bool,
     limits: AffineStationLimits,
 ) -> Result<AffineStationWalls> {
+    build(original,sections,sharp,closed,limits,true)
+}
+pub(crate) fn affine_station_controls(original:&[Vec<Curve>],sections:&[Vec<Vec<Curve>>],
+    limits:AffineStationLimits)->Result<AffineStationWalls> {
+    build(original,sections,&[],false,limits,false)
+}
+fn build(original:&[Vec<Curve>],sections:&[Vec<Vec<Curve>>],sharp:&[usize],closed:bool,
+    limits:AffineStationLimits,quintic:bool)->Result<AffineStationWalls> {
     let AffineStationLimits {
         quantum,
         tolerance,
@@ -390,6 +398,43 @@ pub fn affine_station_walls(
             }
         }
         stations.push(pose);
+    }
+    if !quintic {
+        // This private route certifies station controls ONLY. No quintic sides
+        // or determinant proof is published. A new owner constructs ruled
+        // walls and freshly proves their complete regularity/material volume.
+        let mut proposed=Vec::with_capacity(n);
+        let mut upper=0_f64;
+        for (station,&pose) in stations.iter().enumerate() {
+            let mut row=original.to_vec();let mut at=0;
+            for (ring,wire) in row.iter_mut().enumerate() {
+                for (span,c) in wire.iter_mut().enumerate() {
+                    for (i,p) in c.control_points.iter_mut().enumerate() {
+                        if !charge(&mut out,max) {return Ok(out);}
+                        let Some(q)=apply(pose,local[at]) else {
+                            out.reason="affine-profile-product-unproved";return Ok(out);
+                        };
+                        let mut squared=I::point(0.);
+                        for k in 0..3 {
+                            if !charge(&mut out,max) {return Ok(out);}
+                            let d=I::point(q[k]).sub(I::point(sections[station][ring][span].control_points[i][k]))?;
+                            let radius=d.lo.abs().max(d.hi.abs());
+                            squared=squared.add(I::point(radius).mul(I::point(radius))?)?;
+                        }
+                        upper=upper.max(squared.hi.max(0.).sqrt().next_up());
+                        *p=q.to_vec();at+=1;
+                    }
+                    c.knots=[vec![0.;c.degree+1],vec![1.;c.degree+1]].concat();
+                }
+            }
+            proposed.push(row);
+        }
+        out.displacement_upper=Some(upper);
+        if upper>tolerance {out.reason="affine-displacement-budget";return Ok(out);}
+        out.poses=Some(stations.windows(2).map(|p|[p[0],p[0],p[0],p[1],p[1],p[1]]).collect());
+        out.sections=Some(proposed);out.source_origin=Some(origin);
+        out.reason="bounded-exact-affine-station-profiles";
+        return Ok(out);
     }
     let is_sharp = |i: usize| {
         sharp.contains(&i)

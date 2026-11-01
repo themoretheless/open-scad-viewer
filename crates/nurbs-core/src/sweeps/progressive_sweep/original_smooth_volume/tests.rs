@@ -86,6 +86,29 @@ fn complete_original_c2_embedding_owns_filled_cap_knots_motion_and_one_budget() 
     );
     assert!(r.closed_boundary.is_none());
     assert!(std::ptr::eq(full.sweep(), &sweep) && std::ptr::eq(full.caps()[0], &c));
+    // The global volume token alone does not bind/close the profile packet.
+    // Even a declared C0 seam must freshly prove its original position.
+    let OriginalProfileBoundaryAttempt::Refused(profile) = full
+        .certify_profile_boundaries(
+            &[OriginalProfileClass::C0],
+            OriginalProfileBoundaryLimits {
+                steps: 100000,
+                cells: 100000,
+                exact_work: 1000000,
+                products: 1000000,
+            },
+        )
+        .unwrap()
+    else {
+        panic!("unclosed source trace manufactured a boundary token")
+    };
+    assert!(!profile.certified);
+    assert_eq!(
+        profile.reason,
+        Some("original-profile-boundary-position-unproved")
+    );
+    assert_eq!(profile.uncertain_join, Some([0, 0]));
+
     let exact = OriginalSmoothVolumeLimits {
         cells: r.cells,
         exact_work: r.exact_work,
@@ -277,6 +300,23 @@ fn complete_closed_spatial_original_c2_embedding_includes_caps_and_periodic_moti
             .differential_compatibility_certified
             && r.closed_boundary.as_ref().unwrap().order == 2
     );
+    let OriginalProfileBoundaryAttempt::Certified(profile_boundary) = body
+        .certify_profile_boundaries(
+            &[OriginalProfileClass::G2; 4],
+            OriginalProfileBoundaryLimits {
+                steps: 100000,
+                cells: 100000,
+                exact_work: 1000000,
+                products: 1000000,
+            },
+        )
+        .unwrap()
+    else {
+        panic!("closed original G2 profile coverage lost its volume anchor")
+    };
+    assert!(std::ptr::eq(profile_boundary.volume(), &*body));
+    assert_eq!(profile_boundary.report().inspected_joins, 4);
+    assert_eq!(profile_boundary.report().smooth_joins, 4);
     let OriginalSmoothVolumeAttempt::Refused(short) = sweep
         .certify_original_smooth_volume_atlas(
             [&c, &c],
