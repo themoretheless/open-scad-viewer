@@ -1,0 +1,14 @@
+{
+  "schema": "full-nurbs-library-check/1",
+  "scope": "Default-feature nurbs-core library after NACA5 correction; not full workspace/application. Public suites have separate 72-test receipt.",
+  "sourceCommit": "e0469e4ab",
+  "passed": 2043,
+  "failed": 0,
+  "existingIgnored": 1,
+  "filteredOut": 0,
+  "exitCode": 0,
+  "sourceManifestSha256": "676bba70f96594fdccb1f1088adbdda7012312d7a3e226b9d9d6b0b576ce876a",
+  "testBinarySha256": "454c8efb316c6bb931cc932e6ef2ede2a745a37ed47b4ef7805983391727e76e",
+  "logSha256": "51ea53b913a01b9c5a0a5a60870fa8012fd361f3c4b6ddfcda9a8124a08acf73",
+  "mainPushed": false
+}

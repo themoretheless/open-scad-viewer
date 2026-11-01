@@ -1,0 +1,84 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "contracts": [
+    "NURBS-0220",
+    "NURBS-0221"
+  ],
+  "baseCommit": "e0469e4abf96b9518977ecd3abbae71870fad2f0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/airfoil.rs": "d956de0600462a2f7daee9bbee47440ca369c0cf6a03e99b16e5a46c7097d46f",
+    "crates/nurbs-core/src/construct/curves/airfoil/cst_frame.rs": "23f98e7407535804046950c4f8bcb64512db0d95ea3a5f8713e1ba3ef5f108ba",
+    "crates/nurbs-core/src/construct/curves/airfoil/algorithm_cst_fit.rs": "463df634a9b7ea5eef8de14046002552d3396b80f417e82547a006fb73c578f9",
+    "crates/nurbs-core/src/construct/curves/airfoil/algorithm_cst_points.rs": "a96c1e32d30e16bf640afc1ce22169c8be586f59c8731cde6ebf5bd5435ee2ba",
+    "crates/nurbs-core/tests/cst_contracts.rs": "819c4f1ac5e4b187e47fa0923089c4337991e1db21055a3440cc052191301c66"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/29d1630e5e32c631/out/affine_support-29d1630e5e32c631",
+      "sha256": "728b2efe407a9a0deb5c7572c1b03b714e07101d4087bd665ea8b37c87a42c5e"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/28da9c0aae23dd1a/out/airfoil_standard_contracts-28da9c0aae23dd1a",
+      "sha256": "b51224f9f0b87bedef7b61bc51e1ed56b0bf11e544cc77cadc4b2d28983ac80d"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e705ba731820a2bf/out/biarc_contracts-e705ba731820a2bf",
+      "sha256": "6b35abbc0fb75704cf0f89b1bd64c79323a5fc8623ebc786966a34915ad514ed"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e5ff2236962c9b4b/out/class_a_contracts-e5ff2236962c9b4b",
+      "sha256": "c2c17a4619325cb9d66b8816691a5316f715845e5f7b0899ae2251374bdda648"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/80ae3ba2c25afaa9/out/cloud_processing_contracts-80ae3ba2c25afaa9",
+      "sha256": "3acf74ffffacf3f39fa8a25773069430ac0f791352a2a4587c9637f1eb8b7676"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/8a66650107614675/out/cst_contracts-8a66650107614675",
+      "sha256": "5bee456a1b990d983b0e0ce3a3ab4df0ce97f8830ea5289f3ebaddc9bdddce16"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5566724bf219ffb0/out/curvature_reconstruction_contracts-5566724bf219ffb0",
+      "sha256": "e9f2e19c3ebbe558445a9445ce8bd4f9612075d1b9d8474037501435010972df"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/8101cd5935423a18/out/curve_extension_contracts-8101cd5935423a18",
+      "sha256": "085d36f29814a9c7e997cca775df3e2711f6d685e38ef4b4c8095681410001bc"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5e868672d2fcac3a/out/linear_simplification-5e868672d2fcac3a",
+      "sha256": "fa0894ae2d9e272e73f41099a7ff8b5d534e95b93f0c0181c5ca7275b339a9fb"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/befd5fa5646fc592/out/primitive_fit_contracts-befd5fa5646fc592",
+      "sha256": "14c10fd0d2b645ce4c2b06fcfe8d00d04f255051b3a1b12a01b8df1d65367900"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/bd5102dc12f36f9b/out/surface_extension_contracts-bd5102dc12f36f9b",
+      "sha256": "445d839adcf65fc6fc825ccf0aab75f372c34a2954709ac2388406ba6047bdfb"
+    }
+  ],
+  "tests": {
+    "passed": 82,
+    "failed": 0,
+    "ignored": 0,
+    "filteredOut": 0,
+    "newCstContracts": 10
+  },
+  "commandExitCode": 0,
+  "logSha256": "cb9250f68fa83a9766181a21f434aa39311d85bff498627337314462a8de9459",
+  "command": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --test cst_contracts --test airfoil_standard_contracts --test curvature_reconstruction_contracts --test biarc_contracts --test curve_extension_contracts --test surface_extension_contracts --test linear_simplification --test cloud_processing_contracts --test class_a_contracts --test affine_support --test primitive_fit_contracts --locked --offline",
+  "targetDir": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target",
+  "proofScope": "Numerical CST construction and inverse model fitting in authored frames, with side labels and separate physical residuals. No continuous error, exact frame, Gk, topology or aerodynamic certificate. Two capabilities; frame/input variants are not additional figures.",
+  "fullCurrentWorkspaceQualified": false,
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "mainPushed": false,
+  "noDefaultFeaturesCheck": {
+    "passed": true,
+    "exitCode": 0,
+    "logSha256": "58ccc52004d5470c6d95027a8db1d232c93792775fd0a024ace7ae49cce4fa8c",
+    "command": "CARGO_BUILD_JOBS=2 cargo check --manifest-path crates/Cargo.toml -p nurbs-core --lib --no-default-features --locked --offline"
+  }
+}

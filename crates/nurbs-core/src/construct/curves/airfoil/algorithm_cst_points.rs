@@ -37,5 +37,6 @@ pub fn cst_points(profile: &CstProfile, chord: f64, count: usize) -> Result<Vec<
         let x = station(i);
         points.push([chord * x, chord * cst_shape(x, profile.n1, profile.n2, &profile.lower), 0.]);
     }
+    crate::numeric(points.iter().flatten().all(|v|v.is_finite()), "CST sampling overflowed")?;
     Ok(points)
 }
