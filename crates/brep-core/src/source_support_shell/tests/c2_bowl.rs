@@ -243,6 +243,21 @@ fn parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods() {
     let r = smooth::qualify_c2_pole_neighborhoods(&boundary, 100000).unwrap();
     let atlas = r.certificate.expect(r.reason);
     assert_eq!(atlas.neighborhoods().len(), 2);
+    let original = body.definition().unwrap();
+    let whole = crate::source_volume::regularity::stratified::qualify(&atlas, 100000, 100000).unwrap();
+    let (cells, steps) = (whole.cells, whole.steps);
+    let regular = whole.certificate.expect(whole.reason);
+    assert!(std::ptr::eq(regular.body(), &body));
+    assert!(std::ptr::eq(regular.poles(), &atlas));
+    assert_eq!(regular.faces().len(), body.geometry().shell().faces().len());
+    assert_eq!(regular.faces().iter().filter(|f| matches!(f,
+        crate::source_volume::regularity::stratified::Face::Polar { .. })).count(), 8);
+    assert!(crate::source_volume::regularity::stratified::qualify(&atlas, cells, steps).unwrap().certificate.is_some());
+    assert!(crate::source_volume::regularity::stratified::qualify(&atlas, cells-1, steps).unwrap().certificate.is_none());
+    assert!(crate::source_volume::regularity::stratified::qualify(&atlas, cells, steps-1).unwrap().certificate.is_none());
+    assert!(crate::source_volume::regularity::stratified::qualify(&atlas, 0, steps).unwrap().certificate.is_none());
+    assert!(crate::source_volume::regularity::stratified::qualify(&atlas, cells, 0).unwrap().certificate.is_none());
+    assert_eq!(body.definition().unwrap(), original);
     for n in atlas.neighborhoods() {
         assert_eq!(n.dropped_axis(), 2);
         assert!(n.projected_radius_lower() > 0.);

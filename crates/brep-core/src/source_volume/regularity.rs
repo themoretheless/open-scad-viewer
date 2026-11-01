@@ -5,6 +5,7 @@
 use super::Body;
 use crate::source_seam_tangency::Carrier;
 use nurbs_core::{Error, Result, surface_regularity};
+pub mod stratified;
 
 pub struct RegularBody<'a, E: Carrier> {
     body: &'a Body<E>,
