@@ -11,6 +11,60 @@ fn quadratic(points: [[f64; 2]; 3]) -> Curve {
     }
 }
 #[test]
+fn exact_tangent_planes_do_not_authorize_a_material_cusp() {
+    let curves = vec![
+        quadratic([[-1., -1.], [-0.5, 0.], [0., 0.]]),
+        quadratic([[0., 0.], [-0.5, 0.], [-1., 1.]]),
+        Curve::from_polyline(vec![vec![-1., 1.], vec![-1., -1.]]).unwrap(),
+    ];
+    let model = crate::prism::extrude(&[curves], 0., 3.).unwrap();
+    let r = prepare(&model, limits()).unwrap();
+    let shell = r.shell.expect(r.reason);
+    let index = shell
+        .edges()
+        .iter()
+        .position(|e| {
+            e.world()
+                .control_points
+                .iter()
+                .all(|p| p[0] == 0. && p[1] == 0.)
+        })
+        .unwrap();
+    let edge = &shell.edges()[index];
+    let before = edge.definition();
+    let planes = seams::qualify_tangency_exact(
+        edge,
+        seams::Limits {
+            max_sine_squared: 0.,
+            cells: 10000,
+            curve_spans: 10000,
+            normal_spans: 10000,
+        },
+        1,
+        100000000,
+    )
+    .unwrap();
+    assert!(planes.seam.is_some(), "{}", planes.reason);
+    let pair = shell.uses()[index];
+    let regions = shell.regions().unwrap();
+    let sign = regions[pair[0].face].chart_winding() * regions[pair[1].face].chart_winding();
+    // This checks the native signed-anchor premise after exact full-plane
+    // admission. It does NOT claim this cusp has a globally admitted Body.
+    let r = seams::material_orientation::inspect_anchor(
+        edge,
+        sign,
+        seams::material_orientation::Limits {
+            steps: 0,
+            curve_spans: 100000,
+            normal_spans: 100000,
+        },
+    )
+    .unwrap();
+    assert!(!r.positive);
+    assert_eq!(r.reason, "source-material-smooth-seam-opposed-normals");
+    assert_eq!(edge.definition(), before);
+}
+#[test]
 fn closed_curved_prism_has_exact_g1_with_an_actual_curvature_jump() {
     let curves = vec![
         quadratic([[-1., 1.], [-0.5, 0.], [0., 0.]]),
@@ -78,6 +132,43 @@ fn closed_curved_prism_has_exact_g1_with_an_actual_curvature_jump() {
     };
     let r = seams::qualify_exact_smooth_collection(&collection, &axes, limits()).unwrap();
     let proof = r.certificate.expect(r.reason);
+    let orient = seams::material_orientation::qualify(
+        &proof,
+        seams::material_orientation::Limits {
+            steps: 100000,
+            curve_spans: 100000,
+            normal_spans: 100000,
+        },
+    )
+    .unwrap();
+    let oriented = orient.certificate.expect(orient.reason);
+    assert!(std::ptr::eq(oriented.exact(), &proof));
+    assert_eq!(oriented.edges(), &[index]);
+    let tight_orientation = seams::material_orientation::Limits {
+        steps: orient.steps,
+        curve_spans: orient.curve_spans,
+        normal_spans: orient.normal_spans,
+    };
+    assert!(
+        seams::material_orientation::qualify(&proof, tight_orientation)
+            .unwrap()
+            .certificate
+            .is_some()
+    );
+    for dim in 0..3 {
+        let mut l = tight_orientation;
+        match dim {
+            0 => l.steps -= 1,
+            1 => l.curve_spans -= 1,
+            _ => l.normal_spans -= 1,
+        }
+        assert!(
+            seams::material_orientation::qualify(&proof, l)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+    }
     assert!(std::ptr::eq(proof.original(), &collection));
     assert_eq!(proof.tangent_seams().len(), 1);
     assert_eq!(proof.tangent_seams()[0].0, index);

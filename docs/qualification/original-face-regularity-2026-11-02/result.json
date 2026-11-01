@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--lib",
+    "--",
+    "--nocapture"
+  ],
+  "exitCode": 0,
+  "seconds": 878.71,
+  "sourceUnchanged": true,
+  "sourceFiles": 2874,
+  "summary": [
+    "test result: ok. 2064 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 628.98s"
+  ]
+}
