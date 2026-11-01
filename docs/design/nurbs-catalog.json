@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 216,
-  "unallocatedCount": 784,
+  "specifiedCount": 218,
+  "unallocatedCount": 782,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -5983,6 +5983,42 @@
       ],
       "remainingQualification": [
         "numerical construction only; requested continuity is not a certified G2 or B-rep claim",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0217",
+      "name": "восстановление плоской кривой по знаковой кривизне с отчётом интегрирования",
+      "status": "native",
+      "prioritySet": "native-1000-curvature-biarc",
+      "category": "Восстановление и аппроксимация кривых",
+      "nativeApi": "nurbs_core::curve_reconstruction::reconstruct_from_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/curve_reconstruction.rs",
+        "crates/nurbs-core/tests/curvature_reconstruction_contracts.rs",
+        "docs/design/nurbs-curvature-reconstruction.md",
+        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0218",
+      "name": "численная аппроксимация конечными биарками с проверкой концов дуг",
+      "status": "native",
+      "prioritySet": "native-1000-curvature-biarc",
+      "category": "Восстановление и аппроксимация кривых",
+      "nativeApi": "nurbs_core::biarc::fit_biares_report",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/biarc.rs",
+        "crates/nurbs-core/tests/biarc_contracts.rs",
+        "docs/design/nurbs-biarc-fitting.md",
+        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

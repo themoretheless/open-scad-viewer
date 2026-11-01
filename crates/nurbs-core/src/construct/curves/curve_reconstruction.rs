@@ -1,27 +1,39 @@
-//! Planar curve reconstruction from sampled signed curvature (item 330).
-//! θ(s) = θ₀ + ∫κ ds is accumulated with composite Simpson quadrature; the
-//! position follows from the Euler (Fresnel-style) integrals
-//! x(s) = x₀ + ∫cos θ ds, y(s) = y₀ + ∫sin θ ds, also by composite Simpson
-//! over the θ sites. A two-level Simpson estimate quantifies the quadrature
-//! error (Runge: |I - I_h| ≈ |I_h - I_{2h}| / 15 for the composite Simpson
-//! rule); accumulation is documented as O(h⁴) per the composite Simpson rule
-//! plus linear binary64 rounding growth in the site count. The reconstructed
-//! sites are fitted back to a NURBS via `fit_curve_adaptive`.
-use crate::{Result, check, curve::Curve, numeric};
+//! Planar reconstruction from piecewise-linear sampled signed curvature.
+//! Each curvature panel has a quadratic tangent angle, integrated exactly in
+//! real arithmetic. Displacement uses two half-panel Simpson steps. The sum
+//! of local fine/coarse differences divided by 15 is a diagnostic estimate,
+//! not a bound or a protection against oscillatory aliasing. The resulting
+//! sites are fitted numerically to a NURBS with explicit convergence status.
+use crate::{Result, check, curve::Curve, numeric, resource};
+
+/// Shared maximum number of curvature integration panels per call.
+pub const MAX_INTEGRATION_PANELS: usize = 4096;
 
 #[derive(Clone, Debug)]
 pub struct ReconstructionReport {
     /// Planar NURBS fitted to the reconstructed sites (z = 0).
     pub curve: Curve,
-    /// Maximum residual between the fitted curve's signed curvature and the
-    /// input κ, resampled at the input arc-length sites.
+    /// Maximum defined curvature residual at parameters linearly mapped from
+    /// input s to the fit domain. This is not true arc-length inversion.
+    /// Inspect undefined_curvature_sites before using this diagnostic.
     pub max_residual_curvature: f64,
     /// Total arc length covered by the samples (`s_last - s_first`).
     pub length: f64,
-    /// Composite-Simpson quadrature error estimate on the total displacement
-    /// (two-level Runge estimate |I_h − I_{2h}| / 15); documentation-grade,
-    /// not a certified bound.
+    /// Sum of local two-level Simpson displacement error estimates divided
+    /// by 15. Diagnostic only, not a continuous or certified error bound.
     pub quadrature_error_estimate: f64,
+    /// Integrated sites before NURBS fitting, in input station order.
+    pub sites: Vec<[f64; 3]>,
+    /// Integrated tangent angles at the input stations.
+    pub tangent_angles: Vec<f64>,
+    /// Maximum fitting deviation at data sites, not a continuous error bound.
+    pub fitted_site_max_deviation: f64,
+    /// Whether the numerical fitter reached the requested data-site tolerance.
+    pub fit_converged: bool,
+    /// Sites where the fitted curve has no defined nonzero-speed curvature.
+    pub undefined_curvature_sites: usize,
+    /// Number of integration panels consumed from MAX_INTEGRATION_PANELS.
+    pub integration_panels: usize,
 }
 
 /// Reconstruct a planar curve from signed curvature κ sampled at arc-length
@@ -30,8 +42,10 @@ pub struct ReconstructionReport {
 ///
 /// `start` is the position at `s_first` (only x/y are used; z is set to 0)
 /// and `start_tangent_angle` is θ(s_first) in radians. The sampled sites are
-/// fitted to a cubic NURBS within `tolerance`; the report includes the
-/// curvature residual of the fit at the input sites.
+/// fitted to a cubic NURBS (quadratic for three sites). `tolerance` is a
+/// requested data-site fitting tolerance; inspect fit_converged and the
+/// reported deviation. No continuous reconstruction error bound is returned.
+/// Curvature between input stations is defined by linear interpolation.
 pub fn reconstruct_from_curvature(
     kappa: &[(f64, f64)],
     start: [f64; 3],
@@ -67,69 +81,78 @@ pub fn reconstruct_from_curvature(
     )?;
     let n = kappa.len();
 
-    // θ(s) at each site by cumulative composite Simpson on the κ samples
-    // (panel pairs share their left prefix, accumulated incrementally).
     let mut theta = Vec::with_capacity(n);
     theta.push(start_tangent_angle);
+    let mut x = vec![start[0]];
+    let mut y = vec![start[1]];
+    let mut quadrature_error_estimate = 0.;
+    let mut integration_panels = 0;
     for i in 1..n {
         let (s0, k0) = kappa[i - 1];
         let (s1, k1) = kappa[i];
         let h = s1 - s0;
-        // Midpoint κ from linear interpolation between samples; the panel
-        // Simpson step is then exact for quadratic κ and O(h⁵) otherwise.
-        let km = 0.5 * (k0 + k1);
-        let panel = h * (k0 + 4. * km + k1) / 6.;
-        theta.push(theta[i - 1] + panel);
-    }
-    numeric(
-        theta.iter().all(|t| t.is_finite()),
-        "Reconstruction tangent angle exhausted finite precision",
-    )?;
-
-    // Fresnel integrals: cos θ, sin θ at the sites, then composite Simpson
-    // per panel. Non-uniform spacing is handled panel-wise with the midpoint
-    // from linear θ interpolation (Hermite-consistent with the κ quadrature).
-    let mut x = vec![start[0]];
-    let mut y = vec![start[1]];
-    for i in 1..n {
-        let h = kappa[i].0 - kappa[i - 1].0;
-        let (t0, t1) = (theta[i - 1], theta[i]);
-        let tm = 0.5 * (t0 + t1);
-        let ci = [t0.cos(), tm.cos(), t1.cos()];
-        let si = [t0.sin(), tm.sin(), t1.sin()];
-        x.push(x[i - 1] + h * (ci[0] + 4. * ci[1] + ci[2]) / 6.);
-        y.push(y[i - 1] + h * (si[0] + 4. * si[1] + si[2]) / 6.);
+        let t0 = theta[i - 1];
+        // Integral of k0 + (k1-k0)*t/h at t = fraction*h.
+        // In particular the midpoint angle is not (theta0+theta1)/2.
+        let angle = |f: f64| t0 + h * (k0 * f + (k1 - k0) * (0.5 * f * f));
+        // Bound angle travel on each integration cell by 0.5 rad.
+        // All source panels share one fixed work budget. Large oscillatory
+        // inputs are refused instead of aliased into an apparently good fit.
+        let turn = h * k0.abs().max(k1.abs());
+        let parts_f = (turn / 0.5).ceil().max(1.);
+        if !parts_f.is_finite()
+            || parts_f > (MAX_INTEGRATION_PANELS - integration_panels) as f64 {
+            return Err(resource("Curvature integration exceeds the shared panel budget"));
+        }
+        let parts = parts_f as usize;
+        integration_panels += parts;
+        let mut total_dx = 0.;
+        let mut total_dy = 0.;
+        for part in 0..parts {
+            let f0 = part as f64 / parts as f64;
+            let fraction = 1. / parts as f64;
+            let angles = [angle(f0), angle(f0 + fraction * 0.25),
+                angle(f0 + fraction * 0.5), angle(f0 + fraction * 0.75),
+                angle((part + 1) as f64 / parts as f64)];
+            numeric(angles.iter().all(|t| t.is_finite()),
+                "Reconstruction tangent angle exhausted finite precision")?;
+            numeric(turn == 0. || angles.iter().any(|&t| t != t0),
+                "Curvature rotation is not resolvable at the supplied angle")?;
+            let cs = angles.map(f64::cos);
+            let sn = angles.map(f64::sin);
+            let step = h / parts as f64;
+            let fine = |v: [f64; 5]| step * ((v[0] + v[4]) / 12.
+                + (v[1] + v[3]) / 3. + v[2] / 6.);
+            let coarse = |v: [f64; 5]| step * ((v[0] + v[4]) / 6. + 2. * v[2] / 3.);
+            let dx = fine(cs);
+            let dy = fine(sn);
+            total_dx += dx;
+            total_dy += dy;
+            quadrature_error_estimate += (dx - coarse(cs)).hypot(dy - coarse(sn)) / 15.;
+        }
+        x.push(x[i - 1] + total_dx);
+        y.push(y[i - 1] + total_dy);
+        theta.push(angle(1.));
     }
     numeric(
         x.iter().chain(y.iter()).all(|v| v.is_finite() && v.abs() <= 1e9),
         "Reconstruction position exhausted finite precision",
     )?;
-
-    // Two-level Simpson error estimate on the total displacement: coarse
-    // (every second panel) vs fine quadrature; |I_h - I_2h|/15 estimates the
-    // fine-rule error. Documented, not enforced — it informs the caller.
-    let mut coarse_dx = 0.;
-    let mut coarse_dy = 0.;
-    let mut i = 0;
-    while i + 2 < n {
-        let h = kappa[i + 2].0 - kappa[i].0;
-        let (t0, t1, t2) = (theta[i], theta[i + 1], theta[i + 2]);
-        coarse_dx += h * (t0.cos() + 4. * t1.cos() + t2.cos()) / 6.;
-        coarse_dy += h * (t0.sin() + 4. * t1.sin() + t2.sin()) / 6.;
-        i += 2;
-    }
-    let quadrature_error_estimate =
-        ((x[n - 1] - x[0]) - coarse_dx).hypot((y[n - 1] - y[0]) - coarse_dy) / 15.;
-    numeric(
-        quadrature_error_estimate.is_finite(),
-        "Reconstruction quadrature estimate exhausted finite precision",
-    )?;
+    numeric(quadrature_error_estimate.is_finite(),
+        "Reconstruction quadrature estimate exhausted finite precision")?;
 
     let sites: Vec<[f64; 3]> = (0..n).map(|i| [x[i], y[i], 0.]).collect();
-    let (curve, _max_deviation, _converged) =
-        crate::curve_offset::fit_offset_sites(&sites, tolerance)?;
+    let (curve, fitted_site_max_deviation, fit_converged) = if n == 3 {
+        let fit = crate::foundation::interpolation::fit_curve_adaptive(
+            &sites, 2, tolerance,
+            crate::foundation::interpolation::Parameterization::ChordLength, None, true,
+        )?;
+        (fit.curve, fit.max_deviation, fit.converged)
+    } else {
+        crate::curve_offset::fit_offset_sites(&sites, tolerance)?
+    };
     numeric(
-        _max_deviation.is_finite(),
+        fitted_site_max_deviation.is_finite(),
         "Reconstruction fit deviation is not finite",
     )?;
     let fit_curve = curve;
@@ -138,6 +161,7 @@ pub fn reconstruct_from_curvature(
     // arc-length-mapped parameters against the input κ samples.
     let [a, b] = fit_curve.domain();
     let mut max_residual_curvature: f64 = 0.;
+    let mut undefined_curvature_sites = 0;
     for &(s, k) in kappa.iter() {
         let u = a + (b - a) * (s - kappa[0].0) / length;
         let e = fit_curve.evaluate(u)?;
@@ -145,8 +169,16 @@ pub fn reconstruct_from_curvature(
             let speed = d1[0].hypot(d1[1]);
             if speed > 0. {
                 let fitted = (d1[0] * d2[1] - d1[1] * d2[0]) / speed.powi(3);
-                max_residual_curvature = max_residual_curvature.max((fitted - k).abs());
+                if fitted.is_finite() {
+                    max_residual_curvature = max_residual_curvature.max((fitted - k).abs());
+                } else {
+                    undefined_curvature_sites += 1;
+                }
+            } else {
+                undefined_curvature_sites += 1;
             }
+        } else {
+            undefined_curvature_sites += 1;
         }
     }
     numeric(
@@ -158,6 +190,12 @@ pub fn reconstruct_from_curvature(
         max_residual_curvature,
         length,
         quadrature_error_estimate,
+        sites,
+        tangent_angles: theta,
+        fitted_site_max_deviation,
+        fit_converged,
+        undefined_curvature_sites,
+        integration_panels,
     })
 }
 
