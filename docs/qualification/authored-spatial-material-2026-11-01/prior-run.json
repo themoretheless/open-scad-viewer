@@ -1,0 +1,9 @@
+{
+  "path": "/Users/themoretheless/.codex/tmp/osv-guided-closed-material-20261101",
+  "focusedGroups": 30,
+  "focusedNative": 309,
+  "focusedExitCode": 0,
+  "nurbsFull": "2056 passed, 1 failed, 1 ignored: adaptive-budget minimality assumption",
+  "brepFull": "interrupted, process confirmed absent; no terminal result",
+  "revision": "Correct budget-contract test; add complete RMF arc-clock group to focused qualification."
+}
