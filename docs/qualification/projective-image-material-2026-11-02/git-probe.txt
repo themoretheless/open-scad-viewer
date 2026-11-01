@@ -1,0 +1,13 @@
+git rev-parse HEAD
+0eef25b69cbd404885a8da699c5c19a9d4138aa3
+
+git branch --show-current
+codex/source-projective-image-20261102-fba57ef
+
+git remote -v
+origin	git@github.com:themoretheless/open-scad-viewer.git (fetch)
+origin	git@github.com:themoretheless/open-scad-viewer.git (push)
+
+git status --short --branch
+## codex/source-projective-image-20261102-fba57ef
+?? docs/qualification/projective-image-material-2026-11-02/

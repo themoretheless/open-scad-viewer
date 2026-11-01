@@ -1,0 +1,26 @@
+[
+  {
+    "name": "guided-affine-nonplanar-hole-before-spatial-balls",
+    "exitCode": 101,
+    "nativeVolumeCells": 999970,
+    "aggregateCellLimit": 1000000,
+    "globalFlags": false,
+    "reason": "ideal-volume-work-limit",
+    "fixtureSha256": "b904ad4e713fc8ff33faf5b51bf7a8e4369c1e1dd61db390c2cee5398816e868",
+    "implementationBasis": "Prior 302-native frozen source plus the new guided test module; original geometry unchanged for this rejected attempt.",
+    "log": "rejected-guided-before-spatial-balls.log.gz"
+  },
+  {
+    "name": "prior-full-nurbs-adaptive-minimality-assumption",
+    "log": "prior-failed-full-nurbs-core.log.gz",
+    "sourceSnapshot": "/Users/themoretheless/.codex/tmp/osv-guided-closed-material-20261101/source-after.json",
+    "result": "2056 passed, 1 failed, 1 ignored; RMF budget test assumed a previous adaptive cover was minimal. Full brep process interrupted without terminal receipt.",
+    "promoted": false
+  },
+  {
+    "name": "line-image-material-test-compile-assertion",
+    "log": "material-compile-assertion.log.gz",
+    "promoted": false,
+    "result": "Compiler-only failure: LoftCap has no comparison/debug traits. Test compares original surface/trims separately after correction. No geometry result from this attempt."
+  }
+]
