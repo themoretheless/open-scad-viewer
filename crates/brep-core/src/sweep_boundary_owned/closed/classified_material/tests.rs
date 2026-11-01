@@ -384,3 +384,5 @@ fn rational_material_g1_jumps_are_bound_to_the_actual_uv_clock() {
 }
 
 mod guided;
+
+mod authored;

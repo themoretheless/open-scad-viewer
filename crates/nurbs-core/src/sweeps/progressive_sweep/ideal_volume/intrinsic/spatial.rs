@@ -6,6 +6,7 @@ struct RateCell {
     omega: f64,
     bend: f64,
     coefficients: affine::FullCoefficients,
+    path_velocity: V3,
 }
 pub(super) struct Cover {
     cells: Vec<RateCell>,
@@ -15,6 +16,7 @@ impl Cover {
         c: &cell::Context<'_, '_>,
         out: &mut IdealVolumeReport,
         max: usize,
+        path_aligned: bool,
     ) -> Result<Option<Self>> {
         let mut pending = (0..256)
             .rev()
@@ -43,7 +45,24 @@ impl Cover {
                     return Ok(None);
                 };
                 let omega = frame_bounds::angular(&frame)?;
-                let bend = iv::norm(jets[1])?.div(c.arc.as_ref().unwrap().length())?.hi;
+                let (bend, path_velocity) = if path_aligned {
+                    (
+                        iv::norm(jets[1])?.div(c.arc.as_ref().unwrap().length())?.hi,
+                        [I::point(0.), I::point(0.), c.arc.as_ref().unwrap().length()],
+                    )
+                } else {
+                    // General authored/fixed frames need the COMPLETE R^T P_s.
+                    // No alignment of their third axis with the path is assumed.
+                    let mut velocity = [I::point(0.); 3];
+                    for (k, axis) in [&frame.transverse, &frame.binormal, &frame.longitudinal]
+                        .into_iter()
+                        .enumerate()
+                    {
+                        velocity[k] =
+                            iv::dot_tight(decode(axis.as_ref().unwrap().value)?, jets[0])?;
+                    }
+                    (omega, velocity)
+                };
                 let Some(coefficients) = affine::full_coefficients(c.s, domain, out, max)? else {
                     return Ok(None);
                 };
@@ -52,6 +71,7 @@ impl Cover {
                     omega,
                     bend,
                     coefficients,
+                    path_velocity,
                 }))
             })()?;
             let width = I::point(domain[1]).sub(I::point(domain[0]))?;
@@ -100,7 +120,7 @@ pub(super) fn certify(
         [tail, head] => tube.closed && tail[2][1] == 1. && head[2][0] == 0.,
         _ => false,
     };
-    if !connected || !tube.path_aligned || !c.same_cap() || out.cells == max {
+    if !connected || !c.same_cap() || out.cells == max {
         return Ok(false);
     }
     let Some(cover) = &tube.spatial_cover else {
@@ -113,7 +133,6 @@ pub(super) fn certify(
     };
     let q = local(iv::sub(cap[0], c.start)?, c.basis)?;
     let derivatives = [local(cap[1], c.basis)?, local(cap[2], c.basis)?];
-    let length = c.arc.as_ref().unwrap().length();
     let mut columns: Option<[V3; 3]> = None;
     let mut angle = I::point(0.);
     for piece in pieces {
@@ -142,9 +161,9 @@ pub(super) fn certify(
                 value[k] = coeff.value[k].mul(q[k])?.add(coeff.center[k])?;
                 velocity[k] = coeff.first[k].mul(q[k])?.add(coeff.center_first[k])?;
             }
-            // W=R^T R' is skew. Since R e_z=T and P_s=L*T, its two
-            // transverse angular components are bounded by |T_s|, independently
-            // of potentially fast spin about T. All axial carrier terms remain.
+            // W=R^T R' is skew. The path-aligned case uses |T_s| for
+            // transverse angular components; general frames use full Omega.
+            // Every source translation component and axial carrier term remains.
             let spin = I::new(-rate.omega, rate.omega)?;
             let bend = I::new(-rate.bend, rate.bend)?;
             velocity[0] = velocity[0]
@@ -155,8 +174,13 @@ pub(super) fn certify(
                 .add(bend.mul(value[2])?)?;
             velocity[2] = velocity[2]
                 .add(bend.mul(value[0])?)?
-                .add(bend.mul(value[1])?)?
-                .add(length)?;
+                .add(bend.mul(value[1])?)?;
+            for k in 0..3 {
+                let path = rate.path_velocity[k];
+                if path.lo != 0. || path.hi != 0. {
+                    velocity[k] = velocity[k].add(path)?;
+                }
+            }
             let mut current = [[I::point(0.); 3]; 3];
             for j in 0..2 {
                 for k in 0..3 {

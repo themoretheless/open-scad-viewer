@@ -145,9 +145,9 @@ impl Tube {
         };
         let path_aligned = s.frame_laws.is_none()
             && (s.orientation_guide.is_some() || s.options.orientation != Orientation::Fixed);
-        let spatial_cover = if !transverse_carrier && path_aligned && c.same_cap() {
+        let spatial_cover = if !transverse_carrier && c.same_cap() {
             let stage = max.min(out.cells.saturating_add(100000));
-            spatial::Cover::build(c, out, stage)?
+            spatial::Cover::build(c, out, stage, path_aligned)?
         } else {
             None
         };
