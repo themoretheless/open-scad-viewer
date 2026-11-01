@@ -192,6 +192,11 @@ fn parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods() {
     .unwrap();
     let body = r.body.expect(r.reason);
     assert!(body.volume()[0] <= 16. && body.volume()[1] >= 16.);
+    // A physical C2 pole does not make its collapsed original parameter
+    // chart rank two. The ordinary-face owner must not silently waive it.
+    let regular = crate::source_volume::regularity::qualify(&body, 100000).unwrap();
+    assert!(regular.certificate.is_none());
+    assert_eq!(regular.reason, "source-polar-neighborhood-required");
     let faces = body
         .geometry()
         .shell()
