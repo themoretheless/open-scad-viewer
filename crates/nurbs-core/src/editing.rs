@@ -8,3 +8,4 @@ pub mod morph;
 pub mod fairing;
 pub mod surface_fairing;
 pub mod deform;
+pub mod linear_simplification;

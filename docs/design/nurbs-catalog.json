@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 213,
-  "unallocatedCount": 787,
+  "specifiedCount": 214,
+  "unallocatedCount": 786,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -5929,6 +5929,24 @@
       ],
       "remainingQualification": [
         "sampled heuristic only; no complete reconstruction or B-rep certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0214",
+      "name": "точное упрощение полилинейной NURBS без изменения параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::linear_simplification::simplify",
+      "evidence": [
+        "crates/nurbs-core/src/editing/linear_simplification.rs",
+        "crates/nurbs-core/tests/linear_simplification.rs",
+        "docs/design/nurbs-exact-linear-simplification.md",
+        "docs/qualification/nurbs-exact-linear-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "degree-one constant-weight nominal definitions only; no B-rep authority or evaluator roundoff bound",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

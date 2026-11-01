@@ -44,6 +44,7 @@ pub use crate::construct::surfaces::sections::sweep_section_projection;
 pub use crate::construct::surfaces::sections::circle_repair as section_circle_repair;
 pub use crate::construct::surfaces::sections::phase as section_phase;
 pub use crate::editing::weight_edit;
+pub use crate::editing::linear_simplification;
 pub use crate::construct::curves::engineering_profiles;
 pub use crate::construct::surfaces::boundary_fill;
 pub use crate::core::bounds;
