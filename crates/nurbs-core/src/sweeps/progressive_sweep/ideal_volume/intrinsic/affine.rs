@@ -269,4 +269,92 @@ mod tests {
             );
         }
     }
+    #[test]
+    fn full_coefficients_normalize_distinct_raw_clocks_and_keep_the_product_rule() {
+        let profiles = [crate::primitives::line([0.; 3], [1., 0., 0.]).unwrap()];
+        let path = crate::primitives::line([0.; 3], [0., 0., 2.]).unwrap();
+        let mut scale = crate::primitives::line([2., 0., 0.], [3., 0., 0.]).unwrap();
+        scale.knots = vec![2., 2., 6., 6.];
+        let mut axes = crate::primitives::line([1., 2., 3.], [2., 4., 2.]).unwrap();
+        axes.knots = vec![-3., -3., 5., 5.];
+        let mut center = crate::primitives::line([0.; 3], [1., -2., 3.]).unwrap();
+        center.knots = vec![7., 7., 11., 11.];
+        let before = (scale.clone(), axes.clone(), center.clone());
+        let twist = constant_vector_law([0.; 3]).unwrap();
+        let sweep = MultiSweep::new(
+            &profiles,
+            &path,
+            &scale,
+            &twist,
+            Options {
+                normal: [1., 0., 0.],
+                orientation: Orientation::Fixed,
+                spacing: Spacing::Parameter,
+                initial_sections: 3,
+                max_sections: 9,
+                max_deviation: 0.05,
+            },
+        )
+        .unwrap()
+        .with_affine_laws(&axes, &center)
+        .unwrap();
+        let fresh = || IdealVolumeReport {
+            embedding_certified: false,
+            regularity_certified: false,
+            parameter_topology_preserved: false,
+            cells: 0,
+            exact_work: 0,
+            boxes: 0,
+            monotonicity_lower: None,
+            projection: [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+            reason: None,
+        };
+        let mut work = fresh();
+        let coefficients = full_coefficients(&sweep.sweeps[0], [0.25, 0.75], &mut work, 100000)
+            .unwrap()
+            .unwrap();
+        // Independently: D(s)=[2+3s+s^2,4+6s+2s^2,6+s-s^2],
+        // D_s=[3+2s,6+4s,1-2s], c_s=[1,-2,3].
+        for station in [0.25, 0.5, 0.75] {
+            let value = [
+                2. + 3. * station + station * station,
+                4. + 6. * station + 2. * station * station,
+                6. + station - station * station,
+            ];
+            let first = [3. + 2. * station, 6. + 4. * station, 1. - 2. * station];
+            for k in 0..3 {
+                assert!(
+                    coefficients.value[k].lo <= value[k] && value[k] <= coefficients.value[k].hi
+                );
+                assert!(
+                    coefficients.first[k].lo <= first[k] && first[k] <= coefficients.first[k].hi
+                );
+                let expected = [1., -2., 3.][k];
+                assert!(
+                    coefficients.center_first[k].lo <= expected
+                        && expected <= coefficients.center_first[k].hi
+                );
+                assert!(coefficients.center_first[k].hi - coefficients.center_first[k].lo < 1e-10);
+            }
+        }
+        let mut replay = fresh();
+        assert!(
+            full_coefficients(&sweep.sweeps[0], [0.25, 0.75], &mut replay, work.cells)
+                .unwrap()
+                .is_some()
+        );
+        let mut empty = fresh();
+        assert!(
+            full_coefficients(&sweep.sweeps[0], [0.25, 0.75], &mut empty, 0)
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(empty.cells, 0);
+        assert!(
+            !work.embedding_certified
+                && !work.regularity_certified
+                && !work.parameter_topology_preserved
+        );
+        assert_eq!((scale, axes, center), before);
+    }
 }
