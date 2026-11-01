@@ -205,8 +205,8 @@ fn piecewise_composition(c:&[[Expansion;4]],knots:&[Expansion],degree:usize,mapp
     }
     Ok(if covered {BezierIdentity::Equal}else{BezierIdentity::Indeterminate(Reason::MissingProof)})
 }
-fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
-    constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
+fn composition_polynomials(p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+    constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<Vec<Poly>,Reason> {
         let mut basis=Vec::new();
         for axis in 0..2 {
             let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
@@ -236,6 +236,10 @@ fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:
                 add_scaled(&mut composed[axis],&basis,&factor,ctx)?;
             }
         }}
+        Ok(composed)
+}
+fn compare_polynomial_rows(c:&[Poly],composed:&[Poly],constant_axes:[bool;3],
+    ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
         for axis in 0..3 {
             if constant_axes[axis] {continue;}
             let a=mul(&c[axis],&composed[3],ctx)?;let b=mul(&composed[axis],&c[3],ctx)?;
@@ -246,6 +250,12 @@ fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:
         }
         Ok(BezierIdentity::Equal)
 }
+fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+    constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
+    let composed=composition_polynomials(p,s,d,nu,nv,constant_axes,ctx)?;
+    compare_polynomial_rows(c,&composed,constant_axes,ctx)
+}
+
 /// Exact affine pullback of a canonical B-spline on one selected knot span.
 /// The predicate verifies both mapped endpoints are in that span exactly.
 pub fn rational_bspline_composition_affine_identity(
@@ -755,3 +765,6 @@ pub fn rational_bspline_pair_composition_piecewise_identity(
     })().and_then(|value|ctx.charge(0).map(|_|value));
     Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
+
+mod projective_image;
+pub use projective_image::{ProjectiveImageDecision, ProjectiveImageOutcome, rational_bezier_projective_image};

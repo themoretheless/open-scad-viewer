@@ -31,6 +31,7 @@ pub struct OriginalClassifiedClosedMaterialRefusal {
 pub struct OriginalClassifiedClosedMaterial<'s, 'a> {
     material: &'s LoftCap,
     line_image_spans: usize,
+    projective_image_spans: usize,
     volume: Box<OriginalClassifiedVolume<'s, 'a>>,
     material_report: MaterialReport,
     work: OriginalClassifiedClosedMaterialWork,
@@ -39,6 +40,11 @@ impl<'s, 'a> OriginalClassifiedClosedMaterial<'s, 'a> {
     /// Exact oriented line-image bindings, with no normalized-map authority.
     pub fn line_image_spans(&self) -> usize {
         self.line_image_spans
+    }
+    /// Full coefficient identity under a positive derived projective clock.
+    /// This does not grant normalized map correspondence.
+    pub fn projective_image_spans(&self) -> usize {
+        self.projective_image_spans
     }
     pub fn material(&self) -> &'s LoftCap {
         self.material
@@ -127,6 +133,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
     let PreparedMaterial {
         report: source,
         line_image_spans,
+        projective_image_spans,
         material: bound,
         ..
     } = source;
@@ -211,6 +218,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
         Box::new(OriginalClassifiedClosedMaterial {
             material,
             line_image_spans,
+            projective_image_spans,
             volume,
             material_report: source.material,
             work,

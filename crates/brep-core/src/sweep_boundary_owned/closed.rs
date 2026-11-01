@@ -108,6 +108,7 @@ fn refused_source(mut report: ClosedReport, reason: &'static str) -> PreparedAtt
 }
 struct PreparedMaterial {
     line_image_spans: usize,
+    projective_image_spans: usize,
     report: ClosedReport,
     profiles: Vec<Vec<Curve>>,
     material: LoftCap,
@@ -139,7 +140,7 @@ fn prepare_closed_material(
 #[derive(Clone, Copy)]
 enum MaterialBinding {
     NormalizedMap,
-    OrientedLineImages,
+    OrientedImages,
 }
 fn prepare_classified_closed_material(
     sweep: &MultiSweep<'_>,
@@ -154,7 +155,7 @@ fn prepare_classified_closed_material(
         material,
         tolerance_uv,
         limits,
-        MaterialBinding::OrientedLineImages,
+        MaterialBinding::OrientedImages,
     )
 }
 fn prepare_material_with_binding(
@@ -299,6 +300,7 @@ fn prepare_material_with_binding(
         return Ok(refused_material(out, "original-material-region-unproved"));
     }
     let mut line_image_spans = 0;
+    let mut projective_image_spans = 0;
     let mut original_profiles = Vec::with_capacity(loop_sizes.len());
     let mut offset = 0;
     for (ring, &size) in loop_sizes.iter().enumerate() {
@@ -362,25 +364,45 @@ fn prepare_material_with_binding(
                 // Only the ORIGINAL classified material owner can use image
                 // correspondence. Retained/error-bound routes keep normalized
                 // map identity and never receive this weaker kind of binding.
-                if !matches!(binding, MaterialBinding::OrientedLineImages) {
+                if !matches!(binding, MaterialBinding::OrientedImages) {
                     return Ok(refused_material(out, "original-material-boundary-unproved"));
                 }
                 let remaining = b.source_exact_work - out.ownership_exact_work;
-                let Some(image) = nurbs_core::curve_surface_agreement::verify_axis_line_image(
+                let image = nurbs_core::curve_surface_agreement::verify_axis_line_image(
                     world,
                     uv,
                     &material.surface,
                     remaining,
-                )?
-                else {
-                    return Ok(refused_material(out, "original-material-boundary-unproved"));
-                };
-                out.ownership_exact_work += image.work_used;
-                out.material.exact_work = out.ownership_exact_work;
-                if image.outcome != cad_predicates::LineImageOutcome::SameOrientedSegment {
-                    return Ok(refused_material(out, "original-material-boundary-unproved"));
+                )?;
+                let mut line_proven = false;
+                if let Some(image) = image {
+                    out.ownership_exact_work += image.work_used;
+                    out.material.exact_work = out.ownership_exact_work;
+                    line_proven =
+                        image.outcome == cad_predicates::LineImageOutcome::SameOrientedSegment;
                 }
-                line_image_spans += 1;
+                if line_proven {
+                    line_image_spans += 1;
+                } else {
+                    let remaining = b.source_exact_work - out.ownership_exact_work;
+                    let Some(image) = nurbs_core::curve_surface_agreement::verify_projective_image(
+                        world,
+                        uv,
+                        &material.surface,
+                        remaining,
+                    )?
+                    else {
+                        return Ok(refused_material(out, "original-material-boundary-unproved"));
+                    };
+                    out.ownership_exact_work += image.work_used;
+                    out.material.exact_work = out.ownership_exact_work;
+                    if image.outcome
+                        != cad_predicates::ProjectiveImageOutcome::SameOrientedProjectiveImage
+                    {
+                        return Ok(refused_material(out, "original-material-boundary-unproved"));
+                    }
+                    projective_image_spans += 1;
+                }
             }
             out.material.bound_spans += 1;
         }
@@ -389,6 +411,7 @@ fn prepare_material_with_binding(
     out.material.certified = true;
     Ok(PreparedMaterialAttempt::Ready(Box::new(PreparedMaterial {
         line_image_spans,
+        projective_image_spans,
         report: out,
         profiles: original_profiles,
         material: LoftCap {
