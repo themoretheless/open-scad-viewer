@@ -1,0 +1,89 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "contracts": [
+    "NURBS-0219"
+  ],
+  "baseCommit": "96aae21abcec78071454a0ce4638c9d13a2b9e6d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/airfoil.rs": "881d4d8dfd6aa15e502792ded9bb6779da5e664b656333e186326b201acad1be",
+    "crates/nurbs-core/src/construct/curves/airfoil/algorithm_naca5_airfoil.rs": "81d8d298ebcd04b8554edfd465c674eb6122480c6ee1216be693987dff188d27",
+    "crates/nurbs-core/tests/airfoil_standard_contracts.rs": "956a4be366e0f8938074c107f96490ba5efc9183ba8d30831fedd092e68353d3",
+    "crates/nurbs-core/src/lib.rs": "d05873b10596ce7fc50217e0be236cde496b1db75f31fb050b7538491b28b02d"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/29d1630e5e32c631/out/affine_support-29d1630e5e32c631",
+      "sha256": "2306284b1e1e0587b7e7d7e12f04acf1feac227fbc42200862d2ba3b78c153c2"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/28da9c0aae23dd1a/out/airfoil_standard_contracts-28da9c0aae23dd1a",
+      "sha256": "0180180c465eba99981b3e5c3ad7569cfc6e111220ab5a61e8b0e8b65ba1b450"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e705ba731820a2bf/out/biarc_contracts-e705ba731820a2bf",
+      "sha256": "b73c0d161797ba83fe2a03a3e20c3f527b1b445dbd520e0dfa97eba9ea30323b"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e5ff2236962c9b4b/out/class_a_contracts-e5ff2236962c9b4b",
+      "sha256": "74f266c06c7fd5d6d8f420b74e0398563dd1f13fa2c16029544d423630522dc0"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/80ae3ba2c25afaa9/out/cloud_processing_contracts-80ae3ba2c25afaa9",
+      "sha256": "09134da941fbe8e9e60fe4bb243d24f73cf8215d537727f417ff84447cf3ba9a"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5566724bf219ffb0/out/curvature_reconstruction_contracts-5566724bf219ffb0",
+      "sha256": "243e7a2d6c5edcf25f54b853e56cf2c8a255c98e79cb13c92ddfd64d1e2f2fb8"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/8101cd5935423a18/out/curve_extension_contracts-8101cd5935423a18",
+      "sha256": "ff60b2fca90a627b0bb9481a01ec6aa1292133ef281ad37061cedf1cfa4f9de8"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5e868672d2fcac3a/out/linear_simplification-5e868672d2fcac3a",
+      "sha256": "64e7300a3aa36f06b81b6d04571d971d06fff5568343de1a1f50d73f57a713bf"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/befd5fa5646fc592/out/primitive_fit_contracts-befd5fa5646fc592",
+      "sha256": "afd83730165c70e903b0963590f3de9d6b808acf7e19ec3935e879747a33e4fc"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/bd5102dc12f36f9b/out/surface_extension_contracts-bd5102dc12f36f9b",
+      "sha256": "8bb92b5ee79b7eb77036de504e2fb0f971cecd559f12d4af88945f14e039903e"
+    }
+  ],
+  "tests": {
+    "passed": 72,
+    "failed": 0,
+    "ignored": 0,
+    "filteredOut": 0,
+    "newStandardProfileTests": 5
+  },
+  "logSha256": "3eaa7336b72ea94eba29b9a7a721be43d5d372b3a4c6fecf4ea69ea666f06f8f",
+  "commandExitCode": 0,
+  "command": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --test airfoil_standard_contracts --test curvature_reconstruction_contracts --test biarc_contracts --test curve_extension_contracts --test surface_extension_contracts --test linear_simplification --test cloud_processing_contracts --test class_a_contracts --test affine_support --test primitive_fit_contracts --locked --offline",
+  "targetDir": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target",
+  "noDefaultFeaturesCheck": {
+    "passed": true,
+    "exitCode": 0,
+    "logSha256": "8d6ce298f28941651865483afc4ef1933d752e7e6ff70efa76869e6b70e8f70c"
+  },
+  "primarySources": [
+    {
+      "report": "NACA Report 537, Table I, printed p.522",
+      "url": "https://ntrs.nasa.gov/api/citations/19930091610/downloads/19930091610.pdf",
+      "downloadSha256": "7c2cf31a0923bcca36527eecdcb5a29928a1a3eb93399c0418b04b287396c1df"
+    },
+    {
+      "report": "NACA Report 824, Five-Digit Series mean-line numbering and scaling",
+      "url": "https://ntrs.nasa.gov/api/citations/19930090976/downloads/19930090976.pdf",
+      "downloadSha256": "9f27283b704821192fc9dba4ed625f62002903b5127bc869cd04ac0a5cc54efd"
+    }
+  ],
+  "proofScope": "Nominal nonreflex NACA five-digit analytic sections and numerical NURBS profile fits; no continuous error or aerodynamic certificate. One family, not separate figures per code, station or lift digit.",
+  "fullCurrentWorkspaceQualified": false,
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "mainPushed": false
+}

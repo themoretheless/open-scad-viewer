@@ -668,7 +668,7 @@ mod algorithm_naca5_camber;
 pub use algorithm_naca5_camber::naca5_camber;
 #[path="airfoil/algorithm_naca5_airfoil.rs"]
 mod algorithm_naca5_airfoil;
-pub use algorithm_naca5_airfoil::naca5_airfoil;
+pub use algorithm_naca5_airfoil::{naca5_airfoil, naca5_section_at};
 #[path="airfoil/algorithm_naca_points.rs"]
 mod algorithm_naca_points;
 pub use algorithm_naca_points::naca_points;

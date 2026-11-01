@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 218,
-  "unallocatedCount": 782,
+  "specifiedCount": 219,
+  "unallocatedCount": 781,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6021,6 +6021,24 @@
       ],
       "remainingQualification": [
         "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0219",
+      "name": "стандартные нерефлексные профили NACA5 с аналитическими сечениями",
+      "status": "native",
+      "prioritySet": "native-1000-standard-airfoils",
+      "category": "Аналитические профили и восстановление",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::naca5_airfoil",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil/algorithm_naca5_airfoil.rs",
+        "crates/nurbs-core/tests/airfoil_standard_contracts.rs",
+        "docs/design/nurbs-naca5-standard.md",
+        "docs/qualification/nurbs-naca5-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "nominal published coefficients and numerical fit only; no continuous error, closed B-rep or aerodynamic certificate",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
