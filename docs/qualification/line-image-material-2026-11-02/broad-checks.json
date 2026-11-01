@@ -1,0 +1,68 @@
+[
+  {
+    "crate": "cad-predicates",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "cad-predicates",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "exitCode": 0,
+    "seconds": 1.528,
+    "summary": [
+      "test result: ok. 122 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s"
+    ],
+    "failures": [],
+    "log": "full-cad-predicates.log.gz"
+  },
+  {
+    "crate": "nurbs-core",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "nurbs-core",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "exitCode": 0,
+    "seconds": 153.025,
+    "summary": [
+      "test result: ok. 2059 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 150.61s"
+    ],
+    "failures": [],
+    "log": "full-nurbs-core.log.gz"
+  },
+  {
+    "crate": "brep-core",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "brep-core",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "exitCode": 0,
+    "seconds": 778.896,
+    "summary": [
+      "test result: ok. 2062 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 778.51s"
+    ],
+    "failures": [],
+    "log": "full-brep-core.log.gz"
+  }
+]
