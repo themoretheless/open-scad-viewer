@@ -2,6 +2,7 @@
 //! from privately qualified native edge types; angular bounds cover original charts.
 mod curvature;
 pub mod material_orientation;
+pub mod vertices;
 pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, ExactCurvatureReport, qualify_curvature_exact, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature, qualify_polar_curvature_exact};
 mod polar;
 pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
