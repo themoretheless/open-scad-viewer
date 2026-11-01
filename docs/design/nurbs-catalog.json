@@ -5997,7 +5997,8 @@
         "crates/nurbs-core/src/construct/curves/curve_reconstruction.rs",
         "crates/nurbs-core/tests/curvature_reconstruction_contracts.rs",
         "docs/design/nurbs-curvature-reconstruction.md",
-        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
@@ -6015,7 +6016,8 @@
         "crates/nurbs-core/src/construct/curves/biarc.rs",
         "crates/nurbs-core/tests/biarc_contracts.rs",
         "docs/design/nurbs-biarc-fitting.md",
-        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",

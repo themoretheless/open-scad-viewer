@@ -81,3 +81,11 @@ fn unresolved_high_phase_and_unrepresentable_rotation_are_refused() {
     assert!(reconstruct_from_curvature(&[(0.,1e12),(0.5,1e12),(1.,1e12)],[0.;3],0.,1e-3).is_err());
     assert!(reconstruct_from_curvature(&[(0.,1.),(0.5,1.),(1.,1.)],[0.;3],1e300,1e-3).is_err());
 }
+#[test]
+fn quarter_circle_fit_retains_the_existing_curvature_quality_threshold() {
+    let k:Vec<_>=(0..65).map(|i|(std::f64::consts::PI*i as f64/64.,0.5)).collect();
+    let r=reconstruct_from_curvature(&k,[0.;3],0.,1e-6).unwrap();
+    assert!(r.fit_converged);
+    assert!(r.fitted_site_max_deviation <= 1e-6);
+    assert!(r.max_residual_curvature<=0.05);
+}

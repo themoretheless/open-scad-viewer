@@ -1,0 +1,7 @@
+# Full native NURBS checkpoint: 218 / 1000
+
+All nurbs-core library tests pass: 2043 passed, zero failures, one existing ignored native restriction microbenchmark. Nine selected public integration suites pass 67 tests without skips or filters. The original failing full run is retained: 2042 passed, one circle-curvature failure, the same ignored microbenchmark.
+
+The numerical curvature reconstruction initially returned an unconverged 17-control adaptive fit for the radius-two quarter circle (data-site deviation 8.002e-6 against the requested 1e-6; maximum sampled curvature residual 0.08753 against the existing test limit 0.05). Existing bounded global-fit candidates achieve smaller site deviations; the eight-control candidate has deviation 8.903e-8 and curvature residual about 2.34e-5. The implementation retains only a lower reported site deviation and preserves the original requested tolerance and old curvature-quality assertion. No test threshold was raised.
+
+This checkpoint binds actual source files and ten test binaries. The source manifest covers the feature worktree's Rust sources, manifests and lockfile. The ignored microbenchmark makes no production speed claim. These results do not establish full workspace compatibility, all frontend tests, application integration of native-only capabilities, global G0/G1 qualification or main delivery. Earlier focused receipts remain historical evidence for their own recorded source.

@@ -142,7 +142,7 @@ pub fn reconstruct_from_curvature(
         "Reconstruction quadrature estimate exhausted finite precision")?;
 
     let sites: Vec<[f64; 3]> = (0..n).map(|i| [x[i], y[i], 0.]).collect();
-    let (curve, fitted_site_max_deviation, fit_converged) = if n == 3 {
+    let (mut curve, mut fitted_site_max_deviation, mut fit_converged) = if n == 3 {
         let fit = crate::foundation::interpolation::fit_curve_adaptive(
             &sites, 2, tolerance,
             crate::foundation::interpolation::Parameterization::ChordLength, None, true,
@@ -151,6 +151,26 @@ pub fn reconstruct_from_curvature(
     } else {
         crate::curve_offset::fit_offset_sites(&sites, tolerance)?
     };
+    // A position-only adaptive solve may stop unconverged with clustered
+    // knots and poor curvature. Try the existing bounded global candidates
+    // before returning that result. Never replace it with a worse site fit.
+    if !fit_converged {
+        let points: Vec<Vec<f64>> = sites.iter().map(|p| p.to_vec()).collect();
+        for count in [8usize, 13, 19, 26] {
+            if count > n { continue; }
+            if let Ok(candidate) = crate::foundation::fitting::fit_curve_points_report(
+                points.clone(), count, None,
+            ) {
+                let deviation = candidate.certificate.data_site_error_upper;
+                if deviation.is_finite() && deviation < fitted_site_max_deviation {
+                    curve = candidate.curve;
+                    fitted_site_max_deviation = deviation;
+                    fit_converged = deviation <= tolerance;
+                    if fit_converged { break; }
+                }
+            }
+        }
+    }
     numeric(
         fitted_site_max_deviation.is_finite(),
         "Reconstruction fit deviation is not finite",
