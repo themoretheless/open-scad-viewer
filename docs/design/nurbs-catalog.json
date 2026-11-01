@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 210,
-  "unallocatedCount": 790,
+  "specifiedCount": 213,
+  "unallocatedCount": 787,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -5875,6 +5875,60 @@
       ],
       "remainingQualification": [
         "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0211",
+      "name": "выделение аналитических примитивов RANSAC с выбросами",
+      "status": "native",
+      "prioritySet": "native-1000-cloud-processing",
+      "category": "Облака точек и восстановление",
+      "nativeApi": "nurbs_core::analysis::ransac_primitives::detect_primitives",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/ransac_primitives.rs",
+        "crates/nurbs-core/tests/cloud_processing_contracts.rs",
+        "docs/design/nurbs-cloud-processing.md",
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled heuristic only; no complete reconstruction or B-rep certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0212",
+      "name": "согласование знаков заданных нормалей облака",
+      "status": "native",
+      "prioritySet": "native-1000-cloud-processing",
+      "category": "Облака точек и восстановление",
+      "nativeApi": "nurbs_core::analysis::cloud_normals::orient_normals_consistent",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/cloud_normals.rs",
+        "crates/nurbs-core/tests/cloud_processing_contracts.rs",
+        "docs/design/nurbs-cloud-processing.md",
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled heuristic only; no complete reconstruction or B-rep certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0213",
+      "name": "сегментация облака по нормалям и локальной кривизне",
+      "status": "native",
+      "prioritySet": "native-1000-cloud-processing",
+      "category": "Облака точек и восстановление",
+      "nativeApi": "nurbs_core::analysis::cloud_segmentation::segment_cloud",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/cloud_segmentation.rs",
+        "crates/nurbs-core/tests/cloud_processing_contracts.rs",
+        "docs/design/nurbs-cloud-processing.md",
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled heuristic only; no complete reconstruction or B-rep certificate",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

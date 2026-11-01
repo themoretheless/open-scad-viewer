@@ -1,0 +1,62 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "status": "passed-native-contracts-only",
+  "contracts": [
+    "NURBS-0211",
+    "NURBS-0212",
+    "NURBS-0213"
+  ],
+  "baseCommit": "4031dd553674a288082c5e5c30f26281c53146ca",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/cloud_normals.rs": "e0213981b90b8c6743592b86b6edea4fc282722e48aa3c2c6477d9cb4fbb47f2",
+    "crates/nurbs-core/src/analysis/cloud_segmentation.rs": "1435dd008f69ce8b887482bbf2994cedcedb5f80fb773f44e5b919f1cade961b",
+    "crates/nurbs-core/src/analysis/ransac_primitives.rs": "1e7406cf7f70ba183fa16455c0fdd0e8a90510b208e9aefeb61b9e4f3a45e8e3",
+    "crates/nurbs-core/tests/cloud_processing_contracts.rs": "b59ef657e2880eda547c0a944b63f7498048ada3f6372b9cbf296bb1b962bdb3"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "tests": {
+    "passed": 34,
+    "failed": 0,
+    "ignored": 0,
+    "filteredOut": 0,
+    "suites": [
+      8,
+      7,
+      12,
+      7
+    ]
+  },
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/d48964860133e46f/out/affine_support-d48964860133e46f",
+      "sha256": "cc4945eae901305ff1427f5172db10ac7a17d577c19239c4a9601fdbbd0adbe7"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/a263791f705befa2/out/class_a_contracts-a263791f705befa2",
+      "sha256": "c4040b72a796e3f153e934dcf3f0516b36b88c3802f5f5437e027562c7628041"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/3b4aa9b6d7ab559d/out/cloud_processing_contracts-3b4aa9b6d7ab559d",
+      "sha256": "7feb9ca5b819c82c3a3e1ee47ef24eba28cb8ad620d1f79e4a4d2581ea214eb0"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/3a06123af011016c/out/primitive_fit_contracts-3a06123af011016c",
+      "sha256": "5193159d7273c47ba38d11f43cfa69447a3173e8ef25dbda3bba12d4ed37a72a"
+    }
+  ],
+  "logSha256": "47ffd44cbad17feafb342b4b176dbee82001012010808b3a608acee74ef438e0",
+  "command": "CARGO_BUILD_JOBS=1 CARGO_PROFILE_TEST_OPT_LEVEL=0 cargo test --manifest-path crates/Cargo.toml --target-dir /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target -p nurbs-core --test cloud_processing_contracts --test class_a_contracts --test affine_support --test primitive_fit_contracts --locked --offline",
+  "commandExitCode": 0,
+  "noDefaultFeaturesCheck": {
+    "passed": true,
+    "exitCode": 0,
+    "logSha256": "30e314eb100b78f1ac57c33dbb365948546d8e3064aeee5c54db440abfe0d712",
+    "command": "CARGO_BUILD_JOBS=1 cargo check --manifest-path crates/Cargo.toml --target-dir /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target -p nurbs-core --lib --no-default-features --locked --offline"
+  },
+  "proofScope": "Sampled cloud processing contracts, source ownership indices and invalid-input/numeric boundary regressions; no completeness or continuous/B-rep certification.",
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "fullWorkspaceQualified": false,
+  "mainPushed": false
+}
