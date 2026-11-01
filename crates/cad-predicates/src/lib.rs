@@ -9,6 +9,8 @@ mod fibered_affine;
 pub use fibered_affine::*;
 mod bezier_quadric_identity;
 pub use bezier_quadric_identity::*;
+mod bezier_line_image;
+pub use bezier_line_image::{LineImageOutcome, LineImageDecision, rational_bezier_axis_line_image};
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
 mod line_chart_identity;

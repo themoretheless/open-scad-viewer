@@ -245,15 +245,18 @@ fn run(hole: bool, nonplanar: bool) {
     );
     assert!(r.work.cells <= regularity_cells && r.volume.is_none());
     // Endpoints and the complete straight UV image are unchanged; rational
-    // speed no longer agrees with the original world profile's clock.
+    // speed differs from the original world profile: only image authority
+    // may bind this source. The strict map route is tested separately.
     let mut wrong_clock = material.clone();
     wrong_clock.trims[0][0].weights[1] = 2.;
-    let OriginalClassifiedClosedMaterialAttempt::Refused(r) =
+    let OriginalClassifiedClosedMaterialAttempt::Certified(image_bound) =
         certify!(&wrong_clock, &classes, limits()).unwrap()
     else {
-        panic!("same image with wrong original UV clock acquired binding")
+        panic!("complete oriented line image failed fresh source binding")
     };
-    assert_eq!(r.reason, Some("original-material-boundary-unproved"));
+    assert_eq!(image_bound.line_image_spans(), 1);
+    assert_eq!(image_bound.boundary_classes(), classes);
+    assert!(std::ptr::eq(image_bound.material(), &wrong_clock));
     let mut promoted = classes.clone();
     promoted[1] = OriginalProfileClass::G2;
     assert!(matches!(
@@ -388,3 +391,5 @@ mod guided;
 mod authored;
 
 mod varying;
+
+mod image;

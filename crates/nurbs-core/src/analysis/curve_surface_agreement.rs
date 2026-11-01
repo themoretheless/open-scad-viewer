@@ -621,3 +621,6 @@ pub fn lift(
     }
     Ok(out)
 }
+
+mod line_image;
+pub use line_image::verify_axis_line_image;

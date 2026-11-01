@@ -30,11 +30,16 @@ pub struct OriginalClassifiedClosedMaterialRefusal {
 /// remain explicit sharp joins. This type issues no retained Solid guarantee.
 pub struct OriginalClassifiedClosedMaterial<'s, 'a> {
     material: &'s LoftCap,
+    line_image_spans: usize,
     volume: Box<OriginalClassifiedVolume<'s, 'a>>,
     material_report: MaterialReport,
     work: OriginalClassifiedClosedMaterialWork,
 }
 impl<'s, 'a> OriginalClassifiedClosedMaterial<'s, 'a> {
+    /// Exact oriented line-image bindings, with no normalized-map authority.
+    pub fn line_image_spans(&self) -> usize {
+        self.line_image_spans
+    }
     pub fn material(&self) -> &'s LoftCap {
         self.material
     }
@@ -84,7 +89,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
     {
         return Err(fail("Invalid original classified closed material limits"));
     }
-    let prepared = prepare_closed_material(
+    let prepared = prepare_classified_closed_material(
         sweep,
         loop_sizes,
         material,
@@ -121,6 +126,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
     };
     let PreparedMaterial {
         report: source,
+        line_image_spans,
         material: bound,
         ..
     } = source;
@@ -131,7 +137,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
     };
     // Positive rational Bezier hulls keep the complete UV boundary inside the
     // original atlas rectangle. A simple bounded region then lies inside that
-    // convex rectangle too. No periodic extension/image equality grants credit.
+    // convex rectangle too. Image binding does not prove this containment.
     let domain = [
         [
             material.surface.knots_u[material.surface.degree_u],
@@ -204,6 +210,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
     Ok(OriginalClassifiedClosedMaterialAttempt::Certified(
         Box::new(OriginalClassifiedClosedMaterial {
             material,
+            line_image_spans,
             volume,
             material_report: source.material,
             work,
