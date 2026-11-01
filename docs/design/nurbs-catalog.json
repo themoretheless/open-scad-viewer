@@ -6054,7 +6054,9 @@
         "crates/nurbs-core/src/construct/curves/airfoil/cst_frame.rs",
         "crates/nurbs-core/tests/cst_contracts.rs",
         "docs/design/nurbs-cst-profiles.md",
-        "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json"
       ],
       "remainingQualification": [
         "numerical construction and discrete fit diagnostics only; no continuous error, exact frame or B-rep authority",
@@ -6072,7 +6074,9 @@
         "crates/nurbs-core/src/construct/curves/airfoil/algorithm_cst_fit.rs",
         "crates/nurbs-core/tests/cst_contracts.rs",
         "docs/design/nurbs-cst-profiles.md",
-        "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json"
+        "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json"
       ],
       "remainingQualification": [
         "numerical construction and discrete fit diagnostics only; no continuous error, exact frame or B-rep authority",

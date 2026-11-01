@@ -1,0 +1,17 @@
+{
+  "schema": "full-nurbs-library-check/1",
+  "scope": "Default-feature full nurbs-core library after CST changes; not whole workspace/application. Public suites are separately qualified for 82 selected contracts.",
+  "sourceCommit": "4748a7202",
+  "passed": 2043,
+  "failed": 0,
+  "existingIgnored": 1,
+  "filteredOut": 0,
+  "exitCode": 0,
+  "sourceManifestSha256": "0b5d9356275cb08b099e478bde30ef89adb6de6a38521bd170e1693ba68b00f3",
+  "testBinarySha256": "dc864913c148edf94742e6b500f1839c36447ca690daa26a61c106058a2f1900",
+  "logSha256": "d9808f5c833261d7bab717dfe4060270e4f5ab639219e7e5721f9589f76d092e",
+  "mainPushed": false,
+  "command": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 RUST_TEST_THREADS=2 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --lib --locked --offline",
+  "targetDir": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n"
+}
