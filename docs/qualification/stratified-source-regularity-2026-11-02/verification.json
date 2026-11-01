@@ -1,0 +1,36 @@
+{
+  "implementation": "b9e6c68df",
+  "focused": {
+    "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods -- --nocapture",
+    "exitCode": 0,
+    "passed": 1,
+    "failed": 0,
+    "log": "focused.log.gz"
+  },
+  "fullSuite": {
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "brep-core",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "exitCode": 0,
+    "seconds": 1054.11,
+    "sourceUnchanged": true,
+    "sourceFiles": 2878,
+    "summary": [
+      "test result: ok. 2064 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1053.29s"
+    ]
+  },
+  "sourceHashes": {
+    "crates/brep-core/src/source_volume/regularity.rs": "34533ab99f42f201928df35d9893e6f9d4584006e6465cfaa9b6fe767e0be93c",
+    "crates/brep-core/src/source_volume/regularity/stratified.rs": "46ea732781b52726925dd35721898e6e248c57cc1356e587c0820bfbc4419615",
+    "crates/brep-core/src/source_support_shell/tests/c2_bowl.rs": "fd4f5aaf0bc4e72f9f327de61de839f0dac8976439b78d8975f9c415a01c00e9"
+  }
+}
