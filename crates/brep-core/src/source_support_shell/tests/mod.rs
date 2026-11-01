@@ -1,5 +1,6 @@
     use super::*;
     mod original_regularity;
+    mod ordinary_vertices;
     fn limits() -> Limits {
         Limits {
             tolerance_uv: 1e-8,

@@ -88,6 +88,14 @@ mod tests {
         assert!(std::ptr::eq(proof.source(), &source));
         assert_eq!(proof.order(), 2);
         assert!(r.cells > 0 && r.exact_work > 0);
+        // An aggregate allowance may exceed a single native query's hard cap.
+        // The adapter must honor BOTH, not create an invalid native context.
+        let aggregate = qualify(&source, 2, 100000, 10 * cad_predicates::MAX_WORK).unwrap();
+        assert!(aggregate.certificate.is_some());
+        assert_eq!(
+            (aggregate.cells, aggregate.exact_work),
+            (r.cells, r.exact_work)
+        );
         assert!(
             qualify(&source, 2, r.cells, r.exact_work)
                 .unwrap()

@@ -10,6 +10,8 @@ pub use fibered_affine::*;
 mod bezier_quadric_identity;
 pub use bezier_quadric_identity::*;
 mod bezier_line_image;
+mod oriented_ray_fan;
+pub use oriented_ray_fan::{RayFanOutcome, RayFanDecision, oriented_ray_fan};
 pub use bezier_line_image::{LineImageOutcome, LineImageDecision, rational_bezier_axis_line_image};
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
