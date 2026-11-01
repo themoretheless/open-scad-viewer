@@ -1,0 +1,83 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "status": "passed-native-contracts-only",
+  "contracts": [
+    "NURBS-0215",
+    "NURBS-0216"
+  ],
+  "baseCommit": "b27ba10f7d14d22d66906e09cb2cfc573a8170ff",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/curve_extension.rs": "44dff95b1c73753d0f15dcaca1793796fc7e862acd911086e642f66288890174",
+    "crates/nurbs-core/src/editing/surface_extension.rs": "b23dc6a5131c2c8c61751203c87948f569f0eb599cf6851677075e5bdc2ae098",
+    "crates/nurbs-core/tests/curve_extension_contracts.rs": "a1e42684a208b2d90d89848656d4f95897c2a7f2943ab449d5f120c337536371",
+    "crates/nurbs-core/tests/surface_extension_contracts.rs": "a46a71e932c5e153c4a86065c55f0f70f30fc9127c798ea92746adb83108d4a6",
+    "crates/nurbs-core/src/lib.rs": "d05873b10596ce7fc50217e0be236cde496b1db75f31fb050b7538491b28b02d",
+    "crates/nurbs-core/src/editing.rs": "080ec9f99ab70b899f3e36e7151f7f5c040c13aec42b1ccdd8e9f0bdb9d31a4a"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/29d1630e5e32c631/out/affine_support-29d1630e5e32c631",
+      "sha256": "7393906028c528795758c8cb6703c66b0c40f4c2ba6cd8d82d0cce0b7a19a1fb"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e5ff2236962c9b4b/out/class_a_contracts-e5ff2236962c9b4b",
+      "sha256": "2440882942d91ee157b59578667db91e5ff32ebaf42e56e893fe09af7868762f"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/80ae3ba2c25afaa9/out/cloud_processing_contracts-80ae3ba2c25afaa9",
+      "sha256": "e78b82f16adbc734b74337f50701d3f102b52b548aeb5f48356cd58600e67d50"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/8101cd5935423a18/out/curve_extension_contracts-8101cd5935423a18",
+      "sha256": "55773319d6222ab22d0c558de68ff361408f3b2548c762e61d67cdf41affe688"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5e868672d2fcac3a/out/linear_simplification-5e868672d2fcac3a",
+      "sha256": "8858e430d0292a78e6910d5a4d1e182e9aa5c52c071341d7af5757356765472b"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/befd5fa5646fc592/out/primitive_fit_contracts-befd5fa5646fc592",
+      "sha256": "d212c2da0fa3db089a8f9e84654184ea548f38d63b69b20dbcb6a95007c3fdd7"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/bd5102dc12f36f9b/out/surface_extension_contracts-bd5102dc12f36f9b",
+      "sha256": "f60488ba5bd5c400f1d56c70d4221bcc164ef13884d904f3cdf03b99ced49290"
+    }
+  ],
+  "tests": {
+    "passed": 53,
+    "failed": 0,
+    "ignored": 0,
+    "filteredOut": 0,
+    "suites": [
+      8,
+      7,
+      12,
+      7,
+      9,
+      7,
+      3
+    ]
+  },
+  "logSha256": "021a0513c59eef745a0f4faf455fcb25a32031278944d39aa86bd9746bc41808",
+  "command": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --test curve_extension_contracts --test surface_extension_contracts --test linear_simplification --test cloud_processing_contracts --test class_a_contracts --test affine_support --test primitive_fit_contracts --locked --offline",
+  "targetDir": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target",
+  "commandExitCode": 0,
+  "baselineRegressions": {
+    "passed": 1,
+    "failed": 4,
+    "log": "before-expanded.log.gz"
+  },
+  "proofScope": "Numerical continuation of terminal spans with old parameter interval retained; no certified geometric identity, G2, regularity, topology or B-rep authority. Surface extension requires compatible control-curve parameter advances.",
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "fullWorkspaceQualified": false,
+  "mainPushed": false,
+  "noDefaultFeaturesCheck": {
+    "passed": true,
+    "exitCode": 0,
+    "logSha256": "33dec474953810d615623ca9b46abd93bbba6e284577d75a1254d0951ce4fa3e",
+    "command": "CARGO_BUILD_JOBS=2 cargo check --manifest-path crates/Cargo.toml -p nurbs-core --lib --no-default-features --locked --offline"
+  }
+}

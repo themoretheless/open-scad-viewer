@@ -2,8 +2,9 @@
 //! The appended arc is the analytic continuation of the terminal Bézier span:
 //! the homogeneous control net of that span is re-blossomed (de Casteljau
 //! extrapolation) onto the widened interval, so point, tangent and curvature
-//! jets are matched exactly and the joint is smooth by construction. No new
-//! knot is introduced; the terminal knot value simply moves outward.
+//! jets match in exact arithmetic. Binary64 construction is numerical, not a
+//! certified G2 proof. The terminal span is first isolated by knot insertion
+//! when necessary; then the terminal knot value moves outward.
 //!
 //! Stability contract: polynomial extrapolation beyond the defining span is
 //! inherently ill-conditioned for high degrees. Bernstein coefficients of the
@@ -24,7 +25,8 @@ pub enum End {
 }
 
 /// Continuity class requested at the joint. The analytic-continuation
-/// construction is smooth, so every listed class is met by construction.
+/// construction targets these classes in exact arithmetic; no binary64
+/// continuity certificate is returned.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Continuity {
     /// Shared end point and tangent direction.
@@ -43,7 +45,8 @@ pub const STABILITY_GROWTH_LIMIT: f64 = 16.;
 pub struct ExtensionReport {
     /// The extended curve; its active domain reaches past the requested end.
     pub curve: Curve,
-    /// Echoes the requested level; the smooth joint satisfies it by construction.
+    /// Compatibility field echoing the requested level, not a certified
+    /// measurement of the achieved binary64 continuity.
     pub achieved_continuity: Continuity,
     /// Max distance of new control points from the joint, over `length`.
     pub extrapolation_growth: f64,
@@ -53,8 +56,10 @@ pub struct ExtensionReport {
 
 /// Extends a clamped, non-periodic curve beyond `end` by an arc-length
 /// estimate of `length` (anchored at the end speed, refined once within a
-/// factor of two by chord sampling). Control count is preserved, so the
-/// 256-control budget of the source carries over unchanged.
+/// factor of two by chord sampling). Terminal-span extraction may add up to
+/// degree-1 controls and refuses requests exceeding the existing 256-control
+/// limit. The original parameter interval is retained for either end.
+/// Floating-point knot insertion and extrapolation introduce roundoff.
 pub fn extend_curve(
     curve: &Curve,
     end: End,
@@ -70,15 +75,28 @@ pub fn extend_curve(
         length.is_finite() && length > 0.,
         "Extension length must be finite and positive",
     )?;
+    let [a, b] = curve.domain();
+    let p = curve.degree;
+    check(
+        curve.knots[..=p].iter().all(|&k| k == a)
+            && curve.knots[curve.control_points.len()..].iter().all(|&k| k == b),
+        "Extension requires clamped ends",
+    )?;
     match end {
         End::Stop => extend_stop(curve, length, continuity),
         End::Start => {
             let reversed = curve.reverse()?;
             let report = extend_stop(&reversed, length, continuity)?;
-            Ok(ExtensionReport {
-                curve: report.curve.reverse()?,
-                ..report
-            })
+            // Reflect around the ORIGINAL domain. Curve::reverse would use
+            // the expanded interval and translate every old parameter value.
+            let mut extended = report.curve.clone();
+            extended.control_points.reverse();
+            extended.weights.reverse();
+            extended.knots = report.curve.knots.iter().rev()
+                .map(|&k| if k == a { b } else { a + (b - k) }).collect();
+            extended.validate()?;
+            numeric(extended.domain()[0] < a, "Extension start did not advance")?;
+            Ok(ExtensionReport { curve: extended, ..report })
         }
     }
 }
@@ -126,8 +144,20 @@ fn build(curve: &Curve, dt: f64, length: f64) -> Result<(Curve, f64)> {
         "Extension parameter step must be finite and positive",
     )?;
     let p = curve.degree;
+    let old_n = curve.control_points.len();
+    let b = curve.knots[old_n];
+    numeric((b + dt).is_finite() && b + dt > b, "Extension end did not advance")?;
+    let lo = curve.knots[old_n - 1];
+    let multiplicity = curve.knots.iter().filter(|&&k| k == lo).count();
+    // A terminal B-spline control window is a Bezier net only after the
+    // terminal span's left endpoint has full interior multiplicity.
+    let isolated = if multiplicity < p {
+        curve.insert(lo, p - multiplicity)?
+    } else {
+        curve.clone()
+    };
+    let curve = &isolated;
     let n = curve.control_points.len();
-    let b = curve.knots[n];
     // Last nonempty span; a clamped end has knots[n-1] < knots[n] = b.
     let span = (p..n)
         .rev()

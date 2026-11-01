@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 214,
-  "unallocatedCount": 786,
+  "specifiedCount": 216,
+  "unallocatedCount": 784,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -5947,6 +5947,42 @@
       ],
       "remainingQualification": [
         "degree-one constant-weight nominal definitions only; no B-rep authority or evaluator roundoff bound",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0215",
+      "name": "продление многопролётной рациональной кривой с сохранением старых параметров",
+      "status": "native",
+      "prioritySet": "native-1000-extension",
+      "category": "Продление и редактирование",
+      "nativeApi": "nurbs_core::curve_extension::extend_curve",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/curve_extension.rs",
+        "crates/nurbs-core/tests/curve_extension_contracts.rs",
+        "docs/design/nurbs-curve-extension.md",
+        "docs/qualification/nurbs-extension-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "numerical construction only; requested continuity is not a certified G2 or B-rep claim",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0216",
+      "name": "продление совместимой тензорной поверхности по выбранной оси",
+      "status": "native",
+      "prioritySet": "native-1000-extension",
+      "category": "Продление и редактирование",
+      "nativeApi": "nurbs_core::editing::surface_extension::extend_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/surface_extension.rs",
+        "crates/nurbs-core/tests/surface_extension_contracts.rs",
+        "docs/design/nurbs-surface-extension.md",
+        "docs/qualification/nurbs-extension-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "numerical construction only; requested continuity is not a certified G2 or B-rep claim",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
