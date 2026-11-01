@@ -1,0 +1,16 @@
+git rev-parse HEAD
+a30b1e84e7434dddb25d7ad5b4ae56b2d4c8c432
+
+git branch --show-current
+codex/source-body-seam-collection-20261028
+
+git remote -v
+origin	git@github.com:themoretheless/open-scad-viewer.git (fetch)
+origin	git@github.com:themoretheless/open-scad-viewer.git (push)
+
+git status --short --branch
+## codex/source-body-seam-collection-20261028...origin/codex/source-body-seam-collection-20261028 [ahead 87]
+ M crates/brep-core/src/sweep_boundary_owned/closed/classified_material/tests.rs
+ M crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic/affine.rs
+?? crates/brep-core/src/sweep_boundary_owned/closed/classified_material/tests/varying.rs
+?? docs/qualification/varying-spatial-material-2026-11-01/
