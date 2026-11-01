@@ -1,0 +1,108 @@
+{
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_continuity::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 166.34,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2061 filtered out; finished in 0.00s"
+      ],
+      "expectedPassed": 1
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "nonplanar_grid_body_owns_face_jets_and_oriented_exact_edge_classes",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 609.07,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2071 filtered out; finished in 0.06s"
+      ],
+      "expectedPassed": 1
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.3,
+      "summary": [
+        "test result: ok. 127 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s"
+      ],
+      "expectedPassed": 127
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 179.03,
+      "summary": [
+        "test result: ok. 2061 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 178.75s"
+      ],
+      "expectedPassed": 2061
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1134.14,
+      "summary": [
+        "test result: ok. 2067 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1133.64s"
+      ],
+      "expectedPassed": 2067
+    }
+  ],
+  "sourceUnchanged": true,
+  "sourceFiles": 6588
+}
