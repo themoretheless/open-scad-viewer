@@ -78,6 +78,8 @@ Browser Worker: добавлены SurfaceSelfIntersectionBrowser, отдель�
 
 Spatial iso в реальном WASM: frozen source `68c542a30` собран в отдельном worktree; независимая копия кандидата SHA256 `18d9cf461ec58bd5b12d1dc8a49cf5765e8e5c59cb0430569be11cf807dea72f`, 21019737 bytes. **23 raw ABI сценария и 16 Chromium Workers прошли**, включая рациональные U/V 3D-контакты, one-ULP nonplanar контакт, separated-height отрицательный случай и explicit iso .25/.75. Добавлен клиентский валидатор selected-iso отчёта: **14 тестов и vue-tsc прошли**. [Receipt](../qualification/spatial-self-wasm-2026-11-02/results.json). Installed package не заменён; global completeness, tangencies/periodic, trims/Body и editor/provider qualification остаются открытыми.
 
+Смещённые spatial probes: автоматический 3D-поиск расширен с центральной iso до .5/.25/.75 на обеих осях и в обоих направлениях (до 12 spatial, 42 общих admissions). Центральное первое окно сохраняет прежнюю четверть оставшегося бюджета; геометрический резерв оставляет работу off-center окнам. Регрессия с разнесёнными центрами двух перекрывающихся height bands подтверждает контакт вне обоих центральных fibers; прежний central contact при budget=1000 сохранён. **96 native + 26 protocol тестов и vue-tsc прошли**; [receipt](../qualification/offcenter-spatial-probes-2026-11-02/results.json). Сам новый schedule ещё не прошёл WASM. Конечные probes не доказывают surface absence/полноту; общие branch coverage, tangencies/periodic, trims/Body остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

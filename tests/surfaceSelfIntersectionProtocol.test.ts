@@ -37,7 +37,7 @@ describe('finite automatic probe metadata',()=>{
  it('rejects a global coverage claim or inconsistent resource receipt',()=>{
   expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),surfaceCoverageComplete:true}})).toBe(false)
   expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),chargedCells:6}})).toBe(false)
-  expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),attempts:Array(35).fill(search().attempts[0]),chargedCells:175}})).toBe(false)
+  expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),attempts:Array(43).fill(search().attempts[0]),chargedCells:215}})).toBe(false)
  })
  it('complete sampled isos still leave the surface unresolved',()=>{
   const r={...present(),status:'unresolved',presenceProven:false,exactWitness:null,probeSearch:{...search(),attempts:[{...search().attempts[0],isoCoverageComplete:true}]}}

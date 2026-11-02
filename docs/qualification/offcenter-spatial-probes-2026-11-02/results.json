@@ -1,0 +1,22 @@
+{
+  "nativePassed": 96,
+  "protocolPassed": 26,
+  "vueTsc": "passed",
+  "maxSpatialAttempts": 12,
+  "maxCombinedAttempts": 42,
+  "parameters": [
+    0.5,
+    0.25,
+    0.75
+  ],
+  "scope": "Bounded original-source spatial iso proposals; no complete surface coverage",
+  "newScheduleWasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface/spatial_crossing.rs": "aa9ef113d2726dad59a18b4c1416dcfc1c5161b5d0227a08ff171dc70cba49d2",
+    "crates/nurbs-core/src/intersection/self_surface.rs": "93211d3cdf067df55d6991725e3dfaf62d0870e60d5cb3ba8603b1d94430550e",
+    "crates/nurbs-core/tests/surface_self_intersection/spatial_windows.rs": "60f8f1894ebfca450c7dc53c570dff051320827a14e918a82b284cc730d5d399",
+    "crates/nurbs-core/tests/surface_self_intersection/automatic_probes.rs": "06c51ed32bade82965fa8a6c03fe7ee51faa22387e18a6e345734ed085803140",
+    "src/services/surfaceSelfIntersectionProtocol.ts": "b4beb517304a8a02e378c6e881c4568d3ff8eff4121b15e4951385dc7333e2f5",
+    "tests/surfaceSelfIntersectionProtocol.test.ts": "c89fd9a53b198cb5b77bfb03e96ff26b8a728fa11e7ceb5a9fb6528f15449c0c"
+  }
+}

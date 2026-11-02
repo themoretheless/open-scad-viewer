@@ -198,3 +198,39 @@ fn window_solver_rejects_non_3d_target_without_indexing_coordinates() {
     }
     assert!(first_in_window(&c, &s, [[0., 0.4375], [0.4375, 1.], [0., 1.]], 100).is_err());
 }
+
+#[test]
+fn automatic_spatial_probes_find_contact_outside_both_central_fibers() {
+    use nurbs_core::intersection::certified_curve_surface::first_iso_in_window;
+    let mut s = source();
+    for (i, row) in s.control_points.iter_mut().enumerate() {
+        row[0][2] = i as f64 * 0.375;
+        row[1][2] = row[0][2] + 1.;
+    }
+    // At the XY crossing, the two height bands overlap, but neither
+    // band's center belongs to the other. A source fiber .75 hits .1875.
+    for reverse in [false, true] {
+        let (a, b) = if reverse {
+            ([0.4375, 1.], [0., 0.4375])
+        } else {
+            ([0., 0.4375], [0.4375, 1.])
+        };
+        let r = first_iso_in_window(&s, 0, 0.5, [a, b, [0., 1.]], 1000).unwrap();
+        assert!(r.roots.is_empty(), "{r:?}");
+    }
+    let r = surface_self_intersection::inspect(&s, 10000).unwrap();
+    assert_eq!(r.status, Status::Present, "{r:?}");
+    let c = r.certified_crossing.unwrap();
+    assert_eq!(
+        c.proof,
+        nurbs_core::surface_self_intersection::CrossingProof::CurveSurface
+    );
+    assert!(
+        r.probe_search
+            .attempts
+            .iter()
+            .any(|p| p.kind.starts_with("curve-surface") && p.parameter != 0.5)
+    );
+    assert!(r.probe_search.cells <= 10000);
+    assert!(r.probe_search.attempts.len() <= 42);
+}

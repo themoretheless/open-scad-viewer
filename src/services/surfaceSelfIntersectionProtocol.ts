@@ -37,7 +37,7 @@ export function isSurfaceAuditReport(value:unknown):value is SurfaceSelfIntersec
  if(r.injectivity.proven!==(r.status==='absent'))return false
  if(r.probeSearch!==undefined){
   const p=r.probeSearch
-  if(!p||p.surfaceCoverageComplete!==false||typeof p.budgetExhausted!=='boolean'||!Number.isInteger(p.chargedCells)||p.chargedCells<0||p.chargedCells>r.maxSpans||!Array.isArray(p.attempts)||p.attempts.length>34)return false
+  if(!p||p.surfaceCoverageComplete!==false||typeof p.budgetExhausted!=='boolean'||!Number.isInteger(p.chargedCells)||p.chargedCells<0||p.chargedCells>r.maxSpans||!Array.isArray(p.attempts)||p.attempts.length>42)return false
   let charged=0
   for(const a of p.attempts){
    if(!a||![0,1].includes(a.axis)||typeof a.parameter!=='number'||!Number.isFinite(a.parameter)||a.parameter<=0||a.parameter>=1||!Number.isInteger(a.chargedCells)||a.chargedCells<1||a.chargedCells>r.maxSpans||typeof a.isoCoverageComplete!=='boolean'||!(a.refusal===null||(typeof a.refusal==='string'&&a.refusal.length<=1024))||(a.refusal!==null&&a.isoCoverageComplete))return false
