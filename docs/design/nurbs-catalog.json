@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 234,
-  "unallocatedCount": 766,
+  "specifiedCount": 235,
+  "unallocatedCount": 765,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6373,6 +6373,26 @@
       "remainingQualification": [
         "Selected axis nonperiodic, strictly internal knots only. Untouched periodic axis preserved. Global tensor weight gauge plus complete row geometry and proportional denominator proofs; atomic refusal under unchanged limits.",
         "Full native library tests now pass in default and no-codec modes after codec-test boundary and exact border-dispatch repair; historical79-error record retained. Whole workspace, JSON/WASM adapters, Rush, editor and exchange qualification remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0235",
+      "name": "Точное сокращение общего полиномиального множителя тензорной рациональной поверхности с сохранением полной UV-параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::rational_surface_factor::cancel",
+      "evidence": [
+        "crates/nurbs-core/src/editing/rational_surface_factor.rs",
+        "crates/nurbs-core/src/editing/rational_surface_factor/proof.rs",
+        "crates/nurbs-core/tests/rational_surface_factor_contracts.rs",
+        "docs/design/nurbs-rational-surface-factor.md",
+        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "One selected nonperiodic clamped Bezier axis; untouched basis may be multispan/periodic. Exact positive binary64 storage or unchanged-source refusal under existing degree1..25,256-pole,4096-bit and shared1m-work caps. No evaluator-bit identity or old source/topology certificate reuse.",
+        "Native qualification only. JSON/WASM/Rush/editor/exchange and complete current-source distribution remain separate."
       ]
     }
   ],

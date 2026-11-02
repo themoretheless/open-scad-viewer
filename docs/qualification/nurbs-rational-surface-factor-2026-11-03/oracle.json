@@ -1,0 +1,8 @@
+{
+  "acceptedDefinitions": 6,
+  "negativeControls": 4,
+  "failed": 0,
+  "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+  "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+  "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+}

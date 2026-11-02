@@ -19,7 +19,7 @@ fn linear(p: &Poly, a: &Q, b: &Q, w: &mut Work) -> PResult<Poly> {
     }
     Ok(out)
 }
-fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<Poly> {
+pub(crate) fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<Poly> {
     let k = c
         .knots
         .iter()

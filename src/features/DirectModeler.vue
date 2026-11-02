@@ -1,37 +1,33 @@
 <script setup lang="ts">
+import {createAsyncPanels} from './directModeler/createAsyncPanels'
+const {
+  ExpressionShellCheck, SurfacePairChecks, SurfaceDistanceCheck, ProfileBridgeCheck,
+  FrozenGraphBodyPanel, SourceGraphG2Preview, SourceBodyFailureNotice, CadDimensionOverlay,
+  SolidGcodePanel, SolidLaserPanel, VrControls, SceneVirtualList,
+  SketchDimensionPanel, ProfileIntersectionPresentation, CurvePointTrimControls, CurveOffsetPreview,
+  CurveOffsetConstructionInfo, CurveOffsetControls, CoonsPreparationControls, ShellDistanceSummary,
+  SolidVolumeWitness, SolidVolumeDistance, MaterialPathCheck
+}=createAsyncPanels()
 import {useBooleanOperations} from './directModeler/useBooleanOperations'
 import {prepareDocumentCommit} from './directModeler/prepareDocumentCommit'
 import {primitiveCreationError} from '../services/primitiveCreationError'
 import RoundSolidOptions from '../components/RoundSolidOptions.vue'
 import {sourceBodyRecordInspectionOptions} from '../services/sourceBodyArchive'
-const ExpressionShellCheck=defineAsyncComponent(()=>import('../components/ExpressionShellCheck.vue'))
-const SurfacePairChecks=defineAsyncComponent(()=>import('../components/SurfacePairChecks.vue'))
-const SurfaceDistanceCheck=defineAsyncComponent(()=>import('../components/SurfaceDistanceCheck.vue'))
-const ProfileBridgeCheck=defineAsyncComponent(()=>import('../components/ProfileBridgeCheck.vue'))
-const FrozenGraphBodyPanel=defineAsyncComponent(()=>import('../components/FrozenGraphBodyPanel.vue'))
-const SourceGraphG2Preview=defineAsyncComponent(()=>import('../components/SourceGraphG2Preview.vue'))
-const SourceBodyFailureNotice=defineAsyncComponent(()=>import('../components/SourceBodyFailureNotice.vue'))
 import type {ExpressionDisplayReport} from '../services/expressionDisplay'
 import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
 import type {ExpressionMeshReport} from '../services/expressionMesh'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
-const CadDimensionOverlay=defineAsyncComponent(()=>import('../components/CadDimensionOverlay.vue'))
 import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
-const SolidGcodePanel=defineAsyncComponent(()=>import('./GcodePanel.vue'))
-const SolidLaserPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
-const VrControls=defineAsyncComponent(()=>import('../components/VrControls.vue'))
 import {faceAbsenceProven } from '../services/solidSelfIntersection'
 import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
 import type {MainSolidJob} from '../services/mainSolidProtocol'
 import SceneObjectControls from '../components/SceneObjectControls.vue'
-const SceneVirtualList=defineAsyncComponent(()=>import('../components/SceneVirtualList.vue'))
 import { connectedEdgeChain } from '../services/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.vue'
 import RunoutControls from '../components/RunoutControls.vue'
 import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
-const SketchDimensionPanel=defineAsyncComponent(()=>import('../components/SketchDimensionPanel.vue'))
-import { defineAsyncComponent, computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import {solidVertexCount} from '../services/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../services/solidProfileEdit'
 import {isSolidSceneEdit} from '../services/solidSceneEdit'
@@ -80,19 +76,9 @@ import { useDraftPersistence } from './directModeler/useDraftPersistence'
 import { useFileExchange } from './directModeler/useFileExchange'
 import { useDisplayAndSnapQueues } from './directModeler/useDisplayAndSnapQueues'
 import { useViewportLayerAndPolygons } from './directModeler/useViewportLayerAndPolygons'
-const ProfileIntersectionPresentation=defineAsyncComponent(()=>import('../components/ProfileIntersectionPresentation.vue'))
-const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
-const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
-const CurveOffsetConstructionInfo=defineAsyncComponent(()=>import('../components/CurveOffsetConstructionInfo'))
-const CurveOffsetControls=defineAsyncComponent(()=>import('../components/CurveOffsetControls'))
-const CoonsPreparationControls=defineAsyncComponent(()=>import('../components/CoonsPreparationControls'))
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; appendBodies?: { bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null; paletteRequest?: number }>()
 const emit = defineEmits<{ backend: [gpu: boolean]; close: []; append: [source: string]; toMesh: []; 'edit-group': [request: { name: string; source: string; replaces: string | null }] }>()
 const ru = computed(() => props.locale === 'ru')
-const ShellDistanceSummary=defineAsyncComponent(()=>import('../components/ShellDistanceSummary.vue'))
-const SolidVolumeWitness=defineAsyncComponent(()=>import('../components/SolidVolumeWitness.vue'))
-const SolidVolumeDistance=defineAsyncComponent(()=>import('../components/SolidVolumeDistance.vue'))
-const MaterialPathCheck=defineAsyncComponent(()=>import('../components/MaterialPathCheck.vue'))
 const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
 const error = ref('')

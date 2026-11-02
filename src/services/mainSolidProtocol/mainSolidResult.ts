@@ -1,3 +1,4 @@
+import {validRepairMesh,validManifoldReport,validManifoldRepair} from './results/manifoldRepair'
 import {validFrozenGraphBody,validFrozenGraphDisplay} from '../frozenGraphBody'
 import {validExpressionShell} from '../expressionShell'
 import {validExpressionInspection} from '../expressionShellInspection'
@@ -16,7 +17,7 @@ import type { MainSolidExpectation, MainSolidResults } from '../mainSolidProtoco
 import type { NurbsCurve, NurbsCurveDistance } from '../nurbsCurve'
 import type { NurbsSurfaceDistance } from '../nurbsSurface'
 import type { PolygonMesh } from '../geometry/polygon'
-import type { KernelManifoldMetrics, KernelManifoldRepair, KernelManifoldReport } from '../geometry/manifoldAnalysis'
+import type { KernelManifoldMetrics } from '../geometry/manifoldAnalysis'
 import type { MeshBooleanResult, MeshRepairResult } from '../meshEditing'
 import type { ImportedMesh } from '../meshImport'
 import type { MeshConvertResult, MeshExportArtifact } from '../meshConvert'
@@ -47,39 +48,6 @@ import { validSourceBody } from '../sourceBody'
 import { validWholeWall } from '../solidWholeWall'
 import { validateProfileIntersectionReport } from '../geometry/profileIntersections'
 import { validProfileBridgeChordReport } from '../nurbsProfileBridgeChords'
-
-function validRepairMesh(value:unknown,vertices?:number,triangles?:number):value is PolygonMesh {
-  const mesh=value as PolygonMesh
-  if(!mesh||!isNumericSequence(mesh.positions)||!isNumericSequence(mesh.indices)
-    ||!mesh.positions.length||mesh.positions.length%3||!mesh.indices.length||mesh.indices.length%3)return false
-  const vertexCount=mesh.positions.length/3,triangleCount=mesh.indices.length/3
-  return (vertices===undefined||vertices===vertexCount)&&(triangles===undefined||triangles===triangleCount)
-    &&numericSequenceOf(mesh.positions,mesh.positions.length,finite)
-    &&numericSequenceOf(mesh.indices,mesh.indices.length,index=>Number.isSafeInteger(index)&&Number(index)>=0&&Number(index)<vertexCount)
-}
-
-function validManifoldReport(value:unknown,vertices:number,triangles:number):value is KernelManifoldReport {
-  const report=value as KernelManifoldReport
-  if(!report||report.vertexCount!==vertices||report.triangleCount!==triangles
-    ||!Number.isSafeInteger(report.componentCount)||report.componentCount<1
-    ||typeof report.isManifold!=='boolean'||typeof report.isManifoldWithBoundary!=='boolean')return false
-  const indices=(view:unknown,max:number,pairs=false)=>isNumericSequence(view)&&(!pairs||view.length%2===0)
-    &&numericSequenceOf(view,view.length,index=>Number.isSafeInteger(index)&&Number(index)>=0&&Number(index)<max)
-  return indices(report.boundaryEdges,vertices,true)&&indices(report.nonManifoldEdges,vertices,true)
-    &&indices(report.orientationEdges,vertices,true)&&indices(report.degenerateTriangles,triangles)
-    &&indices(report.nonManifoldVertices,vertices)&&indices(report.isolatedVertices,vertices)
-}
-
-function validManifoldRepair(value:unknown,mesh:PolygonMesh,after:KernelManifoldReport):value is KernelManifoldRepair {
-  const repair=value as KernelManifoldRepair
-  if(!repair||!validRepairMesh(repair)||repair.mode!==1
-    ||repair.positions.length!==mesh.positions.length||repair.indices.length!==mesh.indices.length
-    ||repair.isManifold!==after.isManifold||repair.isManifoldWithBoundary!==after.isManifoldWithBoundary)return false
-  const counts=[repair.weldedVertices,repair.removedDegenerateTriangles,repair.flippedTriangles,repair.splitVertices,repair.filledHoles,repair.filledTriangles]
-  const equal=(a:ArrayLike<number>,b:ArrayLike<number>)=>{for(let index=0;index<a.length;index++)if(a[index]!==b[index])return false;return true}
-  return counts.every(count=>Number.isSafeInteger(count)&&count>=0)
-    &&equal(repair.positions,mesh.positions)&&equal(repair.indices,mesh.indices)
-}
 
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
