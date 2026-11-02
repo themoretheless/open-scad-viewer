@@ -208,6 +208,13 @@ fn monotone_hull(
 // Proof/search results belong to ONE immutable source context and aggregate
 // ledger. Negative entries only skip a completed bounded metric proposal;
 // they never classify geometry. Budget-stopped proposals are not cached.
+#[derive(Default)]
+struct MetricCache {
+    attempts: BTreeMap<Vec<[[u64; 2]; 3]>, bool>,
+    // Only complete proofs of ONE convex source hull. This cache is created
+    // inside a single immutable-source/projection owner and never escapes it.
+    domains: Vec<Box3>,
+}
 fn cached_metric(
     pieces: &[Box3],
     columns: [V3; 3],
@@ -215,16 +222,28 @@ fn cached_metric(
     query: &mut impl FnMut(Box3, &mut IdealVolumeReport) -> Result<Enclosed>,
     out: &mut IdealVolumeReport,
     max: usize,
-    cache: &mut BTreeMap<Vec<[[u64; 2]; 3]>, bool>,
+    cache: &mut MetricCache,
 ) -> Result<bool> {
     let k = pieces.iter().map(|b| key(*b)).collect::<Vec<_>>();
-    if let Some(proven) = cache.get(&k) {
-        return Ok(*proven);
+    if cache.attempts.get(&k) == Some(&true) {return Ok(true);}
+    if pieces.len() == 1 {
+        for domain in cache.domains.iter().rev() {
+            // Failed containment trials also spend the same owner budget.
+            if out.cells == max {return Ok(false);}
+            out.cells += 1;
+            if (0..3).all(|i| domain[i][0] <= pieces[0][i][0]
+                && pieces[0][i][1] <= domain[i][1]) {
+                // A complete injectivity/regularity proof on H applies to
+                // every convex subset of H. No union of different metrics,
+                // failed proposal, foreign source or serialized flag is used.
+                return Ok(true);
+            }
+        }
     }
+    if let Some(proven) = cache.attempts.get(&k) {return Ok(*proven);}
     let proven = monotone_hull(pieces, columns, projection, query, out, max)?;
-    if proven || out.cells < max {
-        cache.insert(k, proven);
-    }
+    if proven || out.cells < max {cache.attempts.insert(k, proven);}
+    if proven && pieces.len() == 1 {cache.domains.push(pieces[0]);}
     Ok(proven)
 }
 fn hull(a: Box3, b: Box3) -> Box3 {
@@ -313,7 +332,7 @@ fn certify_map_impl(
 )->Result<()> {
     out.reason = Some("ideal-volume-work-limit");
     let mut cache = BTreeMap::new();
-    let mut metrics = BTreeMap::new();
+    let mut metrics = MetricCache::default();
     let mut query = |b, out: &mut IdealVolumeReport| -> Result<Enclosed> {
         if let Some(e) = cache.get(&key(b)) {
             return Ok(*e);
@@ -503,6 +522,38 @@ fn certify_map_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn complete_metric_domain_reuse_is_contained_source_local_and_paid() {
+        let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let mut out=IdealVolumeReport {embedding_certified:false,regularity_certified:false,
+            parameter_topology_preserved:false,cells:0,exact_work:0,boxes:0,
+            monotonicity_lower:None,projection,reason:None};
+        let mut cache=MetricCache::default();
+        let calls=std::cell::Cell::new(0);
+        // F=(u-u^2,v,t) embeds the left quarter, but folds on the full cube.
+        let mut query=|b:Box3,out:&mut IdealVolumeReport|->Result<Enclosed>{
+            calls.set(calls.get()+1);out.cells+=1;
+            let [u,v,t]=b.map(|d|I::new(d[0],d[1]).unwrap());
+            let mut columns=projection.map(|v|v.map(I::point));
+            columns[0][0]=I::point(1.).sub(I::point(2.).mul(u)?)?;
+            Ok(Enclosed::Value(cell::Enclosure {value:[u.sub(u.mul(u)?)?,v,t],columns}))
+        };
+        let left=[[0.,0.25],[0.,1.],[0.,1.]];
+        let zero=[[I::point(0.);3];3];
+        assert!(cached_metric(&[left],zero,projection,&mut query,&mut out,10000,&mut cache).unwrap());
+        let small=[[0.0625,0.125],[0.25,0.5],[0.25,0.5]];
+        let before=out.cells;let source_calls=calls.get();
+        assert!(cached_metric(&[small],zero,projection,&mut query,&mut out,before+1,&mut cache).unwrap());
+        assert_eq!(out.cells,before+1);assert_eq!(calls.get(),source_calls);
+        // This is not an exact-key hit: another containment search requires
+        // its own unit, even when every source query is avoided.
+        let before=out.cells;
+        assert!(!cached_metric(&[small],zero,projection,&mut query,&mut out,before,&mut cache).unwrap());
+        assert_eq!(out.cells,before);assert_eq!(calls.get(),source_calls);
+        // The proved local chart cannot authorize the surrounding folded map.
+        assert!(!cached_metric(&[[[0.,1.];3]],zero,projection,&mut query,&mut out,10000,&mut cache).unwrap());
+        assert!(calls.get()>source_calls);
+    }
     #[test]
     fn unsuitable_corner_positive_metric_does_not_starve_the_exact_pair_proof() {
         let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
