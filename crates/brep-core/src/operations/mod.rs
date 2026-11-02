@@ -8,6 +8,12 @@ use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 mod boolean;
+mod seam_boolean;
+pub use seam_boolean::{
+    CertifiedSeamNormalizedBoolean, SeamNormalizedBooleanCertificate,
+    certify_seam_normalized_boolean, verify_seam_normalized_boolean,
+};
+mod orthogonal_boundary;
 mod edge_features;
 mod planar_boolean;
 mod planar_edit;

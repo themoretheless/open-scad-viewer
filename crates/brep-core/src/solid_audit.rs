@@ -4,6 +4,8 @@
 //! shells, watertight shared-edge incidence, and empty/multi-body bounds.
 //! Failure is a typed refuse — never silent heal.
 
+mod box_containment;
+
 use crate::Model;
 use crate::trim_sew::{SewCertificate, sew_closed_model_edges};
 use nurbs_core::{Error, Result};
@@ -245,6 +247,9 @@ pub fn isolated_outward_shell(model: &Model, shell_id: usize, cavity_role: bool)
 fn supported_cavity_containment(model: &Model, outer: usize, inner: usize) -> Result<bool> {
     let outer = isolated_outward_shell(model, outer, false)?;
     let inner = isolated_outward_shell(model, inner, true)?;
+    if box_containment::verify(&outer, &inner, model.tolerance_mm)? {
+        return Ok(true);
+    }
     if crate::nurbs_ss_g6::graph_affine_strict_containment_bounds(&outer, &inner)?.is_some() {
         return Ok(true);
     }

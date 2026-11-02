@@ -1,0 +1,47 @@
+{
+  "scope": "Typed closed boundary embedding for Full Round with exact fresh physical cap charts",
+  "test_exit_code": 0,
+  "tests_passed": 14,
+  "targets": [
+    "feature_ops",
+    "full_round_embedding",
+    "full_round_embedding_prism",
+    "full_round_frame",
+    "full_round_groups",
+    "full_round_prism"
+  ],
+  "proofs": [
+    "Exact stored carrier/edge agreement and exact joins",
+    "Valid trim regions and winding",
+    "Injectivity of every face",
+    "Complete distinct-face pair classification",
+    "Refusal on insufficient pair coverage",
+    "Retained G1/radius/envelope and continuous closure qualifications"
+  ],
+  "regressions": [
+    "Cuboid full round embedded boundary",
+    "Nonrectangular height-nine profile with through-hole",
+    "Initial height-nine exact agreement failure fixed by physical XY cap clocks"
+  ],
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "8fbe8921deb3d9cd52c256a5be5aa202e82f32ee091445e2bb925393c34db47b",
+    "crates/brep-core/src/feature_ops/full_round_seams.rs": "91591ddda7bb65cd3d985f5df07e034d423e71765f1cce015df76cd672199263",
+    "crates/brep-core/src/feature_ops/full_round_caps.rs": "56d8449dd985c3a69b79a1f4506cb01a13239aa402c101accf051bb691ce8500",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "8d3bca285aaec0ee1e294663e3ab6803a883aa5a5b15ca111740a50e6cecc1b7",
+    "crates/brep-core/src/feature_ops/full_round_prism/groups.rs": "ddb3aef6ff462c21e32d7d57e5a182695e55bfdfab09a651c08b3b03a200cf8a",
+    "crates/brep-core/tests/full_round_embedding.rs": "b4c149d3d315e691133a714fe9df74bff83e9d37bbe75498ef2c627285e493f3",
+    "crates/brep-core/tests/full_round_embedding_prism.rs": "1e24943752a89f6bfa54bbbd2e06a0ef931546569d1bc8e29a3f9bd27ec1dd43",
+    "crates/brep-core/tests/full_round_frame.rs": "ea1ef6951e983760f5b440314a4fdc7fb027baf7b84805172f23ab8e04f2bdba",
+    "crates/brep-core/tests/full_round_prism.rs": "17a0e2530b74e9156530af65dcd87e800443274393c55522d4acdfa5ca49da94",
+    "crates/brep-core/tests/full_round_groups.rs": "b4b16872097d16a286d80ab6625faf215f4477c82a54e1f3e495da21d2c5cd85"
+  },
+  "limitations": [
+    "Embedding admission is explicit through Qualification::qualify_embedding",
+    "Not filled-material/cavity role certification",
+    "Arbitrary transformed/general curved support cases remain unproved",
+    "No Plasticity runtime comparison",
+    "Focused tests do not qualify full concurrent worktree"
+  ],
+  "architecture_gate": "Existing mainSolidResult.ts 595 lines vs pin 594",
+  "full_parity": false
+}

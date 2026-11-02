@@ -1,0 +1,116 @@
+{
+  "status": "lossless frozen-recipe transport and actual native/WASM router verified; ModelGraph and packaged deployment remain open",
+  "rust_tests_passed": 12,
+  "rust_tests": {
+    "full_round_exact_transport": 2,
+    "geometry_bridge_full_round_exact": 2,
+    "full_round_exact_material_family": 6,
+    "full_round_raw_binding": 2
+  },
+  "wasm_abi_cases_passed": 6,
+  "counts_note": "native fixture filtered rerun overlaps one of the two transport tests; not added",
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted.rs": "bc78efee75c09c1e20b2ecbb037408a0d595251ff83a1d1dd9f56da8eb58d9cb",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/recipe.rs": "2ced318ae850243bb32903843f989ded7644423d522de558b299a7e931dac828",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/transport.rs": "eb8c47c8b4ac1d7f545316190af65dd978bfcdcecaaef4eb8510a7d73643f50e",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/geometry_value.rs": "cc172d9fe26afd54b792d560d74c1d776d791d6aa888ff63339a00bfb0c47be3",
+    "crates/brep-core/src/feature_ops/full_round_curved/material_relation/exact.rs": "39c6741008927538e727dcf17c2d996cf6ac51a0540e212d67c6f0bc358482ea",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/material.rs": "d47c715abe3e6002ce491e79486894525a1dc5945b6fe68bcd20d436739af686",
+    "crates/geometry-bridge/src/lib.rs": "1eaccb918496ed57d18c7d533b512900aade6169c92137673298d02e91cafdf4",
+    "crates/geometry-bridge/src/dispatch/cad.rs": "de812d3d1f858d30b9139b30dae23013625500ff6050cfc8b8e79adf6417a6be",
+    "crates/geometry-bridge/src/cad_full_round_exact.rs": "987c7bbd9d091d5a3888e1bd53faaf1af5a5dda3f02a99524f5a54ab396c31e4",
+    "crates/brep-core/tests/full_round_exact_transport.rs": "f5e912c9e71491fd7e839caa3a9e5737e783d95509ae51f7264762c1f2050772",
+    "crates/brep-core/tests/full_round_exact_material_family.rs": "c366fbf8688fe9063d0e226e3d8f60191301392aefb5212da96f755bb8bcf1be",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "77b0bfff1fb6a86c94a0ff9716d6ae8f68d103da74740bd6cd5122baf44e0e9b",
+    "crates/geometry-bridge/tests/full_round_exact.rs": "59850802c23fa52acf61293be54087b61fba12a49da530b9d2505511a2c8028e",
+    "scripts/check-full-round-exact-transport-wasm.mts": "4dd9dc90dd8c8cf3a44cf9170149b3dfe68ea5fcc38285b0ec9700fdc9430161"
+  },
+  "formats": [
+    "admitted-full-round/1",
+    "exact-rational-nurbs-brep/1"
+  ],
+  "operations": [
+    "cad_full_round_exact",
+    "cad_full_round_exact_restore"
+  ],
+  "wasm": {
+    "schema": "full-round-exact-transport-wasm/1",
+    "passed": true,
+    "wasmPath": "/tmp/rea-full-round-wasm/wasm32-unknown-unknown/debug/geometry_wasm.wasm",
+    "wasmSha256": "69eb251798727f99df9c2a5b88691a56b5db3ce4ac2122edadc565a06af2adf6",
+    "wasmBytes": 45143769,
+    "nativeFixtureSha256": "f16e2beba672b02cbce581de038f8e11be9b7e01bf474241214a79984253847f",
+    "cases": [
+      {
+        "name": "native-frozen-recipe-to-wasm",
+        "ok": true,
+        "elapsedMs": 21034.460584
+      },
+      {
+        "name": "wasm-original-source-construction",
+        "ok": true,
+        "elapsedMs": 19227.942208
+      },
+      {
+        "name": "wasm-json-frozen-roundtrip",
+        "ok": true,
+        "elapsedMs": 18075.76075
+      },
+      {
+        "name": "forged-rational-output",
+        "ok": false,
+        "elapsedMs": 18098.048874999993,
+        "error": {
+          "code": "BREP_FEATURE_REFUSED",
+          "message": "Exact output/evidence differs from frozen-source reconstruction"
+        }
+      },
+      {
+        "name": "caller-success-field",
+        "ok": false,
+        "elapsedMs": 0.49670799999148585,
+        "error": {
+          "code": "GEOMETRY_INVALID_INPUT",
+          "message": "Unexpected exact Full Round request field"
+        }
+      },
+      {
+        "name": "changed-original-source-interval",
+        "ok": false,
+        "elapsedMs": 3.238374999986263,
+        "error": {
+          "code": "BREP_FEATURE_REFUSED",
+          "message": "Exact recipe changes an unselected source interval"
+        }
+      }
+    ],
+    "scope": "Fresh custom WASM via real binary ABI. Native frozen recipe geometry is identical after reconstruction. This does not update the packaged application artifact or qualify ModelGraph/UI integration."
+  },
+  "build": {
+    "target": "wasm32-unknown-unknown",
+    "profile": "dev opt-level=1 debug=0",
+    "jobs": 2,
+    "target_dir": "/tmp/rea-full-round-wasm",
+    "packaged_artifact_updated": false
+  },
+  "coverage": [
+    "frozen original contact ranges/bridge proposals/target center and radius",
+    "exact reconstruction without rerunning floating contact solving",
+    "binary and JSON roundtrip preserves actual rational topology",
+    "native artifact reconstructed identically in real WASM",
+    "actual WASM original-source construction and JSON reconstruction",
+    "forged exact coefficients/evidence, invalid source interval, unknown success keys and byte budget refuse",
+    "all six native multispan families and source-clock/reversed-carrier recipes replay"
+  ],
+  "checks": [
+    "11 frozen clean files unchanged",
+    "API map passed: 242 roots, 200 catalog entries; not parity"
+  ],
+  "open": [
+    "ModelGraph exact-rational carrier/types and operation routing",
+    "persistent topology ID and source-owned output lineage",
+    "native exact payload editing/display/exchange consumers",
+    "packaged kernel artifact/source identity/worker integration",
+    "full regressions and complete original library parity scope"
+  ]
+}

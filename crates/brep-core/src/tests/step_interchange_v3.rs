@@ -2097,3 +2097,154 @@ fn actual_ui_step_roundtrip_classifies_oriented_identity_bindings() {
         }
     }
 }
+
+
+#[test]
+fn bspline_surface_five_forms_roundtrip_and_validate() {
+    let points = "#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));#6=CARTESIAN_POINT('',(2.,0.,1.));#7=CARTESIAN_POINT('',(2.,1.,1.));";
+    let net = "((#2,#3),(#4,#5),(#6,#7))";
+    let weights = "((1.,2.),(3.,4.),(5.,6.))";
+    let explicit = format!(
+        "#1=(BOUNDED_SURFACE()B_SPLINE_SURFACE(2,1,{net},.UNSPECIFIED.,.F.,.F.,.F.)B_SPLINE_SURFACE_WITH_KNOTS((3,3),(2,2),(0.,1.),(0.,1.),.UNSPECIFIED.)RATIONAL_B_SPLINE_SURFACE({weights})SURFACE());{points}"
+    );
+    let implicit = ["UNIFORM_SURFACE", "QUASI_UNIFORM_SURFACE", "BEZIER_SURFACE"].map(|form| {
+        format!(
+            "#1=(BOUNDED_SURFACE()B_SPLINE_SURFACE(2,1,{net},.UNSPECIFIED.,.F.,.F.,.F.){form}()RATIONAL_B_SPLINE_SURFACE({weights})SURFACE());{points}"
+        )
+    });
+    for (index, text) in std::iter::once(explicit)
+        .chain(implicit)
+        .enumerate()
+    {
+        let entities = parse(&text).unwrap();
+        let surface = surface_v5(&entities, 1, 1.).unwrap();
+        assert_eq!(surface.weights, vec![vec![1., 2.], vec![3., 4.], vec![5., 6.]]);
+        let expected_u: &[f64] = match index {
+            0 | 2 | 3 => &[0., 0., 0., 1., 1., 1.],
+            1 => &[0., 1., 2., 3., 4., 5.],
+            _ => unreachable!(),
+        };
+        assert_eq!(surface.knots_u, expected_u);
+        let expected_v: &[f64] = if index == 1 {
+            &[0., 1., 2., 3.]
+        } else {
+            &[0., 0., 1., 1.]
+        };
+        assert_eq!(surface.knots_v, expected_v);
+
+        let mut writer = Writer::new();
+        let id = emit_surface_source(&mut writer, &surface);
+        let canonical = writer
+            .rows
+            .iter()
+            .map(|(entity, body)| format!("#{entity}={body};"))
+            .collect::<String>();
+        let entities = parse(&canonical).unwrap();
+        let roundtrip = surface_v5(&entities, id, 1.).unwrap();
+        assert_eq!(roundtrip, surface, "surface form index {index}");
+    }
+}
+
+#[test]
+fn bspline_surface_refuses_bad_bezier_and_knot_budget() {
+    let bad_bezier = "#1=(B_SPLINE_SURFACE(1,1,((#2,#3),(#4,#5),(#6,#7)),.UNSPECIFIED.,.F.,.F.,.F.)BEZIER_SURFACE()SURFACE());#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));#6=CARTESIAN_POINT('',(2.,0.,0.));#7=CARTESIAN_POINT('',(2.,1.,0.));";
+    assert!(
+        surface_v5(&parse(bad_bezier).unwrap(), 1, 1.)
+            .unwrap_err()
+            .message
+            .contains("degree+1")
+    );
+    let oversized = "#1=B_SPLINE_SURFACE_WITH_KNOTS('',1,1,((#2,#3),(#4,#5)),.UNSPECIFIED.,.F.,.F.,.F.,(4097),(2),(0.),(0.,1.),.UNSPECIFIED.);#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));";
+    assert!(
+        surface_v5(&parse(oversized).unwrap(), 1, 1.)
+            .unwrap_err()
+            .message
+            .contains("4096-entry budget")
+    );
+}
+
+
+#[test]
+fn curve_bounded_surface_requires_face_boundary_agreement() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [1., 2., 3.]).unwrap();
+    let (text, _, _) = export_step_v5(&model).unwrap();
+    let entities = parse(data_payload(&text).unwrap()).unwrap();
+    let (face_id, face_args) = entities
+        .iter()
+        .find_map(|(id, entity)| match &entity.value {
+            Value::Call(name, args) if name == "ADVANCED_FACE" => Some((*id, args)),
+            _ => None,
+        })
+        .unwrap();
+    let surface_id = one_ref(&face_args[2], "test surface").unwrap();
+    let mut boundaries = BTreeSet::new();
+    for bound in list(&face_args[1], "test bounds").unwrap() {
+        let (_, bound_args) = call(&entities, one_ref(bound, "test bound").unwrap()).unwrap();
+        let (_, loop_args) = call(
+            &entities,
+            one_ref(&bound_args[1], "test loop").unwrap(),
+        )
+        .unwrap();
+        for oriented in list(&loop_args[1], "test oriented edges").unwrap() {
+            let (_, oriented_args) = call(
+                &entities,
+                one_ref(oriented, "test oriented").unwrap(),
+            )
+            .unwrap();
+            let (_, edge_args) = call(
+                &entities,
+                one_ref(&oriented_args[3], "test edge").unwrap(),
+            )
+            .unwrap();
+            let (_, geometry_args) = call(
+                &entities,
+                one_ref(&edge_args[3], "test geometry").unwrap(),
+            )
+            .unwrap();
+            boundaries.insert(one_ref(&geometry_args[1], "test 3D curve").unwrap());
+        }
+    }
+    assert_eq!(boundaries.len(), 4);
+    let wrapper_id = entities.keys().max().unwrap() + 1;
+    let boundary_refs = boundaries
+        .iter()
+        .map(|id| format!("#{id}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let wrapper = format!(
+        "#{wrapper_id}=CURVE_BOUNDED_SURFACE('',#{surface_id},({boundary_refs}),.T.);\n"
+    );
+    let wrapped = text
+        .lines()
+        .map(|line| {
+            if line.starts_with(&format!("#{face_id}=ADVANCED_FACE(")) {
+                line.replacen(&format!(",#{surface_id},"), &format!(",#{wrapper_id},"), 1)
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        .replace("OSCAD_TOPO/3|", "EXTERNAL_STEP|")
+        .replace("ENDSEC;\nEND-ISO", &format!("{wrapper}ENDSEC;\nEND-ISO"));
+    let (back, _, _) = import_step_v5(&wrapped).unwrap();
+    assert_eq!(back.faces.len(), model.faces.len());
+    assert_eq!(back.loops.len(), model.loops.len());
+
+    let reduced_refs = boundaries
+        .iter()
+        .take(boundaries.len() - 1)
+        .map(|id| format!("#{id}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mismatched = wrapped.replace(
+        &format!("({boundary_refs})"),
+        &format!("({reduced_refs})"),
+    );
+    assert!(
+        import_step_v5(&mismatched)
+            .unwrap_err()
+            .message
+            .contains("boundaries disagree")
+    );
+}

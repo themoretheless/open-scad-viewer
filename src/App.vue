@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import {useTransientNotice} from './composables/useTransientNotice'
+import FormaRegion from './components/FormaRegion.vue'
+import topbarUi from './ui/Topbar.ui?raw'
+import editorToolbarUi from './ui/EditorToolbar.ui?raw'
+import editorStatsUi from './ui/EditorStats.ui?raw'
+import viewerToolbarUi from './ui/ViewerToolbar.ui?raw'
+import selectionModesUi from './ui/SelectionModes.ui?raw'
+import dockRailUi from './ui/DockRail.ui?raw'
+import computeInspectorUi from './ui/ComputeInspector.ui?raw'
+import statusbarUi from './ui/Statusbar.ui?raw'
 import SweepBoundaryBadges from './components/SweepBoundaryBadges.vue'
 import { useBuildAndRendererLifecycle, type SweepViewportProgressSnapshot } from './composables/useBuildAndRendererLifecycle'
 import { useCodeEditorViewport } from './composables/useCodeEditorViewport'
@@ -26,14 +35,12 @@ import CustomizerPanel from './components/CustomizerPanel.vue'
 const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.vue'))
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
-import type { DirectDocument } from './services/directModeling'
+import type { DirectDocument, DirectBody } from './services/directModeling'
 import { APP_STRINGS as L, type Language } from './i18n/appStrings'
 import { useAppearance } from './composables/useAppearance'
 import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './services/directModeling'
-import type { DirectBody } from './services/directModeling'
-import type { WorkspaceMode } from './services/workspaceModes'
-import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
+import { type WorkspaceMode, WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './services/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
@@ -52,15 +59,7 @@ import { MAX_PARAMETER_PRESETS } from './services/parameterPresets'
 import { analyzeSurfaceArea, type GeometryComputeResult } from './services/geometryCompute'
 import { EXAMPLE_CATALOG, EXAMPLES } from './data/examples'
 import { assertExampleCatalog } from './services/exampleCatalog'
-import {
-  buildPaletteDescriptors,
-  buildShortcutHelpGroups,
-  resolveKeyboardCommand,
-  type CommandId,
-  type CommandScope,
-  type PaletteCommandId,
-  type PaletteCommandRuntimeState,
-} from './services/commandRegistry'
+import { buildPaletteDescriptors, buildShortcutHelpGroups, resolveKeyboardCommand, type CommandId, type CommandScope, type PaletteCommandId, type PaletteCommandRuntimeState } from './services/commandRegistry'
 import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
@@ -68,30 +67,14 @@ import { nextRovingIndex } from './services/rovingFocus'
 import { SceneController } from './services/sceneController'
 import { ViewportController } from './services/viewportController'
 import { revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
-import {
-  setStorageFailureHandler,
-  storageGet,
-  storageSet,
-  storageSetJSON,
-} from './services/safeStorage'
+import { setStorageFailureHandler, storageGet, storageSet, storageSetJSON } from './services/safeStorage'
 import { extractCustomizerParameters } from './services/scadCustomizer'
-import {
-  geometryExportEligibility,
-} from './services/buildPromotionPolicy'
-import {
-  MAX_WORKSPACE_SOURCE_LENGTH,
-  updateWorkspaceDocument,
-  type WorkspaceDocumentSnapshot,
-} from './services/workspaceDocument'
+import { geometryExportEligibility } from './services/buildPromotionPolicy'
+import { MAX_WORKSPACE_SOURCE_LENGTH, updateWorkspaceDocument, type WorkspaceDocumentSnapshot } from './services/workspaceDocument'
 import type { BrowserWorkspacePersistence } from './services/workspacePersistence'
 import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
-import type {
-  PickHit,
-  SelectionMode,
-  StandardView,
-} from './services/rendererContracts'
-import { blockColors, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, readCommandMru } from './appHelpers'
-import type { DockTab } from './appHelpers'
+import type { PickHit, SelectionMode, StandardView } from './services/rendererContracts'
+import { blockColors, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, readCommandMru, type DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
 assertThemeCatalog(THEME_CATALOG)
@@ -1153,108 +1136,97 @@ function isCommandEnabled(id: CommandId): boolean {
 
 const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEditorResize({ mainRef, editorWidth, editorMaxWidth })
 
+function handleShellAction(name: string, args: unknown[], event?: Event) {
+  switch (name) {
+    case 'openWorkspaceMode': openWorkspaceMode(args[0] as WorkspaceMode); break
+    case 'saveSource': saveSource(); break
+    case 'resolveConflict': void resolveWorkspaceConflict(Boolean(args[0])); break
+    case 'retryPersistence': void retryWorkspacePersistence(); break
+    case 'toggleEditor': editorOpen.value = !editorOpen.value; break
+    case 'openCommandPalette': openCommandPalette(); break
+    case 'openExportDialog': openExportDialog(); break
+    case 'renderFull': void doRender('full'); break
+    case 'cancelGeometryBuild': cancelGeometryBuild(); break
+    case 'cancelSolidBuild': cancelSolidBuild(); break
+    case 'fitView': fitView(); break
+    case 'resetView': resetView(); break
+    case 'previousView': previousView(); break
+    case 'toggleProjection': toggleProjection(); break
+    case 'toggleGrid': toggleGrid(); break
+    case 'setDisplayMode': setDisplayMode(args[0] as 'shaded' | 'edges' | 'xray'); break
+    case 'setSelectionMode': setSelectionMode(args[0] as SelectionMode); break
+    case 'focusSelection': focusSelection(); break
+    case 'toggleIsolate': toggleIsolate(); break
+    case 'clearSelection': clearSelection(); break
+    case 'dockTabKeydown': if (event) handleDockTabKeydown(event as KeyboardEvent); break
+    case 'selectDockTab': dockTab.value = args[0] as DockTab; break
+    case 'closeDock': closeDock(); break
+    case 'runGeometryAnalysis': void runGeometryAnalysis(); break
+    case 'cancelGeometryAnalysis': cancelGeometryAnalysis(); break
+    case 'cancelConversion': cancelConversion(); break
+  }
+}
 
-
+function handleShellBinding(path: string, value: unknown) {
+  if (path === 'autoRender') autoRender.value = Boolean(value)
+}
 </script>
 
 <template>
   <div class="app" :style="{ '--workspace-top': topbarHeight + 'px' }" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
     <nav ref="topbarRef" class="topbar" aria-label="Application" :inert="functionReferenceOpen">
-      <div class="topbar-left">
-        <svg class="logo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>
-        </svg>
-        <details class="menu file-menu">
-          <summary class="file-chip" :title="t('fileMenu')">
-            <span class="file-chip-name">{{ fileName }}</span>
-            <span v-if="workspaceConflict || workspacePersistenceStatus !== 'saved'" class="file-chip-dot" :class="workspaceConflict ? 'error' : workspacePersistenceStatus" aria-hidden="true" />
-            <svg class="chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-          </summary>
-          <div class="menu-list" @click="closeMenus">
-            <button type="button" :title="t('openFile')" @click="triggerOpen">{{ t('open') }}</button>
-            <button type="button" :title="t('saveFile')" @click="saveSource">{{ t('save') }}</button>
-            <button type="button" :disabled="savingBrowser" :title="t('saveBrowserHelp')" @click="saveBrowserDraft">{{ savingBrowser ? t('savingDraft') : t('saveBrowser') }}</button>
-            <button type="button" :title="t('shareFile')" @click="shareSource">{{ t('share') }}</button>
-            <button type="button" :disabled="conversionPending" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
-            <span class="menu-status" role="status">{{ persistenceLabel }}</span>
-          </div>
-        </details>
-        <input ref="fileInputRef" class="sr-only" type="file" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
-        <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
-      </div>
-      <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
-        <button
-          v-for="mode in WORKSPACE_MODES"
-          :key="mode"
-          type="button"
-          :class="{ active: workspaceMode === mode }"
-          :aria-pressed="workspaceMode === mode"
-          :title="workspaceModeHint(mode, lang)"
-          @click="openWorkspaceMode(mode)"
-        >{{ workspaceModeLabel(mode, lang) }}</button>
-      </div>
-      <div class="topbar-right">
-        <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
-          <span>⚠ {{ t('storageConflict') }}</span>
-          <button type="button" @click="saveSource">{{ t('exportDraft') }}</button>
-          <button type="button" @click="resolveWorkspaceConflict(false)">{{ t('useIndexed') }}</button>
-          <button type="button" @click="resolveWorkspaceConflict(true)">{{ t('restoreDraft') }}</button>
-        </div>
-        <button
-          v-else-if="workspacePersistenceStatus === 'error'"
-          class="persistence-status persistence-error"
-          type="button"
-          :title="storageFailureDetail || t('retrySave')"
-          @click="retryWorkspacePersistence"
-        >⚠ {{ t('unsavedDraft') }}</button>
-        <button
-          class="icon-btn source-toggle"
-          type="button"
-          :class="{ active: editorOpen }"
-          :aria-pressed="editorOpen"
-          :aria-label="lang === 'ru' ? 'Исходный код' : 'Source'"
-          :title="lang === 'ru' ? 'Исходный код' : 'Source'"
-          @click="editorOpen = !editorOpen"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg>
-        </button>
-        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" :aria-label="t('commands')" aria-keyshortcuts="Control+K Meta+K" @click="openCommandPalette">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <span>{{ t('commandHelp') }}</span> <kbd>Ctrl K</kbd>
-        </button>
-        <button class="btn topbar-action" type="button" :title="t('exportTitle')" @click="openExportDialog">
-          <span>{{ t('export') }}</span>
-        </button>
-        <details class="menu settings-menu">
-          <summary class="icon-btn" :title="t('settings')" :aria-label="t('settings')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
-          </summary>
-          <div class="menu-list menu-right">
-            <div class="menu-row" @click.stop>
-              <span>{{ t('theme') }}</span>
-              <select v-model="themeSelection" :aria-label="t('theme')" @change="applyPreferences">
-                <option value="system">{{ t('systemTheme') }}</option>
-                <option v-for="theme in THEME_CATALOG" :key="theme.id" :value="theme.id">{{ theme.name[lang] }}</option>
-              </select>
+      <FormaRegion :source="topbarUi" :locale="lang" :state="{ workspaceModeGroupLabel: lang === 'ru' ? 'Режим работы' : 'Workspace mode', workspaceMode, modes: WORKSPACE_MODES.map(m => ({ id: m, label: workspaceModeLabel(m, lang), hint: workspaceModeHint(m, lang) })), workspaceConflict, conflictWarning: `⚠ ${t('storageConflict')}`, exportDraftLabel: t('exportDraft'), useIndexedLabel: t('useIndexed'), restoreDraftLabel: t('restoreDraft'), persistenceError: workspacePersistenceStatus === 'error', persistenceErrorTitle: storageFailureDetail || t('retrySave'), unsavedDraftLabel: `⚠ ${t('unsavedDraft')}`, editorOpen, sourceLabel: lang === 'ru' ? 'Исходный код' : 'Source', commandHelp: t('commandHelp'), commandsLabel: t('commands'), exportTitle: t('exportTitle'), exportLabel: t('export') }" @action="handleShellAction">
+        <template #fileMenu>
+          <details class="menu file-menu">
+            <summary class="file-chip" :title="t('fileMenu')">
+              <span class="file-chip-name">{{ fileName }}</span>
+              <span v-if="workspaceConflict || workspacePersistenceStatus !== 'saved'" class="file-chip-dot" :class="workspaceConflict ? 'error' : workspacePersistenceStatus" aria-hidden="true" />
+              <svg class="chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="menu-list" @click="closeMenus">
+              <button type="button" :title="t('openFile')" @click="triggerOpen">{{ t('open') }}</button>
+              <button type="button" :title="t('saveFile')" @click="saveSource">{{ t('save') }}</button>
+              <button type="button" :disabled="savingBrowser" :title="t('saveBrowserHelp')" @click="saveBrowserDraft">{{ savingBrowser ? t('savingDraft') : t('saveBrowser') }}</button>
+              <button type="button" :title="t('shareFile')" @click="shareSource">{{ t('share') }}</button>
+              <button type="button" :disabled="conversionPending" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
+              <span class="menu-status" role="status">{{ persistenceLabel }}</span>
             </div>
-            <label class="menu-row" @click.stop>
-              <span>{{ t('customBase') }}</span>
-              <input type="color" :value="customBase ?? effectiveTokens['--bg']" :aria-label="t('customBase')" @input="setCustomColor('base', $event)">
-            </label>
-            <label class="menu-row" @click.stop>
-              <span>{{ t('customAccent') }}</span>
-              <input type="color" :value="customAccent ?? effectiveTokens['--accent']" :aria-label="t('customAccent')" @input="setCustomColor('accent', $event)">
-            </label>
-            <button v-if="customAccent || customBase" type="button" @click.stop="resetCustomColors">{{ t('customReset') }}</button>
-            <button type="button" :aria-label="t('language')" @click="toggleLang">
-              <span>{{ t('language') }}</span><kbd>{{ lang === 'ru' ? 'RU' : 'EN' }}</kbd>
-            </button>
-            <button type="button" aria-keyshortcuts="?" aria-haspopup="dialog" @click="closeMenus(); shortcutHelpOpen = true">
-              <span>{{ t('shortcuts') }}</span><kbd>?</kbd>
-            </button>
-          </div>
-        </details>
-      </div>
+          </details>
+          <input ref="fileInputRef" class="sr-only" type="file" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
+          <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
+        </template>
+        <template #settingsMenu>
+          <details class="menu settings-menu">
+            <summary class="icon-btn" :title="t('settings')" :aria-label="t('settings')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+            </summary>
+            <div class="menu-list menu-right">
+              <div class="menu-row" @click.stop>
+                <span>{{ t('theme') }}</span>
+                <select v-model="themeSelection" :aria-label="t('theme')" @change="applyPreferences">
+                  <option value="system">{{ t('systemTheme') }}</option>
+                  <option v-for="theme in THEME_CATALOG" :key="theme.id" :value="theme.id">{{ theme.name[lang] }}</option>
+                </select>
+              </div>
+              <label class="menu-row" @click.stop>
+                <span>{{ t('customBase') }}</span>
+                <input type="color" :value="customBase ?? effectiveTokens['--bg']" :aria-label="t('customBase')" @input="setCustomColor('base', $event)">
+              </label>
+              <label class="menu-row" @click.stop>
+                <span>{{ t('customAccent') }}</span>
+                <input type="color" :value="customAccent ?? effectiveTokens['--accent']" :aria-label="t('customAccent')" @input="setCustomColor('accent', $event)">
+              </label>
+              <button v-if="customAccent || customBase" type="button" @click.stop="resetCustomColors">{{ t('customReset') }}</button>
+              <button type="button" :aria-label="t('language')" @click="toggleLang">
+                <span>{{ t('language') }}</span><kbd>{{ lang === 'ru' ? 'RU' : 'EN' }}</kbd>
+              </button>
+              <button type="button" aria-keyshortcuts="?" aria-haspopup="dialog" @click="closeMenus(); shortcutHelpOpen = true">
+                <span>{{ t('shortcuts') }}</span><kbd>?</kbd>
+              </button>
+            </div>
+          </details>
+        </template>
+      </FormaRegion>
     </nav>
 
     <main
@@ -1306,46 +1278,44 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           : 'Built as exact solids. hull, projection, offset and polyhedron have no exact form and are refused.' }}</p>
       </section>
       <section v-else class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
-        <div class="toolbar editor-toolbar">
-          <VrControls :meshes="sceneState.meshes" :visibility="sceneState.visibility" :isolated="sceneState.isolated" :selected-index="sceneState.selectedIndex" :locale="lang" />
-          <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
-            <svg class="play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
-            {{ t('render') }}
-          </button>
-          <button v-if="rendering" class="btn" type="button" @click="cancelGeometryBuild()">{{ t('cancelBuild') }}</button>
-          <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
-          <button v-if="solidBuilding" class="btn" type="button" @click="cancelSolidBuild()">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
-          <span class="toolbar-spacer" aria-hidden="true" />
-          <button
-            ref="functionReferenceButton"
-            class="icon-btn"
-            type="button"
-            :title="`${t('functionReference')} (F1)`"
-            :aria-label="t('functionReference')"
-            aria-keyshortcuts="F1"
-            aria-haspopup="dialog"
-            :aria-expanded="functionReferenceOpen"
-            @click="openFunctionReference()"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5"/><path d="M12 17h.01"/></svg>
-          </button>
-          <details class="menu more-menu">
-            <summary class="icon-btn" :title="t('more')" :aria-label="t('more')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-            </summary>
-            <div class="menu-list menu-right" @click="closeMenus">
-              <button type="button" :disabled="solidBuilding" :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'" @click="buildSolidFromSource()">{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
-              <button type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
-              <button type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
-              <span class="menu-sep" aria-hidden="true" />
-              <button type="button" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }} <kbd>Alt Shift F</kbd></button>
-              <button type="button" @click="openEditorFind(false)">{{ t('find') }}</button>
-              <button type="button" @click="openEditorFind(true)">{{ t('replace') }}</button>
-              <button type="button" :disabled="!sceneMeshes.length || rendering" @click="bringCodeToSolid">{{ t('codeToSolid') }}</button>
-              <button type="button" :disabled="!sceneMeshes.length || rendering" @click="bringCodeToMesh">{{ t('codeToMesh') }}</button>
-            </div>
-          </details>
-        </div>
+        <FormaRegion :source="editorToolbarUi" :locale="lang" :state="{ rendering, renderLabel: t('render'), cancelBuildLabel: t('cancelBuild'), autoRender, autoLabel: t('auto'), solidBuilding, cancelSolidLabel: lang === 'ru' ? 'Отмена' : 'Cancel' }" @action="handleShellAction" @binding="handleShellBinding">
+          <template #vr>
+            <VrControls :meshes="sceneState.meshes" :visibility="sceneState.visibility" :isolated="sceneState.isolated" :selected-index="sceneState.selectedIndex" :locale="lang" />
+          </template>
+          <template #functionReference>
+            <button
+              ref="functionReferenceButton"
+              class="icon-btn"
+              type="button"
+              :title="`${t('functionReference')} (F1)`"
+              :aria-label="t('functionReference')"
+              aria-keyshortcuts="F1"
+              aria-haspopup="dialog"
+              :aria-expanded="functionReferenceOpen"
+              @click="openFunctionReference()"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5"/><path d="M12 17h.01"/></svg>
+            </button>
+          </template>
+          <template #moreMenu>
+            <details class="menu more-menu">
+              <summary class="icon-btn" :title="t('more')" :aria-label="t('more')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+              </summary>
+              <div class="menu-list menu-right" @click="closeMenus">
+                <button type="button" :disabled="solidBuilding" :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'" @click="buildSolidFromSource()">{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
+                <button type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
+                <button type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
+                <span class="menu-sep" aria-hidden="true" />
+                <button type="button" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }} <kbd>Alt Shift F</kbd></button>
+                <button type="button" @click="openEditorFind(false)">{{ t('find') }}</button>
+                <button type="button" @click="openEditorFind(true)">{{ t('replace') }}</button>
+                <button type="button" :disabled="!sceneMeshes.length || rendering" @click="bringCodeToSolid">{{ t('codeToSolid') }}</button>
+                <button type="button" :disabled="!sceneMeshes.length || rendering" @click="bringCodeToMesh">{{ t('codeToMesh') }}</button>
+              </div>
+            </details>
+          </template>
+        </FormaRegion>
 
         <div v-if="findOpen" class="find-bar" role="search" @keydown="handleFindKeydown">
           <input
@@ -1421,116 +1391,69 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <div v-for="warning in warnings" :key="warning">⚠ {{ warning }}</div>
         </div>
 
-        <footer class="stats" aria-live="polite">
-          <span>{{ t('meshes') }} <strong>{{ formatNumber(meshCount) }}</strong></span>
-          <span>{{ t('triangles') }} <strong>{{ formatNumber(triangleCount) }}</strong></span>
-          <span v-if="meshCount">{{ t('volume') }} <strong>{{ formatNumber(volume, 2) }}</strong></span>
-          <span v-if="meshCount">{{ t('area') }} <strong>{{ formatNumber(surfaceArea, 2) }}</strong></span>
-          <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
-        </footer>
+        <FormaRegion :source="editorStatsUi" :locale="lang" :state="{ meshesLabel: t('meshes'), meshesValue: formatNumber(meshCount), trianglesLabel: t('triangles'), trianglesValue: formatNumber(triangleCount), hasMeshes: meshCount > 0, volumeLabel: t('volume'), volumeValue: formatNumber(volume, 2), areaLabel: t('area'), areaValue: formatNumber(surfaceArea, 2), statusClass: ['status', stale ? 'stale' : '', rendering ? 'busy' : '', error ? 'failed' : ''].filter(Boolean).join(' '), statusSummary: `${statusText} · ${formatNumber(renderDuration, 0)} ms` }" />
       </section>
 
-      <div
-        class="splitter"
-        role="separator"
-        tabindex="0"
-        aria-orientation="vertical"
-        :aria-label="t('resize')"
-        :aria-valuenow="Math.round(editorWidth)"
-        aria-valuemin="300"
-        :aria-valuemax="editorMaxWidth"
-        @pointerdown="startResize"
-        @pointermove="moveResize"
-        @pointerup="stopResize"
-        @pointercancel="stopResize"
-        @lostpointercapture="stopResize"
-        @keydown="resizeEditorWithKeyboard"
-      ><span /></div>
+      <div class="splitter" role="separator" tabindex="0" aria-orientation="vertical" :aria-label="t('resize')" :aria-valuenow="Math.round(editorWidth)" aria-valuemin="300" :aria-valuemax="editorMaxWidth" @pointerdown="startResize" @pointermove="moveResize" @pointerup="stopResize" @pointercancel="stopResize" @lostpointercapture="stopResize" @keydown="resizeEditorWithKeyboard"><span /></div>
 
       <section class="canvas-panel" :class="{ 'with-dock': dockOpen }" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
         <MainModelingTools ref="mainToolsRef" :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @solid="continueMainEditInSolid" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
-        <div class="viewer-toolbar" :class="{ 'with-dock': dockOpen }">
-          <button class="view-btn icon-only" type="button" :title="t('fit')" :aria-label="t('fit')" @click="fitView">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
-          </button>
-          <button class="view-btn icon-only" type="button" :title="t('reset')" :aria-label="t('reset')" @click="resetView">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
-          </button>
-          <button
-            class="view-btn icon-only"
-            type="button"
-            :disabled="!canPreviousView"
-            :aria-label="t('previousView')"
-            :title="canPreviousView ? `${t('previousView')} · [` : t('noPreviousView')"
-            @click="previousView"
-          ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
-          <span class="vt-sep" aria-hidden="true" />
-          <button class="view-btn icon-only" type="button" :aria-pressed="projection === 'orthographic'" :aria-label="projection === 'perspective' ? t('perspective') : t('orthographic')" :title="`${projection === 'perspective' ? t('perspective') : t('orthographic')} → ${projection === 'perspective' ? t('orthographic') : t('perspective')}`" @click="toggleProjection">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path v-if="projection === 'perspective'" d="M4 20L9 4h6l5 16zM6.5 12h11M5 16h14"/><path v-else d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>
-          </button>
-          <button class="view-btn icon-only" type="button" :aria-pressed="gridVisible" :aria-label="t('grid')" :title="t('grid')" @click="toggleGrid">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          </button>
-          <ModelingGridControls :locale="lang" />
-          <details class="viewport-material-menu">
-            <summary :aria-label="lang === 'ru' ? 'Материал' : 'Material'">{{ lang === 'ru' ? 'Материал' : 'Material' }}</summary>
-          <MaterialControls
-            :locale="lang"
-            :shading-model="shadingModel"
-            :theme-id="renderThemeId"
-            :base-color="defaultBaseColor"
-            :metallic="defaultMetallic"
-            :roughness="defaultRoughness"
-            :matcap-id="matcapId"
-            :env-id="envId"
-            :shadows-enabled="shadowsEnabled"
-            @update:shading-model="setShadingModel"
-            @update:theme-id="setRenderTheme"
-            @update:base-color="setDefaultBaseColor"
-            @update:metallic="setDefaultMetallic"
-            @update:roughness="setDefaultRoughness"
-            @update:matcap-id="setMatcap"
-            @update:env-id="setEnv"
-            @update:shadows-enabled="setShadows"
-            @apply-preset="applyMaterialPreset"
-          />
-          </details>
-          <button
-            ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"
-            :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('scanPlane')"
-            :aria-expanded="scanPanelOpen" aria-controls="scan-plane-panel"
-            :disabled="!sectionAvailable && !sectionEnabled"
-            @click="scanPanelOpen = !scanPanelOpen"
-          ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M2 12h20" stroke-dasharray="3 2"/></svg><i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
-          <span class="vt-sep" aria-hidden="true" />
-          <div class="display-modes" role="group" :aria-label="t('display')">
-            <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'shaded'" :aria-label="t('shaded')" :title="t('shaded')" @click="setDisplayMode('shaded')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z" fill="currentColor" fill-opacity="0.35"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></svg>
+        <FormaRegion :source="viewerToolbarUi" :locale="lang" :state="{ toolbarClass: dockOpen ? 'viewer-toolbar with-dock' : 'viewer-toolbar', fitLabel: t('fit'), resetLabel: t('reset'), canPreviousView, previousViewLabel: t('previousView'), previousViewTitle: canPreviousView ? `${t('previousView')} · [` : t('noPreviousView'), isOrthographic: projection === 'orthographic', projectionLabel: projection === 'perspective' ? t('perspective') : t('orthographic'), projectionTitle: `${projection === 'perspective' ? t('perspective') : t('orthographic')} → ${projection === 'perspective' ? t('orthographic') : t('perspective')}`, gridVisible, gridLabel: t('grid'), displayLabel: t('display'), displayMode, shadedLabel: t('shaded'), edgesLabel: t('edges'), xrayLabel: t('xray') }" @action="handleShellAction">
+          <template #gridAndMaterial>
+            <ModelingGridControls :locale="lang" />
+            <details class="viewport-material-menu">
+              <summary :aria-label="lang === 'ru' ? 'Материал' : 'Material'">{{ lang === 'ru' ? 'Материал' : 'Material' }}</summary>
+              <MaterialControls
+                :locale="lang"
+                :shading-model="shadingModel"
+                :theme-id="renderThemeId"
+                :base-color="defaultBaseColor"
+                :metallic="defaultMetallic"
+                :roughness="defaultRoughness"
+                :matcap-id="matcapId"
+                :env-id="envId"
+                :shadows-enabled="shadowsEnabled"
+                @update:shading-model="setShadingModel"
+                @update:theme-id="setRenderTheme"
+                @update:base-color="setDefaultBaseColor"
+                @update:metallic="setDefaultMetallic"
+                @update:roughness="setDefaultRoughness"
+                @update:matcap-id="setMatcap"
+                @update:env-id="setEnv"
+                @update:shadows-enabled="setShadows"
+                @apply-preset="applyMaterialPreset"
+              />
+            </details>
+          </template>
+          <template #scanToggle>
+            <button
+              ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"
+              :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('scanPlane')"
+              :aria-expanded="scanPanelOpen" aria-controls="scan-plane-panel"
+              :disabled="!sectionAvailable && !sectionEnabled"
+              @click="scanPanelOpen = !scanPanelOpen"
+            ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M2 12h20" stroke-dasharray="3 2"/></svg><i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
+          </template>
+          <template #standardViewSelect>
+            <label class="view-select-label">
+              <span class="sr-only">{{ t('view') }}</span>
+              <select v-model="standardView" class="view-select" :aria-label="t('view')" @change="changeStandardView">
+                <option value="iso">{{ t('iso') }}</option>
+                <option value="front">{{ t('front') }}</option>
+                <option value="back">{{ t('back') }}</option>
+                <option value="left">{{ t('left') }}</option>
+                <option value="right">{{ t('right') }}</option>
+                <option value="top">{{ t('top') }}</option>
+                <option value="bottom">{{ t('bottom') }}</option>
+              </select>
+            </label>
+          </template>
+          <template #dockToggle>
+            <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-pressed="dockOpen" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
             </button>
-            <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'edges'" :aria-label="t('edges')" :title="t('edges')" @click="setDisplayMode('edges')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10M4 7l8 14M20 7l-8 14"/></svg>
-            </button>
-            <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'xray'" :aria-label="t('xray')" :title="t('xray')" @click="setDisplayMode('xray')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10" stroke-opacity="0.45"/><path d="M4 17l8-4 8 4M12 3v10"/></svg>
-            </button>
-          </div>
-          <label class="view-select-label">
-            <span class="sr-only">{{ t('view') }}</span>
-            <select v-model="standardView" class="view-select" :aria-label="t('view')" @change="changeStandardView">
-              <option value="iso">{{ t('iso') }}</option>
-              <option value="front">{{ t('front') }}</option>
-              <option value="back">{{ t('back') }}</option>
-              <option value="left">{{ t('left') }}</option>
-              <option value="right">{{ t('right') }}</option>
-              <option value="top">{{ t('top') }}</option>
-              <option value="bottom">{{ t('bottom') }}</option>
-            </select>
-          </label>
-          <span class="vt-sep" aria-hidden="true" />
-          <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-pressed="dockOpen" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
-          </button>
-        </div>
+          </template>
+        </FormaRegion>
 
         <ScanPlanePanel
           v-if="scanPanelOpen" id="scan-plane-panel"
@@ -1542,17 +1465,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           @reset="resetSection" @close="closeScanPanel"
         />
 
-        <div class="selection-modes" role="group" :aria-label="t('selectionMode')">
-          <button type="button" :class="{ active: selectionMode === 'point' }" :aria-pressed="selectionMode === 'point'" :title="`${t('point')} · 1`" @click="setSelectionMode('point')">
-            <span class="mode-point" aria-hidden="true" /> <span>{{ t('point') }}</span><kbd>1</kbd>
-          </button>
-          <button type="button" :class="{ active: selectionMode === 'face' }" :aria-pressed="selectionMode === 'face'" :title="`${t('face')} · 3`" @click="setSelectionMode('face')">
-            <span class="mode-face" aria-hidden="true" /> <span>{{ t('face') }}</span><kbd>3</kbd>
-          </button>
-          <button type="button" :class="{ active: selectionMode === 'object' }" :aria-pressed="selectionMode === 'object'" :title="`${t('body')} · 4`" @click="setSelectionMode('object')">
-            <span class="mode-body" aria-hidden="true" /> <span>{{ t('body') }}</span><kbd>4</kbd>
-          </button>
-        </div>
+        <FormaRegion :source="selectionModesUi" :locale="lang" :state="{ selectionModeLabel: t('selectionMode'), selectionMode, pointLabel: t('point'), pointTitle: `${t('point')} · 1`, faceLabel: t('face'), faceTitle: `${t('face')} · 3`, bodyLabel: t('body'), bodyTitle: `${t('body')} · 4`, showHud: selectedMesh !== null || isolated, hasSelectedMesh: selectedMesh !== null, selectedSummary: selectedMesh !== null ? `${t('selected')}: ${t('object')} ${selectedMesh + 1} / ${meshCount}${(selectedHit?.cycleCount ?? 0) > 1 ? ` · ${t('depthCandidate')} ${(selectedHit?.cycleIndex ?? 0) + 1}/${selectedHit?.cycleCount}` : ''}` : '', isolateLabel: t('isolate'), focusLabel: t('focus'), isolated, isolateTitle: isolated ? t('unisolate') : t('isolate'), deselectLabel: t('deselect') }" @action="handleShellAction" />
 
         <canvas
           ref="canvasRef"
@@ -1672,28 +1585,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" />
         </div>
         <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
-          <div class="dock-rail" role="tablist" aria-orientation="vertical" :aria-label="t('sidebar')" @keydown="handleDockTabKeydown">
-            <button
-              v-for="tab in dockTabs"
-              :id="`dock-tab-${tab}`"
-              :key="tab"
-              type="button"
-              role="tab"
-              aria-controls="dock-panel"
-              :aria-selected="dockTab === tab"
-              :aria-label="t(tab)"
-              :title="t(tab)"
-              :tabindex="dockTab === tab ? 0 : -1"
-              :class="{ active: dockTab === tab }"
-              @click="dockTab = tab"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path :d="DOCK_ICONS[tab]"/></svg>
-            </button>
-            <span class="dock-rail-spacer" aria-hidden="true" />
-            <button class="dock-close" type="button" :aria-label="t('closeSidebar')" :title="t('closeSidebar')" @click="closeDock">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-            </button>
-          </div>
+          <FormaRegion :source="dockRailUi" :locale="lang" :state="{ sidebarLabel: t('sidebar'), dockTab, tabs: dockTabs.map(tab => ({ id: tab, domId: `dock-tab-${tab}`, label: t(tab), iconPath: DOCK_ICONS[tab] })), closeSidebarLabel: t('closeSidebar') }" @action="handleShellAction" />
           <div class="dock-body">
           <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">
           <SceneOutliner
@@ -1713,20 +1605,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
             @highlight-source="highlightSource"
           />
           <div v-else-if="dockTab === 'inspect'" class="compute-inspector">
-          <section class="compute-panel" :aria-label="lang === 'ru' ? 'Вычисление геометрии' : 'Geometry computation'">
-            <strong>{{ lang === 'ru' ? 'Вычисление геометрии' : 'Geometry computation' }}</strong>
-            <button type="button" :disabled="selectedMesh === null || !canExport || computeBusy" @click="runGeometryAnalysis">{{ computeBusy ? (lang === 'ru' ? 'Вычисление…' : 'Computing…') : (lang === 'ru' ? 'Рассчитать площадь на GPU' : 'Compute surface area on GPU') }}</button>
-            <button v-if="computeBusy" type="button" @click="cancelGeometryAnalysis">{{ lang === 'ru' ? 'Отменить' : 'Cancel' }}</button>
-            <p>{{ lang === 'ru' ? 'Выберите деталь актуальной полной сборки. Эксперимент: WebGPU Compute со сверкой каждого результата на CPU.' : 'Select a part from a current full build. Experimental WebGPU Compute with CPU verification of every result.' }}</p>
-            <div v-if="computeResult" role="status">
-              <p>{{ lang === 'ru' ? 'Площадь поверхности' : 'Surface area' }}: <strong>{{ formatNumber(computeResult.area, 4) }}</strong></p>
-              <p>{{ computeResult.backend === 'webgpu-compute' ? 'WebGPU Compute ✓' : (lang === 'ru' ? 'Результат CPU (запасной путь)' : 'CPU result (fallback)') }}</p>
-              <p>CPU: {{ formatNumber(computeResult.cpuMs, 1) }} ms · GPU: {{ computeResult.gpuMs === null ? '—' : formatNumber(computeResult.gpuMs, 1) + ' ms' }}</p>
-              <p v-if="computeResult.fallback">{{ lang === 'ru' ? 'GPU недоступен, завершился с ошибкой или не прошёл сверку. Показан расчёт CPU.' : 'GPU unavailable, failed, or did not pass verification. Showing CPU calculation.' }}</p>
-              <p>{{ lang === 'ru' ? 'GPU-время включает запуск, передачу и чтение результата. Этот режим проверяет корректность, а не обещает ускорение.' : 'GPU time includes setup, upload and readback. This mode verifies correctness; it does not promise acceleration.' }}</p>
-            </div>
-            <p v-if="computeError" role="alert">{{ computeError }}</p>
-          </section>
+          <FormaRegion :source="computeInspectorUi" :locale="lang" :state="{ panelTitle: lang === 'ru' ? 'Вычисление геометрии' : 'Geometry computation', canRunCompute: selectedMesh !== null && canExport && !computeBusy, computeButtonLabel: computeBusy ? (lang === 'ru' ? 'Вычисление…' : 'Computing…') : (lang === 'ru' ? 'Рассчитать площадь на GPU' : 'Compute surface area on GPU'), computeBusy, cancelLabel: lang === 'ru' ? 'Отменить' : 'Cancel', description: lang === 'ru' ? 'Выберите деталь актуальной полной сборки. Эксперимент: WebGPU Compute со сверкой каждого результата на CPU.' : 'Select a part from a current full build. Experimental WebGPU Compute with CPU verification of every result.', hasResult: computeResult !== null, areaPrefix: `${lang === 'ru' ? 'Площадь поверхности' : 'Surface area'}: `, areaValue: computeResult ? formatNumber(computeResult.area, 4) : '', backendSummary: computeResult?.backend === 'webgpu-compute' ? 'WebGPU Compute ✓' : (lang === 'ru' ? 'Результат CPU (запасной путь)' : 'CPU result (fallback)'), timingSummary: computeResult ? `CPU: ${formatNumber(computeResult.cpuMs, 1)} ms · GPU: ${computeResult.gpuMs === null ? '—' : formatNumber(computeResult.gpuMs, 1) + ' ms'}` : '', showFallback: Boolean(computeResult?.fallback), fallbackNote: lang === 'ru' ? 'GPU недоступен, завершился с ошибкой или не прошёл сверку. Показан расчёт CPU.' : 'GPU unavailable, failed, or did not pass verification. Showing CPU calculation.', verificationNote: lang === 'ru' ? 'GPU-время включает запуск, передачу и чтение результата. Этот режим проверяет корректность, а не обещает ускорение.' : 'GPU time includes setup, upload and readback. This mode verifies correctness; it does not promise acceleration.', computeError }" @action="handleShellAction" />
           <InspectPanel
             :selection="currentInspection"
             :measurement="panelMeasurement"
@@ -1806,36 +1685,12 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           </div>
           </div>
         </div>
-        <div v-if="selectedMesh !== null || isolated" class="selection-hud" role="status">
-          <span v-if="selectedMesh !== null">
-            <span class="selection-dot" aria-hidden="true" />
-            {{ t('selected') }}: {{ t('object') }} {{ selectedMesh + 1 }} / {{ meshCount }}
-            <span v-if="(selectedHit?.cycleCount ?? 0) > 1">
-              · {{ t('depthCandidate') }} {{ (selectedHit?.cycleIndex ?? 0) + 1 }}/{{ selectedHit?.cycleCount }}
-            </span>
-          </span>
-          <span v-else>{{ t('isolate') }}</span>
-          <button v-if="selectedMesh !== null" type="button" :title="t('focus')" @click="focusSelection">/</button>
-          <button type="button" :aria-pressed="isolated" :title="isolated ? t('unisolate') : t('isolate')" @click="toggleIsolate">.</button>
-          <button v-if="selectedMesh !== null" type="button" :title="t('deselect')" @click="clearSelection">×</button>
-        </div>
         <div v-if="rendering" class="rendering-badge" role="status"><span class="spinner" />{{ t('compiling') }} · {{ t(renderingQuality) }}</div>
         <div v-else-if="stale" class="stale-badge">{{ t('stale') }}</div>
       </section>
     </main>
 
-    <footer class="statusbar" :aria-label="lang === 'ru' ? 'Состояние' : 'Status'">
-      <span class="status-item"><i class="status-dot" :class="(directModelerOpen?solidGpuActive:gpuOk) ? 'ok' : 'off'" aria-hidden="true" />{{ directModelerOpen ? (solidGpuActive?t('backendWebGpu'):'CPU · SVG') : currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless') }}</span>
-      <span class="status-item kernel-badge">Manifold</span>
-      <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
-      <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item" role="status">{{ persistenceLabel }}</span>
-      <span v-if="conversionPending" class="status-item conversion-status" role="status">
-        <span>{{ conversionStatus || t(conversionOperation === 'export' ? 'exportTitle' : 'convertFile') }}</span>
-        <progress :max="conversionProgress?.total ?? (conversionOperation === 'export' ? 2 : 7)" :value="conversionProgress?.completed ?? 0" />
-        <button type="button" :aria-label="t('cancel')" @click="cancelConversion">{{ t('cancel') }}</button>
-      </span>
-      <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item status-hint">{{ t('hint') }}</span>
-    </footer>
+    <FormaRegion :source="statusbarUi" :locale="lang" :state="{ statusAriaLabel: lang === 'ru' ? 'Состояние' : 'Status', gpuDotClass: (directModelerOpen ? solidGpuActive : gpuOk) ? 'ok' : 'off', backendLabel: directModelerOpen ? (solidGpuActive ? t('backendWebGpu') : 'CPU · SVG') : (currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless')), showSortedTransparency: currentBackendQuality.transparency === 'object-sorted-alpha', transparencySortedLabel: t('transparencySorted'), showPersistence: !directModelerOpen && !meshModelerOpen, persistenceLabel, conversionPending, conversionLabel: conversionStatus || t(conversionOperation === 'export' ? 'exportTitle' : 'convertFile'), conversionMax: conversionProgress?.total ?? (conversionOperation === 'export' ? 2 : 7), conversionValue: conversionProgress?.completed ?? 0, cancelLabel: t('cancel'), hintLabel: t('hint') }" @action="handleShellAction" />
 
     <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
       <div ref="exportDialogRef" class="dialog export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" @keydown.escape.stop="exportDialogOpen = false">
@@ -1924,4 +1779,4 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
 
 <style src="./styles/app-shell-global.css"></style>
 
-<style scoped src="./styles/app-shell.css"></style>
+<style src="./styles/app-shell.css"></style>

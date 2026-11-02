@@ -363,7 +363,7 @@ pub(crate) fn prepare_sides(
         }
     }
     let supports = std::array::from_fn(|i| &source.faces[sides[i][0].face].surface);
-    let corner = corner_blend::g2_traces(
+    let corner = corner_blend::g2_traces_compact(
         supports,
         traces.try_into().ok().unwrap(),
         options,

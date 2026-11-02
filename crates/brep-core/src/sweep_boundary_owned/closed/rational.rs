@@ -43,6 +43,12 @@ pub struct RationalClosedReport {
     pub material: Option<nurbs_core::trim_region_audit::Report>,
     pub volume: Option<nurbs_core::progressive_sweep::IdealVolumeReport>,
     pub proof_coordinates: Option<affine_volume::ProofCoordinates>,
+    pub source_shear: Option<affine_volume::SourceShearReport>,
+    /// Original positive-weight UV trim hull. Valid material audit precedes it.
+    pub material_uv_bounds: Option<[[f64; 2]; 2]>,
+    /// Outward normalized carrier rectangle containing all filled material.
+    pub proof_uv_window: [[f64; 2]; 2],
+    pub material_plane_chart: Option<affine_volume::MaterialPlaneReport>,
     pub binding: Option<smooth::BindingReport>,
     pub smoothness: Option<crate::sweep_smoothness::complete::Report>,
     pub c0_regularity: Option<crate::boundary_embedding::regularity::Report>,
@@ -227,6 +233,10 @@ fn rational_closed_impl(
         material: None,
         volume: None,
         proof_coordinates: None,
+        source_shear: None,
+        material_uv_bounds: None,
+        proof_uv_window: [[0., 1.]; 2],
+        material_plane_chart: None,
         binding: None,
         smoothness: None,
         c0_regularity: None,
@@ -326,16 +336,71 @@ fn rational_closed_impl(
             parameter_monotonicity: proof,
         });
     }
-    let proof = affine_volume::certify_rational_preconditioned(
+    // Positive-weight B-spline curves lie in their literal control hulls.
+    // A bounded, independently valid planar material region lies between its
+    // boundary coordinate extrema, including every hole and filled interior.
+    let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
+    for curve in material.trims.iter().flatten() {
+        for point in &curve.control_points {
+            for k in 0..2 {
+                if l.source_exact_work - r.source_exact_work < 2 {
+                    return Ok(refuse(r, "rational-material-window-work-limit"));
+                }
+                r.source_exact_work += 2;
+                bounds[k][0] = bounds[k][0].min(point[k]);
+                bounds[k][1] = bounds[k][1].max(point[k]);
+            }
+        }
+    }
+    if l.source_exact_work - r.source_exact_work < 16 {
+        return Ok(refuse(r, "rational-material-window-work-limit"));
+    }
+    r.source_exact_work += 16;
+    if let Some(window) = affine_volume::normalize_uv_window(&material.surface, bounds)? {
+        r.material_uv_bounds = Some(bounds);
+        r.proof_uv_window = window;
+    }
+    let chart = affine_volume::inspect_material_plane(
         &material.surface,
+        profiles,
+        &material.trims[0][0],
+        l.source_exact_work - r.source_exact_work,
+    )?;
+    r.source_exact_work += chart.work;
+    if chart.exhausted {
+        return Ok(refuse(r, "rational-material-plane-chart-work-limit"));
+    }
+    let orientation_point = if let Some(chart) = chart.chart.as_ref() {
+        r.material_plane_chart = Some(chart.report().clone());
+        chart.report().orientation_parameter
+    } else {
+        [
+            r.proof_uv_window[0][0] + (r.proof_uv_window[0][1] - r.proof_uv_window[0][0]) * 0.5,
+            r.proof_uv_window[1][0] + (r.proof_uv_window[1][1] - r.proof_uv_window[1][0]) * 0.5,
+            0.5,
+        ]
+    };
+    let proof_carrier = chart
+        .chart
+        .as_ref()
+        .map_or(&material.surface, |c| c.carrier());
+    let proof_window = if chart.chart.is_some() {
+        [[0., 1.]; 2]
+    } else {
+        r.proof_uv_window
+    };
+    let proof = affine_volume::certify_rational_preconditioned_window(
+        proof_carrier,
         origin,
         motion,
         true,
         l.volume.projection,
+        proof_window,
         l.volume.cells,
         l.volume.exact_work,
     )?;
     r.proof_coordinates = proof.coordinates;
+    r.source_shear = proof.source_shear;
     let volume = proof.volume;
     let proven = volume.embedding_certified
         && volume.regularity_certified
@@ -442,7 +507,7 @@ fn rational_closed_impl(
         &material.surface,
         origin,
         motion,
-        [0.5; 3],
+        orientation_point,
         l.orientation_cells,
     )?;
     r.orientation_cells = sign.cells;

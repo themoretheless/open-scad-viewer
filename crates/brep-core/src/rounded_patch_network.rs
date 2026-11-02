@@ -1,6 +1,7 @@
-//! Exact sewing of authored rectangular rational Bezier patches. Endpoint
-//! coincidence only indexes candidates; complete saved boundary controls or
-//! exact curve/lift identities decide sharing. Solid admission is independent.
+//! Authored rectangular rational Bezier sewing. Public full-patch assembly
+//! retains exact boundary ownership. The internal segmented-carrier path also
+//! requires fresh whole-use tolerance lifts under its separate shared cell cap.
+//! Endpoint coincidence only indexes candidates. Solid admission is independent.
 use crate::{
     Body, Coedge, Edge, Error, Face, FaceUse, Loop, Model, Result, Shell, TopologyIds, Vertex,
 };
@@ -15,7 +16,7 @@ pub struct Assembly {
     pub directly_owned_uses: usize,
     pub proved_uses: usize,
 }
-fn clamped_single(knots: &[f64], degree: usize, count: usize) -> bool {
+pub(crate) fn clamped_single(knots: &[f64], degree: usize, count: usize) -> bool {
     degree > 0
         && degree <= 32
         && count == degree + 1
@@ -77,7 +78,7 @@ pub(crate) fn boundary(s: &Surface, side: usize) -> (Curve, Curve) {
         crate::line(uv[side].to_vec(), uv[(side + 1) % 4].to_vec()),
     )
 }
-fn same_owned_boundary(a: &Curve, b: &Curve, reverse: bool) -> bool {
+pub(crate) fn same_owned_boundary(a: &Curve, b: &Curve, reverse: bool) -> bool {
     // Both are full single Bezier charts, so normalized traversal does not
     // depend on their independent authored knot-domain endpoints.
     a.degree == b.degree
@@ -105,6 +106,56 @@ pub fn assemble(
     max_work: u64,
     sources: &[&Model],
 ) -> Result<Assembly> {
+    assemble_impl(
+        surfaces, reversed, tolerance, max_work, sources, None, 0, &mut 0,
+    )
+}
+/// Internal segmented-carrier path. Every prepared saved world/UV use gets a
+/// fresh continuous lift check; no endpoint-only join authorizes a seam.
+pub(crate) fn assemble_prepared(
+    surfaces: &[Surface],
+    reversed: &[bool],
+    tolerance: f64,
+    max_work: u64,
+    boundaries: &[Vec<(Curve, Curve)>],
+    max_cells: usize,
+    cells: &mut usize,
+) -> Result<Assembly> {
+    assemble_impl(
+        surfaces,
+        reversed,
+        tolerance,
+        max_work,
+        &[],
+        Some(boundaries),
+        max_cells,
+        cells,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn assemble_impl(
+    surfaces: &[Surface],
+    reversed: &[bool],
+    tolerance: f64,
+    max_work: u64,
+    sources: &[&Model],
+    prepared: Option<&[Vec<(Curve, Curve)>]>,
+    max_cells: usize,
+    cells: &mut usize,
+) -> Result<Assembly> {
+    if let Some(boundaries) = prepared {
+        if boundaries.len() != surfaces.len()
+            || boundaries.iter().any(|v| v.len() < 4 || v.len() > 256)
+            || boundaries.iter().map(Vec::len).sum::<usize>() > brep_topology::MAX_COEDGES
+            || !(1..=100000).contains(&max_cells)
+            || *cells > max_cells
+        {
+            return Err(refuse(
+                "BREP_PATCH_NETWORK_LIMITS",
+                "Choose bounded complete prepared face boundaries and lift work",
+            ));
+        }
+    }
     if surfaces.len() < 4
         || surfaces.len() > 1024
         || surfaces.len() != reversed.len()
@@ -143,8 +194,28 @@ pub fn assemble(
     let mut proved = 0;
     for (face, surface) in surfaces.iter().enumerate() {
         let mut coedges = Vec::new();
-        for side in 0..4 {
-            let (curve, pcurve) = boundary(surface, side);
+        let boundary_curves = if let Some(boundaries) = prepared {
+            boundaries[face].clone()
+        } else {
+            (0..4).map(|side| boundary(surface, side)).collect()
+        };
+        for (curve, mut pcurve) in boundary_curves {
+            if prepared.is_some() {
+                curve.validate()?;
+                pcurve.validate()?;
+                if curve.control_points[0].len() != 3 || pcurve.control_points[0].len() != 2 {
+                    return Err(refuse(
+                        "BREP_PATCH_NETWORK_UNSUPPORTED",
+                        "Prepared world/UV boundary dimensions must be 3/2",
+                    ));
+                }
+                if !prepared_lift(&curve, &pcurve, surface, false, tolerance, max_cells, cells)? {
+                    return Err(refuse(
+                        "BREP_PATCH_NETWORK_UNPROVEN",
+                        "Prepared original face lift remains unproven",
+                    ));
+                }
+            }
             let mut vs = [0; 2];
             for (i, end) in [false, true].into_iter().enumerate() {
                 let p = endpoint(&curve, end);
@@ -174,39 +245,26 @@ pub fn assemble(
                 }
                 work += count;
                 let owned = same_owned_boundary(&edges[edge].curve, &curve, reverse);
+                let candidate_pc = if prepared.is_some() && !owned {
+                    prepared_clock(&edges[edge].curve, &curve, &pcurve, reverse)?
+                } else {
+                    pcurve.clone()
+                };
                 let equal = if owned {
                     true
                 } else {
-                    let proof = curve_surface_agreement::verify_exact(
+                    compare_prepared(
                         &edges[edge].curve,
-                        &pcurve,
+                        &candidate_pc,
                         surface,
                         reverse,
-                        max_work - work,
+                        tolerance,
+                        max_work,
+                        &mut work,
+                        prepared.is_some(),
+                        max_cells,
+                        cells,
                     )?
-                    .ok_or_else(|| {
-                        refuse(
-                            "BREP_PATCH_NETWORK_UNPROVEN",
-                            "Boundary correspondence is not supported by the exact prover",
-                        )
-                    })?;
-                    if proof.work_used > max_work - work {
-                        return Err(refuse(
-                            "BREP_PATCH_NETWORK_BUDGET",
-                            "Invalid exact correspondence accounting",
-                        ));
-                    }
-                    work += proof.work_used;
-                    match proof.outcome {
-                        cad_predicates::BezierIdentity::Equal => true,
-                        cad_predicates::BezierIdentity::Different => false,
-                        cad_predicates::BezierIdentity::Indeterminate(_) => {
-                            return Err(refuse(
-                                "BREP_PATCH_NETWORK_UNPROVEN",
-                                "Complete boundary equality remains unproved",
-                            ));
-                        }
-                    }
                 };
                 if equal {
                     if uses[edge].len() != 1 {
@@ -226,6 +284,7 @@ pub fn assemble(
                     } else {
                         proved += 1;
                     }
+                    pcurve = candidate_pc;
                     chosen = Some((edge, reverse));
                     break;
                 }
@@ -339,6 +398,85 @@ pub fn assemble(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
+fn compare_prepared(
+    c: &Curve,
+    p: &Curve,
+    s: &Surface,
+    reversed: bool,
+    tolerance: f64,
+    max_work: u64,
+    work: &mut u64,
+    prepared: bool,
+    max_cells: usize,
+    cells: &mut usize,
+) -> Result<bool> {
+    let proof = if prepared && *work == max_work {
+        None
+    } else {
+        curve_surface_agreement::verify_exact(c, p, s, reversed, max_work - *work)?
+    };
+    if let Some(proof) = proof {
+        if proof.work_used > max_work - *work {
+            return Err(refuse(
+                "BREP_PATCH_NETWORK_BUDGET",
+                "Exact correspondence accounting exceeds allowance",
+            ));
+        }
+        *work += proof.work_used;
+        match proof.outcome {
+            cad_predicates::BezierIdentity::Equal => return Ok(true),
+            cad_predicates::BezierIdentity::Different if !prepared => return Ok(false),
+            _ if !prepared => {
+                return Err(refuse(
+                    "BREP_PATCH_NETWORK_UNPROVEN",
+                    "Complete boundary equality remains unproved",
+                ));
+            }
+            _ => {}
+        }
+    } else if !prepared {
+        return Err(refuse(
+            "BREP_PATCH_NETWORK_UNPROVEN",
+            "Boundary correspondence is not supported by the exact prover",
+        ));
+    }
+    prepared_lift(c, p, s, reversed, tolerance, max_cells, cells)
+}
+mod clocks;
+pub(crate) use clocks::{needs_prepared, prepared_clock};
+pub(crate) fn prepared_lift(
+    c: &Curve,
+    p: &Curve,
+    s: &Surface,
+    reversed: bool,
+    tolerance: f64,
+    max_cells: usize,
+    cells: &mut usize,
+) -> Result<bool> {
+    if *cells >= max_cells {
+        return Err(refuse(
+            "BREP_PATCH_NETWORK_BUDGET",
+            "Prepared face lift work exhausted",
+        ));
+    }
+    let proof = curve_surface_agreement::verify(c, p, s, reversed, tolerance, max_cells - *cells)?;
+    if proof.cells > max_cells - *cells {
+        return Err(refuse(
+            "BREP_PATCH_NETWORK_BUDGET",
+            "Prepared face lift exceeds allowance",
+        ));
+    }
+    *cells += proof.cells;
+    match proof.status {
+        curve_surface_agreement::Status::WithinTolerance => Ok(true),
+        curve_surface_agreement::Status::Mismatch => Ok(false),
+        _ => Err(refuse(
+            "BREP_PATCH_NETWORK_UNPROVEN",
+            "Complete prepared shared face lift remains unresolved",
+        )),
+    }
+}
 impl Assembly {
     /// Fresh geometric admission on the saved sewn model. Projection matrices
     /// are proposals only; they are independently checked on every face.

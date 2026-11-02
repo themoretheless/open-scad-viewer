@@ -238,6 +238,9 @@ impl Model {
                         for i in 0..=8 {
                             let t = i as f64 / 8.;
                             let uv = curve_point(&c.pcurve, t)?;
+                            let uv = if f.surface.periodic_u || f.surface.periodic_v {
+                                nurbs_core::periodic_trim::wrapped_surface_parameters(&f.surface, [uv[0], uv[1]])?
+                            } else { [uv[0], uv[1]] };
                             let p = surface.evaluate(uv[0], uv[1])?.point;
                             let q = curve_point(&edge.curve, if c.reversed { 1. - t } else { t })?;
                             require(
@@ -306,51 +309,5 @@ impl Model {
     }
 }
 
-/// Certify collapsed boundaries from control nets, not a finite sample set.
-/// Currently supported pole charts collapse one complete rectangular boundary.
-pub(crate) fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> Result<()> {
-    require(
-        pcurve.degree == 1 && pcurve.control_points.len() == 2,
-        "Pole pcurve must be a straight surface boundary",
-    )?;
-    let u = [
-        surface.knots_u[surface.degree_u],
-        surface.knots_u[surface.control_points.len()],
-    ];
-    let v = [
-        surface.knots_v[surface.degree_v],
-        surface.knots_v[surface.control_points[0].len()],
-    ];
-    let a = &pcurve.control_points[0];
-    let b = &pcurve.control_points[1];
-    let lies_in = |a: f64, b: f64, domain: [f64; 2]| {
-        a != b && a >= domain[0] && a <= domain[1] && b >= domain[0] && b <= domain[1]
-    };
-    let same = |p: &Vec<f64>| p.as_slice() == pole.as_slice();
-    let collapsed = if a[0] == b[0] && lies_in(a[1], b[1], v) {
-        if a[0] == u[0] {
-            surface.control_points[0].iter().all(same)
-        } else if a[0] == u[1] {
-            surface.control_points.last().unwrap().iter().all(same)
-        } else {
-            false
-        }
-    } else if a[1] == b[1] && lies_in(a[0], b[0], u) {
-        if a[1] == v[0] {
-            surface.control_points.iter().all(|r| same(&r[0]))
-        } else if a[1] == v[1] {
-            surface
-                .control_points
-                .iter()
-                .all(|r| same(r.last().unwrap()))
-        } else {
-            false
-        }
-    } else {
-        false
-    };
-    require(
-        collapsed,
-        "Pole boundary is not identically collapsed in the surface control net",
-    )
-}
+mod pole_boundary;
+pub(crate) use pole_boundary::validate_pole_boundary;

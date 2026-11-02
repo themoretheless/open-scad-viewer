@@ -243,14 +243,16 @@ pub(crate) fn recognize(model: &Model) -> Result<Option<Vec<Layer>>> {
                         .all(|p| p[2] == low)
                 })
                 .collect::<Vec<_>>();
-            if bottom.len() != 1 {
+            if bottom.is_empty() {
                 return Ok(None);
             }
-            let mut curve = prism::directed_edge(model, bottom[0])?;
-            if usage.reversed {
-                curve = curve.reverse()?;
+            // side_is_proven established a complete rectangular boundary;
+            // source edge subdivision may represent the bottom by a chain.
+            for coedge in bottom {
+                let mut curve = prism::directed_edge(model, coedge)?;
+                if usage.reversed { curve = curve.reverse()?; }
+                sides.push((owner, low, high, xy(curve)));
             }
-            sides.push((owner, low, high, xy(curve)));
             levels.extend([low, high]);
         }
         let origin = shell

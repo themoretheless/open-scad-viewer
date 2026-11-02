@@ -59,6 +59,152 @@ fn composite_base_text() -> String {
     export_iges_v2(&model).unwrap().0
 }
 
+fn without_identity(mut text: String) -> String {
+    let (entities, _, _) = parse(&text).unwrap();
+    for (&de, entity) in &entities {
+        if entity.directory.ty == 406 && entity.directory.form == 15 {
+            text = set_status(&text, de, "01000000");
+        }
+    }
+    text
+}
+
+fn trimmed_outer_fixture() -> (String, usize, usize) {
+    let text = composite_base_text();
+    let (entities, _, _) = parse(&text).unwrap();
+    let face = directory_entity(&text, 510, 0);
+    let surface = u(&entities[&face].values, 1, "face surface").unwrap();
+    let loop_de = u(&entities[&face].values, 4, "face loop").unwrap();
+    let n = u(&entities[&loop_de].values, 1, "loop count").unwrap();
+    let mut boundary = vec![
+        "143".into(),
+        "0".into(),
+        "2".into(),
+        surface.to_string(),
+        n.to_string(),
+    ];
+    for i in 0..n {
+        let at = 2 + 7 * i;
+        let edge_list = u(&entities[&loop_de].values, at + 1, "loop edge list").unwrap();
+        let edge_index = u(&entities[&loop_de].values, at + 2, "loop edge").unwrap();
+        let orientation = u(&entities[&loop_de].values, at + 3, "loop orientation").unwrap();
+        let pcurve = u(&entities[&loop_de].values, at + 6, "loop pcurve").unwrap();
+        let curve = u(
+            &entities[&edge_list].values,
+            2 + 5 * (edge_index - 1),
+            "edge curve",
+        )
+        .unwrap();
+        boundary.extend([
+            curve.to_string(),
+            pcurve.to_string(),
+            if orientation == 1 { "1" } else { "2" }.into(),
+        ]);
+    }
+    let (text, outer) = append_entity(&text, 143, 0, "00010000", |_| boundary);
+    let (text, trimmed) = append_entity(&text, 144, 0, "00000000", |_| {
+        vec![
+            "144".into(),
+            surface.to_string(),
+            "1".into(),
+            "0".into(),
+            outer.to_string(),
+        ]
+    });
+    let (entities, _, _) = parse(&text).unwrap();
+    let (shell, shell_at) = entities
+        .iter()
+        .find_map(|(&de, entity)| {
+            if entity.directory.ty != 514 {
+                return None;
+            }
+            (0..u(&entity.values, 1, "shell face count").unwrap())
+                .map(|i| 2 + 2 * i)
+                .find(|&at| u(&entity.values, at, "shell face").unwrap() == face)
+                .map(|at| (de, at))
+        })
+        .unwrap();
+    let text = rewire_reference(&text, shell, shell_at, trimmed);
+    let text = set_status(&text, face, "01000000");
+    let text = set_status(&text, loop_de, "01000000");
+    (without_identity(text), trimmed, outer)
+}
+
+fn trimmed_hole_fixture() -> (String, usize) {
+    let (text, trimmed, _) = trimmed_outer_fixture();
+    let (entities, _, _) = parse(&text).unwrap();
+    let surface = u(&entities[&trimmed].values, 1, "trimmed surface").unwrap();
+    let geometry = surface128(&entities, surface, 1.).unwrap();
+    let uv = [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]];
+    let mut text = text;
+    let mut values = vec![
+        "143".into(),
+        "0".into(),
+        "2".into(),
+        surface.to_string(),
+        "4".into(),
+    ];
+    for i in 0..4 {
+        let a = uv[i];
+        let b = uv[(i + 1) % 4];
+        let xyz_a = geometry.evaluate(a[0], a[1]).unwrap().point;
+        let xyz_b = geometry.evaluate(b[0], b[1]).unwrap().point;
+        let (next, curve) = append_line(&text, xyz_a.to_vec(), xyz_b.to_vec(), false);
+        let (next, pcurve) = append_line(&next, a.to_vec(), b.to_vec(), false);
+        text = next;
+        values.extend([curve.to_string(), pcurve.to_string(), "1".into()]);
+    }
+    let (text, inner) = append_entity(&text, 143, 0, "00010000", |_| values);
+    let (entities, _, _) = parse(&text).unwrap();
+    let mut trimmed_values = entities[&trimmed].values.clone();
+    trimmed_values[3] = "1".into();
+    trimmed_values.push(inner.to_string());
+    let text = replace_parameters(&text, trimmed, trimmed_values);
+    let solid = directory_entity(&text, 186, 0);
+    let text = set_status(&text, solid, "01000000");
+    // A single face with a hole is deliberately an open shell, not a closed solid.
+    let shell = entities
+        .values()
+        .find(|entity| entity.directory.ty == 514)
+        .map(|entity| entity.directory.form)
+        .unwrap();
+    assert_eq!(shell, 0);
+    let shell_de = entities
+        .iter()
+        .find_map(|(&de, entity)| (entity.directory.ty == 514).then_some(de))
+        .unwrap();
+    let mut lines = text.lines().map(str::to_string).collect::<Vec<_>>();
+    let directory = lines
+        .iter_mut()
+        .find(|line| {
+            line.as_bytes()[72] == b'D'
+                && line[73..80].trim().parse::<usize>().unwrap() == shell_de + 1
+        })
+        .unwrap();
+    directory.replace_range(32..40, &format!("{:>8}", 1));
+    let solid_de = entities
+        .iter()
+        .find_map(|(&de, entity)| (entity.directory.ty == 186).then_some(de))
+        .unwrap();
+    let text = set_status(&(lines.join("\n") + "\n"), solid_de, "01000000");
+    (text, trimmed)
+}
+
+fn loop_uv_area(model: &Model, loop_index: usize) -> f64 {
+    let points = model.loops[loop_index]
+        .coedges
+        .iter()
+        .flat_map(|coedge| coedge.pcurve.control_points.iter().cloned())
+        .collect::<Vec<_>>();
+    let mut area = points
+        .windows(2)
+        .map(|pair| pair[0][0] * pair[1][1] - pair[1][0] * pair[0][1])
+        .sum::<f64>();
+    area += points.last().unwrap()[0] * points.first().unwrap()[1]
+        - points.first().unwrap()[0] * points.last().unwrap()[1];
+    area
+}
+
 fn directory_entity(text: &str, ty: usize, ordinal: usize) -> usize {
     text.lines()
         .filter(|line| {
@@ -160,8 +306,7 @@ fn refresh_identity_for(text: &str, target: usize) -> String {
     let (entities, _, _) = parse(text).unwrap();
     let mut updates = Vec::new();
     for (&de, entity) in &entities {
-        if entity.directory.ty != 406 || entity.directory.form != 15 || entity.values.len() != 4
-        {
+        if entity.directory.ty != 406 || entity.directory.form != 15 || entity.values.len() != 4 {
             continue;
         }
         if u(&entity.values, 3, "identity target").unwrap() != target {
@@ -330,9 +475,7 @@ fn rewrite_global_value(text: &str, search: &str, replacement: &str) -> String {
         .as_bytes()
         .chunks(72)
         .enumerate()
-        .map(|(i, chunk)| {
-            pad_record(std::str::from_utf8(chunk).unwrap(), 'G', i + 1, 72).unwrap()
-        })
+        .map(|(i, chunk)| pad_record(std::str::from_utf8(chunk).unwrap(), 'G', i + 1, 72).unwrap())
         .collect::<Vec<_>>();
     let global_count = global_lines.len();
     output.append(&mut global_lines);
@@ -419,9 +562,7 @@ fn direct_roundtrip_is_80_column_and_preserves_graph_identity() {
     let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
     let (text, _, report) = export_iges_v2(&model).unwrap();
     assert!(text.lines().all(|line| line.len() == 80));
-    assert!(
-        text.contains("     126") && text.contains("     128") && text.contains("     186")
-    );
+    assert!(text.contains("     126") && text.contains("     128") && text.contains("     186"));
     let (back, cert, identity) = import_iges_v2(&text).unwrap();
     assert_eq!(cert.capability, IGES_INTERCHANGE_V2_CAPABILITY);
     assert!(identity.identity.preserved);
@@ -674,8 +815,7 @@ fn self_and_multi_node_402_cycles_are_bounded_typed_refusals() {
     assert_eq!(error.code, "BREP_IGES_V2_REFUSED");
     assert!(error.message.contains("cycle"));
     assert!(
-        error.message.contains(&format!("DE {b}"))
-            || error.message.contains(&format!("DE {a}"))
+        error.message.contains(&format!("DE {b}")) || error.message.contains(&format!("DE {a}"))
     );
 }
 
@@ -704,6 +844,158 @@ fn global_parameter_19_is_the_exported_minimum_resolution() {
     assert_eq!(values[14], "MM");
     assert_eq!(values[18], "0.001");
     assert_eq!(parse_global(&global).unwrap().3, 0.001);
+}
+
+#[test]
+fn trimmed_144_imports_143_outer_and_reuses_existing_edges() {
+    let (text, trimmed, outer) = trimmed_outer_fixture();
+    let (model, _, _) = import_iges_v2(&text).unwrap();
+    model.validate().unwrap();
+    assert_eq!(model.faces.len(), 6);
+    assert_eq!(model.edges.len(), 12);
+    let face = model.faces.last().unwrap();
+    assert!(face.holes.is_empty());
+    assert_eq!(model.loops[face.outer].coedges.len(), 4);
+    assert!(loop_uv_area(&model, face.outer) > 0.);
+    let (entities, _, _) = parse(&text).unwrap();
+    assert_eq!(entities[&trimmed].directory.ty, 144);
+    assert_eq!(entities[&outer].directory.ty, 143);
+}
+
+#[test]
+fn trimmed_reversed_segment_order_is_oriented_without_reordering() {
+    let (text, _, outer) = trimmed_outer_fixture();
+    let (entities, _, _) = parse(&text).unwrap();
+    let old = &entities[&outer].values;
+    let n = u(old, 4, "boundary count").unwrap();
+    let mut values = old[..5].to_vec();
+    for i in (0..n).rev() {
+        values.extend_from_slice(&old[5 + 3 * i..8 + 3 * i]);
+    }
+    let text = replace_parameters(&text, outer, values);
+    let (model, _, _) = import_iges_v2(&text).unwrap();
+    model.validate().unwrap();
+    assert!(loop_uv_area(&model, model.faces.last().unwrap().outer) > 0.);
+}
+
+#[test]
+fn trimmed_144_classifies_explicit_inner_loop_and_normalizes_direction() {
+    let (text, trimmed) = trimmed_hole_fixture();
+    let (model, _, _) = import_iges_v2(&text).unwrap();
+    let face = model.faces.last().unwrap();
+    assert_eq!(face.holes.len(), 1);
+    assert!(loop_uv_area(&model, face.outer) > 0.);
+    assert!(loop_uv_area(&model, face.holes[0]) < 0.);
+    let (entities, _, _) = parse(&text).unwrap();
+    assert_eq!(u(&entities[&trimmed].values, 3, "inner count").unwrap(), 1);
+}
+
+#[test]
+fn trimmed_3d_only_and_natural_outer_are_typed_refusals_with_ids() {
+    let (text, trimmed, outer) = trimmed_outer_fixture();
+    let (entities, _, _) = parse(&text).unwrap();
+    let mut boundary = entities[&outer].values.clone();
+    boundary[1] = "1".into();
+    let error = import_iges_v2(&replace_parameters(&text, outer, boundary)).unwrap_err();
+    assert_eq!(error.code, "BREP_IGES_V2_TRIMMED_UNSUPPORTED");
+    assert!(error.message.contains(&format!("DE {outer}")));
+
+    let mut trimmed_values = entities[&trimmed].values.clone();
+    trimmed_values[2] = "0".into();
+    trimmed_values[4] = "0".into();
+    let error = import_iges_v2(&replace_parameters(&text, trimmed, trimmed_values)).unwrap_err();
+    assert_eq!(error.code, "BREP_IGES_V2_TRIMMED_UNSUPPORTED");
+    assert!(error.message.contains(&format!("DE {trimmed}")));
+}
+
+#[test]
+fn trimmed_open_boundary_reports_id_gap_and_tolerance() {
+    let (text, _, outer) = trimmed_outer_fixture();
+    let (entities, _, _) = parse(&text).unwrap();
+    let curve_de = u(&entities[&outer].values, 5, "first boundary curve").unwrap();
+    let curve = curve126(&entities, curve_de, 3, 1.).unwrap();
+    let domain = curve.domain();
+    let a = curve.evaluate(domain[0]).unwrap().point;
+    let mut b = curve.evaluate(domain[1]).unwrap().point;
+    b[1] += 0.01;
+    let (text, replacement) = append_line(&text, a, b, false);
+    let text = rewire_reference(&text, outer, 5, replacement);
+    let error = import_iges_v2(&text).unwrap_err();
+    assert_eq!(error.code, "BREP_IGES_V2_TRIMMED_GAP");
+    assert!(error.message.contains(&format!("DE {outer}")));
+    assert!(error.message.contains("gap_mm="));
+    assert!(error.message.contains("tolerance_mm="));
+}
+
+#[test]
+fn trimmed_joint_within_tolerance_snaps_xyz_and_uv_to_midpoint() {
+    let entities = BTreeMap::new();
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 2., 2.],
+        knots_v: vec![0., 0., 2., 2.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 2., 0.]],
+            vec![vec![2., 0., 0.], vec![2., 2., 0.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let mut builder = Builder {
+        e: &entities,
+        scale: 1.,
+        merge_tolerance_mm: 0.001,
+        vertices: vec![
+            Vertex {
+                point: [0., 0., 0.],
+            },
+            Vertex {
+                point: [1., 0., 0.],
+            },
+            Vertex {
+                point: [1.0005, 0., 0.],
+            },
+            Vertex {
+                point: [1., 1., 0.],
+            },
+        ],
+        edges: vec![
+            Edge {
+                degenerate: false,
+                vertices: [0, 1],
+                curve: crate::line(vec![0., 0., 0.], vec![1., 0., 0.]),
+            },
+            Edge {
+                degenerate: false,
+                vertices: [2, 3],
+                curve: crate::line(vec![1.0005, 0., 0.], vec![1., 1., 0.]),
+            },
+        ],
+        loops: vec![],
+        faces: vec![],
+        shells: vec![],
+        bodies: vec![],
+        vertex_de: vec![41; 4],
+        edge_de: vec![41; 2],
+        loop_de: vec![],
+        face_de: vec![],
+        shell_de: vec![],
+        body_de: vec![],
+    };
+    let mut coedges = vec![
+        Coedge::new(0, false, crate::line(vec![0., 0.], vec![1., 0.])),
+        Coedge::new(1, false, crate::line(vec![1.0005, 0.], vec![1., 1.])),
+    ];
+    builder
+        .close_trimmed_joint(41, 0, 1, &mut coedges, &BTreeSet::from([0, 1]), &surface)
+        .unwrap();
+    assert!((builder.edges[0].curve.control_points[1][0] - 1.00025).abs() < 1e-12);
+    assert!((builder.edges[1].curve.control_points[0][0] - 1.00025).abs() < 1e-12);
+    assert!((coedges[0].pcurve.control_points[1][0] - 1.00025).abs() < 1e-12);
+    assert!((coedges[1].pcurve.control_points[0][0] - 1.00025).abs() < 1e-12);
+    assert_eq!(builder.vertices[1].point, builder.vertices[2].point);
 }
 
 #[test]
@@ -865,11 +1157,10 @@ fn composite_arc_and_general_rational_join_are_explicitly_unsupported() {
     let error = import_iges_v2(&rewire_reference(&text, edge_list, 2, composite)).unwrap_err();
     assert_eq!(error.code, "BREP_IGES_V2_COMPOSITE_UNSUPPORTED");
 
-    let curve =
-        Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]])
-            .unwrap()
-            .elevate(2)
-            .unwrap();
+    let curve = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]])
+        .unwrap()
+        .elevate(2)
+        .unwrap();
     let (text, spline) = append_entity(&base_text(), 126, 0, "00000000", |_| {
         curve_values(&curve, 3)
     });

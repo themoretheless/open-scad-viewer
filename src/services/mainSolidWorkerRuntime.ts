@@ -1,4 +1,5 @@
 import {inspectNurbsOffsetDeviation} from './nurbsOffsetDeviation'
+import {createSourceGraphG2Preview} from './sourceGraphG2Preview'
 import {createG2RunoutSurface} from './geometricG2'
 import {executeDirectTransaction} from './directTransactions'
 import {inspectProfileBridgeChords} from './nurbsProfileBridgeChords'
@@ -68,6 +69,7 @@ import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainS
 
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
+case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.width,job.options)
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
 case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
 case 'animationFrames':return (await import('./assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)

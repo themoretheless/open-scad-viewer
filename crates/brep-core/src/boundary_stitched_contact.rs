@@ -31,18 +31,37 @@ fn natural_edges(model: &Model, face: usize) -> Option<Vec<(usize, usize, bool)>
     let mut sides = Vec::new();
     for c in &wire.coedges {
         let p = &c.pcurve;
-        if p.degree != 1 || p.control_points.len() != 2 || p.knots != [0., 0., 1., 1.] {
+        // An owned child edge keeps its original natural pcurve clock after
+        // splitting. Full clamping/positive constant weights prove the same
+        // complete straight UV side without requiring a unit clock.
+        if p.degree != 1
+            || p.periodic
+            || p.control_points.len() != 2
+            || p.knots.len() != 4
+            || p.knots[0] != p.knots[1]
+            || p.knots[2] != p.knots[3]
+            || p.knots[1] >= p.knots[2]
+            || p.weights.len() != 2
+            || !p.weights[0].is_finite()
+            || p.weights[0] <= 0.
+            || p.weights[0] != p.weights[1]
+        {
             return None;
         }
         let a = &p.control_points[0];
         let b = &p.control_points[1];
-        let s=&face.surface;
-        let domain=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],
-            [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
+        let s = &face.surface;
+        let domain = [
+            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+        ];
         let axis = (0..2).find(|&k| {
-            let d=domain[k];let f=domain[1-k];
-            a[k] == b[k] && (a[k] == d[0] || a[k] == d[1])
-                && ((a[1-k]==f[0]&&b[1-k]==f[1])||(a[1-k]==f[1]&&b[1-k]==f[0]))
+            let d = domain[k];
+            let f = domain[1 - k];
+            a[k] == b[k]
+                && (a[k] == d[0] || a[k] == d[1])
+                && ((a[1 - k] == f[0] && b[1 - k] == f[1])
+                    || (a[1 - k] == f[1] && b[1 - k] == f[0]))
         })?;
         let max = a[axis] == domain[axis][1];
         if sides.iter().any(|&(_, k, m)| k == axis && m == max) {
@@ -183,15 +202,27 @@ pub(crate) fn certify(model: &Model, faces: [usize; 2], max_cells: usize) -> Res
         let Some(&(_, other, bmax)) = b.iter().find(|x| x.0 == edge) else {
             continue;
         };
-        let first=&model.faces[faces[0]].surface;
-        let second=&model.faces[faces[1]].surface;
-        let merged=if axis==other {stitch(first,second,axis,amax,bmax)}else{None};
-        let r=if let Some(merged)=merged {
-            surface_linear_monotonicity::inspect_candidate(&merged,max_cells-out.cells)?
-        }else {
+        let first = &model.faces[faces[0]].surface;
+        let second = &model.faces[faces[1]].surface;
+        let merged = if axis == other {
+            stitch(first, second, axis, amax, bmax)
+        } else {
+            None
+        };
+        let r = if let Some(merged) = merged {
+            surface_linear_monotonicity::inspect_candidate(&merged, max_cells - out.cells)?
+        } else {
             // Leave work for the existing independent contact fallbacks.
-            let Some(report)=general::certify(first,second,[axis,other],[amax,bmax],
-                (max_cells-out.cells).min(256))? else {continue;};
+            let Some(report) = general::certify(
+                first,
+                second,
+                [axis, other],
+                [amax, bmax],
+                (max_cells - out.cells).min(256),
+            )?
+            else {
+                continue;
+            };
             report
         };
         out.cells += r.cells;

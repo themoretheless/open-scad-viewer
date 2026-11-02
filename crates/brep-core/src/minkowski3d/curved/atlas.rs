@@ -3,13 +3,21 @@
 //! prescribed deformation. Local projected vertex disks and all disjoint chart
 //! pairs are checked throughout S -> its actual corner triangulation.
 use super::*;
+mod admission;
+pub(super) mod algebraic;
 mod bernstein;
+mod conform;
 mod conical;
+pub(super) mod difference;
+pub(super) mod domains;
 mod graph_pole;
 mod linear;
 mod nonlinear;
+mod nonlinear_cancel;
 mod planar_pole;
 mod projection;
+pub(crate) mod point_material;
+pub(super) mod pullback;
 mod transport;
 mod trim;
 use bernstein::{Net, Scalar};
@@ -66,8 +74,106 @@ fn separates(a: &[P], b: &[P], n: &P) -> bool {
     let (b0, b1) = bounds(b, n);
     a1 < b0 || b1 < a0
 }
-
-
+/// A deliberately small set of exact separating axes. Failure only requests
+/// subdivision; no axis or floating-point proximity is treated as evidence.
+fn separated(a: &[P], b: &[P], work: &mut Work) -> Result<bool> {
+    for k in 0..3 {
+        if separates(
+            a,
+            b,
+            &std::array::from_fn(|i| if i == k { Q::one() } else { Q::zero() }),
+        ) {
+            return Ok(true);
+        }
+    }
+    let center = |p: &[P]| {
+        std::array::from_fn(|i| p.iter().map(|p| p[i].clone()).sum::<Q>() / integer(p.len() as i64))
+    };
+    if separates(a, b, &sub(&center(a), &center(b))) {
+        return Ok(true);
+    }
+    // Corner triangle face normals and crossed edge directions are cheap
+    // exact witnesses for the usual near-linear chart hulls.
+    if a.len() >= 3 && b.len() >= 3 {
+        for p in [a, b] {
+            let n = cross(&sub(&p[1], &p[0]), &sub(&p[2], &p[0]));
+            if separates(a, b, &n) {
+                return Ok(true);
+            }
+            for k in 0..3 {
+                work.charge(1)?;
+                if separates(a, b, &cross(&n, &sub(&p[(k + 1) % 3], &p[k]))) {
+                    return Ok(true);
+                }
+            }
+        }
+        for i in 0..3 {
+            for j in 0..3 {
+                work.charge(1)?;
+                if separates(
+                    a,
+                    b,
+                    &cross(&sub(&a[(i + 1) % 3], &a[i]), &sub(&b[(j + 1) % 3], &b[j])),
+                ) {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    // Convex hull face normals are useful even for spatially rotated charts.
+    for p in [a, b] {
+        for i in 0..p.len().min(6) {
+            for j in i + 1..p.len().min(6) {
+                for k in j + 1..p.len().min(6) {
+                    work.charge(1)?;
+                    if separates(a, b, &cross(&sub(&p[j], &p[i]), &sub(&p[k], &p[i]))) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+fn disjoint(a: &[Net; 2], b: &[Net; 2], depth: u8, work: &mut Work) -> Result<bool> {
+    work.charge(1)?;
+    let pa = a.iter().flat_map(points).collect::<Vec<_>>();
+    let pb = b.iter().flat_map(points).collect::<Vec<_>>();
+    if separated(&pa, &pb, work)? {
+        return Ok(true);
+    }
+    if depth == 4 {
+        return Ok(false);
+    }
+    // Split the larger swept box; every child covers its full time interval.
+    let diameter = |p: &[P]| {
+        (0..3)
+            .map(|k| {
+                p.iter().map(|p| p[k].clone()).max().unwrap()
+                    - p.iter().map(|p| p[k].clone()).min().unwrap()
+            })
+            .max()
+            .unwrap()
+    };
+    let (first, other, swap) = if diameter(&pa) >= diameter(&pb) {
+        (a, b, false)
+    } else {
+        (b, a, true)
+    };
+    let x = bernstein::subdivide(&first[0], work)?;
+    let y = bernstein::subdivide(&first[1], work)?;
+    for (x, y) in x.into_iter().zip(y) {
+        let child = [x, y];
+        if !(if swap {
+            disjoint(other, &child, depth + 1, work)?
+        } else {
+            disjoint(&child, other, depth + 1, work)?
+        }) {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
 fn scalar_dot(p: &[Scalar], n: &P) -> Scalar {
     p[0].iter()
         .enumerate()
@@ -86,84 +192,177 @@ fn positive_sum(a: &Scalar, b: &Scalar, sign: i64) -> bool {
             .all(|(x, y)| x + y * integer(sign) > Q::zero())
     })
 }
-
-type Curve = [Vec<sb::H>; 2];
-fn projected(p: &P, n: &P) -> P {
-    let t = dot(p, n) / dot(n, n);
-    std::array::from_fn(|i| &p[i] - &t * &n[i])
+fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
+    regular_parameter_disk(p, n, work, false)
 }
-fn curve_points(c: &Curve, n: &P) -> Vec<P> {
-    c.iter()
-        .flatten()
-        .filter(|h| h[3] > Q::zero())
-        .map(|h| projected(&sb::point(h), n))
-        .collect()
-}
-fn plane_separated(a: &[P], b: &[P], n: &P, work: &mut Work) -> Result<bool> {
-    for p in [a, b] {
-        for i in 0..p.len() {
-            for j in i + 1..p.len() {
-                work.charge(1)?;
-                let edge = sub(&p[j], &p[i]);
-                if separates(a, b, &edge) || separates(a, b, &cross(n, &edge)) {
-                    return Ok(true);
+fn regular_parameter_disk(
+    p: &Patch,
+    n: &P,
+    work: &mut Work,
+    stationary_boundary: bool,
+) -> Result<bool> {
+    let c = bernstein::corners(&p.h);
+    let (e, f) = (sub(&c[1], &c[0]), sub(&c[2], &c[0]));
+    let det = dot(n, &cross(&e, &f));
+    if det <= Q::zero() {
+        return Ok(false);
+    }
+    // Both duals share the positive factor det. Keeping them unnormalized
+    // preserves every sign/interval criterion and avoids a large denominator.
+    let a = cross(&f, n);
+    let b = cross(n, &e);
+    let au = scalar_dot(&p.derivatives[0], &a);
+    let av = scalar_dot(&p.derivatives[1], &a);
+    let bu = scalar_dot(&p.derivatives[0], &b);
+    let bv = scalar_dot(&p.derivatives[1], &b);
+    // For J_t=(1-t)J+tI, det J_t=(1-t)^2 det J+t(1-t)tr J+t².
+    // Either exact positive diagonal dominance or positive determinant and
+    // trace therefore prove the complete time homotopy, including skew charts.
+    if positive_sum(&au, &av, 1)
+        && positive_sum(&au, &av, -1)
+        && positive_sum(&bv, &bu, 1)
+        && positive_sum(&bv, &bu, -1)
+    {
+        return Ok(true);
+    }
+    if !positive_sum(&au, &bv, 1)
+        && !stationary_boundary
+        && !p.h.iter().flatten().any(|p| p[3].is_zero())
+    {
+        return Ok(false);
+    }
+    let range = |p: &Scalar| {
+        [
+            p.iter().flatten().min().unwrap().clone(),
+            p.iter().flatten().max().unwrap().clone(),
+        ]
+    };
+    let times = |a: [Q; 2], b: [Q; 2]| {
+        let products = [&a[0] * &b[0], &a[0] * &b[1], &a[1] * &b[0], &a[1] * &b[1]];
+        [
+            products.iter().min().unwrap().clone(),
+            products.iter().max().unwrap().clone(),
+        ]
+    };
+    if times(range(&au), range(&bv))[0] > times(range(&av), range(&bu))[1] {
+        return Ok(true);
+    }
+    if 2 * (au.len() - 1) > 33 {
+        return Ok(false);
+    }
+    let det = bernstein::difference(
+        &bernstein::product(&au, &bv, work)?,
+        &bernstein::product(&av, &bu, work)?,
+    );
+    if stationary_boundary || p.h.iter().flatten().any(|p| p[3].is_zero()) {
+        // At a certified removable homogeneous vertex, strict coefficient
+        // positivity is impossible. Positivity in the open triangle plus the
+        // separately proved Jordan boundary still gives projected degree one.
+        let trace = au
+            .iter()
+            .zip(&bv)
+            .flat_map(|(a, b)| a.iter().zip(b).map(|(a, b)| a + b))
+            .collect::<Vec<_>>();
+        if !(trace.iter().all(|q| *q >= Q::zero())
+            && det.iter().flatten().all(|q| *q >= Q::zero())
+            && det.iter().flatten().any(|q| *q > Q::zero()))
+        {
+            return Ok(false);
+        }
+        // Prove the boundary of each singular chart, including internal star
+        // edges. Interior positivity alone must not authorize an edge collapse.
+        let edges = [
+            bernstein::edges(&p.motion[0]),
+            bernstein::edges(&p.motion[1]),
+        ];
+        let curves = (0..3)
+            .map(|i| [edges[0][i].clone(), edges[1][i].clone()])
+            .collect::<Vec<_>>();
+        for curve in &curves {
+            if !monotone_parameter(curve, n, work, stationary_boundary)? {
+                return Ok(false);
+            }
+        }
+        for i in 0..3 {
+            for j in i + 1..3 {
+                let shared = if (i + 1) % 3 == j { &c[j] } else { &c[i] };
+                if !curve_pair(&curves[i], &curves[j], Some(shared), n, work)? {
+                    return Ok(false);
                 }
             }
         }
+        return Ok(true);
     }
-    Ok(false)
+    Ok(det.iter().flatten().all(|q| *q > Q::zero()))
 }
-fn monotone(c: &Curve, n: &P, work: &mut Work) -> Result<bool> {
-    let h = &c[0];
-    let d = h.len() - 1;
-    let a = projected(&sb::point(&h[0]), n);
-    let b = projected(&sb::point(h.last().unwrap()), n);
-    let axis = sub(&b, &a);
-    if zero(&axis) {
-        return Ok(false);
-    }
-    let x = h
-        .iter()
-        .map(|p| (0..3).map(|k| &p[k] * &axis[k]).sum::<Q>())
-        .collect::<Vec<_>>();
-    let w = h.iter().map(|p| p[3].clone()).collect::<Vec<_>>();
-    let deriv = |v: &[Q]| {
-        v.windows(2)
-            .map(|v| (&v[1] - &v[0]) * integer(d as i64))
-            .collect::<Vec<_>>()
-    };
-    let product = |a: &[Q], b: &[Q], work: &mut Work| -> Result<Vec<Q>> {
-        work.charge(a.len() * b.len())?;
-        let product = sb::multiply(a, b);
-        if product
-            .iter()
-            .any(|q| q.numer().bits() > 8192 || q.denom().bits() > 8192)
-        {
-            return Err(fail("atlas edge derivative bit budget exceeded"));
-        }
-        Ok(product)
-    };
-    let a = product(&deriv(&x), &w, work)?;
-    let b = product(&x, &deriv(&w), work)?;
-    Ok(a.iter().zip(b).all(|(x, y)| x > &y))
-}
-fn curve_pair(a: &Curve, b: &Curve, shared: Option<&P>, n: &P, work: &mut Work) -> Result<bool> {
-    let (pa, pb) = (curve_points(a, n), curve_points(b, n));
-    if let Some(origin) = shared {
-        let origin = projected(origin, n);
-        let v = pa
-            .iter()
-            .map(|p| sub(p, &origin))
-            .chain(pb.iter().map(|p| sub(&origin, p)))
-            .filter(|p| !zero(p))
-            .collect::<Vec<_>>();
-        // The curve endpoints and strict Bernstein positivity ensure that
-        // dropping zero endpoint controls cannot hide an interior return.
-        return super::super::rounding::pointed(&v, work);
-    }
-    plane_separated(&pa, &pb, n, work)
-}
+type Curve = [Vec<sb::H>; 2];
 
+fn star(
+    vertex: u32,
+    incident: &[usize],
+    patches: &[Patch],
+    positions: &[P],
+    work: &mut Work,
+) -> Result<usize> {
+    let mut links = BTreeMap::<u32, (u32, Curve)>::new();
+    let mut n: P = std::array::from_fn(|_| Q::zero());
+    for &i in incident {
+        let p = &patches[i];
+        let k = p.ids.iter().position(|v| *v == vertex).unwrap();
+        let c = bernstein::corners(&p.h);
+        n = add(&n, &cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0])));
+        let e = (k + 1) % 3;
+        let curve = [
+            bernstein::edges(&p.motion[0])[e].clone(),
+            bernstein::edges(&p.motion[1])[e].clone(),
+        ];
+        if links
+            .insert(p.ids[e], (p.ids[(e + 1) % 3], curve))
+            .is_some()
+        {
+            return Err(fail("atlas vertex link branches"));
+        }
+    }
+    match star_projected(vertex, incident, patches, positions, &links, &n, work) {
+        Ok(count) => Ok(count),
+        Err(first) => {
+            // Area sums can lie exactly in a cap plane at a conical rim.
+            // Normalize/deduplicate directions, then reprove the entire disk.
+            let mut normals = BTreeSet::new();
+            for &i in incident {
+                let c = bernstein::corners(&patches[i].h);
+                let v = cross(&sub(&c[1], &c[0]), &sub(&c[2], &c[0]));
+                let norm: Q = v
+                    .iter()
+                    .map(|q| {
+                        if *q < Q::zero() {
+                            -q.clone()
+                        } else {
+                            q.clone()
+                        }
+                    })
+                    .sum();
+                if !norm.is_zero() {
+                    normals.insert(v.map(|q| q / &norm));
+                }
+            }
+            let n: P = std::array::from_fn(|k| normals.iter().map(|p| p[k].clone()).sum());
+            if let Ok(count) =
+                star_projected(vertex, incident, patches, positions, &links, &n, work)
+            {
+                return Ok(count);
+            }
+            for n in projection::directions(&normals, work)? {
+                if let Ok(count) =
+                    star_projected(vertex, incident, patches, positions, &links, &n, work)
+                {
+                    return Ok(count);
+                }
+            }
+            Err(first)
+        }
+    }
+}
 #[allow(clippy::too_many_arguments)]
 fn star_projected(
     _vertex: u32,
@@ -390,8 +589,24 @@ fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> 
     Ok((positions, patches))
 }
 pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
+    checked_charts(m, depth).map(|(certificate, _)| certificate)
+}
+fn checked_charts(m: &Model, depth: u8) -> Result<(Certificate, Vec<Patch>)> {
+    admission::checked(m, depth)
+}
+fn checked_charts_recipe(
+    m: &Model,
+    depth: u8,
+    normalize_images: bool,
+) -> Result<(Certificate, Vec<Patch>)> {
     let mut work = Work::default();
     let (mut positions, mut patches) = build(m, depth, &mut work)?;
+    if normalize_images && !conform::normalize_images(&positions, &mut patches, &mut work)? {
+        return Err(fail(
+            "no proved source image normalization extends this atlas",
+        ));
+    }
+    conform::synchronize(&positions, &mut patches, &mut work)?;
     let mut original = BTreeMap::<(u32, u32), Vec<Vec<sb::H>>>::new();
     for p in &patches {
         for (k, mut e) in bernstein::edges(&p.h).into_iter().enumerate() {
@@ -517,7 +732,7 @@ pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
             pairs += 1;
         }
     }
-    Ok(Certificate {
+    let certificate = Certificate {
         version: 1,
         source: source_id(&Source::Brep(m.clone()))?,
         depth,
@@ -529,7 +744,8 @@ pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
             disjoint_pairs: pairs,
             boundary_pairs,
         },
-    })
+    };
+    Ok((certificate, patches))
 }
 /// Bind the proved PL endpoint to the exact chain actually decomposed by the
 /// Minkowski code. Equality includes orientations and multiplicities.
@@ -636,46 +852,10 @@ impl<'de> Deserialize<'de> for Certificate {
 #[path = "atlas/tests/tests_integration.rs"]
 mod tests;
 
-/// Both complete time homotopies have the same oriented segment image. Their
-/// strictly monotone clocks give a continuous time-dependent edge gluing, which
-/// extends over each disk. Projected star proofs depend on these images, not on
-/// an arbitrary speed chosen along the common segment.
-fn segment_seam(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<bool> {
-    let p = sb::point(&a[0]);
-    let q = sb::point(a.last().unwrap());
-    let axis = sub(&q, &p);
-    if zero(&axis) || sb::point(&b[0]) != p || sb::point(b.last().unwrap()) != q {
-        return Ok(false);
-    }
-    if a.iter()
-        .chain(b)
-        .filter(|h| h[3] > Q::zero())
-        .any(|h| !zero(&cross(&sub(&sb::point(h), &p), &axis)))
-    {
-        return Ok(false);
-    }
-    let n = (0..3)
-        .map(|k| {
-            cross(
-                &axis,
-                &std::array::from_fn(|j| if j == k { Q::one() } else { Q::zero() }),
-            )
-        })
-        .find(|n| !zero(n))
-        .unwrap();
-    Ok(monotone(&[a.to_vec(), a.to_vec()], &n, work)?
-        && monotone(&[b.to_vec(), b.to_vec()], &n, work)?)
-}
+pub(super) mod region_brep;
 
-#[path="atlas/algorithm_separated.rs"]
-mod algorithm_separated;
-use algorithm_separated::separated;
-#[path="atlas/algorithm_disjoint.rs"]
-mod algorithm_disjoint;
-use algorithm_disjoint::disjoint;
-#[path="atlas/algorithm_regular.rs"]
-mod algorithm_regular;
-use algorithm_regular::regular;
-#[path="atlas/algorithm_star.rs"]
-mod algorithm_star;
-use algorithm_star::star;
+#[path = "atlas/curve_projection.rs"]
+mod curve_projection;
+use curve_projection::{curve_points, monotone, monotone_parameter, curve_pair, segment_seam};
+
+pub(super) mod boolean;

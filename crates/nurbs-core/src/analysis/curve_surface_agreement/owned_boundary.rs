@@ -236,10 +236,20 @@ mod tests {
         );
         let mut partial = p.clone();
         partial.control_points[1][0] = 0.9;
-        assert!(
-            super::super::verify_exact(&c, &partial, &s, false, 10000)
+        // A partial traversal must never inherit full-curve equality. The
+        // restriction proof may exhaust a small budget; with sufficient work
+        // it identifies this deliberately wrong clock as different.
+        let partial_proof = super::super::verify_exact(&c, &partial, &s, false, 10000)
+            .unwrap()
+            .unwrap();
+        assert_ne!(partial_proof.outcome, B::Equal);
+        assert!(partial_proof.work_used <= 10000);
+        assert_eq!(
+            super::super::verify_exact(&c, &partial, &s, false, 1000000)
                 .unwrap()
-                .is_none()
+                .unwrap()
+                .outcome,
+            B::Different
         );
         assert_eq!(
             super::super::verify_exact(&c, &p, &s, false, 0)

@@ -2,6 +2,10 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "cad_full_round_exact",
+    "cad_full_round_exact_restore",
+    "cad_full_round_exact_display",
+    "cad_full_round_exact_history",
     "cad_surface_boundary_measure",
     "cad_mesh_intersection",
     "cad_mesh_intersections",
@@ -97,6 +101,10 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "cad_full_round_exact" => cad_full_round_exact::construct(v),
+        "cad_full_round_exact_restore" => cad_full_round_exact::restore(v),
+        "cad_full_round_exact_display" => cad_full_round_exact::display(v),
+        "cad_full_round_exact_history" => cad_full_round_history::dispatch(v),
         "cad_surface_boundary_measure" => cad_surface_diagnostics::measure(v),
         "cad_mesh_intersection" => cad_diagnostics::intersection(v),
         "cad_mesh_intersections" => cad_diagnostics::intersections(v),

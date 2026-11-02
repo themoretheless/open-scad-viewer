@@ -1,0 +1,13 @@
+{
+  "parser": "OpenCascade/cadquery-ocp",
+  "valid": true,
+  "solids": 1,
+  "faces": 10,
+  "curved_faces": 8,
+  "midsection_max_error": 8.881784197001252e-16,
+  "volume": 687.559992185875,
+  "independent_analytic_volume": 687.5599921856518,
+  "volume_relative_error": 3.2457860402568863e-13,
+  "ocp_integration_error_estimate": 1.172140418608688e-13,
+  "scope": "one hollow cubic fixture; not global embedding certification"
+}

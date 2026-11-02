@@ -3,6 +3,8 @@
 
 /// Existing modules for geometry.
 pub mod geometry {
+    pub use crate::bernstein_interpolation;
+
     pub use crate::core;
     pub use crate::numerics;
     pub use crate::curve;
@@ -52,6 +54,10 @@ pub mod curves {
 
 /// Existing modules for surfaces.
 pub mod surfaces {
+    // Owns fixed-weight hard fitting, original-curve admission and the
+    // reference-metric variational shell submodule (no root algorithm alias).
+    pub use crate::constrained_surface;
+    pub use crate::polyhedral_spline;
     pub use crate::construct;
     pub use crate::sweeps;
     pub use crate::worm_wheel;
@@ -116,6 +122,9 @@ pub mod editing {
 
 /// Existing modules for joining.
 pub mod joining {
+    pub use crate::profile_section_bridge;
+    pub use crate::profile_expression_bernstein;
+
     pub use crate::join;
     pub use crate::curve_join;
     pub use crate::continuity;
@@ -162,6 +171,11 @@ pub mod offsets {
 
 /// Existing modules for queries.
 pub mod queries {
+    pub use crate::polar_surface_differential;
+    pub use crate::rational_pole_differential;
+    pub use crate::surface_boundary_secant;
+    pub use crate::surface_weight_profile;
+
     pub use crate::frechet;
     pub use crate::curve_secant_trace;
     pub use crate::surface_normal_trace;
@@ -205,6 +219,8 @@ pub mod queries {
 
 /// Existing modules for parameterization.
 pub mod parameterization {
+    pub use crate::curve_coordinate_clock;
+
     pub use crate::trim;
     pub use crate::periodic_trim;
     pub use crate::curve_pullback;
@@ -228,6 +244,12 @@ pub mod parameterization {
 
 /// Existing modules for validation.
 pub mod validation {
+    pub use crate::profile_projection_jacobian;
+    pub use crate::profile_projected_jordan;
+    pub use crate::factored_surface_normals;
+    pub use crate::profile_expression_radius;
+    pub use crate::synchronized_boundary_normals;
+
     pub use crate::certificates;
     pub use crate::affine_volume;
     pub use crate::fibered_volume;

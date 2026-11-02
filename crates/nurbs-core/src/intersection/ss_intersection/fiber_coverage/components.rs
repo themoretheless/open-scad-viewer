@@ -1,10 +1,41 @@
 //! Complete connected-component census of the original parameter root set.
 //! Physical world branches, periodic quotients and branch topology differ.
 use super::*;
+mod discovery;
+pub use discovery::{
+    DiscoveredMixedFiberComponents, MixedComponentDiscoveryLimits, MixedComponentDiscoveryResult,
+    MixedTransitionSearch, connect_mixed_fiber_cover_automatic,
+};
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FiberBridgeSpec {
     pub charts: [usize; 2],
+    /// Positive widths request an oriented local overlap. Exactly one fixed
+    /// coordinate instead requests a source-certified point connection.
     pub domain: Box4,
+}
+/// A certified common parameter root at one closed coordinate. It connects
+/// components but supplies no open-overlap orientation.
+#[derive(Clone, Debug)]
+pub struct FiberPointConnection {
+    charts: [usize; 2],
+    point: QualifiedFiber,
+}
+impl FiberPointConnection {
+    pub fn charts(&self) -> [usize; 2] {
+        self.charts
+    }
+    pub fn point(&self) -> &QualifiedFiber {
+        &self.point
+    }
+    pub(super) fn matches(&self, other: &Self) -> bool {
+        self.charts == other.charts
+            && self.point.domain() == other.point.domain()
+            && self.point.free_axis() == other.point.free_axis()
+            && self.point.source().first() == other.point.source().first()
+            && self.point.source().second() == other.point.source().second()
+            && self.point.report() == other.point.report()
+            && self.point.limits().max_rectangles == other.point.limits().max_rectangles
+    }
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct FiberSeparation {
@@ -17,6 +48,7 @@ pub struct QualifiedFiberComponents {
     coverage: QualifiedMixedFiberCoverage,
     specs: Vec<FiberBridgeSpec>,
     transitions: Vec<QualifiedFiberTransition>,
+    points: Vec<FiberPointConnection>,
     components: Vec<Vec<usize>>,
     separations: Vec<FiberSeparation>,
     rectangles: usize,
@@ -28,6 +60,9 @@ impl QualifiedFiberComponents {
     }
     pub fn transitions(&self) -> &[QualifiedFiberTransition] {
         &self.transitions
+    }
+    pub fn point_connections(&self) -> &[FiberPointConnection] {
+        &self.points
     }
     pub fn components(&self) -> &[Vec<usize>] {
         &self.components
@@ -48,6 +83,12 @@ impl QualifiedFiberComponents {
                 && self.separations == fresh.separations
                 && self.rectangles == fresh.rectangles
                 && self.transitions.len() == fresh.transitions.len()
+                && self.points.len() == fresh.points.len()
+                && self
+                    .points
+                    .iter()
+                    .zip(&fresh.points)
+                    .all(|(a, b)| a.matches(b))
                 && self
                     .transitions
                     .iter()
@@ -127,6 +168,7 @@ pub fn connect_mixed_fiber_cover(
         return Ok(out);
     }
     let mut transitions = Vec::with_capacity(specs.len());
+    let mut points = Vec::new();
     let mut labels = (0..fs.len()).collect::<Vec<_>>();
     for spec in specs {
         if work.used == work.max {
@@ -134,18 +176,62 @@ pub fn connect_mixed_fiber_cover(
             out.rectangles = work.used;
             return Ok(out);
         }
-        let r = qualify_fiber_transition(
-            &fs[spec.charts[0]],
-            &fs[spec.charts[1]],
-            spec.domain,
-            work.max - work.used,
-        )?;
-        work.used += r.rectangles();
-        let Some(proof) = r.into_transition() else {
-            out.reason = "original-bridge-unproven";
-            out.rectangles = work.used;
-            return Ok(out);
-        };
+        let singleton = (0..4)
+            .filter(|&k| spec.domain[k][0] == spec.domain[k][1])
+            .collect::<Vec<_>>();
+        if singleton.len() == 1 {
+            let axis = singleton[0];
+            check(
+                (0..4).all(|k| {
+                    spec.domain[k].iter().all(|v| v.is_finite())
+                        && spec.domain[k][0] <= spec.domain[k][1]
+                        && (k == axis || spec.domain[k][0] < spec.domain[k][1])
+                        && spec.charts.iter().all(|&i| {
+                            fs[i].domain()[k][0] <= spec.domain[k][0]
+                                && spec.domain[k][1] <= fs[i].domain()[k][1]
+                        })
+                }),
+                "Point bridge must lie in both original charts with exactly one fixed coordinate",
+            )?;
+            let axis = [
+                FiberAxis::FirstU,
+                FiberAxis::FirstV,
+                FiberAxis::SecondU,
+                FiberAxis::SecondV,
+            ][axis];
+            let r = fs[spec.charts[0]].source().certify(
+                spec.domain,
+                axis,
+                FiberLimits {
+                    max_rectangles: work.max - work.used,
+                    preconditioner: None,
+                },
+            )?;
+            work.used += r.report().rectangles;
+            let Some(point) = r.into_fiber() else {
+                out.reason = "original-point-bridge-unproven";
+                out.rectangles = work.used;
+                return Ok(out);
+            };
+            points.push(FiberPointConnection {
+                charts: spec.charts,
+                point,
+            });
+        } else {
+            let r = qualify_fiber_transition(
+                &fs[spec.charts[0]],
+                &fs[spec.charts[1]],
+                spec.domain,
+                work.max - work.used,
+            )?;
+            work.used += r.rectangles();
+            let Some(proof) = r.into_transition() else {
+                out.reason = "original-bridge-unproven";
+                out.rectangles = work.used;
+                return Ok(out);
+            };
+            transitions.push(proof);
+        }
         let a = labels[spec.charts[0]];
         let b = labels[spec.charts[1]];
         let low = a.min(b);
@@ -155,7 +241,6 @@ pub fn connect_mixed_fiber_cover(
                 *label = low;
             }
         }
-        transitions.push(proof);
     }
     out.rectangles = work.used;
     out.reason = "cross-component-root-contact-unproven";
@@ -186,6 +271,7 @@ pub fn connect_mixed_fiber_cover(
         coverage: coverage.clone(),
         specs: specs.to_vec(),
         transitions,
+        points,
         components,
         separations,
         rectangles: work.used,

@@ -1,0 +1,30 @@
+{
+  "status": "native earlier-selection dependency regeneration qualified; bridge/WASM delivery remains open",
+  "newTestsPassed": 3,
+  "historyRegressionsPassed": 8,
+  "sourceSha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/history.rs": "157985301990aa5f4c499d947e02c0e9d84c53786669e993f137889e5636709c",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/history/regenerate.rs": "679858cfb0e245a29afed430f386c2e9fc10723968bcb8d6306158aa05434d24",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/history/codec.rs": "2b1ac18077b1d8aff5cc5102906a5aa248793b7d6a746a2adf2c4e453087e54f",
+    "crates/brep-core/tests/full_round_history_regenerate.rs": "041b7d6a34f391f3ffd9c938fc68de71d7fff1044a8753d2c2abe9cbd3799dfc",
+    "crates/brep-core/tests/full_round_exact_history.rs": "c8dbd6325bff7b910280809ae7f9f96a0bb3ac111a9dd69280b40179d6653eda"
+  },
+  "coverage": [
+    "earlier root selection rebuilds actual descendants",
+    "later source changes inherit authored selection IDs",
+    "later explicit reselection overrides inherited choice",
+    "hidden redo rebuilt and original cursor retained",
+    "frozen codec replay preserves revised bodies and actual work",
+    "editing an earlier reselection changes later source-step geometry",
+    "missing inherited face in later source refuses atomically",
+    "invalid revision, wrong parameter kind and duplicate face IDs refuse atomically"
+  ],
+  "remaining": [
+    "earlier source-parameter editing and source-construction expression replay",
+    "bridge/WASM/browser exposure of regenerate_selection",
+    "general dependency graphs, changed-ID lineage transfer and branch merges",
+    "all original Plasticity library parity scope"
+  ],
+  "cleanBaseline": "11 files unchanged",
+  "architecture": "six previously recorded other-file violations, no limits changed"
+}

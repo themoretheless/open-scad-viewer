@@ -1,19 +1,19 @@
 import {sha256Hex} from './sha256'
 export const MAX_NATIVE_GEOMETRY_CHARACTERS = 4 * 1024 * 1024
-/** Immutable serialized f64 geometry, separate from the Float32 rendering payload.
+/** Immutable serialized kernel-owned geometry, separate from the Float32 rendering payload.
  * Geometry is revalidated by its owning kernel before further operations.
  * Revision identity is snapshot-local, not a persistent topology naming claim.
  */
 export interface NativeGeometryArtifact {
   readonly version:1
   readonly nodeId:string
-  readonly kind:'profile'|'patches'|'subdivision'|'sdf'|'brep'|'curve'|'surface'|'mesh'
+  readonly kind:'profile'|'patches'|'subdivision'|'sdf'|'brep'|'rational-brep'|'curve'|'surface'|'mesh'
   readonly revision:string
   readonly geometryJson:string
   readonly documentJson:string
   readonly documentRevision:string
 }
-const kinds=['profile','patches','subdivision','sdf','brep','curve','surface','mesh']
+const kinds=['profile','patches','subdivision','sdf','brep','rational-brep','curve','surface','mesh']
 export function createNativeGeometryArtifact(nodeId:string,kind:NativeGeometryArtifact['kind'],data:unknown,document:unknown,pack?:(json:string)=>unknown):NativeGeometryArtifact {
   let geometryJson=JSON.stringify(data)
   const documentJson=JSON.stringify(document)

@@ -1,4 +1,4 @@
-//! Section geometry: preserves the original arithmetic and proof budgets.
+//! Matched section positions and jets; whole-skin admission remains separate.
 use super::*;
 
 /// G2 quintic Bézier section: position, tangent and curvature vector matched
@@ -32,7 +32,12 @@ pub(super) fn g2_section(m: &Marcher<'_>, sample: &SpineSample) -> Result<std::r
     };
     let k0 = normal_curvature(m.a, sample.uv_a, t0)?.unwrap_or(0.);
     let k1 = normal_curvature(m.b, sample.uv_b, t1)?.unwrap_or(0.);
-    let handle = 0.35 * chord_len;
+    // Five equal projected steps in the near-parallel limit avoid the old
+    // reversed interior control polygon. A 0.35 chord handle shrinks midpoint
+    // speed to 0.34375 of the mean, amplifying shallow-wedge curvature to
+    // ~22.2149/r. The 1/5 chord proposal gives ~1.5/r and preserves the same
+    // endpoint position/tangent/curvature constraints below.
+    let handle = 0.2 * chord_len;
     // Bézier end condition: curvature vector K = (4/5)·(P2−P1)⊥/a² — solve
     // for the inner controls with K matched to k_n·n of each support.
     let k0_vec = scale(na, k0);

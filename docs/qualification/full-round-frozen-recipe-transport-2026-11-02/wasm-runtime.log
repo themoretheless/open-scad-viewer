@@ -1,0 +1,7 @@
+{"name":"native-frozen-recipe-to-wasm","ok":true,"elapsedMs":21034.460584}
+{"name":"wasm-original-source-construction","ok":true,"elapsedMs":19227.942208}
+{"name":"wasm-json-frozen-roundtrip","ok":true,"elapsedMs":18075.76075}
+{"name":"forged-rational-output","ok":false,"elapsedMs":18098.048874999993,"error":{"code":"BREP_FEATURE_REFUSED","message":"Exact output/evidence differs from frozen-source reconstruction"}}
+{"name":"caller-success-field","ok":false,"elapsedMs":0.49670799999148585,"error":{"code":"GEOMETRY_INVALID_INPUT","message":"Unexpected exact Full Round request field"}}
+{"name":"changed-original-source-interval","ok":false,"elapsedMs":3.238374999986263,"error":{"code":"BREP_FEATURE_REFUSED","message":"Exact recipe changes an unselected source interval"}}
+{"passed":true,"cases":6,"wasmSha256":"69eb251798727f99df9c2a5b88691a56b5db3ce4ac2122edadc565a06af2adf6"}

@@ -1,5 +1,7 @@
 //! Bounded, conservative verification of C(t) = S(P(t)) over a full interval.
 //! Positive rational hulls cover every knot span. Exhaustion is inconclusive.
+mod point_lift;
+pub use point_lift::verify_exact_point;
 use crate::distance_bounds::{Interval, box_distance};
 use crate::{Result, check, curve::Curve, surface::Surface};
 
@@ -274,6 +276,7 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
     if require_chart {
         if let Some(identity)=structured_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
     }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
@@ -289,7 +292,9 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
         || !bezier(&c.knots,c.degree,c.control_points.len())
         || !bezier(&p.knots,p.degree,p.control_points.len())
         || !bezier(&s.knots_u,s.degree_u,s.control_points.len())
-        || !bezier(&s.knots_v,s.degree_v,s.control_points[0].len()) {return Ok(None);}
+        || !bezier(&s.knots_v,s.degree_v,s.control_points[0].len()) {
+        return if require_chart {partial_boundary::verify(c,p,s,reversed,max_work)} else {Ok(None)};
+    }
     let domain=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
     // Positive rational weights put the entire pcurve in its control hull.
@@ -463,8 +468,12 @@ fn exact_natural_nurbs_boundary(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_w
 mod tests;
 
 mod owned_boundary;
+mod bspline_trace;
 mod correspondence;
-pub use correspondence::{CorrespondenceReport, verify_correspondence, verify_oriented_correspondence};
+pub use correspondence::{
+    CorrespondenceReport, verify_correspondence, verify_oriented_correspondence,
+    verify_parameter_correspondence, verify_parameter_clocks, parameter_clock_error_bound,
+};
 
 /// Method proposes a definition only; admission comes from continuous evidence.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -625,3 +634,4 @@ pub fn lift(
 }
 
 mod structured_boundary;
+mod partial_boundary;

@@ -195,8 +195,10 @@ fn continuous_report_covers_normalized_wrap_and_only_returns_accepted_curve() {
         }
     }
     let report = periodic_seam::curve_report(&c, 3.375, 1e-12, 7).unwrap();
-    assert!(!report.verification.accepted);
-    assert!(report.curve.is_none());
+    assert!(report.verification.accepted);
+    assert!(report.verification.error_upper <= 1e-12);
+    assert!(report.curve.is_some());
+    assert!(periodic_seam::curve_report(&c, 3.375, 1e-12, 1).is_err());
 }
 
 #[test]

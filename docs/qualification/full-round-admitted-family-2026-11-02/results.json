@@ -1,0 +1,94 @@
+{
+  "status": "native exact admitted entry and six-fixture strict family qualification; full parity incomplete",
+  "passed": 9,
+  "tests": {
+    "full_round_exact_material_family": 6,
+    "full_round_admitted": 3
+  },
+  "counts_note": "latest six-case family plus latest three-case entry run; earlier overlapping repeats not added",
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "3b490c80c0033e74442d40909e17bed8f2ab8775b7f7d695ede80aca48458263",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "3266c2fd9953f5109db2c8aef399d85cdf126fa8cd1f69d2df87f52ab8e2c1dc",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted.rs": "122db15a0d61d7a678e717909a4fff583fae0bb3e5930eefe8a28b3a44677009",
+    "crates/brep-core/tests/full_round_exact_material_family.rs": "f2ad79afa8bd501c1e03ee501ed3a42a271e476994da496a3e2239d7671395ff",
+    "crates/brep-core/tests/full_round_admitted.rs": "390413145b085bf3f044dcc5aa3c53eaa5b8d8a763cf40597ddff77907b4c850"
+  },
+  "strict_cases": [
+    {
+      "weight": 1.0,
+      "right": 5.0,
+      "left": -1.0,
+      "spans": 2,
+      "added_witnesses": 0,
+      "removed_witnesses": 8,
+      "ray_cells": 288
+    },
+    {
+      "weight": 1.0,
+      "right": 3.0,
+      "left": -1.0,
+      "spans": 3,
+      "added_witnesses": 0,
+      "removed_witnesses": 9,
+      "ray_cells": 340
+    },
+    {
+      "weight": 1.0,
+      "right": 3.0,
+      "left": 1.0,
+      "spans": 4,
+      "added_witnesses": 0,
+      "removed_witnesses": 16,
+      "ray_cells": 572
+    },
+    {
+      "weight": 0.7,
+      "right": 5.0,
+      "left": -1.0,
+      "spans": 2,
+      "added_witnesses": 0,
+      "removed_witnesses": 10,
+      "ray_cells": 360
+    },
+    {
+      "weight": 0.7,
+      "right": 3.0,
+      "left": 1.0,
+      "spans": 4,
+      "added_witnesses": 0,
+      "removed_witnesses": 8,
+      "ray_cells": 308
+    },
+    {
+      "weight": 0.7,
+      "right": 5.0,
+      "left": 1.0,
+      "spans": 3,
+      "added_witnesses": 0,
+      "removed_witnesses": 12,
+      "ray_cells": 460
+    }
+  ],
+  "entry": "feature_ops::full_round_exact(&source, selected_faces, Default::default())",
+  "output": "actual prism::Topology from NoAddedExactMaterial.result(); no f64 conversion or legacy fallback",
+  "coverage": [
+    "six symmetric/asymmetric polynomial/rational source cases",
+    "arc span counts 1+1, 2+2, 2+1, 1+2",
+    "strict no-addition and independent replay",
+    "whole edited-span radius and zero-allowance G1",
+    "safe native public entry owns exact returned topology",
+    "missing material budget and wrong selection refuse without source mutation",
+    "through-hole remains profile hole in one admitted body"
+  ],
+  "checks": [
+    "11 frozen clean files unchanged",
+    "API map check passed; 242 roots, 200 catalog entries; not parity"
+  ],
+  "open": [
+    "ModelGraph/WASM/main pipeline transport for rational topology",
+    "exact source-owned topology lineage and native output exchange/roundtrip",
+    "general spatial/non-extrusion supports, variable-radius/high-valence networks",
+    "complete full regression and external native-library comparison",
+    "full original library parity scope"
+  ]
+}

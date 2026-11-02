@@ -25,6 +25,8 @@ fn original_frame_and_filled_caps_certify_through_the_public_native_protocol() {
     assert_eq!(owned["idealBodyEmbeddingCertified"], false);
     assert_eq!(owned["smoothnessCertified"], false);
     assert_eq!(owned["seamContinuity"], "C0");
+    assert_eq!(owned["jointContinuousGlobalCertified"],false);
+    assert_eq!(owned["jointContinuousGlobalG2Certified"],false);
     assert!(!owned["model"].is_null());
 
     let common = dispatch(data["common"].clone()).unwrap();
@@ -48,10 +50,14 @@ fn caller_flags_cannot_replace_any_native_certificate_stage() {
         request["limits"][key] = json!(budget);
         request["certified"] = json!(true);
         request["continuousBound"] = json!(true);
+        request["jointContinuousGlobalCertified"]=json!(true);
+        request["jointContinuousGlobalG2Certified"]=json!(true);
         request["model"] = data["common"]["retained"].clone();
         let refused = dispatch(request).unwrap();
         assert_eq!(refused["certified"], false, "{key}: {refused:?}");
         assert!(refused["model"].is_null(), "{key}");
+        assert_eq!(refused["jointContinuousGlobalCertified"],false);
+        assert_eq!(refused["jointContinuousGlobalG2Certified"],false);
     }
     let mut request = data["sweep"].clone();
     request["limits"]["volume"]["maxPairs"] = json!(1);
@@ -136,6 +142,8 @@ fn ideal_source_embedding_is_native_owned_and_budgeted_separately_from_retained_
     let full = dispatch(request.clone()).unwrap();
     assert_eq!(full["certified"], true, "{full:?}");
     assert_eq!(full["idealBodyEmbeddingCertified"], true);
+    assert_eq!(full["jointContinuousGlobalCertified"],true);
+    assert_eq!(full["jointContinuousGlobalG1Certified"],false);
     assert_eq!(full["idealBody"]["volumeRegularityCertified"], true);
     assert_eq!(full["idealBody"]["parameterTopologyPreserved"], true);
     assert_eq!(full["smoothnessCertified"], false);

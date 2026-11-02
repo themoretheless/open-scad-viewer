@@ -1,0 +1,43 @@
+{
+  "scope": "local clean versus independent informed geometry; no Plasticity execution or speed claim",
+  "cylinder": {
+    "radius": 2,
+    "height": 5,
+    "reference_volume": 62.83185307179586,
+    "clean_representation": "32-segment faceted solid",
+    "clean_volume": 62.42890304516103,
+    "clean_absolute_volume_error": 0.4029500266348336,
+    "informed_representation": "retained rational boundary and analytic extrusion measure",
+    "informed_volume": 62.83185307179586,
+    "informed_absolute_volume_error": 0,
+    "informed_retained_faces": 6,
+    "informed_retained_edges": 12,
+    "coarse_display_triangles": 48,
+    "fine_display_triangles": 400,
+    "fine_boundary_chord_estimate": 0.0009868792685368
+  },
+  "annulus": {
+    "retained_faces": 10,
+    "cap_boundary_loops": 2,
+    "analytic_volume": 100.53096491487338,
+    "display_closed_manifold": true
+  },
+  "incompatible_knots_loft": {
+    "clean_rejected": true,
+    "informed_accepted": true,
+    "common_spans": 6,
+    "maximum_endpoint_profile_error_201_samples": 9.155133597044475e-16
+  },
+  "rotated_convex_intersection": {
+    "clean_equivalent_api": "unavailable: clean CSG takes only axis-aligned boxes",
+    "reference_volume": 6.627416997969522,
+    "informed_volume": 6.627416997969519,
+    "absolute_volume_error": 3.552713678800501e-15,
+    "closed_manifold": true
+  },
+  "convex_difference_partition": {
+    "pieces": 4,
+    "volume_conservation_error": 8.881784197001252e-16,
+    "sewn_external_shell": false
+  }
+}

@@ -11,7 +11,7 @@ mod network;
 pub use network::{NetworkReplacement, RegionPatch, replace_g2_network};
 #[path = "region_replacement/cap.rs"]
 mod cap;
-pub use cap::{SurfaceCap, cap_region};
+pub use cap::{SurfaceCap, cap_region, cap_region_with_pcurves};
 
 pub struct Replacement {
     pub model: Model,
@@ -566,7 +566,7 @@ pub use trihedral_setbacks::{EdgeSetback, FacePort, TrihedralSetbacks, plan_trih
 #[path = "region_replacement/trihedral_skins.rs"]
 mod trihedral_skins;
 pub use trihedral_skins::{
-    StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips,
+    StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips, build_trihedral_strips_with_profile,
 };
 
 #[path = "region_replacement/trihedral_rim.rs"]
@@ -590,3 +590,72 @@ pub use central_loft::{
     CornerSewLimits, FluxLimits, FluxReport, MaterialReport, ProjectionDiskReport,
     QualifiedSewnCorner, SewnCornerCandidate, StripFitReport, propose_trihedral_center,
 };
+#[path = "region_replacement/central_graph.rs"]
+mod central_graph;
+#[path = "region_replacement/trihedral_graft.rs"]
+mod trihedral_graft;
+pub use trihedral_graft::{TrihedralGraftCandidate,propose_trihedral_graft};
+pub use central_graph::{
+    CentralGraph, CentralGraphInspection, GraphOptions, GraphGuide, inspect_central_graph, propose_central_graph,
+    propose_central_graph_guided,
+    propose_central_graph_fair,
+    propose_central_graph_refined,
+    propose_central_graph_constrained, propose_central_graph_junction_constrained, GraphHessianAnchor,
+    inspect_central_graph_correlated,
+    trim_central_graph,
+};
+
+mod interior_lift;
+pub use interior_lift::{InteriorLift, InteriorLiftProposal, propose_interior_lift};
+
+mod interior_tile;
+pub use interior_tile::{InteriorTileLimits, InteriorTileProposal, propose_interior_tile, propose_curvature_limited_tile, certify_tile_rectangle_inside};
+
+mod corner_patch_network;
+pub use corner_patch_network::{CornerPatchNetwork,propose_corner_patch_network,propose_binary_corner_patch_network};
+
+mod corner_patch_body;
+pub use corner_patch_body::{CornerPatchBody,propose_corner_patch_body};
+
+mod nurbs_edge_transition;
+pub use nurbs_edge_transition::{NurbsEdgeTransition, propose_nurbs_edge_transition};
+
+mod trim_contacts;
+pub use trim_contacts::{ContactCut, ContactReplacement, RemovalAnchor, trim_and_replace_contacts};
+
+mod four_edge_corner;
+pub use four_edge_corner::{FourEdgeCorner, four_edge_corner_stock, propose_four_edge_corner};
+
+#[path = "region_replacement/graph_contacts.rs"]
+mod graph_contacts;
+pub use graph_contacts::{GraphContactCut, trim_and_replace_graph_contacts, trim_and_replace_graph_contacts_g2};
+
+#[path = "region_replacement/six_edge_corner.rs"]
+mod six_edge_corner;
+pub use six_edge_corner::{SixEdgeCorner,six_edge_corner_stock,propose_six_edge_corner};
+pub use six_edge_corner::{SixEdgeGraphProof,inspect_six_edge_graph};
+
+pub use six_edge_corner::propose_six_edge_corner_radii;
+pub use six_edge_corner::{QualifiedSixEdgeBody,build_six_edge_corner_radii};
+
+mod qualified_contacts;
+pub use qualified_contacts::{ContactQualificationLimits, QualifiedContactBody, trim_and_replace_contacts_g2};
+mod end_runout;
+pub use end_runout::{QualifiedEndRunout, build_g2_end_runout};
+mod patch_set;
+pub use patch_set::{SewPatch, SewnPatchSet, sew_g2_patch_set, sew_g2_patch_set_with_graph_work};
+pub use end_runout::{RunoutPanelField, RunoutPanelFields, inspect_runout_panels};
+
+mod retained_patch_set;
+pub use retained_patch_set::{OwnedSewPatch, OwnedPatchSet, RetainedPatchBody, trim_and_sew_g2_patch_set};
+
+mod embedded_patch_set;
+pub use embedded_patch_set::{EmbeddedPatchLimits, EmbeddedPatchBody, EmbeddedPatchFailure, GlobalPatchDiagnostic, trim_and_sew_embedded_g2_patch_set};
+
+#[path = "region_replacement/contact_patch_body.rs"]
+mod contact_patch_body;
+pub use contact_patch_body::{ContactPatchBody, ContactPatchFailure, sew_contact_g2_patch_set};
+
+#[path = "region_replacement/contact_end_normals.rs"]
+mod contact_end_normals;
+pub use contact_end_normals::{ContactEndNormals, EndNormalDiagnostic, EndNormalDecision, inspect_contact_end_normals};

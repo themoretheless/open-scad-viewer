@@ -9,6 +9,8 @@ use crate::{
     surface_contact::{Verdict, Witness},
     surface_offset,
 };
+mod fitting;
+pub use fitting::{FitAttempt, FitLimits, FitReport, FitStop, fit_branch};
 pub struct Cell {
     pub interval: [f64; 2],
     pub error_upper_uv: Option<f64>,
@@ -64,7 +66,7 @@ fn interval(x: [f64; 2]) -> Result<I> {
 }
 /// Additional section queries refine only an already certified root enclosure.
 /// If the tighter query is inconclusive, retain the last certified enclosure.
-fn section(
+pub(crate) fn section(
     s: [&Surface; 2],
     d: [f64; 2],
     axis: usize,
@@ -80,16 +82,27 @@ fn section(
     else {
         return Ok((None, calls));
     };
+    let (mut input_free, mut input_second) = (free, second);
     for _ in 0..refinements {
-        let next_free = witness.first_uv[1 - axis];
-        let next_second = witness.second_uv;
+        let next_free =
+            offset_contact_tangent::padded(witness.first_uv[1 - axis], input_free, free);
+        let next_second = std::array::from_fn(|k| {
+            offset_contact_tangent::padded(witness.second_uv[k], input_second[k], second[k])
+        });
         if next_free[0] >= next_free[1] || next_second.iter().any(|r| r[0] >= r[1]) {
+            break;
+        }
+        if next_free == input_free && next_second == input_second {
             break;
         }
         calls += 1;
         match surface_offset::certify_contact_section(s, d, axis, t, next_free, next_second, spans)?
         {
-            Verdict::Witness(w) => witness = w,
+            Verdict::Witness(w) => {
+                witness = w;
+                input_free = next_free;
+                input_second = next_second;
+            }
             _ => break,
         }
     }
@@ -146,6 +159,42 @@ pub fn certify(
     max_cells: usize,
     refinements: usize,
 ) -> Result<Report> {
+    certify_refined(
+        p,
+        side,
+        s,
+        d,
+        axis,
+        drive,
+        free,
+        second,
+        spans,
+        tolerance_uv,
+        max_cells,
+        refinements,
+        0,
+    )
+}
+/// Same original-tube authority as `certify`, with bounded uniform-tube
+/// contractions before implicit tangent enclosures. Only proved nested tubes
+/// are used; a failed contraction retains the last reproducibly proved input.
+/// `band_queries` includes every contraction and final tangent-band query.
+#[allow(clippy::too_many_arguments)]
+pub fn certify_refined(
+    p: &Curve,
+    side: usize,
+    s: [&Surface; 2],
+    d: [f64; 2],
+    axis: usize,
+    drive: [f64; 2],
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    tolerance_uv: f64,
+    max_cells: usize,
+    refinements: usize,
+    band_refinements: usize,
+) -> Result<Report> {
     check(
         side < 2 && axis < 2 && drive[0] < drive[1],
         "Choose valid contact side, axis and driving interval",
@@ -155,7 +204,8 @@ pub fn certify(
             && tolerance_uv > 0.
             && max_cells > 0
             && max_cells <= 100000
-            && refinements <= 16,
+            && refinements <= 16
+            && band_refinements <= 16,
         "Contact pcurve needs a positive UV tolerance and bounded work",
     )?;
     let lifted = lift(p)?;
@@ -177,8 +227,18 @@ pub fn certify(
     let mut mismatch = false;
     while let Some(range) = pending.pop() {
         out.visited += 1;
-        out.band_queries += 1;
-        let tangent = offset_contact_tangent::certify(s, d, axis, range, free, second, spans)?;
+        let refined = offset_contact_tangent::certify_refined(
+            s,
+            d,
+            axis,
+            range,
+            free,
+            second,
+            spans,
+            band_refinements,
+        )?;
+        out.band_queries += refined.band_queries;
+        let tangent = refined.report;
         let mut cell = Cell {
             interval: range,
             error_upper_uv: None,

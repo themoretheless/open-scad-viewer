@@ -1,3 +1,4 @@
+import { diagnosticSnapshotGeometry } from './brepDiagnosticSnapshot'
 /** Independent diagnostic transport. This is never a GeometryExecutionDescriptor. */
 import {MAX_GEOMETRY_SOURCE_CHARACTERS, parseGeometrySourceRoutingHeader} from '../core/geometryExecution'
 import {MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
@@ -170,7 +171,7 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
     if (output.empty === true) {
       if (mesh || output.snapshotRevision !== null || output.geometryAssetId !== null || output.topologyFaceIds.length) return false
     } else {
-      if (output.empty !== false || !mesh || mesh.nativeGeometry?.kind !== 'brep'
+      if (output.empty !== false || !mesh || !mesh.nativeGeometry
         || mesh.nativeGeometry.nodeId !== output.entityId || mesh.nativeGeometry.revision !== output.snapshotRevision
         || mesh.geometryAssetId !== output.geometryAssetId || mesh.geometryAssetId !== geometryAssetId(mesh.vertices, mesh.indices)
         || !mesh.faceIdsAuthoritative || mesh.transform.some((entry, index) => entry !== (index % 5 === 0 ? 1 : 0))
@@ -190,11 +191,12 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
       } else if (run.source !== null) return false
       // Snapshot hashes are checked by the existing mesh validator; additionally
       // bind the advertised face list and triangle indices to that exact snapshot.
-      const snapshot = JSON.parse(mesh.nativeGeometry.geometryJson) as {geometry?: {faces?: unknown[]; topologyIds?: {faces?: unknown[]}}}
-      const faceList = snapshot.geometry?.topologyIds?.faces
+      const geometry = diagnosticSnapshotGeometry(mesh.nativeGeometry, program.core.nodes[expectedOutput.node].valueType.representation)
+      const topologyIds = geometry?.topologyIds
+      const faceList = record(topologyIds) ? topologyIds.faces : null
       const reportedFaces = output.topologyFaceIds
-      if (!Array.isArray(snapshot.geometry?.faces) || !Array.isArray(faceList)
-        || faceList.length !== snapshot.geometry.faces.length || faceList.length !== output.topologyFaceIds.length
+      if (!Array.isArray(geometry?.faces) || !Array.isArray(faceList)
+        || faceList.length !== geometry.faces.length || faceList.length !== output.topologyFaceIds.length
         || faceList.some((id, index) => typeof id !== 'string' || id !== reportedFaces[index])
         || !mesh.faceIds || mesh.faceIds.some(face => face >= faceList.length)) return false
       triangles += mesh.indices.length / 3

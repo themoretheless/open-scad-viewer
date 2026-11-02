@@ -128,3 +128,28 @@ fn g2_corner_closes_owned_hole_without_replacing_source_edges() {
     );
     assert_eq!(unsupported, saved);
 }
+
+#[test]
+fn compact_corner_keeps_exact_original_rim_lifts_without_quintic_roundoff() {
+    let (source, uses, options) = fixture();
+    let before = source.clone();
+    let out = corner_close::close(
+        &source,
+        0,
+        uses,
+        options,
+        1e-8,
+        [1e-7, 1e-5, 1e-4],
+        100_000,
+        1_000_000,
+    )
+    .unwrap();
+    let s = &out.model.faces[out.face].surface;
+    assert_eq!((s.degree_u, s.degree_v), (2, 2));
+    assert_eq!((s.control_points.len(), s.control_points[0].len()), (3, 3));
+    let exact = brep_core::boundary_agreement::verify_exact(&out.model, 1_000_000).unwrap();
+    assert!(exact.all_equal && exact.all_joins_exact, "{:?}", exact.uses);
+    assert!(out.corner.admitted && out.corner.interior.certified);
+    assert_eq!(source, before);
+    eprintln!("compact_corner exact_work={} controls=9", exact.work);
+}

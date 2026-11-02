@@ -1,6 +1,7 @@
 //! Exact complete original-cell census on a transverse normal segment.
 use super::*;
 use event_coordinates::{sign_at, zero_at};
+pub(in crate::profile_certificate) mod radius;
 pub(in crate::profile_certificate) fn probes(
     nets: &[Vec<[Q; 3]>],
     selected: usize,

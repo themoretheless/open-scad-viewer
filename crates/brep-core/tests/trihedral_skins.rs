@@ -32,6 +32,20 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
     let rim = region::build_trihedral_rim(&out, limits().tolerances).unwrap();
     let collars=region::prepare_trihedral_collars(&m,&out,limits().tolerances,1e-8,0.001,100000,20000000,1000000).unwrap();
     assert_eq!(collars.boundaries.len(),6);
+    // Construction must retain the original support coefficients, not a
+    // separately rounded knot-extracted proposal with different provenance.
+    for collar in &collars.boundaries {
+        let rebuilt = nurbs_core::surface_collar::construct(
+            &collar.original_surface,
+            &collar.original_pcurve,
+            collar.direction,
+            limits().tolerances[0] / 4.,
+            2_000_000,
+        )
+        .unwrap();
+        assert_eq!(collar.surface, rebuilt.surface);
+        collar.g2.positions.as_ref().unwrap().reverify().unwrap();
+    }
     assert!(collars.cells<=100000 && collars.coefficient_work<=20000000);
     assert_eq!(rim.connectors.len(), 3);
     assert_eq!(rim.ordered.len(), 6);

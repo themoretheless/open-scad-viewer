@@ -230,9 +230,9 @@
 ### Обмен данными (167–173)
 
 167. **IGES 126/128** — entity 126: рациональная B-сплайн-кривая; 128: поверхность. **✓ реализовано (аудит): `iges_interchange_v2.rs::curve126/surface128` + экспорт curve_values/surface_values, round-trip-тесты. NIST-корпус и полная обработка PROP/PD-вариантов не подтверждены.**
-168. **IGES 144/143** — Trimmed/Bounded Surface; без них поверхности придут необрезанными.
-169. **STEP: b_spline_surface_with_knots** — AP203/AP214: `b_spline_surface`, `rational_b_spline_surface`, `uniform/quasi_uniform/bezier_surface`.
-170. **STEP: тримминг и грани** — `trimmed_curve`, `surface_curve`, `curve_bounded_surface`, `advanced_face` с p-кривыми.
+168. **IGES 144/143** — Trimmed/Bounded Surface; без них поверхности придут необрезанными. **✓ реализовано в brep-core: 144 + 143/142, pcurve/3D correspondence, reverse/snap/closure, outer/inner, open shell 514 form 1, budgets и typed diagnostics; 35 IGES-тестов; 141, 3D-only и natural outer — typed unsupported.**
+169. **STEP: b_spline_surface_with_knots** — AP203/AP214: `b_spline_surface`, `rational_b_spline_surface`, `uniform/quasi_uniform/bezier_surface`. **✓ реализовано в brep-core: все 5 форм, AP242 complex instances, knots/multiplicities/weights, validation и knot budget; целевые тесты round-trip зелёные.**
+170. **STEP: тримминг и грани** — `trimmed_curve`, `surface_curve`, `curve_bounded_surface`, `advanced_face` с p-кривыми. **✓ реализовано в brep-core: advanced_face/pcurves/same_sense/seam/pole/hole и безопасный curve_bounded_surface с проверкой согласования boundary↔edge curves; несогласованные случаи typed refused.**
 171. **STEP: единицы и допуски** — всегда читайте `si_unit` и `uncertainty_measure_with_unit`; классическая беда — мм vs дюймы. **✓ реализовано: `step_interchange_v3/units.rs::uncertainty_mm` (UNCERTAINTY_MEASURE_WITH_UNIT с собственной единицей, conversion chains, min при нескольких) + импорт в `Model.tolerance_mm` (дефолт 1e-7, сборка — min по occurrence) + экспорт из модели в `step_v3_export.rs`; 5 тестов: round-trip, дюймы, дефолт, min, typed refusals.**
 172. **Экспорт STL** — только меш; допуск 0.01–0.1 мм, binary STL (ASCII раздувается в 5–7 раз). **✓ реализовано (аудит): `mesh_export.rs` (binary STL, little-endian, нормали, контроль float32) + `export_file.rs::Builder`; тесты есть. Deflection задаётся на стадии тесселяции, не в экспортёре.**
 173. **OBJ и 3MF** — OBJ формально имеет `cstype bspline`, но читатели понимают только полигоны; 3MF — меш-формат; экспортируйте тесселяцию.

@@ -45,6 +45,8 @@
     "worm"
   ],
   "surfaces": [
+    "constrained_surface",
+    "polyhedral_spline",
     "function_surface",
     "boundary_fill",
     "coons",
@@ -119,7 +121,8 @@
     "surface_g1_pcurves",
     "corner_blend",
     "radius_transition",
-    "profile_section_bridge"
+    "profile_section_bridge",
+    "profile_expression_bernstein"
   ],
   "offsets": [
     "curve_offset",
@@ -183,7 +186,8 @@
     "surface_collar",
     "polar_surface_differential",
     "rational_pole_differential",
-    "surface_boundary_secant"
+    "surface_boundary_secant",
+    "surface_weight_profile"
   ],
   "parameterization": [
     "curve_pullback",
@@ -203,7 +207,8 @@
     "boundary_partition",
     "bezier_extraction",
     "trim",
-    "periodic_trim"
+    "periodic_trim",
+    "curve_coordinate_clock"
   ],
   "validation": [
     "affine_volume",
@@ -249,8 +254,6 @@
     "profile_projected_jordan",
     "factored_surface_normals",
     "profile_expression_radius",
-    "profile_expression_bernstein",
-    "surface_weight_profile",
     "synchronized_boundary_normals"
   ],
   "meshing": [

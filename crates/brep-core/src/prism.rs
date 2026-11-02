@@ -527,7 +527,7 @@ pub(crate) fn side_is_proven(
     use nurbs_core::surface::Axis;
     let face = &model.faces[usage.face];
     let surface = &face.surface;
-    if !face.holes.is_empty() || model.loops[face.outer].coedges.len() != 4 {
+    if !face.holes.is_empty() || !(4..=256).contains(&model.loops[face.outer].coedges.len()) {
         return Ok(false);
     }
     let extrusion_axis = (0..2).find(|&axis| {
@@ -613,11 +613,11 @@ pub(crate) fn side_is_proven(
     {
         return Ok(false);
     }
-    let mut boundaries = BTreeSet::new();
-    let mut horizontal = 0;
+    let mut boundaries = BTreeMap::<(usize,usize),Vec<[f64;2]>>::new();
     for coedge in &model.loops[face.outer].coedges {
         let pcurve = &coedge.pcurve;
-        if pcurve.degree != 1
+        if coedge.trim().is_some_and(|t| t.curve_parameter != model.edges[coedge.edge].curve.domain()
+            || t.pcurve_parameter != pcurve.domain() || t.periodic_lift != [[0;2];2]) || pcurve.degree != 1
             || pcurve.control_points.len() != 2
             || pcurve.weights[0] != pcurve.weights[1]
             || pcurve.periodic
@@ -641,17 +641,12 @@ pub(crate) fn side_is_proven(
         } else {
             return Ok(false);
         };
-        if !((a[varying] == domain[varying][0] && b[varying] == domain[varying][1])
-            || (a[varying] == domain[varying][1] && b[varying] == domain[varying][0]))
-        {
-            return Ok(false);
-        }
-        if !boundaries.insert((constant, side)) {
-            return Ok(false);
-        }
+        if a[varying] == b[varying] || a[varying].min(b[varying]) < domain[varying][0]
+            || a[varying].max(b[varying]) > domain[varying][1] { return Ok(false); }
+        boundaries.entry((constant,side)).or_default().push([a[varying],b[varying]]);
         let mut iso = surface.iso(if constant == 0 { Axis::U } else { Axis::V }, a[constant])?;
-        if domain[varying] != carrier_domain[varying] {
-            iso = iso.trim(domain[varying][0], domain[varying][1])?;
+        if [a[varying].min(b[varying]),a[varying].max(b[varying])] != carrier_domain[varying] {
+            iso = iso.trim(a[varying].min(b[varying]), a[varying].max(b[varying]))?;
         }
         if a[varying] > b[varying] {
             iso = iso.reverse()?;
@@ -660,11 +655,21 @@ pub(crate) fn side_is_proven(
         {
             return Ok(false);
         }
-        if constant == axis {
-            horizontal += 1;
-        }
+
     }
-    Ok(horizontal == 2 && boundaries.len() == 4)
+    // Subdivision does not change a rectangular carrier. Each side must have
+    // one consistently directed, exact, gap-free and nonoverlapping coverage.
+    if boundaries.len()!=4 { return Ok(false); }
+    for ((constant,_),segments) in &mut boundaries {
+        let forward=segments[0][0]<segments[0][1];
+        if segments.iter().any(|s|(s[0]<s[1])!=forward) { return Ok(false); }
+        for s in segments.iter_mut() { if s[0]>s[1] {s.swap(0,1);} }
+        segments.sort_by(|a,b|a[0].total_cmp(&b[0]));
+        let varying=1-*constant;
+        if segments[0][0]!=domain[varying][0] || segments.last().unwrap()[1]!=domain[varying][1]
+            || segments.windows(2).any(|s|s[0][1]!=s[1][0]) {return Ok(false);}
+    }
+    Ok(true)
 }
 /// Recognize only when every retained cap and side definition proves an XY
 /// extrusion. Deformed control nets and merely similar display meshes do not

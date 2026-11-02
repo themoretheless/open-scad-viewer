@@ -138,6 +138,8 @@ fn original_spatial_material_and_actual_g2_solid_have_independent_global_certifi
             r.orientation
         ),
     };
+    assert!(body.joint_certificate(0).is_ok());
+    assert!(matches!(body.joint_certificate(2),Err(crate::sweep_boundary_owned::joint::Refusal::OriginalG1)));
     let r = body.report();
     assert!(
         r.certified
@@ -341,6 +343,9 @@ fn qualified_mode(mode: usize, count: usize, hole: bool, reverse: bool) {
             r.orientation
         ),
     };
+    let joint=b.joint_certificate(2).unwrap();
+    assert!(std::ptr::eq(joint.model(),b.model()));
+    assert_eq!(joint.boundary_error_upper(),b.report().boundary_error_upper.unwrap());
     let r = b.report();
     assert!(
         r.certified

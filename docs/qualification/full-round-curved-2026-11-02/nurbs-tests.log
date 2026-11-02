@@ -1,0 +1,24 @@
+   Compiling nurbs-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/nurbs-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.58s
+     Running tests/freeform_geometry.rs (/tmp/rea-r53-test-opt2/debug/build/nurbs-core/15ae571a13ac1624/out/freeform_geometry-15ae571a13ac1624)
+
+running 7 tests
+test extracted_uniform_patch_is_not_reinterpreted_as_clamped_bezier_controls ... ok
+test rational_source_offset_derivatives_use_original_weights ... ok
+test freeform_offset_retains_exact_normal_map_and_analytic_derivatives ... ok
+test freeform_chamfer_keeps_original_contact_rails_and_derivatives ... ok
+test rolling_ball_queries_solve_curved_support_contacts_and_exact_circle_sections ... ok
+test focal_crossing_cannot_receive_a_regular_offset_certificate ... ok
+test offset_fitting_retains_nonunit_original_uv_clocks ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+
+     Running tests/profile_full_round.rs (/tmp/rea-r53-test-opt2/debug/build/nurbs-core/724f5a6564c338c4/out/profile_full_round-724f5a6564c338c4)
+
+running 3 tests
+test full_round_contacts_recover_parallel_support_semicircle ... ok
+test full_round_solves_original_polynomial_and_rational_curved_supports ... ok
+test full_round_refuses_nonfitting_and_invalid_original_contacts ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

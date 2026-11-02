@@ -1,5 +1,7 @@
 //! Prebound partition: preserves the original arithmetic and proof budgets.
 use super::*;
+#[path = "endpoint.rs"]
+mod endpoint;
 
 pub(crate) fn partition_fiber_prebound(
     source: &Model,
@@ -130,6 +132,22 @@ pub(crate) fn partition_fiber_prebound(
             };
             curve.control_points[cv] = model.vertices[owned[end].0].point.to_vec();
             pcurves[0].control_points[pc] = owned[end].1.to_vec();
+            let pc = if end == 0 {
+                0
+            } else {
+                pcurves[1].control_points.len() - 1
+            };
+            let seed = &pcurves[1].control_points[pc];
+            let domain = piece.source().domain();
+            pcurves[1].control_points[pc] = endpoint::propose(
+                &cutter.faces[cutter_face].surface,
+                model.vertices[owned[end].0].point,
+                [seed[0], seed[1]],
+                [domain[2], domain[3]],
+                &mut evaluations,
+                max_evaluations,
+            )
+            .to_vec();
         }
         if max_cells.saturating_sub(cells) < 3 {
             return Err(unproven("Edited original-root trace work exhausted"));
@@ -146,9 +164,12 @@ pub(crate) fn partition_fiber_prebound(
             },
         )?;
         cells += fresh.rectangles() + fresh.agreement_cells();
-        let fresh = fresh
-            .into_trace()
-            .ok_or_else(|| unproven("Bound endpoint edits fail original-root trace proof"))?;
+        let reason = fresh.reason();
+        let fresh = fresh.into_trace().ok_or_else(|| {
+            unproven(&format!(
+                "Bound endpoint edits fail original-root trace proof: {reason}"
+            ))
+        })?;
         root_error_upper_mm = root_error_upper_mm.max(fresh.world_error_upper());
         let hull = std::array::from_fn(|k| {
             [

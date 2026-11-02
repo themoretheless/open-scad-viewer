@@ -15,7 +15,7 @@ pub struct Cage {
     pub vertices: Vec<Point>,
     pub faces: Vec<Vec<usize>>,
 }
-
+pub mod quad_surface;
 #[derive(Clone, Debug)]
 pub struct Refined {
     pub cage: Cage,

@@ -15,14 +15,8 @@ pub struct Report {
     /// adjacent-row point, and the two meridian controls in the next row.
     pub source_frame: Option<[[f64; 3]; 4]>,
 }
-#[derive(Clone, Debug)]
-pub struct RuledReport {
-    pub proven: bool,
-    pub cells: usize,
-    pub reason: &'static str,
-    pub direction_denominator_lower: Option<f64>,
-    pub angular_derivative_numerator: Option<[f64; 2]>,
-}
+mod ruled;
+pub use ruled::{RuledReport, certify_ruled_source_frame};
 
 #[derive(Clone, Debug)]
 pub struct PolarReport {
@@ -554,9 +548,7 @@ fn restrict(a: &Poly, domain: [[f64; 2]; 2]) -> Result<Poly> {
 #[path = "report/tests/mod.rs"]
 mod tests;
 
-#[path="report/algorithm_certify_ruled_source_frame.rs"]
-mod algorithm_certify_ruled_source_frame;
-pub use algorithm_certify_ruled_source_frame::certify_ruled_source_frame;
+
 #[path="report/algorithm_certify_polar_source_frame.rs"]
 mod algorithm_certify_polar_source_frame;
 pub use algorithm_certify_polar_source_frame::certify_polar_source_frame;

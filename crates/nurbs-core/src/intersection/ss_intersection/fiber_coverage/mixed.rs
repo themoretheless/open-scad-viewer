@@ -6,6 +6,12 @@ pub enum MixedCoverageKind {
     Fiber {
         index: usize,
     },
+    /// A fresh original Krawczyk image encloses EVERY root of this closed cell
+    /// inside the named chart. This does not assert that the cell is nonempty.
+    RootImage {
+        index: usize,
+        attempt: FiberReport,
+    },
     Excluded(FiberReport),
     Split {
         axis: usize,
@@ -17,9 +23,13 @@ pub enum MixedCoverageKind {
 #[derive(Clone, Debug, PartialEq)]
 pub struct MixedCoverageNode {
     domain: Box4,
+    probes: Vec<(FiberAxis, FiberReport)>,
     kind: Option<MixedCoverageKind>,
 }
 impl MixedCoverageNode {
+    pub fn probes(&self) -> &[(FiberAxis, FiberReport)] {
+        &self.probes
+    }
     pub fn domain(&self) -> Box4 {
         self.domain
     }
@@ -113,6 +123,21 @@ impl QualifiedMixedFiberCoverage {
             )?;
             seen[id] = true;
             let node = &self.nodes[id];
+            check(
+                node.probes.len() <= 4,
+                "Too many original mixed-axis queries",
+            )?;
+            let mut axes = [false; 4];
+            for (axis, report) in &node.probes {
+                check(!axes[axis.index()], "Duplicate mixed-axis original query")?;
+                axes[axis.index()] = true;
+                let fresh = probe(self.fibers[0].source(), node.domain, *axis, work)?;
+                check(
+                    fresh.as_ref() == Some(report),
+                    "Mixed-axis original source query changed",
+                )?;
+            }
+            let last = node.probes.last();
             match node
                 .kind
                 .as_ref()
@@ -121,16 +146,32 @@ impl QualifiedMixedFiberCoverage {
                 MixedCoverageKind::Fiber { index } => {
                     check(
                         *index < self.fibers.len()
+                            && node.probes.is_empty()
                             && contains(self.fibers[*index].domain(), node.domain),
                         "Mixed coverage cell is outside its actual root fiber",
                     )?;
                     covered += 1;
                 }
-                MixedCoverageKind::Excluded(report) => {
-                    let fresh = run(&self.fibers[0], node.domain, work)?;
+                MixedCoverageKind::RootImage { index, attempt } => {
                     check(
-                        fresh.as_ref().is_some_and(|r| {
-                            r.report() == report && report.status == FiberStatus::Excluded
+                        *index < self.fibers.len()
+                            && last.is_some_and(|(axis, r)| {
+                                r == attempt
+                                    && contains_root_image(
+                                        node.domain,
+                                        r,
+                                        axis.index(),
+                                        self.fibers[*index].domain(),
+                                    )
+                            }),
+                        "Mixed original root-image containment receipt changed",
+                    )?;
+                    covered += 1;
+                }
+                MixedCoverageKind::Excluded(report) => {
+                    check(
+                        last.is_some_and(|(_, r)| {
+                            r == report && report.status == FiberStatus::Excluded
                         }),
                         "Mixed original exclusion receipt changed",
                     )?;
@@ -142,9 +183,8 @@ impl QualifiedMixedFiberCoverage {
                     children,
                     attempt,
                 } => {
-                    let fresh = run(&self.fibers[0], node.domain, work)?;
                     check(
-                        fresh.as_ref().is_some_and(|r| r.report() == attempt)
+                        last.is_some_and(|(_, r)| r == attempt)
                             && *axis < 4
                             && node.domain[*axis][0] < *parameter
                             && *parameter < node.domain[*axis][1]
@@ -179,11 +219,54 @@ impl QualifiedMixedFiberCoverage {
         )
     }
 }
+fn probe(
+    source: &FiberSources,
+    domain: Box4,
+    axis: FiberAxis,
+    work: &mut Work,
+) -> Result<Option<FiberReport>> {
+    if work.used == work.max {
+        return Ok(None);
+    }
+    let r = source.certify(
+        domain,
+        axis,
+        FiberLimits {
+            max_rectangles: work.max - work.used,
+            preconditioner: None,
+        },
+    )?;
+    work.used += r.report().rectangles;
+    Ok(Some(r.report().clone()))
+}
 fn contains(outer: Box4, inner: Box4) -> bool {
     (0..4).all(|a| outer[a][0] <= inner[a][0] && inner[a][1] <= outer[a][1])
 }
 fn overlaps(a: Box4, b: Box4) -> bool {
     (0..4).all(|k| a[k][0] <= b[k][1] && b[k][0] <= a[k][1])
+}
+fn contains_root_image(cell: Box4, report: &FiberReport, free: usize, chart: Box4) -> bool {
+    if report.status == FiberStatus::Excluded {
+        return false;
+    }
+    let Some(image) = report.root_image else {
+        return false;
+    };
+    let mut roots = cell;
+    let mut index = 0;
+    for k in 0..4 {
+        if k != free {
+            roots[k] = [
+                cell[k][0].max(image[index][0]),
+                cell[k][1].min(image[index][1]),
+            ];
+            index += 1;
+        }
+    }
+    roots
+        .iter()
+        .all(|d| d.iter().all(|v| v.is_finite()) && d[0] <= d[1])
+        && contains(chart, roots)
 }
 fn validate(fibers: &[QualifiedFiber], domain: Box4) -> Result<()> {
     check(
@@ -208,16 +291,30 @@ fn validate(fibers: &[QualifiedFiber], domain: Box4) -> Result<()> {
     Ok(())
 }
 fn split_at(cell: Box4, domain: Box4, fibers: &[QualifiedFiber]) -> Option<(usize, f64)> {
-    // Align with actual authored fiber boundaries before ordinary refinement.
+    // Align with actual fiber boundaries, but balance the partition instead
+    // of peeling boundaries in input order. A dense curved atlas otherwise
+    // exhausts depth along a long chain of tiny slabs before it can cover the
+    // roots. This chooses proposals only; every closed child still needs its
+    // own unchanged original exclusion or full chart-containment proof.
+    let mut best: Option<(f64, usize, f64)> = None;
     for f in fibers.iter().filter(|f| overlaps(cell, f.domain())) {
         let tube = f.domain();
         for a in 0..4 {
             for t in tube[a] {
                 if cell[a][0] < t && t < cell[a][1] {
-                    return Some((a, t));
+                    let score =
+                        (t - cell[a][0]).min(cell[a][1] - t) / (domain[a][1] - domain[a][0]);
+                    if best.is_none_or(|(old, axis, parameter)| {
+                        score > old || (score == old && (a < axis || (a == axis && t < parameter)))
+                    }) {
+                        best = Some((score, a, t));
+                    }
                 }
             }
         }
+    }
+    if let Some((_, a, t)) = best {
+        return Some((a, t));
     }
     let a = (0..4).max_by(|&a, &b| {
         let width = |k: usize| (cell[k][1] - cell[k][0]) / (domain[k][1] - domain[k][0]);
@@ -258,27 +355,54 @@ pub fn cover_mixed_fiber_box(
         result.report.rectangles = work.used;
         return Ok(result);
     }
-    let mut nodes = vec![MixedCoverageNode { domain, kind: None }];
+    let mut nodes = vec![MixedCoverageNode {
+        domain,
+        kind: None,
+        probes: vec![],
+    }];
     let mut pending = vec![(0, 0)];
     let mut excluded = 0;
     let mut covered = 0;
-    while let Some((id, depth)) = pending.pop() {
+    'cells: while let Some((id, depth)) = pending.pop() {
         let cell = nodes[id].domain;
         if let Some(index) = fibers.iter().position(|f| contains(f.domain(), cell)) {
             nodes[id].kind = Some(MixedCoverageKind::Fiber { index });
             covered += 1;
             continue;
         }
-        let Some(r) = run(&fibers[0], cell, &mut work)? else {
-            result.report.reason = "rectangle-budget";
-            result.report.unresolved_box = Some(cell);
-            break;
-        };
-        if r.report().status == FiberStatus::Excluded {
-            nodes[id].kind = Some(MixedCoverageKind::Excluded(r.report().clone()));
-            excluded += 1;
-            continue;
+        let mut axes = [false; 4];
+        for axis in [
+            fibers[0].free_axis(),
+            FiberAxis::FirstU,
+            FiberAxis::FirstV,
+            FiberAxis::SecondU,
+            FiberAxis::SecondV,
+        ] {
+            if axes[axis.index()] {
+                continue;
+            }
+            axes[axis.index()] = true;
+            let Some(r) = probe(fibers[0].source(), cell, axis, &mut work)? else {
+                result.report.reason = "rectangle-budget";
+                result.report.unresolved_box = Some(cell);
+                break 'cells;
+            };
+            nodes[id].probes.push((axis, r.clone()));
+            if r.status == FiberStatus::Excluded {
+                nodes[id].kind = Some(MixedCoverageKind::Excluded(r));
+                excluded += 1;
+                continue 'cells;
+            }
+            if let Some(index) = fibers
+                .iter()
+                .position(|f| contains_root_image(cell, &r, axis.index(), f.domain()))
+            {
+                nodes[id].kind = Some(MixedCoverageKind::RootImage { index, attempt: r });
+                covered += 1;
+                continue 'cells;
+            }
         }
+        let attempt = nodes[id].probes.last().unwrap().1.clone();
         let split = split_at(cell, domain, fibers);
         if depth == limits.max_depth || nodes.len() + 2 > limits.max_cells || split.is_none() {
             result.report.reason = if depth == limits.max_depth {
@@ -300,16 +424,18 @@ pub fn cover_mixed_fiber_box(
         nodes.push(MixedCoverageNode {
             domain: a,
             kind: None,
+            probes: vec![],
         });
         nodes.push(MixedCoverageNode {
             domain: b,
             kind: None,
+            probes: vec![],
         });
         nodes[id].kind = Some(MixedCoverageKind::Split {
             axis,
             parameter,
             children,
-            attempt: r.report().clone(),
+            attempt,
         });
         pending.push((children[1], depth + 1));
         pending.push((children[0], depth + 1));
@@ -379,6 +505,21 @@ mod tests {
             .into_coverage()
             .unwrap();
         owner.reverify().unwrap();
+        // The whole product is wider than the chart, but EVERY original root
+        // is enclosed inside it. No sampled point or candidate lift proves this.
+        assert_eq!(owner.nodes.len(), 1);
+        assert!(!contains(owner.fibers[0].domain(), owner.domain));
+        assert!(matches!(
+            owner.nodes[0].kind,
+            Some(MixedCoverageKind::RootImage { .. })
+        ));
+        let mut bad = owner.clone();
+        bad.nodes[0].probes[0].0 = FiberAxis::FirstV;
+        assert!(bad.reverify().is_err());
+        let mut bad = owner.clone();
+        let duplicate = bad.nodes[0].probes[0].clone();
+        bad.nodes[0].probes.push(duplicate);
+        assert!(bad.reverify().is_err());
         let mut bad = owner.clone();
         bad.report.rectangles -= 1;
         assert!(bad.reverify().is_err());
@@ -395,19 +536,28 @@ mod tests {
         let n = bad
             .nodes
             .iter_mut()
-            .find(|n| matches!(n.kind, Some(MixedCoverageKind::Fiber { .. })))
+            .find(|n| matches!(n.kind, Some(MixedCoverageKind::RootImage { .. })))
             .unwrap();
-        n.kind = Some(MixedCoverageKind::Fiber { index: 999 });
+        if let Some(MixedCoverageKind::RootImage { index, .. }) = &mut n.kind {
+            *index = 999;
+        }
+        assert!(bad.reverify().is_err());
+        let mut bad = owner.clone();
+        if let Some(MixedCoverageKind::RootImage { attempt, .. }) = &mut bad.nodes[0].kind {
+            attempt.root_image.as_mut().unwrap()[0] = [0., 0.1];
+        }
         assert!(bad.reverify().is_err());
         let mut bad = owner;
-        let n = bad
-            .nodes
-            .iter_mut()
-            .find(|n| matches!(n.kind, Some(MixedCoverageKind::Split { .. })))
-            .unwrap();
-        if let Some(MixedCoverageKind::Split { children, .. }) = &mut n.kind {
-            children[1] = children[0];
-        }
+        let attempt = match bad.nodes[0].kind.as_ref().unwrap() {
+            MixedCoverageKind::RootImage { attempt, .. } => attempt.clone(),
+            _ => unreachable!(),
+        };
+        bad.nodes[0].kind = Some(MixedCoverageKind::Split {
+            axis: 0,
+            parameter: 0.5,
+            children: [0, 0],
+            attempt,
+        });
         assert!(bad.reverify().is_err());
     }
 }

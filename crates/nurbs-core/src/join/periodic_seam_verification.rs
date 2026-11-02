@@ -7,6 +7,8 @@ use crate::{
     resource,
 };
 use std::{cmp::Ordering, collections::BinaryHeap};
+#[path = "periodic_phase_correlated.rs"]
+mod correlated;
 #[derive(Clone, Debug)]
 pub struct Verification {
     pub error_upper: f64,
@@ -110,7 +112,9 @@ pub fn verify_curve(
     source.validate()?;
     candidate.validate()?;
     check(
-        crate::section_phase::closed(source) && crate::section_phase::closed(candidate),
+        (crate::section_phase::closed(source)
+            || crate::curve_partition_agreement::verify_source_closure(source)?)
+            && crate::section_phase::closed(candidate),
         "Phase verification requires periodic or exactly closed clamped curves",
     )?;
     check(
@@ -137,6 +141,9 @@ pub fn verify_curve(
         .collect();
     if domains.len() > max_cells {
         return Err(resource("Initial phase spans exceed the cell budget"));
+    }
+    if let Some(proof) = correlated::verify(source, candidate, tolerance, max_cells)? {
+        return Ok(proof);
     }
     let mut heap = BinaryHeap::new();
     for d in domains {

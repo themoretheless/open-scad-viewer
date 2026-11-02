@@ -1,0 +1,34 @@
+{
+  "status": "12 actual WASM ABI cases qualified; application package/scene/worker integration remains open",
+  "wasm_abi_cases_passed": 12,
+  "wasm_sha256": "da45c8d325c8295264649e09f075920ba5f4950cc1fd043a67355c726fecb5e9",
+  "wasm_bytes": 45561258,
+  "retained_module": "/tmp/rea-full-round-qualified/da45c8d325c8295264649e09f075920ba5f4950cc1fd043a67355c726fecb5e9.wasm",
+  "display_volume_errors_mm3": [
+    3.7579863461232037,
+    0.24324684347024572,
+    0.060921291870073446
+  ],
+  "native_geometry_and_ids_identical": true,
+  "inputs": {
+    "source_sha256": "3d4e8fb16b7e334830dc87969691cdcc1d0fed09b9390ae5f540cf240d9e8be4",
+    "native_artifact_sha256": "e84c952b304409a53b046bcd769ffa06861349c24697871530343fd34bb9c731"
+  },
+  "source_sha256": {
+    "scripts/check-full-round-exact-display-wasm.mts": "6c49ef4d5a132c5150f571bba219d70fbc26d38dd5769da976e4366289b5e808",
+    "src/services/geometry/brepExactDisplay.ts": "ed19e8a6ae762c80361df4ed56ffa4a737393bfe85cc646aaa0795604a6f3b34",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/prism/display.rs": "0ce5bbe4356e6c3654da6418dabf0194c86538572b2b834bb34e63511a7942c8",
+    "crates/geometry-bridge/src/cad_full_round_exact.rs": "84d7362791c275e8e70353ad5ce96cc5af4b2848edd1bb2bb424d62e80b3858e",
+    "crates/geometry-bridge/src/dispatch/cad.rs": "29573eb0bb6b6b3e1eca22c34fa7d6313072121fb28f35f37c42073d6138c2d3",
+    "crates/geometry-bridge/src/brep_display.rs": "cd4d44da7ce85b4b9cc3bdf89c594c72432eb4928688012327b3096a3173c1c3"
+  },
+  "scope": "Real import-free ABI, source-attested graph, display, native rational frozen recipe restoration and negative cases. No host geometry fallback.",
+  "open": [
+    "application scene and exact artifact snapshot/edit ownership",
+    "published source-bound kernel/worker delivery",
+    "broader rational BRep rendering",
+    "exact geometric error, embedding and mass certification for display mesh",
+    "general downstream exact operations and interchange",
+    "full initial native-library parity"
+  ]
+}

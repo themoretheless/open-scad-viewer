@@ -78,35 +78,9 @@ export function resultFromShapes(shapes: readonly SemanticShape[]): SemanticProg
 }
 
 
-export function remapSemanticNode(node: SemanticNode, id: number, oldToNew: Int32Array): SemanticNode {
-  const remap = (input: number) => {
-    const mapped = oldToNew[input]
-    if (mapped < 0) throw new Error('Semantic DAG canonicalization encountered an unreachable input')
-    return mapped
-  }
-  switch (node.kind) {
-    case 'transform':
-    case 'linear-extrude':
-    case 'rotate-extrude-analytic':
-    case 'rotate-extrude-polygonal':
-    case 'projection':
-    case 'offset':
-      return { ...node, id, input: remap(node.input) }
-    case 'boolean':
-    case 'hull':
-      return { ...node, id, inputs: node.inputs.map(remap) }
-    default:
-      return { ...node, id }
-  }
-}
+export {remapSemanticNode} from '../remapSemanticNode'
+import {remapSemanticNode} from '../remapSemanticNode'
 
-
-/**
- * Hidden reducers are created only after their authored buckets have been
- * evaluated, so append order is not always canonical DFS postorder. Reindex
- * the completed, reachable DAG once in bounded O(nodes + edges) time instead
- * of making reducer construction depend on sibling evaluation timing.
- */
 export function canonicalizeCompletedDag(
   builder: SemanticProgramBuilder,
   result: SemanticResult,

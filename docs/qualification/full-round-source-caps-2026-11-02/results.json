@@ -1,0 +1,52 @@
+{
+  "scope": "Native bilinear horizontal cap charts, actual UV nesting and continuous original edge/pcurve transport agreement",
+  "status": "thirteen-focused-tests-passed",
+  "tests_passed": 13,
+  "per_target": [
+    2,
+    5,
+    6
+  ],
+  "log": "tests.log",
+  "additional_replay": {
+    "log": "raw-clock-replay.log",
+    "tests_passed": 2,
+    "exit_code": 0,
+    "overlaps_main_run": true
+  },
+  "proof": [
+    "original constant-weight bilinear coefficients retained including mixed term",
+    "strict Jacobian corner signs and convex boundary prove global injective regular chart",
+    "exact polynomial nonnegativity proves entire pcurve remains in native chart",
+    "complete actual UV Jordan/nesting/orientation",
+    "common rational knot refinement and positive Bernstein denominator give whole-interval squared displacement bounds"
+  ],
+  "modes": {
+    "exact": "zero coupled-parameter displacement, sufficient for exact cap seam identity",
+    "tolerated": "nonzero displacement proven within declared model tolerance; exact certificate refused"
+  },
+  "observed": [
+    "dyadic box caps have exact seam identity",
+    "default curved source has nonzero coupled seam displacement within tolerance",
+    "bilinear mixed coefficient preserved",
+    "even boundary tangency accepted despite control hull outside chart",
+    "actual chart exit and folded chart rejected",
+    "raw clock and reversed carrier replay passed"
+  ],
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/original_restriction/plane.rs": "8680b9adb5d7fa5d1293ee79adacaef2c2d673c0b0886d733bd66cb7379ef33f",
+    "crates/brep-core/src/profile_certificate/original_restriction.rs": "453e65498ca1b7b3b0cfb37b90ceb49137a71a6b46de03a33435e75a04b50455",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_caps.rs": "252d1f727f6cc036fb9e25e3fd38efed6e60ef0a7055aba69a023f3f953e6c3c",
+    "crates/brep-core/src/feature_ops/full_round_curved/raw_profiles.rs": "89ceac6df0838bda0c1df8a9ca87b2db34fe8d86047703cd5e6a5df4c714ee8f",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "75d61b77bab8dea84aa06b43d95faf99f1dacd925d8fea1262570076fadb251b",
+    "crates/brep-core/tests/full_round_source_caps.rs": "40dbd85395cedc43f3bffcd991e934ecc9fdfb4c2c693c66801cb58b0901d6ae",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "2203cddc1f6ac650d64d52b601a564066b33da836adaeeb76d917c98f3255991"
+  },
+  "limitations": [
+    "Not a whole original source-solid or source/result material certificate",
+    "Nonzero parameterwise displacement does not by itself classify arbitrary image-set equivalence",
+    "No silent UV canonicalization or replacement of original source geometry",
+    "General non-bilinear caps, target-radius fidelity, pipeline delivery and full parity remain open"
+  ],
+  "goal": "active; original native-library scope preserved"
+}

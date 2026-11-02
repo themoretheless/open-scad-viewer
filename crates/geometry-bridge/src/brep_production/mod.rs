@@ -1,13 +1,15 @@
 //! Native occurrence-production replay for the B-rep SemanticProgram.
 //!
-//! Byte-exact Rust port of validateOccurrenceProduction
+//! Rust port of validateOccurrenceProduction
 //! (src/services/semanticProgramValidator.ts l.1381) for the brep-1 reachable
 //! path: every DAG node must have exactly one recomputed materializer group,
 //! every occurrence group must close its frozen v1 production rule
-//! (primitive, transform/projection/offset maps, preserving-alias,
+//! (primitive, transform/projection/offset and exact Full Round maps, preserving-alias,
 //! transparent, boolean, hull, difference, linear/rotate extrusion), the
 //! authenticated evaluation schedule must equal the node IDs exactly, and the
 //! synthetic program frontier must equal the transported result.
+//! Exact Full Round is a native extension; the corresponding host schema and
+//! production rule still require integration and separate qualification.
 //!
 //! Narrowing (documented in the slice evidence): the interrupted-evaluation
 //! branches (active difference bucket reconstruction, partial maps,
@@ -17,6 +19,7 @@
 //! before this replay runs, so they are unreachable on the native path and
 //! remain host-side; a transported non-empty effects list or non-null
 //! terminal is refused here as well.
+mod map_parameters;
 use super::{Result, Value};
 use std::collections::{HashMap, HashSet};
 
@@ -33,6 +36,7 @@ enum ProductionRule {
     TransformMap,
     ProjectionMap,
     OffsetMap,
+    FullRoundExactMap,
     PreservingAlias,
     Transparent,
     Boolean,
@@ -109,6 +113,9 @@ fn production_rule(operation: &Value) -> Result<ProductionRule> {
     }
     if pair == ("geometry", "offset") && authored_call {
         return Ok(ProductionRule::OffsetMap);
+    }
+    if pair == ("geometry", "full_round_exact") && authored_call {
+        return Ok(ProductionRule::FullRoundExactMap);
     }
     if (pair == ("presentation", "color") || pair == ("assertion", "assert")) && authored_call {
         return Ok(ProductionRule::PreservingAlias);
@@ -298,28 +305,6 @@ impl<'a> Replay<'a> {
             .ok_or_else(|| invalid("Semantic node value type is incomplete"))
     }
 
-    /// JSON.stringify(matrix) / String(cut) / String(distance) common-parameter
-    /// strings from the host map rules.
-    fn map_parameters(&self, node: usize, kind: &str) -> Result<String> {
-        Ok(match kind {
-            "transform" => {
-                let mut out = String::new();
-                super::brep_identity::stable_json(&self.nodes[node]["matrix"], &mut out);
-                out
-            }
-            "projection" => match &self.nodes[node]["cut"] {
-                Value::Bool(value) => value.to_string(),
-                Value::Number(number) => super::brep_identity::js_number(number),
-                _ => return Err(invalid("Semantic projection node is missing its cut")),
-            },
-            "offset" => match &self.nodes[node]["distance"] {
-                Value::Number(number) => super::brep_identity::js_number(number),
-                _ => return Err(invalid("Semantic offset node is missing its distance")),
-            },
-            _ => return Err(invalid("Unexpected semantic map node kind")),
-        })
-    }
-
     fn boolean_union_inputs(&self, node: usize) -> Result<Option<Vec<usize>>> {
         if self.node_kind(node)? != "boolean"
             || self.nodes[node]["operation"].as_str() != Some("union")
@@ -435,13 +420,15 @@ impl<'a> Replay<'a> {
             }
             ProductionRule::TransformMap
             | ProductionRule::ProjectionMap
-            | ProductionRule::OffsetMap => {
+            | ProductionRule::OffsetMap
+            | ProductionRule::FullRoundExactMap => {
                 self.require_output_count(&output_rows, frontier.len())?;
                 let mut common_parameters: HashMap<&str, String> = HashMap::new();
                 for (index, row) in output_rows.iter().copied().enumerate() {
                     let expected: &[&str] = match rule {
                         ProductionRule::TransformMap => &["transform"],
                         ProductionRule::ProjectionMap => &["projection"],
+                        ProductionRule::FullRoundExactMap => &["full-round-exact"],
                         _ => &["offset"],
                     };
                     let produced = self.require_node_kind(row, expected)?;
@@ -452,7 +439,7 @@ impl<'a> Replay<'a> {
                             "Map output must consume its matching ordered frontier item",
                         ));
                     }
-                    let parameters = self.map_parameters(produced, kind)?;
+                    let parameters = map_parameters::derive(&self.nodes[produced], kind)?;
                     let bucket = if rule == ProductionRule::TransformMap && name == "rotate" {
                         self.node_space(frontier[index].node)?
                     } else {

@@ -346,6 +346,49 @@ pub fn rebuild_surface_report(
     })
 }
 
+/// Remove a set of axis knots in one refit. The returned candidate is admitted
+/// only by a fresh whole-surface bound against the ORIGINAL coefficients.
+/// Target knots must be a multiplicity-subset with unchanged clamped ends.
+pub fn remove_surface_knots_report(
+    source: &Surface, axis: Axis, knots: Vec<f64>, max_error: f64,
+    tolerance: Option<ToleranceContext>,
+) -> Result<SurfaceEdit> {
+    source.validate()?;
+    check(max_error.is_finite() && max_error > 0.,
+        "Batch surface knot removal needs a positive finite error budget")?;
+    let (degree, original, periodic) = match axis {
+        Axis::U => (source.degree_u, &source.knots_u, source.periodic_u),
+        Axis::V => (source.degree_v, &source.knots_v, source.periodic_v),
+    };
+    check(!periodic && knots.len() < original.len() && knots.len() >= 2*(degree+1)
+        && knots.iter().all(|x| x.is_finite())
+        && knots.windows(2).all(|w| w[0] <= w[1]),
+        "Need a smaller non-periodic knot vector")?;
+    check(original[..degree+1].iter().all(|&k| k == original[0])
+        && original[original.len()-degree-1..].iter().all(|&k| k == original[original.len()-1])
+        && knots[..degree+1] == original[..degree+1]
+        && knots[knots.len()-degree-1..] == original[original.len()-degree-1..],
+        "Batch removal must preserve clamped end knots")?;
+    let mut cursor = 0;
+    for &k in &knots {
+        while cursor < original.len() && original[cursor] < k { cursor += 1; }
+        check(cursor < original.len() && original[cursor] == k,
+            "Target knots must be a multiplicity subset of original knots")?;
+        cursor += 1;
+    }
+    let candidate = source.edit_axis(axis, |c| refit_curve(c, degree, knots.clone()))?;
+    let error = crate::continuity::deviation::positional_upper(source, &candidate)?;
+    let accepted = error <= max_error;
+    Ok(SurfaceEdit {
+        surface: if accepted { candidate } else { source.clone() },
+        certificate: EditCertificate {
+            operation: EditOperation::SurfaceKnotRemoval,
+            accepted, exact_zero_recognized: false, error_upper: error,
+            budget: max_error, tolerance: context(tolerance), rebuild: None,
+        },
+    })
+}
+
 /// Remove one existing interior knot along a non-periodic surface axis.
 pub fn remove_surface_knot_report(
     source: &Surface, axis: Axis, knot: f64, max_error: f64,

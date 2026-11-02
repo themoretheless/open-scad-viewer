@@ -406,3 +406,100 @@ fn replays_through_the_full_envelope_admission() {
     tampered_nodes[2]["input"] = json!(0);
     assert!(super::super::brep_envelope::validate(&request, &tampered_nodes).is_err());
 }
+
+// Authored native fixture, derived from the existing nested-transform fixture.
+// This is not produced by the TS lowerer, which still needs the new operation.
+fn exact_round_fixture() -> Fixture {
+    let mut fixture = load("nestedTransform");
+    fixture.operations[0]["name"] = json!("full_round_exact");
+    fixture.operations[0]["category"] = json!("geometry");
+    for operation in &mut fixture.operations {
+        operation["structuralPath"][0]["name"] = json!("full_round_exact");
+        operation["operationId"] = json!(super::super::brep_identity::derive_operation_id(
+            operation["structuralPath"].as_array().unwrap()
+        ));
+    }
+    let mut ty = fixture.nodes[2]["valueType"].clone();
+    ty["geometryKind"] = json!("solid");
+    ty["representation"] = json!("rational-brep");
+    fixture.nodes[2] =
+        json!({"id":2,"kind":"full-round-exact","input":1,"faces":[0,1,2],"valueType":ty});
+    fixture.result["item"]["identityOccurrence"] = json!(0);
+    rederive_occurrence_digests(&mut fixture.occurrences, &fixture.operations);
+    fixture
+}
+
+#[test]
+fn exact_round_has_its_own_materializer_and_scene_identity() {
+    admit(&exact_round_fixture()).unwrap();
+    let mut wrong_owner = exact_round_fixture();
+    wrong_owner.result["item"]["identityOccurrence"] = json!(4);
+    assert!(admit(&wrong_owner).is_err());
+    let mut wrong_input = exact_round_fixture();
+    wrong_input.nodes[2]["input"] = json!(0);
+    assert!(admit(&wrong_input).is_err());
+    let mut wrong_kind = exact_round_fixture();
+    wrong_kind.nodes[2]["kind"] = json!("offset");
+    assert!(admit(&wrong_kind).is_err());
+}
+
+#[test]
+fn exact_round_requires_indexed_face_selection() {
+    for faces in [
+        json!([0, 1]),
+        json!([0, 1, 2, 3]),
+        json!([0, -1, 2]),
+        json!([0, 1.5, 2]),
+        json!([0, "1", 2]),
+    ] {
+        let mut fixture = exact_round_fixture();
+        fixture.nodes[2]["faces"] = faces;
+        assert!(admit(&fixture).is_err());
+    }
+}
+
+#[test]
+fn exact_round_executes_with_authenticated_operation_and_occurrence_rows() {
+    let mut fixture = exact_round_fixture();
+    fixture.nodes[0]["size"] = json!([4, 8, 6]);
+    fixture.nodes[1]["matrix"] = json!([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    let source = brep_core::cuboid([0.; 3], [4., 8., 6.]).unwrap();
+    let face = |axis: usize, value: f64| {
+        source
+            .faces
+            .iter()
+            .position(|f| {
+                f.surface
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .all(|p| p[axis] == value)
+            })
+            .unwrap()
+    };
+    fixture.nodes[2]["faces"] = json!([face(0, 0.), face(1, 8.), face(0, 4.)]);
+    admit(&fixture).unwrap();
+    let closure = super::super::brep_envelope::derive_capability_closure(
+        &[],
+        &fixture.nodes,
+        "single",
+        fixture.occurrences.len(),
+        0,
+    )
+    .unwrap();
+    let request = json!({
+        "op":"brep_graph", "nodes":fixture.nodes, "operations":fixture.operations,
+        "occurrences":fixture.occurrences, "result":fixture.result,
+        "execution":fixture.execution, "declaredCapabilities":[], "capabilityClosure":closure,
+        "maxNodes":4, "maxBytes":4194304
+    });
+    let output = crate::dispatch(request).unwrap();
+    assert_eq!(
+        output["outcomes"][0]["geometry"]["representation"].as_str(),
+        Some("rational-brep")
+    );
+    assert_eq!(
+        output["resultItems"][0]["reference"]["identityOccurrence"].as_u64(),
+        Some(0)
+    );
+}

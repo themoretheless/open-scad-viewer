@@ -2,10 +2,10 @@
 //! arithmetic; open-slab branches are ordered real root sections, with checked
 //! one-sided incidences. No sampled continuation decides connectivity.
 use super::*;
-use algebraic_intersections::{ExactRatio, decode_ratio, ratio};
+use algebraic_intersections::{decode_ratio, ratio, ExactRatio};
 use arithmetic::algebraic_events::{self as roots, fibers};
 use arithmetic::bivariate::{self as bi, Bi};
-use arithmetic::{Poly, at, derivative, gcd, product, quotient, sub};
+use arithmetic::{at, derivative, gcd, product, quotient, sub, Poly};
 #[derive(Clone, Debug, PartialEq)]
 pub struct BranchCut {
     pub parameter: [ExactRatio; 2],
@@ -216,6 +216,147 @@ pub(super) fn decompose(
     if let Some(d) = &diagonal_projection {
         projection = union(&projection, d)?;
     }
+    finish(
+        content,
+        p,
+        projection,
+        dpoly,
+        diagonal_projection,
+        width,
+        None,
+    )
+}
+
+/// Projection by exact factor discriminants and pairwise resultants. Each
+/// factor is made primitive/square-free; common factors are removed by exact
+/// division. This is the discriminant product identity, not sampled pruning.
+pub(super) fn decompose_factors(
+    factors: &[Bi],
+    diagonal: Option<[Q; 2]>,
+    width: &Q,
+) -> Result<ParameterBranchDecomposition> {
+    if factors.is_empty()
+        || factors.len() > 16
+        || factors.iter().any(|p| p.iter().flatten().all(Q::is_zero))
+    {
+        return Err(refused("Factored branch input shape budget exceeded"));
+    }
+    let mut content = vec![Q::one()];
+    let mut parts: Vec<Bi> = Vec::new();
+    for raw in factors {
+        let mut h = raw
+            .iter()
+            .map(|r| {
+                let mut r = r.clone();
+                while r.last().is_some_and(Q::is_zero) {
+                    r.pop();
+                }
+                r
+            })
+            .collect::<Bi>();
+        while h.last().is_some_and(Vec::is_empty) {
+            h.pop();
+        }
+        let c = h.iter().try_fold(Vec::new(), |g, p| gcd(&g, p))?;
+        content = union(&content, &c)?;
+        let p = bi::primitive(h.clone())?;
+        let mut p = if p.len() > 1 {
+            bi::exact_bivariate_quotient(&p, &bi::common(p.clone(), derivative_t(&p))?)?
+        } else {
+            p
+        };
+        for previous in &parts {
+            let common = bi::common(p.clone(), previous.clone())?;
+            p = bi::exact_bivariate_quotient(&p, &common)?;
+        }
+        if p.len() > 1 {
+            parts.push(p);
+        }
+    }
+    let mut p = vec![vec![Q::one()]];
+    let mut projection = vec![Q::zero(), -Q::one(), Q::one()];
+    let mut projection_factors = Vec::new();
+    add_event_factor(&mut projection, &mut projection_factors, &content)?;
+    for (i, f) in parts.iter().enumerate() {
+        p = multiply_t(&p, f);
+        if p.len() > 18
+            || p.iter().any(|r| {
+                r.len() > 257
+                    || r.iter()
+                        .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
+            })
+        {
+            return Err(refused(
+                "Factored branch product arithmetic budget exceeded",
+            ));
+        }
+        add_event_factor(&mut projection, &mut projection_factors, f.last().unwrap())?;
+        add_event_factor(
+            &mut projection,
+            &mut projection_factors,
+            &bi::resultant(f, &derivative_t(f))?,
+        )?;
+        for t in [Q::zero(), Q::one()] {
+            add_event_factor(&mut projection, &mut projection_factors, &at_t(f, &vec![t]))?;
+        }
+        if let Some(d) = &diagonal {
+            add_event_factor(
+                &mut projection,
+                &mut projection_factors,
+                &at_t(f, &d.to_vec()),
+            )?;
+        }
+        for previous in &parts[..i] {
+            add_event_factor(
+                &mut projection,
+                &mut projection_factors,
+                &bi::resultant(f, previous)?,
+            )?;
+        }
+    }
+    let dpoly = diagonal.map(|d| d.to_vec());
+    let diagonal_projection = dpoly.as_ref().map(|d| at_t(&p, d));
+    finish(
+        content,
+        p,
+        projection,
+        dpoly,
+        diagonal_projection,
+        width,
+        Some(projection_factors),
+    )
+}
+
+fn add_event_factor(projection: &mut Poly, factors: &mut Vec<Poly>, q: &Poly) -> Result<()> {
+    *projection = union(projection, q)?;
+    if q.len() > 1 {
+        let mut r = radical(q)?;
+        let lead = r.last().unwrap().clone();
+        for q in &mut r {
+            *q /= &lead;
+        }
+        if r.len() > 257
+            || r.iter()
+                .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
+        {
+            return Err(refused("Factored projection witness budget exceeded"));
+        }
+        if !factors.contains(&r) {
+            factors.push(r);
+        }
+    }
+    Ok(())
+}
+
+fn finish(
+    content: Poly,
+    p: Bi,
+    mut projection: Poly,
+    dpoly: Option<Poly>,
+    diagonal_projection: Option<Poly>,
+    width: &Q,
+    projection_factors: Option<Vec<Poly>>,
+) -> Result<ParameterBranchDecomposition> {
     let leading = projection.last().unwrap().clone();
     for x in &mut projection {
         *x /= &leading
@@ -234,7 +375,24 @@ pub(super) fn decompose(
     }
     let mut out = Vec::new();
     for (k, i) in cuts.iter().enumerate() {
-        let vertical = fibers::zero(&content, &projection, i)?;
+        // A root of a proved factor in the globally isolated interval is the
+        // SAME critical parameter. Keep the global root census unchanged,
+        // but avoid arithmetic in unrelated number-field factors.
+        let mut local_projection = projection.clone();
+        if let Some(factors) = &projection_factors {
+            if i[0] == i[1] {
+                local_projection = vec![-i[0].clone(), Q::one()];
+            } else {
+                for factor in factors {
+                    if factor.len() < local_projection.len()
+                        && roots::count(factor, &i[0], &i[1])? == 1
+                    {
+                        local_projection = factor.clone();
+                    }
+                }
+            }
+        }
+        let vertical = fibers::zero(&content, &local_projection, i)?;
         let mut fiber = p.clone();
         if vertical {
             fiber = multiply_t(&fiber, &vec![Vec::new(), vec![Q::one()]]);
@@ -249,7 +407,7 @@ pub(super) fn decompose(
         let mut fw = width.clone();
         let mut nodes;
         loop {
-            nodes = fibers::isolate_at(&fiber, &projection, i, &fw)?;
+            nodes = fibers::isolate_at(&fiber, &local_projection, i, &fw)?;
             if nodes.windows(2).all(|v| v[0][1] < v[1][0]) {
                 break;
             }
@@ -260,11 +418,13 @@ pub(super) fn decompose(
         }
         let mut excluded_nodes = vec![false; nodes.len()];
         if let Some(d) = &dpoly {
-            if vertical || fibers::zero(diagonal_projection.as_ref().unwrap(), &projection, i)? {
+            if vertical
+                || fibers::zero(diagonal_projection.as_ref().unwrap(), &local_projection, i)?
+            {
                 let linear = vec![d.iter().map(|q| -q).collect(), vec![Q::one()]];
                 let mut accounted = false;
                 for _ in 0..192 {
-                    let dr = fibers::isolate_at(&linear, &projection, i, &fw)?;
+                    let dr = fibers::isolate_at(&linear, &local_projection, i, &fw)?;
                     if dr.is_empty() {
                         accounted = true;
                         break;
@@ -281,7 +441,7 @@ pub(super) fn decompose(
                         break;
                     }
                     fw /= Q::from_integer(2.into());
-                    nodes = fibers::isolate_at(&fiber, &projection, i, &fw)?;
+                    nodes = fibers::isolate_at(&fiber, &local_projection, i, &fw)?;
                     if fw.denom().bits() > 1024 {
                         return Err(refused("Diagonal critical node is unproved"));
                     }
@@ -293,7 +453,7 @@ pub(super) fn decompose(
         }
         let (left, right) = incidence(
             &p,
-            &projection,
+            &local_projection,
             i,
             &nodes,
             k.checked_sub(1).map(|j| &cuts[j]),
@@ -376,7 +536,7 @@ pub(super) fn decompose(
 #[cfg(feature = "codec")]
 mod codec {
     use super::*;
-    use value_codec::{Deserialize, Serialize, Value, error, json};
+    use value_codec::{error, json, Deserialize, Serialize, Value};
     impl Serialize for BranchCut {
         fn to_value(&self) -> Value {
             json!({"parameter":self.parameter,"fibers":self.fibers,"vertical":self.vertical,"verticalArcs":self.vertical_arcs,"left":self.left,"right":self.right,"excludedNodes":self.excluded_nodes})
@@ -563,5 +723,58 @@ mod tests {
             p.branches = None
         }
         assert!(verify_span_intersections(&a, &a, &legacy).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod factored_projection_tests {
+    use super::*;
+    fn q(n: i64) -> Q {
+        Q::from_integer(n.into())
+    }
+    fn width() -> Q {
+        Q::new(1.into(), 65536.into())
+    }
+    fn canonical_graph(mut g: ParameterBranchDecomposition) -> ParameterBranchDecomposition {
+        // Defining equations differing by a nonzero rational unit encode the
+        // same roots. Still compare every exact coefficient after division,
+        // and ALL projection/cut/incidence/slab data without normalization.
+        let lead = decode_ratio(g.fiber_relation.last().unwrap().last().unwrap()).unwrap();
+        assert!(!lead.is_zero());
+        for row in &mut g.fiber_relation {
+            for q in row {
+                *q = ratio(&(decode_ratio(q).unwrap() / &lead));
+            }
+        }
+        g
+    }
+
+    #[test]
+    fn independent_factors_preserve_the_complete_branch_graph() {
+        let a = vec![vec![q(0), q(-1)], vec![q(1)]];
+        let b = vec![vec![q(-1), q(1)], vec![q(1)]];
+        let h = multiply_t(&a, &b);
+        let old = decompose(&h, Some([q(1), q(-1)]), &width()).unwrap();
+        let new = decompose_factors(&[a, b], Some([q(1), q(-1)]), &width()).unwrap();
+        assert_eq!(canonical_graph(old), canonical_graph(new));
+    }
+    #[test]
+    fn repeated_and_vertical_factors_preserve_the_complete_branch_graph() {
+        let a = vec![vec![q(0), q(-1)], vec![q(1)]];
+        let vertical = vec![vec![Q::new((-1).into(), 2.into()), q(0), q(1)]];
+        let h = multiply_t(&vertical, &multiply_t(&a, &a));
+        let old = decompose(&h, Some([q(1), q(-1)]), &width()).unwrap();
+        let new =
+            decompose_factors(&[vertical, a.clone(), a], Some([q(1), q(-1)]), &width()).unwrap();
+        assert_eq!(canonical_graph(old), canonical_graph(new));
+    }
+    #[test]
+    fn zero_coefficient_rows_are_canonicalized_before_content_gcd() {
+        let a = vec![vec![q(0)], vec![q(1)]];
+        let b = vec![vec![q(-1)], vec![q(1)]];
+        let old = decompose(&multiply_t(&a, &b), None, &width()).unwrap();
+        let new = decompose_factors(&[a, b], None, &width()).unwrap();
+        assert_eq!(canonical_graph(old), canonical_graph(new));
+        assert!(decompose_factors(&[vec![vec![q(0)]]], None, &width()).is_err());
     }
 }

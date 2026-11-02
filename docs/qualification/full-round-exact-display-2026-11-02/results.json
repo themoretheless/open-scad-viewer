@@ -1,0 +1,39 @@
+{
+  "status": "native source-owned exact Full Round display sampling qualified; application integration remains open",
+  "native_tests_passed": 4,
+  "tests": [
+    "closed oriented display for polynomial/rational profiles at 2,8,16 samples",
+    "through-hole cap preservation",
+    "resource budget and forged artifact refusals",
+    "independent rounded-box analytic volume reference convergence"
+  ],
+  "sampling": "rational homogeneous De Casteljau; final Cartesian point conversion only; no f64 BRep conversion",
+  "scope": "admitted Cartesian-product extrusion family only",
+  "error_bound_certified": false,
+  "mass_properties_exact": false,
+  "display_self_intersections_proven": false,
+  "ownership": "shared cap/wall profile vertices and actual rational topology face IDs",
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/prism.rs": "ec60ad80b5f0e1f054409230548d4c0c7166ff19dab6bca4d90ce1b8c402d7c2",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/prism/display.rs": "0ce5bbe4356e6c3654da6418dabf0194c86538572b2b834bb34e63511a7942c8",
+    "crates/geometry-bridge/src/cad_full_round_exact.rs": "84d7362791c275e8e70353ad5ce96cc5af4b2848edd1bb2bb424d62e80b3858e",
+    "crates/geometry-bridge/src/brep_display.rs": "cd4d44da7ce85b4b9cc3bdf89c594c72432eb4928688012327b3096a3173c1c3",
+    "crates/geometry-bridge/src/dispatch/cad.rs": "29573eb0bb6b6b3e1eca22c34fa7d6313072121fb28f35f37c42073d6138c2d3",
+    "crates/geometry-bridge/tests/full_round_exact_display.rs": "4a29a84036c2af2f1084bc785dc4f469bda5ea0ba475072f58a8920717d89daa",
+    "src/services/geometry/brepExactDisplay.ts": "ed19e8a6ae762c80361df4ed56ffa4a737393bfe85cc646aaa0795604a6f3b34"
+  },
+  "checks": [
+    "11 clean files unchanged",
+    "API map: 242 public modules, 200 entries, not parity",
+    "rustfmt and targeted diff checks passed",
+    "vue-tsc --noEmit passed"
+  ],
+  "architecture": "global gate remains red on five other recorded worktree files; changed files below existing limits",
+  "open": [
+    "exact artifact snapshots, scene rendering and edit ownership",
+    "fresh WASM/package/actual worker qualification",
+    "full rational BRep display beyond this extrusion family",
+    "certified approximation error and exact mass properties",
+    "complete original native library parity"
+  ]
+}

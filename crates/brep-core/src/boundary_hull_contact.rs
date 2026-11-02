@@ -61,6 +61,59 @@ fn contact_controls(model: &Model, face: usize) -> Vec<&[f64]> {
         .flatten()
         .map(|p| p.as_slice())
         .collect::<Vec<_>>();
+    // A tilted exact affine plane has the same trimmed convex-hull property
+    // as a coordinate plane. Full support poles can lie outside the retained
+    // triangle and on both sides of its base; they are not its face hull.
+    let outer_curves = model.loops[f.outer]
+        .coedges
+        .iter()
+        .map(|c| &model.edges[c.edge].curve)
+        .collect::<Vec<_>>();
+    let positive = outer_curves
+        .iter()
+        .all(|c| c.weights.iter().all(|w| w.is_finite() && *w > 0.));
+    if positive
+        && crate::face_domain::affine_support(&f.surface)
+        && outer_curves
+            .iter()
+            .map(|c| c.control_points.len())
+            .sum::<usize>()
+            <= 64
+    {
+        let anchors = [
+            f.surface.control_points[0][0].as_slice(),
+            f.surface.control_points[1][0].as_slice(),
+            f.surface.control_points[0][1].as_slice(),
+        ];
+        let noncollinear = [[0, 1], [0, 2], [1, 2]].into_iter().any(|axes| {
+            matches!(
+                crate::shared_boundary::orient(&anchors, Some(axes)),
+                Some(cad_predicates::Sign::Positive | cad_predicates::Sign::Negative)
+            )
+        });
+        // Keep this primitive fail-closed even for a changed support passed
+        // without its required joint exact-lift prerequisites (e.g. a caller
+        // accidentally reusing old topology after substituting a surface).
+        let on_current_plane = noncollinear
+            && outer_curves.iter().all(|c| {
+                c.control_points.iter().all(|p| {
+                    p.len() == 3
+                        && crate::shared_boundary::orient(
+                            &[anchors[0], anchors[1], anchors[2], p],
+                            None,
+                        ) == Some(cad_predicates::Sign::Zero)
+                })
+            });
+        if on_current_plane {
+            return outer_curves
+                .into_iter()
+                .flat_map(|c| c.control_points.iter().map(|p| p.as_slice()))
+                .collect();
+        }
+    }
+    if !positive {
+        return surface;
+    }
     for axis in 0..3 {
         let value = surface[0][axis];
         if !surface.iter().all(|p| p[axis] == value) {

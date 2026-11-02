@@ -14,6 +14,8 @@
 /// Task-oriented API views; existing flat module paths remain supported.
 pub mod domains;
 pub mod numerics;
+pub mod constrained_surface;
+pub mod polyhedral_spline;
 pub mod core;
 pub mod distance;
 pub mod construct;
@@ -362,3 +364,9 @@ pub use crate::construct::surfaces::wing_loft;
 pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
 pub mod synchronized_boundary_normals;
+/// Whole original-span strict coordinate clocks for rational curves.
+#[path = "analysis/curve_coordinate_clock.rs"]
+pub mod curve_coordinate_clock;
+
+#[path = "construct/surfaces/original_graph_transition.rs"]
+pub mod original_graph_transition;

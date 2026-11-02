@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  11:44:13
+   Duration  26.13s (transform 1.45s, setup 0ms, import 1.65s, tests 24.37s, environment 0ms)
+

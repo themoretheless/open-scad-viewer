@@ -1,0 +1,127 @@
+TAP version 13
+# Subtest: binds streaming bytes exactly, rejecting equal-size drift and truncation
+ok 1 - binds streaming bytes exactly, rejecting equal-size drift and truncation
+  ---
+  duration_ms: 0.941208
+  type: 'test'
+  ...
+# Subtest: rejects packed payload copies across chunks and within one chunk
+ok 2 - rejects packed payload copies across chunks and within one chunk
+  ---
+  duration_ms: 0.51925
+  type: 'test'
+  ...
+# Subtest: packs a valid module with an exact roundtrip and stable fingerprints
+ok 3 - packs a valid module with an exact roundtrip and stable fingerprints
+  ---
+  duration_ms: 2.584291
+  type: 'test'
+  ...
+# Subtest: rejects malformed modules and oversized raw input
+ok 4 - rejects malformed modules and oversized raw input
+  ---
+  duration_ms: 0.096
+  type: 'test'
+  ...
+# Subtest: rejects modules with external imports
+ok 5 - rejects modules with external imports
+  ---
+  duration_ms: 0.191958
+  type: 'test'
+  ...
+# Subtest: bounded geometry profile preserves encoded flags and reproducible paths
+ok 6 - bounded geometry profile preserves encoded flags and reproducible paths
+  ---
+  duration_ms: 1.192333
+  type: 'test'
+  ...
+# Subtest: geometry-only location policy does not change other kernel build flags
+ok 7 - geometry-only location policy does not change other kernel build flags
+  ---
+  duration_ms: 0.120583
+  type: 'test'
+  ...
+# Subtest: refused oversized geometry package preserves every published artifact
+ok 8 - refused oversized geometry package preserves every published artifact
+  ---
+  duration_ms: 4.757959
+  type: 'test'
+  ...
+# wasm-opt cache hit: b6a58e44a620488212c1db89499aa17b0091544698f7dae477a0c29ca72ca405
+# wasm-opt cache write skipped: EEXIST: file already exists, mkdir '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/wasm-cache-test-BIGlha/file'
+# wasm-opt cache hit: b6a58e44a620488212c1db89499aa17b0091544698f7dae477a0c29ca72ca405
+# Subtest: reuses validated bytes and invalidates input, tool and flags independently
+ok 9 - reuses validated bytes and invalidates input, tool and flags independently
+  ---
+  duration_ms: 5.222458
+  type: 'test'
+  ...
+# Subtest: damaged or mismatched entries are replaced without trusting their bytes
+ok 10 - damaged or mismatched entries are replaced without trusting their bytes
+  ---
+  duration_ms: 2.986542
+  type: 'test'
+  ...
+# Subtest: does not cache optimizer failure or invalid output
+ok 11 - does not cache optimizer failure or invalid output
+  ---
+  duration_ms: 0.390959
+  type: 'test'
+  ...
+# Subtest: unwritable cache location does not discard a valid optimization
+ok 12 - unwritable cache location does not discard a valid optimization
+  ---
+  duration_ms: 0.510584
+  type: 'test'
+  ...
+# Subtest: oversized cache entry is a miss and is repaired
+ok 13 - oversized cache entry is a miss and is repaired
+  ---
+  duration_ms: 1.2495
+  type: 'test'
+  ...
+# wasm-opt cache hit: b6a58e44a620488212c1db89499aa17b0091544698f7dae477a0c29ca72ca405
+# Subtest: concurrent misses publish one complete entry without scratch leftovers
+ok 14 - concurrent misses publish one complete entry without scratch leftovers
+  ---
+  duration_ms: 21.71225
+  type: 'test'
+  ...
+# wasm-opt: 42 -> 39 bytes (7.1% smaller)
+# wasm-opt: 42 -> 39 bytes (7.1% smaller)
+# wasm-opt cache hit: 30515890add9b55cd4a5e015b892b961ffec8adcdec78b44ef87fabe4d0c5765
+# [parse exception: expected list (at 1:0)]
+# Fatal: error parsing wasm (try --debug for more info)
+# Subtest: repeated optimization preserves Cargo input and produces identical runnable bytes
+ok 15 - repeated optimization preserves Cargo input and produces identical runnable bytes
+  ---
+  duration_ms: 323.992375
+  type: 'test'
+  ...
+# Subtest: optimizer failure is catchable and does not alter the input
+ok 16 - optimizer failure is catchable and does not alter the input
+  ---
+  duration_ms: 115.323042
+  type: 'test'
+  ...
+# Subtest: explicit native optimizer rejects missing or unrecognized tools before changing Cargo input
+ok 17 - explicit native optimizer rejects missing or unrecognized tools before changing Cargo input
+  ---
+  duration_ms: 15.974166
+  type: 'test'
+  ...
+# Subtest: native and bundled optimizers agree on executable fixture bytes
+ok 18 - native and bundled optimizers agree on executable fixture bytes # SKIP
+  ---
+  duration_ms: 0.0605
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 621.717208

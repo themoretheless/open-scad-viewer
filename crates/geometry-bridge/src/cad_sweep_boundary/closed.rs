@@ -33,12 +33,16 @@ pub(super) fn construct(
             },
         },
     )?;
+    let joint=match &attempt {
+        owned::ClosedAttempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),
+        owned::ClosedAttempt::Refused(_)=>[false;3],
+    };
     let (model, r) = match &attempt {
         owned::ClosedAttempt::Certified(body) => (Some(body.model()), body.report()),
         owned::ClosedAttempt::Refused(r) => (None, r.as_ref()),
     };
     Ok(
-        json!({"model":model,"certified":r.certified,"continuousBound":r.continuous_bound,
+        json!({"model":model,"jointContinuousGlobalCertified":joint[0],"jointContinuousGlobalG1Certified":joint[1],"jointContinuousGlobalG2Certified":joint[2],"certified":r.certified,"continuousBound":r.continuous_bound,
         "withinBudget":r.within_budget,"boundaryErrorUpper":r.boundary_error_upper,
         "decompositionErrorUpper":r.decomposition_error_upper,"wall":r.wall,
         "sourceCells":r.source_cells,"sourceProducts":r.source_products,"ownershipExactWork":r.ownership_exact_work,

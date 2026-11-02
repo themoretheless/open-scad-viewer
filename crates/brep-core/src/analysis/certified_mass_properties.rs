@@ -571,6 +571,11 @@ pub(super) fn flux(
         ));
     }
     budget.used += 1;
+    let [u, v] = if surface.periodic_u || surface.periodic_v {
+        nurbs_core::periodic_trim::wrapped_surface_parameters(surface, [u, v])?
+    } else {
+        [u, v]
+    };
     let e = surface.evaluate(u, v)?;
     let (du, dv) = e.first_derivatives().ok_or_else(|| {
         Error::new(

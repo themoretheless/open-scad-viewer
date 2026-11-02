@@ -1,0 +1,35 @@
+{
+  "scope": "Whole-side distance and radial-normal envelope qualification for Full Round",
+  "status": "terminal-exit-0",
+  "observed_at_utc": "2026-11-01T20:17:45.731274+00:00",
+  "final_test_session_id": 63847,
+  "final_log": "/tmp/rea-full-round-radius-final.log",
+  "earlier_run": {
+    "exit_code": 101,
+    "log": "/tmp/rea-full-round-radius-tests.log",
+    "reason": "API changed during compilation; tests referenced envelopes() while earlier compiled artifact only had radii(). Final rerun uses frozen final sources."
+  },
+  "next_action": "Final test process completed; see results.json and tests.log. Full library parity remains open.",
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "352932a3c1d00fc2f6ebce8b7515b3203f6b99f5d8628288a8128101fa0db722",
+    "crates/brep-core/src/feature_ops/full_round_seams.rs": "d5347faa158e55dd376b73a0c5b4118afd472ddccb945fd269b9ff5c64d06ca0",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "200466bdac2a342e1159bb32c7881fd4f3d638113036b59e13786930fa5d3619",
+    "crates/brep-core/tests/full_round_frame.rs": "ea1ef6951e983760f5b440314a4fdc7fb027baf7b84805172f23ab8e04f2bdba",
+    "crates/brep-core/tests/full_round_prism.rs": "17a0e2530b74e9156530af65dcd87e800443274393c55522d4acdfa5ca49da94",
+    "crates/brep-core/tests/full_round_groups.rs": "b4b16872097d16a286d80ab6625faf215f4477c82a54e1f3e495da21d2c5cd85",
+    "crates/brep-core/src/feature_ops/full_round_prism/groups.rs": "ddb3aef6ff462c21e32d7d57e5a182695e55bfdfab09a651c08b3b03a200cf8a"
+  },
+  "bounds": {
+    "shared_cells": 100000,
+    "shared_work": 1000000,
+    "max_sine_squared": 1e-10
+  },
+  "tests_passed": 12,
+  "full_parity": false,
+  "limitations": [
+    "Current implementation not yet test-qualified",
+    "General curved support construction remains open",
+    "Global self-intersection resolution remains open",
+    "No Plasticity runtime comparison"
+  ]
+}

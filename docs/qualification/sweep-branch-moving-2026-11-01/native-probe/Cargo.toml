@@ -1,0 +1,15 @@
+[package]
+name = "sweep-moving-solid-probe"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+resolver = "3"
+[dependencies]
+geometry-bridge = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/geometry-bridge" }
+nurbs-core = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/nurbs-core" }
+brep-core = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/brep-core", features = ["codec"] }
+cad-step = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/cad-step" }
+value-codec = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/value-codec" }
+[patch.crates-io]
+usvg = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/vendor/usvg" }
+resvg = { path = "/private/tmp/osv-sweep-branch-moving-20261101-r7/crates/vendor/resvg" }

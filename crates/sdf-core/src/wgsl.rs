@@ -76,7 +76,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let p = vec3f(
         params.min_x + f32(x) * params.step_x,
         params.min_y + f32(y) * params.step_y,
-        params.min_z + f32(z) * params.step_z,
+        params.min_z + f32(z) * params.step_z
     );
     var stack: array<f32, 33>;
     var sp = 0u;
@@ -160,7 +160,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                     let lc = length(qc);
                     angle += 2.0 * atan2(
                         dot(qa, cross(qb, qc)),
-                        la * lb * lc + dot(qa, qb) * lc + dot(qb, qc) * la + dot(qc, qa) * lb,
+                        la * lb * lc + dot(qa, qb) * lc + dot(qb, qc) * la + dot(qc, qa) * lb
                     );
                 }
             }

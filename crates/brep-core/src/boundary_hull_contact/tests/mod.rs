@@ -137,8 +137,7 @@ fn retained_hollow_sweep_vertex_contacts_require_authored_vertex_ownership() {
             .collect();
         vec![outer, inner]
     };
-    let model =
-        crate::rational_section_loft(&[section(0.), section(5.), section(10.)]).unwrap();
+    let model = crate::rational_section_loft(&[section(0.), section(5.), section(10.)]).unwrap();
     let before = model.clone();
     let walls = model.faces.len() - 2;
     let mut vertices = Vec::new();
@@ -185,24 +184,16 @@ fn retained_hollow_sweep_vertex_contacts_require_authored_vertex_ownership() {
 }
 #[test]
 fn coincident_geometry_without_shared_topology_is_not_authorized() {
-    let m = crate::operations::boolean(
-        &crate::cuboid([0.; 3], [10.; 3]).unwrap(),
-        &crate::cuboid([2.; 3], [8.; 3]).unwrap(),
-        "difference",
-    )
-    .unwrap();
-    let mut examples = [None, None];
-    for a in 0..m.faces.len() {
-        for b in a + 1..m.faces.len() {
-            if let Some(c) = certify(&m, [a, b]) {
-                let k = usize::from(c.vertex.is_some());
-                if examples[k].is_none() {
-                    examples[k] = Some(c);
-                }
-            }
-        }
-    }
-    for c in examples.into_iter().map(Option::unwrap) {
+    // This native fixture explicitly has both an arc-only and a vertex-only
+    // face contact. Boolean face merging need not retain both contact kinds.
+    let m = crate::analytic::g2_annular::cylinder(8., 4., 16., 0.5, 1e-8)
+        .unwrap()
+        .model;
+    for (faces, vertex_only) in [([0, 28], false), ([0, 5], true)] {
+        let c = certify(&m, faces)
+            .expect("Explicit authored contact must qualify before detaching topology");
+        assert_eq!(c.vertex.is_some(), vertex_only);
+        assert_eq!(c.edges.is_empty(), vertex_only);
         let mut broken = m.clone();
         let face = &m.faces[c.faces[1]];
         for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {

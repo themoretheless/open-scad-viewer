@@ -14,15 +14,17 @@ pub struct ProofCoordinates {
     pub rows: [[f64; 3]; 3],
     pub offset: [f64; 3],
     pub determinant: [f64; 2],
-    /// Exact original coefficient identity A_dependent=scale*A_base+constant.
+    /// Exact coefficient identity A_dependent=scale*A_base+constant in the
+    /// proof source chart (paired source_shear is reported separately).
     pub column_factor: Option<ColumnFactor>,
 }
 #[derive(Clone, Debug)]
 pub struct PreconditionedReport {
     pub volume: IdealVolumeReport,
-    /// None means that no invertible proposal was established and the original
-    /// world-coordinate atlas was used. All attempts share the volume ledger.
+    /// Optional world-coordinate preconditioning. Direct graph proofs need no
+    /// proposal. All attempted proofs share the same volume ledger.
     pub coordinates: Option<ProofCoordinates>,
+    pub source_shear: Option<SourceShearReport>,
 }
 
 /// One clamped rational Bezier pose law, degree 1..8. Adjacent pieces occupy
@@ -159,10 +161,11 @@ pub(super) fn pose_in_coordinates(
                 .controls
                 .iter()
                 .map(|pose| {
-                    let mut v = replacement.unwrap_or(pose[col]).map(I::point);
+                    let original = replacement.unwrap_or(pose[col]);
+                    let mut v = original.map(I::point);
                     if col == 3 {
                         for k in 0..3 {
-                            v[k] = if pose[col][k] == c.offset[k] {
+                            v[k] = if original[k] == c.offset[k] {
                                 I::point(0.)
                             } else {
                                 v[k].sub(I::point(c.offset[k]))?
@@ -237,6 +240,7 @@ pub fn certify_rational_preconditioned(
     max_exact_work: u64,
 ) -> Result<PreconditionedReport> {
     let mut coordinates = None;
+    let mut source_shear = None;
     let volume = certify_motion_impl(
         carrier,
         origin,
@@ -247,10 +251,13 @@ pub fn certify_rational_preconditioned(
         max_exact_work,
         true,
         &mut coordinates,
+        &mut source_shear,
+        [[0., 1.]; 2],
     )?;
     Ok(PreconditionedReport {
         volume,
         coordinates,
+        source_shear,
     })
 }
 /// Conditional world Jacobian sign; GLOBAL meaning requires the same exact
@@ -266,3 +273,73 @@ pub fn jacobian_orientation_rational(
 }
 #[cfg(test)]
 mod tests;
+
+/// Original-map atlas restricted to an outward normalized UV window. This does
+/// not prove that a material region lies in the window: its owner must prove
+/// that separately from actual positive-weight trims and valid material roles.
+pub fn certify_rational_preconditioned_window(
+    carrier: &Surface,
+    origin: [f64; 3],
+    pieces: &[RationalPiece],
+    closed: bool,
+    projection: [[f64; 3]; 3],
+    uv_window: [[f64; 2]; 2],
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<PreconditionedReport> {
+    let mut coordinates = None;
+    let mut source_shear = None;
+    let volume = certify_motion_impl(
+        carrier,
+        origin,
+        Motion::Rational(pieces),
+        closed,
+        projection,
+        max_cells,
+        max_exact_work,
+        true,
+        &mut coordinates,
+        &mut source_shear,
+        uv_window,
+    )?;
+    Ok(PreconditionedReport {
+        volume,
+        coordinates,
+        source_shear,
+    })
+}
+
+/// Outward normalized enclosure of a literal original UV rectangle. This only
+/// converts domains; it does not certify any material containment or geometry.
+pub fn normalize_uv_window(carrier: &Surface, uv: [[f64; 2]; 2]) -> Result<Option<[[f64; 2]; 2]>> {
+    carrier.validate()?;
+    let domain = [
+        [
+            carrier.knots_u[carrier.degree_u],
+            carrier.knots_u[carrier.control_points.len()],
+        ],
+        [
+            carrier.knots_v[carrier.degree_v],
+            carrier.knots_v[carrier.control_points[0].len()],
+        ],
+    ];
+    let mut window = [[0., 1.]; 2];
+    for k in 0..2 {
+        if !uv[k][0].is_finite()
+            || !uv[k][1].is_finite()
+            || uv[k][0] >= uv[k][1]
+            || uv[k][0] < domain[k][0]
+            || uv[k][1] > domain[k][1]
+        {
+            return Ok(None);
+        }
+        if uv[k] == domain[k] {
+            continue;
+        }
+        let width = I::point(domain[k][1]).sub(I::point(domain[k][0]))?;
+        let low = I::point(uv[k][0]).sub(I::point(domain[k][0]))?.div(width)?;
+        let high = I::point(uv[k][1]).sub(I::point(domain[k][0]))?.div(width)?;
+        window[k] = [low.lo.max(0.), high.hi.min(1.)];
+    }
+    Ok(Some(window))
+}

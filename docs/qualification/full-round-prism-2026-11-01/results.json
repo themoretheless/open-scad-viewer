@@ -1,0 +1,35 @@
+{
+  "scope": "Independent full-width round on proven profile extrusions; full Plasticity parity remains open",
+  "test_exit_code": 0,
+  "tests_passed": 9,
+  "test_targets": [
+    "feature_ops",
+    "full_round_frame",
+    "full_round_prism"
+  ],
+  "test_profile": {
+    "opt_level": 2,
+    "package_overrides": {
+      "brep-core": 1,
+      "nurbs-core": 1
+    },
+    "debug_assertions": true,
+    "overflow_checks": true
+  },
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "edad59c1a48173b6610ddf0d94e5cb6290b7f8d308409d81c5e27079c300ce57",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "bcb3dc503374a48e2b29062320e2eeed04f8eea29f8e85b491d9163cba5c61a7",
+    "crates/brep-core/tests/full_round_prism.rs": "0188d413e38fa72b6f3654c90076912ed5b3cc215546646b0337135827219dd1",
+    "crates/brep-core/tests/full_round_frame.rs": "8a0cd5d191013df076f09dade7c48c8d52781c6f0f165d0e3f171674b2b4dff3"
+  },
+  "architecture_gate": {
+    "exit_code": 1,
+    "diagnostic": "src/services/mainSolidProtocol/mainSolidResult.ts: 595 lines, pin 594",
+    "scope": "unrelated existing diagnostic"
+  },
+  "limitations": [
+    "Focused tests do not qualify all concurrently edited sources",
+    "Plasticity runtime comparisons unavailable at license window",
+    "General curved supports, multi-face groups and strip interference resolution remain open"
+  ]
+}

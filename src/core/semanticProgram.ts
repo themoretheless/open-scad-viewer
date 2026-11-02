@@ -290,6 +290,15 @@ export interface SemanticOffsetNode extends SemanticNodeBase {
   readonly distance: number
 }
 
+/** Indexed original-face selection; exact rational result is owned by Rust. */
+export interface SemanticFullRoundExactNode extends SemanticNodeBase {
+  readonly kind: 'full-round-exact'
+  readonly input: SemanticNodeId
+  readonly faces: readonly [number, number, number]
+  readonly limits?: Readonly<Partial<Record<'maxPairProjections' | 'maxAtoms' | 'maxRayCells' | 'refinements' | 'radiusHalvings', number>>>
+  readonly maxBytes?: number
+}
+
 export type SemanticNode =
   | SemanticBoxNode
   | SemanticSphereAnalyticNode
@@ -309,6 +318,7 @@ export type SemanticNode =
   | SemanticRotateExtrudePolygonalNode
   | SemanticProjectionNode
   | SemanticOffsetNode
+  | SemanticFullRoundExactNode
 
 export interface SemanticOutputRef {
   readonly node: SemanticNodeId
@@ -453,4 +463,5 @@ export const CAPABILITY_BY_KIND: Readonly<Record<SemanticNode['kind'], string>> 
   'rotate-extrude-polygonal': 'operation.rotate-extrude.polygonal',
   projection: 'operation.projection',
   offset: 'operation.offset',
+  'full-round-exact': 'operation.full-round-exact',
 })

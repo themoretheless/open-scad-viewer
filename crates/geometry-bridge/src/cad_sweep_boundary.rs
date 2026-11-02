@@ -237,12 +237,16 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
             limits,
         )?
     };
+    let joint=match &attempt {
+        owned::Attempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),
+        owned::Attempt::Refused(_)=>[false;3],
+    };
     let (model, r) = match &attempt {
         owned::Attempt::Certified(body) => (Some(body.model()), body.report()),
         owned::Attempt::Refused(r) => (None, r.as_ref()),
     };
     Ok(
-        json!({"model":model,"certified":r.certified,"continuousBound":r.continuous_bound,"withinBudget":r.within_budget,
+        json!({"model":model,"jointContinuousGlobalCertified":joint[0],"jointContinuousGlobalG1Certified":joint[1],"jointContinuousGlobalG2Certified":joint[2],"certified":r.certified,"continuousBound":r.continuous_bound,"withinBudget":r.within_budget,
         "boundaryErrorUpper":r.boundary_error_upper,"filledCapErrorUpper":r.cap_errors,"wall":r.wall,
         "sourceCells":r.source_cells,"sourceProducts":r.source_products,"sourceExactWork":r.source_exact_work,
         "reason":r.reason,"scope":"original-sweep-law-and-authored-filled-caps",

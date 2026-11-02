@@ -10,11 +10,13 @@ mod plane_roots;
 pub use plane_roots::*;
 #[path = "bspline_plane_incidence.rs"]
 mod plane_incidence;
-pub use plane_incidence::{rational_bspline_plane_incidence, rational_quadratic_plane_discriminant};
+pub use plane_incidence::{
+    rational_bspline_plane_incidence, rational_quadratic_plane_discriminant,
+};
 #[derive(Clone)]
-struct Rational {
-    n: Expansion,
-    d: Expansion,
+pub(crate) struct Rational {
+    pub(crate) n: Expansion,
+    pub(crate) d: Expansion,
 }
 impl Rational {
     fn reduced(n: Expansion, d: Expansion, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
@@ -34,16 +36,16 @@ impl Rational {
         let [n, d] = pair;
         Ok(Self { n, d })
     }
-    fn scalar(n: Expansion) -> Self {
+    pub(crate) fn scalar(n: Expansion) -> Self {
         Self {
             n,
             d: Expansion::scalar(1.),
         }
     }
-    fn zero() -> Self {
+    pub(crate) fn zero() -> Self {
         Self::scalar(Expansion::scalar(0.))
     }
-    fn add(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+    pub(crate) fn add(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         if self.d.sub(&b.d, ctx)?.sign() == Sign::Zero {
             return Self::reduced(self.n.add(&b.n, ctx)?, self.d.clone(), ctx);
         }
@@ -53,7 +55,7 @@ impl Rational {
             ctx,
         )
     }
-    fn sub(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+    pub(crate) fn sub(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         self.add(
             &Self {
                 n: Expansion::scalar(0.).sub(&b.n, ctx)?,
@@ -62,14 +64,18 @@ impl Rational {
             ctx,
         )
     }
-    fn mul(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+    pub(crate) fn mul(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
         if self.n.sign() == Sign::Zero || b.n.sign() == Sign::Zero {
             ctx.charge(1)?;
             return Ok(Self::zero());
         }
         Self::reduced(self.n.mul(&b.n, ctx)?, self.d.mul(&b.d, ctx)?, ctx)
     }
-    fn div_positive(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+    pub(crate) fn div_positive(
+        &self,
+        b: &Self,
+        ctx: &mut PredicateContext<'_>,
+    ) -> Result<Self, Reason> {
         if b.n.sign() != Sign::Positive || b.d.sign() != Sign::Positive {
             return Err(Reason::MissingProof);
         }
@@ -82,7 +88,7 @@ impl Rational {
         }
         Self::reduced(self.n.mul(&b.d, ctx)?, self.d.mul(&b.n, ctx)?, ctx)
     }
-    fn equal(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
+    pub(crate) fn equal(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
         Ok(self
             .n
             .mul(&b.d, ctx)?
@@ -91,8 +97,8 @@ impl Rational {
             == Sign::Zero)
     }
 }
-type Series = Vec<[Rational; 4]>;
-fn series(
+pub(crate) type Series = Vec<[Rational; 4]>;
+pub(crate) fn series(
     x: &[Expansion],
     u: &[Expansion],
     p: usize,
@@ -224,6 +230,7 @@ fn bspline_jet_identity(
     degree: usize,
     order: usize,
     endpoints: bool,
+    first_order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
         || order > 4
@@ -274,7 +281,7 @@ fn bspline_jet_identity(
                 ctx,
             )?;
             let end = cartesian(&series(&x, u, degree, last, &u[n], order, ctx)?, order, ctx)?;
-            for q in 0..=order {
+            for q in first_order..=order {
                 for k in 0..3 {
                     if !start[q][k].equal(&end[q][k], ctx)? {
                         return Ok(BezierIdentity::Different);
@@ -335,7 +342,7 @@ pub fn rational_bspline_internal_jet_identity(
     degree: usize,
     order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
-    bspline_jet_identity(ctx, controls, knots, degree, order, false)
+    bspline_jet_identity(ctx, controls, knots, degree, order, false, 0)
 }
 /// Exact Cartesian endpoint jets on the active original knot domain, including
 /// nonclamped bases and independently varying endpoint homogeneous scales.
@@ -347,7 +354,7 @@ pub fn rational_bspline_cartesian_endpoint_jet_identity(
     degree: usize,
     order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
-    bspline_jet_identity(ctx, controls, knots, degree, order, true)
+    bspline_jet_identity(ctx, controls, knots, degree, order, true, 0)
 }
 #[cfg(test)]
 #[path = "bspline_internal_jets/tests/tests_integration.rs"]
@@ -585,3 +592,20 @@ pub fn rational_bspline_direction_jet_identity(
 #[cfg(test)]
 #[path = "bspline_internal_jets/tests/direction_tests_integration.rs"]
 mod direction_tests;
+
+/// Endpoint derivatives only, for a clock lift whose positions differ by one
+/// complete period. This grants no position closure, cover or regularity.
+pub fn rational_bspline_cartesian_endpoint_derivative_identity(
+    ctx: &mut PredicateContext<'_>,
+    controls: &[[LeafRef; 4]],
+    knots: &[LeafRef],
+    degree: usize,
+    order: usize,
+) -> Result<BezierIdentityDecision, InputError> {
+    if order == 0 {
+        return Err(InputError::InvalidInput(
+            "Derivative order must be positive",
+        ));
+    }
+    bspline_jet_identity(ctx, controls, knots, degree, order, true, 1)
+}

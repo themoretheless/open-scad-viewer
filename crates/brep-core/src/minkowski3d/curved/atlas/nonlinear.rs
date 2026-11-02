@@ -244,7 +244,20 @@ fn inverse_proposal(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<Clock> 
                     .collect()
             };
             // A nullspace vector with a vanishing denominator is not an inverse.
-            let den = eval(&ac, count);
+            let Ok(source_clock) = super::nonlinear_cancel::clock(
+                eval(&ac, 0)
+                    .into_iter()
+                    .zip(eval(&ac, count))
+                    .map(|(n, d)| [n, d])
+                    .collect(),
+                work,
+            ) else {
+                continue;
+            };
+            let den = source_clock
+                .iter()
+                .map(|p| p[1].clone())
+                .collect::<Vec<_>>();
             let sign = if den.iter().all(|q| *q > Q::zero()) {
                 Q::one()
             } else if den.iter().all(|q| *q < Q::zero()) {
@@ -254,12 +267,16 @@ fn inverse_proposal(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<Clock> 
             };
             let num = eval(&bc, 0);
             let den = eval(&bc, count);
-            let clock = reduce_clock(
+            let Ok(clock) = super::nonlinear_cancel::clock(
                 num.iter()
                     .zip(den)
                     .map(|(n, d)| [&sign * n, &sign * d])
                     .collect(),
-            );
+                work,
+            ) else {
+                continue;
+            };
+            let clock = reduce_clock(clock);
             if clock
                 .iter()
                 .any(|p| p[1] <= Q::zero() || p[0] < Q::zero() || p[0] > p[1])
@@ -286,6 +303,69 @@ fn inverse_proposal(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<Clock> 
 fn proposal(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<Clock> {
     graph_proposal(a, b, work).or_else(|_| inverse_proposal(a, b, work))
 }
+// A common cover avoids explicitly representing an algebraic inverse. For
+// example A(t)=(t²,t⁴), B(s)=(s³,s⁶) agree at t=r³, s=r².
+// The complete homogeneous identity is checked; powers alone prove nothing.
+fn common_cover(a: &[sb::H], b: &[sb::H], work: &mut Work) -> Result<(Clock, Clock)> {
+    let power = |degree: usize| -> Clock {
+        (0..=degree)
+            .map(|i| [if i == degree { Q::one() } else { Q::zero() }, Q::one()])
+            .collect()
+    };
+    // Vanishing order at the common endpoint is invariant under equality.
+    // It selects admissible powers before expensive composition proposals.
+    let order = |h: &[sb::H]| -> usize {
+        let p = sb::point(&h[0]);
+        let mut residual = h
+            .iter()
+            .map(|q| std::array::from_fn::<_, 3, _>(|k| &q[k] - &q[3] * &p[k]))
+            .collect::<Vec<_>>();
+        for degree in 0..h.len() {
+            if residual[0].iter().any(|q| !q.is_zero()) {
+                return degree;
+            }
+            residual = residual
+                .windows(2)
+                .map(|v| std::array::from_fn(|k| &v[1][k] - &v[0][k]))
+                .collect();
+        }
+        0
+    };
+    let (oa, ob) = (order(a), order(b));
+    if oa == 0 || ob == 0 {
+        return Err(fail("constant common-cover seam"));
+    }
+    for total in 3usize..=16 {
+        for p in 1..=8 {
+            let Some(q) = total.checked_sub(p) else {
+                continue;
+            };
+            if q == 0
+                || p * oa != q * ob
+                || q > 8
+                || p == q
+                || (a.len() - 1) * p > 64
+                || (b.len() - 1) * q > 64
+            {
+                continue;
+            }
+            let (ca, cb) = (power(p), power(q));
+            if sb::same(&compose(a, &ca, work)?, &compose(b, &cb, work)?) {
+                return Ok((ca, cb));
+            }
+        }
+    }
+    Err(fail("no proved bounded common algebraic seam cover"))
+}
+fn orient_clock(mut clock: Clock, reversed: bool) -> Clock {
+    if reversed {
+        clock.reverse();
+        for p in &mut clock {
+            p[0] = &p[1] - &p[0];
+        }
+    }
+    clock
+}
 pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> {
     if patches.len() > 128 {
         return Err(fail("nonlinear seam chart budget exceeded"));
@@ -305,6 +385,7 @@ pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> 
         }
     }
     let mut clocks = vec![BTreeMap::<usize, Clock>::new(); patches.len()];
+    let mut stationary = vec![false; patches.len()];
     for e in edges.values() {
         if e.len() != 2 {
             return Err(fail("nonlinear seam incidence is not two"));
@@ -316,8 +397,15 @@ pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> 
         }
         let (patch, edge, reversed, mut clock) = if let Ok(p) = proposal(ha, hb, work) {
             (*a, *k, *rev, p)
+        } else if let Ok(p) = proposal(hb, ha, work) {
+            (*b, *l, *other, p)
         } else {
-            (*b, *l, *other, proposal(hb, ha, work)?)
+            let (ca, cb) = common_cover(ha, hb, work)?;
+            stationary[*a] = true;
+            stationary[*b] = true;
+            clocks[*a].insert(*k, orient_clock(ca, *rev));
+            clocks[*b].insert(*l, orient_clock(cb, *other));
+            continue;
         };
         if reversed {
             clock.reverse();
@@ -354,7 +442,7 @@ pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> 
                     .collect(),
             );
         }
-        let map = trim::disk_uv(curves, work)?;
+        let map = trim::disk_uv_parameter(curves, work, stationary[i])?;
         let h = bernstein::compose_triangle(&p.h, &map, work)?;
         if bernstein::corners(&h) != bernstein::corners(&p.h) {
             return Err(fail("nonlinear chart transport changed its vertices"));
@@ -369,6 +457,52 @@ pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn algebraic_seams_have_an_exact_common_cover() {
+        let curve = |d, exponent| {
+            (0..=d)
+                .map(|i| {
+                    let term = |k| {
+                        if i >= k {
+                            choose(i, k) / choose(d, k)
+                        } else {
+                            Q::zero()
+                        }
+                    };
+                    [term(exponent), term(2 * exponent), Q::zero(), Q::one()]
+                })
+                .collect::<Vec<_>>()
+        };
+        let (a, b) = (curve(4, 2), curve(6, 3));
+        let (ca, cb) = common_cover(&a, &b, &mut Work::default()).unwrap();
+        assert_eq!((ca.len(), cb.len()), (4, 3));
+        assert!(sb::same(
+            &compose(&a, &ca, &mut Work::default()).unwrap(),
+            &compose(&b, &cb, &mut Work::default()).unwrap()
+        ));
+        // The algebraic candidate must also extend over the actual UV disk.
+        for clock in [&ca, &cb] {
+            let edge = clock
+                .iter()
+                .map(|q| [q[0].clone(), Q::zero(), Q::zero(), q[1].clone()])
+                .collect();
+            let line = |a: [i64; 2], b: [i64; 2]| {
+                vec![
+                    [integer(a[0]), integer(a[1]), Q::zero(), Q::one()],
+                    [integer(b[0]), integer(b[1]), Q::zero(), Q::one()],
+                ]
+            };
+            trim::disk_uv_parameter(
+                vec![edge, line([1, 0], [0, 1]), line([0, 1], [0, 0])],
+                &mut Work::default(),
+                true,
+            )
+            .unwrap();
+        }
+        let mut bad = b;
+        bad[2][2] += Q::one();
+        assert!(common_cover(&a, &bad, &mut Work::default()).is_err());
+    }
     #[test]
     fn spatial_rational_carrier_recovers_a_homogeneous_inverse() {
         // A(t)=(t,t²,t³)/(1+2t³). The denominator has no rational

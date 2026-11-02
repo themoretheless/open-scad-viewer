@@ -1,0 +1,43 @@
+{
+  "scope": "Independent Full Round for continuous coplanar selected chains on proven XY extrusions",
+  "test_exit_code": 0,
+  "tests_passed": 12,
+  "test_targets": [
+    "feature_ops",
+    "full_round_frame",
+    "full_round_groups",
+    "full_round_prism"
+  ],
+  "profile": {
+    "opt_level": 2,
+    "overrides": {
+      "nurbs-core": 1,
+      "brep-core": 1
+    },
+    "debug_assertions": true,
+    "overflow_checks": true
+  },
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "6345eda24aa5f76544b0069e72f8af05d62d87c5e9a849cbcac0c23b437097c7",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "1d425b998520d43787228ff2982b2d1d473a7a2efc3fca173fb10e866ad0144e",
+    "crates/brep-core/src/feature_ops/full_round_prism/groups.rs": "b00fed64406c614363809823f1e74ab1872493b7ac310e6270b788700fb4d691",
+    "crates/brep-core/tests/full_round_groups.rs": "f145b7e3a4407f48641472cd67c421bb29156fa7c2171d59d4c912902677ff42",
+    "crates/brep-core/tests/full_round_prism.rs": "ce4f62ff40965539420eeaf612eccffc8e941a874a178e4ad0ec0ba14fc6ab71",
+    "crates/brep-core/tests/full_round_frame.rs": "8a0cd5d191013df076f09dade7c48c8d52781c6f0f165d0e3f171674b2b4dff3"
+  },
+  "regressions": [
+    "Three left support faces, two middle faces and two right support faces",
+    "Collection-order independence and swapped supports",
+    "Original selection indices retained",
+    "Analytical result volume",
+    "Disconnected/incomplete/duplicate/empty/unknown selections refuse atomically"
+  ],
+  "limitations": [
+    "General curved support networks remain open",
+    "No Plasticity runtime comparison",
+    "Focused checks do not qualify whole concurrent worktree"
+  ],
+  "architecture_gate": "Existing mainSolidResult.ts 595 lines vs pin 594",
+  "clean_baseline": "11 files unchanged",
+  "full_parity": false
+}

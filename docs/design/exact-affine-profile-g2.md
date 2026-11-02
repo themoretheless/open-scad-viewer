@@ -99,3 +99,97 @@ The unresolved prefix includes neighboring curved profile charts [0,1], [0,3],
 qualification `probes/` and the failed diagnostic log; it is not in the passing
 feature matrix and supplies no Solid credit. The candidate API has no Solid
 success flag. Complete-boundary G2 remains tested independently.
+
+## Original nonclamped and periodic B-spline joins
+
+The 2026-10-28 successor removes the transverse Bezier-only restriction from
+the native projective strip audit. Formal rational de Boor series compute
+one-sided homogeneous jets from the original knots and coefficients. No
+rounded knot insertion, fitted surface, or sampled derivative supplies proof.
+The along bases must agree under an exactly proved affine domain map; cross
+degrees and original cross domains may differ. Unrelated along bases still
+return unproved rather than undergoing implicit fitting.
+
+Every exceptional internal knot and declared periodic closure is independently
+checked over the entire other basis. A positive rational velocity ratio can
+propose a geometric transition, but whole-strip projective jet identities and
+outward normal covers remain mandatory. Periodic storage validation alone,
+including its existing exterior-knot tolerance, never grants exact closure.
+Identical original surfaces share their completed source audit; different
+definitions cannot reuse it. An identical source also keeps one normal ledger.
+
+The existing limits remain: 1M exact work per seam, the existing shared
+collection allowance, 33 strip controls per direction, and 4096 normal cells
+with depth 12. Original surface-to-world-edge trace checks use a separate
+shared exact ledger. Nonclamped/periodic isoparametric traces now bind the
+actual curve basis, pcurve traversal, original support coefficients and exact
+periodic endpoint images. Failure of a sufficient constant homogeneous gauge
+is unresolved, not a claimed mismatch witness.
+
+The topology validator now distinguishes `(edge, end)` in vertex links. This
+admits the ordinary one-vertex, two-closed-edge torus representation while
+retaining degree, connectivity, edge-incidence and orientation refusals.
+Complete-boundary G2 still requires exact world traces, every owned edge,
+regular faces and connected vertex links. It supplies no global volume,
+intersection, nesting or Solid certificate by itself.
+
+Native qualification and archived source inputs are recorded under
+`docs/qualification/sweep-bspline-joins-2026-10-28`. This source qualification
+does not update the previously published WASM or substitute for STEP/UI gates.
+
+## Independent original along bases and fractional-linear seam maps
+
+The 2026-10-30 successor compares exact original homogeneous jets on the union
+of active along-knot intervals, allowing different degrees, control counts and
+nonclamped knot partitions. An exact formal de Boor recurrence produces all
+power coefficients on each interval. Equality is coefficient-wise over the
+complete interval, including both one-sided limits; a fitted or rounded
+extraction is never a premise. Source interior/periodic joins, interval normals
+and all existing work ceilings remain mandatory.
+
+After an unsuccessful affine correspondence, original interior knots can
+propose a positive fractional-linear along map. Its exact inverse partitions
+both original bases. Homogeneous numerator de Boor recurrences remove only a
+strictly positive denominator independent of transverse coordinates. Every
+projective G1/G2 coefficient identity remains mandatory. Arbitrary nonlinear
+maps, missing proposals and unrelated projective gauges remain unproved.
+
+Independent world-curve/support bases have a separate original coefficient
+proof. Authored linear pcurves permit affine correspondence only: geometric
+point-set equality under a fractional-linear map cannot issue a curve ownership
+certificate. Either periodic declaration requires an independent exact
+world-curve endpoint closure proof, including when the equivalent other basis
+is stored as a clamped closed chain. Full-boundary regularity, vertex links,
+all owned seams and global volume prerequisites retain separate proof owners.
+
+The frozen native audit, exact scope and remaining coverage are recorded under
+`docs/qualification/sweep-independent-bases-2026-10-30`. Passing this finite
+native audit supplies neither universal sweep coverage nor WASM/STEP/UI credit.
+
+## Nonlinear source charts and joint continuous/global admission
+
+The next 2026-10-30 continuation proves original rational polynomial
+compositions using positive denominators, strictly positive whole-interval
+Bernstein derivative bounds, exact endpoint images and complete ordered source
+coverage. Local Cartesian/projective charts admit periodic one-lap maps; a
+second lap cannot acquire the same correspondence certificate. Exact linear
+elimination supplies projective chart proposals for nondegenerate conics and
+full-rank spatial cubics. Every polynomial position/jet identity and the
+independent source joins/normal covers remain mandatory.
+
+Existing zeroth-jet comparisons now expose an affine parameter-identity fact
+for proposal routing. This adds no arithmetic work or differential proof
+credit. Nominal and exact normal-scale proposals retain priority; nonlinear
+search uses only the remaining owner budget. A common parameterization cannot
+be promoted into regularity or G1/G2 evidence.
+
+Four immutable constructor-owned body families expose joint certificate tokens
+for the complete distance bound, original and retained global validity and,
+when actually owned, both boundary G1/G2 proofs. Tokens borrow the same actual
+model and cannot be constructed from caller reports. Native joint flags are
+computed from these tokens. Sharp C0 and G1-only cases retain their respective
+higher-order refusals; a retained G2 result alone cannot grant original G2.
+
+The final source/qualification record and the remaining unproved families are
+under `docs/qualification/sweep-nonlinear-joint-2026-10-30`. This does not imply
+universal reparameterization coverage or WASM/UI/independent STEP delivery.

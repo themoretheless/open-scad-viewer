@@ -7,7 +7,10 @@ type UV=[Interval,Interval]
 type Cell=[UV,UV]
 export interface FaceContactLimits {maxPairs:number;maxCells:number;maxDomainCells:number;cellsPerPair:number;domainCellsPerPair:number;maxBoxes:number}
 export interface FaceContactWitness {firstUv:UV;secondUv:UV;pointIntervalMm:[Interval,Interval,Interval];contractionUpper:number}
-export type SharedBoundaryCertificate={kind:'planar-face';edge:number;planarFace:number;sidedFace:number}|{kind:'opposite-sides';edge:number;faces:[number,number]}|{kind:'exact-hull';faces:[number,number];edges:number[];vertex:number|null;contactEnclosure:[Interval,Interval,Interval];joinedProof:JoinedContactProof|null;polarJoin?:PolarProofEvidence|null;sourceJoin?:SourceJoinedContactProof|null}|JoinedSourceChartProof|SourceVolumeBoundary
+export type SharedBoundaryCertificate={kind:'planar-face';edge:number;planarFace:number;sidedFace:number}|{kind:'opposite-sides';edge:number;faces:[number,number]}|{kind:'exact-hull';faces:[number,number];edges:number[];vertex:number|null;contactEnclosure:[Interval,Interval,Interval];joinedProof:JoinedContactProof|null;polarJoin?:PolarProofEvidence|null;sourceJoin?:SourceJoinedContactProof|null}|JoinedSourceChartProof|SourceVolumeBoundary|SameSupportPartition|ProjectedTrimPartition|ProjectedTrimNetwork
+export interface ProjectedTrimNetwork {kind:'projected-trim-network';certified:true;faces:[number,number];edges:number[];vertices:number[];cells:number;axes:[number,number];determinantSigns:[number,number]}
+export interface ProjectedTrimPartition {kind:'projected-trim-partition';certified:true;faces:[number,number];edge:number|null;vertex:number|null;cells:number;axes:[number,number];determinantSigns:[number,number]}
+export interface SameSupportPartition {kind:'same-support-partition';certified:true;faces:[number,number];edge:number|null;vertex:number|null;cells:number;projection:number[][];rowWeights:[number,number]}
 export interface JoinedSourceChartProof {kind:'joined-source-charts';certified:true;faces:[number,number];edge:number;contactEnclosure:[Interval,Interval,Interval];projection:number[][];rowWeights:[number,number];profileParameterization:NurbsProfileParameterization|null;cells:number}
 export interface SourceVolumeBoundary extends SourceVolumeSeparation {kind:'source-volume-boundary';edge:number}
 export interface SourceVolumeSeparation {certified:true;faces:[number,number];sourceFaces:number[];projection:number[][];cells:number;principalMinorLower:[number,number,number]}
@@ -25,7 +28,7 @@ export interface FaceContacts {
  cells:number;domainCells:number;toleranceUv:number;limits:FaceContactLimits;pairs:FaceContactPair[]
 }
 export function faceContactExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits){
- return {toleranceUv,limits:{...limits},domains:model.faces.map(f=>({uv:[[f.surface.knotsU[f.surface.degreeU],f.surface.knotsU[f.surface.controlPoints.length]],[f.surface.knotsV[f.surface.degreeV],f.surface.knotsV[f.surface.controlPoints[0].length]]] as UV,edges:[...new Set([f.outer,...f.holes].flatMap(l=>model.loops[l].coedges.map(c=>c.edge)))],vertices:[...new Set([f.outer,...f.holes].flatMap(l=>model.loops[l].coedges.flatMap(c=>model.edges[c.edge].vertices)))],periodic:!!(f.surface.periodicU||f.surface.periodicV)}))}
+ return {toleranceUv,limits:{...limits},domains:model.faces.map(f=>({carrierKey:JSON.stringify(f.surface),uv:[[f.surface.knotsU[f.surface.degreeU],f.surface.knotsU[f.surface.controlPoints.length]],[f.surface.knotsV[f.surface.degreeV],f.surface.knotsV[f.surface.controlPoints[0].length]]] as UV,edges:[...new Set([f.outer,...f.holes].flatMap(l=>model.loops[l].coedges.map(c=>c.edge)))],vertices:[...new Set([f.outer,...f.holes].flatMap(l=>model.loops[l].coedges.flatMap(c=>model.edges[c.edge].vertices)))],periodic:!!(f.surface.periodicU||f.surface.periodicV)}))}
 }
 const integer=(x:unknown,max=Number.MAX_SAFE_INTEGER):x is number=>typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=max
 const interval=(x:unknown):x is Interval=>Array.isArray(x)&&x.length===2&&x.every(Number.isFinite)&&x[0]<=x[1]
@@ -51,7 +54,19 @@ export function validFaceContacts(e:ReturnType<typeof faceContactExpectation>,va
   if(p.status==='shared-boundary'){
    const c=p.sharedBoundary
    if(periodic||!c||p.cells!==0||p.domainCells!==0||p.unresolvedBoxCount!==0||p.witness!==null)return false
-   if(c.kind==='exact-hull'){
+   if(c.kind==='projected-trim-network'){
+    if(!exactBoundaryAdmitted||c.certified!==true||!Array.isArray(c.faces)||c.faces.length!==2||c.faces[0]!==a||c.faces[1]!==b||!integer(c.cells,sourceCells)||c.cells===0||!Array.isArray(c.axes)||c.axes.length!==2||!c.axes.every(x=>integer(x,2))||c.axes[0]===c.axes[1]||!Array.isArray(c.determinantSigns)||c.determinantSigns.length!==2||!c.determinantSigns.every(x=>x===-1||x===1)||!Array.isArray(c.edges)||c.edges.length<2||new Set(c.edges).size!==c.edges.length||!c.edges.every(edge=>integer(edge)&&e.domains[a].edges.includes(edge)&&e.domains[b].edges.includes(edge))||!Array.isArray(c.vertices)||c.vertices.length===0||new Set(c.vertices).size!==c.vertices.length||!c.vertices.every(vertex=>integer(vertex)&&e.domains[a].vertices.includes(vertex)&&e.domains[b].vertices.includes(vertex)))return false
+   }else if(c.kind==='projected-trim-partition'){
+    if(!exactBoundaryAdmitted||c.certified!==true||!Array.isArray(c.faces)||c.faces.length!==2||c.faces[0]!==a||c.faces[1]!==b||!integer(c.cells,sourceCells)||c.cells===0||(c.edge===null)===(c.vertex===null)||!Array.isArray(c.axes)||c.axes.length!==2||!c.axes.every(x=>integer(x,2))||c.axes[0]===c.axes[1]||!Array.isArray(c.determinantSigns)||c.determinantSigns.length!==2||!c.determinantSigns.every(x=>x===-1||x===1))return false
+    if(c.edge!==null){if(!integer(c.edge)||!e.domains[a].edges.includes(c.edge)||!e.domains[b].edges.includes(c.edge))return false}
+    else if(!integer(c.vertex)||!e.domains[a].vertices.includes(c.vertex)||!e.domains[b].vertices.includes(c.vertex))return false
+   }else if(c.kind==='same-support-partition'){
+    if(!exactBoundaryAdmitted||c.certified!==true||e.domains[a].carrierKey!==e.domains[b].carrierKey||!Array.isArray(c.faces)||c.faces.length!==2||c.faces[0]!==a||c.faces[1]!==b||!integer(c.cells,sourceCells)||c.cells===0||(c.edge===null)===(c.vertex===null)||!Array.isArray(c.projection)||c.projection.length!==2||!c.projection.every(row=>Array.isArray(row)&&row.length===3&&row.every(x=>Number.isSafeInteger(x)&&Math.abs(x)<=16))||!Array.isArray(c.rowWeights)||c.rowWeights.length!==2||!c.rowWeights.every(x=>Number.isFinite(x)&&x>0))return false
+    const [u,v]=c.projection
+    if(![u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]].some(x=>x!==0))return false
+    if(c.edge!==null){if(!integer(c.edge)||!e.domains[a].edges.includes(c.edge)||!e.domains[b].edges.includes(c.edge))return false}
+    else if(!integer(c.vertex)||!e.domains[a].vertices.includes(c.vertex)||!e.domains[b].vertices.includes(c.vertex))return false
+   }else if(c.kind==='exact-hull'){
     if(!exactBoundaryAdmitted||!Array.isArray(c.faces)||c.faces.length!==2||c.faces[0]!==a||c.faces[1]!==b||!Array.isArray(c.edges)||new Set(c.edges).size!==c.edges.length||!c.edges.every(edge=>integer(edge)&&e.domains[a].edges.includes(edge)&&e.domains[b].edges.includes(edge))||!Array.isArray(c.contactEnclosure)||c.contactEnclosure.length!==3||!c.contactEnclosure.every(interval))return false
     if(c.vertex!==null&&(!integer(c.vertex)||!e.domains[a].vertices.includes(c.vertex)||!e.domains[b].vertices.includes(c.vertex)))return false
     if(c.edges.length===0&&c.vertex===null)return false

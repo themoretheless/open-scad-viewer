@@ -472,3 +472,9 @@ fn ideal_refused(
     });
     Attempt::Refused(Box::new(body.report))
 }
+
+/// Immutable joint continuous/global/differential certificate admission.
+pub mod joint;
+
+/// Original filled-volume proof transfer under an exact clock conjugacy.
+pub mod clock;

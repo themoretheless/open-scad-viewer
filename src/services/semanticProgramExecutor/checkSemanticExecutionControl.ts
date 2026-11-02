@@ -258,7 +258,8 @@ export function reduceEmptyInputs<TPayloadFamily extends object>(
 }
 
 export function nodeMustReturnValueAfterReduction(node: SemanticNode): boolean {
-  if (node.kind === 'hull'
+  if (node.kind === 'full-round-exact'
+    || node.kind === 'hull'
     || node.kind === 'linear-extrude'
     || node.kind === 'rotate-extrude-analytic'
     || node.kind === 'rotate-extrude-polygonal') return true

@@ -1,0 +1,9 @@
+{"name":"native-frozen-recipe-to-wasm","ok":true,"elapsedMs":28774.163915999998}
+{"name":"legacy-naming-upgrade","ok":true,"elapsedMs":20497.503125}
+{"name":"forged-source-lineage","ok":false,"elapsedMs":23214.43299999999,"error":{"code":"BREP_FEATURE_REFUSED","message":"Exact output/evidence differs from frozen-source reconstruction"}}
+{"name":"wasm-original-source-construction","ok":true,"elapsedMs":21545.198374999993}
+{"name":"wasm-json-frozen-roundtrip","ok":true,"elapsedMs":19042.9755}
+{"name":"forged-rational-output","ok":false,"elapsedMs":20469.862749999986,"error":{"code":"BREP_FEATURE_REFUSED","message":"Exact output/evidence differs from frozen-source reconstruction"}}
+{"name":"caller-success-field","ok":false,"elapsedMs":0.3753749999741558,"error":{"code":"GEOMETRY_INVALID_INPUT","message":"Unexpected exact Full Round request field"}}
+{"name":"changed-original-source-interval","ok":false,"elapsedMs":3.6237919999985024,"error":{"code":"BREP_FEATURE_REFUSED","message":"Exact recipe changes an unselected source interval"}}
+{"passed":true,"cases":8,"wasmSha256":"6335e44e7345131f2cccd316f3b5875cd9ff4f674144cf935e134c482413ffe5"}

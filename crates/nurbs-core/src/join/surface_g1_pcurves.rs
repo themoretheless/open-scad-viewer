@@ -9,6 +9,8 @@ use crate::{
     surface_join::Decision,
 };
 type V = [I; 3];
+#[path = "surface_g1_pcurves/correlated.rs"]
+mod correlated;
 pub struct Report {
     pub positions: Positions,
     pub decision: Decision,
@@ -17,6 +19,12 @@ pub struct Report {
     pub regularity_proven: bool,
     pub violation_parameter: Option<f64>,
     pub cells: usize,
+    pub normal_work: u64,
+}
+impl Report {
+    pub fn work(&self) -> u64 {
+        self.positions.exact_work + self.normal_work
+    }
 }
 fn cross(a: V, b: V) -> Result<V> {
     Ok([
@@ -148,7 +156,53 @@ pub(crate) fn normal_rectangle(
                 [None; 2],
                 1,
             )?;
-            let Some(n) = normalized(cross(j[1][0], j[0][1])?)? else {
+            let direct = normalized(cross(j[1][0], j[0][1])?)?;
+            // A sampled frame only proposes a shear. Project ORIGINAL interval
+            // coefficients before differentiating, retaining planar correlation
+            // even when world axes are oblique. No rounded carrier is certified.
+            let midpoint = clipped.map(|d| d[0] * 0.5 + d[1] * 0.5);
+            let frame = s
+                .evaluate(midpoint[0], midpoint[1])
+                .ok()
+                .and_then(|p| p.unit_normal())
+                .and_then(|n| {
+                    let z = (0..3).max_by(|&a, &b| n[a].abs().total_cmp(&n[b].abs()))?;
+                    let axes = [(z + 1) % 3, (z + 2) % 3, z];
+                    let plane = [-n[axes[0]] / n[z], -n[axes[1]] / n[z]];
+                    plane.iter().all(|x| x.is_finite()).then_some((axes, plane))
+                });
+            let mut projected = None;
+            if let Some((axes, plane)) = frame {
+                let g = crate::surface_measure::jets::calculate_partial_stable_graph(
+                    s,
+                    [u, v],
+                    clipped,
+                    [None; 2],
+                    (axes, plane),
+                )?;
+                let n = cross(g[1][0], g[0][1])?;
+                if n[2].lo > 0. || n[2].hi < 0. {
+                    let sign = if n[2].lo > 0. { 1. } else { -1. };
+                    let mut ratios = [I::point(0.); 3];
+                    ratios[axes[2]] = I::point(sign);
+                    for k in 0..2 {
+                        ratios[axes[k]] = n[k]
+                            .div_signed(n[2])?
+                            .sub(I::point(plane[k]))?
+                            .mul(I::point(sign))?;
+                    }
+                    projected = normalized(ratios)?;
+                }
+            }
+            let n = match (direct, projected) {
+                (Some(a), Some(b)) => Some([
+                    a[0].intersect(b[0].lo, b[0].hi)?,
+                    a[1].intersect(b[1].lo, b[1].hi)?,
+                    a[2].intersect(b[2].lo, b[2].hi)?,
+                ]),
+                (a, b) => a.or(b),
+            };
+            let Some(n) = n else {
                 return Ok(None);
             };
             result = Some(if let Some(old) = result {
@@ -251,6 +305,7 @@ pub fn inspect(
     let positions =
         surface_g2_pcurves::verify_positions(c, p, s, reverse, position, max_cells, max_exact)?;
     let mut cells = positions.cells;
+    let mut normal_work = 0;
     let mut pending = vec![[0., 1.]];
     let mut upper = [0_f64; 2];
     let mut complete = positions.proven;
@@ -269,7 +324,21 @@ pub fn inspect(
             None
         };
         if let (Some(a), Some(b)) = (a, b) {
-            let bounds = [distance(a, b, false)?, distance(a, b, true)?];
+            let mut bounds = [distance(a, b, false)?, distance(a, b, true)?];
+            if bounds.iter().all(|u| *u > normal) {
+                if let Some(c) = correlated::bounds(
+                    p,
+                    s,
+                    reverse,
+                    q,
+                    &mut normal_work,
+                    max_exact.saturating_sub(positions.exact_work),
+                )? {
+                    for i in 0..2 {
+                        bounds[i] = bounds[i].min(c[i]);
+                    }
+                }
+            }
             if bounds.iter().any(|u| *u <= normal) {
                 for k in 0..2 {
                     upper[k] = upper[k].max(bounds[k]);
@@ -295,6 +364,7 @@ pub fn inspect(
                         regularity_proven: false,
                         violation_parameter: Some(mid),
                         cells,
+                        normal_work,
                     });
                 }
             }
@@ -329,6 +399,7 @@ pub fn inspect(
         regularity_proven: complete,
         violation_parameter: None,
         cells,
+        normal_work,
     })
 }
 

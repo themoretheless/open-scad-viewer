@@ -95,3 +95,7 @@ export function matrix3FromMatrix4(matrix: readonly number[]): readonly number[]
 export async function loadManifoldPlanBackend(): Promise<ManifoldPlanBackend> {
   return new ManifoldPlanBackend(await loadCadKernelOps())
 }
+
+export function unsupportedBrepNode(node: SemanticNode): never {
+  throw backendError('E_MANIFOLD_PLAN_UNSUPPORTED', `${node.kind} is a B-rep operation and cannot be executed by the mesh-only Manifold backend`)
+}

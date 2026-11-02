@@ -1,0 +1,76 @@
+{
+  "scope": "Original polynomial/rational profile Full Round contact proposals and proof-gated XY prism construction",
+  "goal_status": "paused",
+  "status": "focused-tests-passed",
+  "tests_passed": 27,
+  "runs": [
+    {
+      "log": "nurbs-tests.log",
+      "tests_passed": 10,
+      "per_target_counts": [
+        7,
+        3
+      ],
+      "exit_code": 0
+    },
+    {
+      "log": "brep-tests.log",
+      "tests_passed": 16,
+      "per_target_counts": [
+        4,
+        2,
+        1,
+        1,
+        2,
+        2,
+        4
+      ],
+      "exit_code": 0
+    },
+    {
+      "log": "volume-tests.log",
+      "tests_passed": 1,
+      "per_target_counts": [
+        1
+      ],
+      "exit_code": 0
+    }
+  ],
+  "pending_session_6061": "Observed terminal exit 0 while saving report; no rerun",
+  "source_sha256": {
+    "crates/nurbs-core/src/offset/profile_corner.rs": "f9be5b3b7bfbc7c51f6c63d9308df8996af6e5ebd4d27c4f663f369ed1e30143",
+    "crates/nurbs-core/src/offset/profile_corner/full_round.rs": "a949111695e1dee0dae9d66dd17b242b59c223b26d88ea912d37a3463e68afdf",
+    "crates/nurbs-core/src/offset/freeform_blend.rs": "b1083f9adf4b1180de1acd2b4ebcfb135b186cf7cf4fb2ce45a3e7aca2df172d",
+    "crates/nurbs-core/tests/profile_full_round.rs": "b64715b8ec9f75054b296613508bc8c7d600ef73caf4be9ecfcba9356b595a1d",
+    "crates/brep-core/src/feature_ops.rs": "cea71447ee12256ec3003a371575f6b75f1286be5bb2ba3a45d818ded248f965",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "72fcc3476b741b0ec63d814fdb59162f84be0bcd97505b82b672ebc52ca481fd",
+    "crates/brep-core/src/feature_ops/full_round_seams.rs": "b5f7a4a05e741660a43790fbe02d1d2aeeb34dc637f82bd751c42f254c3315db",
+    "crates/brep-core/src/feature_ops/full_round_seams/material.rs": "d22a18e7eab58f69df805726f50f952fdd186664715a1340f21103fcd7317113",
+    "crates/brep-core/src/feature_ops/full_round_caps.rs": "56d8449dd985c3a69b79a1f4506cb01a13239aa402c101accf051bb691ce8500",
+    "crates/brep-core/tests/full_round_curved.rs": "8b6b6916069b4ac0e900ed4487fc1d6ac45979a0841fcce7a315a14698cd048e",
+    "crates/brep-core/tests/full_round_curved_volume.rs": "ea1497dd750d0d88075386c97c0efe120d45bebe3b91ae869e5ea5d00f9679d1"
+  },
+  "test_profile": {
+    "opt_level": 2,
+    "package_overrides": {
+      "nurbs-core": 1,
+      "brep-core": 1
+    },
+    "debug_assertions": true,
+    "overflow_checks": true,
+    "target_dir": "/tmp/rea-r53-test-opt2"
+  },
+  "nurbs_features": "--no-default-features --features codec",
+  "architecture_gate": "Existing mainSolidResult.ts 595 lines vs pin 594; unchanged limit",
+  "clean_baseline": "11 frozen files unchanged",
+  "reference": "Plasticity Beta 26.2.0-beta.39 ARM64 pk.node SHA256 5f00e0c6bcf0497e2e27674629492aeb37228c06dfad1ddda455e221c1ca7f1d",
+  "reference_evidence_level": "Static call chain for FullRound -> PK_FACE_make_3_face_blend; no runtime geometry equivalence",
+  "limitations": [
+    "Numeric proposal is not a root certificate or branch census",
+    "One XY prism, straight middle, convex local contact branch, two single-span arcs",
+    "General spatial supports/multi-span and overhanging arcs remain open",
+    "Full source-material removal relation not implied by resulting G1/radius/volume proof",
+    "Not full current-worktree qualification or Plasticity parity"
+  ],
+  "full_parity": false
+}

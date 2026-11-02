@@ -1,5 +1,7 @@
 //! Exact ORIGINAL coefficient premises for ordered affine fibers.
 //! No patch injectivity, frame rank, boundary smoothness or Solid credit here.
+mod projected;
+pub use projected::{projected_direction_dot3d, projected_orient3d, projected_polygon_orientation};
 use crate::{
     Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef, PredicateContext,
     Reason, Sign,

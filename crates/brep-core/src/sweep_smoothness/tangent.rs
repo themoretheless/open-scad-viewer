@@ -85,7 +85,7 @@ pub fn inspect_edges(
             max_exact - out.exact_work,
         )?;
         out.cells += proof.cells;
-        out.exact_work += proof.positions.exact_work;
+        out.exact_work += proof.work();
         out.within_tolerance &= proof.decision == Decision::WithinTolerance;
         out.seams.push(Seam {
             edge,

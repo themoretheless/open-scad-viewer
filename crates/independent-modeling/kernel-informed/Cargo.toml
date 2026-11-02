@@ -1,0 +1,8 @@
+[package]
+name = "modeling-kernel-informed"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+modeling-clean = { path = "../clean" }

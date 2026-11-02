@@ -1,0 +1,15 @@
+vite v8.3.0 building client environment for production...
+transforming...
+✓ 127 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../tmp/full-round-history-worker-browser/dist/assets/exactFullRoundHistory.worker-DToPNxKN.js  5,924.97 kB
+../../../../../tmp/full-round-history-worker-browser/dist/qualification.js                                 6,578.03 kB │ gzip: 5,528.24 kB
+
+✓ built in 336ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+{"passed":true,"ownership":{"active":false,"workersStarted":6,"workersTerminated":6},"ticks":2244,"busy":"Error: Exact history worker is busy","cancelled":"Error: Exact history edit cancelled","deadline":"Error: Exact history edit deadline exceeded","failed":"Error: Exact history has no undo revision","malformed":"Error: Invalid bounded exact history edit request","changed":true,"undoExact":true,"redoExact":true,"inputIntact":true,"moreTriangles":true}

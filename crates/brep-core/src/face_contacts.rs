@@ -4,6 +4,12 @@
 mod boundary_stitched_contact;
 #[path = "source_volume_contact.rs"]
 mod source_volume_contact;
+#[path = "same_support_contact.rs"]
+mod same_support_contact;
+#[path = "projected_trim_contact.rs"]
+mod projected_trim_contact;
+#[path = "projected_trim_network.rs"]
+mod projected_trim_network;
 use crate::face_contact_groups::Certificate as DisjointGroup;
 use crate::{Error, Model, Result, face_domain::FaceDomain};
 use nurbs_core::surface_contact_search::{self, Report as Search};
@@ -32,6 +38,9 @@ pub enum SharedBoundary {
     JoinedSourceCharts(boundary_stitched_contact::Certificate),
     SourceVolumeBoundary(source_volume_contact::Certificate),
     OwnedVertex(crate::trimmed_vertex_contact::Certificate),
+    SameSupportPartition(same_support_contact::Certificate),
+    ProjectedTrimPartition(projected_trim_contact::Certificate),
+    ProjectedTrimNetwork(projected_trim_network::Certificate),
 }
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -506,6 +515,8 @@ impl Inspector {
                     .map(SharedBoundary::OppositeSides)
             };
             let mut boundary_cells = 0;
+
+
             if boundary.is_none() && sweep_hulls && joint_exact_domain {
                 let allowance = (limits.cells - out.cells)
                     .min(limits.cells_per_pair.saturating_sub(boundary_cells))
@@ -527,14 +538,34 @@ impl Inspector {
             // Try the exact four-wall cell before spending the pair budget on
             // a stitched surface. Other chart families keep their ordering.
             let volume_first=sa.degree_u==1 && sa.degree_v==5 && sb.degree_u==1 && sb.degree_v==5;
-            if volume_first && boundary.is_none()&&!periodic&&joint_exact_domain&&out.cells<limits.cells {
+            if volume_first && boundary.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
                 let separated=source_volume_context.as_ref().unwrap().certify([a,b],
-                    (limits.cells-out.cells).min(pair_allowance))?;
-                source_chart_cells=separated.cells;out.cells+=separated.cells;
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
+                source_chart_cells+=separated.cells;out.cells+=separated.cells;
                 if let Some(c)=separated.certificate {
                     if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
                     else {volume_separation=Some(c);}
                 }
+            }
+            if boundary.is_none() && volume_separation.is_none() && joint_exact_domain
+                && source_chart_cells < pair_allowance && out.cells < limits.cells
+                && projected_trim_network::multiple_shared_edges(model,[a,b]) {
+                let attempt = projected_trim_network::certify(model,[a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
+                source_chart_cells += attempt.cells; out.cells += attempt.cells;
+                boundary = attempt.certificate.map(SharedBoundary::ProjectedTrimNetwork);
+            }
+            if boundary.is_none() && volume_separation.is_none() && joint_exact_domain && source_chart_cells < pair_allowance && out.cells < limits.cells {
+                let attempt = same_support_contact::certify(model, [a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
+                source_chart_cells += attempt.cells; out.cells += attempt.cells;
+                boundary = attempt.certificate.map(SharedBoundary::SameSupportPartition);
+            }
+            if boundary.is_none() && volume_separation.is_none() && joint_exact_domain && source_chart_cells < pair_allowance && out.cells < limits.cells {
+                let attempt = projected_trim_contact::certify(model,[a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
+                source_chart_cells += attempt.cells; out.cells += attempt.cells;
+                boundary = attempt.certificate.map(SharedBoundary::ProjectedTrimPartition);
             }
             if boundary.is_none()&&volume_separation.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
                 let joined=boundary_stitched_contact::certify(model,[a,b],

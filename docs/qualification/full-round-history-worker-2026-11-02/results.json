@@ -1,0 +1,37 @@
+{
+  "status": "browser worker library qualified; editor command wiring and full parity remain open",
+  "wasmSha256": "e552c5d978af4690563c20211a9e40e745b87a832fe265129d5ff72ee5523fac",
+  "browser": "151.0.7922.34",
+  "installedPackage": true,
+  "platformWorkerAudit": {
+    "started": 6,
+    "terminated": 6
+  },
+  "workerDebugEvents": 5,
+  "result": {
+    "ownership": {
+      "active": false,
+      "workersStarted": 6,
+      "workersTerminated": 6
+    },
+    "ticks": 2244,
+    "busy": "Error: Exact history worker is busy",
+    "cancelled": "Error: Exact history edit cancelled",
+    "deadline": "Error: Exact history edit deadline exceeded",
+    "failed": "Error: Exact history has no undo revision",
+    "malformed": "Error: Invalid bounded exact history edit request",
+    "changed": true,
+    "undoExact": true,
+    "redoExact": true,
+    "inputIntact": true,
+    "moreTriangles": true
+  },
+  "typecheck": "passed",
+  "qualification": "actual Chromium using production Vite-built worker and installed kernel; no compiler substitution",
+  "remaining": [
+    "editor command/store wiring",
+    "aggregate scene metrics",
+    "general dependency/lineage history",
+    "full original Plasticity library parity and external behavioral comparison"
+  ]
+}

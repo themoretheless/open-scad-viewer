@@ -1,0 +1,23 @@
+{
+  "status": "focused qualification; full parity incomplete",
+  "passed": 10,
+  "raw_binding": "2 passed; distinct raw clocks, reversed edge, transposed/reversed cap carrier",
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/original_restriction/plane.rs": "c731f4949e93445ac433193f848f28568ccf98965c89a19911d6457fa4bdb9fa",
+    "crates/brep-core/src/profile_certificate/original_restriction/plane/pullback.rs": "d226a6b5e026850546b75b63565ac79f50b5d62ecfa29501be3aba0c95db7d46",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_caps.rs": "5077a0ff2d0615c5f8aec5318d4c632c7c4aa53e89a577ef9575abf9413c5765",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_caps/pullbacks.rs": "deb31f22d3297742f85a24f3f7522931910b057ba2beab1d67f926a1ee194a1a",
+    "crates/brep-core/tests/full_round_cap_pullback.rs": "9d5536f5713b561c96c716ef29692d6ed4d5773beff95afda54c19cd6eddbd3d",
+    "crates/brep-core/tests/full_round_source_caps.rs": "c6b4deba6160a809a86804ff0dacd17668fb1e56c213daf850540bb494dde2ab",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "cfb9ccdeeb4ab01832d7912231821071c388466841fe8a929ab72dca6940620d"
+  },
+  "limits": [
+    "No source-solid admission",
+    "Lower rim/side compatibility remains open",
+    "Source/result material relation and radius fidelity remain open",
+    "No Plasticity runtime equivalence",
+    "No full regression or pipeline qualification"
+  ],
+  "clean_baseline": "11 files unchanged",
+  "api_map": "242 public roots, 200 catalog entries; check passed"
+}

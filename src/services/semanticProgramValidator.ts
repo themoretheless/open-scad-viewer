@@ -78,7 +78,7 @@ export interface ValidatedSemanticExecution {
 }
 
 export type SemanticProductionRule =
-  | 'primitive' | 'transform-map' | 'projection-map' | 'offset-map'
+  | 'primitive' | 'transform-map' | 'projection-map' | 'offset-map' | 'full-round-exact-map'
   | 'preserving-alias' | 'transparent' | 'boolean' | 'hull' | 'difference'
   | 'linear-extrude' | 'rotate-extrude' | 'terminal-unsupported'
 

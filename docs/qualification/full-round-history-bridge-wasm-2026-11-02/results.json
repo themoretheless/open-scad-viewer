@@ -1,0 +1,20 @@
+{
+  "status": "native bridge, optimized ABI and installed package history qualified; editor integration and full parity remain open",
+  "wasmSha256": "e552c5d978af4690563c20211a9e40e745b87a832fe265129d5ff72ee5523fac",
+  "wasmBytes": 16243008,
+  "limitBytes": 16777216,
+  "bridgeTests": 3,
+  "optimizedAbiCases": 14,
+  "installedHistorySnapshotSceneTests": 14,
+  "browserWorkers": 5,
+  "installedBrowserPackage": true,
+  "typecheck": "passed",
+  "cleanBaseline": "11 files unchanged",
+  "architecture": "six previously recorded other-file violations; no limits changed",
+  "backup": "/tmp/rea-full-round-history-delivery-before",
+  "remaining": [
+    "editor/scene history ownership integration",
+    "general dependency history, changed-ID lineage and branch merges",
+    "all original Plasticity library parity scope"
+  ]
+}

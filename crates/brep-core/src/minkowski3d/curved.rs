@@ -6,6 +6,25 @@ use super::*;
 use crate::Model;
 use value_codec::{Deserialize, Serialize, Value, error, json};
 mod atlas;
+pub use atlas::algebraic::{
+    AtlasAlgebraicParameters, AtlasAlgebraicRoot, certify_algebraic_knot_parameters,
+    certify_algebraic_seam_parameters, verify_algebraic_knot_parameters,
+    verify_algebraic_seam_parameters,
+};
+pub use atlas::difference::{
+    CertifiedEnclosedDifference, EnclosedDifferenceCertificate, certify_enclosed_difference,
+    verify_enclosed_difference,
+};
+pub use atlas::domains::{
+    AlgebraicDomainAtlas, DomainEdge, DomainEdgeKind, DomainEvaluation, DomainFace, DomainLocation,
+    DomainPartition, DomainPolynomial, DomainSeam, DomainVertex, VerifiedDomainAtlas,
+    certify_algebraic_domain_atlas, check_algebraic_domain_atlas, verify_algebraic_domain_atlas,
+};
+pub use atlas::pullback::{
+    AtlasAlgebraicPullback, AtlasExactTriangle, certify_algebraic_surface_pullback,
+    certify_algebraic_triangle_pullback, verify_algebraic_surface_pullback,
+    verify_algebraic_triangle_pullback,
+};
 mod atlas_legacy;
 mod prismatic;
 pub use atlas::Certificate as SourceAtlasCertificate;
@@ -33,7 +52,12 @@ pub fn verify_source_atlas(m: &Model, c: &SourceAtlasCertificate) -> Result<()> 
     }
     Ok(())
 }
+mod difference;
 mod shear;
+pub use difference::{
+    CertifiedQuadraticDifference, QuadraticDifferenceCertificate, certify_quadratic_difference,
+    verify_quadratic_difference,
+};
 mod topology;
 mod trimmed;
 pub use prismatic::SumReport as SumTopologyReport;
@@ -174,61 +198,6 @@ fn source_id(s: &Source) -> Result<String> {
     h.update(b"nurbs-minkowski-source-v1");
     h.update(bytes);
     Ok(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
-}
-fn rectangle(m: &Model, face: usize) -> Result<()> {
-    let f = &m.faces[face];
-    let s = &f.surface;
-    let lo = [s.knots_u[s.degree_u], s.knots_v[s.degree_v]];
-    let hi = [
-        s.knots_u[s.control_points.len()],
-        s.knots_v[s.control_points[0].len()],
-    ];
-    let wire = &m.loops[f.outer];
-    if !f.holes.is_empty() || wire.coedges.len() != 4 {
-        return Err(fail(
-            "curved source requires complete rectangular UV faces; curved or holed trim charts are unproved",
-        ));
-    }
-    let corners = [
-        [lo[0], lo[1]],
-        [hi[0], lo[1]],
-        [hi[0], hi[1]],
-        [lo[0], hi[1]],
-    ];
-    let mut starts = Vec::new();
-    for c in &wire.coedges {
-        let p = &c.pcurve;
-        let d = p.domain();
-        if p.control_points.len() != p.degree + 1
-            || p.knots[..=p.degree].iter().any(|x| *x != d[0])
-            || p.knots[p.degree + 1..].iter().any(|x| *x != d[1])
-        {
-            return Err(fail(
-                "rectangular trim needs a clamped rational boundary segment",
-            ));
-        }
-        let a = &p.control_points[0];
-        let b = p.control_points.last().unwrap();
-        let side = (0..4)
-            .find(|i| a[..] == corners[*i] && b[..] == corners[(*i + 1) % 4])
-            .ok_or_else(|| fail("trim does not exactly traverse a parameter rectangle side"))?;
-        for q in &p.control_points {
-            for k in 0..2 {
-                if corners[side][k] == corners[(side + 1) % 4][k] {
-                    if q[k] != corners[side][k] {
-                        return Err(fail("trim leaves its exact rectangle side"));
-                    }
-                } else if q[k] < lo[k] || q[k] > hi[k] {
-                    return Err(fail("trim exits its full rectangle interval"));
-                }
-            }
-        }
-        starts.push(side);
-    }
-    if (0..4).any(|i| starts[(i + 1) % 4] != (starts[i] + 1) % 4) {
-        return Err(fail("rectangular trim side census is incomplete"));
-    }
-    Ok(())
 }
 
 fn enclose(nominal: &[Poly], tubes: &[Poly], work: &mut Work) -> Result<(Vec<Poly>, Vec<Poly>)> {
@@ -485,7 +454,9 @@ fn region(s: &Source, depth: u8, limit: &Q, work: &mut Work, version: u32) -> Re
                 (None, None)
             };
             if version >= 4 && atlas.is_none() {
-                atlas = atlas::nominal_report(m, depth, &input).ok().map(SourceAtlasTopologyReport::Rational);
+                atlas = atlas::nominal_report(m, depth, &input)
+                    .ok()
+                    .map(SourceAtlasTopologyReport::Rational);
             }
             let (inner, outer) = if version == 1 {
                 enclose(&nominal, &tubes, work)?
@@ -624,7 +595,10 @@ pub fn certify(a: &Source, b: &Source, maximum: f64, f32_mesh: bool) -> Result<V
     let mut c = derive(a, b, [find(a)?, find(b)?], maximum, 4)?;
     // Preserve the existing v3 wire format when its old proof recipes suffice.
     // Only the general rational atlas requires the new reconstruction recipe.
-    if c.source_atlas_topology.iter().all(|r| !matches!(r, Some(SourceAtlasTopologyReport::Rational(_)))) {
+    if c.source_atlas_topology
+        .iter()
+        .all(|r| !matches!(r, Some(SourceAtlasTopologyReport::Rational(_))))
+    {
         c.version = 3;
     }
     let nominal = display_precision(&c.nominal, if f32_mesh { "f32" } else { "f64" })?;
@@ -759,3 +733,72 @@ mod tests;
 #[path = "curved/source_geometry.rs"]
 mod source_geometry;
 use source_geometry::geometry;
+
+pub use atlas::region_brep::{
+    AlgebraicRegionBrep, AlgebraicRegionCertificate, AlgebraicRegionFace, AlgebraicRegionSeam,
+    certify_graph_region_brep, certify_graph_region_brep_factored, verify_graph_region_brep,
+};
+
+pub use atlas::region_brep::{
+    AlgebraicModelPocket, ModelPocketCertificate, PocketEdge, PocketEdgeUse, PocketFace,
+    PocketFaceKind, PocketVertex, certify_model_pocket, verify_model_pocket,
+};
+
+pub use atlas::region_brep::{
+    BoundaryArcWitness, CertifiedPocketModel, PocketModelCertificate, certify_pocket_boolean_model,
+    certify_pocket_boolean_model_with_arcs, verify_pocket_boolean_model,
+};
+
+pub use atlas::region_brep::{
+    CertifiedFramedPocketModel, CertifiedPocketModelBatch, FramedPocketModelCertificate,
+    ModelPocketRequest, PocketCoordinateFrame, PocketModelBatchCertificate,
+    certify_framed_pocket_boolean_model, certify_model_pocket_batch,
+    certify_oriented_pocket_boolean_model, verify_framed_pocket_boolean_model,
+    verify_model_pocket_batch,
+};
+
+#[path = "curved/source_charts.rs"]
+mod source_charts;
+use source_charts::rectangle;
+
+pub use difference::{
+    CertifiedQuadraticBoolean, QuadraticBooleanCertificate, certify_quadratic_boolean,
+    verify_quadratic_boolean,
+};
+
+pub(crate) use difference::try_common_quadratic_boolean;
+
+pub(crate) use atlas::boolean::try_nonintersecting_nurbs_boolean;
+pub use atlas::boolean::{
+    CertifiedNonintersectingNurbsBoolean, NonintersectingNurbsBooleanCertificate,
+    NurbsMaterialRelation, certify_nonintersecting_nurbs_boolean,
+    verify_nonintersecting_nurbs_boolean,
+};
+
+pub use atlas::region_brep::{CertifiedGraphBoxBoolean, GraphBoxBooleanCertificate, certify_graph_box_boolean, verify_graph_box_boolean};
+pub(crate) use atlas::region_brep::try_graph_box_boolean;
+
+mod same_carrier;
+pub use same_carrier::{
+    CertifiedSameCarrierMerge, SameCarrierMergeCertificate,
+    certify_same_carrier_merge, verify_same_carrier_merge,
+};
+pub(crate) use same_carrier::same_carrier_component;
+
+pub(crate) use same_carrier::seam_model_id;
+
+mod intersection_graph;
+pub use intersection_graph::{
+    GraphEndpoint, NurbsGraphLimits, NurbsGraphWork, NurbsIntersectionGraphCertificate,
+    OriginalFacePairGraph, OriginalGraphEvent, OriginalGraphPiece, OriginalIntersectionArc,
+    OriginalIntersectionCycle, OriginalRootKey, QualifiedNurbsIntersectionGraph,
+    certify_nurbs_intersection_graph, verify_nurbs_intersection_graph,
+};
+
+mod retained_boolean;
+pub use retained_boolean::{
+    CertifiedRetainedNurbsBoolean, NurbsFacePartition, RegionEdgeOrigin,
+    RetainedNurbsBooleanCertificate, RetainedRegionMaterial,
+    certify_retained_nurbs_boolean, verify_retained_nurbs_boolean, author_retained_nurbs_boolean,
+};
+pub(crate) use retained_boolean::try_retained_nurbs_boolean;

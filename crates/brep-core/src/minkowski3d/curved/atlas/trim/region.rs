@@ -72,7 +72,63 @@ fn add(counts: &mut BTreeMap<Edge, i32>, a: P, b: P, sign: i32) {
         *counts.entry((b, a)).or_default() -= sign;
     }
 }
+// Extract each authored nonempty knot span separately. No samples or rounded
+// parameters enter the boundary: both neighbours retain the exact knot value.
+fn boundary_spans(c: &crate::Curve, work: &mut Work) -> Result<Vec<Vec<sb::H>>> {
+    c.validate()?;
+    let [a, b] = c.domain();
+    let mut knots = c
+        .knots
+        .iter()
+        .copied()
+        .filter(|t| *t >= a && *t <= b)
+        .map(|t| Q::from_float(t).unwrap())
+        .collect::<Vec<_>>();
+    knots.sort();
+    knots.dedup();
+    if knots.len() < 2 || knots.len() > 65 {
+        return Err(fail("trim knot-span budget exceeded"));
+    }
+    let mut spans = Vec::new();
+    for interval in knots.windows(2) {
+        work.charge(c.control_points.len())?;
+        let h = sb::curve(c, &interval[0], &interval[1])?;
+        if spans.last().is_some_and(|previous: &Vec<sb::H>| {
+            sb::point(previous.last().unwrap()) != sb::point(&h[0])
+        }) {
+            return Err(fail("trim knot spans are discontinuous"));
+        }
+        spans.push(h);
+    }
+    Ok(spans)
+}
+// Refinement changes only the proposed chart partition. Every retry retains
+// exact homogeneous curves and must pass the same global disk-chain proof.
 pub(super) fn charts(m: &Model, face: usize, work: &mut Work) -> Result<Vec<Net>> {
+    for level in 0..=2 {
+        match charts_refined(m, face, level, work) {
+            Err(error) if level < 2 && error.message.contains("UV disk Jacobian is unproved") => {}
+            result => return result,
+        }
+    }
+    unreachable!()
+}
+fn bisect(h: &[sb::H]) -> (Vec<sb::H>, Vec<sb::H>) {
+    let mut row = h.to_vec();
+    let mut left = vec![row[0].clone()];
+    let mut right = vec![row.last().unwrap().clone()];
+    while row.len() > 1 {
+        row = row
+            .windows(2)
+            .map(|p| std::array::from_fn(|k| (&p[0][k] + &p[1][k]) / integer(2)))
+            .collect();
+        left.push(row[0].clone());
+        right.push(row.last().unwrap().clone());
+    }
+    right.reverse();
+    (left, right)
+}
+fn charts_refined(m: &Model, face: usize, level: usize, work: &mut Work) -> Result<Vec<Net>> {
     let f = &m.faces[face];
     let mut curves = BTreeMap::<Edge, Vec<sb::H>>::new();
     let mut rings = Vec::<Vec<P>>::new();
@@ -83,16 +139,41 @@ pub(super) fn charts(m: &Model, face: usize, work: &mut Work) -> Result<Vec<Net>
         .enumerate()
     {
         let edges = &m.loops[l].coedges;
-        if edges.len() < 3 || edges.len() > 64 || vertices.len() + edges.len() > 128 {
+        if edges.is_empty() || edges.len() > 64 || vertices.len() + edges.len() > 128 {
             return Err(fail("trim region boundary budget exceeded"));
         }
         let mut ring = Vec::new();
         let mut previous = None;
         let mut first = None;
-        for (ei, e) in edges.iter().enumerate() {
-            let c = &e.pcurve;
-            let [a, b] = c.domain();
-            let h = sb::curve(c, &Q::from_float(a).unwrap(), &Q::from_float(b).unwrap())?;
+        let mut spans = Vec::new();
+        for e in edges {
+            let mut pieces = boundary_spans(&e.pcurve, work)?;
+            if e.pcurve.degree > 1 {
+                for _ in 0..level {
+                    work.charge(pieces.iter().map(|h| h.len() * h.len()).sum())?;
+                    pieces = pieces
+                        .iter()
+                        .flat_map(|h| {
+                            let (a, b) = bisect(h);
+                            [a, b]
+                        })
+                        .collect();
+                }
+            }
+            spans.extend(pieces);
+            if spans.len() > 64 || vertices.len() + spans.len() > 128 {
+                return Err(fail("trim region split boundary budget exceeded"));
+            }
+        }
+        // A wire can have two (or one closed) multispan coedges. The chord
+        // triangulation needs three actual span vertices, not three coedges.
+        // All complete-curve isotopy, joining and orientation proofs follow.
+        if spans.len() < 3 {
+            return Err(fail(
+                "trim region needs at least three authored span chords",
+            ));
+        }
+        for (ei, h) in spans.into_iter().enumerate() {
             let (a, b) = (sb::point(&h[0]), sb::point(h.last().unwrap()));
             if a == b || !vertices.insert(a.clone()) || previous.as_ref().is_some_and(|p| *p != a) {
                 return Err(fail("trim region repeats a vertex or is not joined"));
@@ -234,7 +315,7 @@ fn certify(
                 ]);
             }
         }
-        charts.push(disk(m, face, boundary, work)?);
+        charts.extend(disks(m, face, boundary, work)?);
     }
     if residual.values().any(|n| *n != 0) {
         return Err(fail("trim proposal boundary chain is false"));
@@ -282,6 +363,79 @@ mod tests {
         m.loops.push(crate::Loop { coedges });
         m.faces[0].holes.push(l);
         m
+    }
+    #[test]
+    fn internal_knots_split_exactly_and_discontinuities_refuse() {
+        let mut c = crate::Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.375, 1., 1.],
+            control_points: vec![vec![0., 0.], vec![0.5, 0.25], vec![1., 0.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let spans = boundary_spans(&c, &mut Work::default()).unwrap();
+        assert_eq!(spans.len(), 2);
+        assert_eq!(sb::point(spans[0].last().unwrap()), sb::point(&spans[1][0]));
+        assert_eq!(sb::point(&spans[1][0])[0], Q::new(1.into(), 2.into()));
+        c.knots = vec![0., 0., 0.375, 0.375, 1., 1.];
+        c.control_points.insert(2, vec![0.75, 0.5]);
+        c.weights.push(1.);
+        assert!(boundary_spans(&c, &mut Work::default()).is_err());
+    }
+    #[test]
+    fn multispan_outer_wire_and_hole_keep_the_region_proof() {
+        let mut m = holed(false);
+        let loops = [m.faces[0].outer, m.faces[0].holes[0]];
+        for l in loops {
+            for e in &mut m.loops[l].coedges {
+                let a = e.pcurve.control_points[0].clone();
+                let b = e.pcurve.control_points.last().unwrap().clone();
+                let mid = a.iter().zip(&b).map(|(a, b)| (a + b) / 2.).collect();
+                e.pcurve = crate::Curve {
+                    degree: 1,
+                    knots: vec![0., 0., 0.375, 1., 1.],
+                    control_points: vec![a, mid, b],
+                    weights: vec![1.; 3],
+                    periodic: false,
+                };
+            }
+        }
+        assert!(!charts(&m, 0, &mut Work::default()).unwrap().is_empty());
+    }
+    #[test]
+    fn hole_is_not_filled_when_the_surface_is_split_into_knot_cells() {
+        let mut m = holed(false);
+        let s = &mut m.faces[0].surface;
+        assert_eq!(s.degree_u, 1);
+        let mid = s.control_points[0]
+            .iter()
+            .zip(&s.control_points[1])
+            .map(|(a, b)| a.iter().zip(b).map(|(a, b)| (a + b) / 2.).collect())
+            .collect();
+        s.control_points.insert(1, mid);
+        let mid = s.weights[0]
+            .iter()
+            .zip(&s.weights[1])
+            .map(|(a, b)| (a + b) / 2.)
+            .collect();
+        s.weights.insert(1, mid);
+        s.knots_u = vec![0., 0., 0.5, 1., 1.];
+        let half = Q::new(1.into(), 2.into());
+        let hole = sb::at(s, &[half.clone(), half]).unwrap();
+        let result = charts(&m, 0, &mut Work::default()).unwrap();
+        assert!(result.len() > 8);
+        for h in result {
+            let p = bernstein::corners(&h);
+            let normal = cross(&sub(&p[1], &p[0]), &sub(&p[2], &p[0]));
+            assert!(!zero(&normal));
+            let inside = (0..3).all(|k| {
+                dot(
+                    &normal,
+                    &cross(&sub(&p[(k + 1) % 3], &p[k]), &sub(&hole, &p[k])),
+                ) >= Q::zero()
+            });
+            assert!(!inside, "surface knot partition filled the original hole");
+        }
     }
     #[test]
     fn curved_hole_is_retained_by_exact_disks() {

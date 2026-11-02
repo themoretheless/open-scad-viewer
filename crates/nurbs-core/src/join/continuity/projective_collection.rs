@@ -81,6 +81,8 @@ fn inspect_collection(
         let remaining = (max_work - out.exact_work).min(1000000);
         let inspect = if projective { inspect_surface_projective_strip_jets }
             else { inspect_surface_exact_strip_jets };
+        let mut nonlinear_scale=seam.normal_scale;
+        let mut nonlinear_scalar=super::station_scale::propose_station_scale_scalar(seam.normal_scale);
         let mut proof = if rational_proposal {
             super::exact_strip::inspect_station_projective_strip_jets(
                 &patches[seam.patches[0]],&patches[seam.patches[1]],
@@ -103,6 +105,7 @@ fn inspect_collection(
             let scalar=super::station_scale::propose_station_scale_scalar(ratio);
             if scalar!=cad_predicates::AuthoredScalar::Binary64Bits(1f64.to_bits())
                 && scalar!= (cad_predicates::AuthoredScalar::RationalConstant{numerator:1,denominator:1}) {
+                nonlinear_scale=ratio;nonlinear_scalar=scalar.clone();
                 let prior_work=proof.work;
                 proof=super::exact_strip::inspect_station_projective_strip_jets(
                     &patches[seam.patches[0]],&patches[seam.patches[1]],
@@ -116,6 +119,7 @@ fn inspect_collection(
                 &patches[seam.patches[0]],&patches[seam.patches[1]],
                 &seam.boundaries[0],&seam.boundaries[1],
             )? {
+                nonlinear_scale=seam.normal_scale;nonlinear_scalar=scalar.clone();
                 let prior_work=proof.work;
                 proof=super::exact_strip::inspect_station_projective_strip_jets(
                     &patches[seam.patches[0]],&patches[seam.patches[1]],
@@ -123,6 +127,16 @@ fn inspect_collection(
                 )?;
                 proof.work+=prior_work;
             }
+        }
+        // A map cannot fix intrinsic source irregularity. Otherwise search it
+        // ONCE, after nominal/rational-scale attempts, using only owner remainder.
+        if rational_proposal && !proof.affine_parameter_identity && !proof.certified && !proof.exact_identity && proof.work<remaining
+            && matches!(proof.reason,"constant-projective-jet-relation-different"|"bspline-projective-jet-relation-different"|"unsupported-common-bspline-basis") {
+            let prior=proof.work;
+            proof=super::exact_strip::inspect_nonlinear_station_jets(
+                &patches[seam.patches[0]],&patches[seam.patches[1]],
+                &seam.boundaries[0],&seam.boundaries[1],seam.order,nonlinear_scale,nonlinear_scalar,remaining-prior)?;
+            proof.work+=prior;
         }
         check(proof.work<=remaining,"Invalid native candidate work accounting")?;
         out.exact_work += proof.work;
@@ -132,7 +146,7 @@ fn inspect_collection(
             for skipped in index+1..seams.len() {
                 out.unresolved_seams.push(skipped);
                 out.seams.push(ExactStripJetReport {
-                    certified:false,exact_identity:false,regularity_certified:false,work:0,
+                    certified:false,exact_identity:false,affine_parameter_identity:false,regularity_certified:false,work:0,
                     reason:"seam-audit-skipped-after-refusal",
                 });
             }

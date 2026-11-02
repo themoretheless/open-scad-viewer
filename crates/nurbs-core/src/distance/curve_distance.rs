@@ -13,6 +13,15 @@ pub(crate) fn restricted_controls(
     span: usize,
     t: Interval,
 ) -> Result<Vec<Vec<Interval>>> {
+    restricted_controls_between(curve, span, [Interval::point(t.lo), Interval::point(t.hi)])
+}
+/// Outward blossom restriction at independently enclosed endpoint parameters.
+/// The caller proves both exact endpoints belong to this original span.
+pub(crate) fn restricted_controls_between(
+    curve: &Curve,
+    span: usize,
+    endpoints: [Interval; 2],
+) -> Result<Vec<Vec<Interval>>> {
     let degree = curve.degree;
     let dimension = curve.control_points[0].len();
     let mut d = Vec::with_capacity(degree + 1);
@@ -46,7 +55,11 @@ pub(crate) fn restricted_controls(
     // Exact restricted Bernstein controls are blossom values at
     // lo^(degree-k), hi^k. Keep the construction interval-valued and then use
     // the positive rational convex hull, avoiding interval-parameter dependency.
-    let count = if t.lo == t.hi { 1 } else { degree + 1 };
+    let count = if endpoints[0] == endpoints[1] && endpoints[0].lo == endpoints[0].hi {
+        1
+    } else {
+        degree + 1
+    };
     let mut controls = Vec::with_capacity(count);
     let mut q = vec![vec![Interval::point(0.); dimension + 1]; degree + 1];
     for k in 0..count {
@@ -54,12 +67,12 @@ pub(crate) fn restricted_controls(
             q[j].copy_from_slice(&d[j]);
         }
         for r in 1..=degree {
-            let parameter = if r - 1 < degree - k { t.lo } else { t.hi };
+            let parameter = endpoints[usize::from(r - 1 >= degree - k)];
             for j in (r..=degree).rev() {
                 let i = span - degree + j;
                 let denominator = Interval::point(curve.knots[i + degree - r + 1])
                     .sub(Interval::point(curve.knots[i]))?;
-                let alpha = Interval::point(parameter)
+                let alpha = parameter
                     .sub(Interval::point(curve.knots[i]))?
                     .div(denominator)?
                     .intersect(0., 1.)?;
@@ -104,9 +117,7 @@ pub(crate) fn restricted_controls_axis(
         min_weight = min_weight.min(w.lo);
         max_weight = max_weight.max(w.hi);
         let x = curve.control_points[i][axis];
-        let p = Interval::point(x)
-            .sub(Interval::point(origin))?
-            .mul(w)?;
+        let p = Interval::point(x).sub(Interval::point(origin))?.mul(w)?;
         d[idx] = [p, w];
     }
     let count = if t.lo == t.hi { 1 } else { degree + 1 };
@@ -265,7 +276,11 @@ impl Search for CurveSearch<'_> {
     fn upper(&self) -> Option<f64> {
         self.best.as_ref().map(|w| w.upper)
     }
-    fn early_stop_bound(&self, _queue_empty: bool, lower: f64) -> Option<crate::DistanceStopReason> {
+    fn early_stop_bound(
+        &self,
+        _queue_empty: bool,
+        lower: f64,
+    ) -> Option<crate::DistanceStopReason> {
         (self.stop_at_separation && lower > 0.).then_some(crate::DistanceStopReason::Separated)
     }
     fn split(&mut self, cell: Cell) -> Result<Split<Cell>> {
@@ -280,12 +295,9 @@ impl Search for CurveSearch<'_> {
         let selected = if split_a { &cell.a } else { &cell.b };
         let middle = if split_a { ma } else { mb };
         let mut children = [None, None];
-        for (i, domain) in [
-            [selected.domain[0], middle],
-            [middle, selected.domain[1]],
-        ]
-        .into_iter()
-        .enumerate()
+        for (i, domain) in [[selected.domain[0], middle], [middle, selected.domain[1]]]
+            .into_iter()
+            .enumerate()
         {
             let (pa, pb) = if split_a {
                 (Part::new(self.a, cell.a.span, domain)?, cell.b.clone())

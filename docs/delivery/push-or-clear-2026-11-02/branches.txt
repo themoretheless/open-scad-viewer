@@ -1,0 +1,82 @@
++ codex/ci-artifact-candidates-20261102                            409ecefeb (/Users/themoretheless/.codex/worktrees/ci-artifact-candidates/open-scad-viewer) [origin/codex/ci-artifact-candidates-20261102] fix(ci): install and use pinned browser qualification workspace
+  codex/closed-profile-g2                                          a62b7a613 [origin/codex/closed-profile-g2] test(cad): qualify 16 quintic STEP round trips through packaged Rust WASM
+* codex/hardware-offloading-and-wip-2026-10-08                     e018f2360 [origin/codex/hardware-offloading-and-wip-2026-10-08] feat(ui,cad): integrate Forma UI studio regions and curved atlas/sweep improvements
++ codex/integrate-available-20261013                               7fb7db944 (/Users/themoretheless/.codex/tmp/osv-integrate-available-20261013) [origin/codex/integrate-available-20261013] Record successful checked CAD integration push
+  codex/integrate-fillet-20261024                                  c120b631e [origin/codex/integrate-fillet-20261024] Merge branch 'codex/preserve-fillet-push-20261021' into codex/integrate-fillet-20261024
+  codex/laser-cam-foundation                                       f24327170 [origin/main: behind 56] fix: reconcile compile errors after PR #57/#58 merges
+  codex/laser-cam-p1                                               f24327170 [origin/main: behind 56] fix: reconcile compile errors after PR #57/#58 merges
++ codex/nurbs-native-1000-next-20261101                            3fb34b84a (/Users/themoretheless/.codex/worktrees/nurbs-native-1000-next/open-scad-viewer) [origin/codex/nurbs-native-1000-next-20261101] feat(nurbs): assemble bounded compatible curve chains atomically
++ codex/nurbs-plan-completion-20261028                             7b1cac076 (/private/tmp/osv-nurbs-plan-20261028) feat(brep): dispatch source-owned SS bridge groups across actual operands
++ codex/nurbs-plan-recovery-20261028                               997f4bcb0 (/Users/themoretheless/.codex/worktrees/nurbs-plan-recovery/open-scad-viewer) [origin/codex/nurbs-plan-recovery-20261028: ahead 3] test(wasm): retain independent native229 host candidate evidence
+  codex/pr38-memory-diagnostics                                    082304cd1 [origin/codex/pr38-memory-diagnostics] ci: provide exact recorded WASM49 payloads to diagnostic probes
+  codex/profile-frame-premises                                     f824aa31f [origin/codex/profile-frame-premises] Account for measured ownRust48 CI asset size
+  codex/profile-solid-qualification                                70e2e78a5 [origin/codex/profile-solid-qualification] Expect the earlier exact-boundary refusal in the stale-proof regression
+  codex/push-integration-2026-10-04                                f24327170 [origin/main: behind 56] fix: reconcile compile errors after PR #57/#58 merges
++ codex/push-integration-2026-10-07                                12bda09ec (/Users/themoretheless/.codex/tmp/osv-push-integration-20261007) [origin/codex/push-integration-2026-10-07] Bind rebuilt boundary-certificate WASM and fresh qualification inputs
+  codex/push-integration-20261020                                  f24327170 [origin/main: behind 56] fix: reconcile compile errors after PR #57/#58 merges
++ codex/source-body-seam-collection-20261028                       c8a286864 (/Users/themoretheless/.codex/tmp/osv-source-body-seams-20261028) [origin/codex/source-body-seam-collection-20261028: ahead 108] Merge commit 'f046834ca' into codex/source-body-seam-collection-20261028
++ codex/source-projective-image-20261102-fba57ef                   3c87f8eb4 (/Users/themoretheless/.codex/tmp/osv-source-projective-image-20261102) Qualify rational nonplanar cap correction through original and actual filled Solids
+  codex/spatial-bishop-phase                                       64e01a204 [origin/codex/spatial-bishop-phase] ci: release disposable worker allocator pages and retain x86 measurements
+  codex/sweep-global-guarantees                                    2b06383ac [origin/codex/sweep-global-guarantees] Publish the recorded own-Rust v45 geometry kernel
+  codex/sweep-structure                                            83a4b40bc [origin/codex/sweep-structure] Merge main domain routers while retaining native sweep dispatch
+  main                                                             67d8cbab4 [origin/main: behind 1] fix(build): pin v7 delivery budgets and close source audits
+  remotes/origin/HEAD                                              -> origin/main
+  remotes/origin/claude/bold-goodall-0gbkct                        0d574fb09 Merge remote-tracking branch 'origin/main' into claude/bold-goodall-0gbkct
+  remotes/origin/claude/cross-platform-ci                          d888ceb5e Fix the Windows node-check failures
+  remotes/origin/claude/extrude-preview-flicker                    b6a384e91 Build rust job test binaries without debug info
+  remotes/origin/claude/grid-issue-6753f2                          5668ad4ed Add Zed tasks that open the browser with the dev server
+  remotes/origin/claude/keen-noether-89kkfz                        db1e0b1cc test: re-freeze qualification fingerprints (G0 v28 / G1 v45), evidence v20
+  remotes/origin/claude/restore-redesign                           b43ca4530 Unify Mesh and Solid: shared header, selection action bar, collapsible create strips
+  remotes/origin/claude/sweet-babbage-vmihfg                       6ef5305ee Merge main into redesign restore; raise DirectModeler budget to measured size
+  remotes/origin/claude/ux-ui-redesign-248b82                      a1e5ad14c Exact involute gears, tolerant SSI fallback and .mg ModelGraph documents
+  remotes/origin/claude/wonderful-gauss-h1vn6j                     c406d1908 Merge pull request #56 from themoretheless/claude/wonderful-gauss-h1vn6j
+  remotes/origin/codex/bezier-certificates-20261015                40ed68b30 feat(cad): certify rational Bezier profiles and preserve cusp meshes
+  remotes/origin/codex/cad-concurrent-resume-2026-10-01            8cc18bc13 feat(cad): qualify whole-wall coverage in redesigned workspace
+  remotes/origin/codex/cad-local-evidence-2026-09-30               2e0eb3066 feat: publish verified CAD commands, diagnostics and rational surfaces
+  remotes/origin/codex/ci-artifact-candidates-20261102             409ecefeb fix(ci): install and use pinned browser qualification workspace
+  remotes/origin/codex/closed-profile-g2                           a62b7a613 test(cad): qualify 16 quintic STEP round trips through packaged Rust WASM
+  remotes/origin/codex/frame-cap-certificate                       1447375db Freeze rebuilt merged frame-cap kernel and complete native qualification evidence
+  remotes/origin/codex/frame-cap-certificate-base                  e8859f09c Freeze observed Windows rollout and verify strengthened native proof contracts
+  remotes/origin/codex/g1-v100-source-20261014                     6dff3e94a Reconcile six native Linux golden payloads and freeze unchanged WASM for fresh G1v100
+  remotes/origin/codex/general-certificate-main-integration        1447375db Freeze rebuilt merged frame-cap kernel and complete native qualification evidence
+  remotes/origin/codex/golden-numeric-audit-20261014               16bf446c9 Observe exact Windows hosted rollout images without qualification work
+  remotes/origin/codex/hardware-offloading-and-wip-2026-10-08      e018f2360 feat(ui,cad): integrate Forma UI studio regions and curved atlas/sweep improvements
+  remotes/origin/codex/ideal-body-global-g2                        56aff865d Record native source-atlas qualification and remaining full-goal scope
+  remotes/origin/codex/integrate-available-20261013                7fb7db944 Record successful checked CAD integration push
+  remotes/origin/codex/integrate-fillet-20261024                   c120b631e Merge branch 'codex/preserve-fillet-push-20261021' into codex/integrate-fillet-20261024
+  remotes/origin/codex/laser-cam-foundation                        4f6d37ddb feat: add laser CAM GRBL workflow
+  remotes/origin/codex/loft-generalization                         9fcf12f5d Apply CI Vitest worker limit to inherited projects
+  remotes/origin/codex/loft-library                                7b1d55eac fix(ci): bound optional native cache saves outside test results
+  remotes/origin/codex/nurbs-native-1000-next-20261101             3fb34b84a feat(nurbs): assemble bounded compatible curve chains atomically
+  remotes/origin/codex/nurbs-plan-recovery-20261028                b041eb1ad feat(nurbs): expand native catalogue to 226 and qualify local runtime v10
+  remotes/origin/codex/pr38-memory-diagnostics                     082304cd1 ci: provide exact recorded WASM49 payloads to diagnostic probes
+  remotes/origin/codex/preserve-main-work-2026-10-04               123895b23 wip: preserve local CAD source and qualification evidence before integration
+  remotes/origin/codex/profile-frame-premises                      f824aa31f Account for measured ownRust48 CI asset size
+  remotes/origin/codex/profile-solid-qualification                 70e2e78a5 Expect the earlier exact-boundary refusal in the stale-proof regression
+  remotes/origin/codex/push-integration-2026-10-04                 a2c92f98b feat(cad): qualify source contact pcurves and patch trim boundaries
+  remotes/origin/codex/push-integration-2026-10-07                 12bda09ec Bind rebuilt boundary-certificate WASM and fresh qualification inputs
+  remotes/origin/codex/source-body-seam-collection-20261028        ab5a62279 Record exact pole-plane native qualification without claiming quotient regularity or G2
+  remotes/origin/codex/source-fibered-caps                         0ebe4373a Split PR58 archive identities and freeze final source bindings under existing limits
+  remotes/origin/codex/spatial-bishop-phase                        64e01a204 ci: release disposable worker allocator pages and retain x86 measurements
+  remotes/origin/codex/sweep-global-guarantees                     2b06383ac Publish the recorded own-Rust v45 geometry kernel
+  remotes/origin/codex/sweep-miter-native-qualification            4ad0b3ce8 Record observed Linux sweep WASM and preserve historical drift expectations
+  remotes/origin/codex/sweep-structure                             83a4b40bc Merge main domain routers while retaining native sweep dispatch
+  remotes/origin/codex/webgpu-variants                             085ee2a31 Add WebGPU variants and streaming WASM budgets
+  remotes/origin/cursor/lattice-strength-analysis-274c             7b3afccf3 Fix overhang risk to use current channel axis
+  remotes/origin/cursor/skeletal-strength-lattices-274c            872f5e1d0 Cover isogrid/octet/BCC lattices with tests and docs
+  remotes/origin/gcode-core-fdm                                    a96efc179 Turn gcode-core into a production FDM encode/parse library.
+  remotes/origin/main                                              b041eb1ad feat(nurbs): expand native catalogue to 226 and qualify local runtime v10
+  remotes/origin/qualify/g1-v34                                    240129b14 Qualify freeform tessellation/mass finite cells and ship G8 matrix v19.
+  remotes/origin/themoretheless-cuda-gpu-math-library              1546d8cf8 cuda: normalize generated PTX endings
+  remotes/origin/themoretheless-dead-module-cleanup                3659d8b39 Remove confirmed dead TypeScript modules
+  remotes/origin/themoretheless-fix-build-crash                    91ef719b7 Fix verify-dist.mjs path handling on Windows
+  remotes/origin/themoretheless-fix-ci-rust-toolchain-action       c6e2e750a brep-core: scale roundoff tolerance in same_curve by curve extent
+  remotes/origin/themoretheless-gcode-dialect-support              4e794bb14 Support multiple G-code dialects: firmware flavors and tolerant foreign parser
+  remotes/origin/themoretheless-gpu-cuda-acceleration              3f89800f6 Add CUDA placement for heavy native kernels alongside wgpu GPU path
+  remotes/origin/themoretheless-gpu-metal-cuda-workgroup-tuning    271774cce gpu-compute: per-backend workgroup tuning (Metal vs CUDA/Vulkan-class)
+  remotes/origin/themoretheless-gpu-scan-optimization              3fb9dd778 photogrammetry: batched GPU sweep with in-shader selection, accurate preset
+  remotes/origin/themoretheless-import-export-convert-formats      2756ca54a Split mesh format registry, document import/convert, move dist budget
+  remotes/origin/themoretheless-inline-unsafe-hotpath-optimisation f129ab8c7 Inline and unsafe hotpath optimisation across sdf-core, polygon-core, geometry-bridge
+  remotes/origin/themoretheless-optimize-viewer-performance        74b166b4e Deduplicate Rust qualification in CI
+  remotes/origin/themoretheless-performance-optimization           9a3625f3b Address benchmark review feedback
+  remotes/origin/themoretheless-sculpt-test-coverage               01821605d Restructure sculpt engine around SculptTarget and per-kind passes

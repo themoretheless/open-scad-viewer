@@ -65,6 +65,8 @@ fn check_agreement(
 mod authored;
 pub use authored::partition;
 pub(crate) use authored::partition_with_position;
+mod vertex_proposal;
+pub use vertex_proposal::partition_to_vertex;
 
 // Prefer a low-complexity binary fraction inside the certified band. This
 // only selects a representative; original-domain, root-position and face-lift
@@ -280,7 +282,71 @@ fn partition_at_proved_root(
         .get(edge_id)
         .ok_or_else(|| invalid("Edge index is out of range"))?;
     let parameter = root_representative(root_parameter, edge.curve.domain());
-    let point = edge.curve.evaluate(parameter)?.point;
+    let incident_uses = source
+        .loops
+        .iter()
+        .flat_map(|w| &w.coedges)
+        .filter(|c| c.edge == edge_id)
+        .count();
+    let mut result = if incident_uses == 2 {
+        use crate::feature_ops::edge_partition as shared;
+        let split = shared::split(
+            source,
+            edge_id,
+            &[parameter],
+            "root-bound-single",
+            shared::Limits {
+                max_cells: (max_cells - root_cells).min(100000),
+                ..Default::default()
+            },
+        )?;
+        if split.edges().len() != 2 || split.vertices().len() != 1 {
+            return Err(unresolved(
+                "Single shared root lost its topology-owned partition",
+            ));
+        }
+        let children = [split.edges()[0], split.edges()[1]];
+        Partition {
+            source_edge: edge_id,
+            source_identity: source.1.edges[edge_id],
+            child_identities: children.map(|e| split.model().1.edges[e]),
+            child_edges: children,
+            vertex: split.vertices()[0],
+            source_parameter: parameter,
+            cells: split.evidence().cells,
+            model: split.model().clone(),
+        }
+    } else {
+        // Preserve the separate one-sided open-sheet operation. A failed
+        // shared-edge proof never falls back to this path.
+        let [a, b] = edge.curve.domain();
+        let fraction = (parameter - a) / (b - a);
+        let cuts: Vec<_> = source
+            .loops
+            .iter()
+            .enumerate()
+            .flat_map(|(wire, l)| {
+                l.coedges
+                    .iter()
+                    .enumerate()
+                    .filter(move |(_, c)| c.edge == edge_id)
+                    .map(move |(coedge, c)| {
+                        let [p0, p1] = c.pcurve.domain();
+                        let t = if c.reversed { 1. - fraction } else { fraction };
+                        PcurveCut {
+                            wire,
+                            coedge,
+                            parameter: p0 + (p1 - p0) * t,
+                        }
+                    })
+            })
+            .collect();
+        partition(source, edge_id, parameter, &cuts, max_cells - root_cells)?
+    };
+    result.cells += root_cells;
+    // Certify the saved common vertex, which knot insertion may round
+    // differently from an independent evaluation of the same rational point.
+    let point = result.model.vertices[result.vertex].point;
     let mut squared = I::point(0.);
     for k in 0..3 {
         let delta =
@@ -288,35 +354,18 @@ fn partition_at_proved_root(
         squared = squared.add(delta.mul(delta)?)?;
     }
     let error_upper = squared.hi.max(0.).sqrt().next_up();
-    if !error_upper.is_finite() || error_upper > source.tolerance_mm {
+    let tolerance = source
+        .1
+        .local_tolerances_mm
+        .get(&source.1.edges[edge_id])
+        .copied()
+        .unwrap_or(source.tolerance_mm)
+        .min(source.tolerance_mm);
+    if !error_upper.is_finite() || error_upper > tolerance {
         return Err(unresolved(
-            "Authored shared vertex is not proved within the certified root-position box tolerance",
+            "Saved shared root vertex is not bounded at the original local spatial tolerance",
         ));
     }
-    let [a, b] = edge.curve.domain();
-    let fraction = (parameter - a) / (b - a);
-    let cuts: Vec<_> = source
-        .loops
-        .iter()
-        .enumerate()
-        .flat_map(|(wire, l)| {
-            l.coedges
-                .iter()
-                .enumerate()
-                .filter(move |(_, c)| c.edge == edge_id)
-                .map(move |(coedge, c)| {
-                    let [p0, p1] = c.pcurve.domain();
-                    let t = if c.reversed { 1. - fraction } else { fraction };
-                    PcurveCut {
-                        wire,
-                        coedge,
-                        parameter: p0 + (p1 - p0) * t,
-                    }
-                })
-        })
-        .collect();
-    let mut result = partition(source, edge_id, parameter, &cuts, max_cells - root_cells)?;
-    result.cells += root_cells;
     Ok(RootPartition {
         partition: result,
         root_parameter: root_parameter,
@@ -354,17 +403,91 @@ pub fn partition_all_at_face(
     tolerance_uv: f64,
     max_cells: usize,
 ) -> Result<FacePartitions> {
-    let coverage = crate::face_crossings::inspect(
-        source, edge_id, support, face_id, tolerance_uv, max_cells,
-    )?;
+    let coverage =
+        crate::face_crossings::inspect(source, edge_id, support, face_id, tolerance_uv, max_cells)?;
     if !coverage.complete {
-        return Err(unresolved("All trimmed-face root memberships must be resolved"));
+        return Err(unresolved(
+            "All trimmed-face root memberships must be resolved",
+        ));
     }
     for pair in coverage.eligible.windows(2) {
         if coverage.roots[pair[0]].root.parameter_box[0][1]
-            >= coverage.roots[pair[1]].root.parameter_box[0][0] {
-            return Err(unresolved("Retained root intervals must be strictly separated"));
+            >= coverage.roots[pair[1]].root.parameter_box[0][0]
+        {
+            return Err(unresolved(
+                "Retained root intervals must be strictly separated",
+            ));
         }
+    }
+    // Closed/shared edges use one immutable-original partition for every root.
+    // This preserves authored pcurve trim relations instead of recomputing
+    // fractions on successively rounded child curves.
+    let incident_uses = source
+        .loops
+        .iter()
+        .flat_map(|w| &w.coedges)
+        .filter(|c| c.edge == edge_id)
+        .count();
+    if incident_uses == 2 && !coverage.eligible.is_empty() {
+        use crate::feature_ops::edge_partition as shared;
+        if coverage.cells >= max_cells {
+            return Err(unresolved("No shared work remains after root isolation"));
+        }
+        let original = &source.edges[edge_id];
+        let domain = original.curve.domain();
+        let parameters: Vec<_> = coverage
+            .eligible
+            .iter()
+            .map(|&i| root_representative(coverage.roots[i].root.parameter_box[0], domain))
+            .collect();
+        let tolerance = source
+            .1
+            .local_tolerances_mm
+            .get(&source.1.edges[edge_id])
+            .copied()
+            .unwrap_or(source.tolerance_mm)
+            .min(source.tolerance_mm);
+        let limits = shared::Limits {
+            max_cells: (max_cells - coverage.cells).min(100000),
+            ..Default::default()
+        };
+        let split = shared::split_with_uv_tolerance(
+            source,
+            edge_id,
+            &parameters,
+            "trimmed-face-root-batch",
+            tolerance_uv,
+            limits,
+        )?;
+        if split.vertices().len() != coverage.eligible.len() {
+            return Err(unresolved("Shared root partition lost endpoint ownership"));
+        }
+        for (k, &root_index) in coverage.eligible.iter().enumerate() {
+            use nurbs_core::interval_eval::Interval as I;
+            let saved = split.model().vertices[split.vertices()[k]].point;
+            let root = &coverage.roots[root_index].root;
+            let mut squared = I::point(0.);
+            for axis in 0..3 {
+                let delta = I::point(saved[axis]).sub(I::new(
+                    root.position_bounds[axis][0],
+                    root.position_bounds[axis][1],
+                )?)?;
+                squared = squared.add(delta.mul(delta)?)?;
+            }
+            let error = squared.hi.max(0.).sqrt().next_up();
+            if !error.is_finite() || error > tolerance {
+                return Err(unresolved(
+                    "Actual saved endpoint is not bounded to its original retained root",
+                ));
+            }
+        }
+        return Ok(FacePartitions {
+            model: split.model().clone(),
+            cells: coverage.cells + split.evidence().cells,
+            coverage,
+            edges: split.edges().to_vec(),
+            vertices: split.vertices().to_vec(),
+        });
     }
     let mut model = source.clone();
     let mut edges = Vec::with_capacity(coverage.eligible.len() + 1);
@@ -376,9 +499,14 @@ pub fn partition_all_at_face(
         }
         let root = &coverage.roots[index];
         let split = partition_at_proved_root(
-            &model, edge_id, root.root.parameter_box[0], root.root.position_bounds,
+            &model,
+            edge_id,
+            root.root.parameter_box[0],
+            root.root.position_bounds,
             [root.root.parameter_box[1], root.root.parameter_box[2]],
-            Some(root.face_crossing_sign), 0, max_cells - cells,
+            Some(root.face_crossing_sign),
+            0,
+            max_cells - cells,
         )?;
         cells += split.partition.cells;
         edges.push(split.partition.child_edges[1]);
@@ -391,18 +519,43 @@ pub fn partition_all_at_face(
     if !vertices.is_empty() {
         let original = &source.edges[edge_id].curve;
         let carrier = Surface {
-            degree_u: original.degree, degree_v: 1,
-            knots_u: original.knots.clone(), knots_v: vec![0., 0., 1., 1.],
-            control_points: original.control_points.iter().map(|p| vec![p.clone(), p.clone()]).collect(),
+            degree_u: original.degree,
+            degree_v: 1,
+            knots_u: original.knots.clone(),
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: original
+                .control_points
+                .iter()
+                .map(|p| vec![p.clone(), p.clone()])
+                .collect(),
             weights: original.weights.iter().map(|&w| vec![w, w]).collect(),
-            periodic_u: false, periodic_v: false,
+            periodic_u: false,
+            periodic_v: false,
         };
         for &edge in &edges {
             let child = &model.edges[edge].curve;
             let [a, b] = child.domain();
             let pc = crate::line(vec![a, 0.], vec![b, 0.]);
-            check_agreement(child, &pc, &carrier, false, source.tolerance_mm, &mut cells, max_cells)?;
+            check_agreement(
+                child,
+                &pc,
+                &carrier,
+                false,
+                source.tolerance_mm,
+                &mut cells,
+                max_cells,
+            )?;
         }
     }
-    Ok(FacePartitions { model, coverage, edges, vertices, cells })
+    Ok(FacePartitions {
+        model,
+        coverage,
+        edges,
+        vertices,
+        cells,
+    })
 }
+
+pub mod root_interval;
+
+pub mod contact_interval;

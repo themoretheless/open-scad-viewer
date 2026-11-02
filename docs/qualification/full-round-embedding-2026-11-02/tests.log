@@ -1,0 +1,741 @@
+   Compiling brep-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core)
+warning: unused import: `nurbs_core::numerics::error_upper as error_bound`
+ --> brep-core/src/analytic/rational_loft.rs:4:5
+  |
+4 | use nurbs_core::numerics::error_upper as error_bound;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `super::*`
+ --> brep-core/src/face_contacts/frozen_contacts.rs:2:5
+  |
+2 | use super::*;
+  |     ^^^^^^^^
+
+warning: unused import: `shore_derivation::order`
+   --> brep-core/src/profile_certificate/span_intersections/translated/periodic_chart_shores.rs:446:5
+    |
+446 | use shore_derivation::order;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `support_plan::world_curve`
+   --> brep-core/src/profile_certificate/span_intersections/translated/periodic_support_boundaries.rs:312:5
+    |
+312 | use support_plan::world_curve;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::TopologyIds`
+ --> brep-core/src/minkowski3d/curved/atlas/region_brep/model_pocket/ordinary/build.rs:2:5
+  |
+2 | use crate::TopologyIds;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `poly::Poly`
+ --> brep-core/src/minkowski3d/curved/atlas/region_brep/model_pocket/ordinary/build.rs:4:5
+  |
+4 | use poly::Poly;
+  |     ^^^^^^^^^^
+
+warning: unused import: `curve_points`
+   --> brep-core/src/minkowski3d/curved/atlas.rs:858:24
+    |
+858 | use curve_projection::{curve_points, monotone, monotone_parameter, curve_pair, segment_seam};
+    |                        ^^^^^^^^^^^^
+
+warning: unused import: `refs`
+  --> brep-core/src/step_interchange_v3.rs:10:40
+   |
+10 |     number, one_ref, parse, reachable, refs, string_value, usize_value, values,
+   |                                        ^^^^
+
+warning: unused import: `canonical_face_senses`
+  --> brep-core/src/step_interchange_v3.rs:13:13
+   |
+13 |     Writer, canonical_face_senses, certify_periodic_surface, certify_step_v8_topology,
+   |             ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `replay::*`
+   --> brep-core/src/source_inverse_shear.rs:272:9
+    |
+272 | pub use replay::*;
+    |         ^^^^^^^^^
+
+warning: unused imports: `ExpressionEndpointNormalReport`, `ExpressionLineReport`, `ExpressionMaterialInterval`, `ExpressionMaterialLineQualification`, `ExpressionMaterialLineReport`, `ExpressionMaterialLine`, and `ExpressionTrimmedLineReport`
+  --> brep-core/src/source_profile_shell.rs:18:5
+   |
+18 |     ExpressionEndpointNormalReport, ExpressionLineReport, ExpressionMaterialInterval,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 |     ExpressionMaterialLine, ExpressionMaterialLineQualification, ExpressionMaterialLineReport,
+   |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+20 |     ExpressionSegmentCandidate, ExpressionSegmentReport, ExpressionTrimmedLineReport,
+   |                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ProfileRuledContactReport`, `ProfileRuledImageReport`, and `ProfileRuledImage`
+   --> brep-core/src/source_profile_shell.rs:934:26
+    |
+934 |     ProfileRuledContact, ProfileRuledContactReport, ProfileRuledImage, ProfileRuledImageReport,
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ProfileBoundaryReport`
+   --> brep-core/src/source_profile_shell.rs:964:60
+    |
+964 | pub use profile_boundary_contact::{ProfileBoundaryContact, ProfileBoundaryReport};
+    |                                                            ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ProfilePairedReport`
+   --> brep-core/src/source_profile_shell.rs:968:56
+    |
+968 | pub use profile_paired_contact::{ProfilePairedContact, ProfilePairedReport};
+    |                                                        ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `TransitionXyPlaneReport`
+   --> brep-core/src/source_profile_shell.rs:972:54
+    |
+972 | pub use xy_plane_contact::{TransitionXyPlaneContact, TransitionXyPlaneReport};
+    |                                                      ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> brep-core/src/direct_edit/replace.rs:378:9
+    |
+378 |     let mut plane_of = |m: &Model, f: usize, planes: &mut BTreeMap<usize, PlaneEq>| -> Result<PlaneEq> {
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `previous`
+   --> brep-core/src/feature_graph.rs:475:23
+    |
+475 |         let (reduced, previous) = self.reduced_order(feature)?;
+    |                       ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_previous`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `CanonicalPolygon` is more private than the item `canonical_polygons`
+   --> brep-core/src/direct_edit/movement.rs:341:1
+    |
+341 | / pub(super) fn canonical_polygons(
+342 | |     model: &Model,
+343 | |     substitute: &BTreeMap<usize, [f64; 3]>,
+344 | |     guard: &mut BudgetGuard,
+345 | | ) -> Result<Vec<CanonicalPolygon>> {
+    | |__________________________________^ function `canonical_polygons` is reachable at visibility `pub(in crate::direct_edit)`
+    |
+note: but type `CanonicalPolygon` is only usable at visibility `pub(self)`
+   --> brep-core/src/direct_edit/movement.rs:322:1
+    |
+322 | struct CanonicalPolygon {
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: field `shell` is never read
+ --> brep-core/src/direct_edit/audit.rs:9:9
+  |
+8 | pub struct ShellEulerCheck {
+  |            --------------- field in this struct
+9 |     pub shell: usize,
+  |         ^^^^^
+  |
+  = note: `ShellEulerCheck` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `dirty`, `seam_faces`, and `checked_face_pairs` are never read
+  --> brep-core/src/direct_edit/audit.rs:24:9
+   |
+23 | pub struct DirectEditValidationReport {
+   |            -------------------------- fields in this struct
+24 |     pub dirty: DirtyRegion,
+   |         ^^^^^
+25 |     pub seam_faces: BTreeSet<usize>,
+   |         ^^^^^^^^^^
+...
+36 |     pub checked_face_pairs: usize,
+   |         ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `DirectEditValidationReport` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `ok` is never used
+  --> brep-core/src/direct_edit/audit.rs:70:12
+   |
+39 | impl DirectEditValidationReport {
+   | ------------------------------- method in this implementation
+...
+70 |     pub fn ok(&self) -> bool {
+   |            ^^
+
+warning: struct `DirectEditUndoRecord` is never constructed
+   --> brep-core/src/direct_edit/audit.rs:384:12
+    |
+384 | pub struct DirectEditUndoRecord {
+    |            ^^^^^^^^^^^^^^^^^^^^
+
+warning: methods `checkpoint_hash` and `rollback` are never used
+   --> brep-core/src/direct_edit/audit.rs:391:12
+    |
+390 | impl DirectEditUndoRecord {
+    | ------------------------- methods in this implementation
+391 |     pub fn checkpoint_hash(&self) -> [u8; 32] {
+    |            ^^^^^^^^^^^^^^^
+...
+395 |     pub fn rollback(&self) -> Result<Model> {
+    |            ^^^^^^^^
+
+warning: struct `DirectEditCommit` is never constructed
+   --> brep-core/src/direct_edit/audit.rs:407:12
+    |
+407 | pub struct DirectEditCommit {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `DirectEditTransaction` is never constructed
+   --> brep-core/src/direct_edit/audit.rs:415:12
+    |
+415 | pub struct DirectEditTransaction {
+    |            ^^^^^^^^^^^^^^^^^^^^^
+
+warning: associated items `stage`, `validate`, `rollback`, and `commit` are never used
+   --> brep-core/src/direct_edit/audit.rs:423:12
+    |
+422 | impl DirectEditTransaction {
+    | -------------------------- associated items in this implementation
+423 |     pub fn stage(checkpoint: &Model, staged: Model) -> Self {
+    |            ^^^^^
+...
+432 |     pub fn validate(
+    |            ^^^^^^^^
+...
+455 |     pub fn rollback(&self) -> Result<Model> {
+    |            ^^^^^^^^
+...
+465 |     pub fn commit(self) -> Result<DirectEditCommit> {
+    |            ^^^^^^
+
+warning: variant `Cylinder` is never constructed
+   --> brep-core/src/direct_edit/replace.rs:242:5
+    |
+240 | enum TargetGeom {
+    |      ---------- variant in this enum
+241 |     Plane(PlaneFrame),
+242 |     Cylinder(CylinderTarget),
+    |     ^^^^^^^^
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:174:8
+    |
+174 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:180:8
+    |
+180 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:191:8
+    |
+191 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:230:8
+    |
+230 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `outline` is never used
+   --> brep-core/src/gear/gear_spec.rs:619:15
+    |
+619 | pub(super) fn outline(spec:&GearSpec)->Result<(Vec<Vec<Curve>>,GearGeometry)> { profile_with_report(spec) }
+    |               ^^^^^^^
+
+warning: struct `Report` is never constructed
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:11:12
+   |
+11 | pub struct Report {
+   |            ^^^^^^
+
+warning: struct `Certificate` is never constructed
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:18:12
+   |
+18 | pub struct Certificate {
+   |            ^^^^^^^^^^^
+
+warning: struct `Patch` is never constructed
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:26:8
+   |
+26 | struct Patch {
+   |        ^^^^^
+
+warning: function `points` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:32:4
+   |
+32 | fn points(h: &Net) -> Vec<P> {
+   |    ^^^^^^
+
+warning: function `bounds` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:42:4
+   |
+42 | fn bounds(p: &[P], n: &P) -> (Q, Q) {
+   |    ^^^^^^
+
+warning: function `separates` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:49:4
+   |
+49 | fn separates(a: &[P], b: &[P], n: &P) -> bool {
+   |    ^^^^^^^^^
+
+warning: function `separated` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:59:4
+   |
+59 | fn separated(a: &[P], b: &[P], work: &mut Work) -> Result<bool> {
+   |    ^^^^^^^^^
+
+warning: function `disjoint` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:118:4
+    |
+118 | fn disjoint(a: &[Net; 2], b: &[Net; 2], depth: u8, work: &mut Work) -> Result<bool> {
+    |    ^^^^^^^^
+
+warning: function `scalar_dot` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:157:4
+    |
+157 | fn scalar_dot(p: &[Scalar], n: &P) -> Scalar {
+    |    ^^^^^^^^^^
+
+warning: function `positive_sum` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:168:4
+    |
+168 | fn positive_sum(a: &Scalar, b: &Scalar, sign: i64) -> bool {
+    |    ^^^^^^^^^^^^
+
+warning: function `regular` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:175:4
+    |
+175 | fn regular(p: &Patch, n: &P, work: &mut Work) -> Result<bool> {
+    |    ^^^^^^^
+
+warning: type alias `Curve` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:228:6
+    |
+228 | type Curve = [Vec<sb::H>; 2];
+    |      ^^^^^
+
+warning: function `projected` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:229:4
+    |
+229 | fn projected(p: &P, n: &P) -> P {
+    |    ^^^^^^^^^
+
+warning: function `curve_points` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:233:4
+    |
+233 | fn curve_points(c: &Curve, n: &P) -> Vec<P> {
+    |    ^^^^^^^^^^^^
+
+warning: function `plane_separated` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:239:4
+    |
+239 | fn plane_separated(a: &[P], b: &[P], n: &P, work: &mut Work) -> Result<bool> {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `monotone` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:252:4
+    |
+252 | fn monotone(c: &Curve, n: &P, work: &mut Work) -> Result<bool> {
+    |    ^^^^^^^^
+
+warning: function `curve_pair` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:292:4
+    |
+292 | fn curve_pair(a: &Curve, b: &Curve, shared: Option<&P>, n: &P, work: &mut Work) -> Result<bool> {
+    |    ^^^^^^^^^^
+
+warning: function `star` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:308:4
+    |
+308 | fn star(
+    |    ^^^^
+
+warning: function `append_patch` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:389:4
+    |
+389 | fn append_patch(
+    |    ^^^^^^^^^^^^
+
+warning: function `build` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:422:4
+    |
+422 | fn build(m: &Model, depth: u8, work: &mut Work) -> Result<(Vec<P>, Vec<Patch>)> {
+    |    ^^^^^
+
+warning: function `derive` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:549:15
+    |
+549 | pub(super) fn derive(m: &Model, depth: u8) -> Result<Certificate> {
+    |               ^^^^^^
+
+warning: function `nominal_report` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy.rs:638:15
+    |
+638 | pub(super) fn nominal_report(m: &Model, depth: u8, input: &Input) -> Result<Report> {
+    |               ^^^^^^^^^^^^^^
+
+warning: type alias `Scalar` is never used
+ --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:4:17
+  |
+4 | pub(super) type Scalar = Vec<Vec<Q>>;
+  |                 ^^^^^^
+
+warning: type alias `Net` is never used
+ --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:5:17
+  |
+5 | pub(super) type Net = Vec<Vec<sb::H>>;
+  |                 ^^^
+
+warning: function `choose` is never used
+ --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:6:4
+  |
+6 | fn choose(n: usize, k: usize) -> Q {
+  |    ^^^^^^
+
+warning: function `multi` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:11:4
+   |
+11 | fn multi(n: usize, i: usize, j: usize) -> u64 {
+   |    ^^^^^
+
+warning: function `blank` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:16:4
+   |
+16 | fn blank(n: usize) -> Scalar {
+   |    ^^^^^
+
+warning: function `scalar` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:19:15
+   |
+19 | pub(super) fn scalar(h: &Net, k: usize) -> Scalar {
+   |               ^^^^^^
+
+warning: function `product` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:24:15
+   |
+24 | pub(super) fn product(a: &Scalar, b: &Scalar, work: &mut Work) -> Result<Scalar> {
+   |               ^^^^^^^
+
+warning: function `derivative` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:57:15
+   |
+57 | pub(super) fn derivative(a: &Scalar, axis: usize) -> Scalar {
+   |               ^^^^^^^^^^
+
+warning: function `difference` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:73:15
+   |
+73 | pub(super) fn difference(a: &Scalar, b: &Scalar) -> Scalar {
+   |               ^^^^^^^^^^
+
+warning: function `triangle` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:80:15
+   |
+80 | pub(super) fn triangle(h: &sb::Net, uv: [[i64; 2]; 3], work: &mut Work) -> Result<Net> {
+   |               ^^^^^^^^
+
+warning: function `corners` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:131:15
+    |
+131 | pub(super) fn corners(h: &Net) -> [P; 3] {
+    |               ^^^^^^^
+
+warning: function `homotopy` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:140:15
+    |
+140 | pub(super) fn homotopy(h: &Net, work: &mut Work) -> Result<[Net; 2]> {
+    |               ^^^^^^^^
+
+warning: function `edges` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:184:15
+    |
+184 | pub(super) fn edges(h: &Net) -> [Vec<sb::H>; 3] {
+    |               ^^^^^
+
+warning: function `derivatives` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:193:15
+    |
+193 | pub(super) fn derivatives(h: &Net, work: &mut Work) -> Result<[Vec<Scalar>; 2]> {
+    |               ^^^^^^^^^^^
+
+warning: function `restrict` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:210:15
+    |
+210 | pub(super) fn restrict(h: &Net, vertices: [[Q; 3]; 3], work: &mut Work) -> Result<Net> {
+    |               ^^^^^^^^
+
+warning: function `subdivide` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:242:15
+    |
+242 | pub(super) fn subdivide(h: &Net, work: &mut Work) -> Result<Vec<Net>> {
+    |               ^^^^^^^^^
+
+warning: function `compose` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/bernstein.rs:263:15
+    |
+263 | pub(super) fn compose(h: &sb::Net, uv: &Net, work: &mut Work) -> Result<Net> {
+    |               ^^^^^^^
+
+warning: function `reverse` is never used
+ --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:4:15
+  |
+4 | pub(super) fn reverse(h: &Net) -> Net {
+  |               ^^^^^^^
+
+warning: function `rotate` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:11:15
+   |
+11 | pub(super) fn rotate(h: &sb::Net) -> sb::Net {
+   |               ^^^^^^
+
+warning: function `root` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:17:4
+   |
+17 | fn root(q: &Q, n: usize) -> Option<Q> {
+   |    ^^^^
+
+warning: function `choose` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:25:4
+   |
+25 | fn choose(n: usize, k: usize) -> Q {
+   |    ^^^^^^
+
+warning: function `check` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:30:15
+   |
+30 | pub(super) fn check(h: &Net) -> Result<()> {
+   |               ^^^^^
+
+warning: function `pole` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:46:15
+   |
+46 | pub(super) fn pole(h: &sb::Net, work: &mut Work) -> Result<Option<Net>> {
+   |               ^^^^
+
+warning: function `exponent` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:114:4
+    |
+114 | fn exponent(q: &Q, p: &Q) -> Result<Q> {
+    |    ^^^^^^^^
+
+warning: function `clock` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:133:4
+    |
+133 | fn clock(a: &[sb::H], b: &[sb::H]) -> Result<Q> {
+    |    ^^^^^
+
+warning: function `synchronize` is never used
+   --> brep-core/src/minkowski3d/curved/atlas_legacy/transport.rs:185:15
+    |
+185 | pub(super) fn synchronize(patches: &mut [Patch], work: &mut Work) -> Result<()> {
+    |               ^^^^^^^^^^^
+
+warning: function `choose` is never used
+ --> brep-core/src/minkowski3d/curved/atlas_legacy/trim.rs:3:4
+  |
+3 | fn choose(n: usize, k: usize) -> Q {
+  |    ^^^^^^
+
+warning: function `elevate` is never used
+ --> brep-core/src/minkowski3d/curved/atlas_legacy/trim.rs:8:4
+  |
+8 | fn elevate(c: &[sb::H], d: usize) -> Vec<sb::H> {
+  |    ^^^^^^^
+
+warning: function `chart` is never used
+  --> brep-core/src/minkowski3d/curved/atlas_legacy/trim.rs:21:15
+   |
+21 | pub(super) fn chart(m: &Model, face: usize, work: &mut Work) -> Result<Net> {
+   |               ^^^^^
+
+warning: function `cap_single_exact` is never used
+   --> brep-core/src/thread_internal.rs:455:15
+    |
+455 | pub(super) fn cap_single_exact(source: &Model, z: f64, max_cells: usize) -> Result<(Model, usize)> {
+    |               ^^^^^^^^^^^^^^^^
+
+warning: function `transport_fragment` is never used
+ --> brep-core/src/source_inverse_shear/replay.rs:3:8
+  |
+3 | pub fn transport_fragment(
+  |        ^^^^^^^^^^^^^^^^^^
+
+warning: struct `RegionReport` is never constructed
+  --> brep-core/src/source_inverse_shear/replay.rs:64:12
+   |
+64 | pub struct RegionReport {
+   |            ^^^^^^^^^^^^
+
+warning: function `transport_region` is never used
+  --> brep-core/src/source_inverse_shear/replay.rs:71:8
+   |
+71 | pub fn transport_region(
+   |        ^^^^^^^^^^^^^^^^
+
+warning: function `rewrite_region` is never used
+   --> brep-core/src/source_inverse_shear/replay.rs:108:4
+    |
+108 | fn rewrite_region(
+    |    ^^^^^^^^^^^^^^
+
+warning: struct `ShellReport` is never constructed
+   --> brep-core/src/source_inverse_shear/replay.rs:211:12
+    |
+211 | pub struct ShellReport {
+    |            ^^^^^^^^^^^
+
+warning: function `transport_shell` is never used
+   --> brep-core/src/source_inverse_shear/replay.rs:220:8
+    |
+220 | pub fn transport_shell(
+    |        ^^^^^^^^^^^^^^^
+
+warning: fields `source`, `axes`, and `linear` are never read
+ --> brep-core/src/source_ruled_trace.rs:5:5
+  |
+4 | pub(crate) struct Certificate<'a> {
+  |                   ----------- fields in this struct
+5 |     source: &'a Surface,
+  |     ^^^^^^
+6 |     axes: [usize; 2],
+  |     ^^^^
+7 |     linear: usize,
+  |     ^^^^^^
+
+warning: methods `source`, `axes`, and `linear_axis` are never used
+  --> brep-core/src/source_ruled_trace.rs:11:19
+   |
+10 | impl Certificate<'_> {
+   | -------------------- methods in this implementation
+11 |     pub(crate) fn source(&self) -> &Surface {
+   |                   ^^^^^^
+...
+14 |     pub(crate) fn axes(&self) -> [usize; 2] {
+   |                   ^^^^
+...
+17 |     pub(crate) fn linear_axis(&self) -> usize {
+   |                   ^^^^^^^^^^^
+
+warning: struct `MonotoneCoordinate` is never constructed
+   --> brep-core/src/source_ruled_trace.rs:112:19
+    |
+112 | pub(crate) struct MonotoneCoordinate<'t, 's> {
+    |                   ^^^^^^^^^^^^^^^^^^
+
+warning: methods `trace`, `coordinate`, `increasing`, `coordinate_range`, `parameter_domain`, and `coordinate_enclosure` are never used
+   --> brep-core/src/source_ruled_trace.rs:118:19
+    |
+117 | impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    | --------------------------------------- methods in this implementation
+118 |     pub(crate) fn trace(&self) -> &'t Certificate<'s> {
+    |                   ^^^^^
+...
+121 |     pub(crate) fn coordinate(&self) -> usize {
+    |                   ^^^^^^^^^^
+...
+124 |     pub(crate) fn increasing(&self) -> bool {
+    |                   ^^^^^^^^^^
+...
+129 |     pub(crate) fn coordinate_range(&self) -> [f64; 2] {
+    |                   ^^^^^^^^^^^^^^^^
+...
+135 |     pub(crate) fn parameter_domain(&self) -> [f64; 2] {
+    |                   ^^^^^^^^^^^^^^^^
+...
+140 |     pub(crate) fn coordinate_enclosure(
+    |                   ^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `CoordinatePreimage` is never constructed
+   --> brep-core/src/source_ruled_trace.rs:179:19
+    |
+179 | pub(crate) struct CoordinatePreimage<'p, 't, 's> {
+    |                   ^^^^^^^^^^^^^^^^^^
+
+warning: methods `owner`, `target`, and `exterior_domains` are never used
+   --> brep-core/src/source_ruled_trace.rs:186:19
+    |
+185 | impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
+    | ----------------------------------------------- methods in this implementation
+186 |     pub(crate) fn owner(&self) -> &'p MonotoneCoordinate<'t, 's> {
+    |                   ^^^^^
+...
+189 |     pub(crate) fn target(&self) -> [f64; 2] {
+    |                   ^^^^^^
+...
+194 |     pub(crate) fn exterior_domains(&self, roots: [[f64; 2]; 2]) -> Result<Vec<[f64; 2]>> {
+    |                   ^^^^^^^^^^^^^^^^
+
+warning: method `coordinate_preimage` is never used
+   --> brep-core/src/source_ruled_trace.rs:221:19
+    |
+220 | impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    | --------------------------------------- method in this implementation
+221 |     pub(crate) fn coordinate_preimage<'p>(
+    |                   ^^^^^^^^^^^^^^^^^^^
+
+warning: function `certify_monotone_coordinate` is never used
+   --> brep-core/src/source_ruled_trace.rs:267:15
+    |
+267 | pub(crate) fn certify_monotone_coordinate<'t, 's>(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `brep-core` (lib) generated 98 warnings (run `cargo fix --lib -p brep-core` to apply 17 suggestions)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 52s
+     Running tests/feature_ops.rs (/tmp/rea-r53-test-opt2/debug/build/brep-core/97c64431de068a3f/out/feature_ops-97c64431de068a3f)
+
+running 4 tests
+test full_round_consumes_the_middle_face_and_keeps_analytic_cylinder ... ok
+test reblend_recognized_chain_changes_radius_with_atomic_failure ... ok
+test selected_boss_face_patterns_as_joined_and_cut_topology ... ok
+test full_round_handles_translated_frames_and_both_middle_normals ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/full_round_embedding.rs (/tmp/rea-r53-test-opt2/debug/build/brep-core/1480dcb37a97e33d/out/full_round_embedding-1480dcb37a97e33d)
+
+running 1 test
+test full_round_original_boundary_embedding_has_complete_face_and_pair_proofs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/full_round_embedding_prism.rs (/tmp/rea-r53-test-opt2/debug/build/brep-core/b403b3b85abb95fd/out/full_round_embedding_prism-b403b3b85abb95fd)
+
+running 1 test
+test full_round_embedding_covers_nonrectangular_profile_and_all_hole_wall_pairs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/full_round_frame.rs (/tmp/rea-r53-test-opt2/debug/build/brep-core/a0e75b3bb6d8592d/out/full_round_frame-a0e75b3bb6d8592d)
+
+running 2 tests
+test full_round_refuses_sheared_cuboid_without_mutation ... ok
+test full_round_is_covariant_under_rigid_frames_and_reflections ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/full_round_groups.rs (/tmp/rea-r53-test-opt2/debug/build/brep-core/32ee42ba46048d2b/out/full_round_groups-32ee42ba46048d2b)
+
+running 2 tests
+test full_round_groups_refuse_incomplete_disconnected_and_duplicate_selections ... ok
+test full_round_groups_collapse_selected_seams_and_keep_original_selection_ids ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/full_round_prism.rs (/tmp/rea-r53-test-opt2/debug/build/brep-core/8337f2d3fdca1fea/out/full_round_prism-8337f2d3fdca1fea)
+
+running 4 tests
+test full_round_refuses_rear_profile_intruding_into_removed_strip ... ok
+test full_round_selection_is_bound_to_actual_face_not_only_its_plane ... ok
+test full_round_retains_rational_curved_rear_carriers ... ok
+test full_round_preserves_nonrectangular_rear_and_through_hole ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

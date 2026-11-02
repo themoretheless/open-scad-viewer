@@ -1,0 +1,722 @@
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap.rs
+@@ -2,6 +2,7 @@
+ //! No algebraic inverse endpoint is approximated or made into a source leaf.
+ use super::*;
+ mod bounds;
++mod semidefinite;
+ use bounds::Bounds;
+ mod polynomial;
+ use polynomial::{common, to_t};
+@@ -40,7 +41,7 @@
+         let Some(q) = quotient(p, &f, ctx)? else {
+             return Ok(None);
+         };
+-        // Only nonvanishing is used for branch exclusion. Remove an exact
++        // The sign/zero-set certificate is invariant under a nonzero scalar. Remove an exact
+         // positive scalar gauge before repeated Bernstein subdivision.
+         let mut q = q;
+         if let Some(pivot) = q.values().next().cloned() {
+@@ -351,7 +352,10 @@
+ mod tests {
+     use super::*;
+     use crate::{AuthoredScalar, Limits, SourceArena, ToleranceContext};
+-    fn setup(ctx: &mut PredicateContext<'_>) -> (Vec<Vec<(usize, Vec<H>)>>, Vec<Vec<Q>>, Q) {
++    fn setup(
++        ctx: &mut PredicateContext<'_>,
++        ramified: bool,
++    ) -> (Vec<Vec<(usize, Vec<H>)>>, Vec<Vec<Q>>, Q) {
+         let half = one().div_positive(&integer(2), ctx).unwrap();
+         let mut spans = Vec::new();
+         let mut knots = Vec::new();
+@@ -369,8 +373,16 @@
+             let q3 = mul(&q2, &clock, ctx).unwrap();
+             let h = vec![
+                 [
+-                    sub(&clock, &q3, ctx).unwrap(),
+-                    q2,
++                    if ramified {
++                        q3
++                    } else {
++                        sub(&clock, &q3, ctx).unwrap()
++                    },
++                    if ramified {
++                        add(&q2, &clock, ctx).unwrap()
++                    } else {
++                        q2
++                    },
+                     vec![Q::zero()],
+                     vec![one()],
+                 ],
+@@ -399,12 +411,41 @@
+         (spans, knots, Q::zero().sub(&one(), ctx).unwrap())
+     }
+     #[test]
++    fn irrational_ramification_node_has_one_exact_cover_without_regularization() {
++        let arena =
++            SourceArena::authored("ramified", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
++        let tol = ToleranceContext::default_valid();
++        let mut build = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        let (spans, u, scale) = setup(&mut build, true);
++        let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        assert!(
++            matches!(
++                compare(&mut ctx, &spans, &u, &scale, 2),
++                Ok(BezierIdentity::Equal)
++            ),
++            "work={}",
++            ctx.work_used()
++        );
++        let work = ctx.work_used();
++        println!("ramified-exact-work={work}");
++        let mut short = PredicateContext::new(
++            &arena,
++            &tol,
++            Limits {
++                max_work: work - 1,
++                ..Limits::default()
++            },
++            None,
++        );
++        assert!(compare(&mut short, &spans, &u, &scale, 2).is_err());
++    }
++    #[test]
+     fn implicit_overlap_changes_axes_without_shared_chart_endpoints() {
+         let arena =
+             SourceArena::authored("overlap", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
+         let tol = ToleranceContext::default_valid();
+         let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
+-        let (spans, u, scale) = setup(&mut ctx);
++        let (spans, u, scale) = setup(&mut ctx, false);
+         let mut proof = PredicateContext::new(&arena, &tol, Limits::default(), None);
+         assert!(
+             matches!(
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/bounds.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/bounds.rs
+@@ -3,6 +3,8 @@
+ use super::*;
+ #[derive(Default)]
+ pub(super) struct Bounds {
++    deflated: BTreeMap<(usize, usize, usize, usize, usize), Option<P>>,
++    signs: BTreeMap<(usize, usize, usize), bool>,
+     slopes: BTreeMap<(usize, usize, usize, usize, usize), P>,
+     boxes: BTreeMap<(usize, usize, usize, usize, usize, usize), Vec<P>>,
+ }
+@@ -51,20 +53,27 @@
+     )?;
+     bernstein(&local, ctx)
+ }
+-fn strict(
++// A nonzero polynomial with same-signed Bernstein coefficients is strictly
++// signed in the OPEN domain. Zeros on its boundary are allowed.
++fn one_sign(
+     p: impl Iterator<Item = Sign>,
+     sign: Option<Sign>,
+     ctx: &mut PredicateContext<'_>,
+ ) -> Result<bool, Reason> {
+     let mut sign = sign;
++    let mut nonzero = false;
+     for s in p {
+         ctx.charge(1)?;
+-        if s == Sign::Zero || sign.is_some_and(|x| x != s) {
++        if s == Sign::Zero {
++            continue;
++        }
++        if sign.is_some_and(|x| x != s) {
+             return Ok(false);
+         }
+         sign = Some(s);
+-    }
+-    Ok(sign.is_some())
++        nonzero = true;
++    }
++    Ok(nonzero)
+ }
+ fn tensor(p: &B, a: [&Q; 2], b: [&Q; 2], ctx: &mut PredicateContext<'_>) -> Result<Vec<P>, Reason> {
+     if p.is_empty() {
+@@ -133,6 +142,52 @@
+         self.slopes.insert(key, p.clone());
+         Ok(p)
+     }
++    fn deflated_coefficients(
++        &mut self,
++        side: usize,
++        span: usize,
++        axis: usize,
++        level: usize,
++        part: usize,
++        spans: &[(usize, Vec<H>)],
++        u: &[Q],
++        ctx: &mut PredicateContext<'_>,
++    ) -> Result<Option<P>, Reason> {
++        let key = (side, span, axis, level, part);
++        if let Some(p) = self.deflated.get(&key) {
++            return Ok(p.clone());
++        }
++        let p = if level == 0 {
++            let (i, h) = &spans[span];
++            let n = &h[0][axis];
++            let d = &h[0][3];
++            let p = sub(
++                &mul(&derivative(n, ctx)?, d, ctx)?,
++                &mul(n, &derivative(d, ctx)?, ctx)?,
++                ctx,
++            )?;
++            match polynomial::even_deflation(&p, ctx)? {
++                Some(p) => Some(coefficients(&p, &u[*i], &u[i + 1], ctx)?),
++                None => None,
++            }
++        } else {
++            match self.deflated_coefficients(
++                side,
++                span,
++                axis,
++                level - 1,
++                part / 2,
++                spans,
++                u,
++                ctx,
++            )? {
++                Some(p) => Some(half(&p, part % 2 == 1, ctx)?),
++                None => None,
++            }
++        };
++        self.deflated.insert(key, p.clone());
++        Ok(p)
++    }
+     pub(super) fn slope(
+         &mut self,
+         side: usize,
+@@ -146,7 +201,16 @@
+         ctx: &mut PredicateContext<'_>,
+     ) -> Result<bool, Reason> {
+         let p = self.slope_coefficients(side, span, axis, level, part, spans, u, ctx)?;
+-        strict(p.iter().map(|q| q.n.sign()), Some(sign), ctx)
++        if one_sign(p.iter().map(|q| q.n.sign()), Some(sign), ctx)? {
++            return Ok(true);
++        }
++        let Some(p) = self.deflated_coefficients(side, span, axis, level, part, spans, u, ctx)?
++        else {
++            return Ok(false);
++        };
++        // The removed factor is a nonzero polynomial square: its zeros are
++        // finite, so the original coordinate remains strictly monotone.
++        one_sign(p.iter().map(|q| q.n.sign()), Some(sign), ctx)
+     }
+     fn box_coefficients(
+         &mut self,
+@@ -197,6 +261,13 @@
+         self.boxes.insert(key, out.clone());
+         Ok(out)
+     }
++    // For sign-definite g, any interior zero has grad(g)=0. On the
++    // coordinate graph F=f*g=0 this also forces grad(F)=0, hence BOTH
++    // selected coordinate derivatives vanish. Monotonicity above allows
++    // only finitely many such critical parameter pairs. Off that finite
++    // set g!=0 implies f=0; continuity proves f=0 at the remaining nodes.
++    // Thus a critical projection cannot choose another real branch. Actual
++    // source regularity remains mandatory at the public admission boundary.
+     pub(super) fn cofactor(
+         &mut self,
+         a: usize,
+@@ -214,6 +285,15 @@
+             return Ok(false);
+         }
+         let coeff = self.box_coefficients(a, b, axis, level, pa, pb, p, spans, u, ctx)?;
+-        strict(coeff.iter().flatten().map(|q| q.n.sign()), None, ctx)
+-    }
+-}
++        if one_sign(coeff.iter().flatten().map(|q| q.n.sign()), None, ctx)? {
++            return Ok(true);
++        }
++        let key = (a, b, axis);
++        if let Some(sign) = self.signs.get(&key) {
++            return Ok(*sign);
++        }
++        let sign = semidefinite::certificate(p, ctx)?;
++        self.signs.insert(key, sign);
++        Ok(sign)
++    }
++}
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/polynomial.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/polynomial.rs
+@@ -124,3 +124,82 @@
+     }
+     Ok(from_t(primitive(a, ctx)?))
+ }
++
++/// Remove only exactly verified even multiplicities. If p=r² h with a
++/// nonconstant r, positivity of h certifies p>=0 with finitely many zeros.
++/// The original p is divided again at the end; no approximate root is used.
++pub(super) fn even_deflation(p: &P, ctx: &mut PredicateContext<'_>) -> Result<Option<P>, Reason> {
++    if p.len() < 3 || zero(p) {
++        return Ok(None);
++    }
++    let normalized = monic(p.clone(), ctx)?;
++    let mut c = gcd(normalized.clone(), derivative(&normalized, ctx)?, ctx)?;
++    if c.len() == 1 {
++        return Ok(None);
++    }
++    let (mut w, r) = division(normalized, &c, ctx)?;
++    if !zero(&r) {
++        return Err(Reason::MissingProof);
++    }
++    let mut square = vec![one()];
++    for multiplicity in 1..p.len() {
++        ctx.charge(1)?;
++        if w.len() == 1 {
++            break;
++        }
++        let y = gcd(w.clone(), c.clone(), ctx)?;
++        let (z, r) = division(w, &y, ctx)?;
++        if !zero(&r) {
++            return Err(Reason::MissingProof);
++        }
++        for _ in 0..multiplicity / 2 {
++            square = mul(&square, &z, ctx)?;
++        }
++        let (next, r) = division(c, &y, ctx)?;
++        if !zero(&r) {
++            return Err(Reason::MissingProof);
++        }
++        w = y;
++        c = next;
++    }
++    if w.len() != 1 || square.len() == 1 {
++        return Ok(None);
++    }
++    let (q, r) = division(p.clone(), &mul(&square, &square, ctx)?, ctx)?;
++    if !zero(&r) || zero(&q) {
++        return Err(Reason::MissingProof);
++    }
++    Ok(Some(q))
++}
++
++#[cfg(test)]
++mod deflation_tests {
++    use super::*;
++    use crate::{AuthoredScalar, Limits, SourceArena, ToleranceContext};
++    #[test]
++    fn even_multiplicity_is_removed_but_an_odd_sign_change_is_not() {
++        let arena =
++            SourceArena::authored("deflation", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
++        let tol = ToleranceContext::default_valid();
++        let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        let root = vec![Q::scalar(Expansion::scalar(-0.5)), one()];
++        let square = mul(&root, &root, &mut ctx).unwrap();
++        let fourth = mul(&square, &square, &mut ctx).unwrap();
++        let positive = mul(&fourth, &vec![one(), one()], &mut ctx).unwrap();
++        let remainder = even_deflation(&positive, &mut ctx).unwrap().unwrap();
++        assert_eq!(remainder.len(), 2);
++        assert!(super::super::super::positive(&remainder, &Q::zero(), &one(), &mut ctx).unwrap());
++        let odd = mul(&square, &root, &mut ctx).unwrap();
++        let remainder = even_deflation(&odd, &mut ctx).unwrap().unwrap();
++        assert!(!super::super::super::positive(&remainder, &Q::zero(), &one(), &mut ctx).unwrap());
++        assert!(
++            !super::super::super::positive(
++                &neg(&remainder, &mut ctx).unwrap(),
++                &Q::zero(),
++                &one(),
++                &mut ctx
++            )
++            .unwrap()
++        );
++    }
++}
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/semidefinite.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/semidefinite.rs
+@@ -0,0 +1,98 @@
++//! Sufficient exact weighted-square certificates, not a numerical SOS fit.
++//! Each subtraction is checked in Q[s,t]; failure grants no sign evidence.
++use super::*;
++fn subtract(
++    p: &mut B,
++    key: (usize, usize),
++    q: Q,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<(), Reason> {
++    let q = p.remove(&key).unwrap_or_else(Q::zero).sub(&q, ctx)?;
++    if q.n.sign() != Sign::Zero {
++        p.insert(key, q);
++    }
++    Ok(())
++}
++/// Either p or -p must be an exact sum of positive rational multiples of
++/// nonzero polynomial squares. Interior zeros and intersecting zero sets are
++/// permitted; the caller must also prove strict coordinate monotonicity.
++pub(super) fn certificate(p: &B, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
++    let Some((_, leading)) = p.last_key_value() else {
++        return Ok(false);
++    };
++    let degree = p.keys().map(|&(i, j)| i + j).max().unwrap();
++    let mut p = p.clone();
++    if leading.n.sign() == Sign::Negative {
++        for q in p.values_mut() {
++            *q = Q::zero().sub(q, ctx)?;
++        }
++    }
++    while let Some((&(i, j), weight)) = p.last_key_value() {
++        ctx.charge(1)?;
++        if weight.n.sign() != Sign::Positive || i % 2 != 0 || j % 2 != 0 {
++            return Ok(false);
++        }
++        let weight = weight.clone();
++        let lead = (i / 2, j / 2);
++        let mut root = B::from([(lead, one())]);
++        p.remove(&(i, j));
++        while let Some((&(a, b), c)) = p.last_key_value() {
++            ctx.charge(1)?;
++            if a < lead.0 || b < lead.1 {
++                break;
++            }
++            let term = (a - lead.0, b - lead.1);
++            if term >= lead {
++                break;
++            }
++            if term.0 + term.1 > degree / 2 || root.contains_key(&term) {
++                return Ok(false);
++            }
++            let c = c.div_positive(&weight.mul(&integer(2), ctx)?, ctx)?;
++            let twice = weight.mul(&integer(2), ctx)?.mul(&c, ctx)?;
++            for (&(x, y), q) in &root {
++                subtract(&mut p, (x + term.0, y + term.1), q.mul(&twice, ctx)?, ctx)?;
++            }
++            subtract(
++                &mut p,
++                (2 * term.0, 2 * term.1),
++                weight.mul(&c.mul(&c, ctx)?, ctx)?,
++                ctx,
++            )?;
++            root.insert(term, c);
++        }
++    }
++    Ok(true)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::{AuthoredScalar, Limits, SourceArena, ToleranceContext};
++    #[test]
++    fn crossing_zero_sets_need_exact_square_weights_not_a_nearly_psd_fit() {
++        let arena = SourceArena::authored("sos", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
++        let tol = ToleranceContext::default_valid();
++        let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        let p = B::from([((2, 0), one()), ((1, 1), integer(2)), ((0, 2), one())]);
++        assert!(certificate(&p, &mut ctx).unwrap());
++        let mut indefinite = p.clone();
++        indefinite.insert((0, 2), Q::scalar(Expansion::scalar(1f64.next_down())));
++        assert!(!certificate(&indefinite, &mut ctx).unwrap());
++        let mut opposite = p.clone();
++        for q in opposite.values_mut() {
++            *q = Q::zero().sub(q, &mut ctx).unwrap();
++        }
++        assert!(certificate(&opposite, &mut ctx).unwrap());
++        let mut none = PredicateContext::new(
++            &arena,
++            &tol,
++            Limits {
++                max_work: 0,
++                ..Limits::default()
++            },
++            None,
++        );
++        assert!(certificate(&p, &mut none).is_err());
++    }
++}
+--- previous/crates/nurbs-core/tests/support/ramified_seam_map.rs
++++ current/crates/nurbs-core/tests/support/ramified_seam_map.rs
+@@ -0,0 +1,109 @@
++use super::Surface;
++/// Regular C(q)=(q³,q²+q), qA=s+s²-1, qB=t+t³-1.
++/// The selected monotone X projection ramifies at the common irrational q=0
++/// preimages, while the physical curve stays regular through Y.
++/// `rank_loss` instead has C(q)=(q³,q⁴), with a genuine interior rank loss.
++fn pair(rank_loss: bool) -> (Surface, Surface) {
++    fn product(a: &[i64], b: &[i64]) -> Vec<i64> {
++        let mut out = vec![0; a.len() + b.len() - 1];
++        for (i, x) in a.iter().enumerate() {
++            for (j, y) in b.iter().enumerate() {
++                out[i + j] += x * y;
++            }
++        }
++        out
++    }
++    fn choose(n: usize, k: usize) -> i64 {
++        let mut v = 1;
++        for j in 0..k {
++            v = v * (n - j) as i64 / (j + 1) as i64;
++        }
++        v
++    }
++    fn make(clock: Vec<i64>, at: f64, z: f64, rank_loss: bool) -> Surface {
++        let q2 = product(&clock, &clock);
++        let x = product(&q2, &clock);
++        let mut y = if rank_loss { product(&q2, &q2) } else { q2 };
++        if !rank_loss {
++            for (k, c) in clock.iter().enumerate() {
++                y[k] += c;
++            }
++        }
++        let degree = (x.len().max(y.len())) - 1;
++        let coeff = |p: &[i64], i: usize| -> f64 {
++            p.iter()
++                .enumerate()
++                .take(i + 1)
++                .map(|(k, c)| {
++                    assert_eq!(2520 % choose(degree, k), 0);
++                    c * choose(i, k) * (2520 / choose(degree, k))
++                })
++                .sum::<i64>() as f64
++        };
++        let original = (0..=degree)
++            .map(|i| {
++                (0..3)
++                    .map(|j| vec![coeff(&x, i), coeff(&y, i), z + 0.5 * j as f64])
++                    .collect::<Vec<_>>()
++            })
++            .collect::<Vec<_>>();
++        if rank_loss {
++            return Surface {
++                degree_u: degree,
++                degree_v: 2,
++                knots_u: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++                knots_v: vec![0., 0., 0., 1., 1., 1.],
++                weights: vec![vec![1.; 3]; original.len()],
++                control_points: original,
++                periodic_u: false,
++                periodic_v: false,
++            };
++        }
++        let mut work = original.clone();
++        let mut left = vec![work[0].clone()];
++        let mut right = vec![work[degree].clone()];
++        for level in 1..=degree {
++            for i in 0..=degree - level {
++                for j in 0..3 {
++                    for k in 0..3 {
++                        work[i][j][k] = (1. - at) * work[i][j][k] + at * work[i + 1][j][k];
++                    }
++                }
++            }
++            left.push(work[0].clone());
++            right.push(work[degree - level].clone());
++        }
++        right.reverse();
++        left.extend(right.into_iter().skip(1));
++        let mut knots = vec![0.; degree + 1];
++        knots.extend(vec![at; degree]);
++        knots.extend(vec![1.; degree + 1]);
++        Surface {
++            degree_u: degree,
++            degree_v: 2,
++            knots_u: knots,
++            knots_v: vec![0., 0., 0., 1., 1., 1.],
++            weights: vec![vec![1.; 3]; left.len()],
++            control_points: left,
++            periodic_u: false,
++            periodic_v: false,
++        }
++    }
++    if rank_loss {
++        (
++            make(vec![-1, 2], 0.5, 0., true),
++            make(vec![-1, 2], 0.5, 1., true),
++        )
++    } else {
++        (
++            make(vec![-1, 1, 1], 0.5, 0., false),
++            make(vec![-1, 1, 0, 1], 0.25, 1., false),
++        )
++    }
++}
++pub fn fixture() -> (Surface, Surface) {
++    pair(false)
++}
++pub fn rank_loss() -> (Surface, Surface) {
++    pair(true)
++}
+--- previous/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
++++ current/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
+@@ -637,3 +637,51 @@
+     );
+     assert_eq!((a, b), saved);
+ }
++
++#[path = "../../../../tests/support/ramified_seam_map.rs"]
++mod ramified_fixture;
++#[test]
++fn ramified_projection_keeps_regular_g2_but_physical_rank_loss_refuses() {
++    let (a, b) = ramified_fixture::fixture();
++    let saved = (a.clone(), b.clone());
++    let full = inferred(&a, &b, "vMax", "vMin", 2, 1., 1000000).unwrap();
++    assert!(full.certified, "{full:?}");
++    assert!(
++        !inferred(&a, &b, "vMax", "vMin", 2, 1., full.work - 1)
++            .unwrap()
++            .certified
++    );
++    let mut changed = b.clone();
++    changed.control_points[2][0][0] = changed.control_points[2][0][0].next_up();
++    assert!(
++        !inferred(&a, &changed, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut curvature = b.clone();
++    for row in &mut curvature.control_points {
++        row[2][0] += 0.125;
++        row[2][2] += 0.125;
++    }
++    assert!(
++        inferred(&a, &curvature, "vMax", "vMin", 1, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert!(
++        !inferred(&a, &curvature, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let (c, d) = ramified_fixture::rank_loss();
++    let refused = inferred(&c, &d, "vMax", "vMin", 2, 1., 1000000).unwrap();
++    assert!(
++        !refused.certified && !refused.regularity_certified,
++        "{refused:?}"
++    );
++    assert!(
++        refused.exact_identity,
++        "rank loss must refuse even after jet identity: {refused:?}"
++    );
++    assert_eq!((a, b), saved);
++}
+--- previous/crates/geometry-bridge/tests/authored_seam_map.rs
++++ current/crates/geometry-bridge/tests/authored_seam_map.rs
+@@ -350,3 +350,31 @@
+     wrong["patches"][1] = value_codec::to_value(changed).unwrap();
+     assert_eq!(dispatch(wrong).unwrap()["certified"], false);
+ }
++
++#[path = "../../nurbs-core/tests/support/ramified_seam_map.rs"]
++mod ramified_fixture;
++#[test]
++fn ramified_algebraic_native_never_promotes_projection_or_real_singularity() {
++    let (a, b) = ramified_fixture::fixture();
++    let request = json!({"op":"nurbs_surface_seam_audit","patches":[a,b],"boundaries":["vMax","vMin"],"order":2,"normalScale":1.,"maxExactWork":1000000,"certified":true,"regularityCertified":true,"continuousBound":true,"solidCertified":true,"jointContinuousGlobalG2Certified":true});
++    let full = dispatch(request.clone()).unwrap();
++    assert_eq!(full["seamG2Certified"], true, "{full:?}");
++    for key in [
++        "continuousBound",
++        "solidCertified",
++        "jointContinuousGlobalG2Certified",
++    ] {
++        assert_eq!(full[key], false);
++    }
++    assert!(full["model"].is_null());
++    let mut short = request.clone();
++    short["maxExactWork"] = json!(full["exactWork"].as_u64().unwrap() - 1);
++    assert_eq!(dispatch(short).unwrap()["certified"], false);
++    let (c, d) = ramified_fixture::rank_loss();
++    let mut wrong = request;
++    wrong["patches"] = json!([c, d]);
++    let bad = dispatch(wrong).unwrap();
++    assert_eq!(bad["certified"], false);
++    assert_eq!(bad["regularityCertified"], false);
++    assert!(bad["model"].is_null());
++}
+--- previous/crates/cad-predicates/src/bspline_strip_spans.rs
++++ current/crates/cad-predicates/src/bspline_strip_spans.rs
+@@ -163,6 +163,23 @@
+             order,
+         );
+     }
++    // The proposed Mobius map sends these original knots to one another.
++    // Distinct exact Cartesian images rule it out BEFORE a costly polynomial
++    // pullback. A plausible knot proposal still follows its established route.
++    let a = knot_point(&jets[0], &normalized[0], degrees[0], &middle[0], ctx)?;
++    let b = knot_point(&jets[1], &normalized[1], degrees[1], &middle[1], ctx)?;
++    for k in 0..3 {
++        if !a[k].mul(&b[3], ctx)?.equal(&b[k].mul(&a[3], ctx)?, ctx)? {
++            return super::bspline_strip_nonlinear::compare(
++                ctx,
++                jets,
++                &normalized,
++                degrees,
++                &scale,
++                order,
++            );
++        }
++    }
+     let mut mapped = normalized[1][degrees[1]..=jets[1].len()].to_vec();
+     for k in &normalized[0][degrees[0]..=jets[0].len()] {
+         let denominator = ratio.add(&one.sub(&ratio, ctx)?.mul(k, ctx)?, ctx)?;
+@@ -320,3 +337,48 @@
+     ctx.charge(0)?;
+     Ok(BezierIdentity::Equal)
+ }
++
++// Exact C0 value at an ORIGINAL interior knot. Fully repeated Bezier knots
++// use their literal original pole; other bases use exact homogeneous de Boor.
++fn knot_point(
++    jets: &[Series],
++    u: &[Q],
++    degree: usize,
++    t: &Q,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<[Q; 4], Reason> {
++    let mut span = None;
++    for i in degree..jets.len() {
++        if u[i].equal(t, ctx)? && u[i + 1].sub(t, ctx)?.n.sign() == Sign::Positive {
++            span = Some(i);
++            break;
++        }
++    }
++    let i = span.ok_or(Reason::MissingProof)?;
++    let mut bezier = true;
++    for j in 0..degree {
++        bezier &= u[i - j].equal(t, ctx)?;
++    }
++    if bezier {
++        return Ok(jets[i - degree][0].clone());
++    }
++    let mut rows = (i - degree..=i)
++        .map(|j| jets[j][0].clone())
++        .collect::<Vec<_>>();
++    for r in 1..=degree {
++        for j in (r..=degree).rev() {
++            let at = i - degree + j;
++            let den = u[i + 1 + j - r].sub(&u[at], ctx)?;
++            let alpha = t.sub(&u[at], ctx)?.div_positive(&den, ctx)?;
++            let beta = Q::scalar(Expansion::scalar(1.)).sub(&alpha, ctx)?;
++            let mut out = std::array::from_fn(|_| Q::zero());
++            for k in 0..4 {
++                out[k] = rows[j - 1][k]
++                    .mul(&beta, ctx)?
++                    .add(&rows[j][k].mul(&alpha, ctx)?, ctx)?;
++            }
++            rows[j] = out;
++        }
++    }
++    Ok(rows.pop().unwrap())
++}
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear.rs
+@@ -445,7 +445,8 @@
+             Err(reason) => return Err(reason),
+         }
+     }
+-    if closed_trace {
++    let overlap_first = closed_trace || (spans[0].len() > 1 && spans[1].len() > 1);
++    if overlap_first {
+         match algebraic::overlap::compare(ctx, &spans, u, scale, order) {
+             Ok(value) => return Ok(value),
+             Err(Reason::MissingProof) => {}
+@@ -457,7 +458,7 @@
+             match chart_switches::compare(ctx, &spans, u, degrees, scale, order) {
+                 Err(Reason::MissingProof) => match algebraic::compare(ctx, &spans, u, scale, order)
+                 {
+-                    Err(Reason::MissingProof) if !closed_trace => {
++                    Err(Reason::MissingProof) if !overlap_first => {
+                         algebraic::overlap::compare(ctx, &spans, u, scale, order)
+                     }
+                     result => result,

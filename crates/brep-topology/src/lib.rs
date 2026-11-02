@@ -662,3 +662,6 @@ mod methods_full;
 mod methods_euler_characteristic;
 #[path="lib/methods_new.rs"]
 mod methods_new;
+#[cfg(test)]
+mod periodic_vertex_links;
+

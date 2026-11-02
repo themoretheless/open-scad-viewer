@@ -10,6 +10,11 @@ use crate::{
 };
 #[path = "surface_g2_pcurves/trace_mean_value.rs"]
 mod trace_mean_value;
+#[path="surface_g2_pcurves/common_basis.rs"]
+mod common_basis;
+#[path = "surface_g2_pcurves/graph_owned.rs"]
+mod graph_owned;
+pub use graph_owned::{OwnedGraphInspection,inspect_owned_graph,inspect_owned_graph_oriented};
 #[derive(Clone)]
 pub struct PositionEvidence {
     pub exact: Option<cad_predicates::BezierIdentityDecision>,
@@ -282,6 +287,11 @@ fn cell(
     work: &mut usize,
     max: usize,
 ) -> Result<Cell> {
+    if let Some(bound)=common_basis::upper(p,s,reverse,t,work,max)? {
+        if bound[0]<=normal && bound[1]<=curvature {
+            return Ok(Cell {t,upper:Some([bound,[2.,f64::INFINITY]]),lower:[[0.;2];2]});
+        }
+    }
     // A finite mean-value enclosure supplies whole-cell regularity/upper
     // bounds and midpoint lower witnesses. Reuse this group on short traces
     // instead of querying an independent rectangle pair and midpoint again.

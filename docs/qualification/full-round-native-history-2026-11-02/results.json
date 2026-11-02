@@ -1,0 +1,41 @@
+{
+  "status": "native exact feature history qualified; bridge/WASM/editor integration remains open",
+  "history_tests_passed": 8,
+  "material_regressions_passed": 15,
+  "regression_suites": {
+    "exact_wire_material": 5,
+    "full_round_admitted": 4,
+    "full_round_exact_material_family": 6
+  },
+  "coverage": [
+    "source ID binding survives actual face-array reordering",
+    "live feature rebuild on source geometry changes",
+    "real feature reselection to the opposite end",
+    "undo/redo and explicit prefix fork preserve original redo",
+    "failed missing-ID/selection/resource edits preserve state",
+    "complete frozen artifact replay including cursor and hidden redo",
+    "forged hidden redo geometry and inconsistent operation tags refuse",
+    "independently valid body with wrong source ancestry refuses",
+    "caller replay byte/revision/work bounds and atomic live storage/capacity bounds"
+  ],
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted.rs": "8c64d9f72ef7fde1ca43d46beccd95b7291fcb42a978908ef871d419e9e58323",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/history.rs": "e0d6adfb544293968cab2b952bb8c8beaf98a1b8707eaa363a9937ef9b46c835",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/history/codec.rs": "2b1ac18077b1d8aff5cc5102906a5aa248793b7d6a746a2adf2c4e453087e54f",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/material.rs": "cd784594f291016689ff0dcb28b41dc421c82ff0b9cc582e584cae52a01a58c9",
+    "crates/brep-core/tests/full_round_exact_history.rs": "c8dbd6325bff7b910280809ae7f9f96a0bb3ac111a9dd69280b40179d6653eda"
+  },
+  "checks": [
+    "11 frozen clean files unchanged",
+    "new modules and changed files below existing architecture limits",
+    "rustfmt new history files and targeted diff check passed"
+  ],
+  "architecture": "same six other worktree violations remain; no limits/pins changed",
+  "open": [
+    "bridge/WASM transport and actual application history integration",
+    "general source-construction/dependency regeneration and branch merge",
+    "source lineage transfer when authored IDs change",
+    "persistent edge/vertex/loop identity across arbitrary edits",
+    "all broader original native-library parity requirements"
+  ]
+}

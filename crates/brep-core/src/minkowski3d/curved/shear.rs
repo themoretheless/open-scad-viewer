@@ -202,7 +202,7 @@ fn inverse(p: &P, f: &Poly2, axis: usize) -> P {
     p[axis] -= shift;
     p
 }
-fn reference_charts(
+pub(super) fn reference_charts(
     m: &Model,
     f: &Poly2,
     axis: usize,
@@ -265,7 +265,13 @@ fn reference_charts(
     }
     Ok((charts, cells))
 }
-fn reference_input(m: &Model, charts: &[[P; 3]]) -> Result<Input> {
+pub(super) fn reference_input(m: &Model, charts: &[[P; 3]]) -> Result<Input> {
+    reference_input_recipe(m, charts, false)
+}
+pub(super) fn reference_input_generic(m: &Model, charts: &[[P; 3]]) -> Result<Input> {
+    reference_input_recipe(m, charts, true)
+}
+fn reference_input_recipe(m: &Model, charts: &[[P; 3]], generic_center: bool) -> Result<Input> {
     let mut points = BTreeMap::<P, u32>::new();
     let mut triangles = Vec::new();
     for body in &m.bodies {
@@ -298,6 +304,48 @@ fn reference_input(m: &Model, charts: &[[P; 3]]) -> Result<Input> {
                             .collect::<Vec<_>>()
                     })
                     .collect::<Vec<_>>();
+                // A triangle's rectangular-domain midpoint can lie inside a
+                // boundary edge, splitting only one incident fan. The new
+                // subtraction recipe chooses an exact generic fan origin off
+                // every boundary supporting line; legacy replay is unchanged.
+                let center = if generic_center {
+                    let mut lines = Vec::new();
+                    for c in loops.iter().flatten() {
+                        let d = c.domain();
+                        let mut ends = Vec::new();
+                        for t in d {
+                            let t = Q::from_float(t).unwrap();
+                            ends.push(sb::point(&sb::curve(c, &t, &t)?[0]));
+                        }
+                        lines.push((ends[0].clone(), ends[1].clone()));
+                    }
+                    let mut found = None;
+                    let mut work = Work::default();
+                    for j in 1..=1024 {
+                        let domain = [
+                            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+                            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+                        ];
+                        let uv: P = std::array::from_fn(|i| {
+                            if i == 2 {
+                                return Q::zero();
+                            }
+                            let a = Q::from_float(domain[i][0]).unwrap();
+                            let b = Q::from_float(domain[i][1]).unwrap();
+                            &a + (b - &a) / integer(j + 2 + i as i64)
+                        });
+                        work.charge(lines.len())?;
+                        if lines.iter().all(|(a, b)| {
+                            (&b[0] - &a[0]) * (&uv[1] - &a[1]) != (&b[1] - &a[1]) * (&uv[0] - &a[0])
+                        }) {
+                            found = Some(map(&uv));
+                            break;
+                        }
+                    }
+                    found.ok_or_else(|| fail("exact reference fan origin budget exceeded"))?
+                } else {
+                    center
+                };
                 let (o, n) = planar::original_wires(&loops)?;
                 if n.iter().enumerate().any(|(i, d)| *d != usize::from(i != 0))
                     || o.iter()
@@ -574,3 +622,41 @@ impl<'de> Deserialize<'de> for Report {
 #[cfg(test)]
 #[path = "shear/tests/tests_integration.rs"]
 mod tests;
+
+// Infer only a proposal from exact second-order coefficients. Admission still
+// requires whole-carrier identities and exact trim inverse images on BOTH
+// operands; one agreeing control point or fitted curvature has no authority.
+pub(super) fn common_quadratic_coefficient(a: &Model, b: &Model, work: &mut Work) -> Option<Q> {
+    let mut proposal = None;
+    for face in a.faces.iter().chain(&b.faces) {
+        let [u, v] = intervals(&face.surface);
+        let h = sb::cell(
+            &face.surface,
+            [u[0].clone(), u[1].clone()],
+            [v[0].clone(), v[1].clone()],
+        )
+        .ok()?;
+        let x = power(&h, 0).ok()?;
+        if !linear(&x) {
+            return None;
+        }
+        let z = power(&h, 2).ok()?;
+        for (i, j) in [(1, 0), (0, 1)] {
+            let dx = coefficient(&x, i, j);
+            if !dx.is_zero() {
+                proposal = Some(coefficient(&z, 2 * i, 2 * j) / (&dx * &dx));
+                break;
+            }
+        }
+        if proposal.is_some() {
+            break;
+        }
+    }
+    let k = proposal?;
+    let polynomial = vec![vec![Q::zero()], vec![Q::zero()], vec![k.clone()]];
+    for m in [a, b] {
+        let (charts, _) = reference_charts(m, &polynomial, 2, work).ok()?;
+        reference_input_generic(m, &charts).ok()?;
+    }
+    Some(k)
+}

@@ -42,6 +42,27 @@ pub fn create(v: Value) -> Result<Value> {
         max_exact,
     )?;
     r.cells += prepared.cells;
+    let fields = brep_core::region_replacement::inspect_runout_panels(
+        &r.construction.patches,
+        tolerances[0],
+        1e-8,
+        brep_core::region_replacement::ContactQualificationLimits {
+            cells: max_cells - r.cells,
+            exact_work: 0,
+            domain_cells: 1_000_000,
+            shape_cells: 1_000_000,
+        },
+    )?;
+    let complete = r.complete && fields.complete;
+    let within = complete && r.within_tolerance && fields.within_tolerance;
+    let field_reports=fields.panels.iter().map(|p| {
+        let c=p.curvature.as_ref();
+        json!({"patch":p.patch,"injectivityCertified":p.injectivity.certified,
+            "curvatureDecision":match c.map(|c|c.decision) {Some(brep_core::face_curvature::Decision::Within)=>"within",Some(brep_core::face_curvature::Decision::Exceeds)=>"exceeds",Some(brep_core::face_curvature::Decision::Unresolved)=>"unresolved",None=>"unvisited"},
+            "absoluteCurvatureUpper":c.and_then(|c|c.absolute_curvature_upper),
+            "witnessUv":c.and_then(|c|c.witness_uv),"witnessCurvature":c.and_then(|c|c.witness_curvature),
+            "unresolvedRegion":c.and_then(|c|c.unresolved_region)})
+    }).collect::<Vec<_>>();
     let seam = |r: &nurbs_core::surface_g2::Report| {
         json!({"positionBounds":r.position_bounds,
         "regularityProven":r.regularity_proven,"cells":r.cells,
@@ -51,8 +72,11 @@ pub fn create(v: Value) -> Result<Value> {
             "curvatureLower":b.tensor_lower,"curvatureUpper":b.tensor_upper})).collect::<Vec<_>>()})
     };
     Ok(
-        json!({"patches":r.construction.patches,"report":{"method":"native-original-support-G2-runout/1",
-        "complete":r.complete,"withinTolerance":r.within_tolerance,"cells":r.cells,"exactWork":r.exact_work,
+        json!({"patches":r.construction.patches,"report":{"method":"native-original-support-G2-runout/2",
+        "patchCount":r.construction.patches.len(),"complete":complete,"withinTolerance":within,"cells":r.cells+fields.cells,"exactWork":r.exact_work,
+        "seamComplete":r.complete,"seamWithinTolerance":r.within_tolerance,"fieldComplete":fields.complete,
+        "curvatureLimitPerMm":10.,"domainCells":fields.domain_cells,"shapeCells":fields.shape_cells,
+        "maxDomainCells":1000000,"maxShapeCells":1000000,"fields":field_reports,
         "maxCells":max_cells,"maxExactWork":max_exact,"tolerances":tolerances,
         "solidGeometryCertified":false,"radiusLawCertified":false,"interiorEmbeddingCertified":false,
         "supportSeams":r.support_seams.iter().map(|(patch,source,p)|json!({"patch":patch,"source":source,
@@ -91,6 +115,21 @@ mod tests {
             "maxCells":100000,"maxExactWork":1000000,"tolerances":[1e-7,1e-5,1e-4]})
     }
     #[test]
+    fn admitted_runout_requires_all_saved_panel_fields_below_ten() {
+        let mut v = request();
+        v["sourceTrace"]["at"] = json!(0.5);
+        v["targetPcurve"]["controlPoints"] = json!([[0., 0.5], [1., 0.5]]);
+        v["gains"] = json!([0.5, 0.5]);
+        let r = crate::dispatch(v).unwrap();
+        assert_eq!(r["report"]["method"], "native-original-support-G2-runout/2");
+        assert_eq!(r["report"]["withinTolerance"], true);
+        assert_eq!(r["report"]["fieldComplete"], true);
+        for p in r["report"]["fields"].as_array().unwrap() {
+            assert_eq!(p["injectivityCertified"], true);
+            assert!(p["absoluteCurvatureUpper"].as_f64().unwrap() <= 10.);
+        }
+    }
+    #[test]
     fn world_curve_inputs_preserve_original_projection_and_physical_tangent_length() {
         let mut v = request();
         let plane = field::<Surface>(&v, "plane").unwrap();
@@ -98,7 +137,15 @@ mod tests {
         v["sourcePosition"] = json!(0.9);
         v["tangentLengthMm"] = json!(0.1);
         let r = crate::dispatch(v.clone()).unwrap();
-        assert_eq!(r["report"]["withinTolerance"], true);
+        assert_eq!(r["report"]["seamWithinTolerance"], true);
+        assert_eq!(r["report"]["withinTolerance"], false);
+        assert!(
+            r["report"]["fields"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|f| f["curvatureDecision"] == "exceeds")
+        );
         assert!(r["report"]["cells"].as_u64().unwrap() <= 100000);
         v["targetCurve"]["controlPoints"][0][1] = json!(0.5);
         assert!(crate::dispatch(v).is_err());
@@ -106,7 +153,15 @@ mod tests {
     #[test]
     fn dispatched_runout_returns_original_support_receipts_without_a_solid_claim() {
         let r = crate::dispatch(request()).unwrap();
-        assert_eq!(r["report"]["withinTolerance"], true);
+        assert_eq!(r["report"]["seamWithinTolerance"], true);
+        assert_eq!(r["report"]["withinTolerance"], false);
+        assert!(
+            r["report"]["fields"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|f| f["curvatureDecision"] == "exceeds")
+        );
         assert_eq!(r["report"]["solidGeometryCertified"], false);
         assert_eq!(r["report"]["radiusLawCertified"], false);
         assert_eq!(r["report"]["supportSeams"].as_array().unwrap().len(), 2);
@@ -124,3 +179,7 @@ mod tests {
         assert!(crate::dispatch(v).is_err());
     }
 }
+
+#[path = "cad_runout/graph_preview.rs"]
+mod graph_preview;
+pub(crate) fn source_graph_preview(v: Value) -> Result<Value> { graph_preview::create(v) }

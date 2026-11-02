@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "installedPackage": true,
+  "identity": "// Generated from the packaged WASM; not qualification evidence.\nexport default Object.freeze({\"sha256\":\"1a70b8d7c3c94767c70df5c99b4a5fcc136161151df4a12cbf8a67cbe40ce99c\",\"byteLength\":16334881})\n",
+  "result": {
+    "ownership": {
+      "active": false,
+      "workersStarted": 7,
+      "workersTerminated": 7
+    },
+    "ticks": 3008,
+    "busy": "Error: Exact history worker is busy",
+    "cancelled": "Error: Exact history edit cancelled",
+    "deadline": "Error: Exact history edit deadline exceeded",
+    "failed": "Error: Exact history has no undo revision",
+    "malformed": "Error: Invalid bounded exact history edit request",
+    "regenerated": true,
+    "changed": true,
+    "undoExact": true,
+    "redoExact": true,
+    "inputIntact": true,
+    "moreTriangles": true
+  },
+  "workers": [
+    "http://127.0.0.1:4190/assets/exactFullRoundHistory.worker-DGZcCx85.js",
+    "http://127.0.0.1:4190/assets/exactFullRoundHistory.worker-DGZcCx85.js",
+    "http://127.0.0.1:4190/assets/exactFullRoundHistory.worker-DGZcCx85.js",
+    "http://127.0.0.1:4190/assets/exactFullRoundHistory.worker-DGZcCx85.js",
+    "http://127.0.0.1:4190/assets/exactFullRoundHistory.worker-DGZcCx85.js",
+    "http://127.0.0.1:4190/assets/exactFullRoundHistory.worker-DGZcCx85.js"
+  ],
+  "platformAudit": {
+    "started": 7,
+    "terminated": 7
+  }
+}

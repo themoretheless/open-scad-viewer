@@ -6,12 +6,19 @@ use nurbs_core::{
     curve::Curve,
     curve_surface_agreement::{self, Status},
 };
+#[path = "face_cut/legacy_closed.rs"]
+mod legacy_closed;
+pub(crate) use legacy_closed::closed_with_budget;
 
 #[path = "face_cut/retention_network.rs"]
 mod retention_network;
 pub use retention_network::{
     FaceRetention, RetentionNetwork, RetentionRegion, plan_retention_network,
 };
+#[path = "face_cut/contact_retention.rs"]
+mod contact_retention;
+pub use contact_retention::{ContactFaceCut, ContactRetention, ContactRetentionLimits, plan_contact_retention};
+
 #[path = "face_cut/rooted_retention.rs"]
 mod rooted_retention;
 pub use rooted_retention::{
@@ -120,7 +127,7 @@ pub fn partition_projected(
         1000000,
     )
 }
-fn projected_with_budget(
+pub(crate) fn projected_with_budget(
     source: &Model,
     face_id: usize,
     endpoints: [usize; 2],
@@ -418,7 +425,7 @@ pub fn partition(
         1000000,
     )
 }
-fn partition_with_budget(
+pub(crate) fn partition_with_budget(
     source: &Model,
     face_id: usize,
     endpoints: [usize; 2],

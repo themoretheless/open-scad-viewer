@@ -156,6 +156,20 @@ pub fn reflected_parameter_identity(
         .map(|&r| ctx.resolve(r).cloned())
         .collect::<Result<Vec<AuthoredScalar>, _>>()?;
     let computed = (|| -> Result<ParameterIdentity, Reason> {
+        // Structural cancellation is exact for finite represented binary64
+        // pairs, including subnormals. Do not manufacture a huge common scale
+        // for (-a)+a-(-t)-t, or round any addition to claim an identity.
+        let binary = values.iter().map(|v|match v {
+            AuthoredScalar::Binary64Bits(bits)=>Some(f64::from_bits(*bits)),
+            _=>None,
+        }).collect::<Option<Vec<_>>>();
+        if let Some(v)=binary.filter(|v|v.iter().all(|x|x.is_finite())) {
+            if (v[0]==v[2]&&v[1]==v[3])||(v[0]==v[3]&&v[1]==v[2])
+                ||(v[0]==-v[1]&&v[2]==-v[3]) {
+                ctx.charge(4)?;
+                return Ok(ParameterIdentity::Equal);
+            }
+        }
         let v = exact_inputs(&values, ctx)?;
         let diff = v[0].add(&v[1], ctx)?.sub(&v[2], ctx)?.sub(&v[3], ctx)?;
         ctx.charge(0)?;
@@ -175,6 +189,21 @@ pub fn reflected_parameter_identity(
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn reflected_extreme_pairs_are_exact_and_still_charge_the_shared_budget() {
+        let inspect=|values:[f64;4],budget| {
+            let source=SourceArena::authored("reflected-cancellation",1,
+                values.iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).unwrap();
+            let tolerance=ToleranceContext::default_valid();
+            let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work:budget,..Limits::default()},None);
+            reflected_parameter_identity(&mut ctx,std::array::from_fn(|i|source.leaf(i).unwrap())).unwrap()
+        };
+        let values=[-2.,2.,f64::from_bits(1),-f64::from_bits(1)];
+        let proof=inspect(values,1000000);assert_eq!(proof.outcome,ParameterIdentity::Equal);assert!(proof.work_used>0);
+        assert_ne!(inspect(values,proof.work_used-1).outcome,ParameterIdentity::Equal);
+        assert_ne!(inspect(values,0).outcome,ParameterIdentity::Equal);
+        assert_eq!(inspect([1e16,1.,1e16,0.],1000000).outcome,ParameterIdentity::Different);
+    }
     #[test]
     fn projective_linear_crossings_keep_one_third_exact() {
         let evaluate=|weight:f64,budget:u64| {

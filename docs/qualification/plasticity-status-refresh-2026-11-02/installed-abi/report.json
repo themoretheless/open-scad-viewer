@@ -1,0 +1,122 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "name": "native-history-exact-replay",
+      "ok": true,
+      "elapsedMs": 1016.1684580000001
+    },
+    {
+      "name": "create-from-native-root",
+      "ok": true,
+      "elapsedMs": 477.449208
+    },
+    {
+      "name": "live-source-rebuild",
+      "ok": true,
+      "elapsedMs": 971.0711249999999
+    },
+    {
+      "name": "undo",
+      "ok": true,
+      "elapsedMs": 934.5876659999999
+    },
+    {
+      "name": "redo",
+      "ok": true,
+      "elapsedMs": 926.0211670000003
+    },
+    {
+      "name": "prefix-branch",
+      "ok": true,
+      "elapsedMs": 908.3704170000001
+    },
+    {
+      "name": "branch-source-rebuild",
+      "ok": true,
+      "elapsedMs": 951.8222499999993
+    },
+    {
+      "name": "authored-id-reselection",
+      "ok": true,
+      "elapsedMs": 971.9716250000001
+    },
+    {
+      "name": "edit-after-undo-requires-branch",
+      "ok": false,
+      "elapsedMs": 921.7457089999998,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Branch explicitly before editing an undone exact history"
+      }
+    },
+    {
+      "name": "forged-hidden-redo",
+      "ok": false,
+      "elapsedMs": 907.340791999999,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Exact output/evidence differs from frozen-source reconstruction"
+      }
+    },
+    {
+      "name": "inconsistent-operation-tag",
+      "ok": false,
+      "elapsedMs": 933.7309160000004,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Selection edit changed its original source model"
+      }
+    },
+    {
+      "name": "no-caller-proof-credit",
+      "ok": false,
+      "elapsedMs": 1.0119159999994736,
+      "error": {
+        "code": "GEOMETRY_INVALID_INPUT",
+        "message": "Unknown exact history request field"
+      }
+    },
+    {
+      "name": "caller-material-limit",
+      "ok": false,
+      "elapsedMs": 1.4810829999987618,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Stored proof allowances exceed remaining caller history budget"
+      }
+    },
+    {
+      "name": "caller-byte-limit",
+      "ok": false,
+      "elapsedMs": 1.3326249999990978,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Exact history document exceeds byte budget"
+      }
+    },
+    {
+      "name": "regenerate-earlier-selection",
+      "ok": true,
+      "elapsedMs": 2580.9047500000015
+    },
+    {
+      "name": "redo-regenerated-descendant",
+      "ok": true,
+      "elapsedMs": 1256.4817910000002
+    },
+    {
+      "name": "source-step-has-no-selection-parameter",
+      "ok": false,
+      "elapsedMs": 1029.923667000001,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Source rebase has no authored selection parameter"
+      }
+    }
+  ],
+  "wasmSha256": "1a70b8d7c3c94767c70df5c99b4a5fcc136161151df4a12cbf8a67cbe40ce99c",
+  "wasmBytes": 16334881,
+  "nativeFixtureSha256": "4b6f0791825c675521d1aeacefd20967287a4e372f28c55f33ee3f9a7f63eb7b",
+  "scope": "Actual shared ABI: frozen native history, live feature edits, undo/redo/fork and refusal. Not editor-history integration or general history parity."
+}

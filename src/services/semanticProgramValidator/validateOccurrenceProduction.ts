@@ -1,3 +1,4 @@
+import { isSemanticMapRule, semanticMapNodeKinds, semanticMapParameters } from './semanticMapProduction'
 import { SEMANTIC_PROGRAM_LIMITS, semanticNodeInputs, semanticResultItems } from '../../core/semanticProgram'
 import type { SemanticNode, SemanticOccurrence, SemanticProgramCoreV1, SemanticStaticOperation } from '../../core/semanticProgram'
 import type { SemanticProductionGroup, SemanticProductionItem, SemanticScheduleEvent, ValidatedSemanticExecution } from '../semanticProgramValidator'
@@ -246,21 +247,17 @@ export function validateOccurrenceProduction(
       }
       const reducedCutters = cuttersCompleted ? completeReduction(cutters) : [...cutters]
       terminalItems = [...reducedBase, ...reducedCutters]
-    } else if (active && (rule === 'transform-map' || rule === 'projection-map' || rule === 'offset-map')) {
+    } else if (active && isSemanticMapRule(rule)) {
       if (outputRows.length > frontier.length) {
         fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'partial map emits beyond its completed frontier')
       }
       const commonParameters = new Map<string, string>()
       outputRows.forEach((row, index) => {
-        const expectedKind = rule === 'transform-map' ? ['transform'] as const
-          : rule === 'projection-map' ? ['projection'] as const : ['offset'] as const
-        const produced = requireNodeKind(row, expectedKind)
+        const produced = requireNodeKind(row, semanticMapNodeKinds(rule))
         if (!equalNumberList(semanticNodeInputs(produced), [frontier[index].node])) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, 'partial map output must consume the matching ordered frontier item')
         }
-        const parameters = produced.kind === 'transform' ? JSON.stringify(produced.matrix)
-          : produced.kind === 'projection' ? String(produced.cut)
-            : produced.kind === 'offset' ? String(produced.distance) : ''
+        const parameters = semanticMapParameters(produced)
         const parameterBucket = rule === 'transform-map' && operation.name === 'rotate'
           ? nodes[frontier[index].node].valueType.space
           : 'all'
@@ -296,22 +293,16 @@ export function validateOccurrenceProduction(
       }
       const produced = requireNodeKind(outputRows[0], expectedByName[operation.name])
       own(outputRows[0], produced.id)
-    } else if (rule === 'transform-map' || rule === 'projection-map' || rule === 'offset-map') {
+    } else if (isSemanticMapRule(rule)) {
       requireOutputCount(canonical, outputRows, frontier.length)
       const commonParameters = new Map<string, string>()
       outputRows.forEach((row, index) => {
-        const expectedKind = rule === 'transform-map' ? ['transform'] as const
-          : rule === 'projection-map' ? ['projection'] as const : ['offset'] as const
-        const produced = requireNodeKind(row, expectedKind)
+        const produced = requireNodeKind(row, semanticMapNodeKinds(rule))
         const input = semanticNodeInputs(produced)
         if (input.length !== 1 || input[0] !== frontier[index].node) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, 'map output must consume its matching ordered frontier item')
         }
-        let parameters: string
-        if (produced.kind === 'transform') parameters = JSON.stringify(produced.matrix)
-        else if (produced.kind === 'projection') parameters = String(produced.cut)
-        else if (produced.kind === 'offset') parameters = String(produced.distance)
-        else fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}]`, 'unexpected map node kind')
+        const parameters = semanticMapParameters(produced)
         const parameterBucket = rule === 'transform-map' && operation.name === 'rotate'
           ? nodes[frontier[index].node].valueType.space
           : 'all'

@@ -1,0 +1,895 @@
+--- a/crates/cad-predicates/src/bspline_strip_nonlinear.rs
++++ b/crates/cad-predicates/src/bspline_strip_nonlinear.rs
+@@ -1,5 +1,6 @@
+ //! Exact rational seam maps recovered from a proved affine source coordinate.
+ //! All span pairs with nonempty mapped overlap are checked as polynomials.
++mod algebraic;
+ mod chart_switches;
+ use crate::bspline_internal_jets::{Rational as Q, Series};
+ use crate::{BezierIdentity, Expansion, PredicateContext, Reason, Sign};
+@@ -286,7 +287,33 @@
+     }
+     Ok(true)
+ }
++/// The inverse of a rational positive clock can be genuinely algebraic.
++/// Prove that inverse implicitly by proving the opposite rational bijection;
++/// never approximate its roots or relax original normal-jet identities.
+ pub(crate) fn compare(
++    ctx: &mut PredicateContext<'_>,
++    jets: &[Vec<Series>],
++    u: &[Vec<Q>],
++    degrees: [usize; 2],
++    scale: &Q,
++    order: usize,
++) -> Result<BezierIdentity, Reason> {
++    match compare_direct(ctx, jets, u, degrees, scale, order) {
++        Err(Reason::MissingProof) if order > 0 => {
++            let inverse_scale = one().div_positive(scale, ctx)?;
++            compare_direct(
++                ctx,
++                &[jets[1].clone(), jets[0].clone()],
++                &[u[1].clone(), u[0].clone()],
++                [degrees[1], degrees[0]],
++                &inverse_scale,
++                order,
++            )
++        }
++        result => result,
++    }
++}
++fn compare_direct(
+     ctx: &mut PredicateContext<'_>,
+     jets: &[Vec<Series>],
+     u: &[Vec<Q>],
+@@ -404,7 +431,12 @@
+         }
+     }
+     match local_charts(ctx, &spans, u, degrees, scale, order) {
+-        Err(Reason::MissingProof) => chart_switches::compare(ctx, &spans, u, degrees, scale, order),
++        Err(Reason::MissingProof) => {
++            match chart_switches::compare(ctx, &spans, u, degrees, scale, order) {
++                Err(Reason::MissingProof) => algebraic::compare(ctx, &spans, u, scale, order),
++                result => result,
++            }
++        }
+         result => result,
+     }
+ }
+--- a/crates/geometry-bridge/tests/authored_seam_map.rs
++++ b/crates/geometry-bridge/tests/authored_seam_map.rs
+@@ -222,3 +222,59 @@
+     assert_eq!(wrong["jointContinuousGlobalG2Certified"], false);
+     assert!(wrong["model"].is_null());
+ }
++
++#[test]
++fn implicit_algebraic_seam_reaches_native_protocol_and_never_grants_solid_credit() {
++    let make = |degree, xy: &[[f64; 2]], z, dz| Surface {
++        degree_u: degree,
++        degree_v: 2,
++        knots_u: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        knots_v: vec![0., 0., 0., 1., 1., 1.],
++        control_points: xy
++            .iter()
++            .map(|p| {
++                (0..3)
++                    .map(|j| vec![p[0], p[1], z + dz * j as f64])
++                    .collect()
++            })
++            .collect(),
++        weights: vec![vec![1.; 3]; xy.len()],
++        periodic_u: false,
++        periodic_v: false,
++    };
++    let a = make(
++        4,
++        &[[0., 0.], [7.5, 0.], [20., 2.5], [37.5, 15.], [60., 60.]],
++        0.,
++        0.5,
++    );
++    let b = make(
++        6,
++        &[
++            [0., 0.],
++            [5., 0.],
++            [10., 1.],
++            [16.5, 3.],
++            [26., 8.],
++            [40., 20.],
++            [60., 60.],
++        ],
++        1.,
++        1.,
++    );
++    let request = json!({"op":"nurbs_surface_seam_audit","patches":[a,b],"boundaries":["vMax","vMin"],
++        "order":2,"normalScale":2.,"maxExactWork":1000000,"jointContinuousGlobalG2Certified":true,"solidCertified":true});
++    let full = dispatch(request.clone()).unwrap();
++    assert_eq!(full["seamG2Certified"], true, "{full:?}");
++    assert_eq!(full["jointContinuousGlobalG2Certified"], false);
++    assert_eq!(full["solidCertified"], false);
++    assert!(full["model"].is_null());
++    let mut short = request.clone();
++    short["maxExactWork"] = json!(full["exactWork"].as_u64().unwrap() - 1);
++    assert_eq!(dispatch(short).unwrap()["certified"], false);
++    let mut changed = request;
++    let mut patches: [Surface; 2] = value_codec::from_value(changed["patches"].clone()).unwrap();
++    patches[1].control_points[1][0][1] = 0.125;
++    changed["patches"] = value_codec::to_value(patches).unwrap();
++    assert_eq!(dispatch(changed).unwrap()["certified"], false);
++}
+--- a/crates/nurbs-core/src/analysis/affine_volume.rs
++++ b/crates/nurbs-core/src/analysis/affine_volume.rs
+@@ -14,6 +14,7 @@
+ /// Three matrix columns followed by translation; all values are literal source
+ /// coefficients, not interval samples or caller-supplied successful proofs.
+ pub type Pose = [[f64; 3]; 4];
++mod graph_translation;
+ mod material_plane;
+ mod rational;
+ pub use material_plane::{
+@@ -34,6 +35,12 @@
+         match self {
+             Self::Quintic(p) => p.len(),
+             Self::Rational(p) => p.len(),
++        }
++    }
++    fn controls(self, i: usize) -> &'a [Pose] {
++        match self {
++            Self::Quintic(p) => &p[i],
++            Self::Rational(p) => &p[i].controls,
+         }
+     }
+     fn valid(self) -> bool {
+@@ -354,6 +361,9 @@
+                 }
+             }
+         }
++    }
++    if graph_translation::certify(carrier, pieces, closed, &mut out, max_cells, max_exact_work)? {
++        return Ok(out);
+     }
+     let mut context = Context {
+         uv_window,
+--- a/crates/nurbs-core/src/analysis/affine_volume/rational/tests.rs
++++ b/crates/nurbs-core/src/analysis/affine_volume/rational/tests.rs
+@@ -495,3 +495,121 @@
+         .is_err()
+     );
+ }
++
++#[test]
++fn original_nonplanar_graph_has_global_proof_without_height_smallness_or_atlas_budget_reset() {
++    let mut q = carrier();
++    q.degree_u = 2;
++    q.degree_v = 2;
++    q.knots_u = vec![2., 2., 2., 7., 7., 7.];
++    q.knots_v = vec![-3., -3., -3., 5., 5., 5.];
++    q.control_points = (0..3)
++        .map(|i| {
++            (0..3)
++                .map(|j| {
++                    vec![
++                        1. + 2. * i as f64 + j as f64,
++                        -2. + 2. * j as f64,
++                        if i == 1 && j == 1 { 1024. } else { 0. },
++                    ]
++                })
++                .collect()
++        })
++        .collect();
++    q.weights = vec![vec![1.; 3]; 3];
++    let p = vec![line(0., 1., vec![1., 4.]), line(1., 3., vec![2., 1.])];
++    let saved = q.clone();
++    let full = certify_rational(&q, [0.; 3], &p, false, projection(), 2, 1000000).unwrap();
++    assert!(
++        full.embedding_certified && full.regularity_certified && full.parameter_topology_preserved,
++        "{full:?}"
++    );
++    assert_eq!(
++        full.reason,
++        Some("original-nonplanar-graph-translation-certified")
++    );
++    assert_eq!(full.cells, 2);
++    for (cells, work) in [
++        (0, 1000000),
++        (full.cells - 1, 1000000),
++        (2, 0),
++        (2, full.exact_work - 1),
++    ] {
++        let r = certify_rational(&q, [0.; 3], &p, false, projection(), cells, work).unwrap();
++        assert!(
++            !r.embedding_certified && r.cells <= cells && r.exact_work <= work,
++            "{r:?}"
++        );
++    }
++    let mut oblique = p.clone();
++    let basis = [[1., 0.25, 0.], [0., 1., 0.25], [0.5, 0.25, 1.]];
++    for pose in oblique.iter_mut().flat_map(|p| &mut p.controls) {
++        let t = pose[3][2];
++        for j in 0..3 {
++            pose[j] = basis[j];
++        }
++        pose[3] = [0.5 * t, 0.25 * t, t];
++    }
++    let proof =
++        certify_rational_preconditioned(&q, [0.; 3], &oblique, false, projection(), 2, 1000000)
++            .unwrap();
++    assert!(
++        proof.volume.embedding_certified && proof.volume.regularity_certified,
++        "{proof:?}"
++    );
++    assert_eq!(proof.volume.reason, full.reason);
++    let mut singular = oblique.clone();
++    for pose in singular.iter_mut().flat_map(|p| &mut p.controls) {
++        pose[2] = pose[1];
++    }
++    assert!(
++        !certify_rational(&q, [0.; 3], &singular, false, projection(), 2, 1000000)
++            .unwrap()
++            .embedding_certified
++    );
++    let polynomial = [std::array::from_fn(|i| {
++        let mut pose = identity();
++        pose[3][2] = i as f64;
++        pose
++    })];
++    let poly =
++        super::super::certify(&q, [0.; 3], &polynomial, false, projection(), 1, 1000000).unwrap();
++    assert!(
++        poly.embedding_certified && poly.regularity_certified,
++        "{poly:?}"
++    );
++    assert_eq!(poly.reason, full.reason);
++    let mut reversal = p.clone();
++    reversal[1] = line(1., 0., vec![1., 1.]);
++    assert!(
++        !certify_rational(&q, [0.; 3], &reversal, false, projection(), 2, 1000000)
++            .unwrap()
++            .embedding_certified
++    );
++    let mut changed = q.clone();
++    changed.control_points[1][1][0] = changed.control_points[1][1][0].next_up();
++    assert!(
++        !certify_rational(&changed, [0.; 3], &p, false, projection(), 2, 1000000)
++            .unwrap()
++            .embedding_certified
++    );
++    let mut collapsed = q.clone();
++    for row in &mut collapsed.control_points {
++        for point in row {
++            point[1] = 0.;
++        }
++    }
++    assert!(
++        !certify_rational(&collapsed, [0.; 3], &p, false, projection(), 2, 1000000)
++            .unwrap()
++            .embedding_certified
++    );
++    let mut stopped = p.clone();
++    stopped[1] = line(1., 1., vec![1., 1.]);
++    assert!(
++        !certify_rational(&q, [0.; 3], &stopped, false, projection(), 2, 1000000)
++            .unwrap()
++            .regularity_certified
++    );
++    assert_eq!(q.control_points, saved.control_points);
++}
+--- a/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
++++ b/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
+@@ -345,3 +345,152 @@
+         assert_eq!((a, b), saved);
+     }
+ }
++
++#[test]
++fn algebraic_inverse_clock_is_proved_without_rounded_root_or_extra_budget() {
++    // q=(s+s^2)/2 has strictly positive derivative but a nonrational inverse.
++    // Cartesian (3q,3q^2,z) makes both surfaces regular along the seam.
++    let make = |degree, xy: &[[f64; 2]], z| Surface {
++        degree_u: degree,
++        degree_v: 2,
++        knots_u: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        knots_v: vec![0., 0., 0., 1., 1., 1.],
++        control_points: xy
++            .iter()
++            .map(|p| {
++                (0..3)
++                    .map(|j| vec![p[0], p[1], z + 0.5 * j as f64])
++                    .collect()
++            })
++            .collect(),
++        weights: vec![vec![1.; 3]; xy.len()],
++        periodic_u: false,
++        periodic_v: false,
++    };
++    // Its inverse (-1+sqrt(1+8q))/2 is represented implicitly, never rounded.
++    let a = make(
++        4,
++        &[[0., 0.], [0.375, 0.], [1., 0.125], [1.875, 0.75], [3., 3.]],
++        0.,
++    );
++    let b = make(2, &[[0., 0.], [1.5, 0.], [3., 3.]], 1.);
++    let saved = (a.clone(), b.clone());
++    let full = inferred(&a, &b, "vMax", "vMin", 2, 1., 1000000).unwrap();
++    assert!(full.certified, "{full:?}");
++    for budget in [0, full.work - 1] {
++        assert!(
++            !inferred(&a, &b, "vMax", "vMin", 2, 1., budget)
++                .unwrap()
++                .certified
++        );
++    }
++    let mut wrong = b.clone();
++    wrong.control_points[1][0][1] = f64::from_bits(1);
++    assert!(
++        !inferred(&a, &wrong, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut curvature = b.clone();
++    for row in &mut curvature.control_points {
++        row[2][1] += 0.125;
++    }
++    assert!(
++        inferred(&a, &curvature, "vMax", "vMin", 1, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert!(
++        !inferred(&a, &curvature, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert_eq!((a, b), saved);
++}
++
++#[test]
++fn implicit_algebraic_clocks_cross_both_original_partitions_without_rational_inverse() {
++    let make = |degree, xy: &[[f64; 2]], z, dz| Surface {
++        degree_u: degree,
++        degree_v: 2,
++        knots_u: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
++        knots_v: vec![0., 0., 0., 1., 1., 1.],
++        control_points: xy
++            .iter()
++            .map(|p| {
++                (0..3)
++                    .map(|j| vec![p[0], p[1], z + dz * j as f64])
++                    .collect()
++            })
++            .collect(),
++        weights: vec![vec![1.; 3]; xy.len()],
++        periodic_u: false,
++        periodic_v: false,
++    };
++    // (60q,60q²,z), q_A=(s+s²)/2, q_B=(t+t³)/2. The unique map
++    // solves s+s²=t+t³ and is not rational in either direction.
++    let a = split_original_u(
++        &make(
++            4,
++            &[[0., 0.], [7.5, 0.], [20., 2.5], [37.5, 15.], [60., 60.]],
++            0.,
++            0.5,
++        ),
++        0.5,
++    );
++    let b = split_original_u(
++        &make(
++            6,
++            &[
++                [0., 0.],
++                [5., 0.],
++                [10., 1.],
++                [16.5, 3.],
++                [26., 8.],
++                [40., 20.],
++                [60., 60.],
++            ],
++            1.,
++            1.,
++        ),
++        0.5,
++    );
++    let saved = (a.clone(), b.clone());
++    let full = inferred(&a, &b, "vMax", "vMin", 2, 2., 1000000).unwrap();
++    assert!(full.certified, "{full:?}");
++    assert!(
++        !inferred(&a, &b, "vMax", "vMin", 2, 2., full.work - 1)
++            .unwrap()
++            .certified
++    );
++    let mut changed = b.clone();
++    changed.control_points[2][0][1] = 1f64.next_up();
++    assert!(
++        !inferred(&a, &changed, "vMax", "vMin", 2, 2., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut curved = b.clone();
++    for row in &mut curved.control_points {
++        row[2][1] += 0.125;
++    }
++    assert!(
++        inferred(&a, &curved, "vMax", "vMin", 1, 2., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert!(
++        !inferred(&a, &curved, "vMax", "vMin", 2, 2., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut reversed = b.clone();
++    reversed.control_points.reverse();
++    reversed.weights.reverse();
++    assert!(
++        !inferred(&a, &reversed, "vMax", "vMin", 2, 2., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert_eq!((a, b), saved);
++}
+--- /dev/null
++++ b/crates/nurbs-core/src/analysis/affine_volume/graph_translation.rs
+@@ -0,0 +1,192 @@
++//! Exact triangular global map on the ORIGINAL nonplanar carrier.
++//! Height is never flattened, sampled or bounded to establish injectivity.
++use super::*;
++use crate::numerics::compensated::two_sum;
++fn subtract(a: f64, b: f64) -> Option<f64> {
++    let (v, e) = two_sum(a, -b);
++    (v.is_finite() && e == 0.).then_some(v)
++}
++fn multiply(a: f64, b: f64) -> Option<f64> {
++    if a == 0. || b == 0. {
++        return Some(0.);
++    }
++    if a == 1. {
++        return Some(b);
++    }
++    if b == 1. {
++        return Some(a);
++    }
++    let v = a * b;
++    (v.is_finite()
++        && a.abs() >= 1e-100
++        && b.abs() >= 1e-100
++        && v.abs() >= 1e-100
++        && a.mul_add(b, -v) == 0.)
++        .then_some(v)
++}
++/// true means success or budget exhaustion; false permits the existing atlas
++/// with the SAME remaining ledger. No fresh budget is created on refusal.
++pub(super) fn certify(
++    carrier: &Surface,
++    pieces: Motion<'_>,
++    closed: bool,
++    out: &mut IdealVolumeReport,
++    max_cells: usize,
++    max_work: u64,
++) -> Result<bool> {
++    if closed || carrier.periodic_u || carrier.periodic_v {
++        return Ok(false);
++    }
++    let pu = carrier.degree_u;
++    let pv = carrier.degree_v;
++    if pu == 0
++        || pv == 0
++        || carrier.control_points.len() != pu + 1
++        || carrier.control_points[0].len() != pv + 1
++    {
++        return Ok(false);
++    }
++    let clamped = |knots: &[f64], p: usize| {
++        knots[..=p].iter().all(|x| *x == knots[p])
++            && knots[p + 1..].iter().all(|x| *x == knots[p + 1])
++    };
++    if !clamped(&carrier.knots_u, pu) || !clamped(&carrier.knots_v, pv) {
++        return Ok(false);
++    }
++    macro_rules! charge {
++        ($n:expr) => {
++            if max_work - out.exact_work < $n {
++                out.reason = Some("affine-volume-graph-work-limit");
++                return Ok(true);
++            }
++            out.exact_work += $n;
++        };
++    }
++    // One constant ORIGINAL invertible linear law, not a sampled frame.
++    let first = pieces.controls(0)[0];
++    for pose in (0..pieces.len()).flat_map(|i| pieces.controls(i)) {
++        for j in 0..3 {
++            for k in 0..3 {
++                charge!(1);
++                if pose[j][k] != first[j][k] {
++                    return Ok(false);
++                }
++            }
++        }
++    }
++    charge!(9);
++    let determinant = iv::dot_tight(
++        first[0].map(I::point),
++        iv::cross(first[1].map(I::point), first[2].map(I::point))?,
++    )?;
++    if determinant.lo <= 0. && determinant.hi >= 0. {
++        return Ok(false);
++    }
++    for &w in carrier.weights.iter().flatten() {
++        charge!(1);
++        if w != carrier.weights[0][0] {
++            return Ok(false);
++        }
++    }
++    // Exact translation-control differences parallel one source matrix column.
++    // Thus after the same fixed inverse linear map translation varies only in
++    // the original graph-height coordinate. The inverse is never approximated.
++    let mut chart = None;
++    for height in 0..3 {
++        let Some(pivot) = (0..3).find(|&k| first[height][k] != 0.) else {
++            continue;
++        };
++        let mut valid = true;
++        let mut varies = false;
++        'controls: for pose in (0..pieces.len()).flat_map(|i| pieces.controls(i)) {
++            charge!(1);
++            let Some(d) = subtract(pose[3][pivot], first[3][pivot]) else {
++                valid = false;
++                break;
++            };
++            varies |= d != 0.;
++            for k in 0..3 {
++                charge!(3);
++                let lhs = subtract(pose[3][k], first[3][k])
++                    .and_then(|v| multiply(v, first[height][pivot]));
++                let rhs = multiply(d, first[height][k]);
++                if lhs.is_none() || lhs != rhs {
++                    valid = false;
++                    break 'controls;
++                }
++            }
++        }
++        if valid && varies {
++            chart = Some((height, pivot));
++            break;
++        }
++    }
++    let Some((height, pivot)) = chart else {
++        return Ok(false);
++    };
++    let axes = (0..3).filter(|&k| k != height).collect::<Vec<_>>();
++    let p0 = &carrier.control_points[0][0];
++    let mut columns = [[0.; 2]; 2];
++    for (j, &k) in axes.iter().enumerate() {
++        charge!(2);
++        let (Some(du), Some(dv)) = (
++            subtract(carrier.control_points[pu][0][k], p0[k]),
++            subtract(carrier.control_points[0][pv][k], p0[k]),
++        ) else {
++            return Ok(false);
++        };
++        columns[0][j] = du;
++        columns[1][j] = dv;
++        for i in 0..=pu {
++            for l in 0..=pv {
++                charge!(7);
++                let lhs = subtract(carrier.control_points[i][l][k], p0[k])
++                    .and_then(|v| multiply(v, (pu * pv) as f64));
++                let rhs = multiply(du, (i * pv) as f64)
++                    .zip(multiply(dv, (l * pu) as f64))
++                    .and_then(|(a, b)| subtract(a, -b));
++                if lhs.is_none() || lhs != rhs {
++                    return Ok(false);
++                }
++            }
++        }
++    }
++    charge!(3);
++    let det = I::point(columns[0][0])
++        .mul(I::point(columns[1][1]))?
++        .sub(I::point(columns[0][1]).mul(I::point(columns[1][0]))?)?;
++    if det.lo <= 0. && det.hi >= 0. {
++        return Ok(false);
++    }
++    let mut sign = 0;
++    for i in 0..pieces.len() {
++        if out.cells == max_cells {
++            out.reason = Some("affine-volume-graph-cell-limit");
++            return Ok(true);
++        }
++        out.cells += 1;
++        out.boxes += 1;
++        let jet = pieces.enclose(i, I::new(0., 1.)?)?;
++        let d = jet.origin[1][pivot];
++        let s = if d.lo > 0. {
++            1
++        } else if d.hi < 0. {
++            -1
++        } else {
++            return Ok(false);
++        };
++        if sign != 0 && sign != s {
++            return Ok(false);
++        }
++        sign = s;
++    }
++    // Projection is an affine homeomorphism (det!=0), so equal world points
++    // force equal UV. At that UV, strict same-sign time translation forces
++    // equal time. The Jacobian determinant is det(projection)*translation'.
++    // Arbitrary ORIGINAL height and its derivatives cannot alter either fact.
++    out.embedding_certified = true;
++    out.regularity_certified = true;
++    out.parameter_topology_preserved = true;
++    out.reason = Some("original-nonplanar-graph-translation-certified");
++    Ok(true)
++}
+--- /dev/null
++++ b/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic.rs
+@@ -0,0 +1,266 @@
++//! Implicit algebraic seam correspondence, proved without solving for roots.
++//! A common strictly monotone Cartesian coordinate owns a unique one-cover.
++//! Original position/normal jets must vanish modulo its exact bivariate relation.
++use super::*;
++use std::collections::BTreeMap;
++type B = BTreeMap<(usize, usize), Q>;
++fn tensor(a: &P, b: &P, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
++    let mut out = B::new();
++    for (i, x) in a.iter().enumerate() {
++        for (j, y) in b.iter().enumerate() {
++            ctx.charge(1)?;
++            if x.n.sign() != Sign::Zero && y.n.sign() != Sign::Zero {
++                out.insert((i, j), x.mul(y, ctx)?);
++            }
++        }
++    }
++    Ok(out)
++}
++fn combine(mut a: B, b: B, factor: &Q, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
++    for (key, v) in b {
++        let v = a
++            .remove(&key)
++            .unwrap_or_else(Q::zero)
++            .add(&v.mul(factor, ctx)?, ctx)?;
++        if v.n.sign() != Sign::Zero {
++            a.insert(key, v);
++        }
++    }
++    Ok(a)
++}
++fn times_source(a: &B, b: &P, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
++    let mut out = B::new();
++    for (&(i, j), x) in a {
++        for (k, y) in b.iter().enumerate() {
++            ctx.charge(1)?;
++            if y.n.sign() == Sign::Zero {
++                continue;
++            }
++            let key = (i + k, j);
++            let v = out
++                .remove(&key)
++                .unwrap_or_else(Q::zero)
++                .add(&x.mul(y, ctx)?, ctx)?;
++            if v.n.sign() != Sign::Zero {
++                out.insert(key, v);
++            }
++        }
++    }
++    Ok(out)
++}
++fn divisible(mut p: B, f: &B, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
++    let Some((&(fi, fj), fc)) = f.last_key_value() else {
++        return Ok(false);
++    };
++    let sign = if fc.n.sign() == Sign::Negative {
++        neg(&vec![one()], ctx)?[0].clone()
++    } else {
++        one()
++    };
++    let den = fc.mul(&sign, ctx)?;
++    while let Some((&(i, j), c)) = p.last_key_value() {
++        ctx.charge(1)?;
++        if i < fi || j < fj {
++            return Ok(false);
++        }
++        let factor = c.mul(&sign, ctx)?.div_positive(&den, ctx)?;
++        for (&(a, b), v) in f {
++            let key = (a + i - fi, b + j - fj);
++            let r = p
++                .remove(&key)
++                .unwrap_or_else(Q::zero)
++                .sub(&v.mul(&factor, ctx)?, ctx)?;
++            if r.n.sign() != Sign::Zero {
++                p.insert(key, r);
++            }
++        }
++    }
++    Ok(true)
++}
++fn difference(a: &P, b: &P, c: &P, d: &P, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
++    let left = tensor(a, b, ctx)?;
++    let right = tensor(c, d, ctx)?;
++    combine(left, right, &Q::zero().sub(&one(), ctx)?, ctx)
++}
++fn relation_mod(
++    a: &[H],
++    b: &[H],
++    axis: usize,
++    scale: &Q,
++    order: usize,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<bool, Reason> {
++    let f = difference(&a[0][axis], &b[0][3], &a[0][3], &b[0][axis], ctx)?;
++    if f.is_empty() {
++        return Ok(false);
++    }
++    for k in 0..3 {
++        if !divisible(
++            difference(&a[0][k], &b[0][3], &a[0][3], &b[0][k], ctx)?,
++            &f,
++            ctx,
++        )? {
++            return Ok(false);
++        }
++    }
++    let va = velocity(a, ctx)?;
++    let vb = velocity(b, ctx)?;
++    let aw2 = mul(&a[0][3], &a[0][3], ctx)?;
++    let bw2 = mul(&b[0][3], &b[0][3], ctx)?;
++    for k in 0..3 {
++        let p = combine(
++            tensor(&aw2, &vb[k], ctx)?,
++            tensor(&va[k], &bw2, ctx)?,
++            scale,
++            ctx,
++        )?;
++        if !divisible(p, &f, ctx)? {
++            return Ok(false);
++        }
++    }
++    if order == 1 {
++        return Ok(true);
++    }
++    let ca = acceleration(a, ctx)?;
++    let cb = acceleration(b, ctx)?;
++    let aw3 = mul(&aw2, &a[0][3], ctx)?;
++    let bw3 = mul(&bw2, &b[0][3], ctx)?;
++    let factor = Q::zero().sub(&scale.mul(scale, ctx)?, ctx)?;
++    let mut residual = Vec::new();
++    for k in 0..3 {
++        residual.push(combine(
++            tensor(&aw3, &cb[k], ctx)?,
++            tensor(&ca[k], &bw3, ctx)?,
++            &factor,
++            ctx,
++        )?);
++    }
++    for k in 0..3 {
++        let j = (k + 1) % 3;
++        let p = combine(
++            times_source(&residual[k], &va[j], ctx)?,
++            times_source(&residual[j], &va[k], ctx)?,
++            &Q::zero().sub(&one(), ctx)?,
++            ctx,
++        )?;
++        if !divisible(p, &f, ctx)? {
++            return Ok(false);
++        }
++    }
++    Ok(true)
++}
++pub(super) fn compare(
++    ctx: &mut PredicateContext<'_>,
++    spans: &[Vec<(usize, Vec<H>)>],
++    u: &[Vec<Q>],
++    scale: &Q,
++    order: usize,
++) -> Result<BezierIdentity, Reason> {
++    for axis in 0..3 {
++        let mut ranges = Vec::new();
++        let mut direction = None;
++        let mut valid = true;
++        for side in 0..2 {
++            let mut rows = Vec::new();
++            let mut previous: Option<Q> = None;
++            for (i, h) in &spans[side] {
++                let n = &h[0][axis];
++                let d = &h[0][3];
++                let lo = &u[side][*i];
++                let hi = &u[side][i + 1];
++                let first = value(n, lo, ctx)?.div_positive(&value(d, lo, ctx)?, ctx)?;
++                let last = value(n, hi, ctx)?.div_positive(&value(d, hi, ctx)?, ctx)?;
++                let slope = sub(
++                    &mul(&derivative(n, ctx)?, d, ctx)?,
++                    &mul(n, &derivative(d, ctx)?, ctx)?,
++                    ctx,
++                )?;
++                let sign = last.sub(&first, ctx)?.n.sign();
++                if sign == Sign::Zero || direction.is_some_and(|s| s != sign) {
++                    valid = false;
++                    break;
++                }
++                if let Some(p) = previous {
++                    if !p.equal(&first, ctx)? {
++                        valid = false;
++                        break;
++                    }
++                }
++                let slope = if sign == Sign::Negative {
++                    neg(&slope, ctx)?
++                } else {
++                    slope
++                };
++                if !positive(&slope, lo, hi, ctx)? {
++                    valid = false;
++                    break;
++                }
++                direction = Some(sign);
++                previous = Some(last.clone());
++                rows.push([first, last]);
++            }
++            if !valid {
++                break;
++            }
++            ranges.push(rows);
++        }
++        if !valid {
++            continue;
++        }
++        if !ranges[0][0][0].equal(&ranges[1][0][0], ctx)?
++            || !ranges[0].last().unwrap()[1].equal(&ranges[1].last().unwrap()[1], ctx)?
++        {
++            continue;
++        }
++        let reverse = direction == Some(Sign::Negative);
++        'pairs: for (i, (_, a)) in spans[0].iter().enumerate() {
++            for (j, (_, b)) in spans[1].iter().enumerate() {
++                let [al, ah] = if reverse {
++                    [&ranges[0][i][1], &ranges[0][i][0]]
++                } else {
++                    [&ranges[0][i][0], &ranges[0][i][1]]
++                };
++                let [bl, bh] = if reverse {
++                    [&ranges[1][j][1], &ranges[1][j][0]]
++                } else {
++                    [&ranges[1][j][0], &ranges[1][j][1]]
++                };
++                if ah.sub(bl, ctx)?.n.sign() != Sign::Positive
++                    || bh.sub(al, ctx)?.n.sign() != Sign::Positive
++                {
++                    continue;
++                }
++                if !relation_mod(a, b, axis, scale, order, ctx)? {
++                    valid = false;
++                    break 'pairs;
++                }
++            }
++        }
++        if valid {
++            ctx.charge(0)?;
++            return Ok(BezierIdentity::Equal);
++        }
++    }
++    Err(Reason::MissingProof)
++}
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::{AuthoredScalar, Limits, SourceArena, ToleranceContext};
++    #[test]
++    fn bivariate_division_requires_exact_identity_not_near_zero_resultant() {
++        let arena =
++            SourceArena::authored("implicit", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
++        let tol = ToleranceContext::default_valid();
++        let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        let f = B::from([
++            ((2, 0), one()),
++            ((0, 3), Q::zero().sub(&one(), &mut ctx).unwrap()),
++        ]);
++        let p = times_source(&f, &vec![one(), one()], &mut ctx).unwrap();
++        assert!(divisible(p.clone(), &f, &mut ctx).unwrap());
++        let mut changed = p;
++        changed.insert((0, 0), one());
++        assert!(!divisible(changed, &f, &mut ctx).unwrap());
++    }
++}

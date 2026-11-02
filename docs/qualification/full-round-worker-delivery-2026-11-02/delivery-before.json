@@ -1,0 +1,18 @@
+{
+  "src/generated/geometry-kernels/identity.ts": {
+    "sha256": "7cecbdd47c310b6ed19f8d88e56681daf0cc306b5234ac501e7b9d99750bbb7c",
+    "bytes": 195
+  },
+  "src/generated/geometry-kernels/bytes.ts": {
+    "sha256": "de6cd33be841ac9aa2e574e31be4a9cd43bc4a91890f6d4b7b1bb0a67ef0ea1b",
+    "bytes": 5467467
+  },
+  "src/generated/geometry-kernels/kernel_bg.wasm": {
+    "sha256": "cccc05ce27e15ded848ce27131a6b9d016617115ca7e574870c32742359192e5",
+    "bytes": 16208524
+  },
+  "public/wasm/geometry-kernel.wasm": {
+    "sha256": "cccc05ce27e15ded848ce27131a6b9d016617115ca7e574870c32742359192e5",
+    "bytes": 16208524
+  }
+}

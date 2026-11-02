@@ -1,0 +1,50 @@
+{
+  "scope": "Actual indexed raw BRep rim/coedge ownership and exact rational contact-parameter transfer for Full Round",
+  "status": "eleven-focused-tests-passed",
+  "tests_passed": 11,
+  "runs": [
+    {
+      "log": "tests.log",
+      "exit_code": 0,
+      "tests_passed": 10,
+      "per_target": [
+        5,
+        2,
+        2,
+        1
+      ]
+    },
+    {
+      "log": "volume-tests.log",
+      "exit_code": 0,
+      "tests_passed": 1,
+      "per_target": [
+        1
+      ]
+    }
+  ],
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/raw_profiles.rs": "b3f5c974c251f1e7d81c26bf5c6ce635b1e29acfddba919f36613b5f35fde4ac",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "b8c74b70b84dfc15a6644b3508bdcdf3ade5faab02f8bb99405ff77e6bc1c353",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "4272adeb8fb16f87ff6b2ba502515b589df845ff23de2c506537a25e3aec1eb3",
+    "crates/brep-core/tests/full_round_curved_volume.rs": "eec6cdd60f4e82d5a8c124ab5279a356d07ab57f68ac49bc1700f4f96ca5d558"
+  },
+  "verified": [
+    "original raw curve coefficients and knot clocks retained",
+    "native edge/coedge/face-use traversal, including exact negative knot reflection",
+    "contact hint transferred rationally without binary64 intermediate",
+    "actual selected face ownership by native edge IDs, not geometric fingerprint",
+    "unmodified outer/hole curves use original definitions",
+    "reversed source edge and reversed top carrier/coedges",
+    "changed source definition rejected",
+    "new exact solid admission replayed in six volume fixtures"
+  ],
+  "limitations": [
+    "Raw rim/coedge binding does not prove equality of complete original side support surfaces",
+    "Normalized solver geometry remains a proposal; actual exact geometry must pass its own checks",
+    "Source/result material inclusion and target-radius qualification on new geometry remain open",
+    "Legacy rounded Model remains separate and retains known strict-material-inclusion failure",
+    "Not whole-worktree or runtime Plasticity parity qualification"
+  ],
+  "goal": "active; full original native-library scope preserved"
+}

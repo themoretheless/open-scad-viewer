@@ -195,6 +195,19 @@ pub(crate) fn calculate_partial_stable_graph_third(s:&Surface,span:[usize;2],dom
     calculate_partial_stable_projected(s,span,domain,corner,3,Some(frame))
 }
 fn calculate_partial_stable_projected(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],max_order:usize,frame:Option<([usize;3],[f64;2])>)->Result<Jets> {
+    stable_projected_difference(s,span,domain,corner,max_order,frame,None)
+}
+/// Enclose actual-reference jets with ORIGINAL common rational denominator.
+/// Both homogeneous nets are enclosed before subtraction and differentiation;
+/// no rounded difference Surface is constructed or accepted as authority.
+pub(crate) fn calculate_partial_stable_difference(actual:&Surface,reference:&Surface,span:[usize;2],domain:[[f64;2];2],max_order:usize)->Result<Jets> {
+    crate::check(actual.degree_u==reference.degree_u && actual.degree_v==reference.degree_v
+        && actual.knots_u==reference.knots_u && actual.knots_v==reference.knots_v
+        && actual.weights==reference.weights && actual.periodic_u==reference.periodic_u
+        && actual.periodic_v==reference.periodic_v,"Difference jets need the same original rational basis")?;
+    stable_projected_difference(actual,span,domain,[None;2],max_order,None,Some(reference))
+}
+fn stable_projected_difference(s:&Surface,span:[usize;2],domain:[[f64;2];2],corner:[Option<usize>;2],max_order:usize,frame:Option<([usize;3],[f64;2])>,reference:Option<&Surface>)->Result<Jets> {
     let full = [
         [s.knots_u[span[0]], s.knots_u[span[0] + 1]],
         [s.knots_v[span[1]], s.knots_v[span[1] + 1]],
@@ -212,13 +225,18 @@ fn calculate_partial_stable_projected(s:&Surface,span:[usize;2],domain:[[f64;2];
             .intersect(0., 1.)?;
     }
     let mut net = original_span_net(s, span, full)?;
-    let origin = &s.control_points[span[0] - s.degree_u][span[1] - s.degree_v];
-    for row in &mut net {
-        for h in row {
-            for k in 0..3 {
-                h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
+    if let Some(reference)=reference {
+        let other=original_span_net(reference,span,full)?;
+        for (row,other) in net.iter_mut().zip(other) {
+            for (h,old) in row.iter_mut().zip(other) {
+                for k in 0..3 {h[k]=h[k].sub(old[k])?;}
             }
         }
+    } else {
+        let origin = &s.control_points[span[0] - s.degree_u][span[1] - s.degree_v];
+        for row in &mut net {for h in row {for k in 0..3 {
+            h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
+        }}}
     }
     if let Some((axes,plane))=frame {
         for row in &mut net {for h in row {

@@ -96,6 +96,10 @@ pub(super) fn construct(
             limits,
         )?
     };
+    let joint=match &attempt {
+        owned::SmoothClosedAttempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),
+        owned::SmoothClosedAttempt::Refused(_)=>[false;3],
+    };
     let (model, r) = match &attempt {
         owned::SmoothClosedAttempt::Certified(b) => (Some(b.model()), b.report()),
         owned::SmoothClosedAttempt::Refused(r) => (None, r.as_ref()),
@@ -105,7 +109,7 @@ pub(super) fn construct(
     let original_g1 = r.certified && r.original.g1_certified();
     let original_g2 = r.certified && r.original.g2_certified();
     Ok(
-        json!({"model":model,"certified":r.certified,"solidGeometryCertified":r.certified,
+        json!({"model":model,"jointContinuousGlobalCertified":joint[0],"jointContinuousGlobalG1Certified":joint[1],"jointContinuousGlobalG2Certified":joint[2],"certified":r.certified,"solidGeometryCertified":r.certified,
             "continuousBound":r.continuous_bound,"withinBudget":r.within_budget,"boundaryErrorUpper":r.boundary_error_upper,
             "wallDisplacementUpper":r.displacement_upper,"topologyPreserved":r.topology_preserved,"shellRolesCertified":r.shell_roles_certified,
             "smoothnessCertified":g1,"fullBoundaryG1Certified":g1,"fullBoundaryG2Certified":g2,
@@ -130,7 +134,7 @@ pub(super) fn construct(
             "retainedVolume":r.volume.as_ref().map(|p|{let mut v=atlas(p);v["proofMethod"]=json!("coefficient-owned-filled-volume-atlas");v}),
             "orientation":r.orientation.as_ref().map(|p|json!({"sign":p.sign,"determinant":p.determinant,"cells":r.orientation_cells,"reason":p.reason})),
             "smoothness":r.smoothness.as_ref().map(|s|json!({"extractionComplete":s.extraction_complete,"vertexLinksComplete":s.vertex_links_complete,
-                "edgeIds":s.edge_ids,"unresolvedEdges":s.unresolved_edges,"exactWork":s.exact_work,
+                "edgeIds":s.edge_ids,"unresolvedEdges":s.unresolved_edges,"exactWork":s.exact_work,"parameterWork":s.parameter_work,
                 "edgeCorrespondenceCertified":s.edge_correspondence.as_ref().is_some_and(|p|p.all_equal&&p.all_joins_exact),
                 "agreementWork":s.edge_correspondence.as_ref().map_or(0,|p|p.work),"allFacesRegular":s.regularity.all_faces_regular,
                 "regularityCells":s.regularity.cells,"fullBoundaryG1Certified":s.g1_certified,"fullBoundaryG2Certified":s.g2_certified,

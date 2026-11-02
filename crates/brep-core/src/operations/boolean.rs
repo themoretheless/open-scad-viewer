@@ -2,6 +2,14 @@ use super::*;
 /// Bounded regularized CSG over retained boundary geometry. Empty results have
 /// no placeholder topology. Unsupported curved intersections remain explicit.
 pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    boolean_impl(a, b, operation, true)
+}
+pub(super) fn boolean_impl(
+    a: &Model,
+    b: &Model,
+    operation: &str,
+    retry_seams: bool,
+) -> Result<Model> {
     a.validate()?;
     b.validate()?;
     if !matches!(operation, "union" | "difference" | "intersection" | "xor") {
@@ -25,81 +33,48 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     // Curved operands are fail-closed: a rejected analytic certificate must
     // never fall through to prism recognition, polygonal CSG, or Manifold.
     if has_curved_geometry {
-        if crate::nurbs_ss_g6::is_general_nurbs_boolean_candidate(a, b) {
-            return crate::nurbs_ss_g6::author_general_nurbs_boolean(a, b, operation)
-                .map(|(model, _certificate)| model);
-        }
-        if crate::nurbs_ss_g6::is_nurbs_boolean_v5_candidate(a, b) {
-            return crate::nurbs_ss_g6::nurbs_boolean_rational_graph_patch_v5(a, b, operation)
-                .map(|(model, _certificate)| model);
-        }
-        if crate::nurbs_ss_g6::is_nurbs_boolean_v3_candidate(a, b) {
-            if crate::nurbs_ss_g6::canonical_graph_is_first(a)
-                && let Ok((model, _certificate)) =
-                    crate::nurbs_ss_g6::nurbs_boolean_graph_containment_v4(a, b, operation)
-            {
-                return Ok(model);
-            }
-            if let Ok((model, _certificate)) =
-                crate::nurbs_ss_g6::nurbs_boolean_graph_patch_unequal_v4(a, b, operation)
-            {
-                return Ok(model);
-            }
-            return crate::nurbs_ss_g6::nurbs_boolean_graph_patch_v3(a, b, operation)
-                .map(|(model, _certificate)| model);
-        }
-        if crate::nurbs_ss_g6::is_nurbs_boolean_candidate(a, b) {
-            return crate::nurbs_ss_g6::nurbs_boolean_imprint_solids(a, b, operation)
-                .map(|(model, _certificate)| model);
-        }
-        match crate::profile_imprint::boolean(a, b, operation) {
-            Ok(Some(result)) => {
-                crate::solid_audit::audit_solid(&result)?;
-                return Ok(result);
-            }
-            Ok(None) => {}
-            // A profile family that cannot read an operand (free-form
-            // trims, fitted flanks) is not a verdict on the pair: the
-            // analytic matrix and the tolerant fallback still get to try.
-            Err(e) if e.code == "BREP_UNSUPPORTED_PLANAR_TRIM" => {}
-            Err(e) => return Err(e),
-        }
-        match crate::analytic_boolean::analytic_boolean(a, b, operation) {
-            Ok((result, cert)) => {
-                if !cert.permits_topology_change() || !cert.no_prism_authorship {
-                    return Err(Error::new(
-                        "BREP_ANALYTIC_BOOLEAN_REFUSED",
-                        "Curved Boolean certificate does not permit topology change",
-                    ));
+        return match curved_boolean_exact(a, b, operation) {
+            Ok(model) => Ok(model),
+            Err(error) if proof_refusal(error.code) => {
+                if retry_seams {
+                    if let Some(model) =
+                        super::seam_boolean::try_seam_normalized_boolean(a, b, operation)?
+                    {
+                        return Ok(model);
+                    }
                 }
-                return Ok(result);
-            }
-            Err(analytic_error) => {
-                // The exact matrix refused this pair. A numerical
-                // surface/surface trace with a stated tolerance is the
-                // fallback; its result carries `tolerance_mm` so callers can
-                // tell it from an exact one. Hard errors (invalid input,
-                // resource limits) are not retried.
-                if !matches!(
-                    analytic_error.code,
-                    "BREP_UNSUPPORTED_OPERATION"
-                        | "BREP_ANALYTIC_BOOLEAN_REFUSED"
-                        | "BREP_SOLID_AUDIT_REFUSED"
-                ) || operation == "xor"
+                if let Some(model) =
+                    crate::minkowski3d::curved::try_graph_box_boolean(a, b, operation)?
                 {
-                    return Err(analytic_error);
+                    return Ok(model);
                 }
-                return crate::tolerant_boolean::boolean(a, b, operation).map_err(|tolerant| {
-                    Error::new(
-                        analytic_error.code,
-                        format!(
-                            "{}; tolerant fallback: {}",
-                            analytic_error.message, tolerant.message
-                        ),
-                    )
-                });
+                if operation == "intersection" {
+                    if let Some(model) =
+                        crate::minkowski3d::curved::try_graph_box_boolean(b, a, operation)?
+                    {
+                        return Ok(model);
+                    }
+                }
+                if let Some(model) =
+                    crate::minkowski3d::curved::try_nonintersecting_nurbs_boolean(a, b, operation)?
+                {
+                    return Ok(model);
+                }
+                if let Some(model) =
+                    crate::minkowski3d::curved::try_retained_nurbs_boolean(a, b, operation)?
+                {
+                    return Ok(model);
+                }
+                Err(Error::new(
+                    "BREP_NURBS_BOOLEAN_UNPROVED",
+                    format!(
+                        "Complete NURBS intersection coverage and retained-material classification are unproved: {}",
+                        error.message
+                    ),
+                ))
             }
-        }
+            Err(error) => Err(error),
+        };
     }
     // Convex planar CSG is built directly from clipped boundary polygons,
     // independent of face orientation in world axes.
@@ -172,45 +147,76 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     if occupied.is_empty() {
         return Model::empty(a.tolerance_mm.max(b.tolerance_mm));
     }
-    let mut polygons = vec![];
-    let directions = [
-        ([-1, 0, 0], 0usize),
-        ([1, 0, 0], 0),
-        ([0, -1, 0], 1),
-        ([0, 1, 0], 1),
-        ([0, 0, -1], 2),
-        ([0, 0, 1], 2),
-    ];
-    for &[x, y, z] in &occupied {
-        let cell = [x, y, z];
-        let x0 = coordinates[0][x];
-        let x1 = coordinates[0][x + 1];
-        let y0 = coordinates[1][y];
-        let y1 = coordinates[1][y + 1];
-        let z0 = coordinates[2][z];
-        let z1 = coordinates[2][z + 1];
-        for (side, &(delta, axis)) in directions.iter().enumerate() {
-            let adjacent = cell[axis] as isize + delta[axis] as isize;
-            let exposed = adjacent < 0 || adjacent >= shape[axis] as isize || {
-                let mut neighbor = cell;
-                neighbor[axis] = adjacent as usize;
-                !occupied.contains(&neighbor)
-            };
-            if !exposed {
-                continue;
-            }
-            polygons.push(match side {
-                0 => vec![[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]],
-                1 => vec![[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]],
-                2 => vec![[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]],
-                3 => vec![[x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0]],
-                4 => vec![[x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [x1, y0, z0]],
-                _ => vec![[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]],
-            });
-        }
-    }
+    let polygons = super::orthogonal_boundary::polygons(&coordinates, &occupied)?;
     let mut result = model_from_polygons(polygons, a.tolerance_mm.max(b.tolerance_mm))?;
     result.inherit_topology_ids(&[a, b]);
     result.validate()?;
     Ok(result)
+}
+
+// Unsupported sufficient proofs can be followed by another complete proof.
+// Invalid data and resource-limit codes keep their original failure semantics.
+pub(super) fn proof_refusal(code: &str) -> bool {
+    code == "BREP_UNSUPPORTED_OPERATION"
+        || code == "BREP_UNSUPPORTED_PLANAR_TRIM"
+        || code.ends_with("_REFUSED")
+        || code.ends_with("_UNPROVED")
+        || code.ends_with("_UNRESOLVED")
+}
+fn curved_boolean_exact(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    if let Some(model) = crate::minkowski3d::curved::try_common_quadratic_boolean(a, b, operation)?
+    {
+        return Ok(model);
+    }
+    if crate::nurbs_ss_g6::is_general_nurbs_boolean_candidate(a, b) {
+        return crate::nurbs_ss_g6::author_general_nurbs_boolean(a, b, operation)
+            .map(|(model, _certificate)| model);
+    }
+    if crate::nurbs_ss_g6::is_nurbs_boolean_v5_candidate(a, b) {
+        return crate::nurbs_ss_g6::nurbs_boolean_rational_graph_patch_v5(a, b, operation)
+            .map(|(model, _certificate)| model);
+    }
+    if crate::nurbs_ss_g6::is_nurbs_boolean_v3_candidate(a, b) {
+        if crate::nurbs_ss_g6::canonical_graph_is_first(a)
+            && let Ok((model, _certificate)) =
+                crate::nurbs_ss_g6::nurbs_boolean_graph_containment_v4(a, b, operation)
+        {
+            return Ok(model);
+        }
+        if let Ok((model, _certificate)) =
+            crate::nurbs_ss_g6::nurbs_boolean_graph_patch_unequal_v4(a, b, operation)
+        {
+            return Ok(model);
+        }
+        return crate::nurbs_ss_g6::nurbs_boolean_graph_patch_v3(a, b, operation)
+            .map(|(model, _certificate)| model);
+    }
+    if crate::nurbs_ss_g6::is_nurbs_boolean_candidate(a, b) {
+        return crate::nurbs_ss_g6::nurbs_boolean_imprint_solids(a, b, operation)
+            .map(|(model, _certificate)| model);
+    }
+    match crate::profile_imprint::boolean(a, b, operation) {
+        Ok(Some(result)) => {
+            crate::solid_audit::audit_solid(&result)?;
+            return Ok(result);
+        }
+        Ok(None) => {}
+        // A profile family that cannot read an operand (free-form
+        // trims, fitted flanks) is not a verdict on the pair: the
+        // analytic matrix still gets to prove the pair.
+        Err(e) if e.code == "BREP_UNSUPPORTED_PLANAR_TRIM" => {}
+        Err(e) => return Err(e),
+    }
+    match crate::analytic_boolean::analytic_boolean(a, b, operation) {
+        Ok((result, cert)) => {
+            if !cert.permits_topology_change() || !cert.no_prism_authorship {
+                return Err(Error::new(
+                    "BREP_ANALYTIC_BOOLEAN_REFUSED",
+                    "Curved Boolean certificate does not permit topology change",
+                ));
+            }
+            return Ok(result);
+        }
+        Err(error) => Err(error),
+    }
 }

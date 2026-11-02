@@ -1,0 +1,4 @@
+{"rawBytes":18255785}
+wasm-opt: 18255785 -> 16225953 bytes (11.1% smaller)
+{"optimizedBytes":16225953,"sha256":"c0701cb91cf7b719fad299c8ec1e713a820fea0521dd3150c8f778328c4f49c4"}
+Staged bounded package prepared

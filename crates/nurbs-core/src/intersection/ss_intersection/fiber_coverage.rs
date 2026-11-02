@@ -6,8 +6,10 @@ mod construct_trace;
 mod mixed;
 mod world_trace;
 pub use components::{
-    FiberBridgeSpec, FiberComponentsResult, FiberSeparation, QualifiedFiberComponents,
-    connect_mixed_fiber_cover,
+    DiscoveredMixedFiberComponents, FiberBridgeSpec, FiberComponentsResult, FiberPointConnection,
+    FiberSeparation, MixedComponentDiscoveryLimits, MixedComponentDiscoveryResult,
+    MixedTransitionSearch, QualifiedFiberComponents, connect_mixed_fiber_cover,
+    connect_mixed_fiber_cover_automatic,
 };
 pub use construct_trace::{FiberTraceBuild, FiberTraceBuildLimits, construct_fiber_trace};
 pub use world_trace::{
@@ -21,8 +23,9 @@ pub use mixed::{
     cover_mixed_fiber_box, cover_mixed_fiber_surfaces,
 };
 pub use transition::{
-    FiberTransitionResult, QualifiedFiberTransition, TransitionOrientation,
-    qualify_fiber_transition,
+    DiscoveredFiberTransition, FiberTransitionDiscoveryLimits, FiberTransitionDiscoveryResult,
+    FiberTransitionResult, QualifiedFiberTransition, TransitionAttempt, TransitionOrientation,
+    discover_fiber_transition, qualify_fiber_transition,
 };
 type Box4 = [[f64; 2]; 4];
 #[derive(Clone, Copy, Debug)]
@@ -705,9 +708,26 @@ mod tests {
 }
 
 mod discovery;
-pub use discovery::{FiberDiscoveryLimits,FiberDiscoveryKind,FiberDiscoveryNode,FiberDiscoveryResult,QualifiedDiscoveredFiberAtlas,discover_fiber_box,discover_fiber_surfaces};
+pub use discovery::{
+    FiberDiscoveryKind, FiberDiscoveryLimits, FiberDiscoveryNode, FiberDiscoveryResult,
+    QualifiedDiscoveredFiberAtlas, discover_fiber_box, discover_fiber_surfaces,
+};
 mod discovered_components;
-pub use discovered_components::{DiscoveredComponentLimits,OriginalFiberPointConnection,QualifiedDiscoveredFiberComponents,DiscoveredFiberComponentsResult,connect_discovered_fiber_atlas};
+pub use discovered_components::{
+    DiscoveredComponentLimits, DiscoveredFiberComponentsResult, OriginalFiberPointConnection,
+    QualifiedDiscoveredFiberComponents, connect_discovered_fiber_atlas,
+};
 
+mod closed_branches;
 mod physical_branches;
-pub use physical_branches::{PhysicalFiberBranchLimits, OriginalPhysicalFiberBranch, OriginalPhysicalFiberVertex, OriginalPhysicalFiberTrim, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches};
+pub use closed_branches::{
+    ClosedFiberBranchLimits, OriginalClosedFiberBranch, OriginalClosedFiberTrim,
+    QualifiedClosedFiberBranches, assemble_closed_fiber_branches,
+};
+pub use physical_branches::{
+    OriginalPhysicalFiberBranch, OriginalPhysicalFiberTrim, OriginalPhysicalFiberVertex,
+    PhysicalFiberBranchLimits, QualifiedPhysicalFiberBranches, assemble_physical_fiber_branches,
+};
+
+mod trace_atlas;
+pub use trace_atlas::{QualifiedFiberTraceAtlas, qualify_fiber_trace_atlas};

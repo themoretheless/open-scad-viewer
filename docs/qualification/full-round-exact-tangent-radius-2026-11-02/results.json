@@ -1,0 +1,61 @@
+{
+  "status": "focused exact tangent/contact/radius and strict material qualification; full original parity incomplete",
+  "passed": 10,
+  "tests": {
+    "exact_restriction_wire": 2,
+    "exact_wire_tangent_repair": 2,
+    "full_round_curved": 2,
+    "full_round_curved_volume": 1,
+    "full_round_exact_material": 1,
+    "full_round_raw_binding": 2
+  },
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/original_restriction/wire.rs": "c3cc830d73cda8d7cb88fa473d180d6a2d41f16542c69a58bb46486892823c6f",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/tangent_repair.rs": "b9a1d02831d58ab1a0db315d61b87fc754e8eaa09cb10f4fdbced20cfd208195",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/contacts.rs": "08fa41321c89e4a616fd68848ca7b9d9aa688a0e7c15ca27f7506a712dcc9f77",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/radius.rs": "b3f978641d95e9f95987ac81fe3a8b7287c34df7fccde7b5c8489524f1b31435",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "3175940ca33ce230acf34b9ee3bee60320a4b1912ad5337291c6e99552a8ae0c",
+    "crates/brep-core/tests/exact_wire_tangent_repair.rs": "0f24724c2ae66ff9ba6d3a2d7bbd481c4aaaeffe940e23ca921356a4c83c90f2",
+    "crates/brep-core/tests/full_round_exact_material.rs": "ff2ec451d21e9711992f662ad3cd69a10ed2fb27eccf0f50384a2bbe3f9258dc"
+  },
+  "strict_material_cases": [
+    {
+      "weight": 1,
+      "added_witnesses": 0,
+      "removed_witnesses": 8,
+      "ray_cells": 288
+    },
+    {
+      "weight": 0.7,
+      "added_witnesses": 0,
+      "removed_witnesses": 10,
+      "ray_cells": 360
+    }
+  ],
+  "unrepaired_endpoint_only_regression": {
+    "weight": 1,
+    "added_witnesses": 7,
+    "no_addition": "refused"
+  },
+  "exact_G1": "zero sine-squared at all edited joins; fixed source pieces unchanged",
+  "radius": "whole edited-span Bernstein bound to unchanged proposal center/radius <= source.tolerance_mm/32; nonzero bound is not exact circle identity",
+  "displacement": "maximum over ALL Cartesian controls; positive weights unchanged; whole-curve bound <= original tolerance/32",
+  "crown": "exact rational projection onto finite original raw middle segment, with original line tangent; no support extension",
+  "coverage": [
+    "middle-control displacement 1/8 proves squared bound 1/64; smaller tolerance refuses",
+    "parallel tangent lines refuse",
+    "nonbinary raw clocks, reversed edge and transposed/reversed cap",
+    "six symmetric/asymmetric polynomial/rational volume fixtures with multispan arcs"
+  ],
+  "checks": [
+    "11 frozen clean files unchanged",
+    "API map passed: 242 roots, 200 catalog entries; not parity"
+  ],
+  "open": [
+    "strict material census across remaining asymmetric/multispan fixtures",
+    "general spatial/freeform Full Round and variable radius networks",
+    "main pipeline/model delivery and full regression/WASM",
+    "complete original library parity and external runtime equivalence"
+  ],
+  "format_note": "rustfmt reordered module declarations after test run; no implementation change"
+}

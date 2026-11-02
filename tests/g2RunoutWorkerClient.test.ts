@@ -10,7 +10,9 @@ const surface={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoin
 const job:Extract<MainSolidJob,{kind:'g2RunoutSurface'}>={kind:'g2RunoutSurface',source:surface,plane:surface,
  targetPcurve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,.1],[1,.1]],weights:[1,1]},
  options:{sourceBoundary:'vMax',sourceTrace:{at:.9,along:[0,1]},gains:[.1,.1],transverseUv:[0,1]}}
-function result(){return {patches:[surface],report:{method:'native-original-support-G2-runout/1',complete:true,withinTolerance:true,cells:12,exactWork:100,
+function result(){return {patches:[surface],report:{method:'native-original-support-G2-runout/2',patchCount:1,seamComplete:true,seamWithinTolerance:true,fieldComplete:true,curvatureLimitPerMm:10,
+ domainCells:1,shapeCells:1,maxDomainCells:1000000,maxShapeCells:1000000,
+ fields:[{patch:0,injectivityCertified:true,curvatureDecision:'within',absoluteCurvatureUpper:1,witnessUv:null,witnessCurvature:null,unresolvedRegion:null}],complete:true,withinTolerance:true,cells:12,exactWork:100,
  maxCells:100000,maxExactWork:1000000,tolerances:[1e-7,1e-5,1e-4],solidGeometryCertified:false,radiusLawCertified:false,interiorEmbeddingCertified:false,
  supportSeams:[0,1].map(source=>({patch:0,source,positionValidated:true,positionUpper:1e-8,inspection:{decision:'within-tolerance',regularityProven:true,cells:6,
  positionBounds:[0,1e-8],orientation:'same',branches:[]}})),internalSeams:[]}}}
@@ -26,7 +28,7 @@ it('cancels runout work, retries in a new realm and discards a captured late res
  }finally{client.dispose()}
 })
 it('refuses a malformed surface and forged seam scope from the worker',async()=>{
- for(const mutate of [(v:any)=>v.patches[0].weights[0][0]=NaN,(v:any)=>v.report.supportSeams[1].source=0]){
+ for(const mutate of [(v:any)=>v.patches[0].weights[0][0]=NaN,(v:any)=>v.report.supportSeams[1].source=0,(v:any)=>v.report.fields[0].absoluteCurvatureUpper=11,(v:any)=>v.report.method='native-original-support-G2-runout/1']){
   const port=new Port(),client=new MainSolidWorkerClient(()=>port)
   try{const promise=client.run(job),failed=expect(promise).rejects.toMatchObject({code:'CAD_PROTOCOL'}),response=structuredClone(result());mutate(response);port.reply(response);await failed}
   finally{client.dispose()}

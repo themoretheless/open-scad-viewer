@@ -1,4 +1,5 @@
 use super::*;
+mod periodic_grid;
 
 pub(super) fn face_integral(
     model: &Model,
@@ -21,7 +22,11 @@ pub(super) fn face_integral(
     } else {
         &GAUSS_RATIONAL
     };
-    let u0 = surface.knots_u[surface.degree_u];
+    let u0 = if surface.periodic_u {
+        integration_grids[use_.face][0][0]
+    } else {
+        surface.knots_u[surface.degree_u]
+    };
     let mut result = [0.; 11];
     for &wire in std::iter::once(&face.outer).chain(&face.holes) {
         for (coedge_index, coedge) in model.loops[wire].coedges.iter().enumerate() {
@@ -137,7 +142,11 @@ pub fn mass_properties(
     let integration_grids = model
         .faces
         .iter()
-        .map(|face| conditioned_surface_grid(&face.surface, &mut budget))
+        .enumerate()
+        .map(|(i, face)| {
+            let grid = conditioned_surface_grid(&face.surface, &mut budget)?;
+            periodic_grid::lift(model, i, grid, &mut budget)
+        })
         .collect::<Result<Vec<_>>>()?;
     let mut integration_spans = BTreeMap::new();
     for (face_index, face) in model.faces.iter().enumerate() {

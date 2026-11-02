@@ -201,6 +201,10 @@ fn original_and_actual_rational_body_own_full_filled_planar_and_nonplanar_cap_g2
         );
         let r = b.report();
         assert!(r.certified && r.source_boundary_exact && r.source_g2 && r.topology_preserved);
+        let joint = b.joint_certificate(2).unwrap();
+        assert!(std::ptr::eq(joint.model(), b.model()));
+        assert_eq!(joint.boundary_error_upper(), 0.);
+        assert_eq!(joint.order(), 2);
         assert_eq!(b.model().faces.len(), 32);
         assert_eq!(r.caps.len(), 2);
         assert!(
@@ -253,6 +257,11 @@ fn curvature_jump_preserves_explicit_g1_and_refuses_strict_cap_g2() {
         .unwrap(),
     );
     assert!(b.report().source_g1 && !b.report().source_g2);
+    assert!(b.joint_certificate(1).is_ok());
+    assert!(matches!(
+        b.joint_certificate(2),
+        Err(crate::sweep_boundary_owned::joint::Refusal::OriginalG2)
+    ));
 }
 
 #[test]
@@ -322,6 +331,8 @@ fn sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection(
         .unwrap(),
     );
     assert!(b.report().certified && !b.report().source_g1 && !b.report().source_g2);
+    assert!(b.joint_certificate(0).is_ok());
+    assert!(b.joint_certificate(1).is_err());
     assert_eq!(b.report().seam_continuity, "C0");
     assert!(b.report().c0_regularity.as_ref().unwrap().all_faces_regular);
     assert!(b.report().c0_agreement.as_ref().unwrap().all_equal);
@@ -581,3 +592,136 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
         );
     }
 }
+
+#[path = "../../../../tests/fixtures/clock_conjugacy.rs"]
+mod clock_case;
+#[test]
+fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_proofs() {
+    let (profiles, material, _) = fixture(false);
+    let (reference, target, map) = clock_case::motion();
+    let saved = (reference.clone(), target.clone(), map.clone());
+    let l = limits();
+    let result = crate::sweep_boundary_owned::clock::construct(
+        &profiles,
+        &material,
+        [0.; 3],
+        &reference,
+        &target,
+        &map,
+        &[],
+        1e-8,
+        l,
+    )
+    .unwrap();
+    let body = match result {
+        crate::sweep_boundary_owned::clock::Attempt::Certified(b) => b,
+        crate::sweep_boundary_owned::clock::Attempt::Refused(r) => panic!(
+            "clock refused {} work={} cols={} reference={:?}",
+            r.reason,
+            r.proof.exact_work,
+            r.proof.columns,
+            r.reference.as_ref().map(|r| (
+                r.reason,
+                r.source_exact_work,
+                r.volume.as_ref().map(|v| v.reason)
+            ))
+        ),
+    };
+    assert_eq!(body.clock_proof().columns, 4);
+    assert!(body.clock_proof().c2_clock && body.clock_proof().periodic_derivatives);
+    assert!(body.source_exact_work() <= l.source_exact_work);
+    let proof = body.joint_certificate(2).unwrap();
+    assert_eq!(proof.boundary_error_upper(), 0.);
+    assert!(std::ptr::eq(proof.model(), body.model()));
+    let mut altered = target.clone();
+    altered[1].controls[3][0][0] = altered[1].controls[3][0][0].next_up();
+    let denied = crate::sweep_boundary_owned::clock::construct(
+        &profiles,
+        &material,
+        [0.; 3],
+        &reference,
+        &altered,
+        &map,
+        &[],
+        1e-8,
+        l,
+    )
+    .unwrap();
+    assert!(matches!(
+        denied,
+        crate::sweep_boundary_owned::clock::Attempt::Refused(_)
+    ));
+    let mut translated = target.clone();
+    translated[2].controls[4][3][2] = 0.125;
+    assert!(matches!(
+        crate::sweep_boundary_owned::clock::construct(
+            &profiles,
+            &material,
+            [0.; 3],
+            &reference,
+            &translated,
+            &map,
+            &[],
+            1e-8,
+            l
+        )
+        .unwrap(),
+        crate::sweep_boundary_owned::clock::Attempt::Refused(_)
+    ));
+    let mut short = l;
+    short.source_exact_work = body.clock_proof().exact_work - 1;
+    assert!(matches!(
+        crate::sweep_boundary_owned::clock::construct(
+            &profiles,
+            &material,
+            [0.; 3],
+            &reference,
+            &target,
+            &map,
+            &[],
+            1e-8,
+            short
+        )
+        .unwrap(),
+        crate::sweep_boundary_owned::clock::Attempt::Refused(_)
+    ));
+    let mut global = l;
+    global.volume.cells = 0;
+    match crate::sweep_boundary_owned::clock::construct(
+        &profiles,
+        &material,
+        [0.; 3],
+        &reference,
+        &target,
+        &map,
+        &[],
+        1e-8,
+        global,
+    )
+    .unwrap()
+    {
+        crate::sweep_boundary_owned::clock::Attempt::Refused(r) => {
+            assert!(r.proof.certified);
+            assert_eq!(r.reason, "reference-original-global-proof-unproved");
+        }
+        _ => panic!("A valid clock cannot supply a missing original global proof"),
+    }
+    for (a, b) in reference
+        .iter()
+        .zip(&saved.0)
+        .chain(target.iter().zip(&saved.1))
+    {
+        assert_eq!(a.controls, b.controls);
+        assert_eq!(a.weights, b.weights);
+    }
+    assert_eq!(map, saved.2);
+}
+
+
+
+
+
+
+
+#[path = "tests/geometry.rs"]
+mod geometry;

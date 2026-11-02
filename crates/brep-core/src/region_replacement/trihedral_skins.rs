@@ -192,6 +192,43 @@ pub fn build_trihedral_strips(
     span_mm: f64,
     limits: StripLimits,
 ) -> Result<TrihedralStrips> {
+    build_strips(
+        source, shell, vertex, requested, runout_mm, span_mm, limits, None,
+    )
+}
+/// Joint-corner proposal with an explicit planar G2 profile. The unchanged
+/// default builder keeps its original profile. Every saved seam is rechecked.
+pub fn build_trihedral_strips_with_profile(
+    source: &Model,
+    shell: usize,
+    vertex: usize,
+    requested: &[EdgeRadius],
+    runout_mm: f64,
+    span_mm: f64,
+    limits: StripLimits,
+    handle_fraction: f64,
+) -> Result<TrihedralStrips> {
+    build_strips(
+        source,
+        shell,
+        vertex,
+        requested,
+        runout_mm,
+        span_mm,
+        limits,
+        Some(handle_fraction),
+    )
+}
+fn build_strips(
+    source: &Model,
+    shell: usize,
+    vertex: usize,
+    requested: &[EdgeRadius],
+    runout_mm: f64,
+    span_mm: f64,
+    limits: StripLimits,
+    handle: Option<f64>,
+) -> Result<TrihedralStrips> {
     if !span_mm.is_finite()
         || span_mm <= 0.
         || limits.tolerances.iter().any(|v| !v.is_finite() || *v <= 0.)
@@ -282,7 +319,13 @@ pub fn build_trihedral_strips(
             }
             sides[k] = side.signum();
         }
-        let built = fillet_contact::build_g2(
+        let build = |surfaces, radius, options, tolerance, cells, exact| match handle {
+            Some(fraction) => fillet_contact::build_planar_g2_profile(
+                surfaces, radius, fraction, options, tolerance, cells, exact,
+            ),
+            None => fillet_contact::build_g2(surfaces, radius, options, tolerance, cells, exact),
+        };
+        let built = build(
             surfaces,
             edge.radius_mm,
             &FilletOptions {
@@ -491,9 +534,12 @@ pub fn build_trihedral_strips(
                 return Err(refused("Mutual separation work exhausted"));
             }
             let distance = crate::face_domain::distance_between_faces(
-                &strips[a].patch.model, 0,
-                &strips[b].patch.model, 0,
-                limits.tolerances[0], limits.tolerance_uv,
+                &strips[a].patch.model,
+                0,
+                &strips[b].patch.model,
+                0,
+                limits.tolerances[0],
+                limits.tolerance_uv,
                 (remaining / 2).min(1024).max(1),
                 // Initial broad trim queries must leave work for the actual
                 // subdivision cover; this remains inside the shared caller limit.
@@ -505,9 +551,15 @@ pub fn build_trihedral_strips(
             if !distance.lower_bound_mm.is_finite()
                 || distance.lower_bound_mm <= limits.tolerances[0]
             {
-                return Err(refused(&format!("Mutual strip separation remains unproven for [{a},{b}]: lower={}, cells={}, domains={}",distance.lower_bound_mm,distance.cells,distance.domain_cells)));
+                return Err(refused(&format!(
+                    "Mutual strip separation remains unproven for [{a},{b}]: lower={}, cells={}, domains={}",
+                    distance.lower_bound_mm, distance.cells, distance.domain_cells
+                )));
             }
-            separation.push(StripSeparation { strips: [a,b], distance });
+            separation.push(StripSeparation {
+                strips: [a, b],
+                distance,
+            });
         }
     }
     Ok(TrihedralStrips {

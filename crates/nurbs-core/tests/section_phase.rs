@@ -59,7 +59,9 @@ fn unresolved_results_are_atomic_and_invalid_inputs_are_rejected() {
     let curves = vec![square(0.), square(2.)];
     let before = curves.clone();
     let anchors = vec![vec![2., 1., -1.], vec![2., 1., 3.]];
-    let r = section_phase::align(&curves, &anchors, 0.01, 1e-12, 5).unwrap();
+    let improved = section_phase::align(&curves, &anchors, 0.01, 1e-12, 5).unwrap();
+    assert!(improved.curves.is_some());
+    let r = section_phase::align(&curves, &anchors, 0.01, 1e-30, 5).unwrap();
     assert!(r.curves.is_none());
     assert!(
         r.phases

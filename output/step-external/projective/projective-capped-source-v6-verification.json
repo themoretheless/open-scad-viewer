@@ -1,0 +1,46 @@
+{
+  "schema": "cad-source-capped-body-step-occt/1",
+  "stepSha256": "ce6c1bb2de8348066c152629fa6d9b8c1282268447457b78d8cf15bacfdf9ac4",
+  "scope": "One specified native source-body STEP export; independent solid validity, signed volume and axis extents.",
+  "fixture": {
+    "centers": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        8
+      ]
+    ],
+    "radii": [
+      0.5,
+      1.25
+    ]
+  },
+  "occtValid": true,
+  "solids": 1,
+  "volumeMm3": 24.952242861024963,
+  "expectedVolumeMm3": 24.952242822677132,
+  "volumeErrorMm3": 3.834783157685706e-08,
+  "boundsMm": [
+    -1.2500001,
+    -1.2500001,
+    -0.5000001000000001,
+    1.2500001,
+    1.2500001,
+    9.250000100000001
+  ],
+  "expectedBoundsMm": [
+    -1.25,
+    -1.25,
+    -0.5,
+    1.25,
+    1.25,
+    9.25
+  ],
+  "maxBoundsErrorMm": 1.0000000116860974e-07,
+  "passed": true
+}

@@ -6,6 +6,8 @@ use crate::{
     surface::Surface,
     surface_offset::{self, ContactBand},
 };
+mod refinement;
+pub(crate) use refinement::padded;
 pub struct Report {
     pub contact: ContactBand,
     pub derivatives: Option<[[f64; 2]; 3]>,
@@ -13,6 +15,74 @@ pub struct Report {
     pub speed: Option<[f64; 2]>,
     pub regular: bool,
     pub reason: &'static str,
+}
+pub struct RefinedReport {
+    pub report: Report,
+    pub band_queries: usize,
+}
+/// Preserve the original unique branch while tightening its complete tube.
+/// The final query repeats the last successful input, so failed/precision-
+/// limited further contraction cannot discard existing root authority.
+#[allow(clippy::too_many_arguments)]
+pub fn certify_refined(
+    surfaces: [&Surface; 2],
+    distances: [f64; 2],
+    axis: usize,
+    drive: [f64; 2],
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    refinements: usize,
+) -> Result<RefinedReport> {
+    check(
+        refinements <= 16,
+        "Choose at most sixteen uniform tube refinements",
+    )?;
+    let (mut last_free, mut last_second) = (free, second);
+    let mut queries = 0;
+    if refinements > 0 {
+        let (mut next_free, mut next_second) = (free, second);
+        for _ in 0..=refinements {
+            queries += 1;
+            let ContactBand::ContinuousBranch(w) = surface_offset::certify_contact_band(
+                surfaces,
+                distances,
+                axis,
+                drive,
+                next_free,
+                next_second,
+                spans,
+            )?
+            else {
+                break;
+            };
+            last_free = next_free;
+            last_second = next_second;
+            let f = w.first_uv[1 - axis];
+            if f[0] >= f[1] || w.second_uv.iter().any(|r| r[0] >= r[1]) {
+                break;
+            }
+            next_free = padded(f, last_free, free);
+            next_second =
+                std::array::from_fn(|k| padded(w.second_uv[k], last_second[k], second[k]));
+            if next_free == last_free && next_second == last_second {
+                break;
+            }
+        }
+    }
+    let report = certify(
+        surfaces,
+        distances,
+        axis,
+        drive,
+        last_free,
+        last_second,
+        spans,
+    )?;
+    Ok(RefinedReport {
+        report,
+        band_queries: queries + 1,
+    })
 }
 impl Report {
     #[cfg(feature = "codec")]

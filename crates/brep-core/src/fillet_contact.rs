@@ -107,6 +107,32 @@ pub fn build_g2(
         max_exact,
     )
 }
+/// Restrict proposal search to explicit support-chart domains, then qualify
+/// the complete contact curves again against the immutable ORIGINAL supports.
+/// Trimming selects a numerical search region; its rounded coefficients never
+/// replace the original-support authority. Both passes share proof budgets.
+/// This qualifies contact positions only, not branch ownership, radius or G2.
+pub fn build_g2_on_domains(
+    supports: [&Surface; 2], domains: [[f64; 4]; 2], radius: f64,
+    options: &FilletOptions, position_tolerance: f64,
+    max_cells: usize, max_exact: u64,
+) -> Result<Report> {
+    let trimmed = [supports[0].trim(domains[0])?, supports[1].trim(domains[1])?];
+    let proposed = build_g2([&trimmed[0], &trimmed[1]], radius, options,
+        position_tolerance, max_cells, max_exact)?;
+    if proposed.status != Status::VerifiedContacts { return Ok(proposed); }
+    let used_cells = proposed.cells;
+    let used_exact = proposed.exact_work;
+    let edit_error = proposed.skin_edit_error_upper;
+    let edit_work = proposed.skin_edit_work;
+    let mut out = qualify(supports, proposed.fillet, position_tolerance,
+        max_cells.saturating_sub(used_cells), max_exact.saturating_sub(used_exact))?;
+    out.cells += used_cells;
+    out.exact_work += used_exact;
+    out.skin_edit_error_upper = edit_error;
+    out.skin_edit_work = edit_work;
+    Ok(out)
+}
 /// Variable nominal-radius quintic section proposals with fresh C2 skin
 /// preparation and complete contact lifts. VerifiedContacts concerns positions
 /// only; actual whole-seam G2 and geometric radius laws need independent proofs.
@@ -117,6 +143,49 @@ pub fn build_variable_g2(
     position_tolerance: f64,
     max_cells: usize,
     max_exact: u64,
+) -> Result<Report> {
+    build_variable_g2_profile(
+        supports,
+        law,
+        options,
+        position_tolerance,
+        max_cells,
+        max_exact,
+        None,
+    )
+}
+/// Explicit planar profile handle fraction; contact identities are retained,
+/// but the authored skin is freshly prepared and contacts requalified.
+/// This does not certify G2, principal curvature or material containment.
+pub fn build_planar_g2_profile(
+    supports: [&Surface; 2],
+    radius: f64,
+    handle_fraction: f64,
+    options: &FilletOptions,
+    position_tolerance: f64,
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<Report> {
+    build_variable_g2_profile(
+        supports,
+        RadiusLaw::Constant(radius),
+        options,
+        position_tolerance,
+        max_cells,
+        max_exact,
+        Some(handle_fraction),
+    )
+}
+#[path = "fillet_contact/planar_profile.rs"]
+mod planar_profile;
+fn build_variable_g2_profile(
+    supports: [&Surface; 2],
+    law: RadiusLaw,
+    options: &FilletOptions,
+    position_tolerance: f64,
+    max_cells: usize,
+    max_exact: u64,
+    handle: Option<f64>,
 ) -> Result<Report> {
     if !position_tolerance.is_finite()
         || position_tolerance < 0.
@@ -129,6 +198,36 @@ pub fn build_variable_g2(
         ));
     }
     let mut fillet = fillet_surfaces::variable_g2_fillet(supports[0], supports[1], law, options)?;
+    if let (Some(fraction), Some(surface)) = (handle, fillet.surface.as_ref()) {
+        let updated = planar_profile::refit(surface, supports, fraction)?;
+        // Both positive-weight supports lie in their control hulls. The
+        // union-hull L1 diameter is a finite bound on the profile rewrite;
+        // the old loft's deviation estimate is never inherited unchanged.
+        use nurbs_core::interval_eval::Interval as I;
+        let points = surface
+            .control_points
+            .iter()
+            .flatten()
+            .chain(updated.control_points.iter().flatten())
+            .collect::<Vec<_>>();
+        let mut displacement = I::point(0.);
+        for k in 0..3 {
+            let lo = points.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min);
+            let hi = points
+                .iter()
+                .map(|p| p[k])
+                .fold(f64::NEG_INFINITY, f64::max);
+            displacement = displacement.add(I::point(hi).sub(I::point(lo))?)?;
+        }
+        fillet.skin_deviation_estimate = I::point(fillet.skin_deviation_estimate)
+            .add(displacement)?
+            .hi;
+        fillet.warnings.push(
+            "Explicit planar G2 extrusion; fresh whole-seam, radius and curvature checks required"
+                .into(),
+        );
+        fillet.surface = Some(updated);
+    }
     let prepared = if fillet.surface.is_some() && fillet.failure.is_none() && !fillet.closed_spine {
         prepare_c2_skin(&mut fillet, position_tolerance)?
     } else {
@@ -236,6 +335,21 @@ fn prepare_c2_skin(fillet: &mut FilletReport, tolerance: f64) -> Result<(Option<
     let original = fillet.surface.as_ref().unwrap();
     let mut candidate = original.clone();
     let degree = candidate.degree_v;
+    // A single positive-weight linear span has no internal continuity joins.
+    if degree == 1
+        && candidate.control_points[0].len() == 2
+        && candidate.knots_v.len() == 4
+        && candidate.knots_v[0] == candidate.knots_v[1]
+        && candidate.knots_v[2] == candidate.knots_v[3]
+        && candidate
+            .weights
+            .iter()
+            .flatten()
+            .all(|w| w.is_finite() && *w > 0.)
+        && tolerance > 0.
+    {
+        return Ok((Some(0.), 0));
+    }
     if degree < 2 || tolerance <= 0. {
         return Ok((None, work));
     }
@@ -265,39 +379,21 @@ fn prepare_c2_skin(fillet: &mut FilletReport, tolerance: f64) -> Result<(Option<
     if removals == 0 {
         return Ok((Some(0.), work));
     }
-    let per_edit = (tolerance * 0.25 / removals as f64).next_down();
-    if per_edit <= 0. {
-        return Ok((None, work));
-    }
-    for knot in interior {
-        while candidate.knots_v.iter().filter(|&&t| t == knot).count() > degree - 2 {
-            let cost = deviation_work(&candidate, &candidate);
-            if work.saturating_add(cost) > 2000000 {
-                return Ok((None, work));
-            }
-            work += cost;
-            let edit = nurbs_core::foundation::approximate_edits::remove_surface_knot_report(
-                &candidate,
-                Axis::V,
-                knot,
-                per_edit,
-                None,
-            )?;
-            if !edit.certificate.accepted {
-                return Ok((None, work));
-            }
-            candidate = edit.surface;
+    let mut knots = Vec::with_capacity(candidate.knots_v.len() - removals);
+    for &knot in &candidate.knots_v {
+        if knot <= domain[0] || knot >= domain[1]
+            || knots.iter().filter(|&&k| k == knot).count() < degree - 2 {
+            knots.push(knot);
         }
     }
-    let cost = deviation_work(original, &candidate);
-    if work.saturating_add(cost) > 2000000 {
-        return Ok((None, work));
-    }
+    let cost = deviation_work(original, original);
+    if cost > 2000000 { return Ok((None, work)); }
     work += cost;
-    let error = nurbs_core::continuity::deviation::positional_upper(original, &candidate)?;
-    if error > tolerance * 0.25 {
-        return Ok((None, work));
-    }
+    let edit = nurbs_core::foundation::approximate_edits::remove_surface_knots_report(
+        original, Axis::V, knots, tolerance * 0.25, None)?;
+    if !edit.certificate.accepted { return Ok((None, work)); }
+    let error = edit.certificate.error_upper;
+    candidate = edit.surface;
     fillet.surface = Some(candidate);
     fillet.skin_deviation_estimate = (fillet.skin_deviation_estimate + error).next_up();
     fillet.warnings.push(format!(
@@ -309,14 +405,55 @@ fn prepare_c2_skin(fillet: &mut FilletReport, tolerance: f64) -> Result<(Option<
 /// Build a coordinate-station radius proposal and freshly inspect the actual
 /// contact lifts. Radius itself still requires a whole-skin saved-face proof.
 pub fn build_linear_at_stations(
-    supports:[&Surface;2],coordinate:usize,stations:[f64;2],radii:[f64;2],options:&FilletOptions,
-    position_tolerance:f64,max_cells:usize,max_exact:u64,
-)->Result<(Report,[f64;4])>{
-    if !position_tolerance.is_finite() || position_tolerance<0. || max_cells>100000 || max_exact>1000000 {
-        return Err(nurbs_core::Error::new("BREP_FILLET_CONTACT_LIMITS","Station contact qualification needs bounded finite work"));
+    supports: [&Surface; 2],
+    coordinate: usize,
+    stations: [f64; 2],
+    radii: [f64; 2],
+    options: &FilletOptions,
+    position_tolerance: f64,
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<(Report, [f64; 4])> {
+    if !position_tolerance.is_finite()
+        || position_tolerance < 0.
+        || max_cells > 100000
+        || max_exact > 1000000
+    {
+        return Err(nurbs_core::Error::new(
+            "BREP_FILLET_CONTACT_LIMITS",
+            "Station contact qualification needs bounded finite work",
+        ));
     }
-    let proposal=fillet_surfaces::linear_at_stations(supports[0],supports[1],coordinate,stations,radii,options)?;
-    if !proposal.converged{return Err(nurbs_core::Error::new("BREP_STATION_RADIUS_UNPROVEN","Coordinate-station radius proposal did not converge"));}
-    let field=proposal.radius_field;
-    Ok((qualify(supports,proposal.fillet,position_tolerance,max_cells,max_exact)?,field))
+    let proposal = fillet_surfaces::linear_at_stations(
+        supports[0],
+        supports[1],
+        coordinate,
+        stations,
+        radii,
+        options,
+    )?;
+    if !proposal.converged {
+        return Err(nurbs_core::Error::new(
+            "BREP_STATION_RADIUS_UNPROVEN",
+            "Coordinate-station radius proposal did not converge",
+        ));
+    }
+    let field = proposal.radius_field;
+    Ok((
+        qualify(
+            supports,
+            proposal.fillet,
+            position_tolerance,
+            max_cells,
+            max_exact,
+        )?,
+        field,
+    ))
 }
+
+/// Original B-rep support discovery and ordered high-valence neighborhoods.
+pub mod topology;
+/// Fresh selected-edge ownership for bounded original-chart contact collars.
+pub mod branch;
+/// Partial nonparallel branch ownership in convex original polygonal charts.
+pub mod convex_branch;

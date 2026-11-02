@@ -1,4 +1,13 @@
-//! Closed rectangular patch skins with explicitly sampled thickness assurance.
+//! Closed patch-network skins with independent offset and sewing contracts.
+pub mod freeform_network;
+pub mod intersected_pair;
+pub mod mapped_network;
+pub mod miter_network;
+mod network;
+pub mod planar_network;
+pub mod quadrilateral_network;
+pub mod parametric_network;
+pub mod contact_pair;
 use crate::{Model, Result};
 use nurbs_core::{Error, curve::Curve, surface::Surface, surface_offset, surface_regularity};
 #[derive(Clone, Copy, Debug)]
@@ -19,6 +28,9 @@ impl Default for Limits {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stop {
     ConstructedSampledThickness,
+    ConstructedCertifiedNormalDisplacement,
+    NormalOffsetUnresolved,
+    NormalOffsetExceedsTolerance,
     RegularityUnresolved,
     SourceDegenerate,
     OffsetDegeneracy,
@@ -30,12 +42,16 @@ pub struct Report {
     pub stop: Stop,
     pub max_sampled_thickness_deviation: Option<f64>,
     pub offset_fallback_reason: Option<String>,
+    /// Whole-domain pointwise normal-displacement error, not a closest-distance bound.
     pub continuous_thickness_error_upper: Option<f64>,
+    /// Certifies the normal-displacement error above, including saved-pole rounding.
+    /// Does not certify side-wall thickness, offset injectivity, or a valid solid.
     pub rounding_inclusive_thickness_certified: bool,
     pub regularity: Vec<surface_regularity::Report>,
     pub regularity_cells: usize,
     pub agreement: Option<crate::boundary_agreement::Report>,
     pub solid_geometry_certified: bool,
+    pub normal_offset_certificate: Option<surface_offset::CandidateCertificate>,
 }
 fn side(a: &Curve, b: &Curve) -> Surface {
     Surface {
@@ -69,6 +85,38 @@ pub fn thicken_patch(
     signed_thickness: f64,
     tolerance: f64,
     limits: Limits,
+) -> Result<Report> {
+    thicken_impl(source, signed_thickness, tolerance, limits, None)
+}
+
+/// Close a full Bezier patch with an authored same-basis cap. Admission uses
+/// a continuous pointwise normal-displacement bound, independently of the
+/// sewing tolerance. This does not certify closest thickness or global solid
+/// embedding. Source/cap rank and every saved boundary lift are checked anew.
+pub fn thicken_patch_with_cap(
+    source: &Surface,
+    cap: &Surface,
+    signed_thickness: f64,
+    normal_error_tolerance: f64,
+    normal_cells: usize,
+    sewing_tolerance: f64,
+    limits: Limits,
+) -> Result<Report> {
+    thicken_impl(
+        source,
+        signed_thickness,
+        sewing_tolerance,
+        limits,
+        Some((cap, normal_error_tolerance, normal_cells)),
+    )
+}
+
+fn thicken_impl(
+    source: &Surface,
+    signed_thickness: f64,
+    tolerance: f64,
+    limits: Limits,
+    cap: Option<(&Surface, f64, usize)>,
 ) -> Result<Report> {
     source.validate()?;
     let clamped = |k: &[f64], p: usize, n: usize| {
@@ -118,6 +166,7 @@ pub fn thicken_patch(
         regularity_cells: 0,
         agreement: None,
         solid_geometry_certified: false,
+        normal_offset_certificate: None,
     };
     // Two exactly constant coordinates constrain the entire positive rational
     // image to a line. Its two-dimensional normal is identically zero; no
@@ -142,35 +191,59 @@ pub fn thicken_patch(
     if !valid {
         return Ok(out);
     }
-    let offset = match surface_offset::offset(source, signed_thickness, tolerance) {
-        Ok(candidate)
-            if candidate.surface.degree_u == source.degree_u
-                && candidate.surface.degree_v == source.degree_v
-                && candidate.surface.knots_u == source.knots_u
-                && candidate.surface.knots_v == source.knots_v
-                && candidate.surface.weights == source.weights =>
-        {
-            candidate
+    let offset_surface = if let Some((candidate, error_tolerance, cells)) = cap {
+        let proof = surface_offset::certify_candidate(
+            source,
+            candidate,
+            signed_thickness,
+            error_tolerance,
+            cells,
+        )?;
+        let status = proof.status;
+        out.continuous_thickness_error_upper = proof.error_upper;
+        out.rounding_inclusive_thickness_certified =
+            status == surface_offset::CandidateStatus::Within;
+        out.normal_offset_certificate = Some(proof);
+        if status != surface_offset::CandidateStatus::Within {
+            out.stop = if status == surface_offset::CandidateStatus::Exceeds {
+                Stop::NormalOffsetExceedsTolerance
+            } else {
+                Stop::NormalOffsetUnresolved
+            };
+            return Ok(out);
         }
-        candidate => {
-            out.offset_fallback_reason = Some(match candidate {
+        candidate.clone()
+    } else {
+        let offset = match surface_offset::offset(source, signed_thickness, tolerance) {
+            Ok(candidate)
+                if candidate.surface.degree_u == source.degree_u
+                    && candidate.surface.degree_v == source.degree_v
+                    && candidate.surface.knots_u == source.knots_u
+                    && candidate.surface.knots_v == source.knots_v
+                    && candidate.surface.weights == source.weights =>
+            {
+                candidate
+            }
+            candidate => {
+                out.offset_fallback_reason = Some(match candidate {
                 Ok(_) => "Adaptive offset changed the original basis; retaining an exactly owned same-basis candidate".into(),
                 Err(error) => format!("Adaptive offset unavailable: {}", error.message),
             });
-            surface_offset::offset_preserving_basis(source, signed_thickness)?
+                surface_offset::offset_preserving_basis(source, signed_thickness)?
+            }
+        };
+        out.max_sampled_thickness_deviation = Some(offset.max_deviation);
+        if !offset.degenerate_regions.is_empty() || offset.exceeds_fold_free_bound {
+            out.stop = Stop::OffsetDegeneracy;
+            return Ok(out);
         }
+        if offset.max_deviation > tolerance {
+            out.stop = Stop::SampledToleranceNotMet;
+            return Ok(out);
+        }
+        offset.surface
     };
-    out.max_sampled_thickness_deviation = Some(offset.max_deviation);
-    if !offset.degenerate_regions.is_empty() || offset.exceeds_fold_free_bound {
-        out.stop = Stop::OffsetDegeneracy;
-        return Ok(out);
-    }
-    if offset.max_deviation > tolerance {
-        out.stop = Stop::SampledToleranceNotMet;
-        return Ok(out);
-    }
-    if offset
-        .surface
+    if offset_surface
         .control_points
         .iter()
         .flatten()
@@ -183,7 +256,7 @@ pub fn thicken_patch(
     }
     let mut patches = Vec::with_capacity(6);
     patches.push(source.clone());
-    patches.push(offset.surface);
+    patches.push(offset_surface);
     for i in 0..4 {
         patches.push(side(
             &crate::rounded_patch_network::boundary(source, i).0,
@@ -222,6 +295,10 @@ pub fn thicken_patch(
         return Ok(out);
     }
     out.model = Some(assembled.model);
-    out.stop = Stop::ConstructedSampledThickness;
+    out.stop = if cap.is_some() {
+        Stop::ConstructedCertifiedNormalDisplacement
+    } else {
+        Stop::ConstructedSampledThickness
+    };
     Ok(out)
 }

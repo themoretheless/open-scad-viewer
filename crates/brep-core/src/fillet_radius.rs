@@ -59,7 +59,7 @@ pub fn inspect_contacts_in_domain(
 )->Result<Report>{
     inspect_uses(
         supports,
-        skin,
+        [skin; 2],
         contacts.map(|c| ContactUse {
             curve: &c.curve,
             support_pcurve: &c.support_pcurve,
@@ -97,8 +97,25 @@ pub fn inspect_model(
     max_cells: usize,
     max_exact: u64,
 ) -> Result<Report> {
+    inspect_model_skins(model, [skin_face; 2], edges, law, law_domain, sides,
+        tolerance_mm, max_cells, max_exact)
+}
+/// Inspect two contact interfaces that may belong to different transition
+/// faces. Each curve and both pcurves are read from actual saved coedges.
+/// This certifies the contact-center law only, not interior skin radius/G2.
+pub fn inspect_model_skins(
+    model: &crate::Model,
+    skin_faces: [usize; 2],
+    edges: [usize; 2],
+    law: &RadiusLaw,
+    law_domain: [f64; 2],
+    sides: [f64; 2],
+    tolerance_mm: f64,
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<Report> {
     model.validate()?;
-    if skin_face >= model.faces.len()
+    if skin_faces.iter().any(|&f| f >= model.faces.len())
         || edges[0] == edges[1]
         || edges.iter().any(|&e| e >= model.edges.len())
     {
@@ -109,7 +126,8 @@ pub fn inspect_model(
     }
     let mut uses = Vec::new();
     let mut faces = Vec::new();
-    for edge in edges {
+    for (side, edge) in edges.into_iter().enumerate() {
+        let skin_face = skin_faces[side];
         let hits = model
             .faces
             .iter()
@@ -147,7 +165,7 @@ pub fn inspect_model(
             &model.faces[faces[0]].surface,
             &model.faces[faces[1]].surface,
         ],
-        &model.faces[skin_face].surface,
+        skin_faces.map(|f| &model.faces[f].surface),
         [uses[0], uses[1]],
         law,
         law_domain,
@@ -159,7 +177,7 @@ pub fn inspect_model(
 }
 fn inspect_uses(
     supports: [&Surface; 2],
-    skin: &Surface,
+    skins: [&Surface; 2],
     contacts: [ContactUse<'_>; 2],
     law: &RadiusLaw,
     law_domain: [f64; 2],
@@ -171,7 +189,7 @@ fn inspect_uses(
     for s in supports {
         s.validate()?;
     }
-    skin.validate()?;
+    for skin in skins { skin.validate()?; }
     for c in contacts {
         c.curve.validate()?;
         c.support_pcurve.validate()?;
@@ -207,11 +225,8 @@ fn inspect_uses(
             return Ok(out);
         }
     };
-    if skin
-        .control_points
-        .len()
-        .checked_mul(skin.control_points[0].len())
-        .is_none_or(|n| n > 4096)
+    if skins.iter().any(|skin| skin.control_points.len()
+        .checked_mul(skin.control_points[0].len()).is_none_or(|n| n > 4096))
     {
         out.reason = "skin-control-budget";
         return Ok(out);
@@ -280,7 +295,7 @@ fn inspect_uses(
         let proof = surface_g2_pcurves::verify_positions(
             c.curve,
             [c.support_pcurve, c.fillet_pcurve],
-            [supports[side], skin],
+            [supports[side], skins[side]],
             c.reversed,
             tolerance_mm * 0.25,
             (max_cells - out.cells) / 2,
