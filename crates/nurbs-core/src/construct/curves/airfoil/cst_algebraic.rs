@@ -1,5 +1,8 @@
 //! Direct algebraic CST conversion with an outward control-error enclosure.
 use super::*;
+#[path = "cst_algebraic/moments.rs"]
+mod moments;
+pub use moments::{CstSectionMoments,cst_section_moments};
 use crate::distance_bounds::Interval;
 
 /// Immutable construction result. The bound concerns the mathematical
@@ -131,7 +134,7 @@ fn weighted_integral(row:&[Interval],r:usize,work:&mut Work)->Result<Interval> {
     let d=row.len()-1;let mut sum=Interval::point(0.);
     for (i,&a) in row.iter().enumerate() {
         // Integral B_i^d(t)*t^r = product(i+1..i+r) /
-        // product(d+1..d+r+1). Here d<=50,r<=3, all integers exact f64.
+        // product(d+1..d+r+1). Here d<=75,r<=5; products remain exact f64 integers.
         let mut numerator=1u64;let mut denominator=1u64;
         for j in 1..=r {work.charge()?;numerator*= (i+j) as u64;}
         for j in 1..=r+1 {work.charge()?;denominator*= (d+j) as u64;}

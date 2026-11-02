@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 224,
-  "unallocatedCount": 776,
+  "specifiedCount": 225,
+  "unallocatedCount": 775,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6145,10 +6145,32 @@
         "crates/nurbs-core/src/editing/exact_knot_removal.rs",
         "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
         "docs/design/nurbs-exact-knot-removal.md",
-        "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json"
+        "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "one verified proposal, not exhaustive representability search; nonperiodic clamped degree1..25, shared work refusal allowed; nominal geometry only, no machine-bit evaluation or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0225",
+      "name": "вторые моменты площади исходного CST-сечения с интервальными границами",
+      "status": "native",
+      "prioritySet": "native-1000-section-mechanics",
+      "category": "Геометрические характеристики сечений",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::cst_section_moments",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil.rs",
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic/moments.rs",
+        "crates/nurbs-core/tests/cst_moment_contracts.rs",
+        "docs/design/nurbs-cst-second-moments.md",
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact_beta_oracle.py",
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact-beta-oracle.json",
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/checks.json"
+      ],
+      "remainingQualification": [
+        "original algebraic CST law and coefficientwise ordered section only; no frame transform, solid mass inertia, principal axes or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
