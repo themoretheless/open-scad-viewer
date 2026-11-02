@@ -1,0 +1,15 @@
+{
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "cargo": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)",
+  "system": "Darwin",
+  "machine": "arm64",
+  "settings": {
+    "CARGO_BUILD_JOBS": 2,
+    "RUST_TEST_THREADS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0,
+    "CARGO_PROFILE_DEV_DEBUG": 0
+  },
+  "targetDirectory": "isolated outside checkout",
+  "scope": "native Rust classified original material, actual retained Solid and paired-carrier filled map"
+}

@@ -1,0 +1,21 @@
+{
+  "previousQualification": "../common-c1-pole-atlas-2026-11-02/QUALIFICATION.md",
+  "changedInputs": [
+    "crates/brep-core/src/sweep_boundary_owned.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_volume.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_volume/tests.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests.rs",
+    "crates/nurbs-core/src/analysis/affine_volume.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/rational.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/rational/tests.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/tests.rs",
+    "crates/nurbs-core/src/trim/trim_region_audit.rs"
+  ],
+  "newInputs": [
+    "crates/brep-core/src/sweep_boundary_owned/classified_original.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/classified_original.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/capped.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/capped/tests.rs"
+  ],
+  "removedInputs": []
+}
