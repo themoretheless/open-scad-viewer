@@ -176,3 +176,7 @@ Actual WASM original affine contacts: frozen source `a46f426b2` собран в 
 ### Рациональные multi-span target-часы, 2026-11-03
 
 Снято ограничение постоянных весов для исходных clamped B-spline graph targets с точно separable весами и Greville-проекцией. Каждый span проходит точное homogeneous blossom restriction, positive-weight и monotone-ordinate census; стыки проверяются на непрерывность, крайние значения 0/1. Обратные UV — точные рациональные ограждения. Прошли 27 native, 12 bridge, 2 clock и 70 client тестов; inverse/restriction сверены с независимым Cox-базисом на степенях 1–8. vue-tsc и architecture 54/0 прошли. Отчёт `docs/qualification/rational-multispan-quadric-graph-2026-11-03/results.json`. Подготовлены 54 graph runtime cases/147 Workers; их новый WASM-прогон ещё НЕ выполнен. Coupled weights, общий freeform, trim/Body и installed provider остаются открытыми.
+
+### Рациональные multi-span часы: WASM runtime, 2026-11-03
+
+Код `3eba92165ef5b779b369f4a9499539e7f658c720`, WASM SHA-256 `6a82c37cca659bf0502f183b4f1fb592f050331bb74b0e0ce40a8f6be3684b28`: прошли 165 ABI-сценариев; Chromium проверил 54 graph-сценария, все 147 Workers созданы и завершены. Новый положительный рациональный multi-span сценарий и шесть algebraic edge/corner контактов прошли с global natural UV. Отчёт `docs/qualification/rational-multispan-quadric-graph-wasm-2026-11-03/results.json`. Временный checkout удалён, установленный WASM не менялся. Coupled weights, общий freeform/all branches, trim/Body и installed provider остаются открытыми.
