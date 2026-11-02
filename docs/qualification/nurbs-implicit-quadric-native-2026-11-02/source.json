@@ -1,0 +1,22 @@
+{
+  "baseCommit": "f722fad62",
+  "implementation": "Existing exact quadric implementation; new public qualification contracts, not new primitive variants.",
+  "files": [
+    {
+      "path": "crates/nurbs-core/src/analysis/implicit_quadric.rs",
+      "sha256": "69cee6138364fae4a59064b101e2bf6aaf95028a5a28cb1dc26c941a59e1c143"
+    },
+    {
+      "path": "crates/cad-predicates/src/bezier_quadric_identity.rs",
+      "sha256": "345efee604bd86abc2969a0ee2be0e179afeda74d9ba58e8884c47c4c1b7d619"
+    },
+    {
+      "path": "crates/nurbs-core/src/foundation/knot_removal.rs",
+      "sha256": "aed15711e3072b6fa46e9fd8576f1acb8bd01c18bbd582aae0648632888d3155"
+    },
+    {
+      "path": "crates/nurbs-core/tests/implicit_quadric_contracts.rs",
+      "sha256": "8066a94e65f95d58d268e0b9f895b52c8b4939f7980a3b76f2cca5e4d8b7488d"
+    }
+  ]
+}

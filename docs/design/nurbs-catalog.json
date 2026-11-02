@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 222,
-  "unallocatedCount": 778,
+  "specifiedCount": 223,
+  "unallocatedCount": 777,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6105,6 +6105,28 @@
       ],
       "remainingQualification": [
         "original CST algebraic subset and sufficient coefficientwise side ordering only; no transformed frame, second moments, B-rep or volume authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0223",
+      "name": "точная принадлежность исходного NURBS-патча заданной квадрике и регулярная неявная опора",
+      "status": "native",
+      "prioritySet": "native-1000-analytic-support",
+      "category": "Анализ аналитических поверхностей",
+      "nativeApi": "nurbs_core::analysis::implicit_quadric::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/implicit_quadric.rs",
+        "crates/cad-predicates/src/bezier_quadric_identity.rs",
+        "crates/nurbs-core/src/foundation/knot_removal.rs",
+        "crates/nurbs-core/tests/implicit_quadric_contracts.rs",
+        "docs/design/nurbs-implicit-quadrics.md",
+        "docs/qualification/nurbs-implicit-quadric-native-2026-11-02/default-check.json",
+        "docs/qualification/nurbs-implicit-quadric-native-2026-11-02/no-codec-check.json",
+        "docs/qualification/knot-removal-zero-admission-2026-11-02/after-check.json"
+      ],
+      "remainingQualification": [
+        "single clamped degree1..8 tensor patch and authored equation only; no fitting, general multispan recognition, parameter regularity, injectivity, pole quotient, B-rep or solid authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
