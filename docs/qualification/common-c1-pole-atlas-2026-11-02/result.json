@@ -1,0 +1,55 @@
+{
+  "implementation": "1904c60a28a7434a14ff7ba75ef867fd0b6975f5",
+  "frozenInputs": 6610,
+  "inputsUnchangedDuringChecks": true,
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "c2_bowl",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 157.531210375,
+      "log": "focused.log.gz",
+      "summary": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2083 filtered out; finished in 4.81s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "seconds": 658.8372981250001,
+      "log": "brep-full.log.gz",
+      "summary": [
+        "test result: ok. 2085 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 658.62s"
+      ]
+    }
+  ],
+  "unchangedDependencyQualification": {
+    "packet": "../material-trim-common-atlas-2026-11-02/result.json",
+    "cadPredicatesPassed": 131,
+    "nurbsCorePassed": 2068,
+    "rerunThisPacket": false,
+    "reason": "All predicate, nurbs-core, Cargo and toolchain inputs are byte-identical."
+  },
+  "whitespaceCheck": "git diff --check passed",
+  "wasmBrowserStepRemoteCiQualified": false
+}
