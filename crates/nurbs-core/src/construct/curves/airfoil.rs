@@ -681,9 +681,13 @@ pub use algorithm_naca_points::naca_points;
 #[path="airfoil/algorithm_cst_points.rs"]
 mod algorithm_cst_points;
 pub use algorithm_cst_points::cst_points;
+use algorithm_cst_points::validate_cst_profile;
 #[path="airfoil/algorithm_cst_fit.rs"]
 mod algorithm_cst_fit;
 pub use algorithm_cst_fit::{cst_fit, cst_fit_in_frame, cst_fit_sides};
 #[path="airfoil/cst_frame.rs"]
 mod cst_frame;
 pub use cst_frame::{CstFrame, cst_airfoil};
+#[path="airfoil/cst_algebraic.rs"]
+mod cst_algebraic;
+pub use cst_algebraic::{AlgebraicCst,cst_algebraic};

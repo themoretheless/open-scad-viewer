@@ -6045,7 +6045,7 @@
     },
     {
       "id": "NURBS-0220",
-      "name": "численное построение CST-профиля в NURBS",
+      "name": "построение CST-профиля в NURBS: численное и прямое алгебраическое",
       "status": "native",
       "prioritySet": "native-1000-cst",
       "category": "Профили и восстановление",
@@ -6056,10 +6056,12 @@
         "docs/design/nurbs-cst-profiles.md",
         "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json",
         "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
-        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json"
+        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json",
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+        "crates/nurbs-core/tests/cst_algebraic_contracts.rs"
       ],
       "remainingQualification": [
-        "numerical construction and discrete fit diagnostics only; no continuous error, exact frame or B-rep authority",
+        "sampled fit has discrete diagnostics; algebraic subset has a nominal continuous position bound only, excluding evaluator roundoff, derivatives, exact frame and B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     },

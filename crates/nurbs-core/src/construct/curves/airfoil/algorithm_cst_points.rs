@@ -1,7 +1,6 @@
 //! airfoil algorithm: cst_points.
 use super::*;
-/// Ordered point loop of a CST profile (upper then lower, nose clustered).
-pub fn cst_points(profile: &CstProfile, chord: f64, count: usize) -> Result<Vec<[f64; 3]>> {
+pub(super) fn validate_cst_profile(profile: &CstProfile) -> Result<()> {
     check(
         profile.n1.is_finite() && profile.n2.is_finite() && profile.n1 > 0. && profile.n2 > 0.,
         "CST class exponents must be positive and finite",
@@ -20,6 +19,12 @@ pub fn cst_points(profile: &CstProfile, chord: f64, count: usize) -> Result<Vec<
             .all(|x| x.abs() <= 1.),
         "CST coefficients must satisfy |a| <= 1",
     )?;
+    Ok(())
+}
+
+/// Ordered point loop of a CST profile (upper then lower, nose clustered).
+pub fn cst_points(profile: &CstProfile, chord: f64, count: usize) -> Result<Vec<[f64; 3]>> {
+    validate_cst_profile(profile)?;
     check(
         (8..=2048).contains(&count) && chord.is_finite() && chord > 0.,
         "CST sampling needs 8..2048 stations and a positive chord",
