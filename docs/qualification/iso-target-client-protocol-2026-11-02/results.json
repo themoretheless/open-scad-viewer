@@ -1,0 +1,10 @@
+{
+  "protocolTestsPassed": 43,
+  "newTests": 17,
+  "vueTsc": "passed",
+  "actualNewWasmReportValidated": false,
+  "sourceSha256": {
+    "src/services/surfaceIsoTargetProtocol.ts": "ca091a051b52a690fb4a3b70cf833dbced7b11aa449e3ae28a818238a3869d9d",
+    "tests/surfaceIsoTargetProtocol.test.ts": "ddc86e2296e78b1b9e9e50fef5b39fe954d8011fbb248010de71042704c5caf4"
+  }
+}

@@ -86,6 +86,8 @@ Iso против отдельной исходной поверхности: н�
 
 Bridge iso–target: публичный `nurbs_surface_iso_target_window` принимает source/axis/parameter/target/window/maxCells и возвращает все исходные 3D Krawczyk roots, natural existence/parameter boxes, world bounds и unresolved области. Window coverage/absence отделены от всех surface branches, trim и Body admission; forged/extra fields отвергаются. **4 новых + 14 существующих bridge-тестов прошли**; [receipt](../qualification/surface-iso-target-bridge-2026-11-02/results.json), [контракт API](../api/nurbs-surface-iso-target-window.md). Новый op ещё не прошёл WASM/Worker и не завершает surface–surface branch completeness.
 
+Клиентский контракт iso–target: типизированный `SurfaceIsoTargetReport` и `isSurfaceIsoTargetReport` проверяют natural coordinate ownership, root box внутри существования и запроса, бюджет/ориентацию и согласованность window-only полноты. Защищены sparse arrays и forged surface/trim/Body admissions. **43 протокольных теста (17 новых) и vue-tsc прошли**; [receipt](../qualification/iso-target-client-protocol-2026-11-02/results.json). Проверка реального нового WASM-ответа остаётся pending: frozen source `6495f1b9b` собирается отдельно; клиентский Worker ещё не подключён к этому op.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.
