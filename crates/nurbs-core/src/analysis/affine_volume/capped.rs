@@ -3,9 +3,10 @@
 use super::*;
 /// F(u,v,t)=T(t)+A(t)((1-t)C0(u,v)+t*C1(u,v)-origin).
 /// Both source carriers have independent original degrees, knots and weights.
-/// One fixed-metric atlas covers the whole normalized UV x [0,1] volume,
-/// every original affine motion piece and all one-sided derivatives. A local
-/// Jacobian, coincident traces or source reports supply no global credit.
+/// A source-C1 P-matrix proof or a fixed-metric/exhaustive-pair atlas covers
+/// the whole normalized UV x [0,1] volume. Every original motion piece and
+/// one-sided derivative remains owned. Point Jacobians, coincident traces and
+/// caller-supplied reports supply no global credit.
 pub fn certify_rational_caps(
     caps: [&Surface; 2],
     origin: [f64; 3],
@@ -22,7 +23,7 @@ pub fn certify_rational_caps(
         projection,
         max_cells,
         max_exact_work,
-        false,
+        true,
         &mut None,
         &mut None,
         [[0.,1.];2],
@@ -50,14 +51,20 @@ pub fn jacobian_orientation_rational_caps(
 pub(super) fn jets(
     first: &Surface,
     second: Option<&Surface>,
+    separated: Option<&separable::Carrier>,
     difference_owner: Option<&crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference<'_>>,
     b: Box3,
     out: &mut IdealVolumeReport,
     max: usize,
 ) -> Result<Option<([[I; 3]; 3], [I; 3])>> {
-    let Some(a) = charts::cap_jets(first, [b[0], b[1]], &mut out.cells, max)? else {
-        return Ok(None);
+    // The exact tensor-weight and coordinate-dependence owner refers to
+    // THIS original base carrier. Cancelling its common weight factor keeps
+    // independent rational end weights and the full C1-C0 time term intact.
+    let base = match separated {
+        Some(carrier) => carrier.enclose([b[0], b[1]], &mut out.cells, max)?,
+        None => charts::cap_jets(first, [b[0], b[1]], &mut out.cells, max)?,
     };
+    let Some(a) = base else { return Ok(None); };
     let Some(second) = second.filter(|s| !std::ptr::eq(*s, first)) else {
         return Ok(Some((a, [I::point(0.); 3])));
     };

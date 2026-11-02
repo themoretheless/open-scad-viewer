@@ -1,0 +1,5 @@
+{
+  "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/atlas.rs": "a8ebd964c395fd7567ddcd4a4a431b959d030acfd27deb02dbd25d8eb6889991",
+  "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/atlas/refinement.rs": "6934bca909792ed6c434d0a417ad9008092acaf6a0b74b4fd24146960c1e3c90",
+  "crates/Cargo.lock": "f0b3df199fe827167e27aa21cb0de15a4561a5934a3a3df9372fe28eb1e8d7db"
+}

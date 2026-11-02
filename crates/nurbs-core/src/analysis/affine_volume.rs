@@ -218,14 +218,14 @@ impl Context<'_> {
             }
         }
         let jets = if self.second.is_some() {
-            capped::jets(self.carrier, self.second, self.difference.as_ref(), [query[0],query[1],b[2]], out, max)?
+            capped::jets(self.carrier, self.second, self.separable.as_ref(), self.difference.as_ref(), [query[0],query[1],b[2]], out, max)?
         } else {
             let q = if let Some(carrier) = &self.separable {
                 carrier.enclose(query, &mut out.cells, max)?
             } else { charts::cap_jets(self.carrier, query, &mut out.cells, max)? };
             q.map(|q| (q, [I::point(0.);3]))
         };
-        let Some((mut q, qt)) = jets else {
+        let Some((mut q, mut qt)) = jets else {
             return Ok(Enclosed::Unavailable(None));
         };
         for k in 0..2 {
@@ -239,7 +239,18 @@ impl Context<'_> {
         // This is a subdivision proposal, never a regularity/admission claim.
         let normal = iv::cross(q[1], q[2])?;
         if !normal.iter().any(|x| x.lo > 0. || x.hi < 0.) {
-            let axis = usize::from(b[1][1] - b[1][0] > b[0][1] - b[0][0]);
+            let axis = if self.second.is_some() {
+                // Q=(1-t)C0+t*C1 also has TIME-dependent UV jets. Refining
+                // only U/V cannot resolve a wide temporal blend of distinct
+                // carrier tangents, even when both carriers are affine planes.
+                // Fair original-chart subdivision is a proposal only: the
+                // same full normal, metric and pair predicates remain required.
+                (0..3).max_by(|&i,&j|
+                    (b[i][1]-b[i][0]).total_cmp(&(b[j][1]-b[j][0])))
+                    .unwrap()
+            } else {
+                usize::from(b[1][1] - b[1][0] > b[0][1] - b[0][0])
+            };
             return Ok(Enclosed::Unavailable(Some(axis)));
         }
         q[0] = iv::sub(q[0], self.origin.map(I::point))?;
@@ -253,7 +264,9 @@ impl Context<'_> {
                 // carrier value, never either carrier derivative.
                 q[0][f.base] = q[0][f.base].add(I::point(f.scale))?;
             } else {
-                for jet in &mut q {
+                // The same fixed source shear acts on the cap time jet.
+                // Otherwise A(C1-C0) loses its dependent-column contribution.
+                for jet in q.iter_mut().chain(std::iter::once(&mut qt)) {
                     jet[f.base] = jet[f.base].add(jet[f.dependent].mul(I::point(f.scale))?)?;
                 }
             }
@@ -365,8 +378,8 @@ fn certify_motion_impl(
     carrier.validate()?;
     if let Some(end) = second {
         end.validate()?;
-        check(!closed && !precondition && end.control_points.iter().flatten().all(|p|p.len()==3),
-            "Paired affine carriers require open normalized charts and world coordinates")?;
+        check(!closed && end.control_points.iter().flatten().all(|p|p.len()==3),
+            "Paired affine carriers require open normalized charts")?;
     }
     check(
         carrier
@@ -440,7 +453,7 @@ fn certify_motion_impl(
     if second.is_none() && graph_translation::certify(carrier, pieces, closed, &mut out, max_cells, max_exact_work)? {
         return Ok(out);
     }
-    let separated = if source_shear.is_some()
+    let separated = if (source_shear.is_some() || second.is_some())
         && carrier
             .weights
             .iter()
@@ -475,8 +488,9 @@ fn certify_motion_impl(
     if precondition && out.cells < max_cells {
         // A single native proposal from ORIGINAL point jets. Its invertibility
         // is independently proved; no point regularity supplies atlas credit.
+        let proposal_time = if second.is_some() { 0.5 } else { 0.125 };
         if let Enclosed::Value(e) =
-            context.enclose([[0.5; 2], [0.5; 2], [0.125; 2]], &mut out, max_cells)?
+            context.enclose([[0.5; 2], [0.5; 2], [proposal_time; 2]], &mut out, max_cells)?
         {
             if out.cells < max_cells {
                 out.cells += 1;
@@ -498,7 +512,11 @@ fn certify_motion_impl(
                     _ => [[0.; 3]; 3],
                 };
                 if let Some(p) = atlas::inverse_proposal(proposal.map(|v| v.map(I::point)))
-                    .or_else(|| atlas::inverse_proposal(e.columns))
+                    .or_else(|| if second.is_some() {
+                        atlas::normalized_inverse_proposal(e.columns)
+                    } else {
+                        atlas::inverse_proposal(e.columns)
+                    })
                 {
                     let determinant = iv::dot_tight(
                         p[0].map(I::point),
@@ -530,6 +548,25 @@ fn certify_motion_impl(
                     }
                 }
             }
+        }
+    }
+    // A single positive rational pose is C-infinity. Literal C1 carrier
+    // knots permit the separate Gale-Nikaido rectangular-domain theorem.
+    // No arbitrary C0 station join or closed quotient borrows that premise.
+    if second.is_some() && !closed
+        && matches!(pieces,Motion::Rational(p) if p.len()==1) {
+        let end=second.unwrap();
+        let cost=1+(carrier.knots_u.len()+carrier.knots_v.len()+end.knots_u.len()+end.knots_v.len()) as u64;
+        if cost>max_exact_work-out.exact_work {
+            out.exact_work=max_exact_work;out.reason=Some("affine-volume-c1-premise-work-limit");return Ok(out);
+        }
+        out.exact_work+=cost;
+        if charts::surface_c1(carrier) && charts::surface_c1(end) {
+            if atlas::certify_c1_rectangular_map(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells)? {
+                out.embedding_certified=true;out.regularity_certified=true;
+                out.parameter_topology_preserved=true;out.reason=None;return Ok(out);
+            }
+            if out.cells==max_cells {return Ok(out);}
         }
     }
     // The whole-field metric theorem has no constant-frame premise. For

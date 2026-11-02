@@ -49,11 +49,22 @@ pub(super) fn verify(
         let original_bezier = |k: &[f64], p: usize, n: usize| {
             n == p + 1 && k[..=p].iter().all(|&x| x == k[p]) && k[n..].iter().all(|&x| x == k[n])
         };
+        // Fully clamped, bounded multispan borders have a complete normalized
+        // tensor owner below this dispatch. In particular, rounded reversed
+        // knots need that owner to prove Different; the periodic/nonclamped
+        // trace predicate can only return MissingProof for their basis change.
+        let normalized_clamped_owner = (1..=8).contains(&c.degree)
+            && (1..=8).contains(&degrees[free])
+            && c.control_points.len() <= 64 && counts[free] <= 64
+            && c.knots[..=c.degree].iter().all(|&x| x == c.domain()[0])
+            && c.knots[c.control_points.len()..].iter().all(|&x| x == c.domain()[1])
+            && knots[free][..=degrees[free]].iter().all(|&x| x == knots[free][degrees[free]])
+            && knots[free][counts[free]..].iter().all(|&x| x == knots[free][counts[free]]);
         if clamped
             && !periodic[0]
             && !periodic[1]
             && !c.periodic
-            && ((original_bezier(&c.knots, c.degree, c.control_points.len())
+            && (normalized_clamped_owner || (original_bezier(&c.knots, c.degree, c.control_points.len())
                 && original_bezier(knots[free], degrees[free], counts[free]))
                 || (c.degree == degrees[free]
                     && c.control_points.len() == counts[free]
