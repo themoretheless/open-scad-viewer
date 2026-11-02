@@ -765,3 +765,6 @@ fn nonrepresentable_iso_controls_are_not_rounded_into_a_crossing_proof() {
     assert_eq!(r.status, Status::Unresolved);
     assert!(r.certified_crossing.is_none());
 }
+
+#[path = "surface_self_intersection/distinct_spans.rs"]
+mod distinct_spans;

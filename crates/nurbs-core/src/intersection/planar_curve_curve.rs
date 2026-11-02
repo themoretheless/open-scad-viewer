@@ -182,6 +182,28 @@ pub fn intersect_curve_curve_certified_report(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<CertifiedCurveIntersection> {
+    intersect_selected(a, b, tolerance, max_cells, false)
+}
+
+/// Certifies crossings between distinct original spans of one planar curve.
+/// `complete` covers only those pairs: it does not audit self-loops wholly
+/// inside one span. The diagonal and the identical-curve overlap shortcut are
+/// deliberately excluded. Knots and controls are never extracted or rounded.
+pub fn intersect_distinct_spans_certified_report(
+    curve: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    intersect_selected(curve, curve, tolerance, max_cells, true)
+}
+
+fn intersect_selected(
+    a: &Curve,
+    b: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+    self_pairs: bool,
+) -> Result<CertifiedCurveIntersection> {
     a.validate()?;
     b.validate()?;
     check(
@@ -203,12 +225,12 @@ pub fn intersect_curve_curve_certified_report(
         cells: 0,
         complete: false,
     };
-    if a == b {
+    if !self_pairs && a == b {
         out.identical_parameter_overlap = true;
         out.complete = true;
         return Ok(out);
     }
-    if let Some((crossings, complete)) = exact_line_pair(a, b) {
+    if let Some((crossings, complete)) = (!self_pairs).then(|| exact_line_pair(a, b)).flatten() {
         out.crossings = crossings;
         out.complete = complete;
         return Ok(out);
@@ -230,12 +252,19 @@ pub fn intersect_curve_curve_certified_report(
     let aa = spans(a);
     let bb = spans(b);
     check(
-        aa.len().saturating_mul(bb.len()) <= 4096,
+        self_pairs || aa.len().saturating_mul(bb.len()) <= 4096,
         "Planar intersection initial span-pair limit exceeded",
     )?;
     let mut stack = Vec::new();
     for &(sa, da) in &aa {
         for &(sb, db) in &bb {
+            if self_pairs && sa >= sb {
+                continue;
+            }
+            if stack.len() == 4096 {
+                out.unresolved.push(whole);
+                return Ok(out);
+            }
             stack.push((sa, sb, [da, db], 0usize));
         }
     }

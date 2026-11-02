@@ -41,47 +41,39 @@ pub(super) fn find(s: &Surface, max_cells: usize) -> Result<Option<CertifiedCros
         let Some(c) = original_iso(s, axis) else {
             continue;
         };
-        let Some(pieces) = crate::curve_partition_agreement::exact_bezier_span_partition(&c)?
-        else {
-            continue;
-        };
+        if cells == max_cells {
+            return Ok(None);
+        }
         let [start, end] = c.domain();
         let width = I::point(end).sub(I::point(start))?;
-        for (i, a) in pieces.iter().enumerate() {
-            for b in pieces.iter().skip(i + 1) {
-                // Charge pair admission as well as solver cells, including
-                // literal-overlap reports which can use zero solver cells.
-                if max_cells - cells < 2 {
-                    return Ok(None);
+        let report = crate::intersection::intersect_distinct_spans_certified_report(
+            &c,
+            1e-7,
+            max_cells - cells,
+        )?;
+        cells += report.cells;
+        for crossing in report.crossings {
+            let mut boxes = [[[0.5, 0.5]; 2]; 2];
+            let mut interior = true;
+            for (j, range) in crossing.parameters.into_iter().enumerate() {
+                let normalized = I::new(range[0], range[1])?
+                    .sub(I::point(start))?
+                    .div(width)?;
+                if normalized.lo <= 0. || normalized.hi >= 1. {
+                    interior = false;
+                    break;
                 }
-                cells += 1;
-                let report=crate::intersection::planar_curve_curve::intersect_curve_curve_certified_report(a,b,1e-7,max_cells-cells)?;
-                cells += report.cells;
-                for crossing in report.crossings {
-                    let mut boxes = [[[0.5, 0.5]; 2]; 2];
-                    let mut interior = true;
-                    for (j, range) in crossing.parameters.into_iter().enumerate() {
-                        let normalized = I::new(range[0], range[1])?
-                            .sub(I::point(start))?
-                            .div(width)?;
-                        if normalized.lo <= 0. || normalized.hi >= 1. {
-                            interior = false;
-                            break;
-                        }
-                        boxes[j][axis] = [normalized.lo, normalized.hi];
-                    }
-                    // Disjoint source parameter intervals establish distinct preimages.
-                    if interior
-                        && (boxes[0][axis][1] < boxes[1][axis][0]
-                            || boxes[1][axis][1] < boxes[0][axis][0])
-                    {
-                        return Ok(Some(CertifiedCrossing {
-                            parameter_boxes: boxes,
-                            position_bounds: crossing.position_bounds,
-                            cells,
-                        }));
-                    }
-                }
+                boxes[j][axis] = [normalized.lo, normalized.hi];
+            }
+            // Disjoint source parameter intervals establish distinct preimages.
+            if interior
+                && (boxes[0][axis][1] < boxes[1][axis][0] || boxes[1][axis][1] < boxes[0][axis][0])
+            {
+                return Ok(Some(CertifiedCrossing {
+                    parameter_boxes: boxes,
+                    position_bounds: crossing.position_bounds,
+                    cells,
+                }));
             }
         }
     }

@@ -1,0 +1,21 @@
+{
+  "status": "focused native tests passed; global architecture gate failed",
+  "testsPassed": 62,
+  "newTests": 6,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity --test planar_curve_crossings",
+  "scope": "All eligible distinct original span pairs of a planar losslessly represented iso-curve; no Bernstein extraction or knot insertion; both axes; diagonal and identical-curve shortcuts excluded",
+  "completeMeaning": "Distinct-spans coverage only. Does not include self-loops within one original span; never used as a surface absence certificate.",
+  "limits": "1..100000 solver cells; >4096 initial distinct pairs returns incomplete/unresolved without a full-coverage claim",
+  "architectureFindings": 75,
+  "architectureOverLimitOrGrowth": 8,
+  "staleArchitectureBaselineEntries": 67,
+  "newWasmQualified": false,
+  "remaining": "Nonplanar contacts, within-span loops, exact rational iso-coefficients not representable in binary64, periodic charts, full surface contact completeness, trims/material Body and packaged delivery remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/planar_curve_curve.rs": "872a007d994603242086a2a1b7be9c25344453e161c5e26616ec1c08db72a538",
+    "crates/nurbs-core/src/intersection/mod.rs": "5b48f976cb1175f8e489c7e03979475e4ece90c0b48da8434934b69a3201a3df",
+    "crates/nurbs-core/src/intersection/self_surface/nonlinear_crossing.rs": "1e6f207fc93aa3555ec9706cad2512f38d79dafd3ce3e3e59e505d5f2ca64b06",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "3874f261706ea479a958f885d744862694dd2ad6b6a953eedf023580cf96969c",
+    "crates/nurbs-core/tests/surface_self_intersection/distinct_spans.rs": "c1acbfc264de2d39ff217ee2061f00c822e8e127b16e723306fdc7d3a2c06fa5"
+  }
+}
