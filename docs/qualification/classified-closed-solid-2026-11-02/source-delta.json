@@ -1,0 +1,17 @@
+{
+  "previousQualification": "../classified-original-solid-2026-11-02/QUALIFICATION.md",
+  "changedInputs": [
+    "crates/brep-core/src/sweep_boundary_owned.rs",
+    "crates/brep-core/src/sweep_boundary_owned/closed.rs",
+    "crates/brep-core/src/sweep_boundary_owned/closed/smooth.rs",
+    "crates/brep-core/src/sweep_smoothness/complete.rs"
+  ],
+  "newInputs": [
+    "crates/brep-core/src/sweep_boundary_owned/closed/classified.rs",
+    "crates/brep-core/src/sweep_boundary_owned/closed/classified/roles.rs",
+    "crates/brep-core/src/sweep_boundary_owned/closed/classified/tests.rs",
+    "crates/brep-core/src/sweep_smoothness/complete/classified.rs",
+    "crates/brep-core/src/sweep_smoothness/complete/classified/tests.rs"
+  ],
+  "unchangedNurbsCorePredicatesCargoAndToolchain": true
+}
