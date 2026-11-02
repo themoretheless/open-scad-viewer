@@ -30,7 +30,19 @@ pub fn first_in_window(
     max_cells: usize,
 ) -> Result<WindowReport> {
     c.validate()?;
-    search(Source::Curve(c), s, window, max_cells)
+    search(Source::Curve(c), s, window, max_cells, true)
+}
+/// Enumerates certified roots over the entire requested original parameter
+/// window. Exhaustion, singular roots and subdivision boundaries stay explicit
+/// in `unresolved`; only an empty unresolved list authorizes `complete`.
+pub fn all_in_window(
+    c: &Curve,
+    s: &Surface,
+    window: Box3,
+    max_cells: usize,
+) -> Result<WindowReport> {
+    c.validate()?;
+    search(Source::Curve(c), s, window, max_cells, false)
 }
 use super::window_source::Source;
 pub(super) fn search(
@@ -38,6 +50,7 @@ pub(super) fn search(
     s: &Surface,
     window: Box3,
     max_cells: usize,
+    stop_first: bool,
 ) -> Result<WindowReport> {
     s.validate()?;
     check(
@@ -155,9 +168,11 @@ pub(super) fn search(
                     position_bounds: std::array::from_fn(|i| [p[i].lo, p[i].hi]),
                     crossing_sign: sign,
                 });
-                out.unresolved.extend(stack.into_iter().map(|q| q.domain));
-                out.complete = out.unresolved.is_empty();
-                return Ok(out);
+                if stop_first {
+                    out.unresolved.extend(stack.into_iter().map(|q| q.domain));
+                    out.complete = out.unresolved.is_empty();
+                    return Ok(out);
+                }
             }
             Verdict::Unresolved => {
                 if cell.depth == 48 {

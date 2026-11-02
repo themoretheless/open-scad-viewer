@@ -234,3 +234,75 @@ fn automatic_spatial_probes_find_contact_outside_both_central_fibers() {
     assert!(r.probe_search.cells <= 10000);
     assert!(r.probe_search.attempts.len() <= 42);
 }
+
+#[test]
+fn full_window_enumerates_both_transverse_roots_and_proves_coverage() {
+    use nurbs_core::intersection::certified_curve_surface::all_in_window;
+    let s = source();
+    let c = iso(&s);
+    let plane = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![
+            vec![vec![0., -1., 0.], vec![0., -1., 2.]],
+            vec![vec![0., 1., 0.], vec![0., 1., 2.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let window = [[0., 1.]; 3];
+    let first = first_in_window(&c, &plane, window, 10000).unwrap();
+    assert_eq!(first.roots.len(), 1);
+    assert!(!first.complete);
+    let all = all_in_window(&c, &plane, window, 10000).unwrap();
+    assert!(all.complete, "{all:?}");
+    assert!(all.unresolved.is_empty());
+    assert_eq!(all.roots.len(), 2, "{all:?}");
+    for t in [0.25, 0.75] {
+        assert_eq!(
+            all.roots
+                .iter()
+                .filter(|r| r.parameter_box[0][0] <= t && t <= r.parameter_box[0][1])
+                .count(),
+            1
+        );
+    }
+    assert!(all.cells <= 10000);
+    let short = all_in_window(&c, &plane, window, 1).unwrap();
+    assert!(!short.complete);
+    assert!(!short.unresolved.is_empty());
+    assert_eq!(short.cells, 1);
+}
+
+#[test]
+fn full_window_does_not_label_a_tangent_root_as_complete() {
+    use nurbs_core::intersection::certified_curve_surface::all_in_window;
+    let c = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0.25, 0., 1.], vec![-0.25, 0.5, 1.], vec![0.25, 1., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let s = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![
+            vec![vec![0., -1., 0.], vec![0., -1., 2.]],
+            vec![vec![0., 1., 0.], vec![0., 1., 2.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let r = all_in_window(&c, &s, [[0., 1.]; 3], 100).unwrap();
+    assert!(r.roots.is_empty());
+    assert!(!r.complete);
+    assert!(!r.unresolved.is_empty());
+    assert!(r.cells <= 100);
+}

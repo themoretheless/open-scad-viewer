@@ -526,7 +526,7 @@ pub fn intersections(c: &Curve, s: &Surface, max_cells: usize) -> Result<Report>
 mod affine_plane;
 
 mod window;
-pub use window::{WindowRoot,WindowReport,first_in_window};
+pub use window::{WindowRoot,WindowReport,first_in_window,all_in_window};
 
 mod window_source;
-pub use window_source::first_iso_in_window;
+pub use window_source::{first_iso_in_window,all_iso_in_window};

@@ -135,12 +135,13 @@ impl Source<'_> {
 /// First original iso/surface root in a natural parameter window. `parameter`
 /// is normalized on the transverse source axis and interpreted exactly.
 /// No rounded extracted curve, trim admission or surface completeness implied.
-pub fn first_iso_in_window(
+fn iso_search(
     s: &Surface,
     axis: usize,
     parameter: f64,
     window: Box3,
     max_cells: usize,
+    stop_first: bool,
 ) -> Result<window::WindowReport> {
     s.validate()?;
     check(
@@ -178,5 +179,28 @@ pub fn first_iso_in_window(
         s,
         window,
         max_cells,
+        stop_first,
     )
+}
+
+/// First certified original iso/surface root; unvisited windows remain unresolved.
+pub fn first_iso_in_window(
+    s: &Surface,
+    axis: usize,
+    parameter: f64,
+    window: Box3,
+    max_cells: usize,
+) -> Result<window::WindowReport> {
+    iso_search(s, axis, parameter, window, max_cells, true)
+}
+/// Complete requested-window search on original iso/surface coefficients.
+/// This proves neither whole-surface coverage nor trim/Body admission.
+pub fn all_iso_in_window(
+    s: &Surface,
+    axis: usize,
+    parameter: f64,
+    window: Box3,
+    max_cells: usize,
+) -> Result<window::WindowReport> {
+    iso_search(s, axis, parameter, window, max_cells, false)
 }

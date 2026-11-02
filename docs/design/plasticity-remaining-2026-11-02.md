@@ -80,6 +80,8 @@ Spatial iso в реальном WASM: frozen source `68c542a30` собран в 
 
 Смещённые spatial probes: автоматический 3D-поиск расширен с центральной iso до .5/.25/.75 на обеих осях и в обоих направлениях (до 12 spatial, 42 общих admissions). Центральное первое окно сохраняет прежнюю четверть оставшегося бюджета; геометрический резерв оставляет работу off-center окнам. Регрессия с разнесёнными центрами двух перекрывающихся height bands подтверждает контакт вне обоих центральных fibers; прежний central contact при budget=1000 сохранён. **96 native + 26 protocol тестов и vue-tsc прошли**; [receipt](../qualification/offcenter-spatial-probes-2026-11-02/results.json). Сам новый schedule ещё не прошёл WASM. Конечные probes не доказывают surface absence/полноту; общие branch coverage, tangencies/periodic, trims/Body остаются открытыми.
 
+Полный обход заданного curve/surface window: новые `all_in_window` и `all_iso_in_window` продолжают исходный Krawczyk-поиск после первого корня; все initial/subdivision/refinement cells расходуют общий budget. Непроверенные/сингулярные/граничные клетки остаются unresolved. Complete относится только к указанному natural-parameter product window. На cubic curve / plane найдены оба аналитических поперечных корня с полным покрытием; first-root режим остаётся неполным, exhausted budget и tangent root полноту не получают. **98 нативных тестов прошли**; [receipt](../qualification/full-curve-surface-window-2026-11-02/results.json). Полнота всех surface/surface ветвей, касания, trims/Body и WASM новых API остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.
