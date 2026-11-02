@@ -84,7 +84,8 @@
     "profile_spring",
     "bellows",
     "sphere_envelope",
-    "worm_wheel"
+    "worm_wheel",
+    "original_graph_transition"
   ],
   "editing": [
     "affine",
