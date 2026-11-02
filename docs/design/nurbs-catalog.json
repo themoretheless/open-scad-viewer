@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 236,
-  "unallocatedCount": 764,
+  "specifiedCount": 237,
+  "unallocatedCount": 763,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6413,6 +6413,27 @@
       "remainingQualification": [
         "Finite exactly independent authored axes; whole closed ellipse, variable rational angular clock, positive binary64 rational weights and exact pole storage or atomic refusal under unchanged1m-work/4096-bit limits. No legacy-clock/evaluator-bit identity.",
         "Native only; JSON/WASM/Rush/editor/STEP and current-source distribution remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0237",
+      "name": "Точный полный аффинный эллипсоид с рациональными весами, доказательством покрытия, полюсов и шва",
+      "status": "native",
+      "prioritySet": "native-1000-exact-construction",
+      "category": "Точное построение",
+      "nativeApi": "nurbs_core::primitives::exact_quadrics::ellipsoid",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics/proof.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics/template.rs",
+        "crates/nurbs-core/tests/exact_quadrics_contracts.rs",
+        "docs/design/nurbs-exact-quadrics.md",
+        "docs/qualification/nurbs-exact-quadrics-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Three finite exactly independent authored axes, including oblique/reflected frames. Entire 9x5 quadratic surface with variable rational clocks, nonperiodic clamped storage, intentional collapsed poles and longitude seam. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
+        "Native surface geometry only; no B-rep/solid incidence, volume, evaluator-bit identity, JSON/WASM/Rush/editor/STEP or current-source distribution qualification."
       ]
     }
   ],
