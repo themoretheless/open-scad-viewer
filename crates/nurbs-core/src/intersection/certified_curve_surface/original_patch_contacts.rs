@@ -6,8 +6,15 @@ use cad_predicates::{
     PredicateContext, SourceArena, ToleranceContext, rational_bspline_affine_patch_roots,
 };
 use num_traits::Zero;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginalPatchUvProof {
+    SeparableProjective,
+    InjectiveBilinearKrawczyk,
+    PositiveBilinearGlobalInverse,
+}
 #[derive(Debug)]
 pub struct OriginalPatchContact {
+    pub uv_proof: OriginalPatchUvProof,
     pub parameter_box: Box3,
     pub position_bounds: [[f64; 2]; 3],
     /// Original one-sided spans and their exact scalar multiplicities.
@@ -23,6 +30,8 @@ pub struct OriginalPatchContacts {
     pub exact_work: u64,
     pub spans: usize,
     pub complete: bool,
+    pub target_weights_separable: bool,
+    pub target_uv_injectivity: Option<super::patch_uv_injectivity::BilinearUvInjectivity>,
 }
 /// All original curve contacts with an exact untrimmed parallelogram support.
 /// Positive separable target weights give independent projective UV clocks.
@@ -68,13 +77,14 @@ pub fn original_affine_patch_contacts(
             && s.degree_v == 1
             && s.control_points.len() == 2
             && s.control_points[0].len() == 2
-            && q(s.weights[0][0]) * q(s.weights[1][1]) == q(s.weights[0][1]) * q(s.weights[1][0])
             && s.knots_u[0] == s.knots_u[1]
             && s.knots_u[2] == s.knots_u[3]
             && s.knots_v[0] == s.knots_v[1]
             && s.knots_v[2] == s.knots_v[3],
-        "Target must be a clamped affine patch with exact separable weights",
+        "Target must be one clamped degree-(1,1) patch",
     )?;
+    let separable =
+        q(s.weights[0][0]) * q(s.weights[1][1]) == q(s.weights[0][1]) * q(s.weights[1][0]);
     let pole = |i: usize, j: usize| std::array::from_fn(|k| q(s.control_points[i][j][k]));
     let origin = pole(0, 0);
     let u = subtract(&pole(1, 0), &origin);
@@ -137,6 +147,8 @@ pub fn original_affine_patch_contacts(
         exact_work: 0,
         spans: 0,
         complete: false,
+        target_weights_separable: separable,
+        target_uv_injectivity: None,
     };
     for span in c.degree..c.control_points.len() {
         let domain = [c.knots[span], c.knots[span + 1]];
@@ -210,9 +222,63 @@ pub fn original_affine_patch_contacts(
                 let denominator = I::point(w1).mul(I::point(1.).sub(x)?)?.add(numerator)?;
                 numerator.div(denominator)?.intersect(0., 1.)
             };
-            let ub = natural(clock(alpha, s.weights[0][0], s.weights[1][0])?, &s.knots_u)?;
-            let vb = natural(clock(beta, s.weights[0][0], s.weights[0][1])?, &s.knots_v)?;
+            let mut global = false;
+            let (uv, uv_proof) = if separable {
+                let inverse = clock(alpha, s.weights[0][0], s.weights[1][0])
+                    .and_then(|u| Ok([u, clock(beta, s.weights[0][0], s.weights[0][1])?]));
+                match inverse {
+                    Ok(uv) => (uv, OriginalPatchUvProof::SeparableProjective),
+                    Err(e) if e.code == crate::NUMERIC_ERROR => {
+                        global = true;
+                        (
+                            [I::new(0., 1.)?; 2],
+                            OriginalPatchUvProof::PositiveBilinearGlobalInverse,
+                        )
+                    }
+                    Err(e) => return Err(e),
+                }
+            } else {
+                if out.target_uv_injectivity.is_none() {
+                    out.target_uv_injectivity =
+                        Some(super::patch_uv_injectivity::certify(&s.weights)?);
+                }
+                let inverse = match super::patch_uv::inverse(&s.weights, alpha, beta) {
+                    Ok(v) => v,
+                    Err(e) if e.code == crate::NUMERIC_ERROR => None,
+                    Err(e) => return Err(e),
+                };
+                match inverse {
+                    Some(b) => (
+                        [I::new(b[0][0], b[0][1])?, I::new(b[1][0], b[1][1])?],
+                        OriginalPatchUvProof::InjectiveBilinearKrawczyk,
+                    ),
+                    None => {
+                        global = true;
+                        (
+                            [I::new(0., 1.)?; 2],
+                            OriginalPatchUvProof::PositiveBilinearGlobalInverse,
+                        )
+                    }
+                }
+            };
+            if global && out.target_uv_injectivity.is_none() {
+                out.target_uv_injectivity = Some(super::patch_uv_injectivity::certify(&s.weights)?);
+            }
+            // Global bijectivity proves existence and uniqueness even when a
+            // tight numeric inverse cannot be enclosed. Its whole-chart box
+            // is honest evidence, not a tolerance-qualified authored vertex.
+            let ub = if global {
+                I::new(s.knots_u[1], s.knots_u[2])?
+            } else {
+                natural(uv[0], &s.knots_u)?.intersect(s.knots_u[1], s.knots_u[2])?
+            };
+            let vb = if global {
+                I::new(s.knots_v[1], s.knots_v[2])?
+            } else {
+                natural(uv[1], &s.knots_v)?.intersect(s.knots_v[1], s.knots_v[2])?
+            };
             let contact = OriginalPatchContact {
+                uv_proof,
                 parameter_box: [[t.lo, t.hi], [ub.lo, ub.hi], [vb.lo, vb.hi]],
                 position_bounds: std::array::from_fn(|k| [p[k].lo, p[k].hi]),
                 source_spans: vec![span],

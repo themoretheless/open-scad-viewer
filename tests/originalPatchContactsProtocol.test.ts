@@ -20,4 +20,10 @@ describe('original patch contacts protocol',()=>{
  it('rejects duplicate scalar span proofs',()=>{const r=report();r.scalarProofs.push(structuredClone(r.scalarProofs[0]));r.spans=2;r.exactWork=60;expect(isOriginalPatchContactsReport(r)).toBe(false)})
  it('rejects mismatched one-sided order arrays',()=>{const r=report();r.contacts[0].multiplicities=[];expect(isOriginalPatchContactsReport(r)).toBe(false)})
  it('rejects sparse root evidence',()=>{const r=report();r.contacts[0].parameterBox=Array(3);expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('accepts coupled UV only with global injectivity and interval proof metadata',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='injective-bilinear-krawczyk';expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects coupled contacts without global UV injectivity',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=false;r.contacts[0].uvMethod='injective-bilinear-krawczyk';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('rejects a separable shortcut attached to coupled weights',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='separable-projective';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+
+ it('accepts an explicitly broad UV box with a global bijection proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='positive-bilinear-global-inverse';r.contacts[0].parameterBox[1]=[-2,2];r.contacts[0].parameterBox[2]=[10,14];expect(isOriginalPatchContactsReport(r)).toBe(true)})
+
 })

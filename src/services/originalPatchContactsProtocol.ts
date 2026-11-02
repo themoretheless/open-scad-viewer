@@ -9,7 +9,8 @@ export interface OriginalPatchContactsReport {
  status:'present'|'absent-on-patch'|'unresolved'
  presenceProven:boolean;patchAbsenceProven:boolean;curvePatchCoverageComplete:boolean
  parameterCoordinates:['curve-natural-t','patch-natural-u','patch-natural-v']
- contacts:{method:'original-patch-plane-polynomial';parameterBox:ParameterBox3;positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[]}[]
+ targetWeightsSeparable?:boolean;targetUvInjectivityProven?:boolean
+ contacts:{method:'original-patch-plane-polynomial';uvMethod?:'separable-projective'|'injective-bilinear-krawczyk'|'positive-bilinear-global-inverse';parameterBox:ParameterBox3;positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[]}[]
  scalarProofs:{span:number;status:'roots'|'coincident'|'indeterminate';normalizedOriginalSpanRoots:{interval:[number,number];multiplicity:number}[];reason:string|null;workUsed:number}[]
  proofContextSerialized:false
  unresolvedSpans:number[];ambiguousParameters:[number,number][]
@@ -34,6 +35,9 @@ export function isOriginalPatchContactsReport(value:unknown):value is OriginalPa
   ||typeof r.curvePatchCoverageComplete!=='boolean'||(r.curvePatchCoverageComplete&&r.spans===0)||r.curvePatchCoverageComplete!==(r.unresolvedSpans.length===0&&r.ambiguousParameters.length===0)
   ||r.presenceProven!==(r.contacts.length>0)||r.patchAbsenceProven!==(r.curvePatchCoverageComplete&&r.contacts.length===0)
   ||r.status!==(r.presenceProven?'present':r.patchAbsenceProven?'absent-on-patch':'unresolved'))return false
+ if(r.targetWeightsSeparable!==undefined||r.targetUvInjectivityProven!==undefined){
+  if(typeof r.targetWeightsSeparable!=='boolean'||typeof r.targetUvInjectivityProven!=='boolean'||(r.targetWeightsSeparable&&!r.targetUvInjectivityProven)||(r.presenceProven&&!r.targetUvInjectivityProven))return false
+ }
  const proofs=new Map<number,OriginalPatchContactsReport['scalarProofs'][number]>()
  let work=0
  for(const p of r.scalarProofs){
@@ -49,6 +53,11 @@ export function isOriginalPatchContactsReport(value:unknown):value is OriginalPa
   if(!c||c.method!=='original-patch-plane-polynomial'||Object.hasOwn(c,'crossingSign')||!box(c.parameterBox)||!box(c.positionBounds)
    ||!Array.isArray(c.sourceSpans)||c.sourceSpans.length<1||c.sourceSpans.length>256||!Array.isArray(c.multiplicities)||c.multiplicities.length!==c.sourceSpans.length
    ||new Set(c.sourceSpans).size!==c.sourceSpans.length)return false
+  if(c.uvMethod!==undefined&&!['separable-projective','injective-bilinear-krawczyk','positive-bilinear-global-inverse'].includes(c.uvMethod))return false
+  if(c.uvMethod==='injective-bilinear-krawczyk'&&(r.targetWeightsSeparable!==false||r.targetUvInjectivityProven!==true))return false
+  if(c.uvMethod==='positive-bilinear-global-inverse'&&r.targetUvInjectivityProven!==true)return false
+  if(r.targetWeightsSeparable===false&&!['injective-bilinear-krawczyk','positive-bilinear-global-inverse'].includes(c.uvMethod??''))return false
+  if(c.uvMethod==='separable-projective'&&r.targetWeightsSeparable===false)return false
   for(let i=0;i<c.sourceSpans.length;i++){
    const span=c.sourceSpans[i],multiplicity=c.multiplicities[i]
    if(!integer(span,1,255)||!integer(multiplicity,1,25))return false

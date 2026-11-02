@@ -187,9 +187,73 @@ fn separable_target_weights_use_the_original_projective_uv_clocks() {
 fn one_ulp_nonseparable_weights_are_not_approximated_by_rank_one() {
     let mut s = patch();
     s.weights = vec![vec![1., 3.], vec![2., 6f64.next_up()]];
-    assert!(original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).is_err());
+    let r = original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).unwrap();
+    assert!(!r.target_weights_separable);
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::InjectiveBilinearKrawczyk);
     let (a, b) = (1f64.next_up(), 1. - f64::EPSILON);
     assert_eq!(a * b, 1.); // Rounded determinant vanishes; the exact one does not.
     s.weights = vec![vec![a, 1.], vec![1., b]];
-    assert!(original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).is_err());
+    let r = original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).unwrap();
+    assert!(!r.target_weights_separable);
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::InjectiveBilinearKrawczyk);
+}
+
+#[test]
+fn coupled_bilinear_uv_inverse_has_global_uniqueness_and_original_root_boxes() {
+    for weights in [
+        vec![vec![1., 1.], vec![1., 2.]],
+        vec![vec![1., 1.], vec![2., 2.5]],
+    ] {
+        for transpose in [false, true] {
+            let mut s = patch();
+            s.weights = weights.clone();
+            if transpose {
+                s.control_points = (0..2)
+                    .map(|j| (0..2).map(|i| s.control_points[i][j].clone()).collect())
+                    .collect();
+                s.weights = (0..2)
+                    .map(|j| (0..2).map(|i| s.weights[i][j]).collect())
+                    .collect();
+                std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+            }
+            for order in [2, 4] {
+                let r =
+                    original_affine_patch_contacts(&curve(order), &s, 1e-9, 10, 100000).unwrap();
+                assert!(r.complete, "{r:?}");
+                assert!(!r.target_weights_separable);
+                let proof = r.target_uv_injectivity.as_ref().unwrap();
+                assert!(proof.proven && proof.determinant_factorization_verified);
+                assert_eq!(r.contacts.len(), 1);
+                assert_eq!(r.contacts[0].multiplicities, vec![order]);
+                let (a, b, c, d) = (weights[0][0], weights[1][0], weights[0][1], weights[1][1]);
+                let u = (a * c).sqrt() / ((a * c).sqrt() + (b * d).sqrt());
+                let v = (a * b).sqrt() / ((a * b).sqrt() + (c * d).sqrt());
+                let uv = if transpose {
+                    [10. + 4. * v, -2. + 4. * u]
+                } else {
+                    [-2. + 4. * u, 10. + 4. * v]
+                };
+                for (axis, x) in uv.into_iter().enumerate() {
+                    let b = r.contacts[0].parameter_box[axis + 1];
+                    assert!(b[0] <= x && x <= b[1], "{r:?}");
+                }
+                assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::InjectiveBilinearKrawczyk);
+            }
+        }
+    }
+}
+
+#[test]
+fn a_global_bijection_proof_preserves_contact_when_a_tight_numeric_uv_box_fails() {
+    let mut s = patch();
+    s.weights = vec![vec![1., 1.], vec![1., 1e12]];
+    let r = original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert!(r.target_uv_injectivity.as_ref().unwrap().proven);
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::PositiveBilinearGlobalInverse);
+    assert_eq!(r.contacts[0].parameter_box[1], [-2., 2.]);
+    assert_eq!(r.contacts[0].parameter_box[2], [10., 14.]);
 }

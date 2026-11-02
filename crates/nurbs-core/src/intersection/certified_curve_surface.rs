@@ -535,4 +535,9 @@ mod plane_contacts;
 pub use plane_contacts::{AffinePlaneContact, AffinePlaneContacts, affine_plane_contacts};
 
 mod original_patch_contacts;
-pub use original_patch_contacts::{OriginalPatchContact,OriginalPatchContacts,original_affine_patch_contacts};
+pub use original_patch_contacts::{OriginalPatchContact,OriginalPatchContacts,OriginalPatchUvProof,original_affine_patch_contacts};
+
+mod patch_uv;
+
+mod patch_uv_injectivity;
+pub use patch_uv_injectivity::BilinearUvInjectivity;

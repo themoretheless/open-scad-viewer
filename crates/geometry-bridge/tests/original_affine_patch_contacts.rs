@@ -147,3 +147,20 @@ fn original_projective_target_clocks_are_preserved_in_public_uv_boxes() {
         assert!(b[0].as_f64().unwrap() <= t && t <= b[1].as_f64().unwrap());
     }
 }
+
+#[test]
+fn coupled_target_uv_boxes_preserve_the_injective_bilinear_proof() {
+    let mut v = request(2);
+    v["patch"]["weights"] = json!([[1, 1], [1, 2]]);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(r["targetWeightsSeparable"], false);
+    assert_eq!(r["targetUvInjectivityProven"], true);
+    assert_eq!(r["contacts"][0]["uvMethod"], "injective-bilinear-krawczyk");
+    let t = 2f64.sqrt() - 1.;
+    for (axis, x) in [-2. + 4. * t, 10. + 4. * t].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][axis + 1];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+}
