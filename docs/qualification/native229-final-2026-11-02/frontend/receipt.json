@@ -1,0 +1,26 @@
+{
+  "sourceRecord": "OwnRust86",
+  "sourceSha256": "66b38b04b96602bcee67078d998705e27d3e49e0ca39bd7998a92fba41eb021e",
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "startedAt": "2026-11-02T05:23:38.542793+00:00",
+  "terminal": true,
+  "maxWorkers": 2,
+  "testTimeout": 90000,
+  "qualificationClaim": "none",
+  "exitCode": 0,
+  "endedAt": "2026-11-02T06:04:14.787293+00:00",
+  "sourceUnchanged": true,
+  "artifactUnchanged": true,
+  "tests": {
+    "numPassedTests": 6549,
+    "numFailedTests": 0,
+    "numPendingTests": 10
+  },
+  "scope": "Complete frontend on OwnRust86/native229 authored source with independently retained pre-existing runtimev10 Baf bytes. Does not compile/qualify native227..229 as new WASM functions or qualify hosted Linux candidates.",
+  "files": {
+    "native229-full-frontend-state.json.gz": "2d8b90bff1af93a564a8af51799f11fd20b78a06597bbb3508d194648961baf0",
+    "native229-full-frontend.log.gz": "3b8eaadd0ccc69001c402ca5920606b65b857286bb02d548aad03cb16282f9bf",
+    "native229-full-frontend.json.gz": "d7509bfaaf58bc823e6ee287cb72cff8feeece0276dee4ba973c3d388ab9367f",
+    "run-native229-full-frontend.py.gz": "97617fadc181ccdd580ce370b6666e4e166e72be9d96aa772fa24692b7cf9843"
+  }
+}
