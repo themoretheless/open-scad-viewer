@@ -1,0 +1,76 @@
+{
+  "status": "passed",
+  "sourceCommit": "e04412b2debd80f81aa9327a6d181c42d126067e",
+  "sourceCommitScope": "Frozen native Rust/WASM source. Client runtime uses the recorded source hashes below, including the explicit .ts import compatibility fix.",
+  "artifact": {
+    "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/13e803f7919265b32b38650b0121f75c9c3e9e1e3c2d19af137ee567e831a886.wasm",
+    "sha256": "13e803f7919265b32b38650b0121f75c9c3e9e1e3c2d19af137ee567e831a886",
+    "bytes": 21677085
+  },
+  "independentCopy": true,
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 133,
+  "workers": {
+    "started": 118,
+    "terminated": 118
+  },
+  "finiteGraphCases": 25,
+  "frozenPredicateTests": {
+    "library": 158,
+    "integration": 28,
+    "total": 186,
+    "status": "passed"
+  },
+  "clientTests": 151,
+  "vueTsc": "passed",
+  "mcpTsc": "passed",
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 54,
+    "pinnedLayerViolations": 0,
+    "baselineChangedByThisStage": false
+  },
+  "clientRuntimeFix": "Use an explicit .ts runtime protocol import for Node strip-types. allowImportingTsExtensions is enabled with existing noEmit=true and strict=true retained; no type-check bypass or arithmetic limit relaxation.",
+  "installedPackageUpdated": false,
+  "installedGeometryWasmSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "temporaryWorktreeRemoved": true,
+  "verified": [
+    "finite saddle and paraboloid transverse/tangent/irrational contacts",
+    "two roots and original rational source clock",
+    "carrier presence with proved finite patch absence",
+    "rotated graph chart and constant weight gauge",
+    "ULP-perturbed target identity and zero target budget refuse admission",
+    "coincident components remain incomplete",
+    "all four algebraic edges and both corners",
+    "nearby interior/exterior and negative projection determinant",
+    "irrational boundary root and both nearby sides",
+    "original nonrepresentable projected frame",
+    "coordinate budget exhaustion never promotes carrier roots",
+    "native refusal for unsupported weights/sheets and preflight invalid budget",
+    "root ownership by normalized provenance and complete target/carrier/boundary work accounting",
+    "input preservation and all real Workers terminated"
+  ],
+  "finiteSurfaceUvAdmission": "Only proved emitted contacts in the constant-weight single-Bezier graph family",
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "fullSharedRustRegressionQualified": false,
+  "remaining": [
+    "nonconstant rational target clocks and multi-span charts",
+    "non-graph quadric sheet selection and general freeform supports",
+    "complete surface/surface branches, periodic/poles and coincident components",
+    "trim/Body/Boolean and production provider/editor integration",
+    "full library regression/performance/distribution and parity qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "64256a6c064586f9dee19d7fe9e0dc5ee4eca4ca57a00ff4a29cbf49c42e4bc9",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "33a75a19079d70ccea9afc1aaa23bec44e1f477cf92cb2afd457beb5f0b23dd0",
+    "tools/browser-qualification/surface-self-intersection.ts": "e0e368b71a3d7e89ba3ed82b2590226841c5a344a501e207c05db54281764e67",
+    "tools/browser-qualification/surface-self-intersection.mjs": "5d928fd8eb3702555e0869d67b1f5b45ea16e2df1947aca218dda1b3f05bd079",
+    "src/services/originalQuadricGraphProtocol.ts": "2f24021a87c01bf2d50ecd9b44c635874583f2db4117a6370ffcd8a4de2ca33e",
+    "src/services/originalQuadricCarrierProtocol.ts": "68ffec836a44fb3a35ffc9936344df7ca8d605501a3ebde1dd562a39653ed9fb",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "f4765a00bcc6ab75d34bdd5c4e0e20e36a62d4b13514f3a415310e4232b38cb5",
+    "src/workers/surfaceSelfIntersection.worker.ts": "aa9949a919e82e7f84396bf4cad3083d55c48c5afd1aa70deae15c0d58bb4d92",
+    "tsconfig.json": "c1f3cbfa8010f3811446e97bdd2d67fea49feb509cb7de4e507612078525d9a8"
+  }
+}

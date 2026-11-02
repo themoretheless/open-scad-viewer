@@ -1,4 +1,4 @@
-import {MAX_QUADRIC_EXACT_WORK,isOriginalQuadricCarrierReport,type OriginalQuadricCarrierQuery,type OriginalQuadricCarrierReport} from './originalQuadricCarrierProtocol'
+import {MAX_QUADRIC_EXACT_WORK,isOriginalQuadricCarrierReport,type OriginalQuadricCarrierQuery,type OriginalQuadricCarrierReport} from './originalQuadricCarrierProtocol.ts'
 import type {NurbsSurface} from './nurbsSurface'
 import type {ParameterBox3} from './surfaceIsoTargetProtocol'
 export interface OriginalQuadricGraphQuery extends OriginalQuadricCarrierQuery {patch:NurbsSurface}
