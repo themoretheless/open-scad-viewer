@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "testsPassed": 15,
+  "newTests": 4,
+  "scope": "exact reflected continuous clamped multispan rational surfaces, U and V; exact input-knot symmetry; invalid disconnected charts rejected",
+  "remaining": "arbitrary self-intersection discovery and complete branch coverage remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface.rs": "45c460a1311c8c834d39ee341b8d53b5b756c3a171ed9dfa0b7ea27c52c5d2c1",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "857f8984a2ca4154f8b377a353c8ef87e0917da6978bc95fc7193d3dbbed69bc"
+  }
+}
