@@ -563,3 +563,101 @@ fn exact_crossing_pair_budget_is_enforced() {
         Status::Present
     );
 }
+
+fn overlap_strip() -> Surface {
+    let mut s = crossing_strip();
+    s.control_points = [[0., 0.], [3., 0.], [1., 1.], [1., 0.], [2., 0.]]
+        .into_iter()
+        .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+        .collect();
+    s.knots_u = vec![0., 0., 1., 2., 3., 4., 4.];
+    s.weights = vec![vec![1.; 2]; 5];
+    s
+}
+#[test]
+fn positive_collinear_overlap_has_strict_interior_witness() {
+    use num_rational::BigRational as Q;
+    let s = overlap_strip();
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let w = r.exact_witness.unwrap();
+    assert_eq!(w[0][0], Q::new(1.into(), 8.into()));
+    assert_eq!(w[1][0], Q::new(7.into(), 8.into()));
+    assert_eq!(
+        s.evaluate(0.5, 0.5).unwrap().point,
+        s.evaluate(3.5, 0.5).unwrap().point
+    );
+}
+#[test]
+fn adjacent_backtracking_overlap_is_not_dismissed_as_a_shared_endpoint() {
+    use num_rational::BigRational as Q;
+    let mut s = crossing_strip();
+    s.control_points = [[0., 0.], [3., 0.], [1., 0.]]
+        .into_iter()
+        .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+        .collect();
+    s.knots_u = vec![0., 0., 1., 2., 2.];
+    s.weights = vec![vec![1.; 2]; 3];
+    let r = surface_self_intersection::inspect(&s, 1).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.reflected_axis, None);
+    let w = r.exact_witness.unwrap();
+    assert_eq!(w[0][0], Q::new(1.into(), 3.into()));
+    assert_eq!(w[1][0], Q::new(3.into(), 4.into()));
+}
+#[test]
+fn parallel_offset_intervals_are_not_collinear_overlap() {
+    let mut s = overlap_strip();
+    for i in 3..5 {
+        for j in 0..2 {
+            s.control_points[i][j][2] += 1e-12;
+        }
+    }
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+#[test]
+fn rational_overlap_uses_original_weighted_clocks() {
+    use num_rational::BigRational as Q;
+    let mut s = overlap_strip();
+    s.weights[1] = vec![3.; 2];
+    s.weights[3] = vec![2.; 2];
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    let w = r.exact_witness.unwrap();
+    assert_eq!(w[0][0], Q::new(1.into(), 16.into()));
+    assert_eq!(w[1][0], Q::new(11.into(), 12.into()));
+}
+
+#[test]
+fn collinear_endpoint_join_is_not_a_positive_overlap() {
+    let mut s = crossing_strip();
+    s.control_points = [[0., 0.], [1., 0.], [2., 0.]]
+        .into_iter()
+        .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+        .collect();
+    s.knots_u = vec![0., 0., 1., 2., 2.];
+    s.weights = vec![vec![1.; 2]; 3];
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+#[test]
+fn collinear_overlap_is_proven_along_v_too() {
+    use num_rational::BigRational as Q;
+    let mut s = overlap_strip();
+    s.control_points = (0..2)
+        .map(|j| (0..5).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..5).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let w = r.exact_witness.unwrap();
+    assert_eq!(w[0][1], Q::new(1.into(), 8.into()));
+    assert_eq!(w[1][1], Q::new(7.into(), 8.into()));
+}

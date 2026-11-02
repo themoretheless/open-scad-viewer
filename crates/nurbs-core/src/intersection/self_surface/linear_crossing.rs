@@ -1,4 +1,4 @@
-//! Exact proper crossings of original rational degree-one iso-curves.
+//! Exact crossings and interval overlaps of rational degree-one iso-curves.
 use super::*;
 use num_traits::{One, Zero};
 type Q = BigRational;
@@ -89,7 +89,28 @@ fn intersection(a: &[Q; 4], b: &[Q; 4], c: &[Q; 4], d: &[Q; 4]) -> Option<[Q; 2]
         }
         return None; // a projected crossing is not a spatial intersection
     }
-    None // parallel/overlapping chords need a different proof
+    // Parallel directions: prove collinearity in all three coordinates before
+    // intersecting the scalar intervals. A positive overlap has a midpoint
+    // strictly inside BOTH segments; an endpoint-only touch is excluded.
+    let x = (0..3).find(|&i| !r[i].is_zero())?;
+    if s[x].is_zero()
+        || !(0..3).all(|i| &delta[i] * &r[x] == &delta[x] * &r[i] && &s[i] * &r[x] == &s[x] * &r[i])
+    {
+        return None;
+    }
+    let lo = a[x]
+        .clone()
+        .min(b[x].clone())
+        .max(c[x].clone().min(d[x].clone()));
+    let hi = a[x]
+        .clone()
+        .max(b[x].clone())
+        .min(c[x].clone().max(d[x].clone()));
+    if lo >= hi {
+        return None;
+    }
+    let midpoint = (lo + hi) / q(2.);
+    Some([(&midpoint - &a[x]) / &r[x], (&midpoint - &c[x]) / &s[x]])
 }
 fn clock(lambda: &Q, a: &Q, b: &Q) -> Q {
     lambda * a / (b * (Q::one() - lambda) + lambda * a)
@@ -111,7 +132,9 @@ pub(super) fn find(s: &Surface, max_pairs: usize) -> Option<[[Q; 2]; 2]> {
         };
         let spans: Vec<_> = (1..count).filter(|&i| knots[i] < knots[i + 1]).collect();
         for (i, &a) in spans.iter().enumerate() {
-            for &b in spans.iter().skip(i + 2) {
+            // Keep nonadjacent pairs first, then also inspect an adjacent
+            // backtracking span. Merely shared endpoints still fail admission.
+            for &b in spans.iter().skip(i + 2).chain(spans.get(i + 1)) {
                 if visited == max_pairs {
                     return None;
                 }
