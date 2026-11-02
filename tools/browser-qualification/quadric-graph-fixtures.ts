@@ -110,3 +110,13 @@ for(let edge=0;edge<6;edge++){
  const q=rationalMultispanTarget(boundaryQuery(edge)),uv=edge===0?[-2,11.5]:edge===1?[2,11.5]:edge===2?[-.25,10]:edge===3?[-.25,14]:edge===4?[-2,10]:[2,14]
  quadricGraphCases.push({name:`graph-rational-multispan-edge-${edge}`,query:q,check:r=>present(r,[[2+4/3,uv[0]!,uv[1]!,2]],'quadric-coordinate-sign')})
 }
+
+function coupledPlane(q:OriginalQuadricGraphQuery){for(const row of q.patch.controlPoints)for(const p of row)p[2]=0;q.patch.weights=[[1,3],[2,2]];q.quadric=[[0,0,0,0],[0,0,0,0],[0,0,0,.5],[0,0,.5,0]];return q}
+{
+ const q=coupledPlane(graphQuery());q.curve.controlPoints=[[.5,.625,-1],[.5,.625,1]]
+ quadricGraphCases.push({name:'graph-coupled-planar-bilinear-target',query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='coupled-bilinear','Missing coupled joint inverse proof')}})
+}
+{
+ const q=coupledPlane(boundaryQuery()),f=[1,-1,0,4];q.curve.controlPoints=q.curve.controlPoints.map((p,i)=>[p[0]!,.75,-f[i]!])
+ quadricGraphCases.push({name:'graph-coupled-planar-algebraic-edge',query:q,check:r=>present(r,[[2+4/3,-2,12,2]],'quadric-coordinate-sign')})
+}

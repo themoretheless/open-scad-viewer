@@ -743,3 +743,70 @@ fn separable_rational_multispan_clocks_have_global_exact_inverse_enclosures() {
         );
     }
 }
+
+#[test]
+fn nonseparable_planar_bilinear_target_has_joint_natural_uv_inverse() {
+    let (mut s, _) = saddle();
+    for row in &mut s.control_points {
+        for p in row {
+            p[2] = 0.;
+        }
+    }
+    let mut q = [[0.; 4]; 4];
+    q[2][3] = 0.5;
+    q[3][2] = 0.5;
+    for gauge in [1., 7.] {
+        s.weights = vec![vec![gauge, 3. * gauge], vec![2. * gauge, 2. * gauge]];
+        let r = inspect(&line([0.5, 0.625, -1.], [0.5, 0.625, 1.]), &s, q);
+        present(&r, &[(4., 0., 12., 1)]);
+        assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::CoupledBilinear);
+        for b in &r.contacts[0].parameter_box[1..] {
+            assert!(b[1] - b[0] < 1e-12);
+        }
+        for (x, y, u, v) in [
+            (0., 0., -2., 10.),
+            (1., 1., 2., 14.),
+            (0., 0.75, -2., 12.),
+            (1., 0.5, 2., 12.),
+        ] {
+            present(
+                &inspect(&line([x, y, -1.], [x, y, 1.]), &s, q),
+                &[(4., u, v, 1)],
+            );
+        }
+        let outside = inspect(&line([1.25, 0.5, -1.], [1.25, 0.5, 1.]), &s, q);
+        assert!(outside.complete && outside.contacts.is_empty());
+    }
+    s.control_points[1][1][2] = 0.125;
+    let r = inspect(&line([0.5, 0.625, -1.], [0.5, 0.625, 1.]), &s, q);
+    assert!(!r.target_graph_proven && !r.complete && r.contacts.is_empty());
+}
+
+#[test]
+fn coupled_planar_chart_retains_exact_algebraic_outer_edge_signs() {
+    let (mut s, _) = saddle();
+    for row in &mut s.control_points {
+        for p in row {
+            p[2] = 0.;
+        }
+    }
+    s.weights = vec![vec![1., 3.], vec![2., 2.]];
+    let mut q = [[0.; 4]; 4];
+    q[2][3] = 0.5;
+    q[3][2] = 0.5;
+    let c = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [1., 0., -1., -2.]
+            .iter()
+            .zip([1., -1., 0., 4.])
+            .map(|(x, f)| vec![*x, 0.75, -f])
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let r = inspect(&c, &s, q);
+    present(&r, &[(2. + 4. / 3., -2., 12., 2)]);
+    assert!(r.boundary_exact_work > 0);
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphUvProof::QuadricCoordinateSign);
+}

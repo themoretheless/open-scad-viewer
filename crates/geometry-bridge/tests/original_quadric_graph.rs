@@ -240,3 +240,26 @@ fn rational_multispan_graph_keeps_target_clock_proof_and_work_ledger() {
     );
     ledger(&r);
 }
+
+#[test]
+fn coupled_planar_bilinear_clock_serializes_certified_joint_uv() {
+    let mut q = query();
+    q["patch"]["controlPoints"] =
+        json!([[[0., 0., 0.], [0., 1., 0.]], [[1., 0., 0.], [1., 1., 0.]]]);
+    q["patch"]["weights"] = json!([[1., 3.], [2., 2.]]);
+    q["quadric"] = json!([
+        [0., 0., 0., 0.],
+        [0., 0., 0., 0.],
+        [0., 0., 0., 0.5],
+        [0., 0., 0.5, 0.]
+    ]);
+    q["curve"]["controlPoints"] = json!([[0.5, 0.625, -1.], [0.5, 0.625, 1.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "coupled-bilinear");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    for (i, x) in [4., 0., 12.].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][i];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+    ledger(&r);
+}

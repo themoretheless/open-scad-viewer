@@ -1,10 +1,11 @@
-//! Finite original polynomial graph contacts with one proved implicit branch.
+//! Finite original rational graph contacts with one proved implicit branch.
 use super::affine_plane::q;
 use super::*;
 use cad_predicates::{BezierIdentity, BezierIdentityDecision};
 use num_rational::BigRational as Q;
 mod chart;
 mod clock;
+mod coupled;
 mod edge;
 mod identity;
 pub use edge::GraphBoundaryProof;
@@ -14,6 +15,7 @@ pub enum OriginalQuadricGraphParameterization {
     PolynomialAffine,
     SeparableProjective,
     SeparableRational,
+    CoupledBilinear,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {
@@ -47,7 +49,9 @@ pub struct OriginalQuadricGraphContacts {
 /// Original clamped B-spline graph with positive exactly separable weights
 /// and exact Greville projection. Multi-span clocks require a complete exact
 /// monotone homogeneous Bernstein restriction census and continuous joins.
-/// Single Bezier graphs use weighted Bernstein clocks and their exact shortcut;
+/// Single Bezier graphs use weighted Bernstein clocks and their exact shortcut.
+/// Planar degree-(1,1) patches additionally admit nonseparable positive weights
+/// through a joint bilinear inverse and a proved global projection bijection;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its

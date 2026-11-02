@@ -1,6 +1,6 @@
 //! Exact homogeneous blossom restriction and monotone rational span census.
 use super::*;
-pub(super) struct Span {
+pub(in crate::intersection::certified_curve_surface::quadric_graph) struct Span {
     domain: [Q; 2],
     poles: Vec<[Q; 2]>,
 }

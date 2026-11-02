@@ -6,7 +6,7 @@ export interface OriginalQuadricGraphRequest extends OriginalQuadricGraphQuery {
 export interface OriginalQuadricGraphReport {
  schema:'nurbs-original-quadric-graph-contacts/1';status:'present-on-patch'|'absent-on-patch'|'unresolved'
  presenceProven:boolean;patchAbsenceProven:boolean;curvePatchCoverageComplete:boolean;targetGraphProven:boolean
- targetParameterization?:'polynomial-affine'|'separable-projective'|'separable-rational'
+ targetParameterization?:'polynomial-affine'|'separable-projective'|'separable-rational'|'coupled-bilinear'
  targetMembership:{status:'equal'|'different'|'indeterminate';reason:string|null;workUsed:number}
  carrier:OriginalQuadricCarrierReport|null
  contacts:{method:'original-quadric-graph';uvMethod:'exact-singleton'|'original-affine-control-bounds'|'quadric-coordinate-sign';parameterBox:ParameterBox3;positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[];normalizedOriginalSpanParameters:[number,number][]}[]
@@ -32,7 +32,7 @@ export function isOriginalQuadricGraphReport(value:unknown):value is OriginalQua
   ||!Array.isArray(r.boundaryProofs)||r.boundaryProofs.length>51200||typeof r.targetGraphProven!=='boolean'||typeof r.curvePatchCoverageComplete!=='boolean'
   ||r.presenceProven!==(r.contacts.length>0)||r.finiteSurfaceUvAdmission!==r.presenceProven||r.patchAbsenceProven!==(r.curvePatchCoverageComplete&&r.contacts.length===0)
   ||r.status!==(r.presenceProven?'present-on-patch':r.patchAbsenceProven?'absent-on-patch':'unresolved'))return false
- if(r.targetParameterization!==undefined&&!['polynomial-affine','separable-projective','separable-rational'].includes(r.targetParameterization))return false
+ if(r.targetParameterization!==undefined&&!['polynomial-affine','separable-projective','separable-rational','coupled-bilinear'].includes(r.targetParameterization))return false
  const t=r.targetMembership
  if(!t||!['equal','different','indeterminate'].includes(t.status)||!integer(t.workUsed,0,r.exactWork)||r.targetGraphProven!==(t.status==='equal'))return false
  if(t.status==='indeterminate'){if(typeof t.reason!=='string'||!reasons.includes(t.reason))return false}else if(t.reason!==null)return false

@@ -116,6 +116,7 @@ pub(super) fn contact(
             }
         })));
     }
+    let inverse = chart.inverse_clocks(&ranges);
     let natural = |axis: usize| -> Result<[f64; 2]> {
         let (knots, p, n) = if axis == 0 {
             (&s.knots_u, s.degree_u, s.control_points.len())
@@ -123,15 +124,9 @@ pub(super) fn contact(
             (&s.knots_v, s.degree_v, s.control_points[0].len())
         };
         let width = q(knots[n]) - q(knots[p]);
-        let lo = chart.inverse_clock(axis, &ranges[axis][0]);
-        let hi = if ranges[axis][0] == ranges[axis][1] {
-            lo.clone()
-        } else {
-            chart.inverse_clock(axis, &ranges[axis][1])
-        };
         Ok([
-            bound(&(q(knots[p]) + &width * &lo[0]))?[0],
-            bound(&(q(knots[p]) + width * &hi[1]))?[1],
+            bound(&(q(knots[p]) + &width * &inverse[axis][0]))?[0],
+            bound(&(q(knots[p]) + width * &inverse[axis][1]))?[1],
         ])
     };
     Ok(Decision::Contact(OriginalQuadricGraphContact {
