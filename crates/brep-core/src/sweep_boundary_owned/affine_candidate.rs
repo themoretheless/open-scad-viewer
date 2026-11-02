@@ -4,10 +4,12 @@ use super::*;
 pub struct AffineBoundaryReport {
     pub coherent_controls: bool,
     pub wall_displacement_upper: Option<f64>,
+    pub cap_correction_upper: [f64; 2],
     pub work: u64,
     pub reason: &'static str,
 }
 pub(super) struct Candidate {
+    pub nominal_surfaces: [nurbs_core::surface::Surface; 2],
     pub source_surfaces: [nurbs_core::surface::Surface; 2],
     pub original: Vec<Vec<Curve>>,
     pub origin: [f64; 3],
@@ -35,6 +37,7 @@ pub(super) fn prepare(
     let mut report = AffineBoundaryReport {
         coherent_controls: false,
         wall_displacement_upper: None,
+        cap_correction_upper: [0.; 2],
         work: 0,
         reason: "affine-boundary-coefficient-family-unproved",
     };
@@ -95,12 +98,14 @@ pub(super) fn prepare(
         return Ok((None, report));
     };
     let mut retained = [caps[0].clone(), caps[1].clone()];
+    let mut source_surfaces = [caps[0].surface.clone(), caps[1].surface.clone()];
     for endpoint in 0..2 {
         let pose = if endpoint == 0 {
             poses[0][0]
         } else {
             poses.last().unwrap()[5]
         };
+        let mut failed = false;
         for p in retained[endpoint]
             .surface
             .control_points
@@ -110,11 +115,60 @@ pub(super) fn prepare(
             if !charge(&mut report, l.work) {
                 return Ok((None, report));
             }
-            let Some(image) = crate::exact_affine_source::image(pose, p, origin) else {
+            if let Some(image) = crate::exact_affine_source::image(pose, p, origin) {
+                *p = image.to_vec();
+            } else {
+                failed = true;
+                break;
+            }
+        }
+        if failed {
+            // A pure-translation endpoint admits a common-amplitude proposal.
+            // Arbitrary affine endpoint correction remains explicitly unproved.
+            if pose[..3] != [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]] {
                 report.reason = "affine-filled-cap-exact-product-unproved";
                 return Ok((None, report));
+            }
+            let mut translation = [0.; 3];
+            for k in 0..3 {
+                let Some(t) = crate::exact_affine_source::exact_add(pose[3][k], -origin[k]) else {
+                    report.reason = "affine-filled-cap-translation-unrepresentable";
+                    return Ok((None, report));
+                };
+                translation[k] = t;
+            }
+            let correction = crate::rational_cap_translation::propose(
+                caps[endpoint],
+                translation,
+                origin,
+                l.tolerance,
+                l.work - report.work,
+            )?;
+            report.work += correction.work;
+            let Some(cap) = correction.cap else {
+                report.reason = correction.reason;
+                return Ok((None, report));
             };
-            *p = image.to_vec();
+            report.cap_correction_upper[endpoint] = correction.displacement_upper.unwrap();
+            source_surfaces[endpoint] = cap.surface.clone();
+            for p in source_surfaces[endpoint]
+                .control_points
+                .iter_mut()
+                .flatten()
+            {
+                for k in 0..3 {
+                    if !charge(&mut report, l.work) {
+                        return Ok((None, report));
+                    }
+                    let Some(value) = crate::exact_affine_source::exact_add(p[k], -translation[k])
+                    else {
+                        report.reason = "affine-corrected-cap-reference-unrepresentable";
+                        return Ok((None, report));
+                    };
+                    p[k] = value;
+                }
+            }
+            retained[endpoint] = cap;
         }
     }
     let mut sides = Vec::with_capacity(original.len());
@@ -139,7 +193,8 @@ pub(super) fn prepare(
     report.reason = "exact-affine-filled-boundary-controls";
     Ok((
         Some(Candidate {
-            source_surfaces: [caps[0].surface.clone(), caps[1].surface.clone()],
+            nominal_surfaces: [caps[0].surface.clone(), caps[1].surface.clone()],
+            source_surfaces,
             original: original.to_vec(),
             origin,
             pieces: poses

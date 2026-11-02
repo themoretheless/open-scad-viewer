@@ -129,6 +129,7 @@ fn union(a: &mut EnclosedPose, b: EnclosedPose) -> Result<()> {
 struct Context<'a> {
     carrier: &'a Surface,
     second: Option<&'a Surface>,
+    difference: Option<crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference<'a>>,
     origin: [f64; 3],
     pieces: Motion<'a>,
     poses: BTreeMap<[u64; 2], EnclosedPose>,
@@ -188,7 +189,7 @@ impl Context<'_> {
         }
         out.cells += 1;
         out.boxes += 1;
-        let Some((mut q, qt)) = capped::jets(self.carrier, self.second, b, out, max)? else {
+        let Some((mut q, qt)) = capped::jets(self.carrier, self.second, self.difference.as_ref(), b, out, max)? else {
             return Ok(Enclosed::Unavailable(None));
         };
         // Strong rational weights can make a wide carrier jet box ambiguous
@@ -332,9 +333,14 @@ fn certify_motion_impl(
             }
         }
     }
+    let difference = if let Some(end)=second {
+        crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference::prepare(
+            [carrier,end],&mut out.cells,max_cells)?
+    } else { None };
     let mut context = Context {
         carrier,
         second,
+        difference,
         origin,
         pieces,
         poses: BTreeMap::new(),
@@ -400,6 +406,25 @@ fn certify_motion_impl(
             }
         }
     }
+    let mut constant_linear=second.is_some() && !closed;
+    if constant_linear {
+        let reference=pieces.endpoints(0).0;
+        let controls:Box<dyn Iterator<Item=&Pose>>=match pieces {
+            Motion::Quintic(p)=>Box::new(p.iter().flat_map(|p|p.iter())),
+            Motion::Rational(p)=>Box::new(p.iter().flat_map(|p|p.controls.iter())),
+        };
+        'proposal: for pose in controls {
+            for col in 0..3 { for k in 0..3 {
+                if out.exact_work==max_exact_work {out.reason=Some("affine-volume-metric-proposal-work-limit");return Ok(out);}
+                out.exact_work+=1;
+                if pose[col][k]!=reference[col][k] {constant_linear=false;break 'proposal;}
+            }}
+        }
+    }
+    if constant_linear {
+        atlas::certify_map_global_first(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells,closed)?;
+        return Ok(out);
+    }
     atlas::certify_map(
         |b, out, max| context.enclose(b, out, max),
         projection,
@@ -464,6 +489,7 @@ fn orientation_motion_with_caps(
     let mut context = Context {
         carrier,
         second,
+        difference: None,
         origin,
         pieces,
         poses: BTreeMap::new(),

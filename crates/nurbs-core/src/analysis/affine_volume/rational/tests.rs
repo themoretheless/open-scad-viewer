@@ -113,6 +113,7 @@ fn nonbinary_time_knots_enclose_both_original_rational_one_sided_jets() {
     let q = carrier();
     let mut c = Context {
         second: None,
+        difference: None,
         carrier: &q,
         origin: [0.; 3],
         pieces: Motion::Rational(&p),
@@ -291,6 +292,7 @@ fn moving_affine_original_source_preconditioning_preserves_regular_thin_time_box
     eprintln!("original moving affine global proof {global:?}");
     let mut context = Context {
         second: None,
+        difference: None,
         carrier: &q,
         origin: [0.; 3],
         pieces: Motion::Rational(&p),

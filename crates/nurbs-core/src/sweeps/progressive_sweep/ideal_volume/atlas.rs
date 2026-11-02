@@ -292,11 +292,24 @@ pub(super) fn local_source(
 /// Internal query engine shared by original transport and coefficient-owned
 /// affine volumes. No public callback can fabricate geometry enclosures.
 pub(crate) fn certify_map(
+    enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
+    projection:[[f64;3];3], out:&mut IdealVolumeReport, max_cells:usize, closed:bool,
+)->Result<()> { certify_map_impl(enclose,projection,out,max_cells,closed,false) }
+
+/// Search-order proposal only. ONE fixed metric must cover the ENTIRE source
+/// box; point jets supply zero credit. Failed trials share the pair atlas ledger.
+pub(crate) fn certify_map_global_first(
+    enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
+    projection:[[f64;3];3], out:&mut IdealVolumeReport, max_cells:usize, closed:bool,
+)->Result<()> { certify_map_impl(enclose,projection,out,max_cells,closed,true) }
+
+fn certify_map_impl(
     mut enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
     projection:[[f64;3];3],
     out:&mut IdealVolumeReport,
     max_cells:usize,
     closed:bool,
+    global_first:bool,
 )->Result<()> {
     out.reason = Some("ideal-volume-work-limit");
     let mut cache = BTreeMap::new();
@@ -310,6 +323,15 @@ pub(crate) fn certify_map(
         Ok(e)
     };
     let root = [[0., 1.]; 3];
+    if global_first && !closed && out.cells<max_cells {
+        out.cells+=1;
+        if let Enclosed::Value(seed)=query([[0.5;2];3],out)? {
+            if cached_metric(&[root],seed.columns,projection,&mut query,out,max_cells,&mut metrics)? {
+                out.embedding_certified=true;out.regularity_certified=true;
+                out.parameter_topology_preserved=true;out.reason=None;return Ok(());
+            }
+        }
+    }
     let mut pairs = vec![(root, root)];
     while let Some((a, b)) = pairs.pop() {
         // Pair inspection itself is bounded, including cache-only visits.

@@ -128,6 +128,7 @@ fn temporal_piece_boundaries_enclose_both_one_sided_derivatives() {
     let s = carrier();
     let mut c = Context {
         second: None,
+        difference: None,
         carrier: &s,
         origin: [0.; 3],
         pieces: Motion::Quintic(&p),

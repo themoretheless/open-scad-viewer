@@ -378,6 +378,31 @@ fn build(original:&[Vec<Curve>],sections:&[Vec<Vec<Curve>>],sharp:&[usize],close
             .flat_map(|c| &c.control_points)
             .map(|p| [p[0], p[1], p[2]])
             .collect::<Vec<_>>();
+        if !quintic {
+            // Exact translations need no lattice product. Rational poles may
+            // have a much finer binary grid than a perfectly exact path shift.
+            // Verify EVERY proposed coefficient against the actual section;
+            // a failed trial still spends this same owner work ledger.
+            let mut translation = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.], [0.; 3]];
+            let mut available = true;
+            for k in 0..3 {
+                if let Some(t) = exact_add(target[0][k], -local[0][k]) {
+                    translation[3][k] = t;
+                } else {
+                    available = false;
+                }
+            }
+            for (source, actual) in local.iter().zip(&target) {
+                if !charge(&mut out, max) {
+                    return Ok(out);
+                }
+                available &= apply(translation, *source).as_ref() == Some(actual);
+            }
+            if available {
+                stations.push(translation);
+                continue;
+            }
+        }
         let Some(mut pose) = fit(&local, &target) else {
             out.reason = "affine-fit-proposal-unavailable";
             return Ok(out);

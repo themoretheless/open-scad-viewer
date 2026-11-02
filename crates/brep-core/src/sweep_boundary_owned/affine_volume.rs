@@ -1,9 +1,12 @@
 //! Fresh complete actual filled-map admission, independent of pairwise search.
 use super::*;
 use nurbs_core::affine_volume as atlas;
+mod translated;
 pub struct AffineFilledVolumeReport {
     pub certified: bool,
     pub packet_bound: bool,
+    /// Fresh coefficient/UV binding plus complete actual lifts cancels exact endpoint translations.
+    pub translated_trace_transport: bool,
     /// Distinct original carriers use a fresh normalized common material proof
     /// and a complete two-carrier filled map, rather than carrier equality.
     pub paired_carriers: bool,
@@ -54,6 +57,62 @@ fn rectangle(model: &Model, face: usize) -> bool {
     }
     seen.into_iter().all(|v| v)
 }
+// A constant coordinate and a nonconstant clamped Bernstein coordinate
+// cannot be equal: positive weights and independence of the Bernstein basis
+// make a nonzero homogeneous coefficient polynomial nonzero. This only avoids
+// an unnecessary equality trial; the complete TWO-carrier theorem still runs.
+fn distinct_planar_coordinate(
+    caps: [&nurbs_core::surface::Surface; 2],
+    out: &mut AffineFilledVolumeReport,
+    max: u64,
+) -> Result<bool> {
+    for (a, b) in [(caps[0], caps[1]), (caps[1], caps[0])] {
+        if b.periodic_u
+            || b.periodic_v
+            || b.control_points.len() != b.degree_u + 1
+            || b.control_points[0].len() != b.degree_v + 1
+        {
+            continue;
+        }
+        if [(&b.knots_u, b.degree_u), (&b.knots_v, b.degree_v)]
+            .iter()
+            .any(|(k, p)| {
+                !k[..=*p].iter().all(|x| *x == k[*p])
+                    || !k[*p + 1..].iter().all(|x| *x == k[*p + 1])
+            })
+        {
+            continue;
+        }
+        for axis in 0..3 {
+            let value = a.control_points[0][0][axis];
+            let mut constant = true;
+            let mut different = false;
+            for p in a.control_points.iter().flatten() {
+                if out.work == max {
+                    out.reason = "actual-affine-boundary-work-limit";
+                    return Ok(false);
+                }
+                out.work += 1;
+                constant &= p[axis] == value;
+            }
+            if !constant {
+                continue;
+            }
+            for p in b.control_points.iter().flatten() {
+                if out.work == max {
+                    out.reason = "actual-affine-boundary-work-limit";
+                    return Ok(false);
+                }
+                out.work += 1;
+                different |= p[axis] != value;
+            }
+            if different {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
 /// Only the private freshly constructed coherent packet can call this route.
 /// Whole normalized carrier equality is freshly proved on the actual original
 /// surfaces; unresolved representation equivalence supplies no authority.
@@ -69,6 +128,7 @@ pub(super) fn qualify(
     let mut out = AffineFilledVolumeReport {
         certified: false,
         packet_bound: false,
+        translated_trace_transport: false,
         paired_carriers: false,
         carrier_identity: None,
         material_roles_certified: false,
@@ -80,37 +140,57 @@ pub(super) fn qualify(
         work: spent,
         reason: "actual-affine-boundary-packet-unproved",
     };
-    if c.source_surfaces[0] != source_caps[0].surface
-        || c.source_surfaces[1] != source_caps[1].surface
+    if c.nominal_surfaces[0] != source_caps[0].surface
+        || c.nominal_surfaces[1] != source_caps[1].surface
     {
         out.reason = "actual-affine-source-packet-rebound";
         return Ok(out);
     }
+    // The actual coefficient map may use a bounded corrected carrier. Nominal
+    // sources above remain bound to the independent original/error owner.
+    // Fresh normalized lifts below bind BOTH actual carriers to every wall.
+    let actual_caps = [
+        LoftCap {
+            surface: c.source_surfaces[0].clone(),
+            trims: source_caps[0].trims.clone(),
+        },
+        LoftCap {
+            surface: c.source_surfaces[1].clone(),
+            trims: source_caps[1].trims.clone(),
+        },
+    ];
+    let source_caps = [&actual_caps[0], &actual_caps[1]];
     use nurbs_core::progressive_sweep::{
         NormalizedCarrierIdentityAttempt, NormalizedCarrierIdentityLimits,
         certify_normalized_carrier_identity,
     };
     let caps = [&source_caps[0].surface, &source_caps[1].surface];
-    let identity = certify_normalized_carrier_identity(
-        caps,
-        NormalizedCarrierIdentityLimits {
-            cells: limits.matrix_cells - out.cells,
-            exact_work: limits.work - out.work,
-        },
-    )?;
-    let same_carrier = match identity {
-        NormalizedCarrierIdentityAttempt::Certified(p) => {
-            out.cells += p.report().cells;
-            out.work += p.report().exact_work;
-            out.carrier_identity = Some(p.report().clone());
-            p.matches(caps)
-        }
-        NormalizedCarrierIdentityAttempt::Refused(r) => {
-            out.cells += r.cells;
-            out.work += r.exact_work;
-            out.carrier_identity = Some(*r);
-            false
-        }
+    let visibly_distinct = distinct_planar_coordinate(caps, &mut out, limits.work)?;
+    let same_carrier = if visibly_distinct {
+        false
+    } else {
+        let identity = certify_normalized_carrier_identity(
+            caps,
+            NormalizedCarrierIdentityLimits {
+                cells: limits.matrix_cells - out.cells,
+                exact_work: limits.work - out.work,
+            },
+        )?;
+        let same_carrier = match identity {
+            NormalizedCarrierIdentityAttempt::Certified(p) => {
+                out.cells += p.report().cells;
+                out.work += p.report().exact_work;
+                out.carrier_identity = Some(p.report().clone());
+                p.matches(caps)
+            }
+            NormalizedCarrierIdentityAttempt::Refused(r) => {
+                out.cells += r.cells;
+                out.work += r.exact_work;
+                out.carrier_identity = Some(*r);
+                false
+            }
+        };
+        same_carrier
     };
     if !same_carrier
         && !super::common_trim_region::certify(source_caps, &mut out.work, limits.work)?
@@ -183,35 +263,41 @@ pub(super) fn qualify(
             }
         }
     }
-    for source_cap in source_caps {
-        if source_cap.trims.len() != c.original.len() {
-            return Ok(out);
-        }
-        for (profiles, trims) in c.original.iter().zip(&source_cap.trims) {
-            if profiles.len() != trims.len() {
+    let Some(translated_traces) = translated::prepare(model, c, source_caps, &mut out, limits.work)
+    else {
+        return Ok(out);
+    };
+    if !translated_traces {
+        for source_cap in source_caps {
+            if source_cap.trims.len() != c.original.len() {
                 return Ok(out);
             }
-            for (world, uv) in profiles.iter().zip(trims) {
-                if out.work == limits.work {
-                    out.reason = "actual-affine-boundary-work-limit";
+            for (profiles, trims) in c.original.iter().zip(&source_cap.trims) {
+                if profiles.len() != trims.len() {
                     return Ok(out);
                 }
-                let proof = nurbs_core::curve_surface_agreement::verify_exact(
-                    world,
-                    uv,
-                    &source_cap.surface,
-                    false,
-                    limits.work - out.work,
-                )?;
-                let Some(proof) = proof else {
-                    out.work = limits.work;
-                    out.reason = "actual-affine-source-trace-unproved";
-                    return Ok(out);
-                };
-                out.work += proof.work_used;
-                if proof.outcome != cad_predicates::BezierIdentity::Equal {
-                    out.reason = "actual-affine-source-trace-unproved";
-                    return Ok(out);
+                for (world, uv) in profiles.iter().zip(trims) {
+                    if out.work == limits.work {
+                        out.reason = "actual-affine-boundary-work-limit";
+                        return Ok(out);
+                    }
+                    let proof = nurbs_core::curve_surface_agreement::verify_exact(
+                        world,
+                        uv,
+                        &source_cap.surface,
+                        false,
+                        limits.work - out.work,
+                    )?;
+                    let Some(proof) = proof else {
+                        out.work = limits.work;
+                        out.reason = "actual-affine-source-trace-unproved";
+                        return Ok(out);
+                    };
+                    out.work += proof.work_used;
+                    if proof.outcome != cad_predicates::BezierIdentity::Equal {
+                        out.reason = "actual-affine-source-trace-unproved";
+                        return Ok(out);
+                    }
                 }
             }
         }
@@ -228,6 +314,7 @@ pub(super) fn qualify(
         out.reason = "actual-affine-boundary-agreement-unproved";
         return Ok(out);
     }
+    out.translated_trace_transport = translated_traces;
     let remaining = limits.matrix_cells - out.cells;
     if remaining < 2 || out.work == limits.work {
         out.reason = "actual-affine-boundary-work-limit";

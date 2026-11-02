@@ -4,7 +4,7 @@
 //! weights require no equality assumption or rounded replacement surface.
 use super::*;
 type H = [I; 5]; // numerator delta XYZ, weight delta, original end weight
-pub(super) struct Difference<'s> {
+pub(crate) struct Difference<'s> {
     caps: [&'s Surface; 2],
     jets: [H; 3],
     nets: [Vec<Vec<H>>; 3],
@@ -97,7 +97,7 @@ fn restricted_hull(net: &[Vec<H>], uv: [[f64; 2]; 2]) -> Result<H> {
     Ok(hull(rows.iter().flatten().copied()))
 }
 impl<'s> Difference<'s> {
-    pub(super) fn prepare(
+    pub(crate) fn prepare(
         caps: [&'s Surface; 2],
         spent: &mut usize,
         max: usize,
@@ -170,7 +170,7 @@ impl<'s> Difference<'s> {
             Err(e) => Err(e),
         }
     }
-    pub(super) fn enclose(
+    pub(crate) fn enclose(
         &self,
         caps: [&Surface; 2],
         a: [V3; 3],

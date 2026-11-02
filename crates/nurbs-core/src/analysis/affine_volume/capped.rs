@@ -48,6 +48,7 @@ pub fn jacobian_orientation_rational_caps(
 pub(super) fn jets(
     first: &Surface,
     second: Option<&Surface>,
+    difference_owner: Option<&crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference<'_>>,
     b: Box3,
     out: &mut IdealVolumeReport,
     max: usize,
@@ -65,8 +66,19 @@ pub(super) fn jets(
     let one = I::point(1.).sub(t)?;
     let mut q = a;
     let mut difference = a;
+    for j in 0..3 { difference[j]=iv::sub(z[j],a[j])?; }
+    // Intersect two independent ORIGINAL enclosures. Subtracting unrelated
+    // Cartesian hulls loses the common homogeneous numerator/weight terms.
+    // The owner is pointer-bound to these exact carriers and spends this same
+    // ledger, including failed restrictions; it never remints a source jet.
+    if let Some(owner)=difference_owner {
+        if let Some(correlated)=owner.enclose([first,second],a,[b[0],b[1]],&mut out.cells,max)? {
+            for j in 0..3 { for k in 0..3 {
+                difference[j][k]=difference[j][k].intersect(correlated[j][k].lo,correlated[j][k].hi)?;
+            }}
+        }
+    }
     for j in 0..3 {
-        difference[j] = iv::sub(z[j], a[j])?;
         let convex = iv::add(iv::scale(a[j], one)?, iv::scale(z[j], t)?)?;
         let correlated = iv::add(a[j], iv::scale(difference[j], t)?)?;
         for k in 0..3 {

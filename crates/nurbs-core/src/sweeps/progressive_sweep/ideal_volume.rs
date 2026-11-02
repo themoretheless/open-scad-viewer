@@ -36,7 +36,7 @@ pub(crate) mod cell;
 pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
-mod cap_difference;
+pub(crate) mod cap_difference;
 mod intrinsic;
 pub(crate) mod pose;
 use charts::*;

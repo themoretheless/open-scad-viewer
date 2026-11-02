@@ -281,3 +281,220 @@ fn rounded_rational_hollow_cap_refuses_when_translation_breaks_exact_trim_trace(
         before.1
     );
 }
+
+#[test]
+fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_material_traces() {
+    let (profiles, caps) = source();
+    let before = caps
+        .iter()
+        .map(|c| (c.surface.clone(), c.trims.clone()))
+        .collect::<Vec<_>>();
+    let literal =
+        crate::rational_cap_translation::propose(&caps[0], [0., 0., 2.], [0.; 3], 0., 1000000)
+            .unwrap();
+    assert!(literal.cap.is_some());
+    assert_eq!(literal.displacement_upper, Some(0.));
+    assert_eq!(literal.modified_axes, [false; 3]);
+    let report =
+        crate::rational_cap_translation::propose(&caps[1], [0., 0., 2.], [0.; 3], 0.05, 1000000)
+            .unwrap();
+    let end = report.cap.as_ref().unwrap_or_else(|| {
+        panic!(
+            "proposal refused: {} bound={:?}",
+            report.reason, report.displacement_upper
+        )
+    });
+    assert_eq!(report.modified_axes, [false, false, true]);
+    assert!(
+        end.surface
+            .control_points
+            .iter()
+            .flatten()
+            .any(|p| p[2] != 2.)
+    );
+    let mut work = 0;
+    for (profile, uv) in profiles.iter().zip(end.trims.iter().flatten()) {
+        let mut world = profile.clone();
+        for p in &mut world.control_points {
+            p[2] += 2.;
+        }
+        let proof = nurbs_core::curve_surface_agreement::verify_exact(
+            &world,
+            uv,
+            &end.surface,
+            false,
+            1000000 - work,
+        )
+        .unwrap()
+        .unwrap();
+        work += proof.work_used;
+        assert_eq!(proof.outcome, cad_predicates::BezierIdentity::Equal);
+    }
+    let replay = crate::rational_cap_translation::propose(
+        &caps[1],
+        [0., 0., 2.],
+        [0.; 3],
+        0.05,
+        report.work,
+    )
+    .unwrap();
+    assert!(replay.cap.is_some());
+    let short = crate::rational_cap_translation::propose(
+        &caps[1],
+        [0., 0., 2.],
+        [0.; 3],
+        0.05,
+        report.work - 1,
+    )
+    .unwrap();
+    assert!(short.cap.is_none());
+    let strict =
+        crate::rational_cap_translation::propose(&caps[1], [0., 0., 2.], [0.; 3], 1e-8, 1000000)
+            .unwrap();
+    assert!(strict.cap.is_none());
+    assert_eq!(
+        strict.reason,
+        "rational-cap-translation-error-budget-exceeded"
+    );
+    let path = nurbs_core::primitives::line([0.; 3], [0., 0., 2.]).unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let axis = constant_vector_law([0., 0., 1.]).unwrap();
+    let normal = constant_vector_law([1., 0., 0.]).unwrap();
+    let sweep = MultiSweep::new(
+        &profiles,
+        &path,
+        &scale,
+        &twist,
+        Options {
+            normal: [1., 0., 0.],
+            orientation: Orientation::Fixed,
+            spacing: Spacing::Parameter,
+            initial_sections: 5,
+            max_sections: 5,
+            max_deviation: 0.05,
+        },
+    )
+    .unwrap()
+    .with_frame_laws(&axis, &normal)
+    .unwrap();
+    let mut classes = vec![OriginalProfileClass::C0; 9];
+    classes[0] = OriginalProfileClass::G2;
+    let body = crate::sweep_boundary_owned::construct_affine_with_original_classified_material(
+        &sweep,
+        &[5, 4],
+        5,
+        [&caps[0], &caps[1]],
+        &classes,
+        1e-8,
+        0.05,
+        crate::sweep_boundary_owned_tests::limits(),
+        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        limits(),
+        crate::AffineStationLimits {
+            quantum: 2f64.powi(-20),
+            tolerance: 0.001,
+            work: 1000000,
+            matrix_cells: 100000,
+        },
+    )
+    .unwrap();
+    let crate::sweep_boundary_owned::OriginalClassifiedBodyAttempt::Certified(body) = body else {
+        let crate::sweep_boundary_owned::OriginalClassifiedBodyAttempt::Refused(r) = body else {
+            unreachable!()
+        };
+        panic!(
+            "corrected rational actual solid refused: {} retained={:?}",
+            r.reason,
+            r.retained.as_ref().map(|r| (
+                r.reason,
+                r.affine_volume.as_ref().map(|v| (
+                    v.work,
+                    v.agreement.as_ref().map(|a| (a.work, a.all_equal)),
+                    v.cells,
+                    v.volume.as_ref().map(|f| (f.reason, f.cells, f.exact_work))
+                ))
+            ))
+        );
+    };
+    assert!(body.retained_report().certified);
+    let actual = body.retained_report().affine_volume.as_ref().unwrap();
+    assert!(actual.certified && actual.translated_trace_transport && actual.paired_carriers);
+    let filled = actual.volume.as_ref().unwrap();
+    assert!(
+        filled.embedding_certified
+            && filled.regularity_certified
+            && filled.parameter_topology_preserved
+    );
+    assert!(actual.orientation.as_ref().unwrap().sign.is_some());
+    assert!(
+        body.retained_report()
+            .affine_candidate
+            .as_ref()
+            .unwrap()
+            .cap_correction_upper[1]
+            > 0.
+    );
+    let run = |work, cells, tolerance| {
+        crate::sweep_boundary_owned::construct_affine_with_original_classified_material(
+            &sweep,
+            &[5, 4],
+            5,
+            [&caps[0], &caps[1]],
+            &classes,
+            1e-8,
+            0.05,
+            crate::sweep_boundary_owned_tests::limits(),
+            [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+            limits(),
+            crate::AffineStationLimits {
+                quantum: 2f64.powi(-20),
+                tolerance,
+                work,
+                matrix_cells: cells,
+            },
+        )
+        .unwrap()
+    };
+    for (w, c) in [(actual.work, 100000), (1000000, actual.cells)] {
+        let crate::sweep_boundary_owned::OriginalClassifiedBodyAttempt::Certified(_) =
+            run(w, c, 0.001)
+        else {
+            panic!("measured actual replay refused work={w} cells={c}")
+        };
+    }
+    for (w, c, t) in [
+        (actual.work - 1, 100000, 0.001),
+        (1000000, actual.cells - 1, 0.001),
+        (1000000, 100000, 1e-8),
+    ] {
+        let crate::sweep_boundary_owned::OriginalClassifiedBodyAttempt::Refused(r) = run(w, c, t)
+        else {
+            panic!("incomplete actual correction admitted")
+        };
+        assert!(r.original.is_none() && r.retained.is_some());
+        if let Some(v) = r.retained.as_ref().unwrap().affine_volume.as_ref() {
+            assert!(v.work <= w && v.cells <= c);
+        }
+    }
+    assert_eq!(
+        caps.iter()
+            .map(|c| (c.surface.clone(), c.trims.clone()))
+            .collect::<Vec<_>>(),
+        before
+    );
+    eprintln!(
+        "corrected actual field: work={} cells={} filled_cells={} filled_exact={} error={:?}",
+        actual.work,
+        actual.cells,
+        filled.cells,
+        filled.exact_work,
+        body.retained_report().boundary_error_upper
+    );
+    assert_eq!(body.cap_wall_continuity(), "C0");
+    assert_eq!(body.boundary_classes(), classes);
+    eprintln!(
+        "rational translated nonplanar cap: work={} boundary_work={} bound={:?}",
+        report.work, work, report.displacement_upper
+    );
+}
