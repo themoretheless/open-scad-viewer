@@ -65,12 +65,14 @@ jobs:
         run: node node_modules/vitest/vitest.mjs run tests/brepCurvedGraphBooleanV3.test.ts tests/brepDirectStepV3.test.ts tests/brepIntersections.test.ts tests/brepKernel.test.ts tests/manifoldMetricsReport.test.ts tests/meshManifoldDefects.test.ts tests/meshTopology.test.ts tests/nurbsBasicPaths.test.ts tests/nurbsDegreeZeroIdentity.test.ts tests/nurbsPrimitives.test.ts tests/nurbsSurfaceDistance.test.ts --maxWorkers 2 --reporter=default --reporter=json --outputFile.json=output/qualification/geometry-direct-node.json
         env:
           VITEST_MAX_WORKERS: '2'
+      - name: Install pinned browser probe dependencies
+        run: npm ci --prefix tools/browser-qualification
       - name: Install Chromium and Linux dependencies
         if: runner.os == 'Linux'
-        run: node node_modules/playwright/cli.js install --with-deps chromium
+        run: node tools/browser-qualification/node_modules/playwright/cli.js install --with-deps chromium
       - name: Install Chromium
         if: runner.os != 'Linux'
-        run: node node_modules/playwright/cli.js install chromium
+        run: node tools/browser-qualification/node_modules/playwright/cli.js install chromium
       - name: Check embedded candidate in independent browser realms
         run: node tools/browser-qualification/isolated-packed-candidate-direct-api.mjs output/qualification/geometry-direct-browser public/wasm/geometry-kernel.wasm
       - uses: actions/upload-artifact@v4
