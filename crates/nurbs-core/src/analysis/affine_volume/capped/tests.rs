@@ -62,7 +62,17 @@ fn pieces() -> Vec<RationalPiece> {
 const P: [[f64; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 #[test]
 fn independent_rational_caps_retain_global_map_jets_and_every_budget() {
-    let a = cap(false);
+    check_independent_caps(cap(false));
+}
+#[test]
+fn tensor_weight_base_and_independent_end_keep_complete_map_and_budget_ownership() {
+    let mut a = cap(false);
+    // Positive original tensor weights; the end cap retains its independent
+    // degree, non-factorable weights and nonplanar interior.
+    a.weights = vec![vec![1.,2.],vec![4.,8.]];
+    check_independent_caps(a);
+}
+fn check_independent_caps(a: Surface) {
     let b = cap(true);
     let pieces = pieces();
     let before = (a.clone(), b.clone(), pieces.clone());

@@ -50,14 +50,20 @@ pub fn jacobian_orientation_rational_caps(
 pub(super) fn jets(
     first: &Surface,
     second: Option<&Surface>,
+    separated: Option<&separable::Carrier>,
     difference_owner: Option<&crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference<'_>>,
     b: Box3,
     out: &mut IdealVolumeReport,
     max: usize,
 ) -> Result<Option<([[I; 3]; 3], [I; 3])>> {
-    let Some(a) = charts::cap_jets(first, [b[0], b[1]], &mut out.cells, max)? else {
-        return Ok(None);
+    // The exact tensor-weight and coordinate-dependence owner refers to
+    // THIS original base carrier. Cancelling its common weight factor keeps
+    // independent rational end weights and the full C1-C0 time term intact.
+    let base = match separated {
+        Some(carrier) => carrier.enclose([b[0], b[1]], &mut out.cells, max)?,
+        None => charts::cap_jets(first, [b[0], b[1]], &mut out.cells, max)?,
     };
+    let Some(a) = base else { return Ok(None); };
     let Some(second) = second.filter(|s| !std::ptr::eq(*s, first)) else {
         return Ok(Some((a, [I::point(0.); 3])));
     };

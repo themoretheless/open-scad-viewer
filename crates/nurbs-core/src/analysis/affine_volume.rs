@@ -218,7 +218,7 @@ impl Context<'_> {
             }
         }
         let jets = if self.second.is_some() {
-            capped::jets(self.carrier, self.second, self.difference.as_ref(), [query[0],query[1],b[2]], out, max)?
+            capped::jets(self.carrier, self.second, self.separable.as_ref(), self.difference.as_ref(), [query[0],query[1],b[2]], out, max)?
         } else {
             let q = if let Some(carrier) = &self.separable {
                 carrier.enclose(query, &mut out.cells, max)?
@@ -453,7 +453,7 @@ fn certify_motion_impl(
     if second.is_none() && graph_translation::certify(carrier, pieces, closed, &mut out, max_cells, max_exact_work)? {
         return Ok(out);
     }
-    let separated = if source_shear.is_some()
+    let separated = if (source_shear.is_some() || second.is_some())
         && carrier
             .weights
             .iter()
