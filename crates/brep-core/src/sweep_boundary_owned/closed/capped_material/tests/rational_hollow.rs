@@ -192,3 +192,92 @@ fn guided_unequal_rational_hollow_caps_clock_and_affine_matrix() {
         }
     }
 }
+
+// The original source proof is insufficient: exercise the complete retained
+// admission independently, with unchanged native transport proof allowances.
+#[test]
+fn rounded_rational_hollow_cap_refuses_when_translation_breaks_exact_trim_trace() {
+    use crate::sweep_boundary_owned::{
+        OriginalClassifiedBodyAttempt, construct_with_original_classified_material,
+    };
+    let (profiles, caps) = source();
+    let path = nurbs_core::primitives::line([0.; 3], [0., 0., 2.]).unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let axis = constant_vector_law([0., 0., 1.]).unwrap();
+    let normal = constant_vector_law([1., 0., 0.]).unwrap();
+    let sweep = MultiSweep::new(
+        &profiles,
+        &path,
+        &scale,
+        &twist,
+        Options {
+            normal: [1., 0., 0.],
+            orientation: Orientation::Fixed,
+            spacing: Spacing::Parameter,
+            initial_sections: 5,
+            max_sections: 5,
+            max_deviation: 0.05,
+        },
+    )
+    .unwrap()
+    .with_frame_laws(&axis, &normal)
+    .unwrap();
+    let mut end = caps[1].clone();
+    for p in end.surface.control_points.iter_mut().flatten() {
+        p[2] += 2.;
+    }
+    let mut classes = vec![OriginalProfileClass::C0; 9];
+    classes[0] = OriginalProfileClass::G2;
+    let before = (
+        profiles.clone(),
+        caps.iter()
+            .map(|c| (c.surface.clone(), c.trims.clone()))
+            .collect::<Vec<_>>(),
+    );
+    let original = certify_original_classified_capped_material(
+        &sweep,
+        &[5, 4],
+        [&caps[0], &caps[1]],
+        &classes,
+        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        1e-8,
+        limits(),
+    )
+    .unwrap();
+    let OriginalClassifiedCappedMaterialAttempt::Certified(original) = original else {
+        panic!("source rational material must be independently proven")
+    };
+    assert!(original.volume().report().charts.volume.embedding_certified);
+    let out = construct_with_original_classified_material(
+        &sweep,
+        &[5, 4],
+        5,
+        [&caps[0], &caps[1]],
+        [&caps[0], &end],
+        &classes,
+        1e-8,
+        0.05,
+        crate::sweep_boundary_owned_tests::limits(),
+        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        limits(),
+    );
+    let error = match out {
+        Err(error) => error,
+        Ok(_) => panic!("rounded filled cap must not borrow the original material certificate"),
+    };
+    assert_eq!(error.code, "BREP_RATIONAL_SWEEP_REFUSED");
+    assert!(
+        error
+            .message
+            .contains("Authored cap whole-boundary agreement is not proven exact")
+    );
+    assert!(error.message.contains("outcome: Different"));
+    assert_eq!(profiles, before.0);
+    assert_eq!(
+        caps.iter()
+            .map(|c| (c.surface.clone(), c.trims.clone()))
+            .collect::<Vec<_>>(),
+        before.1
+    );
+}

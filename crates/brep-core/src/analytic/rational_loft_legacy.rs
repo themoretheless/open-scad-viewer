@@ -205,7 +205,8 @@ pub fn capped_loft_with_caps(start: &[Vec<Curve>], end: &[Vec<Curve>],
     let model = section_loft(&[start.to_vec(),end.to_vec()],None,Some(sides),false,Some(caps))?;
     let agreement = crate::boundary_agreement::verify_exact(&model,1_000_000)?;
     if !agreement.all_equal || !agreement.all_joins_exact {
-        return Err(err("Authored cap whole-boundary agreement is not proven exact"));
+        let unresolved = agreement.uses.iter().find(|u| !u.decision.as_ref().is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Equal));
+        return Err(err(format!("Authored cap whole-boundary agreement is not proven exact: work={}, first={:?}", agreement.work, unresolved)));
     }
     Ok(model)
 }

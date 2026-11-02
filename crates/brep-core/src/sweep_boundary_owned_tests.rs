@@ -33,7 +33,7 @@ fn cap(corners: Vec<Vec<f64>>) -> LoftCap {
         ],
     }
 }
-fn limits() -> Limits {
+pub(crate) fn limits() -> Limits {
     Limits {
         source_cells: 100000,
         source_products: 1000000,
