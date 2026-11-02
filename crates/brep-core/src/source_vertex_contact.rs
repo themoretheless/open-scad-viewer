@@ -7,6 +7,7 @@ use crate::{
 use cad_predicates::Sign;
 use nurbs_core::{Error, Result};
 use std::collections::BTreeMap;
+mod proposal;
 pub struct Certificate<E = crate::source_shared_edge::SharedEdge> {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
@@ -191,82 +192,94 @@ pub fn certify<E:VertexCarrier>(shell: &Shell<E>, faces: [usize; 2], max_work: u
         if point != other {
             continue;
         }
-        let mut normal = std::array::from_fn::<_, 3, _>(|k| centers[0][k] - centers[1][k]);
-        let scale = normal.iter().map(|v| v.abs()).fold(0_f64, f64::max);
-        if scale == 0. || !scale.is_finite() {
-            continue;
-        }
-        for v in &mut normal {
-            *v /= scale;
-        }
-        let axis = (0..3)
-            .min_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
-            .unwrap();
-        let mut basis = [0.; 3];
-        basis[axis] = 1.;
-        let cross = |a: [f64; 3], b: [f64; 3]| {
-            [
-                a[1] * b[2] - a[2] * b[1],
-                a[2] * b[0] - a[0] * b[2],
-                a[0] * b[1] - a[1] * b[0],
-            ]
-        };
-        let x = cross(normal, basis);
-        let y = cross(normal, x);
-        let plane = [
-            *point,
-            std::array::from_fn(|k| point[k] + x[k]),
-            std::array::from_fn(|k| point[k] + y[k]),
-        ];
-        if plane.iter().flatten().any(|v| !v.is_finite()) {
-            continue;
-        }
-        out.reason = "source-vertex-support-unproven";
-        if !crate::source_allowed_contact::independent(
-            plane[0],
-            plane[1],
-            plane[2],
-            &mut out.exact_work,
-            max_work,
-        )? {
-            continue;
-        }
-        let mut sides = [None; 2];
-        let mut supported = true;
-        for slot in 0..2 {
-            for &world in &points[slot] {
-                let Some(sign) = crate::source_allowed_contact::orient(
-                    &[plane[0], plane[1], plane[2], world],
-                    None,
-                    &mut out.exact_work,
-                    max_work,
-                )?
-                else {
-                    out.reason = "source-vertex-contact-work-limit";
-                    return Ok(out);
-                };
-                if sign == Sign::Zero {
-                    supported &= world == *point;
-                } else if sides[slot].is_some_and(|s| s != sign) {
-                    supported = false;
-                } else {
-                    sides[slot] = Some(sign);
+        for attempt in 0..2 {
+            let mut normal = if attempt==0 {
+                std::array::from_fn::<_,3,_>(|k|centers[0][k]-centers[1][k])
+            } else {
+                match proposal::improve(&points,*point,&mut out.exact_work,max_work) {
+                    Some(n)=>n,
+                    None if out.exact_work==max_work=> {
+                        out.reason="source-vertex-contact-work-limit";return Ok(out);
+                    },
+                    None=>continue,
+                }
+            };
+            let scale = normal.iter().map(|v| v.abs()).fold(0_f64, f64::max);
+            if scale == 0. || !scale.is_finite() {
+                continue;
+            }
+            for v in &mut normal {
+                *v /= scale;
+            }
+            let axis = (0..3)
+                .min_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
+                .unwrap();
+            let mut basis = [0.; 3];
+            basis[axis] = 1.;
+            let cross = |a: [f64; 3], b: [f64; 3]| {
+                [
+                    a[1] * b[2] - a[2] * b[1],
+                    a[2] * b[0] - a[0] * b[2],
+                    a[0] * b[1] - a[1] * b[0],
+                ]
+            };
+            let x = cross(normal, basis);
+            let y = cross(normal, x);
+            let plane = [
+                *point,
+                std::array::from_fn(|k| point[k] + x[k]),
+                std::array::from_fn(|k| point[k] + y[k]),
+            ];
+            if plane.iter().flatten().any(|v| !v.is_finite()) {
+                continue;
+            }
+            out.reason = "source-vertex-support-unproven";
+            if !crate::source_allowed_contact::independent(
+                plane[0],
+                plane[1],
+                plane[2],
+                &mut out.exact_work,
+                max_work,
+            )? {
+                continue;
+            }
+            let mut sides = [None; 2];
+            let mut supported = true;
+            for slot in 0..2 {
+                for &world in &points[slot] {
+                    let Some(sign) = crate::source_allowed_contact::orient(
+                        &[plane[0], plane[1], plane[2], world],
+                        None,
+                        &mut out.exact_work,
+                        max_work,
+                    )?
+                    else {
+                        out.reason = "source-vertex-contact-work-limit";
+                        return Ok(out);
+                    };
+                    if sign == Sign::Zero {
+                        supported &= world == *point;
+                    } else if sides[slot].is_some_and(|s| s != sign) {
+                        supported = false;
+                    } else {
+                        sides[slot] = Some(sign);
+                    }
                 }
             }
-        }
-        if supported && sides.iter().all(Option::is_some) && sides[0] != sides[1] {
-            out.certificate = Some(Certificate {
-                faces,
-                regions: [regions[faces[0]].clone(), regions[faces[1]].clone()],
-                vertex: *vertex,
-                point: *point,
-                plane,
-                uses: [*first, *second],
-                material_hulls,
-                corner_image: None,
-            });
-            out.reason = "source-vertex-contact-qualified";
-            return Ok(out);
+            if supported && sides.iter().all(Option::is_some) && sides[0] != sides[1] {
+                out.certificate = Some(Certificate {
+                    faces,
+                    regions: [regions[faces[0]].clone(), regions[faces[1]].clone()],
+                    vertex: *vertex,
+                    point: *point,
+                    plane,
+                    uses: [*first, *second],
+                    material_hulls,
+                    corner_image: None,
+                });
+                out.reason = "source-vertex-contact-qualified";
+                return Ok(out);
+            }
         }
     }
     // A coplanar face need not have a strict side. The other original chart

@@ -64,6 +64,16 @@ pub struct PairReport<E = crate::source_shared_edge::SharedEdge> {
     pub pole_paired: Option<crate::source_pole_paired_contact::Certificate<E>>,
     pub disjoint_hull: Option<crate::source_hull_separation::Certificate>,
 }
+impl<E> PairReport<E> {
+    /// Diagnostic completeness only. Reports never authorize a source owner.
+    pub(crate) fn qualification_proven(&self) -> bool {
+        self.allowed.is_some() || self.fiber.is_some() || self.interior_fiber.is_some()
+            || self.paired_fiber.is_some() || self.vertex_contact.is_some()
+            || self.ruled_projection.is_some() || self.pole_planar.is_some()
+            || self.pole_paired.is_some() || self.disjoint_hull.is_some()
+            || self.result.as_ref().is_some_and(|r|r.absence_proven)
+    }
+}
 pub struct ShellReport<E = crate::source_shared_edge::SharedEdge> {
     pub pairs: Vec<PairReport<E>>,
     pub total_pairs: usize,
