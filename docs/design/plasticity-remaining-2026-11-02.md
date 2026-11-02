@@ -160,3 +160,7 @@ Actual WASM original affine contacts: frozen source `a46f426b2` собран в 
 Наши реализации в `brep-core`/`nurbs-core` написаны независимо на Rust; алгоритмы Parasolid/XNURBS не объявляются восстановленными. Нативная история и её replay — собственная реализация, без наблюдённого runtime-соответствия чужой истории. `independent-modeling/clean` сохранена для сравнения.
 
 [Полный ledger и исторические этапы](plasticity-library-gap-plan.md). Старые записи сохраняют состояние своих дат/артефактов; текущую очередь брать из этого файла и свежего receipt.
+
+### Рациональные target-часы: фактический WASM runtime, 2026-11-03
+
+Кандидат из `feef6e2760544e134248f06f3486669b8063bbf6`, SHA-256 `a14f654d87f589d7a99c6610629b8b0e9aa93881e55abddd251ba01357d76b73`: 146 ABI-сценариев прошли; Chromium создал и завершил 130 Workers, включая 37 finite-graph сценариев. Замороженный inverse-clock тест также прошёл. Отчёт: `docs/qualification/rational-quadric-graph-wasm-2026-11-03/results.json`. Временный worktree удалён; установленный WASM не обновлён. Это проверка однопатчевых quadric graph с положительными separable rational clocks; multi-span, coupled weights, общий freeform, trim/Body и production provider остаются открытыми.
