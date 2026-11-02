@@ -96,6 +96,14 @@ pub(crate) fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
         .all(|x| x.is_finite())
         .then_some(inverse)
 }
+/// A coordinate PROPOSAL from source directions, retaining physical axis
+/// lengths for the subsequent metric scaling. Inverting the raw Jacobian
+/// instead can absorb a thin carrier/long path ratio into world coordinates.
+/// Its determinant and all transformed source jets still require independent
+/// outward verification by the caller; this supplies no geometric credit.
+pub(crate) fn normalized_inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
+    inverse_proposal(scaled(columns, coordinate_scale(columns)?).ok()?)
+}
 /// ONE invertible diagonal change x=S*xi on the complete joint chart.
 /// A thin carrier and a long path must not make the SPD proposal depend on
 /// arbitrary normalized parameter units. This never changes source jets/knots.

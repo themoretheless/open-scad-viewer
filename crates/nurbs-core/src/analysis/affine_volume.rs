@@ -512,7 +512,11 @@ fn certify_motion_impl(
                     _ => [[0.; 3]; 3],
                 };
                 if let Some(p) = atlas::inverse_proposal(proposal.map(|v| v.map(I::point)))
-                    .or_else(|| atlas::inverse_proposal(e.columns))
+                    .or_else(|| if second.is_some() {
+                        atlas::normalized_inverse_proposal(e.columns)
+                    } else {
+                        atlas::inverse_proposal(e.columns)
+                    })
                 {
                     let determinant = iv::dot_tight(
                         p[0].map(I::point),
