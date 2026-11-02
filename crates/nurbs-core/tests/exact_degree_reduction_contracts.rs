@@ -48,3 +48,28 @@ fn degree_twenty_five_never_raises_proof_or_proposal_budget(){
 fn constant_curve_can_reduce_even_when_its_denominator_degree_does_not(){
  let source=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![5.,7.];3],weights:vec![1.,2.,1.],periodic:false};let r=reduce(&source,1_000_000).unwrap();assert!(r.reduced,"{:?}",r.refusal);assert_eq!(r.curve.degree,1);assert_eq!(r.curve.control_points,vec![vec![5.,7.];2]);assert_eq!(r.curve.weights,vec![1.;2]);
 }
+
+#[test]
+fn smooth_degree_reduction_compacts_original_breaks_and_preserves_global_law(){
+ use nurbs_core::editing::exact_degree_reduction::reduce_smooth;
+ let original=cubic();let source=original.insert(3.5,1).unwrap();
+ let r=reduce_smooth(&source,1_000_000).unwrap();assert!(r.reduced,"{:?}",r.refusal);
+ assert_eq!(r.curve,reduce(&original,1_000_000).unwrap().curve);
+ for i in 0..=32{let t=i as f64/32.;let point=r.curve.evaluate(2.+3.*t).unwrap().point;assert!((point[1]-12.*t*(1.-t)).abs()<1e-12);}
+ let exact=reduce_smooth(&source,r.work_used).unwrap();assert!(exact.reduced);assert_eq!(exact.curve,r.curve);
+ for budget in [1,r.work_used-1]{let result=reduce_smooth(&source,budget).unwrap();assert!(!result.reduced);assert_eq!(result.curve,source);assert!(result.work_used<=budget);}
+}
+#[test]
+fn smooth_degree_reduction_never_uses_rounded_extraction_as_original_authority(){
+ use nurbs_core::editing::exact_degree_reduction::reduce_smooth;
+ let mut source=cubic().insert(3.5,1).unwrap();source.control_points[2][1]=source.control_points[2][1].next_up();
+ let r=reduce_smooth(&source,1_000_000).unwrap();assert!(!r.reduced);assert_eq!(r.curve,source);
+ for budget in [0,1_000_001]{assert!(reduce_smooth(&source,budget).is_err());}
+}
+
+#[test]
+fn smooth_extraction_keeps_existing_control_limit_and_refuses_atomic_growth(){
+ use nurbs_core::editing::exact_degree_reduction::reduce_smooth;
+ let source=Curve{degree:3,knots:[vec![0.;4],(1..253).map(|i|i as f64/253.).collect(),vec![1.;4]].concat(),control_points:(0..256).map(|i|vec![i as f64,0.]).collect(),weights:vec![1.;256],periodic:false};
+ source.validate().unwrap();let r=reduce_smooth(&source,1_000_000).unwrap();assert!(!r.reduced);assert_eq!(r.curve,source);assert_eq!(r.refusal,Some(Refusal::InvalidProposedDefinition));assert_eq!(r.work_used,0);
+}

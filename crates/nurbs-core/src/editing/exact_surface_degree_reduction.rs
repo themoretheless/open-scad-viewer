@@ -20,3 +20,13 @@ pub fn reduce(source:&Surface,axis:Axis,max_work:u64)->Result<Report>{
     })?;
     Ok(Report{surface:r.surface,reduced:r.changed,refusal:r.refusal,rows_verified:r.rows_verified,work_used:r.work_used})
 }
+
+/// General smooth selected-axis layout, with the same atomic row AND
+/// denominator proof. Extraction and compaction are only curve proposals.
+pub fn reduce_smooth(source:&Surface,axis:Axis,max_work:u64)->Result<Report>{
+    let r=super::exact_tensor_edit::apply(source,axis,0.,max_work,|curve,budget|{
+        let p=super::exact_degree_reduction::reduce_smooth(curve,budget)?;
+        Ok(super::exact_tensor_edit::CurveProposal{curve:p.curve,changed:p.reduced,refusal:p.refusal,work_used:p.work_used})
+    })?;
+    Ok(Report{surface:r.surface,reduced:r.changed,refusal:r.refusal,rows_verified:r.rows_verified,work_used:r.work_used})
+}

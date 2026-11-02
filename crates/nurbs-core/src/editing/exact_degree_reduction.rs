@@ -78,3 +78,6 @@ pub fn reduce(source:&Curve,max_work:u64)->Result<Report>{
         BezierIdentity::Indeterminate(reason)=>Ok(refused(Refusal::PredicateIndeterminate(reason),used)),
     }
 }
+
+mod smooth;
+pub use smooth::reduce_smooth;

@@ -6214,10 +6214,13 @@
         "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
         "docs/design/nurbs-exact-degree-reduction.md",
         "docs/qualification/nurbs-exact-degree-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py",
+        "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
       ],
       "remainingQualification": [
-        "clamped nonperiodic degree2..25 piecewise Bezier storage only; one proposal, shared work refusals allowed; no arbitrary smooth knot layout, minimality, evaluator bit identity or B-rep authority",
+        "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     },
@@ -6235,10 +6238,13 @@
         "crates/nurbs-core/tests/exact_surface_degree_contracts.rs",
         "docs/design/nurbs-exact-surface-degree-reduction.md",
         "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact_oracle.py",
+        "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
       ],
       "remainingQualification": [
-        "selected axis clamped nonperiodic degree2..25 piecewise Bezier only; one proposal per row with exact denominator identity and shared work refusal; no arbitrary smooth knot layout, minimality, machine evaluator bit identity or B-rep authority",
+        "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority; tensor row denominator identity also required",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

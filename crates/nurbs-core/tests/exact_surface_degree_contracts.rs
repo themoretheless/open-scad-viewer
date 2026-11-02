@@ -46,3 +46,16 @@ fn maximum_degree_refusals_do_not_reset_the_tensor_budget(){
 fn piecewise_bezier_axis_retains_unequal_span_boundaries(){
  let x=[0.,2.,4.,6.,8.,10.,12.];let z=[0.,4.,4.,0.,-4.,-4.,0.];let source=Surface{degree_u:3,degree_v:1,knots_u:[vec![2.;4],vec![5.;3],vec![9.;4]].concat(),knots_v:vec![-3.,-3.,1.,1.],control_points:(0..7).map(|i|vec![vec![x[i],0.,z[i]],vec![x[i],2.,z[i]]]).collect(),weights:vec![vec![1.;2];7],periodic_u:false,periodic_v:false};let r=reduce(&source,Axis::U,1_000_000).unwrap();assert!(r.reduced,"{:?}",r.refusal);assert_eq!(r.surface.knots_u,[vec![2.;3],vec![5.;2],vec![9.;3]].concat());let p=r.surface.evaluate(7.,-1.).unwrap().point;assert_eq!(p,[9.,1.,-3.]);
 }
+
+#[test]
+fn smooth_axis_extraction_and_compaction_preserve_complete_original_tensor(){
+ use nurbs_core::{surface_edit,editing::exact_surface_degree_reduction::reduce_smooth};
+ let original=polynomial();
+ for (axis,knot) in [(Axis::U,3.5),(Axis::V,-1.)]{
+  let source=surface_edit::insert(&original,axis,knot,1).unwrap();
+  let r=reduce_smooth(&source,axis,1_000_000).unwrap();assert!(r.reduced,"{:?}",r.refusal);
+  assert_eq!(r.surface,reduce(&original,axis,1_000_000).unwrap().surface);
+  assert!(reduce_smooth(&source,axis,r.work_used).unwrap().reduced);
+  let interrupted=reduce_smooth(&source,axis,r.work_used-1).unwrap();assert!(!interrupted.reduced);assert_eq!(interrupted.surface,source);assert!(interrupted.work_used<r.work_used);
+ }
+}
