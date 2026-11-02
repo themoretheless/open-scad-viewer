@@ -12,12 +12,26 @@ pub(super) fn promising(
     max: usize,
 ) -> Result<bool> {
     for b in pieces {
-        for mask in 0..8 {
+        // Keep cheap corner rejection first. Rational carrier jets can be
+        // benign at every corner but violate this candidate metric on a face
+        // or in the interior. Extra original-point queries ONLY reject a
+        // proposal; all successful candidates still need the complete cover.
+        let corners = (0..8).map(|mask| std::array::from_fn(|i| [b[i][(mask >> i) & 1]; 2]));
+        let mids = (0usize..27).filter(|&code|
+            (0..3).any(|i| (code / 3usize.pow(i)) % 3 == 1)
+        ).map(|code| std::array::from_fn(|i| {
+            let position = (code / 3usize.pow(i as u32)) % 3;
+            let value = match position {
+                0 => b[i][0], 2 => b[i][1],
+                _ => crate::distance_bounds::midpoint(b[i][0], b[i][1]),
+            };
+            [value; 2]
+        }));
+        for point in corners.chain(mids) {
             if out.cells == max {
                 return Ok(false);
             }
             out.cells += 1;
-            let point = std::array::from_fn(|i| [b[i][(mask >> i) & 1]; 2]);
             let Enclosed::Value(e) = query(point, out)? else {
                 return Ok(false);
             };

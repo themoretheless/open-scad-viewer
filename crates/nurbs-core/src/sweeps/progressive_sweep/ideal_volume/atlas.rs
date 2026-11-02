@@ -504,6 +504,38 @@ fn certify_map_impl(
 mod tests {
     use super::*;
     #[test]
+    fn unsuitable_corner_positive_metric_does_not_starve_the_exact_pair_proof() {
+        let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let run=|max| {
+            let mut out=IdealVolumeReport {embedding_certified:false,regularity_certified:false,
+                parameter_topology_preserved:false,cells:0,exact_work:0,boxes:0,
+                monotonicity_lower:None,projection,reason:None};
+            // F=(u,v,t+16u(1-u)v(1-v)) is globally injective: x,y fix
+            // u,v, then z fixes t. ALL its interval Jacobians are triangular
+            // with diagonal one. Center/corner Jacobians are identity, but
+            // their proposed Euclidean SPD metric fails at face midpoints.
+            let source=|b:Box3,out:&mut IdealVolumeReport,max:usize|->Result<Enclosed>{
+                if out.cells==max {return Ok(Enclosed::Unavailable(None));}out.cells+=1;
+                let [u,v,t]=b.map(|x|I::new(x[0],x[1]).unwrap());
+                let one=I::point(1.);let k=I::point(16.);
+                let a=u.mul(one.sub(u)?)?;let d=v.mul(one.sub(v)?)?;
+                let mut columns=projection.map(|v|v.map(I::point));
+                columns[0][2]=k.mul(one.sub(I::point(2.).mul(u)?)?)?.mul(d)?;
+                columns[1][2]=k.mul(a)?.mul(one.sub(I::point(2.).mul(v)?)?)?;
+                Ok(Enclosed::Value(cell::Enclosure {value:[u,v,t.add(k.mul(a)?.mul(d)?)?],columns}))
+            };
+            certify_map_global_first(source,projection,&mut out,max,false).unwrap();out
+        };
+        let full=run(256);
+        assert!(full.embedding_certified && full.regularity_certified
+            && full.parameter_topology_preserved,"{full:?}");
+        assert!(full.cells<100,"{full:?}");
+        assert!(run(full.cells).embedding_certified);
+        let short=run(full.cells-1);
+        assert!(!short.embedding_certified && short.cells<full.cells);
+        eprintln!("corner-positive unsuitable metric: cells={}",full.cells);
+    }
+    #[test]
     fn unavailable_joint_carrier_jets_require_a_complete_refined_cover() {
         let projection = [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
         let run = |max, folded| {
