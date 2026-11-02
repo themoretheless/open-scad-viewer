@@ -108,3 +108,46 @@ fn coincident_span_and_nonaffine_target_do_not_authorize_isolated_contacts() {
     s.control_points[1][1][0] = 1.1f64.next_up();
     assert!(original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).is_err());
 }
+
+#[test]
+fn a_shared_exact_knot_keeps_both_one_sided_multiplicities() {
+    let c = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        control_points: [1., 0., 0., 0.5, 1.]
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| vec![x, 0.25 + i as f64 * 0.125, 1.])
+            .collect(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let s = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0., 2.]],
+            vec![vec![0., 1., 0.], vec![0., 1., 2.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let r = original_affine_patch_contacts(&c, &s, 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1, "{r:?}");
+    assert_eq!(r.contacts[0].parameter_box[0], [1., 1.]);
+    assert_eq!(r.contacts[0].source_spans, vec![2, 4]);
+    assert_eq!(r.contacts[0].multiplicities, vec![2, 1]);
+}
+#[test]
+fn discontinuous_source_storage_is_not_given_a_continuous_patch_contact_proof() {
+    let mut c = curve(2);
+    let copy = c.control_points.clone();
+    c.control_points.extend(copy);
+    c.weights = vec![1.; 6];
+    c.knots = vec![0., 0., 0., 1., 1., 1., 2., 2., 2.];
+    assert!(original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).is_err());
+}
