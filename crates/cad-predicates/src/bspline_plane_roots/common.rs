@@ -31,6 +31,34 @@ pub fn rational_bspline_plane_common_root(
     planes: [[LeafRef; 4]; 2],
     interval: [f64; 2],
 ) -> Result<OriginalPlaneCommonRootDecision, InputError> {
+    let values = prepare(ctx, controls, knots, degree, span, planes, interval)?;
+    let computed = (|| {
+        let polys = polynomials(ctx, &values, controls.len(), knots.len(), degree, span)?;
+        let common =
+            crate::planar_bezier_roots::unique_common_root(&polys[0], &polys[1], interval, ctx)?;
+        ctx.charge(0)?;
+        Ok(if common {
+            OriginalPlaneCommonRootOutcome::Common
+        } else {
+            OriginalPlaneCommonRootOutcome::Distinct
+        })
+    })();
+    Ok(OriginalPlaneCommonRootDecision {
+        outcome: computed.unwrap_or_else(OriginalPlaneCommonRootOutcome::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
+
+pub(super) fn prepare(
+    ctx: &PredicateContext<'_>,
+    controls: &[[LeafRef; 4]],
+    knots: &[LeafRef],
+    degree: usize,
+    span: usize,
+    planes: [[LeafRef; 4]; 2],
+    interval: [f64; 2],
+) -> Result<Vec<f64>, InputError> {
     let n = controls.len();
     if !(1..=25).contains(&degree)
         || n <= degree
@@ -72,34 +100,32 @@ pub fn rational_bspline_plane_common_root(
     {
         return Err(InputError::InvalidInput("Invalid original source or plane"));
     }
-    let computed = (|| {
-        ctx.charge(values.len() as u64)?;
-        let x: Vec<_> = values.iter().map(|v| Expansion::scalar(*v)).collect();
-        let mut polys = Vec::new();
-        for i in 0..2 {
-            let plane = std::array::from_fn(|j| x[tail + i * 4 + j].clone());
-            polys.push(super::polynomial::original_polynomial(
-                ctx,
-                &x[..tail],
-                uv,
-                n,
-                degree,
-                span,
-                &plane,
-            )?);
-        }
-        let common =
-            crate::planar_bezier_roots::unique_common_root(&polys[0], &polys[1], interval, ctx)?;
-        ctx.charge(0)?;
-        Ok(if common {
-            OriginalPlaneCommonRootOutcome::Common
-        } else {
-            OriginalPlaneCommonRootOutcome::Distinct
-        })
-    })();
-    Ok(OriginalPlaneCommonRootDecision {
-        outcome: computed.unwrap_or_else(OriginalPlaneCommonRootOutcome::Indeterminate),
-        work_used: ctx.work_used(),
-        context: ctx.identity(),
-    })
+    Ok(values)
+}
+pub(super) fn polynomials(
+    ctx: &mut PredicateContext<'_>,
+    values: &[f64],
+    n: usize,
+    knot_count: usize,
+    degree: usize,
+    span: usize,
+) -> Result<Vec<Vec<Expansion>>, Reason> {
+    let tail = n * 4 + knot_count;
+    let uv = &values[n * 4..tail];
+    ctx.charge(values.len() as u64)?;
+    let x: Vec<_> = values.iter().map(|v| Expansion::scalar(*v)).collect();
+    let mut polys = Vec::new();
+    for i in 0..2 {
+        let plane = std::array::from_fn(|j| x[tail + i * 4 + j].clone());
+        polys.push(super::polynomial::original_polynomial(
+            ctx,
+            &x[..tail],
+            uv,
+            n,
+            degree,
+            span,
+            &plane,
+        )?);
+    }
+    Ok(polys)
 }

@@ -683,4 +683,4 @@ mod stationary_tests;
 
 #[path = "planar_bezier_common_root.rs"]
 mod common_root;
-pub(crate) use common_root::unique_common_root;
+pub(crate) use common_root::{unique_common_root, unique_root_sign};

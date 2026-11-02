@@ -251,3 +251,6 @@ pub use common::{OriginalPlaneCommonRootDecision, OriginalPlaneCommonRootOutcome
 #[path = "bspline_plane_roots/edge.rs"]
 mod edge;
 pub use edge::rational_bspline_affine_patch_edge_root;
+#[path = "bspline_plane_roots/sign.rs"]
+mod sign;
+pub use sign::{OriginalPlaneRootSignDecision, rational_bspline_plane_root_sign};
