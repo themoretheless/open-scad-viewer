@@ -35,14 +35,6 @@ pub(super) fn find(
                 search.exhausted = true;
                 return Ok(None);
             }
-            let curve = linear_crossing::iso(s, axis)
-                .and_then(|h| nonlinear_crossing::original_iso(s, axis, &h));
-            let Some(curve) = curve else {
-                attempt.refusal =
-                    Some("3D source iso is not exactly binary64-representable".into());
-                search.attempts.push(attempt);
-                continue;
-            };
             let [a, b] = domains[axis];
             let cut = a + (b - a) * 0.4375;
             if cut <= a || cut >= b {
@@ -62,8 +54,8 @@ pub(super) fn find(
             // diagonal boundary in one window must not consume every proposal.
             let slots_left = 4 - (axis * 2 + usize::from(reverse));
             let quota = ((max_cells - search.cells) / slots_left).max(1);
-            let report = match crate::intersection::certified_curve_surface::first_in_window(
-                &curve, s, window, quota,
+            let report = match crate::intersection::certified_curve_surface::first_iso_in_window(
+                s, axis, 0.5, window, quota,
             ) {
                 Ok(r) => r,
                 Err(e) => {

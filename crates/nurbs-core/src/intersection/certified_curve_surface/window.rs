@@ -30,13 +30,18 @@ pub fn first_in_window(
     max_cells: usize,
 ) -> Result<WindowReport> {
     c.validate()?;
+    search(Source::Curve(c), s, window, max_cells)
+}
+use super::window_source::Source;
+pub(super) fn search(
+    c: Source<'_>,
+    s: &Surface,
+    window: Box3,
+    max_cells: usize,
+) -> Result<WindowReport> {
     s.validate()?;
     check(
-        c.control_points[0].len() == 3
-            && !c.periodic
-            && !s.periodic_u
-            && !s.periodic_v
-            && (1..=100000).contains(&max_cells),
+        c.valid() && !s.periodic_u && !s.periodic_v && (1..=100000).contains(&max_cells),
         "Window roots need bounded nonperiodic 3D sources",
     )?;
     let domains = [
@@ -55,7 +60,7 @@ pub fn first_in_window(
         "Invalid original root window",
     )?;
     check(
-        (c.degree + 1)
+        (c.degree() + 1)
             .saturating_mul(s.degree_u + 1)
             .saturating_mul(s.degree_v + 1)
             <= 4096,
@@ -67,7 +72,7 @@ pub fn first_in_window(
             .map(|i| (i, [k[i], k[i + 1]]))
             .collect::<Vec<_>>()
     };
-    let cs = spans(&c.knots, c.degree, c.control_points.len());
+    let cs = spans(c.knots(), c.degree(), c.count());
     let us = spans(&s.knots_u, s.degree_u, s.control_points.len());
     let vs = spans(&s.knots_v, s.degree_v, s.control_points[0].len());
     let mut stack = Vec::new();
@@ -105,7 +110,7 @@ pub fn first_in_window(
             return Ok(out);
         }
         out.cells += 1;
-        match krawczyk(&field_net(c, s, cell.ids, cell.domain)?)? {
+        match krawczyk(&c.field(s, cell.ids, cell.domain)?)? {
             Verdict::Excluded => {}
             Verdict::Unique(root, sign) => {
                 let mut domain = map_box(cell.domain, [[0., 1.]; 3], root)?;
@@ -115,7 +120,7 @@ pub fn first_in_window(
                     }
                     out.cells += 1;
                     let search = refinement_box(domain, cell.domain);
-                    match krawczyk(&field_net(c, s, cell.ids, search)?)? {
+                    match krawczyk(&c.field(s, cell.ids, search)?)? {
                         Verdict::Unique(next, next_sign) => {
                             if next_sign != sign {
                                 return Err(crate::Error::new(
@@ -138,11 +143,7 @@ pub fn first_in_window(
                         }
                     }
                 }
-                let p = crate::curve_distance::enclosure(
-                    c,
-                    cell.ids[0],
-                    I::new(domain[0][0], domain[0][1])?,
-                )?;
+                let p = c.position(cell.ids[0], domain[0])?;
                 out.roots.push(WindowRoot {
                     spans: cell.ids,
                     existence_domain: cell.domain,

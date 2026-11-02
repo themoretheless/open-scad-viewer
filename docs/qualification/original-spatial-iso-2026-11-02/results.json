@@ -1,0 +1,18 @@
+{
+  "native_passed": 93,
+  "native_failed": 0,
+  "scope": "Original rational iso/surface Krawczyk witnesses without rounded extracted curves",
+  "bridge_qualified": false,
+  "wasm_qualified": false,
+  "whole_surface_complete": false,
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "28e068445307ac9ff1e2af2d4251ade11bde906050399a37a6b50758eadc8718",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window.rs": "2aba8d4a41c74b3ec21d5ce3b9f363ad4db4851d92e9af313e6b4f1fd7c03651",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window_source.rs": "94881c475f4f6e78c7f9dbeb22a166aa953c4638d5eb4f6274e42ade5615750a",
+    "crates/nurbs-core/src/intersection/self_surface.rs": "c4e1871b393a5b47437e7a30fc3ef9d4cb195b08c11b9300406a9f3f31f6a39e",
+    "crates/nurbs-core/src/intersection/self_surface/spatial_crossing.rs": "7ec92d02ccfd570fc8bb25c44780a66a746c0bc5ad2829ad888d8451a3810238",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "04abac6a987133854ad7ffd0fd8e6c5008ee0d402be899e663f4e63a905485c4",
+    "crates/nurbs-core/tests/surface_self_intersection/spatial_windows.rs": "f538cdb871f0e0fb4dab254d216fd22fbf4fdbcbc6a372e71d49ef8e757e20c0",
+    "docs/design/plasticity-remaining-2026-11-02.md": "080a98b694da8f48f6fb190f0cef3397affee550860c3b2ef070b1a7d1d46e66"
+  }
+}

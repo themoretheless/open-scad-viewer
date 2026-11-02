@@ -88,8 +88,8 @@ fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
 /// and original rational parameter clocks. Up to 15 interior dyadic proposals
 /// per axis steer planar iso-curve Krawczyk proofs on original curve/surface
 /// bounds. Four further central iso/surface windows can prove nonplanar
-/// contacts with different transverse parameters. That route requires an
-/// exactly binary64-representable source iso and uses original 3D bounds.
+/// contacts with different transverse parameters. That route bounds the exact
+/// rational iso directly on original surface coefficients, without a rounded curve.
 /// Probe admissions and solver cells share max_spans search units.
 /// Probes select candidates only; finite exhaustion never proves absence.
 /// Local reflection spans and linear span pairs each have max_spans work caps.

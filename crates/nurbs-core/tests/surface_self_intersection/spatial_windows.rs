@@ -115,3 +115,31 @@ fn reverse_spatial_window_gets_budget_after_an_unresolved_forward_window() {
             .any(|p| p.kind == "curve-surface-reverse")
     );
 }
+
+#[test]
+fn original_rational_iso_needs_no_binary64_curve_controls() {
+    use nurbs_core::intersection::certified_curve_surface::first_iso_in_window;
+    let mut s = source();
+    for row in &mut s.weights {
+        row[1] = 2.;
+    }
+    // The central iso has z=4/3+u^3/4. Its exact Cartesian
+    // controls cannot be stored in a binary64 Curve.
+    let r = first_iso_in_window(&s, 0, 0.5, [[0., 0.4375], [0.4375, 1.], [0., 1.]], 10000).unwrap();
+    assert_eq!(r.roots.len(), 1, "{r:?}");
+    let root = &r.roots[0];
+    for (i, t) in [0.25, 0.75, 473. / 1063.].into_iter().enumerate() {
+        assert!(
+            root.parameter_box[i][0] <= t && t <= root.parameter_box[i][1],
+            "{root:?}"
+        );
+    }
+    let z = 4. / 3. + 1. / 256.;
+    assert!(root.position_bounds[2][0] <= z && z <= root.position_bounds[2][1]);
+    let audit = surface_self_intersection::inspect(&s, 10000).unwrap();
+    assert_eq!(audit.status, Status::Present, "{audit:?}");
+    assert_eq!(
+        audit.certified_crossing.unwrap().proof,
+        nurbs_core::surface_self_intersection::CrossingProof::CurveSurface
+    );
+}

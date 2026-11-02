@@ -484,17 +484,19 @@ fn rational_linear_crossing_uses_weights_in_parameter_clock() {
     }
 }
 #[test]
-fn projected_crossing_is_not_a_spatial_coincidence() {
+fn shifted_linear_sheets_contact_on_different_fibers() {
     let mut s = crossing_strip();
     for i in 2..4 {
         for j in 0..2 {
             s.control_points[i][j][2] += 0.01;
         }
     }
-    assert_ne!(
-        surface_self_intersection::inspect(&s, 100).unwrap().status,
-        Status::Present
-    );
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let c = r.certified_crossing.unwrap();
+    assert_eq!(c.proof, surface_self_intersection::CrossingProof::CurveSurface);
+    assert!(c.parameter_boxes[0][1][1] < c.parameter_boxes[1][1][0]
+        || c.parameter_boxes[1][1][1] < c.parameter_boxes[0][1][0]);
 }
 #[test]
 fn adjacent_span_endpoints_are_not_interior_self_intersections() {
@@ -699,17 +701,19 @@ fn nonlinear_crossing_budget_cannot_be_relabelled_a_proof() {
     assert!(r.certified_crossing.is_none());
 }
 #[test]
-fn nonlinear_projected_crossing_with_different_z_is_unproven() {
+fn shifted_nonlinear_sheets_contact_on_different_fibers() {
     let mut s = nonlinear_crossing_strip();
     for i in 3..5 {
         for j in 0..2 {
             s.control_points[i][j][2] += 0.1;
         }
     }
-    assert_ne!(
-        surface_self_intersection::inspect(&s, 1000).unwrap().status,
-        Status::Present
-    );
+    let r = surface_self_intersection::inspect(&s, 1000).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let c = r.certified_crossing.unwrap();
+    assert_eq!(c.proof, surface_self_intersection::CrossingProof::CurveSurface);
+    assert!(c.parameter_boxes[0][1][1] < c.parameter_boxes[1][1][0]
+        || c.parameter_boxes[1][1][1] < c.parameter_boxes[0][1][0]);
 }
 
 #[test]
