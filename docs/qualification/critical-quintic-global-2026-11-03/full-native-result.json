@@ -1,0 +1,30 @@
+{
+  "sourceGuardPassed": true,
+  "sourceFiles": 4411,
+  "binaryGuardPassed": true,
+  "nativeBinarySha256": "d0e9a40ae76dc79b27161b845d6a41fe8d819e3c026b2f67b49f954d6970153e",
+  "nurbsCore": {
+    "passed": 2245,
+    "failed": 0,
+    "ignored": 1
+  },
+  "brepCore": {
+    "passed": 2312,
+    "failed": 0,
+    "ignored": 5,
+    "filtered": 0,
+    "seconds": 1231.32
+  },
+  "nativeStep": {
+    "passed": 2,
+    "failed": 0
+  },
+  "noCodec": "passed",
+  "newTestsIgnored": 0,
+  "newCriticalBodyGlobalCertified": true,
+  "legacyRankContractsPreserved": true,
+  "wholeGoalComplete": false,
+  "wasmPublished": false,
+  "ciChecked": false,
+  "uiChecked": false
+}
