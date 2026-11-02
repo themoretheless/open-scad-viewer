@@ -2,7 +2,7 @@
 use crate::{Result, surface::Surface, surface_injectivity};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive};
-mod linear_crossing;
+pub(super) mod linear_crossing;
 mod nonlinear_crossing;
 #[derive(Clone, Debug)]
 pub struct CertifiedCrossing {

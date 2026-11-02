@@ -9,6 +9,8 @@ use crate::{
 };
 type Domain = [[f64; 2]; 2];
 mod coplanar;
+mod source;
+use source::Bounds;
 #[derive(Clone, Debug)]
 pub struct CertifiedCurveCrossing {
     pub parameters: Domain,
@@ -23,23 +25,19 @@ pub struct CertifiedCurveIntersection {
     pub cells: usize,
     pub complete: bool,
 }
-fn spans(c: &Curve) -> Vec<(usize, [f64; 2])> {
-    (c.degree..c.control_points.len())
-        .filter(|&i| c.knots[i] < c.knots[i + 1])
-        .map(|i| (i, [c.knots[i], c.knots[i + 1]]))
-        .collect()
+fn spans(c: &impl Bounds) -> Vec<(usize, [f64; 2])> {
+    c.spans()
 }
-fn hull(c: &Curve, span: usize, d: [f64; 2]) -> Result<Vec<I>> {
-    curve_distance::enclosure(c, span, I::new(d[0], d[1])?)
+fn hull(c: &impl Bounds, span: usize, d: [f64; 2]) -> Result<Vec<I>> {
+    c.hull(span, d)
 }
-fn jacobian(c: &Curve, span: usize, d: [f64; 2], axes: [usize; 2]) -> Result<[I; 2]> {
-    let jet = curve_jets::enclose(c, span, d)?;
-    let width = I::point(d[1]).sub(I::point(d[0]))?;
-    Ok([jet[1][axes[0]].div(width)?, jet[1][axes[1]].div(width)?])
+fn jacobian(c: &impl Bounds, span: usize, d: [f64; 2], axes: [usize; 2]) -> Result<[I; 2]> {
+    let j = c.derivative(span, d)?;
+    Ok([j[axes[0]], j[axes[1]]])
 }
 fn krawczyk(
-    a: &Curve,
-    b: &Curve,
+    a: &impl Bounds,
+    b: &impl Bounds,
     sa: usize,
     sb: usize,
     d: Domain,
@@ -253,6 +251,29 @@ fn intersect_selected(
         out.unresolved.push(whole);
         return Ok(out);
     };
+    solve(
+        a, b, axes, tolerance, max_cells, self_pairs, diagonal, false,
+    )
+}
+
+fn solve(
+    a: &impl Bounds,
+    b: &impl Bounds,
+    axes: [usize; 2],
+    tolerance: f64,
+    max_cells: usize,
+    self_pairs: bool,
+    diagonal: bool,
+    stop_after_first: bool,
+) -> Result<CertifiedCurveIntersection> {
+    let whole = [a.domain(), b.domain()];
+    let mut out = CertifiedCurveIntersection {
+        crossings: vec![],
+        identical_parameter_overlap: false,
+        unresolved: vec![],
+        cells: 0,
+        complete: false,
+    };
     let aa = spans(a);
     let bb = spans(b);
     check(
@@ -260,9 +281,18 @@ fn intersect_selected(
         "Planar intersection initial span-pair limit exceeded",
     )?;
     let mut stack = Vec::new();
+    if diagonal {
+        for &(span, domain) in &aa {
+            if stack.len() == 4096 {
+                out.unresolved.push(whole);
+                return Ok(out);
+            }
+            stack.push((span, span, [domain; 2], 0usize));
+        }
+    }
     for &(sa, da) in &aa {
         for &(sb, db) in &bb {
-            if self_pairs && (sa > sb || (sa == sb && !diagonal)) {
+            if self_pairs && sa >= sb {
                 continue;
             }
             if stack.len() == 4096 {
@@ -282,8 +312,15 @@ fn intersect_selected(
         out.cells += 1;
         if diagonal && sa == sb {
             let union = [d[0][0].min(d[1][0]), d[0][1].max(d[1][1])];
-            if let Ok(jet) = curve_jets::enclose(a, sa, union) {
-                if jet[1].iter().any(|x| x.lo > 0. || x.hi < 0.) {
+            if let Ok(jet) = a.derivative(sa, union) {
+                if jet.iter().any(|x| x.lo > 0. || x.hi < 0.) {
+                    continue;
+                }
+            }
+        }
+        if self_pairs && d[0][1] == d[1][0] {
+            if let (Ok(left), Ok(right)) = (a.derivative(sa, d[0]), b.derivative(sb, d[1])) {
+                if source::ordered_join(&left, &right).unwrap_or(false) {
                     continue;
                 }
             }
@@ -322,6 +359,12 @@ fn intersect_selected(
                     position_bounds: bounds,
                     contact: ContactClass::Transverse,
                 });
+                if stop_after_first {
+                    out.unresolved
+                        .extend(stack.into_iter().map(|(_, _, d, _)| d));
+                    out.complete = out.unresolved.is_empty();
+                    return Ok(out);
+                }
                 continue;
             }
             // Every root of the parent lies in its Krawczyk image. Preserve
@@ -347,4 +390,53 @@ fn intersect_selected(
     }
     out.complete = out.unresolved.is_empty();
     Ok(out)
+}
+
+/// Searches for the first planar iso self-crossing at the exact active-domain
+/// midpoint of the other axis (axis 0 = U, 1 = V). Recomputed exact homogeneous
+/// coefficients own the plane identity; bounds use the original surface.
+/// Unvisited cells remain unresolved. This does not prove surface completeness.
+pub fn intersect_surface_iso_certified_report(
+    surface: &crate::surface::Surface,
+    axis: usize,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    surface.validate()?;
+    check(
+        axis < 2
+            && !surface.periodic_u
+            && !surface.periodic_v
+            && tolerance.is_finite()
+            && tolerance > 0.
+            && (1..=100000).contains(&max_cells),
+        "Invalid original iso audit",
+    )?;
+    let source = source::Iso::new(surface, axis)?;
+    let Some(homogeneous) = crate::intersection::self_surface::linear_crossing::iso(surface, axis)
+    else {
+        return Ok(CertifiedCurveIntersection {
+            crossings: vec![],
+            identical_parameter_overlap: false,
+            unresolved: vec![[source.domain(); 2]],
+            cells: 0,
+            complete: false,
+        });
+    };
+    let points = homogeneous
+        .iter()
+        .map(|h| std::array::from_fn(|i| &h[i] / &h[3]))
+        .collect();
+    let Some(axes) = coplanar::axes_from_points(points) else {
+        return Ok(CertifiedCurveIntersection {
+            crossings: vec![],
+            identical_parameter_overlap: false,
+            unresolved: vec![[source.domain(); 2]],
+            cells: 0,
+            complete: false,
+        });
+    };
+    solve(
+        &source, &source, axes, tolerance, max_cells, true, true, true,
+    )
 }

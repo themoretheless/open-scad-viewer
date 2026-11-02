@@ -747,7 +747,7 @@ fn certified_nonlinear_crossing_also_has_original_v_parameter_boxes() {
 }
 
 #[test]
-fn nonrepresentable_iso_controls_are_not_rounded_into_a_crossing_proof() {
+fn original_surface_bounds_admit_nonrepresentable_iso_controls() {
     let mut s = nonlinear_crossing_strip();
     s.degree_v = 2;
     s.knots_v = vec![0., 0., 0., 1., 1., 1.];
@@ -761,9 +761,10 @@ fn nonrepresentable_iso_controls_are_not_rounded_into_a_crossing_proof() {
         })
         .collect();
     s.weights = vec![vec![1., 2., 2.]; 5]; // exact middle iso has z=8/7, not binary64
-    let r = surface_self_intersection::inspect(&s, 1000).unwrap();
-    assert_eq!(r.status, Status::Unresolved);
-    assert!(r.certified_crossing.is_none());
+    let r = surface_self_intersection::inspect(&s, 10000).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let c = r.certified_crossing.unwrap();
+    assert!(c.position_bounds[2][0] <= 8. / 7. && 8. / 7. <= c.position_bounds[2][1]);
 }
 
 #[path = "surface_self_intersection/distinct_spans.rs"]
@@ -774,3 +775,6 @@ mod within_span;
 
 #[path = "surface_self_intersection/oblique_plane.rs"]
 mod oblique_plane;
+
+#[path = "surface_self_intersection/original_iso.rs"]
+mod original_iso;

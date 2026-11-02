@@ -16,6 +16,9 @@ pub(super) fn axes(a: &Curve, b: &Curve) -> Option<[usize; 2]> {
         .chain(&b.control_points)
         .map(|p| std::array::from_fn(|i| Q::from_f64(p[i]).unwrap()))
         .collect();
+    axes_from_points(points)
+}
+pub(super) fn axes_from_points(points: Vec<[Q; 3]>) -> Option<[usize; 2]> {
     let directions: Vec<[Q; 3]> = points
         .iter()
         .map(|p| std::array::from_fn(|i| &p[i] - &points[0][i]))

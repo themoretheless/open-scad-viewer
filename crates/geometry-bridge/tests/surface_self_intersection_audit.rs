@@ -138,3 +138,35 @@ fn nonlinear_existence_uses_certified_boxes_without_a_rounded_point() {
         assert!(b[0].as_f64().unwrap() <= t && t <= b[1].as_f64().unwrap());
     }
 }
+
+#[test]
+fn bridge_certifies_a_nonrepresentable_rational_iso_without_rounding_controls() {
+    let s = Surface {
+        degree_u: 2,
+        degree_v: 2,
+        knots_u: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [[-1., -1.], [0., 0.], [1., 1.], [1., -1.], [-1., 1.]]
+            .into_iter()
+            .map(|[x, y]| {
+                [0., 1., 2.]
+                    .into_iter()
+                    .map(|z| vec![x + z, y + z, z])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1., 2., 2.]; 5],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let mut v = request(s);
+    v["maxSpans"] = json!(10000);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert!(r["witness"].is_null() && r["exactWitness"].is_null());
+    assert_eq!(r["allContactBranchesEnumerated"], false);
+    for (i, x) in [79. / 63., 79. / 63., 8. / 7.].into_iter().enumerate() {
+        let b = &r["certifiedCrossing"]["positionBounds"][i];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+}

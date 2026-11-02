@@ -8,7 +8,7 @@ fn q(x: f64) -> Q {
 
 // Collapse the other parameter at its exact active-domain midpoint. Original
 // homogeneous tensor coefficients define a rational curve of the original axis degree.
-pub(super) fn iso(s: &Surface, axis: usize) -> Option<Vec<[Q; 4]>> {
+pub(in crate::intersection) fn iso(s: &Surface, axis: usize) -> Option<Vec<[Q; 4]>> {
     let (knots, p, n, count) = if axis == 0 {
         (
             &s.knots_v,

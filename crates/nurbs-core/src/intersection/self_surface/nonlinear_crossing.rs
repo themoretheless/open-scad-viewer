@@ -1,12 +1,11 @@
-//! Original-source planar Krawczyk proofs on exactly representable iso-curves.
+//! Original-source planar Krawczyk proofs on exact rational iso-curves.
 use super::*;
 use crate::{curve::Curve, distance_bounds::Interval as I};
 fn exact_f64(q: &BigRational) -> Option<f64> {
     let x = q.to_f64()?;
     (BigRational::from_f64(x).as_ref() == Some(q)).then_some(x)
 }
-fn original_iso(s: &Surface, axis: usize) -> Option<Curve> {
-    let homogeneous = super::linear_crossing::iso(s, axis)?;
+fn original_iso(s: &Surface, axis: usize, homogeneous: &[[BigRational; 4]]) -> Option<Curve> {
     let mut controls = Vec::new();
     let mut weights = Vec::new();
     for h in homogeneous {
@@ -38,19 +37,29 @@ pub(super) fn find(s: &Surface, max_cells: usize) -> Result<Option<CertifiedCros
         if !(2..=16).contains(&degree) {
             continue;
         }
-        let Some(c) = original_iso(s, axis) else {
+        let Some(homogeneous) = super::linear_crossing::iso(s, axis) else {
             continue;
         };
         if cells == max_cells {
             return Ok(None);
         }
-        let [start, end] = c.domain();
+        let domain = if axis == 0 {
+            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]]
+        } else {
+            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]]
+        };
+        let [start, end] = domain;
         let width = I::point(end).sub(I::point(start))?;
-        let report = crate::intersection::intersect_self_curve_certified_report(
-            &c,
-            1e-7,
-            max_cells - cells,
-        )?;
+        let report = if let Some(c) = original_iso(s, axis, &homogeneous) {
+            crate::intersection::intersect_self_curve_certified_report(&c, 1e-7, max_cells - cells)?
+        } else {
+            crate::intersection::planar_curve_curve::intersect_surface_iso_certified_report(
+                s,
+                axis,
+                1e-7,
+                max_cells - cells,
+            )?
+        };
         cells += report.cells;
         for crossing in report.crossings {
             let mut boxes = [[[0.5, 0.5]; 2]; 2];
