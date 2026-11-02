@@ -107,6 +107,7 @@ fn refused_source(mut report: ClosedReport, reason: &'static str) -> PreparedAtt
     PreparedAttempt::Refused(Box::new(report))
 }
 struct PreparedMaterial {
+    bindings: Vec<classified_material::MaterialSpanBinding>,
     line_image_spans: usize,
     projective_image_spans: usize,
     report: ClosedReport,
@@ -248,11 +249,13 @@ fn prepare_material_with_binding(
     // The exact original UV chain may itself be multispan or one closed
     // curve. Normalize only through exact coefficient decomposition; rounded
     // UV extraction cannot prove the original material region or its binding.
+    let mut trim_sources = Vec::with_capacity(material.trims.len());
     let mut trims = Vec::with_capacity(material.trims.len());
     let mut trim_count = 0usize;
     for ring in &material.trims {
         let mut pieces = Vec::new();
-        for curve in ring {
+        let mut sources = Vec::new();
+        for (curve_index, curve) in ring.iter().enumerate() {
             let rows = (curve.degree..curve.control_points.len())
                 .filter(|&i| curve.knots[i] < curve.knots[i + 1])
                 .count()
@@ -279,8 +282,10 @@ fn prepare_material_with_binding(
                     "original-material-trim-complexity-unproved",
                 ));
             }
+            sources.extend((0..parts.len()).map(|span| (curve_index, span)));
             pieces.extend(parts);
         }
+        trim_sources.push(sources);
         trims.push(pieces);
     }
     if limits.material.pairs == 0 || limits.material.cells == 0 || limits.material.domain_cells == 0
@@ -299,13 +304,15 @@ fn prepare_material_with_binding(
     if !valid {
         return Ok(refused_material(out, "original-material-region-unproved"));
     }
+    let mut bindings = Vec::new();
     let mut line_image_spans = 0;
     let mut projective_image_spans = 0;
     let mut original_profiles = Vec::with_capacity(loop_sizes.len());
     let mut offset = 0;
     for (ring, &size) in loop_sizes.iter().enumerate() {
         let mut spans = Vec::new();
-        for profile in &profiles[offset..offset + size] {
+        let mut profile_sources = Vec::new();
+        for (profile_index, profile) in profiles[offset..offset + size].iter().enumerate() {
             let regular = curve_regularity::inspect(profile, b.source_cells - out.source_cells)?;
             out.source_cells += regular.cells;
             let proven = regular.spanwise_regular;
@@ -335,6 +342,7 @@ fn prepare_material_with_binding(
                     "original-material-exact-decomposition-unproved",
                 ));
             };
+            profile_sources.extend((0..parts.len()).map(|span| (offset + profile_index, span)));
             spans.extend(parts);
         }
         offset += size;
@@ -344,7 +352,8 @@ fn prepare_material_with_binding(
                 "original-material-contour-count-mismatch",
             ));
         }
-        for (world, uv) in spans.iter().zip(&trims[ring]) {
+        for (span_index, (world, uv)) in spans.iter().zip(&trims[ring]).enumerate() {
+            let mut kind = classified_material::MaterialSpanBindingKind::NormalizedMap;
             let remaining = b.source_exact_work - out.ownership_exact_work;
             let Some(proof) = nurbs_core::curve_surface_agreement::verify_exact(
                 world,
@@ -383,6 +392,7 @@ fn prepare_material_with_binding(
                 }
                 if line_proven {
                     line_image_spans += 1;
+                    kind = classified_material::MaterialSpanBindingKind::OrientedLineImage;
                 } else {
                     let remaining = b.source_exact_work - out.ownership_exact_work;
                     let Some(image) = nurbs_core::curve_surface_agreement::verify_projective_image(
@@ -402,14 +412,22 @@ fn prepare_material_with_binding(
                         return Ok(refused_material(out, "original-material-boundary-unproved"));
                     }
                     projective_image_spans += 1;
+                    kind = classified_material::MaterialSpanBindingKind::OrientedProjectiveImage;
                 }
             }
+            bindings.push(classified_material::MaterialSpanBinding::new(
+                ring,
+                profile_sources[span_index],
+                trim_sources[ring][span_index],
+                kind,
+            ));
             out.material.bound_spans += 1;
         }
         original_profiles.push(spans);
     }
     out.material.certified = true;
     Ok(PreparedMaterialAttempt::Ready(Box::new(PreparedMaterial {
+        bindings,
         line_image_spans,
         projective_image_spans,
         report: out,
@@ -669,7 +687,8 @@ pub use smooth::{
 
 mod classified_material;
 pub use classified_material::{
-    OriginalClassifiedClosedMaterial, OriginalClassifiedClosedMaterialAttempt,
-    OriginalClassifiedClosedMaterialLimits, OriginalClassifiedClosedMaterialRefusal,
-    OriginalClassifiedClosedMaterialWork, certify_original_classified_closed_material,
+    MaterialSpanBinding, MaterialSpanBindingKind, OriginalClassifiedClosedMaterial,
+    OriginalClassifiedClosedMaterialAttempt, OriginalClassifiedClosedMaterialLimits,
+    OriginalClassifiedClosedMaterialRefusal, OriginalClassifiedClosedMaterialWork,
+    certify_original_classified_closed_material,
 };

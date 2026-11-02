@@ -516,6 +516,6 @@ pub use affine_candidate::AffineBoundaryReport;
 mod affine_volume;
 pub use affine_volume::AffineFilledVolumeReport;
 
-pub use closed::{OriginalClassifiedClosedMaterialLimits, OriginalClassifiedClosedMaterialWork,
+pub use closed::{MaterialSpanBinding, MaterialSpanBindingKind, OriginalClassifiedClosedMaterialLimits, OriginalClassifiedClosedMaterialWork,
     OriginalClassifiedClosedMaterial, OriginalClassifiedClosedMaterialRefusal,
     OriginalClassifiedClosedMaterialAttempt, certify_original_classified_closed_material};

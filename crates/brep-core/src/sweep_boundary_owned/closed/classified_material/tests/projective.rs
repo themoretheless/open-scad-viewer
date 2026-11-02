@@ -124,6 +124,19 @@ fn curved_nonplanar_projective_images_bind_g2_material_joins_and_a_hole() {
     };
     assert_eq!(body.line_image_spans(), 4);
     assert_eq!(body.projective_image_spans(), 4);
+    assert_eq!(body.bindings().len(), 8);
+    for (i, binding) in body.bindings().iter().enumerate() {
+        assert_eq!(binding.ring(), i / 4);
+        assert_eq!(binding.profile(), (i, 0));
+        assert_eq!(binding.trim(), (i % 4, 0));
+    }
+    assert_eq!(
+        body.bindings()
+            .iter()
+            .filter(|b| b.kind() == MaterialSpanBindingKind::OrientedProjectiveImage)
+            .count(),
+        4
+    );
     assert_eq!(body.material_report().bound_spans, 8);
     assert_eq!(body.boundary_classes(), classes);
     assert_eq!(body.closed_seam_order(), 2);

@@ -140,6 +140,13 @@ fn run(hole: bool, nonplanar: bool) {
         body.material_report().trim.as_ref().unwrap().valid,
         Some(true)
     );
+    assert_eq!(body.bindings().len(), classes.len());
+    for (index, binding) in body.bindings().iter().enumerate() {
+        assert_eq!(binding.ring(), index / 5);
+        assert_eq!(binding.profile(), (index, 0));
+        assert_eq!(binding.trim(), (index % 5, 0));
+        assert_eq!(binding.kind(), MaterialSpanBindingKind::NormalizedMap);
+    }
     assert_eq!(body.boundary_classes(), classes);
     assert_eq!(body.closed_seam_order(), 2);
     assert!(std::ptr::eq(body.material(), &material));
@@ -255,6 +262,15 @@ fn run(hole: bool, nonplanar: bool) {
         panic!("complete oriented line image failed fresh source binding")
     };
     assert_eq!(image_bound.line_image_spans(), 1);
+    assert_eq!(
+        image_bound.bindings()[0].kind(),
+        MaterialSpanBindingKind::OrientedLineImage
+    );
+    assert!(
+        body.bindings()
+            .iter()
+            .all(|b| b.kind() == MaterialSpanBindingKind::NormalizedMap)
+    );
     assert_eq!(image_bound.boundary_classes(), classes);
     assert!(std::ptr::eq(image_bound.material(), &wrong_clock));
     let mut promoted = classes.clone();
@@ -395,3 +411,5 @@ mod varying;
 mod image;
 
 mod projective;
+
+mod bindings;

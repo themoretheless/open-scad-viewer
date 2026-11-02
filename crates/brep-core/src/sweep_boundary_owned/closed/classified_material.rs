@@ -1,6 +1,8 @@
 //! Original closed material boundary: fresh trim/trace binding + typed volume.
 //! No retained mesh, sampled image or caller report supplies proof authority.
 use super::*;
+mod bindings;
+pub use bindings::{MaterialSpanBinding, MaterialSpanBindingKind};
 use nurbs_core::progressive_sweep::{
     OriginalClassifiedVolume, OriginalClassifiedVolumeAttempt, OriginalClassifiedVolumeLimits,
     OriginalClassifiedVolumeReport, OriginalProfileClass, OriginalSmoothVolumeLimits,
@@ -30,6 +32,7 @@ pub struct OriginalClassifiedClosedMaterialRefusal {
 /// remain explicit sharp joins. This type issues no retained Solid guarantee.
 pub struct OriginalClassifiedClosedMaterial<'s, 'a> {
     material: &'s LoftCap,
+    bindings: Vec<MaterialSpanBinding>,
     line_image_spans: usize,
     projective_image_spans: usize,
     volume: Box<OriginalClassifiedVolume<'s, 'a>>,
@@ -37,6 +40,12 @@ pub struct OriginalClassifiedClosedMaterial<'s, 'a> {
     work: OriginalClassifiedClosedMaterialWork,
 }
 impl<'s, 'a> OriginalClassifiedClosedMaterial<'s, 'a> {
+    /// Complete, ordered ownership of every decomposed boundary span. Records
+    /// index the immutable original material and sweep borrowed by this owner.
+    /// Loop zero is the outer contour; remaining loops are material holes.
+    pub fn bindings(&self) -> &[MaterialSpanBinding] {
+        &self.bindings
+    }
     /// Exact oriented line-image bindings, with no normalized-map authority.
     pub fn line_image_spans(&self) -> usize {
         self.line_image_spans
@@ -131,6 +140,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
         }
     };
     let PreparedMaterial {
+        bindings,
         report: source,
         line_image_spans,
         projective_image_spans,
@@ -216,6 +226,7 @@ pub fn certify_original_classified_closed_material<'s, 'a>(
     };
     Ok(OriginalClassifiedClosedMaterialAttempt::Certified(
         Box::new(OriginalClassifiedClosedMaterial {
+            bindings,
             material,
             line_image_spans,
             projective_image_spans,

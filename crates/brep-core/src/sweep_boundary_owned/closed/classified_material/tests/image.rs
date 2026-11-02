@@ -74,6 +74,13 @@ fn nonlinear_line_clocks_bind_the_complete_original_material_without_map_authori
         }
     };
     assert_eq!(body.line_image_spans(), 10);
+    assert_eq!(body.bindings().len(), 10);
+    for (i, binding) in body.bindings().iter().enumerate() {
+        assert_eq!(binding.ring(), i / 5);
+        assert_eq!(binding.profile(), (i, 0));
+        assert_eq!(binding.trim(), (i % 5, 0));
+        assert_eq!(binding.kind(), MaterialSpanBindingKind::OrientedLineImage);
+    }
     assert_eq!(body.material_report().bound_spans, 10);
     assert_eq!(body.boundary_classes(), classes);
     assert_eq!(body.closed_seam_order(), 2);
