@@ -82,3 +82,22 @@ for(let edge=0;edge<6;edge++){
  const q=generalTarget(graphQuery());q.patch.controlPoints=[0,1,2].map(i=>[0,1,2].map(j=>[i/2,j/2,Number(i===2)+Number(j===2)]));q.patch.weights=[[1,3,9],[2,6,18],[5,15,45]];q.quadric=[[1,0,0,0],[0,1,0,0],[0,0,0,-.5],[0,0,-.5,0]]
  quadricGraphCases.push({name:'graph-separable-clock-wrong-quadric-refuses',query:q,check:r=>require(!r.targetGraphProven&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved weighted geometry admitted')})
 }
+
+function multispanTarget(q:OriginalQuadricGraphQuery){
+ const x=[0,.25,.75,1];Object.assign(q.patch,{knotsU:[-2,-2,-1,1,2,2],knotsV:[10,10,11,13,14,14],controlPoints:x.map(a=>x.map(b=>[a,b,a*b])),weights:x.map(()=>x.map(()=>7))});return q
+}
+{
+ const q=multispanTarget(graphQuery());quadricGraphCases.push({name:'graph-multispan-internal-knot',query:q,check:r=>{present(r,[[4,0,12,2]]);require(r.targetParameterization==='polynomial-affine','Missing original linear precision proof')}})
+}
+for(let edge=0;edge<6;edge++){
+ const q=multispanTarget(boundaryQuery(edge)),uv=edge===0?[-2,12]:edge===1?[2,12]:edge===2?[0,10]:edge===3?[0,14]:edge===4?[-2,10]:[2,14]
+ quadricGraphCases.push({name:`graph-multispan-outer-edge-${edge}`,query:q,check:r=>{present(r,[[2+4/3,uv[0]!,uv[1]!,2]],'quadric-coordinate-sign');require(r.boundaryExactWork>0,'Missing outer-frame proof')}})
+}
+{
+ const q=graphQuery(),x=[0,.25,.75,1],z=[0,0,.5,1];Object.assign(q.patch,{degreeU:2,knotsU:[-2,-2,-2,0,2,2,2],controlPoints:x.map((a,i)=>[[a,0,z[i]!],[a,1,z[i]!]]),weights:x.map(()=>[1,1])});q.quadric=[[1,0,0,0],[0,0,0,0],[0,0,0,-.5],[0,0,-.5,0]];q.curve.controlPoints=[[.5,.5,-1],[.5,.5,1]]
+ quadricGraphCases.push({name:'graph-multispan-quadratic-original-basis',query:q,check:r=>present(r,[[4.5,0,12,1]])})
+}
+for(const zero of [false,true]){
+ const q=multispanTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
+ quadricGraphCases.push({name:`graph-multispan-unproved-target-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved multi-span target admitted')})
+}

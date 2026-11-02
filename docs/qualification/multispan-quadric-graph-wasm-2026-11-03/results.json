@@ -1,0 +1,30 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/9b3ce90ad184a312dd795a523a6cd7a39ff62765489003d1453479890d41b7ce.wasm",
+  "sha256": "9b3ce90ad184a312dd795a523a6cd7a39ff62765489003d1453479890d41b7ce",
+  "bytes": 21710993,
+  "sourceCommit": "d2f34a80b289056e798c742233805cffd4d861f3",
+  "status": "passed",
+  "abiCases": 158,
+  "graphCases": 47,
+  "workersStarted": 140,
+  "workersTerminated": 140,
+  "clientTests": 70,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "c54bfb559a88b060f623a6b9cbd2e73662e7bda67af79467427a4413e18c5f73",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "e028d0f2446ca2f3e9198ce42cc0feca1411ddc47a41d31f60b33d02539fb3fd",
+    "tools/browser-qualification/surface-self-intersection.mjs": "8af99bf27365b4214548da059dc0a1c968e532506249e25893ace0da64e2085d"
+  },
+  "scope": "Actual raw WASM and Chromium Worker qualification of constant-weight original multi-span quadric graph target charts.",
+  "remaining": [
+    "Nonconstant multi-span rational clocks",
+    "Coupled weights",
+    "General freeform all-branch enumeration",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}

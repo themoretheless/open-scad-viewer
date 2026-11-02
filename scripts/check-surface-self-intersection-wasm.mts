@@ -183,6 +183,11 @@ const graphBadSheet=graphQuery();graphBadSheet.quadric=[[0,0,0,0],[0,0,0,0],[0,0
 reject('graph-ambiguous-sheet',{op:'nurbs_original_quadric_graph_contacts',...graphBadSheet})
 const graphPerturbedRank=graphQuery();graphPerturbedRank.patch.weights=[[1,3],[2,6+Number.EPSILON*4]]
 reject('graph-perturbed-separable-target',{op:'nurbs_original_quadric_graph_contacts',...graphPerturbedRank})
+const multiBase=quadricGraphCases.find(c=>c.name==='graph-multispan-internal-knot')!
+const multiDrift=structuredClone(multiBase.query);multiDrift.patch.controlPoints[1]![0]![0]=.25+Number.EPSILON/4
+reject('graph-multispan-ulp-projection-drift',{op:'nurbs_original_quadric_graph_contacts',...multiDrift})
+const multiRational=structuredClone(multiBase.query);multiRational.patch.weights[1]=[14,14,14,14]
+reject('graph-multispan-unproved-rational-clock',{op:'nurbs_original_quadric_graph_contacts',...multiRational})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

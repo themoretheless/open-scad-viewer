@@ -168,3 +168,7 @@ Actual WASM original affine contacts: frozen source `a46f426b2` собран в 
 ### Multi-span quadric graph, 2026-11-03
 
 Добавлены исходные clamped B-spline target-графы с постоянными весами: точная Greville-проекция и tensor membership по всем исходным span, общий predicate-бюджет, глобальные natural UV. Исправлена outer-edge frame: используются крайние poles всей поверхности. В изолированном checkout прошли 26 native и 11 bridge тестов, architecture 54/0. Отчёт `docs/qualification/multispan-quadric-graph-2026-11-03/results.json`. Рациональные nonconstant multi-span часы, coupled weights, общий freeform, trim/Body и WASM-проверка нового multi-span расширения остаются открытыми.
+
+### Multi-span graph: WASM и Workers, 2026-11-03
+
+Исходный native-коммит `d2f34a80b289056e798c742233805cffd4d861f3`, WASM SHA-256 `9b3ce90ad184a312dd795a523a6cd7a39ff62765489003d1453479890d41b7ce`: прошли 158 ABI-сценариев; Chromium проверил 47 graph-сценариев, 140 Workers созданы и завершены. Проверены внутренние узлы, все outer edges/corners, quadratic original basis, unproved membership/work refusal, ULP projection drift и refusal nonconstant multi-span clocks. Также прошли 70 клиентских тестов, vue-tsc и architecture 54/0. Отчёт `docs/qualification/multispan-quadric-graph-wasm-2026-11-03/results.json`. Временный worktree удалён, установленный пакет не менялся. Nonconstant multi-span clocks, coupled weights, общий freeform, trim/Body и production provider остаются открытыми.
