@@ -1,0 +1,277 @@
+{
+  "distinctCases": 18,
+  "newRationalHollowCases": 8,
+  "legacyCases": 10,
+  "cases": [
+    {
+      "family": "rational-hollow",
+      "authored": true,
+      "arc": false,
+      "affine": false,
+      "rational": true,
+      "work": {
+        "cells": 18925,
+        "exact_work": 375910,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": true,
+      "arc": false,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 20028,
+        "exact_work": 376084,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": false,
+      "arc": false,
+      "affine": false,
+      "rational": true,
+      "work": {
+        "cells": 51854,
+        "exact_work": 375910,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": true,
+      "arc": true,
+      "affine": false,
+      "rational": true,
+      "work": {
+        "cells": 29219,
+        "exact_work": 381213,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": true,
+      "arc": true,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 30172,
+        "exact_work": 381387,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": true,
+      "arc": false,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 371,
+        "exact_work": 189641,
+        "products": 50,
+        "material_pairs": 20,
+        "material_cells": 10,
+        "material_domain_cells": 20
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": true,
+      "arc": false,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 394,
+        "exact_work": 377553,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": true,
+      "arc": false,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 406,
+        "exact_work": 377727,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": true,
+      "arc": true,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 6734,
+        "exact_work": 382856,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": true,
+      "arc": true,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 6789,
+        "exact_work": 383030,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": false,
+      "arc": false,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 3693,
+        "exact_work": 189641,
+        "products": 50,
+        "material_pairs": 20,
+        "material_cells": 10,
+        "material_domain_cells": 20
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": false,
+      "arc": false,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 2484,
+        "exact_work": 377553,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": false,
+      "arc": false,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 3721,
+        "exact_work": 377727,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": false,
+      "arc": true,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 152777,
+        "exact_work": 379843,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "spatial",
+      "authored": false,
+      "arc": true,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 170434,
+        "exact_work": 380017,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": false,
+      "arc": false,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 54012,
+        "exact_work": 376084,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": false,
+      "arc": true,
+      "affine": false,
+      "rational": true,
+      "work": {
+        "cells": 102952,
+        "exact_work": 378206,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    },
+    {
+      "family": "rational-hollow",
+      "authored": false,
+      "arc": true,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 106408,
+        "exact_work": 378380,
+        "products": 171,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      }
+    }
+  ]
+}

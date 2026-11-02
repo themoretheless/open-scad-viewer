@@ -1,0 +1,96 @@
+{
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "capped_material::tests::rational_hollow",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2,
+      "expectedIgnored": 0,
+      "summary": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2078 filtered out; finished in 195.16s"
+      ],
+      "seconds": 407.35,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "capped_material::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 7,
+      "expectedIgnored": 0,
+      "summary": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2073 filtered out; finished in 164.15s"
+      ],
+      "seconds": 164.33,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2068,
+      "expectedIgnored": 1,
+      "summary": [
+        "test result: ok. 2068 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 71.84s"
+      ],
+      "seconds": 178.57,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2075,
+      "expectedIgnored": 5,
+      "summary": [
+        "test result: ok. 2075 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 867.83s"
+      ],
+      "seconds": 868.05,
+      "passed": true
+    }
+  ],
+  "sourceUnchanged": true,
+  "sourceFiles": 6597
+}
