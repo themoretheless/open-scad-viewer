@@ -50,6 +50,8 @@
 
 Публичный bridge: добавлен read-only op nurbs_surface_self_intersection_audit с полями surface/maxSpans и schema nurbs-surface-self-intersection/1. Вердикт пересчитывается Rust-кодом; presenceProven/absenceProven отделены от allContactBranchesEnumerated=false. exactWitness передаётся строками numerator/denominator, без ограничения точности JavaScript Number. Пройдено **6 bridge-тестов**, включая execute-протокол с целыми выше 2^53, Unresolved при бюджете, invalid input и forged fields; [receipt](../qualification/self-surface-bridge-2026-11-02/results.json). Текущий установленный WASM не обновлялся; actual ABI/Worker и редактор остаются открытыми.
 
+Настоящий WASM ABI: из чистого snapshot коммита 26d6454cc собран отдельный release geometry-wasm (24 008 265 байт, SHA cfbc28f39f290824d70227d70a3f1c165c8cae446416d42020eddb6757559da0). **12 binary ABI cases прошли** на Node 22.23.4: отсутствие, складки, projective gauge, non-dyadic UV, большие строки дробей, рациональное пространственное пересечение, соседний overlap, budget Unresolved, invalid/forged input и recovery. Модуль не имеет imports, входные буферы сохранены; освобождение request/response выполнено через ABI. [Receipt](../qualification/self-surface-wasm-2026-11-02/results.json), [build provenance](../qualification/self-surface-wasm-2026-11-02/build.json). Raw-кандидат сохранён локально отдельно. Установленный пакет не заменён; packaged-WASM, реальный browser Worker, production delivery budget и редактор остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.
