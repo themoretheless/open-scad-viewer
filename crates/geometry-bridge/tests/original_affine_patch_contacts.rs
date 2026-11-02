@@ -1,6 +1,6 @@
 use geometry_bridge::dispatch;
 use nurbs_core::{curve::Curve, surface::Surface};
-use value_codec::{Value, json};
+use value_codec::{json, Value};
 fn request(order: usize) -> Value {
     let c = Curve {
         degree: order,
@@ -167,14 +167,18 @@ fn coupled_target_uv_boxes_preserve_the_injective_bilinear_proof() {
 }
 
 #[test]
-fn nonsingleton_boundary_root_preserves_ambiguous_parameter_coverage() {
+fn nonsingleton_boundary_root_uses_original_coordinate_identity() {
     let mut v = request(2);
     v["curve"]["weights"] = json!([1, 2, 4]);
     for p in v["curve"]["controlPoints"].as_array_mut().unwrap() {
         p[1] = json!(0);
     }
     let r = dispatch(v).unwrap();
-    assert_eq!(r["status"], "unresolved");
-    assert_eq!(r["curvePatchCoverageComplete"], false);
-    assert!(!r["ambiguousParameters"].as_array().unwrap().is_empty());
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["uvMethod"],
+        "original-affine-coordinate-bounds"
+    );
+    assert!(r["ambiguousParameters"].as_array().unwrap().is_empty());
 }

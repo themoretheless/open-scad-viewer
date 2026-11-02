@@ -1,0 +1,36 @@
+{
+  "status": "passed-native-and-client",
+  "baseCommit": "d12fd6fbf94a2cd8f8fd90cff530b386f0a8d992",
+  "nativeTests": 90,
+  "clientTests": 81,
+  "vueTsc": "passed",
+  "rawWasmQualified": false,
+  "chromiumWorkerQualified": false,
+  "installedPackageUpdated": false,
+  "proof": "Original active-control exact affine bounds and conditional coordinate = slope * original plane residual + intercept; at certified scalar root residual is zero. No midpoint root evaluation. Positive rational blending preserves identities.",
+  "cases": [
+    "irrational sqrt(1/2) edge root",
+    "four projective edges and corners with non-singleton root",
+    "positive/negative minimum subnormal offsets",
+    "negative nonconstant subnormal remains unresolved",
+    "original active-span identity on multi-span source",
+    "nonproportional shared root remains unresolved"
+  ],
+  "open": [
+    "general polynomial common-root boundary proof",
+    "curved/freeform target supports",
+    "trim/body admission",
+    "all surface-surface branches",
+    "production editor/provider qualification"
+  ],
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_coordinate_bounds.rs": "839a8545d03f7d84651570828a27237c04a83e6a7293900b5341be6d274ab1ee",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "7304ca91257efd1e0fca9690d00a6c671a793222d3b3021191692876000bcb70",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_exact_membership.rs": "4fd7d22fbdc1bd9a3d48fe4d6a8f80758beb4d1cadcfb3ac813205cc3073e0b1",
+    "crates/geometry-bridge/src/intersections/original_patch_contacts.rs": "e2fb12f910d5191781caed4d775b8d2078bcffacbc7fca9ba6ec4b0f49073d3d",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "126d64c1394cd025ad8bf5145f4113fbd63ba502a827ab2faebd289f306c1a35",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "ea1dc28802bbff5c511a2f97a780b79b5a0c5d027ee220dda4b618f5ba2599cb",
+    "src/services/originalPatchContactsProtocol.ts": "5262e0eb1ff2de792483df39a971fabebea414107fe4227b04f8e664ee222223",
+    "tests/originalPatchContactsProtocol.test.ts": "3574553a1f1454423d13fea512f63ef1415cff04d9d400818995e40e11d6d9e3"
+  }
+}

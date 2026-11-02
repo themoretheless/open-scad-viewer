@@ -39,12 +39,12 @@ fn point(c: &Curve, span: usize, t: &Q) -> Result<[Q; 3]> {
     }
     Ok(std::array::from_fn(|k| &d[p][k] / &d[p][3]))
 }
-fn bound(x: &Q) -> Result<[f64; 2]> {
+pub(super) fn bound(x: &Q) -> Result<[f64; 2]> {
     let b =
         enclosure(x).ok_or_else(|| crate::numeric_err("No finite exact membership enclosure"))?;
     Ok([b.lo, b.hi])
 }
-fn clock(a: &Q, w0: f64, w1: f64) -> Q {
+pub(super) fn clock(a: &Q, w0: f64, w1: f64) -> Q {
     q(w0) * a / (q(w1) * (q(1.) - a) + q(w0) * a)
 }
 /// `normalized` is a singleton supplied by the exact scalar isolator, never a

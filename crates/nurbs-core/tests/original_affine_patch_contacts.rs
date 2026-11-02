@@ -77,9 +77,11 @@ fn finite_membership_separates_exterior_exact_boundary_and_interval_ambiguity() 
     assert_eq!(r.contacts[0].parameter_box[2], [10., 10.]);
     c.weights = vec![1., 2., 4.];
     let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
-    assert!(!r.complete);
-    assert!(r.contacts.is_empty());
-    assert!(!r.ambiguous_parameters.is_empty());
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert_eq!(r.contacts[0].parameter_box[2], [10., 10.]);
+    assert!(r.contacts[0].parameter_box[0][0] < r.contacts[0].parameter_box[0][1]);
+    assert_eq!(r.contacts[0].uv_proof, nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalAffineCoordinateBounds);
 }
 #[test]
 fn one_global_exact_budget_and_span_budget_preserve_missing_coverage() {
@@ -390,4 +392,132 @@ fn exact_boundary_point_uses_original_rational_curve_weights() {
         r.contacts[0].position_bounds,
         [[0., 0.], [0.5, 0.5], [0., 0.]]
     );
+}
+
+#[test]
+fn irrational_boundary_root_has_exact_conditional_coordinate() {
+    let c = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![-0.5, -0.5, 0.5],
+            vec![-0.5, -0.5, 0.5],
+            vec![0.5, 0.5, 0.5],
+        ],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    let c = &r.contacts[0];
+    assert_eq!(c.uv_proof, nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalAffineCoordinateBounds);
+    let t = 0.5f64.sqrt();
+    assert!(c.parameter_box[0][0] <= t && t <= c.parameter_box[0][1]);
+    assert!(c.parameter_box[0][0] < c.parameter_box[0][1]);
+    assert_eq!(c.parameter_box[1], [-2., -2.]);
+    let v = 10. + 4. / 3.;
+    assert!(c.parameter_box[2][0] <= v && v <= c.parameter_box[2][1]);
+    assert_eq!(c.position_bounds, [[0., 0.], [0., 0.], [0.5, 0.5]]);
+    assert_eq!(c.multiplicities, [1]);
+}
+
+#[test]
+fn nonproportional_common_root_retains_boundary_ambiguity() {
+    // X=(1-3t)^2, Y=1-3t. Their common root does not imply an affine
+    // control identity; this requires a further exact common-root proof.
+    let c = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: vec![
+            vec![1., 1., 0.5],
+            vec![-1., 0., 0.5],
+            vec![0., -1., 0.5],
+            vec![4., -2., 0.5],
+        ],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+    assert!(!r.complete, "{r:?}");
+    assert!(r.contacts.is_empty());
+    assert!(!r.ambiguous_parameters.is_empty());
+}
+
+#[test]
+fn nonsingleton_roots_preserve_all_edge_and_corner_clocks() {
+    for (a, b, u, v) in [
+        (0., 0.5, -2., 10. + 4. / 3.),
+        (1., 0.5, 2., 11.5),
+        (0.5, 0., -1., 10.),
+        (0.5, 1., -6. / 7., 14.),
+        (0., 0., -2., 10.),
+        (1., 1., 2., 14.),
+    ] {
+        let c = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., a, b], vec![-1., a, b], vec![1., a, b]],
+            weights: vec![1., 2., 4.],
+            periodic: false,
+        };
+        let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+        assert!(r.complete, "{r:?}");
+        assert_eq!(r.contacts.len(), 1);
+        let c = &r.contacts[0];
+        assert_eq!(c.uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalAffineCoordinateBounds);
+        assert_eq!(c.multiplicities, [2]);
+        assert!(c.parameter_box[0][0] < c.parameter_box[0][1]);
+        for (axis, x) in [(1, u), (2, v)] {
+            assert!(
+                c.parameter_box[axis][0] <= x && x <= c.parameter_box[axis][1],
+                "{c:?}"
+            );
+        }
+        assert_eq!(c.position_bounds, [[0., 0.], [a, a], [b, b]]);
+    }
+}
+
+#[test]
+fn interval_root_signed_subnormal_offsets_are_never_snapped_to_edge() {
+    for y in [-f64::from_bits(1), f64::from_bits(1)] {
+        let mut c = curve(2);
+        c.weights = vec![1., 2., 4.];
+        for p in &mut c.control_points {
+            p[1] = y;
+        }
+        let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
+        assert!(r.complete, "{r:?}");
+        assert_eq!(r.contacts.len(), usize::from(y > 0.));
+        if y > 0. {
+            assert_eq!(r.contacts[0].position_bounds[1], [y, y]);
+        }
+    }
+    let mut c = curve(2);
+    c.weights = vec![1., 2., 4.];
+    for p in &mut c.control_points {
+        p[1] = 0.;
+    }
+    c.control_points[2][1] = -f64::from_bits(1);
+    let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.contacts.is_empty(), "{r:?}");
+    assert!(!r.complete);
+}
+
+#[test]
+fn interval_edge_identity_uses_only_original_active_span_controls() {
+    let mut c = curve(2);
+    for p in &mut c.control_points {
+        p[1] = 0.;
+    }
+    c.control_points
+        .extend([vec![0.1, 1., 0.1], vec![0.1, -1., 0.1]]);
+    c.weights = vec![1., 2., 4., 4., 4.];
+    c.knots = vec![0., 0., 0., 1., 1., 2., 2., 2.];
+    let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.spans, 2);
+    assert_eq!(r.contacts.len(), 1);
+    assert_eq!(r.contacts[0].source_spans, [2]);
+    assert_eq!(r.contacts[0].parameter_box[2], [10., 10.]);
 }

@@ -29,7 +29,7 @@ pub(crate) fn run(v: Value) -> Result<Value> {
         return Err(input("Exact contact budget exceeds predicate MAX_WORK"));
     }
     let r = original_affine_patch_contacts(&c, &s, tolerance, max_spans, max_exact_work)?;
-    let contacts:Vec<_>=r.contacts.iter().map(|c|json!({"method":"original-patch-plane-polynomial","uvMethod":match c.uv_proof {OriginalPatchUvProof::SeparableProjective=>"separable-projective",OriginalPatchUvProof::InjectiveBilinearKrawczyk=>"injective-bilinear-krawczyk",OriginalPatchUvProof::PositiveBilinearGlobalInverse=>"positive-bilinear-global-inverse",OriginalPatchUvProof::ExactBoundaryProjective=>"exact-boundary-projective"},"parameterBox":c.parameter_box,"positionBounds":c.position_bounds,"sourceSpans":c.source_spans,"multiplicities":c.multiplicities})).collect();
+    let contacts:Vec<_>=r.contacts.iter().map(|c|json!({"method":"original-patch-plane-polynomial","uvMethod":match c.uv_proof {OriginalPatchUvProof::SeparableProjective=>"separable-projective",OriginalPatchUvProof::InjectiveBilinearKrawczyk=>"injective-bilinear-krawczyk",OriginalPatchUvProof::PositiveBilinearGlobalInverse=>"positive-bilinear-global-inverse",OriginalPatchUvProof::ExactBoundaryProjective=>"exact-boundary-projective",OriginalPatchUvProof::OriginalAffineCoordinateBounds=>"original-affine-coordinate-bounds"},"parameterBox":c.parameter_box,"positionBounds":c.position_bounds,"sourceSpans":c.source_spans,"multiplicities":c.multiplicities})).collect();
     let proofs:Vec<_>=r.scalar_proofs.iter().map(|(span,p)|{
   let (status,roots,reason)=match &p.outcome{
    OriginalPlaneRootsOutcome::Roots(roots)=>("roots",roots.iter().map(|r|json!({"interval":r.interval,"multiplicity":r.multiplicity})).collect::<Vec<_>>(),None),

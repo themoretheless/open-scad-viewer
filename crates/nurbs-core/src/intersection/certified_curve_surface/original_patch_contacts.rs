@@ -12,6 +12,7 @@ pub enum OriginalPatchUvProof {
     InjectiveBilinearKrawczyk,
     PositiveBilinearGlobalInverse,
     ExactBoundaryProjective,
+    OriginalAffineCoordinateBounds,
 }
 #[derive(Debug)]
 pub struct OriginalPatchContact {
@@ -190,6 +191,7 @@ pub fn original_affine_patch_contacts(
             }
         };
         out.scalar_proofs.push((span, decision));
+        let mut coordinate_bounds = None;
         for root in roots {
             let t = if root.interval == [0., 0.] {
                 I::point(domain[0])
@@ -224,7 +226,31 @@ pub fn original_affine_patch_contacts(
                         merge_contact(&mut out.contacts, contact);
                     }
                 } else {
-                    out.ambiguous_parameters.push([t.lo, t.hi]);
+                    if coordinate_bounds.is_none() {
+                        coordinate_bounds =
+                            Some(super::patch_coordinate_bounds::original(c, s, span)?);
+                    }
+                    match coordinate_bounds.as_ref().unwrap().contact(
+                        s,
+                        span,
+                        root.multiplicity,
+                        t,
+                        &p,
+                        alpha,
+                        beta,
+                    )? {
+                        super::patch_coordinate_bounds::Decision::Outside => {}
+                        super::patch_coordinate_bounds::Decision::Unresolved => {
+                            out.ambiguous_parameters.push([t.lo, t.hi])
+                        }
+                        super::patch_coordinate_bounds::Decision::Contact(contact) => {
+                            if out.target_uv_injectivity.is_none() {
+                                out.target_uv_injectivity =
+                                    Some(super::patch_uv_injectivity::certify(&s.weights)?);
+                            }
+                            merge_contact(&mut out.contacts, contact);
+                        }
+                    }
                 }
                 continue;
             }

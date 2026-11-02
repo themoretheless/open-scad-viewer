@@ -543,3 +543,5 @@ mod patch_uv_injectivity;
 pub use patch_uv_injectivity::BilinearUvInjectivity;
 
 mod patch_exact_membership;
+
+mod patch_coordinate_bounds;

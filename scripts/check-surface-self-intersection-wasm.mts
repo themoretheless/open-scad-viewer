@@ -1,6 +1,6 @@
 import {advancedPatchCases} from '../tools/browser-qualification/advanced-patch-fixtures.ts'
 import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol.ts'
-import {originalPatchFixture,originalPatchKnotFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
+import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -152,7 +152,9 @@ const exterior=patchReply(finite);assert.equal(exterior.status,'absent-on-patch'
 for(const p of finite.curve.controlPoints)p[1]=0
 const boundary=patchReply(finite);assert.equal(boundary.status,'present');assert.equal(boundary.contacts[0].uvMethod,'exact-boundary-projective');cases.push({name:'original-patch-exact-boundary',status:boundary.status})
 const intervalBoundary=structuredClone(finite);intervalBoundary.curve.weights=[1,2,4]
-const unresolvedBoundary=patchReply(intervalBoundary);assert.equal(unresolvedBoundary.status,'unresolved');assert(unresolvedBoundary.ambiguousParameters.length>0);cases.push({name:'original-patch-interval-boundary-unresolved',status:unresolvedBoundary.status})
+const intervalEdge=patchReply(intervalBoundary);assert.equal(intervalEdge.status,'present');assert.equal(intervalEdge.curvePatchCoverageComplete,true);assert.equal(intervalEdge.contacts[0].uvMethod,'original-affine-coordinate-bounds');cases.push({name:'original-patch-interval-edge-identity',status:intervalEdge.status})
+const irrationalEdge=patchReply(originalPatchAlgebraicBoundaryFixture());assert.equal(irrationalEdge.status,'present');assert.equal(irrationalEdge.curvePatchCoverageComplete,true);assert.equal(irrationalEdge.contacts[0].uvMethod,'original-affine-coordinate-bounds');assert.deepEqual(irrationalEdge.contacts[0].positionBounds,[[0,0],[0,0],[.5,.5]]);cases.push({name:'original-patch-irrational-edge-identity',status:irrationalEdge.status})
+const commonRoot=patchReply(originalPatchAlgebraicBoundaryFixture(true));assert.equal(commonRoot.status,'unresolved');assert(commonRoot.ambiguousParameters.length>0);cases.push({name:'original-patch-nonproportional-common-root-unresolved',status:commonRoot.status})
 reject('original-patch-forged-body-admission',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),bodyAdmission:true})
 reject('original-patch-over-limit-exact-budget',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),maxExactWork:1000001})
 for(const fixture of advancedPatchCases){const before=JSON.stringify(fixture.query),r=patchReply(fixture.query);assert.equal(JSON.stringify(fixture.query),before);fixture.check(r);cases.push({name:fixture.name,status:r.status,contact:r.contacts[0]??null,complete:r.curvePatchCoverageComplete})}
