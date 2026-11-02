@@ -221,3 +221,5 @@ fn hole_regions_and_material_orientation_remain_independent_obligations() {
     );
     assert!(!r.reference_volume.as_ref().unwrap().proven);
 }
+
+mod critical_projection;

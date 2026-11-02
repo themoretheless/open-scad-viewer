@@ -10,6 +10,7 @@ use cad_predicates::{
 use nurbs_core::{curve::Curve, surface::Surface};
 pub mod bilinear_graph;
 pub mod closed_graph;
+pub(crate) mod opposite_rows;
 mod monotone_coordinate;
 
 mod certificate;

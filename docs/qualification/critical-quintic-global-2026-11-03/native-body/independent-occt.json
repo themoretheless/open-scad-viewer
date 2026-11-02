@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "ocpVersion": "8.0.1.0",
+  "valid": true,
+  "topology": {
+    "solids": 1,
+    "faces": 4,
+    "edges": 6,
+    "vertices": 4
+  },
+  "volume": 114.2857142857143,
+  "analyticVolume": 114.28571428571429,
+  "absoluteVolumeError": 1.4210854715202004e-14,
+  "absoluteTolerance": 1e-07,
+  "integrationErrorEstimate": 1.8651746813702607e-15,
+  "boundaryPointChecks": 28,
+  "maxParameterPointError": 0.0,
+  "closestPointDiagnosticMax": 0.07307376109604233,
+  "closestPointDiagnosticControlsAcceptance": false,
+  "classificationChecks": 15,
+  "classificationsPassed": true,
+  "interferencePairs": 0,
+  "interferenceSearchCompleted": true,
+  "stepSha256": "97f1ee17593231b4490b339f036908b899f23a03853e49d04230879c4dd71ef9",
+  "externalOpenCascade": true,
+  "nativeExactProof": false,
+  "scope": "one new quintic-profile prism; no all-mode sweep claim"
+}
