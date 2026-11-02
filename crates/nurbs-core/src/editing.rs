@@ -14,3 +14,4 @@ pub mod exact_surface_knot_removal;
 pub mod exact_degree_reduction;
 mod exact_tensor_edit;
 pub mod exact_surface_degree_reduction;
+pub mod exact_surface_merge;
