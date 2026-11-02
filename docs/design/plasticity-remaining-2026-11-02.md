@@ -96,6 +96,8 @@ Actual WASM iso–target/off-center: frozen source `6495f1b9b` собран в r
 
 Точная нормализация affine plane: перед scalar-root admission знаменатели всех четырёх исходных plane coefficients очищаются совместно, затем сокращается общий integer gcd и при необходимости выбирается точный power-of-two scale. Raw normal больше не обязан помещаться в binary64: достаточно точной представимости общего сокращённого уравнения. Проверены decimal scale 0.1, сохранение ненулевого offset и отказ для irreducible 56-bit коэффициента без округления. **108 native tests прошли (3 новых)**; [receipt](../qualification/primitive-affine-plane-2026-11-02/results.json). General affine-plane equations без точного binary64 representative, freeform tangencies, trims/Body и bridge/WASM остаются открытыми.
 
+Исходное выражение affine plane: новый cad-predicates `rational_bspline_affine_patch_roots` принимает исходные controls кривой/knots и четыре authored patch vertices, точно проверяет parallelogram identity и строит normal/offset как expansions. Ограничение binary64-представимости производного уравнения снято на уровне scalar predicate; общий exact Sturm/GCD solver сохраняет root multiplicities без дублирования алгоритма. **6 predicate tests (3 новых) + 62 nurbs regressions прошли**; [receipt](../qualification/original-patch-plane-expression-2026-11-02/results.json). Предикат пока относится к бесконечной плоскости: следующий шаг — привязать его к finite-patch UV membership, затем bridge/WASM. General freeform tangencies и полное surface–surface покрытие остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.
