@@ -303,3 +303,70 @@ fn exact_cubic_span_recurrence_detects_a_non_global_fold() {
         assert!((s.evaluate(u, 0.5).unwrap().point[0] - 0.5625).abs() < 1e-13);
     }
 }
+
+fn projective_fold() -> Surface {
+    let mut s = graph();
+    s.degree_u = 3;
+    s.knots_u = vec![0., 0., 0., 0., 1., 1., 1., 1.];
+    s.control_points = [0., 1.5, 4., 0.]
+        .into_iter()
+        .map(|x| vec![vec![x, 0., 2. * x], vec![x, 1., 2. * x]])
+        .collect();
+    s.weights = [1., 2., 3., 4.].into_iter().map(|w| vec![w; 2]).collect();
+    s
+}
+#[test]
+fn asymmetric_homogeneous_gauge_still_proves_rational_fold() {
+    let s = projective_fold();
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.25, 0.5], [0.75, 0.5]]));
+    // X/W = 9u(1-u), W=1+3u. Both X and W are asymmetric.
+    for u in [0.25, 0.75] {
+        let p = s.evaluate(u, 0.5).unwrap().point;
+        assert!((p[0] - 1.6875).abs() < 1e-13);
+        assert!((p[1] - 0.5).abs() < 1e-13);
+    }
+}
+#[test]
+fn independent_row_gauges_do_not_prove_a_tensor_surface_fold() {
+    let mut s = projective_fold();
+    let original = s.clone();
+    for i in 0..4 {
+        s.weights[i][1] = original.weights[3 - i][1];
+        s.control_points[i][1] = original.control_points[3 - i][1].clone();
+    }
+    let a = s.evaluate(0.25, 0.5).unwrap().point;
+    let b = s.evaluate(0.75, 0.5).unwrap().point;
+    assert!((a[0] - b[0]).abs() < 1e-13); // each row has the same symmetric x
+    assert!((a[1] - b[1]).abs() > 0.1); // their mixture has different y
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+#[test]
+fn projective_fold_rejects_one_ulp_changes_to_source_homogeneous_data() {
+    let mut s = projective_fold();
+    s.weights[1][1] = 2_f64.next_up();
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+
+#[test]
+fn rational_projective_fold_is_proven_on_v_axis() {
+    let mut s = projective_fold();
+    s.control_points = (0..2)
+        .map(|j| (0..4).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..4).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.5, 0.25], [0.5, 0.75]]));
+}

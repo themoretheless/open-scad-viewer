@@ -12,7 +12,7 @@ fn add_linear(out: &mut [Q], input: &[Q], a: Q, b: Q) {
         out[i + 1] += c * &b;
     }
 }
-fn reflected(poly: &[Q]) -> bool {
+fn reflect(poly: &[Q]) -> Vec<Q> {
     let mut reverse = vec![Q::zero(); poly.len()];
     for (k, coefficient) in poly.iter().enumerate() {
         let mut choose = 1u64;
@@ -28,7 +28,16 @@ fn reflected(poly: &[Q]) -> bool {
             }
         }
     }
-    reverse == poly
+    reverse
+}
+fn product(a: &[Q], b: &[Q]) -> Vec<Q> {
+    let mut out = vec![Q::zero(); a.len() + b.len() - 1];
+    for (i, x) in a.iter().enumerate() {
+        for (j, y) in b.iter().enumerate() {
+            out[i + j] += x * y;
+        }
+    }
+    out
 }
 
 pub(super) fn reflected_span(s: &Surface, axis: usize, span: usize) -> bool {
@@ -72,24 +81,33 @@ pub(super) fn reflected_span(s: &Surface, axis: usize, span: usize) -> bool {
         }
         basis = next;
     }
+    let polynomial = |j, coordinate| {
+        let mut polynomial = vec![Q::zero(); degree + 1];
+        for local in 0..=degree {
+            let (u, v) = if axis == 0 {
+                (start + local, j)
+            } else {
+                (j, start + local)
+            };
+            let mut coefficient = q(s.weights[u][v]);
+            if coordinate < 3 {
+                coefficient *= q(s.control_points[u][v][coordinate]);
+            }
+            for (dst, value) in polynomial.iter_mut().zip(&basis[local]) {
+                *dst += value * &coefficient;
+            }
+        }
+        polynomial
+    };
+    // Positive original weights make this reference denominator nonzero on
+    // the whole span. Every row must use the SAME projective gauge; separate
+    // per-row rational identities would not prove the tensor surface identity.
+    let reference = polynomial(0, 3);
+    let reversed_reference = reflect(&reference);
     for j in 0..other {
         for coordinate in 0..4 {
-            let mut polynomial = vec![Q::zero(); degree + 1];
-            for local in 0..=degree {
-                let (u, v) = if axis == 0 {
-                    (start + local, j)
-                } else {
-                    (j, start + local)
-                };
-                let mut coefficient = q(s.weights[u][v]);
-                if coordinate < 3 {
-                    coefficient *= q(s.control_points[u][v][coordinate]);
-                }
-                for (dst, value) in polynomial.iter_mut().zip(&basis[local]) {
-                    *dst += value * &coefficient;
-                }
-            }
-            if !reflected(&polynomial) {
+            let p = polynomial(j, coordinate);
+            if product(&p, &reversed_reference) != product(&reflect(&p), &reference) {
                 return false;
             }
         }

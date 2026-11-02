@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "testsPassed": 28,
+  "newTests": 4,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Exact rational reflection with common asymmetric projective gauge, both axes; rejects independent per-row gauges and one-ULP source changes",
+  "proof": "For every original homogeneous row component H, H(t)W0(1-t)=H(1-t)W0(t); original positive weights prove W0 nonzero. Tensor combination shares the same gauge.",
+  "remaining": "General non-reflection self-intersections, periodic charts and full branch enumeration remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface/local_fold/exact_span.rs": "0599045ae17f7852e8463b011d384825fa51118a602f49a31c6b90817bdab06c",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "d4ebbe3845b9d0c563b13b1e9d6acec72204f8161298735488bbaf70e0b6364c"
+  }
+}
