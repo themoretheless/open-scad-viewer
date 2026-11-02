@@ -6058,7 +6058,10 @@
         "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
         "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json",
         "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
-        "crates/nurbs-core/tests/cst_algebraic_contracts.rs"
+        "crates/nurbs-core/tests/cst_algebraic_contracts.rs",
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/default-public-check.json",
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/full-library-check.json",
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/no-codec-check.json"
       ],
       "remainingQualification": [
         "sampled fit has discrete diagnostics; algebraic subset has a nominal continuous position bound only, excluding evaluator roundoff, derivatives, exact frame and B-rep authority",
