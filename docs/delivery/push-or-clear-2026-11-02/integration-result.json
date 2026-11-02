@@ -1,5 +1,5 @@
 {
-  "status": "main c73c6205b verified on origin; cleanup in progress",
+  "status": "merged branch and worktree cleanup complete",
   "integrationHeadBeforeReport": "c73c6205bc35263ba7c7edc2cc0c5c01d2176c9b",
   "allLocalAndFetchedRemoteBranchesReachable": true,
   "rustBridgeCheck": "passed",
@@ -11,13 +11,17 @@
   "viteBuild": "passed with chunk warnings",
   "architectureFindings": 75,
   "fullRuntimeQualification": "not established; unmatched production provider still refuses",
-  "stashEntriesPreserved": 3,
   "ignoredEvidenceBackupRoot": "/Users/themoretheless/.codex/preservation/open-scad-viewer-push-20261102",
   "pushedSourceCommit": "c73c6205bc35263ba7c7edc2cc0c5c01d2176c9b",
   "distributionVerification": "blocked: current artifact has no reviewed delivery budget profile; no profile invented",
-  "worktreesRemoved": 6,
+  "worktreesRemoved": 8,
   "staleWorktreeRecordsPruned": 1,
-  "inUseWorktreeKept": "nurbs-plan-recovery: limactl/ssh cwd; Colima stop approval pending",
-  "ignoredEvidenceFilesPreserved": 240,
-  "dependencyRestore": "existing npm tree moved atomically from retired recovery checkout to primary workspace; no package data deleted"
+  "ignoredEvidenceFilesPreserved": 296,
+  "dependencyRestore": "existing npm tree moved atomically from retired recovery checkout to primary workspace; no package data deleted",
+  "localBranchesDeleted": 23,
+  "remoteBranchesDeleted": 58,
+  "colima": "stopped with explicit user authorization",
+  "stashEntriesInInitialInventory": 3,
+  "stashEntriesCurrentlyVisible": 0,
+  "stashRecovery": "refs/stash absent, reflog empty; git fsck --no-reflogs --unreachable found no unreachable commits; original stashes not recovered"
 }
