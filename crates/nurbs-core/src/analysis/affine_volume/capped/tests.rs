@@ -113,3 +113,43 @@ fn folded_pair_or_broken_motion_never_gains_volume_credit() {
     assert!(!r.embedding_certified);
     assert_eq!(r.reason, Some("affine-volume-station-identity-unproved"));
 }
+
+#[test]
+fn paired_cap_time_jet_survives_exact_column_factor_coordinates() {
+    let a = cap(false);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() { p[1] += 0.25; }
+    let pieces = vec![RationalPiece {
+        controls: vec![
+            [[1.,0.,0.],[0.5,1.,0.],[0.,0.,1.],[0.,0.,0.]],
+            [[1.,0.,0.],[0.5,1.,0.],[0.,0.,1.],[0.,0.,2.]],
+        ], weights: vec![1.;2],
+    }];
+    let coordinates = ProofCoordinates {
+        rows: P, offset: [0.;3], determinant: [1.,1.],
+        column_factor: Some(ColumnFactor {
+            base: 0, dependent: 1, scale: 0.5, constant: [0.,1.,0.],
+        }),
+    };
+    let mut context = Context {
+        carrier: &a, second: Some(&b), difference: None,
+        uv_window: [[0.,1.];2], origin: [0.;3],
+        pieces: Motion::Rational(&pieces), poses: BTreeMap::new(),
+        coordinates: Some(coordinates), separable: None,
+    };
+    let mut out = IdealVolumeReport {
+        embedding_certified: false, regularity_certified: false,
+        parameter_topology_preserved: false, cells: 0, exact_work: 0,
+        boxes: 0, monotonicity_lower: None, projection: P, reason: None,
+    };
+    // Independent derivative of F=(u+.5(v+t/4),v+t/4,2t).
+    // In particular dx/dt=1/8 must not disappear in proof coordinates.
+    for t in [0.,0.25,0.5,1.] {
+        let Enclosed::Value(e) = context.enclose([[0.5;2],[0.5;2],[t;2]], &mut out, 10000).unwrap()
+            else { panic!("point enclosure unavailable"); };
+        for (bound, expected) in e.columns[2].iter().zip([0.125,0.25,2.]) {
+            assert!(bound.lo <= expected && expected <= bound.hi, "{bound:?} misses {expected}");
+            assert!(bound.hi-bound.lo < 1e-10);
+        }
+    }
+}

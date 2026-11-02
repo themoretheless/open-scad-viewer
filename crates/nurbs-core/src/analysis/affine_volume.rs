@@ -225,7 +225,7 @@ impl Context<'_> {
             } else { charts::cap_jets(self.carrier, query, &mut out.cells, max)? };
             q.map(|q| (q, [I::point(0.);3]))
         };
-        let Some((mut q, qt)) = jets else {
+        let Some((mut q, mut qt)) = jets else {
             return Ok(Enclosed::Unavailable(None));
         };
         for k in 0..2 {
@@ -253,7 +253,9 @@ impl Context<'_> {
                 // carrier value, never either carrier derivative.
                 q[0][f.base] = q[0][f.base].add(I::point(f.scale))?;
             } else {
-                for jet in &mut q {
+                // The same fixed source shear acts on the cap time jet.
+                // Otherwise A(C1-C0) loses its dependent-column contribution.
+                for jet in q.iter_mut().chain(std::iter::once(&mut qt)) {
                     jet[f.base] = jet[f.base].add(jet[f.dependent].mul(I::point(f.scale))?)?;
                 }
             }
