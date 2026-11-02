@@ -1,3 +1,4 @@
+import {quadricCarrierCases} from './quadric-carrier-fixtures'
 import {commonRootPatchCases} from './common-root-patch-fixtures'
 import {advancedPatchCases} from './advanced-patch-fixtures'
 import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from './original-patch-fixtures'
@@ -58,11 +59,13 @@ async function qualify(){
   const scalarOnlyQuery=originalPatchAlgebraicBoundaryFixture(true);for(const p of scalarOnlyQuery.curve.controlPoints)p[1]=2
   const commonRootScalarOnly=await lane.inspectOriginalPatchContacts(scalarOnlyQuery)
   const commonRootAuxiliaryBudget=await lane.inspectOriginalPatchContacts({...originalPatchAlgebraicBoundaryFixture(true),maxExactWork:commonRootScalarOnly.exactWork+10})
+  const quadricCarriers=[]
+  for(const fixture of quadricCarrierCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalQuadricCarrierRoots(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Quadric input changed');quadricCarriers.push({name:fixture.name,report})}
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{commonRootScalarOnly,commonRootAuxiliaryBudget,commonRootPatch,advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{quadricCarriers,commonRootScalarOnly,commonRootAuxiliaryBudget,commonRootPatch,advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}

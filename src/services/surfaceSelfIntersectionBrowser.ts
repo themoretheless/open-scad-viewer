@@ -1,3 +1,4 @@
+import {MAX_QUADRIC_EXACT_WORK,isOriginalQuadricCarrierReport,type OriginalQuadricCarrierQuery,type OriginalQuadricCarrierReport} from './originalQuadricCarrierProtocol'
 import {MAX_PATCH_EXACT_WORK,isOriginalPatchContactsReport,type OriginalPatchContactsQuery,type OriginalPatchContactsReport} from './originalPatchContactsProtocol'
 import {isSurfaceIsoTargetReport,type SurfaceIsoTargetReport,type SurfaceIsoTargetQuery} from './surfaceIsoTargetProtocol'
 import type {NurbsSurface} from './nurbsSurface'
@@ -28,6 +29,14 @@ export class SurfaceSelfIntersectionBrowser {
    ||!Number.isInteger(query.maxExactWork)||query.maxExactWork<0||query.maxExactWork>MAX_PATCH_EXACT_WORK)return Promise.reject(new Error('Invalid original patch query'))
   const {maxSpans,maxExactWork}=query
   return this.run({...query,type:'original-patch-contacts/1'},(r):r is OriginalPatchContactsReport=>isOriginalPatchContactsReport(r)&&r.maxSpans===maxSpans&&r.maxExactWork===maxExactWork,options)
+ }
+ inspectOriginalQuadricCarrierRoots(query:OriginalQuadricCarrierQuery,options:{signal?:AbortSignal;deadlineMs?:number}={}):Promise<OriginalQuadricCarrierReport>{
+  if(!query||!Number.isFinite(query.tolerance)||query.tolerance<=0||!Number.isInteger(query.maxSpans)||query.maxSpans<1||query.maxSpans>100000
+   ||!Number.isInteger(query.maxExactWork)||query.maxExactWork<0||query.maxExactWork>MAX_QUADRIC_EXACT_WORK
+   ||!Array.isArray(query.quadric)||query.quadric.length!==4||![0,1,2,3].every(i=>{const row=query.quadric[i];return Array.isArray(row)&&row.length===4&&[0,1,2,3].every(j=>typeof row[j]==='number'&&Number.isFinite(row[j]))})
+   ||!Array.isArray(query.constantProducts)||query.constantProducts.length>16||!Array.from(query.constantProducts).every(p=>Array.isArray(p)&&p.length===2&&[p[0],p[1]].every(v=>typeof v==='number'&&Number.isFinite(v))))return Promise.reject(new Error('Invalid original quadric query'))
+  const {maxSpans,maxExactWork}=query
+  return this.run({...query,type:'original-quadric-carrier-roots/1'},(r):r is OriginalQuadricCarrierReport=>isOriginalQuadricCarrierReport(r)&&r.maxSpans===maxSpans&&r.maxExactWork===maxExactWork,options)
  }
  private run<T>(request:Record<string,unknown>,validate:(r:unknown)=>r is T,options:{signal?:AbortSignal;deadlineMs?:number}):Promise<T>{
   if(this.active)return Promise.reject(new Error('Surface audit busy'))
