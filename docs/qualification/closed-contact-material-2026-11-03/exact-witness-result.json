@@ -1,0 +1,32 @@
+{
+  "exactBoundSpans": {
+    "collision": 8,
+    "positive": 8
+  },
+  "oneUlpNegativeControls": 2,
+  "derivedRankControlExactBoundSpans": 8,
+  "carrierDerivativeVZeroOnU1": true,
+  "actualMaterialCollision": {
+    "stations": [
+      "0",
+      "1/2"
+    ],
+    "uv": [
+      [
+        "2",
+        "4"
+      ],
+      [
+        "256/133",
+        "4"
+      ]
+    ],
+    "world": [
+      "0",
+      "0",
+      "3/256"
+    ]
+  },
+  "sourcePayloadSha256": "e039ab7109908aed5b8fa0acf1d6c51a13feec3e90234ff752b35a1ca64872e2",
+  "scope": "Exact source composition, derived rank loss and one actual material collision; no independent positive global embedding claim."
+}
