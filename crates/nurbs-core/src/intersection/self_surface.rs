@@ -16,6 +16,9 @@ pub struct Report {
     /// Distinct interior normalized parameters, interpreted by the exact affine
     /// active-domain map. Exact reflected homogeneous controls prove coincidence.
     pub witness: Option<[[f64; 2]; 2]>,
+    /// Authoritative exact normalized UV pair, including non-dyadic values.
+    /// `witness` is populated only when every scalar is exactly binary64.
+    pub exact_witness: Option<[[BigRational; 2]; 2]>,
     pub reflected_axis: Option<usize>,
 }
 fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
@@ -57,6 +60,7 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
         },
         injectivity,
         witness: None,
+        exact_witness: None,
         reflected_axis: None,
     };
     if out.status == Status::Absent {
@@ -87,20 +91,40 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
             })
         });
         if reflected {
-            out.status = Status::Present;
-            out.reflected_axis = Some(axis);
-            out.witness = Some(if axis == 0 {
+            let witness = if axis == 0 {
                 [[0.25, 0.5], [0.75, 0.5]]
             } else {
                 [[0.5, 0.25], [0.5, 0.75]]
-            });
+            };
+            record(
+                &mut out,
+                axis,
+                witness.map(|uv| uv.map(|x| BigRational::from_f64(x).unwrap())),
+            );
             return Ok(out);
         }
     }
     if let Some((axis, witness)) = local_fold::find(s, max_spans) {
-        out.status = Status::Present;
-        out.reflected_axis = Some(axis);
-        out.witness = Some(witness);
+        record(&mut out, axis, witness);
     }
     Ok(out)
+}
+
+fn record(out: &mut Report, axis: usize, exact: [[BigRational; 2]; 2]) {
+    let mut floating = [[0.; 2]; 2];
+    let mut representable = true;
+    for i in 0..2 {
+        for j in 0..2 {
+            match exact[i][j].to_f64() {
+                Some(x) if BigRational::from_f64(x).as_ref() == Some(&exact[i][j]) => {
+                    floating[i][j] = x
+                }
+                _ => representable = false,
+            }
+        }
+    }
+    out.status = Status::Present;
+    out.reflected_axis = Some(axis);
+    out.witness = representable.then_some(floating);
+    out.exact_witness = Some(exact);
 }

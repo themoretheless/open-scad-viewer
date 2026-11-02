@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "testsPassed": 31,
+  "newTests": 3,
+  "updatedTest": "Previously unrepresentable local witness now has Present with exact normalized coordinates 1/12 and 1/4; floating witness remains absent",
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Rust exact normalized rational witness for all admitted reflections; binary64 witness only on lossless conversion; shifted domains and both axes",
+  "apiChange": "Report adds exact_witness; Present may have witness=None and exact_witness=Some. Existing binary64 fields are retained.",
+  "remaining": "General non-reflection intersections, periodic charts, complete branch enumeration and transport/editor integration remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface.rs": "03d31c66526a575737577b1be99669761f69d04703f3f85025b90468c0d018d9",
+    "crates/nurbs-core/src/intersection/self_surface/local_fold.rs": "65d52b852b5c7cfacb4e780aeeffb715b8d918921c336356ddb5e630ddf0e8c8",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "251e547ecffb51c2a6d24d2e6362393e61d6ec7e53124a4a6f8a055ea1810d09"
+  }
+}

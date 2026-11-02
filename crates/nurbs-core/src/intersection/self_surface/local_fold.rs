@@ -2,7 +2,7 @@
 use super::*;
 mod exact_span;
 
-pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[f64; 2]; 2])> {
+pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[BigRational; 2]; 2])> {
     let q = |x| BigRational::from_f64(x).unwrap();
     let mut visited = 0;
     for axis in 0..2 {
@@ -50,8 +50,7 @@ pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[f64; 2]; 2
             }
             let domain_start = q(knots[degree]);
             let width = q(knots[count]) - &domain_start;
-            let mut witness = [[0.5; 2]; 2];
-            let mut representable = true;
+            let mut witness = std::array::from_fn(|_| std::array::from_fn(|_| q(0.5)));
             for (i, numerator) in [
                 q(a) * BigRational::from_integer(3.into()) + q(b),
                 q(a) + q(b) * BigRational::from_integer(3.into()),
@@ -61,19 +60,9 @@ pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[f64; 2]; 2
             {
                 let normalized =
                     (numerator / BigRational::from_integer(4.into()) - &domain_start) / &width;
-                let Some(value) = normalized.to_f64() else {
-                    representable = false;
-                    break;
-                };
-                if q(value) != normalized || value <= 0. || value >= 1. {
-                    representable = false;
-                    break;
-                }
-                witness[i][axis] = value;
+                witness[i][axis] = normalized;
             }
-            if representable {
-                return Some((axis, witness));
-            }
+            return Some((axis, witness));
         }
     }
     None

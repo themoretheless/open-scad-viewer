@@ -187,9 +187,17 @@ fn local_fold_is_detected_without_global_reflection() {
 fn local_fold_does_not_round_an_unrepresentable_normalized_witness() {
     let mut s = local_fold();
     s.knots_u = vec![0., 0., 0., 1., 1., 3., 3., 3.];
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert!(r.witness.is_none());
+    let exact = r.exact_witness.unwrap();
     assert_eq!(
-        surface_self_intersection::inspect(&s, 100).unwrap().status,
-        Status::Unresolved
+        exact[0][0],
+        num_rational::BigRational::new(1.into(), 12.into())
+    );
+    assert_eq!(
+        exact[1][0],
+        num_rational::BigRational::new(1.into(), 4.into())
     );
 }
 
@@ -369,4 +377,57 @@ fn rational_projective_fold_is_proven_on_v_axis() {
     let r = surface_self_intersection::inspect(&s, 100).unwrap();
     assert_eq!(r.status, Status::Present);
     assert_eq!(r.witness, Some([[0.5, 0.25], [0.5, 0.75]]));
+}
+
+#[test]
+fn non_dyadic_v_witness_is_preserved_exactly() {
+    use num_rational::BigRational as Q;
+    let mut s = local_fold();
+    s.knots_u = vec![-2., -2., -2., -1., -1., 1., 1., 1.];
+    s.control_points = (0..2)
+        .map(|j| (0..5).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..5).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert!(r.witness.is_none());
+    let w = r.exact_witness.unwrap();
+    assert_eq!(
+        w[0],
+        [Q::new(1.into(), 2.into()), Q::new(1.into(), 12.into())]
+    );
+    assert_eq!(
+        w[1],
+        [Q::new(1.into(), 2.into()), Q::new(1.into(), 4.into())]
+    );
+}
+#[test]
+fn binary64_witness_is_also_backed_by_an_exact_pair() {
+    use num_traits::FromPrimitive;
+    let r = surface_self_intersection::inspect(&projective_fold(), 100).unwrap();
+    let f = r.witness.unwrap();
+    let q = r.exact_witness.unwrap();
+    for i in 0..2 {
+        for j in 0..2 {
+            assert_eq!(
+                num_rational::BigRational::from_f64(f[i][j]).unwrap(),
+                q[i][j]
+            );
+        }
+    }
+}
+#[test]
+fn absent_and_unresolved_reports_do_not_carry_a_witness() {
+    let absent = surface_self_intersection::inspect(&graph(), 100).unwrap();
+    assert_eq!(absent.status, Status::Absent);
+    assert!(absent.witness.is_none() && absent.exact_witness.is_none());
+    let mut s = multispan_fold();
+    s.knots_u = vec![0., 0., 0., 0.25, 0.75_f64.next_up(), 1., 1., 1.];
+    let unresolved = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(unresolved.status, Status::Unresolved);
+    assert!(unresolved.witness.is_none() && unresolved.exact_witness.is_none());
 }
