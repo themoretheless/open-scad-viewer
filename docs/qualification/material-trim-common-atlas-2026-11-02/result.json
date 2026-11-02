@@ -1,0 +1,57 @@
+{
+  "implementation": "632aca39b3ffb4a967851fffd4311684e6b42b52",
+  "frozenInputs": 6609,
+  "sourceInputsUnchangedThroughoutFullRun": true,
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "c2_bowl::unified",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "summary": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2085 filtered out; finished in 1.72s"
+      ],
+      "log": "common-atlas-focused.log.gz"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "-p",
+        "nurbs-core",
+        "-p",
+        "brep-core",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "summary": [
+        "test result: ok. 2083 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 672.45s",
+        "test result: ok. 131 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 2068 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 56.05s"
+      ],
+      "log": "native-full.log.gz",
+      "packagesInLogOrder": [
+        "brep-core",
+        "cad-predicates",
+        "nurbs-core"
+      ]
+    }
+  ],
+  "whitespaceCheck": "git diff --check passed",
+  "wasmBrowserStepRemoteCiQualified": false
+}

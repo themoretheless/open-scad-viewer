@@ -1,0 +1,33 @@
+{
+  "previousQualification": "../ordinary-g1-vertex-2026-11-02/QUALIFICATION.md",
+  "changedInputs": [
+    "crates/brep-core/src/lib.rs",
+    "crates/brep-core/src/source_contour_proposal/proposal.rs",
+    "crates/brep-core/src/source_face_contacts.rs",
+    "crates/brep-core/src/source_paired_fiber_contact.rs",
+    "crates/brep-core/src/source_pole_tangency/graph.rs",
+    "crates/brep-core/src/source_pole_tangency/star_boundary.rs",
+    "crates/brep-core/src/source_seam_tangency.rs",
+    "crates/brep-core/src/source_seam_tangency/body.rs",
+    "crates/brep-core/src/source_seam_tangency/collection.rs",
+    "crates/brep-core/src/source_seam_tangency/vertices.rs",
+    "crates/brep-core/src/source_support_shell/tests/c2_bowl.rs",
+    "crates/brep-core/src/source_vertex_contact/proposal.rs",
+    "crates/brep-core/src/source_volume/regularity/smooth.rs",
+    "crates/cad-predicates/src/lib.rs"
+  ],
+  "newInputs": [
+    "crates/brep-core/src/source_contour_proposal/proposal/rectangle.rs",
+    "crates/brep-core/src/source_curved_boundary_contact.rs",
+    "crates/brep-core/src/source_paired_projection_contact.rs",
+    "crates/brep-core/src/source_seam_tangency/vertices/poles.rs",
+    "crates/brep-core/src/source_support_shell/tests/c2_bowl/unified.rs",
+    "crates/brep-core/src/source_support_shell/tests/c2_bowl/unified/model.rs",
+    "crates/brep-core/src/source_volume/regularity/smooth/stratified.rs",
+    "crates/cad-predicates/src/paired_graph_projection.rs",
+    "crates/cad-predicates/src/paired_graph_projection/curve.rs",
+    "crates/cad-predicates/src/paired_graph_projection/curve/tests.rs",
+    "crates/cad-predicates/src/paired_graph_projection/tests.rs"
+  ],
+  "removedInputs": []
+}
