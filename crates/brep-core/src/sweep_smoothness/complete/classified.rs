@@ -119,9 +119,13 @@ pub fn inspect(model: &Model, classes: &[Class], limits: Limits) -> Result<Repor
         };
         let left = model.faces[*a].surface.clone();
         let mut right = model.faces[*b].surface.clone();
-        if ad != bd && !reverse_along(&mut right, bb) {
-            out.reason = "classified-boundary-clock-unproven";
-            return Ok(out);
+        if ad != bd {
+            let (accepted, used) = reverse_along(&mut right, bb, limits.exact_work - out.exact_work)?;
+            out.exact_work += used;
+            if !accepted {
+                out.reason = "classified-boundary-clock-unproven";
+                return Ok(out);
+            }
         }
         let start = patches.len();
         patches.push(left);
@@ -163,9 +167,9 @@ pub fn inspect(model: &Model, classes: &[Class], limits: Limits) -> Result<Repor
         let proof = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
             &patches,
             &seams,
-            limits.exact_work,
+            limits.exact_work - out.exact_work,
         )?;
-        out.exact_work = proof.exact_work;
+        out.exact_work += proof.exact_work;
         let proven = proof.certified;
         out.proof = Some(proof);
         if !proven {

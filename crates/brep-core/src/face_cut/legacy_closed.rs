@@ -115,7 +115,7 @@ pub(crate) fn closed_with_budget(
         .chain(face.holes.iter().copied())
         .map(|w| curves(&source.loops[w].coedges))
         .collect::<Vec<_>>();
-    if audit(&original, tolerance_uv, &mut cells, &mut pairs, max_cells)? != Some(true) {
+    if audit(&original, tolerance_uv, &mut cells, &mut pairs, max_cells, 100000)? != Some(true) {
         return Err(unproven(
             "Original closed-cut trim region is not valid and positive",
         ));
@@ -127,7 +127,7 @@ pub(crate) fn closed_with_budget(
         vec![curves(&forward)],
     ];
     for region in &regions {
-        if audit(region, tolerance_uv, &mut cells, &mut pairs, max_cells)? != Some(true) {
+        if audit(region, tolerance_uv, &mut cells, &mut pairs, max_cells, 100000)? != Some(true) {
             return Err(unproven(
                 "Closed cut is not simple, positive and strictly inside the original outer trim",
             ));
@@ -140,7 +140,7 @@ pub(crate) fn closed_with_budget(
         for side in 0..2 {
             let mut trial = regions[side].clone();
             trial.push(h.clone());
-            valid[side] = audit(&trial, tolerance_uv, &mut cells, &mut pairs, max_cells)?;
+            valid[side] = audit(&trial, tolerance_uv, &mut cells, &mut pairs, max_cells, 100000)?;
         }
         let side = match valid {
             [Some(true), Some(false)] => 0,

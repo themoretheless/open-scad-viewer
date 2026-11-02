@@ -220,7 +220,7 @@ fn operand(
                 return Err(fail("cut path has no unique current original-face sector"));
             }
             let result = if closed {
-                crate::face_cut::partition_closed(&p.model, candidates[0], &path, 1e-10, 100_000)
+                crate::face_cut::closed_with_budget(&p.model, candidates[0], &path, 1e-10, 100_000, 1_000_000)
                     .map_err(|e| {
                         fail(&format!(
                             "closed cut operand={side} original={original}: {}",
