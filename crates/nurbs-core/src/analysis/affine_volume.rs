@@ -14,11 +14,20 @@ use std::collections::BTreeMap;
 /// Three matrix columns followed by translation; all values are literal source
 /// coefficients, not interval samples or caller-supplied successful proofs.
 pub type Pose = [[f64; 3]; 4];
+mod graph_translation;
+mod material_plane;
 mod rational;
+mod separable;
+mod source_shear;
+pub use material_plane::{
+    MaterialPlaneChart, MaterialPlaneInspection, MaterialPlaneReport, inspect_material_plane,
+};
 pub use rational::{
     ColumnFactor, PreconditionedReport, ProofCoordinates, RationalPiece, certify_rational,
-    certify_rational_preconditioned, jacobian_orientation_rational,
+    certify_rational_preconditioned, certify_rational_preconditioned_window,
+    jacobian_orientation_rational, normalize_uv_window,
 };
+pub use source_shear::SourceShearReport;
 #[derive(Clone, Copy)]
 enum Motion<'a> {
     Quintic(&'a [[Pose; 6]]),
@@ -29,6 +38,12 @@ impl<'a> Motion<'a> {
         match self {
             Self::Quintic(p) => p.len(),
             Self::Rational(p) => p.len(),
+        }
+    }
+    fn controls(self, i: usize) -> &'a [Pose] {
+        match self {
+            Self::Quintic(p) => &p[i],
+            Self::Rational(p) => &p[i].controls,
         }
     }
     fn valid(self) -> bool {
@@ -126,10 +141,12 @@ fn union(a: &mut EnclosedPose, b: EnclosedPose) -> Result<()> {
 }
 struct Context<'a> {
     carrier: &'a Surface,
+    uv_window: [[f64; 2]; 2],
     origin: [f64; 3],
     pieces: Motion<'a>,
     poses: BTreeMap<[u64; 2], EnclosedPose>,
     coordinates: Option<ProofCoordinates>,
+    separable: Option<separable::Carrier>,
 }
 impl Context<'_> {
     fn temporal(
@@ -185,9 +202,30 @@ impl Context<'_> {
         }
         out.cells += 1;
         out.boxes += 1;
-        let Some(mut q) = charts::cap_jets(self.carrier, [b[0], b[1]], &mut out.cells, max)? else {
+        let mut query = [b[0], b[1]];
+        let mut widths = [I::point(1.); 2];
+        for k in 0..2 {
+            if self.uv_window[k] != [0., 1.] {
+                widths[k] = I::point(self.uv_window[k][1]).sub(I::point(self.uv_window[k][0]))?;
+                let q = I::point(self.uv_window[k][0])
+                    .add(widths[k].mul(I::new(b[k][0], b[k][1])?)?)?
+                    .intersect(self.uv_window[k][0], self.uv_window[k][1])?;
+                query[k] = [q.lo, q.hi];
+            }
+        }
+        let jets = if let Some(carrier) = &self.separable {
+            carrier.enclose(query, &mut out.cells, max)?
+        } else {
+            charts::cap_jets(self.carrier, query, &mut out.cells, max)?
+        };
+        let Some(mut q) = jets else {
             return Ok(Enclosed::Unavailable(None));
         };
+        for k in 0..2 {
+            if self.uv_window[k] != [0., 1.] {
+                q[k + 1] = iv::scale(q[k + 1], widths[k])?;
+            }
+        }
         // Strong rational weights can make a wide carrier jet box ambiguous
         // before time enters the problem. Refine its original UV chart first;
         // the turning-source time heuristic must not endlessly split only t.
@@ -203,8 +241,14 @@ impl Context<'_> {
             .as_ref()
             .and_then(|c| c.column_factor.as_ref())
         {
-            for jet in &mut q {
-                jet[f.base] = jet[f.base].add(jet[f.dependent].mul(I::point(f.scale))?)?;
+            if f.dependent == 3 {
+                // Translation = scale * A_base + constant shifts only the
+                // carrier value, never either carrier derivative.
+                q[0][f.base] = q[0][f.base].add(I::point(f.scale))?;
+            } else {
+                for jet in &mut q {
+                    jet[f.base] = jet[f.base].add(jet[f.dependent].mul(I::point(f.scale))?)?;
+                }
             }
         }
         let Some(pose) = self.temporal(b[2], out, max)? else {
@@ -240,6 +284,38 @@ pub fn certify(
         max_exact_work,
     )
 }
+/// Original quintic affine volume with exact paired source conditioning and
+/// the same exhaustive open/closed atlas as the rational entry point.
+pub fn certify_preconditioned(
+    carrier: &Surface,
+    origin: [f64; 3],
+    pieces: &[[Pose; 6]],
+    closed: bool,
+    projection: [[f64; 3]; 3],
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<PreconditionedReport> {
+    let mut coordinates = None;
+    let mut source_shear = None;
+    let volume = certify_motion_impl(
+        carrier,
+        origin,
+        Motion::Quintic(pieces),
+        closed,
+        projection,
+        max_cells,
+        max_exact_work,
+        true,
+        &mut coordinates,
+        &mut source_shear,
+        [[0., 1.]; 2],
+    )?;
+    Ok(PreconditionedReport {
+        volume,
+        coordinates,
+        source_shear,
+    })
+}
 fn certify_motion(
     carrier: &Surface,
     origin: [f64; 3],
@@ -259,6 +335,8 @@ fn certify_motion(
         max_exact_work,
         false,
         &mut None,
+        &mut None,
+        [[0., 1.]; 2],
     )
 }
 fn certify_motion_impl(
@@ -271,6 +349,8 @@ fn certify_motion_impl(
     max_exact_work: u64,
     precondition: bool,
     coordinates: &mut Option<ProofCoordinates>,
+    source_shear_report: &mut Option<SourceShearReport>,
+    uv_window: [[f64; 2]; 2],
 ) -> Result<IdealVolumeReport> {
     carrier.validate()?;
     check(
@@ -286,6 +366,9 @@ fn certify_motion_impl(
                 .iter()
                 .chain(projection.iter().flatten())
                 .all(|x| x.is_finite() && x.abs() <= 1e9)
+            && uv_window.iter().all(|w| {
+                w[0].is_finite() && w[1].is_finite() && 0. <= w[0] && w[0] < w[1] && w[1] <= 1.
+            })
             && pieces.valid(),
         "Invalid affine filled-volume inputs or budgets",
     )?;
@@ -322,12 +405,51 @@ fn certify_motion_impl(
             }
         }
     }
+    let source_shear = if precondition && out.cells < max_cells {
+        match source_shear::prepare(carrier, origin, pieces, &mut out.exact_work, max_exact_work) {
+            Ok(value) => value,
+            Err(()) => {
+                out.reason = Some("affine-volume-source-shear-work-limit");
+                return Ok(out);
+            }
+        }
+    } else {
+        None
+    };
+    let (carrier, origin, pieces) = if let Some(s) = &source_shear {
+        *source_shear_report = Some(s.report.clone());
+        (&s.carrier, s.origin, s.motion())
+    } else {
+        (carrier, origin, pieces)
+    };
+    if graph_translation::certify(carrier, pieces, closed, &mut out, max_cells, max_exact_work)? {
+        return Ok(out);
+    }
+    let separated = if source_shear.is_some()
+        && carrier
+            .weights
+            .iter()
+            .flatten()
+            .any(|w| *w != carrier.weights[0][0])
+    {
+        match separable::prepare(carrier, &mut out.exact_work, max_exact_work) {
+            Ok(value) => value,
+            Err(()) => {
+                out.reason = Some("affine-volume-separable-weight-work-limit");
+                return Ok(out);
+            }
+        }
+    } else {
+        None
+    };
     let mut context = Context {
+        uv_window,
         carrier,
         origin,
         pieces,
         poses: BTreeMap::new(),
         coordinates: None,
+        separable: separated,
     };
     if precondition && out.cells < max_cells {
         // A single native proposal from ORIGINAL point jets. Its invertibility
@@ -445,11 +567,13 @@ fn orientation_motion(
         return Ok(out);
     }
     let mut context = Context {
+        uv_window: [[0., 1.]; 2],
         carrier,
         origin,
         pieces,
         poses: BTreeMap::new(),
         coordinates: None,
+        separable: None,
     };
     if let Enclosed::Value(e) = context.enclose(point.map(|x| [x, x]), &mut work, max_cells)? {
         let d = iv::dot_tight(e.columns[0], iv::cross(e.columns[1], e.columns[2])?)?;
@@ -473,4 +597,6 @@ fn orientation_motion(
 mod tests;
 
 /// Original-value enclosure shared by native volume owners. No refitted pose.
-pub(crate) fn original_rational_pose(p:&RationalPiece,t:I)->Result<EnclosedPose> { rational::pose_on(p,t,1) }
+pub(crate) fn original_rational_pose(p: &RationalPiece, t: I) -> Result<EnclosedPose> {
+    rational::pose_on(p, t, 1)
+}

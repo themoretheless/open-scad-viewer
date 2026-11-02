@@ -1,9 +1,9 @@
-//! Coverage of the tolerant (numerical SSI) Boolean through the public API:
+//! Coverage of the explicit numerical SSI candidate API (not topology authority):
 //! operand matrix, volume identities, cross-validation against exact
 //! families, rigid-motion and operand-order invariance, multi-body and
 //! genus-changing results, the stated tolerance audited on every fitted
 //! edge, and explicit refusals.
-use brep_core::tolerant_boolean::{self, TOLERANT_FLOOR};
+use brep_core::tolerant_boolean::{self, TOLERANT_FLOOR, boolean as candidate_boolean};
 use brep_core::{
     Model, analysis::mass_properties, boolean, cuboid, cylinder, sphere, torus, transform,
 };
@@ -96,9 +96,9 @@ fn euler_characteristic(model: &Model) -> i64 {
 /// Runs the three operations, validates, audits tolerance and checks the
 /// volume identities `|A∪B| = |A| + |B| - |A∩B|` and `|A-B| = |A| - |A∩B|`.
 fn identities(a: &Model, b: &Model, what: &str) -> [Model; 3] {
-    let union = boolean(a, b, "union").unwrap();
-    let difference = boolean(a, b, "difference").unwrap();
-    let intersection = boolean(a, b, "intersection").unwrap();
+    let union = candidate_boolean(a, b, "union").unwrap();
+    let difference = candidate_boolean(a, b, "difference").unwrap();
+    let intersection = candidate_boolean(a, b, "intersection").unwrap();
     for (op, m) in [
         ("union", &union),
         ("difference", &difference),
@@ -234,22 +234,22 @@ fn tolerant_path_agrees_with_exact_families() {
 fn operand_order_and_rigid_motion_do_not_change_volumes() {
     let c = cylinder(3., 10.).unwrap();
     let s = translate(&sphere(2.).unwrap(), [2.5, 0.4, 5.]);
-    let v_union = volume(&boolean(&c, &s, "union").unwrap());
-    let v_int = volume(&boolean(&c, &s, "intersection").unwrap());
+    let v_union = volume(&candidate_boolean(&c, &s, "union").unwrap());
+    let v_int = volume(&candidate_boolean(&c, &s, "intersection").unwrap());
     near(
-        volume(&boolean(&s, &c, "union").unwrap()),
+        volume(&candidate_boolean(&s, &c, "union").unwrap()),
         v_union,
         2e-3,
         "union commutes",
     );
     near(
-        volume(&boolean(&s, &c, "intersection").unwrap()),
+        volume(&candidate_boolean(&s, &c, "intersection").unwrap()),
         v_int,
         2e-3,
         "intersection commutes",
     );
     near(
-        volume(&boolean(&s, &c, "difference").unwrap()),
+        volume(&candidate_boolean(&s, &c, "difference").unwrap()),
         volume(&s) - v_int,
         2e-3,
         "swapped difference identity",
@@ -262,13 +262,13 @@ fn operand_order_and_rigid_motion_do_not_change_volumes() {
         let rc = rigid(&c, axis, degrees, at);
         let rs = rigid(&s, axis, degrees, at);
         near(
-            volume(&boolean(&rc, &rs, "union").unwrap()),
+            volume(&candidate_boolean(&rc, &rs, "union").unwrap()),
             v_union,
             2e-3,
             "union under rigid motion",
         );
         near(
-            volume(&boolean(&rc, &rs, "intersection").unwrap()),
+            volume(&candidate_boolean(&rc, &rs, "intersection").unwrap()),
             v_int,
             2e-3,
             "intersection under rigid motion",
@@ -277,16 +277,15 @@ fn operand_order_and_rigid_motion_do_not_change_volumes() {
 }
 
 #[test]
-
 #[cfg(feature = "codec")]
 fn tolerance_is_stated_bounded_and_honest() {
     let c = cylinder(3., 10.).unwrap();
     let s = translate(&sphere(2.).unwrap(), [2.5, 0.4, 5.]);
-    let m = boolean(&c, &s, "difference").unwrap();
+    let m = candidate_boolean(&c, &s, "difference").unwrap();
     assert!(m.tolerance_mm >= TOLERANT_FLOOR);
     assert!(m.tolerance_mm <= 1e-2);
-    // Exact inputs keep the kernel tolerance; the fallback is the only path
-    // that raises it.
+    // These are explicitly requested numerical candidates. Standard Boolean
+    // no longer raises its tolerance by falling back to this proposal API.
     assert!(c.tolerance_mm < TOLERANT_FLOOR && s.tolerance_mm < TOLERANT_FLOOR);
     audit_tolerance(&m);
     // Serialization round-trip keeps the stated tolerance.
@@ -299,18 +298,18 @@ fn tolerance_is_stated_bounded_and_honest() {
 fn results_chain_into_further_booleans() {
     let c = cylinder(3., 10.).unwrap();
     let s = translate(&sphere(2.).unwrap(), [2.5, 0.4, 5.]);
-    let dimpled = boolean(&c, &s, "difference").unwrap();
+    let dimpled = candidate_boolean(&c, &s, "difference").unwrap();
     // A second, exact-capable cut on a tolerant body still resolves (through
     // the tolerant path, since the body is no longer canonical).
     // (Not [-2.4, 0.3, 3]: there the sphere's +y vertex would sit exactly on
     // the wall, 2.4² + 1.8² = 9, a vertex contact the trace refuses.)
     let s2 = translate(&sphere(1.5).unwrap(), [-2.4, 0.35, 3.1]);
-    let twice = boolean(&dimpled, &s2, "difference").unwrap();
+    let twice = candidate_boolean(&dimpled, &s2, "difference").unwrap();
     twice.validate().unwrap();
     audit_tolerance(&twice);
     near(
         volume(&twice),
-        volume(&dimpled) - volume(&boolean(&dimpled, &s2, "intersection").unwrap()),
+        volume(&dimpled) - volume(&candidate_boolean(&dimpled, &s2, "intersection").unwrap()),
         2e-3,
         "second cut identity",
     );
@@ -354,7 +353,8 @@ fn containment_and_separation_through_the_tolerant_path() {
 fn short_cylinder_with_a_wall_sphere_as_in_the_solid_workspace() {
     let c = cylinder(3., 5.).unwrap();
     let s = translate(&sphere(2.).unwrap(), [2.5, 0.4, 2.5]);
-    let m = boolean(&c, &s, "difference").unwrap_or_else(|e| panic!("{} {}", e.code, e.message));
+    let m = candidate_boolean(&c, &s, "difference")
+        .unwrap_or_else(|e| panic!("{} {}", e.code, e.message));
     assert!(m.tolerance_mm >= TOLERANT_FLOOR);
     audit_tolerance(&m);
 }
@@ -365,7 +365,7 @@ fn an_operand_vertex_on_the_other_surface_is_refused_not_guessed() {
     // (2.4² + 1.8² = 9): the intersection passes through a vertex.
     let c = cylinder(3., 10.).unwrap();
     let s = translate(&sphere(1.5).unwrap(), [-2.4, 0.3, 3.]);
-    let err = boolean(&c, &s, "difference").unwrap_err();
+    let err = candidate_boolean(&c, &s, "difference").unwrap_err();
     assert_eq!(err.code, "BREP_UNSUPPORTED_OPERATION");
 }
 
@@ -383,7 +383,11 @@ fn degenerate_contacts_are_refused_explicitly() {
     // A torus at the origin meets the box exactly along its seams.
     let b = cuboid([0., 0., 0.], [10., 10., 10.]).unwrap();
     let err = boolean(&b, &torus(4., 1.).unwrap(), "union").unwrap_err();
-    assert!(err.message.contains("coincident"), "{}", err.message);
+    assert!(
+        err.code == "BREP_NURBS_BOOLEAN_UNPROVED" || err.message.contains("coincident"),
+        "{}",
+        err.message
+    );
 }
 
 #[test]
@@ -399,7 +403,7 @@ fn many_placements_never_panic_and_always_validate_or_refuse() {
             let z = 1. + j as f64 * 2.9;
             let s = translate(&sphere(1.7).unwrap(), [x, 0.35, z]);
             for op in ["union", "difference", "intersection"] {
-                match boolean(&c, &s, op) {
+                match candidate_boolean(&c, &s, op) {
                     Ok(model) => {
                         model.validate().unwrap();
                         if model.tolerance_mm >= TOLERANT_FLOOR {
@@ -424,4 +428,19 @@ fn many_placements_never_panic_and_always_validate_or_refuse() {
         solved >= 40,
         "most generic placements must resolve, solved {solved}"
     );
+}
+
+#[test]
+fn standard_boolean_never_promotes_an_unproved_numeric_crossing() {
+    let c = cylinder(3., 10.).unwrap();
+    let s = translate(&sphere(2.).unwrap(), [2.5, 0.4, 5.]);
+    for operation in ["union", "intersection", "difference"] {
+        assert_eq!(
+            boolean(&c, &s, operation).unwrap_err().code,
+            "BREP_NURBS_BOOLEAN_UNPROVED"
+        );
+        let candidate = candidate_boolean(&c, &s, operation).unwrap();
+        candidate.validate().unwrap();
+        assert!(candidate.tolerance_mm >= TOLERANT_FLOOR);
+    }
 }

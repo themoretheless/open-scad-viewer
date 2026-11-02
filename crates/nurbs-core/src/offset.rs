@@ -15,6 +15,9 @@ pub mod curve_offset;
 pub mod curve_offset_join;
 pub mod curve_offset_wire;
 pub mod surface_offset;
+pub mod freeform;
+pub mod freeform_blend;
+pub mod profile_corner;
 /// Surface-pair fillet surfaces: rolling-ball, variable-radius, chordal,
 /// G2 and hold-line fillets built on offset-surface intersection marching.
 pub mod fillet_surfaces;

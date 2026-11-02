@@ -16,7 +16,7 @@ fn fixture(curved: bool) -> CornerCollars {
         ],
     )
 }
-fn fixture_at(curved: bool, vertices: [[f64; 2]; 6]) -> CornerCollars {
+fn fixture_at<const N: usize>(curved: bool, vertices: [[f64; 2]; N]) -> CornerCollars {
     let s = Surface {
         degree_u: 2,
         degree_v: 2,
@@ -45,8 +45,8 @@ fn fixture_at(curved: bool, vertices: [[f64; 2]; 6]) -> CornerCollars {
         periodic_v: false,
     };
     let mut boundaries = Vec::new();
-    for i in 0..6 {
-        let pc = Curve::from_polyline(vec![vertices[i].to_vec(), vertices[(i + 1) % 6].to_vec()])
+    for i in 0..N {
+        let pc = Curve::from_polyline(vec![vertices[i].to_vec(), vertices[(i + 1) % N].to_vec()])
             .unwrap();
         let direction = [0.001, 0.001];
         let built =
@@ -59,7 +59,7 @@ fn fixture_at(curved: bool, vertices: [[f64; 2]; 6]) -> CornerCollars {
             .point
             .to_vec();
         *curve.control_points.last_mut().unwrap() = s
-            .evaluate(vertices[(i + 1) % 6][0], vertices[(i + 1) % 6][1])
+            .evaluate(vertices[(i + 1) % N][0], vertices[(i + 1) % N][1])
             .unwrap()
             .point
             .to_vec();
@@ -484,4 +484,65 @@ fn inconsistent_hard_anchors_and_excessive_anchor_count_refuse() {
             .is_err()
         );
     }
+}
+
+fn inspect_polygon_graph<const N:usize>(vertices:[[f64;2];N]) {
+    let collars=fixture_at(true,vertices);
+    let graph=r::propose_central_graph(&collars,options()).unwrap();
+    assert_eq!(graph.pcurves.len(),N);
+    let proof=r::inspect_central_graph_correlated(&collars,&graph,[[1,0,0],[0,1,0]],
+        [1e-7,1e-5,1e-4],100000,1000000,100_000_000).unwrap();
+    if !proof.admitted {
+        let c=&collars.boundaries[0];
+        let diagnosis=nurbs_core::surface_g2_pcurves::inspect_owned_graph(&c.curve,[&c.original_pcurve,&graph.pcurves[0]],
+            [&c.original_surface,&graph.surface],[1e-7,1e-5,1e-4],proof.seams[0].positions.cells+1,1000000,500_000_000).unwrap();
+        eprintln!("one-cell N={N} cells={}, position_cells={}, work={}, accepted={}, reason={:?}",diagnosis.owned.report.geometric.cells,
+            diagnosis.owned.report.positions.cells,diagnosis.coefficient_work,diagnosis.accepted_cells,diagnosis.last_unresolved_reason);
+    }
+    assert!(proof.admitted,"N={N}, rim={}, interior={}, seams={:?}",proof.rim.proven_simple,proof.interior.certified,
+        proof.seams.iter().map(|s|(s.positions.proven,s.geometric.decision)).collect::<Vec<_>>());
+    assert_eq!(proof.seams.len(),N);
+    let trimmed=r::trim_central_graph(&cad_predicates::ToleranceContext::default_valid(),&collars,&graph,1e-8,
+        brep_core::trimmed_face_recipe::Limits{pairs:10000,region_cells:100000,domain_cells:100000,agreement_cells:100000}).unwrap();
+    let face=trimmed.face.expect("actual polygon trim must qualify");
+    assert_eq!(face.edges().len(),N);
+    let mut model=brep_core::Model::empty(1e-7).unwrap();
+    model.vertices=face.vertices().to_vec();model.edges=face.edges().to_vec();
+    model.loops=face.loops().to_vec();model.faces=vec![face.face().clone()];
+    let curvature=brep_core::face_curvature::inspect(&model,0,10.,1e-8,
+        brep_core::face_curvature::Limits{cells:10000,domain_cells:100000,shape_cells:100000},&[]).unwrap();
+    assert_eq!(curvature.decision,brep_core::face_curvature::Decision::Within,"N={N}: {}",curvature.reason);
+    assert!(curvature.absolute_curvature_upper.unwrap()<=10.);
+    eprintln!("polygon sides={N}, complete_g2_seams={}, curvature_upper_per_mm={:.12}, coefficient_work={}",proof.seams.len(),curvature.absolute_curvature_upper.unwrap(),proof.coefficient_work);
+    // Actual geometry is re-inspected; neither a saved sampled residual nor
+    // the successful source-collar receipts can admit a moved central patch.
+    let mut changed=graph;
+    for row in &mut changed.surface.control_points {for p in row {p[2]+=0.01;}}
+    changed.sampled_jet_residual=[0.;6];
+    assert!(!r::inspect_central_graph_correlated(&collars,&changed,[[1,0,0],[0,1,0]],
+        [1e-7,1e-5,1e-4],100000,1000000,100_000_000).unwrap().admitted);
+}
+#[test]
+fn five_seven_eight_sided_curved_graphs_have_full_g2_and_curvature_covers() {
+    let scaled=|p:[f64;2]|p.map(|x|x/16.);
+    inspect_polygon_graph([[2.,2.],[12.,2.],[14.,8.],[8.,14.],[2.,12.]].map(scaled));
+    inspect_polygon_graph([[2.,2.],[8.,1.],[13.,3.],[14.,8.],[11.,13.],[5.,14.],[1.,9.]].map(scaled));
+    inspect_polygon_graph([[4.,2.],[12.,2.],[14.,4.],[14.,12.],[12.,14.],[4.,14.],[2.,12.],[2.,4.]].map(scaled));
+}
+#[test]
+fn polygon_graph_side_counts_and_mismatched_trim_data_refuse() {
+    let mut collars=fixture(false);
+    collars.boundaries.truncate(2);
+    assert!(r::propose_central_graph(&collars,options()).is_err());
+    let mut collars=fixture(false);
+    while collars.boundaries.len()<17 {
+        let extra=fixture(false).boundaries.remove(0);
+        collars.boundaries.push(extra);
+    }
+    assert!(r::propose_central_graph(&collars,options()).is_err());
+    let collars=fixture(false);
+    let mut graph=r::propose_central_graph(&collars,options()).unwrap();
+    graph.pcurves.pop();
+    assert!(r::inspect_central_graph(&collars,&graph,[[1,0,0],[0,1,0]],
+        [1e-7,1e-5,1e-4],100000,1000000).is_err());
 }

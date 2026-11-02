@@ -1,0 +1,34 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |node| tests/exactFullRoundScene.test.ts (7 tests | 1 failed) 43479ms
+     × publishes two mapped exact outputs with distinct scene and snapshot ownership 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/exactFullRoundScene.test.ts > exact Full Round scene on qualified real WASM > publishes two mapped exact outputs with distinct scene and snapshot ownership
+SemanticProgramValidationError: E_SEMANTIC_IDENTITY at $.core.result.items[1].identityOccurrence: output identity must belong to the producing evaluation branch and node lineage
+ ❯ fail src/services/semanticProgramValidator/fail.ts:7:9
+      5|
+      6| export function fail(code: SemanticProgramDiagnosticCode, path: string…
+      7|   throw new SemanticProgramValidationError(code, path, detail)
+       |         ^
+      8| }
+      9|
+ ❯ validateOutputRef src/services/semanticProgramValidator/isChildrenExpansionContinuation.ts:372:5
+ ❯ src/services/semanticProgramValidator/validateResult.ts:47:22
+ ❯ validateResult src/services/semanticProgramValidator/validateResult.ts:46:11
+ ❯ validateCore src/services/semanticProgramValidator/validateSemanticProgramV1.ts:78:23
+ ❯ validateSemanticProgramV1 src/services/semanticProgramValidator/validateSemanticProgramV1.ts:128:3
+ ❯ normalizeSemanticProgram src/services/semanticProgramValidator/validateSemanticProgramV1.ts:260:3
+ ❯ lowerOpenSCADToSemanticProgramUnchecked src/services/openscadSemanticLowerer/lowerOpenSCADToSemanticProgramUnchecked.ts:153:19
+ ❯ Module.lowerOpenSCADToSemanticProgram src/services/semanticProgramLowerer.ts:17:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  09:43:30
+   Duration  44.85s (transform 937ms, setup 0ms, import 1.20s, tests 43.48s, environment 0ms)
+

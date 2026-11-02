@@ -18,7 +18,7 @@ import type {
   SemanticProgramBackend,
   SemanticRuntimeValue,
 } from './semanticProgramExecutor'
-import { backendError, carrierKey, isSupportedCarrier, matrix3FromMatrix4, requirePayload, safeDelete } from './manifoldPlanBackend/inspectManifoldPlanPayload'
+import { backendError, unsupportedBrepNode, carrierKey, isSupportedCarrier, matrix3FromMatrix4, requirePayload, safeDelete } from './manifoldPlanBackend/inspectManifoldPlanPayload'
 export { inspectManifoldPlanPayload, analyzeManifoldPlanSolid, loadManifoldPlanBackend } from './manifoldPlanBackend/inspectManifoldPlanPayload'
 
 const PRESERVING_EVIDENCE = Object.freeze({ tag: 'representation-preserving' as const })
@@ -331,14 +331,12 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         const input = requirePayload(inputs[0], 2, node)
         return this.kernel.offset(input.handle, node.distance)
       }
+      case 'full-round-exact':
       case 'sphere-analytic':
       case 'cylinder-analytic':
       case 'circle-analytic':
       case 'rotate-extrude-analytic':
-        throw backendError(
-          'E_MANIFOLD_PLAN_UNSUPPORTED',
-          `${node.kind} is an analytic B-rep operation and cannot be executed by the mesh-only Manifold backend`,
-        )
+        return unsupportedBrepNode(node)
     }
   }
 

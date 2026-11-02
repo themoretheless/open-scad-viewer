@@ -159,6 +159,10 @@ pub(crate) fn reexpress(source: &Model, placed: &mut Model) -> Result<()> {
                 for point in &mut uv.control_points {
                     *point = axes.map(|axis| point[axis]).to_vec();
                 }
+                // This gate proves the original edge/pcurve are matching
+                // Bezier representations. Reexpress UV coordinates while
+                // preserving the independent authored pcurve clock and trims.
+                uv.knots = coedge.pcurve.knots.clone();
                 updates.push((wire, slot, uv));
             }
             if !admitted {

@@ -17,6 +17,48 @@ pub fn cap_region(
     max_cells: usize,
     max_exact: u64,
 ) -> Result<SurfaceCap> {
+    cap_impl(
+        source,
+        selected,
+        surface,
+        None,
+        tolerance_uv,
+        max_cells,
+        max_exact,
+    )
+}
+/// Use authored pcurve proposals in each original edge's forward clock. Every
+/// actual rim edge must occur exactly once. Original incidence still selects
+/// the rim; complete lift, shared endpoint edits, trim and closure are rechecked.
+/// A proposal never supplies a positive geometry receipt.
+pub fn cap_region_with_pcurves(
+    source: &Model,
+    selected: &[usize],
+    surface: &Surface,
+    pcurves: &[(usize, nurbs_core::curve::Curve)],
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<SurfaceCap> {
+    cap_impl(
+        source,
+        selected,
+        surface,
+        Some(pcurves),
+        tolerance_uv,
+        max_cells,
+        max_exact,
+    )
+}
+fn cap_impl(
+    source: &Model,
+    selected: &[usize],
+    surface: &Surface,
+    pcurves: Option<&[(usize, nurbs_core::curve::Curve)]>,
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<SurfaceCap> {
     source.validate()?;
     surface.validate()?;
     if !(1..=256).contains(&selected.len())
@@ -71,6 +113,19 @@ pub fn cap_region(
     if !(3..=256).contains(&rim.len()) {
         return Err(refused("Cap needs a bounded single outer rim"));
     }
+    if let Some(proposals) = pcurves {
+        if proposals.len() != rim.len()
+            || proposals.iter().map(|p| p.0).collect::<BTreeSet<_>>()
+                != rim.keys().copied().collect()
+        {
+            return Err(refused(
+                "Authored cap proposals must cover every original rim edge exactly once",
+            ));
+        }
+        for (_, pc) in proposals {
+            pc.validate()?;
+        }
+    }
     let first = *rim.keys().next().unwrap();
     let start = source.edges[first].vertices[usize::from(rim[&first])];
     let mut vertex = start;
@@ -90,24 +145,29 @@ pub fn cap_region(
         if cells == max_cells {
             return Err(refused("Shared cap projection work exhausted"));
         }
-        let projected = nurbs_core::curve_pullback::project(
-            &source.edges[edge].curve,
-            surface,
-            nurbs_core::curve_pullback::Limits {
-                tolerance: source.tolerance_mm / 2.,
-                max_segments: 256,
-                max_iterations: 32,
-                agreement_cells: max_cells - cells,
-            },
-        )?;
-        cells += projected.agreement_cells;
-        if !projected.within_tolerance {
-            return Err(refused("Complete owned cap edge misses the authored chart"));
-        }
-        let mut pc = projected
-            .pcurve
-            .ok_or_else(|| refused("Missing saved cap pcurve"))?;
+        let mut pc = if let Some(proposals) = pcurves {
+            proposals.iter().find(|p| p.0 == edge).unwrap().1.clone()
+        } else {
+            let projected = nurbs_core::curve_pullback::project(
+                &source.edges[edge].curve,
+                surface,
+                nurbs_core::curve_pullback::Limits {
+                    tolerance: source.tolerance_mm / 2.,
+                    max_segments: 256,
+                    max_iterations: 32,
+                    agreement_cells: max_cells - cells,
+                },
+            )?;
+            cells += projected.agreement_cells;
+            if !projected.within_tolerance {
+                return Err(refused("Complete owned cap edge misses the authored chart"));
+            }
+            projected
+                .pcurve
+                .ok_or_else(|| refused("Missing saved cap pcurve"))?
+        };
         if pc.periodic
+            || pc.control_points[0].len() != 2
             || !pc.knots[..=pc.degree].iter().all(|&k| k == pc.domain()[0])
             || !pc.knots[pc.control_points.len()..]
                 .iter()

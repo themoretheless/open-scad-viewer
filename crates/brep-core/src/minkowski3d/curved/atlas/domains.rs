@@ -4,7 +4,12 @@ use super::*;
 use crate::profile_certificate::{atlas_roots as roots, ExactRatio, ParameterBranchDecomposition};
 mod algebra;
 mod complex;
+mod query;
 use algebra::Bi;
+pub(super) use query::locate;
+pub use query::{
+    check_algebraic_domain_atlas, DomainEvaluation, DomainLocation, VerifiedDomainAtlas,
+};
 pub type DomainPolynomial = Vec<Vec<ExactRatio>>;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DomainVertex {
@@ -55,7 +60,7 @@ pub struct AlgebraicDomainAtlas {
     pub partitions: Vec<DomainPartition>,
     pub seams: Vec<DomainSeam>,
 }
-fn partition(cuts: &[DomainPolynomial]) -> Result<DomainPartition> {
+pub(super) fn partition(cuts: &[DomainPolynomial]) -> Result<DomainPartition> {
     if cuts.len() > 4 {
         return Err(fail("algebraic atlas per-chart cut budget exceeded"));
     }
@@ -67,6 +72,73 @@ fn partition(cuts: &[DomainPolynomial]) -> Result<DomainPartition> {
     let arrangement = roots::arrangement_branches(&joint)?;
     complex::assemble(cuts, &decoded, arrangement)
 }
+pub(super) fn partition_factorized(
+    cut: &DomainPolynomial,
+    factors: &[DomainPolynomial],
+) -> Result<DomainPartition> {
+    let decoded = algebra::decode(cut)?;
+    let factors = factors
+        .iter()
+        .map(algebra::decode)
+        .collect::<Result<Vec<_>>>()?;
+    let mut work = Work::default();
+    let mut product = vec![vec![Q::one()]];
+    for factor in &factors {
+        product = algebra::product(&product, factor, &mut work)?;
+    }
+    if product != decoded {
+        return Err(fail(
+            "algebraic region factors do not equal the complete source equation",
+        ));
+    }
+    let mut all = vec![
+        vec![vec![Q::zero()], vec![Q::one()]],
+        vec![vec![Q::one()], vec![-Q::one()]],
+        vec![vec![Q::one(), -Q::one()], vec![-Q::one()]],
+    ];
+    all.extend(factors);
+    // Enforce the same total source joint-degree budget before projection.
+    algebra::joint(&[decoded.clone()])?;
+    let arrangement = roots::arrangement_factored_branches(&all)?;
+    complex::assemble(&[cut.clone()], &[decoded], arrangement)
+}
+
+/// Complete factor witness for the joint source cuts plus triangle boundary.
+pub(super) fn partition_cut_factors(
+    cuts: &[DomainPolynomial],
+    factors: &[DomainPolynomial],
+) -> Result<DomainPartition> {
+    if cuts.len() > 4 || factors.len() > 13 {
+        return Err(fail("model pocket arrangement count budget exceeded"));
+    }
+    let decoded = cuts
+        .iter()
+        .map(algebra::decode)
+        .collect::<Result<Vec<_>>>()?;
+    let expected = algebra::joint(&decoded)?;
+    let mut all = vec![
+        vec![vec![Q::zero()], vec![Q::one()]],
+        vec![vec![Q::one()], vec![-Q::one()]],
+        vec![vec![Q::one(), -Q::one()], vec![-Q::one()]],
+    ];
+    all.extend(
+        factors
+            .iter()
+            .map(algebra::decode)
+            .collect::<Result<Vec<_>>>()?,
+    );
+    let mut product = vec![vec![Q::one()]];
+    let mut work = Work::default();
+    for factor in &all {
+        product = algebra::product(&product, factor, &mut work)?;
+    }
+    if product != expected {
+        return Err(fail("model pocket factors omit a joint source cut"));
+    }
+    let arrangement = roots::arrangement_factored_branches(&all)?;
+    complex::assemble(cuts, &decoded, arrangement)
+}
+
 fn source(m: &Model, depth: u8, cuts: &[Vec<DomainPolynomial>]) -> Result<String> {
     if cuts.is_empty() || cuts.len() > 1024 {
         return Err(fail("algebraic atlas cut request shape budget exceeded"));

@@ -1,0 +1,21 @@
+{
+  "recorded_at_utc": "2026-10-30T17:32:06.082456+00:00",
+  "meaning": "Source identity frozen after clean tests and clippy, before informed source creation. Not formal clean-room certification.",
+  "validation": [
+    "cargo test: 12 integration tests passed",
+    "cargo clippy --all-targets -- -D warnings: passed"
+  ],
+  "files": {
+    "SPEC.md": "3acfff6aa42ab61de5750b66680e9b261c39e1cb103d2bdc4f59c0d0c8a72997",
+    "clean/Cargo.toml": "cb3fd18fa05976f591db6627c6663cbc4be4892c94396225e49402868578058d",
+    "clean/README.md": "23ad8b5e62a2956169f158ce6da0b915289c2f8fa1700aab3655fdfcdf0acb2c",
+    "clean/src/boolean.rs": "1757c2279c6802edcd0c4fc861a8a89ac844db82d0cb674fce625311eddd4698",
+    "clean/src/curve.rs": "ba6d8b0bbce8c8d46d84a96863dc014d0b1b89664162a845670f1f9e8fac4845",
+    "clean/src/lib.rs": "6f3b6949715f9978044e299357e580a002e4825bee881a5465c785a6bfb403a4",
+    "clean/src/math.rs": "e88da9658a2a9d4eed6a4b4e8152486520d7022d8229d3c569df8e9776991ae7",
+    "clean/src/mesh.rs": "b7ed87db33ca0c7287cfe684ddde19b8f3bab551719052586c67012e030bab7e",
+    "clean/src/profile.rs": "93307f38e089345c18aab25ae3c9d389a7ca19ac400ed8fa1c147ff319188bbc",
+    "clean/src/surface.rs": "17857ab3d7239a0355722bcd0d051cf0159daad2c41ac9568433ebb117d5ab41",
+    "clean/tests/geometry.rs": "ef4494f23ac9544006b5539fd6a5276c38f6016200f0ad29bfdf53e48bb2bf72"
+  }
+}

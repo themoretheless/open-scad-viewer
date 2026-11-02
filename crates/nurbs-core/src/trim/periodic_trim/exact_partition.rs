@@ -31,11 +31,10 @@ impl ExactPartitionIdentity {
 fn prove(source: &Curve, partition: &Report, max_work: u64) -> Result<(bool, u64)> {
     source.validate()?;
     check(
-        !source.periodic
-            && source.control_points[0].len() == 2
+        source.control_points[0].len() == 2
             && max_work <= cad_predicates::MAX_WORK
             && (1..=256).contains(&partition.pieces.len()),
-        "Exact partition needs bounded nonperiodic UV source and pieces",
+        "Exact partition needs bounded original UV source and nonperiodic pieces",
     )?;
     let mut end = source.domain()[0];
     for p in &partition.pieces {

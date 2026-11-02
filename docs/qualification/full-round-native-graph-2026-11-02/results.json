@@ -1,0 +1,109 @@
+{
+  "status": "native semantic DAG exact Full Round enabled; high-level ModelGraph/schema/package integration remains open",
+  "rust_tests_passed": 15,
+  "rust_tests": {
+    "full_round_exact_graph": 4,
+    "brep_session_tests": 11
+  },
+  "wasm_abi_cases_passed": 6,
+  "source_sha256": {
+    "crates/geometry-bridge/src/lib.rs": "5dcb61a8ea85caa735f6747f947ded7b5b223cc5eb47f1210ecfe01564481d42",
+    "crates/geometry-bridge/src/brep_semantic.rs": "cc79fc53b2a07e5bf1b766cb9f445c8c7a9fae30b6c48a615824157da75a81be",
+    "crates/geometry-bridge/src/brep_session.rs": "9e5c4d1135bee0f6052732f878ca24c274ab9b701dd0448732580cacbd4b55a7",
+    "crates/geometry-bridge/src/brep_exact_full_round.rs": "55058de8350335daa3f78812764e643e9a7db3d01399757c56fc2ec06827110b",
+    "crates/geometry-bridge/tests/full_round_exact_graph.rs": "fd81d00378b80417f8ebf398a64cb9925e7058fac31eefbeeeae877d402b4d28",
+    "scripts/check-full-round-exact-graph-wasm.mts": "247372f8a1b6b6f1a35e469cc26cc875aba698e556cf794487927f2b5ef5c06f"
+  },
+  "node_kind": "full-round-exact",
+  "carrier": {
+    "geometryKind": "solid",
+    "space": "d3",
+    "representation": "rational-brep",
+    "evidence": {
+      "tag": "representation-preserving"
+    }
+  },
+  "coverage": [
+    "unary indexed source node -> native material-admitted rational result",
+    "public brep_graph router and committed snapshot own entire frozen artifact",
+    "fresh native recipe verification before publishing exact result lease",
+    "full artifact charged to character and byte budgets",
+    "wrong carrier, legacy primitive cast and zero material budget refuse",
+    "legacy transform refuses exact payload with BREP_UNSUPPORTED_SEMANTIC",
+    "existing session ownership/release/commit/empty/budget regression tests"
+  ],
+  "transaction_note": "failed direct Session.evaluate preserves prior entries until close/abort; failed session cannot publish or commit; public Runner aborts on failure",
+  "wasm": {
+    "schema": "full-round-exact-native-graph-wasm/1",
+    "passed": true,
+    "cases": [
+      {
+        "name": "public-graph-exact-result",
+        "ok": true,
+        "elapsedMs": 1171.095542
+      },
+      {
+        "name": "full-artifact-character-limit",
+        "ok": false,
+        "elapsedMs": 1113.2388329999999,
+        "error": {
+          "code": "BREP_SEMANTIC_BUDGET",
+          "message": "B-rep execution exceeds its aggregate retained geometry snapshot limit"
+        }
+      },
+      {
+        "name": "wrong-output-carrier",
+        "ok": false,
+        "elapsedMs": 3.3450419999999212,
+        "error": {
+          "code": "GEOMETRY_INVALID_INPUT",
+          "message": "Full Round exact node requires its native-admitted exact solid carrier"
+        }
+      },
+      {
+        "name": "legacy-primitive-cannot-claim-rational",
+        "ok": false,
+        "elapsedMs": 1.0650829999999587,
+        "error": {
+          "code": "GEOMETRY_INVALID_INPUT",
+          "message": "Expected native admitted exact-rational solid result"
+        }
+      },
+      {
+        "name": "material-budget-refusal",
+        "ok": false,
+        "elapsedMs": 98.58662499999991,
+        "error": {
+          "code": "BREP_PROFILE_CERTIFICATE_UNPROVEN",
+          "message": "Exact material pair projection budget exhausted"
+        }
+      },
+      {
+        "name": "no-legacy-transform-cast",
+        "ok": false,
+        "elapsedMs": 1106.505458,
+        "error": {
+          "code": "BREP_UNSUPPORTED_SEMANTIC",
+          "message": "This operation does not consume exact-rational topology"
+        }
+      }
+    ],
+    "wasmPath": "/tmp/rea-full-round-wasm/wasm32-unknown-unknown/debug/geometry_wasm.wasm",
+    "wasmSha256": "20c3db1d2ae0a1226a182b1bbef51afadc2d7510e4bbc41ed3c3fb512a427f21",
+    "wasmBytes": 45537950,
+    "scope": "Public native DAG via actual WASM ABI. High-level ModelGraph/semantic frontend schemas and packaged app kernel are not qualified."
+  },
+  "retained_qualified_wasm": "/tmp/rea-full-round-qualified/20c3db1d2ae0a1226a182b1bbef51afadc2d7510e4bbc41ed3c3fb512a427f21.wasm",
+  "checks": [
+    "11 frozen clean files unchanged",
+    "API map passed: 242 roots, 200 catalog entries; not parity"
+  ],
+  "open": [
+    "high-level SemanticProgram/ModelGraph node union, schema, capability closure and lowering",
+    "NURBS graph frontend/resolver/result and exact display/edit/exchange consumers",
+    "general operations accepting rational output; current legacy transforms/Booleans refuse",
+    "persistent edge/vertex/loop source history and occurrence stability",
+    "packaged source-bound kernel, actual application worker integration and full regressions",
+    "complete initial native-library parity"
+  ]
+}

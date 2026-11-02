@@ -64,10 +64,16 @@ export default defineConfig({
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
             { name: 'direct-commands', test: /src[\\/]features[\\/]directModeler[\\/]use(CommandPalette|Primitives)\.ts$/, includeDependenciesRecursively: false },
+            { name: 'runout-controls', test: /src[\\/]components[\\/]RunoutControls\.vue(?:\?|$)/, includeDependenciesRecursively: false },
             { name: 'round-solid-options', test: /src[\\/](components[\\/]RoundSolidOptions\.vue(?:\?|$)|services[\\/]primitiveCreationError\.ts$)/, includeDependenciesRecursively: false },
             { name: 'sweep-viewport-evidence', test: /src[\\/]services[\\/]sweepViewportEvidence\.ts$/, includeDependenciesRecursively: false },
             { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
             // The declarative command inventory is shared by the entry and help panels.
+            // Result validation is shared by the CAD client and worker adapters.
+            // Keep its dependencies independently cacheable instead of merging
+            // the full validator into the client lifecycle chunk.
+            { name: 'main-solid-protocol', test: /src[\\/]services[\\/]mainSolidProtocol\.ts$/, includeDependenciesRecursively: false },
+            { name: 'main-solid-results', test: /src[\\/]services[\\/]mainSolidProtocol[\\/]mainSolidResult\.ts$/, includeDependenciesRecursively: false },
             { name: 'command-registry', test: /src[\\/]services[\\/]commandRegistry\.ts$/, includeDependenciesRecursively: false },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },

@@ -1,5 +1,6 @@
-//! Tolerant Boolean fallback: numerical surface/surface intersection with a
-//! stated tolerance, for operand pairs the exact analytic matrix refuses.
+//! Explicit numerical NURBS Boolean candidates with a stated tolerance.
+//! Standard Boolean does not grant this path topology-change authority when
+//! the exact intersection/material proofs refuse.
 //!
 //! Every face pair whose control hulls overlap is traced: seeds on the first
 //! face are projected onto the second by Gauss-Newton, each converged seed
@@ -15,8 +16,10 @@
 //! against the other solid's exact surfaces and assembled through
 //! `imprint_assembly`.
 //!
-//! This path never claims exactness: the result carries its tolerance, and
-//! the caller can tell it apart from an exact result by that field.
+//! The legacy `boolean` reports a tolerance estimated from sampled residuals.
+//! `nurbs_boolean_continuous_candidate` additionally requires whole-interval
+//! boundary agreement at an explicit requested tolerance. Neither path proves
+//! complete SS branch coverage or Boolean material classification.
 use crate::imprint_assembly::{Assembler, ChartVertices, EKey, VKey, face_reversed};
 use crate::imprint_pipeline::{self, SpatialRelation};
 use crate::uv_regions::{Piece, pcurve_point};
@@ -45,3 +48,11 @@ mod unsupported;
 pub use boolean::*;
 pub(crate) use tracer::*;
 use unsupported::*;
+
+#[cfg(feature = "codec")]
+mod continuous;
+#[cfg(feature = "codec")]
+pub use continuous::{
+    ContinuousNurbsBooleanCandidate, EvidenceScope, NurbsBooleanBoundaryEvidence,
+    nurbs_boolean_continuous_candidate, verify_nurbs_boolean_boundary_candidate,
+};

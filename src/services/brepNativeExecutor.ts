@@ -9,7 +9,8 @@ import {BrepSemanticBackendError} from './brepSemanticErrors'
 import {requireTrustedSemanticLowering,type SemanticLoweringSuccess} from './semanticProgramLowerer'
 import {checkSemanticExecutionControl,SemanticProgramExecutionError,type SemanticExecutionControl} from './semanticProgramExecutor'
 
-type Geometry={kind:'solid';model:NurbsBrep}|{kind:'profile';profile:BrepProfile}
+export type ExactRationalBrepGeometry={kind:'solid';representation:'rational-brep';model:Readonly<{format:'exact-rational-nurbs-brep/1'} & Record<string,unknown>>;artifact:Readonly<Record<string,unknown>>}
+type Geometry={kind:'solid';representation?:never;model:NurbsBrep}|ExactRationalBrepGeometry|{kind:'profile';profile:BrepProfile}
 type NativeValue={tag:'empty';valueType:SemanticValueType}|{tag:'value';valueType:SemanticValueType;geometry:Geometry}
 type NativeFailure={tag:'failed';node:number|null;code:string;message:string}
 interface NativeCommit {tag:'committed';outcomes:NativeValue[];resultItems:{reference:SemanticOutputRef;outcomeIndex:number}[]}

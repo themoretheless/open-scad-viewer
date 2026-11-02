@@ -216,3 +216,71 @@ fn distinct_parameter_roots_are_retained_even_at_the_same_world_position() {
         );
     }
 }
+
+fn joined_rational(reverse: bool) -> Curve {
+    Curve {
+        degree: 2,
+        knots: vec![-3., -3., -3., 2., 7., 7., 7.],
+        control_points: [-1., -0.5, 0.5, 1.]
+            .into_iter()
+            .map(|z| vec![0.3, 0.4, if reverse { -z } else { z }])
+            .collect(),
+        weights: vec![1., 1.125, 1.125, 1.],
+        periodic: false,
+    }
+}
+#[test]
+fn monotone_rational_root_on_original_c1_knot_is_owned_once() {
+    for reverse in [false, true] {
+        let c = joined_rational(reverse);
+        let s = surface(false);
+        let before = (c.clone(), s.clone());
+        let r = certified_curve_surface::intersections(&c, &s, 4096).unwrap();
+        assert!(r.complete, "{r:?}");
+        assert_eq!(r.roots.len(), 1);
+        let root = &r.roots[0];
+        assert_eq!(
+            root.proof,
+            certified_curve_surface::RootProof::MonotoneAffinePlane
+        );
+        assert_eq!(root.parameter_box[0], [2., 2.]);
+        assert_eq!(root.crossing_sign, if reverse { -1 } else { 1 });
+        assert!(root.position_bounds[2][0] <= 0. && root.position_bounds[2][1] >= 0.);
+        assert!(r.cells <= 4096);
+        assert_eq!((c, s), before);
+    }
+}
+#[test]
+fn original_knot_plane_proof_does_not_admit_boundary_or_exhausted_work() {
+    let mut c = joined_rational(false);
+    for p in &mut c.control_points {
+        p[0] = 0.;
+    }
+    let r = certified_curve_surface::intersections(&c, &surface(false), 64).unwrap();
+    assert!(!r.complete && !r.unresolved.is_empty(), "{r:?}");
+    let r = certified_curve_surface::intersections(&joined_rational(false), &surface(false), 1)
+        .unwrap();
+    assert!(!r.complete && !r.unresolved.is_empty(), "{r:?}");
+    assert!(r.cells <= 1);
+}
+
+#[test]
+fn internal_c0_corner_is_not_promoted_to_smooth_transverse_root() {
+    let c = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 0.5, 0.5, 1., 1., 1.],
+        control_points: [-1., -0.5, 0., 0.5, 1.]
+            .into_iter()
+            .map(|z| vec![0.3, 0.4, z])
+            .collect(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let r = certified_curve_surface::intersections(&c, &surface(false), 64).unwrap();
+    assert!(!r.complete && !r.unresolved.is_empty(), "{r:?}");
+    assert!(
+        r.roots
+            .iter()
+            .all(|r| r.proof != certified_curve_surface::RootProof::MonotoneAffinePlane)
+    );
+}

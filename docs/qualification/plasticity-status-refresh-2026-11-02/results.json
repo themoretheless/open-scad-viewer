@@ -1,0 +1,18 @@
+{
+  "status": "remaining plan refreshed; full parity remains active and incomplete",
+  "nativeEarlierSelectionTests": 3,
+  "nativeHistoryRegressions": 8,
+  "bridgeTests": 4,
+  "rawAbiCases": 17,
+  "installedAbiCases": 17,
+  "installedSha256": "1a70b8d7c3c94767c70df5c99b4a5fcc136161151df4a12cbf8a67cbe40ce99c",
+  "installedBytes": 16334881,
+  "browserWorkersStarted": 7,
+  "browserWorkersTerminated": 7,
+  "cleanFilesUnchanged": 11,
+  "architectureGate": "failed: 7 files; exact audit retained",
+  "scope": "Focused Full Round/history verification on actual current artifacts; no whole-kernel or Plasticity runtime parity claim",
+  "remainingPlan": "docs/design/plasticity-remaining-2026-11-02.md",
+  "installedPackageReplaced": false,
+  "currentTypecheck": "passed"
+}

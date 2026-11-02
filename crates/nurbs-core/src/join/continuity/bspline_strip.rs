@@ -39,6 +39,7 @@ fn identity(
     independent_basis: bool,
     allow_nonlinear: bool,
     max_work: u64,
+    map: Option<&crate::curve::Curve>,
 ) -> Result<(BezierIdentity, u64, bool)> {
     let mut values = Vec::new();
     let mut offsets = [0; 2];
@@ -64,6 +65,15 @@ fn identity(
         along_at[side] = values.len();
         values.extend_from_slice(boundary.along(s).2);
     }
+    let map_offsets = map.map(|m| {
+        let controls = values.len();
+        for (p, w) in m.control_points.iter().zip(&m.weights) {
+            values.extend([p[0], *w]);
+        }
+        let knots = values.len();
+        values.extend_from_slice(&m.knots);
+        (controls, knots)
+    });
     let si = values.len();
     values.push(1.);
     let mut authored = values
@@ -112,7 +122,7 @@ fn identity(
         None,
     );
     let mut affine_position = false;
-    let mut proof = if independent_basis {
+    let mut proof = if independent_basis || map.is_some() {
         let along_refs = [(a, ab), (b, bb)]
             .into_iter()
             .enumerate()
@@ -122,17 +132,43 @@ fn identity(
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        cad_predicates::rational_bspline_independent_strip_jet_identity(
-            &mut ctx,
-            [&a_refs, &b_refs],
-            [&ak, &bk],
-            [ab.cross(a).0, bb.cross(b).0],
-            ls,
-            source.leaf(si).unwrap(),
-            order,
-            [&along_refs[0], &along_refs[1]],
-            [ab.along(a).0, bb.along(b).0],
-        )
+        if let Some(m) = map {
+            let (ci, ki) = map_offsets.unwrap();
+            let controls = (0..m.control_points.len())
+                .map(|i| std::array::from_fn(|k| source.leaf(ci + 2 * i + k).unwrap()))
+                .collect::<Vec<_>>();
+            let knots = (0..m.knots.len())
+                .map(|i| source.leaf(ki + i).unwrap())
+                .collect::<Vec<_>>();
+            cad_predicates::rational_bspline_mapped_strip_jet_identity(
+                &mut ctx,
+                [&a_refs, &b_refs],
+                [&ak, &bk],
+                [ab.cross(a).0, bb.cross(b).0],
+                ls,
+                source.leaf(si).unwrap(),
+                order,
+                [&along_refs[0], &along_refs[1]],
+                [ab.along(a).0, bb.along(b).0],
+                cad_predicates::BsplineParameterMap {
+                    controls: &controls,
+                    knots: &knots,
+                    degree: m.degree,
+                },
+            )
+        } else {
+            cad_predicates::rational_bspline_independent_strip_jet_identity(
+                &mut ctx,
+                [&a_refs, &b_refs],
+                [&ak, &bk],
+                [ab.cross(a).0, bb.cross(b).0],
+                ls,
+                source.leaf(si).unwrap(),
+                order,
+                [&along_refs[0], &along_refs[1]],
+                [ab.along(a).0, bb.along(b).0],
+            )
+        }
     } else {
         cad_predicates::rational_bspline_projective_strip_jet_identity_with_position(
             &mut ctx,
@@ -150,7 +186,8 @@ fn identity(
         })
     }
     .map_err(|e| crate::input(e.to_string()))?;
-    if allow_nonlinear
+    if map.is_none()
+        && allow_nonlinear
         && !affine_position
         && !independent_basis
         && !propose_exact_scale
@@ -166,7 +203,7 @@ fn identity(
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        proof = cad_predicates::rational_bspline_independent_strip_jet_identity(
+        proof = cad_predicates::rational_bspline_nonlinear_strip_jet_identity(
             &mut ctx,
             [&a_refs, &b_refs],
             [&ak, &bk],
@@ -338,6 +375,7 @@ fn source_joins(
                 false,
                 false,
                 max_work - *work,
+                None,
             )?;
             *work += used;
             if proof != BezierIdentity::Equal
@@ -362,6 +400,43 @@ pub(super) fn inspect(
     scalar: Option<AuthoredScalar>,
     allow_nonlinear: bool,
 ) -> Result<ExactStripJetReport> {
+    inspect_impl(
+        a,
+        b,
+        ab,
+        bb,
+        order,
+        scale,
+        max_work,
+        scalar,
+        allow_nonlinear,
+        None,
+    )
+}
+pub(super) fn inspect_mapped(
+    a: &Surface,
+    b: &Surface,
+    ab: Boundary,
+    bb: Boundary,
+    order: usize,
+    scale: f64,
+    max_work: u64,
+    map: &crate::curve::Curve,
+) -> Result<ExactStripJetReport> {
+    inspect_impl(a, b, ab, bb, order, scale, max_work, None, true, Some(map))
+}
+fn inspect_impl(
+    a: &Surface,
+    b: &Surface,
+    ab: Boundary,
+    bb: Boundary,
+    order: usize,
+    scale: f64,
+    max_work: u64,
+    scalar: Option<AuthoredScalar>,
+    allow_nonlinear: bool,
+    map: Option<&crate::curve::Curve>,
+) -> Result<ExactStripJetReport> {
     let mut out = ExactStripJetReport {
         certified: false,
         exact_identity: false,
@@ -376,7 +451,11 @@ pub(super) fn inspect(
     {
         return Ok(out);
     }
-    let (common, used) = same_basis(a, b, ab, bb, max_work)?;
+    let (common, used) = if map.is_some() {
+        (false, 0)
+    } else {
+        same_basis(a, b, ab, bb, max_work)?
+    };
     out.work += used;
     if !common && !allow_nonlinear {
         return Ok(out);
@@ -410,6 +489,7 @@ pub(super) fn inspect(
         !common,
         allow_nonlinear,
         max_work - out.work,
+        map,
     )?;
     out.affine_parameter_identity = position;
     out.work += used;
@@ -435,3 +515,6 @@ pub(super) fn inspect(
 }
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod mapped_tests;

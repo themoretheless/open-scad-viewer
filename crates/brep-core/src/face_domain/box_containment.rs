@@ -103,6 +103,51 @@ pub fn inspect_box_containment(
             "UV loop containment in the natural support is unproven",
         )?;
     }
+    // Positive rational tensor bases form a convex combination of authored
+    // poles on the complete natural support. Min/max comparisons are exact;
+    // no sampling, trim-band enlargement or denominator approximation is used.
+    let positive = s.weights.iter().flatten().all(|w| w.is_finite() && *w > 0.);
+    let hull_cells = usize::from(max_cells > 0 && positive);
+    if hull_cells > 0 {
+        let bounds = std::array::from_fn(|k| {
+            [
+                s.control_points
+                    .iter()
+                    .flatten()
+                    .map(|p| p[k])
+                    .fold(f64::INFINITY, f64::min),
+                s.control_points
+                    .iter()
+                    .flatten()
+                    .map(|p| p[k])
+                    .fold(f64::NEG_INFINITY, f64::max),
+            ]
+        });
+        if contained(bounds, target) {
+            return Ok(BoxContainment {
+                decision: BoxDecision::Within,
+                cells: 1,
+                domain_cells: 0,
+                covered_cells: 1,
+                omitted_cells: 0,
+                witness_uv: None,
+                witness_bounds: None,
+            });
+        }
+    }
+    let affine_hull =
+        super::affine_trim_hull::inspect(model, face, target, max_cells - hull_cells)?;
+    if affine_hull.within {
+        return Ok(BoxContainment {
+            decision: BoxDecision::Within,
+            cells: hull_cells + affine_hull.cells,
+            domain_cells: 0,
+            covered_cells: 1,
+            omitted_cells: 0,
+            witness_uv: None,
+            witness_bounds: None,
+        });
+    }
     let intervals = |knots: &[f64], degree: usize, n: usize| {
         (degree..n)
             .filter(|&i| knots[i] < knots[i + 1])
@@ -117,7 +162,7 @@ pub fn inspect_box_containment(
     }
     let mut out = BoxContainment {
         decision: BoxDecision::Unresolved,
-        cells: 0,
+        cells: hull_cells + affine_hull.cells,
         domain_cells: 0,
         covered_cells: 0,
         omitted_cells: 0,

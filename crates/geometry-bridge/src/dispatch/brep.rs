@@ -43,6 +43,7 @@ const OPS: &[&str] = &[
     "brep_closed_patch_network",
     "brep_g2_surface_bridge",
     "brep_g2_runout_surface",
+    "brep_source_graph_g2_preview",
     "brep_geometric_g2_audit",
     "brep_g2_annular_cylinder",
 
@@ -80,6 +81,7 @@ fn handle(v: Value) -> Result<Value> {
         "brep_closed_patch_network" => cad_geometric_g2::create_closed_patch_network(v),
         "brep_g2_surface_bridge" => cad_geometric_g2::create_surface_bridge(v),
         "brep_g2_runout_surface" => cad_runout::create(v),
+        "brep_source_graph_g2_preview" => cad_runout::source_graph_preview(v),
         "brep_geometric_g2_audit" => cad_geometric_g2::diagnose(v),
         "brep_g2_annular_cylinder" => cad_geometric_g2::create_annular_cylinder(v),
 

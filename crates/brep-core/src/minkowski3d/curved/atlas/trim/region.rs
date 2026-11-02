@@ -102,7 +102,33 @@ fn boundary_spans(c: &crate::Curve, work: &mut Work) -> Result<Vec<Vec<sb::H>>> 
     }
     Ok(spans)
 }
+// Refinement changes only the proposed chart partition. Every retry retains
+// exact homogeneous curves and must pass the same global disk-chain proof.
 pub(super) fn charts(m: &Model, face: usize, work: &mut Work) -> Result<Vec<Net>> {
+    for level in 0..=2 {
+        match charts_refined(m, face, level, work) {
+            Err(error) if level < 2 && error.message.contains("UV disk Jacobian is unproved") => {}
+            result => return result,
+        }
+    }
+    unreachable!()
+}
+fn bisect(h: &[sb::H]) -> (Vec<sb::H>, Vec<sb::H>) {
+    let mut row = h.to_vec();
+    let mut left = vec![row[0].clone()];
+    let mut right = vec![row.last().unwrap().clone()];
+    while row.len() > 1 {
+        row = row
+            .windows(2)
+            .map(|p| std::array::from_fn(|k| (&p[0][k] + &p[1][k]) / integer(2)))
+            .collect();
+        left.push(row[0].clone());
+        right.push(row.last().unwrap().clone());
+    }
+    right.reverse();
+    (left, right)
+}
+fn charts_refined(m: &Model, face: usize, level: usize, work: &mut Work) -> Result<Vec<Net>> {
     let f = &m.faces[face];
     let mut curves = BTreeMap::<Edge, Vec<sb::H>>::new();
     let mut rings = Vec::<Vec<P>>::new();
@@ -113,7 +139,7 @@ pub(super) fn charts(m: &Model, face: usize, work: &mut Work) -> Result<Vec<Net>
         .enumerate()
     {
         let edges = &m.loops[l].coedges;
-        if edges.len() < 3 || edges.len() > 64 || vertices.len() + edges.len() > 128 {
+        if edges.is_empty() || edges.len() > 64 || vertices.len() + edges.len() > 128 {
             return Err(fail("trim region boundary budget exceeded"));
         }
         let mut ring = Vec::new();
@@ -121,10 +147,31 @@ pub(super) fn charts(m: &Model, face: usize, work: &mut Work) -> Result<Vec<Net>
         let mut first = None;
         let mut spans = Vec::new();
         for e in edges {
-            spans.extend(boundary_spans(&e.pcurve, work)?);
+            let mut pieces = boundary_spans(&e.pcurve, work)?;
+            if e.pcurve.degree > 1 {
+                for _ in 0..level {
+                    work.charge(pieces.iter().map(|h| h.len() * h.len()).sum())?;
+                    pieces = pieces
+                        .iter()
+                        .flat_map(|h| {
+                            let (a, b) = bisect(h);
+                            [a, b]
+                        })
+                        .collect();
+                }
+            }
+            spans.extend(pieces);
             if spans.len() > 64 || vertices.len() + spans.len() > 128 {
                 return Err(fail("trim region split boundary budget exceeded"));
             }
+        }
+        // A wire can have two (or one closed) multispan coedges. The chord
+        // triangulation needs three actual span vertices, not three coedges.
+        // All complete-curve isotopy, joining and orientation proofs follow.
+        if spans.len() < 3 {
+            return Err(fail(
+                "trim region needs at least three authored span chords",
+            ));
         }
         for (ei, h) in spans.into_iter().enumerate() {
             let (a, b) = (sb::point(&h[0]), sb::point(h.last().unwrap()));
@@ -423,15 +470,17 @@ mod tests {
             }
         }
         let points = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]].map(|p| p.map(integer));
-        assert!(certify(
-            &m,
-            0,
-            &curves,
-            &points,
-            &[0, 1, 2, 0, 2, 3],
-            &mut Work::default()
-        )
-        .is_err());
+        assert!(
+            certify(
+                &m,
+                0,
+                &curves,
+                &points,
+                &[0, 1, 2, 0, 2, 3],
+                &mut Work::default()
+            )
+            .is_err()
+        );
         assert!(certify(&m, 0, &curves, &points, &[0, 2, 1], &mut Work::default()).is_err());
         assert!(certify(&m, 0, &curves, &points, &[0, 1, 99], &mut Work::default()).is_err());
     }

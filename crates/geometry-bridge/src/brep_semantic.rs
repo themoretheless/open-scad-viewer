@@ -12,6 +12,9 @@ fn model(value: &Value) -> Result<brep_core::Model> {
     if value["kind"].as_str() != Some("solid") {
         return Err(input("Expected solid semantic operand"));
     }
+    if value["model"]["format"].as_str()==Some("exact-rational-nurbs-brep/1") {
+        return Err(unsupported("This operation does not consume exact-rational topology"));
+    }
     field(value, "model")
 }
 fn profile(value: &Value) -> Result<&Value> {
@@ -57,7 +60,7 @@ pub fn execute(v: Value) -> Result<Value> {
         | "sphere-analytic"
         | "cylinder-analytic"
         | "linear-extrude"
-        | "rotate-extrude-analytic" => "d3",
+        | "rotate-extrude-analytic" | "full-round-exact" => "d3",
         "rectangle" | "circle-analytic" | "polygon" | "projection" | "offset" => "d2",
         "transform" | "boolean" | "hull" => match space {
             Some("d2") => "d2",
@@ -87,7 +90,7 @@ pub fn execute(v: Value) -> Result<Value> {
     }
     let unary_operation = matches!(
         kind.as_str(),
-        "transform" | "linear-extrude" | "rotate-extrude-analytic" | "projection" | "offset"
+        "transform" | "linear-extrude" | "rotate-extrude-analytic" | "projection" | "offset" | "full-round-exact"
     );
     if unary_operation && inputs.len() != 1 {
         return Err(input("Expected one reduced semantic operand"));
@@ -108,7 +111,7 @@ pub fn execute(v: Value) -> Result<Value> {
         return Err(input("Semantic operand kind does not match the operation"));
     }
     // Empty algebra precedes feature construction, after kind/arity admission.
-    if unary_operation && is_empty(&inputs[0])? {
+    if unary_operation && kind!="full-round-exact" && is_empty(&inputs[0])? {
         return empty_result(expected, Some(&inputs[0]));
     }
     if kind == "hull"
@@ -130,6 +133,7 @@ pub fn execute(v: Value) -> Result<Value> {
         }
     };
     match kind.as_str() {
+        "full-round-exact" => super::brep_exact_full_round::construct(node,model(unary()?)?),
         "box" => {
             let size: [f64; 3] = field(node, "size")?;
             let center: bool = field(node, "center")?;

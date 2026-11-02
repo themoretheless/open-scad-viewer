@@ -1,0 +1,36 @@
+[package]
+name = "rbench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Explicit, reproducible Rust benchmarks and scenario observations"
+keywords = ["benchmark", "performance", "profiling", "statistics"]
+categories = ["development-tools::profiling", "development-tools::testing"]
+
+[features]
+default = []
+memory = ["dep:backtrace"]
+macros = ["dep:rbench-macros"]
+
+[dependencies]
+backtrace = { version = "=0.3.76", optional = true }
+rbench-macros = { path = "../rbench-macros", version = "0.1.0", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[package.metadata.rbench]
+targets = ["workloads"]
+
+[[bench]]
+name = "workloads"
+harness = false
+
+[[example]]
+name = "memory"
+required-features = ["memory"]

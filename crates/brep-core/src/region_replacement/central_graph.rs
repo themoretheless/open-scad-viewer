@@ -1,4 +1,4 @@
-//! Six-sided Hermite graph proposals. Sampling builds a candidate only;
+//! Bounded 3..16-sided Hermite graph proposals. Sampling builds a candidate only;
 //! original-curve interval inspection is the separate admission authority.
 use super::CornerCollars;
 use nurbs_core::{
@@ -41,7 +41,7 @@ pub struct GraphOptions {
 }
 pub struct CentralGraph {
     pub surface: Surface,
-    /// Same oriented source-owned six curves projected into this chart.
+    /// Same oriented source-owned boundary curves projected into this chart.
     pub pcurves: Vec<Curve>,
     pub sampled_jet_residual: [f64; 6],
 }
@@ -115,148 +115,26 @@ impl Chart {
         ))
     }
 }
-// Column-pivoted Householder QR, not normal equations. The small diagonal
-// regularizer chooses unconstrained interior modes; no geometric proof uses it.
-fn least_squares(a: Vec<Vec<f64>>, b: Vec<f64>, extra: &[Vec<(usize, f64)>]) -> Result<Vec<f64>> {
-    least_squares_constrained(a, b, extra, &[])
-}
-fn least_squares_constrained(
-    mut a: Vec<Vec<f64>>,
-    mut b: Vec<f64>,
-    extra: &[Vec<(usize, f64)>],
+fn correct_physical_poles(
+    order: &[usize],
+    scale: &[f64],
+    x: &mut [f64],
     constraints: &[(Vec<f64>, f64)],
-) -> Result<Vec<f64>> {
-    let m = a.len();
-    let n = a[0].len();
-    if constraints.is_empty() && b.iter().all(|&x| x == 0.) {
-        return Ok(vec![0.; n]);
-    }
-    // Normalize columns before rank-revealing QR. Clustered knots otherwise
-    // mix tiny value columns with enormous second-derivative columns.
-    let column_scale: Vec<f64> = (0..n)
-        .map(|j| a.iter().map(|r| r[j] * r[j]).sum::<f64>().sqrt())
-        .collect();
-    if column_scale.iter().any(|&s| !s.is_finite() || s == 0.) {
-        return Err(refuse("Invalid Hermite column scale"));
-    }
-    for row in &mut a {
-        for j in 0..n {
-            row[j] /= column_scale[j];
-        }
-    }
-    let mut rank = n;
-    let mut order: Vec<usize> = (0..n).collect();
-    for k in 0..n {
-        // Accumulate every remaining column norm in one row-major pass.
-        // Recomputing two strided column scans for each pivot comparison
-        // made large fairing fits spend minutes on cache misses alone.
-        let mut norms = vec![0.; n - k];
-        for row in a.iter().skip(k) {
-            for (sum, &x) in norms.iter_mut().zip(&row[k..]) {
-                *sum += x * x;
-            }
-        }
-        let col = k
-            + (0..norms.len())
-                .max_by(|&i, &j| norms[i].total_cmp(&norms[j]))
-                .unwrap();
-        let norm = norms[col - k].sqrt();
-        for row in &mut a {
-            row.swap(k, col);
-        }
-        order.swap(k, col);
-        if !norm.is_finite() {
-            return Err(refuse(
-                "Hermite fitting system is numerically rank deficient",
-            ));
-        }
-        if norm <= 1e-13 && extra.is_empty() && constraints.is_empty() {
-            rank = k;
-            break;
-        }
-        let alpha = -norm.copysign(a[k][k]);
-        let mut v: Vec<f64> = (k..m).map(|i| a[i][k]).collect();
-        v[0] -= alpha;
-        let beta = 2. / v.iter().map(|x| x * x).sum::<f64>();
-        // Each column dot retains ascending row order; only independent
-        // columns are interleaved. Apply the same Householder reflector in
-        // contiguous rows. This is still pivoted QR, not normal equations.
-        let mut dots = vec![0.; n - k - 1];
-        for (i, row) in a.iter().enumerate().skip(k) {
-            for (sum, &x) in dots.iter_mut().zip(&row[k + 1..]) {
-                *sum += v[i - k] * x;
-            }
-        }
-        for d in &mut dots {
-            *d *= beta;
-        }
-        for (i, row) in a.iter_mut().enumerate().skip(k) {
-            for (x, &d) in row[k + 1..].iter_mut().zip(&dots) {
-                *x -= d * v[i - k];
-            }
-        }
-        let d = beta * (k..m).map(|i| v[i - k] * b[i]).sum::<f64>();
-        for i in k..m {
-            b[i] -= d * v[i - k];
-        }
-        a[k][k] = alpha;
-        for row in a.iter_mut().skip(k + 1) {
-            row[k] = 0.;
-        }
-    }
-    // Append sparse fairing rows to the completed QR factor, rather than
-    // expanding thousands of five-entry rows into another dense matrix.
-    // Positive original Tikhonov rows retain full rank for this path.
-    for row in extra {
-        let mut values = vec![0.; n];
-        let mut inverse_order = vec![0; n];
-        for (j, &original) in order.iter().enumerate() {
-            inverse_order[original] = j;
-        }
-        for &(j, x) in row {
-            values[inverse_order[j]] = x / column_scale[j];
-        }
-        let mut rhs = 0.;
-        for j in 0..n {
-            if values[j] == 0. {
-                continue;
-            }
-            let radius = a[j][j].hypot(values[j]);
-            if !radius.is_finite() || radius == 0. {
-                return Err(refuse("Sparse fairing QR rotation is singular"));
-            }
-            let c = a[j][j] / radius;
-            let s = values[j] / radius;
-            a[j][j] = radius;
-            values[j] = 0.;
-            for k in j + 1..n {
-                let x = a[j][k];
-                let y = values[k];
-                a[j][k] = c * x + s * y;
-                values[k] = -s * x + c * y;
-            }
-            let x = b[j];
-            b[j] = c * x + s * rhs;
-            rhs = -s * x + c * rhs;
-        }
-    }
-    if rank < n {
-        return minimum_norm::complete(&a, &b, &order, &column_scale, rank);
-    }
-    let mut x = vec![0.; n];
-    for i in (0..rank).rev() {
-        x[i] = (b[i] - (i + 1..rank).map(|j| a[i][j] * x[j]).sum::<f64>()) / a[i][i];
-    }
-    constrained::correct(&a, &order, &column_scale, &mut x, constraints)?;
-    let mut out = vec![0.; n];
+) -> Result<()> {
+    let n = x.len();
+    let mut metric = vec![vec![0.; n]; n];
     for i in 0..n {
-        out[order[i]] = x[i] / column_scale[order[i]];
+        let d = 1. / scale[order[i]];
+        if !d.is_finite() || d <= 0. {
+            return Err(refuse("Invalid physical correction scale"));
+        }
+        metric[i][i] = d;
     }
-    if out.iter().any(|x| !x.is_finite()) {
-        return Err(refuse("Hermite fit exceeded finite range"));
-    }
-    Ok(out)
+    constrained::correct(&metric, order, scale, x, constraints)
 }
+
+
+
 fn rows(degree: usize, knots: [&[f64]; 2], uv: [f64; 2]) -> Result<[Vec<(usize, f64)>; 6]> {
     let u = basis(degree, knots[0], knots[0].len() - degree - 1, uv[0], false)?;
     let v = basis(degree, knots[1], knots[1].len() - degree - 1, uv[1], false)?;
@@ -284,7 +162,7 @@ fn rows(degree: usize, knots: [&[f64]; 2], uv: [f64; 2]) -> Result<[Vec<(usize, 
             .collect()
     }))
 }
-/// Build one regular graph chart covering the six-sided rim. The returned
+/// Build one regular graph chart covering a bounded polygonal rim. The returned
 /// surface is an UNADMITTED numerical proposal. Neither fitting residuals nor
 /// the input collar receipts authorize B-rep replacement.
 pub fn propose_central_graph(collars: &CornerCollars, o: GraphOptions) -> Result<CentralGraph> {
@@ -334,10 +212,49 @@ pub fn propose_central_graph_constrained(
     extra: [&[(f64, usize)]; 2],
     anchors: &[[f64; 3]],
 ) -> Result<CentralGraph> {
+    propose_graph_constraints(collars, o, guides, fairness, extra, anchors, false, &[])
+}
+/// A proposal-only second-derivative constraint at an owned boundary parameter.
+#[derive(Clone, Copy)]
+pub struct GraphHessianAnchor {
+    pub boundary: usize,
+    pub parameter_fraction: f64,
+}
+/// Impose all six graph two-jets at each junction, plus up to eight selected
+/// boundary Hessians. These are QR equalities, not a G2/material certificate.
+pub fn propose_central_graph_junction_constrained(
+    collars: &CornerCollars,
+    o: GraphOptions,
+    guides: &[GraphGuide],
+    fairness: f64,
+    extra: [&[(f64, usize)]; 2],
+    hessians: &[GraphHessianAnchor],
+) -> Result<CentralGraph> {
+    propose_graph_constraints(collars, o, guides, fairness, extra, &[], true, hessians)
+}
+fn propose_graph_constraints(
+    collars: &CornerCollars,
+    o: GraphOptions,
+    guides: &[GraphGuide],
+    fairness: f64,
+    extra: [&[(f64, usize)]; 2],
+    anchors: &[[f64; 3]],
+    junctions: bool,
+    hessians: &[GraphHessianAnchor],
+) -> Result<CentralGraph> {
+    if hessians.len() > 8
+        || hessians.iter().any(|a| {
+            a.boundary >= collars.boundaries.len()
+                || !a.parameter_fraction.is_finite()
+                || !(0. ..=1.).contains(&a.parameter_fraction)
+        })
+    {
+        return Err(refuse("Invalid boundary Hessian anchors"));
+    }
     if anchors.len() > 32 || anchors.iter().flatten().any(|x| !x.is_finite()) {
         return Err(refuse("Invalid or excessive hard graph anchors"));
     }
-    if collars.boundaries.len() != 6
+    if !(3..=16).contains(&collars.boundaries.len())
         || extra.iter().any(|axis| {
             axis.len() > 6
                 || axis.iter().any(|&(t, m)| {
@@ -359,7 +276,7 @@ pub fn propose_central_graph_constrained(
         || !o.regularization.is_finite()
         || !(1e-14..=1e-3).contains(&o.regularization)
     {
-        return Err(refuse("Need six boundaries and bounded graph fitting work"));
+        return Err(refuse("Need 3..16 boundaries and bounded graph fitting work"));
     }
     for i in 0..3 {
         for j in 0..3 {
@@ -370,13 +287,13 @@ pub fn propose_central_graph_constrained(
             }
         }
     }
-    for i in 0..6 {
+    for i in 0..collars.boundaries.len() {
         let a = &collars.boundaries[i].curve;
-        let b = &collars.boundaries[(i + 1) % 6].curve;
+        let b = &collars.boundaries[(i + 1) % collars.boundaries.len()].curve;
         a.validate()?;
         if a.control_points[0].len() != 3 || a.control_points.last() != b.control_points.first() {
             return Err(refuse(
-                "Six original boundary curves must form a literal oriented cycle",
+                "Original boundary curves must form a literal oriented cycle",
             ));
         }
     }
@@ -445,7 +362,7 @@ pub fn propose_central_graph_constrained(
         nodes.sort_by(|a, b| a.0.total_cmp(&b.0));
         // Nearby projected stations can differ only by the original root
         // rounding, creating artificial 1e-10-wide knot cells. Coarsen the
-        // proposal mesh, never the six owned curves or their pcurves. All
+        // proposal mesh, never the owned boundary curves or their pcurves. All
         // original geometry is still inspected at unchanged tolerances.
         let mut merged: Vec<(f64, usize)> = Vec::new();
         for (t, m) in nodes {
@@ -567,6 +484,50 @@ pub fn propose_central_graph_constrained(
         b.push(dot(sub(guide.point, chart.origin), chart.frame[2]) * guide.weight);
     }
     let mut hard_rows = Vec::new();
+    let mut jet_targets = Vec::new();
+    if junctions {
+        jet_targets.extend((0..6).map(|i| (i, 0., 0usize)));
+    }
+    jet_targets.extend(
+        hessians
+            .iter()
+            .map(|a| (a.boundary, a.parameter_fraction, 3usize)),
+    );
+    for (boundary, fraction, first) in jet_targets {
+        let c = &collars.boundaries[boundary];
+        let d = c.original_pcurve.domain();
+        let p = c
+            .original_pcurve
+            .evaluate(d[0] + fraction * (d[1] - d[0]))?
+            .point;
+        let (uv, jets) = chart.jets(&c.original_surface, [p[0], p[1]])?;
+        for (k, row) in rows(o.degree, [&knots_u, &knots_v], uv)?
+            .into_iter()
+            .enumerate()
+            .skip(first)
+        {
+            stored += row.len();
+            if stored > 8_000_000 {
+                return Err(refuse("Boundary jets exceed sparse fitting budget"));
+            }
+            for &(j, _) in &row {
+                active_mask[j] = true;
+            }
+            // Equalities are row-equilibrated in control coordinates. A raw
+            // second-derivative row can carry 1/span^2 factors; applying an
+            // absolute control-unit residual to that raw row is ill-scaled.
+            // This changes no mathematical equation and grants no G2 receipt.
+            let factor = row.iter().map(|(_, v)| v.abs()).fold(0f64, f64::max);
+            if !factor.is_finite() || factor <= 0. {
+                return Err(refuse("Invalid hard jet row scale"));
+            }
+            hard_rows.push((
+                row.into_iter().map(|(j, v)| (j, v / factor)).collect(),
+                jets[k] / factor,
+            ));
+        }
+    }
+
     for &anchor in anchors {
         let uv = chart.uv(anchor);
         if uv.iter().any(|x| !x.is_finite() || *x <= 0. || *x >= 1.) {
@@ -664,6 +625,8 @@ pub fn propose_central_graph_constrained(
         .collect::<Vec<_>>();
     let solution = if constraints.is_empty() {
         least_squares(reduced, b, &fair_rows)?
+    } else if junctions {
+        least_squares_metric(reduced, b, &fair_rows, &constraints, true)?
     } else {
         least_squares_constrained(reduced, b, &fair_rows, &constraints)?
     };
@@ -775,7 +738,7 @@ mod streamed_fairing_tests {
         );
     }
 }
-/// Build the actual six-edge trimmed face from unchanged original world
+/// Build the actual polygonal trimmed face from unchanged original world
 /// curves and candidate pcurves. The face recipe freshly audits its UV region
 /// and whole-edge lifts. This does NOT cut retained faces, prove G2, or close
 /// a solid, and consumes no previously issued admission flags.
@@ -786,14 +749,14 @@ pub fn trim_central_graph(
     tolerance_uv: f64,
     limits: crate::trimmed_face_recipe::Limits,
 ) -> Result<crate::trimmed_face_recipe::Report> {
-    if collars.boundaries.len() != 6 || candidate.pcurves.len() != 6 {
+    if !(3..=16).contains(&collars.boundaries.len()) || candidate.pcurves.len() != collars.boundaries.len() {
         return Err(refuse(
-            "A central trimmed face needs six original boundary curves",
+            "A central trimmed face needs 3..16 original boundary curves and matching pcurves",
         ));
     }
     let mut wire = Vec::new();
     let mut area = 0.;
-    for i in 0..6 {
+    for i in 0..collars.boundaries.len() {
         candidate.pcurves[i].validate()?;
         let pc = &candidate.pcurves[i];
         if pc.control_points[0].len() != 2 {
@@ -868,14 +831,14 @@ fn inspect_graph(
     max_exact: u64,
     max_coefficients: Option<usize>,
 ) -> Result<CentralGraphInspection> {
-    if collars.boundaries.len() != 6
-        || candidate.pcurves.len() != 6
+    if !(3..=16).contains(&collars.boundaries.len())
+        || candidate.pcurves.len() != collars.boundaries.len()
         || !(80..=600000).contains(&max_cells)
         || max_exact > 1000000
         || tolerances.iter().any(|x| !x.is_finite() || *x <= 0.)
     {
         return Err(refuse(
-            "Need six original graph seams and finite shared inspection limits",
+            "Need 3..16 original graph seams and finite shared inspection limits",
         ));
     }
     let curves = collars
@@ -900,9 +863,9 @@ fn inspect_graph(
                 [&c.original_pcurve, &candidate.pcurves[i]],
                 [&c.original_surface, &candidate.surface],
                 tolerances,
-                ((max_cells - cells) / (6 - i)).min(100000),
-                max_exact.saturating_sub(exact_work) / (6 - i) as u64,
-                maximum.saturating_sub(coefficient_work) / (6 - i),
+                ((max_cells - cells) / (collars.boundaries.len() - i)).min(100000),
+                max_exact.saturating_sub(exact_work) / (collars.boundaries.len() - i) as u64,
+                maximum.saturating_sub(coefficient_work) / (collars.boundaries.len() - i),
             )?;
             coefficient_work = coefficient_work.saturating_add(proof.coefficient_work);
             proof.owned.report
@@ -915,8 +878,8 @@ fn inspect_graph(
                 tolerances[0],
                 tolerances[1],
                 tolerances[2],
-                ((max_cells - cells) / (6 - i)).min(100000),
-                max_exact.saturating_sub(exact_work) / (6 - i) as u64,
+                ((max_cells - cells) / (collars.boundaries.len() - i)).min(100000),
+                max_exact.saturating_sub(exact_work) / (collars.boundaries.len() - i) as u64,
             )?
         };
         cells += report.geometric.cells;
@@ -939,3 +902,24 @@ fn inspect_graph(
         admitted,
     })
 }
+
+#[cfg(test)]
+mod bounded_junction_tests {
+    use super::*;
+    #[test]
+    fn unresolved_fitting_mode_does_not_create_enormous_physical_poles() {
+        let x = least_squares_metric(
+            vec![vec![1., 1e-15], vec![0., 1e-30]],
+            vec![1., 1e-15],
+            &[],
+            &[(vec![1., 1e-15], 1.)],
+            true,
+        )
+        .unwrap();
+        assert!((x[0] - 1.).abs() < 1e-10 && x[1].abs() < 1e-10, "{x:?}");
+    }
+}
+
+#[path = "central_graph/least_squares.rs"]
+mod least_squares_solver;
+use least_squares_solver::{least_squares, least_squares_constrained, least_squares_metric};

@@ -10,7 +10,9 @@ mod plane_roots;
 pub use plane_roots::*;
 #[path = "bspline_plane_incidence.rs"]
 mod plane_incidence;
-pub use plane_incidence::{rational_bspline_plane_incidence, rational_quadratic_plane_discriminant};
+pub use plane_incidence::{
+    rational_bspline_plane_incidence, rational_quadratic_plane_discriminant,
+};
 #[derive(Clone)]
 pub(crate) struct Rational {
     pub(crate) n: Expansion,
@@ -69,7 +71,11 @@ impl Rational {
         }
         Self::reduced(self.n.mul(&b.n, ctx)?, self.d.mul(&b.d, ctx)?, ctx)
     }
-    pub(crate) fn div_positive(&self, b: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+    pub(crate) fn div_positive(
+        &self,
+        b: &Self,
+        ctx: &mut PredicateContext<'_>,
+    ) -> Result<Self, Reason> {
         if b.n.sign() != Sign::Positive || b.d.sign() != Sign::Positive {
             return Err(Reason::MissingProof);
         }
@@ -224,6 +230,7 @@ fn bspline_jet_identity(
     degree: usize,
     order: usize,
     endpoints: bool,
+    first_order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
         || order > 4
@@ -274,7 +281,7 @@ fn bspline_jet_identity(
                 ctx,
             )?;
             let end = cartesian(&series(&x, u, degree, last, &u[n], order, ctx)?, order, ctx)?;
-            for q in 0..=order {
+            for q in first_order..=order {
                 for k in 0..3 {
                     if !start[q][k].equal(&end[q][k], ctx)? {
                         return Ok(BezierIdentity::Different);
@@ -335,7 +342,7 @@ pub fn rational_bspline_internal_jet_identity(
     degree: usize,
     order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
-    bspline_jet_identity(ctx, controls, knots, degree, order, false)
+    bspline_jet_identity(ctx, controls, knots, degree, order, false, 0)
 }
 /// Exact Cartesian endpoint jets on the active original knot domain, including
 /// nonclamped bases and independently varying endpoint homogeneous scales.
@@ -347,7 +354,7 @@ pub fn rational_bspline_cartesian_endpoint_jet_identity(
     degree: usize,
     order: usize,
 ) -> Result<BezierIdentityDecision, InputError> {
-    bspline_jet_identity(ctx, controls, knots, degree, order, true)
+    bspline_jet_identity(ctx, controls, knots, degree, order, true, 0)
 }
 #[cfg(test)]
 #[path = "bspline_internal_jets/tests/tests_integration.rs"]
@@ -585,3 +592,20 @@ pub fn rational_bspline_direction_jet_identity(
 #[cfg(test)]
 #[path = "bspline_internal_jets/tests/direction_tests_integration.rs"]
 mod direction_tests;
+
+/// Endpoint derivatives only, for a clock lift whose positions differ by one
+/// complete period. This grants no position closure, cover or regularity.
+pub fn rational_bspline_cartesian_endpoint_derivative_identity(
+    ctx: &mut PredicateContext<'_>,
+    controls: &[[LeafRef; 4]],
+    knots: &[LeafRef],
+    degree: usize,
+    order: usize,
+) -> Result<BezierIdentityDecision, InputError> {
+    if order == 0 {
+        return Err(InputError::InvalidInput(
+            "Derivative order must be positive",
+        ));
+    }
+    bspline_jet_identity(ctx, controls, knots, degree, order, true, 1)
+}

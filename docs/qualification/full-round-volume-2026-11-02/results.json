@@ -1,0 +1,41 @@
+{
+  "scope": "Explicit immutable Full Round filled-volume admission through native joint inspector",
+  "api": "Qualification::qualify_volume -> QualifiedVolume",
+  "test_exit_code": 0,
+  "tests_passed": 14,
+  "targets": [
+    "feature_ops",
+    "full_round_embedding",
+    "full_round_embedding_prism",
+    "full_round_frame",
+    "full_round_groups",
+    "full_round_prism"
+  ],
+  "proof_owner": "volume_validity::inspect_with_linear",
+  "regressions": [
+    "Nonrectangular height-nine Full Round with through-hole qualifies as volume",
+    "Shell roles consistent and physical outer shell outward",
+    "Reversed shell still proves boundary embedding but refuses material volume with inward orientation",
+    "Insufficient face-pair budget refuses typed volume admission",
+    "Qualified result retains original local radius/envelope observations and immutable model"
+  ],
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "8fbe8921deb3d9cd52c256a5be5aa202e82f32ee091445e2bb925393c34db47b",
+    "crates/brep-core/src/feature_ops/full_round_seams.rs": "b5f7a4a05e741660a43790fbe02d1d2aeeb34dc637f82bd751c42f254c3315db",
+    "crates/brep-core/src/feature_ops/full_round_seams/material.rs": "d22a18e7eab58f69df805726f50f952fdd186664715a1340f21103fcd7317113",
+    "crates/brep-core/src/feature_ops/full_round_caps.rs": "56d8449dd985c3a69b79a1f4506cb01a13239aa402c101accf051bb691ce8500",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "8d3bca285aaec0ee1e294663e3ab6803a883aa5a5b15ca111740a50e6cecc1b7",
+    "crates/brep-core/src/feature_ops/full_round_prism/groups.rs": "ddb3aef6ff462c21e32d7d57e5a182695e55bfdfab09a651c08b3b03a200cf8a",
+    "crates/brep-core/tests/full_round_embedding_prism.rs": "69c6748706da32fb3297d71bf8bc07878301d4ddd209183305631e8b8186f1df",
+    "crates/brep-core/tests/full_round_embedding.rs": "b4c149d3d315e691133a714fe9df74bff83e9d37bbe75498ef2c627285e493f3"
+  },
+  "limitations": [
+    "Explicit optional qualification; basic FullRoundReport is still local evidence",
+    "No new general curved support construction",
+    "Single-shell through-hole fixture does not prove nested cavity construction/transfer",
+    "No Plasticity runtime comparison",
+    "Focused tests do not qualify whole concurrent worktree"
+  ],
+  "architecture_gate": "Existing mainSolidResult.ts 595 lines vs pin 594",
+  "full_parity": false
+}

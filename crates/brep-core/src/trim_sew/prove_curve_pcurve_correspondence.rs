@@ -526,6 +526,30 @@ pub fn exact_sew_correspondences(
                 false
             }
         };
+        if key.a == key.b {
+            let CurveAuthority::Rational(d) = &proof.authority else {
+                return Err(refuse("BREP_SEW_INVALID", "Closed sew key needs complete rational authority"));
+            };
+            let c = Curve {
+                degree: d.degree,
+                knots: d.knots.iter().map(|v| f64::from_bits(*v)).collect(),
+                control_points: d.control_points.iter().map(|p| p.iter().map(|v| f64::from_bits(*v)).collect()).collect(),
+                weights: d.weights.iter().map(|v| f64::from_bits(*v)).collect(),
+                periodic: d.periodic,
+            };
+            closed_edge::verify(&c)?;
+            if proof.parameter_domain_bits != c.domain().map(f64::to_bits) {
+                return Err(refuse("BREP_SEW_PARAMETERIZATION", "Closed curve clock does not match actual authority"));
+            }
+            // Public record fields cannot borrow stale endpoint/context evidence.
+            prove_boundary_correspondence(context, BoundaryCorrespondenceInput {
+                curve_a: &c, curve_b: &c,
+                endpoints_a: proof.endpoints_bits[0].map(|p| p.map(f64::from_bits)),
+                endpoints_b: proof.endpoints_bits[1].map(|p| p.map(f64::from_bits)),
+                orientation: proof.orientation, seam_shift: proof.seam_shift,
+                shell: proof.shell, uses: proof.uses.clone(),
+            })?;
+        }
         let authority_key = authority_key(&proof.authority);
         if key.definition.as_deref() != Some(authority_key.as_str()) {
             return Err(refuse(

@@ -9,7 +9,7 @@ type FaceMesh=Pick<MeshData,'nativeGeometry'|'faceIdsAuthoritative'|'faceIds'|'v
 export function remapNativeFaceSelection(previous:FaceMesh,next:FaceMesh,hit:PickHit,nextIndex:number):PickHit|null {
  const a=previous.nativeGeometry,b=next.nativeGeometry
  if(!a||!b||!previous.faceIdsAuthoritative||!next.faceIdsAuthoritative||hit.faceId===null
-   ||!['surface','brep','subdivision','patches'].includes(a.kind)
+   ||!['surface','brep','rational-brep','subdivision','patches'].includes(a.kind)
    ||a.nodeId!==b.nodeId||a.kind!==b.kind||a.revision!==b.revision
    ||previous.transform.some((v,i)=>v!==next.transform[i]))return null
  const triangleIndex=next.faceIds.indexOf(hit.faceId)

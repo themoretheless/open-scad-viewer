@@ -1,0 +1,1150 @@
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear.rs
+@@ -340,6 +340,7 @@
+         }
+         spans.push(rows);
+     }
++    let mut closed_trace = true;
+     for axis in 0..3 {
+         let first = &spans[0][0].1[0];
+         let last = &spans[0].last().unwrap().1[0];
+@@ -351,6 +352,7 @@
+         if width.n.sign() == Sign::Zero {
+             continue;
+         }
++        closed_trace = false;
+         let mut anchor = true;
+         for (_, a) in &spans[0] {
+             let expected = add(
+@@ -443,10 +445,23 @@
+             Err(reason) => return Err(reason),
+         }
+     }
++    if closed_trace {
++        match algebraic::overlap::compare(ctx, &spans, u, scale, order) {
++            Ok(value) => return Ok(value),
++            Err(Reason::MissingProof) => {}
++            Err(reason) => return Err(reason),
++        }
++    }
+     match local_charts(ctx, &spans, u, degrees, scale, order) {
+         Err(Reason::MissingProof) => {
+             match chart_switches::compare(ctx, &spans, u, degrees, scale, order) {
+-                Err(Reason::MissingProof) => algebraic::compare(ctx, &spans, u, scale, order),
++                Err(Reason::MissingProof) => match algebraic::compare(ctx, &spans, u, scale, order)
++                {
++                    Err(Reason::MissingProof) if !closed_trace => {
++                        algebraic::overlap::compare(ctx, &spans, u, scale, order)
++                    }
++                    result => result,
++                },
+                 result => result,
+             }
+         }
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic.rs
+@@ -2,6 +2,7 @@
+ //! A common strictly monotone Cartesian coordinate owns a unique one-cover.
+ //! Original position/normal jets must vanish modulo its exact bivariate relation.
+ use super::*;
++pub(super) mod overlap;
+ use std::collections::BTreeMap;
+ type B = BTreeMap<(usize, usize), Q>;
+ fn tensor(a: &P, b: &P, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
+@@ -48,9 +49,10 @@
+     }
+     Ok(out)
+ }
+-fn divisible(mut p: B, f: &B, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
++fn quotient(mut p: B, f: &B, ctx: &mut PredicateContext<'_>) -> Result<Option<B>, Reason> {
++    let mut result = B::new();
+     let Some((&(fi, fj), fc)) = f.last_key_value() else {
+-        return Ok(false);
++        return Ok(None);
+     };
+     let sign = if fc.n.sign() == Sign::Negative {
+         neg(&vec![one()], ctx)?[0].clone()
+@@ -61,9 +63,10 @@
+     while let Some((&(i, j), c)) = p.last_key_value() {
+         ctx.charge(1)?;
+         if i < fi || j < fj {
+-            return Ok(false);
++            return Ok(None);
+         }
+         let factor = c.mul(&sign, ctx)?.div_positive(&den, ctx)?;
++        result.insert((i - fi, j - fj), factor.clone());
+         for (&(a, b), v) in f {
+             let key = (a + i - fi, b + j - fj);
+             let r = p
+@@ -75,7 +78,10 @@
+             }
+         }
+     }
+-    Ok(true)
++    Ok(Some(result))
++}
++fn divisible(p: B, f: &B, ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
++    Ok(quotient(p, f, ctx)?.is_some())
+ }
+ fn difference(a: &P, b: &P, c: &P, d: &P, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
+     let left = tensor(a, b, ctx)?;
+@@ -94,6 +100,16 @@
+     if f.is_empty() {
+         return Ok(false);
+     }
++    jets_mod(a, b, &f, scale, order, ctx)
++}
++fn jets_mod(
++    a: &[H],
++    b: &[H],
++    f: &B,
++    scale: &Q,
++    order: usize,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<bool, Reason> {
+     for k in 0..3 {
+         if !divisible(
+             difference(&a[0][k], &b[0][3], &a[0][3], &b[0][k], ctx)?,
+@@ -445,6 +461,11 @@
+         'search: for a in start[0] + 1..=spans[0].len() {
+             for b in start[1] + 1..=spans[1].len() {
+                 if !same(&points[0][a], &points[1][b], ctx)? {
++                    continue;
++                }
++                // A strictly monotone coordinate cannot return to the same
++                // Cartesian point. Avoid expanding an impossible closed group.
++                if same(&points[0][start[0]], &points[0][a], ctx)? {
+                     continue;
+                 }
+                 let groups = vec![
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap.rs
+@@ -0,0 +1,457 @@
++//! Exact implicit continuation through overlapping, independently bounded charts.
++//! No algebraic inverse endpoint is approximated or made into a source leaf.
++use super::*;
++mod bounds;
++use bounds::Bounds;
++mod polynomial;
++use polynomial::{common, to_t};
++struct Pair {
++    cofactors: [B; 3],
++}
++fn pair(
++    a: &[H],
++    b: &[H],
++    scale: &Q,
++    order: usize,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<Option<Pair>, Reason> {
++    let mut residuals = Vec::new();
++    let mut f = B::new();
++    for k in 0..3 {
++        let p = difference(&a[0][k], &b[0][3], &a[0][3], &b[0][k], ctx)?;
++        if !p.is_empty() {
++            f = if f.is_empty() {
++                p.clone()
++            } else {
++                common(&f, &p, ctx)?
++            };
++        }
++        residuals.push(p);
++    }
++    // A source-only polynomial or a nonzero constant cannot own a graph cover.
++    if !f.keys().any(|&(i, _)| i > 0) || !f.keys().any(|&(_, j)| j > 0) {
++        return Ok(None);
++    }
++    if !jets_mod(a, b, &f, scale, order, ctx)? {
++        return Ok(None);
++    }
++    let mut cofactors = std::array::from_fn(|_| B::new());
++    for (k, p) in residuals.into_iter().enumerate() {
++        let Some(q) = quotient(p, &f, ctx)? else {
++            return Ok(None);
++        };
++        // Only nonvanishing is used for branch exclusion. Remove an exact
++        // positive scalar gauge before repeated Bernstein subdivision.
++        let mut q = q;
++        if let Some(pivot) = q.values().next().cloned() {
++            let pivot = if pivot.n.sign() == Sign::Negative {
++                Q::zero().sub(&pivot, ctx)?
++            } else {
++                pivot
++            };
++            for c in q.values_mut() {
++                *c = c.div_positive(&pivot, ctx)?;
++            }
++        }
++        cofactors[k] = q;
++    }
++    Ok(Some(Pair { cofactors }))
++}
++fn point(h: &[H], t: &Q, ctx: &mut PredicateContext<'_>) -> Result<[Q; 3], Reason> {
++    let d = value(&h[0][3], t, ctx)?;
++    let mut p = std::array::from_fn(|_| Q::zero());
++    for k in 0..3 {
++        p[k] = value(&h[0][k], t, ctx)?.div_positive(&d, ctx)?;
++    }
++    Ok(p)
++}
++fn same(a: &[Q; 3], b: &[Q; 3], ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
++    for k in 0..3 {
++        if !a[k].equal(&b[k], ctx)? {
++            return Ok(false);
++        }
++    }
++    Ok(true)
++}
++fn bernstein(p: &P, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
++    let n = p.len() - 1;
++    if p.iter().skip(1).all(|q| q.n.sign() == Sign::Zero) {
++        return Ok(vec![p[0].clone(); p.len()]);
++    }
++    let mut out = Vec::new();
++    for i in 0..=n {
++        let mut b = Q::zero();
++        let mut ratio = one();
++        for k in 0..=i {
++            if k > 0 {
++                ratio = ratio
++                    .mul(&integer(i + 1 - k), ctx)?
++                    .div_positive(&integer(n + 1 - k), ctx)?;
++            }
++            if p[k].n.sign() != Sign::Zero {
++                b = b.add(&p[k].mul(&ratio, ctx)?, ctx)?;
++            }
++        }
++        out.push(b);
++    }
++    Ok(out)
++}
++struct Cell {
++    span: usize,
++    part: usize,
++    first: [Q; 3],
++    last: [Q; 3],
++}
++fn cells(
++    spans: &[(usize, Vec<H>)],
++    u: &[Q],
++    level: usize,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<Vec<Cell>, Reason> {
++    let mut out: Vec<Cell> = Vec::new();
++    let parts = 1usize << level;
++    for (span, (i, h)) in spans.iter().enumerate() {
++        let width = u[i + 1]
++            .sub(&u[*i], ctx)?
++            .div_positive(&integer(parts), ctx)?;
++        for j in 0..parts {
++            let lo = u[*i].add(&width.mul(&integer(j), ctx)?, ctx)?;
++            let hi = u[*i].add(&width.mul(&integer(j + 1), ctx)?, ctx)?;
++            let first = point(h, &lo, ctx)?;
++            let last = point(h, &hi, ctx)?;
++            if let Some(prev) = out.last() {
++                if !same(&prev.last, &first, ctx)? {
++                    return Err(Reason::MissingProof);
++                }
++            }
++            out.push(Cell {
++                span,
++                part: j,
++                first,
++                last,
++            });
++        }
++    }
++    Ok(out)
++}
++/// Continue the unique positively oriented correspondence through overlapping
++/// local charts. At every node at least one parameter is an exact rational
++/// original/subdivision endpoint; the other may be an unrepresented algebraic
++/// root. Its Cartesian point is known by exact divisibility and uniqueness.
++pub(crate) fn compare(
++    ctx: &mut PredicateContext<'_>,
++    spans: &[Vec<(usize, Vec<H>)>],
++    u: &[Vec<Q>],
++    scale: &Q,
++    order: usize,
++) -> Result<BezierIdentity, Reason> {
++    // Adjacent ORIGINAL intervals may have been cut through one polynomial
++    // jet. Exact coefficient identity proves their union without altering the
++    // authored surface or dropping its independent intrinsic-knot checks.
++    let mut runs = Vec::new();
++    let mut knots = Vec::new();
++    for side in 0..2 {
++        let reps = jet_representatives(&spans[side], ctx)?;
++        let mut rows: Vec<(usize, Vec<H>)> = Vec::new();
++        let mut us: Vec<Q> = Vec::new();
++        for (j, (i, h)) in spans[side].iter().enumerate() {
++            if j > 0
++                && reps[j] == reps[j - 1]
++                && u[side][spans[side][j - 1].0 + 1].equal(&u[side][*i], ctx)?
++            {
++                *us.last_mut().unwrap() = u[side][i + 1].clone();
++            } else {
++                if let Some(last) = us.last() {
++                    if !last.equal(&u[side][*i], ctx)? {
++                        return Err(Reason::MissingProof);
++                    }
++                } else {
++                    us.push(u[side][*i].clone());
++                }
++                rows.push((rows.len(), h.clone()));
++                us.push(u[side][i + 1].clone());
++            }
++        }
++        runs.push(rows);
++        knots.push(us);
++    }
++    // A common positive diagonal world-coordinate change preserves every
++    // Cartesian equality and the normal-jet collinearity identities. Apply it
++    // to ALL jet orders on BOTH sides, never to the authored source geometry.
++    // Original regularity is still independently audited in its original frame.
++    for axis in 0..3 {
++        let pivot = runs
++            .iter()
++            .flat_map(|side| side.iter())
++            .flat_map(|(_, h)| h.iter())
++            .flat_map(|h| h[axis].iter())
++            .find(|q| q.n.sign() != Sign::Zero)
++            .cloned();
++        if let Some(pivot) = pivot {
++            let pivot = if pivot.n.sign() == Sign::Negative {
++                Q::zero().sub(&pivot, ctx)?
++            } else {
++                pivot
++            };
++            if !pivot.equal(&one(), ctx)? {
++                for side in &mut runs {
++                    for (_, jets) in side {
++                        for h in jets {
++                            for q in &mut h[axis] {
++                                *q = q.div_positive(&pivot, ctx)?;
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++    continue_cover(ctx, &runs, &knots, scale, order)
++}
++fn continue_cover(
++    ctx: &mut PredicateContext<'_>,
++    spans: &[Vec<(usize, Vec<H>)>],
++    u: &[Vec<Q>],
++    scale: &Q,
++    order: usize,
++) -> Result<BezierIdentity, Reason> {
++    let representatives = [
++        jet_representatives(&spans[0], ctx)?,
++        jet_representatives(&spans[1], ctx)?,
++    ];
++    let mut cache: BTreeMap<(usize, usize), Option<Pair>> = BTreeMap::new();
++    let mut spent_cells = 0usize;
++    let mut bounds = Bounds::default();
++    // Existing 4096-cell/depth-12 ceilings; every failed refinement also spends
++    // this caller's one exact-work ledger. No fresh budget on a chart switch.
++    for level in 0..=12 {
++        let count = (spans[0].len() + spans[1].len()) * (1usize << level);
++        if spent_cells + count > 4096 {
++            return Err(Reason::MissingProof);
++        }
++        spent_cells += count;
++        ctx.charge(count as u64)?;
++        let a = cells(&spans[0], &u[0], level, ctx)?;
++        let b = cells(&spans[1], &u[1], level, ctx)?;
++        if a.is_empty()
++            || b.is_empty()
++            || !same(&a[0].first, &b[0].first, ctx)?
++            || !same(&a.last().unwrap().last, &b.last().unwrap().last, ctx)?
++        {
++            return Err(Reason::MissingProof);
++        }
++        let mut current = a[0].first.clone();
++        let (mut i, mut j) = (0, 0);
++        while i < a.len() && j < b.len() {
++            let (x, y) = (&a[i], &b[j]);
++            let key = (representatives[0][x.span], representatives[1][y.span]);
++            if !cache.contains_key(&key) {
++                cache.insert(
++                    key,
++                    pair(&spans[0][x.span].1, &spans[1][y.span].1, scale, order, ctx)?,
++                );
++            }
++            let Some(proof) = cache[&key].as_ref() else {
++                return Err(Reason::MissingProof);
++            };
++            let mut advance = None;
++            let mut axes = [0, 1, 2];
++            axes.sort_by_key(|&k| {
++                proof.cofactors[k]
++                    .keys()
++                    .map(|&(i, j)| i + j)
++                    .max()
++                    .unwrap_or(usize::MAX)
++            });
++            for axis in axes {
++                let sign = x.last[axis].sub(&x.first[axis], ctx)?.n.sign();
++                if sign == Sign::Zero || y.last[axis].sub(&y.first[axis], ctx)?.n.sign() != sign {
++                    continue;
++                }
++                let factor = if sign == Sign::Positive {
++                    one()
++                } else {
++                    Q::zero().sub(&one(), ctx)?
++                };
++                let mut inside = true;
++                for cell in [x, y] {
++                    if current[axis]
++                        .sub(&cell.first[axis], ctx)?
++                        .mul(&factor, ctx)?
++                        .n
++                        .sign()
++                        == Sign::Negative
++                        || cell.last[axis]
++                            .sub(&current[axis], ctx)?
++                            .mul(&factor, ctx)?
++                            .n
++                            .sign()
++                            != Sign::Positive
++                    {
++                        inside = false;
++                        break;
++                    }
++                }
++                if !inside
++                    || !bounds.slope(0, x.span, axis, level, x.part, &spans[0], &u[0], sign, ctx)?
++                    || !bounds.slope(1, y.span, axis, level, y.part, &spans[1], &u[1], sign, ctx)?
++                {
++                    continue;
++                }
++                if !bounds.cofactor(
++                    x.span,
++                    y.span,
++                    axis,
++                    level,
++                    x.part,
++                    y.part,
++                    &proof.cofactors[axis],
++                    spans,
++                    u,
++                    ctx,
++                )? {
++                    continue;
++                }
++                let end = x.last[axis]
++                    .sub(&y.last[axis], ctx)?
++                    .mul(&factor, ctx)?
++                    .n
++                    .sign();
++                if end == Sign::Zero && !same(&x.last, &y.last, ctx)? {
++                    return Err(Reason::MissingProof);
++                }
++                advance = Some(end);
++                break;
++            }
++            let Some(end) = advance else {
++                break;
++            };
++            if end != Sign::Positive {
++                current = x.last.clone();
++                i += 1;
++            }
++            if end != Sign::Negative {
++                current = y.last.clone();
++                j += 1;
++            }
++        }
++        if i == a.len() && j == b.len() {
++            ctx.charge(0)?;
++            return Ok(BezierIdentity::Equal);
++        }
++        // Reaching just one final endpoint leaves an uncovered original tail.
++        if i == a.len() || j == b.len() {
++            return Err(Reason::MissingProof);
++        }
++    }
++    Err(Reason::MissingProof)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::{AuthoredScalar, Limits, SourceArena, ToleranceContext};
++    fn setup(ctx: &mut PredicateContext<'_>) -> (Vec<Vec<(usize, Vec<H>)>>, Vec<Vec<Q>>, Q) {
++        let half = one().div_positive(&integer(2), ctx).unwrap();
++        let mut spans = Vec::new();
++        let mut knots = Vec::new();
++        for side in 0..2 {
++            // An open parameter interval whose endpoints meet in space. Neither
++            // x=q-q³ nor y=q² is monotone on this complete regular curve.
++            let mut clock = if side == 0 {
++                vec![Q::zero(), half.clone(), half.clone()]
++            } else {
++                vec![Q::zero(), half.clone(), Q::zero(), half.clone()]
++            };
++            clock = scaled(&clock, &integer(2), ctx).unwrap();
++            clock[0] = Q::zero().sub(&one(), ctx).unwrap();
++            let q2 = mul(&clock, &clock, ctx).unwrap();
++            let q3 = mul(&q2, &clock, ctx).unwrap();
++            let h = vec![
++                [
++                    sub(&clock, &q3, ctx).unwrap(),
++                    q2,
++                    vec![Q::zero()],
++                    vec![one()],
++                ],
++                [
++                    vec![Q::zero()],
++                    vec![Q::zero()],
++                    vec![one()],
++                    vec![Q::zero()],
++                ],
++                std::array::from_fn(|_| vec![Q::zero()]),
++            ];
++            // Deliberately staggered original cuts; none of the interior
++            // Cartesian endpoints agrees with an endpoint on the other side.
++            let us = if side == 0 {
++                vec![Q::zero(), half.clone(), one()]
++            } else {
++                vec![
++                    Q::zero(),
++                    one().div_positive(&integer(4), ctx).unwrap(),
++                    one(),
++                ]
++            };
++            spans.push((0..us.len() - 1).map(|i| (i, h.clone())).collect());
++            knots.push(us);
++        }
++        (spans, knots, Q::zero().sub(&one(), ctx).unwrap())
++    }
++    #[test]
++    fn implicit_overlap_changes_axes_without_shared_chart_endpoints() {
++        let arena =
++            SourceArena::authored("overlap", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
++        let tol = ToleranceContext::default_valid();
++        let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        let (spans, u, scale) = setup(&mut ctx);
++        let mut proof = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        assert!(
++            matches!(
++                compare(&mut proof, &spans, &u, &scale, 2),
++                Ok(BezierIdentity::Equal)
++            ),
++            "work={}",
++            proof.work_used()
++        );
++        let work = proof.work_used();
++        println!("positive-overlap-exact-work={work}");
++        let mut short = PredicateContext::new(
++            &arena,
++            &tol,
++            Limits {
++                max_work: work - 1,
++                ..Limits::default()
++            },
++            None,
++        );
++        assert!(compare(&mut short, &spans, &u, &scale, 2).is_err());
++        // Reversal starts at the SAME Cartesian closure point. A coordinate
++        // coincidence alone must not jump to the other real algebraic branch.
++        let mut reversed = spans.clone();
++        let linear = vec![one(), Q::zero().sub(&one(), &mut ctx).unwrap()];
++        for (_, jets) in &mut reversed[1] {
++            for h in jets {
++                for p in h {
++                    *p = compose(p, &linear, &vec![one()], p.len() - 1, &mut ctx).unwrap();
++                }
++            }
++        }
++        reversed[1].reverse();
++        for (i, row) in reversed[1].iter_mut().enumerate() {
++            row.0 = i;
++        }
++        let mut reversed_u = u.clone();
++        reversed_u[1] = u[1]
++            .iter()
++            .rev()
++            .map(|q| one().sub(q, &mut ctx).unwrap())
++            .collect();
++        let mut negative = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        assert!(compare(&mut negative, &reversed, &reversed_u, &scale, 2).is_err());
++        let mut broken = spans.clone();
++        broken[1][1].1[1][2] = vec![integer(2)];
++        let mut fresh = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        assert!(compare(&mut fresh, &broken, &u, &scale, 1).is_err());
++    }
++}
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/bounds.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/bounds.rs
+@@ -0,0 +1,219 @@
++//! Source-bound exact Bernstein subdivision caches. Subdivision never changes
++//! authored geometry; all coefficients descend from the original polynomials.
++use super::*;
++#[derive(Default)]
++pub(super) struct Bounds {
++    slopes: BTreeMap<(usize, usize, usize, usize, usize), P>,
++    boxes: BTreeMap<(usize, usize, usize, usize, usize, usize), Vec<P>>,
++}
++fn half(p: &P, right: bool, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
++    let mut work = p.clone();
++    let mut left = vec![work[0].clone()];
++    let mut rhs = vec![work.last().unwrap().clone()];
++    for level in 1..p.len() {
++        for i in 0..p.len() - level {
++            work[i] = if work[i].n.sign() == Sign::Zero && work[i + 1].n.sign() == Sign::Zero {
++                Q::zero()
++            } else {
++                work[i]
++                    .add(&work[i + 1], ctx)?
++                    .div_positive(&integer(2), ctx)?
++            };
++        }
++        left.push(work[0].clone());
++        rhs.push(work[p.len() - 1 - level].clone());
++    }
++    if right {
++        rhs.reverse();
++        Ok(rhs)
++    } else {
++        Ok(left)
++    }
++}
++fn coefficients(p: &P, lo: &Q, hi: &Q, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
++    let mut p = p.clone();
++    if let Some(pivot) = p.iter().find(|q| q.n.sign() != Sign::Zero).cloned() {
++        let pivot = if pivot.n.sign() == Sign::Negative {
++            Q::zero().sub(&pivot, ctx)?
++        } else {
++            pivot
++        };
++        for q in &mut p {
++            *q = q.div_positive(&pivot, ctx)?;
++        }
++    }
++    let local = compose(
++        &p,
++        &vec![lo.clone(), hi.sub(lo, ctx)?],
++        &vec![one()],
++        p.len() - 1,
++        ctx,
++    )?;
++    bernstein(&local, ctx)
++}
++fn strict(
++    p: impl Iterator<Item = Sign>,
++    sign: Option<Sign>,
++    ctx: &mut PredicateContext<'_>,
++) -> Result<bool, Reason> {
++    let mut sign = sign;
++    for s in p {
++        ctx.charge(1)?;
++        if s == Sign::Zero || sign.is_some_and(|x| x != s) {
++            return Ok(false);
++        }
++        sign = Some(s);
++    }
++    Ok(sign.is_some())
++}
++fn tensor(p: &B, a: [&Q; 2], b: [&Q; 2], ctx: &mut PredicateContext<'_>) -> Result<Vec<P>, Reason> {
++    if p.is_empty() {
++        return Ok(Vec::new());
++    }
++    let mut rows = to_t(p);
++    let degree_s = rows.iter().map(Vec::len).max().unwrap() - 1;
++    let degree_t = rows.len() - 1;
++    for row in &mut rows {
++        *row = compose(
++            row,
++            &vec![a[0].clone(), a[1].sub(a[0], ctx)?],
++            &vec![one()],
++            row.len() - 1,
++            ctx,
++        )?;
++        row.resize(degree_s + 1, Q::zero());
++        *row = bernstein(row, ctx)?;
++    }
++    let mut out = Vec::new();
++    for i in 0..=degree_s {
++        let p = rows.iter().map(|row| row[i].clone()).collect::<P>();
++        let mut p = compose(
++            &p,
++            &vec![b[0].clone(), b[1].sub(b[0], ctx)?],
++            &vec![one()],
++            p.len() - 1,
++            ctx,
++        )?;
++        p.resize(degree_t + 1, Q::zero());
++        out.push(bernstein(&p, ctx)?);
++    }
++    Ok(out)
++}
++impl Bounds {
++    fn slope_coefficients(
++        &mut self,
++        side: usize,
++        span: usize,
++        axis: usize,
++        level: usize,
++        part: usize,
++        spans: &[(usize, Vec<H>)],
++        u: &[Q],
++        ctx: &mut PredicateContext<'_>,
++    ) -> Result<P, Reason> {
++        let key = (side, span, axis, level, part);
++        if let Some(p) = self.slopes.get(&key) {
++            return Ok(p.clone());
++        }
++        let p = if level == 0 {
++            let (i, h) = &spans[span];
++            let n = &h[0][axis];
++            let d = &h[0][3];
++            let p = sub(
++                &mul(&derivative(n, ctx)?, d, ctx)?,
++                &mul(n, &derivative(d, ctx)?, ctx)?,
++                ctx,
++            )?;
++            coefficients(&p, &u[*i], &u[i + 1], ctx)?
++        } else {
++            let parent =
++                self.slope_coefficients(side, span, axis, level - 1, part / 2, spans, u, ctx)?;
++            half(&parent, part % 2 == 1, ctx)?
++        };
++        self.slopes.insert(key, p.clone());
++        Ok(p)
++    }
++    pub(super) fn slope(
++        &mut self,
++        side: usize,
++        span: usize,
++        axis: usize,
++        level: usize,
++        part: usize,
++        spans: &[(usize, Vec<H>)],
++        u: &[Q],
++        sign: Sign,
++        ctx: &mut PredicateContext<'_>,
++    ) -> Result<bool, Reason> {
++        let p = self.slope_coefficients(side, span, axis, level, part, spans, u, ctx)?;
++        strict(p.iter().map(|q| q.n.sign()), Some(sign), ctx)
++    }
++    fn box_coefficients(
++        &mut self,
++        a: usize,
++        b: usize,
++        axis: usize,
++        level: usize,
++        pa: usize,
++        pb: usize,
++        p: &B,
++        spans: &[Vec<(usize, Vec<H>)>],
++        u: &[Vec<Q>],
++        ctx: &mut PredicateContext<'_>,
++    ) -> Result<Vec<P>, Reason> {
++        let key = (a, b, axis, level, pa, pb);
++        if let Some(p) = self.boxes.get(&key) {
++            return Ok(p.clone());
++        }
++        let out = if level == 0 {
++            let ai = spans[0][a].0;
++            let bi = spans[1][b].0;
++            tensor(
++                p,
++                [&u[0][ai], &u[0][ai + 1]],
++                [&u[1][bi], &u[1][bi + 1]],
++                ctx,
++            )?
++        } else {
++            let parent =
++                self.box_coefficients(a, b, axis, level - 1, pa / 2, pb / 2, p, spans, u, ctx)?;
++            if parent.is_empty() {
++                return Ok(parent);
++            }
++            let mut rows = Vec::new();
++            for row in parent {
++                rows.push(half(&row, pb % 2 == 1, ctx)?);
++            }
++            let mut out = vec![vec![Q::zero(); rows[0].len()]; rows.len()];
++            for j in 0..rows[0].len() {
++                let col = rows.iter().map(|row| row[j].clone()).collect();
++                let col = half(&col, pa % 2 == 1, ctx)?;
++                for (i, q) in col.into_iter().enumerate() {
++                    out[i][j] = q;
++                }
++            }
++            out
++        };
++        self.boxes.insert(key, out.clone());
++        Ok(out)
++    }
++    pub(super) fn cofactor(
++        &mut self,
++        a: usize,
++        b: usize,
++        axis: usize,
++        level: usize,
++        pa: usize,
++        pb: usize,
++        p: &B,
++        spans: &[Vec<(usize, Vec<H>)>],
++        u: &[Vec<Q>],
++        ctx: &mut PredicateContext<'_>,
++    ) -> Result<bool, Reason> {
++        if p.is_empty() {
++            return Ok(false);
++        }
++        let coeff = self.box_coefficients(a, b, axis, level, pa, pb, p, spans, u, ctx)?;
++        strict(coeff.iter().flatten().map(|q| q.n.sign()), None, ctx)
++    }
++}
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/polynomial.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic/overlap/polynomial.rs
+@@ -0,0 +1,126 @@
++//! Primitive polynomial remainder sequences over exact Q[source].
++use super::*;
++type T = Vec<P>;
++fn divide(a: &Q, b: &Q, ctx: &mut PredicateContext<'_>) -> Result<Q, Reason> {
++    if b.n.sign() == Sign::Negative {
++        Q::zero()
++            .sub(a, ctx)?
++            .div_positive(&Q::zero().sub(b, ctx)?, ctx)
++    } else {
++        a.div_positive(b, ctx)
++    }
++}
++fn division(mut a: P, b: &P, ctx: &mut PredicateContext<'_>) -> Result<(P, P), Reason> {
++    if zero(b) {
++        return Err(Reason::MissingProof);
++    }
++    let mut q = vec![Q::zero(); a.len().saturating_sub(b.len()) + 1];
++    while !zero(&a) && a.len() >= b.len() {
++        ctx.charge(1)?;
++        let at = a.len() - b.len();
++        let c = divide(a.last().unwrap(), b.last().unwrap(), ctx)?;
++        q[at] = c.clone();
++        for (i, v) in b.iter().enumerate() {
++            a[i + at] = a[i + at].sub(&v.mul(&c, ctx)?, ctx)?;
++        }
++        a = trim(a);
++    }
++    Ok((trim(q), a))
++}
++fn monic(a: P, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
++    if zero(&a) {
++        return Ok(a);
++    }
++    let lead = a.last().unwrap();
++    a.iter().map(|x| divide(x, lead, ctx)).collect()
++}
++fn gcd(mut a: P, mut b: P, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
++    while !zero(&b) {
++        let r = division(a, &b, ctx)?.1;
++        a = b;
++        b = r;
++    }
++    monic(a, ctx)
++}
++fn trim_t(mut a: T) -> T {
++    while a.last().is_some_and(|x| zero(x)) {
++        a.pop();
++    }
++    a
++}
++fn primitive(a: T, ctx: &mut PredicateContext<'_>) -> Result<T, Reason> {
++    let a = trim_t(a);
++    if a.is_empty() {
++        return Ok(a);
++    }
++    let mut content = vec![Q::zero()];
++    for c in &a {
++        content = gcd(content, c.clone(), ctx)?;
++        if content.len() == 1 {
++            break;
++        }
++    }
++    let mut out = Vec::new();
++    for c in a {
++        let (q, r) = division(c, &content, ctx)?;
++        if !zero(&r) {
++            return Err(Reason::MissingProof);
++        }
++        out.push(q);
++    }
++    // A constant normalization controls coefficient growth without a rounded pivot.
++    let lead = out.last().unwrap().last().unwrap().clone();
++    for c in &mut out {
++        for q in c {
++            *q = divide(q, &lead, ctx)?;
++        }
++    }
++    Ok(out)
++}
++pub(super) fn to_t(a: &B) -> T {
++    let mut out = Vec::new();
++    for (&(i, j), q) in a {
++        if out.len() <= j {
++            out.resize_with(j + 1, || vec![Q::zero()]);
++        }
++        if out[j].len() <= i {
++            out[j].resize(i + 1, Q::zero());
++        }
++        out[j][i] = q.clone();
++    }
++    out.into_iter().map(trim).collect()
++}
++fn from_t(a: T) -> B {
++    let mut out = B::new();
++    for (j, p) in a.into_iter().enumerate() {
++        for (i, q) in p.into_iter().enumerate() {
++            if q.n.sign() != Sign::Zero {
++                out.insert((i, j), q);
++            }
++        }
++    }
++    out
++}
++pub(super) fn common(a: &B, b: &B, ctx: &mut PredicateContext<'_>) -> Result<B, Reason> {
++    let mut a = primitive(to_t(a), ctx)?;
++    let mut b = primitive(to_t(b), ctx)?;
++    while !b.is_empty() {
++        let mut r = a;
++        while !r.is_empty() && r.len() >= b.len() {
++            ctx.charge(1)?;
++            let at = r.len() - b.len();
++            let lc = r.last().unwrap().clone();
++            let bc = b.last().unwrap();
++            for row in &mut r {
++                *row = mul(row, bc, ctx)?;
++            }
++            for (i, row) in b.iter().enumerate() {
++                r[i + at] = sub(&r[i + at], &mul(row, &lc, ctx)?, ctx)?;
++            }
++            r = primitive(trim_t(r), ctx)?;
++        }
++        a = b;
++        b = primitive(r, ctx)?;
++    }
++    Ok(from_t(primitive(a, ctx)?))
++}
+--- previous/crates/nurbs-core/tests/support/overlap_seam_map.rs
++++ current/crates/nurbs-core/tests/support/overlap_seam_map.rs
+@@ -0,0 +1,84 @@
++use super::Surface;
++/// A regular closed Cartesian trace with no globally monotone XYZ coordinate.
++/// qA=s+s²-1, qB=t+t³-1; C(q)=(q-q³,q²). Original source cuts at
++/// s=1/2 and t=1/4 have distinct images. All coefficients are exact dyadics.
++pub fn fixture() -> (Surface, Surface) {
++    fn product(a: &[i64], b: &[i64]) -> Vec<i64> {
++        let mut out = vec![0; a.len() + b.len() - 1];
++        for (i, x) in a.iter().enumerate() {
++            for (j, y) in b.iter().enumerate() {
++                out[i + j] += x * y;
++            }
++        }
++        out
++    }
++    fn choose(n: usize, k: usize) -> i64 {
++        let mut v = 1;
++        for j in 0..k {
++            v = v * (n - j) as i64 / (j + 1) as i64;
++        }
++        v
++    }
++    fn make(clock: Vec<i64>, at: f64, z: f64) -> Surface {
++        let y = product(&clock, &clock);
++        let q3 = product(&y, &clock);
++        let mut x = vec![0; q3.len()];
++        for (k, c) in q3.iter().enumerate() {
++            x[k] = -c;
++        }
++        for (k, c) in clock.iter().enumerate() {
++            x[k] += c;
++        }
++        let degree = x.len() - 1;
++        let coeff = |p: &[i64], i: usize| -> f64 {
++            p.iter()
++                .enumerate()
++                .take(i + 1)
++                .map(|(k, c)| {
++                    assert_eq!(2520 % choose(degree, k), 0);
++                    c * choose(i, k) * (2520 / choose(degree, k))
++                })
++                .sum::<i64>() as f64
++        };
++        let original = (0..=degree)
++            .map(|i| {
++                (0..3)
++                    .map(|j| vec![coeff(&x, i), coeff(&y, i), z + 0.5 * j as f64])
++                    .collect::<Vec<_>>()
++            })
++            .collect::<Vec<_>>();
++        let mut work = original.clone();
++        let mut left = vec![work[0].clone()];
++        let mut right = vec![work[degree].clone()];
++        for level in 1..=degree {
++            for i in 0..=degree - level {
++                for j in 0..3 {
++                    for k in 0..3 {
++                        work[i][j][k] = (1. - at) * work[i][j][k] + at * work[i + 1][j][k];
++                    }
++                }
++            }
++            left.push(work[0].clone());
++            right.push(work[degree - level].clone());
++        }
++        right.reverse();
++        left.extend(right.into_iter().skip(1));
++        let mut knots = vec![0.; degree + 1];
++        knots.extend(vec![at; degree]);
++        knots.extend(vec![1.; degree + 1]);
++        Surface {
++            degree_u: degree,
++            degree_v: 2,
++            knots_u: knots,
++            knots_v: vec![0., 0., 0., 1., 1., 1.],
++            weights: vec![vec![1.; 3]; left.len()],
++            control_points: left,
++            periodic_u: false,
++            periodic_v: false,
++        }
++    }
++    (
++        make(vec![-1, 1, 1], 0.5, 0.),
++        make(vec![-1, 1, 0, 1], 0.25, 1.),
++    )
++}
+--- previous/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
++++ current/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
+@@ -590,3 +590,50 @@
+     );
+     assert_eq!((a, b), saved);
+ }
++
++#[path = "../../../../tests/support/overlap_seam_map.rs"]
++mod overlap_fixture;
++#[test]
++fn implicit_chart_overlap_owns_algebraic_switches_without_common_endpoints() {
++    let (a, b) = overlap_fixture::fixture();
++    let saved = (a.clone(), b.clone());
++    let full = inferred(&a, &b, "vMax", "vMin", 2, 1., 1000000).unwrap();
++    assert!(full.certified, "{full:?}");
++    assert!(
++        !inferred(&a, &b, "vMax", "vMin", 2, 1., full.work - 1)
++            .unwrap()
++            .certified
++    );
++    let mut changed = b.clone();
++    changed.control_points[2][0][0] = changed.control_points[2][0][0].next_up();
++    assert!(
++        !inferred(&a, &changed, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut reverse = b.clone();
++    reverse.control_points.reverse();
++    reverse.weights.reverse();
++    reverse.knots_u = reverse.knots_u.iter().rev().map(|k| 1. - k).collect();
++    assert!(
++        !inferred(&a, &reverse, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut curvature = b.clone();
++    for row in &mut curvature.control_points {
++        row[2][0] += 0.125;
++        row[2][2] += 0.125;
++    }
++    assert!(
++        inferred(&a, &curvature, "vMax", "vMin", 1, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert!(
++        !inferred(&a, &curvature, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert_eq!((a, b), saved);
++}
+--- previous/crates/geometry-bridge/tests/authored_seam_map.rs
++++ current/crates/geometry-bridge/tests/authored_seam_map.rs
+@@ -324,3 +324,29 @@
+     wrong["patches"][1] = value_codec::to_value(changed).unwrap();
+     assert_eq!(dispatch(wrong).unwrap()["certified"], false);
+ }
++
++#[path = "../../nurbs-core/tests/support/overlap_seam_map.rs"]
++mod overlap_fixture;
++#[test]
++fn algebraic_overlap_native_refuses_forged_global_evidence_and_short_work() {
++    let (a, b) = overlap_fixture::fixture();
++    let request = json!({"op":"nurbs_surface_seam_audit","patches":[a,b],"boundaries":["vMax","vMin"],"order":2,"normalScale":1.,"maxExactWork":1000000,"certified":true,"solidCertified":true,"continuousBound":true,"jointContinuousGlobalG2Certified":true});
++    let full = dispatch(request.clone()).unwrap();
++    assert_eq!(full["seamG2Certified"], true, "{full:?}");
++    for key in [
++        "solidCertified",
++        "continuousBound",
++        "jointContinuousGlobalG2Certified",
++    ] {
++        assert_eq!(full[key], false);
++    }
++    assert!(full["model"].is_null());
++    let mut short = request.clone();
++    short["maxExactWork"] = json!(full["exactWork"].as_u64().unwrap() - 1);
++    assert_eq!(dispatch(short).unwrap()["certified"], false);
++    let mut changed = b;
++    changed.control_points[2][0][0] = changed.control_points[2][0][0].next_up();
++    let mut wrong = request;
++    wrong["patches"][1] = value_codec::to_value(changed).unwrap();
++    assert_eq!(dispatch(wrong).unwrap()["certified"], false);
++}
+--- previous/crates/cad-predicates/src/bspline_strip_spans.rs
++++ current/crates/cad-predicates/src/bspline_strip_spans.rs
+@@ -60,6 +60,45 @@
+         }
+         normalized.push(u);
+     }
++    // Exact closed clamped traces have no globally affine Cartesian anchor.
++    // Try their original ordered/overlapping algebraic charts before spending
++    // the shared ledger on an unrelated fractional-linear knot proposal.
++    let mut closed = order > 0 && !propose && !nonlinear_only;
++    if closed {
++        'sides: for side in 0..2 {
++            let n = jets[side].len();
++            let p = degrees[side];
++            for k in 0..=p {
++                if !normalized[side][k].equal(&Q::zero(), ctx)?
++                    || !normalized[side][n + k].equal(&Q::scalar(Expansion::scalar(1.)), ctx)?
++                {
++                    closed = false;
++                    break 'sides;
++                }
++            }
++            let a = &jets[side][0][0];
++            let b = &jets[side][n - 1][0];
++            for k in 0..3 {
++                if !a[k].mul(&b[3], ctx)?.equal(&b[k].mul(&a[3], ctx)?, ctx)? {
++                    closed = false;
++                    break 'sides;
++                }
++            }
++        }
++    }
++    if closed && !nonlinear_only {
++        match super::bspline_strip_nonlinear::compare(
++            ctx,
++            jets,
++            &normalized,
++            degrees,
++            &scale,
++            order,
++        ) {
++            Err(Reason::MissingProof) => {}
++            result => return result,
++        }
++    }
+     if nonlinear_only {
+         return super::bspline_strip_nonlinear::compare(
+             ctx,

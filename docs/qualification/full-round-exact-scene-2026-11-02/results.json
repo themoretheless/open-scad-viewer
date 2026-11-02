@@ -1,0 +1,47 @@
+{
+  "status": "internal exact scene publication qualified; released package/worker/production engine and full parity remain open",
+  "real_wasm_scene_tests_passed": 7,
+  "host_regression_tests_passed": 199,
+  "native_result_tests_passed": 3,
+  "actual_wasm_abi_cases_passed": 12,
+  "typechecks": {
+    "vue-tsc --noEmit": "passed",
+    "tsc --noEmit -p tsconfig.mcp.json": "passed"
+  },
+  "wasm": {
+    "wasm_sha256": "a0d2c6d24432429cd88e14683f5f4256c6e0d914bf84d41752fb1951327f441c",
+    "byteLength": 45629564,
+    "retained_module": "/tmp/rea-full-round-qualified/a0d2c6d24432429cd88e14683f5f4256c6e0d914bf84d41752fb1951327f441c.wasm"
+  },
+  "coverage": [
+    "exact scene publication with verified rational snapshot and topology face IDs",
+    "scene payload and serialization roundtrip with native restoration",
+    "sampling-independent geometry/entity identity and re-anchored face selection",
+    "actual source height edit makes prior face selection stale",
+    "cancellation during disposal prevents publication; recovery after node abort",
+    "two mapped exact outputs have separate entities/snapshots",
+    "canonical invocation-root fix in both host/native admission with negative owner tests"
+  ],
+  "source_sha256": {
+    "src/services/brepSemanticScene.ts": "0b262b716ba85652fd721dfdfa9dc5960116c5d59c0f4162c187c31c08106620",
+    "src/services/nativeFaceSelection.ts": "efa5ab33ca5eecfd4a8dc5201459d4cec12c159800fbc791c91c0427182aea52",
+    "src/services/semanticProgramValidator/isChildrenExpansionContinuation.ts": "5a984faae2f71eebfc686fcc9561d1bbb57812f5916b2714019a7c392839fe54",
+    "crates/geometry-bridge/src/brep_result.rs": "a2fcada8becc8b2e4aca92a12fa07a70fc944d962762b638b4baa412cf9725f9",
+    "tests/exactFullRoundScene.test.ts": "457273c74804488e2355a93706f678ddcef82e9274a37d535f277d101894edfa",
+    "tests/fullRoundSemanticContract.test.ts": "3da8f3db221a1480d7e815b13293cb1eaae0dfbb90d804e8b42e074d09bc61bf"
+  },
+  "checks": [
+    "11 clean files unchanged",
+    "all changed source files within existing architecture limits; no pins changed",
+    "targeted diff check passed"
+  ],
+  "architecture": "global gate remains red on six other recorded worktree files",
+  "qualification_boundary": "real Rust geometry, display, snapshots, mesh/BVH; opt-in test-only module delivery substitution and lifecycle signal injection; not actual production Worker/bootstrap",
+  "open": [
+    "source-bound released kernel delivery and actual application Worker qualification",
+    "production engine registration and complete application qualification",
+    "general exact edit/history/dependency regeneration and lineage transfer",
+    "downstream rational transforms/Booleans/exchange beyond supported family",
+    "all other original native-library parity requirements"
+  ]
+}

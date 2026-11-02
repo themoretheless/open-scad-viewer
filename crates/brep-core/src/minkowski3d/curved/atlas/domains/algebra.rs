@@ -29,7 +29,7 @@ pub(super) fn decode(p: &DomainPolynomial) -> Result<Bi> {
     }
     Ok(out)
 }
-fn product(a: &Bi, b: &Bi, work: &mut Work) -> Result<Bi> {
+pub(super) fn product(a: &Bi, b: &Bi, work: &mut Work) -> Result<Bi> {
     if a.is_empty() || b.is_empty() {
         return Ok(Vec::new());
     }

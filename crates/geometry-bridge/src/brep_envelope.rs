@@ -179,6 +179,7 @@ fn capability_by_kind(kind: &str) -> Result<&'static str> {
         "rotate-extrude-polygonal" => "operation.rotate-extrude.polygonal",
         "projection" => "operation.projection",
         "offset" => "operation.offset",
+        "full-round-exact" => "operation.full-round-exact",
         _ => return Err(invalid("Unknown semantic node kind")),
     })
 }
@@ -238,7 +239,8 @@ pub(crate) fn inputs(node: &Value, kind: &str) -> Result<Vec<usize>> {
         | "rotate-extrude-analytic"
         | "rotate-extrude-polygonal"
         | "projection"
-        | "offset" => vec![index(&node["input"])?],
+        | "offset"
+        | "full-round-exact" => vec![index(&node["input"])?],
         "boolean" | "hull" => node["inputs"]
             .as_array()
             .ok_or_else(|| invalid("Semantic node is missing its inputs"))?

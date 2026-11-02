@@ -33,7 +33,7 @@ export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOpt
    if(p.ids.length!==3||new Set(p.ids).size!==3||!source||!plane||!curve||!p.runout)throw Error('RUNOUT_INPUTS')
    if(curve.curve.controlPoints[0]?.length!==3)throw Error('RUNOUT_TARGET: select a spatial boundary curve')
    const result=createG2WorldRunout(source.surface,plane.surface,curve.curve,p.runout)
-   if(!result.report.complete||!result.report.withinTolerance)return {document:null,error:'RUNOUT_G2_UNPROVEN',report:null,runoutReport:result.report}
+   if(!result.report.complete||!result.report.withinTolerance)return {document:null,error:result.report.fields.some(f=>f.curvatureDecision==='exceeds')?'RUNOUT_CURVATURE_LIMIT':result.report.seamWithinTolerance&&!result.report.fieldComplete?'RUNOUT_FIELD_UNPROVEN':'RUNOUT_G2_UNPROVEN',report:null,runoutReport:result.report}
    const surfaces=result.patches.map((surface,i)=>({id:i===0?p.id:`${p.id}:${i}`,name:`G2 transition ${i+1}`,surface,segmentsU:24,segmentsV:24,...p.group?{group:p.group}:{}}))
    if(document.surfaces?.length){
     const existingIds=new Set(document.surfaces.map(old=>old.id))

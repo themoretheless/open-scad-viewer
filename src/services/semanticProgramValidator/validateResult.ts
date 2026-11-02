@@ -271,6 +271,7 @@ export function semanticProductionRule(
   if (operation.category === 'transform' && authoredCall && ['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(operation.name)) return 'transform-map'
   if (pair === 'geometry:projection' && authoredCall) return 'projection-map'
   if (pair === 'geometry:offset' && authoredCall) return 'offset-map'
+  if (pair === 'geometry:full_round_exact' && authoredCall) return 'full-round-exact-map'
   if ((pair === 'presentation:color' || pair === 'assertion:assert') && authoredCall) return 'preserving-alias'
   if (operation.category === 'control') {
     if (operation.name === '$assign' && last.kind === 'control') return 'transparent'

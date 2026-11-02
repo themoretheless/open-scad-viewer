@@ -1,5 +1,7 @@
 //! Common contraction on a continuously glued ORIGINAL periodic rectangle.
 use super::*;
+mod periodic_extrusion;
+pub use periodic_extrusion::{PeriodicExtrusionReport, certify_periodic_extrusion};
 #[derive(Clone, Debug)]
 pub struct GluedRectangleReport {
     pub proven: bool,

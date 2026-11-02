@@ -250,6 +250,7 @@ dependencies = [
  "base64",
  "bridge-codec",
  "data-url",
+ "flate2",
  "gif",
  "image-webp",
  "imagesize",
@@ -1316,6 +1317,7 @@ dependencies = [
  "brep-topology",
  "cad-predicates",
  "geometry-ops",
+ "num-bigint",
  "num-rational",
  "num-traits",
  "osv-math",
@@ -2017,6 +2019,7 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 name = "subdivision-core"
 version = "0.1.0"
 dependencies = [
+ "cad-predicates",
  "geometry-ops",
  "osv-math",
  "rustc-hash",

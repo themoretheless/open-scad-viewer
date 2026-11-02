@@ -5,6 +5,7 @@ use crate::numerics::compensated::two_sum;
 #[derive(Clone, Debug)]
 pub struct ColumnFactor {
     pub base: usize,
+    /// 0..2 is a matrix column; 3 is the original translation law.
     pub dependent: usize,
     pub scale: f64,
     pub constant: [f64; 3],
@@ -47,50 +48,52 @@ pub(crate) fn prove_factor(
     max: u64,
 ) -> std::result::Result<Option<ColumnFactor>, ()> {
     let first = pieces[0].controls[0];
-    for base in 0..3 {
-        for dependent in 0..3 {
-            if base == dependent {
-                continue;
-            }
-            let proposal = pieces.iter().flat_map(|p| &p.controls).find_map(|p| {
-                (0..3).find_map(|k| {
-                    let d = p[base][k] - first[base][k];
-                    if d == 0. {
-                        return None;
-                    }
-                    let scale = (p[dependent][k] - first[dependent][k]) / d;
-                    (scale.is_finite() && scale != 0. && scale.abs() <= 1e9).then_some(scale)
-                })
-            });
-            let Some(scale) = proposal else {
-                continue;
-            };
-            let Some(constant) = residual(first[base], first[dependent], scale) else {
-                continue;
-            };
-            let mut valid = true;
-            'check: for p in pieces.iter().flat_map(|p| &p.controls) {
-                for k in 0..3 {
-                    if *work == max {
-                        return Err(());
-                    }
-                    *work += 1;
-                    let value =
-                        multiply(scale, p[base][k]).and_then(|v| subtract(p[dependent][k], v));
-                    if value != Some(constant[k]) {
-                        valid = false;
-                        break 'check;
-                    }
+    // Preserve existing column-factor priority; translation is a later class.
+    let pairs = (0..3)
+        .flat_map(|base| {
+            (0..3)
+                .filter(move |&dependent| dependent != base)
+                .map(move |dependent| (base, dependent))
+        })
+        .chain((0..3).map(|base| (base, 3)));
+    for (base, dependent) in pairs {
+        let proposal = pieces.iter().flat_map(|p| &p.controls).find_map(|p| {
+            (0..3).find_map(|k| {
+                let d = p[base][k] - first[base][k];
+                if d == 0. {
+                    return None;
+                }
+                let scale = (p[dependent][k] - first[dependent][k]) / d;
+                (scale.is_finite() && scale != 0. && scale.abs() <= 1e9).then_some(scale)
+            })
+        });
+        let Some(scale) = proposal else {
+            continue;
+        };
+        let Some(constant) = residual(first[base], first[dependent], scale) else {
+            continue;
+        };
+        let mut valid = true;
+        'check: for p in pieces.iter().flat_map(|p| &p.controls) {
+            for k in 0..3 {
+                if *work == max {
+                    return Err(());
+                }
+                *work += 1;
+                let value = multiply(scale, p[base][k]).and_then(|v| subtract(p[dependent][k], v));
+                if value != Some(constant[k]) {
+                    valid = false;
+                    break 'check;
                 }
             }
-            if valid {
-                return Ok(Some(ColumnFactor {
-                    base,
-                    dependent,
-                    scale,
-                    constant,
-                }));
-            }
+        }
+        if valid {
+            return Ok(Some(ColumnFactor {
+                base,
+                dependent,
+                scale,
+                constant,
+            }));
         }
     }
     Ok(None)

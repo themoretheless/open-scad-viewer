@@ -85,7 +85,7 @@ fn root_box(f: &QualifiedFiber) -> Option<Box4> {
 fn separate(a: Box4, b: Box4) -> Option<usize> {
     (0..4).find(|&k| a[k][1] < b[k][0] || b[k][1] < a[k][0])
 }
-fn point_connection(
+pub(super) fn point_connection(
     source: &FiberSources,
     first: &QualifiedFiber,
     second: &QualifiedFiber,
@@ -128,16 +128,13 @@ fn point_connection(
             }
             let mut domain = common;
             domain[free] = [value, value];
-            let r = source.certify(
-                domain,
-                axis,
-                FiberLimits {
-                    max_rectangles: work.max - work.used,
-                    preconditioner: None,
-                },
-            )?;
-            work.used += r.report().rectangles;
-            if r.report().reason == "rectangle-budget" {
+            // A fixed-coordinate root can be well inside the common charts
+            // while the raw unknown box remains too dependent for inclusion.
+            // Contract original root images with the SAME remaining allowance;
+            // only the final original uniform-root certificate grants a point.
+            let r = source.certify_contracted(domain, axis, work.max - work.used)?;
+            work.used += r.rectangles();
+            if r.reason() == "rectangle-budget" {
                 return Ok(None);
             }
             if let Some(point) = r.into_fiber() {

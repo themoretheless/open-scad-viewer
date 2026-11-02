@@ -1,0 +1,46 @@
+{
+  "status": "focused canonical source-boundary/material qualification; full parity incomplete",
+  "passed": 17,
+  "tests": {
+    "full_round_source_boundary": 4,
+    "full_round_raw_binding": 2,
+    "full_round_source_supports": 9,
+    "original_source_regularity": 2
+  },
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "5ed45c4acb4c4426a6208b64d0d883a42e45d618627127c8d3da6aca986011f7",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_boundary.rs": "49f8287228f02f583332156fbd9066c68c6364ad39ef55b02d79f5cb00287897",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_boundary/material.rs": "21834e9c28237ad144bed12ae61ac135d7fc353b02f7fb71bc410dd66c2be24b",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports/lower_rims.rs": "4a1f827b86232c70c0de3226c99583ac01778c24b1a0604c9760b725d201c578",
+    "crates/brep-core/tests/full_round_source_boundary.rs": "2189f0387201bbbfc2b5da4534707e31ef9e3652cfbb47cf62b1e4b30defc0c0",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "d2e5506bdc51d50a50849c375dd049ceb8b0b05239eed7d3bad4c3ce30bb6a7f"
+  },
+  "coverage": [
+    "lower directed rim endpoints",
+    "all horizontal rim endpoints versus exact native vertices",
+    "world cap rim regularity and internal-knot G1",
+    "complete cap/side face census",
+    "every original edge has two opposite distinct face uses",
+    "shared immutable original model across cap/profile/seam certificates",
+    "separate exact rational canonical source material body",
+    "polynomial and rational supports; raw clocks and reversed cap",
+    "through-hole remains one body without cavity shell",
+    "tolerance-valid vertex drift and stationary world curve refuse"
+  ],
+  "checks": [
+    "11 clean frozen files unchanged",
+    "API map check passed: 242 roots, 200 catalog entries"
+  ],
+  "fixture_corrections": [
+    "source fixture with binary-exact UV must retain exact receipt rather than assert nonzero seam",
+    "negative stationary fixture scaled by exact 1/256 to fit original allowed tolerance; validators unchanged"
+  ],
+  "meaning": "material reference uses explicit canonical cap pullbacks on original carriers/world rims; it does not assert legacy UV identity or mutate original Model",
+  "open": [
+    "exact source/result material relation on new rational geometry",
+    "target radius fidelity and exact tangent repair if needed",
+    "main pipeline integration and complete regression gates",
+    "general spatial freeform families and full original library parity",
+    "external Plasticity runtime equivalence"
+  ]
+}

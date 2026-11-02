@@ -314,3 +314,39 @@ fn automatic_curved_surface_root_partitions_both_incident_faces() {
     assert!(edge_partition::partition_at_surface(&model, edge, &support, 0, 1).is_err());
     assert!(edge_partition::partition_at_surface(&model, edge, &support, 1, 10000).is_err());
 }
+#[test]
+fn shared_vertex_proposal_requires_both_complete_original_face_lifts() {
+    let model = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let before = model.clone();
+    let edge = 0;
+    let [a, b] = model.edges[edge].curve.domain();
+    let parameter = a + (b - a) * 0.5;
+    let p = model.edges[edge].curve.evaluate(parameter).unwrap().point;
+    let mut vertex = [p[0], p[1], p[2]];
+    vertex[0] += model.tolerance_mm * 0.25;
+    let cuts = cuts(&model, edge, 0.5);
+    assert_eq!(cuts.len(), 2);
+    let out = edge_partition::partition_to_vertex(&model, edge, parameter, &cuts, vertex, 100000)
+        .unwrap();
+    assert_eq!(out.model.vertices[out.vertex].point, vertex);
+    assert!(
+        brep_core::boundary_agreement::verify(&out.model, 100000)
+            .unwrap()
+            .complete
+    );
+    assert_eq!(out.model.bodies.len(), model.bodies.len());
+    let mut far = vertex;
+    far[0] += model.tolerance_mm * 8.;
+    assert!(
+        edge_partition::partition_to_vertex(&model, edge, parameter, &cuts, far, 100000).is_err()
+    );
+    let mut wrong = cuts.clone();
+    let c = &model.loops[wrong[0].wire].coedges[wrong[0].coedge];
+    let d = c.pcurve.domain();
+    wrong[0].parameter = d[0] + (d[1] - d[0]) * 0.25;
+    assert!(
+        edge_partition::partition_to_vertex(&model, edge, parameter, &wrong, vertex, 100000)
+            .is_err()
+    );
+    assert_eq!(model, before);
+}

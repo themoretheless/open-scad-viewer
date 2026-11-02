@@ -1,6 +1,7 @@
+import {validSourceGraphG2Preview} from '../sourceGraphG2Preview'
 import {validOffsetEnvelope} from './results/offsetEnvelope'
 import {validMinkowskiResult} from './results/minkowski'
-import {validG2RunoutResult} from '../geometricG2'
+import {validG2RunoutResult,validG2RunoutDiagnosticReport} from '../geometricG2'
 import type {AssemblyFrameExport} from '../assemblyFrameExport'
 import type { CurveMeasurement, FaceDistanceResult, PointMeasurement, ShellDistanceResult } from '../solidMeasurements'
 import type { DirectDocument } from '../directModeling'
@@ -81,6 +82,7 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
   if(job.kind==='sourceBodyRestore')return validSourceBody(job,value)
   if(job.kind==='profileBridgeChords')return validProfileBridgeChordReport(job,value)
   if (!value || typeof value!=='object') return false
+  if(job.kind==='sourceGraphG2Preview')return validSourceGraphG2Preview(value,job.options)
   if(job.kind==='g2RunoutSurface')return validG2RunoutResult(value,job.maxCells,job.maxExactWork,job.maxPatches,job.tolerances)
 if(job.kind==='minkowski3d')return validMinkowskiResult(job,value,document=>mainSolidResult({kind:'extrusion'},document))
 if(job.kind==='animationFrames'){const v=value as AssemblyFrameExport;return v?.frames?.length>0&&v.frames.length<=300&&finite(v.fps)&&v.fps>0&&v.width===960&&v.height===640&&v.frames.every(f=>finite(f.time)&&typeof f.svg==='string'&&f.svg.startsWith('<svg'))}
@@ -473,6 +475,7 @@ if(job.kind==='drawingSheets')return Array.isArray(value)&&value.length>0&&value
   }
   if(job.kind==='surfaceBuild') {
     const v=value as MainSolidResults['surfaceBuild'],r=v.report
+    if(job.runoutId&&!v.document&&v.runoutReport!==undefined&&!validG2RunoutDiagnosticReport(v.runoutReport))return false
     if(job.runoutId&&v.document){
       const patches=(v.document.surfaces??[]).filter(s=>s.id===job.runoutId||s.id.startsWith(job.runoutId+':')).map(s=>s.surface)
       if(!validG2RunoutResult({patches,report:v.runoutReport},100000,1000000,256)||!v.runoutReport?.withinTolerance)return false

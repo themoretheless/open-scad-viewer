@@ -331,3 +331,67 @@ fn flat_g2_boundary_cannot_hide_a_folded_interior() {
             && result.coefficient_work <= 2000000
     );
 }
+
+#[test]
+fn compact_candidate_keeps_original_support_admission_and_refusal() {
+    for rational in [false, true] {
+        let s = supports(rational);
+        let o = options();
+        let traces = std::array::from_fn(|i| {
+            let domain = [
+                [
+                    s[i].knots_u[s[i].degree_u],
+                    s[i].knots_u[s[i].control_points.len()],
+                ],
+                [
+                    s[i].knots_v[s[i].degree_v],
+                    s[i].knots_v[s[i].control_points[0].len()],
+                ],
+            ];
+            let cross = usize::from(i >= 2);
+            corner_blend::Trace {
+                at: domain[cross][usize::from(i % 2 == 0)],
+                along: domain[1 - cross],
+            }
+        });
+        let r = corner_blend::g2_traces_compact(
+            s.each_ref(),
+            traces,
+            o,
+            [1e-7, 1e-5, 1e-4],
+            100_000,
+            1_000_000,
+        )
+        .unwrap();
+        assert!(r.admitted && r.within_tolerance && r.interior.certified);
+        assert_eq!(r.seams.len(), 4);
+        let zero = corner_blend::g2_traces_compact(
+            s.each_ref(),
+            traces,
+            o,
+            [1e-7, 1e-5, 1e-4],
+            0,
+            1_000_000,
+        )
+        .unwrap();
+        assert!(!zero.admitted && !zero.complete);
+        let mut bad = s.clone();
+        for p in bad[3].control_points.iter_mut().flatten() {
+            p[2] += 0.1;
+        }
+        let permissive = Options {
+            compatibility_tolerance: 10.,
+            ..o
+        };
+        let r = corner_blend::g2_traces_compact(
+            bad.each_ref(),
+            traces,
+            permissive,
+            [1e-7, 1e-5, 1e-4],
+            100_000,
+            1_000_000,
+        )
+        .unwrap();
+        assert!(!r.admitted && !r.within_tolerance);
+    }
+}

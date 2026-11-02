@@ -1,0 +1,22 @@
+{
+  "status": "native capability admission qualified; full SemanticProgram/frontend integration remains open",
+  "integration_tests_passed": 5,
+  "source_sha256": {
+    "crates/geometry-bridge/src/brep_envelope.rs": "fbebec01b75b967564203f8bc2659f15b08696b1e7358688869d45732f633d07",
+    "crates/geometry-bridge/tests/full_round_exact_graph.rs": "01ac1c0be440908b8e3a9f9c1967edb3a4f489d227f0bd9fe7dc634b429ff22d"
+  },
+  "checks": [
+    "clean baseline: 11 frozen files unchanged",
+    "rustfmt integration test passed",
+    "git diff --check passed"
+  ],
+  "scope": "Native capability closure and semantic result selection only; no operation production, frontend schema/lowering or new WASM qualification",
+  "open": [
+    "native occurrence production rule",
+    "TypeScript node union/schema/capability closure and lowering",
+    "exact consumers and downstream operations",
+    "packaged WASM/worker and full original parity"
+  ],
+  "envelope_regression_tests_passed": 8,
+  "total_distinct_rust_tests_passed": 13
+}

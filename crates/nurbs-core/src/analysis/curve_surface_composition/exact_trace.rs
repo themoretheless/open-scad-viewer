@@ -2,15 +2,18 @@
 //! subtract a narrow chart origin BEFORE conversion back to binary64 intervals.
 //! This module issues no geometric certificate by itself.
 use crate::{Result, check, curve::Curve, distance_bounds::Interval as I};
+#[path = "exact_trace/restriction.rs"]
+mod restriction;
 use num_rational::BigRational as Q;
 use num_traits::{One, ToPrimitive, Zero};
+pub(super) use restriction::Restriction;
 
 pub(super) struct Work {
     pub used: usize,
     pub limit: usize,
 }
 impl Work {
-    fn operations(&mut self, n: usize) -> Result<()> {
+    pub(super) fn operations(&mut self, n: usize) -> Result<()> {
         if n > self.limit.saturating_sub(self.used) {
             self.used = self.limit;
             return Err(crate::numeric_err(
@@ -117,7 +120,58 @@ type Net = Vec<Vec<[I; 4]>>;
 pub(super) struct Support {
     jets: Vec<Jet>,
     degrees: [usize; 2],
+    constant_jets: Vec<[Option<I>; 4]>,
     nets: std::cell::RefCell<std::collections::BTreeMap<(usize, usize, usize), Net>>,
+}
+/// Position numerators are absent only when original constant homogeneous
+/// weights make them unnecessary for graph jets. Rational pcurves still
+/// retain their common homogeneous denominator; variable surface weights
+/// require all original position numerators.
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct GraphTrace {
+    pub(super) position: Option<[Vec<I>; 3]>,
+    pub(super) weight: Vec<I>,
+    pub(super) derivatives: [Vec<Vec<I>>; 5],
+}
+impl GraphTrace {
+    pub(super) fn restrict(&self, map: &Restriction, w: &mut Work) -> Result<Self> {
+        let position = match &self.position {
+            Some(p) => Some(
+                p.iter()
+                    .map(|p| map.apply(p, w))
+                    .collect::<Result<Vec<_>>>()?
+                    .try_into()
+                    .ok()
+                    .unwrap(),
+            ),
+            None => None,
+        };
+        let weight = map.apply(&self.weight, w)?;
+        let derivatives = self
+            .derivatives
+            .iter()
+            .map(|j| {
+                j.iter()
+                    .map(|p| map.apply(p, w))
+                    .collect::<Result<Vec<_>>>()
+            })
+            .collect::<Result<Vec<_>>>()?
+            .try_into()
+            .ok()
+            .unwrap();
+        Ok(Self {
+            position,
+            weight,
+            derivatives,
+        })
+    }
+    pub(super) fn polynomials(&self) -> impl Iterator<Item = &Vec<I>> {
+        self.position
+            .iter()
+            .flat_map(|p| p.iter())
+            .chain(std::iter::once(&self.weight))
+            .chain(self.derivatives.iter().flatten())
+    }
 }
 const ORDERS: [[usize; 2]; 6] = [[0, 0], [1, 0], [0, 1], [2, 0], [1, 1], [0, 2]];
 impl Support {
@@ -143,6 +197,15 @@ impl Support {
             .collect()
     }
     pub(super) fn new(s: &crate::surface::Surface, w: &mut Work) -> Result<Self> {
+        Self::new_in_frame(s, w, false)
+    }
+    /// Both choices are exact integer projections of original authored poles.
+    /// Cartesian is an additional proof chart, never a rotated floating proxy.
+    pub(super) fn new_in_frame(
+        s: &crate::surface::Surface,
+        w: &mut Work,
+        cartesian: bool,
+    ) -> Result<Self> {
         s.validate()?;
         check(
             !s.periodic_u && !s.periodic_v && s.degree_u <= 12 && s.degree_v <= 12,
@@ -163,12 +226,16 @@ impl Support {
                 let x = authored(p[0])?;
                 let y = authored(p[1])?;
                 let z = authored(p[2])?;
-                let cp = [
-                    (&x - &y) * &weight,
-                    (&x + &y - Q::from_integer(2.into()) * &z) * &weight,
-                    (x + y + z) * &weight,
-                    weight,
-                ];
+                let cp = if cartesian {
+                    [&x * &weight, &y * &weight, &z * &weight, weight]
+                } else {
+                    [
+                        (&x - &y) * &weight,
+                        (&x + &y - Q::from_integer(2.into()) * &z) * &weight,
+                        (x + y + z) * &weight,
+                        weight,
+                    ]
+                };
                 for q in &cp {
                     w.charge(q)?;
                 }
@@ -191,9 +258,22 @@ impl Support {
             }
             jets.push(jet);
         }
+        let mut constant_jets = Vec::new();
+        for jet in &jets {
+            w.operations(4 * jet.poles.len() * jet.poles[0].len())?;
+            let mut constants = [None; 4];
+            for k in 0..4 {
+                let value = &jet.poles[0][0][k];
+                if jet.poles.iter().flatten().all(|p| &p[k] == value) {
+                    constants[k] = Some(enclosure(value)?);
+                }
+            }
+            constant_jets.push(constants);
+        }
         Ok(Self {
             jets,
             degrees,
+            constant_jets,
             nets: std::cell::RefCell::new(Default::default()),
         })
     }
@@ -206,17 +286,128 @@ impl Support {
         spans: [usize; 2],
         w: &mut Work,
     ) -> Result<Vec<Vec<Vec<I>>>> {
+        self.compose_impl(pc, range, spans, w, false, false)
+    }
+    pub(super) fn compose_graph(
+        &self,
+        pc: &Curve,
+        range: [f64; 2],
+        spans: [usize; 2],
+        w: &mut Work,
+    ) -> Result<GraphTrace> {
+        self.compose_graph_oriented(pc, range, spans, w, false)
+    }
+    pub(super) fn compose_graph_oriented(
+        &self,
+        pc: &Curve,
+        range: [f64; 2],
+        spans: [usize; 2],
+        w: &mut Work,
+        reversed: bool,
+    ) -> Result<GraphTrace> {
+        w.operations(pc.weights.len() + 6)?;
+        let constant = self.constant_jets[0][3].filter(|v| v.lo == v.hi && v.lo > 0.);
+        let polynomial_pc = pc.weights.iter().all(|&x| x == 1.);
+        let omit = constant.is_some()
+            && self.constant_jets[1..]
+                .iter()
+                .all(|jet| jet[3] == Some(I::point(0.)));
+        let mut jets = self.compose_impl(pc, range, spans, w, omit, reversed)?;
+        if omit {
+            check(
+                jets.iter().all(|j| j[3].iter().all(|&v| v == I::point(0.))),
+                "Original constant-weight graph derivative invariant failed",
+            )?;
+            let scale = constant.unwrap();
+            let weight = if polynomial_pc {
+                vec![scale]
+            } else {
+                // Original pcurve weights are independent of UV chart origin.
+                // Wp^(degree_u+degree_v) is the common factor of ALL composed
+                // homogeneous jets, including this omitted position weight.
+                let h = pcurve_oriented(pc, range, [[0., 1.]; 2], w, reversed)?;
+                let mut power = vec![I::point(1.)];
+                for _ in 0..self.degrees.iter().sum::<usize>() {
+                    w.operations(12 * power.len() * h[2].len())?;
+                    power = super::mul(&power, &h[2])?;
+                }
+                if scale == I::point(1.) {
+                    power
+                } else {
+                    w.operations(power.len())?;
+                    power
+                        .into_iter()
+                        .map(|v| v.mul(scale))
+                        .collect::<Result<Vec<_>>>()?
+                }
+            };
+            Ok(GraphTrace {
+                position: None,
+                weight,
+                derivatives: jets.try_into().ok().unwrap(),
+            })
+        } else {
+            let mut position = jets.remove(0);
+            let weight = position.pop().unwrap();
+            Ok(GraphTrace {
+                position: Some(position.try_into().ok().unwrap()),
+                weight,
+                derivatives: jets.try_into().ok().unwrap(),
+            })
+        }
+    }
+    fn compose_impl(
+        &self,
+        pc: &Curve,
+        range: [f64; 2],
+        spans: [usize; 2],
+        w: &mut Work,
+        omit_position: bool,
+        reversed: bool,
+    ) -> Result<Vec<Vec<Vec<I>>>> {
         let root = &self.jets[0];
         let domains =
             std::array::from_fn(|a| [root.knots[a][spans[a]], root.knots[a][spans[a] + 1]]);
-        let h = pcurve(pc, range, domains, w)?;
+        let h = pcurve_oriented(pc, range, domains, w, reversed)?;
+        w.operations(pc.weights.len())?;
+        let polynomial_pc = pc.weights.iter().all(|&weight| weight == 1.);
         let mut weight_powers = vec![vec![I::point(1.)]];
         for n in 1..=4 {
-            w.operations(12 * weight_powers[n - 1].len() * h[2].len())?;
-            weight_powers.push(super::mul(&weight_powers[n - 1], &h[2])?);
+            if polynomial_pc {
+                weight_powers.push(vec![I::point(1.)]);
+            } else {
+                w.operations(12 * weight_powers[n - 1].len() * h[2].len())?;
+                weight_powers.push(super::mul(&weight_powers[n - 1], &h[2])?);
+            }
         }
+        let mut basis = TraceBasis::new(&h, w)?;
         let mut output = Vec::new();
         for (index, jet) in self.jets.iter().enumerate() {
+            if omit_position && index == 0 {
+                continue;
+            }
+            if self.constant_jets[index]
+                .iter()
+                .all(|v| *v == Some(I::point(0.)))
+            {
+                // An original exact zero remains zero for every rational
+                // pcurve denominator; do not expand it into uncertain noise.
+                w.operations(4)?;
+                output.push(vec![vec![I::point(0.)]; 4]);
+                continue;
+            }
+            if polynomial_pc && self.constant_jets[index].iter().all(Option::is_some) {
+                // Exact constants of the ORIGINAL homogeneous derivative net.
+                // Unit pcurve weights make the common denominator exactly one.
+                w.operations(4)?;
+                output.push(
+                    self.constant_jets[index]
+                        .iter()
+                        .map(|v| vec![v.unwrap()])
+                        .collect(),
+                );
+                continue;
+            }
             let [a, b] = ORDERS[index];
             let zero = a > self.degrees[0] || b > self.degrees[1];
             if zero {
@@ -229,25 +420,6 @@ impl Support {
                 ]);
                 continue;
             }
-            // Precharge an upper bound for every interval convolution and
-            // coefficient accumulation in lift_coefficients. Big-rational
-            // preprocessing is charged separately, operation by operation.
-            let n = pc.degree;
-            let [du, dv] = jet.degrees;
-            let mut cost = 0usize;
-            for d in [du, dv] {
-                for r in 1..=d {
-                    cost = cost.saturating_add(24 * (n * (r - 1) + 1) * (n + 1));
-                }
-                for r in 0..=d {
-                    cost = cost.saturating_add(12 * (n * r + 1) * (n * (d - r) + 1));
-                }
-            }
-            cost = cost.saturating_add(
-                (du + 1) * (dv + 1) * (12 * (n * du + 1) * (n * dv + 1) + 8 * (n * (du + dv) + 1)),
-            );
-            cost = cost.saturating_add(4 * 12 * (n * (du + dv) + 1) * (n * (a + b) + 1));
-            w.operations(cost)?;
             let span = [spans[0] - a, spans[1] - b];
             let key = (index, span[0], span[1]);
             let cached = self.nets.borrow().get(&key).cloned();
@@ -267,16 +439,170 @@ impl Support {
                 cache.insert(key, net.clone());
                 net
             };
-            let composed = super::lift_coefficients(&h, &net, jet.degrees, [[0., 1.], [0., 1.]])?;
-            output.push(
+            // A literal unit-weight boundary pcurve restricts the original
+            // tensor jet to one boundary row/column exactly. No epsilon test
+            // and no replacement of the authored coordinate is permitted.
+            let (net, degrees) =
+                restrict_polynomial_boundaries(net, jet.degrees, &h, polynomial_pc, w)?;
+            let active = std::array::from_fn(|k| {
+                self.constant_jets[index][k] != Some(I::point(0.))
+                    && (!polynomial_pc || self.constant_jets[index][k].is_none())
+            });
+            let composed = basis.compose(&net, degrees, active, w)?;
+            let mut composed = if polynomial_pc {
+                composed
+            } else {
                 composed
                     .iter()
-                    .map(|poly| super::mul(poly, &weight_powers[a + b]))
-                    .collect::<Result<Vec<_>>>()?,
-            );
+                    .map(|poly| {
+                        w.operations(12 * poly.len() * weight_powers[a + b].len())?;
+                        super::mul(poly, &weight_powers[a + b])
+                    })
+                    .collect::<Result<Vec<_>>>()?
+            };
+            for k in 0..4 {
+                if let Some(value) = self.constant_jets[index][k] {
+                    if polynomial_pc || value == I::point(0.) {
+                        composed[k] = vec![value];
+                    }
+                }
+            }
+            output.push(composed);
         }
         Ok(output)
     }
+}
+/// Per-composition cache: every entry belongs to this exact authored pcurve
+/// interval. No basis or work receipt can leak across cells or source curves.
+struct TraceBasis<'a> {
+    h: &'a [Vec<I>],
+    complement: [Vec<I>; 2],
+    up: [Vec<Vec<I>>; 2],
+    down: [Vec<Vec<I>>; 2],
+    rows: std::collections::BTreeMap<(usize, usize), Vec<Vec<I>>>,
+}
+impl<'a> TraceBasis<'a> {
+    fn new(h: &'a [Vec<I>], w: &mut Work) -> Result<Self> {
+        let mut complement: [Vec<I>; 2] = std::array::from_fn(|_| Vec::new());
+        for axis in 0..2 {
+            w.operations(h[axis].len())?;
+            complement[axis] = h[2]
+                .iter()
+                .zip(&h[axis])
+                .map(|(&weight, &value)| weight.sub(value))
+                .collect::<Result<Vec<_>>>()?;
+        }
+        Ok(Self {
+            h,
+            complement,
+            up: std::array::from_fn(|_| vec![vec![I::point(1.)]]),
+            down: std::array::from_fn(|_| vec![vec![I::point(1.)]]),
+            rows: Default::default(),
+        })
+    }
+    fn row(&mut self, axis: usize, degree: usize, w: &mut Work) -> Result<Vec<Vec<I>>> {
+        if !self.rows.contains_key(&(axis, degree)) {
+            while self.up[axis].len() <= degree {
+                let previous = self.up[axis].last().unwrap();
+                w.operations(12 * previous.len() * self.h[axis].len())?;
+                let next = super::mul(previous, &self.h[axis])?;
+                self.up[axis].push(next);
+            }
+            while self.down[axis].len() <= degree {
+                let previous = self.down[axis].last().unwrap();
+                w.operations(12 * previous.len() * self.complement[axis].len())?;
+                let next = super::mul(previous, &self.complement[axis])?;
+                self.down[axis].push(next);
+            }
+            let mut row = Vec::new();
+            for i in 0..=degree {
+                let (up, down) = (&self.up[axis][i], &self.down[axis][degree - i]);
+                w.operations(12 * up.len() * down.len())?;
+                let product = super::mul(up, down)?;
+                w.operations(product.len())?;
+                let factor = I::point(super::choose(degree, i));
+                row.push(
+                    product
+                        .into_iter()
+                        .map(|x| x.mul(factor))
+                        .collect::<Result<Vec<_>>>()?,
+                );
+            }
+            self.rows.insert((axis, degree), row);
+        }
+        let row = &self.rows[&(axis, degree)];
+        w.operations(row.iter().map(Vec::len).sum())?;
+        Ok(row.clone())
+    }
+    fn compose(
+        &mut self,
+        net: &Net,
+        degrees: [usize; 2],
+        active: [bool; 4],
+        w: &mut Work,
+    ) -> Result<Vec<Vec<I>>> {
+        let [du, dv] = degrees;
+        let u = self.row(0, du, w)?;
+        let v = self.row(1, dv, w)?;
+        let degree = (self.h[0].len() - 1) * (du + dv);
+        let mut output = vec![vec![I::point(0.); degree + 1]; 4];
+        let coordinates = active.iter().filter(|&&a| a).count();
+        for i in 0..=du {
+            for j in 0..=dv {
+                w.operations(12 * u[i].len() * v[j].len())?;
+                let coefficient = super::mul(&u[i], &v[j])?;
+                w.operations(2 * coordinates * coefficient.len())?;
+                for k in 0..4 {
+                    if active[k] {
+                        for (out, &value) in output[k].iter_mut().zip(&coefficient) {
+                            *out = out.add(value.mul(net[i][j][k])?)?;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(output)
+    }
+}
+
+/// Exact boundary restriction retains the same homogeneous jets only for a
+/// unit pcurve denominator. For rational pcurves the missing denominator power
+/// must not be discarded, even if the geometric coordinate is constant.
+fn restrict_polynomial_boundaries(
+    mut net: Net,
+    mut degrees: [usize; 2],
+    h: &[Vec<I>],
+    polynomial: bool,
+    w: &mut Work,
+) -> Result<(Net, [usize; 2])> {
+    if !polynomial {
+        return Ok((net, degrees));
+    }
+    w.operations(2 * h.iter().map(Vec::len).sum::<usize>())?;
+    if !h[2].iter().all(|&v| v == I::point(1.)) {
+        return Ok((net, degrees));
+    }
+    for axis in 0..2 {
+        let boundary = if h[axis].iter().all(|&v| v == I::point(0.)) {
+            Some(0)
+        } else if h[axis].iter().all(|&v| v == I::point(1.)) {
+            Some(degrees[axis])
+        } else {
+            None
+        };
+        if let Some(index) = boundary {
+            w.operations(4 * net.len() * net[0].len())?;
+            net = if axis == 0 {
+                vec![net.swap_remove(index)]
+            } else {
+                net.into_iter()
+                    .map(|mut row| vec![row.swap_remove(index)])
+                    .collect()
+            };
+            degrees[axis] = 0;
+        }
+    }
+    Ok((net, degrees))
 }
 fn differentiate(jet: Jet, axis: usize, w: &mut Work) -> Result<Jet> {
     let p = jet.degrees[axis];
@@ -338,37 +664,107 @@ fn blossom(mut row: Vec<Q>, arguments: &[Q], w: &mut Work) -> Result<Q> {
     Ok(row.remove(0))
 }
 
-/// Restrict a clamped Bezier pcurve to normalized traversal [lo,hi], then
-/// express it in the surface knot cell. Original poles/weights are untouched.
+/// Restrict an original clamped pcurve traversal to one original knot span,
+/// then express it in the surface knot cell. Spline extraction and traversal
+/// conversion use exact rational arithmetic, not rounded knot insertion.
+/// A range crossing knots refuses; callers must cover all original spans.
 pub(super) fn pcurve(
     c: &Curve,
     range: [f64; 2],
     cell: [[f64; 2]; 2],
     w: &mut Work,
 ) -> Result<Vec<Vec<I>>> {
+    pcurve_oriented(c, range, cell, w, false)
+}
+pub(super) fn pcurve_oriented(
+    c: &Curve,
+    range: [f64; 2],
+    cell: [[f64; 2]; 2],
+    w: &mut Work,
+    reversed: bool,
+) -> Result<Vec<Vec<I>>> {
     c.validate()?;
     let p = c.degree;
+    let n = c.control_points.len();
     check(
-        c.control_points.len() == p + 1
+        n <= 4096
             && p <= 16
             && !c.periodic
             && c.control_points[0].len() == 2
             && c.knots[..=p].iter().all(|x| *x == c.knots[p])
-            && c.knots[p + 1..].iter().all(|x| *x == c.knots[p + 1]),
-        "Exact trace requires a clamped Bezier pcurve",
+            && c.knots[n..].iter().all(|x| *x == c.knots[n]),
+        "Exact trace requires a bounded clamped nonperiodic pcurve",
     )?;
     check(
         range[0] >= 0. && range[1] <= 1. && range[0] < range[1],
         "Invalid exact trace traversal range",
     )?;
-    let ends = [authored(range[0])?, authored(range[1])?];
+    let mut ends = [authored(range[0])?, authored(range[1])?];
+    if reversed {
+        for end in &mut ends {
+            *end = Q::one() - &*end;
+            w.charge(end)?;
+        }
+    }
+    let span = if n == p + 1 {
+        p
+    } else {
+        w.operations(n)?;
+        let mut index = p + 1;
+        while index < n {
+            let mut end = index + 1;
+            while end < n && c.knots[end] == c.knots[index] {
+                end += 1;
+            }
+            check(
+                end - index <= p,
+                "Exact pcurve trace cannot skip an internal discontinuity",
+            )?;
+            index = end;
+        }
+        let origin = authored(c.knots[p])?;
+        let width = authored(c.knots[n])? - &origin;
+        let t = ends.clone().map(|t| &origin + &width * t);
+        let span = (p..n)
+            .find(|&i| {
+                c.knots[i] < c.knots[i + 1]
+                    && authored(c.knots[i]).is_ok_and(|a| a <= *t.iter().min().unwrap())
+                    && authored(c.knots[i + 1]).is_ok_and(|b| *t.iter().max().unwrap() <= b)
+            })
+            .ok_or_else(|| crate::numeric_err("Exact pcurve range crosses original knots"))?;
+        let a = authored(c.knots[span])?;
+        let width = authored(c.knots[span + 1])? - &a;
+        ends = t.map(|t| (t - &a) / &width);
+        span
+    };
     let mut h: Vec<Vec<Q>> = vec![Vec::new(); 3];
-    for (i, cp) in c.control_points.iter().enumerate() {
+    for i in span - p..=span {
+        let cp = &c.control_points[i];
         let weight = authored(c.weights[i])?;
         for k in 0..2 {
             h[k].push(authored(cp[k])? * &weight);
         }
         h[2].push(weight);
+    }
+    if n != p + 1 {
+        let matrix = extraction(&c.knots, p, span, w)?;
+        let mut extracted = vec![Vec::new(); 3];
+        for row in matrix {
+            for axis in 0..3 {
+                let mut value = Q::zero();
+                for i in 0..=p {
+                    if row[i].is_zero() {
+                        continue;
+                    }
+                    let term = &row[i] * &h[axis][i];
+                    w.charge(&term)?;
+                    value += term;
+                    w.charge(&value)?;
+                }
+                extracted[axis].push(value);
+            }
+        }
+        h = extracted;
     }
     let mut restricted = vec![Vec::new(); 3];
     for j in 0..=p {
@@ -476,6 +872,211 @@ mod tests {
         for k in 0..2 {
             assert_eq!(h[k], vec![I::point(0.), I::point(1.)]);
         }
+    }
+    #[test]
+    fn boundary_restriction_uses_only_exact_unit_polynomial_coordinates() {
+        let net: Net = (0..3)
+            .map(|i| (0..4).map(|j| [I::point((i * 4 + j) as f64); 4]).collect())
+            .collect();
+        for axis in 0..2 {
+            for end in 0..2 {
+                let mut h = vec![vec![I::point(0.25), I::point(0.75)]; 3];
+                h[axis] = vec![I::point(end as f64); 2];
+                h[2] = vec![I::point(1.); 2];
+                let (reduced, d) =
+                    restrict_polynomial_boundaries(net.clone(), [2, 3], &h, true, &mut work())
+                        .unwrap();
+                assert_eq!(d[axis], 0);
+                assert_eq!(d[1 - axis], [2, 3][1 - axis]);
+                if axis == 0 {
+                    assert_eq!(reduced, vec![net[end * 2].clone()]);
+                } else {
+                    assert_eq!(
+                        reduced,
+                        net.iter().map(|row| vec![row[end * 3]]).collect::<Net>()
+                    );
+                }
+                let (unchanged, d) =
+                    restrict_polynomial_boundaries(net.clone(), [2, 3], &h, false, &mut work())
+                        .unwrap();
+                assert_eq!(unchanged, net);
+                assert_eq!(d, [2, 3]);
+                h[axis][0] = I::new(-1e-20, 1e-20).unwrap();
+                assert_eq!(
+                    restrict_polynomial_boundaries(net.clone(), [2, 3], &h, true, &mut work())
+                        .unwrap()
+                        .1,
+                    [2, 3]
+                );
+            }
+        }
+        let h = vec![
+            vec![I::point(0.); 2],
+            vec![I::point(1.); 2],
+            vec![I::point(1.); 2],
+        ];
+        let (corner, d) =
+            restrict_polynomial_boundaries(net.clone(), [2, 3], &h, true, &mut work()).unwrap();
+        assert_eq!(corner, vec![vec![net[0][3]]]);
+        assert_eq!(d, [0, 0]);
+        let mut none = Work { used: 0, limit: 0 };
+        assert!(restrict_polynomial_boundaries(net, [2, 3], &h, true, &mut none).is_err());
+        assert_eq!(none.used, 0);
+    }
+    #[test]
+    fn original_boundary_jets_retain_transverse_and_mixed_curvature() {
+        let s = crate::surface::Surface {
+            degree_u: 2,
+            degree_v: 2,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            weights: vec![vec![1.; 3]; 3],
+            periodic_u: false,
+            periodic_v: false,
+            control_points: (0..3)
+                .map(|i| {
+                    (0..3)
+                        .map(|j| {
+                            let u = i as f64 * 0.5;
+                            let v = j as f64 * 0.5;
+                            let a = if i == 2 { 1. } else { 0. };
+                            let b = if j == 2 { 1. } else { 0. };
+                            vec![u * (1. + v), v + u * b, a + b + a * b]
+                        })
+                        .collect()
+                })
+                .collect(),
+        };
+        let before = s.clone();
+        for axis in 0..2 {
+            for end in [0., 1.] {
+                let points = [0.125, 0.875].map(|t| {
+                    if axis == 0 {
+                        vec![end, t]
+                    } else {
+                        vec![t, end]
+                    }
+                });
+                let p = Curve::from_polyline(points.to_vec()).unwrap();
+                let mut w = Work {
+                    used: 0,
+                    limit: 1_000_000,
+                };
+                let support = Support::new_in_frame(&s, &mut w, true).unwrap();
+                let jets = support.compose(&p, [0., 1.], [2, 2], &mut w).unwrap();
+                for t in [0., 0.5, 1.] {
+                    let free = 0.125 + 0.75 * t;
+                    let (u, v) = if axis == 0 { (end, free) } else { (free, end) };
+                    let expected = [
+                        [u * (1. + v), v + u * v * v, u * u + v * v + u * u * v * v],
+                        [1. + v, v * v, 2. * u * (1. + v * v)],
+                        [u, 1. + 2. * u * v, 2. * v * (1. + u * u)],
+                        [0., 0., 2. * (1. + v * v)],
+                        [1., 2. * v, 4. * u * v],
+                        [0., 2. * u, 2. * (1. + u * u)],
+                    ];
+                    for jet in 0..6 {
+                        for k in 0..3 {
+                            let mut row = jets[jet][k].clone();
+                            while row.len() > 1 {
+                                row = row
+                                    .windows(2)
+                                    .map(|r| {
+                                        r[0].mul(I::point(1. - t))
+                                            .unwrap()
+                                            .add(r[1].mul(I::point(t)).unwrap())
+                                            .unwrap()
+                                    })
+                                    .collect();
+                            }
+                            assert!(
+                                row[0].lo <= expected[jet][k] && row[0].hi >= expected[jet][k],
+                                "axis={axis} end={end} jet={jet} k={k} t={t}: {:?} vs {}",
+                                row[0],
+                                expected[jet][k]
+                            );
+                        }
+                    }
+                }
+                assert!(w.used > 0 && w.used < w.limit);
+            }
+        }
+        assert_eq!(s, before);
+    }
+    #[test]
+    fn reversed_trace_retains_exact_clock_complement_below_binary64_spacing() {
+        let p = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
+        let tiny = 2f64.powi(-100);
+        assert_eq!(1. - tiny, 1., "control must expose rounded complement loss");
+        let mut w = work();
+        let reversed = pcurve_oriented(&p, [0., tiny], [[0., 1.]; 2], &mut w, true).unwrap();
+        assert_eq!(reversed[0][0], I::point(1.));
+        let endpoint = reversed[0][1];
+        let exact = Q::one() - authored(tiny).unwrap();
+        assert!(authored(endpoint.lo).unwrap() <= exact && exact <= authored(endpoint.hi).unwrap());
+        assert!(
+            endpoint.lo < endpoint.hi,
+            "exact complement must not collapse to rounded one"
+        );
+        assert_eq!(p.control_points, vec![vec![0., 0.], vec![1., 0.]]);
+    }
+    #[test]
+    fn original_rational_pcurve_spans_use_exact_extraction_without_refitting() {
+        let c = Curve {
+            degree: 2,
+            knots: vec![2., 2., 2., 4., 7., 7., 7.],
+            control_points: vec![
+                vec![0.25, 0.],
+                vec![0.3, 0.1],
+                vec![0.7, 0.2],
+                vec![0.9, 0.4],
+            ],
+            weights: vec![1., 0.5, 2., 1.],
+            periodic: false,
+        };
+        let before = c.clone();
+        for range in [[0., 0.25], [0.5, 1.]] {
+            let mut ledger = work();
+            let h = pcurve(&c, range, [[0., 1.]; 2], &mut ledger).unwrap();
+            for t in [0., 0.125, 0.5, 0.875, 1.] {
+                let mut value = Vec::new();
+                for coeffs in &h {
+                    let mut row = coeffs.clone();
+                    while row.len() > 1 {
+                        row = row
+                            .windows(2)
+                            .map(|p| p[0].mul(I::point(1. - t))?.add(p[1].mul(I::point(t))?))
+                            .collect::<Result<Vec<_>>>()
+                            .unwrap();
+                    }
+                    value.push(row[0]);
+                }
+                let actual = c
+                    .evaluate(2. + 5. * (range[0] + (range[1] - range[0]) * t))
+                    .unwrap();
+                for k in 0..2 {
+                    let bound = value[k].div_signed(value[2]).unwrap();
+                    assert!(
+                        bound.lo - actual.rounding_bound <= actual.point[k]
+                            && actual.point[k] <= bound.hi + actual.rounding_bound
+                    );
+                }
+            }
+            assert!(ledger.used > 0 && ledger.used <= ledger.limit);
+        }
+        assert_eq!(c, before);
+        assert!(pcurve(&c, [0.25, 0.75], [[0., 1.]; 2], &mut work()).is_err());
+        let mut small = Work { used: 0, limit: 1 };
+        assert!(pcurve(&c, [0., 0.25], [[0., 1.]; 2], &mut small).is_err());
+        assert!(small.used <= small.limit);
+        let jump = Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 0.5, 1., 1.],
+            control_points: vec![vec![0., 0.], vec![0.25, 0.], vec![0.75, 0.], vec![1., 0.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        assert!(pcurve(&jump, [0., 0.25], [[0., 1.]; 2], &mut work()).is_err());
     }
     #[test]
     fn extraction_of_quadratic_c2_span_is_partition_of_unity() {

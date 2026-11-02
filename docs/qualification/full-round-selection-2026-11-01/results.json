@@ -1,0 +1,25 @@
+{
+  "scope": "Full Round selection fidelity on proven XY profile extrusions",
+  "test_exit_code": 0,
+  "tests_passed": 10,
+  "targets": [
+    "feature_ops",
+    "full_round_frame",
+    "full_round_prism"
+  ],
+  "regression": "Coplanar rear support selection refuses; actual adjoining support selection succeeds",
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "edad59c1a48173b6610ddf0d94e5cb6290b7f8d308409d81c5e27079c300ce57",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "017a240d00978ede4f394898d7b9619c3c7822edeff1275bad79a00508298eab",
+    "crates/brep-core/tests/full_round_prism.rs": "ce4f62ff40965539420eeaf612eccffc8e941a874a178e4ad0ec0ba14fc6ab71",
+    "crates/brep-core/tests/full_round_frame.rs": "8a0cd5d191013df076f09dade7c48c8d52781c6f0f165d0e3f171674b2b4dff3"
+  },
+  "full_parity": false,
+  "architecture_gate": "Unrelated existing mainSolidResult.ts 595 lines vs pin 594",
+  "clean_baseline": "11 files unchanged",
+  "limitations": [
+    "No general multi-face groups",
+    "No reference runtime comparison",
+    "Focused tests do not qualify concurrent full worktree"
+  ]
+}

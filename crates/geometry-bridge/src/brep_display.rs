@@ -3,7 +3,7 @@ use super::{Mesh, Result, Value, field, input, take_field};
 use std::collections::BTreeMap;
 use value_codec::json;
 use math_core::cross;
-fn prepare(mesh: &Mesh) -> Result<(Vec<f32>, Vec<usize>, f64)> {
+pub(crate) fn prepare(mesh: &Mesh) -> Result<(Vec<f32>, Vec<usize>, f64)> {
     mesh.validate()?;
     if mesh.indices.len() / 3 > 20_000 {
         return Err(input("B-rep scene exceeds 20000 display triangles"));

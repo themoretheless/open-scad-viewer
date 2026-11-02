@@ -1,0 +1,8 @@
+{
+  "schema": "embedded-g2-step-occt/1",
+  "stepSha256": "2d95af6595aad48e32cde17b840a08de0a78210f4d1ec2b2791330121961b460",
+  "valid": true,
+  "solids": 1,
+  "shells": 1,
+  "scope": "Independent STEP validity and solid count; G2 and curvature verified separately by native roundtrip test"
+}

@@ -9,3 +9,5 @@ Qualification: seven full polygonize_accelerated cases, three AA-only windows pe
 Recovery before any numerical samples: old observer disappeared, termination provenance unknown. Preserve waiting-only series. Cargo/runtime sources changed externally to local wgpu/openscad-gpu; preserve all edits, rebuild and restart complete profile+AA-first matrix. Extend frozen source snapshots to BOTH local runtime crates, all source file types. No measurement/acceptance gate changed.
 
 Recovery v5: external executable removal and runtime renaming require full fresh series. Freeze current gpu-runtime/gpu-shader rather than removed wgpu/naga packages. Missing frozen files always fail closed and decision is still recorded. Correct builtin distance emission repaired with regression test; all GPU-required SDF tests pass. No numerical or environmental gates changed.
+
+Recovery v6: dependency migration to Git forma requires fresh build/full restart. Snapshot/hash actual transitive Git dependency sources via dependency-sources.json plus local sources and Cargo.lock. All original measurement/acceptance gates unchanged. Prior series contain no numerical samples.

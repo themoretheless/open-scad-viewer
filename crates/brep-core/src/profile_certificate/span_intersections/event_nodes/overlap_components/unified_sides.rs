@@ -226,7 +226,16 @@ pub fn own_original_unified_sides_automatically(
             ],
             limits.max_refinements,
         )?;
-        let mut radius = Q::one();
+        let all_cells = graph.owner().dictionary().sources().iter()
+            .map(cells).collect::<Result<Vec<_>>>()?;
+        let selected = all_cells[..c.source].iter().map(Vec::len).sum::<usize>() + c.cell;
+        let nets = all_cells.iter().flatten().map(|c| c.net.clone()).collect::<Vec<_>>();
+        let local = (&parameter - &cell.domain[0]) / (&cell.domain[1] - &cell.domain[0]);
+        // Only proposes a scale. The unchanged full transverse and winding
+        // proof below remains the sole authority, including center ownership.
+        let mut radius = arithmetic::carrier_sides::radius::suggest(
+            &nets, selected, &local, limits.max_refinements,
+        ).unwrap_or_else(|_| Q::one());
         let mut proved = None;
         for step in 0..=radius_halvings {
             if let Ok(side) = own_original_unified_sides(

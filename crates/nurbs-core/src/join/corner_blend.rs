@@ -139,6 +139,71 @@ fn g2_traces_bounded(
     max_exact: u64,
     max_coefficients: usize,
 ) -> Result<Report> {
+    let surface = propose_traces(
+        supports,
+        traces,
+        o,
+        tolerances,
+        max_cells,
+        max_exact,
+        max_coefficients,
+        5,
+        o.compatibility_tolerance,
+    )?;
+    inspect_candidate_bounded(
+        &surface,
+        supports,
+        traces,
+        o,
+        tolerances,
+        max_cells,
+        max_exact,
+        max_coefficients,
+    )
+}
+/// Prefer an unelevated quadratic-or-higher tensor when ALL overlapping
+/// homogeneous jet constraints agree exactly. Otherwise keep the independent
+/// quintic construction. Candidate selection consumes no admission evidence;
+/// the chosen surface receives one fresh original-support G2/interior audit.
+pub fn g2_traces_compact(
+    supports: [&Surface; 4],
+    traces: [Trace; 4],
+    o: Options,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_exact: u64,
+) -> Result<Report> {
+    let surface = propose_traces(
+        supports, traces, o, tolerances, max_cells, max_exact, 2_000_000, 2, 0.,
+    )
+    .or_else(|_| {
+        propose_traces(
+            supports,
+            traces,
+            o,
+            tolerances,
+            max_cells,
+            max_exact,
+            2_000_000,
+            5,
+            o.compatibility_tolerance,
+        )
+    })?;
+    inspect_candidate_bounded(
+        &surface, supports, traces, o, tolerances, max_cells, max_exact, 2_000_000,
+    )
+}
+fn propose_traces(
+    supports: [&Surface; 4],
+    traces: [Trace; 4],
+    o: Options,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_exact: u64,
+    max_coefficients: usize,
+    minimum_degree: usize,
+    compatibility: f64,
+) -> Result<Surface> {
     check(
         max_coefficients <= 2000000,
         "Corner coefficient budget exceeds limit",
@@ -195,8 +260,8 @@ fn g2_traces_bounded(
             if o.reverse_along[side] {
                 *c = c.reverse()?;
             }
-            if c.degree < 5 {
-                *c = c.elevate(5)?;
+            if c.degree < minimum_degree {
+                *c = c.elevate(minimum_degree)?;
             }
         }
         fields.push(f);
@@ -308,7 +373,7 @@ fn g2_traces_bounded(
                     check(
                         old.iter()
                             .zip(h)
-                            .all(|(x, y)| (x - y).abs() <= o.compatibility_tolerance),
+                            .all(|(x, y)| (x - y).abs() <= compatibility),
                         "Corner boundary jet blocks are incompatible",
                     )?;
                 } else {
@@ -353,16 +418,7 @@ fn g2_traces_bounded(
         periodic_u: false,
         periodic_v: false,
     };
-    inspect_candidate_bounded(
-        &surface,
-        supports,
-        traces,
-        o,
-        tolerances,
-        max_cells,
-        max_exact,
-        max_coefficients,
-    )
+    Ok(surface)
 }
 /// Fresh admission of an actual candidate: all four ORIGINAL-support seams and
 /// the complete candidate interior share the caller's work ledger. Supplied
@@ -446,7 +502,7 @@ fn inspect_candidate_bounded(
             certified: false,
             cells: 0,
             projection: [[1, 0, 0], [0, 1, 0]],
-            row_weights: [1.,1.],
+            row_weights: [1., 1.],
             profile_parameterization: None,
             reason: Some("corner-interior-uninspected"),
         },

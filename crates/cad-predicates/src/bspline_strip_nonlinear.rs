@@ -1,5 +1,7 @@
 //! Exact rational seam maps recovered from a proved affine source coordinate.
 //! All span pairs with nonempty mapped overlap are checked as polynomials.
+mod algebraic;
+mod chart_switches;
 use crate::bspline_internal_jets::{Rational as Q, Series};
 use crate::{BezierIdentity, Expansion, PredicateContext, Reason, Sign};
 pub(crate) type P = Vec<Q>;
@@ -27,7 +29,7 @@ pub(crate) fn add(a: &P, b: &P, ctx: &mut PredicateContext<'_>) -> Result<P, Rea
     }
     Ok(trim(p))
 }
-fn neg(a: &P, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
+pub(crate) fn neg(a: &P, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
     a.iter().map(|v| Q::zero().sub(v, ctx)).collect()
 }
 pub(crate) fn sub(a: &P, b: &P, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
@@ -179,6 +181,48 @@ fn acceleration(h: &[H], ctx: &mut PredicateContext<'_>) -> Result<[P; 3], Reaso
     }
     Ok(a)
 }
+// A constant homogeneous gauge and constant normal parameter scale imply
+// all requested Cartesian jets directly. Check every original polynomial
+// coefficient before avoiding the more general higher-degree cross products.
+fn strict_gauge(
+    a: &[H],
+    b: &[H],
+    scale: &Q,
+    order: usize,
+    ctx: &mut PredicateContext<'_>,
+) -> Result<bool, Reason> {
+    let Some(i) = b[0][3].iter().position(|v| v.n.sign() != Sign::Zero) else {
+        return Ok(false);
+    };
+    let Some(ca) = a[0][3].get(i) else {
+        return Ok(false);
+    };
+    let cb = &b[0][3][i];
+    if ca.n.sign() != cb.n.sign() {
+        return Ok(false);
+    }
+    let negative = Q::zero().sub(scale, ctx)?;
+    let mut factor = one();
+    for q in 0..=order {
+        if q > 0 {
+            factor = factor.mul(&negative, ctx)?;
+        }
+        for k in 0..4 {
+            for j in 0..a[q][k].len().max(b[q][k].len()) {
+                let av = a[q][k].get(j).cloned().unwrap_or_else(Q::zero);
+                let bv = b[q][k].get(j).cloned().unwrap_or_else(Q::zero);
+                if !av
+                    .mul(&factor, ctx)?
+                    .mul(cb, ctx)?
+                    .equal(&bv.mul(ca, ctx)?, ctx)?
+                {
+                    return Ok(false);
+                }
+            }
+        }
+    }
+    Ok(true)
+}
 pub(crate) fn relation(
     a: &[H],
     b: &[H],
@@ -186,6 +230,9 @@ pub(crate) fn relation(
     order: usize,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<bool, Reason> {
+    if strict_gauge(a, b, scale, order, ctx)? {
+        return Ok(true);
+    }
     for k in 0..3 {
         if !zero(&sub(
             &mul(&a[0][k], &b[0][3], ctx)?,
@@ -194,6 +241,9 @@ pub(crate) fn relation(
         )?) {
             return Ok(false);
         }
+    }
+    if order == 0 {
+        return Ok(true);
     }
     let va = velocity(a, ctx)?;
     let vb = velocity(b, ctx)?;
@@ -237,7 +287,33 @@ pub(crate) fn relation(
     }
     Ok(true)
 }
+/// The inverse of a rational positive clock can be genuinely algebraic.
+/// Prove that inverse implicitly by proving the opposite rational bijection;
+/// never approximate its roots or relax original normal-jet identities.
 pub(crate) fn compare(
+    ctx: &mut PredicateContext<'_>,
+    jets: &[Vec<Series>],
+    u: &[Vec<Q>],
+    degrees: [usize; 2],
+    scale: &Q,
+    order: usize,
+) -> Result<BezierIdentity, Reason> {
+    match compare_direct(ctx, jets, u, degrees, scale, order) {
+        Err(Reason::MissingProof) if order > 0 => {
+            let inverse_scale = one().div_positive(scale, ctx)?;
+            compare_direct(
+                ctx,
+                &[jets[1].clone(), jets[0].clone()],
+                &[u[1].clone(), u[0].clone()],
+                [degrees[1], degrees[0]],
+                &inverse_scale,
+                order,
+            )
+        }
+        result => result,
+    }
+}
+fn compare_direct(
     ctx: &mut PredicateContext<'_>,
     jets: &[Vec<Series>],
     u: &[Vec<Q>],
@@ -253,7 +329,10 @@ pub(crate) fn compare(
         let mut rows = Vec::new();
         for i in degrees[side]..jets[side].len() {
             if u[side][i + 1].sub(&u[side][i], ctx)?.n.sign() == Sign::Positive {
-                rows.push((i, span(&jets[side], &u[side], degrees[side], i, ctx)?));
+                rows.push((
+                    i,
+                    super::bspline_strip_map::span(&jets[side], &u[side], degrees[side], i, ctx)?,
+                ));
             }
         }
         if rows.is_empty() {
@@ -261,6 +340,7 @@ pub(crate) fn compare(
         }
         spans.push(rows);
     }
+    let mut closed_trace = true;
     for axis in 0..3 {
         let first = &spans[0][0].1[0];
         let last = &spans[0].last().unwrap().1[0];
@@ -272,6 +352,7 @@ pub(crate) fn compare(
         if width.n.sign() == Sign::Zero {
             continue;
         }
+        closed_trace = false;
         let mut anchor = true;
         for (_, a) in &spans[0] {
             let expected = add(
@@ -351,7 +432,42 @@ pub(crate) fn compare(
             return Ok(BezierIdentity::Equal);
         }
     }
-    local_charts(ctx, &spans, u, degrees, scale, order)
+    if spans[0].len() > 1 || spans[1].len() > 1 {
+        match algebraic::ordered_local_charts(ctx, &spans, u, scale, order) {
+            Ok(value) => return Ok(value),
+            Err(Reason::MissingProof) => {
+                match algebraic::ordered_span_groups(ctx, &spans, u, scale, order) {
+                    Ok(value) => return Ok(value),
+                    Err(Reason::MissingProof) => {}
+                    Err(reason) => return Err(reason),
+                }
+            }
+            Err(reason) => return Err(reason),
+        }
+    }
+    let overlap_first = closed_trace || (spans[0].len() > 1 && spans[1].len() > 1);
+    if overlap_first {
+        match algebraic::overlap::compare(ctx, &spans, u, scale, order) {
+            Ok(value) => return Ok(value),
+            Err(Reason::MissingProof) => {}
+            Err(reason) => return Err(reason),
+        }
+    }
+    match local_charts(ctx, &spans, u, degrees, scale, order) {
+        Err(Reason::MissingProof) => {
+            match chart_switches::compare(ctx, &spans, u, degrees, scale, order) {
+                Err(Reason::MissingProof) => match algebraic::compare(ctx, &spans, u, scale, order)
+                {
+                    Err(Reason::MissingProof) if !overlap_first => {
+                        algebraic::overlap::compare(ctx, &spans, u, scale, order)
+                    }
+                    result => result,
+                },
+                result => result,
+            }
+        }
+        result => result,
+    }
 }
 
 // Ordered local graph charts admit closed/periodic sources without assuming
@@ -368,7 +484,9 @@ fn local_charts(
     let mut cursor = 0;
     let mut progress = Q::zero();
     for (bi, b) in &spans[1] {
-        while cursor < spans[0].len() && progress.equal(&u[0][spans[0][cursor].0 + 1], ctx)? {
+        while cursor < spans[0].len()
+            && progress.sub(&u[0][spans[0][cursor].0 + 1], ctx)?.n.sign() != Sign::Negative
+        {
             cursor += 1;
         }
         let Some((ai, a)) = spans[0].get(cursor) else {
@@ -421,30 +539,43 @@ fn local_charts(
                 .div_positive(&value(&d, &u[1][bi + 1], ctx)?, ctx)?;
             if !start.equal(&progress, ctx)?
                 || start.sub(bounds[0], ctx)?.n.sign() == Sign::Negative
-                || bounds[1].sub(&end, ctx)?.n.sign() == Sign::Negative
+                || one().sub(&end, ctx)?.n.sign() == Sign::Negative
             {
                 continue;
             }
-            let mut composed = Vec::new();
-            for h in a {
-                let mut row = std::array::from_fn(|_| vec![Q::zero()]);
-                for k in 0..4 {
-                    row[k] = compose(&h[k], &n, &d, degrees[0], ctx)?;
-                }
-                composed.push(row);
-            }
-            if relation(&composed, b, scale, order, ctx)? {
+            if crossed_relations(
+                &spans[0], &u[0], b, &n, &d, &start, &end, degrees[0], scale, order, ctx,
+            )? {
                 accepted = Some(end);
                 break;
             }
         }
         if accepted.is_none() {
-            if let (Some(l), Some(m)) = (
+            let old = match (
                 projective_coordinate(&a[0], 1, ctx)?,
                 projective_coordinate(&a[0], 0, ctx)?,
             ) {
-                let mut n = linear_form(&b[0], &l, ctx)?;
-                let mut d = linear_form(&b[0], &m, ctx)?;
+                (Some(l), Some(m)) => Some((l, m)),
+                _ => None,
+            };
+            if let Some((l, m, inverse_degree, coordinate_scales, coupled)) = match old {
+                Some((l, m)) => Some((
+                    l.to_vec(),
+                    m.to_vec(),
+                    1,
+                    std::array::from_fn(|_| one()),
+                    false,
+                )),
+                None => coupled_coordinate(&a[0], ctx)?
+                    .map(|(l, m, degree, scales)| (l, m, degree, scales, true)),
+            } {
+                let normalized_target =
+                    normalize_inverse_coordinates(&b[0], &coordinate_scales, ctx)?;
+                let (mut n, mut d) =
+                    inverse_forms(&normalized_target, &l, &m, inverse_degree, ctx)?;
+                if coupled {
+                    (n, d) = reduce_ratio(n, d, ctx)?;
+                }
                 let midpoint = u[1][*bi]
                     .add(&u[1][bi + 1], ctx)?
                     .div_positive(&integer(2), ctx)?;
@@ -465,17 +596,12 @@ fn local_charts(
                             .div_positive(&value(&d, &u[1][bi + 1], ctx)?, ctx)?;
                         if start.equal(&progress, ctx)?
                             && start.sub(bounds[0], ctx)?.n.sign() != Sign::Negative
-                            && bounds[1].sub(&end, ctx)?.n.sign() != Sign::Negative
+                            && one().sub(&end, ctx)?.n.sign() != Sign::Negative
                         {
-                            let mut composed = Vec::new();
-                            for h in a {
-                                let mut row = std::array::from_fn(|_| vec![Q::zero()]);
-                                for k in 0..4 {
-                                    row[k] = compose(&h[k], &n, &d, degrees[0], ctx)?;
-                                }
-                                composed.push(row);
-                            }
-                            if relation(&composed, b, scale, order, ctx)? {
+                            if crossed_relations(
+                                &spans[0], &u[0], b, &n, &d, &start, &end, degrees[0], scale,
+                                order, ctx,
+                            )? {
                                 accepted = Some(end);
                             }
                         }
@@ -496,71 +622,52 @@ fn local_charts(
     }
 }
 
-// An exact projective linear inverse proposes a chart for general conics and
-// full-rank spatial cubics. A/D can be nonlinear in every Cartesian coordinate.
-// Free variables are fixed to zero; all final map identities remain mandatory.
-fn projective_coordinate(
-    h: &H,
-    power: usize,
+// Rational-polynomial identities on every positive source overlap avoid
+// rounded (possibly irrational) preimage knots. Each identity holds throughout
+// the B span, hence throughout its actual overlap with that original A span.
+fn crossed_relations(
+    spans: &[(usize, Vec<H>)],
+    u: &[Q],
+    b: &[H],
+    n: &P,
+    d: &P,
+    start: &Q,
+    end: &Q,
+    degree: usize,
+    scale: &Q,
+    order: usize,
     ctx: &mut PredicateContext<'_>,
-) -> Result<Option<[Q; 4]>, Reason> {
-    let n = h.iter().map(Vec::len).max().unwrap().max(power + 1);
-    let mut rows = (0..n)
-        .map(|i| {
-            let mut r = (0..4)
-                .map(|k| h[k].get(i).cloned().unwrap_or_else(Q::zero))
-                .collect::<Vec<_>>();
-            r.push(if i == power { one() } else { Q::zero() });
-            r
-        })
-        .collect::<Vec<_>>();
-    let mut pivots = Vec::new();
-    let mut r = 0;
-    for col in 0..4 {
-        let Some(at) = (r..n).find(|&j| rows[j][col].n.sign() != Sign::Zero) else {
+) -> Result<bool, Reason> {
+    let mut covered = false;
+    for (ai, a) in spans {
+        if end.sub(&u[*ai], ctx)?.n.sign() != Sign::Positive
+            || u[ai + 1].sub(start, ctx)?.n.sign() != Sign::Positive
+        {
             continue;
-        };
-        rows.swap(r, at);
-        if rows[r][col].n.sign() == Sign::Negative {
-            for k in col..=4 {
-                rows[r][k] = Q::zero().sub(&rows[r][k], ctx)?;
-            }
         }
-        let pivot = rows[r][col].clone();
-        for k in col..=4 {
-            rows[r][k] = rows[r][k].div_positive(&pivot, ctx)?;
-        }
-        for j in 0..n {
-            if j == r {
-                continue;
+        covered = true;
+        let mut composed = Vec::new();
+        for h in a {
+            let mut row = std::array::from_fn(|_| vec![Q::zero()]);
+            for k in 0..4 {
+                row[k] = compose(&h[k], n, d, degree, ctx)?;
             }
-            let factor = rows[j][col].clone();
-            for k in col..=4 {
-                rows[j][k] = rows[j][k].sub(&factor.mul(&rows[r][k], ctx)?, ctx)?;
-            }
+            composed.push(row);
         }
-        pivots.push(col);
-        r += 1;
-        if r == n {
-            break;
+        if !relation(&composed, b, scale, order, ctx)? {
+            return Ok(false);
         }
     }
-    if rows
-        .iter()
-        .any(|r| r[..4].iter().all(|v| v.n.sign() == Sign::Zero) && r[4].n.sign() != Sign::Zero)
-    {
-        return Ok(None);
-    }
-    let mut answer = std::array::from_fn(|_| Q::zero());
-    for (row, &col) in pivots.iter().enumerate() {
-        answer[col] = rows[row][4].clone();
-    }
-    Ok(Some(answer))
+    Ok(covered)
 }
-fn linear_form(h: &H, c: &[Q; 4], ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
-    let mut p = vec![Q::zero()];
-    for k in 0..4 {
-        p = add(&p, &scaled(&h[k], &c[k], ctx)?, ctx)?;
-    }
-    Ok(p)
-}
+
+#[cfg(test)]
+#[path = "bspline_strip_nonlinear/tests/coupled.rs"]
+mod coupled_tests;
+
+#[path = "bspline_strip_nonlinear/inverse.rs"]
+mod inverse;
+use inverse::{
+    coupled_coordinate, inverse_forms, normalize_inverse_coordinates, projective_coordinate,
+    reduce_ratio,
+};

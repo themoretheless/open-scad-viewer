@@ -1,5 +1,6 @@
 //! Bounded proof of a simple outer UV loop with disjoint, oppositely oriented
 //! holes. All conclusions require exact joins and proven loop simplicity.
+pub mod nesting;
 use crate::{Result,check,curve::Curve,curve_distance,trim_domain::{TrimDomain,Location},trim_simplicity};
 pub struct Report {
     /// None is unproven; false is a demonstrated role/orientation violation.

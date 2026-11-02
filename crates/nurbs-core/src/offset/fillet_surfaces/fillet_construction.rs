@@ -286,7 +286,11 @@ pub(super) fn build_report(
             warnings,
         ));
     }
-    let n = options.max_sections.clamp(2, MAX_SECTIONS);
+    let hermite = section_kind == SectionKind::G2 && !closed
+        && !(station_hermite::affine_chart(m.a) && station_hermite::affine_chart(m.b));
+    // Hermite interpolation is local and does not use the <=11-section natural
+    // loft solve. Bound proposal size separately; proof ledgers are unchanged.
+    let n = options.max_sections.clamp(2, if hermite { 33 } else { MAX_SECTIONS });
     let spine = stations(m, raw, n, law)?;
     // Result boundary: spine stations must be finite before section building.
     for sample in &spine {
@@ -349,8 +353,10 @@ pub(super) fn build_report(
     }
     let mut contact_pcurves = None;
     let mut spine = spine;
-    let assembled = if section_kind == SectionKind::G2 && !closed && !matches!(law, RadiusLaw::Constant(_))
-        && !(station_hermite::affine_chart(m.a) && station_hermite::affine_chart(m.b)) {
+    // Constant radius does not imply straight contact fields on curved supports.
+    // Interpolate the actual station derivatives and matching UV fields for both
+    // constant and variable laws. All whole-interval admission remains separate.
+    let assembled = if hermite {
         station_hermite::build(m, raw, law, n).and_then(|(surface, pcurves, refined)| {
             contact_pcurves = Some(pcurves);
             spine = refined;

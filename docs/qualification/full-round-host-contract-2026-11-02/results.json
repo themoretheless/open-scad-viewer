@@ -1,0 +1,68 @@
+{
+  "status": "host contract and source-to-native Full Round qualified; full parity remains open",
+  "host_tests_passed": 279,
+  "rust_tests_passed": 22,
+  "rust_suites": {
+    "native_production": 16,
+    "native_graph_and_source_admission": 6
+  },
+  "typechecks": {
+    "vue-tsc --noEmit": "passed",
+    "tsc --noEmit -p tsconfig.mcp.json": "passed"
+  },
+  "source_sha256": {
+    "src/core/semanticProgram.ts": "27ba1d21e747865cc40c52f8cd14fecff0f7b26d652ae241e5ebcf3ceae815f4",
+    "src/core/semanticProgram/semanticResultItems.ts": "c4548c91675adc2547141938c433667dba635f2a01b6d5c86d4b421a2e74e4eb",
+    "src/semantic/lowererBuilder.ts": "da9afcbbdfdbae80e676111f3595f99971b850d261aec48b02c0f05af1120caf",
+    "src/semantic/remapSemanticNode.ts": "d61747fb2443467f8fe6e5db26bbd5223127a398e4c40d424505aca2e4aad773",
+    "src/services/semanticProgramValidator.ts": "f9cfea2e3d986c2e176d7de5762c39c9902bca67074673a25858401df4b749ce",
+    "src/services/semanticProgramValidator/validateNodes.ts": "cf494889a06b6da7b8cf6f3544b4944006bc735a500488417499e60ec2a5c844",
+    "src/services/semanticProgramValidator/validateFullRoundExactNode.ts": "8c7805cda11f27c18f3861f44740a17a6e1a5f95b7e757f0059cd79277694485",
+    "src/services/semanticProgramValidator/validateResult.ts": "295aa12daaad6dc68954fd34345fcd0651df295f938476dff142a0a8b5f49fdb",
+    "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": "c6e31ec4300123839ac98766eb97b2ef363cc4c9064bd3df4c4f0693b1efc8c5",
+    "src/services/semanticProgramValidator/semanticMapProduction.ts": "33f32cc69fa55b1368156af532d4abfcf5e81717f962b5925cd202983d77c329",
+    "src/services/semanticProgramExecutor/checkSemanticExecutionControl.ts": "c9e1ade006e8b1549f0adb8e530c23765198f5bbab6386df0d9a1c8956f60e68",
+    "src/services/openscadSemanticLowerer/evalNode.ts": "8eb167fc476dd7433fad21f5d848f9cd2701950df8e9661ec3ce974fb2462639",
+    "src/services/openscadSemanticLowerer/evalFullRoundExact.ts": "7a671efa06149c69cf89205d61345784f18e9dfd01647a5c513a577db53b4938",
+    "src/services/openscadSemanticLowerer/evalProjection.ts": "a32ee2984dc3097590ec1ba4643b8853570b6d3d21aab69b5ad961e9da25588e",
+    "src/services/openscadSemanticLowerer/evalUserModule.ts": "cb4a0b42917974639b2de3ce464a5491caead59e713b3d638ecf6df23668b217",
+    "src/services/manifoldPlanBackend.ts": "597648b3cc29664545f2c0b7da339af060f366df4b5fb98a3c2bba5f9c161da3",
+    "src/services/manifoldPlanBackend/inspectManifoldPlanPayload.ts": "6b246e4692f43834bd223dd07070d01670d5cb656bc6708bbe67f392e0dd4a8b",
+    "src/services/brepNativeExecutor.ts": "51b04456d64671e9b9a1f96875126a6068ab0aefa95c971cb5f7bcd07d301d89",
+    "src/services/brepSemanticScene.ts": "8e81836bcba22476adda11f088aaee59c81feb7a51af692356679480bb29d556",
+    "tests/fullRoundSemanticContract.test.ts": "f66cda59c1f724b61904eff0565120e1de5394ac5e673047fd0efe8420b3f711",
+    "scripts/qualify-full-round-source-contract.mts": "5aa7211b23d8307fcff384f45d69ef61640b9c1643e9eca9d7a37f322f2e0f4f",
+    "crates/geometry-bridge/tests/full_round_exact_graph.rs": "654cd9b62134ebc1d54a2b3d82dc67eba651491983809ab9b41856d40da40a79",
+    "crates/geometry-bridge/src/brep_production/mod.rs": "788099d793c4001b72a9654822ee15f3539e8cd7da4f190aa690f727ae0bf488",
+    "crates/geometry-bridge/src/brep_production/map_parameters.rs": "9d10717d12eb135b920bca971b0a1aaed3781d90939832904f76ef7c0cfa972f"
+  },
+  "coverage": [
+    "full-round-exact typed node, indexed source dependency and rational result",
+    "strict host schema, face selection and material budgets",
+    "normal and interrupted map production support; interrupted extension has not received a new dedicated case",
+    "full_round_exact source lowering, user-module remapping and binary codec roundtrip",
+    "full source-attested native request with operation and occurrence identity and capability admission, actual exact construction",
+    "source text and capability tampering refuse",
+    "distinct rational transport type; mesh backend and unimplemented f64 display path refuse exact output",
+    "all changed oversized files comply with existing pins; new source files below limits"
+  ],
+  "clean_baseline": "11 frozen files unchanged",
+  "architecture": {
+    "passed": false,
+    "remaining_files": [
+      "crates/brep-core/src/minkowski3d/curved.rs",
+      "crates/brep-core/src/profile_certificate.rs",
+      "crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace.rs",
+      "crates/nurbs-core/src/analysis/curve_surface_composition/graph_trace.rs",
+      "src/services/mainSolidProtocol/mainSolidResult.ts"
+    ],
+    "note": "Other worktree files; no pins increased by this change."
+  },
+  "open": [
+    "dedicated interrupted Full Round and multi-output common-parameter qualification",
+    "exact display/edit/exchange consumers and downstream rational operations",
+    "new source-bound WASM/package and actual worker qualification",
+    "separate NURBS ModelGraph schema/resolver integration",
+    "full regression/architecture closure and initial complete library parity"
+  ]
+}

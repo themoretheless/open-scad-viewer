@@ -1,0 +1,55 @@
+{
+  "scope": "Complete active-span Full Round chain qualification",
+  "goal_status": "active",
+  "test_exit_code": 0,
+  "tests_passed": 17,
+  "target_counts": [
+    4,
+    2,
+    1,
+    1,
+    1,
+    2,
+    2,
+    4
+  ],
+  "targets": [
+    "feature_ops",
+    "full_round_curved",
+    "full_round_curved_volume",
+    "full_round_embedding",
+    "full_round_embedding_prism",
+    "full_round_frame",
+    "full_round_groups",
+    "full_round_prism"
+  ],
+  "geometric_cases": "Six polynomial/rational symmetric/asymmetric support fixtures within the volume regression; 1+1,2+2,2+1,1+2 arc spans",
+  "invariants": [
+    "Every consecutive authored seam pair owns exactly one distinct side face",
+    "Every actual longitudinal seam receives original-pcurve G1 and regularity proof",
+    "Every authored circular face receives whole radius and radial-normal envelope proof",
+    "Immutable proof snapshot and complete all_edges chain retained",
+    "Primary contact/crown/contact edges retained for compatibility",
+    "Full boundary/roles/outward volume proof passes all six fixtures"
+  ],
+  "bounds": {
+    "shared_cells": 100000,
+    "shared_work": 1000000,
+    "normal_chord": 1e-05,
+    "radial_normal_sine_squared": 1e-10
+  },
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_seams.rs": "9a65073e3fe0de198eeae1c725a2dc5ec1450637960621bc04d160cb93afece7",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "74ab10974807c3d4b5862b84c04ed634da70a1c4e3ad679a82bdc33227e86508",
+    "crates/brep-core/tests/full_round_curved_volume.rs": "3519fd64005991d56c4951df29bf633a5a30c60ba4ceec3230a9411719b3460b"
+  },
+  "full_parity": false,
+  "limitations": [
+    "Still an XY prism construction, not arbitrary spatial supports",
+    "Local numerical branch proposal is not a complete root census",
+    "Full source-material subtraction equivalence remains open",
+    "No Plasticity runtime comparison",
+    "Focused tests do not qualify full concurrent worktree"
+  ],
+  "architecture_gate": "Existing mainSolidResult.ts 595 lines vs pin 594"
+}

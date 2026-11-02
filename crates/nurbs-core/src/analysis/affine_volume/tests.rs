@@ -127,11 +127,13 @@ fn temporal_piece_boundaries_enclose_both_one_sided_derivatives() {
     let p = pieces();
     let s = carrier();
     let mut c = Context {
+        uv_window: [[0., 1.]; 2],
         carrier: &s,
         origin: [0.; 3],
         pieces: Motion::Quintic(&p),
         poses: BTreeMap::new(),
         coordinates: None,
+        separable: None,
     };
     let mut out = audit(&s, &p, false, 0, 0);
     let value = c

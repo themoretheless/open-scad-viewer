@@ -17,6 +17,7 @@ geometry-ops = { workspace = true }
 brep-topology = { workspace = true }
 cad-predicates = { workspace = true }
 num-rational = "0.4.2"
+num-bigint = "0.4.8"
 num-traits = "0.2.19"
 
 [[example]]

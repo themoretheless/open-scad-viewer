@@ -5,6 +5,7 @@ use crate::{
     curve_surface_agreement::{self, Report as Agreement, Status},
     surface::Surface,
 };
+mod projected_graph;
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
     pub tolerance: f64,
@@ -99,6 +100,7 @@ pub fn project(c: &Curve, s: &Surface, limits: Limits) -> Result<Report> {
         within_tolerance: false,
     };
     if let Some(p) = affine_candidate(c, s) {
+        let p = projected_graph::compact_line(&p).unwrap_or(p);
         let proof = curve_surface_agreement::verify(
             c,
             &p,
@@ -118,23 +120,64 @@ pub fn project(c: &Curve, s: &Surface, limits: Limits) -> Result<Report> {
         // Roundoff at an original chart edge may put an affine proposal pole
         // just outside its domain. Clipping is another geometry proposal only:
         // the entire ORIGINAL spatial curve must still pass the fresh lift.
-        let d=domains(s);
-        let mut bounded=p.clone();
+        let d = domains(s);
+        let mut bounded = p.clone();
         for pole in &mut bounded.control_points {
-            for k in 0..2 {pole[k]=pole[k].clamp(d[k][0],d[k][1]);}
+            for k in 0..2 {
+                pole[k] = pole[k].clamp(d[k][0], d[k][1]);
+            }
         }
-        if bounded!=p && out.agreement_cells<limits.agreement_cells {
-            let proof=curve_surface_agreement::verify(c,&bounded,s,false,limits.tolerance,
-                (limits.agreement_cells-out.agreement_cells).min(100000))?;
-            out.agreement_cells+=proof.cells;
-            if proof.status==Status::WithinTolerance {
-                out.within_tolerance=true;
-                out.pcurve=Some(bounded);
-                out.agreement=Some(proof);
+        if bounded != p && out.agreement_cells < limits.agreement_cells {
+            let proof = curve_surface_agreement::verify(
+                c,
+                &bounded,
+                s,
+                false,
+                limits.tolerance,
+                (limits.agreement_cells - out.agreement_cells).min(100000),
+            )?;
+            out.agreement_cells += proof.cells;
+            if proof.status == Status::WithinTolerance {
+                out.within_tolerance = true;
+                out.pcurve = Some(bounded);
+                out.agreement = Some(proof);
                 return Ok(out);
             }
-            out.agreement=Some(proof);
+            out.agreement = Some(proof);
         }
+    }
+    let (graphs, evaluations) = projected_graph::candidates(c, s)?;
+    out.evaluations += evaluations;
+    for mut p in graphs {
+        if out.agreement_cells == limits.agreement_cells {
+            return Ok(out);
+        }
+        // An original-edge endpoint evaluation can lie a few ulps beyond
+        // an exact chart edge. Bounding is a new proposal, never authority:
+        // verify the ENTIRE unchanged world curve on the original chart.
+        let domain = domains(s);
+        for pole in &mut p.control_points {
+            for k in 0..2 {
+                pole[k] = pole[k].clamp(domain[k][0], domain[k][1]);
+            }
+        }
+        if let Some(line) = projected_graph::compact_line(&p) { p = line; }
+        let proof = curve_surface_agreement::verify(
+            c,
+            &p,
+            s,
+            false,
+            limits.tolerance,
+            (limits.agreement_cells - out.agreement_cells).min(4096),
+        )?;
+        out.agreement_cells += proof.cells;
+        if proof.status == Status::WithinTolerance {
+            out.within_tolerance = true;
+            out.pcurve = Some(p);
+            out.agreement = Some(proof);
+            return Ok(out);
+        }
+        out.agreement = Some(proof);
     }
     let d = domains(s);
     let [a, b] = c.domain();

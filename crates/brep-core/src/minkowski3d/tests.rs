@@ -1,5 +1,5 @@
 use super::*;
-fn mesh(cells: Vec<Poly>) -> SourceMesh {
+pub(super) fn mesh(cells: Vec<Poly>) -> SourceMesh {
     let mut w = Work::default();
     let all = cells.iter().flat_map(Poly::vertices).collect::<Vec<_>>();
     let planes = cells

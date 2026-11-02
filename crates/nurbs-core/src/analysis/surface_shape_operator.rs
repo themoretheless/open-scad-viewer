@@ -1,4 +1,7 @@
 //! World-coordinate curvature tensor for future geometric G2 seam inspection.
+#[path = "surface_shape_operator/spectrum.rs"]
+mod spectrum;
+pub use spectrum::absolute_spectral_bounds;
 use crate::{
     Result,
     curve_differential::Side,
@@ -78,7 +81,7 @@ pub(crate) fn from_jets(j: &jets::Jets) -> Result<Option<Shape>> {
 /// Recover the world graph derivatives through a proved nonsingular XY chart.
 /// This avoids subtracting independent wide tangent boxes to prove a nearly
 /// planar curvature. No planarity or orthonormality of the proposal is assumed.
-fn from_graph_jets(j:&jets::Jets,frame:([usize;3],[f64;2]))->Result<Option<Shape>> {
+pub(crate) fn from_graph_jets(j:&jets::Jets,frame:([usize;3],[f64;2]))->Result<Option<Shape>> {
     let (axes,plane)=frame;
     let (xu,xv,yu,yv)=(j[1][0][0],j[0][1][0],j[1][0][1],j[0][1][1]);
     let determinant=xu.mul(yv)?.sub(xv.mul(yu)?)?;

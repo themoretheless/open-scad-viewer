@@ -6,6 +6,7 @@
 pub(crate) use bridge_codec::{Error, Result, Routed, Value};
 
 mod drawing_pdf;
+pub mod bundled_font;
 pub mod svg;
 pub mod svg_css;
 pub mod svg_silhouette;

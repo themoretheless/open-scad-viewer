@@ -479,3 +479,15 @@ fn identical_boundary_rows(a:&Surface,b:&Surface,ab:Boundary,bb:Boundary)->bool 
         a.control_points[au][av]==b.control_points[bu][bv]&&a.weights[au][av]==b.weights[bu][bv]
     })
 }
+
+/// Whole original seam jets under an authored normalized scalar rational map.
+/// Map verification grants neither curve/pcurve ownership nor global volume.
+pub fn inspect_surface_mapped_projective_strip_jets(
+    a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,map:&crate::curve::Curve,max_work:u64,
+)->Result<ExactStripJetReport>{
+    a.validate()?;b.validate()?;map.validate()?;
+    check(a.control_points.iter().chain(&b.control_points).flatten().all(|p|p.len()==3)
+        && map.control_points.iter().all(|p|p.len()==2&&p[1]==0.)&&!map.periodic,"Mapped jets require XYZ surfaces and a nonperiodic scalar map stored as [value,0]")?;
+    check(matches!(order,1|2)&&scale.is_finite()&&scale>0.&&max_work<=1000000,"Invalid mapped seam options")?;
+    super::continuity::bspline_strip::inspect_mapped(a,b,Boundary::parse(ab)?,Boundary::parse(bb)?,order,scale,max_work,map)
+}

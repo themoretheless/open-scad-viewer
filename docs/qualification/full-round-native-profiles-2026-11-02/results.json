@@ -1,0 +1,40 @@
+{
+  "status": "focused qualification; full original scope incomplete",
+  "passed": 13,
+  "tests": {
+    "full_round_source_supports": 9,
+    "original_source_regularity": 2,
+    "full_round_raw_binding": 2
+  },
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/original_restriction/wire.rs": "eb0f3a94af3b1b5c30d9f7c92fb065e797a6df7fafdaf1a2d69a9c665090d485",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/smooth.rs": "8ff97aa5828a3ace53cf60f157c57aad677a52af64a1c409470d532e593590fb",
+    "crates/brep-core/src/profile_certificate/original_restriction/wire/regularity.rs": "a85c4b78d441f65d6bf611368a767b5e842dc434be4e047c382c2a5d0648999a",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports.rs": "00d492954092a30b86b68a41e59cd92d16dcc4c692ba4e277be79e49c1fc4b9d",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports/profiles.rs": "8f9d25fab420a4aab7c534517faa76979db37f4c048067c3164f1001a4b85d8d",
+    "crates/brep-core/tests/full_round_source_supports.rs": "3e3c6b3550516655ffc19a3e1e05dd5c8c0849955c6683626d5df15f385772cd",
+    "crates/brep-core/tests/original_source_regularity.rs": "bc47dcf850bfdf525fbfac07b95bb8b4c1e2d2315f21a091a112998b5267447d",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "0c78c5659e68047d4017be2fe4f045d92978adc5d8c06583a784a559f7dfaa33"
+  },
+  "coverage": [
+    "actual native side profile restrictions on indexed rim windows",
+    "exact directed top-rim endpoints",
+    "complete regularity and zero-tolerance oriented internal-knot G1",
+    "Jordan and hole nesting of native carrier profiles",
+    "outward physical carrier normal from UV axis, height direction, traversal, shell use",
+    "original degree-elevated coefficients preserved",
+    "authored corners allowed; internal kink and even stationary root refuse",
+    "different raw clocks, reversed top edge and transposed/reversed cap"
+  ],
+  "checks": [
+    "11 clean files unchanged",
+    "API map check passed: 242 roots, 200 entries; not parity"
+  ],
+  "open": [
+    "lower directed endpoint and original vertex compatibility",
+    "world cap rim regularity",
+    "complete oriented source boundary assembly/admission",
+    "source/result material relation, radius fidelity",
+    "full original library parity and pipeline delivery"
+  ]
+}

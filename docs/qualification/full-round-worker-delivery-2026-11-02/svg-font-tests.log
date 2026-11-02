@@ -1,0 +1,97 @@
+   Compiling num-traits v0.2.19
+   Compiling geometry-ops v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/geometry-ops)
+   Compiling cad-predicates v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/cad-predicates)
+   Compiling mesh-topology v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/mesh-topology)
+   Compiling num-integer v0.1.47
+   Compiling num-bigint v0.4.8
+   Compiling planar-geometry v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/planar-geometry)
+   Compiling mesh-section v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/mesh-section)
+   Compiling bridge-svg v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/bridge-svg)
+    Finished `test` profile [optimized + debuginfo] target(s) in 22.28s
+     Running unittests src/lib.rs (/tmp/rea-r53-test-opt2/debug/build/bridge-svg/cc85ebc8ba859069/out/bridge_svg-cc85ebc8ba859069)
+
+running 75 tests
+test svg::non_scaling_tests::non_scaling_gradient_stroke_retains_original_paint_coordinates ... ok
+test drawing_pdf::tests::refuses_images_and_empty_export ... ok
+test svg::non_scaling_tests::non_scaling_dash_lengths_and_offsets_are_measured_in_host_space ... ok
+test svg::non_scaling_tests::non_scaling_closed_stroke_preserves_hole_and_join_geometry ... ok
+test svg::non_scaling_tests::non_scaling_normalized_svg_roundtrip_preserves_physical_geometry_and_paint ... ok
+test bundled_font::tests::compressed_font_restores_every_original_byte ... ok
+test svg::non_scaling_tests::non_scaling_resource_budget_is_checked_before_any_clone_or_mutation ... ok
+test svg::non_scaling_tests::non_scaling_square_and_round_caps_are_built_after_transform ... ok
+test svg::non_scaling_tests::non_scaling_marker_units_distinguish_stroke_width_from_user_space ... ok
+test svg::non_scaling_tests::non_scaling_text_matches_equivalent_glyphs_at_double_font_size ... ok
+test svg::non_scaling_tests::non_scaling_silhouette_matches_vector_contours_and_preserves_hole ... ok
+test svg::non_scaling_tests::non_scaling_clips_use_the_declared_space_and_unstroked_object_bbox ... ok
+test svg::non_scaling_tests::non_scaling_affine_transform_preserves_physical_width ... ok
+test svg::non_scaling_tests::non_scaling_use_resolves_inherit_per_instance_without_leaking_from_defs ... ok
+test svg::tests::clipping_unions_children_and_intersects_nested_clips ... ok
+test svg::tests::audit_css_root_size_and_close_continuation ... ok
+test svg::non_scaling_tests::non_scaling_host_is_outermost_viewport_even_with_nested_svg ... ok
+test svg::non_scaling_tests::non_scaling_paint_order_and_element_opacity_survive_outline_rendering ... ok
+test svg::non_scaling_tests::non_scaling_css_cascade_and_explicit_inheritance_match_attributes ... ok
+test svg::tests::all_gap_dashes_are_valid_empty_geometry_and_preserve_other_paints ... ok
+test svg::tests::compatibility_px_preserves_css_identifiers_strings_and_xml_quotes ... ok
+test svg::non_scaling_tests::non_scaling_width_resolves_physical_pixel_and_percentage_units ... ok
+test svg::tests::dashed_strokes_have_caps_and_nonuniform_transforms ... ok
+test svg::tests::css_use_symbol_nested_viewports_and_transform ... ok
+test svg::tests::effects_preserved_in_preview_require_explicit_silhouette ... ok
+test svg::tests::css_geometry_properties_and_non_applicable_declarations_are_admitted ... ok
+test svg::tests::embedded_images_and_partial_geometry_fail_before_any_silent_omission ... ok
+test svg::tests::animated_gif_first_frame_preserves_canvas_and_matches_static_preview ... ok
+test svg::tests::custom_fonts_admit_outlines_and_reject_nested_images_in_every_collection_face ... ok
+test svg::tests::malformed_geometry_security_and_reference_budgets_fail_explicitly ... ok
+test svg::tests::nested_markers_count_expansion_and_source_inheritance ... ok
+test svg::tests::markers_and_gradient_paints_are_real_geometry ... ok
+test svg::tests::non_scaling_dash_budget_uses_host_space_before_preview_expansion ... ok
+test svg::tests::latin_cyrillic_text_outlines_preview_and_reimport ... ok
+test svg::tests::marker_admission_counts_tref_copies_links_and_primitive_arcs ... ok
+test svg::tests::duplicate_ids_and_dual_href_cannot_bypass_reference_admission ... ok
+test svg::tests::object_bounding_box_clip_and_evenodd_hole ... ok
+test svg::non_scaling_tests::non_scaling_pattern_content_uses_each_painted_instances_host_transform ... ok
+test svg::tests::open_scad_dimensions_and_viewbox_are_binary64 ... ok
+test svg::tests::quadratic_cubic_smooth_and_arc_paths_preserve_endpoints ... ok
+test svg::tests::raster_decode_errors_are_explicit_before_preview_or_silhouette ... ok
+test svg::non_scaling_tests::non_scaling_mask_content_resolves_user_space_and_object_bbox_instances ... ok
+test svg::tests::vector_effect_rejection_checks_every_css_declaration_and_rule ... ok
+test svg_css::tests::admission_does_not_change_rendered_attribute_selectors ... ok
+test svg_css::tests::admission_preserves_marker_and_font_dependencies_of_original_selectors ... ok
+test svg::tests::opacity_and_visibility_remove_invisible_geometry ... ok
+test svg::tests::marker_replication_is_rejected_before_normalization ... ok
+test svg_css::tests::case_insensitive_important_keeps_quoted_data_unchanged ... ok
+test svg_css::tests::effective_root_size_and_admission_retain_cascade_and_path_cost ... ok
+test svg_css::tests::css_geometry_respects_symbol_viewport_percentages_and_units ... ok
+test svg_css::tests::geometry_cascade_applies_specificity_source_order_and_inline_important ... ok
+test svg_css::tests::geometry_defaults_are_not_implicitly_inherited ... ok
+test svg_css::tests::geometry_inherit_is_resolved_for_each_use_instance ... ok
+test svg_css::tests::inherit_uses_computed_parent_font_units ... ok
+test svg::tests::ordinary_css_markers_and_recursive_marker_suppression_remain_valid ... ok
+test svg_css::tests::geometry_d_path_and_none_preserve_path_semantics ... ok
+test svg::tests::webp_normalization_preserves_transparency_and_static_pixels ... ok
+test svg_css::tests::supported_css_selector_combinators_preserve_geometry ... ok
+test svg_silhouette::tests::enlarged_nested_svg_cannot_bypass_pattern_tile_budget ... ok
+test svg_silhouette::tests::compound_fill_preserves_hole_and_island_winding ... ok
+test svg_silhouette::tests::diagonal_pixels_remain_separate_closed_islands ... ok
+test svg_silhouette::tests::invalid_options_and_excessive_effect_work_fail_closed ... ok
+test svg_silhouette::tests::embedded_png_alpha_controls_image_silhouette ... ok
+test svg_silhouette::tests::filter_output_is_rendered_before_thresholding ... ok
+test svg_silhouette::tests::pattern_opacity_produces_disjoint_geometry ... ok
+test svg_silhouette::tests::rectangle_has_exact_mm_bounds_and_only_four_corners ... ok
+test svg_silhouette::tests::alpha_threshold_and_luminance_mask_change_the_silhouette ... ok
+test svg_silhouette::tests::dense_dashes_and_accumulated_paint_work_fail_before_rendering ... ok
+test svg_silhouette::tests::every_three_by_three_grid_preserves_area_and_pixel_membership ... ok
+test svg::tests::reference_expansion_counts_path_weight_and_text_before_normalization ... ok
+test svg_silhouette::tests::svg_admission_review_regressions ... ok
+test svg_css::tests::unsupported_valid_css_is_explicit_and_css_expansion_is_bounded ... ok
+test svg_css::tests::large_shared_css_path_is_limited_while_values_are_accumulated ... ok
+test drawing_pdf::tests::vector_pages_keep_lines_and_unicode_glyphs ... ok
+test svg_css::tests::selector_list_cross_product_is_rejected_before_css_parser_allocation ... ok
+
+test result: ok. 75 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+   Doc-tests bridge_svg
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

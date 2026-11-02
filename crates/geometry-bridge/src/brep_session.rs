@@ -204,7 +204,9 @@ impl Session {
             let characters = if empty {
                 0
             } else {
-                super::brep_json_size::characters(if value["kind"].as_str() == Some("solid") {
+                super::brep_json_size::characters(if value["representation"].as_str()==Some(super::brep_exact_full_round::REPRESENTATION) {
+                    &value
+                } else if value["kind"].as_str() == Some("solid") {
                     &value["model"]
                 } else {
                     &value["profile"]
@@ -297,7 +299,7 @@ pub(crate) fn references(node: &Value) -> Result<Vec<usize>> {
     Ok(match node["kind"].as_str() {
         Some("boolean" | "hull") => field(node, "inputs")?,
         Some(
-            "transform" | "linear-extrude" | "rotate-extrude-analytic" | "projection" | "offset",
+            "transform" | "linear-extrude" | "rotate-extrude-analytic" | "projection" | "offset" | "full-round-exact",
         ) => vec![field(node, "input")?],
         Some(
             "box" | "sphere-analytic" | "cylinder-analytic" | "rectangle" | "circle-analytic"
@@ -321,10 +323,12 @@ fn validate_carrier(value_type: &Value) -> Result<()> {
         ),
         (Some("solid" | "solid-set"), Some("d3")) | (Some("region"), Some("d2"))
     );
-    if !supported
-        || value_type["representation"].as_str() != Some("analytic-brep")
-        || value_type["evidence"]["tag"].as_str() != Some("representation-preserving")
-    {
+    let analytic=value_type["representation"].as_str()==Some("analytic-brep")
+        && value_type["evidence"]["tag"].as_str()==Some("representation-preserving");
+    let exact=value_type["geometryKind"].as_str()==Some("solid") && value_type["space"].as_str()==Some("d3")
+        && value_type["representation"].as_str()==Some(super::brep_exact_full_round::REPRESENTATION)
+        && value_type["evidence"]["tag"].as_str()==Some("representation-preserving");
+    if !supported || !(analytic || exact) {
         return Err(super::Error::new(
             "BREP_UNSUPPORTED_SEMANTIC",
             "Unsupported B-rep semantic carrier or evidence",
@@ -336,6 +340,12 @@ fn validate_carrier(value_type: &Value) -> Result<()> {
 /// Validate before publishing a lease. This is topology admission, not a solid
 /// certificate or a proof of numerical correctness.
 fn validate_result(value_type: &Value, value: &Value) -> Result<()> {
+    if value_type["representation"].as_str()==Some(super::brep_exact_full_round::REPRESENTATION) {
+        return super::brep_exact_full_round::validate(value);
+    }
+    if value["representation"].as_str()==Some(super::brep_exact_full_round::REPRESENTATION) {
+        return Err(input("Exact-rational result requires its declared exact carrier"));
+    }
     let profile = value["kind"].as_str() == Some("profile");
     if profile != (value_type["space"].as_str() == Some("d2")) {
         return Err(input(

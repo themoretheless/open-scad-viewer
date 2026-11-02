@@ -551,6 +551,8 @@ fn curved_rational_support_contacts_are_continuously_qualified_for_both_builders
         let contacts = r.contacts.as_ref().unwrap();
         assert!(contacts.iter().all(|c| c.positions.proven));
         if is_smooth {
+            assert!(r.fillet.contact_pcurves.is_some(),
+                "Constant radius on curved supports needs matched Hermite UV fields");
             assert!(r.skin_edit_error_upper.unwrap() <= 0.25e-6);
             assert!(r.skin_edit_work > 0 && r.skin_edit_work <= 2000000);
             let skin = r.fillet.surface.as_ref().unwrap();

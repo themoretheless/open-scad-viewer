@@ -1,0 +1,775 @@
+ M architecture-baseline.json
+ M crates/Cargo.lock
+ M crates/brep-core/examples/central_graph_diagnostics.rs
+ M crates/brep-core/examples/fair_tile_search.rs
+ M crates/brep-core/src/analysis/certified_mass_properties.rs
+ M crates/brep-core/src/analysis/mass_properties.rs
+ M crates/brep-core/src/body_edit.rs
+ M crates/brep-core/src/boundary_agreement.rs
+ M crates/brep-core/src/boundary_embedding.rs
+ M crates/brep-core/src/boundary_hull_contact.rs
+ M crates/brep-core/src/boundary_hull_contact/extended_support.rs
+ M crates/brep-core/src/boundary_stitched_contact.rs
+ M crates/brep-core/src/corner_close.rs
+ M crates/brep-core/src/edge_partition.rs
+ M crates/brep-core/src/face_contacts.rs
+ M crates/brep-core/src/face_curvature.rs
+ M crates/brep-core/src/face_cut.rs
+ M crates/brep-core/src/face_cut/automatic_fiber.rs
+ M crates/brep-core/src/face_cut/automatic_fiber/prebound_partition.rs
+ M crates/brep-core/src/face_domain.rs
+ M crates/brep-core/src/face_domain/box_containment.rs
+ M crates/brep-core/src/fillet_contact.rs
+ M crates/brep-core/src/fillet_radius.rs
+ M crates/brep-core/src/iges_interchange_v2.rs
+ M crates/brep-core/src/lib.rs
+ M crates/brep-core/src/minkowski3d.rs
+ M crates/brep-core/src/minkowski3d/curved.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas/conform.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas/domains.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas/domains/algebra.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas/domains/tests.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas/pullback.rs
+ M crates/brep-core/src/minkowski3d/curved/atlas/trim/region.rs
+ M crates/brep-core/src/minkowski3d/curved/shear.rs
+ M crates/brep-core/src/minkowski3d/tests.rs
+ M crates/brep-core/src/model_validation.rs
+ M crates/brep-core/src/operations/boolean.rs
+ M crates/brep-core/src/operations/mod.rs
+ M crates/brep-core/src/operations/tests.rs
+ M crates/brep-core/src/prism.rs
+ M crates/brep-core/src/profile_certificate.rs
+ M crates/brep-core/src/profile_certificate/arithmetic/algebraic_events.rs
+ M crates/brep-core/src/profile_certificate/arithmetic/carrier_sides.rs
+ M crates/brep-core/src/profile_certificate/atlas_roots.rs
+ M crates/brep-core/src/profile_certificate/branches.rs
+ M crates/brep-core/src/profile_certificate/span_intersections/event_nodes/overlap_components/unified_sides.rs
+ M crates/brep-core/src/region_replacement.rs
+ M crates/brep-core/src/region_replacement/cap.rs
+ M crates/brep-core/src/region_replacement/central_graph.rs
+ M crates/brep-core/src/region_replacement/central_graph/constrained.rs
+ M crates/brep-core/src/region_replacement/interior_tile.rs
+ M crates/brep-core/src/region_replacement/trihedral_skins.rs
+ M crates/brep-core/src/rounded_patch_network.rs
+ M crates/brep-core/src/shell_thickness.rs
+ M crates/brep-core/src/solid_audit.rs
+ M crates/brep-core/src/step_interchange_v3.rs
+ M crates/brep-core/src/stepped_prism/layer.rs
+ M crates/brep-core/src/sweep_boundary_owned.rs
+ M crates/brep-core/src/sweep_boundary_owned/closed/rational.rs
+ M crates/brep-core/src/sweep_boundary_owned/closed/rational/tests.rs
+ M crates/brep-core/src/sweep_smoothness/geometric.rs
+ M crates/brep-core/src/sweep_smoothness/tangent.rs
+ M crates/brep-core/src/tolerant_boolean/mod.rs
+ M crates/brep-core/src/tolerant_boolean/tests/mod.rs
+ M crates/brep-core/src/transform_plane_charts.rs
+ M crates/brep-core/src/trim_sew/classify_imprint_circle_events.rs
+ M crates/brep-core/src/trim_sew/mod.rs
+ M crates/brep-core/src/trim_sew/prove_curve_pcurve_correspondence.rs
+ M crates/brep-core/tests/central_graph.rs
+ M crates/brep-core/tests/corner_close.rs
+ M crates/brep-core/tests/edge_partition.rs
+ M crates/brep-core/tests/fillet_contact.rs
+ M crates/brep-core/tests/interior_tile.rs
+ M crates/brep-core/tests/tolerant_ssi.rs
+ M crates/bridge-svg/Cargo.toml
+ M crates/bridge-svg/src/drawing_pdf.rs
+ M crates/bridge-svg/src/lib.rs
+ M crates/bridge-svg/src/svg/legacy_source.rs
+ M crates/cad-predicates/src/bspline_internal_jets.rs
+ M crates/cad-predicates/src/bspline_strip_jets.rs
+ M crates/cad-predicates/src/bspline_strip_map.rs
+ M crates/cad-predicates/src/bspline_strip_nonlinear.rs
+ M crates/cad-predicates/src/bspline_strip_spans.rs
+ M crates/cad-predicates/src/fibered_affine.rs
+ M crates/cad-predicates/src/lib.rs
+ M crates/geometry-bridge/src/brep_display.rs
+ M crates/geometry-bridge/src/brep_envelope.rs
+ M crates/geometry-bridge/src/brep_production/mod.rs
+ M crates/geometry-bridge/src/brep_production/tests.rs
+ M crates/geometry-bridge/src/brep_result.rs
+ M crates/geometry-bridge/src/brep_semantic.rs
+ M crates/geometry-bridge/src/brep_session.rs
+ M crates/geometry-bridge/src/cad_face_contacts.rs
+ M crates/geometry-bridge/src/cad_runout.rs
+ M crates/geometry-bridge/src/cad_sweep_boundary/rational_closed.rs
+ M crates/geometry-bridge/src/cad_sweep_smoothness.rs
+ M crates/geometry-bridge/src/dispatch/brep.rs
+ M crates/geometry-bridge/src/dispatch/cad.rs
+ M crates/geometry-bridge/src/dispatch/sweep.rs
+ M crates/geometry-bridge/src/lib.rs
+ M crates/geometry-bridge/src/svg/raster_normalization.rs
+ M crates/nurbs-core/Cargo.toml
+ M crates/nurbs-core/src/analysis/affine_volume.rs
+ M crates/nurbs-core/src/analysis/affine_volume/rational.rs
+ M crates/nurbs-core/src/analysis/affine_volume/rational/factor.rs
+ M crates/nurbs-core/src/analysis/affine_volume/rational/tests.rs
+ M crates/nurbs-core/src/analysis/affine_volume/tests.rs
+ M crates/nurbs-core/src/analysis/curve_pullback.rs
+ M crates/nurbs-core/src/analysis/curve_surface_agreement.rs
+ M crates/nurbs-core/src/analysis/curve_surface_agreement/correspondence.rs
+ M crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs
+ M crates/nurbs-core/src/analysis/curve_surface_composition.rs
+ M crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace.rs
+ M crates/nurbs-core/src/analysis/curve_surface_composition/graph_trace.rs
+ M crates/nurbs-core/src/analysis/surface_collar.rs
+ M crates/nurbs-core/src/analysis/surface_collar/jet_difference.rs
+ M crates/nurbs-core/src/analysis/surface_injectivity.rs
+ M crates/nurbs-core/src/analysis/surface_injectivity/seam_glued.rs
+ M crates/nurbs-core/src/analysis/surface_measure/jets.rs
+ M crates/nurbs-core/src/analysis/surface_shape_operator.rs
+ M crates/nurbs-core/src/curve_partition_agreement.rs
+ M crates/nurbs-core/src/distance/curve_distance.rs
+ M crates/nurbs-core/src/domains.rs
+ M crates/nurbs-core/src/foundation/approximate_edits.rs
+ M crates/nurbs-core/src/intersection/certified_curve_surface.rs
+ M crates/nurbs-core/src/intersection/ss_intersection.rs
+ M crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs
+ M crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/components.rs
+ M crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/discovered_components.rs
+ M crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed.rs
+ M crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/transition.rs
+ M crates/nurbs-core/src/join/continuity.rs
+ M crates/nurbs-core/src/join/continuity/bspline_strip.rs
+ M crates/nurbs-core/src/join/corner_blend.rs
+ M crates/nurbs-core/src/join/periodic_seam_verification.rs
+ M crates/nurbs-core/src/join/surface_g1_pcurves.rs
+ M crates/nurbs-core/src/join/surface_g2_pcurves.rs
+ M crates/nurbs-core/src/join/surface_g2_pcurves/graph_owned.rs
+ M crates/nurbs-core/src/lib.rs
+ M crates/nurbs-core/src/moving_envelope.rs
+ M crates/nurbs-core/src/moving_radius.rs
+ M crates/nurbs-core/src/offset.rs
+ M crates/nurbs-core/src/offset/fillet_surfaces.rs
+ M crates/nurbs-core/src/offset/fillet_surfaces/fillet_construction.rs
+ M crates/nurbs-core/src/offset/fillet_surfaces/section_geometry.rs
+ M crates/nurbs-core/src/offset/surface_offset.rs
+ M crates/nurbs-core/src/offset/surface_offset/source.rs
+ M crates/nurbs-core/src/offset_contact_pcurve.rs
+ M crates/nurbs-core/src/offset_contact_tangent.rs
+ M crates/nurbs-core/src/surface_quotient_injectivity/report.rs
+ M crates/nurbs-core/src/trim/periodic_trim.rs
+ M crates/nurbs-core/src/trim/periodic_trim/exact_partition.rs
+ M crates/nurbs-core/src/trim/trim_domain.rs
+ M crates/nurbs-core/src/trim/trim_region_audit.rs
+ M crates/nurbs-core/tests/certified_curve_surface.rs
+ M crates/nurbs-core/tests/corner_blend.rs
+ M crates/nurbs-core/tests/periodic_seam_candidates.rs
+ M crates/nurbs-core/tests/section_phase.rs
+ M crates/nurbs-core/tests/ss_mixed_fiber_coverage.rs
+ M crates/nurbs-core/tests/surface_g1_pcurves.rs
+ M crates/subdivision-core/Cargo.toml
+ M crates/subdivision-core/README.md
+ M crates/subdivision-core/src/lib.rs
+ M docs/design/nurbs-api-domains.json
+ M docs/qualification/metal-sdf-empty-cells-2026-10-28/CONTINUATION.md
+ M docs/qualification/metal-sdf-empty-cells-2026-10-28/measure.py
+ M docs/qualification/metal-sdf-empty-cells-2026-10-28/protocol.md
+ M public/wasm/geometry-kernel.wasm
+ M public/wasm/language-kernel.wasm
+ M public/wasm/photogrammetry.wasm
+ M scripts/build-geometry-kernels.mjs
+ M scripts/verify-cad-fresh-part-dimensions.py
+ M src/core/nativeGeometry.ts
+ M src/core/semanticProgram.ts
+ M src/core/semanticProgram/semanticResultItems.ts
+ M src/features/DirectModeler.vue
+ M src/generated/photogrammetry/bytes.ts
+ M src/semantic/lowererBuilder.ts
+ M src/services/brepDiagnosticProtocol.ts
+ M src/services/brepNativeExecutor.ts
+ M src/services/brepSemanticScene.ts
+ M src/services/geometricG2.ts
+ M src/services/mainSolidProtocol.ts
+ M src/services/mainSolidProtocol/mainSolidExpectation.ts
+ M src/services/mainSolidProtocol/mainSolidResult.ts
+ M src/services/mainSolidWorkerRuntime.ts
+ M src/services/manifoldPlanBackend.ts
+ M src/services/manifoldPlanBackend/inspectManifoldPlanPayload.ts
+ M src/services/nativeFaceSelection.ts
+ M src/services/openscadSemanticLowerer/evalNode.ts
+ M src/services/openscadSemanticLowerer/evalUserModule.ts
+ M src/services/semanticProgramExecutor/checkSemanticExecutionControl.ts
+ M src/services/semanticProgramValidator.ts
+ M src/services/semanticProgramValidator/isChildrenExpansionContinuation.ts
+ M src/services/semanticProgramValidator/validateNodes.ts
+ M src/services/semanticProgramValidator/validateOccurrenceProduction.ts
+ M src/services/semanticProgramValidator/validateResult.ts
+ M src/services/solidFaceContacts.ts
+ M src/services/solidSurfaceConstruction.ts
+ M tests/g2RunoutSurfaceBuild.test.ts
+ M tests/g2RunoutTransport.test.ts
+ M tests/g2RunoutWorkerClient.test.ts
+ M vite.config.ts
+ M vitest.config.ts
+?? .venv-cad-step/
+?? crates/brep-core/examples/central_face_diagnostics.rs
+?? crates/brep-core/examples/central_seam_witnesses.rs
+?? crates/brep-core/examples/compatible_contact_body.rs
+?? crates/brep-core/examples/corner_affine_embedding_diagnostics.rs
+?? crates/brep-core/examples/corner_patch_body_diagnostics.rs
+?? crates/brep-core/examples/corner_patch_global_diagnostics.rs
+?? crates/brep-core/examples/corner_patch_network_diagnostics.rs
+?? crates/brep-core/examples/corner_skew_body_diagnostics.rs
+?? crates/brep-core/examples/corner_step_chart_diagnostics.rs
+?? crates/brep-core/examples/expanded_contact_runout.rs
+?? crates/brep-core/examples/four_edge_corner_diagnostics.rs
+?? crates/brep-core/examples/full_round_material_relation.rs
+?? crates/brep-core/examples/joint_corner_diagnostics.rs
+?? crates/brep-core/examples/radius_driven_contact.rs
+?? crates/brep-core/examples/radius_transition_field.rs
+?? crates/brep-core/examples/retained_patch_embedding.rs
+?? crates/brep-core/examples/six_edge_corner_diagnostics.rs
+?? crates/brep-core/examples/support/compatible_contact_fixture.rs
+?? crates/brep-core/examples/support/contact_qualification.rs
+?? crates/brep-core/examples/support/exact_contact_witness.rs
+?? crates/brep-core/examples/support/expanded_contact_runout.rs
+?? crates/brep-core/examples/support/natural_patch_sheet.rs
+?? crates/brep-core/examples/support/nurbs_contact_stock.rs
+?? crates/brep-core/examples/support/pyramid_material.rs
+?? crates/brep-core/examples/support/retained_patch_fixture.rs
+?? crates/brep-core/examples/trim_contact_diagnostics.rs
+?? crates/brep-core/src/analysis/mass_properties/
+?? crates/brep-core/src/boundary_agreement/
+?? crates/brep-core/src/boundary_embedding/retained_rectangles.rs
+?? crates/brep-core/src/boundary_embedding/tests/
+?? crates/brep-core/src/boundary_hull_contact/tests/
+?? crates/brep-core/src/edge_partition/
+?? crates/brep-core/src/exact_graph_strip.rs
+?? crates/brep-core/src/exact_graph_strip/
+?? crates/brep-core/src/face_cut/automatic_fiber/endpoint.rs
+?? crates/brep-core/src/face_cut/closed.rs
+?? crates/brep-core/src/face_cut/contact_retention.rs
+?? crates/brep-core/src/face_domain/affine_trim_hull.rs
+?? crates/brep-core/src/face_domain/closed_carrier.rs
+?? crates/brep-core/src/feature_ops.rs
+?? crates/brep-core/src/feature_ops/
+?? crates/brep-core/src/fillet_contact/
+?? crates/brep-core/src/iges_interchange_v2/
+?? crates/brep-core/src/minkowski3d/curved/atlas/admission.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/boolean.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/boolean/
+?? crates/brep-core/src/minkowski3d/curved/atlas/curve_projection.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/difference.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/difference/
+?? crates/brep-core/src/minkowski3d/curved/atlas/domains/query.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/point_material.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/region_brep.rs
+?? crates/brep-core/src/minkowski3d/curved/atlas/region_brep/
+?? crates/brep-core/src/minkowski3d/curved/difference.rs
+?? crates/brep-core/src/minkowski3d/curved/difference/
+?? crates/brep-core/src/minkowski3d/curved/intersection_graph.rs
+?? crates/brep-core/src/minkowski3d/curved/intersection_graph/
+?? crates/brep-core/src/minkowski3d/curved/retained_boolean.rs
+?? crates/brep-core/src/minkowski3d/curved/retained_boolean/
+?? crates/brep-core/src/minkowski3d/curved/same_carrier.rs
+?? crates/brep-core/src/minkowski3d/curved/same_carrier/
+?? crates/brep-core/src/minkowski3d/curved/source_charts.rs
+?? crates/brep-core/src/minkowski3d/difference.rs
+?? crates/brep-core/src/model_validation/
+?? crates/brep-core/src/operations/orthogonal_boundary.rs
+?? crates/brep-core/src/operations/seam_boolean.rs
+?? crates/brep-core/src/operations/tests/
+?? crates/brep-core/src/profile_certificate/arithmetic/carrier_sides/
+?? crates/brep-core/src/profile_certificate/material_relation.rs
+?? crates/brep-core/src/profile_certificate/original_restriction.rs
+?? crates/brep-core/src/profile_certificate/original_restriction/
+?? crates/brep-core/src/projected_trim_contact.rs
+?? crates/brep-core/src/projected_trim_network.rs
+?? crates/brep-core/src/region_replacement/central_graph/least_squares.rs
+?? crates/brep-core/src/region_replacement/contact_end_normals.rs
+?? crates/brep-core/src/region_replacement/contact_patch_body.rs
+?? crates/brep-core/src/region_replacement/corner_patch_body.rs
+?? crates/brep-core/src/region_replacement/corner_patch_network.rs
+?? crates/brep-core/src/region_replacement/corner_patch_network/
+?? crates/brep-core/src/region_replacement/embedded_patch_set.rs
+?? crates/brep-core/src/region_replacement/end_runout.rs
+?? crates/brep-core/src/region_replacement/end_runout/
+?? crates/brep-core/src/region_replacement/four_edge_corner.rs
+?? crates/brep-core/src/region_replacement/graph_contacts.rs
+?? crates/brep-core/src/region_replacement/nurbs_edge_transition.rs
+?? crates/brep-core/src/region_replacement/patch_set.rs
+?? crates/brep-core/src/region_replacement/qualified_contacts.rs
+?? crates/brep-core/src/region_replacement/retained_patch_set.rs
+?? crates/brep-core/src/region_replacement/six_edge_corner.rs
+?? crates/brep-core/src/region_replacement/trim_contacts.rs
+?? crates/brep-core/src/rounded_patch_network/
+?? crates/brep-core/src/same_support_contact.rs
+?? crates/brep-core/src/same_support_contact/
+?? crates/brep-core/src/shell_thickness/
+?? crates/brep-core/src/solid_audit/
+?? crates/brep-core/src/step_interchange_v3/point_inverse.rs
+?? crates/brep-core/src/sweep_boundary_owned/clock.rs
+?? crates/brep-core/src/sweep_boundary_owned/closed/rational/tests/
+?? crates/brep-core/src/tolerant_boolean/continuous.rs
+?? crates/brep-core/src/trim_sew/closed_edge.rs
+?? crates/brep-core/tests/analytic_cone_refinement.rs
+?? crates/brep-core/tests/authored_cycle_compaction.rs
+?? crates/brep-core/tests/automatic_parametric_thickness.rs
+?? crates/brep-core/tests/cap_pcurves.rs
+?? crates/brep-core/tests/certified_patch_thickness.rs
+?? crates/brep-core/tests/circular_edge_transition.rs
+?? crates/brep-core/tests/clamped_closed_edge_partition.rs
+?? crates/brep-core/tests/closed_edge_seam.rs
+?? crates/brep-core/tests/closed_face_cut.rs
+?? crates/brep-core/tests/closed_periodic_edge_partition.rs
+?? crates/brep-core/tests/common/
+?? crates/brep-core/tests/compatible_contact_body.rs
+?? crates/brep-core/tests/contact_branch.rs
+?? crates/brep-core/tests/contact_pair_thickness.rs
+?? crates/brep-core/tests/contact_topology.rs
+?? crates/brep-core/tests/convex_contact_branch.rs
+?? crates/brep-core/tests/corner_patch_network.rs
+?? crates/brep-core/tests/curved_profile_blend.rs
+?? crates/brep-core/tests/cycle_compaction.rs
+?? crates/brep-core/tests/cycle_seam.rs
+?? crates/brep-core/tests/domain_contact.rs
+?? crates/brep-core/tests/edge_history_regeneration.rs
+?? crates/brep-core/tests/edge_reclock.rs
+?? crates/brep-core/tests/edge_refinement_history.rs
+?? crates/brep-core/tests/edge_transition.rs
+?? crates/brep-core/tests/embedded_patch_body.rs
+?? crates/brep-core/tests/exact_graph_strip.rs
+?? crates/brep-core/tests/exact_lift_point_witness.rs
+?? crates/brep-core/tests/exact_restriction_wire.rs
+?? crates/brep-core/tests/exact_source_prism.rs
+?? crates/brep-core/tests/exact_source_solid.rs
+?? crates/brep-core/tests/exact_wire_jordan.rs
+?? crates/brep-core/tests/exact_wire_material.rs
+?? crates/brep-core/tests/exact_wire_smoothness.rs
+?? crates/brep-core/tests/exact_wire_tangent_repair.rs
+?? crates/brep-core/tests/expanded_contact_runout.rs
+?? crates/brep-core/tests/feature_ops.rs
+?? crates/brep-core/tests/fixtures/clock_conjugacy.rs
+?? crates/brep-core/tests/four_edge_corner.rs
+?? crates/brep-core/tests/freeform_features.rs
+?? crates/brep-core/tests/freeform_network_thickness.rs
+?? crates/brep-core/tests/frozen_graph_volume.rs
+?? crates/brep-core/tests/full_periodic_cone_frustum.rs
+?? crates/brep-core/tests/full_periodic_face_refinement.rs
+?? crates/brep-core/tests/full_round_admitted.rs
+?? crates/brep-core/tests/full_round_cap_pullback.rs
+?? crates/brep-core/tests/full_round_curved.rs
+?? crates/brep-core/tests/full_round_curved_volume.rs
+?? crates/brep-core/tests/full_round_embedding.rs
+?? crates/brep-core/tests/full_round_embedding_prism.rs
+?? crates/brep-core/tests/full_round_exact_history.rs
+?? crates/brep-core/tests/full_round_exact_material.rs
+?? crates/brep-core/tests/full_round_exact_material_family.rs
+?? crates/brep-core/tests/full_round_exact_profile_relation.rs
+?? crates/brep-core/tests/full_round_exact_transport.rs
+?? crates/brep-core/tests/full_round_frame.rs
+?? crates/brep-core/tests/full_round_groups.rs
+?? crates/brep-core/tests/full_round_history_regenerate.rs
+?? crates/brep-core/tests/full_round_prism.rs
+?? crates/brep-core/tests/full_round_raw_binding.rs
+?? crates/brep-core/tests/full_round_source_boundary.rs
+?? crates/brep-core/tests/full_round_source_caps.rs
+?? crates/brep-core/tests/full_round_source_clock.rs
+?? crates/brep-core/tests/full_round_source_supports.rs
+?? crates/brep-core/tests/g2_end_runout.rs
+?? crates/brep-core/tests/graph_box_boolean.rs
+?? crates/brep-core/tests/intersected_pair_thickness.rs
+?? crates/brep-core/tests/joint_corner_profile.rs
+?? crates/brep-core/tests/mapped_network_thickness.rs
+?? crates/brep-core/tests/miter_network_thickness.rs
+?? crates/brep-core/tests/mixed_edge_history.rs
+?? crates/brep-core/tests/nurbs_edge_transition.rs
+?? crates/brep-core/tests/nurbs_intersection_graph.rs
+?? crates/brep-core/tests/oblique_full_periodic_face.rs
+?? crates/brep-core/tests/offset_cap_automatic_regions.rs
+?? crates/brep-core/tests/offset_cap_branches.rs
+?? crates/brep-core/tests/offset_cap_conform.rs
+?? crates/brep-core/tests/offset_cap_crossings.rs
+?? crates/brep-core/tests/offset_cap_partition.rs
+?? crates/brep-core/tests/offset_cap_regions.rs
+?? crates/brep-core/tests/offset_cap_sewing.rs
+?? crates/brep-core/tests/offset_cap_sheet.rs
+?? crates/brep-core/tests/original_curve_restriction.rs
+?? crates/brep-core/tests/original_source_regularity.rs
+?? crates/brep-core/tests/original_vertical_edge.rs
+?? crates/brep-core/tests/orthogonal_boundary_regions.rs
+?? crates/brep-core/tests/parametric_network_thickness.rs
+?? crates/brep-core/tests/partial_seam_relations.rs
+?? crates/brep-core/tests/perforated_periodic_face.rs
+?? crates/brep-core/tests/periodic_edge_partition.rs
+?? crates/brep-core/tests/planar_network_curved_t.rs
+?? crates/brep-core/tests/planar_network_projective_clocks.rs
+?? crates/brep-core/tests/planar_network_t_junctions.rs
+?? crates/brep-core/tests/planar_network_thickness.rs
+?? crates/brep-core/tests/polygon_contact_network.rs
+?? crates/brep-core/tests/prism_subdivided_boundary.rs
+?? crates/brep-core/tests/profile_material_relation.rs
+?? crates/brep-core/tests/quadrilateral_network_thickness.rs
+?? crates/brep-core/tests/qualified_contact_body.rs
+?? crates/brep-core/tests/radius_driven_contact.rs
+?? crates/brep-core/tests/rational_projection_exclusion.rs
+?? crates/brep-core/tests/reclock_history.rs
+?? crates/brep-core/tests/region_feature_pattern.rs
+?? crates/brep-core/tests/region_feature_pattern_charts.rs
+?? crates/brep-core/tests/region_feature_pattern_components.rs
+?? crates/brep-core/tests/region_feature_pattern_holes.rs
+?? crates/brep-core/tests/region_feature_pattern_trim_clocks.rs
+?? crates/brep-core/tests/retained_nurbs_boolean.rs
+?? crates/brep-core/tests/retained_patch_body.rs
+?? crates/brep-core/tests/retrim_replacement.rs
+?? crates/brep-core/tests/root_owned_interval.rs
+?? crates/brep-core/tests/same_support_partition.rs
+?? crates/brep-core/tests/saved_contact_radius.rs
+?? crates/brep-core/tests/saved_graph_patch_set.rs
+?? crates/brep-core/tests/seam_boolean.rs
+?? crates/brep-core/tests/sewn_patch_set.rs
+?? crates/brep-core/tests/shared_edge_partition.rs
+?? crates/brep-core/tests/shared_edge_trim_fragments.rs
+?? crates/brep-core/tests/six_edge_corner.rs
+?? crates/brep-core/tests/support/
+?? crates/brep-core/tests/trim_contact_replacement.rs
+?? crates/bridge-svg/assets/NotoSans-Regular.ttf.zlib
+?? crates/bridge-svg/src/bundled_font.rs
+?? crates/cad-predicates/src/bspline_lift_point.rs
+?? crates/cad-predicates/src/bspline_strip_nonlinear/
+?? crates/cad-predicates/src/combinatorics.rs
+?? crates/cad-predicates/src/fibered_affine/
+?? crates/cad-predicates/tests/projected_geometry.rs
+?? crates/geometry-bridge/examples/full-round-history-fixture.rs
+?? crates/geometry-bridge/src/brep_exact_full_round.rs
+?? crates/geometry-bridge/src/brep_production/map_parameters.rs
+?? crates/geometry-bridge/src/cad_full_round_exact.rs
+?? crates/geometry-bridge/src/cad_full_round_history.rs
+?? crates/geometry-bridge/src/cad_runout/graph_preview.rs
+?? crates/geometry-bridge/tests/authored_seam_map.rs
+?? crates/geometry-bridge/tests/full_round_exact.rs
+?? crates/geometry-bridge/tests/full_round_exact_display.rs
+?? crates/geometry-bridge/tests/full_round_exact_graph.rs
+?? crates/geometry-bridge/tests/full_round_exact_history.rs
+?? crates/independent-modeling/
+?? crates/nurbs-core/src/analysis/affine_volume/graph_translation.rs
+?? crates/nurbs-core/src/analysis/affine_volume/material_plane.rs
+?? crates/nurbs-core/src/analysis/affine_volume/separable.rs
+?? crates/nurbs-core/src/analysis/affine_volume/source_shear.rs
+?? crates/nurbs-core/src/analysis/curve_coordinate_clock.rs
+?? crates/nurbs-core/src/analysis/curve_pullback/
+?? crates/nurbs-core/src/analysis/curve_surface_agreement/partial_boundary.rs
+?? crates/nurbs-core/src/analysis/curve_surface_agreement/point_lift.rs
+?? crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace/
+?? crates/nurbs-core/src/analysis/curve_surface_composition/graph_trace/
+?? crates/nurbs-core/src/analysis/curve_surface_composition/polynomial_trace.rs
+?? crates/nurbs-core/src/analysis/surface_collar/jet_difference/tensor.rs
+?? crates/nurbs-core/src/analysis/surface_collar/jet_difference/world_difference.rs
+?? crates/nurbs-core/src/analysis/surface_injectivity/seam_glued/
+?? crates/nurbs-core/src/analysis/surface_shape_operator/
+?? crates/nurbs-core/src/constrained_surface.rs
+?? crates/nurbs-core/src/constrained_surface/
+?? crates/nurbs-core/src/construct/surfaces/original_graph_transition.rs
+?? crates/nurbs-core/src/construct/surfaces/original_graph_transition/
+?? crates/nurbs-core/src/curve_partition_agreement/
+?? crates/nurbs-core/src/intersection/certified_curve_surface/
+?? crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/closed_branches.rs
+?? crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/components/
+?? crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/trace_atlas.rs
+?? crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/transition/
+?? crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
+?? crates/nurbs-core/src/join/periodic_phase_correlated.rs
+?? crates/nurbs-core/src/join/surface_g1_pcurves/
+?? crates/nurbs-core/src/join/surface_g2_pcurves/common_basis.rs
+?? crates/nurbs-core/src/moving_envelope/
+?? crates/nurbs-core/src/moving_radius/
+?? crates/nurbs-core/src/offset/freeform.rs
+?? crates/nurbs-core/src/offset/freeform/
+?? crates/nurbs-core/src/offset/freeform_blend.rs
+?? crates/nurbs-core/src/offset/profile_corner.rs
+?? crates/nurbs-core/src/offset/profile_corner/
+?? crates/nurbs-core/src/offset/surface_offset/boundary_contact.rs
+?? crates/nurbs-core/src/offset/surface_offset/boundary_contact/
+?? crates/nurbs-core/src/offset/surface_offset/candidate.rs
+?? crates/nurbs-core/src/offset/surface_offset/contact_curve.rs
+?? crates/nurbs-core/src/offset/surface_offset/contact_curve/
+?? crates/nurbs-core/src/offset/surface_offset/coverage.rs
+?? crates/nurbs-core/src/offset/surface_offset/mapped.rs
+?? crates/nurbs-core/src/offset/surface_offset/parametric.rs
+?? crates/nurbs-core/src/offset/surface_offset/proposal.rs
+?? crates/nurbs-core/src/offset/surface_offset/quadrilateral.rs
+?? crates/nurbs-core/src/offset/surface_offset/regions.rs
+?? crates/nurbs-core/src/offset/surface_offset/source/
+?? crates/nurbs-core/src/offset_contact_pcurve/
+?? crates/nurbs-core/src/offset_contact_tangent/
+?? crates/nurbs-core/src/polyhedral_spline.rs
+?? crates/nurbs-core/src/surface_quotient_injectivity/report/
+?? crates/nurbs-core/src/trim/periodic_trim/evaluation.rs
+?? crates/nurbs-core/src/trim/trim_domain/curve_cover.rs
+?? crates/nurbs-core/src/trim/trim_region_audit/
+?? crates/nurbs-core/tests/adaptive_constraints.rs
+?? crates/nurbs-core/tests/batch_surface_knot_removal.rs
+?? crates/nurbs-core/tests/boundary_constraints.rs
+?? crates/nurbs-core/tests/combined_positive_loading.rs
+?? crates/nurbs-core/tests/common/
+?? crates/nurbs-core/tests/constrained_surface.rs
+?? crates/nurbs-core/tests/convex_g2.rs
+?? crates/nurbs-core/tests/curve_concatenation.rs
+?? crates/nurbs-core/tests/curve_coordinate_clock.rs
+?? crates/nurbs-core/tests/curve_distance_law.rs
+?? crates/nurbs-core/tests/curve_network_constraints.rs
+?? crates/nurbs-core/tests/curve_network_g2.rs
+?? crates/nurbs-core/tests/curve_pullback_graph.rs
+?? crates/nurbs-core/tests/curve_region_cover.rs
+?? crates/nurbs-core/tests/exact_support_plane_trace.rs
+?? crates/nurbs-core/tests/freeform_geometry.rs
+?? crates/nurbs-core/tests/homothetic_periodic_surface.rs
+?? crates/nurbs-core/tests/loaded_adaptive_constraints.rs
+?? crates/nurbs-core/tests/loaded_curve_network.rs
+?? crates/nurbs-core/tests/loaded_rational_constraints.rs
+?? crates/nurbs-core/tests/loaded_unparameterized_constraints.rs
+?? crates/nurbs-core/tests/moving_envelope_curved.rs
+?? crates/nurbs-core/tests/native_support_frame.rs
+?? crates/nurbs-core/tests/oblique_periodic_extrusion.rs
+?? crates/nurbs-core/tests/offset_boundary_contact.rs
+?? crates/nurbs-core/tests/offset_cap.rs
+?? crates/nurbs-core/tests/offset_contact_chain.rs
+?? crates/nurbs-core/tests/offset_contact_curve_fit.rs
+?? crates/nurbs-core/tests/offset_contact_lift.rs
+?? crates/nurbs-core/tests/offset_contact_region.rs
+?? crates/nurbs-core/tests/offset_contact_world_curve.rs
+?? crates/nurbs-core/tests/offset_coordinate_plane.rs
+?? crates/nurbs-core/tests/offset_endpoint_attachment.rs
+?? crates/nurbs-core/tests/offset_lift_fit.rs
+?? crates/nurbs-core/tests/offset_nested_region.rs
+?? crates/nurbs-core/tests/offset_path_discovery.rs
+?? crates/nurbs-core/tests/offset_path_graph.rs
+?? crates/nurbs-core/tests/offset_root_coverage.rs
+?? crates/nurbs-core/tests/offset_uv_regions.rs
+?? crates/nurbs-core/tests/original_curve_closure.rs
+?? crates/nurbs-core/tests/parameter_correspondence.rs
+?? crates/nurbs-core/tests/periodic_curve_partition.rs
+?? crates/nurbs-core/tests/periodic_extrusion_quotient.rs
+?? crates/nurbs-core/tests/periodic_phase_bounds.rs
+?? crates/nurbs-core/tests/periodic_surface_sampling.rs
+?? crates/nurbs-core/tests/polyhedral_spline.rs
+?? crates/nurbs-core/tests/polynomial_trace.rs
+?? crates/nurbs-core/tests/profile_full_round.rs
+?? crates/nurbs-core/tests/quadratic_core_g2.rs
+?? crates/nurbs-core/tests/rational_constraints.rs
+?? crates/nurbs-core/tests/ruled_dual_frame.rs
+?? crates/nurbs-core/tests/shallow_g2_sections.rs
+?? crates/nurbs-core/tests/source_contact_curvature_law.rs
+?? crates/nurbs-core/tests/ss_automatic_fiber_transition.rs
+?? crates/nurbs-core/tests/ss_closed_fiber_branches.rs
+?? crates/nurbs-core/tests/ss_trace_atlas.rs
+?? crates/nurbs-core/tests/support/authored_seam_map.rs
+?? crates/nurbs-core/tests/support/branched_seam_map.rs
+?? crates/nurbs-core/tests/support/circuit_seam_map.rs
+?? crates/nurbs-core/tests/support/moving_nonplanar_carrier.rs
+?? crates/nurbs-core/tests/support/overlap_seam_map.rs
+?? crates/nurbs-core/tests/support/ramified_seam_map.rs
+?? crates/nurbs-core/tests/support/ss_closed_fiber.rs
+?? crates/nurbs-core/tests/support/switched_seam_map.rs
+?? crates/nurbs-core/tests/surface_offset_candidate.rs
+?? crates/nurbs-core/tests/surface_offset_mapped.rs
+?? crates/nurbs-core/tests/surface_offset_parametric.rs
+?? crates/nurbs-core/tests/surface_offset_proposal.rs
+?? crates/nurbs-core/tests/surface_offset_quadrilateral.rs
+?? crates/nurbs-core/tests/trim_nesting.rs
+?? crates/nurbs-core/tests/unparameterized_constraints.rs
+?? crates/nurbs-core/tests/variational_constraints.rs
+?? crates/subdivision-core/src/quad_surface.rs
+?? crates/subdivision-core/src/quad_surface/
+?? crates/subdivision-core/tests/
+?? docs/design/cad-feature-extensions-2026-10-31.md
+?? docs/design/cad-freeform-extensions-2026-10-31.md
+?? docs/design/nurbs-domain-ownership-2026-11-01.md
+?? docs/design/plasticity-full-round-reference.md
+?? docs/design/plasticity-library-gap-plan.md
+?? docs/design/plasticity-parity-checkpoint-2026-10-31.md
+?? docs/design/plasticity-remaining-2026-11-02.md
+?? docs/design/plasticity-transfer-status-2026-11-02.md
+?? docs/qualification/algebraic-domain-atlas-2026-10-30/
+?? docs/qualification/atlas-algebraic-parameters-2026-10-30/
+?? docs/qualification/atlas-branches-2026-10-28/
+?? docs/qualification/atlas-curved-conform-2026-10-30/
+?? docs/qualification/atlas-knot-cells-2026-10-30/
+?? docs/qualification/atlas-nonplanar-branches-2026-10-30/
+?? docs/qualification/automatic-contact-topology-2026-10-31/
+?? docs/qualification/brep-admission-enclosed-cut-2026-10-30/
+?? docs/qualification/cad-prism-side-fix-2026-11-02/
+?? docs/qualification/compact-original-rim-2026-11-01/
+?? docs/qualification/compatible-nurbs-contact-2026-11-02/
+?? docs/qualification/compiled-original-g2-traces-2026-11-02/
+?? docs/qualification/complete-source-law-2026-11-02/
+?? docs/qualification/contact-branch-polygon-2026-10-31/
+?? docs/qualification/contact-end-normals-2026-11-02/
+?? docs/qualification/contact-patch-admission-2026-11-02/
+?? docs/qualification/contact-retention-2026-11-02/
+?? docs/qualification/contact-root-refinement-2026-11-02/
+?? docs/qualification/contact-sewing-bindings-2026-11-02/
+?? docs/qualification/convex-affine-nurbs-2026-11-02/
+?? docs/qualification/convex-core-g2-2026-11-02/
+?? docs/qualification/corner-global-nurbs-2026-10-31/
+?? docs/qualification/corner-patch-body-2026-10-31/
+?? docs/qualification/curved-editable-difference-2026-10-31/
+?? docs/qualification/distributed-tile-2026-10-30/
+?? docs/qualification/embedded-g2-admission-2026-11-02/
+?? docs/qualification/embedded-g2-step-2026-11-02/
+?? docs/qualification/exact-closed-source-shell-2026-11-02/
+?? docs/qualification/exact-contact-storage-witness-2026-11-02/
+?? docs/qualification/exact-graph-brep-strip-2026-11-02/
+?? docs/qualification/exact-graph-curvature-2026-11-02/
+?? docs/qualification/exact-graph-internal-g2-2026-11-02/
+?? docs/qualification/exact-native-volume-admission-2026-11-02/
+?? docs/qualification/exact-normal-radius-diagnostics-2026-11-02/
+?? docs/qualification/exact-original-document-boundaries-2026-11-02/
+?? docs/qualification/exact-original-plane-contacts-2026-11-02/
+?? docs/qualification/exact-original-source-contacts-2026-11-02/
+?? docs/qualification/exact-original-source-ends-2026-11-02/
+?? docs/qualification/exact-polynomial-contact-trace-2026-11-01/
+?? docs/qualification/exact-profile-material-relation-2026-11-02/
+?? docs/qualification/exact-retained-source-contacts-2026-11-02/
+?? docs/qualification/exact-retained-source-regions-2026-11-02/
+?? docs/qualification/exact-rooted-boundary-split-2026-11-02/
+?? docs/qualification/exact-sewn-source-roof-2026-11-02/
+?? docs/qualification/exact-source-flux-and-pair-hulls-2026-11-02/
+?? docs/qualification/exact-transverse-contacts-and-face-charts-2026-11-02/
+?? docs/qualification/expanded-contact-runout-2026-11-02/
+?? docs/qualification/face-curvature-2026-10-30/
+?? docs/qualification/fair-r1-rooted-cuts-2026-11-02/
+?? docs/qualification/full-round-admitted-family-2026-11-02/
+?? docs/qualification/full-round-display-wasm-2026-11-02/
+?? docs/qualification/full-round-exact-display-2026-11-02/
+?? docs/qualification/full-round-exact-scene-2026-11-02/
+?? docs/qualification/full-round-exact-snapshot-2026-11-02/
+?? docs/qualification/full-round-exact-tangent-radius-2026-11-02/
+?? docs/qualification/full-round-frozen-recipe-transport-2026-11-02/
+?? docs/qualification/full-round-history-bridge-wasm-2026-11-02/
+?? docs/qualification/full-round-history-regenerate-2026-11-02/
+?? docs/qualification/full-round-history-scene-2026-11-02/
+?? docs/qualification/full-round-history-worker-2026-11-02/
+?? docs/qualification/full-round-host-contract-2026-11-02/
+?? docs/qualification/full-round-native-envelope-2026-11-02/
+?? docs/qualification/full-round-native-graph-2026-11-02/
+?? docs/qualification/full-round-native-history-2026-11-02/
+?? docs/qualification/full-round-native-production-2026-11-02/
+?? docs/qualification/full-round-source-lineage-2026-11-02/
+?? docs/qualification/full-round-worker-delivery-2026-11-02/
+?? docs/qualification/g2-end-runout-2026-11-01/
+?? docs/qualification/g2-source-seam-law-2026-11-02/
+?? docs/qualification/graph-box-boolean-2026-11-02/
+?? docs/qualification/graph-trim-sew-g2-2026-11-01/
+?? docs/qualification/independent-algebraic-caps-2026-10-31/
+?? docs/qualification/independent-boolean-reedit-2026-11-01/
+?? docs/qualification/independent-nurbs-intersection-graph-2026-11-02/
+?? docs/qualification/interior-lift-2026-10-30/
+?? docs/qualification/interior-tile-2026-10-30/
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/README.md
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/production-reference/
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/production-sources/
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/run-1793135914010755000/telemetry.jsonl
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/run-1793175191840089000/telemetry.jsonl
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/run-1793184064541571000/telemetry.jsonl
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/run-1793196787614973000/telemetry.jsonl
+?? docs/qualification/metal-sdf-empty-cells-2026-10-28/run-1793233328294320000/
+?? docs/qualification/metal-sdf-large-auto-final-2026-10-21/run-1792591602581769000/telemetry.jsonl
+?? docs/qualification/metal-sdf-large-auto-final-2026-10-21/run-1792592542365850000/telemetry.jsonl
+?? docs/qualification/metal-sdf-large-auto-final-2026-10-21/run-1792614936723125000/telemetry.jsonl
+?? docs/qualification/metal-sdf-large-auto-final-2026-10-21/run-1792625264885333000/telemetry.jsonl
+?? docs/qualification/model-algebraic-pocket-2026-10-31/
+?? docs/qualification/native-aligned-wall-minimum-2026-11-02/
+?? docs/qualification/new-interface-patch-set-2026-11-01/
+?? docs/qualification/nonlinear-source-clock-2026-11-02/
+?? docs/qualification/nurbs-continuous-candidates-2026-11-01/
+?? docs/qualification/nurbs-material-classification-2026-11-01/
+?? docs/qualification/nurbs-trace-atlas-2026-11-02/
+?? docs/qualification/ordinary-algebraic-boolean-2026-10-31/
+?? docs/qualification/original-boundary-g2-jets-2026-11-02/
+?? docs/qualification/original-nurbs-four-edge-2026-10-31/
+?? docs/qualification/original-point-lift-2026-11-02/
+?? docs/qualification/original-spline-g2-traces-2026-11-02/
+?? docs/qualification/plasticity-status-refresh-2026-11-02/
+?? docs/qualification/polyhedral-crossing-difference-2026-10-31/
+?? docs/qualification/projected-trim-contact-2026-11-01/
+?? docs/qualification/quadratic-core-g2-radius-2026-11-02/
+?? docs/qualification/radius-driven-contacts-2026-11-02/
+?? docs/qualification/retained-nurbs-boolean-2026-11-02/
+?? docs/qualification/retained-patch-body-2026-11-01/
+?? docs/qualification/retained-patch-embedding-2026-11-01/
+?? docs/qualification/root-owned-shared-edge-2026-11-01/
+?? docs/qualification/root-trim-sew-g2-2026-11-01/
+?? docs/qualification/runout-field-transport-2026-11-01/
+?? docs/qualification/same-carrier-seam-boolean-2026-11-02/
+?? docs/qualification/same-support-contact-2026-11-01/
+?? docs/qualification/saved-contact-radius-2026-11-02/
+?? docs/qualification/six-edge-contact-2026-10-31/
+?? docs/qualification/source-graph-g2-preview-2026-11-02/
+?? docs/qualification/source-graph-g2-ui-2026-11-02/
+?? docs/qualification/source-graph-g2-ui-positive-2026-11-02/
+?? docs/qualification/source-owned-graph-transition-2026-11-02/
+?? docs/qualification/source-referenced-runout-law-2026-11-02/
+?? docs/qualification/sweep-algebraic-graph-2026-10-31/
+?? docs/qualification/sweep-authored-map-global-2026-10-30/
+?? docs/qualification/sweep-auto-map-global-2026-10-30/
+?? docs/qualification/sweep-b4cd-requalification-2026-10-19/recovery-2026-10-21/qualified-inputs.tar.gz
+?? docs/qualification/sweep-branch-material-2026-10-31/
+?? docs/qualification/sweep-branch-moving-2026-11-01/
+?? docs/qualification/sweep-bspline-joins-2026-10-28/qualified-source-r6.tar.gz
+?? docs/qualification/sweep-bspline-joins-2026-10-28/source-snapshot-r2.tar.gz
+?? docs/qualification/sweep-bspline-joins-2026-10-28/source-snapshot.tar.gz
+?? docs/qualification/sweep-circuit-charts-2026-11-02/
+?? docs/qualification/sweep-coverage-2026-10-01/full-audit-2026-10-11/
+?? docs/qualification/sweep-independent-bases-2026-10-30/
+?? docs/qualification/sweep-interior-cuts-2026-11-02/
+?? docs/qualification/sweep-nonlinear-joint-2026-10-30/
+?? docs/qualification/sweep-overlap-charts-2026-11-02/
+?? docs/qualification/sweep-polynomial-pullbacks-2026-11-02/
+?? docs/qualification/sweep-ramified-charts-2026-11-02/
+?? docs/qualification/sweep-window-crossings-2026-10-31/
+?? docs/qualification/typed-original-graph-jets-2026-11-02/
+?? forma-project.json
+?? scripts/check-bundled-font-wasm.mts
+?? scripts/check-cad-parts-native-bridge.py
+?? scripts/check-full-round-exact-display-wasm.mts
+?? scripts/check-full-round-exact-graph-wasm.mts
+?? scripts/check-full-round-exact-transport-wasm.mts
+?? scripts/check-full-round-history-wasm.mts
+?? scripts/check-g2-runout-fields-wasm.mts
+?? scripts/check-source-graph-g2-preview-wasm.mts
+?? scripts/generate-corner-exact-coefficients.py
+?? scripts/geometry-kernel-cargo.mjs
+?? scripts/qualify-full-round-source-contract.mts
+?? scripts/verify-contact-control-volumes.py
+?? scripts/verify-four-edge-step-radii.py
+?? scripts/verify-six-edge-radii-occt.py
+?? scripts/verify-six-edge-volume.py
+?? scripts/verify-step-self-intersections-occt.py
+?? src/components/RunoutControls.vue
+?? src/components/SourceGraphG2Preview.vue
+?? src/semantic/remapSemanticNode.ts
+?? src/services/brepDiagnosticBrowser.ts
+?? src/services/brepDiagnosticSnapshot.ts
+?? src/services/exactFullRoundHistory.ts
+?? src/services/exactFullRoundHistoryBrowser.ts
+?? src/services/exactFullRoundHistoryScene.ts
+?? src/services/exactFullRoundHistoryWorkerProtocol.ts
+?? src/services/exactFullRoundSnapshot.ts
+?? src/services/geometry/brepExactDisplay.ts
+?? src/services/openscadSemanticLowerer/evalFullRoundExact.ts
+?? src/services/openscadSemanticLowerer/evalProjection.ts
+?? src/services/semanticProgramValidator/semanticMapProduction.ts
+?? src/services/semanticProgramValidator/validateFullRoundExactNode.ts
+?? src/services/sourceGraphG2Preview.ts
+?? src/workers/exactFullRoundHistory.worker.ts
+?? tests/exactFullRoundHistory.test.ts
+?? tests/exactFullRoundHistoryScene.test.ts
+?? tests/exactFullRoundScene.test.ts
+?? tests/exactFullRoundSnapshot.test.ts
+?? tests/fullRoundSemanticContract.test.ts
+?? tests/g2RunoutRealWorker.test.ts
+?? tests/geometryKernelCargo.test.mjs
+?? tests/sameSupportContactProtocol.test.ts
+?? tests/sourceGraphG2Panel.test.ts
+?? tests/sourceGraphG2Preview.test.ts
+?? tests/sourceGraphG2RealWorker.test.ts
+?? tests/test_cad_fresh_dimensions_manifest.py
+?? tools/browser-qualification/brep-full-round.mjs
+?? tools/browser-qualification/brep-full-round.ts
+?? tools/browser-qualification/full-round-history.mjs
+?? tools/browser-qualification/full-round-history.ts
+?? tsconfig.tsbuildinfo
+?? ui/

@@ -1,4 +1,5 @@
 use super::*;
+mod partitioned;
 #[test]
 fn push_boolean_partitioned_cap_moves_all_supports() {
     let model = boolean(
@@ -7,6 +8,7 @@ fn push_boolean_partitioned_cap_moves_all_supports() {
         "union",
     )
     .unwrap();
+    let model = partitioned::cap_fixture(&model);
     let caps: Vec<_> = model
         .faces
         .iter()

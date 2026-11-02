@@ -1,0 +1,113 @@
+{
+  "status": "indexed face ancestry and deterministic output naming verified; full edit/history naming and ModelGraph incomplete",
+  "rust_tests_passed": 14,
+  "rust_tests": {
+    "full_round_admitted": 4,
+    "full_round_exact_transport": 2,
+    "full_round_exact_material_family": 6,
+    "full_round_raw_binding": 2
+  },
+  "wasm_abi_cases_passed": 8,
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted.rs": "71af896dfeb1a798024ed2b70e693f5296d0d3b78c7302d2e0279500eaa8aca2",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/lineage.rs": "df1ef0422d37db7e145ee52a961412e83599ee15a935eb6af59c8aa74ec53c10",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/geometry_value.rs": "ea2a849cb0c7f5b17d1dffb5cc3f8a14b7f6ab5a282f294192664890cf174bd9",
+    "crates/brep-core/src/feature_ops/full_round_curved/admitted/transport.rs": "f9bde3b057e3460480d962390e8fa9d8c3cefaab18813862ff5fa5f132cff4c5",
+    "crates/brep-core/tests/full_round_admitted.rs": "9037d8542c2c136136a42130c9a0624dc7dbaaf7df7833270f768a28cb230f5b",
+    "crates/brep-core/tests/full_round_exact_transport.rs": "f47350289b18c5691d833f8d7186db20ee3f8075c778613f5f100d9623461dab",
+    "crates/brep-core/tests/full_round_exact_material_family.rs": "1126769c298b21d01abbfabc649b599e6d367c90ebb1aa2416094e436cabe08a",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "9edc92d21195128ab1b4fe4505492ded3abf7ae82cc18786b4474db0d2596d47",
+    "scripts/check-full-round-exact-transport-wasm.mts": "48ddf519c6c515d4eead3d9ac95ce97627a069ac2bf4b7e4905629ea76c28553"
+  },
+  "wasm": {
+    "schema": "full-round-exact-transport-wasm/1",
+    "passed": true,
+    "wasmPath": "/tmp/rea-full-round-wasm/wasm32-unknown-unknown/debug/geometry_wasm.wasm",
+    "wasmSha256": "6335e44e7345131f2cccd316f3b5875cd9ff4f674144cf935e134c482413ffe5",
+    "wasmBytes": 45499106,
+    "nativeFixtureSha256": "e84c952b304409a53b046bcd769ffa06861349c24697871530343fd34bb9c731",
+    "cases": [
+      {
+        "name": "native-frozen-recipe-to-wasm",
+        "ok": true,
+        "elapsedMs": 28774.163915999998
+      },
+      {
+        "name": "legacy-naming-upgrade",
+        "ok": true,
+        "elapsedMs": 20497.503125
+      },
+      {
+        "name": "forged-source-lineage",
+        "ok": false,
+        "elapsedMs": 23214.43299999999,
+        "error": {
+          "code": "BREP_FEATURE_REFUSED",
+          "message": "Exact output/evidence differs from frozen-source reconstruction"
+        }
+      },
+      {
+        "name": "wasm-original-source-construction",
+        "ok": true,
+        "elapsedMs": 21545.198374999993
+      },
+      {
+        "name": "wasm-json-frozen-roundtrip",
+        "ok": true,
+        "elapsedMs": 19042.9755
+      },
+      {
+        "name": "forged-rational-output",
+        "ok": false,
+        "elapsedMs": 20469.862749999986,
+        "error": {
+          "code": "BREP_FEATURE_REFUSED",
+          "message": "Exact output/evidence differs from frozen-source reconstruction"
+        }
+      },
+      {
+        "name": "caller-success-field",
+        "ok": false,
+        "elapsedMs": 0.3753749999741558,
+        "error": {
+          "code": "GEOMETRY_INVALID_INPUT",
+          "message": "Unexpected exact Full Round request field"
+        }
+      },
+      {
+        "name": "changed-original-source-interval",
+        "ok": false,
+        "elapsedMs": 3.6237919999985024,
+        "error": {
+          "code": "BREP_FEATURE_REFUSED",
+          "message": "Exact recipe changes an unselected source interval"
+        }
+      }
+    ],
+    "scope": "Fresh custom WASM via real binary ABI. Native frozen recipe geometry is identical after reconstruction. This does not update the packaged application artifact or qualify ModelGraph/UI integration."
+  },
+  "retained_qualified_wasm": "/tmp/rea-full-round-qualified/6335e44e7345131f2cccd316f3b5875cd9ff4f674144cf935e134c482413ffe5.wasm",
+  "coverage": [
+    "source parents chosen by constructor slots and certified indexed rim/side bindings",
+    "all output entity IDs; unique output IDs and no generated/current-source ID collision",
+    "whole unchanged one-child side face retains original face ID",
+    "trimmed/split side faces, middle-to-blend replacement and modified cap ancestry",
+    "original rim/loop persistent IDs and exact oriented/stored clocks on retained face origins",
+    "valid ChangeSet including original history plus output changes",
+    "author-renamed source IDs do not alias output children",
+    "portable naming identical in real native/WASM reconstruction",
+    "older v1 artifacts without optional naming fields upgrade after complete proof reconstruction",
+    "forged parent ancestry/output coefficients/success fields/source intervals refuse"
+  ],
+  "limits": [
+    "vertices, edges and loops receive newly generated IDs; no full historical persistence claim",
+    "deterministic for same frozen source/recipe; general occurrence/branch/edit naming not qualified",
+    "ModelGraph carrier/schema/execution not yet extended",
+    "packaged application kernel unchanged",
+    "full original library parity and general spatial families remain open"
+  ],
+  "checks": [
+    "11 frozen clean files unchanged",
+    "API map check passed: 242 roots, 200 entries; not parity"
+  ]
+}

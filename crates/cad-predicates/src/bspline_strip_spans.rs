@@ -14,6 +14,19 @@ pub(crate) fn compare(
     order: usize,
     propose: bool,
 ) -> Result<BezierIdentity, Reason> {
+    compare_search(ctx, jets, knots, degrees, scale, order, propose, false)
+}
+
+pub(crate) fn compare_search(
+    ctx: &mut PredicateContext<'_>,
+    jets: &[Vec<Series>],
+    knots: [&[LeafRef]; 2],
+    degrees: [usize; 2],
+    scale: Q,
+    order: usize,
+    propose: bool,
+    nonlinear_only: bool,
+) -> Result<BezierIdentity, Reason> {
     let mut normalized = Vec::new();
     let mut breaks: Vec<Q> = Vec::new();
     for side in 0..2 {
@@ -46,6 +59,55 @@ pub(crate) fn compare(
             }
         }
         normalized.push(u);
+    }
+    // Exact closed clamped traces have no globally affine Cartesian anchor.
+    // Try their original ordered/overlapping algebraic charts before spending
+    // the shared ledger on an unrelated fractional-linear knot proposal.
+    let mut closed = order > 0 && !propose && !nonlinear_only;
+    if closed {
+        'sides: for side in 0..2 {
+            let n = jets[side].len();
+            let p = degrees[side];
+            for k in 0..=p {
+                if !normalized[side][k].equal(&Q::zero(), ctx)?
+                    || !normalized[side][n + k].equal(&Q::scalar(Expansion::scalar(1.)), ctx)?
+                {
+                    closed = false;
+                    break 'sides;
+                }
+            }
+            let a = &jets[side][0][0];
+            let b = &jets[side][n - 1][0];
+            for k in 0..3 {
+                if !a[k].mul(&b[3], ctx)?.equal(&b[k].mul(&a[3], ctx)?, ctx)? {
+                    closed = false;
+                    break 'sides;
+                }
+            }
+        }
+    }
+    if closed && !nonlinear_only {
+        match super::bspline_strip_nonlinear::compare(
+            ctx,
+            jets,
+            &normalized,
+            degrees,
+            &scale,
+            order,
+        ) {
+            Err(Reason::MissingProof) => {}
+            result => return result,
+        }
+    }
+    if nonlinear_only {
+        return super::bspline_strip_nonlinear::compare(
+            ctx,
+            jets,
+            &normalized,
+            degrees,
+            &scale,
+            order,
+        );
     }
     let affine = compare_spans(
         ctx,
@@ -100,6 +162,23 @@ pub(crate) fn compare(
             &scale,
             order,
         );
+    }
+    // The proposed Mobius map sends these original knots to one another.
+    // Distinct exact Cartesian images rule it out BEFORE a costly polynomial
+    // pullback. A plausible knot proposal still follows its established route.
+    let a = knot_point(&jets[0], &normalized[0], degrees[0], &middle[0], ctx)?;
+    let b = knot_point(&jets[1], &normalized[1], degrees[1], &middle[1], ctx)?;
+    for k in 0..3 {
+        if !a[k].mul(&b[3], ctx)?.equal(&b[k].mul(&a[3], ctx)?, ctx)? {
+            return super::bspline_strip_nonlinear::compare(
+                ctx,
+                jets,
+                &normalized,
+                degrees,
+                &scale,
+                order,
+            );
+        }
     }
     let mut mapped = normalized[1][degrees[1]..=jets[1].len()].to_vec();
     for k in &normalized[0][degrees[0]..=jets[0].len()] {
@@ -257,4 +336,49 @@ fn compare_spans(
     }
     ctx.charge(0)?;
     Ok(BezierIdentity::Equal)
+}
+
+// Exact C0 value at an ORIGINAL interior knot. Fully repeated Bezier knots
+// use their literal original pole; other bases use exact homogeneous de Boor.
+fn knot_point(
+    jets: &[Series],
+    u: &[Q],
+    degree: usize,
+    t: &Q,
+    ctx: &mut PredicateContext<'_>,
+) -> Result<[Q; 4], Reason> {
+    let mut span = None;
+    for i in degree..jets.len() {
+        if u[i].equal(t, ctx)? && u[i + 1].sub(t, ctx)?.n.sign() == Sign::Positive {
+            span = Some(i);
+            break;
+        }
+    }
+    let i = span.ok_or(Reason::MissingProof)?;
+    let mut bezier = true;
+    for j in 0..degree {
+        bezier &= u[i - j].equal(t, ctx)?;
+    }
+    if bezier {
+        return Ok(jets[i - degree][0].clone());
+    }
+    let mut rows = (i - degree..=i)
+        .map(|j| jets[j][0].clone())
+        .collect::<Vec<_>>();
+    for r in 1..=degree {
+        for j in (r..=degree).rev() {
+            let at = i - degree + j;
+            let den = u[i + 1 + j - r].sub(&u[at], ctx)?;
+            let alpha = t.sub(&u[at], ctx)?.div_positive(&den, ctx)?;
+            let beta = Q::scalar(Expansion::scalar(1.)).sub(&alpha, ctx)?;
+            let mut out = std::array::from_fn(|_| Q::zero());
+            for k in 0..4 {
+                out[k] = rows[j - 1][k]
+                    .mul(&beta, ctx)?
+                    .add(&rows[j][k].mul(&alpha, ctx)?, ctx)?;
+            }
+            rows[j] = out;
+        }
+    }
+    Ok(rows.pop().unwrap())
 }

@@ -9,7 +9,7 @@ fn index(ids: BTreeSet<usize>) -> BTreeMap<usize, usize> {
         .collect()
 }
 
-fn extract(model: &Model, body: usize) -> (Model, BTreeMap<usize, usize>) {
+pub(crate) fn extract(model: &Model, body: usize) -> (Model, BTreeMap<usize, usize>) {
     extract_range(model, body..body + 1)
 }
 

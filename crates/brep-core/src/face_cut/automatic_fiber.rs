@@ -190,8 +190,6 @@ fn partition_fiber_impl(
     Ok(out)
 }
 
-
-
 fn join_pieces(
     pieces: &[nurbs_core::curve::Curve],
     intervals: &[[f64; 2]],
@@ -465,20 +463,30 @@ pub(super) fn qualify_automatic_search(
             *parameter_box = next;
         }
     }
-    // A single uniform operator can be too coarse for an otherwise regular
-    // curved branch. Reprove an ordered complete cover of its free interval.
-    *parameter_box = original;
-    let axis = automatic_search_chart(
-        model,
-        face,
-        roots,
-        cutter_roots,
-        parameter_box,
-        1. / 128.,
-        metric_scales,
-    )?;
-    if qualify_fiber_cover(&sources, *parameter_box, axis, cells, max_cells).is_ok() {
-        return Ok(axis);
+    // A regular curved branch can fail every uniform operator while admitting
+    // a complete ordered cover. Reuse ALL bounded proposal widths, not only the
+    // narrowest endpoint neighborhood: interior excursions may leave that box.
+    // Each failed cover consumes its allowance; no predicate or budget changes.
+    for attempt in 0..8 {
+        let remaining = max_cells.saturating_sub(*cells);
+        let allowance = remaining / (8 - attempt);
+        if allowance < 32 {
+            return Err(unproven("Piecewise automatic search work exhausted"));
+        }
+        *parameter_box = original;
+        let axis = automatic_search_chart(
+            model,
+            face,
+            roots,
+            cutter_roots,
+            parameter_box,
+            (1usize << attempt) as f64 / 128.,
+            metric_scales,
+        )?;
+        let limit = *cells + allowance;
+        if qualify_fiber_cover(&sources, *parameter_box, axis, cells, limit).is_ok() {
+            return Ok(axis);
+        }
     }
     Err(unproven(&format!(
         "Automatic original-surface fiber remains unresolved after bounded search: {}",

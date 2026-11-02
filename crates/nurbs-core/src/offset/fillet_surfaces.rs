@@ -196,7 +196,8 @@ pub struct FilletOptions {
     pub tolerance: f64,
     /// Total marching step budget across both directions.
     pub max_march_steps: usize,
-    /// Skin section count cap (clamped to `2..=11`).
+    /// Skin section count cap: `2..=11` for natural loft, `2..=33`
+    /// for open curved-support G2 Hermite proposals. Proof limits are separate.
     pub max_sections: usize,
 }
 

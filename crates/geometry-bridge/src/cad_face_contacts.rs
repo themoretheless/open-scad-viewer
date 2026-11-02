@@ -341,9 +341,12 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells+p.hull_cells+p.source_chart_cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells+p.source_chart_cells,0,Vec::new(),0)};
+            (witness,r.cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint||p.volume_separation.is_some() {disjoint+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
+            brep_core::face_contacts::SharedBoundary::ProjectedTrimNetwork(c)=>json!({"kind":"projected-trim-network","certified":true,"faces":c.faces,"edges":c.edges,"vertices":c.vertices,"cells":c.cells,"axes":c.axes,"determinantSigns":c.determinant_signs}),
+            brep_core::face_contacts::SharedBoundary::ProjectedTrimPartition(c)=>json!({"kind":"projected-trim-partition","certified":true,"faces":c.faces,"edge":c.edge(),"vertex":c.vertex(),"cells":c.cells,"axes":c.axes,"determinantSigns":c.determinant_signs}),
+            brep_core::face_contacts::SharedBoundary::SameSupportPartition(c)=>json!({"kind":"same-support-partition","certified":true,"faces":c.faces,"edge":c.edge(),"vertex":c.vertex(),"cells":c.cells,"projection":c.carrier.projection,"rowWeights":c.carrier.row_weights}),
             brep_core::face_contacts::SharedBoundary::OwnedVertex(c)=>json!({"kind":"owned-vertex","faces":c.faces,"vertex":c.vertex}),
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,

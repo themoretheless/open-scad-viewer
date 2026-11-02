@@ -1,0 +1,7 @@
+crates/brep-core/src/minkowski3d/curved.rs: 804 lines exceeds limit 800; split it
+crates/brep-core/src/profile_certificate.rs: grew to 1001 lines (pinned at 1000); oversized files may only shrink
+crates/cad-predicates/src/lib.rs: grew to 1202 lines (pinned at 1200); oversized files may only shrink
+crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace.rs: 1235 lines exceeds limit 800; split it
+crates/nurbs-core/src/analysis/curve_surface_composition/graph_trace.rs: 974 lines exceeds limit 800; split it
+src/features/DirectModeler.vue: grew to 3129 lines (pinned at 3127); oversized files may only shrink
+src/services/mainSolidProtocol/mainSolidResult.ts: grew to 597 lines (pinned at 594); oversized files may only shrink

@@ -19,6 +19,7 @@ struct AlongProof<'a> {
     knots: [&'a [LeafRef]; 2],
     degrees: [usize; 2],
     map: Option<BsplineParameterMap<'a>>,
+    nonlinear_only: bool,
 }
 
 /// One-sided jet on a specified original, nonempty knot span.
@@ -175,6 +176,51 @@ pub fn rational_bspline_independent_strip_jet_identity(
             knots: along_knots,
             degrees: along_degrees,
             map: None,
+            nonlinear_only: false,
+        }),
+        &mut false,
+    )
+}
+
+/// Nonlinear chart search in the same work context after an owner's common-
+/// basis attempt. No affine acceptance is presumed: all final original map and
+/// strip identities are mandatory. Intended to avoid repeating a failed affine
+/// proposal. This is sufficient evidence and never certifies an authored pcurve.
+pub fn rational_bspline_nonlinear_strip_jet_identity(
+    ctx: &mut PredicateContext<'_>,
+    strips: [&[Vec<[LeafRef; 4]>]; 2],
+    knots: [&[LeafRef]; 2],
+    degrees: [usize; 2],
+    locations: [BsplineStripLocation; 2],
+    scale: LeafRef,
+    order: usize,
+    along_knots: [&[LeafRef]; 2],
+    along_degrees: [usize; 2],
+) -> Result<BezierIdentityDecision, InputError> {
+    for side in 0..2 {
+        if !(1..=32).contains(&along_degrees[side])
+            || strips[side].len() <= along_degrees[side]
+            || along_knots[side].len() != strips[side].len() + along_degrees[side] + 1
+        {
+            return Err(InputError::InvalidInput(
+                "Invalid independent along B-spline basis",
+            ));
+        }
+    }
+    strip_identity(
+        ctx,
+        strips,
+        knots,
+        degrees,
+        locations,
+        scale,
+        order,
+        false,
+        Some(AlongProof {
+            knots: along_knots,
+            degrees: along_degrees,
+            map: None,
+            nonlinear_only: true,
         }),
         &mut false,
     )
@@ -226,6 +272,7 @@ pub fn rational_bspline_mapped_strip_jet_identity(
             knots: along_knots,
             degrees: along_degrees,
             map: Some(map),
+            nonlinear_only: false,
         }),
         &mut false,
     )
@@ -370,9 +417,10 @@ fn strip_identity(
                     map,
                     &scale,
                     order,
+                    false,
                 );
             }
-            return super::bspline_strip_spans::compare(
+            return super::bspline_strip_spans::compare_search(
                 ctx,
                 &jets,
                 along.knots,
@@ -380,6 +428,7 @@ fn strip_identity(
                 scale,
                 order,
                 propose_exact_scale,
+                along.nonlinear_only,
             );
         }
         verify_jets_position(ctx, jets, scale, order, propose_exact_scale, position)

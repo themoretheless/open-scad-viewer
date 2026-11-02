@@ -298,7 +298,7 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
     };
     options
         .fontdb_mut()
-        .load_font_data(include_bytes!("../../assets/NotoSans-Regular.ttf").to_vec());
+        .load_font_data(bridge_svg::bundled_font::bytes().to_vec());
     options.fontdb_mut().set_sans_serif_family("Noto Sans");
     options.fontdb_mut().set_serif_family("Noto Sans");
     options.fontdb_mut().set_monospace_family("Noto Sans");

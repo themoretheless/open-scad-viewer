@@ -1,7 +1,7 @@
 //! Bounded vector drawing PDF with embedded searchable Unicode text.
 use crate::{Error, Result};
 use std::{collections::BTreeMap, fmt::Write};
-const FONT: &[u8] = include_bytes!("../assets/NotoSans-Regular.ttf");
+use crate::bundled_font::bytes as font_bytes;
 fn unicode_hex(text: &str) -> String {
     text.encode_utf16().map(|v| format!("{v:04X}")).collect()
 }
@@ -47,7 +47,7 @@ impl Writer<'_> {
                 if !self.checked_fonts.contains(&glyph.font) {
                     if self
                         .fontdb
-                        .with_face_data(glyph.font, |bytes, index| index == 0 && bytes == FONT)
+                        .with_face_data(glyph.font, |bytes, index| index == 0 && bytes == font_bytes())
                         != Some(true)
                     {
                         return Err(invalid("PDF text requires the bundled Noto Sans font"));
@@ -251,7 +251,7 @@ pub(crate) fn generate(sources: &[String]) -> Result<String> {
                 .join(" ")
         ),
     );
-    let font = ttf_parser::Face::parse(FONT, 0).map_err(|_| invalid("Invalid bundled font"))?;
+    let font = ttf_parser::Face::parse(font_bytes(), 0).map_err(|_| invalid("Invalid bundled font"))?;
     let mut glyphs = BTreeMap::new();
     let font_id = 3 + sources.len() * 2;
     for (i, source) in sources.iter().enumerate() {
@@ -331,14 +331,14 @@ pub(crate) fn generate(sources: &[String]) -> Result<String> {
             font_id + 3
         ),
     );
-    let encoded = FONT.iter().map(|v| format!("{v:02X}")).collect::<String>() + ">";
+    let encoded = font_bytes().iter().map(|v| format!("{v:02X}")).collect::<String>() + ">";
     object(
         &mut pdf,
         &mut offsets,
         format!(
             "<< /Length {} /Length1 {} /Filter /ASCIIHexDecode >>\nstream\n{encoded}\nendstream",
             encoded.len(),
-            FONT.len()
+            font_bytes().len()
         ),
     );
     let mut cmap = String::from(

@@ -1,0 +1,100 @@
+{
+  "schema": "full-round-exact-display-wasm/1",
+  "passed": true,
+  "cases": [
+    {
+      "name": "source-attested-graph",
+      "ok": true,
+      "elapsedMs": 1334.02625
+    },
+    {
+      "name": "exact-display-2",
+      "ok": true,
+      "elapsedMs": 610.5961659999998
+    },
+    {
+      "name": "exact-display-8",
+      "ok": true,
+      "elapsedMs": 653.8117499999998
+    },
+    {
+      "name": "exact-display-16",
+      "ok": true,
+      "elapsedMs": 654.0520840000004
+    },
+    {
+      "name": "native-frozen-artifact-restore",
+      "ok": true,
+      "elapsedMs": 22845.67425
+    },
+    {
+      "name": "native-rational-artifact-display",
+      "ok": true,
+      "elapsedMs": 21072.584874999997
+    },
+    {
+      "name": "zero-segments",
+      "ok": false,
+      "elapsedMs": 578.3324580000044,
+      "error": {
+        "code": "BREP_PROFILE_CERTIFICATE_UNPROVEN",
+        "message": "Invalid exact display sampling or triangle budget"
+      }
+    },
+    {
+      "name": "too-many-segments",
+      "ok": false,
+      "elapsedMs": 589.135374999998,
+      "error": {
+        "code": "BREP_PROFILE_CERTIFICATE_UNPROVEN",
+        "message": "Invalid exact display sampling or triangle budget"
+      }
+    },
+    {
+      "name": "triangle-budget",
+      "ok": false,
+      "elapsedMs": 575.9634579999984,
+      "error": {
+        "code": "BREP_PROFILE_CERTIFICATE_UNPROVEN",
+        "message": "Exact display profile exceeds sampling budget"
+      }
+    },
+    {
+      "name": "forged-exact-geometry",
+      "ok": false,
+      "elapsedMs": 565.5787090000013,
+      "error": {
+        "code": "BREP_FEATURE_REFUSED",
+        "message": "Exact output/evidence differs from frozen-source reconstruction"
+      }
+    },
+    {
+      "name": "changed-source-text",
+      "ok": false,
+      "elapsedMs": 0.48475000000325963,
+      "error": {
+        "code": "BREP_SEMANTIC_CONTRACT",
+        "message": "Semantic source bytes do not match the envelope attestation"
+      }
+    },
+    {
+      "name": "missing-operation-capability",
+      "ok": false,
+      "elapsedMs": 0.22912499999802094,
+      "error": {
+        "code": "BREP_SEMANTIC_CONTRACT",
+        "message": "Semantic capability closure does not exactly match authored and inferred capabilities"
+      }
+    }
+  ],
+  "volumeErrors": [
+    3.7579863461232037,
+    0.24324684347024572,
+    0.060921291870073446
+  ],
+  "wasmSha256": "da45c8d325c8295264649e09f075920ba5f4950cc1fd043a67355c726fecb5e9",
+  "wasmBytes": 45561258,
+  "sourceSha256": "3d4e8fb16b7e334830dc87969691cdcc1d0fed09b9390ae5f540cf240d9e8be4",
+  "nativeArtifactSha256": "e84c952b304409a53b046bcd769ffa06861349c24697871530343fd34bb9c731",
+  "scope": "Actual ABI, source-attested graph, display, native rational restore and refusals. No application scene, packaged kernel, worker or exact mesh error/mass certification."
+}

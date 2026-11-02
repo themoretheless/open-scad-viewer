@@ -1,0 +1,7 @@
+{"name":"public-graph-exact-result","ok":true,"elapsedMs":1171.095542}
+{"name":"full-artifact-character-limit","ok":false,"elapsedMs":1113.2388329999999,"error":{"code":"BREP_SEMANTIC_BUDGET","message":"B-rep execution exceeds its aggregate retained geometry snapshot limit"}}
+{"name":"wrong-output-carrier","ok":false,"elapsedMs":3.3450419999999212,"error":{"code":"GEOMETRY_INVALID_INPUT","message":"Full Round exact node requires its native-admitted exact solid carrier"}}
+{"name":"legacy-primitive-cannot-claim-rational","ok":false,"elapsedMs":1.0650829999999587,"error":{"code":"GEOMETRY_INVALID_INPUT","message":"Expected native admitted exact-rational solid result"}}
+{"name":"material-budget-refusal","ok":false,"elapsedMs":98.58662499999991,"error":{"code":"BREP_PROFILE_CERTIFICATE_UNPROVEN","message":"Exact material pair projection budget exhausted"}}
+{"name":"no-legacy-transform-cast","ok":false,"elapsedMs":1106.505458,"error":{"code":"BREP_UNSUPPORTED_SEMANTIC","message":"This operation does not consume exact-rational topology"}}
+{"passed":true,"cases":6,"wasmSha256":"20c3db1d2ae0a1226a182b1bbef51afadc2d7510e4bbc41ed3c3fb512a427f21"}

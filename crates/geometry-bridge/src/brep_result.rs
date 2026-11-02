@@ -144,7 +144,7 @@ pub fn select(result: &Value, nodes: &[Value], occurrences: &[Value]) -> Result<
         let identity_node =
             occurrence_nodes[identity].ok_or_else(|| invalid("Output identity has no node"))?;
         if !preserves(node, identity_node, nodes)?
-            || root(canonical[producer], &parents) != root(identity, &parents)
+            || root(canonical[producer], &parents) != root(canonical[identity], &parents)
             || !(ancestor(identity, producer, &parents)
                 || ancestor(identity, canonical[producer], &parents))
         {
@@ -265,5 +265,25 @@ mod tests {
                 .is_err()
             );
         }
+    }
+    #[test]
+    fn root_map_outputs_share_a_call_but_keep_distinct_node_owners() {
+        let nodes = vec![
+            json!({"kind":"box"}),
+            json!({"kind":"full-round-exact","input":0}),
+            json!({"kind":"box"}),
+            json!({"kind":"full-round-exact","input":2}),
+        ];
+        let rows = vec![
+            json!({"id":0,"parent":null,"node":1,"occurrenceId":"one-call","sceneEntityId":"entity:0"}),
+            json!({"id":1,"parent":null,"node":3,"occurrenceId":"one-call","sceneEntityId":"entity:1"}),
+        ];
+        let mut result = json!({"tag":"multi","items":[
+            {"node":1,"producerOccurrence":0,"identityOccurrence":0,"color":[1,1,1,1]},
+            {"node":3,"producerOccurrence":1,"identityOccurrence":1,"color":[1,1,1,1]}]});
+        let selected = select(&result, &nodes, &rows).unwrap();
+        assert_eq!(selected.roots, vec![1, 3]);
+        result["items"][1]["identityOccurrence"] = json!(0);
+        assert!(select(&result, &nodes, &rows).is_err());
     }
 }

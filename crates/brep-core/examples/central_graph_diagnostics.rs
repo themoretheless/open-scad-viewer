@@ -3,6 +3,16 @@ mod saved;
 use brep_core::region_replacement as r;
 fn main() {
     let m = brep_core::cuboid([0.; 3], [10.; 3]).unwrap();
+    let radii = std::env::var("OSV_CENTRAL_GRAPH_RADII")
+        .unwrap_or_else(|_| "0.1,0.2,0.35".into())
+        .split(',')
+        .map(|v| v.parse::<f64>().expect("nominal rolling radius"))
+        .collect::<Vec<_>>();
+    assert_eq!(radii.len(), 3);
+    let runout = std::env::var("OSV_CENTRAL_GRAPH_RUNOUT")
+        .ok()
+        .map(|v| v.parse::<f64>().unwrap())
+        .unwrap_or(0.1);
     let requests: Vec<_> = m
         .edges
         .iter()
@@ -11,7 +21,7 @@ fn main() {
         .enumerate()
         .map(|(i, (edge, _))| r::EdgeRadius {
             edge,
-            radius_mm: [0.1, 0.2, 0.35][i],
+            radius_mm: radii[i],
         })
         .collect();
     let limits = r::StripLimits {
@@ -22,7 +32,21 @@ fn main() {
         max_exact: 1000000,
         max_coefficients: 2000000,
     };
-    let strips = r::build_trihedral_strips(&m, 0, 0, &requests, 0.1, 2., limits).unwrap();
+    let strips = if let Ok(handle) = std::env::var("OSV_CENTRAL_GRAPH_HANDLE") {
+        r::build_trihedral_strips_with_profile(
+            &m,
+            0,
+            0,
+            &requests,
+            runout,
+            2.,
+            limits,
+            handle.parse().unwrap(),
+        )
+        .unwrap()
+    } else {
+        r::build_trihedral_strips(&m, 0, 0, &requests, runout, 2., limits).unwrap()
+    };
     let collars = r::prepare_trihedral_collars(
         &m,
         &strips,

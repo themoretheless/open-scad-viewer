@@ -4,7 +4,10 @@ use crate::{Error, Model, Result};
 use nurbs_core::trim_domain::{Classification, TrimDomain};
 
 mod rectangle_closure;
+mod closed_carrier;
 mod box_containment;
+mod affine_trim_hull;
+pub(crate) use affine_trim_hull::affine_support;
 pub use box_containment::{BoxDecision,BoxContainment,inspect_box_containment};
 
 pub struct FaceDomain {
@@ -243,6 +246,25 @@ pub fn audit_trim_regions(
     max_cells: usize,
     max_domain_cells: usize,
 ) -> Result<TrimAudit> {
+    audit_trim_regions_impl(model, tolerance_uv, max_pairs, max_cells, max_domain_cells, false)
+}
+pub(crate) fn audit_edge_trim_regions(
+    model: &Model,
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<TrimAudit> {
+    audit_trim_regions_impl(model, tolerance_uv, max_pairs, max_cells, max_domain_cells, true)
+}
+fn audit_trim_regions_impl(
+    model: &Model,
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+    max_domain_cells: usize,
+    closed: bool,
+) -> Result<TrimAudit> {
     model.validate_boundary_diagnostic_inputs()?;
     if !(1..=100000).contains(&max_pairs)
         || !(1..=100000).contains(&max_cells)
@@ -263,7 +285,7 @@ pub fn audit_trim_regions(
         domain_cells: 0,
     };
     for face in &model.faces {
-        let loops: Vec<Vec<nurbs_core::curve::Curve>> = std::iter::once(face.outer)
+        let mut loops: Vec<Vec<nurbs_core::curve::Curve>> = std::iter::once(face.outer)
             .chain(face.holes.iter().copied())
             .map(|wire| {
                 model.loops[wire]
@@ -273,6 +295,20 @@ pub fn audit_trim_regions(
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
+        if closed {
+            for wire in &mut loops {
+                let singleton=wire.len()==1;
+                let mut prepared=Vec::new();
+                for curve in wire.iter() {
+                    if singleton || closed_carrier::literal_multispan(curve) {
+                        let (curves,cells,work)=closed_carrier::prepare(
+                            curve,tolerance_uv,max_cells-out.cells,max_domain_cells-out.domain_cells)?;
+                        out.cells+=cells;out.domain_cells+=work;prepared.extend(curves);
+                    } else { prepared.push(curve.clone()); }
+                }
+                *wire=prepared;
+            }
+        }
         let result = if out.pairs < max_pairs
             && out.cells < max_cells
             && out.domain_cells < max_domain_cells

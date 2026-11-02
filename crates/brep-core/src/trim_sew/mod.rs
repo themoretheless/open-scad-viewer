@@ -20,6 +20,7 @@ mod tests;
 
 mod authorized_heal_plan;
 mod chart_kind;
+mod closed_edge;
 mod classify_imprint_circle_events;
 mod prove_curve_pcurve_correspondence;
 pub use authorized_heal_plan::*;

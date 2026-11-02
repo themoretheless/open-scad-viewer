@@ -1,3 +1,5 @@
+import { prepareExactFullRoundDisplay } from './geometry/brepExactDisplay'
+import { createExactFullRoundSnapshot } from './exactFullRoundSnapshot'
 /** Internal SemanticProgram → native B-rep → display adapter.
  * This executable seam does not register a qualified production engine.
  */
@@ -93,13 +95,16 @@ export async function buildBrepSemanticScene(
         continue
       }
       if(output.value.geometry.kind!=='solid')throw new Error('B-rep scene output must be a solid')
-      const {model} = output.value.geometry
-      const mesh = prepareBrepDisplay(model, displayPolicy.segments)
+      const geometry = output.value.geometry
+      const exact = geometry.representation === 'rational-brep'
+      const mesh = exact ? prepareExactFullRoundDisplay(geometry.artifact, displayPolicy.segments)
+        : prepareBrepDisplay(geometry.model, displayPolicy.segments)
       checkControl(control)
       triangles += mesh.displayIndices.length / 3
       if (triangles > 20_000) throw new RangeError('B-rep scene exceeds 20000 display triangles')
       if (!mesh.displayIndices.length || !mesh.report.closed) throw new Error('Nonempty B-rep solid did not produce a closed display mesh')
-      const snapshot = createNativeGeometryArtifact(entityId, 'brep', {geometry: model}, execution.program)
+      const snapshot = exact ? createExactFullRoundSnapshot(entityId, geometry.artifact, execution.program)
+        : createNativeGeometryArtifact(entityId, 'brep', {geometry: geometry.model}, execution.program)
       nativeCharacters += snapshot.geometryJson.length + snapshot.documentJson.length
       if (nativeCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) throw new RangeError('B-rep scene exceeds its aggregate native snapshot limit')
       const vertices = new Float32Array(mesh.displayVertices), indices = new Uint32Array(mesh.displayIndices)
@@ -121,7 +126,7 @@ export async function buildBrepSemanticScene(
       })
       volume += Math.abs(mesh.report.signedVolumeMm3)
       outputs.push(Object.freeze({...identity, empty: false, snapshotRevision: snapshot.revision, geometryAssetId: assetId,
-        topologyFaceIds: Object.freeze([...(model.topologyIds?.faces ?? [])])}))
+        topologyFaceIds: Object.freeze([...(exact ? mesh.topologyFaceIds ?? [] : geometry.model.topologyIds?.faces ?? [])])}))
     }
     checkControl(control)
     if (!Number.isFinite(volume) || !Number.isFinite(surfaceArea)) throw new Error('B-rep display metrics are non-finite')

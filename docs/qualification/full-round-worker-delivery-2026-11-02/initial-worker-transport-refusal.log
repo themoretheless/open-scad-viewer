@@ -1,0 +1,25 @@
+vite v8.3.0 building client environment for production...
+transforming...
+✓ 39 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../tmp/full-round-browser-delivery/dist/assets/brepDiagnostic.worker-a3QS5qSl.js  6,575.01 kB
+../../../../../tmp/full-round-browser-delivery/dist/qualification.js                          5,876.96 kB │ gzip: 5,002.57 kB
+
+✓ built in 502ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+page.evaluate: RangeError: Diagnostic scene exceeds its bounded transport contract
+    at h (http://127.0.0.1:4189/qualification.js:3:8991)
+    at /Users/themoretheless/Documents/Sources/open-scad-viewer/tools/browser-qualification/brep-full-round.mjs:34:27 {
+  log: []
+}
+
+Node.js v22.23.4

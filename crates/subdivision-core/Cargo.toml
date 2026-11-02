@@ -14,3 +14,4 @@ math-core = { workspace = true }
 value-codec = { workspace = true, optional = true }
 geometry-ops = { workspace = true }
 rustc-hash = "=2.1.1"
+cad-predicates = { workspace = true }

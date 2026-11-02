@@ -1,0 +1,440 @@
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear/algebraic.rs
+@@ -148,6 +148,44 @@
+         }
+     }
+     Ok(true)
++}
++// Repeated original cuts may encode the very same polynomial jet. Equality
++// of ALL exact coefficients licenses reusing only the divisibility result;
++// every original interval still owns its separate coverage/monotonicity proof.
++fn jet_representatives(
++    spans: &[(usize, Vec<H>)],
++    ctx: &mut PredicateContext<'_>,
++) -> Result<Vec<usize>, Reason> {
++    let mut reps = Vec::new();
++    for (i, (_, a)) in spans.iter().enumerate() {
++        let mut representative = i;
++        'candidate: for j in 0..i {
++            if reps[j] != j {
++                continue;
++            }
++            let b = &spans[j].1;
++            if a.len() != b.len() {
++                continue;
++            }
++            for (x, y) in a.iter().zip(b) {
++                for k in 0..4 {
++                    for r in 0..x[k].len().max(y[k].len()) {
++                        if !x[k]
++                            .get(r)
++                            .unwrap_or(&Q::zero())
++                            .equal(y[k].get(r).unwrap_or(&Q::zero()), ctx)?
++                        {
++                            continue 'candidate;
++                        }
++                    }
++                }
++            }
++            representative = j;
++            break;
++        }
++        reps.push(representative);
++    }
++    Ok(reps)
+ }
+ pub(super) fn compare(
+     ctx: &mut PredicateContext<'_>,
+@@ -213,6 +251,11 @@
+             continue;
+         }
+         let reverse = direction == Some(Sign::Negative);
++        let representatives = [
++            jet_representatives(&spans[0], ctx)?,
++            jet_representatives(&spans[1], ctx)?,
++        ];
++        let mut proved = std::collections::BTreeSet::new();
+         'pairs: for (i, (_, a)) in spans[0].iter().enumerate() {
+             for (j, (_, b)) in spans[1].iter().enumerate() {
+                 let [al, ah] = if reverse {
+@@ -230,10 +273,15 @@
+                 {
+                     continue;
+                 }
++                let key = (representatives[0][i], representatives[1][j]);
++                if proved.contains(&key) {
++                    continue;
++                }
+                 if !relation_mod(a, b, axis, scale, order, ctx)? {
+                     valid = false;
+                     break 'pairs;
+                 }
++                proved.insert(key);
+             }
+         }
+         if valid {
+@@ -342,10 +390,203 @@
+     ctx.charge(0)?;
+     Ok(BezierIdentity::Equal)
+ }
++/// Ordered chart groups allow unrelated ORIGINAL interior knots. A group
++/// endpoint must be an exact common point, but interior endpoints need not have
++/// rational inverse parameters on the other side. `compare` checks every pair
++/// of overlapping scalar ranges by implicit divisibility, without solving or
++/// rounding those inverse roots. Strict monotonicity owns the unique cover.
++pub(super) fn ordered_span_groups(
++    ctx: &mut PredicateContext<'_>,
++    spans: &[Vec<(usize, Vec<H>)>],
++    u: &[Vec<Q>],
++    scale: &Q,
++    order: usize,
++) -> Result<BezierIdentity, Reason> {
++    fn endpoint(h: &[H], t: &Q, ctx: &mut PredicateContext<'_>) -> Result<[Q; 3], Reason> {
++        let den = value(&h[0][3], t, ctx)?;
++        let mut point = std::array::from_fn(|_| Q::zero());
++        for k in 0..3 {
++            point[k] = value(&h[0][k], t, ctx)?.div_positive(&den, ctx)?;
++        }
++        Ok(point)
++    }
++    fn same(a: &[Q; 3], b: &[Q; 3], ctx: &mut PredicateContext<'_>) -> Result<bool, Reason> {
++        for k in 0..3 {
++            if !a[k].equal(&b[k], ctx)? {
++                return Ok(false);
++            }
++        }
++        Ok(true)
++    }
++    let mut points = Vec::new();
++    for side in 0..2 {
++        let mut ends = Vec::new();
++        for (i, h) in &spans[side] {
++            let first = endpoint(h, &u[side][*i], ctx)?;
++            if let Some(last) = ends.last() {
++                if !same(last, &first, ctx)? {
++                    return Err(Reason::MissingProof);
++                }
++            } else {
++                ends.push(first);
++            }
++            ends.push(endpoint(h, &u[side][i + 1], ctx)?);
++        }
++        points.push(ends);
++    }
++    if spans[0].is_empty() || spans[1].is_empty() || !same(&points[0][0], &points[1][0], ctx)? {
++        return Err(Reason::MissingProof);
++    }
++    let mut start = [0, 0];
++    while start[0] < spans[0].len() && start[1] < spans[1].len() {
++        let mut next = None;
++        // Deterministic earliest common endpoints; never skip an unproved group
++        // or reset the caller's exact-work allowance after a failed proposal.
++        'search: for a in start[0] + 1..=spans[0].len() {
++            for b in start[1] + 1..=spans[1].len() {
++                if !same(&points[0][a], &points[1][b], ctx)? {
++                    continue;
++                }
++                let groups = vec![
++                    spans[0][start[0]..a].to_vec(),
++                    spans[1][start[1]..b].to_vec(),
++                ];
++                // Normalize the complete group, retaining each ORIGINAL knot
++                // and polynomial restriction, to avoid global-offset growth.
++                let mut local_spans = Vec::new();
++                let mut local_knots = Vec::new();
++                for side in 0..2 {
++                    let group = &groups[side];
++                    let lo = &u[side][group[0].0];
++                    let hi = &u[side][group.last().unwrap().0 + 1];
++                    let width = hi.sub(lo, ctx)?;
++                    let linear = vec![lo.clone(), width.clone()];
++                    let mut knots = Vec::new();
++                    let mut rows = Vec::new();
++                    for (j, (i, jets)) in group.iter().enumerate() {
++                        knots.push(u[side][*i].sub(lo, ctx)?.div_positive(&width, ctx)?);
++                        let mut transformed = Vec::new();
++                        for h in jets {
++                            let mut row = std::array::from_fn(|_| vec![Q::zero()]);
++                            for k in 0..4 {
++                                row[k] =
++                                    compose(&h[k], &linear, &vec![one()], h[k].len() - 1, ctx)?;
++                            }
++                            transformed.push(row);
++                        }
++                        rows.push((j, transformed));
++                    }
++                    knots.push(one());
++                    local_spans.push(rows);
++                    local_knots.push(knots);
++                }
++                match compare(ctx, &local_spans, &local_knots, scale, order) {
++                    Ok(BezierIdentity::Equal) => {
++                        next = Some([a, b]);
++                        break 'search;
++                    }
++                    Err(Reason::MissingProof) => {}
++                    Err(reason) => return Err(reason),
++                    _ => {}
++                }
++            }
++        }
++        start = next.ok_or(Reason::MissingProof)?;
++    }
++    if start != [spans[0].len(), spans[1].len()] {
++        return Err(Reason::MissingProof);
++    }
++    ctx.charge(0)?;
++    Ok(BezierIdentity::Equal)
++}
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+     use crate::{AuthoredScalar, Limits, SourceArena, ToleranceContext};
++    #[test]
++    fn unmatched_interior_cuts_use_implicit_roots_and_one_ordered_cover() {
++        let arena =
++            SourceArena::authored("cuts", 1, vec![AuthoredScalar::Binary64Bits(0)]).unwrap();
++        let tol = ToleranceContext::default_valid();
++        let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        let integer = |n: usize| {
++            let mut q = Q::zero();
++            for _ in 0..n {
++                q = q.add(&one(), &mut ctx).unwrap();
++            }
++            q
++        };
++        // Construct exact rational constants without going through rounded roots.
++        let mut integer = integer;
++        let two = integer(2);
++        let sixty = integer(60);
++        let half = one().div_positive(&two, &mut ctx).unwrap();
++        let mut spans = Vec::new();
++        let mut knots = Vec::new();
++        for side in 0..2 {
++            let mut rows = Vec::new();
++            let mut us = Vec::new();
++            for branch in 0..4 {
++                let offset = Q::scalar(Expansion::scalar(branch as f64));
++                let local = vec![Q::zero().sub(&offset, &mut ctx).unwrap(), one()];
++                let clock = if side == 0 {
++                    vec![Q::zero(), half.clone(), half.clone()]
++                } else {
++                    vec![Q::zero(), half.clone(), Q::zero(), half.clone()]
++                };
++                let q = compose(&clock, &local, &vec![one()], clock.len() - 1, &mut ctx).unwrap();
++                let c = vec![sixty.clone()];
++                let twice_c = add(&c, &c, &mut ctx).unwrap();
++                let mut x = sub(&c, &mul(&twice_c, &q, &mut ctx).unwrap(), &mut ctx).unwrap();
++                let q2 = mul(&q, &q, &mut ctx).unwrap();
++                let mut y = add(
++                    &x,
++                    &mul(&twice_c, &sub(&q, &q2, &mut ctx).unwrap(), &mut ctx).unwrap(),
++                    &mut ctx,
++                )
++                .unwrap();
++                // y=60+120q-120q²: both ends join the rotated next branch.
++                y = add(&y, &mul(&twice_c, &q, &mut ctx).unwrap(), &mut ctx).unwrap();
++                for _ in 0..branch {
++                    (x, y) = (neg(&y, &mut ctx).unwrap(), x);
++                }
++                let h = vec![
++                    [x, y, vec![Q::zero()], vec![one()]],
++                    [
++                        vec![Q::zero()],
++                        vec![Q::zero()],
++                        vec![one()],
++                        vec![Q::zero()],
++                    ],
++                    std::array::from_fn(|_| vec![Q::zero()]),
++                ];
++                // Only the target has an extra half-span cut. Its source
++                // preimage solves s+s²=5/8 and is irrational.
++                us.push(offset.clone());
++                rows.push((us.len() - 1, h.clone()));
++                if side == 1 {
++                    us.push(offset.add(&half, &mut ctx).unwrap());
++                    rows.push((us.len() - 1, h));
++                }
++            }
++            us.push(Q::scalar(Expansion::scalar(4.)));
++            spans.push(rows);
++            knots.push(us);
++        }
++        let scale = Q::zero().sub(&one(), &mut ctx).unwrap();
++        assert!(matches!(
++            ordered_span_groups(&mut ctx, &spans, &knots, &scale, 2),
++            Ok(BezierIdentity::Equal)
++        ));
++        let mut changed_normal = spans.clone();
++        changed_normal[1][1].1[1][2] = vec![two.clone()];
++        let mut fresh = PredicateContext::new(&arena, &tol, Limits::default(), None);
++        assert!(ordered_span_groups(&mut fresh, &changed_normal, &knots, &scale, 1).is_err());
++        let mut doubled = spans.clone();
++        // A missing interval must not be silently bridged by a common endpoint.
++        doubled[1].remove(2);
++        assert!(ordered_span_groups(&mut ctx, &doubled, &knots, &scale, 2).is_err());
++    }
+     #[test]
+     fn bivariate_division_requires_exact_identity_not_near_zero_resultant() {
+         let arena =
+--- previous/crates/cad-predicates/src/bspline_strip_nonlinear.rs
++++ current/crates/cad-predicates/src/bspline_strip_nonlinear.rs
+@@ -430,10 +430,16 @@
+             return Ok(BezierIdentity::Equal);
+         }
+     }
+-    if spans[0].len() > 1 && spans[0].len() == spans[1].len() {
++    if spans[0].len() > 1 || spans[1].len() > 1 {
+         match algebraic::ordered_local_charts(ctx, &spans, u, scale, order) {
+             Ok(value) => return Ok(value),
+-            Err(Reason::MissingProof) => {}
++            Err(Reason::MissingProof) => {
++                match algebraic::ordered_span_groups(ctx, &spans, u, scale, order) {
++                    Ok(value) => return Ok(value),
++                    Err(Reason::MissingProof) => {}
++                    Err(reason) => return Err(reason),
++                }
++            }
+             Err(reason) => return Err(reason),
+         }
+     }
+--- previous/crates/nurbs-core/tests/support/branched_seam_map.rs
++++ current/crates/nurbs-core/tests/support/branched_seam_map.rs
+@@ -60,3 +60,56 @@
+         ),
+     )
+ }
++
++/// Independent dyadic cuts of the existing polynomial Bezier branches. All
++/// fixture coefficients and products below are exactly representable binary64.
++/// This is fixture construction, not a proof-side knot insertion algorithm.
++pub fn independently_cut() -> (Surface, Surface) {
++    fn split(s: Surface, at: f64) -> Surface {
++        let degree = s.degree_u;
++        let mut rows = Vec::new();
++        let mut knots = vec![0.; degree + 1];
++        for branch in 0..4 {
++            let mut work = s.control_points[branch * degree..=branch * degree + degree].to_vec();
++            if branch > 0 {
++                rows.extend(work.into_iter().skip(1));
++                if branch < 3 {
++                    knots.extend(vec![branch as f64 + 1.; degree]);
++                }
++                continue;
++            }
++            let mut left = vec![work[0].clone()];
++            let mut right = vec![work[degree].clone()];
++            for level in 1..=degree {
++                for i in 0..=degree - level {
++                    for j in 0..3 {
++                        for k in 0..3 {
++                            work[i][j][k] = (1. - at) * work[i][j][k] + at * work[i + 1][j][k];
++                        }
++                    }
++                }
++                left.push(work[0].clone());
++                right.push(work[degree - level].clone());
++            }
++            right.reverse();
++            if branch > 0 {
++                left.remove(0);
++            }
++            rows.extend(left);
++            rows.extend(right.into_iter().skip(1));
++            knots.extend(vec![branch as f64 + at; degree]);
++            if branch < 3 {
++                knots.extend(vec![branch as f64 + 1.; degree]);
++            }
++        }
++        knots.extend(vec![4.; degree + 1]);
++        Surface {
++            weights: vec![vec![1.; 3]; rows.len()],
++            control_points: rows,
++            knots_u: knots,
++            ..s
++        }
++    }
++    let (a, b) = fixture(1);
++    (split(a, 0.25), split(b, 0.5))
++}
+--- previous/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
++++ current/crates/nurbs-core/src/join/continuity/bspline_strip/mapped_tests.rs
+@@ -546,3 +546,47 @@
+     );
+     assert_eq!((a, b), saved);
+ }
++
++#[test]
++fn independently_cut_algebraic_branches_need_no_rounded_inverse_knots() {
++    let (a, b) = branched_fixture::independently_cut();
++    let saved = (a.clone(), b.clone());
++    let proof = inferred(&a, &b, "vMax", "vMin", 2, 1., 1000000).unwrap();
++    assert!(proof.certified, "{proof:?}");
++    assert!(
++        !inferred(&a, &b, "vMax", "vMin", 2, 1., proof.work - 1)
++            .unwrap()
++            .certified
++    );
++    let mut changed = b.clone();
++    changed.control_points[2][0][0] = changed.control_points[2][0][0].next_up();
++    assert!(
++        !inferred(&a, &changed, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut reversed = b.clone();
++    reversed.control_points.reverse();
++    reversed.weights.reverse();
++    assert!(
++        !inferred(&a, &reversed, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    let mut curvature = b.clone();
++    for row in &mut curvature.control_points {
++        row[2][0] += 0.125;
++        row[2][2] += 0.125;
++    }
++    assert!(
++        inferred(&a, &curvature, "vMax", "vMin", 1, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert!(
++        !inferred(&a, &curvature, "vMax", "vMin", 2, 1., 1000000)
++            .unwrap()
++            .certified
++    );
++    assert_eq!((a, b), saved);
++}
+--- previous/crates/geometry-bridge/tests/authored_seam_map.rs
++++ current/crates/geometry-bridge/tests/authored_seam_map.rs
+@@ -299,3 +299,28 @@
+     wrong["patches"][1] = value_codec::to_value(twice).unwrap();
+     assert_eq!(dispatch(wrong).unwrap()["certified"], false);
+ }
++
++#[test]
++fn independently_cut_branches_native_keeps_seam_and_solid_evidence_separate() {
++    let (a, b) = branched_fixture::independently_cut();
++    let request = json!({"op":"nurbs_surface_seam_audit","patches":[a,b],"boundaries":["vMax","vMin"],
++        "order":2,"normalScale":1.,"maxExactWork":1000000,"continuousBound":true,"jointContinuousGlobalG2Certified":true,"solidCertified":true});
++    let full = dispatch(request.clone()).unwrap();
++    assert_eq!(full["seamG2Certified"], true, "{full:?}");
++    for key in [
++        "continuousBound",
++        "jointContinuousGlobalG2Certified",
++        "solidCertified",
++    ] {
++        assert_eq!(full[key], false);
++    }
++    assert!(full["model"].is_null());
++    let mut short = request.clone();
++    short["maxExactWork"] = json!(full["exactWork"].as_u64().unwrap() - 1);
++    assert_eq!(dispatch(short).unwrap()["certified"], false);
++    let mut changed = b;
++    changed.control_points[2][0][0] = changed.control_points[2][0][0].next_up();
++    let mut wrong = request;
++    wrong["patches"][1] = value_codec::to_value(changed).unwrap();
++    assert_eq!(dispatch(wrong).unwrap()["certified"], false);
++}

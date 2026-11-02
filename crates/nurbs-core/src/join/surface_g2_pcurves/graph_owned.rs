@@ -1,6 +1,6 @@
 //! Whole traversal of correlated graph jets, with fresh 3D position ownership.
 use super::*;
-use crate::analysis::curve_surface_composition::graph_trace::{Pair, curve_box};
+use crate::analysis::curve_surface_composition::graph_trace::{Pair, curve_box_oriented};
 pub struct OwnedGraphInspection {
     pub owned: OwnedInspection,
     /// Includes exact rational coefficient operations and precharged interval
@@ -8,6 +8,10 @@ pub struct OwnedGraphInspection {
     pub coefficient_work: usize,
     pub accepted_cells: usize,
     pub last_unresolved_reason: Option<String>,
+    /// Last whole-cell geometric upper bounds that failed admission, retained
+    /// separately so a later work exhaustion cannot hide the useful frontier.
+    pub last_bound_failure: Option<([f64; 2], [f64; 2])>,
+    pub pending_range: Option<[f64; 2]>,
 }
 fn spans(s: &Surface, box_: [[f64; 2]; 2]) -> Option<Vec<[usize; 2]>> {
     let mut axes = [Vec::new(), Vec::new()];
@@ -37,14 +41,39 @@ fn spans(s: &Surface, box_: [[f64; 2]; 2]) -> Option<Vec<[usize; 2]>> {
             .collect(),
     )
 }
-/// The polynomial graph candidate may have a small non-affine stored XY
-/// component; it is explicitly bounded and corrected. Supported source and
-/// candidate bases must be C2 at internal knots and pcurves clamped Beziers.
+/// Non-affine stored candidate XY components are bounded along each original
+/// seam cell and corrected without replacing their coordinates. Supported source and
+/// candidate bases must be C2 at internal knots and pcurves clamped. Each
+/// accepted traversal lies within an exactly extracted original pcurve span;
+/// knot-crossing ranges refuse and are subdivided without refitting the curve.
 /// Exhausted, singular, or unsupported cases never grant G2 or a closed solid.
 pub fn inspect_owned_graph(
     curve: &Curve,
     p: [&Curve; 2],
     s: [&Surface; 2],
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_exact: u64,
+    max_coefficients: usize,
+) -> Result<OwnedGraphInspection> {
+    inspect_owned_graph_oriented(
+        curve,
+        p,
+        s,
+        [false; 2],
+        tolerances,
+        max_cells,
+        max_exact,
+        max_coefficients,
+    )
+}
+/// Fresh original-edge proof with literal saved-coedge traversal directions.
+/// Reversal is applied to exact rational clocks, never to rounded curve copies.
+pub fn inspect_owned_graph_oriented(
+    curve: &Curve,
+    p: [&Curve; 2],
+    s: [&Surface; 2],
+    reversed: [bool; 2],
     tolerances: [f64; 3],
     max_cells: usize,
     max_exact: u64,
@@ -57,12 +86,12 @@ pub fn inspect_owned_graph(
             && (max_coefficients as u64) <= 50_000_000_000,
         "Owned graph proof budgets or tolerances invalid",
     )?;
-    let positions = verify_positions(curve, p, s, [false; 2], tolerances[0], max_cells, max_exact)?;
+    let positions = verify_positions(curve, p, s, reversed, tolerances[0], max_cells, max_exact)?;
     let owner = positions.proven.then(|| OwnedPositions {
         curve: curve.clone(),
         pcurves: [p[0].clone(), p[1].clone()],
         surfaces: [s[0].clone(), s[1].clone()],
-        reversed: [false; 2],
+        reversed,
         tolerance: tolerances[0],
     });
     let mut geometric = surface_g2::Report {
@@ -81,6 +110,8 @@ pub fn inspect_owned_graph(
     let mut coefficient_work = 0;
     let mut accepted_cells = 0;
     let mut last_unresolved_reason = None;
+    let mut last_bound_failure = None;
+    let mut pending_range = None;
     if positions.proven && positions.cells < max_cells && max_coefficients > 0 {
         let mut pair = Pair::new(s[0], s[1], max_coefficients)?;
         let mut stack = vec![[0., 1.]];
@@ -88,6 +119,7 @@ pub fn inspect_owned_graph(
         let mut orientation = None;
         let mut maximum = [0f64; 2];
         while let Some(range) = stack.pop() {
+            pending_range = Some(range);
             if geometric.cells >= max_cells || pair.work >= pair.max_work {
                 all = false;
                 break;
@@ -96,8 +128,8 @@ pub fn inspect_owned_graph(
             let mut accepted = false;
             let boxes = (|| -> Result<_> {
                 Ok([
-                    curve_box(p[0], range, &mut pair.work, pair.max_work)?,
-                    curve_box(p[1], range, &mut pair.work, pair.max_work)?,
+                    curve_box_oriented(p[0], range, &mut pair.work, pair.max_work, reversed[0])?,
+                    curve_box_oriented(p[1], range, &mut pair.work, pair.max_work, reversed[1])?,
                 ])
             })();
             if let Ok(boxes) = boxes {
@@ -107,7 +139,13 @@ pub fn inspect_owned_graph(
                     let mut cell_orientation = None;
                     for ia in a {
                         for &ib in &b {
-                            match pair.bound(p, range, [ia, ib]) {
+                            match pair.bound_adaptive_oriented(
+                                p,
+                                range,
+                                [ia, ib],
+                                Some([tolerances[1], tolerances[2]]),
+                                reversed,
+                            ) {
                                 Ok(proof) => {
                                     if let (Some(upper), Some(same)) =
                                         (proof.upper, proof.same_orientation)
@@ -143,6 +181,7 @@ pub fn inspect_owned_graph(
                         accepted = true;
                         accepted_cells += 1;
                     } else if good {
+                        last_bound_failure = Some((range, bound));
                         last_unresolved_reason = Some(format!(
                             "Whole-cell upper bounds {:?} exceed limits or change orientation at {:?}",
                             bound, range
@@ -176,6 +215,7 @@ pub fn inspect_owned_graph(
                 geometric.regularity_proven = true;
                 geometric.decision = Decision::WithinTolerance;
                 last_unresolved_reason = None;
+                pending_range = None;
             }
         }
     }
@@ -190,6 +230,8 @@ pub fn inspect_owned_graph(
         coefficient_work,
         accepted_cells,
         last_unresolved_reason,
+        last_bound_failure,
+        pending_range,
     })
 }
 
@@ -244,6 +286,83 @@ mod tests {
             Some(Orientation::Same)
         );
         assert!(proof.coefficient_work > 0);
+    }
+    #[test]
+    fn complete_rational_planar_seam_keeps_fresh_original_position_ownership() {
+        let (s, mut p, mut c) = fixture();
+        p.weights[1] = 2.;
+        c.weights[1] = 2.;
+        let before = (s.clone(), p.clone(), c.clone());
+        let proof = inspect_owned_graph(
+            &c,
+            [&p, &p],
+            [&s, &s],
+            [1e-7, 1e-5, 1e-4],
+            10000,
+            100000,
+            100_000_000,
+        )
+        .unwrap();
+        assert!(proof.owned.positions.is_some());
+        assert_eq!(
+            proof.owned.report.geometric.decision,
+            Decision::WithinTolerance,
+            "{:?} {:?}",
+            proof.last_unresolved_reason,
+            proof.pending_range
+        );
+        assert!(proof.pending_range.is_none());
+        assert!(proof.coefficient_work > 0 && proof.coefficient_work <= 100_000_000);
+        assert_eq!((s, p, c), before);
+    }
+    #[test]
+    fn saved_coedge_clock_reversal_needs_matching_fresh_positions() {
+        let (s, p, c) = fixture();
+        let mut backward = p.clone();
+        backward.control_points.reverse();
+        backward.weights.reverse();
+        let original = backward.clone();
+        for (pcurves, reversed) in [
+            ([&p, &backward], [false, true]),
+            ([&backward, &p], [true, false]),
+        ] {
+            let proof = inspect_owned_graph_oriented(
+                &c,
+                pcurves,
+                [&s, &s],
+                reversed,
+                [1e-7, 1e-5, 1e-4],
+                1000,
+                100000,
+                100_000_000,
+            )
+            .unwrap();
+            assert!(proof.owned.positions.is_some());
+            assert_eq!(
+                proof.owned.report.geometric.decision,
+                Decision::WithinTolerance,
+                "{:?}",
+                proof.last_unresolved_reason
+            );
+        }
+        let wrong = inspect_owned_graph_oriented(
+            &c,
+            [&p, &backward],
+            [&s, &s],
+            [false; 2],
+            [1e-7, 1e-5, 1e-4],
+            1000,
+            100000,
+            100_000_000,
+        )
+        .unwrap();
+        assert!(wrong.owned.positions.is_none());
+        assert_eq!(wrong.coefficient_work, 0);
+        assert_ne!(
+            wrong.owned.report.geometric.decision,
+            Decision::WithinTolerance
+        );
+        assert_eq!(backward, original);
     }
     #[test]
     fn displaced_original_curve_prevents_graph_admission() {

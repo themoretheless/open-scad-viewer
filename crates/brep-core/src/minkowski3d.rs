@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[cfg(feature = "codec")]
 pub mod curved;
 mod poly;
+pub mod difference;
 mod rounding;
 mod rounding_legacy;
 mod surface_bounds;

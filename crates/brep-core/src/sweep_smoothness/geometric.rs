@@ -51,6 +51,46 @@ pub fn inspect_edges_with_exact(
     max_cells: usize,
     max_exact: u64,
 ) -> Result<Report> {
+    inspect_edges_impl(model, edges, t, max_cells, max_exact, None).map(|p| p.report)
+}
+pub struct GraphReport {
+    pub report: Report,
+    pub coefficient_work: usize,
+}
+/// Fresh saved-coedge graph proofs share one explicit coefficient ledger.
+/// Unsupported graph charts retain the generic original-edge path.
+pub fn inspect_edges_with_graph_work(
+    model: &Model,
+    edges: &[usize],
+    t: Tolerances,
+    max_cells: usize,
+    max_exact: u64,
+    max_coefficients: usize,
+) -> Result<GraphReport> {
+    if (max_coefficients as u64) > 50_000_000_000 {
+        return Err(Error::new(
+            "BREP_G2_LIMITS",
+            "Invalid graph coefficient budget",
+        ));
+    }
+    inspect_edges_impl(
+        model,
+        edges,
+        t,
+        max_cells,
+        max_exact,
+        Some(max_coefficients),
+    )
+}
+fn inspect_edges_impl(
+    model: &Model,
+    edges: &[usize],
+    t: Tolerances,
+    max_cells: usize,
+    max_exact: u64,
+    graph_work: Option<usize>,
+) -> Result<GraphReport> {
+    let mut coefficient_work = 0usize;
     model.validate_boundary_diagnostic_inputs()?;
     if max_cells > 100_000
         || max_exact > 1000000
@@ -117,18 +157,162 @@ pub fn inspect_edges_with_exact(
             if out.cells < max_cells {
                 let surfaces = [&model.faces[*a].surface, &model.faces[*b].surface];
                 let pcurves = [&ca.pcurve, &cb.pcurve];
-                let reversed = [ca.reversed, cb.reversed];
-                let p = surface_g2_pcurves::inspect(
-                    &model.edges[edge].curve,
-                    pcurves,
-                    surfaces,
-                    reversed,
-                    t.position,
-                    t.normal,
-                    t.curvature,
-                    max_cells - out.cells,
-                    max_exact - out.exact_work,
-                )?;
+                let clock = |c: &crate::Coedge| -> Result<bool> {
+                    let Some(trim) = c.trim() else {
+                        return Ok(c.reversed);
+                    };
+                    let cd = model.edges[edge].curve.domain();
+                    let pd = c.pcurve.domain();
+                    let backward = |r: [f64; 2], d: [f64; 2]| {
+                        if r == d {
+                            Some(false)
+                        } else if r == [d[1], d[0]] {
+                            Some(true)
+                        } else {
+                            None
+                        }
+                    };
+                    if trim.periodic_lift != [[0; 2]; 2] {
+                        return Err(Error::new(
+                            "BREP_G2_SCOPE",
+                            &format!(
+                                "edge={edge}: periodic coedge lifts need a trim-aware G2 proof"
+                            ),
+                        ));
+                    }
+                    match (
+                        backward(trim.curve_parameter, cd),
+                        backward(trim.pcurve_parameter, pd),
+                    ) {
+                        (Some(cback), Some(pback)) => Ok(c.reversed ^ cback ^ pback),
+                        _ => Err(Error::new(
+                            "BREP_G2_SCOPE",
+                            &format!(
+                                "edge={edge}: partial authored coedge clocks need a trim-aware G2 proof"
+                            ),
+                        )),
+                    }
+                };
+                let reversed = [clock(ca)?, clock(cb)?];
+                let mut graph = None;
+                let remaining = graph_work.unwrap_or(0).saturating_sub(coefficient_work);
+                let polynomial =
+                    |s: &nurbs_core::surface::Surface| s.weights.iter().flatten().all(|&w| w == 1.);
+                let c2 = |s: &nurbs_core::surface::Surface| {
+                    for (p, k, n) in [
+                        (s.degree_u, &s.knots_u, s.control_points.len()),
+                        (s.degree_v, &s.knots_v, s.control_points[0].len()),
+                    ] {
+                        let mut i = p + 1;
+                        while i < n {
+                            let mut end = i + 1;
+                            while end < n && k[end] == k[i] {
+                                end += 1;
+                            }
+                            if end - i > p.saturating_sub(2) {
+                                return false;
+                            }
+                            i = end;
+                        }
+                    }
+                    true
+                };
+                let supported = surfaces.iter().all(|s| {
+                    c2(s)
+                        && !s.periodic_u
+                        && !s.periodic_v
+                        && s.degree_u <= 12
+                        && s.degree_v <= 12
+                        && s.control_points.len() * s.control_points[0].len() <= 4096
+                }) && pcurves.iter().all(|p| {
+                    !p.periodic
+                        && p.degree <= 16
+                        && p.control_points.len() <= 4096
+                        && p.knots[..=p.degree].iter().all(|&k| k == p.knots[p.degree])
+                        && p.knots[p.control_points.len()..]
+                            .iter()
+                            .all(|&k| k == p.knots[p.control_points.len()])
+                });
+                if remaining > 0
+                    && max_cells - out.cells >= 2
+                    && supported
+                    && t.position > 0.
+                    && t.normal > 0.
+                    && t.curvature > 0.
+                    && (polynomial(surfaces[1]) || polynomial(surfaces[0]))
+                {
+                    let swapped = !polynomial(surfaces[1]);
+                    let order = if swapped { [1, 0] } else { [0, 1] };
+                    let proof = surface_g2_pcurves::inspect_owned_graph_oriented(
+                        &model.edges[edge].curve,
+                        order.map(|i| pcurves[i]),
+                        order.map(|i| surfaces[i]),
+                        order.map(|i| reversed[i]),
+                        [t.position, t.normal, t.curvature],
+                        // Reserve cells and exact work for the independent
+                        // generic method if the graph chart is inconclusive.
+                        (max_cells - out.cells) / 2,
+                        (max_exact - out.exact_work) / 2,
+                        remaining,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            "BREP_G2_GRAPH",
+                            &format!("edge={edge} faces=[{a},{b}]: {e}"),
+                        )
+                    })?;
+                    if proof.coefficient_work > remaining
+                        || (proof.owned.report.geometric.decision == Decision::WithinTolerance
+                            && proof.owned.positions.is_none())
+                    {
+                        return Err(Error::new(
+                            "BREP_G2_GRAPH",
+                            "Invalid saved-edge graph ownership or work receipt",
+                        ));
+                    }
+                    coefficient_work += proof.coefficient_work;
+                    let mut report = proof.owned.report;
+                    if swapped {
+                        report.positions.sides.swap(0, 1);
+                    }
+                    graph = Some(report);
+                }
+                let p = if let Some(mut p) = graph {
+                    if p.geometric.decision == Decision::Unresolved
+                        && out.cells + p.geometric.cells < max_cells
+                    {
+                        // Both attempts inspect actual saved data and consume
+                        // their own cells/exact work; no budget is reset.
+                        let mut fallback = surface_g2_pcurves::inspect(
+                            &model.edges[edge].curve,
+                            pcurves,
+                            surfaces,
+                            reversed,
+                            t.position,
+                            t.normal,
+                            t.curvature,
+                            max_cells - out.cells - p.geometric.cells,
+                            max_exact - out.exact_work - p.positions.exact_work,
+                        )?;
+                        fallback.geometric.cells += p.geometric.cells;
+                        fallback.positions.cells += p.positions.cells;
+                        fallback.positions.exact_work += p.positions.exact_work;
+                        p = fallback;
+                    }
+                    p
+                } else {
+                    surface_g2_pcurves::inspect(
+                        &model.edges[edge].curve,
+                        pcurves,
+                        surfaces,
+                        reversed,
+                        t.position,
+                        t.normal,
+                        t.curvature,
+                        max_cells - out.cells,
+                        max_exact - out.exact_work,
+                    )?
+                };
                 out.exact_work += p.positions.exact_work;
                 positions = Some(p.positions);
                 Some(p.geometric)
@@ -212,7 +396,10 @@ pub fn inspect_edges_with_exact(
             all_incident_seams_within_tolerance,
         });
     }
-    Ok(out)
+    Ok(GraphReport {
+        report: out,
+        coefficient_work,
+    })
 }
 
 #[cfg(test)]
@@ -220,27 +407,75 @@ mod corner_tests {
     use super::*;
     #[test]
     fn explicit_exact_ledger_never_exceeds_the_callers_remaining_work() {
-        let model=crate::cuboid([0.;3],[10.;3]).unwrap();let before=model.clone();
-        let t=Tolerances{position:1e-7,normal:1e-5,curvature:1e-4};
-        for budget in [0,1,128] {
-            let report=inspect_edges_with_exact(&model,&[0,1,2],t,256,budget).unwrap();
-            assert!(report.exact_work<=budget&&report.cells<=256);
+        let model = crate::cuboid([0.; 3], [10.; 3]).unwrap();
+        let before = model.clone();
+        let t = Tolerances {
+            position: 1e-7,
+            normal: 1e-5,
+            curvature: 1e-4,
+        };
+        for budget in [0, 1, 128] {
+            let report = inspect_edges_with_exact(&model, &[0, 1, 2], t, 256, budget).unwrap();
+            assert!(report.exact_work <= budget && report.cells <= 256);
             assert!(!report.within_tolerance);
         }
-        assert!(inspect_edges_with_exact(&model,&[0],t,256,1000001).is_err());
-        assert_eq!(model,before);
+        assert!(inspect_edges_with_exact(&model, &[0], t, 256, 1000001).is_err());
+        assert_eq!(model, before);
+    }
+    #[test]
+    fn graph_inspection_keeps_the_explicit_shared_ledgers() {
+        let model = crate::cuboid([0.; 3], [10.; 3]).unwrap();
+        let before = model.clone();
+        let t = Tolerances {
+            position: 1e-7,
+            normal: 1e-5,
+            curvature: 1e-4,
+        };
+        let legacy = inspect_edges_with_exact(&model, &[0], t, 256, 100000).unwrap();
+        let zero = inspect_edges_with_graph_work(&model, &[0], t, 256, 100000, 0).unwrap();
+        assert_eq!(zero.coefficient_work, 0);
+        assert_eq!(zero.report.cells, legacy.cells);
+        assert_eq!(zero.report.exact_work, legacy.exact_work);
+        assert_eq!(zero.report.within_tolerance, legacy.within_tolerance);
+        for budget in [1, 10000, 100000] {
+            if let Ok(proof) = inspect_edges_with_graph_work(&model, &[0], t, 256, 100000, budget) {
+                assert!(
+                    proof.coefficient_work <= budget
+                        && proof.report.cells <= 256
+                        && proof.report.exact_work <= 100000
+                );
+                assert!(
+                    !proof.report.within_tolerance,
+                    "sharp cube edge must not pass G2"
+                );
+            }
+        }
+        assert_eq!(model, before);
     }
     #[test]
     fn incomplete_star_and_zero_work_never_certify_a_corner() {
-        let model=crate::cuboid([0.;3],[10.;3]).unwrap();let before=model.clone();
-        let edge=0;let vertex=model.edges[edge].vertices[0];
-        let t=Tolerances{position:1e-7,normal:1e-7,curvature:1e-5};
-        let partial=inspect_edges(&model,&[edge],t,0).unwrap();
-        let c=partial.corners.iter().find(|c|c.vertex==vertex).unwrap();
-        assert!(c.closed_link);assert_eq!(c.omitted_edges.len(),2);assert!(!c.all_incident_seams_within_tolerance);
-        let complete=inspect_edges(&model,&c.edges,t,0).unwrap();
-        let c=complete.corners.iter().find(|c|c.vertex==vertex).unwrap();
-        assert!(c.omitted_edges.is_empty());assert!(!c.all_incident_seams_within_tolerance);
-        assert_eq!(model,before);
+        let model = crate::cuboid([0.; 3], [10.; 3]).unwrap();
+        let before = model.clone();
+        let edge = 0;
+        let vertex = model.edges[edge].vertices[0];
+        let t = Tolerances {
+            position: 1e-7,
+            normal: 1e-7,
+            curvature: 1e-5,
+        };
+        let partial = inspect_edges(&model, &[edge], t, 0).unwrap();
+        let c = partial.corners.iter().find(|c| c.vertex == vertex).unwrap();
+        assert!(c.closed_link);
+        assert_eq!(c.omitted_edges.len(), 2);
+        assert!(!c.all_incident_seams_within_tolerance);
+        let complete = inspect_edges(&model, &c.edges, t, 0).unwrap();
+        let c = complete
+            .corners
+            .iter()
+            .find(|c| c.vertex == vertex)
+            .unwrap();
+        assert!(c.omitted_edges.is_empty());
+        assert!(!c.all_incident_seams_within_tolerance);
+        assert_eq!(model, before);
     }
 }

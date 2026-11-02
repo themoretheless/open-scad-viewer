@@ -1,0 +1,543 @@
+{
+  "schema": "semantic-program-core",
+  "schemaVersion": {
+    "major": 1,
+    "minor": 2
+  },
+  "requiredFeatures": [
+    "semantic.execution-v2"
+  ],
+  "identityVersion": "semantic-program-core-v1",
+  "language": {
+    "contract": "openscad-viewer/brep-1",
+    "semanticsRevision": "brep-1.0.0",
+    "capabilityGraphVersion": "semantic-capabilities-v1"
+  },
+  "units": {
+    "length": "millimeter",
+    "angle": "degree",
+    "handedness": "right",
+    "upAxis": "z",
+    "matrixLayout": "column-major",
+    "composition": "parent-times-local"
+  },
+  "operations": [
+    {
+      "id": 0,
+      "operationId": "opv1:97acf601c1201e3fdeb46994f29ae1ddc7501bc677c7ac7cd39ccc4e92e33f21",
+      "parent": null,
+      "childOrdinal": 0,
+      "name": "full_round_exact",
+      "category": "geometry",
+      "structuralPath": [
+        {
+          "kind": "call",
+          "name": "full_round_exact",
+          "ordinal": 0
+        }
+      ],
+      "identityEvidence": "structural-unique",
+      "ambiguityGroup": null
+    },
+    {
+      "id": 1,
+      "operationId": "opv1:82edcf3a1227294df8d6473f6c6f55ae3d0c5a676e379bcf1d51ed902692dd1c",
+      "parent": 0,
+      "childOrdinal": 0,
+      "name": "$body",
+      "category": "control",
+      "structuralPath": [
+        {
+          "kind": "call",
+          "name": "full_round_exact",
+          "ordinal": 0
+        },
+        {
+          "kind": "body",
+          "name": "$body",
+          "ordinal": 0
+        }
+      ],
+      "identityEvidence": "structural-unique",
+      "ambiguityGroup": null
+    },
+    {
+      "id": 2,
+      "operationId": "opv1:aac61f1e6bbf6c77bd725ee4bfd49932e7494d25de970eec6714d06af8e213ba",
+      "parent": 1,
+      "childOrdinal": 0,
+      "name": "cube",
+      "category": "geometry",
+      "structuralPath": [
+        {
+          "kind": "call",
+          "name": "full_round_exact",
+          "ordinal": 0
+        },
+        {
+          "kind": "body",
+          "name": "$body",
+          "ordinal": 0
+        },
+        {
+          "kind": "call",
+          "name": "cube",
+          "ordinal": 0
+        }
+      ],
+      "identityEvidence": "structural-unique",
+      "ambiguityGroup": null
+    }
+  ],
+  "occurrences": [
+    {
+      "id": 0,
+      "occurrenceId": "occv1:d8f4175d356b3fae8c6e61624b9e98162e212b00510591d882794263893a79dd",
+      "operation": 0,
+      "parent": null,
+      "staticParent": null,
+      "dynamicSlots": [
+        {
+          "name": "$evaluation",
+          "value": {
+            "tag": "undefined"
+          },
+          "duplicateOrdinal": 0
+        }
+      ],
+      "node": 1,
+      "outputOrdinal": 0,
+      "sceneEntityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613"
+    },
+    {
+      "id": 1,
+      "occurrenceId": "occv1:74ebb35a89713b7f6e4a6c461d24c6c7ff03666a3985138ce7975f246b42d18e",
+      "operation": 1,
+      "parent": 0,
+      "staticParent": 0,
+      "dynamicSlots": [
+        {
+          "name": "$evaluation",
+          "value": {
+            "tag": "undefined"
+          },
+          "duplicateOrdinal": 0
+        }
+      ],
+      "node": null,
+      "outputOrdinal": null,
+      "sceneEntityId": null
+    },
+    {
+      "id": 2,
+      "occurrenceId": "occv1:1deecad99e4b2a5be0d53191b3801b2a190ee53e0a51667199ba50a1907b7fd7",
+      "operation": 2,
+      "parent": 1,
+      "staticParent": 1,
+      "dynamicSlots": [
+        {
+          "name": "$evaluation",
+          "value": {
+            "tag": "undefined"
+          },
+          "duplicateOrdinal": 0
+        }
+      ],
+      "node": 0,
+      "outputOrdinal": 0,
+      "sceneEntityId": "entity:v2:4957bc1c587d8b8e9299205659fa190679ae81251dd2b2ccfb8e83f295ec225e"
+    }
+  ],
+  "nodes": [
+    {
+      "kind": "box",
+      "valueType": {
+        "geometryKind": "solid",
+        "space": "d3",
+        "representation": "analytic-brep",
+        "evidence": {
+          "tag": "representation-preserving"
+        }
+      },
+      "size": [
+        4,
+        8,
+        6
+      ],
+      "center": false,
+      "id": 0
+    },
+    {
+      "kind": "full-round-exact",
+      "input": 0,
+      "faces": [
+        5,
+        4,
+        3
+      ],
+      "valueType": {
+        "geometryKind": "solid",
+        "space": "d3",
+        "representation": "rational-brep",
+        "evidence": {
+          "tag": "representation-preserving"
+        }
+      },
+      "id": 1
+    }
+  ],
+  "execution": {
+    "version": "semantic-execution-v2",
+    "evaluationOrder": [
+      0,
+      1
+    ],
+    "discardedEffects": [],
+    "terminal": null
+  },
+  "result": {
+    "tag": "single",
+    "item": {
+      "node": 1,
+      "producerOccurrence": 0,
+      "identityOccurrence": 0,
+      "color": [
+        0.26,
+        0.52,
+        0.96,
+        1
+      ]
+    }
+  },
+  "declaredCapabilities": [
+    "geometry.brep"
+  ],
+  "capabilityClosure": [
+    "construct.box",
+    "evidence.representation-preserving",
+    "geometry.brep",
+    "geometry.kind.solid",
+    "geometry.space.d3",
+    "geometry.value",
+    "operation.full-round-exact",
+    "representation.analytic-brep",
+    "representation.rational-brep",
+    "representation.transition.analytic-brep.to.rational-brep",
+    "semantic.identity-evidence",
+    "semantic.occurrences",
+    "semantic.operation-graph",
+    "semantic.program-v1",
+    "semantic.result.single"
+  ],
+  "diagnosticTemplates": [],
+  "op": "brep_graph",
+  "envelope": {
+    "schema": "semantic-program-envelope",
+    "schemaVersion": {
+      "major": 1,
+      "minor": 2
+    },
+    "source": {
+      "sha256": "3d4e8fb16b7e334830dc87969691cdcc1d0fed09b9390ae5f540cf240d9e8be4",
+      "utf8ByteLength": 110,
+      "utf16CodeUnitLength": 110
+    },
+    "core": {
+      "schema": "semantic-program-core",
+      "schemaVersion": {
+        "major": 1,
+        "minor": 2
+      },
+      "requiredFeatures": [
+        "semantic.execution-v2"
+      ],
+      "identityVersion": "semantic-program-core-v1",
+      "language": {
+        "contract": "openscad-viewer/brep-1",
+        "semanticsRevision": "brep-1.0.0",
+        "capabilityGraphVersion": "semantic-capabilities-v1"
+      },
+      "units": {
+        "length": "millimeter",
+        "angle": "degree",
+        "handedness": "right",
+        "upAxis": "z",
+        "matrixLayout": "column-major",
+        "composition": "parent-times-local"
+      },
+      "operations": [
+        {
+          "id": 0,
+          "operationId": "opv1:97acf601c1201e3fdeb46994f29ae1ddc7501bc677c7ac7cd39ccc4e92e33f21",
+          "parent": null,
+          "childOrdinal": 0,
+          "name": "full_round_exact",
+          "category": "geometry",
+          "structuralPath": [
+            {
+              "kind": "call",
+              "name": "full_round_exact",
+              "ordinal": 0
+            }
+          ],
+          "identityEvidence": "structural-unique",
+          "ambiguityGroup": null
+        },
+        {
+          "id": 1,
+          "operationId": "opv1:82edcf3a1227294df8d6473f6c6f55ae3d0c5a676e379bcf1d51ed902692dd1c",
+          "parent": 0,
+          "childOrdinal": 0,
+          "name": "$body",
+          "category": "control",
+          "structuralPath": [
+            {
+              "kind": "call",
+              "name": "full_round_exact",
+              "ordinal": 0
+            },
+            {
+              "kind": "body",
+              "name": "$body",
+              "ordinal": 0
+            }
+          ],
+          "identityEvidence": "structural-unique",
+          "ambiguityGroup": null
+        },
+        {
+          "id": 2,
+          "operationId": "opv1:aac61f1e6bbf6c77bd725ee4bfd49932e7494d25de970eec6714d06af8e213ba",
+          "parent": 1,
+          "childOrdinal": 0,
+          "name": "cube",
+          "category": "geometry",
+          "structuralPath": [
+            {
+              "kind": "call",
+              "name": "full_round_exact",
+              "ordinal": 0
+            },
+            {
+              "kind": "body",
+              "name": "$body",
+              "ordinal": 0
+            },
+            {
+              "kind": "call",
+              "name": "cube",
+              "ordinal": 0
+            }
+          ],
+          "identityEvidence": "structural-unique",
+          "ambiguityGroup": null
+        }
+      ],
+      "occurrences": [
+        {
+          "id": 0,
+          "occurrenceId": "occv1:d8f4175d356b3fae8c6e61624b9e98162e212b00510591d882794263893a79dd",
+          "operation": 0,
+          "parent": null,
+          "staticParent": null,
+          "dynamicSlots": [
+            {
+              "name": "$evaluation",
+              "value": {
+                "tag": "undefined"
+              },
+              "duplicateOrdinal": 0
+            }
+          ],
+          "node": 1,
+          "outputOrdinal": 0,
+          "sceneEntityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613"
+        },
+        {
+          "id": 1,
+          "occurrenceId": "occv1:74ebb35a89713b7f6e4a6c461d24c6c7ff03666a3985138ce7975f246b42d18e",
+          "operation": 1,
+          "parent": 0,
+          "staticParent": 0,
+          "dynamicSlots": [
+            {
+              "name": "$evaluation",
+              "value": {
+                "tag": "undefined"
+              },
+              "duplicateOrdinal": 0
+            }
+          ],
+          "node": null,
+          "outputOrdinal": null,
+          "sceneEntityId": null
+        },
+        {
+          "id": 2,
+          "occurrenceId": "occv1:1deecad99e4b2a5be0d53191b3801b2a190ee53e0a51667199ba50a1907b7fd7",
+          "operation": 2,
+          "parent": 1,
+          "staticParent": 1,
+          "dynamicSlots": [
+            {
+              "name": "$evaluation",
+              "value": {
+                "tag": "undefined"
+              },
+              "duplicateOrdinal": 0
+            }
+          ],
+          "node": 0,
+          "outputOrdinal": 0,
+          "sceneEntityId": "entity:v2:4957bc1c587d8b8e9299205659fa190679ae81251dd2b2ccfb8e83f295ec225e"
+        }
+      ],
+      "nodes": [
+        {
+          "kind": "box",
+          "valueType": {
+            "geometryKind": "solid",
+            "space": "d3",
+            "representation": "analytic-brep",
+            "evidence": {
+              "tag": "representation-preserving"
+            }
+          },
+          "size": [
+            4,
+            8,
+            6
+          ],
+          "center": false,
+          "id": 0
+        },
+        {
+          "kind": "full-round-exact",
+          "input": 0,
+          "faces": [
+            5,
+            4,
+            3
+          ],
+          "valueType": {
+            "geometryKind": "solid",
+            "space": "d3",
+            "representation": "rational-brep",
+            "evidence": {
+              "tag": "representation-preserving"
+            }
+          },
+          "id": 1
+        }
+      ],
+      "execution": {
+        "version": "semantic-execution-v2",
+        "evaluationOrder": [
+          0,
+          1
+        ],
+        "discardedEffects": [],
+        "terminal": null
+      },
+      "result": {
+        "tag": "single",
+        "item": {
+          "node": 1,
+          "producerOccurrence": 0,
+          "identityOccurrence": 0,
+          "color": [
+            0.26,
+            0.52,
+            0.96,
+            1
+          ]
+        }
+      },
+      "declaredCapabilities": [
+        "geometry.brep"
+      ],
+      "capabilityClosure": [
+        "construct.box",
+        "evidence.representation-preserving",
+        "geometry.brep",
+        "geometry.kind.solid",
+        "geometry.space.d3",
+        "geometry.value",
+        "operation.full-round-exact",
+        "representation.analytic-brep",
+        "representation.rational-brep",
+        "representation.transition.analytic-brep.to.rational-brep",
+        "semantic.identity-evidence",
+        "semantic.occurrences",
+        "semantic.operation-graph",
+        "semantic.program-v1",
+        "semantic.result.single"
+      ],
+      "diagnosticTemplates": []
+    },
+    "provenance": [
+      {
+        "operation": 0,
+        "span": {
+          "start": 63,
+          "end": 109
+        },
+        "label": "full_round_exact()"
+      },
+      {
+        "operation": 1,
+        "span": {
+          "start": 63,
+          "end": 109
+        },
+        "label": "full_round_exact.body"
+      },
+      {
+        "operation": 2,
+        "span": {
+          "start": 95,
+          "end": 109
+        },
+        "label": "cube()"
+      }
+    ],
+    "tessellationIntents": [],
+    "diagnostics": []
+  },
+  "source": {
+    "sha256": "3d4e8fb16b7e334830dc87969691cdcc1d0fed09b9390ae5f540cf240d9e8be4",
+    "utf8ByteLength": 110,
+    "utf16CodeUnitLength": 110
+  },
+  "sourceText": "// @language openscad-viewer/brep-1\n// @requires geometry.brep\nfull_round_exact(faces=[5,4,3]) cube([4,8,6]);\n",
+  "provenance": [
+    {
+      "operation": 0,
+      "span": {
+        "start": 63,
+        "end": 109
+      },
+      "label": "full_round_exact()"
+    },
+    {
+      "operation": 1,
+      "span": {
+        "start": 63,
+        "end": 109
+      },
+      "label": "full_round_exact.body"
+    },
+    {
+      "operation": 2,
+      "span": {
+        "start": 95,
+        "end": 109
+      },
+      "label": "cube()"
+    }
+  ],
+  "tessellationIntents": [],
+  "diagnostics": [],
+  "maxNodes": 4,
+  "maxBytes": 4194304
+}

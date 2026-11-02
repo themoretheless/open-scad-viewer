@@ -1,7 +1,8 @@
 //! Complete original-chart radial/normal agreement after radius qualification.
 use crate::sweep_support::interval_vec3::{cross, norm};
-use crate::{check, interval_eval::Interval as I, moving_radius, Result};
+use crate::{Result, check, interval_eval::Interval as I, moving_radius};
 use std::collections::VecDeque;
+mod correlated;
 pub struct Limits {
     pub max_sine_squared: f64,
     pub cells: usize,
@@ -88,7 +89,24 @@ pub fn qualify(radius: moving_radius::Certificate, limits: Limits) -> Result<Rep
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
     ];
-    let mut queue = VecDeque::from([domain]);
+    let mut uc = s
+        .knots_u
+        .iter()
+        .chain(&c.knots)
+        .copied()
+        .filter(|t| domain[0][0] <= *t && *t <= domain[0][1])
+        .collect::<Vec<_>>();
+    let mut vc = s
+        .knots_v
+        .iter()
+        .copied()
+        .filter(|t| domain[1][0] <= *t && *t <= domain[1][1])
+        .collect::<Vec<_>>();
+    uc.sort_by(f64::total_cmp);
+    uc.dedup();
+    vc.sort_by(f64::total_cmp);
+    vc.dedup();
+    let mut queue = VecDeque::new();
     let mut bounds = [1_f64, 0_f64];
     let mut out = Report {
         envelope: None,
@@ -101,6 +119,14 @@ pub fn qualify(radius: moving_radius::Certificate, limits: Limits) -> Result<Rep
         reason: "moving-envelope-work-limit",
         angular_break_sine_squared: None,
     };
+    if (uc.len() - 1) * (vc.len() - 1) > limits.cells {
+        return Ok(out);
+    }
+    for u in uc.windows(2) {
+        for v in vc.windows(2) {
+            queue.push_back([[u[0], u[1]], [v[0], v[1]]]);
+        }
+    }
     // A rigorously enclosed point may disprove full-domain agreement, but
     // can never admit it. This avoids spending the whole budget subdividing
     // unrelated regions before reaching an already provable defect.
@@ -163,7 +189,34 @@ pub fn qualify(radius: moving_radius::Certificate, limits: Limits) -> Result<Rep
             out.reason = "moving-envelope-radial-bound-unresolved";
             return Ok(out);
         };
-        if let Some(b) = angular(cross(j.first[0], j.first[1])?, radial)? {
+        let mut angle = angular(cross(j.first[0], j.first[1])?, radial)?;
+        if angle.is_none_or(|b| b[1] > limits.max_sine_squared) {
+            let lower = radius
+                .radius()
+                .control_points
+                .iter()
+                .map(|p| p[0])
+                .fold(f64::INFINITY, f64::min);
+            let lower = I::point(lower)
+                .sub(I::point(radius.error_upper()))?
+                .lo
+                .max(0.);
+            if let Some(upper) = correlated::upper(
+                s,
+                c,
+                uv,
+                &j,
+                lower,
+                &mut out.radial_work,
+                limits.radial_work,
+            )? {
+                angle = Some([
+                    angle.map_or(0., |b| b[0]),
+                    angle.map_or(upper, |b| b[1].min(upper)),
+                ]);
+            }
+        }
+        if let Some(b) = angle {
             if b[1] <= limits.max_sine_squared {
                 bounds[0] = bounds[0].min(b[0]);
                 bounds[1] = bounds[1].max(b[1]);
@@ -296,14 +349,9 @@ mod tests {
             .map(|z| vec![vec![1., 0., z], vec![1., 1., z], vec![0., 1., z]])
             .collect();
         s.weights = vec![vec![1., 0.5_f64.sqrt(), 1.]; 4];
-        assert!(moving_radius::qualify(
-            &s,
-            proof.centers(),
-            proof.radius(),
-            1e-9,
-            100,
-            100_000_000
-        )
-        .is_err());
+        assert!(
+            moving_radius::qualify(&s, proof.centers(), proof.radius(), 1e-9, 100, 100_000_000)
+                .is_err()
+        );
     }
 }

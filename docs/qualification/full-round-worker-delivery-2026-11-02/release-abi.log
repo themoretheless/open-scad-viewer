@@ -1,0 +1,13 @@
+{"name":"source-attested-graph","ok":true,"elapsedMs":1033.519375}
+{"name":"exact-display-2","ok":true,"elapsedMs":525.7898339999999}
+{"name":"exact-display-8","ok":true,"elapsedMs":473.2545409999998}
+{"name":"exact-display-16","ok":true,"elapsedMs":482.40650000000005}
+{"name":"native-frozen-artifact-restore","ok":true,"elapsedMs":12242.898542}
+{"name":"native-rational-artifact-display","ok":true,"elapsedMs":12676.439084}
+{"name":"zero-segments","ok":false,"elapsedMs":464.56095899999855,"error":{"code":"BREP_PROFILE_CERTIFICATE_UNPROVEN","message":"Invalid exact display sampling or triangle budget"}}
+{"name":"too-many-segments","ok":false,"elapsedMs":459.76245800000106,"error":{"code":"BREP_PROFILE_CERTIFICATE_UNPROVEN","message":"Invalid exact display sampling or triangle budget"}}
+{"name":"triangle-budget","ok":false,"elapsedMs":460.76004100000137,"error":{"code":"BREP_PROFILE_CERTIFICATE_UNPROVEN","message":"Exact display profile exceeds sampling budget"}}
+{"name":"forged-exact-geometry","ok":false,"elapsedMs":458.2643750000025,"error":{"code":"BREP_FEATURE_REFUSED","message":"Exact output/evidence differs from frozen-source reconstruction"}}
+{"name":"changed-source-text","ok":false,"elapsedMs":1.1361670000005688,"error":{"code":"BREP_SEMANTIC_CONTRACT","message":"Semantic source bytes do not match the envelope attestation"}}
+{"name":"missing-operation-capability","ok":false,"elapsedMs":0.2554999999993015,"error":{"code":"BREP_SEMANTIC_CONTRACT","message":"Semantic capability closure does not exactly match authored and inferred capabilities"}}
+{"passed":true,"cases":12,"wasmSha256":"c0701cb91cf7b719fad299c8ec1e713a820fea0521dd3150c8f778328c4f49c4"}

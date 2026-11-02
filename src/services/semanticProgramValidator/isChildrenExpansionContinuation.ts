@@ -367,7 +367,7 @@ export function validateOutputRef(
     && occurrenceIsDescendantOf(identityOccurrence, canonicalProducerOccurrence, occurrences)
   )
   if (identityNode === null || !nodePreservesIdentity(node, identityNode, nodes)
-    || occurrenceRoot(canonicalProducerOccurrence, occurrences) !== occurrenceRoot(identityOccurrence, occurrences)
+    || occurrenceRoot(canonicalProducerOccurrence, occurrences) !== occurrenceRoot(canonicalOccurrenceRows[identityOccurrence], occurrences)
     || !identityIsInProducingBranch) {
     fail('E_SEMANTIC_IDENTITY', `${path}.identityOccurrence`, 'output identity must belong to the producing evaluation branch and node lineage')
   }

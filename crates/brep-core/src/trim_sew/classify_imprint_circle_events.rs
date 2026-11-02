@@ -210,7 +210,11 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
                 ],
             },
         )?;
-        let mut key = sew_edge_key(endpoints[0], endpoints[1], scale)?;
+        let mut key = if edge.vertices[0]==edge.vertices[1] {
+            closed_edge::verify(&edge.curve)?;
+            let q=quantize(endpoints[0],scale)?;
+            SewEdgeKey{a:q,b:q,mid:None,definition:None,shell:None}
+        } else {sew_edge_key(endpoints[0], endpoints[1], scale)?};
         key.shell = Some(uses[0].4);
         key.definition = Some(authority_key(&correspondence.authority));
         proven.push(CorrespondenceLedgerEntry {

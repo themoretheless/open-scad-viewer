@@ -260,3 +260,31 @@ fn distributed_tile_requires_a_complete_curvature_receipt_and_retains_g2() {
     );
     assert_eq!(source, before);
 }
+
+#[test]
+fn ownership_subdivision_cannot_hide_a_hole_or_accept_empty_work() {
+    let mut source = fixture();
+    let corners = [[0.45, 0.45], [0.45, 0.55], [0.55, 0.55], [0.55, 0.45]];
+    let loop_id = source.loops.len();
+    source.loops.push(brep_core::Loop {
+        coedges: (0..4)
+            .map(|i| {
+                brep_core::Coedge::new(
+                    0,
+                    false,
+                    nurbs_core::curve::Curve::from_polyline(vec![
+                        corners[i].to_vec(),
+                        corners[(i + 1) % 4].to_vec(),
+                    ])
+                    .unwrap(),
+                )
+            })
+            .collect(),
+    });
+    source.faces[0].holes.push(loop_id);
+    let before = source.clone();
+    assert!(r::certify_tile_rectangle_inside(&source, 0, [[0.2, 0.8]; 2], 1e-8, 100000).is_err());
+    assert!(r::certify_tile_rectangle_inside(&source, 0, [[0.2, 0.3]; 2], 1e-8, 0).is_err());
+    assert!(r::certify_tile_rectangle_inside(&source, 0, [[0.2, 0.3]; 2], 1e-8, 100000).is_ok());
+    assert_eq!(source, before);
+}

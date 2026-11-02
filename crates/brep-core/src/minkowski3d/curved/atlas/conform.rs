@@ -297,3 +297,41 @@ pub(super) fn planar_chart(h: &Net, work: &mut Work) -> Result<Option<Net>> {
     };
     planar::canonical(&p, work)
 }
+
+// A separate, proved fallback recipe. Old successful source certificates do
+// not enter this path; every changed chart retains exactly its source image.
+pub(super) fn normalize_images(
+    positions: &[P],
+    patches: &mut [Patch],
+    work: &mut Work,
+) -> Result<bool> {
+    let mut changed = false;
+    let mut vertices = positions
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, p)| (p, i as u32))
+        .collect::<BTreeMap<_, _>>();
+    for p in patches {
+        let candidate = if let Some(h) = planar::canonical(p, work)? {
+            Some(h)
+        } else {
+            graph::canonical(p, work)?
+        };
+        if let Some(h) = candidate {
+            if h == p.h {
+                continue;
+            }
+            let mut next = Vec::new();
+            append_patch(h, false, &mut vertices, &mut next, work)?;
+            if vertices.len() != positions.len() || next[0].ids != p.ids {
+                return Err(fail(
+                    "source image normalization changed authored chart vertices",
+                ));
+            }
+            *p = next.remove(0);
+            changed = true;
+        }
+    }
+    Ok(changed)
+}

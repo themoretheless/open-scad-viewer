@@ -1,0 +1,27 @@
+# Exact inverse-chart switches and material-owned affine-plane proofs
+
+Status: guarded isolated native qualification passed: **921 executions / 886 unique tests**, including all 24 native protocol tests and 19 affine-volume tests. Mathematical crates also checked without codec. Frozen-source and 40 owned-main-file hash guards passed. `result.json` binds the source archive, logs and native binaries; historical/development results are separate evidence.
+
+## Inverse changes inside one original target span
+
+The Rust fallback now permits different inverse rational maps on successive original source spans INSIDE a single original target span. For every branch it checks the whole original composed position and requested normal-jet polynomial identities. It independently proves the branch's parameter order, denominator admissibility and derivative sign. All original intrinsic surface joins and normal regularity remain required.
+
+Neighboring branches meet only if their source-boundary polynomials have an exact common factor with a root strictly inside the target interval. A sign change establishes existence. Each certified boundary has a unique root, so both branches meet at exactly the same cut. Successive source bounds and the branch order establish the complete ordered cover. The cut can be irrational; no numerical root or overlapping rounded brackets supplies evidence.
+
+A map can have a pole elsewhere in the original target span, OUTSIDE its actual active branch. Where the denominator is nonnegative in Bernstein form, its interior positivity is direct. Otherwise both source-boundary polynomials must be strictly increasing, and the rational derivative numerator must be positive. At a cut, `S = D * F' > 0` proves `D > 0`. Between the ordered cuts, `F_lo > 0`, `F_hi < 0` give `(hi-lo) D > 0`. Thus poles cannot enter the admitted branch even though an unused part of the same target span can contain one. First and last finite map values, exact source progress and one-cover completion remain mandatory.
+
+Fixtures use one quartic target span, two rational quadratic source spans with distinct inverse laws, a shared irrational cut and both an endpoint pole and an inactive pole inside the target span. G1-only curvature changes, altered source coefficients, reversed traversal and one-unit-short work retain their refusals. A separate primitive test rejects near-coincident but distinct roots. The order-zero authored world/pcurve contract is unchanged. The native seam protocol grants no body/global/Solid credit from this local result.
+
+## A singularity in the UV rectangle but outside material
+
+The Rust closed rational-material owner can now use an exact original affine-plane chart. It requires an original degree-one 2x2 carrier, equal positive original weights, a constant world coordinate, exact zero bilinear coefficient and a nonsingular projected original UV matrix. Exact subtraction checks and an outward determinant establish these facts from ALL original coefficients; point samples or a fitted plane never establish the identity.
+
+The owner first proves valid bounded UV material and exact original world-boundary/carrier binding. The affine plane map is a homeomorphism, so the filled material image (including holes) lies within the positive-weight world boundary control hull's coordinate bounds. A derived canonical coordinate plane is an EXACT proof superset of that original material image, not a replacement source or an edited material. The original pose laws and origin are unchanged. The native atlas still must prove the entire proof rectangle's global embedding, regularity and closed-time topology. Original UV winding and an original world-Jacobian witness determine orientation; the rounded UV witness's image is rigorously enclosed inside the proof rectangle. Both UV orientations are tested.
+
+The tested shear has `Q(u,v)=(u-v,v,0)`. Its material UV rectangle contains an axis singularity, while its actual material has radial coordinate in [1,5]. Original translation is `T=-0.875*A_0+constant`. The original UV rectangle cannot supply the global certificate; the exact material plane chart can. The owner obtains filled caps, zero boundary error and joint original/retained global G2. Native tests re-audit a fresh STEP import and reject forged plane/clip fields when the axis actually crosses material. One-ULP non-affinity, variable weights and nonplanar coefficients cannot acquire a plane-chart proof. Every new comparison and failed proof attempt shares the original source-work budget; no ceiling, tolerance or deadline is increased.
+
+## Qualification scope
+
+The frozen snapshot overlays 40 owned source files on the last coherent native baseline. All passing evidence must match that snapshot and the owned working-tree hashes. Peer edits are preserved. No UI/browser/window/focus operation, WASM publication, Git consolidation or external STEP engine is part of this run.
+
+This is not universal algebraic inversion or arbitrary trimmed-domain certification. The chart-switch fallback requires its exact rational inverse, slope and boundary-domain predicates within the existing budget. Carriers outside the verified constant-coordinate affine-plane class, or material whose available exact chart rectangle still includes a singularity, need stronger charts/domain decomposition. Independent external OpenCascade, full public STEP/UI coverage and source-coherent WASM delivery remain separate gates.

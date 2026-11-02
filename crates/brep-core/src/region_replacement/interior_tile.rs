@@ -30,6 +30,60 @@ fn check(ok: bool, message: &str) -> Result<()> {
         Err(Error::new("BREP_INTERIOR_TILE_UNPROVEN", message))
     }
 }
+/// Certify the ENTIRE closed rectangle by a finite union of closed Inside
+/// cells. Unresolved parent classifications are subdivided, never accepted.
+/// A hole, outside cell, exhausted work or precision limit refuses atomically.
+pub fn certify_tile_rectangle_inside(
+    source: &Model,
+    face: usize,
+    rectangle: [[f64; 2]; 2],
+    tolerance_uv: f64,
+    max_domain_cells: usize,
+) -> Result<usize> {
+    check(
+        (1..=1000000).contains(&max_domain_cells)
+            && rectangle
+                .iter()
+                .all(|r| r[0].is_finite() && r[1].is_finite() && r[0] < r[1]),
+        "Invalid tile ownership rectangle or work budget",
+    )?;
+    let domain = FaceDomain::new(source, face, tolerance_uv)?;
+    let mut stack = vec![rectangle];
+    let mut visited = 0usize;
+    let mut cells = 0usize;
+    while let Some(r) = stack.pop() {
+        check(
+            visited < 4096 && cells < max_domain_cells,
+            "Tile ownership cover budget exhausted",
+        )?;
+        visited += 1;
+        let membership = domain.classify(r, (max_domain_cells - cells).min(100000))?;
+        cells += membership.cells;
+        if membership.location == Location::Inside {
+            continue;
+        }
+        check(
+            membership.location != Location::Outside,
+            "Tile ownership has an Outside subregion",
+        )?;
+        let widths = std::array::from_fn::<_, 2, _>(|k| {
+            (r[k][1] - r[k][0]) / (rectangle[k][1] - rectangle[k][0])
+        });
+        let axis = usize::from(widths[1] > widths[0]);
+        let middle = r[axis][0] * 0.5 + r[axis][1] * 0.5;
+        check(
+            middle > r[axis][0] && middle < r[axis][1],
+            "Tile ownership cover precision exhausted",
+        )?;
+        let mut a = r;
+        let mut b = r;
+        a[axis][1] = middle;
+        b[axis][0] = middle;
+        stack.push(b);
+        stack.push(a);
+    }
+    Ok(cells)
+}
 /// Extract a rectangular child surface, retain three control layers at every
 /// side and lift one interior pole. Add a hole to the original face and its
 /// complementary tile using FOUR shared world edges and owned vertices.
@@ -131,7 +185,7 @@ fn build_tile(
             && displacement.iter().any(|x| *x > 0.),
         "Invalid tile tolerances, lift or work limits",
     )?;
-    let domain = FaceDomain::new(source, face, tolerance_uv)?;
+    let _domain = FaceDomain::new(source, face, tolerance_uv)?;
     let s = &source.faces[face].surface;
     check(
         !s.periodic_u
@@ -144,12 +198,8 @@ fn build_tile(
                 <= 4096,
         "Tile construction requires a bounded nonperiodic degree 6..12 support",
     )?;
-    check(limits.domain_cells > 0, "Tile ownership budget exhausted")?;
-    let ownership = domain.classify(rectangle, limits.domain_cells.min(100000))?;
-    check(
-        ownership.location == Location::Inside,
-        "Whole tile rectangle is not certified Inside",
-    )?;
+    let ownership_cells =
+        certify_tile_rectangle_inside(source, face, rectangle, tolerance_uv, limits.domain_cells)?;
     let mut tile = s.trim([
         rectangle[0][0],
         rectangle[0][1],
@@ -302,7 +352,7 @@ fn build_tile(
         lifted_pole,
         lifted_poles,
         seams,
-        domain_cells: ownership.cells,
+        domain_cells: ownership_cells,
         closure,
         coefficient_work,
     })

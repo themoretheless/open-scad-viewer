@@ -27,10 +27,20 @@ SOURCE_CRATES = ['sdf-core', 'gpu-compute', 'compute-core', 'geometry-ops',
                  'math-core', 'planar-geometry', 'tensor-core', 'value-codec', 'gpu-runtime', 'gpu-shader']
 SOURCES = ['crates/Cargo.lock', 'crates/Cargo.toml']
 for crate in SOURCE_CRATES:
+    if not (REPO / 'crates' / crate / 'Cargo.toml').exists():
+        continue
     SOURCES.append(f'crates/{crate}/Cargo.toml')
     SOURCES.extend(str(p.relative_to(REPO)) for p in (REPO / 'crates' / crate / 'src').rglob('*')
                    if p.is_file())
-SOURCES = sorted(set(SOURCES))
+DEPENDENCY_MANIFEST = ROOT / 'dependency-sources.json'
+SOURCE_PATHS = json.loads(DEPENDENCY_MANIFEST.read_text()) if DEPENDENCY_MANIFEST.exists() else {}
+if SOURCE_PATHS:
+    SOURCES.append(str(DEPENDENCY_MANIFEST.relative_to(REPO)))
+SOURCES = sorted(set(SOURCES) | set(SOURCE_PATHS))
+
+
+def source_path(label):
+    return Path(SOURCE_PATHS[label]) if label in SOURCE_PATHS else REPO / label
 
 
 
@@ -229,13 +239,13 @@ def main():
         if (prior_decision.get('error') != 'Own fixture timed out'
                 or not all(prior_decision.get(k) for k in ['binary_unchanged', 'sources_unchanged', 'runner_unchanged'])
                 or digest(binary) != prior_meta['sha256']
-                or any(digest(REPO / p) != h for p, h in prior_meta['sources'].items())):
+                or any(digest(source_path(p)) != h for p, h in prior_meta['sources'].items())):
             raise RuntimeError('Timeout recovery requires unchanged frozen evidence')
     out = ROOT / f'run-{time.time_ns()}' 
     out.mkdir()
     (out / 'runner.py').write_bytes(Path(__file__).read_bytes())
     meta = dict(binary=str(binary), sha256=digest(binary), runner_sha256=digest(__file__),
-                sources={p: digest(REPO / p) for p in SOURCES},
+                sources={p: digest(source_path(p)) for p in SOURCES},
                 cpu=subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True).strip(),
                 cases=CASES,
                 reps_per_case={case: (32 if case.startswith(('mesh', 'cross')) else 8) for case in CASES},
@@ -243,7 +253,7 @@ def main():
     for source in SOURCES:
         destination = out / 'sources' / source
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes((REPO / source).read_bytes())
+        destination.write_bytes(source_path(source).read_bytes())
     if predecessor:
         meta['resumed_from'] = str(predecessor)
     write_json(out / 'environment.json', meta)
@@ -262,7 +272,7 @@ def main():
     def check_frozen():
         if digest(binary) != meta['sha256'] or digest(__file__) != meta['runner_sha256']:
             raise RuntimeError('Frozen binary or runner changed')
-        if any(digest(REPO / p) != h for p, h in meta['sources'].items()):
+        if any(digest(source_path(p)) != h for p, h in meta['sources'].items()):
             raise RuntimeError('Frozen SDF sources changed; rebuild and restart qualification')
 
     def interrupted(signum, frame):
@@ -378,7 +388,7 @@ def main():
             child.terminate()  # Never signal a process discovered by observation.
             child.wait(timeout=10)
         result['binary_unchanged'] = matches_digest(binary, meta['sha256'])
-        result['sources_unchanged'] = all(matches_digest(REPO / p, h) for p, h in meta['sources'].items())
+        result['sources_unchanged'] = all(matches_digest(source_path(p), h) for p, h in meta['sources'].items())
         result['runner_unchanged'] = matches_digest(__file__, meta['runner_sha256'])
         write_json(out / 'decision.json', result)
         print(json.dumps(result), flush=True)

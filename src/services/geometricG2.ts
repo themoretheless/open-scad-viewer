@@ -61,8 +61,12 @@ export interface ClosedNurbsPatchNetworkReport {
 }
 
 export interface G2RunoutReport {
- method:'native-original-support-G2-runout/1'
+ method:'native-original-support-G2-runout/2'
  complete:boolean;withinTolerance:boolean;cells:number;exactWork:number;maxCells:number;maxExactWork:number
+ patchCount:number;seamComplete:boolean;seamWithinTolerance:boolean;fieldComplete:boolean;curvatureLimitPerMm:10
+ domainCells:number;shapeCells:number;maxDomainCells:1000000;maxShapeCells:1000000
+ fields:{patch:number;injectivityCertified:boolean;curvatureDecision:'within'|'exceeds'|'unresolved'|'unvisited';absoluteCurvatureUpper:number|null;
+  witnessUv:[number,number]|null;witnessCurvature:[number,number]|null;unresolvedRegion:[[number,number],[number,number]]|null}[]
  tolerances:[number,number,number]
  solidGeometryCertified:false;radiusLawCertified:false;interiorEmbeddingCertified:false
  supportSeams:{patch:number;source:number;positionValidated:boolean;positionUpper:number|null;inspection:NonNullable<GeometricG2Report['seams'][number]['inspection']>}[]
@@ -107,13 +111,54 @@ function isValidControlGrid(controlPoints:number[][][],n:number,m:number):boolea
  }
  return true
 }
+export function validG2RunoutReport(value:unknown,patchCount:number,maxCells:number,maxExactWork:number,maxPatches:number,tolerances:[number,number,number]=[1e-7,1e-5,1e-4]):value is G2RunoutReport {
+ try{
+ const r=value as G2RunoutReport
+ if(!r||!Number.isSafeInteger(patchCount)||patchCount<1||patchCount>maxPatches||r.patchCount!==patchCount||!Array.isArray(r.supportSeams)||!Array.isArray(r.internalSeams))return false
+ if(typeof r.complete!=='boolean'||typeof r.withinTolerance!=='boolean'||!Array.isArray(r.tolerances)||r.tolerances.length!==3||r.tolerances[0]!==tolerances[0]||r.tolerances[1]!==tolerances[1]||r.tolerances[2]!==tolerances[2]
+  ||r.supportSeams.length>patchCount*2||r.internalSeams.length>patchCount-1)return false
+ if(r?.method!=='native-original-support-G2-runout/2'||r.solidGeometryCertified!==false||r.radiusLawCertified!==false||r.interiorEmbeddingCertified!==false
+  ||r.maxCells!==maxCells||r.maxExactWork!==maxExactWork||!Number.isSafeInteger(r.cells)||r.cells<0||r.cells>maxCells
+  ||!Number.isSafeInteger(r.exactWork)||r.exactWork<0||r.exactWork>maxExactWork)return false
+ if(typeof r.seamComplete!=='boolean'||typeof r.seamWithinTolerance!=='boolean'||typeof r.fieldComplete!=='boolean'
+  ||r.curvatureLimitPerMm!==10||r.maxDomainCells!==1000000||r.maxShapeCells!==1000000
+  ||!Number.isSafeInteger(r.domainCells)||r.domainCells<0||r.domainCells>r.maxDomainCells
+  ||!Number.isSafeInteger(r.shapeCells)||r.shapeCells<0||r.shapeCells>r.maxShapeCells
+  ||!Array.isArray(r.fields)||r.fields.length>patchCount
+  ||r.complete!==(r.seamComplete&&r.fieldComplete))return false
+ const fieldSlots=new Set<number>()
+ for(const f of r.fields){
+  if(!Number.isSafeInteger(f.patch)||f.patch<0||f.patch>=patchCount||fieldSlots.has(f.patch)
+   ||typeof f.injectivityCertified!=='boolean'||!['within','exceeds','unresolved','unvisited'].includes(f.curvatureDecision)
+   ||(f.absoluteCurvatureUpper!==null&&(!Number.isFinite(f.absoluteCurvatureUpper)||f.absoluteCurvatureUpper<0)))return false
+  fieldSlots.add(f.patch)
+ }
+ if(r.fieldComplete&&(r.fields.length!==patchCount||r.fields.some(f=>!f.injectivityCertified||f.curvatureDecision==='unresolved'||f.curvatureDecision==='unvisited')))return false
+ if(r.withinTolerance&&(!r.complete||!r.seamWithinTolerance||r.fields.some(f=>!f.injectivityCertified||f.curvatureDecision!=='within'||f.absoluteCurvatureUpper===null||f.absoluteCurvatureUpper>10)))return false
+ if(r.seamWithinTolerance){
+  if(!r.seamComplete||r.supportSeams.length!==patchCount*2||r.internalSeams.length!==Math.max(0,patchCount-1))return false
+  const covered=new Uint8Array(patchCount*2)
+  for(const s of r.supportSeams){
+   if(!Number.isSafeInteger(s.patch)||s.patch<0||s.patch>=patchCount||(s.source!==0&&s.source!==1))return false
+   const slot=s.patch*2+s.source
+   if(covered[slot]!==0)return false
+   covered[slot]=1
+   if(!s.positionValidated||s.positionUpper===null||!Number.isFinite(s.positionUpper)||s.positionUpper<0||s.positionUpper>tolerances[0]||s.inspection.decision!=='within-tolerance'||!s.inspection.regularityProven)return false
+  }
+  for(const s of r.internalSeams)if(s.decision!=='within-tolerance')return false
+ }
+ return true
+ }catch{return false}
+}
+/** Diagnostics carry no document geometry and can never grant application. */
+export function validG2RunoutDiagnosticReport(value:unknown):value is G2RunoutReport {
+ const r=value as G2RunoutReport
+ return !!r&&r.withinTolerance===false&&validG2RunoutReport(r,r.patchCount,100000,1000000,256)
+}
 export function validG2RunoutResult(value:unknown,maxCells:number,maxExactWork:number,maxPatches:number,tolerances:[number,number,number]=[1e-7,1e-5,1e-4]):value is ReturnType<typeof createG2RunoutSurface> {
  try{
  const result=value as ReturnType<typeof createG2RunoutSurface>
- const r=result?.report
- if(!result||!Array.isArray(result.patches)||!result.patches.length||result.patches.length>maxPatches||!r||!Array.isArray(r.supportSeams)||!Array.isArray(r.internalSeams))return false
- if(typeof r.complete!=='boolean'||typeof r.withinTolerance!=='boolean'||!Array.isArray(r.tolerances)||r.tolerances.length!==3||r.tolerances[0]!==tolerances[0]||r.tolerances[1]!==tolerances[1]||r.tolerances[2]!==tolerances[2]
-  ||r.supportSeams.length>result.patches.length*2||r.internalSeams.length>result.patches.length-1)return false
+ if(!result||!Array.isArray(result.patches)||!result.patches.length||result.patches.length>maxPatches)return false
  for(const s of result.patches){
   const n=s.controlPoints?.length,m=s.controlPoints?.[0]?.length
   if(!n||!m||n*m>4096||!Number.isSafeInteger(s.degreeU)||!Number.isSafeInteger(s.degreeV)||s.degreeU<1||s.degreeU>=n||s.degreeV<1||s.degreeV>=m
@@ -122,23 +167,7 @@ export function validG2RunoutResult(value:unknown,maxCells:number,maxExactWork:n
    ||!isValidWeightsGrid(s.weights,n,m)
    ||!isValidControlGrid(s.controlPoints,n,m))return false
  }
- if(r?.method!=='native-original-support-G2-runout/1'||r.solidGeometryCertified!==false||r.radiusLawCertified!==false||r.interiorEmbeddingCertified!==false
-  ||r.maxCells!==maxCells||r.maxExactWork!==maxExactWork||!Number.isSafeInteger(r.cells)||r.cells<0||r.cells>maxCells
-  ||!Number.isSafeInteger(r.exactWork)||r.exactWork<0||r.exactWork>maxExactWork)return false
- if(r.withinTolerance){
-  const patchCount=result.patches.length
-  if(!r.complete||r.supportSeams.length!==patchCount*2||r.internalSeams.length!==Math.max(0,patchCount-1))return false
-  const covered=new Uint8Array(patchCount*2)
-  for(const s of r.supportSeams){
-   if(!Number.isSafeInteger(s.patch)||s.patch<0||s.patch>=patchCount||(s.source!==0&&s.source!==1))return false
-   const slot=s.patch*2+s.source
-   if(covered[slot]!==0)return false
-   covered[slot]=1
-   if(!s.positionValidated||s.positionUpper===null||!Number.isFinite(s.positionUpper)||s.positionUpper>tolerances[0]||s.inspection.decision!=='within-tolerance'||!s.inspection.regularityProven)return false
-  }
-  for(const s of r.internalSeams)if(s.decision!=='within-tolerance')return false
- }
- return true
+ return validG2RunoutReport(result.report,result.patches.length,maxCells,maxExactWork,maxPatches,tolerances)
  }catch{return false}
 }
 /** World-curve input and physical tangent lengths are interpreted by Rust. */

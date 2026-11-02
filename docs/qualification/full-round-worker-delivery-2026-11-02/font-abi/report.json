@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "pdfSha256": "73404578c9d3c04f255270b1c545b350c45353b799f358ecf896ecd116320448",
+  "pdfBytes": 1144555,
+  "baseline": {
+    "wasmSha256": "3b376a51e96febfe421c4bba661642141a54012b8a78a35f93b4d5fc7ac78302",
+    "elapsedMs": 47.44520800000001
+  },
+  "candidate": {
+    "wasmSha256": "c0701cb91cf7b719fad299c8ec1e713a820fea0521dd3150c8f778328c4f49c4",
+    "elapsedMs": 56.142291
+  },
+  "scope": "Actual native Unicode PDF bytes match; this is not a whole-engine performance benchmark."
+}

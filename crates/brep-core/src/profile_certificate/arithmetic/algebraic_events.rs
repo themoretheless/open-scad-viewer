@@ -334,6 +334,15 @@ fn classify(
     }
     Ok(Some(("event".into(), event)))
 }
+// A real source-domain event projects into [0,1+k]. Complex and exterior
+// factors remain in the eliminant census but need no parameter map there.
+fn projection_roots(f: &Poly, k: u8) -> Result<usize> {
+    let lo = Q::zero();
+    let hi = Q::from_integer((k as i64 + 1).into());
+    Ok(count(f, &lo, &hi)?
+        + usize::from(at(f, &lo).is_zero())
+        + usize::from(at(f, &hi).is_zero()))
+}
 pub(in super::super) fn produce(
     a: &[[Q; 3]],
     b: &[[Q; 3]],
@@ -357,6 +366,7 @@ pub(in super::super) fn produce_system(
     {
         return Ok((0, Vec::new()));
     }
+    let mut failures = Vec::new();
     for k in [0, 1, 2, 3, 5, 7, 11] {
         let attempt = (|| -> Result<Vec<Factor>> {
             let e = [shear(&system[0], k)?, shear(&system[1], k)?];
@@ -369,6 +379,14 @@ pub(in super::super) fn produce_system(
             while let Some(f) = queue.pop() {
                 if factors.len() + queue.len() > 256 {
                     return Err(refused("Algebraic factor census exceeded"));
+                }
+                if projection_roots(&f, k)? == 0 {
+                    factors.push(Factor {
+                        polynomial: f,
+                        map: None,
+                        roots: Vec::new(),
+                    });
+                    continue;
                 }
                 match map(&e, &f) {
                     Err(ModularError::Split(g)) => {
@@ -418,14 +436,18 @@ pub(in super::super) fn produce_system(
             }
             Ok(factors)
         })();
-        if let Ok(factors) = attempt {
-            verify_system(system,self_pair,width,k,&factors)?;
-            return Ok((k, factors));
+        match attempt {
+            Ok(factors) => {
+                verify_system(system,self_pair,width,k,&factors)?;
+                return Ok((k, factors));
+            }
+            Err(error) => failures.push(format!("projection {k}: {error}")),
         }
     }
-    Err(refused(
-        "No complete algebraic intersection representation within projection budgets",
-    ))
+    Err(refused(&format!(
+        "No complete algebraic intersection representation within projection budgets; {}",
+        failures.join("; ")
+    )))
 }
 pub(in super::super) fn verify(
     a: &[[Q; 3]],
@@ -481,6 +503,12 @@ pub(in super::super) fn verify_system(
         }
         product_all = product(&product_all, &f.polynomial);
         bound(&product_all)?;
+        if f.map.is_none() && projection_roots(&f.polynomial, k)? == 0 {
+            if !f.roots.is_empty() {
+                return Err(refused("Excluded projection factor has root events"));
+            }
+            continue;
+        }
         let actual = map(&e, &f.polynomial)
             .map_err(|_| refused("Algebraic fiber representation is not independently proved"))?;
         if actual != f.map {

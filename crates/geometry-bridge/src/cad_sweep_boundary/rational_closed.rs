@@ -78,9 +78,11 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
             limits,
         )?
     };
-    let joint=match &attempt {
-        owned::RationalClosedAttempt::Certified(body)=>[0,1,2].map(|order|body.joint_certificate(order).is_ok()),
-        owned::RationalClosedAttempt::Refused(_)=>[false;3],
+    let joint = match &attempt {
+        owned::RationalClosedAttempt::Certified(body) => {
+            [0, 1, 2].map(|order| body.joint_certificate(order).is_ok())
+        }
+        owned::RationalClosedAttempt::Refused(_) => [false; 3],
     };
     let (model, r) = match &attempt {
         owned::RationalClosedAttempt::Certified(b) => (Some(b.model()), b.report()),
@@ -100,6 +102,9 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
         "filledCapErrorUpper":if r.certified && !r.caps.is_empty(){Some(0.)}else{None},
         "sourceWork":{"cells":r.source_cells,"exactWork":r.source_exact_work,"constructionRows":r.construction_rows,"capCells":r.cap_cells,"orientationCells":r.orientation_cells},
         "originalVolume":r.volume.as_ref().map(|p|json!({"embeddingCertified":p.embedding_certified,"volumeRegularityCertified":p.regularity_certified,"parameterTopologyPreserved":p.parameter_topology_preserved,"cells":p.cells,"exactWork":p.exact_work,"boxes":p.boxes,"projection":p.projection,"reason":p.reason})),
+        "originalMaterialUVBounds":r.material_uv_bounds,"originalProofUVWindow":if r.material_plane_chart.is_none(){Some(r.proof_uv_window)}else{None},
+        "originalMaterialPlaneChart":r.material_plane_chart.as_ref().map(|c|json!({"axes":c.axes,"constantAxis":c.constant_axis,"constant":c.constant,"determinant":c.determinant,"bounds":c.bounds,"orientationParameter":c.orientation_parameter})),
+        "sourceShear":r.source_shear.as_ref().map(|s|json!({"base":s.base,"dependent":s.dependent,"scale":s.scale})),
         "proofCoordinates":r.proof_coordinates.as_ref().map(|c|json!({"rows":c.rows,"offset":c.offset,"determinant":c.determinant,
             "columnFactor":c.column_factor.as_ref().map(|f|json!({"base":f.base,"dependent":f.dependent,"scale":f.scale,"constant":f.constant}))})),
         "material":r.material.as_ref().map(|p|json!({"valid":p.valid,"winding":p.winding,"pairs":p.pairs,"cells":p.cells,"domainCells":p.domain_cells,"reason":p.reason})),

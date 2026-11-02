@@ -1,6 +1,8 @@
 //! Periodic-UV seam search, split candidates, and conservative admission.
 //! Exact event proofs and UV deviation do not imply trim-region topology.
 use crate::{Result, check, curve::Curve};
+mod evaluation;
+pub use evaluation::wrapped_surface_parameters;
 mod approximate_chart;
 pub use approximate_chart::{
     ApproximateChartAssembly, ApproximateChartLimits, assemble_approximated_chart,

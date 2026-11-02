@@ -1,0 +1,26 @@
+{
+  "status": "focused qualification; full original parity remains open",
+  "passed": 8,
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports.rs": "febfb9bd2b7601601af68ee894f82d065de97c3b5388136fae3019a70092637e",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports/lower_rims.rs": "b0aca29e9fd7548605e116eb87b1635ca3eee17581320b90d5de81f166d6ea6d",
+    "crates/brep-core/tests/full_round_source_supports.rs": "6c95448df4008dc5342614f3a17fe4485f801dcb8f7fb707ca4f828080d7d652"
+  },
+  "clean_baseline": "11 frozen files unchanged",
+  "api_map": "check passed; 242 public roots, 200 catalog entries; not parity",
+  "coverage": [
+    "every lower native rim has unique original side owner",
+    "exact original lower world curve image versus native side profile window",
+    "complete lower cap/side boundary census",
+    "degree elevation, projective height clock, transposed axes",
+    "different nonbinary native lower clocks",
+    "tolerance-valid lower interior perturbation refuses exact binding"
+  ],
+  "open": [
+    "vertical world edges and original side seam compatibility",
+    "complete source boundary/solid admission",
+    "source/result material relation",
+    "new Full Round radius fidelity",
+    "full original scope and delivery"
+  ]
+}

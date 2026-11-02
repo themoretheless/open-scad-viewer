@@ -49,10 +49,18 @@ mod rectilinear;
 mod fiber;
 mod fiber_coverage;
 pub use fiber_coverage::{
+    QualifiedFiberTraceAtlas, qualify_fiber_trace_atlas,
     FiberTraceBuildLimits, FiberTraceBuild, construct_fiber_trace,
     FiberWorldTraceLimits, FiberWorldTraceResult, QualifiedFiberWorldTrace, qualify_fiber_world_trace,
     FiberBridgeSpec, FiberSeparation, QualifiedFiberComponents, FiberComponentsResult, connect_mixed_fiber_cover,
+    FiberPointConnection,
+    ClosedFiberBranchLimits, OriginalClosedFiberBranch, OriginalClosedFiberTrim,
+    QualifiedClosedFiberBranches, assemble_closed_fiber_branches,
     FiberTransitionResult, QualifiedFiberTransition, TransitionOrientation, qualify_fiber_transition,
+    DiscoveredFiberTransition, FiberTransitionDiscoveryLimits, FiberTransitionDiscoveryResult,
+    TransitionAttempt, discover_fiber_transition,
+    DiscoveredMixedFiberComponents, MixedComponentDiscoveryLimits, MixedComponentDiscoveryResult,
+    MixedTransitionSearch, connect_mixed_fiber_cover_automatic,
     MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
     cover_mixed_fiber_box, cover_mixed_fiber_surfaces,
     CoverageLimits, FiberAtlasCoverageResult, FiberCoverageKind, FiberCoverageNode,

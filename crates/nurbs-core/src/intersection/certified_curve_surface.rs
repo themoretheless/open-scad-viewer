@@ -1,14 +1,23 @@
 //! Original-coefficient curve/surface roots with strict interval Krawczyk proofs.
-//! Boundary roots, tangencies and exhausted cells remain explicitly unresolved.
+//! Natural-boundary roots, tangencies and exhausted cells remain unresolved.
+//! Monotone affine-plane proofs can cross original interior curve knots.
 use crate::{
     Result, check, curve::Curve, distance_bounds::Interval as I, resource, surface::Surface,
 };
 type Vector = [I; 3];
 type Box3 = [[f64; 2]; 3];
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RootProof {
+    InteriorKrawczyk,
+    MonotoneAffinePlane,
+}
 #[derive(Debug)]
 pub struct Root {
+    pub proof: RootProof,
     pub spans: [usize; 3],
-    /// Exact dyadic subcell of the three original knot spans, owning one root.
+    /// Enclosure in normalized original knot spans, owning one root.
+    /// Krawczyk cells are dyadic subdivisions; affine-plane enclosures can
+    /// touch an interior C1 knot and use the closed adjacent span.
     pub normalized_cell: Box3,
     /// Outward natural t/u/v enclosure of that unique root.
     pub parameter_box: Box3,
@@ -359,10 +368,14 @@ pub fn intersections(c: &Curve, s: &Surface, max_cells: usize) -> Result<Report>
             "Certified curve/surface span product exceeds 1024",
         ));
     }
+    let alternate = affine_plane::attempt(c, s, max_cells)?;
+    if let Some(report) = alternate.report {
+        return Ok(report);
+    }
     let mut out = Report {
         roots: vec![],
         unresolved: vec![],
-        cells: 0,
+        cells: alternate.cells,
         excluded: 0,
         complete: false,
     };
@@ -448,6 +461,7 @@ pub fn intersections(c: &Curve, s: &Surface, max_cells: usize) -> Result<Report>
                                 I::new(domain[0][0], domain[0][1])?,
                             )?;
                             out.roots.push(Root {
+                                proof: RootProof::InteriorKrawczyk,
                                 spans: ids,
                                 normalized_cell: cell.normalized,
                                 parameter_box: domain,
@@ -508,3 +522,5 @@ pub fn intersections(c: &Curve, s: &Surface, max_cells: usize) -> Result<Report>
     });
     Ok(out)
 }
+
+mod affine_plane;

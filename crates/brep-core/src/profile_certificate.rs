@@ -9,6 +9,8 @@
 use crate::{Curve, Error, Result};
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
+pub mod material_relation;
+pub mod original_restriction;
 
 mod agreement;
 pub use agreement::{

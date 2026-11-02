@@ -1,0 +1,40 @@
+{
+  "scope": "Whole original side-surface image equality to native rim images times height for the extrusion source family",
+  "status": "ten-focused-tests-passed",
+  "tests_passed": 10,
+  "per_target": [
+    2,
+    2,
+    6
+  ],
+  "log": "tests.log",
+  "proof": [
+    "exact XY tensor independence across height columns",
+    "positive constant vertical weight ratio gives monotone projective height map",
+    "exact closed UV rectangle with full gap-free side and height coverage",
+    "source-bound multi-span agreement or complete bidirectional curve-image agreement",
+    "all actual source side faces and every top segment covered"
+  ],
+  "verified_cases": [
+    "polynomial degree elevation with exact unchanged image",
+    "projective height clock with inverse rational vertical pcurves",
+    "transposed side UV axes and traversal",
+    "unchanged top rim with height-interior warp rejected",
+    "tiny UV endpoint gap rejected",
+    "full-height profile mismatch rejected",
+    "raw source clocks and original indexed ownership replay"
+  ],
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports.rs": "a175a4fb65a011dabb014539e2804e516cf8c1824cd07be510252d451e0ddb9c",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports/rectangle.rs": "98e899280d9c3092d6f97ba1e440cd0b08434a346c1cce65b3fc9f6e9c63b6ce",
+    "crates/brep-core/src/feature_ops/full_round_curved.rs": "d6c658edd0c8d52b9c59a121381b572e002d1ae3fdce8db62f664bba3865a444",
+    "crates/brep-core/tests/full_round_source_supports.rs": "293966231178c1a38b977875069733dd4be80c5edd782e701514ab1b7eb026f9",
+    "crates/brep-core/tests/full_round_raw_binding.rs": "7524286ecff04c61d4c511f269f7a45bcd7328549e04aa29555ad135379b357c"
+  },
+  "limitations": [
+    "Surface IMAGE equality only, not an oriented source solid or arbitrary NURBS carrier certificate",
+    "Caps, original source solid consistency, source/result material inclusion and new-radius fidelity remain open",
+    "No downstream API replacement or runtime Plasticity parity qualification"
+  ],
+  "goal": "active; full original scope preserved"
+}

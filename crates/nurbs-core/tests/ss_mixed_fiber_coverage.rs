@@ -32,11 +32,13 @@ fn essential_mixed_axis_bridge_covers_every_original_root_and_closed_product_cel
     }
 
     assert!(c.report().excluded_cells > 0);
-    assert!(
-        c.nodes()
-            .iter()
-            .any(|n| matches!(n.kind(), Some(ss::MixedCoverageKind::Fiber { index: 2 })))
-    );
+    assert!(c.nodes().iter().any(|n| matches!(
+        n.kind(),
+        Some(
+            ss::MixedCoverageKind::Fiber { index: 2 }
+                | ss::MixedCoverageKind::RootImage { index: 2, .. }
+        )
+    )));
     // Removing the central chart leaves a genuine open interval of original roots.
     let missing = ss::cover_mixed_fiber_surfaces(
         &fs[..2],

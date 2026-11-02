@@ -736,3 +736,23 @@ pub fn offset_preserving_basis(surface:&Surface,distance:f64)->Result<OffsetRepo
     let max_deviation=sampled_deviation(surface,&result,distance,&mut degenerate)?;
     Ok(OffsetReport{surface:result,max_deviation,degenerate_regions:degenerate,exceeds_fold_free_bound:!validity.requested_ok,exact:false})
 }
+
+mod candidate;
+pub use candidate::{CandidateCertificate, CandidateStatus, certify_candidate};
+
+mod mapped;
+pub use mapped::certify_mapped_candidate;
+
+mod quadrilateral;
+pub use quadrilateral::certify_quadrilateral_candidate;
+
+mod parametric;
+pub use parametric::certify_parametric_candidate;
+
+mod proposal;
+pub use proposal::{ProposalLimits, ProposalStop, ProposalAttempt, ProposalReport, propose_parametric_candidate};
+
+pub mod coverage;
+pub mod regions;
+pub mod contact_curve;
+pub mod boundary_contact;

@@ -5,6 +5,7 @@ use crate::{Result, curve::Curve, distance_bounds::Interval, surface::Surface};
 type Poly = Vec<Interval>;
 #[path = "curve_surface_composition/exact_trace.rs"]
 mod exact_trace;
+mod polynomial_trace;
 #[path = "curve_surface_composition/graph_trace.rs"]
 pub(crate) mod graph_trace;
 fn choose(n: usize, k: usize) -> f64 {
@@ -169,7 +170,7 @@ fn span(knots: &[f64], degree: usize, n: usize, range: Interval) -> Option<usize
 }
 /// Homogeneous blossom of the original curve, with interval affine endpoint
 /// mapping. Never round a newly extracted control point before certification.
-fn restricted_ends(c: &Curve, ends: [Interval; 2]) -> Result<Option<Vec<Poly>>> {
+pub(crate) fn restricted_ends(c: &Curve, ends: [Interval; 2]) -> Result<Option<Vec<Poly>>> {
     let range = Interval::new(ends[0].lo.min(ends[1].lo), ends[0].hi.max(ends[1].hi))?;
     let Some(span) = span(&c.knots, c.degree, c.control_points.len(), range) else {
         return Ok(None);
@@ -453,7 +454,7 @@ pub(crate) fn upper_mapped_cell(
     Ok((branches > 0).then_some(maximum))
 }
 
-fn lift_coefficients(
+pub(crate) fn lift_coefficients(
     h: &[Poly],
     net: &[Vec<[Interval; 4]>],
     degrees: [usize; 2],
@@ -511,6 +512,7 @@ fn lift_coefficients(
 pub(crate) fn trace_candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
     p.validate()?;
     s.validate()?;
+    if let Some(c) = polynomial_trace::candidate(p, s) { return Ok(Some(c)); }
     if s.periodic_u || s.periodic_v {
         // Candidate-only view of the same natural-domain basis. Admission
         // still checks the complete original periodic support in lift().

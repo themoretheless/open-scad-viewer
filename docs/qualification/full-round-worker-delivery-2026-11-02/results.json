@@ -1,0 +1,71 @@
+{
+  "status": "local bounded release kernel installed; actual browser diagnostic workers qualified; full parity and production registration open",
+  "kernel_sha256": "c0701cb91cf7b719fad299c8ec1e713a820fea0521dd3150c8f778328c4f49c4",
+  "kernel_bytes": 16225953,
+  "delivery_limit_bytes": 16777216,
+  "limit_unchanged": true,
+  "retained_wasm": "/tmp/rea-full-round-qualified/c0701cb91cf7b719fad299c8ec1e713a820fea0521dd3150c8f778328c4f49c4.wasm",
+  "previous_delivery_backup": "/tmp/rea-full-round-delivery-before",
+  "browser": {
+    "real_workers_started": 5,
+    "real_workers_terminated": 5,
+    "active_worker": null,
+    "artifact_alias_used": false,
+    "source": "actual browser worker and installed normal package",
+    "coverage": [
+      "one and two exact outputs",
+      "native invalid selection refusal",
+      "host cancellation and subsequent recovery",
+      "main event-loop responsiveness",
+      "wrong carrier, encoding and face-binding forgery refusals"
+    ]
+  },
+  "validation": {
+    "wasm_abi_cases": 12,
+    "installed_tests": 59,
+    "svg_pdf_tests": 75,
+    "node_packaging_tests_passed": 17,
+    "node_packaging_tests_skipped": 1,
+    "vue-tsc --noEmit": "passed",
+    "tsc --noEmit -p tsconfig.mcp.json": "passed",
+    "production Vite build": "passed with large-chunk warnings",
+    "WASM package audit": "exact roundtrip; unchanged export names/kinds; no imports"
+  },
+  "size_changes": {
+    "original_optimized_candidate_bytes": 17130275,
+    "font": "byte-identical existing Noto Sans compressed once in WASM; native path unchanged",
+    "panic_locations": "release-WASM compiler file/line/column removed; typed diagnostics and source spans retained; native/debug unchanged",
+    "rejected_variants": "converged passes and per-crate numeric size-profile experiments did not meet the bound; not adopted"
+  },
+  "font_original_sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5",
+  "font_pdf_byte_identical": true,
+  "source_sha256": {
+    "scripts/build-geometry-kernels.mjs": "1a02e10bebcc0e32457c06058ead623c7f5e89dff3a97b77450bd26fbe224497",
+    "scripts/geometry-kernel-cargo.mjs": "28f00da51514a0f263cb88e45ffc1604e86f85f11a0b54c3985f24aab32504cf",
+    "scripts/check-bundled-font-wasm.mts": "dcb8f6af73432e33cf9925ad5679a06fc2bebddca3149ff3c8dd94d54431b281",
+    "tests/geometryKernelCargo.test.mjs": "387e8aa220327cae4d4c5a9f9dc98ccff3d8534ca3ff3814b124878202eef4cd",
+    "tests/exactFullRoundScene.test.ts": "08c687b49197d8fd77705e4b8fe9434c77a71269adc6d0b23874c1482691e57d",
+    "tests/exactFullRoundSnapshot.test.ts": "ca64537e2f17af23a5369faaa02c5f8cf45e5d671ba5ab005d34bad063bd2fc0",
+    "src/services/brepDiagnosticBrowser.ts": "ebdd5d93070ebba7971ee7cb9051aa62f53ed9d56399a2ebc8330b73d0f70270",
+    "src/services/brepDiagnosticProtocol.ts": "5cca78dd7569dde15de9a638a6cb0abca950ff728e848ae60c460736ad2e4e1f",
+    "src/services/brepDiagnosticSnapshot.ts": "efc419301e1897bdc2c691c391fab023d67d93767894f185b263b6e5671fc84b",
+    "tools/browser-qualification/brep-full-round.ts": "7cf99c970a18df2a54c224462a538901f32c24ee243cd0ce65c91b3b02f7f81c",
+    "tools/browser-qualification/brep-full-round.mjs": "f5d03f627366301287cc857c1d6e9df4d044b11135aa52796f1d9972cbc28779",
+    "crates/bridge-svg/Cargo.toml": "91e4ac9d6c815b436b512831f6466c2c126c26a753e19c954aa1b580a332c397",
+    "crates/bridge-svg/src/lib.rs": "c6bba0978e477d58801662ecb066bf6d7f4cc7505c95873caad30d43fc3ccc5d",
+    "crates/bridge-svg/src/drawing_pdf.rs": "b6fbbcd97eaaa270dd92e2ba400fe2fae4eb490ddb51aa8d531deb0d50f03849",
+    "crates/bridge-svg/src/svg/legacy_source.rs": "d6db4c08501b4c2d6fdacf19a5f57696df5a64022fc24a77b75539352095144b",
+    "crates/bridge-svg/src/bundled_font.rs": "32fd083a3ed16f0495e09afd5052cdeaa639cab2f252c083b12871288f841795",
+    "crates/bridge-svg/assets/NotoSans-Regular.ttf.zlib": "f097d12f991b77f40e686bb59931d86e78fb76c84ba3b1a933be4112fd525635",
+    "crates/geometry-bridge/src/svg/raster_normalization.rs": "da2204083dcfefd39d4b1737e2ccab3a41bbff1d917a30790f65fe6205c3fe52"
+  },
+  "clean_baseline": "11 frozen files unchanged",
+  "architecture": "global gate remains red on six other worktree files; no limits/pins raised",
+  "open": [
+    "BRep production-provider registration and full application qualification",
+    "general edit/history/dependency regeneration and lineage transfer",
+    "general rational operations/exchange and wider geometry families",
+    "full regression/distribution/performance qualification",
+    "complete original native-library parity"
+  ]
+}

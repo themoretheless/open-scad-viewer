@@ -877,7 +877,7 @@ fn certify_original_cover(
 mod shared_boundary;
 pub use shared_boundary::certify_shared_natural_boundary;
 mod seam_glued;
-pub use seam_glued::{GluedRectangleReport,certify_seam_glued_rectangle};
+pub use seam_glued::{GluedRectangleReport,certify_seam_glued_rectangle,PeriodicExtrusionReport,certify_periodic_extrusion};
 
 #[path = "surface_injectivity/original_cover.rs"]
 mod original_cover;

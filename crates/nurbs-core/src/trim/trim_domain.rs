@@ -9,6 +9,7 @@ use crate::{
     distance_bounds::{Interval, box_distance, midpoint as mid},
     resource,
 };
+pub mod curve_cover;
 #[cfg(feature = "codec")]
 mod serialization;
 

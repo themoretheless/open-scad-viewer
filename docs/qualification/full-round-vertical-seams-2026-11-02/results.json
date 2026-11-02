@@ -1,0 +1,34 @@
+{
+  "status": "focused qualification; full original scope remains open",
+  "passed": 12,
+  "tests": {
+    "full_round_source_supports": 9,
+    "original_vertical_edge": 3
+  },
+  "source_sha256": {
+    "crates/brep-core/src/profile_certificate/original_restriction.rs": "a6522ce74e895265b05f4d50758293e00e397fe7abb9a71decafb7314e211f34",
+    "crates/brep-core/src/profile_certificate/original_restriction/vertical.rs": "b8e42d46afc85915af5103d5ec453ac31490b56c1d6d89d32a0351c11ae7ff51",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports.rs": "ed074f9ee357129e974ed05b5dc2b9508199d7ba08681dd73edbec399aefb915",
+    "crates/brep-core/src/feature_ops/full_round_curved/source_supports/vertical_seams.rs": "835c664628934f5d5d891b5d9e90d14da6976a94580dc51147ffd551a2007ba9",
+    "crates/brep-core/tests/full_round_source_supports.rs": "386c49d2fc49b5a53a71faa403c2500ef1c80b5f7b784c6571825cee62a0e712",
+    "crates/brep-core/tests/original_vertical_edge.rs": "76d5a088582642c9f52ae5498a5bbd0f3aa7293639acb42c5863b75249cdd1d0"
+  },
+  "clean_baseline": "11 files unchanged",
+  "coverage": [
+    "exact native XY versus both original side positions",
+    "projective native vertical Z map at authored UV endpoints",
+    "opposite physical side traversal",
+    "exact original vertex endpoints",
+    "strict monotonicity and regularity on every original span using complete derivative-root census",
+    "complete original edge census: top, bottom, vertical, without overlap",
+    "rational weights and nonbinary native clocks, both directions",
+    "even stationary root, endpoint stationarity, backtracking, tiny XY bow refusals"
+  ],
+  "open": [
+    "complete oriented original source boundary admission",
+    "side profile regularity and injectivity on actual trimmed carriers",
+    "source/result material relation",
+    "new exact radius fidelity",
+    "general spatial families, full regressions, pipeline and runtime parity"
+  ]
+}

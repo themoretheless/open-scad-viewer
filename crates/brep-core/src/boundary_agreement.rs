@@ -5,6 +5,8 @@ use nurbs_core::{
     curve_surface_agreement::{self, Status},
 };
 
+mod lifts;
+pub(crate) use lifts::periodic_lifts;
 #[derive(Clone, Debug)]
 pub struct BoundaryUse {
     pub face: usize,
@@ -17,7 +19,9 @@ pub struct BoundaryUse {
 }
 #[derive(Clone, Debug)]
 pub struct Report {
-    /// Only edge/lift agreement, not self-intersection or volume validity.
+    /// Every requested use relation was proved. Explicit trim metadata can
+    /// request a subrange; this flag does not grant whole-boundary coverage,
+    /// self-intersection or volume validity.
     pub complete: bool,
     pub cells: usize,
     pub uses: Vec<BoundaryUse>,
@@ -46,55 +50,22 @@ fn trim_nodes(
             ));
         }
     }
-    let fraction = |value: f64, domain: [f64; 2]| {
-        if value == domain[0] {
-            0.
-        } else if value == domain[1] {
-            1.
-        } else {
-            (value - domain[0]) / (domain[1] - domain[0])
-        }
-    };
     let nodes = std::array::from_fn(|end| {
-        std::array::from_fn(|axis| fraction(parameters[axis][end], domains[axis]))
+        std::array::from_fn(|axis| parameters[axis][end])
     });
-    let uv = [
-        coedge.pcurve.evaluate(trim.pcurve_parameter[0])?.point,
-        coedge.pcurve.evaluate(trim.pcurve_parameter[1])?.point,
-    ];
-    let surface_domains = [
-        [
-            face.surface.knots_u[face.surface.degree_u],
-            face.surface.knots_u[face.surface.control_points.len()],
-        ],
-        [
-            face.surface.knots_v[face.surface.degree_v],
-            face.surface.knots_v[face.surface.control_points[0].len()],
-        ],
-    ];
-    for end in 0..2 {
-        for axis in 0..2 {
-            let periodic = [face.surface.periodic_u, face.surface.periodic_v][axis];
-            let domain = surface_domains[axis];
-            let expected = if periodic {
-                ((uv[end][axis] - domain[0]) / (domain[1] - domain[0])).floor() as i32
-            } else {
-                0
-            };
-            if trim.periodic_lift[end][axis] != expected {
-                return Err(Error::new(
-                    "BREP_TRIM_PERIODIC_LIFT",
-                    "Coedge periodic lift does not match its authored pcurve endpoint",
-                ));
-            }
-        }
+    if periodic_lifts(&face.surface, &coedge.pcurve, trim.pcurve_parameter)? != trim.periodic_lift {
+        return Err(Error::new(
+            "BREP_TRIM_PERIODIC_LIFT",
+            "Coedge periodic lift does not match its authored pcurve endpoint",
+        ));
     }
     Ok(Some(nodes))
 }
 
 /// A shared budget includes both uses of each edge. Unprocessed uses are
 /// explicitly unresolved. The model is immutable. Structural validation remains
-/// mandatory, while full-interval checks replace sampled edge/lift admission.
+/// mandatory. Every requested relation receives a continuous check; an authored
+/// trim subrange remains partial and does not certify the rest of the boundary.
 pub fn verify(model: &Model, max_cells: usize) -> Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
     verify_for_defects(model, max_cells)
@@ -135,33 +106,7 @@ pub(crate) fn verify_for_defects(model: &Model, max_cells: usize) -> Result<Repo
                 let nodes = trim_nodes(model, face, coedge)?;
                 if report.cells < max_cells {
                     let budget = (max_cells - report.cells).min(100_000);
-                    let checked = if let Some(nodes) = nodes {
-                        let checked = curve_surface_agreement::verify_oriented_correspondence(
-                            &model.edges[coedge.edge].curve,
-                            &coedge.pcurve,
-                            &face.surface,
-                            &nodes,
-                            coedge.reversed,
-                            model.tolerance_mm,
-                            budget,
-                        )?;
-                        (checked.status, checked.cells, None, None)
-                    } else {
-                        let checked = curve_surface_agreement::verify(
-                            &model.edges[coedge.edge].curve,
-                            &coedge.pcurve,
-                            &face.surface,
-                            coedge.reversed,
-                            model.tolerance_mm,
-                            budget,
-                        )?;
-                        (
-                            checked.status,
-                            checked.cells,
-                            checked.witness,
-                            checked.witness_distance,
-                        )
-                    };
+                    let checked = check_use(model, face, coedge, nodes, budget)?;
                     report.cells += checked.1;
                     entry.status = checked.0;
                     entry.witness = checked.2;
@@ -174,6 +119,62 @@ pub(crate) fn verify_for_defects(model: &Model, max_cells: usize) -> Result<Repo
     }
     Ok(report)
 }
+fn check_use(
+    model: &Model,
+    face: &crate::Face,
+    coedge: &crate::Coedge,
+    nodes: Option<[[f64; 2]; 2]>,
+    budget: usize,
+) -> Result<(Status, usize, Option<f64>, Option<[f64; 2]>)> {
+    let checked = if let Some(nodes) = nodes {
+        let checked = curve_surface_agreement::verify_parameter_correspondence(
+            &model.edges[coedge.edge].curve,
+            &coedge.pcurve,
+            &face.surface,
+            &nodes,
+            coedge.reversed,
+            model.tolerance_mm,
+            budget,
+        )?;
+        (checked.status, checked.cells, None, None)
+    } else {
+        let checked = curve_surface_agreement::verify(
+            &model.edges[coedge.edge].curve,
+            &coedge.pcurve,
+            &face.surface,
+            coedge.reversed,
+            model.tolerance_mm,
+            budget,
+        )?;
+        (
+            checked.status,
+            checked.cells,
+            checked.witness,
+            checked.witness_distance,
+        )
+    };
+    Ok(checked)
+}
+/// One original use, already structurally validated by the calling owner.
+pub(crate) fn verify_authored_use(
+    model: &Model,
+    face: usize,
+    wire: usize,
+    slot: usize,
+    budget: usize,
+) -> Result<(Status, usize)> {
+    let face = &model.faces[face];
+    let coedge = &model.loops[wire].coedges[slot];
+    let nodes = trim_nodes(model, face, coedge)?;
+    let checked = check_use(model, face, coedge, nodes, budget)?;
+    Ok((checked.0, checked.1))
+}
+#[derive(Clone, Debug)]
+pub struct ExactPointWitness {
+    /// Normalized forward pcurve clock; C alone follows the coedge reversal.
+    pub normalized_parameter: f64,
+    pub result: cad_predicates::SplinePointLiftDecision,
+}
 #[derive(Clone, Debug)]
 pub struct ExactUse {
     pub face: usize,
@@ -182,6 +183,8 @@ pub struct ExactUse {
     pub edge: usize,
     /// None for an unsupported representation or an unvisited use.
     pub decision: Option<cad_predicates::BezierIdentityDecision>,
+    /// Point-only diagnostic. Equality here never grants whole-edge identity.
+    pub point_witness: Option<ExactPointWitness>,
 }
 #[derive(Clone, Debug)]
 pub struct ExactReport {
@@ -191,6 +194,16 @@ pub struct ExactReport {
     pub all_joins_exact: bool,
     pub work: u64,
     pub uses: Vec<ExactUse>,
+}
+impl ExactReport {
+    /// A whole-curve or point-only exact difference refutes complete identity.
+    /// Its absence does not prove equality on any unvisited interval.
+    pub fn has_exact_counterexample(&self) -> bool {
+        self.uses.iter().any(|u| {
+            u.decision.as_ref().is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Different)
+                || u.point_witness.as_ref().is_some_and(|w| w.result.point_equality == cad_predicates::BezierIdentity::Different)
+        })
+    }
 }
 /// Exact edge/lift identity, distinct from tolerance agreement. This alone is
 /// not a certificate of valid trim regions, embedding or solid volume.
@@ -218,7 +231,7 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
             report.joins.push((face_id,wire,closed));
             for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
                 jobs.push((report.uses.len(),face_id,coedge));
-                report.uses.push(ExactUse{face:face_id,wire,coedge:coedge_id,edge:coedge.edge,decision:None});
+                report.uses.push(ExactUse{face:face_id,wire,coedge:coedge_id,edge:coedge.edge,decision:None,point_witness:None});
             }
         }
     }
@@ -233,6 +246,13 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
             curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
         }else{None};
         if let Some(d)=&decision{report.work+=d.work_used;}
+        if decision.is_none() && coedge.trim().is_none() && report.work<max_work {
+            let witness=curve_surface_agreement::verify_exact_point(
+                &model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,
+                coedge.reversed,0.5,max_work-report.work)?;
+            if let Some(w)=&witness {report.work+=w.work_used;}
+            report.uses[index].point_witness=witness.map(|result|ExactPointWitness{normalized_parameter:0.5,result});
+        }
         report.all_equal &=decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal);
         report.uses[index].decision=decision;
     }
@@ -415,7 +435,7 @@ mod tests {
         }
     }
     #[test]
-    fn lifted_periodic_uv_is_diagnosable_without_admitting_regular_operations() {
+    fn lifted_periodic_uv_uses_the_same_wrap_in_validation_and_diagnostics() {
         let mut model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
         let face = &mut model.faces[0];
         face.surface
@@ -431,12 +451,20 @@ mod tests {
             }
         }
         let before = format!("{model:?}");
-        assert!(model.validate().is_err());
+        assert!(model.validate().is_ok());
         let result = verify(&model, 10_000).unwrap();
         assert!(result.complete);
         assert_eq!(result.uses.len(), 24);
-        assert!(model.validate().is_err());
+        assert!(model.validate().is_ok());
         assert_eq!(format!("{model:?}"), before);
+        // A literal whole-period lift is valid. A fractional shift changes
+        // the represented boundary and must still fail both validators.
+        let mut displaced = model.clone();
+        for coedge in &mut displaced.loops[wire].coedges {
+            for uv in &mut coedge.pcurve.control_points { uv[0] += 0.25; }
+        }
+        assert!(displaced.validate().is_err());
+        assert!(!verify(&displaced, 10_000).unwrap().complete);
     }
     #[test]
     fn sampled_mismatch_gets_a_local_diagnostic_and_bad_indices_still_refuse() {

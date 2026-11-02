@@ -1,0 +1,184 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, optional unique topology counts, exact bounding box, volume and OCCT tessellation. Does not certify all STEP inputs.",
+  "previewProduced": false,
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket-source",
+      "stepSha256": "effeb0fa7d62cf58f082144b6235b7a18d91caee753503f17095206aad8308fe",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "uniqueEdges": 18,
+      "uniqueVertices": 12,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 6500.0,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 0.0,
+      "volumeIntegrationRelativeError": 1.860330071808262e-16,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "bracket-edited-rounded",
+      "stepSha256": "10877d1e2b3ec8c654076adbd7eac22af7e81d478b69846e9c0ab6eed0b7800d",
+      "valid": true,
+      "solids": 1,
+      "faces": 9,
+      "uniqueEdges": 21,
+      "uniqueVertices": 14,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          2.9999998999999997,
+          -2.0000001,
+          0.9999999
+        ],
+        [
+          43.0000001,
+          28.0000001,
+          21.0000001
+        ]
+      ],
+      "volumeMm3": 6495.707963778792,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 5.108431651024148e-07,
+      "volumeIntegrationRelativeError": 2.8182336933314633e-14,
+      "passed": true,
+      "previewTriangles": 96
+    },
+    {
+      "name": "flange-source",
+      "stepSha256": "854d461679ad06b970a74cdb0741d143992c3d289bbf9c0772fec56dfe169646",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "uniqueEdges": 24,
+      "uniqueVertices": 16,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          -20.000000100000005,
+          -20.000000100000005,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          20.000000100000005,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 7068.58347168089,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 1.1038555385312065e-06,
+      "volumeIntegrationRelativeError": 1.1087894236733686e-13,
+      "passed": true,
+      "previewTriangles": 608
+    },
+    {
+      "name": "flange-edited-rounded",
+      "stepSha256": "d29ae7265b11dc313ed2452862ec0838355ffff5740a886b15c87799bb05220f",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "uniqueEdges": 40,
+      "uniqueVertices": 20,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          -17.00000010000001,
+          -22.00000010000001,
+          0.9999999
+        ],
+        [
+          23.000000100000012,
+          18.00000010000001,
+          7.000000100000003
+        ]
+      ],
+      "volumeMm3": 7041.916995649315,
+      "maxBoundsErrorMm": 1.0000001182675078e-07,
+      "volumeErrorMm3": 1.6495405361638404e-06,
+      "volumeIntegrationRelativeError": 2.485415135115788e-16,
+      "passed": true,
+      "previewTriangles": 7406
+    },
+    {
+      "name": "enclosure-source",
+      "stepSha256": "397ee9f5787c0a6b786d565f0689e5a2ec6f68560be54f5accd5e889b9ae3bec",
+      "valid": true,
+      "solids": 1,
+      "faces": 14,
+      "uniqueEdges": 32,
+      "uniqueVertices": 20,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 7151.999999999999,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.094947017729282e-13,
+      "volumeIntegrationRelativeError": 3.215750735518175e-16,
+      "passed": true,
+      "previewTriangles": 36
+    },
+    {
+      "name": "enclosure-edited-rounded",
+      "stepSha256": "95ab2f2c299c7b83d1ce0fc2f12b16a8aa39b5d81cff51da0b5fe5b6125294d6",
+      "valid": true,
+      "solids": 1,
+      "faces": 18,
+      "uniqueEdges": 41,
+      "uniqueVertices": 27,
+      "topologyPassed": null,
+      "topologyExpectations": {},
+      "boundsMm": [
+        [
+          2.9999998999999997,
+          -2.0000001,
+          0.9999999
+        ],
+        [
+          43.0000001,
+          28.0000001,
+          21.0000001
+        ]
+      ],
+      "volumeMm3": 7147.707963967137,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 6.99188603903167e-07,
+      "volumeIntegrationRelativeError": 4.6669710439609924e-14,
+      "passed": true,
+      "previewTriangles": 158
+    }
+  ]
+}

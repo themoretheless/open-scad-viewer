@@ -4,6 +4,8 @@
 //! contact with trimmed faces, G1/G2 continuity, or a fillet topology change.
 use crate::{Result, check, distance_bounds::Interval as I, numeric, surface::Surface};
 
+mod coordinate_plane;
+use coordinate_plane::coordinate_plane;
 #[derive(Clone, Copy, Debug)]
 pub struct Bounds {
     pub image: Option<[[f64; 2]; 3]>,
@@ -186,6 +188,17 @@ fn bounds_on(
         return Ok(out);
     }
     out.reason = "source-normal-unresolved";
+    if let Some((axis, sign, c)) = coordinate_plane(s, normal.map(|r| I { lo: r[0], hi: r[1] })) {
+        let mut image = image;
+        let value = I::point(c).add(I::point(if sign > 0. { distance } else { -distance }))?;
+        image[axis] = [value.lo, value.hi];
+        let mut normals = [[0.; 2]; 3];
+        normals[axis] = [sign; 2];
+        out.image = Some(std::array::from_fn(|k| image[k]));
+        out.unit_normals = Some(normals);
+        out.reason = "source-normal-offset-enclosure";
+        return Ok(out);
+    }
     let Some(normalized) = normalize(normal.map(|[lo, hi]| I { lo, hi }))? else {
         return Ok(out);
     };
@@ -276,6 +289,17 @@ fn jacobian_bounds_on(
     if distance != 0. {
         out.reason = "source-normal-unresolved";
         let raw = interval_cross(source.first[0], source.first[1])?;
+        if let Some((axis, sign, c)) = coordinate_plane(s, raw) {
+            image[axis] =
+                I::point(c).add(I::point(if sign > 0. { distance } else { -distance }))?;
+            // The exact unit normal is constant on the whole qualified box.
+            // Its derivative is zero; the original source jets remain bounds
+            // for every actual normal-offset derivative, including knot sides.
+            out.image = Some(image.map(|x| [x.lo, x.hi]));
+            out.derivatives = Some(derivatives.map(|row| row.map(|x| [x.lo, x.hi])));
+            out.reason = "offset-incident-span-jets";
+            return Ok(out);
+        }
         let Some(normal) = normalize(raw)? else {
             return Ok(out);
         };
@@ -369,7 +393,7 @@ pub fn evaluate(s: &Surface, uv: [f64; 2], distance: f64) -> Result<Evaluation> 
     Ok(out)
 }
 
-fn source_continuous_for_offset(s: &Surface, domain: [[f64; 2]; 2]) -> bool {
+pub(super) fn source_continuous_for_offset(s: &Surface, domain: [[f64; 2]; 2]) -> bool {
     let counts = [s.control_points.len(), s.control_points[0].len()];
     let degrees = [s.degree_u, s.degree_v];
     let knots = [&s.knots_u, &s.knots_v];
@@ -482,7 +506,7 @@ fn certify_contact_box(
     max_spans: usize,
 ) -> Result<crate::surface_contact::Verdict> {
     use crate::surface_contact::{
-        section_krawczyk_parameterized, SectionVerdict, Verdict, Witness,
+        SectionVerdict, Verdict, Witness, section_krawczyk_parameterized,
     };
     check(
         fixed_axis < 2 && fixed_interval.iter().all(|v| v.is_finite()),

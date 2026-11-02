@@ -1,3 +1,4 @@
+import { validateFullRoundExactNode } from './validateFullRoundExactNode'
 import { SEMANTIC_PROGRAM_LIMITS } from '../../core/semanticProgram'
 import type { SemanticDynamicSlot, SemanticIdentityValue, SemanticNode, SemanticOccurrence, SemanticStaticOperation, SemanticValueType } from '../../core/semanticProgram'
 import type { SemanticModuleActivationAnchor, SemanticOccurrenceValidationIndex } from '../semanticProgramValidator'
@@ -173,6 +174,9 @@ export function validateNodes(value: unknown, contract: string): readonly Semant
         booleanValue(node.cut, `${path}.cut`)
         break
       }
+      case 'full-round-exact':
+        validateFullRoundExactNode(node, nodes, index, contract, path, valueType)
+        break
       case 'offset': {
         exactKeys(node, ['id', 'kind', 'valueType', 'input', 'distance'], path)
         const input = nodeReference(node.input, `${path}.input`, index)

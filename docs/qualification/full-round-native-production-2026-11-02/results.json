@@ -1,0 +1,29 @@
+{
+  "status": "native operation production qualified; frontend integration and full parity open",
+  "rust_tests_passed": 16,
+  "new_tests": 3,
+  "coverage": [
+    "native operation and occurrence identity digest admission",
+    "exact Full Round materializer frontier and new scene identity",
+    "malformed face selection refusal",
+    "actual geometry construction through public graph router with authenticated operation/occurrence rows and capability closure",
+    "13 existing production replay regression tests"
+  ],
+  "checks": [
+    "11 frozen clean files unchanged",
+    "git diff --check passed"
+  ],
+  "source_sha256": {
+    "crates/geometry-bridge/src/brep_production/mod.rs": "e01807090bbfda0db0483b4c87f7e852983061e544b36959a18659caca18a091",
+    "crates/geometry-bridge/src/brep_production/tests.rs": "94d25bdffbb8d0e64fd1b274ad058bf3849a7912732e5b423e2ff678bc0765a4"
+  },
+  "open": [
+    "TypeScript SemanticNode union, validateNodes and producer names",
+    "host production rule and normal/interrupted map replay",
+    "language/frontend lowering and schema negotiation",
+    "exact result consumers and downstream operations",
+    "new WASM/package/worker qualification",
+    "complete original library parity"
+  ],
+  "scope": "Native authored fixture, not a frontend-lowered/source-attested fixture. Earlier WASM receipts do not qualify this change."
+}

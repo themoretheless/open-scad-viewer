@@ -1,0 +1,9 @@
+{
+  "kernel-informed/Cargo.toml": "ce7d64c28d0dd2e692aded11ec78decf303cb44b549f0bae56894c4bde294cba",
+  "kernel-informed/src/brep.rs": "fe0c36ccefdd8bf9ae557194eb666cf4938d06e0ad21cf7b517e85e86f599007",
+  "kernel-informed/src/lib.rs": "88b59f436eb4e43d1c464c4c281696384704b0b0524b1dd11428b82e4750b30f",
+  "kernel-informed/src/loft.rs": "e57317668b68bb4fbed0ed13e96a7ccf4ec4b4199b0effe2f07f815c8a8734aa",
+  "kernel-informed/src/planar.rs": "9fe13cfccd1c0894d2d08f902242928441bff8169a5f7064fb77e57427e46882",
+  "kernel-informed/tests/kernel.rs": "2c3cf46ee2c7dde04b737055a9ffe148f848a36d9f83966575ef0b05c2c180a9",
+  "kernel-informed/examples/compare_kernels.rs": "5bfe83bf8ab01603bea387c96daec016c9aef50afc4eec447f7736c028ae929b"
+}

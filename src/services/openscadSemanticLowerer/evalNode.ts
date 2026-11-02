@@ -1,3 +1,5 @@
+import { evalProjection } from './evalProjection'
+import { evalFullRoundExact } from './evalFullRoundExact'
 import { hasOpenScadViewportModifier } from '../openscadCompiler'
 import type { CallNode, Value } from '../openscadCompiler'
 import { MAX_EXTRUDE_SLICES, MAX_SHAPES, StableViewportRootSelection, enterStableStatementScope, evaluateSequentialBindings, resolveStableExpressionArguments, stableIterable } from '../openscadSemanticLowerer'
@@ -346,20 +348,8 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
         kind: 'rotate-extrude-polygonal', valueType, input: profile.node, angleDegrees, radialSegments: segments,
       }, profile.color)]
     }
-    case 'projection': {
-      const cut = arg(node, 'cut', 0, false, ctx) === true
-      const occurrence = invoke(node, ctx)
-      const shapes = frameChildren(node, node.children, occurrence, ctx)
-      return shapes.map(shape => {
-        if (shape.dimension !== 'solid3') evaluationError(ctx, node.p, 'projection() requires 3D children')
-        return ctx.builder.produce(occurrence, {
-          kind: 'projection',
-          valueType: { ...nodeValueType(shape, ctx), geometryKind: 'region', space: 'd2' },
-          input: shape.node,
-          cut,
-        }, shape.color)
-      })
-    }
+    case 'full_round_exact': return evalFullRoundExact(node, ctx)
+    case 'projection': return evalProjection(node, ctx)
     case 'offset': {
       const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
       const occurrence = invoke(node, ctx)

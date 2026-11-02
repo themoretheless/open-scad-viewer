@@ -6,6 +6,7 @@ import RoundSolidOptions from '../components/RoundSolidOptions.vue'
 import {sourceBodyRecordInspectionOptions} from '../services/sourceBodyArchive'
 const ExpressionShellCheck=defineAsyncComponent(()=>import('../components/ExpressionShellCheck.vue'))
 const ProfileBridgeCheck=defineAsyncComponent(()=>import('../components/ProfileBridgeCheck.vue'))
+const SourceGraphG2Preview=defineAsyncComponent(()=>import('../components/SourceGraphG2Preview.vue'))
 const SourceBodyFailureNotice=defineAsyncComponent(()=>import('../components/SourceBodyFailureNotice.vue'))
 import type {ExpressionDisplayReport} from '../services/expressionDisplay'
 import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
@@ -23,6 +24,7 @@ import SceneObjectControls from '../components/SceneObjectControls.vue'
 const SceneVirtualList=defineAsyncComponent(()=>import('../components/SceneVirtualList.vue'))
 import { connectedEdgeChain } from '../services/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.vue'
+import RunoutControls from '../components/RunoutControls.vue'
 import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
 const SketchDimensionPanel=defineAsyncComponent(()=>import('../components/SketchDimensionPanel.vue'))
@@ -503,6 +505,7 @@ const selectedBrepBodies = computed(() => selectedBodies.value.filter(b=>b.brep)
 const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
+const sourceGraphDisplay=shallowRef<{lines:[number,number,number][][];witness:[number,number,number]|null}|null>(null)
 const profileBridgePanel=ref<InstanceType<typeof ProfileBridgeCheck>|null>(null)
 const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../services/nurbsSurface').NurbsSurface,import('../services/nurbsSurface').NurbsSurface]:null)
 type SolidTopology=import('../services/mainSolidProtocol').MainSolidResults['topology']
@@ -893,6 +896,8 @@ watch(() => [props.open, kernelReady.value, smoothDisplay.value, renderBodies.va
   refreshDisplayPreparation(advancedPreview.value.document)
 }, { flush: 'pre', immediate: true })
 const runoutProblemCurve=computed(()=>advancedOp.value==='nurbs-runout'&&advancedPreview.value.rawError.includes('RUNOUT_TARGET')?surfaceInputs.value[2]:undefined)
+
+
 const { sourceDisplayResults, sourceDisplayErrors, sourceDisplayPending, sourceEdgeSelection, sourceEdgeHover, cancelSourceDisplay, refreshSourceDisplay, pickSourceEdge, pickSourceBody, sourceDisplayEdges, sourceDisplayFaces, sourceUnresolvedCount, sourceUnresolvedBoxes, sourceDisplayEndpointBoxes } = useSourceDisplay({ camera, cancelCommandState, document, edgeIndex, edgeIndexes, extraSelection, faceIndex, hovered: () => hovered, kernelReady: () => kernelReady, mode, objectInView, objectSelectable, openingFaces, project, props, selection, tool })
 const featureEdges=computed(()=>authoredEdges.value.map(edge=>({i:edge.index,id:edge.id,points:edge.points.map(point=>project(point,'3d').join(',')).join(' ')})))
 const splitPlanePoints=computed(()=>{
@@ -2411,6 +2416,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
                 <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
               </g>
+              <g v-if="pane==='3d' && sourceGraphDisplay" data-diagnostic="source-graph-preview" pointer-events="none" fill="none" stroke="#77eac5" stroke-width="1.5">
+                <polyline v-for="(line,i) in sourceGraphDisplay.lines" :key="i" :points="line.map(p=>project(p,'3d').join(',')).join(' ')" vector-effect="non-scaling-stroke" />
+                <circle v-if="sourceGraphDisplay.witness" :cx="project(sourceGraphDisplay.witness,'3d')[0]" :cy="project(sourceGraphDisplay.witness,'3d')[1]" :r="views['3d']/100" fill="#ff647c" stroke="#ff647c" vector-effect="non-scaling-stroke" data-diagnostic="source-graph-radius-witness"><title>{{ label('Нарушение целевого радиуса','Target radius violation') }}</title></circle>
+              </g>
               <g v-if="pane==='3d' && (advancedOp==='nurbs-match'||advancedOp==='nurbs-prepare')" pointer-events="none" data-diagnostic="surface-match-boundaries"><polyline v-for="line in surfaceMatchLines" :key="line.key" :points="line.points" fill="none" :stroke="line.color" stroke-width="3" vector-effect="non-scaling-stroke" /></g>
               <g v-if="pane === '3d' && extrusionHandle" class="height-handle" @pointerdown.stop="dragHeight">
                 <line :x1="extrusionHandle.base[0]" :y1="extrusionHandle.base[1]" :x2="extrusionHandle.top[0]" :y2="extrusionHandle.top[1]" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" />
@@ -2642,16 +2651,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <output v-if="nurbsReduction?.value">{{ label('Верхняя граница отклонения: ','Deviation upper bound: ')+nurbsReduction.value.certificate.hausdorffErrorUpper }} mm</output>
                 <small>{{ label('Применение доступно только при подтверждённом допуске. ID и исходная геометрия в истории сохраняются.','Apply requires an accepted tolerance certificate. Identity and the original geometry in history are preserved.') }}</small>
               </template>
-              <section v-if="advancedOp==='nurbs-runout'" class="runout-controls">
-                <small>{{ label('Создаётся отдельная переходная поверхность. Исходные поверхности сохраняются.','Creates an independent transition surface and preserves the source surfaces.') }}</small>
-                <label v-for="(role,i) in [label('Исходная поверхность','Source surface'),label('Плоский торец','Planar end'),label('Граница на торце','End boundary')]" :key="role">{{ role }}<select v-model="surfaceInputs[i]" :aria-label="role" :aria-invalid="(i===2 && !!runoutProblemCurve)||(i===1 && advancedPreview.rawError.includes('affine plane'))"><template v-if="i<2"><option v-for="s in document.surfaces??[]" :key="s.id" :value="s.id">{{ s.name }}</option></template><template v-else><option v-for="c in (document.curves??[]).filter(c=>c.curve.controlPoints[0]?.length===3)" :key="c.id" :value="c.id">{{ c.name }}</option></template></select></label>
-                <label>{{ label('Край исходной поверхности','Source edge') }}<select v-model="advanced.matchBoundaryA" :aria-label="label('Край исходной поверхности','Source edge')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
-                <label>{{ label('Положение шва, %','Seam position, %') }}<input v-model.number="advanced.runoutPosition" type="number" min="0" max="100" step="1" :aria-label="label('Положение шва, %','Seam position, %')"></label>
-                <label>{{ label('Длина касательных, мм','Tangent length, mm') }}<CadQuantityInput v-model="advanced.runoutTangentLength" kind="length" :locale="locale" :min="0.000001" :aria-label="label('Длина касательных, мм','Tangent length, mm')" @validity="quantityValidity('runoutTangentLength',$event)" /></label>
-                <label><input v-model="advanced.runoutFlip" type="checkbox">{{ label('Обратить сторону перехода','Reverse transition side') }}</label>
-                <label><input v-model="advanced.matchReverse" type="checkbox">{{ label('Обратить направление границы','Reverse boundary direction') }}</label>
-                <output v-if="surfaceBuildResult?.runoutReport" data-testid="runout-report">{{ surfaceBuildResult.runoutReport.withinTolerance?label('G2 подтверждена по всей длине обоих швов','G2 confirmed over both complete seams'):label('Гладкость не подтверждена; измените параметры','Smoothness unproven; adjust parameters') }}</output>
-              </section>
+              <RunoutControls v-if="advancedOp==='nurbs-runout'" :label="label" :locale="locale" :surfaces="document.surfaces??[]" :curves="document.curves??[]" :curve-invalid="!!runoutProblemCurve" :plane-invalid="advancedPreview.rawError.includes('affine plane')" :report="surfaceBuildResult?.runoutReport"
+                v-model:inputs="surfaceInputs" v-model:boundary="advanced.matchBoundaryA" v-model:position="advanced.runoutPosition" v-model:tangent-length="advanced.runoutTangentLength" v-model:flip="advanced.runoutFlip" v-model:reverse="advanced.matchReverse" @length-validity="quantityValidity('runoutTangentLength',$event)" />
               <template v-if="advancedOp==='nurbs-loft'||advancedOp==='nurbs-sweep'||advancedOp==='nurbs-patch'">
                 <small v-if="advancedOp==='nurbs-patch'">{{ label('Низ и верх идут вдоль U, левая и правая — вдоль V. Соедините концы и согласуйте веса.','Bottom/top follow U; left/right follow V. Connect endpoints and match weights.') }}</small>
                 <CoonsPreparationControls v-if="advancedOp==='nurbs-patch'" v-model:enabled="advanced.patchPrepare" v-model:budget="advanced.patchError" :locale="locale" :reports="surfaceBuildResult?.patchReports" @validity="quantityValidity('patchError',$event)" />
@@ -2710,6 +2711,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div v-if="pane==='3d' && selectedNurbs && (!commandActive || pointEditActive || nativeNurbsPending)" class="operation-card nurbs-card">
               <CurveOffsetConstructionInfo :value="selectedNurbsCurve?.offsetConstruction" :locale="locale" :curves="document.curves??[]" :ids="selectedIds" @result="currentChain=$event" />
               <button v-if="selectedCurvePair || selectedSurfacePair" class="primary" @click="matchSelectedG1">{{ selectedSurfacePair?label('G1/G2: A → B','G1/G2: A → B'):label('G1: вторую к первой','G1: match second to first') }}</button>
+              <SourceGraphG2Preview v-if="profileBridgeSurfaces" :surfaces="profileBridgeSurfaces" :active="props.open&&!commandActive" :ru="ru" @display="sourceGraphDisplay=$event" />
               <ProfileBridgeCheck :ref="el => profileBridgePanel = el as InstanceType<typeof ProfileBridgeCheck> | null" v-if="profileBridgeSurfaces" :surfaces="profileBridgeSurfaces" :active="props.open&&!commandActive" :ru="ru" />
               <section v-if="selectedSurfacePair" aria-label="surface-distance" class="body-diagnostics">
                 <button @click="surfaceDistanceOpen=!surfaceDistanceOpen" :aria-pressed="surfaceDistanceOpen">{{ label('Расстояние между поверхностями','Distance between surfaces') }}</button>

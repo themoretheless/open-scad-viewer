@@ -14,7 +14,8 @@
     "interval_newton",
     "sturm",
     "core",
-    "numerics"
+    "numerics",
+    "bernstein_interpolation"
   ],
   "curves": [
     "primitives",
@@ -44,6 +45,8 @@
     "worm"
   ],
   "surfaces": [
+    "constrained_surface",
+    "polyhedral_spline",
     "function_surface",
     "boundary_fill",
     "coons",
@@ -116,7 +119,9 @@
     "surface_g2_pcurves",
     "surface_g1_pcurves",
     "corner_blend",
-    "radius_transition"
+    "radius_transition",
+    "profile_section_bridge",
+    "profile_expression_bernstein"
   ],
   "offsets": [
     "curve_offset",
@@ -177,7 +182,11 @@
     "surface_coordinate_flow",
     "surface_normal_trace",
     "curve_secant_trace",
-    "surface_collar"
+    "surface_collar",
+    "polar_surface_differential",
+    "rational_pole_differential",
+    "surface_boundary_secant",
+    "surface_weight_profile"
   ],
   "parameterization": [
     "curve_pullback",
@@ -197,7 +206,8 @@
     "boundary_partition",
     "bezier_extraction",
     "trim",
-    "periodic_trim"
+    "periodic_trim",
+    "curve_coordinate_clock"
   ],
   "validation": [
     "affine_volume",
@@ -238,7 +248,12 @@
     "surface_self_chord",
     "surface_self_chord_coverage",
     "certificates",
-    "skin_radius"
+    "skin_radius",
+    "profile_projection_jacobian",
+    "profile_projected_jordan",
+    "factored_surface_normals",
+    "profile_expression_radius",
+    "synchronized_boundary_normals"
   ],
   "meshing": [
     "curve_tessellation",

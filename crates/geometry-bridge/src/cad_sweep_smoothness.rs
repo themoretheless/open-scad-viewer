@@ -223,3 +223,30 @@ pub(crate) fn profile_value(r: &sweep_smoothness::ProfileReport) -> Value {
         "stationContinuity":r.station_continuity,"capContinuity":r.cap_continuity,
         "fullBoundarySmoothnessCertified":false})
 }
+
+/// Local mapped-seam evidence cannot stand in for complete source/global proof.
+pub fn diagnose_mapped(v:Value)->Result<Value>{ diagnose_seam(v,false) }
+pub fn diagnose_auto(v:Value)->Result<Value>{ diagnose_seam(v,true) }
+fn diagnose_seam(v:Value,automatic:bool)->Result<Value>{
+    let patches:[nurbs_core::surface::Surface;2]=field(&v,"patches")?;
+    let boundaries:[String;2]=field(&v,"boundaries")?;
+    let order=field(&v,"order")?;
+    let scale=field(&v,"normalScale")?;
+    let max_work=field(&v,"maxExactWork")?;
+    let p=if automatic {
+        nurbs_core::continuity::inspect_surface_projective_strip_jets(
+            &patches[0],&patches[1],&boundaries[0],&boundaries[1],order,scale,max_work)?
+    }else{
+        let map=field(&v,"parameterMap")?;
+        nurbs_core::continuity::inspect_surface_mapped_projective_strip_jets(
+            &patches[0],&patches[1],&boundaries[0],&boundaries[1],order,scale,&map,max_work)?
+    };
+    Ok(json!({"scope":if automatic{"automatic-map-original-seam-only"}else{"authored-map-original-seam-only"},
+        "mapSource":if automatic{"automatic-exact-proof"}else{"authored-exact-proof"},"certified":p.certified,
+        "seamG1Certified":p.certified,"seamG2Certified":p.certified&&order==2,
+        "exactIdentity":p.exact_identity,"affineParameterIdentity":p.affine_parameter_identity,
+        "regularityCertified":p.regularity_certified,"exactWork":p.work,"reason":p.reason,
+        "model":null,"continuousBound":false,"originalGlobalCertified":false,"solidCertified":false,
+        "fullBoundaryG1Certified":false,"fullBoundaryG2Certified":false,
+        "jointContinuousGlobalCertified":false,"jointContinuousGlobalG1Certified":false,"jointContinuousGlobalG2Certified":false}))
+}

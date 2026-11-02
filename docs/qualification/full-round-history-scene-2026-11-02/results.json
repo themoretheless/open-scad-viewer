@@ -1,0 +1,21 @@
+{
+  "status": "scene mesh edit API qualified on installed WASM; editor command wiring remains open",
+  "wasmSha256": "e552c5d978af4690563c20211a9e40e745b87a832fe265129d5ff72ee5523fac",
+  "testsPassed": 2,
+  "typecheck": "passed",
+  "coverage": [
+    "source rebase changes actual mesh and snapshot",
+    "entity identity retained; old face reference becomes stale",
+    "input immutable on success and native refusal",
+    "history retained through existing scene serialization",
+    "undo restores original exact geometry and mesh identity",
+    "redo survives storage; display sampling independent of exact revision",
+    "valid history of another current body refuses"
+  ],
+  "remaining": [
+    "editor command/store wiring and aggregate scene metrics",
+    "worker history-edit request and cancellation qualification",
+    "general multi-run provenance lineage",
+    "general dependency history and complete original Plasticity parity scope"
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "passed": true,
+  "installedPackage": true,
+  "kernel": {
+    "sha256": "c0701cb91cf7b719fad299c8ec1e713a820fea0521dd3150c8f778328c4f49c4",
+    "byteLength": 16225953
+  },
+  "browser": "151.0.7922.34",
+  "workerUrls": [
+    "http://127.0.0.1:4189/assets/brepDiagnostic.worker-2hxNSWv5.js",
+    "http://127.0.0.1:4189/assets/brepDiagnostic.worker-2hxNSWv5.js",
+    "http://127.0.0.1:4189/assets/brepDiagnostic.worker-2hxNSWv5.js",
+    "http://127.0.0.1:4189/assets/brepDiagnostic.worker-2hxNSWv5.js",
+    "http://127.0.0.1:4189/assets/brepDiagnostic.worker-2hxNSWv5.js"
+  ],
+  "result": {
+    "single": {
+      "identity": {
+        "protocol": "brep-semantic-diagnostic-v1",
+        "diagnosticOnly": true,
+        "qualification": "not-qualified",
+        "automaticFallback": false,
+        "kernelPackedBase64Sha256": "74e9272108826c346eab0e037d9cd78eee2a10327b3c1dbb27b2935359560f25"
+      },
+      "outputs": [
+        {
+          "occurrenceId": "occv1:d8f4175d356b3fae8c6e61624b9e98162e212b00510591d882794263893a79dd",
+          "operationId": "opv1:97acf601c1201e3fdeb46994f29ae1ddc7501bc677c7ac7cd39ccc4e92e33f21",
+          "entityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613",
+          "nodeIndex": 1,
+          "empty": false,
+          "snapshotRevision": "f63548c3b56371c92ea76cd563cbc29ec954b9b49d7d6f677282f26fa4bba72f",
+          "geometryAssetId": "asset:v1:f7825e114cd30925:2880:480",
+          "topologyFaceIds": [
+            "f:55aed86bc153287c40a02f0c4e7ddb71",
+            "f:df40656514b097969d5966717612d2e6",
+            "f:f0c801dd777f4eaeb2db5e43b7fcde2d",
+            "f:ce5bf27da3453538650152f7c6565403",
+            "f:12593fb296c0140d2608a0bd28cdbcb0",
+            "f:07e535688ea68f0af5d93beea3474eea",
+            "f:c74b9e29946a63d1181bcd4751c6b0bd"
+          ]
+        }
+      ],
+      "metrics": "display_mesh_estimates",
+      "meshes": [
+        {
+          "triangles": 40,
+          "revision": "f63548c3b56371c92ea76cd563cbc29ec954b9b49d7d6f677282f26fa4bba72f",
+          "entityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613",
+          "coefficientType": "string",
+          "faceIdsAuthoritative": true,
+          "topologyFaceIds": [
+            "f:55aed86bc153287c40a02f0c4e7ddb71",
+            "f:df40656514b097969d5966717612d2e6",
+            "f:f0c801dd777f4eaeb2db5e43b7fcde2d",
+            "f:ce5bf27da3453538650152f7c6565403",
+            "f:12593fb296c0140d2608a0bd28cdbcb0",
+            "f:07e535688ea68f0af5d93beea3474eea",
+            "f:c74b9e29946a63d1181bcd4751c6b0bd"
+          ]
+        }
+      ]
+    },
+    "multi": {
+      "identity": {
+        "protocol": "brep-semantic-diagnostic-v1",
+        "diagnosticOnly": true,
+        "qualification": "not-qualified",
+        "automaticFallback": false,
+        "kernelPackedBase64Sha256": "74e9272108826c346eab0e037d9cd78eee2a10327b3c1dbb27b2935359560f25"
+      },
+      "outputs": [
+        {
+          "occurrenceId": "occv1:d8f4175d356b3fae8c6e61624b9e98162e212b00510591d882794263893a79dd",
+          "operationId": "opv1:97acf601c1201e3fdeb46994f29ae1ddc7501bc677c7ac7cd39ccc4e92e33f21",
+          "entityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613",
+          "nodeIndex": 2,
+          "empty": false,
+          "snapshotRevision": "f63548c3b56371c92ea76cd563cbc29ec954b9b49d7d6f677282f26fa4bba72f",
+          "geometryAssetId": "asset:v1:f7825e114cd30925:2880:480",
+          "topologyFaceIds": [
+            "f:55aed86bc153287c40a02f0c4e7ddb71",
+            "f:df40656514b097969d5966717612d2e6",
+            "f:f0c801dd777f4eaeb2db5e43b7fcde2d",
+            "f:ce5bf27da3453538650152f7c6565403",
+            "f:12593fb296c0140d2608a0bd28cdbcb0",
+            "f:07e535688ea68f0af5d93beea3474eea",
+            "f:c74b9e29946a63d1181bcd4751c6b0bd"
+          ]
+        },
+        {
+          "occurrenceId": "occv1:d8f4175d356b3fae8c6e61624b9e98162e212b00510591d882794263893a79dd",
+          "operationId": "opv1:97acf601c1201e3fdeb46994f29ae1ddc7501bc677c7ac7cd39ccc4e92e33f21",
+          "entityId": "entity:v2:10a0bdc1ad82a53b0a86320a1f3f86c17b9df331bad798b0f43eb7b09cc50e90",
+          "nodeIndex": 3,
+          "empty": false,
+          "snapshotRevision": "0263b58069560f16ee61562c2fe0a77d9af949d40388917e35a63003ddc7a775",
+          "geometryAssetId": "asset:v1:a9487c919372b065:2880:480",
+          "topologyFaceIds": [
+            "f:23431a73a94c26110dafa5e5577c5b88",
+            "f:f81b9f1cf3bc2796cd4f0d508c429619",
+            "f:6d3c82a51bcd84811dd6cd199b9b5e3b",
+            "f:d2d6e06fa35b65b0b71bcd73fa52bb9e",
+            "f:274fe5998eaaed52e65258f0d4d4124c",
+            "f:8acc4b55aa4d2ab0f6cdbd44392f8ad2",
+            "f:00870fa448198f14307902fb69a0bd9c"
+          ]
+        }
+      ],
+      "metrics": "display_mesh_estimates",
+      "meshes": [
+        {
+          "triangles": 40,
+          "revision": "f63548c3b56371c92ea76cd563cbc29ec954b9b49d7d6f677282f26fa4bba72f",
+          "entityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613",
+          "coefficientType": "string",
+          "faceIdsAuthoritative": true,
+          "topologyFaceIds": [
+            "f:55aed86bc153287c40a02f0c4e7ddb71",
+            "f:df40656514b097969d5966717612d2e6",
+            "f:f0c801dd777f4eaeb2db5e43b7fcde2d",
+            "f:ce5bf27da3453538650152f7c6565403",
+            "f:12593fb296c0140d2608a0bd28cdbcb0",
+            "f:07e535688ea68f0af5d93beea3474eea",
+            "f:c74b9e29946a63d1181bcd4751c6b0bd"
+          ]
+        },
+        {
+          "triangles": 40,
+          "revision": "0263b58069560f16ee61562c2fe0a77d9af949d40388917e35a63003ddc7a775",
+          "entityId": "entity:v2:10a0bdc1ad82a53b0a86320a1f3f86c17b9df331bad798b0f43eb7b09cc50e90",
+          "coefficientType": "string",
+          "faceIdsAuthoritative": true,
+          "topologyFaceIds": [
+            "f:23431a73a94c26110dafa5e5577c5b88",
+            "f:f81b9f1cf3bc2796cd4f0d508c429619",
+            "f:6d3c82a51bcd84811dd6cd199b9b5e3b",
+            "f:d2d6e06fa35b65b0b71bcd73fa52bb9e",
+            "f:274fe5998eaaed52e65258f0d4d4124c",
+            "f:8acc4b55aa4d2ab0f6cdbd44392f8ad2",
+            "f:00870fa448198f14307902fb69a0bd9c"
+          ]
+        }
+      ]
+    },
+    "messageChecks": {
+      "wrongCarrierRejected": true,
+      "wrongEncodingRejected": true,
+      "faceBindingRejected": true
+    },
+    "invalidSelection": "E_SEMANTIC_BACKEND_FAILURE",
+    "cancelled": "E_BREP_DIAGNOSTIC_CANCELLED",
+    "recovered": {
+      "identity": {
+        "protocol": "brep-semantic-diagnostic-v1",
+        "diagnosticOnly": true,
+        "qualification": "not-qualified",
+        "automaticFallback": false,
+        "kernelPackedBase64Sha256": "74e9272108826c346eab0e037d9cd78eee2a10327b3c1dbb27b2935359560f25"
+      },
+      "outputs": [
+        {
+          "occurrenceId": "occv1:d8f4175d356b3fae8c6e61624b9e98162e212b00510591d882794263893a79dd",
+          "operationId": "opv1:97acf601c1201e3fdeb46994f29ae1ddc7501bc677c7ac7cd39ccc4e92e33f21",
+          "entityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613",
+          "nodeIndex": 1,
+          "empty": false,
+          "snapshotRevision": "f63548c3b56371c92ea76cd563cbc29ec954b9b49d7d6f677282f26fa4bba72f",
+          "geometryAssetId": "asset:v1:10a0b825777fe189:1728:288",
+          "topologyFaceIds": [
+            "f:55aed86bc153287c40a02f0c4e7ddb71",
+            "f:df40656514b097969d5966717612d2e6",
+            "f:f0c801dd777f4eaeb2db5e43b7fcde2d",
+            "f:ce5bf27da3453538650152f7c6565403",
+            "f:12593fb296c0140d2608a0bd28cdbcb0",
+            "f:07e535688ea68f0af5d93beea3474eea",
+            "f:c74b9e29946a63d1181bcd4751c6b0bd"
+          ]
+        }
+      ],
+      "metrics": "display_mesh_estimates",
+      "meshes": [
+        {
+          "triangles": 24,
+          "revision": "f63548c3b56371c92ea76cd563cbc29ec954b9b49d7d6f677282f26fa4bba72f",
+          "entityId": "entity:v2:d2d2924325993f0918a42b2643c311212d60f8b641f704b15916ed088aa50613",
+          "coefficientType": "string",
+          "faceIdsAuthoritative": true,
+          "topologyFaceIds": [
+            "f:55aed86bc153287c40a02f0c4e7ddb71",
+            "f:df40656514b097969d5966717612d2e6",
+            "f:f0c801dd777f4eaeb2db5e43b7fcde2d",
+            "f:ce5bf27da3453538650152f7c6565403",
+            "f:12593fb296c0140d2608a0bd28cdbcb0",
+            "f:07e535688ea68f0af5d93beea3474eea",
+            "f:c74b9e29946a63d1181bcd4751c6b0bd"
+          ]
+        }
+      ]
+    },
+    "ticks": 956,
+    "ownership": {
+      "activeWorkerEpoch": null,
+      "workersStarted": 5,
+      "workersTerminated": 5,
+      "quarantined": false
+    }
+  }
+}

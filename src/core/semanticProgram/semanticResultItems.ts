@@ -19,6 +19,7 @@ export function semanticNodeInputs(node: SemanticNode): readonly number[] {
     case 'rotate-extrude-polygonal':
     case 'projection':
     case 'offset':
+    case 'full-round-exact':
       return [node.input]
     case 'boolean':
     case 'hull':
@@ -49,6 +50,7 @@ export function semanticNodeProducerOperationNames(node: SemanticNode): readonly
     case 'rotate-extrude-polygonal': return ['rotate_extrude']
     case 'projection': return ['projection']
     case 'offset': return ['offset']
+    case 'full-round-exact': return ['full_round_exact']
   }
 }
 

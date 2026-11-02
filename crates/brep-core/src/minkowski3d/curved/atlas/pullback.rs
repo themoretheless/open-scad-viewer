@@ -19,7 +19,12 @@ fn choose(n: usize, k: usize) -> Q {
         v * integer((n - i) as i64) / integer((i + 1) as i64)
     })
 }
-fn relation(h: &sb::Net, axis: usize, level: &Q, work: &mut Work) -> Result<Vec<Vec<Q>>> {
+pub(super) fn relation(
+    h: &sb::Net,
+    axis: usize,
+    level: &Q,
+    work: &mut Work,
+) -> Result<Vec<Vec<Q>>> {
     let (n, m) = (h.len() - 1, h[0].len() - 1);
     let mut out = vec![vec![Q::zero(); n + 1]; m + 1];
     for (i, row) in h.iter().enumerate() {

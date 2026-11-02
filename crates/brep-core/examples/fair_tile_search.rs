@@ -1,5 +1,5 @@
 //! Offline form search. No topology, G2 or solid admission from these trials.
-use brep_core::{face_curvature as c, face_domain::FaceDomain};
+use brep_core::face_curvature as c;
 use nurbs_core::{curve::basis, surface::Surface};
 fn point_weight(s: &Surface, uv: [f64; 2]) -> f64 {
     let u = basis(s.degree_u, &s.knots_u, s.control_points.len(), uv[0], false)
@@ -36,7 +36,6 @@ fn main() {
     let f = data["centralFace"].as_u64().unwrap() as usize;
     let uv = [0.9430759112081446, 0.4836167378919158];
     let s = &source.faces[f].surface;
-    let domain = FaceDomain::new(&source, f, 1e-8).unwrap();
     let before = s.evaluate(uv[0], uv[1]).unwrap().point;
     let direction = std::env::var("OSV_TILE_LIFT_DIRECTION")
         .unwrap_or_else(|_| "1,1,1".into())
@@ -55,18 +54,43 @@ fn main() {
         .map(|s| s.parse::<f64>().unwrap())
         .collect::<Vec<_>>();
     assert!(widths.len() <= 32 && widths.iter().all(|x| x.is_finite() && *x > 0. && *x < 0.05));
+    let ratio = std::env::var("OSV_TILE_V_RATIO")
+        .unwrap_or_else(|_| "1".into())
+        .parse::<f64>()
+        .unwrap();
+    assert!(ratio.is_finite() && ratio >= 1. && ratio <= 8.);
+    let shift = std::env::var("OSV_TILE_CENTER_SHIFT")
+        .unwrap_or_else(|_| "0,0".into())
+        .split(',')
+        .map(|s| s.parse::<f64>().unwrap())
+        .collect::<Vec<_>>();
+    assert!(shift.len() == 2 && shift.iter().all(|x| x.is_finite() && x.abs() < 0.1));
+    let target = std::env::var("OSV_TILE_TARGET")
+        .unwrap_or_else(|_| "0.000001".into())
+        .parse::<f64>()
+        .unwrap();
+    assert!(target.is_finite() && target > 0. && target <= 0.01);
     for half in widths {
-        let rect = uv.map(|x| [x - half, x + half]);
-        let ownership = domain.classify(rect, 100000).unwrap();
-        if ownership.location != nurbs_core::trim_domain::Location::Inside {
-            trials.push(value_codec::json!({"halfWidthUV":half,"ownership":format!("{:?}",ownership.location)}));
+        let rect = [
+            [uv[0] + shift[0] - half, uv[0] + shift[0] + half],
+            [
+                uv[1] + shift[1] - half * ratio,
+                uv[1] + shift[1] + half * ratio,
+            ],
+        ];
+        assert!((0..2).all(|k| uv[k] > rect[k][0] && uv[k] < rect[k][1]));
+        let ownership = brep_core::region_replacement::certify_tile_rectangle_inside(
+            &source, f, rect, 1e-8, 100000,
+        );
+        if let Err(e) = ownership {
+            trials.push(value_codec::json!({"halfWidthUV":half,"vRatio":ratio,"ownership":"Unresolved","reason":format!("{e}")}));
             continue;
         }
         let mut tile = s
             .trim([rect[0][0], rect[0][1], rect[1][0], rect[1][1]])
             .unwrap();
         let w = point_weight(&tile, uv);
-        let delta = (1e-6 - before.into_iter().fold(f64::INFINITY, f64::min)) / w;
+        let delta = (target - before.into_iter().fold(f64::INFINITY, f64::min)) / w;
         let n = tile.control_points.len();
         let m = tile.control_points[0].len();
         for i in 3..n - 3 {
@@ -114,7 +138,7 @@ fn main() {
             Err(e) => value_codec::json!({"error":format!("{e}")}),
         };
         eprintln!("half={half} curvature={record:?}");
-        trials.push(value_codec::json!({"halfWidthUV":half,"ownership":"Inside","delta":delta,"direction":direction,"curvature":record,"box":format!("{:?}",boxproof.decision),"surface":tile,"G2Qualified":false,"solidQualified":false}));
+        trials.push(value_codec::json!({"halfWidthUV":half,"vRatio":ratio,"ownership":"Inside","delta":delta,"target":target,"rectangle":rect,"direction":direction,"curvature":record,"box":format!("{:?}",boxproof.decision),"surface":tile,"G2Qualified":false,"solidQualified":false}));
     }
     std::fs::write(&args[2],value_codec::to_string(&value_codec::json!({"trials":trials,"sourceFace":f,"before":before,"scope":"Offline form search; continuous curvature and material checks on rectangular trial only; no topology or seam admission"})).unwrap()).unwrap();
 }

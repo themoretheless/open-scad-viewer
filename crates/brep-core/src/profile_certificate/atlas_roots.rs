@@ -95,3 +95,52 @@ pub(crate) fn arrangement_branches(p: &[Vec<Q>]) -> Result<ParameterBranchDecomp
         &Q::new(1.into(), 65536.into()),
     )
 }
+
+fn arrangement_bound(p: &[Q]) -> Result<()> {
+    if p.len() > 257
+        || p.iter()
+            .any(|q| q.numer().bits() > 16384 || q.denom().bits() > 16384)
+    {
+        return Err(refused(
+            "Atlas arrangement query arithmetic budget exceeded",
+        ));
+    }
+    Ok(())
+}
+pub(crate) fn arrangement_polynomial(p: &ExactPolynomial) -> Result<Vec<Q>> {
+    let p = algebraic_intersections::decode_polynomial(p)?;
+    arrangement_bound(&p)?;
+    Ok(p)
+}
+pub(crate) fn arrangement_sign(p: &[Q], f: &[Q], r: &[Q; 2]) -> Result<i8> {
+    arrangement_bound(p)?;
+    arrangement_bound(f)?;
+    arithmetic::event_coordinates::sign_at(&p.to_vec(), &f.to_vec(), r, 192)
+}
+pub(crate) fn arrangement_count(p: &[Q], r: &[Q; 2]) -> Result<usize> {
+    arrangement_bound(p)?;
+    arithmetic::algebraic_events::count(&p.to_vec(), &r[0], &r[1])
+}
+
+/// Exact factor-aware projection; callers bind factors to their source product.
+pub(crate) fn arrangement_factored_branches(
+    factors: &[Vec<Vec<Q>>],
+) -> Result<ParameterBranchDecomposition> {
+    if factors.len() > 16
+        || factors
+            .iter()
+            .any(|p| p.len() > 17 || p.iter().any(|r| r.len() > 17))
+    {
+        return Err(refused("Atlas factor degree/count budget exceeded"));
+    }
+    for factor in factors {
+        for row in factor {
+            bounded(row)?;
+        }
+    }
+    super::branches::decompose_factors(
+        factors,
+        Some([Q::one(), -Q::one()]),
+        &Q::new(1.into(), 65536.into()),
+    )
+}

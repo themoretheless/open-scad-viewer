@@ -1,0 +1,39 @@
+{
+  "scope": "Original-pcurve G1 on all three authored Full Round seams plus continuous whole-boundary agreement",
+  "test_exit_code": 0,
+  "tests_passed": 12,
+  "targets": [
+    "feature_ops",
+    "full_round_frame",
+    "full_round_groups",
+    "full_round_prism"
+  ],
+  "authority": [
+    "surface_g1_pcurves::inspect",
+    "watertight::inspect_with_exact"
+  ],
+  "bounds": {
+    "shared_cells": 100000,
+    "shared_exact_work": 1000000,
+    "normal_tolerance": 1e-05
+  },
+  "snapshot": "Immutable model snapshot in Arc-bound Qualification; grouped IDs inherited before proof",
+  "source_sha256": {
+    "crates/brep-core/src/feature_ops.rs": "2446ebeccdf35cc9538406db251a97610d15935372703ad059c33099da3165b7",
+    "crates/brep-core/src/feature_ops/full_round_seams.rs": "37e5682165799ae82098574db114b71c9c2b862a35a870955c375e277485c8dd",
+    "crates/brep-core/src/feature_ops/full_round_prism.rs": "7876b7df563f94f30637aa9df5af7cfa83899e945429da7a35f265f364c76a11",
+    "crates/brep-core/src/feature_ops/full_round_prism/groups.rs": "ddb3aef6ff462c21e32d7d57e5a182695e55bfdfab09a651c08b3b03a200cf8a",
+    "crates/brep-core/tests/full_round_frame.rs": "640300982dd4766a1cca431658a2b25903b2ed140f81ccfbaf5718abac0699a1",
+    "crates/brep-core/tests/full_round_groups.rs": "1f243fe46742f8d5671dcdbdbede01ede8102609572e19e5656d403684f6ce3c",
+    "crates/brep-core/tests/full_round_prism.rs": "e803002d366317fba97dd8f9864aedb291509a72e99fa4a8fad7ffbed0321460"
+  },
+  "limitations": [
+    "Not a global embedding/self-intersection certificate",
+    "No general curved support construction",
+    "No Plasticity runtime comparison",
+    "Focused tests do not qualify whole concurrent worktree"
+  ],
+  "architecture_gate": "Existing mainSolidResult.ts 595 lines vs pin 594",
+  "clean_baseline": "11 files unchanged",
+  "full_parity": false
+}

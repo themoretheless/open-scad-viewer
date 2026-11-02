@@ -34,6 +34,7 @@ pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod circular_blend;
 pub mod feature_family;
+pub mod feature_ops;
 pub mod feature_graph;
 pub mod feature_history;
 pub mod history_snapshots;
@@ -320,7 +321,15 @@ pub(crate) fn distance(a: &[f64], b: &[f64]) -> f64 {
 }
 pub(crate) fn curve_point(c: &Curve, t: f64) -> Result<Vec<f64>> {
     let d = c.domain();
-    Ok(c.evaluate(d[0] + t * (d[1] - d[0]))?.point)
+    // Literal endpoints avoid an affine roundoff stepping outside the domain.
+    let u = if t == 0. {
+        d[0]
+    } else if t == 1. {
+        d[1]
+    } else {
+        d[0] + t * (d[1] - d[0])
+    };
+    Ok(c.evaluate(u)?.point)
 }
 impl Model {
     /// Canonical regularized empty solid. It has no placeholder shell or body.
@@ -528,3 +537,5 @@ pub mod topology_reference;
 #[path = "cuboid_primitive.rs"]
 mod cuboid_primitive;
 pub use cuboid_primitive::cuboid;
+
+pub mod exact_graph_strip;

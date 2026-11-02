@@ -1,6 +1,11 @@
 //! Original-source local overlap between two uniform parameter-root charts.
 //! This does not census every overlap or identify a physical world branch.
 use super::*;
+mod discovery;
+pub use discovery::{
+    DiscoveredFiberTransition, FiberTransitionDiscoveryLimits, FiberTransitionDiscoveryResult,
+    TransitionAttempt, discover_fiber_transition,
+};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TransitionOrientation {
     Forward,

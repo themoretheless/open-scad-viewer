@@ -1,0 +1,7 @@
+# Exact Full Round history browser worker
+
+`ExactFullRoundHistoryBrowser` runs the existing native scene edit API in one disposable browser Worker per operation. Input mesh buffers are cloned, never transferred. The bounded protocol correlates request IDs, mesh ownership and transform. Native proof is executed in the Worker; host structural metadata is not a geometry certificate. Hard cancellation/deadline terminates the browser Worker; there is no in-process fallback. The lane rejects concurrent requests and releases listeners/timers on terminal paths.
+
+Actual Chromium qualification used the installed package and production Vite-built worker. Source rebase, undo, cancellation, a 1 ms deadline, native refusal and subsequent redo/recovery passed. Original input remains intact, geometry revisions restore exactly, display detail can change independently, and the main realm ticked during work. Browser API instrumentation recorded six constructions and six terminations; a Worker terminated at a 1 ms deadline may disappear before Chromium emits a debug Worker event. This is the synchronous browser terminate API, not a Node join acknowledgement.
+
+TypeScript passes. Clean baseline 11 files unchanged. Global architecture retains the six previously recorded violations; no limits changed. Vite reports large chunk warnings. This is an explicitly invoked library lane, not automatic production provider registration or editor command/store wiring. Aggregate scene metrics, general dependency history and the full original Plasticity parity scope remain open.

@@ -55,8 +55,7 @@ fn interpolation_reproduces_samples_and_partitions_unity() {
     assert_eq!(line.degree, 1);
     let mid = line.evaluate(0.5).unwrap().point;
     assert!((mid[0] - 1.).abs() < 1e-12 && (mid[1] - 2.).abs() < 1e-12);
-    let quad =
-        interpolate(&[0., 0.5, 1.], &[vec![0., 0.], vec![1., 1.], vec![2., 0.]]).unwrap();
+    let quad = interpolate(&[0., 0.5, 1.], &[vec![0., 0.], vec![1., 1.], vec![2., 0.]]).unwrap();
     assert_eq!(quad.degree, 2);
     let p = quad.evaluate(0.5).unwrap().point;
     assert!((p[0] - 1.).abs() < 1e-12 && (p[1] - 1.).abs() < 1e-12);
@@ -224,8 +223,7 @@ fn chart_samples_only_authored_nonunit_trim_intervals() {
     fn rescale(curve: &mut crate::Curve, domain: [f64; 2]) {
         let old = curve.domain();
         for knot in &mut curve.knots {
-            *knot = domain[0]
-                + (*knot - old[0]) / (old[1] - old[0]) * (domain[1] - domain[0]);
+            *knot = domain[0] + (*knot - old[0]) / (old[1] - old[0]) * (domain[1] - domain[0]);
         }
     }
     let mut model = cuboid([0., 0., 0.], [2., 2., 2.]).unwrap();
@@ -249,7 +247,10 @@ fn chart_samples_only_authored_nonunit_trim_intervals() {
         assert_eq!(sampled.curve_parameter, [3., 5.]);
         assert_eq!(sampled.pcurve_parameter, [11., 13.]);
         assert_eq!(sampled.samples[0], pcurve_point(source, 11.).unwrap());
-        assert_eq!(*sampled.samples.last().unwrap(), pcurve_point(source, 13.).unwrap());
+        assert_eq!(
+            *sampled.samples.last().unwrap(),
+            pcurve_point(source, 13.).unwrap()
+        );
     }
     assert!(chart.inside([0.5, 0.5]));
 }
@@ -343,11 +344,13 @@ fn box_corner_into_a_sphere_off_axis_is_not_needed_but_works() {
 }
 
 #[test]
-fn the_public_boolean_falls_back_after_an_exact_refusal() {
+fn the_public_boolean_refuses_unproved_numeric_topology() {
     let c = cylinder(3., 10.).unwrap();
     let s = placed(sphere(2.).unwrap(), [2.5, 0.4, 5.]);
-    let model = crate::boolean(&c, &s, "difference").unwrap();
-    assert!(model.tolerance_mm > 1e-7 && model.tolerance_mm <= CEILING);
+    let err = crate::boolean(&c, &s, "difference").unwrap_err();
+    assert_eq!(err.code, "BREP_NURBS_BOOLEAN_UNPROVED");
+    let candidate = boolean(&c, &s, "difference").unwrap();
+    assert!(candidate.tolerance_mm > 1e-7 && candidate.tolerance_mm <= CEILING);
     // Exact pairs stay exact: the axial sphere keeps the kernel tolerance.
     let axial = placed(sphere(4.).unwrap(), [0., 0., 5.]);
     let exact = crate::boolean(&c, &axial, "difference").unwrap();
@@ -362,7 +365,7 @@ fn torus_through_a_box_corner_region() {
     let b = cuboid([0., 0., 0.], [10., 10., 10.]).unwrap();
     let t = placed(crate::torus(4., 1.).unwrap(), [0.3, 0.7, 0.4]);
     for op in ["union", "difference", "intersection"] {
-        let model = crate::boolean(&b, &t, op).unwrap();
+        let model = boolean(&b, &t, op).unwrap();
         model.validate().unwrap();
         assert!(model.tolerance_mm > 1e-6, "{op}");
     }
@@ -371,7 +374,11 @@ fn torus_through_a_box_corner_region() {
     // coincident boundaries refuse instead of guessing a containment.
     let seam = crate::torus(4., 1.).unwrap();
     let err = crate::boolean(&b, &seam, "union").unwrap_err();
-    assert!(err.message.contains("coincident"), "{}", err.message);
+    assert!(
+        err.code == "BREP_NURBS_BOOLEAN_UNPROVED" || err.message.contains("coincident"),
+        "{}",
+        err.message
+    );
 }
 
 #[test]
@@ -380,4 +387,99 @@ fn disjoint_pairs_resolve_by_empty_algebra() {
     let s = placed(sphere(2.).unwrap(), [20., 0., 5.]);
     assert_eq!(boolean(&c, &s, "union").unwrap().bodies.len(), 2);
     assert!(boolean(&c, &s, "intersection").unwrap().is_empty());
+}
+
+#[cfg(feature = "codec")]
+#[test]
+fn independent_nurbs_candidate_has_continuous_boundary_evidence() {
+    let c = cylinder(3., 10.).unwrap();
+    let s = placed(sphere(2.).unwrap(), [2.5, 0.4, 5.]);
+    let r = nurbs_boolean_continuous_candidate(&c, &s, "difference", 1e-3, 200000).unwrap();
+    assert!(
+        r.model().faces.len() > c.faces.len(),
+        "the crossing must author new retained faces"
+    );
+    assert_eq!(r.model().tolerance_mm, 1e-3);
+    assert_eq!(r.evidence().scope, EvidenceScope::BoundaryAgreementOnly);
+    assert!(r.evidence().uses.iter().all(|n| *n > 0));
+    verify_nurbs_boolean_boundary_candidate(&c, &s, r.model(), "difference", r.evidence()).unwrap();
+    let mut forged = r.evidence().clone();
+    forged.cells[2] += 1;
+    assert!(
+        verify_nurbs_boolean_boundary_candidate(&c, &s, r.model(), "difference", &forged).is_err()
+    );
+    assert!(
+        verify_nurbs_boolean_boundary_candidate(&c, &s, r.model(), "union", r.evidence()).is_err()
+    );
+    let mut tiny = r.evidence().clone();
+    tiny.max_cells_per_model = 1;
+    assert_eq!(
+        verify_nurbs_boolean_boundary_candidate(&c, &s, r.model(), "difference", &tiny)
+            .unwrap_err()
+            .code,
+        "BREP_NURBS_BOUNDARY_UNRESOLVED"
+    );
+    let mut changed = r.model().clone();
+    changed.faces[0].surface.control_points[0][0][0] += 0.25;
+    assert!(
+        verify_nurbs_boolean_boundary_candidate(&c, &s, &changed, "difference", r.evidence())
+            .is_err()
+    );
+}
+
+#[cfg(feature = "codec")]
+#[test]
+fn independent_nurbs_candidate_rejects_unproved_requested_tolerance() {
+    let c = cylinder(3., 10.).unwrap();
+    let s = placed(sphere(2.).unwrap(), [2.5, 0.4, 5.]);
+    assert_eq!(
+        nurbs_boolean_continuous_candidate(&c, &s, "difference", f64::NAN, 1)
+            .unwrap_err()
+            .code,
+        "BREP_NURBS_BOUNDARY_TOLERANCE"
+    );
+    assert_eq!(
+        nurbs_boolean_continuous_candidate(&c, &s, "difference", 1e-3, 0)
+            .unwrap_err()
+            .code,
+        "BREP_NURBS_BOUNDARY_BUDGET"
+    );
+}
+
+#[cfg(feature = "codec")]
+#[test]
+fn independent_affine_nurbs_carriers_need_no_common_quadratic_chart() {
+    let c = transform::affine(
+        &cylinder(3., 10.).unwrap(),
+        [
+            [1., 0.15, 0., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap();
+    let s = transform::affine(
+        &sphere(2.).unwrap(),
+        [
+            [1., 0., 0., 2.5],
+            [0., 0.8, 0., 0.4],
+            [0., 0., 1.2, 5.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap();
+    assert!(
+        crate::minkowski3d::curved::try_common_quadratic_boolean(&c, &s, "difference")
+            .unwrap()
+            .is_none()
+    );
+    let r = nurbs_boolean_continuous_candidate(&c, &s, "difference", 1e-3, 200000).unwrap();
+    assert!(!r.model().bodies.is_empty());
+    assert!(
+        r.model().faces.len() > c.faces.len(),
+        "the independent crossing must author new retained faces"
+    );
+    assert_eq!(r.evidence().scope, EvidenceScope::BoundaryAgreementOnly);
+    verify_nurbs_boolean_boundary_candidate(&c, &s, r.model(), "difference", r.evidence()).unwrap();
 }

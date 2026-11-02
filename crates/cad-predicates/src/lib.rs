@@ -35,6 +35,7 @@ mod bspline_strip_jets;
 mod bspline_strip_spans;
 mod bspline_strip_nonlinear;
 mod bspline_strip_map;
+pub use bspline_strip_map::{rational_bspline_mapped_curve_identity,rational_bspline_mapped_curve_restriction_identity,rational_control_nets_constant_identity};
 pub use bspline_strip_jets::*;
 mod bspline_trace_identity;
 pub use bspline_trace_identity::*;
@@ -53,31 +54,8 @@ pub use construction::*;
 pub use construction3::*;
 pub use context::*;
 
-const BINOMIAL_TABLE: [[u64; 33]; 33] = {
-    let mut table = [[0u64; 33]; 33];
-    let mut n = 0;
-    while n < 33 {
-        table[n][0] = 1;
-        let mut k = 1;
-        while k <= n {
-            table[n][k] = table[n - 1][k - 1] + table[n - 1][k];
-            k += 1;
-        }
-        n += 1;
-    }
-    table
-};
-
-#[inline(always)]
-pub(crate) fn binomial_u64(n: usize, k: usize) -> u64 {
-    if k > n {
-        0
-    } else if n < 33 {
-        BINOMIAL_TABLE[n][k]
-    } else {
-        (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
-    }
-}
+mod combinatorics;
+pub(crate) use combinatorics::binomial_u64;
 
 pub const IMPLEMENTATION_VERSION: &str = "cad-predicates-candidate-15";
 
@@ -669,6 +647,8 @@ pub fn classify_residual(
 #[cfg(test)]
 mod tests;
 
+mod bspline_lift_point;
+pub use bspline_lift_point::{SplinePointLiftDecision, rational_bspline_curve_surface_point_identity};
 mod bezier_point_identity;
 pub use bezier_point_identity::*;
 
