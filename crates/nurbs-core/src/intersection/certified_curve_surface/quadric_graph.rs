@@ -44,14 +44,15 @@ pub struct OriginalQuadricGraphContacts {
     pub exact_work: u64,
     pub complete: bool,
 }
-/// Original Bezier graph with positive separable weighted Bernstein clocks
-/// over an exact affine control-grid projection;
+/// Original clamped B-spline graph with constant weights and exact Greville
+/// projection, or a single Bezier graph with positive separable weighted
+/// Bernstein clocks over an exact affine control-grid projection;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its
 /// carrier. Other charts/branches refuse this contract. No trim/Body credit.
 /// max_exact_work bounds target, carrier and coordinate predicate work. Fixed
-/// degree-bounded rational chart, inverse-clock schedules and singleton checks
+/// control/degree-bounded rational chart, inverse-clock schedules and singleton checks
 /// are separate operations.
 pub fn original_quadric_graph_contacts(
     c: &Curve,

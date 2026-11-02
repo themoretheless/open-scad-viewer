@@ -1,5 +1,5 @@
 use geometry_bridge::dispatch;
-use value_codec::{Value, json};
+use value_codec::{json, Value};
 fn query() -> Value {
     json!({"op":"nurbs_original_quadric_graph_contacts","curve":{"degree":1,"knots":[2.,2.,6.,6.],"controlPoints":[[0.,0.,-0.25],[1.,1.,0.75]],"weights":[1.,1.],"periodic":false},"patch":{"degreeU":1,"degreeV":1,"knotsU":[-2.,-2.,2.,2.],"knotsV":[10.,10.,14.,14.],"controlPoints":[[[0.,0.,0.],[0.,1.,0.]],[[1.,0.,0.],[1.,1.,1.]]],"weights":[[1.,1.],[1.,1.]],"periodicU":false,"periodicV":false},"quadric":[[0.,0.5,0.,0.],[0.5,0.,0.,0.],[0.,0.,0.,-0.5],[0.,0.,-0.5,0.]],"constantProducts":[],"tolerance":1e-9,"maxSpans":10,"maxExactWork":1000000})
 }
@@ -183,13 +183,11 @@ fn arbitrary_separable_bernstein_clocks_produce_refined_finite_uv_boxes() {
     q["patch"]["degreeV"] = json!(2);
     q["patch"]["knotsU"] = json!([-2., -2., -2., 2., 2., 2.]);
     q["patch"]["knotsV"] = json!([10., 10., 10., 14., 14., 14.]);
-    q["patch"]["controlPoints"] = json!(
-        (0..3)
-            .map(|i| (0..3)
-                .map(|j| vec![i as f64 / 2., j as f64 / 2., i as f64 * j as f64 / 4.])
-                .collect::<Vec<_>>())
-            .collect::<Vec<_>>()
-    );
+    q["patch"]["controlPoints"] = json!((0..3)
+        .map(|i| (0..3)
+            .map(|j| vec![i as f64 / 2., j as f64 / 2., i as f64 * j as f64 / 4.])
+            .collect::<Vec<_>>())
+        .collect::<Vec<_>>());
     q["patch"]["weights"] = json!([[1., 3., 7.], [2., 6., 14.], [5., 15., 35.]]);
     let r = dispatch(q).unwrap();
     assert_eq!(r["targetParameterization"], "separable-rational");
@@ -198,5 +196,26 @@ fn arbitrary_separable_bernstein_clocks_produce_refined_finite_uv_boxes() {
     let b = &r["contacts"][0]["parameterBox"][1];
     assert!(b[0].as_f64().unwrap() < b[1].as_f64().unwrap());
     assert!(b[1].as_f64().unwrap() - b[0].as_f64().unwrap() < 1e-12);
+    ledger(&r);
+}
+
+#[test]
+fn multispan_original_graph_serializes_global_natural_coordinates() {
+    let mut q = query();
+    q["patch"]["knotsU"] = json!([-2., -2., 0., 2., 2.]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 1., 0.]],
+        [[0.5, 0., 0.], [0.5, 1., 0.5]],
+        [[1., 0., 0.], [1., 1., 1.]]
+    ]);
+    q["patch"]["weights"] = json!([[1., 1.], [1., 1.], [1., 1.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetGraphProven"], true);
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(r["targetParameterization"], "polynomial-affine");
+    assert_eq!(
+        r["contacts"][0]["parameterBox"],
+        json!([[4., 4.], [0., 0.], [12., 12.]])
+    );
     ledger(&r);
 }

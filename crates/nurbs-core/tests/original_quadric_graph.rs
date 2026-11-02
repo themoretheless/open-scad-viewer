@@ -653,3 +653,57 @@ fn general_rational_clocks_keep_global_edge_coverage_and_weight_gauge() {
     let v = (7f64.sqrt() - 1.) / 6.;
     present(&inspect(&c, &s, q), &[(2. + 4. / 3., -2., 10. + 4. * v, 2)]);
 }
+
+#[test]
+fn original_multispan_greville_graph_preserves_natural_uv_and_outer_edges() {
+    let (mut s, q) = saddle();
+    s.knots_u = vec![-2., -2., -1., 1., 2., 2.];
+    s.knots_v = vec![10., 10., 11., 13., 14., 14.];
+    let x = [0., 0.25, 0.75, 1.];
+    s.control_points = x
+        .iter()
+        .map(|a| x.iter().map(|b| vec![*a, *b, a * b]).collect())
+        .collect();
+    s.weights = vec![vec![7.; 4]; 4];
+    for (a, b) in [
+        (0.5, 0.5),
+        (0., 0.5),
+        (1., 0.5),
+        (0.5, 0.),
+        (0.5, 1.),
+        (0., 0.),
+        (1., 1.),
+    ] {
+        let c = line([a, b, -1.], [a, b, 2.]);
+        let report = inspect(&c, &s, q);
+        present(
+            &report,
+            &[(2. + 4. * (a * b + 1.) / 3., -2. + 4. * a, 10. + 4. * b, 1)],
+        );
+    }
+    // A changed interior pole must not be accepted as the same authored sheet.
+    s.control_points[1][1][2] += 0.125;
+    let r = inspect(&line([0.5, 0.5, -1.], [0.5, 0.5, 2.]), &s, q);
+    assert!(!r.target_graph_proven && !r.complete && r.contacts.is_empty());
+}
+
+#[test]
+fn quadratic_multispan_graph_uses_original_basis_and_refuses_tiny_projection_drift() {
+    let (mut s, _) = saddle();
+    s.degree_u = 2;
+    s.knots_u = vec![-2., -2., -2., 0., 2., 2., 2.];
+    let x = [0., 0.25, 0.75, 1.];
+    let z = [0., 0., 0.5, 1.];
+    s.control_points = (0..4)
+        .map(|i| vec![vec![x[i], 0., z[i]], vec![x[i], 1., z[i]]])
+        .collect();
+    s.weights = vec![vec![1.; 2]; 4];
+    let mut q = [[0.; 4]; 4];
+    q[0][0] = 1.;
+    q[2][3] = -0.5;
+    q[3][2] = -0.5;
+    let c = line([0.5, 0.5, -1.], [0.5, 0.5, 1.]);
+    present(&inspect(&c, &s, q), &[(4.5, 0., 12., 1)]);
+    s.control_points[1][0][0] = f64::from_bits(0.25f64.to_bits() + 1);
+    assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).is_err());
+}

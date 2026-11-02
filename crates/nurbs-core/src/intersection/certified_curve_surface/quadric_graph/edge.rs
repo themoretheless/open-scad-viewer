@@ -49,7 +49,11 @@ pub(super) fn prove(
     let f = values.len();
     values.extend(products.iter().flatten());
     let a = values.len();
-    for (i, j) in [(0, 0), (s.degree_u, 0), (0, s.degree_v)] {
+    for (i, j) in [
+        (0, 0),
+        (s.control_points.len() - 1, 0),
+        (0, s.control_points[0].len() - 1),
+    ] {
         values.extend(&s.control_points[i][j]);
     }
     let arena = SourceArena::authored(

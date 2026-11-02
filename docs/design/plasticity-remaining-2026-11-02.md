@@ -164,3 +164,7 @@ Actual WASM original affine contacts: frozen source `a46f426b2` собран в 
 ### Рациональные target-часы: фактический WASM runtime, 2026-11-03
 
 Кандидат из `feef6e2760544e134248f06f3486669b8063bbf6`, SHA-256 `a14f654d87f589d7a99c6610629b8b0e9aa93881e55abddd251ba01357d76b73`: 146 ABI-сценариев прошли; Chromium создал и завершил 130 Workers, включая 37 finite-graph сценариев. Замороженный inverse-clock тест также прошёл. Отчёт: `docs/qualification/rational-quadric-graph-wasm-2026-11-03/results.json`. Временный worktree удалён; установленный WASM не обновлён. Это проверка однопатчевых quadric graph с положительными separable rational clocks; multi-span, coupled weights, общий freeform, trim/Body и production provider остаются открытыми.
+
+### Multi-span quadric graph, 2026-11-03
+
+Добавлены исходные clamped B-spline target-графы с постоянными весами: точная Greville-проекция и tensor membership по всем исходным span, общий predicate-бюджет, глобальные natural UV. Исправлена outer-edge frame: используются крайние poles всей поверхности. В изолированном checkout прошли 26 native и 11 bridge тестов, architecture 54/0. Отчёт `docs/qualification/multispan-quadric-graph-2026-11-03/results.json`. Рациональные nonconstant multi-span часы, coupled weights, общий freeform, trim/Body и WASM-проверка нового multi-span расширения остаются открытыми.

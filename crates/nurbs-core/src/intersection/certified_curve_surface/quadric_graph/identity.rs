@@ -20,6 +20,9 @@ pub(super) fn prove(
     let offset = values.len();
     values.extend(matrix.into_iter().flatten());
     values.extend(products.iter().flatten());
+    let ko = values.len();
+    values.extend(&s.knots_u);
+    values.extend(&s.knots_v);
     let arena = SourceArena::authored(
         "nurbs-core/original-quadric-graph-membership",
         1,
@@ -52,6 +55,23 @@ pub(super) fn prove(
         },
         None,
     );
-    binary_bezier_quadric_with_constant_products_identity(&mut ctx, &surface, matrix, &factors)
-        .map_err(|_| crate::input("Invalid original quadric graph membership query"))
+    let decision = if s.control_points.len() == s.degree_u + 1 && nv == s.degree_v + 1 {
+        binary_bezier_quadric_with_constant_products_identity(&mut ctx, &surface, matrix, &factors)
+    } else {
+        let ku: Vec<_> = (0..s.knots_u.len())
+            .map(|i| arena.leaf(ko + i).unwrap())
+            .collect();
+        let kv: Vec<_> = (0..s.knots_v.len())
+            .map(|i| arena.leaf(ko + s.knots_u.len() + i).unwrap())
+            .collect();
+        cad_predicates::binary_bspline_quadric_with_constant_products_identity(
+            &mut ctx,
+            &surface,
+            [s.degree_u, s.degree_v],
+            [&ku, &kv],
+            matrix,
+            &factors,
+        )
+    };
+    decision.map_err(|_| crate::input("Invalid original quadric graph membership query"))
 }

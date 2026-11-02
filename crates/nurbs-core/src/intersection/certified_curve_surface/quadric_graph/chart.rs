@@ -14,38 +14,63 @@ impl Chart {
     pub(super) fn original(s: &Surface, matrix: &[[f64; 4]; 4]) -> Result<Self> {
         s.validate()?;
         let (p, r) = (s.degree_u, s.degree_v);
+        let (nu, nv) = (s.control_points.len(), s.control_points[0].len());
+        let single = nu == p + 1 && nv == r + 1;
         check(
             !s.periodic_u
                 && !s.periodic_v
                 && (1..=8).contains(&p)
                 && (1..=8).contains(&r)
-                && s.control_points.len() == p + 1
-                && s.control_points[0].len() == r + 1
+                && nu <= 256
+                && nv <= 256
                 && s.control_points.iter().flatten().all(|x| x.len() == 3),
-            "Quadric graph needs one nonperiodic 3D Bezier patch",
+            "Quadric graph needs a bounded nonperiodic 3D B-spline patch",
         )?;
         check(
             s.knots_u[..=p].iter().all(|x| *x == s.knots_u[p])
-                && s.knots_u[p + 1..].iter().all(|x| *x == s.knots_u[p + 1])
+                && s.knots_u[nu..].iter().all(|x| *x == s.knots_u[nu])
                 && s.knots_v[..=r].iter().all(|x| *x == s.knots_v[r])
-                && s.knots_v[r + 1..].iter().all(|x| *x == s.knots_v[r + 1]),
+                && s.knots_v[nv..].iter().all(|x| *x == s.knots_v[nv]),
             "Quadric graph requires original clamped knots",
         )?;
         let w0 = q(s.weights[0][0]);
+        check(
+            single || s.weights.iter().flatten().all(|w| q(*w) == w0),
+            "Multi-span rational graph clocks are not yet proved",
+        )?;
         // Rank-one positive weights give independent weighted Bernstein
         // clocks. Their strict monotonicity and endpoint coverage are proved
         // by the variance identity in clock.rs; no geometric assumption is
         // needed for coverage. Geometric vectors only accelerate inversion.
         check(
-            (0..=p).all(|i| {
-                (0..=r).all(|j| q(s.weights[i][j]) * &w0 == q(s.weights[i][0]) * q(s.weights[0][j]))
+            (0..nu).all(|i| {
+                (0..nv).all(|j| q(s.weights[i][j]) * &w0 == q(s.weights[i][0]) * q(s.weights[0][j]))
             }),
             "Quadric graph requires exactly separable original positive weights",
         )?;
-        let clocks = [
-            super::clock::Clock::original((0..=p).map(|i| q(s.weights[i][0])).collect()),
-            super::clock::Clock::original((0..=r).map(|j| q(s.weights[0][j])).collect()),
-        ];
+        let clocks = if !single {
+            [
+                super::clock::Clock::original(vec![q(1.), q(1.)]),
+                super::clock::Clock::original(vec![q(1.), q(1.)]),
+            ]
+        } else {
+            [
+                super::clock::Clock::original((0..=p).map(|i| q(s.weights[i][0])).collect()),
+                super::clock::Clock::original((0..=r).map(|j| q(s.weights[0][j])).collect()),
+            ]
+        };
+        // Exact Greville linear precision certifies the polynomial multi-span
+        // projection directly in the original basis, without extracted poles.
+        let greville = |knots: &[f64], d: usize, n: usize| -> Vec<Q> {
+            (0..n)
+                .map(|i| {
+                    ((i + 1..=i + d).map(|k| q(knots[k])).sum::<Q>() / q(d as f64) - q(knots[d]))
+                        / (q(knots[n]) - q(knots[d]))
+                })
+                .collect()
+        };
+        let gu = greville(&s.knots_u, p, nu);
+        let gv = greville(&s.knots_v, r, nv);
         let parameterization = if clocks.iter().all(|c| c.identity()) {
             OriginalQuadricGraphParameterization::PolynomialAffine
         } else if clocks.iter().all(|c| c.projective()) {
@@ -60,20 +85,15 @@ impl Chart {
             }
             let pole = |i: usize, j: usize| axes.map(|k| q(s.control_points[i][j][k]));
             let origin = pole(0, 0);
-            let u = std::array::from_fn(|k| pole(p, 0)[k].clone() - &origin[k]);
-            let v = std::array::from_fn(|k| pole(0, r)[k].clone() - &origin[k]);
+            let u = std::array::from_fn(|k| pole(nu - 1, 0)[k].clone() - &origin[k]);
+            let v = std::array::from_fn(|k| pole(0, nv - 1)[k].clone() - &origin[k]);
             let det = &u[0] * &v[1] - &u[1] * &v[0];
             if det.is_zero() {
                 continue;
             }
-            let affine = (0..=p).all(|i| {
-                (0..=r).all(|j| {
-                    (0..2).all(|k| {
-                        pole(i, j)[k]
-                            == &origin[k]
-                                + &u[k] * q(i as f64) / q(p as f64)
-                                + &v[k] * q(j as f64) / q(r as f64)
-                    })
+            let affine = (0..nu).all(|i| {
+                (0..nv).all(|j| {
+                    (0..2).all(|k| pole(i, j)[k] == &origin[k] + &u[k] * &gu[i] + &v[k] * &gv[j])
                 })
             });
             if !affine {
@@ -83,19 +103,23 @@ impl Chart {
             // projected world coordinates. Equal strict corner signs prove
             // it never vanishes on this whole parallelogram, hence each
             // projected point has exactly one implicit dependent coordinate.
-            let signs: Vec<_> = [pole(0, 0), pole(p, 0), pole(0, r), pole(p, r)]
-                .iter()
-                .map(|xy| {
-                    q(matrix[dependent][3])
-                        + q(matrix[3][dependent])
-                        + (0..2)
-                            .map(|k| {
-                                (q(matrix[dependent][axes[k]]) + q(matrix[axes[k]][dependent]))
-                                    * &xy[k]
-                            })
-                            .sum::<Q>()
-                })
-                .collect();
+            let signs: Vec<_> = [
+                pole(0, 0),
+                pole(nu - 1, 0),
+                pole(0, nv - 1),
+                pole(nu - 1, nv - 1),
+            ]
+            .iter()
+            .map(|xy| {
+                q(matrix[dependent][3])
+                    + q(matrix[3][dependent])
+                    + (0..2)
+                        .map(|k| {
+                            (q(matrix[dependent][axes[k]]) + q(matrix[axes[k]][dependent])) * &xy[k]
+                        })
+                        .sum::<Q>()
+            })
+            .collect();
             if !signs.iter().all(|x| *x > Q::zero()) && !signs.iter().all(|x| *x < Q::zero()) {
                 continue;
             }
