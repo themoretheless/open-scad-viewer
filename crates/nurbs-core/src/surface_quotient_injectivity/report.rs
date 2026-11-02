@@ -549,3 +549,7 @@ fn restrict(a: &Poly, domain: [[f64; 2]; 2]) -> Result<Poly> {
 
 #[cfg(test)]
 mod tests;
+
+#[path="report/algorithm_certify_inner.rs"]
+mod algorithm_certify_inner;
+use algorithm_certify_inner::certify_inner;
