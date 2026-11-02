@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 223,
-  "unallocatedCount": 777,
+  "specifiedCount": 224,
+  "unallocatedCount": 776,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6130,6 +6130,25 @@
       ],
       "remainingQualification": [
         "clamped nonperiodic degree1..8 original tensor and authored equation only; no automatic fitting, periodic/unclamped proof, parameter regularity, injectivity, pole quotient, B-rep or solid authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0224",
+      "name": "точное удаление узла NURBS с сохранением исходной параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_knot_removal::remove",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
+        "docs/design/nurbs-exact-knot-removal.md",
+        "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json"
+      ],
+      "remainingQualification": [
+        "one verified proposal, not exhaustive representability search; nonperiodic clamped degree1..25, shared work refusal allowed; nominal geometry only, no machine-bit evaluation or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

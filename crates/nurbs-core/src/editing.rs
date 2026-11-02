@@ -9,3 +9,4 @@ pub mod fairing;
 pub mod surface_fairing;
 pub mod deform;
 pub mod linear_simplification;
+pub mod exact_knot_removal;

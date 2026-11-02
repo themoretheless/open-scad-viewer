@@ -1,0 +1,25 @@
+{
+  "source": "source.json",
+  "default": {
+    "libraryPassed": 2044,
+    "publicPassed": 120,
+    "publicTargets": 16,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0,
+    "exitCode": 0
+  },
+  "noCodec": {
+    "publicPassed": 120,
+    "publicTargets": 16,
+    "failed": 0,
+    "ignored": 0,
+    "exitCode": 0
+  },
+  "exactRemovalTests": 10,
+  "scope": "Default full nurbs-core library and sixteen public targets, selected public targets without default features. Not full no-codec library, workspace, WASM, UI or STEP.",
+  "logs": [
+    "default-library-public",
+    "no-codec-public"
+  ]
+}
