@@ -431,3 +431,135 @@ fn absent_and_unresolved_reports_do_not_carry_a_witness() {
     assert_eq!(unresolved.status, Status::Unresolved);
     assert!(unresolved.witness.is_none() && unresolved.exact_witness.is_none());
 }
+
+fn crossing_strip() -> Surface {
+    Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 2., 3., 3.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [[0., 0.], [1., 1.], [0., 1.], [1., 0.]]
+            .into_iter()
+            .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+            .collect(),
+        weights: vec![vec![1.; 2]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+#[test]
+fn spatial_linear_span_crossing_has_exact_nonreflection_witness() {
+    use num_rational::BigRational as Q;
+    let s = crossing_strip();
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.reflected_axis, None);
+    let w = r.exact_witness.unwrap();
+    assert_eq!(
+        w[0],
+        [Q::new(1.into(), 6.into()), Q::new(1.into(), 2.into())]
+    );
+    assert_eq!(
+        w[1],
+        [Q::new(5.into(), 6.into()), Q::new(1.into(), 2.into())]
+    );
+    for u in [0.5, 2.5] {
+        let p = s.evaluate(u, 0.5).unwrap().point;
+        assert_eq!(p, [0.5, 0.5, 1.]);
+    }
+}
+#[test]
+fn rational_linear_crossing_uses_weights_in_parameter_clock() {
+    use num_rational::BigRational as Q;
+    let mut s = crossing_strip();
+    s.weights = vec![vec![1.; 2], vec![3.; 2], vec![2.; 2], vec![1.; 2]];
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let w = r.exact_witness.unwrap();
+    assert_eq!(w[0][0], Q::new(1.into(), 12.into()));
+    assert_eq!(w[1][0], Q::new(8.into(), 9.into()));
+    for u in [0.25, 8. / 3.] {
+        let p = s.evaluate(u, 0.5).unwrap().point;
+        assert!((p[0] - 0.5).abs() < 1e-13 && (p[1] - 0.5).abs() < 1e-13);
+    }
+}
+#[test]
+fn projected_crossing_is_not_a_spatial_coincidence() {
+    let mut s = crossing_strip();
+    for i in 2..4 {
+        for j in 0..2 {
+            s.control_points[i][j][2] += 0.01;
+        }
+    }
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+#[test]
+fn adjacent_span_endpoints_are_not_interior_self_intersections() {
+    let mut s = crossing_strip();
+    s.control_points[3] = s.control_points[0].clone();
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+
+#[test]
+fn crossing_survives_rational_quadratic_transverse_basis() {
+    let mut s = crossing_strip();
+    s.degree_v = 2;
+    s.knots_v = vec![0., 0., 0., 1., 1., 1.];
+    s.control_points = s
+        .control_points
+        .iter()
+        .map(|row| {
+            let [x, y, _] = row[0].as_slice() else {
+                unreachable!()
+            };
+            [0., 1., 2.].into_iter().map(|z| vec![*x, *y, z]).collect()
+        })
+        .collect();
+    s.weights = vec![vec![1., 2., 3.]; 4];
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    for u in [0.5, 2.5] {
+        let p = s.evaluate(u, 0.5).unwrap().point;
+        assert_eq!(p, [0.5, 0.5, 1.25]);
+    }
+}
+#[test]
+fn exact_linear_crossing_is_also_found_on_v_axis() {
+    let mut s = crossing_strip();
+    s.control_points = (0..2)
+        .map(|j| (0..4).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..4).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let w = r.exact_witness.unwrap();
+    assert_eq!(w[0][1], num_rational::BigRational::new(1.into(), 6.into()));
+    assert_eq!(w[1][1], num_rational::BigRational::new(5.into(), 6.into()));
+}
+#[test]
+fn exact_crossing_pair_budget_is_enforced() {
+    let mut s = crossing_strip();
+    s.knots_u = vec![0., 0., 1., 2., 3., 4., 4.];
+    s.control_points = [[0., 0.], [1., 1.], [2., 2.], [0., 1.], [1., 0.]]
+        .into_iter()
+        .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+        .collect();
+    s.weights = vec![vec![1.; 2]; 5];
+    assert_eq!(
+        surface_self_intersection::inspect(&s, 1).unwrap().status,
+        Status::Unresolved
+    );
+    assert_eq!(
+        surface_self_intersection::inspect(&s, 2).unwrap().status,
+        Status::Present
+    );
+}

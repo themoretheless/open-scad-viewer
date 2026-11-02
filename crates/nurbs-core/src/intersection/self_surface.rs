@@ -2,6 +2,7 @@
 use crate::{Result, surface::Surface, surface_injectivity};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive};
+mod linear_crossing;
 mod local_fold;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
@@ -14,11 +15,12 @@ pub struct Report {
     pub status: Status,
     pub injectivity: surface_injectivity::Report,
     /// Distinct interior normalized parameters, interpreted by the exact affine
-    /// active-domain map. Exact reflected homogeneous controls prove coincidence.
+    /// active-domain map. Populated only from an exact original-source proof.
     pub witness: Option<[[f64; 2]; 2]>,
     /// Authoritative exact normalized UV pair, including non-dyadic values.
     /// `witness` is populated only when every scalar is exactly binary64.
     pub exact_witness: Option<[[BigRational; 2]; 2]>,
+    /// Reflection axis for fold proofs; None for proper span crossings.
     pub reflected_axis: Option<usize>,
 }
 fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
@@ -46,8 +48,11 @@ fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
         .all(|(&x, &y)| q(x) + q(y) == sum)
 }
 /// Absence follows a single global contraction bound across every source span.
-/// Presence uses exact homogeneous reflection of a complete clamped B-spline axis: a
-/// mathematical interior two-to-one fold, not a tolerance/sample coincidence.
+/// Presence uses exact rational reflection or proper crossings of original
+/// degree-one iso-curve spans. The latter checks all three world coordinates
+/// and original rational parameter clocks. The transverse midpoint selects a
+/// candidate iso-curve; only an exact identity supplies the presence verdict.
+/// Local reflection spans and linear span pairs each have max_spans work caps.
 /// All other cases (including unsupported periodic charts and insufficient
 /// budgets) stay Unresolved. Isolated local regularity never proves absence.
 pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
@@ -98,19 +103,21 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
             };
             record(
                 &mut out,
-                axis,
+                Some(axis),
                 witness.map(|uv| uv.map(|x| BigRational::from_f64(x).unwrap())),
             );
             return Ok(out);
         }
     }
     if let Some((axis, witness)) = local_fold::find(s, max_spans) {
-        record(&mut out, axis, witness);
+        record(&mut out, Some(axis), witness);
+    } else if let Some(witness) = linear_crossing::find(s, max_spans) {
+        record(&mut out, None, witness);
     }
     Ok(out)
 }
 
-fn record(out: &mut Report, axis: usize, exact: [[BigRational; 2]; 2]) {
+fn record(out: &mut Report, axis: Option<usize>, exact: [[BigRational; 2]; 2]) {
     let mut floating = [[0.; 2]; 2];
     let mut representable = true;
     for i in 0..2 {
@@ -124,7 +131,7 @@ fn record(out: &mut Report, axis: usize, exact: [[BigRational; 2]; 2]) {
         }
     }
     out.status = Status::Present;
-    out.reflected_axis = Some(axis);
+    out.reflected_axis = axis;
     out.witness = representable.then_some(floating);
     out.exact_witness = Some(exact);
 }

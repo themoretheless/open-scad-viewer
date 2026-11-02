@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "testsPassed": 38,
+  "newTests": 7,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Exact proper 3D intersections of original rational degree-one iso-curve spans; transverse midpoint uses exact B-spline basis degree <=16; both axes; weight-dependent UV clocks; pair cap",
+  "report": "Present has exact_witness; reflected_axis=None for proper crossings",
+  "remaining": "All-branch completeness, nonlinear intersecting spans, other transverse iso-curves, periodic charts, tangencies/overlaps and material/body trimming remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface.rs": "dc57995c2af0a7de7745135461864fe5a94386e801fefd2b462a09dff3df8914",
+    "crates/nurbs-core/src/intersection/self_surface/linear_crossing.rs": "2d79fd42582b989cec101c76fa790b9108d8b1710622838abf732b1fda4387b3",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "4fd4d3297fb028168423e865e1184c0ca60a91462e10fa3ea3b0d59afdeaf50b"
+  }
+}
