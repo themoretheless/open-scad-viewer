@@ -19,12 +19,34 @@
                 for point in row { point[0] += 10. * i as f64; }
             }
         }
-        for model in [cube, separated] {
+        for (model,joint_prerequisites) in [(cube,true),(separated,false)] {
             for sweep in [false, true] {
                 for joint in [false, true] {
                     for budget in [limits(), Limits { pairs: 1, ..limits() },
                         Limits { cells: 1, ..limits() }, Limits { domain_cells: 1, ..limits() }] {
-                        let expected = frozen_inspect_impl(&model, 1e-8, budget, &[], &[], sweep, joint, None).unwrap();
+                        // The frozen report remains the legacy arithmetic contract.
+                        // Joint admission now has additional proof owners and an
+                        // earlier hull proof; its reference is one uninterrupted
+                        // traversal, so resumptions must preserve its EXACT ledger.
+                        let expected = if !joint {
+                            frozen_inspect_impl(&model,1e-8,budget,&[],&[],sweep,false,None).unwrap()
+                        } else {
+                            let mut full=Inspector::new(std::sync::Arc::new(model.clone()),
+                                1e-8,budget,vec![],vec![],sweep,true,None).unwrap();
+                            while !full.finished() {full.advance(100000).unwrap();}
+                            full.finish().unwrap()
+                        };
+                        if joint && joint_prerequisites && budget.pairs==100 && budget.cells==10000 && budget.domain_cells==100000 {
+                            // The unit cube meets the independent joint prerequisites.
+                            // Translated planes intentionally retain invalid lifts
+                            // and exercise traversal/accounting only.
+                            assert!(expected.all_pairs_classified,"sweep={sweep}: {expected:?}");
+                            assert_eq!(expected.pairs.len(),15);
+                            assert!(expected.pairs.iter().all(|p|p.reason!="interior-contact"));
+                        }
+                        assert_eq!(expected.cells,expected.group_cells+expected.pairs.iter().map(|p|
+                            p.hull_cells+p.boundary_cells+p.source_chart_cells+
+                            p.result.as_ref().map_or(0,|r|r.cells)).sum::<usize>());
                         for batch in [1, 2, 64] {
                             let owned = std::sync::Arc::new(model.clone());
                             let mut work = Inspector::new(owned.clone(), 1e-8, budget, vec![], vec![], sweep, joint, None).unwrap();

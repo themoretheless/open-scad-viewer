@@ -1,0 +1,21 @@
+{
+  "sourceFiles": 4411,
+  "sourceGuardPassed": true,
+  "legacyCertifyUnchanged": true,
+  "legacyContractionUnchanged": true,
+  "nurbsCore": {
+    "passed": 2245,
+    "failed": 0,
+    "ignored": 1
+  },
+  "focusedBrep": {
+    "passed": 6,
+    "failed": 0
+  },
+  "newSupportGeometryCells": 85,
+  "rankLossAndBudgetRefusalsPassed": true,
+  "fullBrep": "running on final-rank frozen executable",
+  "nativeStep": "running on final-rank source",
+  "noCodec": "queued/running on final-rank source",
+  "wholeGoalComplete": false
+}

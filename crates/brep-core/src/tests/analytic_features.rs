@@ -458,7 +458,20 @@ fn enclosure_outer_round_preserves_the_open_cavity() {
     assert!((rotated_volume - (7152. - (1. - std::f64::consts::PI / 4.) * 20.)).abs() < 2e-5);
     assert_eq!(value_codec::to_string(&placed).unwrap(), placed_before);
     assert!(exact_layered_prism_fillet(&source, &source_edges, 8.).is_err());
-    assert!(exact_layered_prism_fillet(&source, &source_edges[..1], 1.).is_err());
+    // A minimal Boolean result may contain one complete longitudinal edge.
+    // Create an ACTUAL partial chain instead of assuming tessellation splits.
+    let domain=source.edges[source_edge].curve.domain();
+    let split=crate::feature_ops::edge_partition::split(&source,source_edge,
+        &[(domain[0]+domain[1])*0.5],"partial-longitudinal-chain",
+        crate::feature_ops::edge_partition::Limits::default()).unwrap();
+    let split_model=split.model();
+    let chain=split_model.edges.iter().enumerate().filter_map(|(i,e)|
+        e.vertices.iter().all(|&v| {let p=split_model.vertices[v].point;p[0]==0. && p[1]==0.}).then_some(i))
+        .collect::<Vec<_>>();
+    assert!(chain.len()>=2,"the partial-chain regression requires two owned pieces");
+    let complete=exact_layered_prism_fillet(split_model,&chain,1.).unwrap();
+    audit_solid(&complete.model).unwrap();
+    assert!(exact_layered_prism_fillet(split_model,&chain[..1],1.).is_err());
     assert!(round_layered_prism_in_envelope(&source, &outer, &source_edges, 8.).is_err());
     assert!(
         round_layered_prism_in_envelope(&source, &outer, &[source_edge, source_edge], 1.)

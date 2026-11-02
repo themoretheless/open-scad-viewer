@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "nativeBodySha256": "3dd293a55859442146d178f8bfaa5866be329908410324fdc5b35bb1bacd5e49",
+  "analyticVolume": "800/7",
+  "strictCoordinate": "10(2u-1)^5",
+  "criticalYDerivative": "5",
+  "supportPlaneCoefficients": [
+    "0",
+    "-12",
+    "-10",
+    "-14",
+    "-4",
+    "0"
+  ],
+  "sourcePolynomialIdentities": true,
+  "fullIntervalArgument": true,
+  "finiteSamplingSuppliesProof": false
+}

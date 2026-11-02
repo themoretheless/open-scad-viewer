@@ -4,6 +4,20 @@
 //! rectangle contributes to the same Jacobian hull; local success is not enough.
 //! A separate C1 polar proof checks all oriented principal minors globally.
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
+mod separable_monotone;
+/// Whole-chart injectivity, allowing exact strictly monotone coordinates with
+/// isolated zero derivatives. Unlike `certify_contraction`, this does NOT prove
+/// immersion/rank. Consumers requiring regularity must prove it independently.
+pub fn certify_chart(s:&Surface,max_work:usize)->Result<Report> {
+    let mut report=certify_contraction(s,max_work)?;
+    if report.proven || matches!(report.reason,"periodic-domain"|
+        "collapsed-boundary-requires-quotient-proof"|"work-limit") {return Ok(report);}
+    if let Some(axes)=separable_monotone::certify(s,&mut report.spans,max_work)? {
+        report.proven=true;report.projection=Some(axes);
+        report.reason="global-separable-coordinate-monotonicity";
+    } else if report.spans==max_work {report.reason="work-limit";}
+    Ok(report)
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     pub proven: bool,

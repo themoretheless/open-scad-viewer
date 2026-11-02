@@ -2,6 +2,12 @@
 //! Failure of a sufficient test is unproven, never evidence of an intersection.
 use crate::{Result, check, curve::Curve, curve_distance, curve_jets, trim_domain};
 mod exact_subdivision;
+/// Internal exact scalar-coordinate proof, with one shared arithmetic ledger.
+/// A 2D view may have a zero second component; no replacement of source poles
+/// by rounded subdivisions is allowed by the underlying owner.
+pub(crate) fn polynomial_coordinate_monotone(c:&Curve,cells:&mut usize,max:usize)->Result<bool> {
+    exact_subdivision::prove(c,cells,max)
+}
 pub struct Pair {
     pub curves: [usize; 2],
     pub proven: bool,
