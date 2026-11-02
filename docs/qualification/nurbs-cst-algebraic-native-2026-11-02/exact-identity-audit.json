@@ -1,0 +1,19 @@
+{
+  "status": "exact-algebraic-audit-only-not-native-qualification",
+  "model": "u=t^power; ordinate=t^m (1-t^power)^n sum a_i B_i^k(t^power)",
+  "parameterPower": "1 for integer n1; 2 for noninteger half-integer n1; m=power*n1",
+  "degreeMaximum": 25,
+  "cases": 2600,
+  "independentCoefficientIdentities": 13182,
+  "coefficientWeightsNonnegativeAndSumAtMostOne": true,
+  "maxIntegerNumerator": 887040,
+  "allIntegerFactorsFitBinary64Exactly": true,
+  "closedLoopControlsMaximum": 51,
+  "constantShapeDegreeReduction": "All equal coefficients give a degree-zero shape by partition of unity",
+  "countedNativeCapabilities": 0,
+  "remainingQualification": [
+    "Rust source and output bindings",
+    "Outward arithmetic proof and shared work enforcement",
+    "Nominal position bound excludes evaluator rounding, Gk and topology"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "exitCode": 0,
+  "passed": 17,
+  "failed": 0,
+  "ignored": 0,
+  "scope": "Public cst_contracts and cst_algebraic_contracts with --no-default-features; not full no-codec library/workspace",
+  "source": "source.json",
+  "log": "no-codec.log.gz"
+}

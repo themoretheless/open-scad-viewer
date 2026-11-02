@@ -1,0 +1,15 @@
+{
+  "exitCodes": [
+    0,
+    0
+  ],
+  "uniquePassed": 89,
+  "failed": 0,
+  "ignored": 0,
+  "scope": "82 existing public tests plus seven algebraic CST tests. First run passed 88 (six algebraic); final targeted run passed seven algebraic tests, including added maximum-degree test. Not 95 unique tests. Source implementation unchanged between runs.",
+  "source": "source.json",
+  "logs": [
+    "default-public-88.log.gz",
+    "default-algebraic-7.log.gz"
+  ]
+}
