@@ -1,0 +1,68 @@
+{
+  "head": "aa62987db1348c162c21ed1ef49dd89419b250ae",
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "original_regularity",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 322.89,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2070 filtered out; finished in 0.01s"
+      ],
+      "expectedPassed": 1
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 144.28,
+      "summary": [
+        "test result: ok. 2061 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 144.11s"
+      ],
+      "expectedPassed": 2061
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1865.66,
+      "summary": [
+        "test result: ok. 2066 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1865.19s"
+      ],
+      "expectedPassed": 2066
+    }
+  ],
+  "sourceUnchanged": true,
+  "sourceFiles": 6582
+}
