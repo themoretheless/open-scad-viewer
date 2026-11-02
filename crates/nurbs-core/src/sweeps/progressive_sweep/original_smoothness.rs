@@ -1,6 +1,7 @@
 //! Sufficient open original-frame C1/C2, separate from retained seams/error.
 use super::*;
 mod guided_arc;
+pub(super) mod contact_motion;
 use crate::sweeps::progressive_miter::{
     authored_frame_certificate as frame, scalar_certificate::Status,
 };

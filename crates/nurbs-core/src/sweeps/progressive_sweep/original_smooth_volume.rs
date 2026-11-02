@@ -186,10 +186,6 @@ pub(super) fn certify_charts(
         return Ok(out);
     }
     out.cap_continuity_certified = true;
-    if sweep.sweeps[0].contact_point.is_some() {
-        out.reason = Some("original-smooth-volume-contact-motion-unproved");
-        return Ok(out);
-    }
     if sweep.source_is_closed()? {
         let motion_limits = OriginalBoundarySmoothnessLimits {
             order: limits.order,

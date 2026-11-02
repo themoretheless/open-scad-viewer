@@ -57,5 +57,9 @@ pub(super) fn open(
             return Ok(false);
         }
     }
+    if let Some(reason)=super::super::original_smoothness::contact_motion::certify(
+        s,l.order,false,&mut out.cells,&mut out.exact_work,l.cells,l.exact_work)? {
+        out.reason=Some(reason);return Ok(false);
+    }
     Ok(true)
 }

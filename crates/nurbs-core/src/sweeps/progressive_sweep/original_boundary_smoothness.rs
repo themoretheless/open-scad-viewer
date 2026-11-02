@@ -174,7 +174,7 @@ impl MultiSweep<'_> {
             products: 0,
             reason: Some("original-boundary-smoothness-unproved"),
         };
-        if s.contact_point.is_some() || !self.source_is_closed()? {
+        if !self.source_is_closed()? {
             out.reason = Some("original-boundary-closed-motion-mode-unproved");
             return Ok(out);
         }
@@ -276,6 +276,10 @@ impl MultiSweep<'_> {
         if !certified {
             out.reason = reason;
             return Ok(out);
+        }
+        if let Some(reason)=super::original_smoothness::contact_motion::certify(
+            s,limits.order,true,&mut out.cells,&mut out.exact_work,limits.cells,limits.exact_work)? {
+            out.laws_certified=false;out.reason=Some(reason);return Ok(out);
         }
         out.reason = None;
         Ok(out)

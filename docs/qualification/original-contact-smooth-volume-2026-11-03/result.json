@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "sourceBase": "cfc7d77d59f3ebdd689d6d7ec0d847289562f92c",
+  "scope": "original-contact-fit-C1-C2-field-and-owned-open-material-body",
+  "rustSourceFilesGuarded": 4401,
+  "nurbs": {
+    "passed": 2255,
+    "failed": 0,
+    "existingIgnored": 1,
+    "filtered": 0
+  },
+  "focusedNurbs": {
+    "passed": 3,
+    "failed": 0
+  },
+  "brep": {
+    "passed": 2,
+    "failed": 0,
+    "filtered": 2316,
+    "fullSuiteRun": false,
+    "contactBody": {
+      "certified": true,
+      "originalOrder": 2,
+      "materialVolumeProven": true,
+      "capWallContinuity": "C0",
+      "boundaryErrorUpper": 7.739605515799558e-05,
+      "cells": 137,
+      "exactWork": 196,
+      "products": 0
+    }
+  },
+  "noCodecCheck": "passed",
+  "architecture": "passed",
+  "wasmRebuilt": false,
+  "stepRoundTripRun": false,
+  "fullBoundaryG1G2Claim": false,
+  "generalGoalComplete": false
+}
