@@ -36,6 +36,7 @@ pub(crate) mod cell;
 pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
+mod cap_difference;
 mod intrinsic;
 pub(crate) mod pose;
 use charts::*;
@@ -259,10 +260,14 @@ impl MultiSweep<'_> {
         } else {
             None
         };
+        let cap_difference = if cap_identity.is_none() {
+            cap_difference::Difference::prepare(caps, &mut out.cells, max_cells)?
+        } else { None };
         let context = cell::Context {
             s,
             caps,
             cap_identity,
+            cap_difference,
             basis,
             start,
             zero,

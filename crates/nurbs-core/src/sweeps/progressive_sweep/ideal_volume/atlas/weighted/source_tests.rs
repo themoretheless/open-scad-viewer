@@ -109,6 +109,7 @@ fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificat
         s,
         caps: [&cap, &cap],
         cap_identity: cap_identity::certify([&cap, &cap], &mut report(), 0, 0),
+        cap_difference: None,
         basis,
         start: [I::point(0.); 3],
         zero,

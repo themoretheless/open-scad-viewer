@@ -286,3 +286,5 @@ fn different_nonplanar_caps_bind_the_same_hollow_material_and_exact_wall_jets() 
     }
     eprintln!("different original capped hollow material: {work:?}");
 }
+
+mod spatial;
