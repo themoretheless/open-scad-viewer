@@ -63,3 +63,16 @@ fold, missing-time-jet, partial-cover and seven-minor regressions.
 A post-merge `brep-core --lib boundary_embedding` run was launched separately.
 It is not counted in this receipt until terminal output is recorded.
 No WASM, UI, STEP, CI or all-mode G1/G2 completion is claimed by this packet.
+
+## Terminal post-merge BRep checks
+
+The same frozen source passes all **18 boundary_embedding** tests, including
+all four previously failing cap-cover/cube/independent-regularity cases.
+A separate exact-name selection of the other seven previous failures passes
+all four closed hollow authored/fixed/guided arc/parameter cases, but still
+fails three tests: cavity outer rounding, coincident geometry without shared
+topology (missing vertex example), and resumable/frozen traversal work-report
+equality. These remain failures; no expectation was weakened. Both terminal
+logs and `post-merge-brep-result.json` are retained. The 4406-file source guard
+still matches. This is **22 passing / 3 failing distinct BRep tests**, not a
+full-suite qualification. Current-source full BRep remains unqualified.
