@@ -170,3 +170,91 @@ fn bridge_certifies_a_nonrepresentable_rational_iso_without_rounding_controls() 
         assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
     }
 }
+
+fn off_center_surface() -> Surface {
+    Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 2., 3., 3.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [[0., 0.], [1., 1.], [0., 1.], [1., 0.]]
+            .into_iter()
+            .enumerate()
+            .map(|(i, [x, y])| {
+                let z = if i == 3 { 1. } else { 0. };
+                vec![vec![x, y, -0.25 * z], vec![x, y, 1. + 0.75 * z]]
+            })
+            .collect(),
+        weights: vec![vec![1.; 2]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+fn iso_request(surface: Surface, parameter: f64) -> Value {
+    json!({"op":"nurbs_surface_iso_self_intersection_audit","surface":surface,"axis":0,"parameter":parameter,"tolerance":1e-7,"maxSpans":1000})
+}
+#[test]
+fn off_center_iso_contact_is_not_a_whole_surface_coverage_claim() {
+    let s = off_center_surface();
+    let mid = dispatch(iso_request(s.clone(), 0.5)).unwrap();
+    assert_eq!(mid["status"], "unresolved");
+    let r = dispatch(iso_request(s, 0.25)).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["presenceProven"], true);
+    assert_eq!(r["surfaceAbsenceProven"], false);
+    assert_eq!(r["allContactBranchesEnumerated"], false);
+    for i in 0..2 {
+        assert_eq!(
+            r["crossings"][0]["parameterBoxes"][i][1],
+            json!([0.25, 0.25])
+        );
+    }
+}
+#[test]
+fn simple_iso_does_not_prove_surface_absence() {
+    let r = dispatch(iso_request(graph(), 0.25)).unwrap();
+    assert_eq!(r["status"], "iso-simple");
+    assert_eq!(r["isoAbsenceProven"], true);
+    assert_eq!(r["surfaceAbsenceProven"], false);
+    assert_eq!(r["isoCoverageComplete"], true);
+}
+#[test]
+fn iso_probe_requests_cannot_supply_a_verdict_or_invalid_parameter() {
+    let mut v = iso_request(off_center_surface(), 0.25);
+    v["surfaceAbsenceProven"] = json!(true);
+    assert!(dispatch(v).is_err());
+    for t in [0., 1., -0.1, 1.1] {
+        assert!(dispatch(iso_request(off_center_surface(), t)).is_err());
+    }
+}
+
+#[test]
+fn iso_simple_never_hides_a_proven_contact_on_another_fiber() {
+    let s = Surface {
+        degree_u: 3,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [
+            [9. / 16., -9. / 32.],
+            [-7. / 16., 13. / 32.],
+            [-7. / 16., -13. / 32.],
+            [9. / 16., 9. / 32.],
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, [x, y])| vec![vec![x, y, 0.], vec![i as f64, 0., 1.]])
+        .collect(),
+        weights: vec![vec![1.; 2]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let mut v = iso_request(s.clone(), 0.125);
+    v["maxSpans"] = json!(10000);
+    let contact = dispatch(v).unwrap();
+    assert_eq!(contact["status"], "present");
+    let simple = dispatch(iso_request(s, 0.75)).unwrap();
+    assert_eq!(simple["status"], "iso-simple");
+    assert_eq!(simple["isoAbsenceProven"], true);
+    assert_eq!(simple["surfaceAbsenceProven"], false);
+}

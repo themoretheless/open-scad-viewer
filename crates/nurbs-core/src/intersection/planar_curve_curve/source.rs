@@ -35,7 +35,7 @@ pub(super) struct Iso<'a> {
     fixed: [f64; 2],
 }
 impl<'a> Iso<'a> {
-    pub fn new(surface: &'a Surface, axis: usize) -> Result<Self> {
+    pub fn new_at(surface: &'a Surface, axis: usize, parameter: f64) -> Result<Self> {
         let (k, p, n) = if axis == 0 {
             (
                 &surface.knots_v,
@@ -50,7 +50,7 @@ impl<'a> Iso<'a> {
             )
         };
         let q = |x| Q::from_f64(x).unwrap();
-        let fixed = (q(k[p]) + q(k[n])) / q(2.);
+        let fixed = q(k[p]) + (q(k[n]) - q(k[p])) * q(parameter);
         let fixed_span = (p..n)
             .find(|&i| q(k[i]) <= fixed && fixed < q(k[i + 1]))
             .ok_or_else(|| crate::input("No original iso span"))?;

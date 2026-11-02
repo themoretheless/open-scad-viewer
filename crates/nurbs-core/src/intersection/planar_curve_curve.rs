@@ -402,9 +402,25 @@ pub fn intersect_surface_iso_certified_report(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<CertifiedCurveIntersection> {
+    intersect_surface_iso_at_certified_report(surface, axis, 0.5, tolerance, max_cells)
+}
+
+/// The transverse parameter is a strict-interior normalized binary64 value,
+/// mapped to the original domain in exact rational arithmetic. This examines
+/// one iso-curve and never asserts whole-surface absence or coverage.
+pub fn intersect_surface_iso_at_certified_report(
+    surface: &crate::surface::Surface,
+    axis: usize,
+    parameter: f64,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
     surface.validate()?;
     check(
         axis < 2
+            && parameter.is_finite()
+            && parameter > 0.
+            && parameter < 1.
             && !surface.periodic_u
             && !surface.periodic_v
             && tolerance.is_finite()
@@ -412,8 +428,9 @@ pub fn intersect_surface_iso_certified_report(
             && (1..=100000).contains(&max_cells),
         "Invalid original iso audit",
     )?;
-    let source = source::Iso::new(surface, axis)?;
-    let Some(homogeneous) = crate::intersection::self_surface::linear_crossing::iso(surface, axis)
+    let source = source::Iso::new_at(surface, axis, parameter)?;
+    let Some(homogeneous) =
+        crate::intersection::self_surface::linear_crossing::iso_at(surface, axis, parameter)
     else {
         return Ok(CertifiedCurveIntersection {
             crossings: vec![],

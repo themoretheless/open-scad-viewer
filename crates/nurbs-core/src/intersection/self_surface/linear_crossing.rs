@@ -9,6 +9,16 @@ fn q(x: f64) -> Q {
 // Collapse the other parameter at its exact active-domain midpoint. Original
 // homogeneous tensor coefficients define a rational curve of the original axis degree.
 pub(in crate::intersection) fn iso(s: &Surface, axis: usize) -> Option<Vec<[Q; 4]>> {
+    iso_at(s, axis, 0.5)
+}
+pub(in crate::intersection) fn iso_at(
+    s: &Surface,
+    axis: usize,
+    parameter: f64,
+) -> Option<Vec<[Q; 4]>> {
+    if axis > 1 || !parameter.is_finite() || parameter <= 0. || parameter >= 1. {
+        return None;
+    }
     let (knots, p, n, count) = if axis == 0 {
         (
             &s.knots_v,
@@ -27,7 +37,7 @@ pub(in crate::intersection) fn iso(s: &Surface, axis: usize) -> Option<Vec<[Q; 4
     if p > 16 {
         return None;
     }
-    let t = (q(knots[p]) + q(knots[n])) / q(2.);
+    let t = q(knots[p]) + (q(knots[n]) - q(knots[p])) * q(parameter);
     let span = (p..n).find(|&i| q(knots[i]) <= t && t < q(knots[i + 1]))?;
     let start = span - p;
     let mut basis = vec![Q::zero(); p + 2];

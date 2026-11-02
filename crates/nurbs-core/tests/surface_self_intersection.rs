@@ -778,3 +778,6 @@ mod oblique_plane;
 
 #[path = "surface_self_intersection/original_iso.rs"]
 mod original_iso;
+
+#[path = "surface_self_intersection/iso_probe.rs"]
+mod iso_probe;
