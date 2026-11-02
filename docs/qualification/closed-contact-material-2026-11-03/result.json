@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "productionSourceBase": "3df7cdca155dfb1b5aade529541af5d7ceac406b",
+  "scope": "original-closed-contact-material-global-embedding-and-G2-boundary",
+  "baseCases": [
+    {
+      "arc": false,
+      "warped": false,
+      "hole": false,
+      "cells": 3498,
+      "exactWork": 45166,
+      "products": 52
+    },
+    {
+      "arc": false,
+      "warped": false,
+      "hole": true,
+      "cells": 3582,
+      "exactWork": 89756,
+      "products": 104
+    },
+    {
+      "arc": false,
+      "warped": true,
+      "hole": false,
+      "cells": 3466,
+      "exactWork": 53349,
+      "products": 52
+    },
+    {
+      "arc": false,
+      "warped": true,
+      "hole": true,
+      "cells": 3518,
+      "exactWork": 106773,
+      "products": 104
+    },
+    {
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 169105,
+      "exactWork": 113409,
+      "products": 52
+    },
+    {
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 169189,
+      "exactWork": 157999,
+      "products": 104
+    },
+    {
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 169076,
+      "exactWork": 121592,
+      "products": 52
+    },
+    {
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 169128,
+      "exactWork": 175016,
+      "products": 104
+    }
+  ],
+  "baseSpanBindings": 48,
+  "nativeDefault": {
+    "passed": 2,
+    "failed": 0,
+    "filtered": 0
+  },
+  "nativeNoCodec": {
+    "passed": 2,
+    "failed": 0,
+    "filtered": 0,
+    "geometryWorkMatchesDefault": true
+  },
+  "existingNativeRegressions": {
+    "passed": 10,
+    "failed": 0,
+    "filtered": 2308
+  },
+  "guardedSourceFiles": 4403,
+  "negativeNativeCases": [
+    "wrong-hole-orientation",
+    "hole-outside-outer-inside-carrier",
+    "singular-filled-carrier",
+    "genuine-material-self-intersection"
+  ],
+  "rankAndCollisionNativeReason": "ideal-volume-work-limit",
+  "independentWitness": {
+    "exactBoundSpans": {
+      "collision": 8,
+      "positive": 8
+    },
+    "oneUlpNegativeControls": 2,
+    "derivedRankControlExactBoundSpans": 8,
+    "carrierDerivativeVZeroOnU1": true,
+    "actualMaterialCollision": {
+      "stations": [
+        "0",
+        "1/2"
+      ],
+      "uv": [
+        [
+          "2",
+          "4"
+        ],
+        [
+          "256/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "0",
+        "0",
+        "3/256"
+      ]
+    },
+    "sourcePayloadSha256": "e039ab7109908aed5b8fa0acf1d6c51a13feec3e90234ff752b35a1ca64872e2",
+    "scope": "Exact source composition, derived rank loss and one actual material collision; no independent positive global embedding claim."
+  },
+  "oracleSourceSha256": "e2ca354ba8c0e82d2aaef3bd6b1df86668cbf6c871b4c6e604240fcf173c83fc",
+  "newRetainedSolidQualification": false,
+  "stepRoundTripRun": false,
+  "wasmRebuilt": false,
+  "broaderGoalComplete": false
+}
