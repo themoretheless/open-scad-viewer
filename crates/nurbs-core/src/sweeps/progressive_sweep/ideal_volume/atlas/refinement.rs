@@ -40,6 +40,10 @@ pub(super) fn promising(
                 .and_then(|c| symmetric_positive(c, metric))
                 .unwrap_or(false);
             if !positive {
+                #[cfg(test)]
+                if std::env::var_os("OSV_TRACE_ACTUAL_METRIC").is_some() {
+                    eprintln!("METRIC rejected point={point:?} columns={:?}",e.columns);
+                }
                 return Ok(false);
             }
         }

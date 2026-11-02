@@ -220,3 +220,6 @@ fn rotating_carrier_tangents_refine_time_instead_of_only_uv() {
     assert!(!bad.embedding_certified && !bad.regularity_certified && !bad.parameter_topology_preserved);
     eprintln!("rotating original cap tangents: cells={} exact={}",full.cells,full.exact_work);
 }
+
+#[cfg(feature = "codec")]
+mod actual_field;
