@@ -1,0 +1,7 @@
+{
+  "acceptedDefinitions": 8,
+  "negativeControls": 2,
+  "failed": 0,
+  "definitionsSha256": "efd2084959f63c33dfcf14ca57d619145637fb4e7f117350ffbb71e1b531fac2",
+  "scope": "Exact rational polynomial cross products on every source/output knot cell; actual binary64 coefficients; default/no-codec outputs match. No runtime or topology claim."
+}

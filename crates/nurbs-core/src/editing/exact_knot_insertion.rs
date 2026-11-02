@@ -13,7 +13,12 @@ pub struct Report {
     pub refusal: Option<Refusal>,
 }
 type PResult<T> = std::result::Result<T, Refusal>;
-fn proposal(source: &Curve, parameter: f64, count: usize, w: &mut Work) -> PResult<Curve> {
+pub(super) fn homogeneous(
+    source: &Curve,
+    parameter: f64,
+    count: usize,
+    w: &mut Work,
+) -> PResult<(Vec<Vec<Q>>, Vec<f64>)> {
     let p = source.degree;
     let dim = source.control_points[0].len();
     let u = w.lift(parameter)?;
@@ -58,12 +63,17 @@ fn proposal(source: &Curve, parameter: f64, count: usize, w: &mut Work) -> PResu
         knots.insert(k + 1, parameter);
         net = refined;
     }
+    Ok((net, knots))
+}
+fn proposal(source: &Curve, parameter: f64, count: usize, w: &mut Work) -> PResult<Curve> {
+    let (net, knots) = homogeneous(source, parameter, count, w)?;
+    let dim = source.control_points[0].len();
     let channels = (0..=dim)
         .map(|axis| net.iter().map(|row| row[axis].clone()).collect())
         .collect::<Vec<Vec<Q>>>();
     let (control_points, weights) = store(&channels, w)?;
     let output = Curve {
-        degree: p,
+        degree: source.degree,
         knots,
         control_points,
         weights,
@@ -80,30 +90,7 @@ fn proposal(source: &Curve, parameter: f64, count: usize, w: &mut Work) -> PResu
 /// parameter law is verified independently. Same original absolute domain.
 /// Boundary clamping and periodic seam refinement are separate operations.
 pub fn insert(source: &Curve, parameter: f64, count: usize, max_work: u64) -> Result<Report> {
-    source.validate()?;
-    let p = source.degree;
-    let [a, b] = source.domain();
-    check(
-        (1..=cad_predicates::MAX_WORK).contains(&max_work),
-        "Exact insertion work must be in1..=1000000",
-    )?;
-    check(
-        !source.periodic,
-        "Exact internal insertion requires nonperiodic storage",
-    )?;
-    check(
-        parameter.is_finite() && a < parameter && parameter < b,
-        "Exact internal knot must lie strictly inside the original domain",
-    )?;
-    check(
-        (1..=p).contains(&count),
-        "Exact internal insertion count must be in1..=degree",
-    )?;
-    let multiplicity = source.knots.iter().filter(|x| **x == parameter).count();
-    check(
-        multiplicity + count <= p,
-        "Exact insertion exceeds existing internal knot multiplicity",
-    )?;
+    validate_request(source, parameter, count, max_work)?;
     let refused = |reason, work_used| Report {
         curve: source.clone(),
         inserted: 0,
@@ -143,4 +130,37 @@ pub fn insert(source: &Curve, parameter: f64, count: usize, max_work: u64) -> Re
             Ok(refused(Refusal::PredicateIndeterminate(r), work.used))
         }
     }
+}
+
+pub(super) fn validate_request(
+    source: &Curve,
+    parameter: f64,
+    count: usize,
+    max_work: u64,
+) -> Result<()> {
+    source.validate()?;
+    let p = source.degree;
+    let [a, b] = source.domain();
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact insertion work must be in1..=1000000",
+    )?;
+    check(
+        !source.periodic,
+        "Exact internal insertion requires nonperiodic storage",
+    )?;
+    check(
+        parameter.is_finite() && a < parameter && parameter < b,
+        "Exact internal knot must lie strictly inside the original domain",
+    )?;
+    check(
+        (1..=p).contains(&count),
+        "Exact internal insertion count must be in1..=degree",
+    )?;
+    let multiplicity = source.knots.iter().filter(|x| **x == parameter).count();
+    check(
+        multiplicity + count <= p,
+        "Exact insertion exceeds existing internal knot multiplicity",
+    )?;
+    Ok(())
 }

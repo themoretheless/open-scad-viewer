@@ -20,3 +20,5 @@ pub mod rational_gauge;
 pub mod rational_factor;
 mod rational_edit;
 pub mod exact_knot_insertion;
+
+pub mod exact_surface_knot_insertion;

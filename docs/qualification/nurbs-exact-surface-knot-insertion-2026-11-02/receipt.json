@@ -1,0 +1,155 @@
+{
+  "baseCommit": "01d397ee924edac6381a73a4bfa866f6d74f5fe6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "824c02b8afe17045eb23b9bbcdc03963f1331db728b2dab03ad6b0b40fceb7f8",
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "9be1b65325c5632b511a82ccd1ffeab9ebe1e89a91c3239cf2183c4aa02028bf",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs": "2a6afcfcfa8dd9393e85e6cab17bb833e6644d01c68c328d2de9f15d65ea65f8",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion/denominator.rs": "7387498176954d33c8ad1bc734b45c6e98c9985dc390047c9b1c00c8f19b75a6",
+    "crates/nurbs-core/tests/exact_surface_knot_insertion_contracts.rs": "a023bcb064fa6dcebdded16447a44b2a04464d1362b381a9dcd1a05c5e9d718e",
+    "crates/nurbs-core/tests/exact_tensor_denominator_contracts.rs": "74686b3a0f16852ac11738da1248235197fe2239cadbd1c57db1e9ebbceae901",
+    "docs/design/nurbs-exact-surface-knot-insertion.md": "6230812a41f676c5728baee5b7a7895e3015cf02da8b950e973a55798e2228d1",
+    "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf"
+  },
+  "tests": {
+    "finalDefaultContracts": 29,
+    "finalNoCodecContracts": 29,
+    "defaultDenominatorUnit": 2,
+    "noCodecSameProductionSourceIsolatedDenominator": 2,
+    "totalFinalExecutions": 62,
+    "fullNoCodecLibTestBuild": {
+      "exitCode": 101,
+      "errors": 79,
+      "status": "open; codec/transport-dependent pre-existing unit modules; not suppressed or qualified"
+    }
+  },
+  "finalRunner": {
+    "native234-no-codec-contracts": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T19:12:50.787173+00:00",
+      "exitCode": 0
+    },
+    "native234-no-codec-denominator-unit": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib",
+        "editing::exact_surface_knot_insertion::denominator::tests",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T19:14:49.540223+00:00",
+      "exitCode": 101
+    },
+    "native234-default-contracts": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T19:15:06.242502+00:00",
+      "exitCode": 0
+    },
+    "native234-default-denominator-unit": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "editing::exact_surface_knot_insertion::denominator::tests",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T19:16:56.882608+00:00",
+      "exitCode": 0
+    }
+  },
+  "additionalExitCodes": {
+    "noCodecIsolatedDenominator": 0,
+    "architecture": 0,
+    "surfaceOracle": 0,
+    "curveRegressionOracleAfterRecordTypeSelection": 0,
+    "factorRegressionOracle": 0
+  },
+  "oracles": {
+    "oracle": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 3,
+      "failed": 0,
+      "definitionsSha256": "3102d2c9de54e81a3790be1fa5e9fd90a22288fece9112bb019f65567ac5cbbe",
+      "scope": "Exact full bivariate homogeneous cross-products on every original/output tensor knot cell. Actual binary64 data; default/no-codec equality. No sampled geometry, runtime, topology or compiler claim."
+    },
+    "curve-regression-oracle": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 2,
+      "failed": 0,
+      "definitionsSha256": "efd2084959f63c33dfcf14ca57d619145637fb4e7f117350ffbb71e1b531fac2",
+      "scope": "Exact rational polynomial cross products on every source/output knot cell; actual binary64 coefficients; default/no-codec outputs match. No runtime or topology claim."
+    },
+    "factor-regression-oracle": {
+      "passed": 8,
+      "failed": 0,
+      "checks": {
+        "elevated-primitive": true,
+        "constant": true,
+        "degree25": true,
+        "negative-factor": true,
+        "rational-clock": true,
+        "3d-clock": true,
+        "wrong-clock-detected": true,
+        "per-pole-weight-sign-change-detected": true
+      },
+      "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+      "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+    }
+  },
+  "normalNoCodecDependencyGraph": "value-codec absent",
+  "limits": "Existing degree/multiplicity, 256-per-axis, 1m shared work, 4096-bit rational arithmetic guards unchanged. One global net gauge. Original source returned on all mathematical refusals.",
+  "scope": "Native operation qualification only. Default lib harness compiles but only2 selected tests executed. Whole no-codec lib harness fails and remains open. No whole-workspace/frontend/WASM/editor/exchange/current compiler attestation or certificate transfer claim."
+}
