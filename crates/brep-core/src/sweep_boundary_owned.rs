@@ -523,3 +523,8 @@ pub use closed::{MaterialSpanBinding, MaterialSpanBindingKind, OriginalClassifie
 pub use closed::{OriginalClassifiedCappedMaterial, OriginalClassifiedCappedMaterialAttempt,
     OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
     OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material};
+
+mod classified_original;
+pub use classified_original::{OriginalClassifiedBody, OriginalClassifiedBodyAttempt,
+    OriginalClassifiedBodyRefusal, construct_with_original_classified_material,
+    construct_affine_with_original_classified_material};

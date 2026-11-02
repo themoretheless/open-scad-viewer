@@ -25,12 +25,12 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
         && (1..=1000000).contains(&max_domain_cells) && tolerance_uv.is_finite() && tolerance_uv>0.,
         "Trim region audit requires 1..16 loops, at most 256 curves, positive tolerance and bounded work")?;
     let mut out=Report{valid:None,reason:"loop-simplicity-unproven",loops:Vec::with_capacity(loops.len()),winding:vec![None;loops.len()],pairs:0,cells:0,domain_cells:0,problem_loops:None};
-    // Only a multi-loop region has a later cross-loop separation stage.
-    // Reserving a fictitious share for one outer loop prevents exact-budget
-    // replay, especially when two cap audits share their remaining cells.
+    // Every subproof debits actual cells from ONE shared ledger. Artificial
+    // equal shares can reject a curved outer loop at its measured total cost,
+    // particularly when two caps share a material audit allowance.
     for (i,l) in loops.iter().enumerate(){
         if out.pairs==max_pairs || out.cells==max_cells {return Ok(out);}
-        let r=trim_simplicity::inspect(l,tolerance_uv,max_pairs-out.pairs,((max_cells-out.cells)/(loops.len()-i+usize::from(loops.len()>1))).max(1))?;
+        let r=trim_simplicity::inspect(l,tolerance_uv,max_pairs-out.pairs,max_cells-out.cells)?;
         out.pairs+=r.pairs.len();out.cells+=r.cells;
         let proven=r.proven_simple;out.loops.push(r);
         if !proven {out.problem_loops=Some([i,i]);return Ok(out);}
@@ -39,7 +39,7 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
     for a in 0..loops.len(){for b in a+1..loops.len(){
         for ca in &loops[a]{for cb in &loops[b]{
             if out.pairs==max_pairs || out.cells==max_cells {out.problem_loops=Some([a,b]);return Ok(out);}
-            let r=match curve_distance::prove_separation(ca,cb,tolerance_uv,((max_cells-out.cells)/(count*count).max(1)).max(1)) {
+            let r=match curve_distance::prove_separation(ca,cb,tolerance_uv,max_cells-out.cells) {
                 Ok(report)=>report,
                 Err(error) if error.code=="NURBS_RESOURCE_LIMIT"=>{
                     out.pairs+=1;out.problem_loops=Some([a,b]);return Ok(out);
@@ -88,6 +88,18 @@ mod tests {
         (0..4).map(|i|Curve::from_polyline(vec![p[i].to_vec(),p[(i+1)%4].to_vec()]).unwrap()).collect()
     }
     fn audit(l:Vec<Vec<Curve>>)->Report{inspect(&l,1e-8,1000,10000,100000).unwrap()}
+    #[test]
+    fn curved_outer_and_hole_replay_their_measured_shared_cells() {
+        let points=[[0.,0.],[0.5,0.],[1.,0.25],[1.,1.],[0.,1.],[0.,0.]];
+        let mut outer=points.windows(2).map(|p|Curve::from_polyline(p.iter().map(|p|p.to_vec()).collect()).unwrap()).collect::<Vec<_>>();
+        outer[1]=Curve{degree:2,knots:vec![-3.,-3.,-3.,5.,5.,5.],control_points:vec![vec![0.5,0.],vec![0.75,0.],vec![1.,0.25]],weights:vec![1.;3],periodic:false};
+        let loops=vec![outer,square(0.25,0.75,true)];let before=loops.clone();
+        let full=inspect(&loops,1e-8,100000,100000,1000000).unwrap();assert_eq!(full.valid,Some(true));
+        let replay=inspect(&loops,1e-8,full.pairs,full.cells,full.domain_cells).unwrap();
+        assert_eq!(replay.valid,Some(true));assert_eq!((replay.pairs,replay.cells,replay.domain_cells),(full.pairs,full.cells,full.domain_cells));
+        let short=inspect(&loops,1e-8,full.pairs,full.cells-1,full.domain_cells).unwrap();assert_eq!(short.valid,None);assert!(short.cells<=full.cells-1);
+        assert_eq!(loops,before);
+    }
     #[test]
     fn a_single_outer_loop_uses_its_complete_remaining_cell_budget(){
         let loops=vec![square(0.,1.,false)];let before=loops.clone();

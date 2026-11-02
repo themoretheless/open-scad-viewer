@@ -4,6 +4,9 @@ use nurbs_core::affine_volume as atlas;
 pub struct AffineFilledVolumeReport {
     pub certified: bool,
     pub packet_bound: bool,
+    /// Distinct original carriers use a fresh normalized common material proof
+    /// and a complete two-carrier filled map, rather than carrier equality.
+    pub paired_carriers: bool,
     pub carrier_identity: Option<nurbs_core::progressive_sweep::NormalizedCarrierIdentityReport>,
     pub material_roles_certified: bool,
     pub agreement: Option<crate::boundary_agreement::ExactReport>,
@@ -66,6 +69,7 @@ pub(super) fn qualify(
     let mut out = AffineFilledVolumeReport {
         certified: false,
         packet_bound: false,
+        paired_carriers: false,
         carrier_identity: None,
         material_roles_certified: false,
         agreement: None,
@@ -94,20 +98,24 @@ pub(super) fn qualify(
             exact_work: limits.work - out.work,
         },
     )?;
-    let identity = match identity {
-        NormalizedCarrierIdentityAttempt::Certified(p) => p,
+    let same_carrier = match identity {
+        NormalizedCarrierIdentityAttempt::Certified(p) => {
+            out.cells += p.report().cells;
+            out.work += p.report().exact_work;
+            out.carrier_identity = Some(p.report().clone());
+            p.matches(caps)
+        }
         NormalizedCarrierIdentityAttempt::Refused(r) => {
             out.cells += r.cells;
             out.work += r.exact_work;
             out.carrier_identity = Some(*r);
-            out.reason = "actual-affine-equal-source-carrier-unproved";
-            return Ok(out);
+            false
         }
     };
-    out.cells += identity.report().cells;
-    out.work += identity.report().exact_work;
-    out.carrier_identity = Some(identity.report().clone());
-    if !identity.matches(caps) {
+    if !same_carrier
+        && !super::common_trim_region::certify(source_caps, &mut out.work, limits.work)?
+    {
+        out.reason = "actual-affine-common-material-domain-unproved";
         return Ok(out);
     }
     if model.shells.len() != 1
@@ -175,34 +183,36 @@ pub(super) fn qualify(
             }
         }
     }
-    if source_caps[0].trims.len() != c.original.len() {
-        return Ok(out);
-    }
-    for (profiles, trims) in c.original.iter().zip(&source_caps[0].trims) {
-        if profiles.len() != trims.len() {
+    for source_cap in source_caps {
+        if source_cap.trims.len() != c.original.len() {
             return Ok(out);
         }
-        for (world, uv) in profiles.iter().zip(trims) {
-            if out.work == limits.work {
-                out.reason = "actual-affine-boundary-work-limit";
+        for (profiles, trims) in c.original.iter().zip(&source_cap.trims) {
+            if profiles.len() != trims.len() {
                 return Ok(out);
             }
-            let proof = nurbs_core::curve_surface_agreement::verify_exact(
-                world,
-                uv,
-                &source_caps[0].surface,
-                false,
-                limits.work - out.work,
-            )?;
-            let Some(proof) = proof else {
-                out.work = limits.work;
-                out.reason = "actual-affine-source-trace-unproved";
-                return Ok(out);
-            };
-            out.work += proof.work_used;
-            if proof.outcome != cad_predicates::BezierIdentity::Equal {
-                out.reason = "actual-affine-source-trace-unproved";
-                return Ok(out);
+            for (world, uv) in profiles.iter().zip(trims) {
+                if out.work == limits.work {
+                    out.reason = "actual-affine-boundary-work-limit";
+                    return Ok(out);
+                }
+                let proof = nurbs_core::curve_surface_agreement::verify_exact(
+                    world,
+                    uv,
+                    &source_cap.surface,
+                    false,
+                    limits.work - out.work,
+                )?;
+                let Some(proof) = proof else {
+                    out.work = limits.work;
+                    out.reason = "actual-affine-source-trace-unproved";
+                    return Ok(out);
+                };
+                out.work += proof.work_used;
+                if proof.outcome != cad_predicates::BezierIdentity::Equal {
+                    out.reason = "actual-affine-source-trace-unproved";
+                    return Ok(out);
+                }
             }
         }
     }
@@ -255,21 +265,33 @@ pub(super) fn qualify(
         }
     }
     out.packet_bound = true;
-    // Fresh source trace identities bind P=Q(uv). Fresh actual edge identities
-    // bind both actual cap loops to A(0)P and A(1)P. Global injectivity of the
-    // filled map makes both endpoint A*Q charts injective, so these are the SAME
-    // normalized UV regions. Positive affine UV domain maps preserve winding
-    // and normal orientation. Every side covers its full natural rectangle.
-    // The borrowed source identity above proves the COMPLETE normalized maps.
-    let volume = atlas::certify_rational(
-        &source_caps[0].surface,
-        c.origin,
-        &c.pieces,
-        false,
-        projection,
-        limits.matrix_cells - out.cells,
-        limits.work - out.work,
-    )?;
+    // Fresh source identities bind BOTH normalized material traces to P.
+    // Exact actual edges bind their endpoint images to A(0)P and A(1)P.
+    // Equal carriers retain the original proof. Distinct carriers require the
+    // fresh positive-affine UV correspondence above, so their normalized trim
+    // clocks and regions coincide. Their Cartesian interpolation equals P on
+    // every material boundary. The complete filled-map proof below supplies
+    // global injectivity/rank; no pair is excluded merely by shared topology.
+    let volume = if same_carrier {
+        atlas::certify_rational(
+            &source_caps[0].surface,
+            c.origin,
+            &c.pieces,
+            false,
+            projection,
+            limits.matrix_cells - out.cells,
+            limits.work - out.work,
+        )?
+    } else {
+        atlas::certify_rational_caps(
+            caps,
+            c.origin,
+            &c.pieces,
+            projection,
+            limits.matrix_cells - out.cells,
+            limits.work - out.work,
+        )?
+    };
     out.cells += volume.cells;
     out.work += volume.exact_work;
     let proven = volume.embedding_certified
@@ -280,13 +302,23 @@ pub(super) fn qualify(
         out.reason = "actual-affine-filled-volume-unproved";
         return Ok(out);
     }
-    let orientation = atlas::jacobian_orientation_rational(
-        &source_caps[0].surface,
-        c.origin,
-        &c.pieces,
-        [0.5; 3],
-        limits.matrix_cells - out.cells,
-    )?;
+    let orientation = if same_carrier {
+        atlas::jacobian_orientation_rational(
+            &source_caps[0].surface,
+            c.origin,
+            &c.pieces,
+            [0.5; 3],
+            limits.matrix_cells - out.cells,
+        )?
+    } else {
+        atlas::jacobian_orientation_rational_caps(
+            caps,
+            c.origin,
+            &c.pieces,
+            [0.5; 3],
+            limits.matrix_cells - out.cells,
+        )?
+    };
     out.cells += orientation.cells;
     let sign = orientation.sign;
     out.orientation = Some(orientation);
@@ -317,6 +349,7 @@ pub(super) fn qualify(
         return Ok(out);
     }
     out.material_roles_certified = true;
+    out.paired_carriers = !same_carrier;
     out.certified = true;
     out.reason = "actual-affine-filled-material-boundary-certified";
     Ok(out)

@@ -244,3 +244,52 @@ fn independent_cap_degrees_weights_and_uv_domains_share_the_actual_filled_certif
     assert_eq!(other.surface, before.surface);
     assert_eq!(other.trims, before.trims);
 }
+
+#[test]
+fn classified_paired_caps_refuse_an_interior_fold_despite_exact_hole_traces() {
+    let (original, cap, old) = source(true);
+    let mut end = cap.clone();
+    let q = [0., -9. / 16., 5. / 4., -9. / 16., 0.];
+    end.surface = nurbs_core::surface::Surface {
+        degree_u: 4,
+        degree_v: 4,
+        knots_u: [vec![0.; 5], vec![1.; 5]].concat(),
+        knots_v: [vec![0.; 5], vec![1.; 5]].concat(),
+        control_points: (0..5)
+            .map(|i| {
+                (0..5)
+                    .map(|j| vec![i as f64 / 4., j as f64 / 4., -256. * q[i] * q[j]])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1.; 5]; 5],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let before = (end.surface.clone(), end.trims.clone());
+    let (candidate, prefix) =
+        affine_candidate::prepare(&original, &old, [&cap, &end], limits()).unwrap();
+    let candidate = candidate.expect("exact coherent boundary packet");
+    let model = model(&candidate);
+    let proof = qualify(
+        &model,
+        &candidate,
+        [&cap, &end],
+        1e-8,
+        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        limits(),
+        prefix.work,
+    )
+    .unwrap();
+    assert!(proof.packet_bound, "{}", proof.reason);
+    assert!(!proof.certified && !proof.material_roles_certified);
+    let volume = proof
+        .volume
+        .as_ref()
+        .expect("must reach actual filled map, not only fail source binding");
+    assert!(!volume.embedding_certified && !volume.parameter_topology_preserved);
+    assert_eq!(proof.reason, "actual-affine-filled-volume-unproved");
+    assert!(proof.cells <= limits().matrix_cells && proof.work <= limits().work);
+    assert_eq!(end.surface, before.0);
+    assert_eq!(end.trims, before.1);
+}

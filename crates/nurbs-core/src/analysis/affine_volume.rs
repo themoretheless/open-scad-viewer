@@ -15,6 +15,8 @@ use std::collections::BTreeMap;
 /// coefficients, not interval samples or caller-supplied successful proofs.
 pub type Pose = [[f64; 3]; 4];
 mod rational;
+mod capped;
+pub use capped::{certify_rational_caps, jacobian_orientation_rational_caps};
 pub use rational::{
     ColumnFactor, PreconditionedReport, ProofCoordinates, RationalPiece, certify_rational,
     certify_rational_preconditioned, jacobian_orientation_rational,
@@ -126,6 +128,7 @@ fn union(a: &mut EnclosedPose, b: EnclosedPose) -> Result<()> {
 }
 struct Context<'a> {
     carrier: &'a Surface,
+    second: Option<&'a Surface>,
     origin: [f64; 3],
     pieces: Motion<'a>,
     poses: BTreeMap<[u64; 2], EnclosedPose>,
@@ -185,7 +188,7 @@ impl Context<'_> {
         }
         out.cells += 1;
         out.boxes += 1;
-        let Some(mut q) = charts::cap_jets(self.carrier, [b[0], b[1]], &mut out.cells, max)? else {
+        let Some((mut q, qt)) = capped::jets(self.carrier, self.second, b, out, max)? else {
             return Ok(Enclosed::Unavailable(None));
         };
         // Strong rational weights can make a wide carrier jet box ambiguous
@@ -210,7 +213,7 @@ impl Context<'_> {
         let Some(pose) = self.temporal(b[2], out, max)? else {
             return Ok(Enclosed::Unavailable(Some(2)));
         };
-        let e: Enclosure = pose.enclose(q, [I::point(0.); 3])?;
+        let e: Enclosure = pose.enclose(q, qt)?;
         Ok(Enclosed::Value(e))
     }
 }
@@ -259,6 +262,7 @@ fn certify_motion(
         max_exact_work,
         false,
         &mut None,
+        None,
     )
 }
 fn certify_motion_impl(
@@ -271,8 +275,14 @@ fn certify_motion_impl(
     max_exact_work: u64,
     precondition: bool,
     coordinates: &mut Option<ProofCoordinates>,
+    second: Option<&Surface>,
 ) -> Result<IdealVolumeReport> {
     carrier.validate()?;
+    if let Some(end) = second {
+        end.validate()?;
+        check(!closed && !precondition && end.control_points.iter().flatten().all(|p|p.len()==3),
+            "Paired affine carriers require open normalized charts and world coordinates")?;
+    }
     check(
         carrier
             .control_points
@@ -300,7 +310,7 @@ fn certify_motion_impl(
         projection,
         reason: Some("affine-volume-work-limit"),
     };
-    if !charts::surface_c0(carrier) {
+    if !charts::surface_c0(carrier) || second.is_some_and(|s|!charts::surface_c0(s)) {
         out.reason = Some("affine-volume-carrier-basis-unproved");
         return Ok(out);
     }
@@ -324,6 +334,7 @@ fn certify_motion_impl(
     }
     let mut context = Context {
         carrier,
+        second,
         origin,
         pieces,
         poses: BTreeMap::new(),
@@ -424,10 +435,16 @@ fn orientation_motion(
     point: [f64; 3],
     max_cells: usize,
 ) -> Result<OrientationReport> {
+    orientation_motion_with_caps(carrier, None, origin, pieces, point, max_cells)
+}
+fn orientation_motion_with_caps(
+    carrier: &Surface, second: Option<&Surface>, origin: [f64;3], pieces: Motion<'_>,
+    point: [f64;3], max_cells: usize,
+) -> Result<OrientationReport> {
     // Reuse complete raw-input validation; a zero-budget certificate performs
     // no geometry queries and supplies no atlas/closure credit to this helper.
     let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
-    let mut work = certify_motion(carrier, origin, pieces, false, projection, 0, 0)?;
+    let mut work = certify_motion_impl(carrier, origin, pieces, false, projection, 0, 0, false, &mut None, second)?;
     check(
         max_cells <= 100000
             && point
@@ -441,11 +458,12 @@ fn orientation_motion(
         cells: 0,
         reason: "affine-orientation-unproved",
     };
-    if !charts::surface_c0(carrier) {
+    if !charts::surface_c0(carrier) || second.is_some_and(|s|!charts::surface_c0(s)) {
         return Ok(out);
     }
     let mut context = Context {
         carrier,
+        second,
         origin,
         pieces,
         poses: BTreeMap::new(),

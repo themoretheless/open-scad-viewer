@@ -247,6 +247,7 @@ pub fn certify_rational_preconditioned(
         max_exact_work,
         true,
         &mut coordinates,
+        None,
     )?;
     Ok(PreconditionedReport {
         volume,
