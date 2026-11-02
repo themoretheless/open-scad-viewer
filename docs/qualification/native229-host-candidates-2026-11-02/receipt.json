@@ -1,0 +1,131 @@
+{
+  "scope": "Actual hosted artifacts independently passed115Node tests and40main/40independent-worker embedded Chromium assertions. Declared5133 input-file bytes equal Root229. No cross-hash borrowing, runtime admission, complete UI, formal compilation attestation or global CAD qualification.",
+  "sourceInputSha256": "2a15a7953895ee22632d996898b9d0dd39a2326fc49fb2a6440dc18ca58c5d42",
+  "runtimeAdmitted": false,
+  "qualificationClaim": "none",
+  "workflowRun": 41397155889,
+  "workflowHead": "409ecefebf8cb7baa14b44e0b3a08ab61349b1f6",
+  "rootSourceRecord": "OwnRust86",
+  "rootSourceCheckpoint": "604a8a5946c14f02ab74255c122ac8d08ca8b23b",
+  "hosts": [
+    {
+      "host": "Linux",
+      "identity": {
+        "sha256": "b91713ad66d8352f2c54c9299548568f7f1ee7a2ec058fa9ac616071c5ce4179",
+        "byteLength": 15943893
+      },
+      "sourceSha256": "2a15a7953895ee22632d996898b9d0dd39a2326fc49fb2a6440dc18ca58c5d42",
+      "sourceFiles": 5133,
+      "sourceRevision": "61191880eca604504f8ba8337bc2e41b7c6b7b05",
+      "sourceInputsMatchRoot229": true,
+      "compiler": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1",
+      "nodeVersion": "v22.23.4",
+      "browserVersion": "151.0.7922.34",
+      "nodePassed": 115,
+      "browserMain": 40,
+      "browserIndependentWorker": 40,
+      "runtimeAdmitted": false,
+      "artifacts": {
+        "geometry-build-candidate-Linux": {
+          "zipSha256": "4c057889d723ffbc7b8ac320d74227df0472db5a1dcfe99a8d81a95e13082f6d",
+          "bytes": 6785254,
+          "artifactId": 13119764664,
+          "githubDigestVerified": true
+        },
+        "geometry-candidate-direct-reports-Linux": {
+          "zipSha256": "3e007ed5923539d872cb2c4634d8d963988720f583c0ebd25c59a8afbc3d2438",
+          "bytes": 6708,
+          "artifactId": 13120465739,
+          "githubDigestVerified": true
+        }
+      },
+      "artifactPath": "docs/qualification/artifacts/geometry-b91713ad66d8352f2c54c9299548568f7f1ee7a2ec058fa9ac616071c5ce4179.wasm"
+    },
+    {
+      "host": "macOS",
+      "identity": {
+        "sha256": "375f67e0dd3e0e27861eeada9fdc7cbb845291e45fe58e1ecbc74df2a4d8c859",
+        "byteLength": 15935873
+      },
+      "sourceSha256": "2a15a7953895ee22632d996898b9d0dd39a2326fc49fb2a6440dc18ca58c5d42",
+      "sourceFiles": 5133,
+      "sourceRevision": "61191880eca604504f8ba8337bc2e41b7c6b7b05",
+      "sourceInputsMatchRoot229": true,
+      "compiler": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1",
+      "nodeVersion": "v22.23.4",
+      "browserVersion": "151.0.7922.34",
+      "nodePassed": 115,
+      "browserMain": 40,
+      "browserIndependentWorker": 40,
+      "runtimeAdmitted": false,
+      "artifacts": {
+        "geometry-build-candidate-macOS": {
+          "zipSha256": "94ad9db3525b4c0bf94b3c9d67036127fc462cc5a12df94e71407aa1d15d00ba",
+          "bytes": 6782108,
+          "artifactId": 13119734457,
+          "githubDigestVerified": true
+        },
+        "geometry-candidate-direct-reports-macOS": {
+          "zipSha256": "e65074bb484eabd256dc4d96af5667e1e03560870615cc982f9c637413a45fcd",
+          "bytes": 6598,
+          "artifactId": 13120595701,
+          "githubDigestVerified": true
+        }
+      },
+      "artifactPath": "docs/qualification/artifacts/geometry-375f67e0dd3e0e27861eeada9fdc7cbb845291e45fe58e1ecbc74df2a4d8c859.wasm"
+    },
+    {
+      "host": "Windows",
+      "identity": {
+        "sha256": "9b995c3c2799544db3ac405a0744c14620bef4e41d3dafa3dca1bd63205e9a1b",
+        "byteLength": 15934666
+      },
+      "sourceSha256": "2a15a7953895ee22632d996898b9d0dd39a2326fc49fb2a6440dc18ca58c5d42",
+      "sourceFiles": 5133,
+      "sourceRevision": "61191880eca604504f8ba8337bc2e41b7c6b7b05",
+      "sourceInputsMatchRoot229": true,
+      "compiler": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: x86_64-pc-windows-msvc\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1",
+      "nodeVersion": "v22.23.4",
+      "browserVersion": "151.0.7922.34",
+      "nodePassed": 115,
+      "browserMain": 40,
+      "browserIndependentWorker": 40,
+      "runtimeAdmitted": false,
+      "artifacts": {
+        "geometry-build-candidate-Windows": {
+          "zipSha256": "822c8b11b6648292b8bc9487f8243c141bd6949f3f158275940107dece43bbc8",
+          "bytes": 6781351,
+          "artifactId": 13120985635,
+          "githubDigestVerified": true
+        },
+        "geometry-candidate-direct-reports-Windows": {
+          "zipSha256": "7911d3093d66da20ca825930d69e36da78e041ac859f28fd25c2e863d537e9f2",
+          "bytes": 6536,
+          "artifactId": 13121050733,
+          "githubDigestVerified": true
+        }
+      },
+      "artifactPath": "docs/qualification/artifacts/geometry-9b995c3c2799544db3ac405a0744c14620bef4e41d3dafa3dca1bd63205e9a1b.wasm"
+    }
+  ],
+  "files": {
+    "macOS/geometry-direct-node.json.gz": "aab5e15e40b19b9819e36cf44cc02c85481eec32e504c4e1491fff5ac11c0d31",
+    "macOS/identity.ts.gz": "7b6c30d49bf15334f14cae16c1fc9ba29bc6df0685eba68a4ea35f05f67ab8bd",
+    "macOS/source-before.json.gz": "6fc9be3ff5aed95edccd523e7a764590c1246cfc5aa48a29e6c754e8d0b4ea78",
+    "macOS/receipt.json.gz": "4f1f4631cc6988762b28e1c617caf1f10513589a076e186b980c98fa5beba1d2",
+    "macOS/report.json.gz": "e6531971c589a466acfc233539573a229fe282f209108a69a33eaed90f88935c",
+    "macOS/source-after.json.gz": "6fc9be3ff5aed95edccd523e7a764590c1246cfc5aa48a29e6c754e8d0b4ea78",
+    "Linux/geometry-direct-node.json.gz": "11ee86b59227a3e1589aaf59425f459ea106f2f318b0b69bd347ff7b5b60ae96",
+    "Linux/identity.ts.gz": "8176dd01bc3b6fbf40d8531ef7cbb1dcda2776169b6ac7171646b700c8c5f6f5",
+    "Linux/source-before.json.gz": "6fc9be3ff5aed95edccd523e7a764590c1246cfc5aa48a29e6c754e8d0b4ea78",
+    "Linux/receipt.json.gz": "f978a9d887b03f6fa08126d5d0a9b3da00df8b25ecaafe14920a53c5760f8962",
+    "Linux/report.json.gz": "9f5f1206ebc85f028777ba287b1bbaf23c1902e1e30ec3d993cd1a25728cb60d",
+    "Linux/source-after.json.gz": "6fc9be3ff5aed95edccd523e7a764590c1246cfc5aa48a29e6c754e8d0b4ea78",
+    "Windows/geometry-direct-node.json.gz": "693e3d3391751417ce59208d0061adc8795dada8673786e974a24162b25b7d9d",
+    "Windows/identity.ts.gz": "90cfe84056b6846c121a80d74fcce06ffd53451c4176bdcbdeb8a6910545d553",
+    "Windows/source-before.json.gz": "6fc9be3ff5aed95edccd523e7a764590c1246cfc5aa48a29e6c754e8d0b4ea78",
+    "Windows/receipt.json.gz": "813ecf6d2ba2990946d5e060c1cd0e5dc3ca811efadafe0937585d7dc8bba6cc",
+    "Windows/report.json.gz": "1287c82a059767a809c760e8a127b90aa5a48765444b7077afe3697591b0f207",
+    "Windows/source-after.json.gz": "6fc9be3ff5aed95edccd523e7a764590c1246cfc5aa48a29e6c754e8d0b4ea78"
+  }
+}
