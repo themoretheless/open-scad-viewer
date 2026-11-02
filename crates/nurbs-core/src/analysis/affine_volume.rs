@@ -239,7 +239,18 @@ impl Context<'_> {
         // This is a subdivision proposal, never a regularity/admission claim.
         let normal = iv::cross(q[1], q[2])?;
         if !normal.iter().any(|x| x.lo > 0. || x.hi < 0.) {
-            let axis = usize::from(b[1][1] - b[1][0] > b[0][1] - b[0][0]);
+            let axis = if self.second.is_some() {
+                // Q=(1-t)C0+t*C1 also has TIME-dependent UV jets. Refining
+                // only U/V cannot resolve a wide temporal blend of distinct
+                // carrier tangents, even when both carriers are affine planes.
+                // Fair original-chart subdivision is a proposal only: the
+                // same full normal, metric and pair predicates remain required.
+                (0..3).max_by(|&i,&j|
+                    (b[i][1]-b[i][0]).total_cmp(&(b[j][1]-b[j][0])))
+                    .unwrap()
+            } else {
+                usize::from(b[1][1] - b[1][0] > b[0][1] - b[0][0])
+            };
             return Ok(Enclosed::Unavailable(Some(axis)));
         }
         q[0] = iv::sub(q[0], self.origin.map(I::point))?;

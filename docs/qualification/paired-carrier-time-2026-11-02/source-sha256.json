@@ -1,0 +1,5 @@
+{
+  "crates/nurbs-core/src/analysis/affine_volume.rs": "e14fdd39d54d172c2ccf02a4287a399389b4b2272a28629b33a62ca0b372890c",
+  "crates/nurbs-core/src/analysis/affine_volume/capped/tests.rs": "b5c7592ab6421cc21a88b7258755056c3e34b06639cb9340365497ab75533792",
+  "crates/Cargo.lock": "f0b3df199fe827167e27aa21cb0de15a4561a5934a3a3df9372fe28eb1e8d7db"
+}

@@ -181,3 +181,32 @@ fn moving_paired_caps_use_one_global_chart_and_preserve_refusal_budgets() {
     assert!(!refused.embedding_certified && !refused.regularity_certified && !refused.parameter_topology_preserved);
     eprintln!("moving paired caps: cells={} exact={}",full.cells,full.exact_work);
 }
+
+#[test]
+fn rotating_carrier_tangents_refine_time_instead_of_only_uv() {
+    let mut a=cap(false);
+    for p in a.control_points.iter_mut().flatten() {p[0]/=64.;p[1]/=64.;}
+    let mut b=a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        let x=p[0];p[0]=-p[1];p[1]=x;
+    }
+    // Constant pose axes: the rotation is in the ORIGINAL cap interpolation,
+    // not its temporal affine law. Each fixed-t XY map has determinant
+    // ((1-t)^2+t^2)/64^2 > 0 and z=2t separates different times.
+    let pieces=pieces();
+    let run=|cells,exact|certify_rational_caps([&a,&b],[0.;3],&pieces,P,cells,exact).unwrap();
+    let full=run(10000,1000000);
+    assert!(full.embedding_certified && full.regularity_certified
+        && full.parameter_topology_preserved,"{full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells<full.cells);
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work<full.exact_work);
+    // Reversing BOTH axes makes the interpolated cap collapse at t=1/2.
+    let mut folded=a.clone();
+    for p in folded.control_points.iter_mut().flatten() {p[0]=-p[0];p[1]=-p[1];}
+    let bad=certify_rational_caps([&a,&folded],[0.;3],&pieces,P,10000,1000000).unwrap();
+    assert!(!bad.embedding_certified && !bad.regularity_certified && !bad.parameter_topology_preserved);
+    eprintln!("rotating original cap tangents: cells={} exact={}",full.cells,full.exact_work);
+}
