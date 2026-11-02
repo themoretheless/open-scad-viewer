@@ -708,7 +708,7 @@ fn assemble_core<E>(
 #[path = "source_shell_incidence/tests/mod.rs"]
 mod tests;
 #[cfg(test)]
-#[path="source_shell_incidence/projective_qualification.rs"]
+#[path="source_shell_incidence/tests/projective_qualification.rs"]
 mod projective_qualification;
 
 #[path = "source_shell_incidence/replay.rs"]

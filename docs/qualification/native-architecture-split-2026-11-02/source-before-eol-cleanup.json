@@ -1,0 +1,20 @@
+{
+  "architecture-baseline.json": "2295a90247ce4848b0b75944611147e8b0a9052e198b65216fe0e6c0c8a5ea37",
+  "crates/brep-core/src/minkowski3d/curved.rs": "31920b4b8418c227748b3264480f6a794e17ea54d1b80a25246e4a64521aaeaa",
+  "crates/brep-core/src/minkowski3d/curved/codec.rs": "04cd7aad2d4252afb5cf61cc0782cd397fa03b74b5635ca942035fc7dbe4d445",
+  "crates/brep-core/src/nurbs_step_shared.rs": "3a2466ac527ccd9094f5bb7804871ee641de5d10f077a63447a92cc07aa7ba7a",
+  "crates/brep-core/src/nurbs_step_shared/linked_graph.rs": "b46295c8383f90cee76f585e480bfa28ee2d55b1e79e6910271be27c16d4533d",
+  "crates/brep-core/src/region_replacement/six_edge_corner.rs": "afa151a0cee4a6ee1c9fb95c2fc3f488b58877184d0a2458fce8d611da5b3776",
+  "crates/brep-core/src/region_replacement/six_edge_corner/graph_proof.rs": "fb619a443c2f4b972e78c59bf6bd3105110a60eae6b76917071b59d14e3ff5ea",
+  "crates/brep-core/src/source_face_contacts.rs": "764d4041abd4685fbfc24687d5d367438d7609cda961314ac1580394f425e4ac",
+  "crates/brep-core/src/source_face_contacts/projective.rs": "05ca0485a632c1bfe3efb09a785352cd063ed4c260894a0f41f41db9bc80657f",
+  "crates/brep-core/src/source_shell_incidence.rs": "594718a180d5e636ac870c58ff02b3f3685c6ec0c5686066be3007a3686a8e32",
+  "crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace.rs": "cb9a6215206b21c6aa8e94c7842159daee30e78cdf037d1b49adaaa23e67e01b",
+  "crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace/extraction.rs": "75d756c7158bc5b3af1f47eb37197c8e91f768e3fa93410c01e2bb5db383e74e",
+  "crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace/tests/mod.rs": "b11a129d1c42cb908f990fcc5bc4b9bae5947ff08e98ea1eedc6ce64416f70ed",
+  "crates/nurbs-core/src/analysis/curve_surface_composition/exact_trace/tests/tensor_contraction.rs": "388d236286c93db27feedbffbf1c691fd11d23ae8525512798e037be1ccae9a2",
+  "crates/nurbs-core/src/analysis/curve_surface_composition/graph_trace.rs": "f1424a354ede325a67e8f73946a894381840a99b9974e530198b1c066d80ba8a",
+  "crates/nurbs-core/src/analysis/curve_surface_composition/graph_trace/tests/mod.rs": "56a1bb8aed593e6d3e72f34fa2bf5a44e20c4d955492703cd807a609db67ff1d",
+  "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "ca31247edd189533e41d0037758bb1484e9eeefee28bf8beb246e95941b3af2e",
+  "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/tests/frame_checks.rs": "7c3674da439c8a67a50767d2e37e1ec09b2a3537361e08e8d384065d8c4ad398"
+}
