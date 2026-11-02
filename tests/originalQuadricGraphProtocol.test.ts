@@ -1,0 +1,33 @@
+import {describe,it,expect} from 'vitest'
+import {isOriginalQuadricGraphReport as valid} from '../src/services/originalQuadricGraphProtocol'
+import {isOriginalQuadricCarrierReport} from '../src/services/originalQuadricCarrierProtocol'
+import {graphReport,graphBoundaryReport,graphUnprovedReport} from './fixtures/quadricGraph'
+describe('finite quadric graph evidence',()=>{
+ it('accepts finite contact only with original target and carrier provenance',()=>expect(valid(graphReport())).toBe(true))
+ it('accepts exact coordinate signs bound to the same original scalar root',()=>expect(valid(graphBoundaryReport())).toBe(true))
+ it('retains target identity failure as unresolved without a carrier search',()=>expect(valid(graphUnprovedReport())).toBe(true))
+ it('accepts finite absence despite carrier presence',()=>{const r=graphReport();Object.assign(r,{contacts:[],status:'absent-on-patch',presenceProven:false,patchAbsenceProven:true,finiteSurfaceUvAdmission:false});expect(valid(r)).toBe(true)})
+ it('retains partial finite presence with explicit incomplete source coverage',()=>{const r=graphReport();r.carrier.unresolvedSpans=[2];r.carrier.curveCarrierCoverageComplete=false;r.curvePatchCoverageComplete=false;expect(valid(r)).toBe(true)})
+ it.each(['proofContextSerialized','allSurfaceBranchesEnumerated','trimAdmission','bodyAdmission'])('rejects forged %s',key=>{const r=graphReport();r[key]=true;expect(valid(r)).toBe(false)})
+ it('rejects a carrier report promoted into a finite schema',()=>expect(valid(graphReport().carrier)).toBe(false))
+ it('rejects finite admission without a contact',()=>{const r=graphReport();r.contacts=[];expect(valid(r)).toBe(false)})
+ it('rejects a contact without target equality',()=>{const r=graphReport();r.targetMembership.status='different';expect(valid(r)).toBe(false)})
+ it('rejects missing carrier provenance',()=>{const r=graphReport();r.carrier=null;expect(valid(r)).toBe(false)})
+ it('requires original normalized root binding for finite admission',()=>{const r=graphReport();delete r.carrier.roots[0].normalizedOriginalSpanParameters;expect(isOriginalQuadricCarrierReport(r.carrier)).toBe(true);expect(valid(r)).toBe(false)})
+ it('rejects normalized provenance not owned by the source scalar proof',()=>{const r=graphReport();r.carrier.roots[0].normalizedOriginalSpanParameters=[[.4,.4]];expect(valid(r)).toBe(false)})
+ it('rejects wrong source order, source span, or unrelated natural parameter',()=>{for(const change of [(r:any)=>r.contacts[0].multiplicities=[1],(r:any)=>r.contacts[0].sourceSpans=[2],(r:any)=>r.contacts[0].parameterBox[0]=[7,8]]){const r=graphReport();change(r);expect(valid(r)).toBe(false)}})
+ it('rejects an invented crossing sign',()=>{const r=graphReport();r.contacts[0].crossingSign=1;expect(valid(r)).toBe(false)})
+ it('rejects a coordinate-sign tag without a successful root-specific proof',()=>{const r=graphBoundaryReport();r.boundaryProofs=[];r.boundaryExactWork=0;r.exactWork=50;expect(valid(r)).toBe(false)})
+ it('rejects a boundary proof for another root or another span',()=>{for(const change of [(r:any)=>r.boundaryProofs[0].normalizedRoot=[.5,.5],(r:any)=>r.boundaryProofs[0].span=2]){const r=graphBoundaryReport();change(r);expect(valid(r)).toBe(false)}})
+ it('rejects an outward sign attached to an admitted finite contact',()=>{const r=graphBoundaryReport();r.boundaryProofs[0].coordinateSign=-1;expect(valid(r)).toBe(false)})
+ it('rejects inconsistent total and per-query work',()=>{for(const change of [(r:any)=>r.exactWork++,(r:any)=>r.boundaryExactWork++,(r:any)=>r.boundaryProofs[0].workUsed++,(r:any)=>r.carrier.maxExactWork++]){const r=graphBoundaryReport();change(r);expect(valid(r)).toBe(false)}})
+ it('rejects singleton UV proof on an interval root',()=>{const r=graphBoundaryReport();r.contacts[0].uvMethod='exact-singleton';expect(valid(r)).toBe(false)})
+ it('rejects non-singleton UV proof on a singleton root',()=>{const r=graphReport();r.contacts[0].uvMethod='original-affine-control-bounds';expect(valid(r)).toBe(false)})
+ it('accepts explicit boundary work exhaustion without admitting the root',()=>{const r=graphBoundaryReport();Object.assign(r,{status:'unresolved',presenceProven:false,finiteSurfaceUvAdmission:false,contacts:[],curvePatchCoverageComplete:false,ambiguousParameters:[[3.3332,3.3336]],boundaryProofs:[],boundaryExactWork:0,exactWork:50});expect(valid(r)).toBe(true)})
+ it('rejects complete coverage while finite membership remains ambiguous',()=>{const r=graphReport();r.ambiguousParameters=[[4,4]];expect(valid(r)).toBe(false)})
+ it('rejects unknown target and coordinate-proof refusal reasons',()=>{const r=graphUnprovedReport();r.targetMembership={status:'indeterminate',reason:'ok',workUsed:20};expect(valid(r)).toBe(false);const q=graphBoundaryReport();q.boundaryProofs[0].coordinateSign=null;q.boundaryProofs[0].reason='ok';expect(valid(q)).toBe(false)})
+ it('rejects malformed boxes and carrier Body promotion',()=>{const r=graphReport();r.contacts[0].parameterBox=Array(3);expect(valid(r)).toBe(false);const q=graphReport();q.carrier.bodyAdmission=true;expect(valid(q)).toBe(false)})
+ it('rejects duplicate contacts for the same isolated source root',()=>{const r=graphReport();r.contacts.push(structuredClone(r.contacts[0]));expect(valid(r)).toBe(false)})
+ it('rejects duplicate edge proofs even when their work ledger is balanced',()=>{const r=graphBoundaryReport();r.boundaryProofs.push(structuredClone(r.boundaryProofs[0]));r.boundaryExactWork=20;r.exactWork=70;expect(valid(r)).toBe(false)})
+ it('binds contacts by normalized provenance when natural boxes overlap',()=>{const r=graphBoundaryReport();const root=structuredClone(r.carrier.roots[0]);root.normalizedOriginalSpanParameters=[[.6,.7]];r.carrier.roots.push(root);r.carrier.scalarProofs[0].normalizedOriginalSpanRoots.push({interval:[.6,.7],multiplicity:2});const c=structuredClone(r.contacts[0]);c.normalizedOriginalSpanParameters=[[.6,.7]];c.uvMethod='original-affine-control-bounds';r.contacts.push(c);expect(valid(r)).toBe(true)})
+})

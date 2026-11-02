@@ -8,7 +8,7 @@ export interface OriginalQuadricCarrierReport {
  schema:'nurbs-original-quadric-carrier-roots/1';status:'present-on-carrier'|'absent-on-carrier'|'unresolved'
  presenceProven:boolean;carrierAbsenceProven:boolean;curveCarrierCoverageComplete:boolean
  parameterCoordinates:['curve-natural-t']
- roots:{method:'original-quadric-polynomial';parameter:[number,number];positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[]}[]
+ roots:{method:'original-quadric-polynomial';parameter:[number,number];positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[];normalizedOriginalSpanParameters?:[number,number][]}[]
  scalarProofs:{span:number;status:'roots'|'coincident'|'indeterminate';normalizedOriginalSpanRoots:{interval:[number,number];multiplicity:number}[];reason:string|null;workUsed:number}[]
  unresolvedSpans:number[];spans:number;maxSpans:number;exactWork:number;maxExactWork:number
  proofContextSerialized:false;finiteSurfaceUvAdmission:false;allSurfaceBranchesEnumerated:false;trimAdmission:false;bodyAdmission:false
@@ -49,8 +49,20 @@ export function isOriginalQuadricCarrierReport(value:unknown):value is OriginalQ
    const span=root.sourceSpans[i],multiplicity=root.multiplicities[i]
    if(!integer(span,1,255)||!integer(multiplicity,1,50))return false
    const p=proofs.get(span)
+   if(root.normalizedOriginalSpanParameters!==undefined){
+    const a=root.normalizedOriginalSpanParameters
+    if(!Array.isArray(a)||a.length!==root.sourceSpans.length||!interval(a[i])||a[i]![0]<0||a[i]![1]>1||!p?.normalizedOriginalSpanRoots.some(r=>r.interval[0]===a[i]![0]&&r.interval[1]===a[i]![1]&&r.multiplicity===multiplicity))return false
+   }
    if(p?.status!=='roots'||!p.normalizedOriginalSpanRoots.some(r=>r.multiplicity===multiplicity))return false
   }
  }
  return true
+}
+
+/** Scalar/options preflight; Rust owns original curve geometry validation. */
+export function validQuadricQueryOptions(query:OriginalQuadricCarrierQuery):boolean {
+ return !!query&&Number.isFinite(query.tolerance)&&query.tolerance>0&&Number.isInteger(query.maxSpans)&&query.maxSpans>=1&&query.maxSpans<=100000
+  &&Number.isInteger(query.maxExactWork)&&query.maxExactWork>=0&&query.maxExactWork<=MAX_QUADRIC_EXACT_WORK
+  &&Array.isArray(query.quadric)&&query.quadric.length===4&&[0,1,2,3].every(i=>{const row=query.quadric[i];return Array.isArray(row)&&row.length===4&&[0,1,2,3].every(j=>typeof row[j]==='number'&&Number.isFinite(row[j]))})
+  &&Array.isArray(query.constantProducts)&&query.constantProducts.length<=16&&Array.from(query.constantProducts).every(p=>Array.isArray(p)&&p.length===2&&[p[0],p[1]].every(v=>typeof v==='number'&&Number.isFinite(v)))
 }

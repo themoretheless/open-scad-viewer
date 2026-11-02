@@ -30,7 +30,14 @@ pub(crate) fn run(v: Value) -> Result<Value> {
     }
     let r =
         original_quadric_carrier_roots(&curve, quadric, &products, tolerance, max_spans, max_work)?;
-    let roots:Vec<_>=r.roots.iter().map(|p|json!({"method":"original-quadric-polynomial","parameter":p.parameter,"positionBounds":p.position_bounds,"sourceSpans":p.source_spans,"multiplicities":p.multiplicities})).collect();
+    Ok(encode_report(&r, max_spans, max_work))
+}
+pub(super) fn encode_report(
+    r: &nurbs_core::intersection::certified_curve_surface::OriginalQuadricCarrierRoots,
+    max_spans: usize,
+    max_work: u64,
+) -> Value {
+    let roots:Vec<_>=r.roots.iter().map(|p|json!({"method":"original-quadric-polynomial","parameter":p.parameter,"positionBounds":p.position_bounds,"sourceSpans":p.source_spans,"multiplicities":p.multiplicities,"normalizedOriginalSpanParameters":p.normalized_original_span_parameters})).collect();
     let proofs:Vec<_>=r.scalar_proofs.iter().map(|(span,p)| {
         let (status,roots,reason)=match &p.outcome {
             OriginalQuadricRootsOutcome::Roots(roots)=>("roots",roots.iter().map(|r|json!({"interval":r.interval,"multiplicity":r.multiplicity})).collect::<Vec<_>>(),None),
@@ -41,11 +48,9 @@ pub(crate) fn run(v: Value) -> Result<Value> {
     }).collect();
     let presence = !roots.is_empty();
     let absence = r.complete && !presence;
-    Ok(
-        json!({"schema":"nurbs-original-quadric-carrier-roots/1","status":if presence{"present-on-carrier"}else if absence{"absent-on-carrier"}else{"unresolved"},
+    json!({"schema":"nurbs-original-quadric-carrier-roots/1","status":if presence{"present-on-carrier"}else if absence{"absent-on-carrier"}else{"unresolved"},
         "presenceProven":presence,"carrierAbsenceProven":absence,"curveCarrierCoverageComplete":r.complete,
         "parameterCoordinates":["curve-natural-t"],"roots":roots,"scalarProofs":proofs,
         "unresolvedSpans":r.unresolved_spans,"spans":r.spans,"maxSpans":max_spans,"exactWork":r.exact_work,"maxExactWork":max_work,
-        "proofContextSerialized":false,"finiteSurfaceUvAdmission":false,"allSurfaceBranchesEnumerated":false,"trimAdmission":false,"bodyAdmission":false}),
-    )
+        "proofContextSerialized":false,"finiteSurfaceUvAdmission":false,"allSurfaceBranchesEnumerated":false,"trimAdmission":false,"bodyAdmission":false})
 }

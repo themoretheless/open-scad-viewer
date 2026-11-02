@@ -140,5 +140,6 @@ pub(super) fn contact(
         position_bounds: position,
         source_spans: root.source_spans.clone(),
         multiplicities: root.multiplicities.clone(),
+        normalized_original_span_parameters: root.normalized_original_span_parameters.clone(),
     }))
 }

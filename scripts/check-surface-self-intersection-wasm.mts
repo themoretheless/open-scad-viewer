@@ -1,3 +1,5 @@
+import {quadricGraphCases,graphQuery,boundaryQuery} from '../tools/browser-qualification/quadric-graph-fixtures.ts'
+import {isOriginalQuadricGraphReport,type OriginalQuadricGraphReport} from '../src/services/originalQuadricGraphProtocol.ts'
 import {quadricCarrierCases} from '../tools/browser-qualification/quadric-carrier-fixtures.ts'
 import {isOriginalQuadricCarrierReport} from '../src/services/originalQuadricCarrierProtocol.ts'
 import {commonRootPatchCases} from '../tools/browser-qualification/common-root-patch-fixtures.ts'
@@ -167,6 +169,18 @@ const auxiliaryBudget=patchReply({...originalPatchAlgebraicBoundaryFixture(true)
 for(const fixture of quadricCarrierCases){const before=JSON.stringify(fixture.query),reply=request({op:'nurbs_original_quadric_carrier_roots',...fixture.query});assert.equal(reply.ok,true);assert(isOriginalQuadricCarrierReport(reply.value));fixture.check(reply.value);assert.equal(JSON.stringify(fixture.query),before);cases.push({name:fixture.name,status:reply.value.status,complete:reply.value.curveCarrierCoverageComplete,roots:reply.value.roots})}
 reject('quadric-forged-finite-admission',{op:'nurbs_original_quadric_carrier_roots',...quadricCarrierCases[0]!.query,finiteSurfaceUvAdmission:true})
 reject('quadric-over-limit-work',{op:'nurbs_original_quadric_carrier_roots',...quadricCarrierCases[0]!.query,maxExactWork:1000001})
+let graphBaseline:OriginalQuadricGraphReport|undefined
+for(const fixture of quadricGraphCases){const before=JSON.stringify(fixture.query),reply=request({op:'nurbs_original_quadric_graph_contacts',...fixture.query});assert.equal(reply.ok,true);assert(isOriginalQuadricGraphReport(reply.value));fixture.check(reply.value);assert.equal(JSON.stringify(fixture.query),before);if(fixture.name==='graph-edge-0')graphBaseline=reply.value;cases.push({name:fixture.name,status:reply.value.status,complete:reply.value.curvePatchCoverageComplete,contacts:reply.value.contacts,exactWork:reply.value.exactWork})}
+assert(graphBaseline?.carrier)
+const graphBudgetQuery={...boundaryQuery(),maxExactWork:graphBaseline.targetMembership.workUsed+graphBaseline.carrier.exactWork}
+const graphBudgetReply=request({op:'nurbs_original_quadric_graph_contacts',...graphBudgetQuery});assert.equal(graphBudgetReply.ok,true);assert(isOriginalQuadricGraphReport(graphBudgetReply.value));assert.equal(graphBudgetReply.value.status,'unresolved');assert.equal(graphBudgetReply.value.finiteSurfaceUvAdmission,false);assert.equal(graphBudgetReply.value.carrier?.curveCarrierCoverageComplete,true);cases.push({name:'graph-boundary-budget-exhaustion',status:graphBudgetReply.value.status,exactWork:graphBudgetReply.value.exactWork})
+reject('graph-forged-body',{op:'nurbs_original_quadric_graph_contacts',...graphQuery(),bodyAdmission:true})
+reject('graph-forged-target-proof',{op:'nurbs_original_quadric_graph_contacts',...graphQuery(),targetGraphProven:true})
+reject('graph-over-limit-work',{op:'nurbs_original_quadric_graph_contacts',...graphQuery(),maxExactWork:1000001})
+const graphBadWeights=graphQuery();graphBadWeights.patch.weights[1]![1]=2
+reject('graph-unsupported-target-weights',{op:'nurbs_original_quadric_graph_contacts',...graphBadWeights})
+const graphBadSheet=graphQuery();graphBadSheet.quadric=[[0,0,0,0],[0,0,0,0],[0,0,1,0],[0,0,0,-1]]
+reject('graph-ambiguous-sheet',{op:'nurbs_original_quadric_graph_contacts',...graphBadSheet})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

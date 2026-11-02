@@ -5,6 +5,7 @@ pub(crate) mod self_surface;
 pub(crate) mod surface_iso_target;
 pub(crate) mod original_patch_contacts;
 pub(crate) mod quadric_carrier;
+pub(crate) mod quadric_graph;
 
 pub fn dispatch(v: Value) -> Result<Value> {
     if v["op"].as_str() == Some("brep_intersection_trace_curve_segments") {

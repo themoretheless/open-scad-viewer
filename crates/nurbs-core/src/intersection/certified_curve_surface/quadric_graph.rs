@@ -22,6 +22,7 @@ pub struct OriginalQuadricGraphContact {
     pub position_bounds: [[f64; 2]; 3],
     pub source_spans: Vec<usize>,
     pub multiplicities: Vec<usize>,
+    pub normalized_original_span_parameters: Vec<[f64; 2]>,
 }
 #[derive(Debug)]
 pub struct OriginalQuadricGraphContacts {
