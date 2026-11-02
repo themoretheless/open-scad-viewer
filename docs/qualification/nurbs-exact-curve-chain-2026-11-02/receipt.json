@@ -1,0 +1,22 @@
+{
+  "scope": "Extension of NURBS-0230, catalogue count unchanged230. Atomic ordered compatible curve chains, no emitted prefix on late refusal. Existing256 output-control limit; aggregate source controls512 equal original two-input maximum. No new numeric work/proof allowance, evaluator bit identity, topology, WASM/UI/exchange or complete workspace authority.",
+  "checks": {
+    "default": {
+      "passed": 56,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "no-codec": {
+      "passed": 56,
+      "failed": 0,
+      "exitCode": 0
+    }
+  },
+  "independentFractionOracleExit": 0,
+  "architectureExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "8558136ae29684e7b5b194098dd8f202da96cf5dbc42277cf0d41b0cd25a3ce5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9e8cc078dc4f07cd126c54cfe51daf4414c2a602c2f3b1d40e1efc10e572e7d3",
+    "docs/design/nurbs-exact-curve-merge.md": "eab0f9364bb581b43c7110eddd463dc8671e34630f0ad3593bc15aa5b45e0297"
+  }
+}
