@@ -15,6 +15,7 @@ use std::collections::BTreeMap;
 /// coefficients, not interval samples or caller-supplied successful proofs.
 pub type Pose = [[f64; 3]; 4];
 mod graph_translation;
+mod motion_c1;
 mod material_plane;
 mod rational;
 mod separable;
@@ -550,11 +551,10 @@ fn certify_motion_impl(
             }
         }
     }
-    // A single positive rational pose is C-infinity. Literal C1 carrier
+    // Smooth original poses with exact C1 time joins and literal C1 carrier
     // knots permit the separate Gale-Nikaido rectangular-domain theorem.
     // No arbitrary C0 station join or closed quotient borrows that premise.
-    if second.is_some() && !closed
-        && matches!(pieces,Motion::Rational(p) if p.len()==1) {
+    if second.is_some() && !closed {
         let end=second.unwrap();
         let cost=1+(carrier.knots_u.len()+carrier.knots_v.len()+end.knots_u.len()+end.knots_v.len()) as u64;
         if cost>max_exact_work-out.exact_work {
@@ -562,7 +562,11 @@ fn certify_motion_impl(
         }
         out.exact_work+=cost;
         if charts::surface_c1(carrier) && charts::surface_c1(end) {
-            if atlas::certify_c1_rectangular_map(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells)? {
+            let c1=match motion_c1::inspect(pieces,&mut out.exact_work,max_exact_work) {
+                Some(c1)=>c1,
+                None=>{out.reason=Some("affine-volume-c1-motion-work-limit");return Ok(out);}
+            };
+            if c1 && atlas::certify_c1_rectangular_map(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells)? {
                 out.embedding_certified=true;out.regularity_certified=true;
                 out.parameter_topology_preserved=true;out.reason=None;return Ok(out);
             }
