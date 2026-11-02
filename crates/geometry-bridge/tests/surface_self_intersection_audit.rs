@@ -109,3 +109,32 @@ fn wire_protocol_preserves_exact_integers_above_javascript_safe_range() {
     assert_eq!(r["exactWitness"][0][0]["denominator"], "432345564227567616");
     assert!(r["exactWitness"][0][0]["denominator"].is_string());
 }
+
+#[test]
+fn nonlinear_existence_uses_certified_boxes_without_a_rounded_point() {
+    let s = Surface {
+        degree_u: 2,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [[-1., -1.], [0., 0.], [1., 1.], [1., -1.], [-1., 1.]]
+            .into_iter()
+            .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+            .collect(),
+        weights: vec![vec![1.; 2]; 5],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let mut v = request(s);
+    v["maxSpans"] = json!(10000);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["allContactBranchesEnumerated"], false);
+    assert!(r["witness"].is_null() && r["exactWitness"].is_null());
+    assert_eq!(r["certifiedCrossing"]["method"], "original-planar-krawczyk");
+    assert!(r["certifiedCrossing"]["cells"].as_u64().unwrap() <= 10000);
+    for (i, t) in [5. / 18., 5. / 6.].into_iter().enumerate() {
+        let b = &r["certifiedCrossing"]["parameterBoxes"][i][0];
+        assert!(b[0].as_f64().unwrap() <= t && t <= b[1].as_f64().unwrap());
+    }
+}

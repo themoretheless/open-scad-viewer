@@ -1,0 +1,114 @@
+{
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "wasmSha256": "cfbc28f39f290824d70227d70a3f1c165c8cae446416d42020eddb6757559da0",
+  "wasmBytes": 24008265,
+  "installedPackageUpdated": false,
+  "result": {
+    "absence": "absent",
+    "exact": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "4",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "reflectedAxis": 0,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "recovered": "absent",
+    "rational": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "9",
+            "numerator": "8"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "reflectedAxis": null,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "busy": "Error: Surface audit busy",
+    "cancelled": "Error: Surface audit cancelled",
+    "deadline": "Error: Surface audit deadline",
+    "nativeRefusal": "Error: NURBS_INVALID_INPUT: Weights must be positive, finite, and in [1e-12, 1e12]",
+    "cloneFailure": "DataCloneError: Failed to execute 'postMessage' on 'Worker': ()=>0 could not be cloned.",
+    "preAbort": "Error: Surface audit cancelled",
+    "badBudget": "Error: Invalid surface audit budget",
+    "inputIntact": true,
+    "noEarlyWorkers": true,
+    "ticks": 29,
+    "ownership": {
+      "active": false,
+      "workersStarted": 8,
+      "workersTerminated": 8
+    }
+  },
+  "platformAudit": {
+    "started": 8,
+    "terminated": 8
+  },
+  "workers": [
+    "http://127.0.0.1:51551/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:51551/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:51551/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:51551/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:51551/assets/surfaceSelfIntersection.worker-CHjHmaok.js"
+  ],
+  "scope": "Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification"
+}

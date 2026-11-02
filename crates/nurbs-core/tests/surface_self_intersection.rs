@@ -661,3 +661,107 @@ fn collinear_overlap_is_proven_along_v_too() {
     assert_eq!(w[0][1], Q::new(1.into(), 8.into()));
     assert_eq!(w[1][1], Q::new(7.into(), 8.into()));
 }
+
+fn nonlinear_crossing_strip() -> Surface {
+    Surface {
+        degree_u: 2,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [[-1., -1.], [0., 0.], [1., 1.], [1., -1.], [-1., 1.]]
+            .into_iter()
+            .map(|[x, y]| vec![vec![x, y, 0.], vec![x, y, 2.]])
+            .collect(),
+        weights: vec![vec![1.; 2]; 5],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+#[test]
+fn nonlinear_original_spans_have_certified_distinct_uv_boxes() {
+    let r = surface_self_intersection::inspect(&nonlinear_crossing_strip(), 10000).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert!(r.witness.is_none() && r.exact_witness.is_none());
+    let c = r.certified_crossing.unwrap();
+    for (i, t) in [5. / 18., 5. / 6.].into_iter().enumerate() {
+        assert!(c.parameter_boxes[i][0][0] <= t && t <= c.parameter_boxes[i][0][1]);
+        assert_eq!(c.parameter_boxes[i][1], [0.5, 0.5]);
+    }
+    for (i, x) in [1. / 9., 1. / 9., 1.].into_iter().enumerate() {
+        assert!(c.position_bounds[i][0] <= x && x <= c.position_bounds[i][1]);
+    }
+    assert!(c.cells > 0 && c.cells <= 10000);
+}
+#[test]
+fn nonlinear_crossing_budget_cannot_be_relabelled_a_proof() {
+    let r = surface_self_intersection::inspect(&nonlinear_crossing_strip(), 1).unwrap();
+    assert_eq!(r.status, Status::Unresolved);
+    assert!(r.certified_crossing.is_none());
+}
+#[test]
+fn nonlinear_projected_crossing_with_different_z_is_unproven() {
+    let mut s = nonlinear_crossing_strip();
+    for i in 3..5 {
+        for j in 0..2 {
+            s.control_points[i][j][2] += 0.1;
+        }
+    }
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 1000).unwrap().status,
+        Status::Present
+    );
+}
+
+#[test]
+fn certified_nonlinear_crossing_also_works_with_rational_weights() {
+    let mut s = nonlinear_crossing_strip();
+    s.weights = [1., 3., 1., 2., 1.]
+        .into_iter()
+        .map(|w| vec![w; 2])
+        .collect();
+    let r = surface_self_intersection::inspect(&s, 10000).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let c = r.certified_crossing.unwrap();
+    for i in 0..2 {
+        assert!(c.position_bounds[i][0] <= 1. / 33. && 1. / 33. <= c.position_bounds[i][1]);
+    }
+}
+#[test]
+fn certified_nonlinear_crossing_also_has_original_v_parameter_boxes() {
+    let mut s = nonlinear_crossing_strip();
+    s.control_points = (0..2)
+        .map(|j| (0..5).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..5).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 10000).unwrap();
+    assert_eq!(r.status, Status::Present);
+    let c = r.certified_crossing.unwrap();
+    for (i, t) in [5. / 18., 5. / 6.].into_iter().enumerate() {
+        assert!(c.parameter_boxes[i][1][0] <= t && t <= c.parameter_boxes[i][1][1]);
+        assert_eq!(c.parameter_boxes[i][0], [0.5, 0.5]);
+    }
+}
+
+#[test]
+fn nonrepresentable_iso_controls_are_not_rounded_into_a_crossing_proof() {
+    let mut s = nonlinear_crossing_strip();
+    s.degree_v = 2;
+    s.knots_v = vec![0., 0., 0., 1., 1., 1.];
+    s.control_points = s
+        .control_points
+        .iter()
+        .map(|row| {
+            let x = row[0][0];
+            let y = row[0][1];
+            [0., 1., 2.].into_iter().map(|z| vec![x, y, z]).collect()
+        })
+        .collect();
+    s.weights = vec![vec![1., 2., 2.]; 5]; // exact middle iso has z=8/7, not binary64
+    let r = surface_self_intersection::inspect(&s, 1000).unwrap();
+    assert_eq!(r.status, Status::Unresolved);
+    assert!(r.certified_crossing.is_none());
+}

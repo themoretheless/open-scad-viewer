@@ -3,6 +3,14 @@ use crate::{Result, surface::Surface, surface_injectivity};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive};
 mod linear_crossing;
+mod nonlinear_crossing;
+#[derive(Clone, Debug)]
+pub struct CertifiedCrossing {
+    /// Two original normalized UV boxes, each enclosing a distinct preimage.
+    pub parameter_boxes: [[[f64; 2]; 2]; 2],
+    pub position_bounds: [[f64; 2]; 3],
+    pub cells: usize,
+}
 mod local_fold;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
@@ -20,6 +28,8 @@ pub struct Report {
     /// Authoritative exact normalized UV pair, including non-dyadic values.
     /// `witness` is populated only when every scalar is exactly binary64.
     pub exact_witness: Option<[[BigRational; 2]; 2]>,
+    /// Existence proof with interval UV boxes; no rounded point is authoritative.
+    pub certified_crossing: Option<CertifiedCrossing>,
     /// Reflection axis for fold proofs; None for proper span crossings.
     pub reflected_axis: Option<usize>,
 }
@@ -52,6 +62,8 @@ fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
 /// degree-one iso-curve spans. The latter checks all three world coordinates
 /// and original rational parameter clocks. The transverse midpoint selects a
 /// candidate iso-curve; only an exact identity supplies the presence verdict.
+/// Exactly representable planar nonlinear iso-curves additionally use strict
+/// Krawczyk inclusion on literal original spans, returning interval UV boxes.
 /// Local reflection spans and linear span pairs each have max_spans work caps.
 /// All other cases (including unsupported periodic charts and insufficient
 /// budgets) stay Unresolved. Isolated local regularity never proves absence.
@@ -66,6 +78,7 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
         injectivity,
         witness: None,
         exact_witness: None,
+        certified_crossing: None,
         reflected_axis: None,
     };
     if out.status == Status::Absent {
@@ -113,6 +126,9 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
         record(&mut out, Some(axis), witness);
     } else if let Some(witness) = linear_crossing::find(s, max_spans) {
         record(&mut out, None, witness);
+    } else if let Some(crossing) = nonlinear_crossing::find(s, max_spans)? {
+        out.status = Status::Present;
+        out.certified_crossing = Some(crossing);
     }
     Ok(out)
 }

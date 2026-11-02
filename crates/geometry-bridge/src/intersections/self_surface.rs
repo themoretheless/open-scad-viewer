@@ -30,6 +30,12 @@ pub(crate) fn run(v: Value) -> Result<Value> {
         Status::Present => "present",
         Status::Unresolved => "unresolved",
     };
+    let crossing = report.certified_crossing.as_ref().map(|c| {
+        json!({
+            "method":"original-planar-krawczyk",
+            "parameterBoxes":c.parameter_boxes,"positionBounds":c.position_bounds,"cells":c.cells
+        })
+    });
     Ok(json!({
         "schema":"nurbs-surface-self-intersection/1",
         "status":status,
@@ -37,6 +43,7 @@ pub(crate) fn run(v: Value) -> Result<Value> {
         "presenceProven":report.status==Status::Present,
         "allContactBranchesEnumerated":false,
         "witness":report.witness,"exactWitness":exact,
+        "certifiedCrossing":crossing,
         "witnessCoordinates":"normalized-original-active-domain",
         "reflectedAxis":report.reflected_axis,
         "injectivity":{"proven":report.injectivity.proven,

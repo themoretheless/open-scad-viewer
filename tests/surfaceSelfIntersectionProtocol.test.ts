@@ -19,3 +19,14 @@ describe('surface audit Worker boundary',()=>{
   expect(isSurfaceAuditReport({...r,exactWitness:null})).toBe(true)
  })
 })
+
+describe('certified nonlinear UV boxes',()=>{
+ const report=()=>({...present(),exactWitness:null,certifiedCrossing:{method:'original-planar-krawczyk',parameterBoxes:[[[.27,.28],[.5,.5]],[[.83,.84],[.5,.5]]],positionBounds:[[.1,.12],[.1,.12],[1,1]],cells:25}})
+ it('accepts interval evidence without inventing an exact point',()=>expect(isSurfaceAuditReport(report())).toBe(true))
+ it('rejects overlapping preimages, invalid enclosures and work claims',()=>{
+  const a=report();a.certifiedCrossing.parameterBoxes[1]=a.certifiedCrossing.parameterBoxes[0]!;expect(isSurfaceAuditReport(a)).toBe(false)
+  const b=report();b.certifiedCrossing.positionBounds[0]=[NaN,1];expect(isSurfaceAuditReport(b)).toBe(false)
+  const c=report();c.certifiedCrossing.cells=101;expect(isSurfaceAuditReport(c)).toBe(false)
+  const d=report();d.certifiedCrossing.parameterBoxes[0][0]=[.3,.2];expect(isSurfaceAuditReport(d)).toBe(false)
+ })
+})
