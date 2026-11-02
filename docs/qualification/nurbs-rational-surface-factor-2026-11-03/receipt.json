@@ -1,0 +1,259 @@
+{
+  "baseCombinedCommit": "650aeee88e2b8283c4ad0ec02a01a59383f194c4",
+  "combinedInputs": {
+    "before": "5dd0bc6d5f3831ee88bb5c74c2dd9c5955f85a76",
+    "mainSnapshot": "7a7207a1e2dce252a21080e139f653666c9b3bd6",
+    "uiCommit": "2658de895b5af18a27c94e991e83498453266987",
+    "combinedHead": "650aeee88e2b8283c4ad0ec02a01a59383f194c4",
+    "conflictResolution": "Single comment-only hunk in curve_surface_agreement.rs; both parents already select complete owned boundary before trace. Kept explanatory comment and all main additions.",
+    "scope": "Own feature branch only; external main/integration/paired-cap worktrees untouched. Combined source requires new qualification."
+  },
+  "sourceSha256": {
+    "architecture-baseline.json": "6462cf226ec436c4b45aefbaab2abb7261128be44c1c4f0b2ec846cba0bc488d",
+    "crates/nurbs-core/src/editing.rs": "0b537a9a525be3ca0c32f80e62d53f694cc10472b5baf90bab5729ac7808338d",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs": "323690872a451c753529bb48ed2255589df673e523cfdd2098d571ace1bea8ae",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion/denominator.rs": "e424e64126ccdbf02582a251e7c0f5638dcac575775479f34a9b601faffd8ac9",
+    "crates/nurbs-core/src/editing/exact_tensor_edit.rs": "e645914783d990bd687cd2249943f86d3835d42dbc86b6d456821b5a296c6e8e",
+    "crates/nurbs-core/src/editing/rational_factor.rs": "d8e92bd4abcde7ba6bf6c56b8bff50481c8c2b8509fc11479c437c84a94967e8",
+    "crates/nurbs-core/src/editing/rational_factor/polynomial.rs": "fb5ddabb8e7b294868b5447b7eed52180febaf5bac827cec908840bb532e3da5",
+    "crates/nurbs-core/src/editing/rational_surface_factor.rs": "77dc094889df8d4645612ea31112919c86269a4bbd4d4e71ad8fa5c8aef193b2",
+    "crates/nurbs-core/src/editing/rational_surface_factor/proof.rs": "5027bedab24d5629bafecc552a4d3020520647e93ff6fef7ccf6aaf1e271f983",
+    "crates/nurbs-core/tests/rational_surface_factor_contracts.rs": "b4a7dc58e92e418d70716735c57426c04894f0ecf5e474d0e1ed9ea38ec7e5dd",
+    "src/features/DirectModeler.vue": "aa0cc96f8aaa9af9c04475ee3c434f1e915655d0db887941d513772caec8c224",
+    "src/features/directModeler/createAsyncPanels.ts": "840acfa12e89764dd4ab60f80850e54d327964b4f1abd8725fc788d4148089b7",
+    "src/services/mainSolidProtocol/mainSolidResult.ts": "4a521d64cb5fd0f9d18f0f6d745f14516ee96aaedfca5a222508a9a4ac037d1c",
+    "src/services/mainSolidProtocol/results/manifoldRepair.ts": "db82814ca5375602f7602fc147663599badbea80c0e09432c69df3830f33ac3c",
+    "docs/design/nurbs-rational-surface-factor.md": "3718e90e67f01868891994c9d35443fab46532bc121adc189d17de8989f51ff2",
+    "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py": "1df07723f98632e72823e582569dfc443b6281915b6549da63eae6adde8c404a"
+  },
+  "tests": {
+    "default-contracts": {
+      "passed": 40,
+      "ignored": 0
+    },
+    "default-full-lib": {
+      "passed": 2243,
+      "ignored": 1
+    },
+    "no-codec-contracts": {
+      "passed": 40,
+      "ignored": 0
+    },
+    "no-codec-full-lib": {
+      "passed": 2038,
+      "ignored": 1
+    }
+  },
+  "totalFinalRustExecutions": 4361,
+  "runner": {
+    "native235-no-codec-contracts": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "exact_tensor_denominator_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T20:15:58.860362+00:00",
+      "exitCode": 0
+    },
+    "native235-no-codec-full-lib": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib"
+      ],
+      "start": "2026-11-02T20:17:31.269387+00:00",
+      "exitCode": 0
+    },
+    "native235-default-contracts": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "exact_tensor_denominator_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T20:20:42.674180+00:00",
+      "exitCode": 0
+    },
+    "native235-default-full-lib": {
+      "status": "terminal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "start": "2026-11-02T20:22:24.913973+00:00",
+      "exitCode": 0
+    }
+  },
+  "inventory": {
+    "priorSourceScope": "Native234/5dd-era default executable, before subsequent main snapshot integration",
+    "before": 2224,
+    "after": 2244,
+    "removedNames": [],
+    "addedNames": [
+      "analysis::affine_volume::capped::tests::actual_field::actual_hollow_quarter_turn_complete_field_has_a_global_certificate",
+      "analysis::affine_volume::capped::tests::actual_field::actual_hollow_quarter_turn_keeps_the_same_field_across_exact_c1_motion_pieces",
+      "analysis::affine_volume::capped::tests::c1_multispan_caps_and_independent_degree_motion_own_the_complete_volume",
+      "analysis::affine_volume::capped::tests::moving_paired_caps_use_one_global_chart_and_preserve_refusal_budgets",
+      "analysis::affine_volume::capped::tests::paired_cap_time_jet_survives_exact_column_factor_coordinates",
+      "analysis::affine_volume::capped::tests::rotating_carrier_tangents_refine_time_instead_of_only_uv",
+      "analysis::affine_volume::capped::tests::smooth_endpoint_carriers_and_regular_frames_cannot_hide_a_time_fold",
+      "analysis::affine_volume::capped::tests::tensor_weight_base_and_independent_end_keep_complete_map_and_budget_ownership",
+      "analysis::affine_volume::motion_c1::tests::independent_weights_require_exact_cartesian_time_jets_and_budget",
+      "editing::rational_surface_factor::proof::tests::equal_constant_rows_cannot_hide_inconsistent_denominator_scales",
+      "join::continuity::bspline_strip::mapped_tests::original_quintic_gram_curve_is_regular_but_true_rank_loss_refuses",
+      "sweeps::progressive_sweep::ideal_volume::atlas::p_matrix::tests::a_complete_c1_cover_cannot_drop_unproved_folded_siblings",
+      "sweeps::progressive_sweep::ideal_volume::atlas::p_matrix::tests::p_matrix_requires_all_principal_minors_and_is_not_an_spd_alias",
+      "sweeps::progressive_sweep::ideal_volume::atlas::smooth_p_matrix::tests::all_principal_minors_are_required_not_symmetry_or_positive_determinant_alone",
+      "sweeps::progressive_sweep::ideal_volume::atlas::smooth_p_matrix::tests::complete_cover_replays_exact_budget_and_refuses_an_interior_fold",
+      "sweeps::progressive_sweep::ideal_volume::atlas::tests::complete_metric_domain_reuse_is_contained_source_local_and_paid",
+      "sweeps::progressive_sweep::ideal_volume::atlas::tests::unavailable_joint_carrier_jets_require_a_complete_refined_cover",
+      "sweeps::progressive_sweep::ideal_volume::atlas::tests::unsuitable_corner_positive_metric_does_not_starve_the_exact_pair_proof",
+      "sweeps::progressive_sweep::ideal_volume::cap_difference::tests::coefficient_quotient_jets_prove_a_whole_rational_difference_derivative_sign",
+      "trim::trim_simplicity::exact_subdivision::tests::critical_quintic_coordinate_requires_exact_subdivision_and_shared_work"
+    ]
+  },
+  "oracles": {
+    "oracle": {
+      "acceptedDefinitions": 6,
+      "negativeControls": 4,
+      "failed": 0,
+      "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+      "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+      "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+    },
+    "curve-regression-oracle": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 2,
+      "failed": 0,
+      "definitionsSha256": "efd2084959f63c33dfcf14ca57d619145637fb4e7f117350ffbb71e1b531fac2",
+      "scope": "Exact rational polynomial cross products on every source/output knot cell; actual binary64 coefficients; default/no-codec outputs match. No runtime or topology claim."
+    },
+    "factor-regression-oracle": {
+      "passed": 8,
+      "failed": 0,
+      "checks": {
+        "elevated-primitive": true,
+        "constant": true,
+        "degree25": true,
+        "negative-factor": true,
+        "rational-clock": true,
+        "3d-clock": true,
+        "wrong-clock-detected": true,
+        "per-pole-weight-sign-change-detected": true
+      },
+      "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+      "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+    },
+    "surface-insertion-regression-oracle": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 3,
+      "failed": 0,
+      "definitionsSha256": "3102d2c9de54e81a3790be1fa5e9fd90a22288fece9112bb019f65567ac5cbbe",
+      "scope": "Exact full bivariate homogeneous cross-products on every original/output tensor knot cell. Actual binary64 data; default/no-codec equality. No sampled geometry, runtime, topology or compiler claim."
+    }
+  },
+  "architecture": {
+    "legacyPins": 54,
+    "layerViolations": 0,
+    "newPins": 0,
+    "raisedLimits": 0,
+    "extraction": "23 per-instance lazy panels retain exact target paths;3 manifold result validators moved verbatim. One obsolete pin removed, DirectModeler pin narrowed3112."
+  },
+  "frontend": {
+    "focusedPassed": 76,
+    "failed": 0,
+    "vueTypesExit": 0,
+    "mcpTypesExit": 0,
+    "viteBuildExit": 0,
+    "setup": {
+      "dependencyLockSha256": "d847e1ca83d25dae9d9243ce1c64bce6f4ee2067a7dfb9b5ff3e8fa0686e286b",
+      "nodeModulesSource": "/Users/themoretheless/.codex/worktrees/nurbs-plan-next/open-scad-viewer/node_modules",
+      "copiedMissingIgnoredFixtureFiles": [
+        "src/generated/language-kernel/identity.ts",
+        "src/generated/language-kernel/.wasm-pack-stamp-base118v",
+        "src/generated/language-kernel/bytes.ts",
+        "src/generated/language-kernel/kernel_bg.wasm",
+        "src/generated/wasm-brotli/.wasm-pack-stamp-base118v",
+        "src/generated/wasm-brotli/bytes.ts",
+        "src/generated/harfbuzz/.wasm-pack-stamp-base118v",
+        "src/generated/harfbuzz/bytes.ts",
+        "src/generated/geometry-kernels/identity.ts",
+        "src/generated/geometry-kernels/bytes.ts",
+        "src/generated/geometry-kernels/.wasm-pack-stamp-brotli24-16-font-sections-v1-sept118-v1-bounded-streams",
+        "src/generated/geometry-kernels/kernel_bg.wasm",
+        "src/generated/vr-core/bytes.ts",
+        "src/generated/photogrammetry/.wasm-pack-stamp-base118v"
+      ],
+      "retainedExistingFiles": [
+        {
+          "path": "src/generated/photogrammetry/bytes.ts",
+          "sameAsFixture": true
+        },
+        {
+          "path": "src/generated/photogrammetry/.wasm-pack-stamp",
+          "sameAsFixture": true
+        }
+      ],
+      "scope": "Source type checks/focused tests setup only. No tracked artifact overwritten. Copied ignored modules retain old e09/e86 identities; no combined-current Rust/WASM compilation or runtime admission claim."
+    },
+    "scope": "Source types, focused protocol/UI regressions and bundling with explicit older generated fixtures; no current combined Rust/WASM build or distribution/runtime qualification."
+  },
+  "environment": {
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2",
+    "offlineLocked": true
+  },
+  "scope": "Native common Bezier-axis factor cancellation with full tensor geometry proof. Complete combined nurbs-core library suite in both modes, existing microbenchmark ignored. Existing work/degree/bit/storage limits unchanged. Old source-bound/topology certificates not transferred; no full workspace, WASM, editor/STEP or main admission claim."
+}

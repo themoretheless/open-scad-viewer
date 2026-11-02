@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 234,
-  "unallocatedCount": 766,
+  "specifiedCount": 237,
+  "unallocatedCount": 763,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6367,11 +6367,73 @@
         "crates/nurbs-core/tests/exact_tensor_denominator_contracts.rs",
         "docs/design/nurbs-exact-surface-knot-insertion.md",
         "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py",
+        "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "Selected axis nonperiodic, strictly internal knots only. Untouched periodic axis preserved. Global tensor weight gauge plus complete row geometry and proportional denominator proofs; atomic refusal under unchanged limits.",
-        "Whole no-codec library unit harness currently has79 codec/transport-dependent test errors; targeted no-codec operation/actual-source denominator checks pass. JSON, WASM, Rush, editor and exchange remain separate."
+        "Full native library tests now pass in default and no-codec modes after codec-test boundary and exact border-dispatch repair; historical79-error record retained. Whole workspace, JSON/WASM adapters, Rush, editor and exchange qualification remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0235",
+      "name": "Точное сокращение общего полиномиального множителя тензорной рациональной поверхности с сохранением полной UV-параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::rational_surface_factor::cancel",
+      "evidence": [
+        "crates/nurbs-core/src/editing/rational_surface_factor.rs",
+        "crates/nurbs-core/src/editing/rational_surface_factor/proof.rs",
+        "crates/nurbs-core/tests/rational_surface_factor_contracts.rs",
+        "docs/design/nurbs-rational-surface-factor.md",
+        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "One selected nonperiodic clamped Bezier axis; untouched basis may be multispan/periodic. Exact positive binary64 storage or unchanged-source refusal under existing degree1..25,256-pole,4096-bit and shared1m-work caps. No evaluator-bit identity or old source/topology certificate reuse.",
+        "Native qualification only. JSON/WASM/Rush/editor/exchange and complete current-source distribution remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0236",
+      "name": "Точный полный аффинный эллипс с рациональными весами и доказательством всей ориентированной геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-exact-construction",
+      "category": "Точное построение",
+      "nativeApi": "nurbs_core::primitives::exact_conics::ellipse",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/primitives/exact_conics.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_conics/proof.rs",
+        "crates/nurbs-core/tests/exact_conics_contracts.rs",
+        "docs/design/nurbs-exact-conics.md",
+        "docs/qualification/nurbs-exact-conics-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-conics-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Finite exactly independent authored axes; whole closed ellipse, variable rational angular clock, positive binary64 rational weights and exact pole storage or atomic refusal under unchanged1m-work/4096-bit limits. No legacy-clock/evaluator-bit identity.",
+        "Native only; JSON/WASM/Rush/editor/STEP and current-source distribution remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0237",
+      "name": "Точный полный аффинный эллипсоид с рациональными весами, доказательством покрытия, полюсов и шва",
+      "status": "native",
+      "prioritySet": "native-1000-exact-construction",
+      "category": "Точное построение",
+      "nativeApi": "nurbs_core::primitives::exact_quadrics::ellipsoid",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics/proof.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics/template.rs",
+        "crates/nurbs-core/tests/exact_quadrics_contracts.rs",
+        "docs/design/nurbs-exact-quadrics.md",
+        "docs/qualification/nurbs-exact-quadrics-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Three finite exactly independent authored axes, including oblique/reflected frames. Entire 9x5 quadratic surface with variable rational clocks, nonperiodic clamped storage, intentional collapsed poles and longitude seam. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
+        "Native surface geometry only; no B-rep/solid incidence, volume, evaluator-bit identity, JSON/WASM/Rush/editor/STEP or current-source distribution qualification."
       ]
     }
   ],

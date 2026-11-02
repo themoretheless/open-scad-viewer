@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createRenderer, defineComponent, h } from 'vue'
+import { createRenderer, defineComponent, h, nextTick, reactive } from 'vue'
 import FormaRegion from '../src/components/FormaRegion.vue'
 import { parseFormaUi } from '../src/forma/parser'
 import { resolveFormaTokens } from '../src/forma/tokens'
@@ -241,4 +241,60 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
     expect(textContent(statusbar!)).toContain('Manifold · Forma')
     status.unmount()
   })
+})
+
+it('keeps live mode state, conditional actions and application slots', async () => {
+  const state = reactive({ workspaceMode: 'solid', modes: [{id:'solid',label:'Solid'}, {id:'mesh',label:'Mesh'}], editorOpen:false, workspaceConflict:false })
+  const root = new TestNode('root'), actions = vi.fn()
+  const app = renderer.createApp({render:()=>h(FormaRegion,{source:topbarUi,state,onAction:actions},{fileMenu:()=>h('mark',{id:'file-slot'},'File menu'),settingsMenu:()=>h('mark',{id:'settings-slot'},'Settings')})})
+  app.mount(root)
+  const modes=()=>allNodes(root).filter(n=>n.tag==='button'&&String(n.props.class).includes('forma-seg-btn'))
+  try {
+    expect(modes().map(n=>n.props['aria-pressed'])).toEqual([true,false])
+    expect(allNodes(root).filter(n=>n.tag==='mark')).toHaveLength(2)
+    state.workspaceMode='mesh';state.editorOpen=true;await nextTick()
+    expect(modes().map(n=>n.props['aria-pressed'])).toEqual([false,true])
+    expect(allNodes(root).find(n=>String(n.props.class).includes('source-toggle'))!.props['aria-pressed']).toBe(true)
+    state.modes.push({id:'code',label:'Code'});await nextTick();modes()[2].props.onClick({})
+    expect(actions).toHaveBeenLastCalledWith('openWorkspaceMode',['code'],expect.anything())
+  } finally {app.unmount()}
+})
+
+it('uses full comparison tokens and unary precedence for live control conditions', () => {
+  const source=`component Conditions { Row {
+    Button { text: "strict"; active: state.n === 2; }
+    Button { text: "different"; active: state.name !== "old"; }
+    Button { text: "range"; active: state.n >= 2 && state.n <= 3; }
+    Button { text: "negation"; disabled: !state.selected && !state.isolated; }
+    Button { text: "alternative"; active: state.n == 2 || state.n != 2; }
+  } }`
+  for (const selected of [false,true]) for (const isolated of [false,true]) {
+    const v=mountForma(source,{n:2,name:'new',selected,isolated})
+    try {const buttons=v.nodes.filter(n=>n.tag==='button');expect(buttons.slice(0,3).map(n=>String(n.props.class).includes('active'))).toEqual([true,true,true]);expect(buttons[3].props.disabled).toBe(!selected&&!isolated);expect(String(buttons[4].props.class)).toContain('active')}finally{v.unmount()}
+  }
+})
+
+it('shows actual compute results and preserves computation cancellation and errors', () => {
+  const busy=mountForma(computeInspectorUi,{panelTitle:'Geometry',computeBusy:true,canRunCompute:false,computeButtonLabel:'Compute',cancelLabel:'Cancel',hasResult:false})
+  try {expect(textContent(busy.root)).not.toContain('14 912');expect(textContent(busy.root)).not.toContain('100%');const buttons=busy.nodes.filter(n=>n.tag==='button');expect(buttons[0].props.disabled).toBe(true);buttons[1].props.onClick({});expect(busy.onAction).toHaveBeenCalledWith('cancelGeometryAnalysis',[],expect.anything())}finally{busy.unmount()}
+  const result=mountForma(computeInspectorUi,{hasResult:true,areaPrefix:'Area: ',areaValue:'42',backendSummary:'CPU fallback',timingSummary:'CPU 2 ms',showFallback:true,fallbackNote:'GPU unavailable',computeError:'Check failed'})
+  try {expect(textContent(result.root)).toContain('Area: 42');expect(textContent(result.root)).toContain('CPU fallback');expect(textContent(result.nodes.find(n=>n.props.role==='alert')!)).toBe('Check failed')}finally{result.unmount()}
+})
+
+it('retains all workspace primitive and Boolean actions in the default slot', () => {
+  const v=mountForma(workspaceActionBarUi,{})
+  try {for (const b of v.nodes.filter(n=>n.tag==='button')) b.props.onClick({});expect(v.onAction.mock.calls.map(c=>c.slice(0,2))).toEqual([['insertPrimitive',['cube']],['insertPrimitive',['cylinder']],['insertPrimitive',['sphere']],['applyBoolean',['difference']]])}finally{v.unmount()}
+})
+
+it('retains draft conflict choices and save retry actions', () => {
+  const v=mountForma(topbarUi,{modes:[],workspaceConflict:true,conflictWarning:'Conflict',exportDraftLabel:'Export draft',useIndexedLabel:'Use saved',restoreDraftLabel:'Keep local',persistenceError:true,unsavedDraftLabel:'Retry save'})
+  try {
+    for(const label of ['Export draft','Use saved','Keep local','Retry save'])v.nodes.find(n=>n.tag==='button'&&textContent(n)===label)!.props.onClick({})
+    expect(v.onAction.mock.calls.map(c=>c.slice(0,2))).toEqual([['saveSource',[]],['resolveConflict',[false]],['resolveConflict',[true]],['retryPersistence',[]]])
+  } finally {v.unmount()}
+})
+
+it('renders actual conversion progress and dispatches cancellation', () => {
+  const v=mountForma(statusbarUi,{conversionPending:true,conversionLabel:'Exporting',conversionValue:1,conversionMax:3,cancelLabel:'Stop'})
+  try {const p=v.nodes.find(n=>n.tag==='progress')!;expect(p.props.value).toBe(1);expect(p.props.max).toBe(3);v.nodes.find(n=>n.tag==='button'&&textContent(n)==='Stop')!.props.onClick({});expect(v.onAction).toHaveBeenCalledWith('cancelConversion',[],expect.anything())}finally{v.unmount()}
 })

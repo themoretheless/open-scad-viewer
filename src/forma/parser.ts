@@ -75,6 +75,12 @@ function tokenize(source: string): Token[] {
       i += 2
       continue
     }
+    const operator = ['===', '!==', '==', '!=', '>=', '<=', '&&', '||'].find(op => cleaned.startsWith(op, i))
+    if (operator) {
+      tokens.push({ kind: 'punct', value: operator })
+      i += operator.length
+      continue
+    }
     if (ch === '"' || ch === "'") {
       const quote = ch
       i++

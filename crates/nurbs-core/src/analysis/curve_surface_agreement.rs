@@ -279,6 +279,9 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
     if require_chart {
         if let Some(identity)=structured_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        // The complete clamped owner can prove mismatches between distinct
+        // normalized bases. The periodic/nonclamped trace owner may only
+        // decline such a basis, so it must not preempt this stronger proof.
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
     }

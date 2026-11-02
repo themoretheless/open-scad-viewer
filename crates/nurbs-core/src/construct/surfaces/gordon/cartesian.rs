@@ -481,13 +481,16 @@ mod tests {
         ];
         assert!(super::super::patch(&u, &v, &[0., 1.], &[0., 1.]).is_err());
         let patches = cells(&u, &v, &[0., 1.], &[0., 1.], 0.).unwrap();
-        let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
-        assert_eq!(certificates.len(), 4);
-        assert!(
-            certificates
-                .iter()
-                .all(|c| c["accepted"] == value_codec::json!(true))
-        );
+        #[cfg(feature = "codec")]
+        {
+            let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
+            assert_eq!(certificates.len(), 4);
+            assert!(
+                certificates
+                    .iter()
+                    .all(|c| c["accepted"] == value_codec::json!(true))
+            );
+        }
         assert_eq!(patches.len(), 1);
         let s = &patches[0];
         for sample in 0..=100 {
@@ -586,6 +589,7 @@ mod tests {
             }
         }
     }
+    #[cfg(feature = "codec")]
     #[test]
     fn checked_curved_rational_network_retains_all_six_authored_curves() {
         let stations = [0., 0.5, 1.];
@@ -704,6 +708,7 @@ mod tests {
             }
         }
     }
+    #[cfg(feature = "codec")]
     #[test]
     fn clamped_cartesian_network_retains_weights_curves_and_tangent_fields() {
         let line = |a: [f64; 3], b: [f64; 3], weights: Vec<f64>| Curve {

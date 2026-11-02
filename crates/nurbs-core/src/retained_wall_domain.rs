@@ -47,7 +47,7 @@ pub fn inspect(v:&Value)->Result<Value>{
     Ok(json!({"domainCertified":report.domain_certified,"work":report.work,"globalEmbeddingCertified":false}))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codec"))]
 mod tests {
     use super::*;
     fn fixture()->Value{

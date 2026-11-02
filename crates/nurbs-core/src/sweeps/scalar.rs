@@ -269,7 +269,7 @@ mod tests {
         );
         let scale = curve(&[[0.5, 0., 0.], [2., 0., 0.]], &[3., 1.], [10., 14.]);
         let origin = [1., 2., -1.];
-        let before = value_codec::to_string(&value_codec::json!([profile, path, scale])).unwrap();
+        let before = (profile.clone(), path.clone(), scale.clone());
         let s = scaled_sweep(&profile, &path, &scale, origin).unwrap();
         for i in 0..=12 {
             for j in 0..=12 {
@@ -301,7 +301,7 @@ mod tests {
         }
         assert_eq!(
             before,
-            value_codec::to_string(&value_codec::json!([profile, path, scale])).unwrap()
+            (profile.clone(), path.clone(), scale.clone())
         );
     }
     #[test]
@@ -333,6 +333,7 @@ mod tests {
             }
         }
     }
+    #[cfg(feature = "codec")]
     #[test]
     fn profile_sweep_scale_and_sampled_refusal() {
         let p = curve(&[[1., 0., 0.], [2., 0., 0.]], &[1., 2.], [0., 1.]);
@@ -365,12 +366,16 @@ mod tests {
         for bad in [0., -1.] {
             scale.control_points[0][0] = bad;
             assert!(scaled_sweep(&p, &path, &scale, [0.; 3]).is_err());
+            #[cfg(feature = "codec")]
             assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 5, 1.).is_err());
         }
         scale.control_points[0][0] = 1.;
-        assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 33, 1.).is_err());
-        assert!(checked_profile_sweep(&p, &path, &scale, [0., 0., 1.], 5, 1.).is_err());
-        assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 5, -1.).is_err());
+        #[cfg(feature = "codec")]
+        {
+            assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 33, 1.).is_err());
+            assert!(checked_profile_sweep(&p, &path, &scale, [0., 0., 1.], 5, 1.).is_err());
+            assert!(checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 5, -1.).is_err());
+        }
         let mut large = path.clone();
         large.knots = vec![0., 0.];
         large.knots.extend((1..33).map(|i| i as f64 / 33.));
@@ -379,6 +384,7 @@ mod tests {
         large.weights = vec![1.; 34];
         assert!(scaled_sweep(&p, &large, &scale, [0.; 3]).is_err());
     }
+    #[cfg(feature = "codec")]
     #[test]
     fn closed_rmf_seam_requires_matching_scale() {
         let path = Curve {
@@ -408,7 +414,7 @@ mod tests {
         };
         let p = curve(&[[1., 0., 0.], [1.2, 0., 0.]], &[1., 1.], [0., 1.]);
         let scale = constant_vector_law([1., 0., 0.]).unwrap();
-        let before = value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap();
+        let before = (p.clone(), path.clone(), scale.clone());
         let r = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 0.01).unwrap();
         assert_eq!(r["report"]["closedPath"], true);
         assert_eq!(r["report"]["seamContinuity"], "G2", "{r}");
@@ -495,7 +501,7 @@ mod tests {
         );
         assert_eq!(
             before,
-            value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap()
+            (p.clone(), path.clone(), scale.clone())
         );
         let tight = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 0.001).unwrap();
         assert_eq!(tight["report"]["accepted"], false);

@@ -1,97 +1,19 @@
 component ViewerToolbar {
-    Grid {
-        width: 560;
-        height: 50;
-        columns: [34, 34, 34, 34, *, 126];
-        rows: [34];
-        padding: 8 12;
-        gap: 6;
-        background: state.theme.surface;
-
-        IconButton {
-            cell: 1 1;
-            key: 'viewFitBtn';
-            width: 34;
-            height: 34;
-            icon: 'assets/fit.svg';
-            text: 'Вписать в экран';
-            clicked -> actions.fitView();
-        }
-
-        IconButton {
-            cell: 1 2;
-            key: 'viewFocusBtn';
-            width: 34;
-            height: 34;
-            icon: 'assets/focus.svg';
-            text: 'Фокус на выделенном';
-            clicked -> actions.focusSelection();
-        }
-
-        IconButton {
-            cell: 1 3;
-            key: 'viewGridBtn';
-            width: 34;
-            height: 34;
-            icon: 'assets/grid.svg';
-            text: 'Координатная сетка';
-            clicked -> actions.toggleGrid();
-        }
-
-        IconButton {
-            cell: 1 4;
-            key: 'viewMeasureBtn';
-            width: 34;
-            height: 34;
-            icon: 'assets/ruler.svg';
-            text: 'Измерение размеров';
-            clicked -> actions.toggleMeasure();
-        }
-
+    tokens { gap: "4px"; }
+    Row {
+        class: state.toolbarClass; gap: tokens.gap;
+        IconButton { class: "view-btn icon-only"; ariaLabel: state.fitLabel; title: state.fitLabel; text: "⊡"; clicked -> actions.fitView(); }
+        IconButton { class: "view-btn icon-only"; ariaLabel: state.resetLabel; title: state.resetLabel; text: "↺"; clicked -> actions.resetView(); }
+        IconButton { class: "view-btn icon-only"; ariaLabel: state.previousViewLabel; title: state.previousViewTitle; disabled: !state.canPreviousView; text: "←"; clicked -> actions.previousView(); }
+        Button { class: "view-btn"; text: state.projectionLabel; title: state.projectionTitle; ariaPressed: state.isOrthographic; clicked -> actions.toggleProjection(); }
+        Button { class: "view-btn"; text: state.gridLabel; active: state.gridVisible; ariaPressed: state.gridVisible; clicked -> actions.toggleGrid(); }
+        Slot { name: "gridAndMaterial"; }
+        Divider {}
         Row {
-            cell: 1 5;
-            width: *;
-            height: 34;
-            padding: 2;
-            gap: 2;
-            radius: 8;
-            background: state.theme.canvas;
-
-            SegmentButton {
-                key: 'modeShaded';
-                width: *;
-                height: 30;
-                text: 'Тонированный';
-                selected: true;
-                clicked -> actions.setDisplayMode('shaded');
-            }
-
-            SegmentButton {
-                key: 'modeEdges';
-                width: *;
-                height: 30;
-                text: 'С рёбрами';
-                selected: false;
-                clicked -> actions.setDisplayMode('edges');
-            }
-
-            SegmentButton {
-                key: 'modeXray';
-                width: *;
-                height: 30;
-                text: 'Рентген';
-                selected: false;
-                clicked -> actions.setDisplayMode('xray');
-            }
-        }
-
-        Badge {
-            cell: 1 6;
-            key: 'projectionBadge';
-            width: 126;
-            height: 30;
-            tone: 'neutral';
-            text: 'Изометрия · 60 FPS';
+            class: "display-modes"; role: "group"; ariaLabel: state.displayLabel;
+            SegmentButton { class: "btn view-btn"; text: state.shadedLabel; active: state.displayMode === "shaded"; ariaPressed: state.displayMode === "shaded"; clicked -> actions.setDisplayMode("shaded"); }
+            SegmentButton { class: "btn view-btn"; text: state.edgesLabel; active: state.displayMode === "edges"; ariaPressed: state.displayMode === "edges"; clicked -> actions.setDisplayMode("edges"); }
+            SegmentButton { class: "btn view-btn"; text: state.xrayLabel; active: state.displayMode === "xray"; ariaPressed: state.displayMode === "xray"; clicked -> actions.setDisplayMode("xray"); }
         }
     }
 }

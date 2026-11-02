@@ -1,0 +1,7 @@
+{
+  "acceptedDefinitions": 8,
+  "negativeControls": 3,
+  "failed": 0,
+  "definitionsSha256": "3102d2c9de54e81a3790be1fa5e9fd90a22288fece9112bb019f65567ac5cbbe",
+  "scope": "Exact full bivariate homogeneous cross-products on every original/output tensor knot cell. Actual binary64 data; default/no-codec equality. No sampled geometry, runtime, topology or compiler claim."
+}

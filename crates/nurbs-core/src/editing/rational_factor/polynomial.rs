@@ -1,8 +1,8 @@
 use super::{PResult, Q, Refusal, Work};
 use num_bigint::BigInt;
 use num_traits::Zero;
-pub(super) type Poly = Vec<Q>;
-pub(super) fn trim(p: &mut Poly) {
+pub(in crate::editing) type Poly = Vec<Q>;
+pub(in crate::editing) fn trim(p: &mut Poly) {
     while p.last().is_some_and(Zero::is_zero) {
         p.pop();
     }
@@ -14,7 +14,7 @@ fn choose(n: usize, k: usize) -> u64 {
     }
     r
 }
-pub(super) fn power(b: &[Q], w: &mut Work) -> PResult<Poly> {
+pub(in crate::editing) fn power(b: &[Q], w: &mut Work) -> PResult<Poly> {
     let p = b.len() - 1;
     let mut a = vec![Q::zero(); p + 1];
     for i in 0..=p {
@@ -28,7 +28,7 @@ pub(super) fn power(b: &[Q], w: &mut Work) -> PResult<Poly> {
     trim(&mut a);
     Ok(a)
 }
-pub(super) fn bernstein(a: &Poly, p: usize, w: &mut Work) -> PResult<Vec<Q>> {
+pub(in crate::editing) fn bernstein(a: &Poly, p: usize, w: &mut Work) -> PResult<Vec<Q>> {
     let mut b = vec![Q::zero(); p + 1];
     for i in 0..=p {
         for k in 0..a.len().min(i + 1) {
@@ -47,7 +47,7 @@ fn monic(mut a: Poly, w: &mut Work) -> PResult<Poly> {
     }
     Ok(a)
 }
-pub(super) fn divide(a: &Poly, b: &Poly, w: &mut Work) -> PResult<(Poly, Poly)> {
+pub(in crate::editing) fn divide(a: &Poly, b: &Poly, w: &mut Work) -> PResult<(Poly, Poly)> {
     if b.is_empty() {
         return Err(Refusal::UnprovedFactor);
     }
@@ -66,7 +66,7 @@ pub(super) fn divide(a: &Poly, b: &Poly, w: &mut Work) -> PResult<(Poly, Poly)> 
     trim(&mut q);
     Ok((q, r))
 }
-pub(super) fn gcd(mut a: Poly, mut b: Poly, w: &mut Work) -> PResult<Poly> {
+pub(in crate::editing) fn gcd(mut a: Poly, mut b: Poly, w: &mut Work) -> PResult<Poly> {
     while !b.is_empty() {
         let (_, r) = divide(&a, &b, w)?;
         a = b;
@@ -74,7 +74,7 @@ pub(super) fn gcd(mut a: Poly, mut b: Poly, w: &mut Work) -> PResult<Poly> {
     }
     monic(a, w)
 }
-pub(super) fn multiply(a: &Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
+pub(in crate::editing) fn multiply(a: &Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
     if a.is_empty() || b.is_empty() {
         return Ok(vec![]);
     }

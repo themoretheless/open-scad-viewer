@@ -31,10 +31,11 @@ input/request errors are distinct. No evaluator-bit identity, downstream
 certificate reuse, topology, WASM, Rush, editor or exchange claim is made.
 
 Qualification distinguishes operation-specific checks from the whole library
-harness. The default library harness compiles and its two denominator tests
-pass. The no-codec whole-library harness currently fails with 79 pre-existing
-codec/transport-dependent test errors. That failure is archived, not suppressed.
-The no-codec denominator target compiles the exact same production denominator
-and bounded-arithmetic source files in a focused integration harness; the actual
-library dependency graph remains codec-free. Full library/workspace checks are
-therefore still an open separate requirement.
+harness. The historical native234 receipt preserves its failed no-codec harness
+build (79 codec/transport-dependent test errors). The follow-up
+`docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json` records
+full default and no-codec library runs after matching test feature boundaries
+and correcting complete clamped-border proof dispatch. The default test
+inventory is unchanged. The operation-specific isolated denominator harness
+still uses the actual production source. Whole workspace, application and
+exchange qualification remain separate requirements.

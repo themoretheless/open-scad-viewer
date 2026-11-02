@@ -19,12 +19,12 @@ fn linear(p: &Poly, a: &Q, b: &Q, w: &mut Work) -> PResult<Poly> {
     }
     Ok(out)
 }
-fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<Poly> {
+pub(crate) fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<Poly> {
     let k = c
         .knots
         .iter()
         .map(|&x| w.lift(x))
-        .collect::<PResult<Vec<_>>>()?;
+        .collect::<std::result::Result<Vec<_>, _>>()?;
     let a = w.lift(lo)?;
     let b = w.lift(hi)?;
     let width = w.op(&b, &a, |x, y| x - y)?;
@@ -65,7 +65,7 @@ fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<Poly> {
         let p = p
             .iter()
             .map(|x| w.op(x, &weight, |x, y| x * y))
-            .collect::<PResult<Vec<_>>>()?;
+            .collect::<std::result::Result<Vec<_>, _>>()?;
         add(&mut out, &p, w)?;
     }
     Ok(out)

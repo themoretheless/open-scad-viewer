@@ -1,0 +1,209 @@
+{
+  "baseCommit": "45ad4df91e96653032d8223305d0f04698befad7",
+  "capability": "NURBS-0236",
+  "scope": "Native exact affine ellipse construction. No WASM/editor/STEP/distribution or current-main claim.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/primitives.rs": "3b46fa886ecec2ce79e753c1231a641657dfab16152268b9b1c559be05d84553",
+    "crates/nurbs-core/src/construct/curves/primitives/exact_conics.rs": "78c6da035b039b2897250abe242111e67948bb30fbce6c3436b99136bc293b10",
+    "crates/nurbs-core/src/construct/curves/primitives/exact_conics/proof.rs": "c5000f6c204cfa65e84de6d055fcea9b441e2fc7d38271b8f701375959b0f7c1",
+    "crates/nurbs-core/src/core.rs": "126cae43686748ecb0fd4ba3efe2a15f0b63c42188687270e38e9531a1b8dc69",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion/denominator.rs": "52db18cc5b9eba1e5830cf207b69e587fbcc36354081e349a599817ab1d9fba3",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/src/editing/rational_factor.rs": "2e9e0b3a484af06589baeed02a6d694d3ff90064ea79f2750803c0dc5300f312",
+    "crates/nurbs-core/tests/exact_conics_contracts.rs": "43f206f25a8e34a0d36c9e619a4acaff3176c850227c0560e4fe689281124c42",
+    "crates/nurbs-core/tests/exact_tensor_denominator_contracts.rs": "7d8af3e788be849220f638c02ca874dda363bbe6f91fcd1d84d066f662cd5b6c",
+    "docs/qualification/nurbs-exact-conics-2026-11-03/exact_oracle.py": "2421d8acdc414558a34f530a5571696467a074d6320bcf64bb16b6c965dc8203"
+  },
+  "tests": {
+    "lib-default": {
+      "passed": 2244,
+      "failed": 0,
+      "ignored": 1
+    },
+    "lib-no-codec": {
+      "passed": 2039,
+      "failed": 0,
+      "ignored": 1
+    },
+    "contracts-default": {
+      "passed": 48,
+      "failed": 0,
+      "ignored": 0
+    },
+    "contracts-no-codec": {
+      "passed": 48,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "totalFinalRustExecutions": 4379,
+  "runner": {
+    "native236-contracts-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--test",
+        "exact_conics_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "exact_tensor_denominator_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T20:52:56.983951+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T20:56:03.074522+00:00"
+    },
+    "native236-lib-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib"
+      ],
+      "start": "2026-11-02T20:56:03.075358+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T20:58:47.047960+00:00"
+    },
+    "native236-contracts-default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "exact_conics_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "exact_tensor_denominator_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T20:58:47.048248+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T20:58:48.305901+00:00"
+    }
+  },
+  "defaultLibCommand": "cargo test --locked --offline --manifest-path crates/Cargo.toml -p nurbs-core --lib",
+  "environment": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-rational-reduction-target-20261102",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2"
+  },
+  "oracles": {
+    "conics": {
+      "acceptedDefinitions": 4,
+      "negativeControls": 4,
+      "globalGaugeControl": true,
+      "definitionsSha256": "06d7df6f99c6e18ce6034ca713adcfc38d8a42295c54fcb6a9363fd83fb39312",
+      "basisOracleSha256": "11b4a9dc6bfa930d437143da65f625c07533ab0fba67f07cb8b4b2b6cace6c0b",
+      "scope": "Exact Fraction Cox-de Boor polynomial identity on every actual knot cell, plane, cardinal endpoints, positive angular numerator. Native geometry only; no sampling, evaluator-bit or application claim."
+    },
+    "surface-factor": {
+      "acceptedDefinitions": 6,
+      "negativeControls": 4,
+      "failed": 0,
+      "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+      "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+      "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+    },
+    "surface-insertion": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 3,
+      "failed": 0,
+      "definitionsSha256": "3102d2c9de54e81a3790be1fa5e9fd90a22288fece9112bb019f65567ac5cbbe",
+      "scope": "Exact full bivariate homogeneous cross-products on every original/output tensor knot cell. Actual binary64 data; default/no-codec equality. No sampled geometry, runtime, topology or compiler claim."
+    },
+    "factor": {
+      "passed": 8,
+      "failed": 0,
+      "checks": {
+        "elevated-primitive": true,
+        "constant": true,
+        "degree25": true,
+        "negative-factor": true,
+        "rational-clock": true,
+        "3d-clock": true,
+        "wrong-clock-detected": true,
+        "per-pole-weight-sign-change-detected": true
+      },
+      "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+      "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+    },
+    "curve-insertion": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 2,
+      "failed": 0,
+      "definitionsSha256": "efd2084959f63c33dfcf14ca57d619145637fb4e7f117350ffbb71e1b531fac2",
+      "scope": "Exact rational polynomial cross products on every source/output knot cell; actual binary64 coefficients; default/no-codec outputs match. No runtime or topology claim."
+    }
+  },
+  "previousDefinitionsUnchanged": {
+    "factor-oracle=": {
+      "definitions": 6,
+      "unchanged": true
+    },
+    "insertion-oracle=": {
+      "definitions": 8,
+      "unchanged": true
+    },
+    "surface-factor-oracle=": {
+      "definitions": 6,
+      "unchanged": true
+    },
+    "surface-insertion-oracle=": {
+      "definitions": 8,
+      "unchanged": true
+    }
+  },
+  "arithmeticExtraction": {
+    "arithmeticBodyUnchangedAfterVisibilityAndErrorRename": true,
+    "normalizedBodySha256": "8631d22e727e3408ff8b56007f5181b18ddc69748590021e838a802bcf84fd41",
+    "workMaximum": 1000000,
+    "rationalBitGuard": 4096,
+    "errorMapping": "ResourceLimit -> ResourceLimit, NotRepresentable -> NotRepresentable",
+    "scope": "Existing editing consumers preserve original arithmetic bodies/work charges; new low-level core owner has no dependency on editing."
+  },
+  "historicalFailure": "First cargo check failed with two iterator collection error-conversion E0277 diagnostics after moving arithmetic ownership; original log retained, conversions fixed.",
+  "limits": "Original 1m-work and4096-bit caps unchanged; no artifact/profile admission or budget increase.",
+  "toolchain": {
+    "cargo": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)\nrelease: 1.100.0-nightly\ncommit-hash: 7941be6fb416b4cd9666aef7b858dfea25587a8c\ncommit-date: 2026-09-11\nhost: aarch64-apple-darwin\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.7.2 [64-bit]",
+    "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1"
+  }
+}

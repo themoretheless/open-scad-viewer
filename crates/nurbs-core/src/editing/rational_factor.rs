@@ -1,7 +1,7 @@
 //! Cancel common polynomial factors, with complete original-clock identity.
 use crate::{Result, check, core::curve_identity::compare_definitions, curve::Curve};
 use num_rational::BigRational as Q;
-mod polynomial;
+pub(super) mod polynomial;
 use super::rational_edit::Work;
 use polynomial::Poly;
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -14,6 +14,14 @@ pub enum Refusal {
     UnprovedFactor,
     DifferentDefinition,
     PredicateIndeterminate(cad_predicates::Reason),
+}
+impl From<crate::core::bounded_rational::Error> for Refusal {
+    fn from(error: crate::core::bounded_rational::Error) -> Self {
+        match error {
+            crate::core::bounded_rational::Error::ResourceLimit => Self::ResourceLimit,
+            crate::core::bounded_rational::Error::NotRepresentable => Self::NotRepresentable,
+        }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -36,12 +44,22 @@ fn quotients(s: &Curve, w: &mut Work) -> PResult<(usize, Vec<Poly>)> {
         }
         h[dim].push(q);
     }
+    common_quotients(&h, dim, w)
+}
+pub(super) fn common_quotients(
+    h: &[Vec<Q>],
+    denominator: usize,
+    w: &mut Work,
+) -> PResult<(usize, Vec<Poly>)> {
     let powers = h
         .iter()
         .map(|row| polynomial::power(row, w))
         .collect::<PResult<Vec<_>>>()?;
-    let mut g = powers[dim].clone();
-    for n in &powers[..dim] {
+    let mut g = powers[denominator].clone();
+    for (index, n) in powers.iter().enumerate() {
+        if index == denominator {
+            continue;
+        }
         g = polynomial::gcd(g, n.clone(), w)?;
         if g.len() == 1 {
             return Err(Refusal::NoCommonFactor);

@@ -19,7 +19,7 @@ pub struct Report {
     pub rows_verified:usize,
     pub work_used:u64,
 }
-fn row(source:&Surface,axis:Axis,index:usize)->Curve {
+pub(super) fn row(source:&Surface,axis:Axis,index:usize)->Curve {
     match axis {
         Axis::U=>Curve{degree:source.degree_u,knots:source.knots_u.clone(),
             control_points:source.control_points.iter().map(|r|r[index].clone()).collect(),

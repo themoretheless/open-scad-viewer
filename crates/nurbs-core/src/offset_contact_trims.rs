@@ -518,26 +518,29 @@ mod tests {
                 .all(|r| !r.tangent_planes_proven)
         );
 
-        let value = r.to_value();
-        for key in [
-            "originalWorldBoundaryIdentityProven",
-            "replacementFaceTrimsProven",
-            "stitchedTopologyProven",
-            "wholeCurveComplete",
-            "tangentToleranceProven",
-            "embeddingProven",
-            "topologyAuthority",
-        ] {
-            assert_eq!(value[key], value_codec::json!(false));
+        #[cfg(feature = "codec")]
+        {
+            let value = r.to_value();
+            for key in [
+                "originalWorldBoundaryIdentityProven",
+                "replacementFaceTrimsProven",
+                "stitchedTopologyProven",
+                "wholeCurveComplete",
+                "tangentToleranceProven",
+                "embeddingProven",
+                "topologyAuthority",
+            ] {
+                assert_eq!(value[key], value_codec::json!(false));
+            }
+            assert_eq!(
+                value["sourceParameterReports"][0]["side"],
+                value_codec::json!(0)
+            );
+            assert_eq!(
+                value["sourceParameterReports"][1]["side"],
+                value_codec::json!(1)
+            );
         }
-        assert_eq!(
-            value["sourceParameterReports"][0]["side"],
-            value_codec::json!(0)
-        );
-        assert_eq!(
-            value["sourceParameterReports"][1]["side"],
-            value_codec::json!(1)
-        );
         assert_eq!(r.uv_reports.len(), 2);
         assert_eq!(r.agreements.len(), 2);
         assert_eq!(r.classifications.len(), 2);

@@ -279,6 +279,7 @@
         }}
     }
 
+    #[cfg(feature = "codec")]
     #[test]
     fn checked_nonplanar_closed_profile_keeps_exact_g2_and_global_surface_proofs() {
         let path=spatial_closed_path([0.,1.]);

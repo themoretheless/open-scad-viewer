@@ -935,6 +935,7 @@ fn closed_guided_and_contact_retained_bounds_include_copied_seam() {
     }
 }
 
+#[cfg(feature = "transport")]
 #[test]
 fn closed_guided_contact_transport_preserves_tight_budget_and_refinement() {
     use value_codec::json;

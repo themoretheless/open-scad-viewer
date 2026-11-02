@@ -11,7 +11,7 @@ use crate::{
 };
 use cad_predicates::{BezierIdentity, Reason};
 use num_rational::BigRational as Q;
-mod denominator;
+pub(super) mod denominator;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
     Arithmetic(curve_edit::Refusal),
