@@ -462,6 +462,15 @@ fn prepare_closed_source(
     error_budget: f64,
     limits: OriginalClosedLimits,
 ) -> Result<PreparedAttempt> {
+    prepare_closed_source_with_binding(sweep,loop_sizes,sections,material,tolerance_uv,error_budget,limits,MaterialBinding::NormalizedMap)
+}
+// Closed reference carriers need oriented image ownership. Unlike two distinct
+// open caps, there is no Cartesian cap interpolation on a moving boundary that
+// could require equal normalized UV/profile clocks. Legacy routes stay strict.
+fn prepare_closed_source_with_binding(
+    sweep:&MultiSweep<'_>,loop_sizes:&[usize],sections:usize,material:&LoftCap,
+    tolerance_uv:f64,error_budget:f64,limits:OriginalClosedLimits,binding:MaterialBinding,
+)->Result<PreparedAttempt>{
     if !(4..=1025).contains(&sections) || !error_budget.is_finite() || error_budget <= 0. {
         return Err(fail("Invalid closed material sweep limits"));
     }
@@ -470,7 +479,10 @@ fn prepare_closed_source(
         profiles: original_profiles,
         material: bound_material,
         ..
-    } = match prepare_closed_material(sweep, loop_sizes, material, tolerance_uv, limits)? {
+    } = match match binding {
+        MaterialBinding::NormalizedMap=>prepare_closed_material(sweep,loop_sizes,material,tolerance_uv,limits),
+        MaterialBinding::OrientedImages=>prepare_classified_closed_material(sweep,loop_sizes,material,tolerance_uv,limits),
+    }? {
         PreparedMaterialAttempt::Ready(p) => *p,
         PreparedMaterialAttempt::Refused(r) => return Ok(PreparedAttempt::Refused(r)),
     };
@@ -713,3 +725,8 @@ pub use capped_material::{
     OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
     OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material,
 };
+
+mod classified;
+pub use classified::{ClassifiedClosedAttempt, ClassifiedClosedBody, ClassifiedClosedLimits,
+    ClassifiedClosedReport, EdgeRole as ClassifiedClosedEdgeRole, EdgeRoles as ClassifiedClosedEdgeRoles,
+    construct_classified_closed_with_original_material, verify_classified_closed_with_original_material};

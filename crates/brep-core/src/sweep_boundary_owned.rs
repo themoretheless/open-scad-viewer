@@ -528,3 +528,7 @@ mod classified_original;
 pub use classified_original::{OriginalClassifiedBody, OriginalClassifiedBodyAttempt,
     OriginalClassifiedBodyRefusal, construct_with_original_classified_material,
     construct_affine_with_original_classified_material};
+
+pub use closed::{ClassifiedClosedAttempt, ClassifiedClosedBody, ClassifiedClosedLimits,
+    ClassifiedClosedReport, ClassifiedClosedEdgeRole, ClassifiedClosedEdgeRoles,
+    construct_classified_closed_with_original_material, verify_classified_closed_with_original_material};

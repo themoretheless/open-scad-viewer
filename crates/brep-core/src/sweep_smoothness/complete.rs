@@ -333,3 +333,5 @@ mod tests {
         assert_eq!(model, before);
     }
 }
+
+pub mod classified;
