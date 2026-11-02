@@ -16,7 +16,7 @@ Disk exhaustion interrupted one check. Only idle regenerable targets from this t
 
 Source c73c6205b, evidence caff4be0d and local artifact ignore rules 14defb95b were published and independently verified on origin.
 
-Deleted 23 merged local branches and 58 merged remote branches after ancestry checks. Remote deletion used atomic push with exact-SHA leases. Eight physical worktrees were removed, including the temporary integration checkout, and one missing worktree record was pruned. Only the primary main checkout remains. Tags were unchanged. Pre-deletion refs are preserved in the committed inventories.
+Deleted 23 merged local branches and 58 merged remote branches after ancestry checks. Remote deletion used atomic push with exact-SHA leases. Eight physical worktrees were removed, including the temporary integration checkout, and one missing worktree record was pruned. At cleanup completion only the primary main checkout remained. Final remote verification observed a newly created concurrent detached checkout at /Users/themoretheless/.codex/worktrees/nurbs-plan-next/open-scad-viewer (14defb95b); it is retained as new work outside the cleanup inventory. Tags were unchanged. Pre-deletion refs are preserved in the committed inventories.
 
 Ignored non-build evidence (296 files) is preserved under /Users/themoretheless/.codex/preservation/open-scad-viewer-push-20261102. With explicit user authorization, Colima was stopped and the recovery checkout removed after cwd holders exited. A disk-related lease cleanup error left a usernet helper; it was verified and terminated gracefully. VM disk data was retained.
 
