@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 240,
-  "unallocatedCount": 760,
+  "specifiedCount": 241,
+  "unallocatedCount": 759,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6555,6 +6555,27 @@
         "Two finite exactly independent authored axes, 0<=inner<outer. Whole9x2 degree2x1 filled-disk/annulus family with canonical angular/linear radial clocks, repeated seam, real inner boundary or collapsed parameter center with regular plane image. Exact nonzero2x2 minor and full plane equation, exact positive binary64 storage or atomic refusal under unchanged shared1m-work/4096-bit guards.",
         "Typed Rust plus strict native JSON and native geometry-bridge routing now qualified on fixed combined snapshot. No installed WASM/Rush/editor/STEP/current-source distribution, edited-net proof transfer, B-rep/solid or numeric-normal/evaluator-bit credit; native geometry domains and refusals above remain.",
         "Current-source raw WASM ABI/native parity and exact geometry oracle slice pass for five constructor families. Stock module exceeds both delivery caps; no installed package, Worker, Rush, editor, STEP or broad performance qualification. Catalogue status remains native."
+      ]
+    },
+    {
+      "id": "NURBS-0241",
+      "name": "Точное проективное преобразование рациональных кривых и тензорных поверхностей с сохранением полной параметризации и доказательством конечного знаменателя",
+      "status": "native",
+      "prioritySet": "native-1000-exact-transformation",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_projective::curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/proof.rs",
+        "crates/nurbs-core/tests/exact_projective_contracts.rs",
+        "crates/nurbs-core/tests/exact_projective_numeric_boundaries.rs",
+        "docs/design/nurbs-exact-projective.md",
+        "docs/qualification/nurbs-exact-projective-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-projective-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Validated3D geometry and invertible finite4x4 matrix. All transformed control weights have one strict sign; mixed/zero signs conservatively refuse. Full original basis/clock and one global net gauge; exact positive binary64 storage or atomic refusal under existing geometry,4096-bit and1m-work limits.",
+        "Native curve and surface APIs qualified in default and no-codec builds. No JSON/WASM/Rush/editor/STEP, evaluator-bit, topology, external certificate or old source-epoch authority transfer. Full1000 target and whole-application qualification remain open."
       ]
     }
   ],

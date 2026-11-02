@@ -1,0 +1,303 @@
+{
+  "baseCommit": "f923a4b4a80b24a2679169f1b49367c1c762fb53",
+  "status": "native-qualified",
+  "catalogueCapability": "NURBS-0241",
+  "scope": "Native exact finite-chart projective transformations of 3D rational curves and tensor surfaces. Not installed WASM, JSON/Rush/editor/STEP, topology or whole-app qualification.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "178f9a28eb8c12d7cfaaaeac8b77ec5afe0fd5f33899012ae6901013ad289b35",
+    "crates/nurbs-core/src/editing/exact_projective.rs": "853af199fa7af70292c291e5f34d86a862b6c8d68f70ab23b1ee0a052f767116",
+    "crates/nurbs-core/src/editing/exact_projective/proof.rs": "c4692834e772385ec8d5832f733cc84420a9d947a10d5c9297a0ccf0e1b51da9",
+    "crates/nurbs-core/tests/exact_projective_contracts.rs": "9846ddd75030f992eba24194df6cf2a5270dec5757a9762235a8b77a1e8717f0",
+    "crates/nurbs-core/tests/exact_projective_numeric_boundaries.rs": "7229409f43f3f78408e96b9b820e81b6192b8a78f3131d5d688ed2ef5bb503ec",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d",
+    "docs/qualification/nurbs-exact-projective-2026-11-03/exact_oracle.py": "7805359467b7e357a7efe2c2673da06cd42f75bfd0099c2d3637ff730d35ef64"
+  },
+  "testEnvironment": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-rational-reduction-target-20261102",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "oracle": {
+    "acceptedDefinitions": 12,
+    "negativeControls": 8,
+    "definitionsSha256": "6ad55f0db3c0381fb740c8c2666ea40ec0f1316cf351346540111fde70fe1084",
+    "scope": "Exact permutation determinant, common homogeneous coefficient identity for actual serialized output over unchanged full basis and strictly signed whole-domain denominator. No sampled identity, evaluator-bit, topology, WASM or application claim."
+  },
+  "previousCurveFactorOracle": {
+    "passed": 8,
+    "failed": 0,
+    "checks": {
+      "elevated-primitive": true,
+      "constant": true,
+      "degree25": true,
+      "negative-factor": true,
+      "rational-clock": true,
+      "3d-clock": true,
+      "wrong-clock-detected": true,
+      "per-pole-weight-sign-change-detected": true
+    },
+    "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+    "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+  },
+  "previousSurfaceFactorOracle": {
+    "acceptedDefinitions": 6,
+    "negativeControls": 4,
+    "failed": 0,
+    "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+    "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+    "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+  },
+  "unitInventory": {
+    "previousUnitNames": 2259,
+    "retainedPreviousUnitNames": 2259,
+    "newUnitNames": 0,
+    "removedUnitNames": [],
+    "previousUnitNamesSha256": "961fd250796271108082815873ebe7af8be2915a0cad4fd32b0b738e08e30a00",
+    "scope": "Unit portion only: stop before first integration-test executable. Current default full unit log retains every previously qualified unit test name; integration tests are additional."
+  },
+  "limits": {
+    "maxExactWork": 1000000,
+    "rationalBits": 4096,
+    "geometryLimitsChanged": false
+  },
+  "historicalAttempts": [
+    {
+      "testLog": "native243-contracts-first.log",
+      "exitCode": 101,
+      "reason": "Negative test matrix for zero denominator was singular; correct rank refusal preceded denominator proof. Test fixed to invertible homogeneous swap; implementation unchanged."
+    },
+    {
+      "stage": "existing curve-factor oracle log reader",
+      "reason": "Whole combined log also contains surface-factor-oracle markers; old reader matched their suffix and expected a curve name. Separate strict-prefix curve records before unchanged oracle. Final six curve definitions match baseline."
+    }
+  ],
+  "admission": "Existing editing root/domain owner; one global complete-net storage gauge, fresh full homogeneous coefficient proof. No caller or older source topology/certificate authority transferred.",
+  "tests": {
+    "default": {
+      "passed": 2294,
+      "ignored": 1,
+      "groups": [
+        [
+          2258,
+          0,
+          1
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ]
+      ]
+    },
+    "no-codec": {
+      "passed": 2089,
+      "ignored": 1,
+      "groups": [
+        [
+          2053,
+          0,
+          1
+        ],
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0
+        ],
+        [
+          9,
+          0,
+          0
+        ]
+      ]
+    }
+  },
+  "totalFinalRustExecutions": 4383,
+  "commands": {
+    "native243-default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T23:36:16.860064+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T23:39:44.086250+00:00"
+    },
+    "native243-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T23:39:44.086970+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T23:43:55.635363+00:00"
+    }
+  },
+  "catalogue": {
+    "target": 1000,
+    "specified": 241,
+    "integrated": 79,
+    "native": 162,
+    "unallocated": 759
+  },
+  "nativeApi": [
+    "nurbs_core::editing::exact_projective::curve",
+    "nurbs_core::editing::exact_projective::surface"
+  ],
+  "archives": {
+    "native243-contracts-first.log.gz": {
+      "bytes": 2723,
+      "sha256": "640f43bba92126ab6c3e4beaf47f77b17e00fd68b951722aa02d885cfbc01f0c",
+      "decodedSha256": "e238d21074625368f820032dceaa4eca95e0476a1ef0cf8d08ec308db2811d37"
+    },
+    "native243-contracts-r2.log.gz": {
+      "bytes": 2424,
+      "sha256": "8529d5778a65e7a41f4c293ef082a921bc8a758c244a59c9872bf9b6976135a7",
+      "decodedSha256": "2da93d11dbec40c5c9e3b92cd6ec6f90de04ff2d92d987fa5f95881b1c8699f3"
+    },
+    "native243-default.log.gz": {
+      "bytes": 59682,
+      "sha256": "95798faeccd03d2b6c3a3fb335a455ca75f174a4a1fb2e54ab7414d58dd488e7",
+      "decodedSha256": "908f9e43a48fc67d27980357927cb2316c7d2a3cd782b80da236e808c16a4e47"
+    },
+    "native243-no-codec.log.gz": {
+      "bytes": 53975,
+      "sha256": "a33f171af01687f0c79b101069586820843d74a624b9436b1137ee2092150925",
+      "decodedSha256": "c3c003e5e682e9c4751398124ba4c7694be73e8f734dd4ee1ed259b0d18eb1f5"
+    },
+    "native243-source-inputs.json.gz": {
+      "bytes": 434,
+      "sha256": "e1ba4f5299e265a8f2ba61747d2e40e02ec969bafdcb240fcc2d2aabc9949625",
+      "decodedSha256": "dc1bb50c91102d8858ae07e5082d4be4ea8b0395992e391896d0b5e41b91a110"
+    },
+    "native243-unit-inventory-final.json.gz": {
+      "bytes": 268,
+      "sha256": "f6c37fac4a9eb8f905e42a86544e463ed67ac655f26c347729d0f386e9b0e521",
+      "decodedSha256": "19925d5c5d67f2284772cb54e55cdcc0ba6ce9cc16833ee79d545e01b4d383f9"
+    },
+    "native243-oracle-default.json.gz": {
+      "bytes": 304,
+      "sha256": "7822c5f74876ab8c637a8f5628052688855115ee2f845c052b145c5518c5d8a4",
+      "decodedSha256": "935f079e8ec9a274cc22d7e2e2202ad231414b8da96ddd7b913eb6b1e840a29d"
+    },
+    "native243-existing-factor-oracle-r2.json.gz": {
+      "bytes": 362,
+      "sha256": "4e1aa48b2019a197f03ce53bfa662a991a9726df4579036903bed18afb60ae1e",
+      "decodedSha256": "2b1149e31e59531f263438c5a69c4aa3c968ac2f15d9e236754b6016bf72a1d1"
+    },
+    "native243-existing-surface-factor-oracle.json.gz": {
+      "bytes": 424,
+      "sha256": "8af4615fdbd373bef219f36da1892e09ccdc5b6aa63eda9de21e68a498f40e5d",
+      "decodedSha256": "1b2dbe9d754d84affb1ce20b38fe1e584ed65f815555ef1379e95331505f4aaf"
+    },
+    "native243-factor-cross-mode.json.gz": {
+      "bytes": 362,
+      "sha256": "4e1aa48b2019a197f03ce53bfa662a991a9726df4579036903bed18afb60ae1e",
+      "decodedSha256": "2b1149e31e59531f263438c5a69c4aa3c968ac2f15d9e236754b6016bf72a1d1"
+    },
+    "native243-surface-factor-cross-mode.json.gz": {
+      "bytes": 424,
+      "sha256": "8af4615fdbd373bef219f36da1892e09ccdc5b6aa63eda9de21e68a498f40e5d",
+      "decodedSha256": "1b2dbe9d754d84affb1ce20b38fe1e584ed65f815555ef1379e95331505f4aaf"
+    },
+    "native243-runner-state.json.gz": {
+      "bytes": 340,
+      "sha256": "1fcea663f1de89405595046a7232916c25c0a4ae8117596ce621bcc31b4b8ab3",
+      "decodedSha256": "295a2c04fc354a9f2dad963744f95f31abf4eaeca0685cb1ed196d67e6d30725"
+    }
+  },
+  "factorCrossMode": {
+    "passed": 8,
+    "failed": 0,
+    "checks": {
+      "elevated-primitive": true,
+      "constant": true,
+      "degree25": true,
+      "negative-factor": true,
+      "rational-clock": true,
+      "3d-clock": true,
+      "wrong-clock-detected": true,
+      "per-pole-weight-sign-change-detected": true
+    },
+    "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+    "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+  },
+  "surfaceFactorCrossMode": {
+    "acceptedDefinitions": 6,
+    "negativeControls": 4,
+    "failed": 0,
+    "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+    "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+    "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+  },
+  "checks": {
+    "apiMap": "244 roots,241 catalogue entries; existing editing owner",
+    "catalogue": "241/1000=79integrated+162native;759unallocated;0errors",
+    "architecture": "54 existing oversized pins,0 pinned layer violations",
+    "diffCheck": "passed"
+  }
+}
