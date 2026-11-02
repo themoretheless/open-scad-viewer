@@ -169,7 +169,56 @@ fn material(g1: bool, hole: bool) -> (LoftCap, Vec<Curve>, Vec<usize>, Vec<Origi
     (LoftCap { surface, trims }, profiles, sizes, classes)
 }
 fn run(g1: bool, hole: bool, sharp: bool, mode: usize, arc: bool, image: bool, nonplanar: bool) {
-    let (mut material, mut profiles, sizes, classes) = material(g1, hole);
+    run_profiles(g1, hole, sharp, mode, arc, image, nonplanar, false)
+}
+fn run_profiles(
+    g1: bool,
+    hole: bool,
+    sharp: bool,
+    mode: usize,
+    arc: bool,
+    image: bool,
+    nonplanar: bool,
+    multispan: bool,
+) {
+    let (mut material, mut profiles, mut sizes, classes) = material(g1, hole);
+    if multispan {
+        assert!(!image);
+        // Preserve two exact spans while putting their requested geometric join
+        // INSIDE one NURBS curve. World and UV clocks have different raw domains.
+        let mut offset = 0;
+        for (ring, size) in sizes.iter_mut().enumerate() {
+            let mut world = profiles[offset].clone();
+            world
+                .control_points
+                .extend_from_slice(&profiles[offset + 1].control_points[1..]);
+            world
+                .weights
+                .extend_from_slice(&profiles[offset + 1].weights[1..]);
+            world.knots = [
+                vec![-4.; world.degree + 1],
+                vec![0.; world.degree],
+                vec![4.; world.degree + 1],
+            ]
+            .concat();
+            profiles.splice(offset..offset + 2, [world]);
+            let wire = &mut material.trims[ring];
+            let mut uv = wire[0].clone();
+            uv.control_points
+                .extend_from_slice(&wire[1].control_points[1..]);
+            uv.weights.extend_from_slice(&wire[1].weights[1..]);
+            uv.knots = [
+                vec![7.; uv.degree + 1],
+                vec![9.; uv.degree],
+                vec![11.; uv.degree + 1],
+            ]
+            .concat();
+            wire.splice(0..2, [uv]);
+            *size -= 1;
+            offset += *size;
+        }
+        assert_eq!(classes.len(), profiles.len() + sizes.len());
+    }
     if nonplanar {
         assert!(!g1);
         let r = 1. / 128.;
@@ -362,7 +411,7 @@ fn run(g1: bool, hole: bool, sharp: bool, mode: usize, arc: bool, image: bool, n
     assert!(edges.roles.iter().all(Option::is_some));
     assert_eq!(edges.classes.len(), body.model().edges.len());
     let layers = count - 1;
-    let spans = profiles.len();
+    let spans = classes.len();
     let source_c0 = classes
         .iter()
         .filter(|c| **c == OriginalProfileClass::C0)
@@ -668,4 +717,18 @@ fn curved_projective_image_clocks_bind_mixed_g1_g2_closed_solid() {
 #[test]
 fn nonplanar_authored_closed_hollow_material_has_complete_classified_actual_solid() {
     run(false, true, false, 1, false, false, true)
+}
+
+#[test]
+fn multispan_closed_hollow_material_keeps_internal_g2_joins_and_trim_ownership() {
+    run_profiles(false, true, false, 0, false, false, false, true)
+}
+#[test]
+fn multispan_nonplanar_authored_closed_material_keeps_internal_g2_joins() {
+    run_profiles(false, true, false, 1, false, false, true, true)
+}
+
+#[test]
+fn multispan_rational_closed_material_keeps_internal_g1_curvature_jump() {
+    run_profiles(true, false, false, 0, false, false, false, true)
 }
