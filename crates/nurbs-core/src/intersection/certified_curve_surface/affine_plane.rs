@@ -2,10 +2,10 @@
 use super::*;
 use num_rational::BigRational as Q;
 use num_traits::{FromPrimitive, ToPrimitive, Zero};
-fn q(x: f64) -> Q {
+pub(super) fn q(x: f64) -> Q {
     Q::from_f64(x).unwrap()
 }
-fn enclosure(x: &Q) -> Option<I> {
+pub(super) fn enclosure(x: &Q) -> Option<I> {
     let f = x.to_f64().filter(|v| v.is_finite())?;
     let mut lo = f;
     let mut hi = f;
@@ -22,10 +22,10 @@ fn enclosure(x: &Q) -> Option<I> {
     }
     None
 }
-fn dot(a: &[Q; 3], b: &[Q; 3]) -> Q {
+pub(super) fn dot(a: &[Q; 3], b: &[Q; 3]) -> Q {
     (0..3).map(|i| &a[i] * &b[i]).sum()
 }
-fn subtract(a: &[Q; 3], b: &[Q; 3]) -> [Q; 3] {
+pub(super) fn subtract(a: &[Q; 3], b: &[Q; 3]) -> [Q; 3] {
     std::array::from_fn(|i| &a[i] - &b[i])
 }
 fn exact_point(c: &Curve, t: f64) -> Option<[Q; 3]> {

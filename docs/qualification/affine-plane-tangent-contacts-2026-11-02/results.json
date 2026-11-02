@@ -1,0 +1,27 @@
+{
+  "nativePassed": 105,
+  "newTests": 6,
+  "scope": "Original curve / exact untrimmed affine parallelogram contacts including scalar multiplicities",
+  "verified": [
+    "double and fourth-order contact with complete coverage",
+    "rational non-dyadic double root",
+    "exact oblique plane",
+    "outside-patch exclusion",
+    "boundary membership remains unresolved",
+    "coincident intervals remain unresolved",
+    "one-ULP nonaffine target rejected"
+  ],
+  "limits": [
+    "nonperiodic 3D sources",
+    "single clamped uniform-weight affine target",
+    "exact plane coefficients must round-trip to finite binary64",
+    "general freeform tangency and trim/Body remain open"
+  ],
+  "wasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "1136df3d50abb6d022a7e228897f08f97d3c8c8f5a0d4a803dfc246d4fd3d2fc",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/affine_plane.rs": "f1ec0e9c3e623bcf996403d1d2f416fc1832b29c7cda098ab70384de01481345",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/plane_contacts.rs": "45b3f6e054755593ac535a6df059661fd426b5b235c6bd04198b73fdb96e4dd1",
+    "crates/nurbs-core/tests/affine_plane_contacts.rs": "b298e87c95363d9a1f9167940f66b3c4d9fa0890fbe4e15c43899176a6fd94a5"
+  }
+}

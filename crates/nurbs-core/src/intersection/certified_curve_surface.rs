@@ -530,3 +530,6 @@ pub use window::{WindowRoot,WindowReport,first_in_window,all_in_window};
 
 mod window_source;
 pub use window_source::{first_iso_in_window,all_iso_in_window,first_surface_iso_in_window,all_surface_iso_in_window};
+
+mod plane_contacts;
+pub use plane_contacts::{AffinePlaneContact, AffinePlaneContacts, affine_plane_contacts};
