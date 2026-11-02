@@ -1,0 +1,6 @@
+{
+  "tensorPolynomialExact": true,
+  "rationalNumeratorAndDenominatorExact": true,
+  "adversarialSourceY": "2/5",
+  "naiveReducedY": "1/2"
+}
