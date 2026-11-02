@@ -130,3 +130,70 @@ fn oblique_original_affine_patch_uses_its_exact_plane() {
         );
     }
 }
+
+#[test]
+fn exact_common_plane_scale_is_removed_before_binary64_admission() {
+    let mut c = tangent(2);
+    let mut s = plane();
+    // (2*binary64(0.1))^2 is not itself a binary64 plane normal.
+    // Its common factor cancels exactly from the whole plane equation.
+    for p in &mut c.control_points {
+        for x in p {
+            *x *= 0.1;
+        }
+    }
+    for row in &mut s.control_points {
+        for p in row {
+            for x in p {
+                *x *= 0.1;
+            }
+        }
+    }
+    let r = affine_plane_contacts(&c, &s, 1e-9, 1000, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert!(r.contacts[0].parameter_box[0][0] <= 0.5 && 0.5 <= r.contacts[0].parameter_box[0][1]);
+    assert!(
+        r.contacts[0]
+            .scalar_cells
+            .iter()
+            .all(|&i| r.scalar.cells[i].root_multiplicity == Some(2))
+    );
+}
+
+#[test]
+fn common_scale_reduction_preserves_the_nonzero_plane_offset() {
+    let mut s = plane();
+    for row in &mut s.control_points {
+        for p in row {
+            for x in p.iter_mut() {
+                *x *= 0.1;
+            }
+            p[0] = 0.1;
+        }
+    }
+    let mut c = tangent(2);
+    for (i, p) in c.control_points.iter_mut().enumerate() {
+        p[0] = if i == 1 { 2. * 0.1 - 0.125 } else { 0.125 };
+        p[1] *= 0.1;
+        p[2] = 0.1;
+    }
+    let r = affine_plane_contacts(&c, &s, 1e-9, 1000, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1, "{r:?}");
+    let contact = &r.contacts[0];
+    assert!(contact.parameter_box[0][0] <= 0.5 && 0.5 <= contact.parameter_box[0][1]);
+    assert!(contact.position_bounds[0][0] <= 0.1 && 0.1 <= contact.position_bounds[0][1]);
+}
+
+#[test]
+fn irreducible_nonrepresentable_plane_coefficients_are_not_rounded() {
+    let mut s = plane();
+    s.control_points = vec![
+        vec![vec![0.1, 0., 0.], vec![0.1, 1., 0.]],
+        vec![vec![1.1, 0., 0.1], vec![1.1, 1., 0.1]],
+    ];
+    // Exact 1.1 - 0.1 has an irreducible 56-bit mantissa. The offset
+    // participates in the common gcd; independently rounding a normal is invalid.
+    assert!(affine_plane_contacts(&tangent(2), &s, 1e-9, 1000, 100000).is_err());
+}

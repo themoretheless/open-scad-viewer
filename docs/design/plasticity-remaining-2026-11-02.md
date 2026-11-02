@@ -94,6 +94,8 @@ Actual WASM iso–target/off-center: frozen source `6495f1b9b` собран в r
 
 Касательные контакты curve–affine patch: новый native `affine_plane_contacts` использует исходный scalar polynomial root coverage и exact multiplicities, затем интервально подтверждает принадлежность оригинальному affine parallelogram. Чётные кратности не превращаются в transverse crossing sign; scalar cells сохраняют односторонние порядки на knots. Поддержаны кратности 2/4, rational double root t=1/3 и exact oblique plane; outside-patch roots исключаются, boundary/coincident остаются unresolved. **105 native tests прошли (6 новых)**; [receipt](../qualification/affine-plane-tangent-contacts-2026-11-02/results.json). Нужен один clamped uniform-weight affine target с точно binary64-представимыми plane coefficients. General freeform tangencies, полнота surface–surface, trims/Body и bridge/WASM нового API остаются открытыми.
 
+Точная нормализация affine plane: перед scalar-root admission знаменатели всех четырёх исходных plane coefficients очищаются совместно, затем сокращается общий integer gcd и при необходимости выбирается точный power-of-two scale. Raw normal больше не обязан помещаться в binary64: достаточно точной представимости общего сокращённого уравнения. Проверены decimal scale 0.1, сохранение ненулевого offset и отказ для irreducible 56-bit коэффициента без округления. **108 native tests прошли (3 новых)**; [receipt](../qualification/primitive-affine-plane-2026-11-02/results.json). General affine-plane equations без точного binary64 representative, freeform tangencies, trims/Body и bridge/WASM остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

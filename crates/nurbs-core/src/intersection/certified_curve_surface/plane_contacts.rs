@@ -1,8 +1,9 @@
 //! Scalar multiplicities on an original affine patch, including tangent roots.
 use super::affine_plane::{dot, enclosure, q, subtract};
 use super::*;
+use num_bigint::BigInt;
 use num_rational::BigRational as Q;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::{Signed, ToPrimitive, Zero};
 #[derive(Debug)]
 pub struct AffinePlaneContact {
     pub parameter_box: Box3,
@@ -30,10 +31,47 @@ fn exact_float(x: &Q) -> Result<f64> {
     )?;
     Ok(f)
 }
+fn gcd(mut a: BigInt, mut b: BigInt) -> BigInt {
+    a = a.abs();
+    b = b.abs();
+    while !b.is_zero() {
+        let r = &a % &b;
+        a = b;
+        b = r;
+    }
+    a
+}
+/// One exact common scale for all normal components AND the offset. Clearing
+/// denominators and the primitive integer gcd changes no plane or root order.
+fn primitive_plane(values: [Q; 4]) -> Result<[f64; 4]> {
+    let denominator = values.iter().fold(BigInt::from(1), |d, v| {
+        let g = gcd(d.clone(), v.denom().clone());
+        d / g * v.denom()
+    });
+    let integers: [BigInt; 4] =
+        std::array::from_fn(|i| values[i].numer() * (&denominator / values[i].denom()));
+    let common = integers
+        .iter()
+        .fold(BigInt::from(0), |g, n| gcd(g, n.clone()));
+    check(!common.is_zero(), "Degenerate affine plane")?;
+    let reduced = integers.map(|n| n / &common);
+    let bits = reduced.iter().map(|n| n.bits()).max().unwrap_or(0);
+    // Preserve exact mantissas while fitting large powers of two into the
+    // finite exponent range. Every final scalar must round-trip exactly.
+    let shift = bits.saturating_sub(1023) as usize;
+    let scale = BigInt::from(1) << shift;
+    let mut result = [0.; 4];
+    for i in 0..4 {
+        result[i] = exact_float(&Q::new(reduced[i].clone(), scale.clone()))?;
+    }
+    Ok(result)
+}
 /// Isolate original curve contacts with a single exact affine parallelogram.
 /// Even scalar multiplicities are admitted through exact polynomial proofs,
 /// without claiming a transverse crossing sign. Boundary/ambiguous patch
-/// membership and coincident intervals remain unresolved. No trim/Body proof.
+/// membership and coincident intervals remain unresolved. Plane coefficients
+/// are reduced by one exact common scale before binary64 admission; an
+/// irreducible unrepresentable plane is refused. No trim/Body proof.
 pub fn affine_plane_contacts(
     c: &Curve,
     s: &Surface,
@@ -77,15 +115,17 @@ pub fn affine_plane_contacts(
         &u[0] * &v[1] - &u[1] * &v[0],
     ];
     let offset = dot(&normal, &origin);
-    let nf = [
-        exact_float(&normal[0])?,
-        exact_float(&normal[1])?,
-        exact_float(&normal[2])?,
-    ];
+    let plane = primitive_plane([
+        normal[0].clone(),
+        normal[1].clone(),
+        normal[2].clone(),
+        offset,
+    ])?;
+    let nf = [plane[0], plane[1], plane[2]];
     let scalar = crate::curve_plane::inspect_with_exact_budget(
         c,
         nf,
-        exact_float(&offset)?,
+        plane[3],
         tolerance,
         max_cells,
         max_exact_work,
