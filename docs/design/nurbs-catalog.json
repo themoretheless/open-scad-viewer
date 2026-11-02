@@ -6187,7 +6187,8 @@
         "crates/nurbs-core/src/editing/exact_knot_removal.rs",
         "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs",
         "docs/design/nurbs-exact-surface-knot-removal.md",
-        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json"
+        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json"
       ],
       "remainingQualification": [
         "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
