@@ -25,9 +25,12 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
         && (1..=1000000).contains(&max_domain_cells) && tolerance_uv.is_finite() && tolerance_uv>0.,
         "Trim region audit requires 1..16 loops, at most 256 curves, positive tolerance and bounded work")?;
     let mut out=Report{valid:None,reason:"loop-simplicity-unproven",loops:Vec::with_capacity(loops.len()),winding:vec![None;loops.len()],pairs:0,cells:0,domain_cells:0,problem_loops:None};
+    // Only a multi-loop region has a later cross-loop separation stage.
+    // Reserving a fictitious share for one outer loop prevents exact-budget
+    // replay, especially when two cap audits share their remaining cells.
     for (i,l) in loops.iter().enumerate(){
         if out.pairs==max_pairs || out.cells==max_cells {return Ok(out);}
-        let r=trim_simplicity::inspect(l,tolerance_uv,max_pairs-out.pairs,((max_cells-out.cells)/(loops.len()-i+1)).max(1))?;
+        let r=trim_simplicity::inspect(l,tolerance_uv,max_pairs-out.pairs,((max_cells-out.cells)/(loops.len()-i+usize::from(loops.len()>1))).max(1))?;
         out.pairs+=r.pairs.len();out.cells+=r.cells;
         let proven=r.proven_simple;out.loops.push(r);
         if !proven {out.problem_loops=Some([i,i]);return Ok(out);}
@@ -85,6 +88,17 @@ mod tests {
         (0..4).map(|i|Curve::from_polyline(vec![p[i].to_vec(),p[(i+1)%4].to_vec()]).unwrap()).collect()
     }
     fn audit(l:Vec<Vec<Curve>>)->Report{inspect(&l,1e-8,1000,10000,100000).unwrap()}
+    #[test]
+    fn a_single_outer_loop_uses_its_complete_remaining_cell_budget(){
+        let loops=vec![square(0.,1.,false)];let before=loops.clone();
+        let full=inspect(&loops,1e-8,1000,10000,100000).unwrap();
+        assert_eq!(full.valid,Some(true));assert!(full.cells>1);
+        let exact=inspect(&loops,1e-8,1000,full.cells,100000).unwrap();
+        assert_eq!(exact.valid,Some(true));assert_eq!(exact.cells,full.cells);
+        let short=inspect(&loops,1e-8,1000,full.cells-1,100000).unwrap();
+        assert_eq!(short.valid,None);assert!(short.cells<full.cells);
+        assert_eq!(loops,before);
+    }
     #[test]
     fn multispan_rational_outer_with_hole_is_audited_without_chords(){
         let mut outer=square(0.,10.,false);
