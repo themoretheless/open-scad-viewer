@@ -254,3 +254,6 @@ pub use edge::{rational_bspline_affine_patch_edge_root, rational_bspline_affine_
 #[path = "bspline_plane_roots/sign.rs"]
 mod sign;
 pub use sign::{OriginalPlaneRootSignDecision, rational_bspline_plane_root_sign};
+#[path = "bspline_plane_roots/quadric.rs"]
+mod quadric;
+pub use quadric::{OriginalQuadricRoot, OriginalQuadricRootsOutcome, OriginalQuadricRootsDecision, rational_bspline_quadric_roots};

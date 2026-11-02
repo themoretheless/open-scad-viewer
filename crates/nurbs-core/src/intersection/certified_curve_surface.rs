@@ -545,3 +545,5 @@ pub use patch_uv_injectivity::BilinearUvInjectivity;
 mod patch_exact_membership;
 
 mod patch_coordinate_bounds;
+mod quadric_carrier;
+pub use quadric_carrier::{OriginalQuadricCarrierRoot, OriginalQuadricCarrierRoots, original_quadric_carrier_roots};
