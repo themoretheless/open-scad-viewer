@@ -370,17 +370,22 @@ fn certify_map_impl(
             if regular(e.columns, projection)? {
                 continue;
             }
-            if h[2][1] - h[2][0] <= 0.125
-                && cached_metric(
-                    &[h],
-                    e.columns,
-                    projection,
-                    &mut query,
-                    out,
-                    max_cells,
-                    &mut metrics,
-                )?
-            {
+        }
+        // An unavailable coarse carrier jet is not a negative whole-field
+        // result. The same fixed-metric owner can refine ORIGINAL UV charts
+        // to obtain those jets. Otherwise adjacent boxes sharing a material
+        // boundary may refine forever while their joint coarse jet stays
+        // unavailable. All subcells, failed trials and queries use this ledger.
+        let refine_unavailable = matches!(eh, Enclosed::Unavailable(Some(0 | 1)));
+        if h[2][1] - h[2][0] <= 0.125 || refine_unavailable {
+            let columns = match eh {
+                Enclosed::Value(e) => e.columns,
+                _ => [[I::point(0.); 3]; 3],
+            };
+            // Zero fallback cannot authorize a metric: monotone_hull first
+            // requests an original center jet, then proves its complete cover.
+            if cached_metric(&[h], columns, projection, &mut query, out,
+                max_cells, &mut metrics)? {
                 continue;
             }
         }
@@ -498,6 +503,45 @@ fn certify_map_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unavailable_joint_carrier_jets_require_a_complete_refined_cover() {
+        let projection = [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let run = |max, folded| {
+            let mut out = IdealVolumeReport {
+                embedding_certified:false, regularity_certified:false,
+                parameter_topology_preserved:false, cells:0, exact_work:0,
+                boxes:0, monotonicity_lower:None, projection, reason:None,
+            };
+            let source = |b:Box3, out:&mut IdealVolumeReport, max:usize| -> Result<Enclosed> {
+                if out.cells==max {return Ok(Enclosed::Unavailable(None));}
+                out.cells+=1;
+                // A conservative primitive may need smaller ORIGINAL charts.
+                if b[0][1]-b[0][0]>0.25 {
+                    return Ok(Enclosed::Unavailable(Some(0)));
+                }
+                let mut value=b.map(|x|I::new(x[0],x[1]).unwrap());
+                let mut columns=projection.map(|v|v.map(I::point));
+                if folded {
+                    let u=value[0].sub(I::point(0.5))?;
+                    value[0]=u.mul(u)?;
+                    columns[0][0]=I::point(2.).mul(u)?;
+                }
+                Ok(Enclosed::Value(cell::Enclosure{value,columns}))
+            };
+            certify_map(source,projection,&mut out,max,false).unwrap();
+            out
+        };
+        let full=run(10000,false);
+        assert!(full.embedding_certified && full.regularity_certified
+            && full.parameter_topology_preserved, "{full:?}");
+        assert!(run(full.cells,false).embedding_certified);
+        let short=run(full.cells-1,false);
+        assert!(!short.embedding_certified && short.cells<full.cells);
+        let folded=run(10000,true);
+        assert!(!folded.embedding_certified && !folded.regularity_certified
+            && !folded.parameter_topology_preserved);
+        eprintln!("refined unavailable carrier: cells={}",full.cells);
+    }
     #[test]
     fn spatially_uncertain_monotone_field_refines_uv_under_one_fixed_metric() {
         let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
