@@ -13,19 +13,13 @@ use crate::{Result, check, curve::Curve};
 pub struct KnotRemovalAssessment {
     /// The assessed knot parameter.
     pub knot: f64,
-    /// The tolerance at which removal provably holds: zero when the removal
-    /// is exact at the control-net level (the Boehm projection vanishes to
-    /// rounding), otherwise the fixed point of the certified deviation bound
-    /// under `remove_curve_knot_report`'s budget-dependent accuracy (1% of
-    /// the budget). Acceptance is monotone in the budget above this value.
+    /// Certified deviation envelope used to assess the removal. A small
+    /// numerical control-net residual is never promoted to a zero envelope.
     pub removable_at_tolerance: f64,
-    /// Boehm-projection norm: maximum Euclidean distance between the source
-    /// control net and the refit-then-reinserted net — the predicted control
-    /// movement the removal forces. Vanishes (to rounding) iff the knot is
-    /// exactly removable.
+    /// Maximum Euclidean displacement of the refit-then-reinserted control
+    /// net. This is a numerical diagnostic, not an exact-identity proof.
     pub control_delta_norm: f64,
-    /// True when the removal pipeline produced a finite certified bound and
-    /// `remove_curve_knot_report` accepts at the certified envelope budget.
+    /// True when the paired removal accepted the reported envelope budget.
     pub feasible: bool,
 }
 
@@ -53,10 +47,9 @@ pub fn assess_knot_removal(
     let mut knots = curve.knots.clone();
     knots.remove(index);
     let candidate = super::refit_curve(curve, curve.degree, knots)?;
-    // Boehm-projection norm: reinsertion restores the control count, so the
-    // nets compare index-by-index. Knot insertion is the exact inverse of an
-    // exact removal, hence this norm vanishes iff the knot is removable
-    // exactly.
+    // Reinsertion restores the control count for a numerical comparison.
+    // Both refitting and insertion round; even a vanishing diagnostic does
+    // not prove exact nominal equality of the original and candidate curves.
     let reconstructed = candidate.insert(knot, 1)?;
     let control_delta_norm = curve
         .control_points
@@ -70,13 +63,6 @@ pub fn assess_knot_removal(
                 .sqrt()
         })
         .fold(0., f64::max);
-    let scale = curve
-        .control_points
-        .iter()
-        .flatten()
-        .map(|x| x.abs())
-        .fold(1., f64::max);
-    let exact_removal = control_delta_norm <= 1e-9 * scale;
     // Fixed point of the certified bound under remove_curve_knot_report's
     // accuracy rule (max_error * 0.01, floored at 1e-12): iterating makes the
     // assessed budget self-consistent, so the paired removal accepts exactly
@@ -104,7 +90,7 @@ pub fn assess_knot_removal(
         }
     }
     crate::numeric(bound.is_finite(), "Knot-removal deviation bound overflowed")?;
-    let removable_at_tolerance = if exact_removal { 0. } else { bound };
+    let removable_at_tolerance = bound;
     let feasible = super::approximate_edits::remove_curve_knot_report(curve, knot, bound, None)
         .map(|edit| edit.certificate.accepted)
         .unwrap_or(false);
@@ -140,14 +126,13 @@ mod tests {
     }
 
     #[test]
-    fn inserted_knot_assesses_as_exactly_removable() {
+    fn inserted_knot_reports_a_certified_numerical_envelope() {
         let base = base_curve();
         let refined = base.insert(0.5, 1).unwrap();
         let assessment = assess_knot_removal(&refined, 0.5, 0).unwrap();
-        assert_eq!(
-            assessment.removable_at_tolerance, 0.,
-            "freshly inserted knot must be exactly removable"
-        );
+        assert!(assessment.removable_at_tolerance.is_finite());
+        assert!(assessment.removable_at_tolerance > 0.,
+            "numerical refit and reinsertion need their certified envelope");
         assert!(
             assessment.control_delta_norm <= 1e-9,
             "predicted control movement must be ~zero, got {}",
@@ -160,6 +145,21 @@ mod tests {
             super::super::approximate_edits::remove_curve_knot_report(&refined, 0.5, 0.01, None)
                 .unwrap();
         assert!(edit.certificate.accepted);
+    }
+
+    #[test]
+    fn subthreshold_nonzero_perturbation_is_not_reported_as_exact() {
+        let mut refined = base_curve().insert(0.5, 1).unwrap();
+        refined.control_points[2][1] += 1e-10;
+        // Exact rational differentiation of these authored binary64 controls
+        // gives a third-derivative jump 56295/8796093022208 at u=0.5.
+        // Removing this knot makes [0,1] one cubic span, so exact removal is
+        // impossible even though the old 1e-9*scale residual test admitted it.
+        let assessment = assess_knot_removal(&refined, 0.5, 4096).unwrap();
+        assert!(assessment.control_delta_norm > 0.);
+        assert!(assessment.control_delta_norm < 4e-9);
+        assert!(assessment.removable_at_tolerance > 0.);
+        assert!(assessment.feasible);
     }
 
     #[test]
