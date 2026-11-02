@@ -1,0 +1,178 @@
+{
+  "nativeWitnessesVerified": 7,
+  "exactMaterialSpanIdentities": 48,
+  "allAxesAndSigns": true,
+  "roundedAnchorRejectedAsAuthority": true,
+  "witnesses": [
+    {
+      "axis": 0,
+      "sign": -1,
+      "rationalInteriorAnchor": false,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-30/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "3/256",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "axis": 2,
+      "sign": 1,
+      "rationalInteriorAnchor": true,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-13720/112941",
+          "4"
+        ]
+      ],
+      "world": [
+        "0",
+        "0",
+        "-15199648742375425/1297036692682702848"
+      ]
+    },
+    {
+      "axis": 0,
+      "sign": 1,
+      "rationalInteriorAnchor": false,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-30/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "-3/256",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "axis": 1,
+      "sign": -1,
+      "rationalInteriorAnchor": false,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-30/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "0",
+        "3/256",
+        "0"
+      ]
+    },
+    {
+      "axis": 1,
+      "sign": 1,
+      "rationalInteriorAnchor": false,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-30/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "0",
+        "-3/256",
+        "0"
+      ]
+    },
+    {
+      "axis": 2,
+      "sign": -1,
+      "rationalInteriorAnchor": false,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-30/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "0",
+        "0",
+        "3/256"
+      ]
+    },
+    {
+      "axis": 2,
+      "sign": 1,
+      "rationalInteriorAnchor": false,
+      "rawPathParameters": [
+        "0",
+        "2"
+      ],
+      "authoredUV": [
+        [
+          "0",
+          "4"
+        ],
+        [
+          "-30/133",
+          "4"
+        ]
+      ],
+      "world": [
+        "0",
+        "0",
+        "-3/256"
+      ]
+    }
+  ],
+  "oracleDependencySha256": "e2ca354ba8c0e82d2aaef3bd6b1df86668cbf6c871b4c6e604240fcf173c83fc",
+  "scope": "Negative original filled-map coincidences; six are also actual material interior collisions."
+}
