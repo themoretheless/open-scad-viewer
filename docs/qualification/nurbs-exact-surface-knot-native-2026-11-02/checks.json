@@ -1,0 +1,24 @@
+{
+  "capability": "NURBS-0226",
+  "checks": {
+    "default": {
+      "passed": 19,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "noCodec": {
+      "passed": 19,
+      "failed": 0,
+      "exitCode": 0
+    }
+  },
+  "architectureExit": 0,
+  "sources": {
+    "crates/nurbs-core/src/editing.rs": "36e6acee5a288ddf9635b4f722893dda7f6e91b158535bcc0534fba8b6481bd4",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "382d82dafe3312468b8b075e1d666455efd8a115eafb897f6ce83ebec4c36fb4",
+    "crates/nurbs-core/src/editing/exact_knot_removal.rs": "72724c8b843341917805f7bbc38c57cfc0479564f870277f3740951e7f79030e",
+    "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs": "2d915a7a9fe99458a117f09845a52b18a2be81eb5d17bc4b2d54569fa8ccbbba",
+    "crates/nurbs-core/tests/exact_knot_removal_contracts.rs": "3921e734c1d8f8fdfadfdca1665bb68f3e9953ba978062c6e388422456563981"
+  },
+  "scope": "Atomic exact tensor knot removal: both row rational identity and polynomial denominator identity, one shared arithmetic budget. No WASM/UI/exchange, full workspace, B-rep or global geometry qualification implied."
+}

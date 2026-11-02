@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 225,
-  "unallocatedCount": 775,
+  "specifiedCount": 226,
+  "unallocatedCount": 774,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6171,6 +6171,26 @@
       ],
       "remainingQualification": [
         "original algebraic CST law and coefficientwise ordered section only; no frame transform, solid mass inertia, principal axes or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0226",
+      "name": "точное удаление узла тензорной NURBS-поверхности с сохранением UV",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::remove",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs",
+        "docs/design/nurbs-exact-surface-knot-removal.md",
+        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json"
+      ],
+      "remainingQualification": [
+        "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
