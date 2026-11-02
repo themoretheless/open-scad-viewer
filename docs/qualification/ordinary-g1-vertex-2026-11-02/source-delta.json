@@ -1,0 +1,11 @@
+{
+  "previousQualification": "../rational-hollow-caps-2026-11-02/QUALIFICATION.md",
+  "unchangedNurbsCoreAndPredicateInputs": true,
+  "changedInputs": [
+    "crates/brep-core/src/source_face_contacts.rs",
+    "crates/brep-core/src/source_shell_geometry.rs",
+    "crates/brep-core/src/source_support_shell/tests/ordinary_vertices.rs",
+    "crates/brep-core/src/source_vertex_contact.rs",
+    "crates/brep-core/src/source_vertex_contact/proposal.rs"
+  ]
+}
