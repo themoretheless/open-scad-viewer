@@ -529,3 +529,6 @@ pub mod topology_reference;
 #[path = "cuboid_primitive.rs"]
 mod cuboid_primitive;
 pub use cuboid_primitive::cuboid;
+
+pub mod source_curved_boundary_contact;
+pub mod source_paired_projection_contact;

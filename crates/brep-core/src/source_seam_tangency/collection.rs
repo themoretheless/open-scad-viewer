@@ -75,6 +75,7 @@ pub struct CollectionReport<'a, E: Carrier> {
     pub polar_coefficients: usize,
     pub polar_shape_products: u64,
     pub polar_exact_work: u64,
+    pub regular_exact_work: u64,
     pub polar_shape_coefficients: usize,
     pub completed_edges: usize,
     pub uncertain_edge: Option<usize>,
@@ -92,6 +93,7 @@ struct Work<E: Carrier> {
     polar_coefficients: usize,
     polar_shape_products: u64,
     polar_exact_work: u64,
+    regular_exact_work: u64,
     polar_shape_coefficients: usize,
     completed_edges: usize,
     uncertain_edge: Option<usize>,
@@ -119,7 +121,7 @@ pub(super) fn validate_classes(classes: &[Class]) -> Result<()> {
     Ok(())
 }
 fn inspect_edges<E: Carrier>(edges: &[E], classes: &[Class], limits: Limits) -> Result<Work<E>> {
-    inspect_with_poles(edges, classes, limits, None)
+    inspect_with_poles(edges, classes, limits, None, None)
 }
 type PolarContext<'p, 's, E> = (
     &'p crate::source_pole_tangency::BodyPlaneLimits<'s, E>,
@@ -132,6 +134,7 @@ fn inspect_with_poles<E: Carrier>(
     classes: &[Class],
     limits: Limits,
     polar: Option<PolarContext<'_, '_, E>>,
+    regular_exact: Option<(&[usize], u64)>,
 ) -> Result<Work<E>> {
     super::validate_limits(&limits)?;
     if edges.is_empty() || edges.len() > 100_000 || classes.len() != edges.len() {
@@ -139,6 +142,17 @@ fn inspect_with_poles<E: Carrier>(
             "BREP_SOURCE_SEAM_COLLECTION",
             "Classify every original edge exactly once",
         ));
+    }
+    if let Some((axes, max)) = regular_exact {
+        if axes.len() != edges.len()
+            || axes.iter().any(|a| *a > 2)
+            || !(1..=100000000).contains(&max)
+        {
+            return Err(Error::new(
+                "BREP_SOURCE_EXACT_CURVATURE",
+                "Use complete source projection proposals and bounded shared exact work",
+            ));
+        }
     }
     validate_classes(classes)?;
     let mut out = Work {
@@ -152,6 +166,7 @@ fn inspect_with_poles<E: Carrier>(
         polar_coefficients: 0,
         polar_shape_products: 0,
         polar_exact_work: 0,
+        regular_exact_work: 0,
         polar_shape_coefficients: 0,
         completed_edges: 0,
         uncertain_edge: None,
@@ -237,7 +252,7 @@ fn inspect_with_poles<E: Carrier>(
                         shape_cells: limits.normal_spans - out.normal_spans,
                     };
                     let r = if let Some(exact) = exact {
-                        if out.polar_exact_work == exact {
+                        if out.polar_exact_work + out.regular_exact_work == exact {
                             out.reason = "exact-polar-collection-work-limit";
                             return Ok(out);
                         }
@@ -247,7 +262,7 @@ fn inspect_with_poles<E: Carrier>(
                             l,
                             products - out.polar_shape_products,
                             coefficients - out.polar_shape_coefficients,
-                            exact - out.polar_exact_work,
+                            exact - out.polar_exact_work - out.regular_exact_work,
                         )?
                     } else {
                         super::qualify_polar_curvature(
@@ -273,6 +288,36 @@ fn inspect_with_poles<E: Carrier>(
                     out.uncertain_edge = None;
                     continue;
                 }
+            }
+            if let Some((axes, max)) = regular_exact {
+                if out.regular_exact_work + out.polar_exact_work == max {
+                    out.reason = "exact-curvature-collection-work-limit";
+                    return Ok(out);
+                }
+                let r = super::qualify_curvature_exact(
+                    edge,
+                    super::CurvatureLimits {
+                        normal_distance,
+                        curvature_distance,
+                        cells: limits.cells - out.cells,
+                        curve_spans: limits.curve_spans - out.curve_spans,
+                        shape_cells: limits.normal_spans - out.normal_spans,
+                    },
+                    axes[index],
+                    max - out.regular_exact_work - out.polar_exact_work,
+                )?;
+                out.regular_exact_work += r.exact_work;
+                out.cells += r.cells;
+                out.curve_spans += r.curve_spans;
+                out.normal_spans += r.shape_cells;
+                let Some(seam) = r.seam else {
+                    out.reason = r.reason;
+                    return Ok(out);
+                };
+                out.curvature_seams.push((index, seam));
+                out.completed_edges += 1;
+                out.uncertain_edge = None;
+                continue;
             }
             let report = super::qualify_curvature(
                 edge,
@@ -347,6 +392,7 @@ pub fn qualify_collection<'a, E: Carrier>(
             polar_coefficients: 0,
             polar_shape_products: 0,
             polar_exact_work: 0,
+            regular_exact_work: 0,
             polar_shape_coefficients: 0,
             completed_edges: 0,
             uncertain_edge: None,
@@ -363,7 +409,7 @@ pub(super) fn qualify_owned_edges<'a, E: Carrier>(
     classes: &[Class],
     limits: Limits,
 ) -> Result<CollectionReport<'a, E>> {
-    qualify_owned_edges_impl(body, classes, limits, None)
+    qualify_owned_edges_impl(body, classes, limits, None, None)
 }
 pub(super) fn qualify_owned_edges_with_poles<'a, E: Carrier>(
     body: &'a Body<E>,
@@ -383,6 +429,7 @@ pub(super) fn qualify_owned_edges_with_poles<'a, E: Carrier>(
         classes,
         limits,
         Some((planes, body.geometry().shell().uses(), coefficients, None)),
+        None,
     )
 }
 pub(super) fn qualify_owned_edges_with_polar_curvature<'a, E: Carrier>(
@@ -392,6 +439,7 @@ pub(super) fn qualify_owned_edges_with_polar_curvature<'a, E: Carrier>(
     atlas: &crate::source_pole_tangency::PoleCurvatureAtlas<'_, E>,
     budgets: super::PolarBudgets,
     exact: Option<u64>,
+    regular_exact: Option<(&[usize], u64)>,
 ) -> Result<CollectionReport<'a, E>> {
     let planes = atlas.graphs().charts().transverse().atlas().planes();
     if !std::ptr::eq(planes.body(), body) {
@@ -410,18 +458,29 @@ pub(super) fn qualify_owned_edges_with_polar_curvature<'a, E: Carrier>(
             budgets.normal_coefficients,
             Some((budgets.shape_products, budgets.shape_coefficients, exact)),
         )),
+        regular_exact,
     )
+}
+pub(super) fn qualify_owned_edges_exact_regular<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    limits: Limits,
+    axes: &[usize],
+    max: u64,
+) -> Result<CollectionReport<'a, E>> {
+    qualify_owned_edges_impl(body, classes, limits, None, Some((axes, max)))
 }
 fn qualify_owned_edges_impl<'a, E: Carrier>(
     body: &'a Body<E>,
     classes: &[Class],
     limits: Limits,
     polar: Option<PolarContext<'_, '_, E>>,
+    regular_exact: Option<(&[usize], u64)>,
 ) -> Result<CollectionReport<'a, E>> {
     let shell = body.geometry().shell();
     let max_sine_squared = limits.max_sine_squared;
-    let work = if polar.is_some() {
-        inspect_with_poles(shell.edges(), classes, limits, polar)?
+    let work = if polar.is_some() || regular_exact.is_some() {
+        inspect_with_poles(shell.edges(), classes, limits, polar, regular_exact)?
     } else {
         inspect_edges(shell.edges(), classes, limits)?
     };
@@ -443,6 +502,7 @@ fn qualify_owned_edges_impl<'a, E: Carrier>(
         polar_coefficients: work.polar_coefficients,
         polar_shape_products: work.polar_shape_products,
         polar_exact_work: work.polar_exact_work,
+        regular_exact_work: work.regular_exact_work,
         polar_shape_coefficients: work.polar_shape_coefficients,
         completed_edges: work.completed_edges,
         uncertain_edge: work.uncertain_edge,

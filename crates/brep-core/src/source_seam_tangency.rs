@@ -7,7 +7,7 @@ pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_cur
 mod polar;
 pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
 mod body;
-pub use body::{Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams, PolarBudgets, qualify_boundary_with_polar_curvature, qualify_boundary_with_exact_polar_curvature};
+pub use body::{qualify_boundary_with_exact_curvature, Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams, PolarBudgets, qualify_boundary_with_polar_curvature, qualify_boundary_with_exact_polar_curvature};
 mod pole_c2;
 pub use pole_c2::{C2PoleNeighborhood, C2PoleAtlas, C2PoleReport, qualify_c2_pole_neighborhoods};
 mod collection;

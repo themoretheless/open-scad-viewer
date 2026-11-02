@@ -115,8 +115,11 @@ pub fn qualify_body_pole_graphs<E: Carrier>(
             let (a, chart) = &charts.charts()[index];
             if !faces.insert(a.face)
                 || shell.faces()[a.face].len() != 1
-                || shell.faces()[a.face][0].edges().len() != 4
-                || shell.regions().is_none_or(|r| r[a.face].loops().len() != 1)
+                || shell.regions().is_none_or(|r| {
+                    r[a.face].loops().len() != 1
+                        || (shell.faces()[a.face][0].edges().len() != 4
+                            && !r[a.face].whole_chart_material())
+                })
                 || chart.dropped_axis() != axis
             {
                 out.reason = "pole-graph-natural-disk-star-unproven";
@@ -125,11 +128,28 @@ pub fn qualify_body_pole_graphs<E: Carrier>(
             separation = separation.min(chart.outer_radius_lower());
             let mut sides = BTreeSet::new();
             for (edge, f) in shell.faces()[a.face][0].edges().iter().enumerate() {
-                let Some(side) = boundary::natural_side(f) else {
+                if out.boundary_steps == limits.boundary_steps {
+                    out.reason = "pole-graph-boundary-step-limit";
+                    return Ok(out);
+                }
+                out.boundary_steps += 1;
+                let pole_side = boundary::pole_side(chart.boundary());
+                let outer_piece = || {
+                    boundary::natural_side_piece(f).filter(|s| {
+                        s.axis == pole_side.axis
+                            && s.upper != pole_side.upper
+                            && shell.regions().unwrap()[a.face].whole_chart_material()
+                    })
+                };
+                let Some(side) = boundary::natural_side(f).or_else(outer_piece) else {
                     out.reason = "pole-graph-full-natural-side-unproven";
                     return Ok(out);
                 };
-                if !sides.insert(side) {
+                if !sides.insert(side)
+                    && !(side.axis == pole_side.axis
+                        && side.upper != pole_side.upper
+                        && shell.regions().unwrap()[a.face].whole_chart_material())
+                {
                     out.reason = "pole-graph-duplicate-natural-side";
                     return Ok(out);
                 }

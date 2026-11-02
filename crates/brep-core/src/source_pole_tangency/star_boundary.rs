@@ -67,6 +67,51 @@ pub(super) fn natural_side(f: &Fragment) -> Option<Side> {
     }
     None
 }
+/// A complete literal fragment on PART of a natural side. Only the outer
+/// radial side may use this in graph admission, with a separate native proof
+/// that the full material UV rectangle is covered. Meridian cuts stay whole.
+pub(super) fn natural_side_piece(f: &Fragment) -> Option<Side> {
+    let c = f.curve();
+    let d = c.domain();
+    let b = f.parameter_bounds();
+    if !((b == [[d[0]; 2], [d[1]; 2]]) || (b == [[d[1]; 2], [d[0]; 2]]))
+        || c.degree != 1
+        || c.periodic
+        || c.control_points.len() != 2
+        || c.weights.len() != 2
+        || c.weights.iter().any(|w| !w.is_finite() || *w <= 0.)
+        || c.control_points.iter().any(|p| p.len() != 2)
+        || c.knots.len() != 4
+        || c.knots[..2].iter().any(|k| *k != d[0])
+        || c.knots[2..].iter().any(|k| *k != d[1])
+        || f.endpoints()
+            .iter()
+            .any(|e| !matches!(e, Endpoint::Parameter(_)))
+    {
+        return None;
+    }
+    let s = f.surface();
+    let domains = [
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    ];
+    for axis in 0..2 {
+        for upper in [false, true] {
+            let free = 1 - axis;
+            let (a, b) = (&c.control_points[0], &c.control_points[1]);
+            if a[axis] == domains[axis][usize::from(upper)]
+                && b[axis] == a[axis]
+                && a[free] != b[free]
+                && [a[free], b[free]]
+                    .iter()
+                    .all(|v| *v >= domains[free][0] && *v <= domains[free][1])
+            {
+                return Some(Side { axis, upper });
+            }
+        }
+    }
+    None
+}
 #[derive(Clone, Copy)]
 pub(super) struct Meridian {
     domain: [f64; 2],

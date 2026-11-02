@@ -58,6 +58,8 @@ pub struct PairReport<E = crate::source_shared_edge::SharedEdge> {
     pub fiber: Option<crate::source_fiber_contact::Certificate<E>>,
     pub interior_fiber: Option<crate::source_interior_contact::Certificate<E>>,
     pub paired_fiber: Option<crate::source_paired_fiber_contact::Certificate<E>>,
+    pub paired_projection: Option<crate::source_paired_projection_contact::Certificate<E>>,
+    pub curved_boundary: Option<crate::source_curved_boundary_contact::Certificate<E>>,
     pub vertex_contact: Option<crate::source_vertex_contact::Certificate<E>>,
     pub ruled_projection: Option<crate::source_ruled_projection_contact::Certificate>,
     pub pole_planar: Option<crate::source_pole_planar_contact::Certificate<E>>,
@@ -67,11 +69,18 @@ pub struct PairReport<E = crate::source_shared_edge::SharedEdge> {
 impl<E> PairReport<E> {
     /// Diagnostic completeness only. Reports never authorize a source owner.
     pub(crate) fn qualification_proven(&self) -> bool {
-        self.allowed.is_some() || self.fiber.is_some() || self.interior_fiber.is_some()
-            || self.paired_fiber.is_some() || self.vertex_contact.is_some()
-            || self.ruled_projection.is_some() || self.pole_planar.is_some()
-            || self.pole_paired.is_some() || self.disjoint_hull.is_some()
-            || self.result.as_ref().is_some_and(|r|r.absence_proven)
+        self.curved_boundary.is_some()
+            || self.paired_projection.is_some()
+            || self.allowed.is_some()
+            || self.fiber.is_some()
+            || self.interior_fiber.is_some()
+            || self.paired_fiber.is_some()
+            || self.vertex_contact.is_some()
+            || self.ruled_projection.is_some()
+            || self.pole_planar.is_some()
+            || self.pole_paired.is_some()
+            || self.disjoint_hull.is_some()
+            || self.result.as_ref().is_some_and(|r| r.absence_proven)
     }
 }
 pub struct ShellReport<E = crate::source_shared_edge::SharedEdge> {
@@ -227,7 +236,8 @@ fn inspect_impl(
             if let Some((work, spans, driver, linear)) = allowed_budget {
                 if out.exact_work < work {
                     let proof = crate::source_hull_separation::certify_shell(
-                        shell, [a,b],
+                        shell,
+                        [a, b],
                         work - out.exact_work,
                     )?;
                     out.exact_work += proof.exact_work;
@@ -239,9 +249,12 @@ fn inspect_impl(
                             fiber: None,
                             interior_fiber: None,
                             paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: None,
                             vertex_contact: None,
                             pole_paired: None,
-                            ruled_projection: None, pole_planar: None,
+                            ruled_projection: None,
+                            pole_planar: None,
                             disjoint_hull: Some(certificate),
                         });
                         continue;
@@ -265,10 +278,13 @@ fn inspect_impl(
                             allowed: Some(certificate),
                             fiber: None,
                             pole_paired: None,
-                            ruled_projection: None, pole_planar: None,
+                            ruled_projection: None,
+                            pole_planar: None,
                             disjoint_hull: None,
                             vertex_contact: None,
                             paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: None,
                             interior_fiber: None,
                         });
                         continue;
@@ -278,32 +294,59 @@ fn inspect_impl(
                 // Recompute the natural plane image before expensive chart guesses.
                 if out.exact_work < work && out.driver_cells < driver {
                     let proof = crate::source_pole_planar_contact::certify(
-                        shell, [a, b], work - out.exact_work, driver - out.driver_cells,
+                        shell,
+                        [a, b],
+                        work - out.exact_work,
+                        driver - out.driver_cells,
                     )?;
                     out.exact_work += proof.exact_work;
                     out.driver_cells += proof.driver_cells;
                     if let Some(certificate) = proof.certificate {
                         out.all_pairs_absence_proven = false;
                         out.pairs.push(PairReport {
-                            faces: [a, b], result: None, allowed: None, fiber: None,
-                            interior_fiber: None, paired_fiber: None, vertex_contact: None,
-                            pole_paired: None, ruled_projection: None, pole_planar: Some(certificate), disjoint_hull: None,
+                            faces: [a, b],
+                            result: None,
+                            allowed: None,
+                            fiber: None,
+                            interior_fiber: None,
+                            paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: None,
+                            vertex_contact: None,
+                            pole_paired: None,
+                            ruled_projection: None,
+                            pole_planar: Some(certificate),
+                            disjoint_hull: None,
                         });
                         continue;
                     }
                 }
                 if out.exact_work < work && out.driver_cells < driver {
                     let proof = crate::source_ruled_projection_contact::certify(
-                        shell,[a,b],tolerance_uv,work-out.exact_work,driver-out.driver_cells,
+                        shell,
+                        [a, b],
+                        tolerance_uv,
+                        work - out.exact_work,
+                        driver - out.driver_cells,
                     )?;
-                    out.exact_work+=proof.exact_work;out.driver_cells+=proof.driver_cells;
-                    if let Some(certificate)=proof.certificate {
-                        out.all_pairs_absence_proven=false;
+                    out.exact_work += proof.exact_work;
+                    out.driver_cells += proof.driver_cells;
+                    if let Some(certificate) = proof.certificate {
+                        out.all_pairs_absence_proven = false;
                         out.pairs.push(PairReport {
-                            faces:[a,b],result:None,allowed:None,fiber:None,
-                            interior_fiber:None,paired_fiber:None,vertex_contact:None,
-                            pole_paired:None,pole_planar:None,disjoint_hull:None,
-                            ruled_projection:Some(certificate),
+                            faces: [a, b],
+                            result: None,
+                            allowed: None,
+                            fiber: None,
+                            interior_fiber: None,
+                            paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: None,
+                            vertex_contact: None,
+                            pole_paired: None,
+                            pole_planar: None,
+                            disjoint_hull: None,
+                            ruled_projection: Some(certificate),
                         });
                         continue;
                     }
@@ -326,10 +369,13 @@ fn inspect_impl(
                             fiber: None,
                             interior_fiber: None,
                             paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: None,
                             vertex_contact: None,
                             disjoint_hull: None,
                             pole_paired: Some(certificate),
-                            ruled_projection: None, pole_planar: None,
+                            ruled_projection: None,
+                            pole_planar: None,
                         });
                         continue;
                     }
@@ -350,8 +396,11 @@ fn inspect_impl(
                             fiber: None,
                             interior_fiber: None,
                             paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: None,
                             pole_paired: None,
-                            ruled_projection: None, pole_planar: None,
+                            ruled_projection: None,
+                            pole_planar: None,
                             disjoint_hull: None,
                             vertex_contact: Some(certificate),
                         });
@@ -376,10 +425,13 @@ fn inspect_impl(
                             fiber: None,
                             interior_fiber: None,
                             pole_paired: None,
-                            ruled_projection: None, pole_planar: None,
+                            ruled_projection: None,
+                            pole_planar: None,
                             disjoint_hull: None,
                             vertex_contact: None,
                             paired_fiber: Some(certificate),
+                            paired_projection: None,
+                            curved_boundary: None,
                         });
                         continue;
                     }
@@ -412,10 +464,13 @@ fn inspect_impl(
                                 allowed: None,
                                 fiber: Some(certificate),
                                 pole_paired: None,
-                                ruled_projection: None, pole_planar: None,
+                                ruled_projection: None,
+                                pole_planar: None,
                                 disjoint_hull: None,
                                 vertex_contact: None,
                                 paired_fiber: None,
+                                paired_projection: None,
+                                curved_boundary: None,
                                 interior_fiber: None,
                             });
                             break;
@@ -453,10 +508,13 @@ fn inspect_impl(
                                 allowed: None,
                                 fiber: None,
                                 pole_paired: None,
-                                ruled_projection: None, pole_planar: None,
+                                ruled_projection: None,
+                                pole_planar: None,
                                 disjoint_hull: None,
                                 vertex_contact: None,
                                 paired_fiber: None,
+                                paired_projection: None,
+                                curved_boundary: None,
                                 interior_fiber: Some(certificate),
                             });
                             break;
@@ -466,7 +524,68 @@ fn inspect_impl(
                         continue;
                     }
                 }
-
+            }
+            if let Some((work, _, driver, _)) = allowed_budget {
+                if out.exact_work < work && out.driver_cells < driver {
+                    let r = crate::source_paired_projection_contact::certify(
+                        shell,
+                        [a, b],
+                        work - out.exact_work,
+                        driver - out.driver_cells,
+                    )?;
+                    out.exact_work += r.exact_work;
+                    out.driver_cells += r.driver_cells;
+                    if let Some(proof) = r.certificate {
+                        out.all_pairs_absence_proven = false;
+                        out.pairs.push(PairReport {
+                            faces: [a, b],
+                            result: None,
+                            allowed: None,
+                            fiber: None,
+                            interior_fiber: None,
+                            paired_fiber: None,
+                            paired_projection: Some(proof),
+                            curved_boundary: None,
+                            vertex_contact: None,
+                            ruled_projection: None,
+                            pole_planar: None,
+                            pole_paired: None,
+                            disjoint_hull: None,
+                        });
+                        continue;
+                    }
+                }
+            }
+            if let Some((work, _, driver, _)) = allowed_budget {
+                if out.exact_work < work && out.driver_cells < driver {
+                    let r = crate::source_curved_boundary_contact::certify(
+                        shell,
+                        [a, b],
+                        work - out.exact_work,
+                        driver - out.driver_cells,
+                    )?;
+                    out.exact_work += r.exact_work;
+                    out.driver_cells += r.driver_cells;
+                    if let Some(proof) = r.certificate {
+                        out.all_pairs_absence_proven = false;
+                        out.pairs.push(PairReport {
+                            faces: [a, b],
+                            result: None,
+                            allowed: None,
+                            fiber: None,
+                            interior_fiber: None,
+                            paired_fiber: None,
+                            paired_projection: None,
+                            curved_boundary: Some(proof),
+                            vertex_contact: None,
+                            ruled_projection: None,
+                            pole_planar: None,
+                            pole_paired: None,
+                            disjoint_hull: None,
+                        });
+                        continue;
+                    }
+                }
             }
             let result = search(
                 [&regions[a], &regions[b]],
@@ -483,13 +602,16 @@ fn inspect_impl(
             out.pairs.push(PairReport {
                 faces: [a, b],
                 pole_paired: None,
-                ruled_projection: None, pole_planar: None,
+                ruled_projection: None,
+                pole_planar: None,
                 result: Some(result),
                 allowed: None,
                 fiber: None,
                 disjoint_hull: None,
                 vertex_contact: None,
                 paired_fiber: None,
+                paired_projection: None,
+                curved_boundary: None,
                 interior_fiber: None,
             });
         }
@@ -578,6 +700,8 @@ pub fn inspect_shell_with_projective_fibers<
                 fiber: None,
                 interior_fiber: None,
                 paired_fiber: None,
+                paired_projection: None,
+                curved_boundary: None,
                 vertex_contact: None,
                 ruled_projection: None,
                 pole_planar: None,
@@ -723,6 +847,38 @@ pub fn inspect_shell_with_projective_fibers<
                 out.exact_work += r.exact_work;
                 if let Some(proof) = r.certificate {
                     pair.vertex_contact = Some(proof);
+                    out.all_pairs_absence_proven = false;
+                    out.pairs.push(pair);
+                    continue;
+                }
+            }
+            if out.exact_work < max_work && out.driver_cells < max_driver {
+                let r = crate::source_paired_projection_contact::certify(
+                    shell,
+                    [a, b],
+                    max_work - out.exact_work,
+                    max_driver - out.driver_cells,
+                )?;
+                out.exact_work += r.exact_work;
+                out.driver_cells += r.driver_cells;
+                if let Some(proof) = r.certificate {
+                    pair.paired_projection = Some(proof);
+                    out.all_pairs_absence_proven = false;
+                    out.pairs.push(pair);
+                    continue;
+                }
+            }
+            if out.exact_work < max_work && out.driver_cells < max_driver {
+                let r = crate::source_curved_boundary_contact::certify(
+                    shell,
+                    [a, b],
+                    max_work - out.exact_work,
+                    max_driver - out.driver_cells,
+                )?;
+                out.exact_work += r.exact_work;
+                out.driver_cells += r.driver_cells;
+                if let Some(proof) = r.certificate {
+                    pair.curved_boundary = Some(proof);
                     out.all_pairs_absence_proven = false;
                     out.pairs.push(pair);
                     continue;

@@ -12,6 +12,7 @@ pub struct Certificate<E = SharedEdge> {
     regions: [SourceRegion; 2],
     fibers: [source_plane_fiber::Certificate; 2],
     edges: Vec<E>,
+    owned_side: usize,
 }
 impl<E> Certificate<E> {
     pub fn faces(&self) -> [usize; 2] {
@@ -23,6 +24,10 @@ impl<E> Certificate<E> {
     pub fn fibers(&self) -> &[source_plane_fiber::Certificate; 2] {
         &self.fibers
     }
+    /// This side completely contains all possible material contacts in the shared edges.
+    pub fn fully_owned_side(&self) -> usize {
+        self.owned_side
+    }
     pub fn edges(&self) -> &[E] {
         &self.edges
     }
@@ -33,7 +38,7 @@ pub struct Report<E = SharedEdge> {
     pub driver_cells: usize,
     pub reason: &'static str,
 }
-pub fn certify<E:crate::source_seam_tangency::Carrier>(
+pub fn certify<E: crate::source_seam_tangency::Carrier>(
     shell: &Shell<E>,
     faces: [usize; 2],
     max_work: u64,
@@ -67,16 +72,21 @@ pub fn certify<E:crate::source_seam_tangency::Carrier>(
     for (index, _) in &shared {
         let c = shell.edges()[*index].world();
         let mut planes = Vec::new();
-        let mut distinct=Vec::new();
+        let mut distinct = Vec::new();
         for point in &c.control_points {
-            if !distinct.contains(&point) {distinct.push(point);}
-            if distinct.len()==3 {break;}
+            if !distinct.contains(&point) {
+                distinct.push(point);
+            }
+            if distinct.len() == 3 {
+                break;
+            }
         }
         if distinct.len() == 3 {
             planes.push(std::array::from_fn(|i| {
                 std::array::from_fn(|k| distinct[i][k])
             }));
-        } else if distinct.len() == 2 {
+        }
+        if distinct.len() >= 2 {
             // Pole points are source-owned proposals, not a geometric plane
             // certificate. Both original chart preimages are still rechecked.
             let mut seen = std::collections::BTreeSet::new();
@@ -88,19 +98,17 @@ pub fn certify<E:crate::source_seam_tangency::Carrier>(
             for axis in 0..3 {
                 let mut point = a;
                 point[axis] += 1.;
-                if point[axis].is_finite() && point[axis] != a[axis]
-                    && seen.insert(point.map(f64::to_bits)) {
+                if point[axis].is_finite()
+                    && point[axis] != a[axis]
+                    && seen.insert(point.map(f64::to_bits))
+                {
                     planes.push([a, b, point]);
                 }
             }
             for (_, pole) in shell.poles() {
                 let point = pole.point();
                 if seen.insert(point.map(f64::to_bits)) {
-                    planes.push([
-                        a,
-                        b,
-                        point,
-                    ]);
+                    planes.push([a, b, point]);
                 }
                 if planes.len() == 64 {
                     break;
@@ -137,9 +145,10 @@ pub fn certify<E:crate::source_seam_tangency::Carrier>(
                     if a.side() == b.side() {
                         continue;
                     }
-                    let mut owned = true;
+                    let mut owned_side = None;
                     for (slot, fiber) in [a, b].iter().enumerate() {
                         let face = faces[slot];
+                        let mut owned = true;
                         let addresses = shared
                             .iter()
                             .map(|(_, uses)| *uses.iter().find(|u| u.face == face).unwrap())
@@ -175,9 +184,19 @@ pub fn certify<E:crate::source_seam_tangency::Carrier>(
                                 };
                             }
                         }
+                        // Opposite exact plane supports already force every
+                        // mutual contact onto BOTH fibers. Complete ownership
+                        // of EITHER material fiber therefore confines every
+                        // contact to the native shared edges, even if the other
+                        // chart continues beyond this neighbor's interval.
+                        if owned {
+                            owned_side = Some(slot);
+                            break;
+                        }
                     }
-                    if owned {
+                    if let Some(owned_side) = owned_side {
                         out.certificate = Some(Certificate {
+                            owned_side,
                             faces,
                             regions: [regions[faces[0]].clone(), regions[faces[1]].clone()],
                             fibers: [a.clone(), b.clone()],
@@ -358,8 +377,12 @@ mod tests {
             .unwrap()
             .shell
             .unwrap();
-        assert!(crate::source_pole_paired_contact::certify(&shell, [0,1], 1000000, 10000)
-            .unwrap().certificate.is_none());
+        assert!(
+            crate::source_pole_paired_contact::certify(&shell, [0, 1], 1000000, 10000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
         assert!(
             crate::source_vertex_contact::certify(&shell, [0, 1], 1000000)
                 .unwrap()

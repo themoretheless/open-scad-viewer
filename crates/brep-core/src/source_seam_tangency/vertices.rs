@@ -3,6 +3,7 @@
 mod corner;
 mod fan;
 mod material;
+mod poles;
 use super::{Carrier, Class, material_orientation::OrientedCollection};
 use crate::{
     source_vertex_links::Node,
@@ -14,6 +15,9 @@ use std::collections::BTreeMap;
 trait FaceEvidence<E: Carrier> {
     fn body(&self) -> &Body<E>;
     fn order(&self) -> usize;
+    fn poles(&self) -> Option<&[super::C2PoleNeighborhood]> {
+        None
+    }
 }
 impl<E: Carrier> FaceEvidence<E> for SmoothFaces<'_, '_, E> {
     fn body(&self) -> &Body<E> {
@@ -21,6 +25,19 @@ impl<E: Carrier> FaceEvidence<E> for SmoothFaces<'_, '_, E> {
     }
     fn order(&self) -> usize {
         self.order()
+    }
+}
+impl<E: Carrier> FaceEvidence<E>
+    for crate::source_volume::regularity::smooth::StratifiedSmoothFaces<'_, '_, '_, '_, E>
+{
+    fn body(&self) -> &Body<E> {
+        self.body()
+    }
+    fn order(&self) -> usize {
+        self.order()
+    }
+    fn poles(&self) -> Option<&[super::C2PoleNeighborhood]> {
+        Some(self.regular().poles().neighborhoods())
     }
 }
 trait EdgeEvidence<E: Carrier> {
@@ -62,8 +79,15 @@ impl Neighborhood {
     }
 }
 pub enum Vertex {
-    C0 { vertex: usize },
+    C0 {
+        vertex: usize,
+    },
     Smooth(Neighborhood),
+    /// Physical pole disk, retained by this atlas through the same source body.
+    Pole {
+        vertex: usize,
+        order: usize,
+    },
 }
 pub struct Atlas<'a, E: Carrier> {
     faces: &'a dyn FaceEvidence<E>,
@@ -79,6 +103,9 @@ impl<E: Carrier> Atlas<'_, E> {
     }
     pub fn edge_classes(&self) -> &[Class] {
         self.edges.classes()
+    }
+    pub fn pole_neighborhoods(&self) -> &[super::C2PoleNeighborhood] {
+        self.faces.poles().unwrap_or(&[])
     }
     pub fn vertices(&self) -> &[Vertex] {
         &self.vertices
@@ -122,7 +149,29 @@ pub fn qualify<'a, E: Carrier + 'a>(
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report<'a, E>> {
-    let body = faces.regular().body();
+    qualify_impl(faces, oriented, axes, tolerance_uv, limits)
+}
+/// Complete ordinary AND pole coverage of the same original material body.
+/// Pole disks retain native C2 authority; all ordinary stars are recomputed.
+/// Stronger pole evidence never upgrades current declared classes. No partial
+/// cover or foreign-source proof is accepted. Explicit C0 remains explicit C0.
+pub fn qualify_stratified<'a, E: Carrier + 'a>(
+    faces: &'a crate::source_volume::regularity::smooth::StratifiedSmoothFaces<'_, '_, '_, '_, E>,
+    oriented: &'a OrientedCollection<'_, '_, '_, E>,
+    axes: &[usize],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<Report<'a, E>> {
+    qualify_impl(faces, oriented, axes, tolerance_uv, limits)
+}
+fn qualify_impl<'a, E: Carrier + 'a>(
+    faces: &'a dyn FaceEvidence<E>,
+    oriented: &'a OrientedCollection<'_, '_, '_, E>,
+    axes: &[usize],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<Report<'a, E>> {
+    let body = faces.body();
     let original = oriented.exact().original();
     let links = &body.geometry().topology().links;
     if !std::ptr::eq(body, original.body())
@@ -150,9 +199,13 @@ pub fn qualify<'a, E: Carrier + 'a>(
         uncertain_vertex: None,
         reason: "source-vertex-graph-unproven",
     };
-    if !shell.poles().is_empty() || links.is_empty() {
+    if (!shell.poles().is_empty() && faces.poles().is_none()) || links.is_empty() {
         return Ok(out);
     }
+    let Some(polar) = poles::cover(body, faces.poles().unwrap_or(&[]), &mut out, limits.steps)
+    else {
+        return Ok(out);
+    };
     let mut orders = BTreeMap::new();
     for link in links {
         out.uncertain_vertex = Some(link.vertex);
@@ -195,7 +248,7 @@ pub fn qualify<'a, E: Carrier + 'a>(
                 let Some(&order) = orders.get(&vertex) else {
                     return Ok(out);
                 };
-                if order == 0 {
+                if order == 0 || polar.contains_key(&vertex) {
                     continue;
                 }
                 out.uncertain_vertex = Some(vertex);
@@ -242,6 +295,17 @@ pub fn qualify<'a, E: Carrier + 'a>(
         if order == 0 {
             vertices.push(Vertex::C0 {
                 vertex: link.vertex,
+            });
+            continue;
+        }
+        if let Some(n) = polar.get(&link.vertex) {
+            if axes[vi] != n.dropped_axis() {
+                out.reason = "source-pole-projected-axis-unproven";
+                return Ok(out);
+            }
+            vertices.push(Vertex::Pole {
+                vertex: link.vertex,
+                order,
             });
             continue;
         }

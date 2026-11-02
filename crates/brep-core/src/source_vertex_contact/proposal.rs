@@ -32,7 +32,7 @@ pub(super) fn improve(
     let sum = constraints
         .iter()
         .fold([0.; 3], |a, q| std::array::from_fn(|k| a[k] + q[k]));
-    let mut normal = unit(sum).unwrap_or(first);
+    let mut normal = sum.map(|x| x / constraints.len() as f64);
     // Iterative projections only seek a useful proposal. Neither convergence
     // nor a rounded positive score is accepted as a separation certificate.
     for _ in 0..128 {
@@ -47,12 +47,23 @@ pub(super) fn improve(
                 worst = (dot, *q);
             }
         }
-        if worst.0 > 1e-6 {
-            return Some(normal);
+        let norm = normal[0].hypot(normal[1]).hypot(normal[2]);
+        if !norm.is_finite() || norm == 0. {
+            return None;
         }
-        normal = unit(std::array::from_fn(|k| {
-            normal[k] + (1. - worst.0) * worst.1[k]
-        }))?;
+        if worst.0 > 1e-6 * norm {
+            return unit(normal);
+        }
+        // Minimum-norm convex-hull proposal (bounded Frank-Wolfe step).
+        // A normalized unit-margin projection can cycle between nearly
+        // opposite constraints even when a strict separator exists.
+        let d = std::array::from_fn::<_, 3, _>(|k| worst.1[k] - normal[k]);
+        let denominator = d.iter().map(|x| x * x).sum::<f64>();
+        if !denominator.is_finite() || denominator <= 0. {
+            return None;
+        }
+        let alpha = ((norm * norm - worst.0) / denominator).clamp(0., 1.);
+        normal = std::array::from_fn(|k| normal[k] + alpha * d[k]);
     }
     None
 }

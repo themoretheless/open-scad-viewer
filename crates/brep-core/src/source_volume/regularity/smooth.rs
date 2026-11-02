@@ -73,3 +73,6 @@ pub fn qualify<'r, 's, E: Carrier>(
     }
     Ok(out)
 }
+
+pub mod stratified;
+pub use stratified::{StratifiedReport, StratifiedSmoothFaces, qualify as qualify_stratified};
