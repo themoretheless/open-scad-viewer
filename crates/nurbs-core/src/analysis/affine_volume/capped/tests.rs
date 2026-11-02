@@ -153,3 +153,31 @@ fn paired_cap_time_jet_survives_exact_column_factor_coordinates() {
         }
     }
 }
+
+#[test]
+fn moving_paired_caps_use_one_global_chart_and_preserve_refusal_budgets() {
+    let mut a = cap(false);
+    for p in a.control_points.iter_mut().flatten() { p[0] /= 64.; p[1] /= 64.; }
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() { p[1] += 1./128.; }
+    let pieces = vec![RationalPiece {
+        controls: vec![
+            [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.],[0.,0.,0.]],
+            [[0.,1.,0.],[-1.,0.,0.],[0.,0.,1.],[0.,0.,2.]],
+        ], weights: vec![1.;2],
+    }];
+    let run = |cells, exact| certify_rational_caps([&a,&b],[0.;3],&pieces,P,cells,exact).unwrap();
+    let full = run(100000,1000000);
+    assert!(full.embedding_certified && full.regularity_certified && full.parameter_topology_preserved, "{full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells < full.cells);
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work < full.exact_work);
+    let mut folded=pieces.clone();
+    folded[0].controls[1][0]=[-1.,0.,0.];
+    folded[0].controls[1][1]=[0.,-1.,0.];
+    let refused=certify_rational_caps([&a,&b],[0.;3],&folded,P,100000,1000000).unwrap();
+    assert!(!refused.embedding_certified && !refused.regularity_certified && !refused.parameter_topology_preserved);
+    eprintln!("moving paired caps: cells={} exact={}",full.cells,full.exact_work);
+}

@@ -22,7 +22,7 @@ pub fn certify_rational_caps(
         projection,
         max_cells,
         max_exact_work,
-        false,
+        true,
         &mut None,
         &mut None,
         [[0.,1.];2],

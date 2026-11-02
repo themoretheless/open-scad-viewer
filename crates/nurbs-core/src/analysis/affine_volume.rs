@@ -367,8 +367,8 @@ fn certify_motion_impl(
     carrier.validate()?;
     if let Some(end) = second {
         end.validate()?;
-        check(!closed && !precondition && end.control_points.iter().flatten().all(|p|p.len()==3),
-            "Paired affine carriers require open normalized charts and world coordinates")?;
+        check(!closed && end.control_points.iter().flatten().all(|p|p.len()==3),
+            "Paired affine carriers require open normalized charts")?;
     }
     check(
         carrier
@@ -477,8 +477,9 @@ fn certify_motion_impl(
     if precondition && out.cells < max_cells {
         // A single native proposal from ORIGINAL point jets. Its invertibility
         // is independently proved; no point regularity supplies atlas credit.
+        let proposal_time = if second.is_some() { 0.5 } else { 0.125 };
         if let Enclosed::Value(e) =
-            context.enclose([[0.5; 2], [0.5; 2], [0.125; 2]], &mut out, max_cells)?
+            context.enclose([[0.5; 2], [0.5; 2], [proposal_time; 2]], &mut out, max_cells)?
         {
             if out.cells < max_cells {
                 out.cells += 1;
