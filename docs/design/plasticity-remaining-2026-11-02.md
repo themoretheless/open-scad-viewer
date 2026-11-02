@@ -76,6 +76,8 @@ Browser Worker: добавлены SurfaceSelfIntersectionBrowser, отдель�
 
 Проверка domain/размерности spatial iso: добавлены U/V-регрессии на исходном knot domain 0.1..3.1 и точном рациональном фиксированном параметре, а также отказ 2D target до индексации координат. Проверка размерности теперь явно стоит в общем оконном API. Результаты совместного прогона сохраняются в `docs/qualification/spatial-iso-domains-2026-11-02/`.
 
+Spatial iso в реальном WASM: frozen source `68c542a30` собран в отдельном worktree; независимая копия кандидата SHA256 `18d9cf461ec58bd5b12d1dc8a49cf5765e8e5c59cb0430569be11cf807dea72f`, 21019737 bytes. **23 raw ABI сценария и 16 Chromium Workers прошли**, включая рациональные U/V 3D-контакты, one-ULP nonplanar контакт, separated-height отрицательный случай и explicit iso .25/.75. Добавлен клиентский валидатор selected-iso отчёта: **14 тестов и vue-tsc прошли**. [Receipt](../qualification/spatial-self-wasm-2026-11-02/results.json). Installed package не заменён; global completeness, tangencies/periodic, trims/Body и editor/provider qualification остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

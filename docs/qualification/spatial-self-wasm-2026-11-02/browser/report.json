@@ -1,0 +1,1468 @@
+{
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "wasmSha256": "18d9cf461ec58bd5b12d1dc8a49cf5765e8e5c59cb0430569be11cf807dea72f",
+  "wasmBytes": 21019737,
+  "installedPackageUpdated": false,
+  "result": {
+    "separatedReport": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "certifiedCrossing": null,
+      "exactWitness": null,
+      "injectivity": {
+        "proven": false,
+        "reason": "projection-not-proven",
+        "spans": 3265
+      },
+      "maxSpans": 10000,
+      "presenceProven": false,
+      "probeSearch": {
+        "attempts": [
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.5,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.5,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.25,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.25,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.75,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.75,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.125,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.125,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.375,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.375,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.625,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.625,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.875,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.875,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.0625,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.0625,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.1875,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.1875,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.3125,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.3125,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.4375,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.4375,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.5625,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.5625,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.6875,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.6875,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.8125,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.8125,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 1,
+            "isoCoverageComplete": false,
+            "kind": "planar-iso",
+            "parameter": 0.9375,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 2,
+            "isoCoverageComplete": true,
+            "kind": "planar-iso",
+            "parameter": 0.9375,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 134,
+            "isoCoverageComplete": false,
+            "kind": "curve-surface-forward",
+            "parameter": 0.5,
+            "refusal": null
+          },
+          {
+            "axis": 0,
+            "chargedCells": 122,
+            "isoCoverageComplete": false,
+            "kind": "curve-surface-reverse",
+            "parameter": 0.5,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 4850,
+            "isoCoverageComplete": false,
+            "kind": "curve-surface-forward",
+            "parameter": 0.5,
+            "refusal": null
+          },
+          {
+            "axis": 1,
+            "chargedCells": 4849,
+            "isoCoverageComplete": false,
+            "kind": "curve-surface-reverse",
+            "parameter": 0.5,
+            "refusal": null
+          }
+        ],
+        "budgetExhausted": false,
+        "chargedCells": 10000,
+        "surfaceCoverageComplete": false
+      },
+      "reflectedAxis": null,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "unresolved",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "spatial": [
+      {
+        "axis": 0,
+        "name": "original-rational-spatial-axis-0",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 239,
+            "method": "original-curve-surface-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.2499999999999701,
+                  0.25000000000003
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.7499999999999697,
+                  0.7500000000000303
+                ],
+                [
+                  0.4449670743179094,
+                  0.4449670743180272
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                -4.588921835117321e-14,
+                4.5741188614556525e-14
+              ],
+              [
+                -1.1921019726912637e-14,
+                1.2013538312298066e-14
+              ],
+              [
+                1.337239583333327,
+                1.3372395833333404
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 3281
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.25,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.25,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.75,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.75,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.125,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.125,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.375,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.375,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.625,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.625,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.875,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.875,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.0625,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.0625,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.1875,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.1875,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.3125,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.3125,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.4375,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.4375,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.5625,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5625,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.6875,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.6875,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.8125,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.8125,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.9375,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.9375,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 149,
+                "isoCoverageComplete": false,
+                "kind": "curve-surface-forward",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 239,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "axis": 1,
+        "name": "original-rational-spatial-axis-1",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 466,
+            "method": "original-curve-surface-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.5,
+                  0.5
+                ],
+                [
+                  0.24999999999998168,
+                  0.25000000000001843
+                ]
+              ],
+              [
+                [
+                  0.4449670743179106,
+                  0.44496707431802557
+                ],
+                [
+                  0.7499999999999812,
+                  0.7500000000000188
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                -2.8028505442516005e-14,
+                2.7875849776630046e-14
+              ],
+              [
+                -7.211823730794266e-15,
+                7.295090457641153e-15
+              ],
+              [
+                1.337239583333327,
+                1.3372395833333397
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 3281
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.25,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.25,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.75,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.75,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.125,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.125,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.375,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.375,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.625,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.625,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.875,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.875,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.0625,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.0625,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.1875,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.1875,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.3125,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.3125,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.4375,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.4375,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5625,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.5625,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.6875,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.6875,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.8125,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.8125,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.9375,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 1,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.9375,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 102,
+                "isoCoverageComplete": false,
+                "kind": "curve-surface-forward",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 0,
+                "chargedCells": 114,
+                "isoCoverageComplete": false,
+                "kind": "curve-surface-reverse",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 160,
+                "isoCoverageComplete": false,
+                "kind": "curve-surface-forward",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 466,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      }
+    ],
+    "nonlinear": [
+      {
+        "name": "original-non-bezier-spans",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 78,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.20673470015013076,
+                  0.20673470177429376
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.8966326490683824,
+                  0.8966326499694438
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                0.04808163779304219,
+                0.048081644516087436
+              ],
+              [
+                0.04808163826333355,
+                0.048081644046493184
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 9843
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 78,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 78,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "within-single-cubic-span",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 56,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.24999999999222522,
+                  0.25000000000777484
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.7499999999922247,
+                  0.7500000000077754
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                -1.1663670029804509e-11,
+                1.1663336962897121e-11
+              ],
+              [
+                -2.916389352236593e-12,
+                2.916444863387824e-12
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 3265
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 56,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 56,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "exact-oblique-source-plane",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 48,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.24999999978304305,
+                  0.25000000021695695
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.749999999868492,
+                  0.7500000001315081
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                -1.9726409394849045e-10,
+                1.97263982926188e-10
+              ],
+              [
+                -4.9316772887664235e-11,
+                4.9316772887664235e-11
+              ],
+              [
+                0.9999999998372817,
+                1.0000000001627183
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 3281
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 48,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 48,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "original-rational-surface-bounds",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 45,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.2777777693881467,
+                  0.2777777861665896
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.8333333257836639,
+                  0.8333333408842318
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                1.253968220409717,
+                1.2539682875235132
+              ],
+              [
+                1.2539682338357974,
+                1.253968274103989
+              ],
+              [
+                1.1428571428571377,
+                1.1428571428571483
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 6530
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 45,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 45,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "original-rational-v-axis",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 50,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.5,
+                  0.5
+                ],
+                [
+                  0.2777777693881467,
+                  0.27777778616658955
+                ]
+              ],
+              [
+                [
+                  0.5,
+                  0.5
+                ],
+                [
+                  0.833333325783664,
+                  0.8333333408842318
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                1.2539682204097164,
+                1.2539682875235132
+              ],
+              [
+                1.253968233835798,
+                1.2539682741039884
+              ],
+              [
+                1.1428571428571377,
+                1.1428571428571483
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 6530
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "probeSearch": {
+            "attempts": [
+              {
+                "axis": 0,
+                "chargedCells": 5,
+                "isoCoverageComplete": true,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              },
+              {
+                "axis": 1,
+                "chargedCells": 45,
+                "isoCoverageComplete": false,
+                "kind": "planar-iso",
+                "parameter": 0.5,
+                "refusal": null
+              }
+            ],
+            "budgetExhausted": false,
+            "chargedCells": 50,
+            "surfaceCoverageComplete": false
+          },
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      }
+    ],
+    "absence": "absent",
+    "exact": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "certifiedCrossing": null,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "4",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "probeSearch": {
+        "attempts": [],
+        "budgetExhausted": false,
+        "chargedCells": 0,
+        "surfaceCoverageComplete": false
+      },
+      "reflectedAxis": 0,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "recovered": "absent",
+    "rational": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "certifiedCrossing": null,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "9",
+            "numerator": "8"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "probeSearch": {
+        "attempts": [],
+        "budgetExhausted": false,
+        "chargedCells": 0,
+        "surfaceCoverageComplete": false
+      },
+      "reflectedAxis": null,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "busy": "Error: Surface audit busy",
+    "cancelled": "Error: Surface audit cancelled",
+    "deadline": "Error: Surface audit deadline",
+    "nativeRefusal": "Error: NURBS_INVALID_INPUT: Weights must be positive, finite, and in [1e-12, 1e12]",
+    "cloneFailure": "DataCloneError: Failed to execute 'postMessage' on 'Worker': ()=>0 could not be cloned.",
+    "preAbort": "Error: Surface audit cancelled",
+    "badBudget": "Error: Invalid surface audit budget",
+    "inputIntact": true,
+    "noEarlyWorkers": true,
+    "ticks": 373,
+    "ownership": {
+      "active": false,
+      "workersStarted": 16,
+      "workersTerminated": 16
+    }
+  },
+  "platformAudit": {
+    "started": 16,
+    "terminated": 16
+  },
+  "workers": [
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js",
+    "http://127.0.0.1:49947/assets/surfaceSelfIntersection.worker-DrCulhg1.js"
+  ],
+  "scope": "Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification"
+}

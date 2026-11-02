@@ -2,8 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
+import {isSurfaceIsoAuditReport} from '../src/services/surfaceIsoSelfIntersectionProtocol.ts'
 import {isSurfaceAuditReport} from '../src/services/surfaceSelfIntersectionProtocol.ts'
-import {nonlinearSurfaceCases} from '../tools/browser-qualification/surface-self-fixtures.ts'
+import {nonlinearSurfaceCases,spatialSurfaceCases} from '../tools/browser-qualification/surface-self-fixtures.ts'
 import { encodeBinary, decodeBinary } from '../src/services/valueBinaryCodec.ts'
 const [wasmPath, directory, sourceCommit] = process.argv.slice(2)
 assert(wasmPath && directory && /^[a-f0-9]{40}$/.test(sourceCommit ?? ''))
@@ -87,7 +88,34 @@ for(const fixture of nonlinearSurfaceCases){
 }
 const skew=nonlinearSurfaceCases[2]!.surface()
 const bits=new DataView(new ArrayBuffer(8));for(const p of skew.controlPoints[1]!){bits.setFloat64(0,p[2]!,true);bits.setBigUint64(0,bits.getBigUint64(0,true)+1n,true);p[2]=bits.getFloat64(0,true)}
-run('one-ulp-nonplanar-source-unresolved',skew,'unresolved',{maxSpans:10000})
+const shifted=run('one-ulp-nonplanar-source-spatial-contact',skew,'present',{maxSpans:10000})
+assert.equal(shifted.certifiedCrossing.method,'original-curve-surface-krawczyk')
+// Original rational spatial contacts with different transverse preimages.
+for(const fixture of spatialSurfaceCases){
+ const axis=fixture.axis,surface=fixture.surface()
+ const r=run(`original-rational-spatial-axis-${axis}`,surface,'present',{maxSpans:10000}),c=r.certifiedCrossing
+ assert.equal(c.method,'original-curve-surface-krawczyk');assert.equal(r.exactWitness,null);assert.equal(r.witness,null)
+ for(const [i,t] of [.25,.75].entries())assert(c.parameterBoxes[i][axis][0]<=t&&t<=c.parameterBoxes[i][axis][1])
+ const v=c.parameterBoxes[1][1-axis];assert(v[0]<=473/1063&&473/1063<=v[1]);assert(v[1]<.5)
+ assert(r.probeSearch.chargedCells<=10000)
+}
+const separated=spatialSurfaceCases[0]!.surface()
+separated.weights=separated.weights.map(()=>[1,1])
+for(const row of separated.controlPoints)row[1]![2]=row[0]![2]!+1/64
+const separatedReply=request({op,surface:separated,maxSpans:10000})
+assert.equal(separatedReply.ok,true);assert(isSurfaceAuditReport(separatedReply.value))
+assert.notEqual(separatedReply.value.status,'present');assert.equal(separatedReply.value.certifiedCrossing,null)
+cases.push({name:'xy-projection-with-separated-height-bands',status:separatedReply.value.status})
+for(const parameter of [.25,.75]){
+ const surface=nonlinearSurfaceCases[1]!.surface()
+ const reply=request({op:'nurbs_surface_iso_self_intersection_audit',surface,axis:0,parameter,tolerance:1e-8,maxSpans:10000})
+ assert.equal(reply.ok,true);const r=reply.value
+ assert(isSurfaceIsoAuditReport(r));assert.equal(r.status,'present')
+ assert.equal(r.surfaceAbsenceProven,false);assert.equal(r.allContactBranchesEnumerated,false)
+ assert(r.crossings.length>0)
+ for(const c of r.crossings)for(const p of c.parameterBoxes)assert.deepEqual(p[1],[parameter,parameter])
+ cases.push({name:`explicit-iso-${parameter}`,status:r.status,scope:'selected fiber only'})
+}
 const result={status:'passed',nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

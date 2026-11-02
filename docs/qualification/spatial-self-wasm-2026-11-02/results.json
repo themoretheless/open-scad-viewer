@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "sourceCommit": "68c542a3004b9fa2f087d72d4a0da67d4a11d806",
+  "wasmSha256": "18d9cf461ec58bd5b12d1dc8a49cf5765e8e5c59cb0430569be11cf807dea72f",
+  "wasmBytes": 21019737,
+  "artifact": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/18d9cf461ec58bd5b12d1dc8a49cf5765e8e5c59cb0430569be11cf807dea72f.wasm",
+  "abiCases": 23,
+  "browser": "151.0.7922.34",
+  "workers": {
+    "started": 16,
+    "terminated": 16
+  },
+  "isoProtocolTests": 14,
+  "vueTsc": "passed",
+  "installedPackageUpdated": false,
+  "wholeSurfaceComplete": false,
+  "limitations": [
+    "bounded probes do not enumerate all surface contacts",
+    "tangent singular periodic cases",
+    "trim and Body admission",
+    "installed packaged runtime and editor qualification"
+  ],
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "621e9323651d524de61f274db1038d3c1ae88342023f121521676f4cb0740afd",
+    "tools/browser-qualification/surface-self-fixtures.ts": "02fc330c2550d96223180a29fe5466dbaf27e5d96a75dcecbb13176516fa7c07",
+    "tools/browser-qualification/surface-self-intersection.ts": "62353a9190af77405b95c8a64572928ffe9bc01b7164516e77596e6a1c7199cf",
+    "tools/browser-qualification/surface-self-intersection.mjs": "6f16ff05d713342f4d8c82a3af9e00d18992d3f5d00f546172932f10879dfefe",
+    "src/services/surfaceIsoSelfIntersectionProtocol.ts": "25a77c8cdb8da94e0428b75df52eda641c2dbe3bfd5870c8c08078ac28cb4e30",
+    "tests/surfaceIsoSelfIntersectionProtocol.test.ts": "a17690887fadc13dd6b2a55cf46e97f764730993815ad34847c77cfd340631d9"
+  }
+}

@@ -11,3 +11,10 @@ export const nonlinearSurfaceCases:Case[]=[
 ]
 
 nonlinearSurfaceCases.push({name:'original-rational-v-axis',axis:1,surface:()=>{const s=nonlinearSurfaceCases[3]!.surface();s.controlPoints=Array.from({length:3},(_,j)=>Array.from({length:5},(_,i)=>s.controlPoints[i]![j]!));s.weights=Array.from({length:3},(_,j)=>Array.from({length:5},(_,i)=>s.weights[i]![j]!));[s.degreeU,s.degreeV]=[s.degreeV,s.degreeU];[s.knotsU,s.knotsV]=[s.knotsV,s.knotsU];return s},parameters:[5/18,5/6],position:[79/63,79/63,8/7]})
+
+export const spatialSurfaceCases=([0,1] as const).map(axis=>({axis,name:`original-rational-spatial-axis-${axis}`,surface:():NurbsSurface=>{
+ const s=loop();s.weights=s.weights.map(()=>[1,2]);
+ s.controlPoints.forEach((row,i)=>{const z=i===3?.25:0;row[0]![2]=z;row[1]![2]=2+z})
+ if(axis===1){s.controlPoints=[0,1].map(j=>s.controlPoints.map(row=>row[j]!));s.weights=[0,1].map(j=>s.weights.map(row=>row[j]!));[s.degreeU,s.degreeV]=[s.degreeV,s.degreeU];[s.knotsU,s.knotsV]=[s.knotsV,s.knotsU]}
+ return s
+}}))
