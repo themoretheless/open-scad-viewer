@@ -1,9 +1,8 @@
 //! Bounded exact linear algebra for affine construction proofs.
-use super::exact_conics::Refusal;
-use crate::core::bounded_rational::Work;
+use crate::core::bounded_rational::{Error, Work};
 use num_rational::BigRational as Q;
 use num_traits::Zero;
-type PResult<T> = std::result::Result<T, Refusal>;
+type PResult<T> = std::result::Result<T, Error>;
 pub(super) fn dot(a: &[Q], b: &[Q], w: &mut Work) -> PResult<Q> {
     let mut result = Q::zero();
     for (a, b) in a.iter().zip(b) {
