@@ -1,0 +1,316 @@
+{
+  "protected": [
+    "codex/hardware-offloading-and-wip-2026-10-08",
+    "codex/nurbs-plan-recovery-20261028",
+    "codex/push-or-clear-integration-20261102",
+    "main"
+  ],
+  "local": [
+    {
+      "name": "codex/ci-artifact-candidates-20261102",
+      "sha": "409ecefebf8cb7baa14b44e0b3a08ab61349b1f6"
+    },
+    {
+      "name": "codex/closed-profile-g2",
+      "sha": "a62b7a613c8b4fbd37d28e5aff6b896043e82022"
+    },
+    {
+      "name": "codex/integrate-available-20261013",
+      "sha": "7fb7db9440753c2890756c74643fff3dc64450ce"
+    },
+    {
+      "name": "codex/integrate-fillet-20261024",
+      "sha": "c120b631e49ffea6f96c4c0030ebd0b557cfddf6"
+    },
+    {
+      "name": "codex/laser-cam-foundation",
+      "sha": "f2432717033351ed4b7d11c6205bf6829643f292"
+    },
+    {
+      "name": "codex/laser-cam-p1",
+      "sha": "f2432717033351ed4b7d11c6205bf6829643f292"
+    },
+    {
+      "name": "codex/loft-qualified-20261102",
+      "sha": "3c87f8eb4c89f623fbafecbadf1f7f036fe7cfa8"
+    },
+    {
+      "name": "codex/nurbs-native-1000-next-20261101",
+      "sha": "3fb34b84ad578bc5251ec9d67424a09059474855"
+    },
+    {
+      "name": "codex/nurbs-plan-completion-20261028",
+      "sha": "7b1cac0768c6cc77879a3a4ae650bac6f2ad404a"
+    },
+    {
+      "name": "codex/pr38-memory-diagnostics",
+      "sha": "082304cd14096c6bbb4a7352bdc514b8727993ea"
+    },
+    {
+      "name": "codex/profile-frame-premises",
+      "sha": "f824aa31f386235f4d11b4a364bef44910c88335"
+    },
+    {
+      "name": "codex/profile-solid-qualification",
+      "sha": "70e2e78a55c8bb760d1f2a3222f5b0d2765dd618"
+    },
+    {
+      "name": "codex/push-integration-2026-10-04",
+      "sha": "f2432717033351ed4b7d11c6205bf6829643f292"
+    },
+    {
+      "name": "codex/push-integration-2026-10-07",
+      "sha": "12bda09ecac7a53f9aea043650dd9cf3825b7fc3"
+    },
+    {
+      "name": "codex/push-integration-20261020",
+      "sha": "f2432717033351ed4b7d11c6205bf6829643f292"
+    },
+    {
+      "name": "codex/source-body-seam-collection-20261028",
+      "sha": "e5d0f38dcdfac10c9c31ba871f565d7a09ad63f5"
+    },
+    {
+      "name": "codex/source-projective-image-20261102-fba57ef",
+      "sha": "7037195388000f25c29f0e90dbfa085c828d177c"
+    },
+    {
+      "name": "codex/spatial-bishop-phase",
+      "sha": "64e01a204c3d88acab89481543df910e8e676aa1"
+    },
+    {
+      "name": "codex/sweep-global-guarantees",
+      "sha": "2b06383ac6f7370b39653ba7f9267ca9aea9bb38"
+    },
+    {
+      "name": "codex/sweep-structure",
+      "sha": "83a4b40bcba5530a898f3c5c83b1c339542de11f"
+    }
+  ],
+  "remote": [
+    {
+      "name": "claude/bold-goodall-0gbkct",
+      "sha": "0d574fb0953710542ee8462e16cf2eee1afe6d81"
+    },
+    {
+      "name": "claude/cross-platform-ci",
+      "sha": "d888ceb5e14bdb4f97804a78047bf937842bea93"
+    },
+    {
+      "name": "claude/extrude-preview-flicker",
+      "sha": "b6a384e918d8c85ecf66ee64efdb98d4b3ad16f5"
+    },
+    {
+      "name": "claude/grid-issue-6753f2",
+      "sha": "5668ad4edccca279a0b5150e439e7a75977750bc"
+    },
+    {
+      "name": "claude/keen-noether-89kkfz",
+      "sha": "db1e0b1ccf42db2e6c410e977f45eeb12063b0d0"
+    },
+    {
+      "name": "claude/restore-redesign",
+      "sha": "b43ca45304fc77983094ee020d1ad38909138e48"
+    },
+    {
+      "name": "claude/sweet-babbage-vmihfg",
+      "sha": "6ef5305ee99fb20e3c9421f41be5f872d6ea2a43"
+    },
+    {
+      "name": "claude/ux-ui-redesign-248b82",
+      "sha": "a1e5ad14ca6d6a9fdae6eabb438bc7da280f1374"
+    },
+    {
+      "name": "claude/wonderful-gauss-h1vn6j",
+      "sha": "c406d1908a0ac324388516dc4b0645c4887edaa1"
+    },
+    {
+      "name": "codex/bezier-certificates-20261015",
+      "sha": "40ed68b30ae59dd4f9110528083caf543c83c598"
+    },
+    {
+      "name": "codex/cad-concurrent-resume-2026-10-01",
+      "sha": "8cc18bc13e1b608ff08a6f2c08ad137e77d7c7ec"
+    },
+    {
+      "name": "codex/cad-local-evidence-2026-09-30",
+      "sha": "2e0eb3066f5d56e7940eeb715c7f846cf1153c7f"
+    },
+    {
+      "name": "codex/ci-artifact-candidates-20261102",
+      "sha": "409ecefebf8cb7baa14b44e0b3a08ab61349b1f6"
+    },
+    {
+      "name": "codex/closed-profile-g2",
+      "sha": "a62b7a613c8b4fbd37d28e5aff6b896043e82022"
+    },
+    {
+      "name": "codex/frame-cap-certificate",
+      "sha": "1447375db27b676002a057cef39df2958cc6faac"
+    },
+    {
+      "name": "codex/frame-cap-certificate-base",
+      "sha": "e8859f09c96314ae853091b29adbcdc04cc86151"
+    },
+    {
+      "name": "codex/g1-v100-source-20261014",
+      "sha": "6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3"
+    },
+    {
+      "name": "codex/general-certificate-main-integration",
+      "sha": "1447375db27b676002a057cef39df2958cc6faac"
+    },
+    {
+      "name": "codex/golden-numeric-audit-20261014",
+      "sha": "16bf446c96fed9f933866f79c28f0393333280c0"
+    },
+    {
+      "name": "codex/ideal-body-global-g2",
+      "sha": "56aff865de63a22015d2205eb00447f7df5261a3"
+    },
+    {
+      "name": "codex/integrate-available-20261013",
+      "sha": "7fb7db9440753c2890756c74643fff3dc64450ce"
+    },
+    {
+      "name": "codex/integrate-fillet-20261024",
+      "sha": "c120b631e49ffea6f96c4c0030ebd0b557cfddf6"
+    },
+    {
+      "name": "codex/laser-cam-foundation",
+      "sha": "4f6d37ddb8a01ce4c2ea719cc88a7819a45d1475"
+    },
+    {
+      "name": "codex/loft-generalization",
+      "sha": "9fcf12f5d43a711c563f3f877555b9627bd563b1"
+    },
+    {
+      "name": "codex/loft-library",
+      "sha": "7b1d55eac623d3de76ecc24178acaf166ef5ee4f"
+    },
+    {
+      "name": "codex/nurbs-native-1000-next-20261101",
+      "sha": "3fb34b84ad578bc5251ec9d67424a09059474855"
+    },
+    {
+      "name": "codex/pr38-memory-diagnostics",
+      "sha": "082304cd14096c6bbb4a7352bdc514b8727993ea"
+    },
+    {
+      "name": "codex/preserve-main-work-2026-10-04",
+      "sha": "123895b23260c6e05fb42762c265a59acba9b376"
+    },
+    {
+      "name": "codex/profile-frame-premises",
+      "sha": "f824aa31f386235f4d11b4a364bef44910c88335"
+    },
+    {
+      "name": "codex/profile-solid-qualification",
+      "sha": "70e2e78a55c8bb760d1f2a3222f5b0d2765dd618"
+    },
+    {
+      "name": "codex/push-integration-2026-10-04",
+      "sha": "a2c92f98b9eac9aef855d063f1dc2f5d9f4595a1"
+    },
+    {
+      "name": "codex/push-integration-2026-10-07",
+      "sha": "12bda09ecac7a53f9aea043650dd9cf3825b7fc3"
+    },
+    {
+      "name": "codex/source-body-seam-collection-20261028",
+      "sha": "ab5a622795ae0310833e0299de049b7add29b231"
+    },
+    {
+      "name": "codex/source-fibered-caps",
+      "sha": "0ebe4373a4d192db2171d601ab762a8748456b08"
+    },
+    {
+      "name": "codex/spatial-bishop-phase",
+      "sha": "64e01a204c3d88acab89481543df910e8e676aa1"
+    },
+    {
+      "name": "codex/sweep-global-guarantees",
+      "sha": "2b06383ac6f7370b39653ba7f9267ca9aea9bb38"
+    },
+    {
+      "name": "codex/sweep-miter-native-qualification",
+      "sha": "4ad0b3ce8ce4a299862b63cee543e1720c34db72"
+    },
+    {
+      "name": "codex/sweep-structure",
+      "sha": "83a4b40bcba5530a898f3c5c83b1c339542de11f"
+    },
+    {
+      "name": "codex/webgpu-variants",
+      "sha": "085ee2a319420d7efe51801996800225560a1ba8"
+    },
+    {
+      "name": "cursor/lattice-strength-analysis-274c",
+      "sha": "7b3afccf379aead6151c7ceaf9b633e40eb62924"
+    },
+    {
+      "name": "cursor/skeletal-strength-lattices-274c",
+      "sha": "872f5e1d06551d9f0a5fb08788d235090731163d"
+    },
+    {
+      "name": "gcode-core-fdm",
+      "sha": "a96efc1793f17b77c5494c9a5d8b7fcd1c05ff8b"
+    },
+    {
+      "name": "qualify/g1-v34",
+      "sha": "240129b14f4ccc4aaa588743f0267b5d4986337d"
+    },
+    {
+      "name": "themoretheless-cuda-gpu-math-library",
+      "sha": "1546d8cf89281745e318e4b152a01b64668dd65d"
+    },
+    {
+      "name": "themoretheless-dead-module-cleanup",
+      "sha": "3659d8b39fc68c587cb0a10263ed42377d033bd3"
+    },
+    {
+      "name": "themoretheless-fix-build-crash",
+      "sha": "91ef719b7439b7aa331fc1673ddfab5d3c8e52c2"
+    },
+    {
+      "name": "themoretheless-fix-ci-rust-toolchain-action",
+      "sha": "c6e2e750a3c22f805947e5442d391cebb4bfeb12"
+    },
+    {
+      "name": "themoretheless-gcode-dialect-support",
+      "sha": "4e794bb14f3d3de6c30833652600f33b856491dc"
+    },
+    {
+      "name": "themoretheless-gpu-cuda-acceleration",
+      "sha": "3f89800f6bbd4335ced52a94ae59232a3a2b9a11"
+    },
+    {
+      "name": "themoretheless-gpu-metal-cuda-workgroup-tuning",
+      "sha": "271774ccea194e618bb9ce389f675a7d281390a3"
+    },
+    {
+      "name": "themoretheless-gpu-scan-optimization",
+      "sha": "3fb9dd778f0592863b5bfbdc7de1f5417a0db1cd"
+    },
+    {
+      "name": "themoretheless-import-export-convert-formats",
+      "sha": "2756ca54a56195a8bb83ce52ee6655aaa615270d"
+    },
+    {
+      "name": "themoretheless-inline-unsafe-hotpath-optimisation",
+      "sha": "f129ab8c7db78252467332d5ab8865df01b28d97"
+    },
+    {
+      "name": "themoretheless-optimize-viewer-performance",
+      "sha": "74b166b4e09c681a17a0eabe011ff4a6f5ddabb0"
+    },
+    {
+      "name": "themoretheless-performance-optimization",
+      "sha": "9a3625f3b887bac02ac7ea29584d0fcb3fc56a0b"
+    },
+    {
+      "name": "themoretheless-sculpt-test-coverage",
+      "sha": "01821605dfa823064bd0ec2c6bf90e40c4bd631d"
+    }
+  ]
+}

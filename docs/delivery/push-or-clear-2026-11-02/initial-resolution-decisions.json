@@ -1,0 +1,122 @@
+[
+  [
+    "crates/brep-core/src/boundary_embedding/tests/mod.rs",
+    "Retain main extracted algorithm/test modules; avoid reintroducing duplicate inline definitions"
+  ],
+  [
+    "crates/brep-core/src/boundary_hull_contact.rs",
+    "Retain main extracted algorithm/test modules; avoid reintroducing duplicate inline definitions"
+  ],
+  [
+    "crates/brep-core/src/boundary_hull_contact/extended_support.rs",
+    "Retain main extracted algorithm/test modules; avoid reintroducing duplicate inline definitions"
+  ],
+  [
+    "crates/brep-core/src/boundary_hull_contact/tests/mod.rs",
+    "Keep updated explicit authored contact fixture; formatting otherwise equivalent"
+  ],
+  [
+    "crates/brep-core/src/face_cut.rs",
+    "Retain new contact retention API alongside main APIs"
+  ],
+  [
+    "crates/brep-core/src/face_cut/closed.rs",
+    "Keep main closed-cut ownership and reference certificates; retain legacy contact adapter separately"
+  ],
+  [
+    "crates/brep-core/src/edge_partition.rs",
+    "Keep main authored partition and position API; retain vertex proposal implementation in separate module"
+  ],
+  [
+    "crates/brep-core/src/iges_interchange_v2.rs",
+    "Retain trimmed IGES import implementation; existing main extracted helpers remain in history, not duplicate active definitions"
+  ],
+  [
+    "crates/brep-core/src/iges_interchange_v2/tests/mod.rs",
+    "Keep new trimmed import regression coverage"
+  ],
+  [
+    "crates/brep-core/src/step_interchange_v3.rs",
+    "Both pcurve use accounting and bounded surface tracking fields are required"
+  ],
+  [
+    "crates/brep-core/src/region_replacement.rs",
+    "Retain both central loft and new central graph/transition owners"
+  ],
+  [
+    "crates/brep-core/src/minkowski3d/curved/atlas.rs",
+    "Use updated stationary-boundary atlas and extracted curve_projection owner; avoid duplicate pre-refactor algorithms"
+  ],
+  [
+    "crates/brep-topology/src/lib.rs",
+    "Retain extracted method implementations, add periodic vertex link regressions"
+  ],
+  [
+    "crates/nurbs-core/src/analysis/curve_surface_agreement.rs",
+    "Retain structured and partial boundary exact routes"
+  ],
+  [
+    "crates/nurbs-core/src/analysis/curve_surface_composition.rs",
+    "Use outward binomial intervals required above degree 48; avoid old u64 overflow"
+  ],
+  [
+    "crates/nurbs-core/src/surface_quotient_injectivity/report.rs",
+    "Retain main extracted source-frame algorithm owner and report type"
+  ],
+  [
+    "docs/design/nurbs-api-domains.json",
+    "Keep newly categorized domains, remove their previous uncategorized entries"
+  ],
+  [
+    "architecture-baseline.json",
+    "Union domain pins using stricter existing bound for duplicate paths; no pin raised"
+  ],
+  [
+    "src/services/mainSolidProtocol/mainSolidResult.ts",
+    "Both offset/expression and source-graph operations remain available"
+  ],
+  [
+    "src/services/mainSolidWorkerRuntime.ts",
+    "Both offset/expression and source-graph operations remain available"
+  ],
+  [
+    "src/services/mainSolidProtocol.ts",
+    "Union result/dispatch types for both source graph and offset deviation"
+  ],
+  [
+    "src/features/DirectModeler.vue",
+    "Keep extracted surface distance/pair widgets, add source graph preview without duplicate UI or refs"
+  ],
+  [
+    "src/semantic/lowererBuilder.ts",
+    "Keep main lowerer modules; port rational node remap below"
+  ],
+  [
+    "vitest.config.ts",
+    "Include all UI suites in custom environment"
+  ],
+  [
+    "public/wasm/geometry-kernel.wasm",
+    "Retain latest current checkout runtime artifact; source/runtime verification still required"
+  ],
+  [
+    "public/wasm/language-kernel.wasm",
+    "Retain latest current checkout runtime artifact; source/runtime verification still required"
+  ],
+  [
+    "crates/compute-core/examples/bench_small_buffers.rs",
+    "Respect migration to Forma dependencies; removed local crates remain in Git history"
+  ],
+  [
+    "crates/compute-core/examples/bench_transfer_copies.rs",
+    "Respect migration to Forma dependencies; removed local crates remain in Git history"
+  ],
+  [
+    "crates/compute-core/examples/bench_transfer_stability.rs",
+    "Respect migration to Forma dependencies; removed local crates remain in Git history"
+  ],
+  [
+    "crates/raster-core/src/postprocess.rs",
+    "Respect migration to Forma dependencies; removed local crates remain in Git history"
+  ]
+]
