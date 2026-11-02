@@ -1,0 +1,42 @@
+{
+  "baseCommit": "b413ccff4256aafaed52553bfe79d54af7b49355",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "c0412fd2383a2b5ec0e76ac9f4d25c9ec6e34f7fee14a4d1db2964067be770ce",
+    "crates/nurbs-core/src/editing/rational_factor.rs": "2da628f057b67b943951fbf90d11f89519f3e1d42c195940537fbd55115d0d65",
+    "crates/nurbs-core/src/editing/rational_factor/polynomial.rs": "bc108b18d81c25f1516daabfa9ccc3353e5f446248ac4cc29edecc163a49a6a2",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "8a10d7d2d8f7f0ab879dd2800a9824192baa895a75418032fb6d8f9c43b7eb35",
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "5f888303acb5dee872e8ce27f90c78a13eb8a27832c6e05393e8f8ec7a7ce287",
+    "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs": "b118c3e0a3f9bf1c76664fa3da2a8181d82031bdf2d62118f5d33a27b084643e",
+    "docs/design/nurbs-exact-knot-insertion.md": "2f8a4dc6c93f1ec577203a923fafaed993d60bf73cc08b96b28f93b7ce1080fd",
+    "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py": "11b4a9dc6bfa930d437143da65f625c07533ab0fba67f07cb8b4b2b6cace6c0b"
+  },
+  "tests": {
+    "native233-contracts-first.log": 22,
+    "native233-contracts-default-final.log": 23,
+    "native233-contracts-no-codec.log": 23
+  },
+  "finalExitCodes": {
+    "default": 0,
+    "noCodec": 0,
+    "architecture": 0,
+    "independentOracle": 0
+  },
+  "oracle": {
+    "acceptedDefinitions": 8,
+    "negativeControls": 2,
+    "failed": 0,
+    "definitionsSha256": "efd2084959f63c33dfcf14ca57d619145637fb4e7f117350ffbb71e1b531fac2",
+    "scope": "Exact rational polynomial cross products on every source/output knot cell; actual binary64 coefficients; default/no-codec outputs match. No runtime or topology claim."
+  },
+  "commands": [
+    "cargo check --locked --offline --manifest-path crates/Cargo.toml -p nurbs-core --lib",
+    "cargo test --locked --offline --manifest-path crates/Cargo.toml -p nurbs-core [--no-default-features] --test exact_knot_insertion_contracts --test rational_factor_contracts -- --nocapture",
+    "node scripts/audit-architecture.mjs"
+  ],
+  "environment": {
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2"
+  },
+  "scope": "Exact nonperiodic internal knot insertion, default/no-codec native contracts and shared rational-factor regressions only; no whole-workspace, runtime, frontend, export or compiler attestation. Historical native232 evidence unchanged. Limits unchanged."
+}

@@ -29,6 +29,29 @@ fn extract(
             ])
         })
         .collect::<Result<Net, Reason>>()?;
+    // A complete clamped one-span basis IS the original Bernstein net.
+    // No de Boor denominators or blossoms need constructing. Both complete
+    // definitions were admitted by basis() before extraction. A cropped range
+    // must still use the original exact restriction algorithm below.
+    if points.len() == 4 * (p + 1) && knots.len() == 2 * (p + 1) && span == p {
+        let mut whole = true;
+        for knot in &knots[..=p] {
+            whole &= knot.sub(range[0], ctx)?.sign() == Sign::Zero;
+        }
+        for knot in &knots[p + 1..] {
+            whole &= knot.sub(range[1], ctx)?.sign() == Sign::Zero;
+        }
+        if whole {
+            // One common gauge across ALL poles/coordinates, never a gauge
+            // per pole. Retain the original overflow/underflow safeguards.
+            let mut flat = base.into_iter().flatten().collect::<Vec<_>>();
+            normalize(&mut flat, ctx)?;
+            return Ok(flat
+                .chunks_exact(4)
+                .map(|p| std::array::from_fn(|i| p[i].clone()))
+                .collect());
+        }
+    }
     let mut rows = vec![base; p + 1];
     for r in 1..=p {
         let m = p - r + 1;
