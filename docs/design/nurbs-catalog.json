@@ -6123,10 +6123,13 @@
         "docs/design/nurbs-implicit-quadrics.md",
         "docs/qualification/nurbs-implicit-quadric-native-2026-11-02/default-check.json",
         "docs/qualification/nurbs-implicit-quadric-native-2026-11-02/no-codec-check.json",
-        "docs/qualification/knot-removal-zero-admission-2026-11-02/after-check.json"
+        "docs/qualification/knot-removal-zero-admission-2026-11-02/after-check.json",
+        "crates/cad-predicates/src/bspline_quadric_identity.rs",
+        "crates/nurbs-core/tests/implicit_quadric_multispan_contracts.rs",
+        "docs/qualification/nurbs-quadric-multispan-native-2026-11-02/checks.json"
       ],
       "remainingQualification": [
-        "single clamped degree1..8 tensor patch and authored equation only; no fitting, general multispan recognition, parameter regularity, injectivity, pole quotient, B-rep or solid authority",
+        "clamped nonperiodic degree1..8 original tensor and authored equation only; no automatic fitting, periodic/unclamped proof, parameter regularity, injectivity, pole quotient, B-rep or solid authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

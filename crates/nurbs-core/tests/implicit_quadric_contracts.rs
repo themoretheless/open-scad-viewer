@@ -73,7 +73,7 @@ fn singular_quadric_and_collapsed_parameter_patch_have_distinct_authority() {
 #[test]
 fn multispan_and_invalid_equations_never_inherit_single_patch_credit() {
     let s=graph(true);let mut q=diagonal([1.,1.,0.,0.]);q[2][3]=-0.5;q[3][2]=-0.5;
-    let multispan=nurbs_core::editing::surface_edit::insert(&s,Axis::U,4.,1).unwrap();let r=inspect(&multispan,q,1_000_000,4096).unwrap();assert!(!r.exact_membership&&!r.regular_implicit_support);assert_eq!(r.reason,Some("implicit-single-bezier-required"));
+    let multispan=nurbs_core::editing::surface_edit::insert(&s,Axis::U,4.,1).unwrap();let r=inspect(&multispan,q,1_000_000,4096).unwrap();assert!(!r.exact_membership&&!r.regular_implicit_support);assert_eq!(r.reason,Some("exact-implicit-membership-unproved"));
     let mut asymmetric=q;asymmetric[0][1]=1.;assert!(inspect(&s,asymmetric,1_000_000,4096).is_err());
     let mut invalid=q;invalid[0][0]=f64::NAN;assert!(inspect(&s,invalid,1_000_000,4096).is_err());
     assert!(inspect(&s,q,16_000_001,4096).is_err());assert!(inspect(&s,q,1_000_000,100_001).is_err());

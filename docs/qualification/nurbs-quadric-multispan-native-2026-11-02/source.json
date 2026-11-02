@@ -1,0 +1,33 @@
+{
+  "baseCommit": "bab2c33de",
+  "files": [
+    {
+      "path": "crates/cad-predicates/src/lib.rs",
+      "sha256": "dedf9218a5827e7c47e2de84914a21fbb0a1bface3aa4a04a03336694fb51ff5"
+    },
+    {
+      "path": "crates/cad-predicates/src/bezier_quadric_identity.rs",
+      "sha256": "39e005e91918e40ca3e38a1d5ee8a224d1c96727368427ec523bbc3fa2144dcc"
+    },
+    {
+      "path": "crates/cad-predicates/src/bspline_quadric_identity.rs",
+      "sha256": "a658f7dd6e0f790b90b0c5a49586bc276548c0031eb73401140e74ad8fae09f6"
+    },
+    {
+      "path": "crates/cad-predicates/src/bspline_quadric_identity_tests.rs",
+      "sha256": "e7cde4dbf5c0f4a9fc226a2f25cd4dda033db11cf6a9d4abf17c92345e3c1c64"
+    },
+    {
+      "path": "crates/nurbs-core/src/analysis/implicit_quadric.rs",
+      "sha256": "d561e36b5078ef15a924c6fd643aa7f5b7e8c412667463455ba98b109f85eef2"
+    },
+    {
+      "path": "crates/nurbs-core/tests/implicit_quadric_contracts.rs",
+      "sha256": "d7d29a8cf71c56ed1f734cf04fa129ec488bf8f419373a952d9cd8933383ae8f"
+    },
+    {
+      "path": "crates/nurbs-core/tests/implicit_quadric_multispan_contracts.rs",
+      "sha256": "da2fd43665f69dbf6de342fc4789a67f9302baaeddfd9b660ccc55f40096b020"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+# Original multispan quadric support
+
+This broadens NURBS-0223 without increasing the catalogue count. Original clamped nonperiodic B-spline tensors are checked directly in every nonempty knot rectangle. A batched homogeneous blossom restriction clears denominators and normalizes every active blossom and all other-axis channels together. It never supplies rounded Cartesian Bezier patches as exact original-source authority. All spans share one predicate context and unchanged MAX_WORK; gradient coverage remains a separate outward interval-cell ledger.
+
+The unchanged single-Bezier predicate route retains its arithmetic ordering and source layout. Multispan source arenas additionally bind original knots, degrees and tensor layout. Exact membership and regular ambient implicit support remain distinct from parameter rank, injectivity, pole quotient, B-rep and material validity. Periodic and unclamped storage still refuse. Existing degree1..8, control, coordinate, work and cell limits are unchanged.
+
+The complete CAD predicate library passes103 tests. The complete default NURBS library passes2044, with zero failures and one existing ignored microbenchmark. Public targets pass110 unique cases in both default and no-codec builds. Source and log receipts preserve the union counting. Rational spheres with two-axis weight gauges, nonuniform polynomial graphs, mixed degrees, degree8, one-ULP last-span mutations, literal original radius products, short shared ledgers, cancellation, foreign/rational source leaves and unsupported storage are covered.
+
+A first native integration fixture incorrectly marked an invalid short net periodic; the owner rejected it. The final fixture authors a valid unwrapped periodic net and verifies explicit support refusal. No admission was weakened. The active Linux223 WASM snapshot predates this extension; these native proofs do not qualify that artifact or the production provider.
