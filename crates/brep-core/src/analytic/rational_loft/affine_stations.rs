@@ -412,13 +412,12 @@ fn build(original:&[Vec<Curve>],sections:&[Vec<Vec<Curve>>],sharp:&[usize],close
                 if !charge(&mut out, max) {
                     return Ok(out);
                 }
-                let Some(x) = snap(
-                    pose[col][k],
-                    if col == 3 { translation_grid } else { quantum },
-                ) else {
-                    out.reason = "affine-fit-lattice-range";
-                    return Ok(out);
-                };
+                let mut proposed=snap(pose[col][k],if col==3 {translation_grid}else{quantum});
+                if proposed.is_none() && !quintic && col==3 {
+                    if !charge(&mut out,max) {return Ok(out);}
+                    proposed=snap(pose[col][k],quantum);
+                }
+                let Some(x)=proposed else {out.reason="affine-fit-lattice-range";return Ok(out);};
                 pose[col][k] = x;
             }
         }

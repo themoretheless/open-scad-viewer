@@ -534,3 +534,5 @@ pub mod source_curved_boundary_contact;
 pub mod source_paired_projection_contact;
 
 pub mod rational_cap_translation;
+
+pub mod rational_cap_affine;

@@ -34,20 +34,36 @@ fn axis(
     out: &mut Report,
     max: u64,
 ) -> Option<(Vec<f64>, bool)> {
-    let t = Q::from_float(translation)?;
-    let a = Q::from_float(anchor)?;
-    let base = &a + &t;
+    let values = values
+        .iter()
+        .map(|v| Q::from_float(*v))
+        .collect::<Option<Vec<_>>>()?;
+    axis_exact(
+        &values,
+        &Q::from_float(anchor)?,
+        &Q::from_float(translation)?,
+        out,
+        max,
+    )
+}
+pub(crate) fn axis_exact(
+    values: &[Q],
+    a: &Q,
+    t: &Q,
+    out: &mut Report,
+    max: u64,
+) -> Option<(Vec<f64>, bool)> {
+    let base = a + t;
     let mut offsets = Vec::with_capacity(values.len());
     let mut literal = Vec::with_capacity(values.len());
-    for &v in values {
+    for q in values {
         if !step(out, max) {
             return None;
         }
-        let q = Q::from_float(v)?;
-        if let Some(f) = exact(&(&q + &t)) {
+        if let Some(f) = exact(&(q + t)) {
             literal.push(f);
         }
-        offsets.push(q - &a);
+        offsets.push(q - a);
     }
     if literal.len() == values.len() {
         return Some((literal, false));
@@ -76,9 +92,13 @@ fn axis(
         return None;
     }
     let mut magnitude: f64 = 0.;
-    for &v in values {
-        let sum = I::point(v).add(I::point(translation)).ok()?;
-        magnitude = magnitude.max(sum.lo.abs()).max(sum.hi.abs());
+    for q in values {
+        let f = (q + t).to_f64()?;
+        if !f.is_finite() {
+            out.reason = "rational-cap-translation-grid-unrepresentable";
+            return None;
+        }
+        magnitude = magnitude.max(f.abs().next_up());
     }
     // A common binary grid at the upper magnitude mantissa spacing.
     // The final rational equality check, rather than this proposal, decides

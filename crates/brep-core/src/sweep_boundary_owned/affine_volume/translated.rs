@@ -1,4 +1,4 @@
-//! Conditional source-trace transport through freshly bound exact translations.
+//! Conditional source-trace transport through freshly bound invertible affine maps.
 //! The caller MUST subsequently prove complete actual boundary agreement.
 use super::*;
 use nurbs_core::curve::Curve;
@@ -33,11 +33,15 @@ pub(super) fn prepare(
         return Some(false);
     };
     let poses = [*first, *last];
-    if poses
-        .iter()
-        .any(|p| p[..3] != [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
-    {
-        return Some(false);
+    for pose in poses {
+        for _ in 0..9 {
+            if !step(out, max) {
+                return None;
+            }
+        }
+        if crate::rational_cap_affine::inverse(pose).is_none() {
+            return Some(false);
+        }
     }
     let sides = c.sides.iter().map(Vec::len).sum::<usize>();
     for endpoint in 0..2 {
@@ -68,7 +72,7 @@ pub(super) fn prepare(
             if !step(out, max) {
                 return None;
             }
-            if crate::exact_affine_source::image(poses[endpoint], a, c.origin)
+            if crate::rational_cap_affine::image(poses[endpoint], a, c.origin)
                 .as_ref()
                 .map(|p| p.as_slice())
                 != Some(b.as_slice())
@@ -125,7 +129,7 @@ pub(super) fn prepare(
                     if !step(out, max) {
                         return None;
                     }
-                    if crate::exact_affine_source::image(poses[endpoint], a, c.origin)
+                    if crate::rational_cap_affine::image(poses[endpoint], a, c.origin)
                         .as_ref()
                         .map(|p| p.as_slice())
                         != Some(b.as_slice())
@@ -136,8 +140,8 @@ pub(super) fn prepare(
             }
         }
     }
-    // Actual full lift agreement then says T+C(uv)=T+P. Cancellation of
-    // this exact injective translation proves C(uv)=P, on the SAME clock.
+    // Actual full lifts give A(C(uv)-origin)+T=A(P-origin)+T.
+    // Exact invertibility of A proves C(uv)=P on the SAME normalized clock.
     // This is one fresh native proof chain, not credit from a prior report.
     Some(true)
 }

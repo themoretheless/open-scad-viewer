@@ -86,7 +86,12 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
         let batch=authored_frame_certificate::certify_control_trajectories(reference_path,sweep.scale,sweep.twist,
             axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
         out.cells+=batch.cells;
-        if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
+        if batch.status!=Status::Certified {
+            let bound=authored_chord_cover::certify(sweep,reference_path,axis,normal,&coordinates,interval,
+                &sections[station],&sections[station+1],&mut out.cells,max_cells)?;
+            let Some(bound)=bound else {out.reason=Some("authored-original-chord-cover-unproved");return Ok(out);};
+            error=error.max(bound);continue;
+        }
         let single_span=batch.single_span;
         let Some(jets)=batch.jets else {out.reason=Some("authored-control-jets-unresolved");return Ok(out);};
         let values=if !single_span {

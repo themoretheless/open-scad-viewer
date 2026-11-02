@@ -7,6 +7,8 @@ pub struct AffineFilledVolumeReport {
     pub packet_bound: bool,
     /// Fresh coefficient/UV binding plus complete actual lifts cancels exact endpoint translations.
     pub translated_trace_transport: bool,
+    /// Exact invertible endpoint maps, same UV clocks and fresh full actual lifts.
+    pub affine_trace_transport: bool,
     /// Distinct original carriers use a fresh normalized common material proof
     /// and a complete two-carrier filled map, rather than carrier equality.
     pub paired_carriers: bool,
@@ -129,6 +131,7 @@ pub(super) fn qualify(
         certified: false,
         packet_bound: false,
         translated_trace_transport: false,
+        affine_trace_transport: false,
         paired_carriers: false,
         carrier_identity: None,
         material_roles_certified: false,
@@ -314,7 +317,14 @@ pub(super) fn qualify(
         out.reason = "actual-affine-boundary-agreement-unproved";
         return Ok(out);
     }
-    out.translated_trace_transport = translated_traces;
+    out.affine_trace_transport = translated_traces;
+    out.translated_trace_transport = translated_traces
+        && [
+            c.pieces.first().unwrap().controls.first().unwrap(),
+            c.pieces.last().unwrap().controls.last().unwrap(),
+        ]
+        .iter()
+        .all(|p| p[..3] == [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]);
     let remaining = limits.matrix_cells - out.cells;
     if remaining < 2 || out.work == limits.work {
         out.reason = "actual-affine-boundary-work-limit";

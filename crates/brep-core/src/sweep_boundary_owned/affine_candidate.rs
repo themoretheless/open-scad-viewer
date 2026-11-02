@@ -123,51 +123,23 @@ pub(super) fn prepare(
             }
         }
         if failed {
-            // A pure-translation endpoint admits a common-amplitude proposal.
-            // Arbitrary affine endpoint correction remains explicitly unproved.
-            if pose[..3] != [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]] {
-                report.reason = "affine-filled-cap-exact-product-unproved";
-                return Ok((None, report));
-            }
-            let mut translation = [0.; 3];
-            for k in 0..3 {
-                let Some(t) = crate::exact_affine_source::exact_add(pose[3][k], -origin[k]) else {
-                    report.reason = "affine-filled-cap-translation-unrepresentable";
-                    return Ok((None, report));
-                };
-                translation[k] = t;
-            }
-            let correction = crate::rational_cap_translation::propose(
+            // Proposal arithmetic and its exact inverse support any invertible
+            // endpoint matrix. Fresh actual trace/volume checks remain mandatory.
+            let correction = crate::rational_cap_affine::propose(
                 caps[endpoint],
-                translation,
+                pose,
+                origin,
                 origin,
                 l.tolerance,
                 l.work - report.work,
             )?;
             report.work += correction.work;
-            let Some(cap) = correction.cap else {
+            let (Some(cap), Some(reference)) = (correction.cap, correction.reference) else {
                 report.reason = correction.reason;
                 return Ok((None, report));
             };
             report.cap_correction_upper[endpoint] = correction.displacement_upper.unwrap();
-            source_surfaces[endpoint] = cap.surface.clone();
-            for p in source_surfaces[endpoint]
-                .control_points
-                .iter_mut()
-                .flatten()
-            {
-                for k in 0..3 {
-                    if !charge(&mut report, l.work) {
-                        return Ok((None, report));
-                    }
-                    let Some(value) = crate::exact_affine_source::exact_add(p[k], -translation[k])
-                    else {
-                        report.reason = "affine-corrected-cap-reference-unrepresentable";
-                        return Ok((None, report));
-                    };
-                    p[k] = value;
-                }
-            }
+            source_surfaces[endpoint] = reference;
             retained[endpoint] = cap;
         }
     }

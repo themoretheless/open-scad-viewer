@@ -284,6 +284,17 @@ fn rounded_rational_hollow_cap_refuses_when_translation_breaks_exact_trim_trace(
 
 #[test]
 fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_material_traces() {
+    run_corrected_affine_cap(0)
+}
+#[test]
+fn rational_hollow_cap_quarter_turn_frame_retains_exact_material_and_full_volume() {
+    run_corrected_affine_cap(1)
+}
+#[test]
+fn rational_hollow_cap_anisotropic_frame_retains_exact_material_and_full_volume() {
+    run_corrected_affine_cap(2)
+}
+fn run_corrected_affine_cap(mode: usize) {
     let (profiles, caps) = source();
     let before = caps
         .iter()
@@ -360,7 +371,25 @@ fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_mate
     let scale = constant_vector_law([1., 0., 0.]).unwrap();
     let twist = constant_vector_law([0.; 3]).unwrap();
     let axis = constant_vector_law([0., 0., 1.]).unwrap();
-    let normal = constant_vector_law([1., 0., 0.]).unwrap();
+    let normal = if mode == 1 {
+        Curve {
+            degree: 1,
+            knots: vec![-3., -3., 13., 13.],
+            control_points: vec![vec![1., 0., 0.], vec![0., 1., 0.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        }
+    } else {
+        constant_vector_law(if mode == 0 {
+            [1., 0., 0.]
+        } else {
+            [0., 1., 0.]
+        })
+        .unwrap()
+    };
+    let count = if mode == 1 { 2 } else { 5 };
+    let axes = constant_vector_law([2., 0.5, 1.]).unwrap();
+    let center = constant_vector_law([0.; 3]).unwrap();
     let sweep = MultiSweep::new(
         &profiles,
         &path,
@@ -370,20 +399,25 @@ fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_mate
             normal: [1., 0., 0.],
             orientation: Orientation::Fixed,
             spacing: Spacing::Parameter,
-            initial_sections: 5,
-            max_sections: 5,
+            initial_sections: count,
+            max_sections: count,
             max_deviation: 0.05,
         },
     )
     .unwrap()
     .with_frame_laws(&axis, &normal)
     .unwrap();
+    let sweep = if mode == 2 {
+        sweep.with_affine_laws(&axes, &center).unwrap()
+    } else {
+        sweep
+    };
     let mut classes = vec![OriginalProfileClass::C0; 9];
     classes[0] = OriginalProfileClass::G2;
     let body = crate::sweep_boundary_owned::construct_affine_with_original_classified_material(
         &sweep,
         &[5, 4],
-        5,
+        count,
         [&caps[0], &caps[1]],
         &classes,
         1e-8,
@@ -419,7 +453,8 @@ fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_mate
     };
     assert!(body.retained_report().certified);
     let actual = body.retained_report().affine_volume.as_ref().unwrap();
-    assert!(actual.certified && actual.translated_trace_transport && actual.paired_carriers);
+    assert!(actual.certified && actual.affine_trace_transport && actual.paired_carriers);
+    assert_eq!(actual.translated_trace_transport, mode == 0);
     let filled = actual.volume.as_ref().unwrap();
     assert!(
         filled.embedding_certified
@@ -439,7 +474,7 @@ fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_mate
         crate::sweep_boundary_owned::construct_affine_with_original_classified_material(
             &sweep,
             &[5, 4],
-            5,
+            count,
             [&caps[0], &caps[1]],
             &classes,
             1e-8,
@@ -484,7 +519,7 @@ fn rational_hollow_cap_amplitude_translation_retains_nonplanarity_and_exact_mate
         before
     );
     eprintln!(
-        "corrected actual field: work={} cells={} filled_cells={} filled_exact={} error={:?}",
+        "corrected actual field mode={mode}: work={} cells={} filled_cells={} filled_exact={} error={:?}",
         actual.work,
         actual.cells,
         filled.cells,

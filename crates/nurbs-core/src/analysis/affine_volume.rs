@@ -406,22 +406,10 @@ fn certify_motion_impl(
             }
         }
     }
-    let mut constant_linear=second.is_some() && !closed;
-    if constant_linear {
-        let reference=pieces.endpoints(0).0;
-        let controls:Box<dyn Iterator<Item=&Pose>>=match pieces {
-            Motion::Quintic(p)=>Box::new(p.iter().flat_map(|p|p.iter())),
-            Motion::Rational(p)=>Box::new(p.iter().flat_map(|p|p.controls.iter())),
-        };
-        'proposal: for pose in controls {
-            for col in 0..3 { for k in 0..3 {
-                if out.exact_work==max_exact_work {out.reason=Some("affine-volume-metric-proposal-work-limit");return Ok(out);}
-                out.exact_work+=1;
-                if pose[col][k]!=reference[col][k] {constant_linear=false;break 'proposal;}
-            }}
-        }
-    }
-    if constant_linear {
+    // The whole-field metric theorem has no constant-frame premise. For
+    // open paired carriers, attempt the SAME bounded global proof before
+    // pair refinement; source points still supply no admission credit.
+    if second.is_some() && !closed {
         atlas::certify_map_global_first(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells,closed)?;
         return Ok(out);
     }
