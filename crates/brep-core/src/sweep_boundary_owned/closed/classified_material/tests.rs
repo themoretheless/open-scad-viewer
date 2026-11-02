@@ -128,6 +128,25 @@ fn run(hole: bool, nonplanar: bool) {
             )
         };
     }
+    let OriginalClassifiedCappedMaterialAttempt::Refused(open) =
+        certify_original_classified_capped_material(
+            &sweep,
+            &loops,
+            [&material, &material],
+            &classes,
+            projection(),
+            1e-8,
+            OriginalClassifiedCappedMaterialLimits {
+                volume: limits().volume,
+                material: limits().material,
+            },
+        )
+        .unwrap()
+    else {
+        panic!("closed traversal acquired open capped ownership")
+    };
+    assert_eq!(open.reason, Some("original-open-source-required"));
+    assert!(open.volume.is_none() && open.work.cells == 0 && open.work.exact_work == 0);
     let body = match certify!(&material, &classes, limits()).unwrap() {
         OriginalClassifiedClosedMaterialAttempt::Certified(b) => b,
         OriginalClassifiedClosedMaterialAttempt::Refused(r) => {

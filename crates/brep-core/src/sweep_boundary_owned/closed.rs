@@ -136,6 +136,7 @@ fn prepare_closed_material(
         tolerance_uv,
         limits,
         MaterialBinding::NormalizedMap,
+        MaterialTraversal::Closed,
     )
 }
 #[derive(Clone, Copy)]
@@ -157,7 +158,13 @@ fn prepare_classified_closed_material(
         tolerance_uv,
         limits,
         MaterialBinding::OrientedImages,
+        MaterialTraversal::Closed,
     )
+}
+#[derive(Clone, Copy)]
+enum MaterialTraversal {
+    Closed,
+    Open,
 }
 fn prepare_material_with_binding(
     sweep: &MultiSweep<'_>,
@@ -166,6 +173,7 @@ fn prepare_material_with_binding(
     tolerance_uv: f64,
     limits: OriginalClosedLimits,
     binding: MaterialBinding,
+    traversal: MaterialTraversal,
 ) -> Result<PreparedMaterialAttempt> {
     let b = limits;
     if !tolerance_uv.is_finite()
@@ -243,8 +251,14 @@ fn prepare_material_with_binding(
         ideal_volume: None,
         reason: None,
     };
-    if !sweep.source_is_closed()? {
-        return Ok(refused_material(out, "original-closed-source-required"));
+    match (traversal, sweep.source_is_closed()?) {
+        (MaterialTraversal::Closed, false) => {
+            return Ok(refused_material(out, "original-closed-source-required"));
+        }
+        (MaterialTraversal::Open, true) => {
+            return Ok(refused_material(out, "original-open-source-required"));
+        }
+        _ => {}
     }
     // The exact original UV chain may itself be multispan or one closed
     // curve. Normalize only through exact coefficient decomposition; rounded
@@ -691,4 +705,11 @@ pub use classified_material::{
     OriginalClassifiedClosedMaterialAttempt, OriginalClassifiedClosedMaterialLimits,
     OriginalClassifiedClosedMaterialRefusal, OriginalClassifiedClosedMaterialWork,
     certify_original_classified_closed_material,
+};
+
+mod capped_material;
+pub use capped_material::{
+    OriginalClassifiedCappedMaterial, OriginalClassifiedCappedMaterialAttempt,
+    OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
+    OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material,
 };

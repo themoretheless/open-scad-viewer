@@ -519,3 +519,7 @@ pub use affine_volume::AffineFilledVolumeReport;
 pub use closed::{MaterialSpanBinding, MaterialSpanBindingKind, OriginalClassifiedClosedMaterialLimits, OriginalClassifiedClosedMaterialWork,
     OriginalClassifiedClosedMaterial, OriginalClassifiedClosedMaterialRefusal,
     OriginalClassifiedClosedMaterialAttempt, certify_original_classified_closed_material};
+
+pub use closed::{OriginalClassifiedCappedMaterial, OriginalClassifiedCappedMaterialAttempt,
+    OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
+    OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material};
