@@ -11,8 +11,13 @@ use crate::{
 };
 
 mod conics;
+mod exact_circle;
 pub mod exact_conics;
+mod exact_frame;
+pub mod exact_frusta;
+pub mod exact_planar_regions;
 pub mod exact_quadrics;
+pub mod exact_tori;
 mod revolution;
 
 pub use conics::{circle, circle_arc, circle_quadrants, conic_osculating, conic_rho, ellipse_arc, hyperbola, parabola};

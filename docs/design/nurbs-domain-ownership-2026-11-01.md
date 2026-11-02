@@ -57,3 +57,10 @@ r69: Jordan nesting forest принадлежит существующему tri
 compound normal-offset regions — `offsets::surface_offset::contact_curve`.
 Новые public roots/пункты каталога не добавлены (242/200). Canonical coedges
 не меняют исходные UV definitions; world lift вычисления и replay остаются Rust.
+
+NURBS-0241: `editing::exact_projective` и его закрытый `proof` принадлежат
+существующему разделу `editing` (зарегистрированному корневому владельцу
+`editing` в `nurbs-api-domains.json`). Нового корневого alias нет. Здесь
+находятся ограниченная точная матричная арифметика, общая проективная калибровка
+всей контрольной сетки и проверка сохранения исходного базиса; topology/BRep
+полномочия модулю не назначены.

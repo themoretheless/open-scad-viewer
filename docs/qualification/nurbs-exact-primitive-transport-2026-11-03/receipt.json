@@ -1,0 +1,353 @@
+{
+  "combinedBaseCommit": "ce1c88235051f364ba1294632c424f4152bc1706",
+  "mergedMainSnapshot": "f0bae31a12833a1b8a52e74905d7492937c440a7",
+  "featureBeforeMerge": "ba713542c5b850817d3f01cc18a18da577865fbe",
+  "scope": "Native JSON and native geometry-bridge routing of five existing exact constructor families, with combined source qualification. No new catalogue capability or installed WASM/editor/STEP/distribution qualification.",
+  "sourceSha256": {
+    "crates/geometry-bridge/tests/exact_primitive_transport.rs": "16e03b3ac1084682454b8e7629c002f5808ebc66be48a0d3a57ac30425d33573",
+    "crates/nurbs-core/src/transport/dispatch.rs": "20f4c25b397f897b1bd097b373ff576d1925d4de82a52974bae759a55ffca540",
+    "crates/nurbs-core/src/transport/exact_primitive_requests.rs": "fe16bcbf1fb31778ddf2b187353411740d48cce944ea30b3ed25d020d2189659",
+    "crates/nurbs-core/src/transport/mod.rs": "de47841152952df22e47e7c74f1f3c4c839eb4fd4b0cb2aaed4ad8cff5e810d8",
+    "crates/nurbs-core/tests/exact_primitive_transport_contracts.rs": "e755e030c2e820a68b5d1a3f728c47af80de7b0b00eee1cc170ecd412d20b7f6",
+    "crates/nurbs-core/tests/exact_primitive_transport_refusals.rs": "ddec4a3c2c0fa1c783dba69f79c526ea5fbac9385ef7e7d1fe3f75916d5fc876",
+    "crates/nurbs-core/tests/support/exact_primitive_transport.rs": "8ac3ca3c1d5d6887fa3e694ea16d9a53665bc94559bb8388b2795878235a732a",
+    "docs/qualification/nurbs-exact-primitive-transport-2026-11-03/exact_wire_oracle.py": "ebdd6c8cf5fed2cae09c4e6379b5d0b03a0c165a6efcc99509c4b274f73e85fa",
+    "docs/qualification/nurbs-exact-planar-regions-2026-11-03/exact_oracle.py": "850905ebd61e814a9b9fc88e79c4c85d3c47698b280703121a8b0a637840ca65",
+    "docs/qualification/nurbs-exact-frusta-2026-11-03/exact_oracle.py": "25cf425223c5ba5d348ae0e0403f97b3d25b136e50823b36fed08c0df0ecf0f9",
+    "docs/qualification/nurbs-exact-tori-2026-11-03/exact_oracle.py": "50223e0c49c80b60f4430f1957df7a5c8b790b2e9c7ffdc4e3b10450026eee30",
+    "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py": "33b4ee1336e68d2ef2f1a218403502e3d0dd200cd1a46bb44c4e43bf0fe62f75",
+    "docs/qualification/nurbs-exact-conics-2026-11-03/exact_oracle.py": "2421d8acdc414558a34f530a5571696467a074d6320bcf64bb16b6c965dc8203",
+    "docs/qualification/nurbs-rational-surface-factor-2026-11-03/exact_oracle.py": "1df07723f98632e72823e582569dfc443b6281915b6549da63eae6adde8c404a",
+    "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+    "docs/qualification/nurbs-rational-factor-2026-11-02/exact_oracle.py": "0fbf4adc19446b88102dba3aaae20a33eb4d9fe153b1c4f559a3c5fb862b7410",
+    "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py": "11b4a9dc6bfa930d437143da65f625c07533ab0fba67f07cb8b4b2b6cace6c0b",
+    "crates/value-codec/src/lib.rs": "b8d86aa42df66c6ffe650ad8d28c9f56871649ae2d789f7298b0da9e9e68a312",
+    "crates/nurbs-core/src/transport/execute.rs": "aa4ff4e2871221c74d9c599faeccc1dc5d4b0400d05426d3bc114fd8e9ed5d38",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d",
+    "crates/Cargo.lock": "f0b3df199fe827167e27aa21cb0de15a4561a5934a3a3df9372fe28eb1e8d7db",
+    "docs/design/nurbs-exact-primitive-transport.md": "c87b109c803c9a8ac3015d7fbf36bf0b3f3cce5bfdcb6a3c1fd00a03bcd481ef"
+  },
+  "tests": {
+    "lib-default": {
+      "passed": 2258,
+      "failed": 0,
+      "ignored": 1
+    },
+    "lib-no-codec": {
+      "passed": 2053,
+      "failed": 0,
+      "ignored": 1
+    },
+    "contracts-default": {
+      "passed": 106,
+      "failed": 0,
+      "ignored": 0
+    },
+    "contracts-no-codec": {
+      "passed": 87,
+      "failed": 0,
+      "ignored": 0
+    },
+    "bridge": {
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "totalFinalRustExecutions": 4507,
+  "runner": {
+    "native241-contracts-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--test",
+        "exact_planar_regions_contracts",
+        "--test",
+        "exact_frusta_contracts",
+        "--test",
+        "exact_tori_contracts",
+        "--test",
+        "exact_quadrics_contracts",
+        "--test",
+        "exact_conics_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "exact_tensor_denominator_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T22:33:48.399488+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T22:38:10.403750+00:00"
+    },
+    "native241-lib-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib"
+      ],
+      "start": "2026-11-02T22:38:10.404383+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T22:48:09.978353+00:00"
+    },
+    "native241-contracts-default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "exact_planar_regions_contracts",
+        "--test",
+        "exact_frusta_contracts",
+        "--test",
+        "exact_tori_contracts",
+        "--test",
+        "exact_quadrics_contracts",
+        "--test",
+        "exact_conics_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "exact_surface_knot_insertion_contracts",
+        "--test",
+        "exact_knot_insertion_contracts",
+        "--test",
+        "exact_tensor_denominator_contracts",
+        "--test",
+        "exact_primitive_transport_contracts",
+        "--test",
+        "exact_primitive_transport_refusals",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T22:48:09.979965+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T22:48:16.590283+00:00"
+    }
+  },
+  "environment": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-rational-reduction-target-20261102",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "toolchain": {
+    "cargo": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)\nrelease: 1.100.0-nightly\ncommit-hash: 7941be6fb416b4cd9666aef7b858dfea25587a8c\ncommit-date: 2026-09-11\nhost: aarch64-apple-darwin\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.7.1 (sys:0.4.90+curl-8.21.0 system ssl:(SecureTransport) LibreSSL/3.3.6)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Mac OS 26.7.2 [64-bit]",
+    "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1"
+  },
+  "frontend": {
+    "passed": 110,
+    "failed": 0,
+    "vueTypesExit": 0,
+    "mcpTypesExit": 0,
+    "scope": "Merged source/static and selected mocked transport tests; no actual installed-WASM claim"
+  },
+  "oracles": {
+    "wire": {
+      "acceptedWireDefinitions": 11,
+      "operations": 5,
+      "negativeControls": 8,
+      "definitionsSha256": "2db1454d84fa6d74bd688b8ba77e408fa05c59784318cea76c186f9134777a0d",
+      "oracleSources": {
+        "docs/qualification/nurbs-exact-conics-2026-11-03/exact_oracle.py": "2421d8acdc414558a34f530a5571696467a074d6320bcf64bb16b6c965dc8203",
+        "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py": "33b4ee1336e68d2ef2f1a218403502e3d0dd200cd1a46bb44c4e43bf0fe62f75",
+        "docs/qualification/nurbs-exact-tori-2026-11-03/exact_oracle.py": "50223e0c49c80b60f4430f1957df7a5c8b790b2e9c7ffdc4e3b10450026eee30",
+        "docs/qualification/nurbs-exact-frusta-2026-11-03/exact_oracle.py": "25cf425223c5ba5d348ae0e0403f97b3d25b136e50823b36fed08c0df0ecf0f9",
+        "docs/qualification/nurbs-exact-planar-regions-2026-11-03/exact_oracle.py": "850905ebd61e814a9b9fc88e79c4c85d3c47698b280703121a8b0a637840ca65"
+      },
+      "scope": "Actual serialized JSON geometry independently verified by exact Fraction full-domain primitive oracles against parsed input, plus source/metadata/authority/budget negative controls. No installed WASM, editor, STEP, B-rep or whole-app claim."
+    },
+    "planar-regions": {
+      "acceptedDefinitions": 10,
+      "negativeControls": 12,
+      "globalGaugeControl": true,
+      "minorAloneMissesOutOfPlaneDamage": true,
+      "radialIdentityAloneMissesAngularPhaseChange": true,
+      "definitionsSha256": "7d9a4b01a3e09392698d97e11434bb5a1043df137216cbf59627d1caf17eea97",
+      "supportSourceSha256": "33b4ee1336e68d2ef2f1a218403502e3d0dd200cd1a46bb44c4e43bf0fe62f75",
+      "scope": "Exact Fraction plane and canonical angular/linear-radius identities on all4 cells; full disk/annulus coverage, seam, boundary/center classification and nonzero exact plane minor. No sampling, B-rep/shell/solid, numeric-normal/evaluator-bit or application claim."
+    },
+    "frusta": {
+      "acceptedDefinitions": 9,
+      "negativeControls": 10,
+      "globalGaugeControl": true,
+      "membershipAloneMissesColumnClockChange": true,
+      "definitionsSha256": "18166f0b60935b17ec87f3027ae6d496530f70f734d5ca9ebfef110500d47b64",
+      "supportSourceSha256": "33b4ee1336e68d2ef2f1a218403502e3d0dd200cd1a46bb44c4e43bf0fe62f75",
+      "scope": "Exact Fraction affine quadric and original angular/linear-height parameterization on all4 cells; complete side coverage, seam and collapsed end, correct intrinsic cone-apex metadata. No sampling, caps/B-rep/solid/volume, smooth apex, evaluator-bit or application claim."
+    },
+    "tori": {
+      "acceptedDefinitions": 6,
+      "negativeControls": 9,
+      "globalGaugeControl": true,
+      "definitionsSha256": "fce8c3b010a3819f7ad84137ac92e11eeb7c0616041301d11bac21d03b7e88f7",
+      "supportSourceSha256": "33b4ee1336e68d2ef2f1a218403502e3d0dd200cd1a46bb44c4e43bf0fe62f75",
+      "scope": "Exact Fraction affine quartic and full canonical rational product parameterization on all16 tensor cells, both seams, full embedded ring-torus coverage. Genuine literal horn/spindle/zero-tube cases refused. No sampling, B-rep/solid/volume, evaluator-bit or application claim."
+    },
+    "quadrics": {
+      "acceptedDefinitions": 5,
+      "negativeControls": 6,
+      "globalGaugeControl": true,
+      "definitionsSha256": "b8c4ac09d6749fa4b76638db426f1150e681e634d5554f5990f7e38981718f06",
+      "tensorBasisOracleSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+      "scope": "Exact binary64 Fraction tensor coefficients on eight cells: affine quadric identity, canonical rational product parameterization, full circle/upper-semicircle coverage, seam and collapsed poles. No sampling, topology, evaluator-bit or application claim."
+    },
+    "conics": {
+      "acceptedDefinitions": 4,
+      "negativeControls": 4,
+      "globalGaugeControl": true,
+      "definitionsSha256": "06d7df6f99c6e18ce6034ca713adcfc38d8a42295c54fcb6a9363fd83fb39312",
+      "basisOracleSha256": "11b4a9dc6bfa930d437143da65f625c07533ab0fba67f07cb8b4b2b6cace6c0b",
+      "scope": "Exact Fraction Cox-de Boor polynomial identity on every actual knot cell, plane, cardinal endpoints, positive angular numerator. Native geometry only; no sampling, evaluator-bit or application claim."
+    },
+    "surface-factor": {
+      "acceptedDefinitions": 6,
+      "negativeControls": 4,
+      "failed": 0,
+      "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+      "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+      "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+    },
+    "surface-insertion": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 3,
+      "failed": 0,
+      "definitionsSha256": "3102d2c9de54e81a3790be1fa5e9fd90a22288fece9112bb019f65567ac5cbbe",
+      "scope": "Exact full bivariate homogeneous cross-products on every original/output tensor knot cell. Actual binary64 data; default/no-codec equality. No sampled geometry, runtime, topology or compiler claim."
+    },
+    "factor": {
+      "passed": 8,
+      "failed": 0,
+      "checks": {
+        "elevated-primitive": true,
+        "constant": true,
+        "degree25": true,
+        "negative-factor": true,
+        "rational-clock": true,
+        "3d-clock": true,
+        "wrong-clock-detected": true,
+        "per-pole-weight-sign-change-detected": true
+      },
+      "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+      "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+    },
+    "curve-insertion": {
+      "acceptedDefinitions": 8,
+      "negativeControls": 2,
+      "failed": 0,
+      "definitionsSha256": "efd2084959f63c33dfcf14ca57d619145637fb4e7f117350ffbb71e1b531fac2",
+      "scope": "Exact rational polynomial cross products on every source/output knot cell; actual binary64 coefficients; default/no-codec outputs match. No runtime or topology claim."
+    }
+  },
+  "previousDefinitionsUnchanged": {
+    "exact-planar-region-oracle=": {
+      "definitions": 10,
+      "unchanged": true
+    },
+    "exact-frustum-oracle=": {
+      "definitions": 9,
+      "unchanged": true
+    },
+    "exact-torus-oracle=": {
+      "definitions": 6,
+      "unchanged": true
+    },
+    "exact-quadric-oracle=": {
+      "definitions": 5,
+      "unchanged": true
+    },
+    "exact-conic-oracle=": {
+      "definitions": 4,
+      "unchanged": true
+    },
+    "factor-oracle=": {
+      "definitions": 6,
+      "unchanged": true
+    },
+    "insertion-oracle=": {
+      "definitions": 8,
+      "unchanged": true
+    },
+    "surface-factor-oracle=": {
+      "definitions": 6,
+      "unchanged": true
+    },
+    "surface-insertion-oracle=": {
+      "definitions": 8,
+      "unchanged": true
+    }
+  },
+  "testInventory": {
+    "previousNames": 2249,
+    "combinedNames": 2259,
+    "retained": 2249,
+    "missing": [],
+    "added": [
+      "analysis::surface_injectivity::separable_monotone::rank_contract::weak_coordinate_injection_cannot_grant_fibered_interior_rank",
+      "analysis::surface_injectivity::separable_monotone::tests::full_product_chart_owns_critical_projection_and_every_budget",
+      "analysis::surface_injectivity::separable_monotone::tests::two_distinct_source_parameters_with_the_same_world_point_are_not_admitted",
+      "intersection::certified_curve_surface::patch_uv::tests::a_newton_proposal_does_not_discard_original_point_uncertainty",
+      "intersection::certified_curve_surface::patch_uv::tests::original_weight_inverse_encloses_the_analytic_coupled_root",
+      "intersection::certified_curve_surface::patch_uv_injectivity::tests::exact_factorization_covers_asymmetric_and_extreme_positive_weights",
+      "intersection::certified_curve_surface::patch_uv_injectivity::tests::invalid_weights_never_form_an_injectivity_proof",
+      "sweeps::progressive_sweep::original_smooth_volume::tests::contact::closed_contact_original_c2_owns_periodic_fit_and_geometric_arc_clock",
+      "sweeps::progressive_sweep::original_smooth_volume::tests::contact::contact_original_c1_guide_does_not_acquire_c2",
+      "sweeps::progressive_sweep::original_smooth_volume::tests::contact::contact_original_c2_volume_owns_fit_affine_laws_caps_and_one_budget"
+    ],
+    "parser": "Includes libtest should-panic suffix; initial name scan omitted that one expected-panic test in both snapshots. Final inventory matches complete2259 binary --list."
+  },
+  "historicalFailure": {
+    "status": "terminal",
+    "exitCode": 101,
+    "passed": 7,
+    "failed": 1,
+    "cause": "Test requested constructed geometry at center2^60, outside existing curve-control1e9 storage bound. Native correctly refused; replaced positive test with exact large radius and small axes plus explicit out-of-range native refusal test. Limits unchanged."
+  },
+  "fixedContracts": {
+    "status": "terminal",
+    "exitCode": 0,
+    "passed": 19,
+    "failed": 0,
+    "log": "native241-transport-r2.log"
+  },
+  "mainWasmObservation": {
+    "source": "d2dbf1ef346db9f667b5a4093e7bfaffc7b23a6a",
+    "artifact": "51f66e2ceb961701084c7f4826f828adc0d8e63ea641a6286668d7c19d2524bc",
+    "bytes": 21639548,
+    "installedPackageUpdated": false,
+    "scope": "separate exact-artifact102ABI/90worker candidate; does not qualify ce1/JSON-adapter source or installed distribution"
+  },
+  "limits": "All original limits retained:1m-work/4096-bit arithmetic, native geometry bounds,2MiB core JSON cap and separate facade cap. No new delivery admission/profile/budget changes.",
+  "completion": "Catalogue remains240=79integrated+161native; JSON adapter/native facade coverage does not complete WASM/Rush/editor/STEP or original1000."
+}
