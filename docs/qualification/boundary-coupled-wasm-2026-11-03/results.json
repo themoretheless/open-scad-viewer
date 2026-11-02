@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "sourceCommit": "8ff4c6ace3272a4d31d1013a7b6e3c941b791039",
+  "wasmSha256": "b75bb11bc785453afa2764fb00a1f5303bf1b2a59e8a14dc9d8f57aaee81819e",
+  "wasmBytes": 21579353,
+  "artifact": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/b75bb11bc785453afa2764fb00a1f5303bf1b2a59e8a14dc9d8f57aaee81819e.wasm",
+  "independentCopy": true,
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 54,
+  "workers": {
+    "started": 44,
+    "terminated": 44
+  },
+  "advancedCases": 16,
+  "vueTsc": "passed",
+  "installedPackageUpdated": false,
+  "temporaryWorktreeRemoved": true,
+  "scope": "Actual raw import-free WASM ABI and Chromium module Workers for coupled rational UV and exact boundary contact families",
+  "verified": [
+    "separable and asymmetric coupled UV with order 2/4",
+    "explicit global broad UV enclosure at existing conditioning limit",
+    "weighted rational source",
+    "degree-25 exact corner",
+    "nonbinary natural source parameter enclosure",
+    "signed subnormal offsets preserve exact side membership",
+    "all four edges and corners with original projective edge clocks",
+    "non-singleton boundary roots remain unresolved",
+    "input preservation and owned Worker termination"
+  ],
+  "remaining": [
+    "general algebraic boundary membership",
+    "general curved supports and freeform tangencies",
+    "all surface/surface branches",
+    "periodic and pole cases",
+    "trim and Body admission",
+    "installed-package provider/editor and whole-library qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "173fa7ef75d7151b12f5a486937773db280bd482d613429b4629eff7a7bfd7fe",
+    "tools/browser-qualification/advanced-patch-fixtures.ts": "360c7ce0427d6bbe43a0c5522e84b8e6baef1e40268fc3d429826cc041d63b8e",
+    "tools/browser-qualification/surface-self-intersection.ts": "f23325b4a43ccb4615062bfc23014ceb4240e16bb33bdca7f1782fd50124e6a1",
+    "tools/browser-qualification/surface-self-intersection.mjs": "735cc64e30c5d4b9c7341ea42ad6408158831b2edd40a5393ab5c0087f7ad4b2",
+    "src/services/originalPatchContactsProtocol.ts": "154bfd1b63d5678eef4b0e8a02efb9bf564c744f71c3a14c95c5dcf0d2331da1",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "f6529f95c6dd7832620316a8b2b6c9ada10682e7039fb141b7ad5fbf2a66a2fa",
+    "src/workers/surfaceSelfIntersection.worker.ts": "ebe064abe33ff1c2b1926d0c6ff8f81accb18aa3b3030f744fa418a597d465b2"
+  }
+}

@@ -10,8 +10,6 @@ pub(super) fn solve(
     plane: &[Expansion; 4],
     tolerance: f64,
 ) -> Result<OriginalPlaneRootsOutcome, Reason> {
-    let tail = n * 4 + uv.len();
-    let u = &x[n * 4..tail];
     let bezier = uv[span - degree + 1] == uv[span] && uv[span + degree] == uv[span + 1];
     let polynomial = if bezier {
         let mut residuals = Vec::new();
@@ -54,41 +52,7 @@ pub(super) fn solve(
         }
         power(&residuals, ctx)?
     } else {
-        let h = series(&x[..n * 4], u, degree, span, &u[span], degree, ctx)?;
-        let width = u[span + 1].sub(&u[span], ctx)?;
-        let mut factor = Expansion::scalar(1.);
-        let mut coefficients = Vec::new();
-        for q in 0..=degree {
-            let mut value = Rational::zero();
-            for axis in 0..3 {
-                value = value.add(
-                    &h[q][axis].mul(&Rational::scalar(plane[axis].clone()), ctx)?,
-                    ctx,
-                )?;
-            }
-            value = value.sub(&h[q][3].mul(&Rational::scalar(plane[3].clone()), ctx)?, ctx)?;
-            value.n = value.n.mul(&factor, ctx)?;
-            if value.d.sign() != Sign::Positive {
-                return Err(Reason::MissingProof);
-            }
-            coefficients.push(value);
-            if q < degree {
-                factor = factor.mul(&width, ctx)?;
-            }
-        }
-        let mut polynomial = Vec::new();
-        for i in 0..coefficients.len() {
-            let mut value = coefficients[i].n.clone();
-            if value.sign() != Sign::Zero {
-                for (j, c) in coefficients.iter().enumerate() {
-                    if i != j {
-                        value = value.mul(&c.d, ctx)?;
-                    }
-                }
-            }
-            polynomial.push(value);
-        }
-        polynomial
+        super::polynomial::original_polynomial(ctx, x, uv, n, degree, span, plane)?
     };
     if polynomial.iter().all(|v| v.sign() == Sign::Zero) {
         return Ok(OriginalPlaneRootsOutcome::Coincident);

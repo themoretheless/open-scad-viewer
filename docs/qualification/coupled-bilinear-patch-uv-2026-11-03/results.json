@@ -1,0 +1,32 @@
+{
+  "nurbsIntegrationPassed": 72,
+  "bridgePassed": 7,
+  "exactProofUnitPassed": 4,
+  "rustTotalPassed": 83,
+  "clientPassed": 77,
+  "vueTsc": "passed",
+  "scope": "Original plane-expression contacts on positive rational bilinear parallelogram support with coupled UV clocks",
+  "verified": [
+    "exact positive Jacobian factorization proves global UV bijection",
+    "original-weight Krawczyk inverse with untrusted Newton proposals",
+    "symmetric/asymmetric weights, transposed target axes and orders 2/4",
+    "rounded determinant trap uses coupled path",
+    "global whole-chart UV enclosure preserves proved contact when numeric inverse fails",
+    "existing 1e12 Surface weight-conditioning guard preserved",
+    "uncertain source-point intervals cannot be discarded by Newton steering"
+  ],
+  "newCoupledWasmQualified": false,
+  "trimBodyAdmission": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "9aa58a14efc88a19b994a3b376e16cfc7109f4a6be03fa1d0c50f79b2cf9252b",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "af3c515899876574bfbbef38c405ae800131b5f943b6c88d520b377a7b66de55",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_uv.rs": "6a9ca051aa053dec9c01ab86a77a3cc919e0a097587db386c272340483dbc476",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_uv_injectivity.rs": "49365c546a6ff2be7c983df655607063c84fca2c6bbb0b40972c093a9de545d0",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "7f069c1243898e935efcbd0c5b1abb8c504d43d863a2260bede102f334882954",
+    "crates/geometry-bridge/src/intersections/original_patch_contacts.rs": "6efd60b2f36be8aca785dd7210213a7d27aa46a60dbb0bd2d0ac316ce962f7e3",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "98ea75369146d3681082b6bdeca1ab6599206a2e9bca01031c0f4754c77b0a42",
+    "src/services/originalPatchContactsProtocol.ts": "397d20631da383cd945d54ae639d0ff8a29f21ed43e2b7ff8c719ba9ab8a4dfd",
+    "tests/originalPatchContactsProtocol.test.ts": "4e4b43f0136ebac833bb6e97ba50ee341361f3c1630e37793f52df45f044e0c8",
+    "docs/api/original-affine-patch-contacts.md": "a23374e297399c72337c413366c5e9b82bef33f5b19aee54ae766ccb96717fec"
+  }
+}

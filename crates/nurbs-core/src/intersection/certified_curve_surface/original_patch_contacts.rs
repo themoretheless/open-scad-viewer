@@ -2,12 +2,24 @@
 use super::affine_plane::{enclosure, q, subtract};
 use super::*;
 use cad_predicates::{
-    AuthoredScalar, Limits, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome,
-    PredicateContext, SourceArena, ToleranceContext, rational_bspline_affine_patch_roots,
+    rational_bspline_affine_patch_edge_sign, rational_bspline_affine_patch_roots, AuthoredScalar,
+    Limits, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome, PredicateContext, Sign,
+    SourceArena, ToleranceContext,
 };
 use num_traits::Zero;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginalPatchUvProof {
+    SeparableProjective,
+    InjectiveBilinearKrawczyk,
+    PositiveBilinearGlobalInverse,
+    ExactBoundaryProjective,
+    OriginalAffineCoordinateBounds,
+    OriginalPolynomialCommonRoot,
+    OriginalPolynomialCoordinateSign,
+}
 #[derive(Debug)]
 pub struct OriginalPatchContact {
+    pub uv_proof: OriginalPatchUvProof,
     pub parameter_box: Box3,
     pub position_bounds: [[f64; 2]; 3],
     /// Original one-sided spans and their exact scalar multiplicities.
@@ -23,12 +35,15 @@ pub struct OriginalPatchContacts {
     pub exact_work: u64,
     pub spans: usize,
     pub complete: bool,
+    pub target_weights_separable: bool,
+    pub target_uv_injectivity: Option<super::patch_uv_injectivity::BilinearUvInjectivity>,
 }
 /// All original curve contacts with an exact untrimmed parallelogram support.
 /// Positive separable target weights give independent projective UV clocks.
 /// The plane is an expression of the original vertices, so derived normal and
 /// offset need not be representable as binary64. Source continuity is required
-/// at interior knots. Boundary membership and coincident spans stay unresolved.
+/// at interior knots. Non-singleton boundary membership and coincident spans
+/// stay unresolved.
 /// This is neither a freeform tangency solver nor a trim/Body admission.
 pub fn original_affine_patch_contacts(
     c: &Curve,
@@ -68,13 +83,14 @@ pub fn original_affine_patch_contacts(
             && s.degree_v == 1
             && s.control_points.len() == 2
             && s.control_points[0].len() == 2
-            && q(s.weights[0][0]) * q(s.weights[1][1]) == q(s.weights[0][1]) * q(s.weights[1][0])
             && s.knots_u[0] == s.knots_u[1]
             && s.knots_u[2] == s.knots_u[3]
             && s.knots_v[0] == s.knots_v[1]
             && s.knots_v[2] == s.knots_v[3],
-        "Target must be a clamped affine patch with exact separable weights",
+        "Target must be one clamped degree-(1,1) patch",
     )?;
+    let separable =
+        q(s.weights[0][0]) * q(s.weights[1][1]) == q(s.weights[0][1]) * q(s.weights[1][0]);
     let pole = |i: usize, j: usize| std::array::from_fn(|k| q(s.control_points[i][j][k]));
     let origin = pole(0, 0);
     let u = subtract(&pole(1, 0), &origin);
@@ -137,6 +153,8 @@ pub fn original_affine_patch_contacts(
         exact_work: 0,
         spans: 0,
         complete: false,
+        target_weights_separable: separable,
+        target_uv_injectivity: None,
     };
     for span in c.degree..c.control_points.len() {
         let domain = [c.knots[span], c.knots[span + 1]];
@@ -176,6 +194,7 @@ pub fn original_affine_patch_contacts(
             }
         };
         out.scalar_proofs.push((span, decision));
+        let mut coordinate_bounds = None;
         for root in roots {
             let t = if root.interval == [0., 0.] {
                 I::point(domain[0])
@@ -195,7 +214,96 @@ pub fn original_affine_patch_contacts(
                 continue;
             }
             if alpha.lo <= 0. || alpha.hi >= 1. || beta.lo <= 0. || beta.hi >= 1. {
-                out.ambiguous_parameters.push([t.lo, t.hi]);
+                if root.interval[0] == root.interval[1] {
+                    if let Some(contact) = super::patch_exact_membership::contact(
+                        c,
+                        s,
+                        span,
+                        root.interval[0],
+                        root.multiplicity,
+                    )? {
+                        if out.target_uv_injectivity.is_none() {
+                            out.target_uv_injectivity =
+                                Some(super::patch_uv_injectivity::certify(&s.weights)?);
+                        }
+                        merge_contact(&mut out.contacts, contact);
+                    }
+                } else {
+                    if coordinate_bounds.is_none() {
+                        coordinate_bounds =
+                            Some(super::patch_coordinate_bounds::original(c, s, span)?);
+                    }
+                    let mut bounds = coordinate_bounds.as_ref().unwrap().clone();
+                    let mut common_root_proven = false;
+                    let mut coordinate_sign_proven = false;
+                    let mut proven_outside = false;
+                    if matches!(
+                        bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)?,
+                        super::patch_coordinate_bounds::Decision::Unresolved
+                    ) {
+                        for edge in 0..4 {
+                            let coordinate = [alpha, beta][edge / 2];
+                            let side = (edge % 2) as f64;
+                            if coordinate.lo > side || coordinate.hi < side {
+                                continue;
+                            }
+                            let before = ctx.work_used();
+                            let proof = rational_bspline_affine_patch_edge_sign(
+                                &mut ctx,
+                                &controls,
+                                &knots,
+                                c.degree,
+                                span,
+                                patch,
+                                edge,
+                                root.interval,
+                            )
+                            .map_err(|_| crate::input("Invalid original edge common-root query"))?;
+                            out.exact_work += ctx.work_used() - before;
+                            out.scalar_proofs.last_mut().unwrap().1.work_used = ctx.work_used();
+                            match proof.sign {
+                                Ok(Sign::Zero) => {
+                                    bounds.constrain_edge(edge);
+                                    common_root_proven = true;
+                                }
+                                Ok(sign) => {
+                                    coordinate_sign_proven = true;
+                                    if (edge % 2 == 0 && sign == Sign::Negative)
+                                        || (edge % 2 == 1 && sign == Sign::Positive)
+                                    {
+                                        proven_outside = true;
+                                        break;
+                                    }
+                                    bounds.constrain_inward(edge);
+                                }
+                                Err(_) => {}
+                            }
+                        }
+                    }
+                    if proven_outside {
+                        continue;
+                    }
+                    match bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)? {
+                        super::patch_coordinate_bounds::Decision::Outside => {}
+                        super::patch_coordinate_bounds::Decision::Unresolved => {
+                            out.ambiguous_parameters.push([t.lo, t.hi])
+                        }
+                        super::patch_coordinate_bounds::Decision::Contact(mut contact) => {
+                            if coordinate_sign_proven {
+                                contact.uv_proof =
+                                    OriginalPatchUvProof::OriginalPolynomialCoordinateSign;
+                            } else if common_root_proven {
+                                contact.uv_proof =
+                                    OriginalPatchUvProof::OriginalPolynomialCommonRoot;
+                            }
+                            if out.target_uv_injectivity.is_none() {
+                                out.target_uv_injectivity =
+                                    Some(super::patch_uv_injectivity::certify(&s.weights)?);
+                            }
+                            merge_contact(&mut out.contacts, contact);
+                        }
+                    }
+                }
                 continue;
             }
             let natural =
@@ -210,40 +318,94 @@ pub fn original_affine_patch_contacts(
                 let denominator = I::point(w1).mul(I::point(1.).sub(x)?)?.add(numerator)?;
                 numerator.div(denominator)?.intersect(0., 1.)
             };
-            let ub = natural(clock(alpha, s.weights[0][0], s.weights[1][0])?, &s.knots_u)?;
-            let vb = natural(clock(beta, s.weights[0][0], s.weights[0][1])?, &s.knots_v)?;
+            let mut global = false;
+            let (uv, uv_proof) = if separable {
+                let inverse = clock(alpha, s.weights[0][0], s.weights[1][0])
+                    .and_then(|u| Ok([u, clock(beta, s.weights[0][0], s.weights[0][1])?]));
+                match inverse {
+                    Ok(uv) => (uv, OriginalPatchUvProof::SeparableProjective),
+                    Err(e) if e.code == crate::NUMERIC_ERROR => {
+                        global = true;
+                        (
+                            [I::new(0., 1.)?; 2],
+                            OriginalPatchUvProof::PositiveBilinearGlobalInverse,
+                        )
+                    }
+                    Err(e) => return Err(e),
+                }
+            } else {
+                if out.target_uv_injectivity.is_none() {
+                    out.target_uv_injectivity =
+                        Some(super::patch_uv_injectivity::certify(&s.weights)?);
+                }
+                let inverse = match super::patch_uv::inverse(&s.weights, alpha, beta) {
+                    Ok(v) => v,
+                    Err(e) if e.code == crate::NUMERIC_ERROR => None,
+                    Err(e) => return Err(e),
+                };
+                match inverse {
+                    Some(b) => (
+                        [I::new(b[0][0], b[0][1])?, I::new(b[1][0], b[1][1])?],
+                        OriginalPatchUvProof::InjectiveBilinearKrawczyk,
+                    ),
+                    None => {
+                        global = true;
+                        (
+                            [I::new(0., 1.)?; 2],
+                            OriginalPatchUvProof::PositiveBilinearGlobalInverse,
+                        )
+                    }
+                }
+            };
+            if global && out.target_uv_injectivity.is_none() {
+                out.target_uv_injectivity = Some(super::patch_uv_injectivity::certify(&s.weights)?);
+            }
+            // Global bijectivity proves existence and uniqueness even when a
+            // tight numeric inverse cannot be enclosed. Its whole-chart box
+            // is honest evidence, not a tolerance-qualified authored vertex.
+            let ub = if global {
+                I::new(s.knots_u[1], s.knots_u[2])?
+            } else {
+                natural(uv[0], &s.knots_u)?.intersect(s.knots_u[1], s.knots_u[2])?
+            };
+            let vb = if global {
+                I::new(s.knots_v[1], s.knots_v[2])?
+            } else {
+                natural(uv[1], &s.knots_v)?.intersect(s.knots_v[1], s.knots_v[2])?
+            };
             let contact = OriginalPatchContact {
+                uv_proof,
                 parameter_box: [[t.lo, t.hi], [ub.lo, ub.hi], [vb.lo, vb.hi]],
                 position_bounds: std::array::from_fn(|k| [p[k].lo, p[k].hi]),
                 source_spans: vec![span],
                 multiplicities: vec![root.multiplicity],
             };
-            // Only identical exact knot parameters alias; overlapping nondegenerate
-            // root enclosures remain distinct proof events.
-            if t.lo == t.hi {
-                if let Some(previous) = out
-                    .contacts
-                    .iter_mut()
-                    .find(|x| x.parameter_box[0] == [t.lo, t.hi])
-                {
-                    previous.source_spans.push(span);
-                    previous.multiplicities.push(root.multiplicity);
-                    for k in 0..3 {
-                        previous.parameter_box[k][0] =
-                            previous.parameter_box[k][0].min(contact.parameter_box[k][0]);
-                        previous.parameter_box[k][1] =
-                            previous.parameter_box[k][1].max(contact.parameter_box[k][1]);
-                        previous.position_bounds[k][0] =
-                            previous.position_bounds[k][0].min(contact.position_bounds[k][0]);
-                        previous.position_bounds[k][1] =
-                            previous.position_bounds[k][1].max(contact.position_bounds[k][1]);
-                    }
-                    continue;
-                }
-            }
-            out.contacts.push(contact);
+            merge_contact(&mut out.contacts, contact);
         }
     }
     out.complete = out.unresolved_spans.is_empty() && out.ambiguous_parameters.is_empty();
     Ok(out)
+}
+
+// Only identical exact parameters alias. Overlapping interval roots stay separate.
+fn merge_contact(contacts: &mut Vec<OriginalPatchContact>, contact: OriginalPatchContact) {
+    let t = contact.parameter_box[0];
+    if t[0] == t[1] {
+        if let Some(previous) = contacts.iter_mut().find(|x| x.parameter_box[0] == t) {
+            previous.source_spans.extend(contact.source_spans);
+            previous.multiplicities.extend(contact.multiplicities);
+            for k in 0..3 {
+                previous.parameter_box[k][0] =
+                    previous.parameter_box[k][0].min(contact.parameter_box[k][0]);
+                previous.parameter_box[k][1] =
+                    previous.parameter_box[k][1].max(contact.parameter_box[k][1]);
+                previous.position_bounds[k][0] =
+                    previous.position_bounds[k][0].min(contact.position_bounds[k][0]);
+                previous.position_bounds[k][1] =
+                    previous.position_bounds[k][1].max(contact.position_bounds[k][1]);
+            }
+            return;
+        }
+    }
+    contacts.push(contact);
 }

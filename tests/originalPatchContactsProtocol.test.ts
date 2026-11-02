@@ -20,4 +20,19 @@ describe('original patch contacts protocol',()=>{
  it('rejects duplicate scalar span proofs',()=>{const r=report();r.scalarProofs.push(structuredClone(r.scalarProofs[0]));r.spans=2;r.exactWork=60;expect(isOriginalPatchContactsReport(r)).toBe(false)})
  it('rejects mismatched one-sided order arrays',()=>{const r=report();r.contacts[0].multiplicities=[];expect(isOriginalPatchContactsReport(r)).toBe(false)})
  it('rejects sparse root evidence',()=>{const r=report();r.contacts[0].parameterBox=Array(3);expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('accepts coupled UV only with global injectivity and interval proof metadata',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='injective-bilinear-krawczyk';expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects coupled contacts without global UV injectivity',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=false;r.contacts[0].uvMethod='injective-bilinear-krawczyk';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('rejects a separable shortcut attached to coupled weights',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='separable-projective';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+
+ it('accepts an explicitly broad UV box with a global bijection proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='positive-bilinear-global-inverse';r.contacts[0].parameterBox[1]=[-2,2];r.contacts[0].parameterBox[2]=[10,14];expect(isOriginalPatchContactsReport(r)).toBe(true)})
+
+ it('accepts an exact boundary-projective contact with target proof metadata',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='exact-boundary-projective';r.contacts[0].parameterBox[1]=[-2,-2];expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects a boundary proof tag without target proof metadata',()=>{const r=report();r.contacts[0].uvMethod='exact-boundary-projective';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+
+ it('accepts original-coordinate evidence for an interval root',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-affine-coordinate-bounds';r.contacts[0].parameterBox[1]=[-2,-2];r.scalarProofs[0].normalizedOriginalSpanRoots[0].interval=[.49,.51];expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects original-coordinate evidence without a target bijection',()=>{const r=report();r.contacts[0].uvMethod='original-affine-coordinate-bounds';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('accepts exact polynomial common-root evidence with target proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects polynomial common-root evidence without target proof',()=>{const r=report();r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('accepts polynomial coordinate-sign evidence with a target bijection',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-polynomial-coordinate-sign';expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects coordinate-sign evidence without target proof metadata',()=>{const r=report();r.contacts[0].uvMethod='original-polynomial-coordinate-sign';expect(isOriginalPatchContactsReport(r)).toBe(false)})
 })

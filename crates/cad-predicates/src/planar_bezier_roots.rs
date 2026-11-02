@@ -680,3 +680,7 @@ pub fn planar_bezier_stationary_roots(
 #[cfg(test)]
 #[path = "planar_bezier_roots/tests/stationary_tests_integration.rs"]
 mod stationary_tests;
+
+#[path = "planar_bezier_common_root.rs"]
+mod common_root;
+pub(crate) use common_root::{unique_common_root, unique_root_sign};

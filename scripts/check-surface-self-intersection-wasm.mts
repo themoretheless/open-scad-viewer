@@ -1,5 +1,9 @@
+import {quadricCarrierCases} from '../tools/browser-qualification/quadric-carrier-fixtures.ts'
+import {isOriginalQuadricCarrierReport} from '../src/services/originalQuadricCarrierProtocol.ts'
+import {commonRootPatchCases} from '../tools/browser-qualification/common-root-patch-fixtures.ts'
+import {advancedPatchCases} from '../tools/browser-qualification/advanced-patch-fixtures.ts'
 import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol.ts'
-import {originalPatchFixture,originalPatchKnotFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
+import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -149,9 +153,20 @@ const zero=patchReply({...originalPatchFixture(2),maxExactWork:0});assert.equal(
 const finite=originalPatchFixture(2);for(const p of finite.curve.controlPoints)p[1]=2
 const exterior=patchReply(finite);assert.equal(exterior.status,'absent-on-patch');assert.equal(exterior.patchAbsenceProven,true);cases.push({name:'original-patch-finite-exclusion',status:exterior.status})
 for(const p of finite.curve.controlPoints)p[1]=0
-const boundary=patchReply(finite);assert.equal(boundary.status,'unresolved');assert(boundary.ambiguousParameters.length>0);cases.push({name:'original-patch-boundary-unresolved',status:boundary.status})
+const boundary=patchReply(finite);assert.equal(boundary.status,'present');assert.equal(boundary.contacts[0].uvMethod,'exact-boundary-projective');cases.push({name:'original-patch-exact-boundary',status:boundary.status})
+const intervalBoundary=structuredClone(finite);intervalBoundary.curve.weights=[1,2,4]
+const intervalEdge=patchReply(intervalBoundary);assert.equal(intervalEdge.status,'present');assert.equal(intervalEdge.curvePatchCoverageComplete,true);assert.equal(intervalEdge.contacts[0].uvMethod,'original-affine-coordinate-bounds');cases.push({name:'original-patch-interval-edge-identity',status:intervalEdge.status})
+const irrationalEdge=patchReply(originalPatchAlgebraicBoundaryFixture());assert.equal(irrationalEdge.status,'present');assert.equal(irrationalEdge.curvePatchCoverageComplete,true);assert.equal(irrationalEdge.contacts[0].uvMethod,'original-affine-coordinate-bounds');assert.deepEqual(irrationalEdge.contacts[0].positionBounds,[[0,0],[0,0],[.5,.5]]);cases.push({name:'original-patch-irrational-edge-identity',status:irrationalEdge.status})
+const commonRoot=patchReply(originalPatchAlgebraicBoundaryFixture(true));assert.equal(commonRoot.status,'present');assert.equal(commonRoot.curvePatchCoverageComplete,true);assert.equal(commonRoot.contacts[0].uvMethod,'original-polynomial-common-root');cases.push({name:'original-patch-nonproportional-common-root-proven',status:commonRoot.status})
 reject('original-patch-forged-body-admission',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),bodyAdmission:true})
 reject('original-patch-over-limit-exact-budget',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),maxExactWork:1000001})
+for(const fixture of [...advancedPatchCases,...commonRootPatchCases]){const before=JSON.stringify(fixture.query),r=patchReply(fixture.query);assert.equal(JSON.stringify(fixture.query),before);fixture.check(r);cases.push({name:fixture.name,status:r.status,contact:r.contacts[0]??null,complete:r.curvePatchCoverageComplete})}
+const scalarOnlyQuery=originalPatchAlgebraicBoundaryFixture(true);for(const p of scalarOnlyQuery.curve.controlPoints)p[1]=2
+const scalarOnly=patchReply(scalarOnlyQuery);assert.equal(scalarOnly.status,'absent-on-patch');cases.push({name:'common-root-scalar-budget-baseline',status:scalarOnly.status,exactWork:scalarOnly.exactWork})
+const auxiliaryBudget=patchReply({...originalPatchAlgebraicBoundaryFixture(true),maxExactWork:scalarOnly.exactWork+10});assert.equal(auxiliaryBudget.status,'unresolved');assert.equal(auxiliaryBudget.contacts.length,0);assert(auxiliaryBudget.ambiguousParameters.length>0);assert(auxiliaryBudget.exactWork<=auxiliaryBudget.maxExactWork);assert.equal(auxiliaryBudget.exactWork,auxiliaryBudget.scalarProofs.reduce((sum,p)=>sum+p.workUsed,0));cases.push({name:'common-root-auxiliary-work-exhaustion',status:auxiliaryBudget.status,exactWork:auxiliaryBudget.exactWork,maxExactWork:auxiliaryBudget.maxExactWork})
+for(const fixture of quadricCarrierCases){const before=JSON.stringify(fixture.query),reply=request({op:'nurbs_original_quadric_carrier_roots',...fixture.query});assert.equal(reply.ok,true);assert(isOriginalQuadricCarrierReport(reply.value));fixture.check(reply.value);assert.equal(JSON.stringify(fixture.query),before);cases.push({name:fixture.name,status:reply.value.status,complete:reply.value.curveCarrierCoverageComplete,roots:reply.value.roots})}
+reject('quadric-forged-finite-admission',{op:'nurbs_original_quadric_carrier_roots',...quadricCarrierCases[0]!.query,finiteSurfaceUvAdmission:true})
+reject('quadric-over-limit-work',{op:'nurbs_original_quadric_carrier_roots',...quadricCarrierCases[0]!.query,maxExactWork:1000001})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

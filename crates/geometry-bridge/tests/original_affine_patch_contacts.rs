@@ -1,6 +1,6 @@
 use geometry_bridge::dispatch;
 use nurbs_core::{curve::Curve, surface::Surface};
-use value_codec::{Value, json};
+use value_codec::{json, Value};
 fn request(order: usize) -> Value {
     let c = Curve {
         degree: order,
@@ -73,7 +73,7 @@ fn zero_exact_budget_keeps_unresolved_source_spans() {
     assert!(!r["unresolvedSpans"].as_array().unwrap().is_empty());
 }
 #[test]
-fn finite_exclusion_and_boundary_ambiguity_remain_distinct() {
+fn finite_exclusion_and_exact_boundary_contact_remain_distinct() {
     let mut v = request(2);
     for p in v["curve"]["controlPoints"].as_array_mut().unwrap() {
         p[1] = json!(2);
@@ -85,8 +85,9 @@ fn finite_exclusion_and_boundary_ambiguity_remain_distinct() {
         p[1] = json!(0);
     }
     let r = dispatch(v).unwrap();
-    assert_eq!(r["status"], "unresolved");
-    assert!(!r["ambiguousParameters"].as_array().unwrap().is_empty());
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["contacts"][0]["uvMethod"], "exact-boundary-projective");
+    assert_eq!(r["contacts"][0]["parameterBox"][2], json!([10., 10.]));
 }
 #[test]
 fn extra_verdicts_and_excessive_exact_work_are_rejected() {
@@ -145,5 +146,95 @@ fn original_projective_target_clocks_are_preserved_in_public_uv_boxes() {
     for (axis, t) in [-2. / 3., 11.].into_iter().enumerate() {
         let b = &r["contacts"][0]["parameterBox"][axis + 1];
         assert!(b[0].as_f64().unwrap() <= t && t <= b[1].as_f64().unwrap());
+    }
+}
+
+#[test]
+fn coupled_target_uv_boxes_preserve_the_injective_bilinear_proof() {
+    let mut v = request(2);
+    v["patch"]["weights"] = json!([[1, 1], [1, 2]]);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(r["targetWeightsSeparable"], false);
+    assert_eq!(r["targetUvInjectivityProven"], true);
+    assert_eq!(r["contacts"][0]["uvMethod"], "injective-bilinear-krawczyk");
+    let t = 2f64.sqrt() - 1.;
+    for (axis, x) in [-2. + 4. * t, 10. + 4. * t].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][axis + 1];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+}
+
+#[test]
+fn nonsingleton_boundary_root_uses_original_coordinate_identity() {
+    let mut v = request(2);
+    v["curve"]["weights"] = json!([1, 2, 4]);
+    for p in v["curve"]["controlPoints"].as_array_mut().unwrap() {
+        p[1] = json!(0);
+    }
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["uvMethod"],
+        "original-affine-coordinate-bounds"
+    );
+    assert!(r["ambiguousParameters"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn nonproportional_boundary_common_root_reports_exact_proof_and_total_work() {
+    let mut v = request(3);
+    v["curve"]["controlPoints"] = json!([
+        [1., 1., 0.5],
+        [-1., 0., 0.5],
+        [0., -1., 0.5],
+        [4., -2., 0.5]
+    ]);
+    v["patch"]["controlPoints"] =
+        json!([[[0., 0., 0.], [0., 0., 1.]], [[0., 1., 0.], [0., 1., 1.]]]);
+    v["patch"]["weights"] = json!([[1., 2.], [3., 5.]]);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["uvMethod"],
+        "original-polynomial-common-root"
+    );
+    assert_eq!(
+        r["contacts"][0]["positionBounds"],
+        json!([[0., 0.], [0., 0.], [0.5, 0.5]])
+    );
+    assert_eq!(r["exactWork"], r["scalarProofs"][0]["workUsed"]);
+    assert_eq!(r["bodyAdmission"], false);
+}
+
+#[test]
+fn algebraic_coordinate_sign_distinguishes_interior_and_exterior_reports() {
+    for delta in [-2f64.powi(-40), 2f64.powi(-40)] {
+        let mut v = request(3);
+        let controls: Vec<_> = [1., -1., 0., 4.]
+            .into_iter()
+            .zip([1., 0., -1., -2.])
+            .map(|(x, y)| vec![x, y + delta, 0.5])
+            .collect();
+        v["curve"]["controlPoints"] = json!(controls);
+        v["patch"]["controlPoints"] =
+            json!([[[0., 0., 0.], [0., 0., 1.]], [[0., 1., 0.], [0., 1., 1.]]]);
+        v["patch"]["weights"] = json!([[1., 2.], [3., 5.]]);
+        let r = dispatch(v).unwrap();
+        assert_eq!(r["curvePatchCoverageComplete"], true);
+        assert_eq!(r["exactWork"], r["scalarProofs"][0]["workUsed"]);
+        if delta > 0. {
+            assert_eq!(r["status"], "present");
+            assert_eq!(
+                r["contacts"][0]["uvMethod"],
+                "original-polynomial-coordinate-sign"
+            );
+        } else {
+            assert_eq!(r["status"], "absent-on-patch");
+            assert_eq!(r["patchAbsenceProven"], true);
+        }
     }
 }

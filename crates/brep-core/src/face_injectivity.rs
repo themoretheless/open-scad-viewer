@@ -76,7 +76,7 @@ fn inspect_impl(
             Some(if legacy {
                 surface_injectivity::certify(&f.surface, max_spans - report.spans)?
             } else {
-                surface_injectivity::certify_contraction(&f.surface, max_spans - report.spans)?
+                surface_injectivity::certify_chart(&f.surface, max_spans - report.spans)?
             })
         } else {
             None
@@ -515,7 +515,7 @@ impl Inspector {
             Some(if false {
                 surface_injectivity::certify(&f.surface, self.max_spans - self.report.spans)?
             } else {
-                surface_injectivity::certify_contraction(&f.surface, self.max_spans - self.report.spans)?
+                surface_injectivity::certify_chart(&f.surface, self.max_spans - self.report.spans)?
             })
         } else {
             None

@@ -1,6 +1,5 @@
 use super::*;
-#[test]
-fn skewed_station_hulls_meet_only_at_owned_vertex() {
+fn skewed_station_model() -> Model {
     let section = |z: f64, t: f64| {
         vec![
             [
@@ -23,9 +22,11 @@ fn skewed_station_hulls_meet_only_at_owned_vertex() {
             .collect(),
         ]
     };
-    let model =
-        crate::rational_section_loft(&[section(0., 0.), section(5., 0.25), section(10., 0.5)])
-            .unwrap();
+    crate::rational_section_loft(&[section(0., 0.), section(5., 0.25), section(10., 0.5)]).unwrap()
+}
+#[test]
+fn skewed_station_hulls_meet_only_at_owned_vertex() {
+    let model=skewed_station_model();
     let c = certify(&model, [0, 7]).expect("skewed common station vertex");
     assert!(c.vertex.is_some());
     assert!(c.edges.is_empty());
@@ -200,18 +201,15 @@ fn coincident_geometry_without_shared_topology_is_not_authorized() {
         "difference",
     )
     .unwrap();
-    let mut examples = [None, None];
-    for a in 0..m.faces.len() {
-        for b in a + 1..m.faces.len() {
-            if let Some(c) = certify(&m, [a, b]) {
-                let k = usize::from(c.vertex.is_some());
-                if examples[k].is_none() {
-                    examples[k] = Some(c);
-                }
-            }
-        }
-    }
-    for c in examples.into_iter().map(Option::unwrap) {
+    // The minimal Boolean cavity has edge contacts but no vertex-only face
+    // pairs. Own the latter with an authored multi-station loft, independently
+    // of how Boolean chooses to split coplanar faces.
+    let edge=(0..m.faces.len()).flat_map(|a|(a+1..m.faces.len()).map(move |b|[a,b]))
+        .find_map(|pair|certify(&m,pair).filter(|c|!c.edges.is_empty())).unwrap();
+    let loft=skewed_station_model();
+    let vertex=certify(&loft,[0,7]).expect("authored vertex-only contact");
+    assert!(vertex.vertex.is_some() && vertex.edges.is_empty());
+    for (m,c) in [(&m,edge),(&loft,vertex)] {
         let mut broken = m.clone();
         let face = &m.faces[c.faces[1]];
         for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {

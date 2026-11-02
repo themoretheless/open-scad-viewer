@@ -4,6 +4,7 @@ use nurbs_intersect::{self as queries, Options, SurfaceTrace};
 pub(crate) mod self_surface;
 pub(crate) mod surface_iso_target;
 pub(crate) mod original_patch_contacts;
+pub(crate) mod quadric_carrier;
 
 pub fn dispatch(v: Value) -> Result<Value> {
     if v["op"].as_str() == Some("brep_intersection_trace_curve_segments") {

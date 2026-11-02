@@ -4,7 +4,7 @@ Rust API: `nurbs_core::intersection::certified_curve_surface::original_affine_pa
 
 This read-only operation isolates curve contacts with an exact untrimmed affine parallelogram, including scalar multiplicities greater than one. The plane equation is constructed inside the exact predicate from the four original vertices; its normal and offset need not have a binary64 representation.
 
-Inputs are valid nonperiodic 3D positive-weight sources. The curve admits degree 1..25, at most 256 controls, and C0 or smoother interior knot storage. The patch must be a single clamped degree-(1,1), 2x2 chart with an exact parallelogram identity and separable positive weights (`w00*w11 == w01*w10` over the original exact values). An approximate plane is not substituted for an unsupported chart.
+Inputs are valid nonperiodic 3D positive-weight sources. The curve admits degree 1..25, at most 256 controls, and C0 or smoother interior knot storage. The patch must be a single clamped degree-(1,1), 2x2 chart with an exact parallelogram identity and valid positive weights. An approximate plane is not substituted for an unsupported chart.
 
 `parameter_tolerance` is positive and finite in the natural curve parameter. `max_spans` (1..100000) bounds scalar span queries; `max_exact_work` is one shared predicate allowance across all queried spans. Unvisited, indeterminate and coincident spans remain in `unresolved_spans`. Scalar decisions and their source context identities remain in `scalar_proofs`.
 
@@ -22,4 +22,18 @@ Status is `present` when any finite-patch contact is admitted, `absent-on-patch`
 
 Browser adapter: `SurfaceSelfIntersectionBrowser.inspectOriginalPatchContacts(query, options)` uses the same owned Worker lane as surface and iso–target diagnostics. It validates `OriginalPatchContactsReport`, including one-sided order/source-span links and exact-work accounting, and checks the requested span/exact-work budgets on reply. A zero exact budget is a valid unresolved query. Abort, deadline and busy handling are shared. The caller supplies the import-free module; this adapter does not install a package or register a production provider.
 
-For separable nonuniform weights, affine world fractions are converted to original projective UV clocks before the natural knot-domain map. Each inverse is `t = w0*alpha / (w1*(1-alpha) + w0*alpha)`. Rounded determinant equality does not establish weight separability; coupled nonseparable clocks remain unsupported.
+For separable nonuniform weights, affine world fractions are converted to original projective UV clocks before the natural knot-domain map. Each inverse is `t = w0*alpha / (w1*(1-alpha) + w0*alpha)`. Rounded determinant equality does not establish weight separability. Nonseparable weights use the coupled proof path below.
+
+## Coupled bilinear UV
+
+For nonseparable positive weights, the native path verifies the exact coefficient identity `L*R*M*N - u*(1-u)*v*(1-v)*(A*D-B*C)^2 = W*Q`, with `A=w00`, `B=w10`, `C=w01`, `D=w11`. The four Bernstein coefficients of Q are `A*B*C`, `A*B*D`, `A*C*D`, `B*C*D`, all strictly positive. Thus the rectangle coordinates satisfy `F_u>0` and `det D(F,G)=Q/W^3>0`. Each fixed F level has one u(v), and G increases strictly along it from 0 to 1. This proves a unique UV preimage throughout the parallelogram support.
+
+`uvMethod` distinguishes `separable-projective`, `injective-bilinear-krawczyk`, `positive-bilinear-global-inverse`, and `exact-boundary-projective`. A bounded Newton proposal chooses candidate boxes; only strict Krawczyk inclusion/contraction of the original bilinear field authorizes a refined UV box. The search has at most 24 candidate boxes and 8 refinements per contact. Scalar `exactWork` continues to count the shared exact scalar-predicate allowance, not these fixed interval refinements.
+
+If a tight numeric inverse is unavailable, the verified global bijection still proves the contact. The last method returns the full original UV chart as an honest enclosure, with no UV precision guarantee for vertex authoring. Optional report metadata `targetWeightsSeparable` and `targetUvInjectivityProven` records the selected proof path. Existing source validation and surface weight-conditioning limits remain unchanged. General curved supports, trims and Body admission are still outside this operation.
+
+## Exact boundary membership
+
+When the scalar isolator returns a singleton normalized root, native code maps it to the natural source parameter exactly over rationals and evaluates the original homogeneous B-spline with its original weights. The point is checked against the original affine plane. Exact affine fractions classify exterior, interior, edge and corner membership without snapping a small offset to zero.
+
+On an edge, the fixed UV axis is exact and the remaining axis uses that edge's two original weights in an exact projective clock. The result is enclosed outward only after rational natural-parameter mapping (`uvMethod: exact-boundary-projective`). If an exact interior point cannot be separated numerically from a boundary, the global-bijection method supplies a conservative chart enclosure. Scalar root intervals are never replaced by their midpoint; non-singleton boundary cases remain ambiguous until a further proof resolves them. Coincident spans and trim/Body admission are unchanged.

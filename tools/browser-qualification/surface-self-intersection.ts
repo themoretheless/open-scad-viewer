@@ -1,4 +1,7 @@
-import {originalPatchFixture,originalPatchKnotFixture} from './original-patch-fixtures'
+import {quadricCarrierCases} from './quadric-carrier-fixtures'
+import {commonRootPatchCases} from './common-root-patch-fixtures'
+import {advancedPatchCases} from './advanced-patch-fixtures'
+import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from './original-patch-fixtures'
 import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from './surface-self-fixtures'
 import {SurfaceSelfIntersectionBrowser} from '../../src/services/surfaceSelfIntersectionBrowser'
 import type {NurbsSurface} from '../../src/services/nurbsSurface'
@@ -45,11 +48,24 @@ async function qualify(){
   const originalPatchOutside=await lane.inspectOriginalPatchContacts(finite)
   for(const p of finite.curve.controlPoints)p[1]=0
   const originalPatchBoundary=await lane.inspectOriginalPatchContacts(finite)
+  const intervalBoundary=structuredClone(finite);intervalBoundary.curve.weights=[1,2,4]
+  const originalPatchIntervalBoundary=await lane.inspectOriginalPatchContacts(intervalBoundary)
+  const originalPatchIrrationalBoundary=await lane.inspectOriginalPatchContacts(originalPatchAlgebraicBoundaryFixture())
+  const originalPatchCommonRootBoundary=await lane.inspectOriginalPatchContacts(originalPatchAlgebraicBoundaryFixture(true))
+  const advancedPatch=[]
+  for(const fixture of advancedPatchCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalPatchContacts(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Advanced patch input changed');advancedPatch.push({name:fixture.name,report})}
+  const commonRootPatch=[]
+  for(const fixture of commonRootPatchCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalPatchContacts(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Common-root patch input changed');commonRootPatch.push({name:fixture.name,report})}
+  const scalarOnlyQuery=originalPatchAlgebraicBoundaryFixture(true);for(const p of scalarOnlyQuery.curve.controlPoints)p[1]=2
+  const commonRootScalarOnly=await lane.inspectOriginalPatchContacts(scalarOnlyQuery)
+  const commonRootAuxiliaryBudget=await lane.inspectOriginalPatchContacts({...originalPatchAlgebraicBoundaryFixture(true),maxExactWork:commonRootScalarOnly.exactWork+10})
+  const quadricCarriers=[]
+  for(const fixture of quadricCarrierCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalQuadricCarrierRoots(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Quadric input changed');quadricCarriers.push({name:fixture.name,report})}
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{quadricCarriers,commonRootScalarOnly,commonRootAuxiliaryBudget,commonRootPatch,advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}

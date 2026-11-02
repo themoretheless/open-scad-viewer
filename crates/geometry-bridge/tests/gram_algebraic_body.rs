@@ -119,6 +119,7 @@ fn quintic_original_profile_body_survives_step_with_sharp_caps() {
         "{transported_boundary:?}"
     );
     assert_eq!(transported_boundary["errorUpper"].as_f64(), Some(0.));
+    assert_eq!(transported_boundary["certified"],true,"{transported_boundary:?}");
     assert!(
         !transported_boundary["uvTransportFaces"]
             .as_array()
@@ -147,6 +148,7 @@ fn quintic_original_profile_body_survives_step_with_sharp_caps() {
     common["retained"] = value_codec::to_value(&model).unwrap();
     let boundary = dispatch(common.clone()).unwrap();
     assert_eq!(boundary["continuousBound"], true, "{boundary:?}");
+    assert_eq!(boundary["certified"],true,"{boundary:?}");
     assert_eq!(boundary["smoothnessCertified"], false);
     assert_eq!(
         boundary["referenceVolume"]["trimRegionsValid"], true,
@@ -163,6 +165,7 @@ fn quintic_original_profile_body_survives_step_with_sharp_caps() {
         imported_boundary["referenceVolume"]["trimRegionsValid"],
         true
     );
+    assert_eq!(imported_boundary["certified"],true,"{imported_boundary:?}");
     assert_eq!(
         (&model, &restored),
         (&original_models.0, &original_models.1)

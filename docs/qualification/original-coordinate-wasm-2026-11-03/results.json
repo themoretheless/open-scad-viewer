@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "sourceCommit": "154ed6d94d34f3fd0384883b060b15b877801fd8",
+  "artifact": {
+    "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/d9723762de4e1943c9031351126c39935ee8507c2db37bdc430b29afc8138c6f.wasm",
+    "sha256": "d9723762de4e1943c9031351126c39935ee8507c2db37bdc430b29afc8138c6f",
+    "bytes": 21597647
+  },
+  "independentCopy": true,
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 56,
+  "workers": {
+    "started": 46,
+    "terminated": 46
+  },
+  "installedPackageUpdated": false,
+  "installedGeometryWasmSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "temporaryWorktreeRemoved": true,
+  "verified": [
+    "original active-control boundary identity at non-singleton scalar roots",
+    "conditional exact edge coordinate at irrational sqrt(1/2) root",
+    "nonproportional common root remains unresolved",
+    "prior 16 coupled-UV and singleton boundary cases",
+    "owned Worker termination"
+  ],
+  "remaining": [
+    "general polynomial common-root membership",
+    "general curved/freeform supports",
+    "complete surface/surface branches",
+    "periodic/poles",
+    "trim/Body admission",
+    "installed-package provider/editor qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "dea538713912fc890cb337ff63f6f85daa687261a07367c88bb7ab290cccf7d9",
+    "tools/browser-qualification/original-patch-fixtures.ts": "e1074047c58d4bbb0d8ce3d52850c180eb0897de5a57ef9efd03e21fcbf286c8",
+    "tools/browser-qualification/surface-self-intersection.ts": "f060df7b51a7e448409208ed73520fb196754d79af1330e0f103e07795df383a",
+    "tools/browser-qualification/surface-self-intersection.mjs": "2b47f182f7f639429b9897a9f527c757458a139ae261830868a61f3f9e6ca7ea"
+  }
+}
