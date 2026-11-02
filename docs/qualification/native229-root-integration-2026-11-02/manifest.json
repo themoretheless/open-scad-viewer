@@ -1,0 +1,236 @@
+{
+  "scope": "Guarded native-only transfer; Root runtime and governance not copied from feature. Exact pre-edit sources retained; not a full historical checkout.",
+  "rootBefore": "b041eb1ada6c40aa23f91b26659f34dde6c47766",
+  "featureBase": "b0fa45af52b278fefad1de81721de2a4f4a5fcf7",
+  "featureTip": "153a77ceb53f02c448f833b383c7b93ca7a544f4",
+  "records": [
+    {
+      "path": "crates/nurbs-core/src/editing.rs",
+      "afterSha256": "ca70cfcfd2b7616f807a801226c2a75b112289f2dafdb89fa0d9dacdd3a3df7d",
+      "beforeSha256": "36e6acee5a288ddf9635b4f722893dda7f6e91b158535bcc0534fba8b6481bd4",
+      "beforeArchive": "docs/qualification/native229-root-integration-2026-11-02/before/crates/nurbs-core/src/editing.rs"
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_degree_reduction.rs",
+      "afterSha256": "cee72f4a8fcd858594616ee6763dadfb5e34267e2214a96f6e72371936e944c6",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
+      "afterSha256": "d7d12ec56ccb3996c5d21014ded25c5ddef144ad8ca7e7f9deaa5ddd41034322",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs",
+      "afterSha256": "eae0b9b04ea7d8649dc17406738f4ceba1b429b70d574408aff2b99231a611ca",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+      "afterSha256": "d470e6d9cd0fe986d4c008476e997b6e8b36bbe538f109ba0d00ce1fabdd1f02",
+      "beforeSha256": "382d82dafe3312468b8b075e1d666455efd8a115eafb897f6ce83ebec4c36fb4",
+      "beforeArchive": "docs/qualification/native229-root-integration-2026-11-02/before/crates/nurbs-core/src/editing/exact_surface_knot_removal.rs"
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+      "afterSha256": "e6b1fd6cba672c1ae92b33ea890acaa7882d34aae0e712e716a0c8954a402ab3",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+      "afterSha256": "8dfa58c695c24122c7f89b2278c1112ff5ded4a3cfd33b38d3eb0874c496be0a",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
+      "afterSha256": "e5a8575327fe5e29487d8da1e415a2e9d732857e011e301d4a02914583dc32e4",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_surface_degree_contracts.rs",
+      "afterSha256": "c46b2e16974a88aa94dabcb4de3d2ef59e7e93a15f1d11a2596a32fc3e60ff52",
+      "beforeSha256": null
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs",
+      "afterSha256": "ba7746469effd12b8e9c88a0313f40e100b2450df678224e2cf9cd9758a0d6cb",
+      "beforeSha256": "2d915a7a9fe99458a117f09845a52b18a2be81eb5d17bc4b2d54569fa8ccbbba",
+      "beforeArchive": "docs/qualification/native229-root-integration-2026-11-02/before/crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs"
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_surface_merge_contracts.rs",
+      "afterSha256": "d7f593d08e7b7787003ef656beb5e578ee786ca228271b7415037ca0d65e8c3d",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/design/nurbs-api-map.md",
+      "afterSha256": "72a3e46618ee5ba9aad659065277cbc748d4b269e9c114673ceabb219051ad8d",
+      "beforeSha256": "45412db943d3b52f240abfda78356270751b89ba9283e174dd4cda2218c8998b",
+      "beforeArchive": "docs/qualification/native229-root-integration-2026-11-02/before/docs/design/nurbs-api-map.md"
+    },
+    {
+      "path": "docs/design/nurbs-catalog.json",
+      "afterSha256": "250b4d642fe51a36ca05d522942dbc0a1d7392d63779756dd6e4a37502b4f37e",
+      "beforeSha256": "49af057f9821a26e605d1a47eea2833ac05c44ba26db542dc3d17debab08acde",
+      "beforeArchive": "docs/qualification/native229-root-integration-2026-11-02/before/docs/design/nurbs-catalog.json"
+    },
+    {
+      "path": "docs/design/nurbs-exact-degree-reduction.md",
+      "afterSha256": "8b5e8e92ccb4d0502fa64ba4e31009b7f418f3f5141859fd80368f274548b5df",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/design/nurbs-exact-surface-degree-reduction.md",
+      "afterSha256": "31424dc278488944639cbeb122d04bd7cd99a2b9b566d504f88703632b00c3ee",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/design/nurbs-exact-surface-knot-removal.md",
+      "afterSha256": "036454dad41fbda75a4f0689c66b18450bf42ee2c1906f92a5b4e7ab815c5173",
+      "beforeSha256": "8960e98092b998ef6ab97214de4e172e4a1e526494ff2726e57478826c9a7cb0",
+      "beforeArchive": "docs/qualification/native229-root-integration-2026-11-02/before/docs/design/nurbs-exact-surface-knot-removal.md"
+    },
+    {
+      "path": "docs/design/nurbs-exact-surface-merge.md",
+      "afterSha256": "5e4d0ea2df18cf04d27d66129fa071b47a9b379e877bc3a02e848061a249d4ea",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-degree-native-2026-11-02/checks.json",
+      "afterSha256": "dec5eadd99434538ff770a190b09625daff1ef1c117c7fa30ca6f770fb9a4e86",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact-oracle.json",
+      "afterSha256": "d9fa61c95b48acab7fd29fb6283dc7437c436767beada6621f7429705d36165b",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py",
+      "afterSha256": "d2d36552f71f2166533f9842e81eb3b5eaa65953a5215115d6f89b7179a35c89",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-degree-native-2026-11-02/native227-exact-degree-default-final.log.gz",
+      "afterSha256": "094e05adfbcbe77ec105faefe5702466863a2d231d88aacdeed574d24800d58f",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-degree-native-2026-11-02/native227-exact-degree-no-codec.log.gz",
+      "afterSha256": "2a5da2349b11fe321d9b620d934c02abeba0e02f93b603ba5ae1953ef5d4b066",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/architecture.log.gz",
+      "afterSha256": "875f973e8646a091a07c5245aac2ee049cfc3a93110ed649b3939bcbc72d3ef0",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/default.log.gz",
+      "afterSha256": "4758dd3153bcc12c0469e289de292e84e268a3998f585668f7317b556e5bb9fc",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact-oracle.json",
+      "afterSha256": "b9cdcf97619e4a976df1dd66872724e3f40efeef3c0e1030683026e0adf5ac7c",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py",
+      "afterSha256": "7b04f8237402341efa0d86fbdd4378c6007ae892c48adc57b7b5899d11117da5",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/no-codec.log.gz",
+      "afterSha256": "a859a3d1118be1389e45a2ef28564408cb5c47db9b65edafc642789e1ee8eee5",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
+      "afterSha256": "556370c4584b2293ded4b37bd17906819808e2320190a888c4e0af7e427ac1b7",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
+      "afterSha256": "7c299620d69b1e1471e5a3b945161a017e61faa3c367ba51933cbb69b95e18d5",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact-oracle.json",
+      "afterSha256": "18a5f6ecb579f711c7670f08646389c1a7a12ffb3583ea25690e141359d3998e",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact_oracle.py",
+      "afterSha256": "b911816c78dc606131db62c1be0123762ec67585976d18e6b9b0eaf9adb98643",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/native228-surface-degree-default-final.log.gz",
+      "afterSha256": "a251abef9443fca22469375e2a4c7fc76969261ef5322d5b8d8a3fa6a862dbc6",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/native228-surface-degree-no-codec.log.gz",
+      "afterSha256": "709898976c9b01591c470c17332a076bcafcfb8f9f98b294af5b3240c67e6cf0",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-merge-2026-11-02/architecture.log.gz",
+      "afterSha256": "875f973e8646a091a07c5245aac2ee049cfc3a93110ed649b3939bcbc72d3ef0",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-merge-2026-11-02/default.log.gz",
+      "afterSha256": "1f0c3c389820ade34f229e19534965693a9a10fdec7059d651d95d8a47582cb8",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-merge-2026-11-02/exact-oracle.json",
+      "afterSha256": "64b94b457a2e3f3d431633966d3ea447ac4eedfa7672ab34060a4ae7c8075e58",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-merge-2026-11-02/exact_oracle.py",
+      "afterSha256": "8d9b8c8f7ea09deb01befabf77e297cebc0a031302b523c9e311580105725779",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-merge-2026-11-02/no-codec.log.gz",
+      "afterSha256": "c8794b03f33f258510b20a445901d1437b12df769c16d48c0aa236e1a0497ff6",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-merge-2026-11-02/receipt.json",
+      "afterSha256": "2fcf8bba509893e391ec747aed7d77effb77e8ac985a9eaa9292bd4d3ec471c8",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-pass-2026-11-02/architecture.log.gz",
+      "afterSha256": "875f973e8646a091a07c5245aac2ee049cfc3a93110ed649b3939bcbc72d3ef0",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-pass-2026-11-02/default.log.gz",
+      "afterSha256": "6c09433267ad8392d46426777a762f39e9f9fa8debb88fdd97a793530f794821",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-pass-2026-11-02/no-codec.log.gz",
+      "afterSha256": "7167f9a625a33078af7a73dcda23cdc167fcae74b66fd6bf31cf7fac54a0a33f",
+      "beforeSha256": null
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json",
+      "afterSha256": "15ebe4f13c63ece61fb4d208ef3a9aee076302768ed5a3f4e5830a1d654b8c3c",
+      "beforeSha256": null
+    }
+  ],
+  "hostOwnerCensus": {
+    "sourceUnchanged": true,
+    "path": "docs/qualification/algorithm-owners-native226-2026-11-02.json",
+    "scope": "Authored production TS/Vue/MJS only; Rust-only additions do not change this census. Writer restored byte-exact after unnecessary path rename, no old report changed.",
+    "writerArchive": "docs/qualification/native229-root-integration-2026-11-02/before/scripts/audit-algorithm-owners.mjs",
+    "writerSha256": "d3f065103f63e1d48cf1f4e0f3013296d8bb7f5d02f4e8a5b8719acf200fdbaf"
+  }
+}

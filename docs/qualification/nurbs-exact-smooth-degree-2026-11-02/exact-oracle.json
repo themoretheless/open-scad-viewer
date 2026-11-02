@@ -1,0 +1,26 @@
+{
+  "exactPiecewiseSourceAndGlobalCandidate": true,
+  "spans": 2,
+  "axes": 3,
+  "independentPolynomialLaws": [
+    [
+      "-4",
+      "2"
+    ],
+    [
+      "-40/3",
+      "28/3",
+      "-4/3"
+    ],
+    [
+      "-2",
+      "2"
+    ]
+  ],
+  "oneUlpPerturbationNonzeroResidual": [
+    "17/3799912185593856",
+    "-7/1266637395197952",
+    "11/5066549580791808",
+    "-1/3799912185593856"
+  ]
+}

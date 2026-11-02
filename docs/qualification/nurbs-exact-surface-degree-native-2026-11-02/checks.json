@@ -1,0 +1,27 @@
+{
+  "capability": "NURBS-0228 plus existing0226 regression",
+  "checks": {
+    "default": {
+      "exitCode": 0,
+      "passed": 35,
+      "failed": 0
+    },
+    "noCodec": {
+      "exitCode": 0,
+      "passed": 35,
+      "failed": 0
+    }
+  },
+  "independentBivariatePolynomialOracleExit": 0,
+  "architectureExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing.rs": "fbf6f99a02a233345a055ed5630d91e6326d896d5a860c30d851726ca4ab9fdb",
+    "crates/nurbs-core/src/editing/exact_tensor_edit.rs": "8dfa58c695c24122c7f89b2278c1112ff5ded4a3cfd33b38d3eb0874c496be0a",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "e0bfd546788e9b7a7b1a4d20dab761b95db178f718614b73e8f81684abf7d198",
+    "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs": "d49e18dc532f23c05694c8b3c51df34f3f38f501a0094e0724becaa4c4780b21",
+    "crates/nurbs-core/src/editing/exact_degree_reduction.rs": "c610e89568f2fd7bf073855c27b62d94fc13be3a1b0c9cb217c2e58b88944038",
+    "crates/nurbs-core/src/core/curve_identity.rs": "e850a58ac1ca54b82181094cffed2c2560acea6ed6ddde15db0f27b8962a7296",
+    "crates/nurbs-core/tests/exact_surface_degree_contracts.rs": "88bd969fd9002b02cc4928d434c8186dfbf969f22e89ec71e44ca9406dce373c"
+  },
+  "scope": "Exact single-axis degree reduction for selected clamped nonperiodic piecewise Bezier axis, shared row/denominator proof engine, unchanged1M arithmetic maximum. No general smooth-axis layout, minimality, evaluator bit identity, B-rep, integration or whole-workspace qualification inferred."
+}

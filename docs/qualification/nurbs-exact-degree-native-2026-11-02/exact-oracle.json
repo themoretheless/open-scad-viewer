@@ -1,0 +1,11 @@
+{
+  "polynomialExact": true,
+  "rationalClockExact": true,
+  "constantGaugeExact": true,
+  "nonzeroQuadraticResidual": [
+    "0",
+    "-1/4503599627370496",
+    "1/4503599627370496",
+    "0"
+  ]
+}

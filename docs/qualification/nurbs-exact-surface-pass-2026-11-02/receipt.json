@@ -1,0 +1,22 @@
+{
+  "capability": "Extension of NURBS-0226; catalogue count unchanged228",
+  "checks": {
+    "default": {
+      "passed": 37,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "no-codec": {
+      "passed": 37,
+      "failed": 0,
+      "exitCode": 0
+    }
+  },
+  "architectureExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "d470e6d9cd0fe986d4c008476e997b6e8b36bbe538f109ba0d00ce1fabdd1f02",
+    "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs": "ba7746469effd12b8e9c88a0313f40e100b2450df678224e2cf9cd9758a0d6cb",
+    "docs/design/nurbs-exact-surface-knot-removal.md": "036454dad41fbda75a4f0689c66b18450bf42ee2c1906f92a5b4e7ab815c5173"
+  },
+  "scope": "One bounded pass on one clamped nonperiodic axis; committed exact row and denominator proofs, unchanged1M maximum shared across attempts; complete pass does not imply minimality. No whole-workspace, WASM, frontend, B-rep or exchange credit."
+}

@@ -1,0 +1,19 @@
+{
+  "scope": "New native229 append-only source identities and focused metadata integrity; no whole-app or global qualification. Original failed private gzip-as-text preview retained; corrected preview published without weakening text or binary checks.",
+  "focusedTestsPassed": 33,
+  "focusedFailed": 0,
+  "focusedExit": 0,
+  "ownerCheckExit": 0,
+  "sourceRecord": "OwnRust86",
+  "sourceSha256": "66b38b04b96602bcee67078d998705e27d3e49e0ca39bd7998a92fba41eb021e",
+  "completedCleanWorkUnits": 0,
+  "files": {
+    "native229-root-owner-check.log.gz": "fc0b79441aca3b8158e6a5f7d74915a0a81e0e470f30eb382cc9def70ceee3eb",
+    "native229-refreeze-focused.json.gz": "718398f70b6979c1ffe80afb6d625f5805b5fccafacd5e9215a8ade50efbccbf",
+    "native229-refreeze-publication-attempt2.log.gz": "c2d2b93ef686fe8cdfac461d9651b1b8dc8f560717b0369631e5c2053a1ba7b5",
+    "native229-refreeze-mutation-plan.json.gz": "e53a427aaeeef1a7fb4cc064af7f54aa02233cbc8b84d17f0fee812bd2aa996f",
+    "native229-refreeze-published-receipt.json.gz": "deb8325ff26ca64dde961bb8ee4b963b145fb96fbb1ed7c3d6d6cc1f9242d7bf",
+    "native229-refreeze-focused.log.gz": "4f5349cbbde020b5c9007cf4319f41d3c72cbc499cf294677cf772bca2fb544e",
+    "native229-refreeze-publication.log.gz": "f33010132e2496ec1cc426ba96809205d32811b94d183156650ac6420ce78f90"
+  }
+}
