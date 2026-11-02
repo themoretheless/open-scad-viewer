@@ -1,3 +1,4 @@
+import {advancedPatchCases} from '../tools/browser-qualification/advanced-patch-fixtures.ts'
 import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol.ts'
 import {originalPatchFixture,originalPatchKnotFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
 import assert from 'node:assert/strict'
@@ -154,6 +155,7 @@ const intervalBoundary=structuredClone(finite);intervalBoundary.curve.weights=[1
 const unresolvedBoundary=patchReply(intervalBoundary);assert.equal(unresolvedBoundary.status,'unresolved');assert(unresolvedBoundary.ambiguousParameters.length>0);cases.push({name:'original-patch-interval-boundary-unresolved',status:unresolvedBoundary.status})
 reject('original-patch-forged-body-admission',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),bodyAdmission:true})
 reject('original-patch-over-limit-exact-budget',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),maxExactWork:1000001})
+for(const fixture of advancedPatchCases){const before=JSON.stringify(fixture.query),r=patchReply(fixture.query);assert.equal(JSON.stringify(fixture.query),before);fixture.check(r);cases.push({name:fixture.name,status:r.status,contact:r.contacts[0]??null,complete:r.curvePatchCoverageComplete})}
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))
