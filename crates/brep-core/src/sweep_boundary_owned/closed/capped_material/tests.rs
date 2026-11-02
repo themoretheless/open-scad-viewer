@@ -288,3 +288,5 @@ fn different_nonplanar_caps_bind_the_same_hollow_material_and_exact_wall_jets() 
 }
 
 mod spatial;
+
+mod rational_hollow;

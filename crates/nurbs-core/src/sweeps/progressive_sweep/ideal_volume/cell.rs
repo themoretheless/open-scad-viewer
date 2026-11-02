@@ -88,7 +88,7 @@ impl Context<'_, '_> {
         if !self.same_cap() {
             for j in 0..3 { difference[j] = iv::sub(z[j],a[j])?; }
             if let Some(owner) = &self.cap_difference {
-                if let Some(bound) = owner.enclose(caps,a,&mut out.cells,max_cells)? {
+                if let Some(bound) = owner.enclose(caps,a,[b[0],b[1]],&mut out.cells,max_cells)? {
                     for j in 0..3 {for k in 0..3 {
                         difference[j][k] = difference[j][k].intersect(bound[j][k].lo,bound[j][k].hi)?;
                     }}

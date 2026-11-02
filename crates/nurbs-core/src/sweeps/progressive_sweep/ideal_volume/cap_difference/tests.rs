@@ -66,7 +66,10 @@ fn original_rational_difference_retains_zero_components_and_raw_domain_jets() {
         let a = cap_jets(&c[0], [[0., 1.]; 2], &mut spent, 10000)
             .unwrap()
             .unwrap();
-        let bound = d.enclose(pair, a, &mut spent, 10000).unwrap().unwrap();
+        let bound = d
+            .enclose(pair, a, [[0., 1.]; 2], &mut spent, 10000)
+            .unwrap()
+            .unwrap();
         for axis in 0..2 {
             assert!(bound[0][axis].lo > -0.02 && bound[0][axis].hi < 0.02);
         }
@@ -98,14 +101,66 @@ fn original_rational_difference_retains_zero_components_and_raw_domain_jets() {
             }
         }
         let mut exhausted = 0;
-        assert!(d.enclose(pair, a, &mut exhausted, 0).unwrap().is_none());
+        assert!(
+            d.enclose(pair, a, [[0., 1.]; 2], &mut exhausted, 0)
+                .unwrap()
+                .is_none()
+        );
         assert_eq!(exhausted, 0);
         let foreign = c[0].clone();
         assert!(
-            d.enclose([&foreign, &c[1]], a, &mut spent, 10000)
+            d.enclose([&foreign, &c[1]], a, [[0., 1.]; 2], &mut spent, 10000)
                 .unwrap()
                 .is_none()
         );
         assert_eq!(c, before);
+    }
+}
+
+#[test]
+fn restricted_original_homogeneous_jets_sharpen_unequal_weight_difference() {
+    let c = caps(true);
+    let pair = [&c[0], &c[1]];
+    let mut spent = 0;
+    let d = Difference::prepare(pair, &mut spent, 10000)
+        .unwrap()
+        .unwrap();
+    let whole = cap_jets(&c[0], [[0., 1.]; 2], &mut spent, 10000)
+        .unwrap()
+        .unwrap();
+    let broad = d
+        .enclose(pair, whole, [[0., 1.]; 2], &mut spent, 10000)
+        .unwrap()
+        .unwrap();
+    let point = cap_jets(&c[0], [[0.5; 2]; 2], &mut spent, 10000)
+        .unwrap()
+        .unwrap();
+    let narrow = d
+        .enclose(pair, point, [[0.5; 2]; 2], &mut spent, 10000)
+        .unwrap()
+        .unwrap();
+    for k in 0..2 {
+        assert!(broad[0][k].hi - broad[0][k].lo > 0.001);
+        assert!(narrow[0][k].lo > -1e-10 && narrow[0][k].hi < 1e-10);
+    }
+    for uv in [[[0.25, 0.5], [0.5, 0.75]], [[1.; 2]; 2]] {
+        let a = cap_jets(&c[0], uv, &mut spent, 10000).unwrap().unwrap();
+        let bound = d.enclose(pair, a, uv, &mut spent, 10000).unwrap().unwrap();
+        for u in uv[0] {
+            for v in uv[1] {
+                let a = cap_jets(&c[0], [[u; 2], [v; 2]], &mut spent, 10000)
+                    .unwrap()
+                    .unwrap();
+                let b = cap_jets(&c[1], [[u; 2], [v; 2]], &mut spent, 10000)
+                    .unwrap()
+                    .unwrap();
+                for j in 0..3 {
+                    for k in 0..3 {
+                        let reference = b[j][k].sub(a[j][k]).unwrap();
+                        assert!(bound[j][k].lo <= reference.hi && reference.lo <= bound[j][k].hi);
+                    }
+                }
+            }
+        }
     }
 }

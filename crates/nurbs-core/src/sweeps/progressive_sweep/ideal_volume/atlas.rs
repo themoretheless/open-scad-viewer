@@ -10,6 +10,7 @@
 use super::{cell::Enclosed, *};
 use std::collections::BTreeMap;
 mod weighted;
+mod refinement;
 
 fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     let mut p = [[I::point(0.); 3]; 3];
@@ -166,13 +167,11 @@ fn monotone_hull(
     };
     let mut pending = pieces.to_vec();
     let mut visits = 0;
-    // A fixed metric on a wide turning interval may be a poor proposal even
-    // when smaller joint charts are regular. Spend a short probe first and
-    // let the exhaustive PAIR cover refine, rather than exhausting the ledger
-    // on spatial splits that cannot repair the temporal metric. Small joint
-    // charts retain the deeper bounded proposal. Neither limit admits geometry.
-    let temporal_width=pieces.iter().map(|b|b[2][1]-b[2][0]).sum::<f64>();
-    let visit_limit=if temporal_width>1./64. {16}else{256};
+    // Point checks only discard unpromising proposals. They supply zero
+    // admission credit. A promising fixed metric gets a deeper source-paid
+    // complete field cover, including spatially nonlinear rational carriers.
+    if !refinement::promising(pieces,projection,scale,inverse,query,out,max)? {return Ok(false);}
+    let visit_limit=1024;
     while let Some(b) = pending.pop() {
         if visits == visit_limit || out.cells == max {
             return Ok(false);
@@ -194,7 +193,9 @@ fn monotone_hull(
         }
         let axis = match e {
             Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>i,
-            _ => match widest(b) {Some((axis,_))=>axis,None=>return Ok(false)},
+            _ => match refinement::axis(b,projection,scale,inverse,query,out,max)? {
+                Some(axis)=>axis,None=>return Ok(false),
+            },
         };
         let Some(children) = split_axis(b, axis) else {
             return Ok(false);
@@ -475,6 +476,35 @@ pub(crate) fn certify_map(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn spatially_uncertain_monotone_field_refines_uv_under_one_fixed_metric() {
+        let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let source=|b:Box3,out:&mut IdealVolumeReport,max:usize|->Result<Enclosed>{
+            if out.cells==max {return Ok(Enclosed::Unavailable(None));}out.cells+=1;
+            let mut value=[I::point(0.);3];let mut columns=[[I::point(0.);3];3];
+            for k in 0..2 {
+                let u=I::new(b[k][0],b[k][1])?;
+                value[k]=u.mul(u)?.mul(u)?.sub(I::point(1.5).mul(u.mul(u)?)?)?.add(u)?;
+                columns[k][k]=I::point(3.).mul(u.mul(u)?)?.sub(I::point(3.).mul(u)?)?.add(I::point(1.))?;
+            }
+            value[2]=I::new(b[2][0],b[2][1])?;columns[2][2]=I::point(1.);
+            Ok(Enclosed::Value(cell::Enclosure{value,columns}))
+        };
+        let run=|max| {
+            let mut report=IdealVolumeReport{embedding_certified:false,regularity_certified:false,
+                parameter_topology_preserved:false,cells:0,exact_work:0,boxes:0,monotonicity_lower:None,projection,reason:None};
+            let mut query=|b,out:&mut IdealVolumeReport|source(b,out,max);
+            let root=[[0.,1.];3];let Enclosed::Value(e)=source(root,&mut report,max).unwrap() else {panic!()};
+            let proven=monotone_hull(&[root],e.columns,projection,&mut query,&mut report,max).unwrap();
+            (proven,report.cells)
+        };
+        // f'(u)=3u²-3u+1>=1/4. The original interval expression on [0,1]
+        // contains zero; temporal subdivision cannot repair that UV ambiguity.
+        let (proven,work)=run(10000);assert!(proven,"source field budget: {work}");assert!(work<10000);
+        let (exact,used)=run(work);assert!(exact);assert_eq!(used,work);
+        let (short,used)=run(work-1);assert!(!short);assert!(used<work);
+
+    }
     #[test]
     fn regular_interval_matrix_is_stronger_than_endpoint_determinant_signs() {
         // A and B both have det=11, but their convex average is singular

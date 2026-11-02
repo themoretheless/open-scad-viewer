@@ -1,0 +1,194 @@
+//! Unequal nonuniform rational cap weights, a real hole and spatial source laws.
+//! Fixture arithmetic only proposes authored binary64 inputs; the normal fresh
+//! native composition, region, embedding and jet factories supply all authority.
+use super::*;
+const L: i128 = 1068602784865;
+const E: i128 = 30531508139;
+fn gcd(mut a: i128, mut b: i128) -> i128 {
+    while b != 0 {
+        let r = a % b;
+        a = b;
+        b = r;
+    }
+    a
+}
+fn dyadic(mut n: i128, mut d: i128, mut exponent: i32) -> f64 {
+    if n == 0 {
+        return 0.;
+    }
+    let g = gcd(n.abs(), d);
+    n /= g;
+    d /= g;
+    assert!(
+        d > 0 && (d as u128).is_power_of_two(),
+        "non-dyadic fixture ratio: {n}/{d}"
+    );
+    exponent -= d.trailing_zeros() as i32;
+    while n % 2 == 0 {
+        n /= 2;
+        exponent += 1;
+    }
+    assert!(
+        n.abs() < (1i128 << 53),
+        "fixture mantissa exceeds exact binary64: {n}"
+    );
+    (n as f64) * 2_f64.powi(exponent)
+}
+// Homogeneous blossom at p-k copies of a/4 and k copies of b/4. All arithmetic
+// before conversion is integral; no rounded knot insertion is trusted.
+fn coefficients(a: i128, b: i128, k: usize) -> (i128, i128) {
+    let mut w = [5, 4, 3, 2, 1];
+    let mut x = [0, 4, 3, 6, 4]; // wi * [0,1,1,3,4]
+    for level in 0..4 {
+        let t = if level < 4 - k { a } else { b };
+        for j in 0..4 - level {
+            w[j] = (4 - t) * w[j] + t * w[j + 1];
+            x[j] = (4 - t) * x[j] + t * x[j + 1];
+        }
+    }
+    (x[0], w[0])
+}
+fn position(t: i128) -> f64 {
+    let (n, d) = coefficients(t, t, 0);
+    dyadic(L * n, d, -51)
+}
+fn profile(a: [i128; 2], b: [i128; 2]) -> Curve {
+    let moving = usize::from(a[0] == b[0]);
+    let fixed = 1 - moving;
+    let mut points = Vec::new();
+    let mut weights = Vec::new();
+    for k in 0..5 {
+        let (n, d) = coefficients(a[moving], b[moving], k);
+        let mut p = vec![0.; 3];
+        p[moving] = dyadic(L * n, d, -51);
+        p[fixed] = position(a[fixed]);
+        points.push(p);
+        weights.push(dyadic(d, 256, 0));
+    }
+    Curve {
+        degree: 4,
+        knots: [vec![-2.; 5], vec![6.; 5]].concat(),
+        control_points: points,
+        weights,
+        periodic: false,
+    }
+}
+fn source() -> (Vec<Curve>, [LoftCap; 2]) {
+    // Full original profiles are retained. The scale is a common binary unit
+    // chosen to make every required original pole exactly representable. It
+    // does not replace the existing unit-size spatial qualification fixtures.
+    let rings = [
+        vec![[0, 0], [1, 0], [4, 0], [4, 4], [0, 4], [0, 0]],
+        vec![[1, 1], [1, 3], [3, 3], [3, 1], [1, 1]],
+    ];
+    let profiles = rings
+        .iter()
+        .flat_map(|r| r.windows(2).map(|p| profile(p[0], p[1])))
+        .collect();
+    let wi = [5i128, 4, 3, 2, 1];
+    let xi = [0, 1, 1, 3, 4];
+    let q = [0, -9, 20, -9, 0];
+    let caps = std::array::from_fn(|end| {
+        let (u, v) = if end == 0 {
+            ([-3., 5.], [7., 11.])
+        } else {
+            ([17., 25.], [-7., 1.])
+        };
+        let mut points = vec![vec![vec![0.; 3]; 5]; 5];
+        let mut weights = vec![vec![0.; 5]; 5];
+        for i in 0..5 {
+            for j in 0..5 {
+                let w = wi[i] * wi[j];
+                if end == 0 {
+                    weights[i][j] = w as f64;
+                    points[i][j] = vec![dyadic(L * xi[i], 1, -51), dyadic(L * xi[j], 1, -51), 0.];
+                } else {
+                    // W1=2 W0+16 q(u)q(v); N1xy=2 N0xy. Positive weights
+                    // are deliberately NOT a common gauge of the first cap.
+                    let numerator = 32 * w + q[i] * q[j];
+                    assert!(numerator > 0);
+                    weights[i][j] = dyadic(numerator, 16, 0);
+                    points[i][j] = vec![
+                        dyadic(L * xi[i] * 32 * w, numerator, -51),
+                        dyadic(L * xi[j] * 32 * w, numerator, -51),
+                        dyadic(E * q[i] * q[j], numerator, -62),
+                    ];
+                }
+            }
+        }
+        let surface = Surface {
+            degree_u: 4,
+            degree_v: 4,
+            knots_u: [vec![u[0]; 5], vec![u[1]; 5]].concat(),
+            knots_v: [vec![v[0]; 5], vec![v[1]; 5]].concat(),
+            control_points: points,
+            weights,
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let trims = rings
+            .iter()
+            .map(|r| {
+                r.windows(2)
+                    .map(|p| Curve {
+                        degree: 1,
+                        knots: vec![13., 13., 19., 19.],
+                        control_points: p
+                            .iter()
+                            .map(|p| {
+                                vec![
+                                    u[0] + (u[1] - u[0]) * p[0] as f64 / 4.,
+                                    v[0] + (v[1] - v[0]) * p[1] as f64 / 4.,
+                                ]
+                            })
+                            .collect(),
+                        weights: vec![if end == 0 { 1. } else { 2. }; 2],
+                        periodic: false,
+                    })
+                    .collect()
+            })
+            .collect();
+        LoftCap { surface, trims }
+    });
+    assert_ne!(
+        caps[0].surface.weights[1][1] * caps[1].surface.weights[2][3],
+        caps[1].surface.weights[1][1] * caps[0].surface.weights[2][3]
+    );
+    assert_ne!(
+        caps[0].surface.control_points,
+        caps[1].surface.control_points
+    );
+    (profiles, caps)
+}
+fn run(authored: bool, arc: bool, affine: bool) {
+    let (profiles, caps) = source();
+    let mut classes = vec![OriginalProfileClass::C0; 9];
+    classes[0] = OriginalProfileClass::G2;
+    super::spatial::run_source(
+        authored,
+        arc,
+        affine,
+        true,
+        "rational-hollow",
+        profiles,
+        caps,
+        vec![5, 4],
+        classes,
+    );
+}
+#[test]
+fn authored_unequal_rational_hollow_caps_clock_and_affine_matrix() {
+    for arc in [false, true] {
+        for affine in [false, true] {
+            run(true, arc, affine);
+        }
+    }
+}
+#[test]
+fn guided_unequal_rational_hollow_caps_clock_and_affine_matrix() {
+    for arc in [false, true] {
+        for affine in [false, true] {
+            run(false, arc, affine);
+        }
+    }
+}

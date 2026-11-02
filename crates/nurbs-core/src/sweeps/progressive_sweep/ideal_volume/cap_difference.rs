@@ -7,6 +7,7 @@ type H = [I; 5]; // numerator delta XYZ, weight delta, original end weight
 pub(super) struct Difference<'s> {
     caps: [&'s Surface; 2],
     jets: [H; 3],
+    nets: [Vec<Vec<H>>; 3],
 }
 fn bezier(s: &Surface) -> bool {
     let n = s.control_points.len();
@@ -47,6 +48,53 @@ fn derivative(a: H, b: H, degree: usize) -> Result<H> {
         out[k] = b[k].sub(a[k])?.mul(I::point(degree as f64))?;
     }
     Ok(out)
+}
+// These are outward coefficient intervals, never new floating source poles.
+// Subdivision restricts the complete polynomial, not a finite set of samples.
+fn split(mut row: Vec<H>, t: I) -> Result<(Vec<H>, Vec<H>)> {
+    let n = row.len();
+    let mut left = vec![row[0]];
+    let mut right = vec![row[n - 1]];
+    for width in (1..n).rev() {
+        for i in 0..width {
+            for k in 0..5 {
+                row[i][k] = row[i][k].add(t.mul(row[i + 1][k].sub(row[i][k])?)?)?;
+            }
+        }
+        left.push(row[0]);
+        right.push(row[width - 1]);
+    }
+    right.reverse();
+    Ok((left, right))
+}
+fn restrict(mut row: Vec<H>, d: [f64; 2]) -> Result<Vec<H>> {
+    if d[0] == 1. {
+        return Ok(vec![*row.last().unwrap(); row.len()]);
+    }
+    if d[0] > 0. {
+        row = split(row, I::point(d[0]))?.1;
+    }
+    if d[1] < 1. {
+        let phase = I::point(d[1])
+            .sub(I::point(d[0]))?
+            .div(I::point(1.).sub(I::point(d[0]))?)?
+            .intersect(0., 1.)?;
+        row = split(row, phase)?.0;
+    }
+    Ok(row)
+}
+fn restricted_hull(net: &[Vec<H>], uv: [[f64; 2]; 2]) -> Result<H> {
+    let mut rows = net
+        .iter()
+        .map(|r| restrict(r.clone(), uv[1]))
+        .collect::<Result<Vec<_>>>()?;
+    for j in 0..rows[0].len() {
+        let column = restrict(rows.iter().map(|r| r[j]).collect(), uv[0])?;
+        for i in 0..rows.len() {
+            rows[i][j] = column[i];
+        }
+    }
+    Ok(hull(rows.iter().flatten().copied()))
 }
 impl<'s> Difference<'s> {
     pub(super) fn prepare(
@@ -94,21 +142,26 @@ impl<'s> Difference<'s> {
                 }
             }
             let value = hull(net.iter().flatten().copied());
-            let mut du = Vec::with_capacity((n - 1) * m);
-            let mut dv = Vec::with_capacity(n * (m - 1));
+            let mut du = vec![vec![[I::point(0.); 5]; m]; n - 1];
+            let mut dv = vec![vec![[I::point(0.); 5]; m - 1]; n];
             for i in 0..n {
                 for j in 0..m {
                     if i + 1 < n {
-                        du.push(derivative(net[i][j], net[i + 1][j], a.degree_u)?);
+                        du[i][j] = derivative(net[i][j], net[i + 1][j], a.degree_u)?;
                     }
                     if j + 1 < m {
-                        dv.push(derivative(net[i][j], net[i][j + 1], a.degree_v)?);
+                        dv[i][j] = derivative(net[i][j], net[i][j + 1], a.degree_v)?;
                     }
                 }
             }
             Ok(Self {
                 caps,
-                jets: [value, hull(du.into_iter()), hull(dv.into_iter())],
+                jets: [
+                    value,
+                    hull(du.iter().flatten().copied()),
+                    hull(dv.iter().flatten().copied()),
+                ],
+                nets: [net, du, dv],
             })
         })();
         match calculation {
@@ -121,23 +174,36 @@ impl<'s> Difference<'s> {
         &self,
         caps: [&Surface; 2],
         a: [V3; 3],
+        uv: [[f64; 2]; 2],
         spent: &mut usize,
         max: usize,
     ) -> Result<Option<[V3; 3]>> {
-        if !(0..2).all(|i| std::ptr::eq(caps[i], self.caps[i])) || *spent == max {
+        if !(0..2).all(|i| std::ptr::eq(caps[i], self.caps[i]))
+            || *spent == max
+            || uv
+                .iter()
+                .any(|d| !(0. <= d[0] && d[0] <= d[1] && d[1] <= 1.))
+        {
             return Ok(None);
         }
         *spent += 1;
         let calculation = (|| -> Result<[V3; 3]> {
-            let w = self.jets[0][4];
+            let mut jets = self.jets;
+            for j in 0..3 {
+                let local = restricted_hull(&self.nets[j], uv)?;
+                for k in 0..5 {
+                    jets[j][k] = jets[j][k].intersect(local[k].lo, local[k].hi)?;
+                }
+            }
+            let w = jets[0][4];
             let mut out = [[I::point(0.); 3]; 3];
             for k in 0..3 {
-                out[0][k] = self.jets[0][k].sub(a[0][k].mul(self.jets[0][3])?)?.div(w)?;
+                out[0][k] = jets[0][k].sub(a[0][k].mul(jets[0][3])?)?.div(w)?;
                 for axis in 1..3 {
-                    let r = self.jets[axis][k]
-                        .sub(a[axis][k].mul(self.jets[0][3])?)?
-                        .sub(a[0][k].mul(self.jets[axis][3])?)?;
-                    out[axis][k] = r.sub(out[0][k].mul(self.jets[axis][4])?)?.div(w)?;
+                    let r = jets[axis][k]
+                        .sub(a[axis][k].mul(jets[0][3])?)?
+                        .sub(a[0][k].mul(jets[axis][3])?)?;
+                    out[axis][k] = r.sub(out[0][k].mul(jets[axis][4])?)?.div(w)?;
                 }
             }
             Ok(out)

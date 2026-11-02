@@ -47,6 +47,30 @@ fn run(authored: bool, arc: bool, affine: bool, rational: bool) {
         caps[1].surface.weights[2][2] *= 65. / 64.;
         assert_ne!(caps[1].surface.weights[2][2], caps[1].surface.weights[0][0]);
     }
+    let loops = if rational { vec![5] } else { vec![5, 5] };
+    let classes = [
+        OriginalProfileClass::G2,
+        OriginalProfileClass::C0,
+        OriginalProfileClass::C0,
+        OriginalProfileClass::C0,
+        OriginalProfileClass::C0,
+    ]
+    .repeat(loops.len());
+    run_source(
+        authored, arc, affine, rational, "legacy", profiles, caps, loops, classes,
+    );
+}
+pub(super) fn run_source(
+    authored: bool,
+    arc: bool,
+    affine: bool,
+    rational: bool,
+    label: &str,
+    profiles: Vec<Curve>,
+    caps: [LoftCap; 2],
+    loops: Vec<usize>,
+    classes: Vec<OriginalProfileClass>,
+) {
     // The original control simplex has determinant -1/512, so this is not a
     // planar-path case. Its Z derivative is strictly positive throughout.
     let path = curve(
@@ -146,15 +170,6 @@ fn run(authored: bool, arc: bool, affine: bool, rational: bool) {
     } else {
         sweep
     };
-    let loops = if rational { vec![5] } else { vec![5, 5] };
-    let classes = [
-        OriginalProfileClass::G2,
-        OriginalProfileClass::C0,
-        OriginalProfileClass::C0,
-        OriginalProfileClass::C0,
-        OriginalProfileClass::C0,
-    ]
-    .repeat(loops.len());
     let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
     let certify = |l| {
         certify_original_classified_capped_material(
@@ -171,7 +186,7 @@ fn run(authored: bool, arc: bool, affine: bool, rational: bool) {
     let body = match certify(limits()) {
         OriginalClassifiedCappedMaterialAttempt::Certified(body) => body,
         OriginalClassifiedCappedMaterialAttempt::Refused(r) => panic!(
-            "spatial capped authored={authored} arc={arc} affine={affine} rational={rational}: {:?}, volume={:?}, work={:?}",
+            "spatial capped {label} authored={authored} arc={arc} affine={affine} rational={rational}: {:?}, volume={:?}, work={:?}",
             r.reason, r.volume, r.work
         ),
     };
@@ -190,11 +205,9 @@ fn run(authored: bool, arc: bool, affine: bool, rational: bool) {
         );
         assert_eq!(
             body.material_reports()[i].trim.as_ref().unwrap().winding,
-            if rational {
-                vec![Some(1)]
-            } else {
-                vec![Some(1), Some(-1)]
-            }
+            std::iter::once(Some(1))
+                .chain(std::iter::repeat_n(Some(-1), loops.len() - 1))
+                .collect::<Vec<_>>()
         );
     }
     let work = body.work();
@@ -249,7 +262,11 @@ fn run(authored: bool, arc: bool, affine: bool, rational: bool) {
         [&path, &axis, &normal, &guide, &twist, &axes, &center],
         before_laws.each_ref()
     );
-    eprintln!(
-        "spatial capped authored={authored} arc={arc} affine={affine} rational={rational}: {work:?}"
-    );
+    if label == "legacy" {
+        eprintln!(
+            "spatial capped authored={authored} arc={arc} affine={affine} rational={rational}: {work:?}"
+        );
+    } else {
+        eprintln!("{label} capped authored={authored} arc={arc} affine={affine}: {work:?}");
+    }
 }
