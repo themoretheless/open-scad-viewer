@@ -1,5 +1,6 @@
 use super::*;
 use nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits;
+mod contact;
 fn source(crease: bool) -> LoftCap {
     let corners = vec![
         vec![-3., -1., 0.],

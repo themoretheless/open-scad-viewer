@@ -450,3 +450,5 @@ fn positive_arc_clock_proves_complete_c2_volume_despite_a_raw_speed_jump() {
         body.report().exact_work
     );
 }
+
+mod contact;
