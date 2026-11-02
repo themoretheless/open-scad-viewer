@@ -4,7 +4,9 @@
 use super::surface_bounds as sb;
 use super::*;
 use crate::Model;
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, Value, error, json};
+mod identity;
 mod atlas;
 pub use atlas::algebraic::{
     AtlasAlgebraicParameters, AtlasAlgebraicRoot, certify_algebraic_knot_parameters,
@@ -68,6 +70,7 @@ pub enum SourceAtlasTopologyReport {
     Polynomial(shear::Report),
     Rational(atlas::Report),
 }
+#[cfg(feature = "codec")]
 impl Serialize for SourceAtlasTopologyReport {
     fn to_value(&self) -> Value {
         match self {
@@ -77,6 +80,7 @@ impl Serialize for SourceAtlasTopologyReport {
         }
     }
 }
+#[cfg(feature = "codec")]
 impl<'de> Deserialize<'de> for SourceAtlasTopologyReport {
     fn from_value(v: Value) -> value_codec::Result<Self> {
         match v["kind"].as_str() {
@@ -130,6 +134,7 @@ fn up(q: &Q) -> f64 {
 impl VerifiedEnclosure {
     /// A full-sum claim needs its own checked recipe. Two source ambient
     /// certificates alone do not prove topology of their Minkowski sum.
+    #[cfg(feature = "codec")]
     pub fn approximation_topology(&self) -> Option<Value> {
         if self.certificate.version >= 3 {
             if self
@@ -193,7 +198,7 @@ fn ratio(q: &Q) -> Ratio {
     [q.numer().to_string(), q.denom().to_string()]
 }
 fn source_id(s: &Source) -> Result<String> {
-    let bytes = value_codec::encode_binary(&s.to_value()).map_err(|e| fail(&e.to_string()))?;
+    let bytes = identity::source(s)?;
     let mut h = Sha256::new();
     h.update(b"nurbs-minkowski-source-v1");
     h.update(bytes);
@@ -627,6 +632,7 @@ pub fn verify(
     })
 }
 
+#[cfg(feature = "codec")]
 #[path = "curved/codec.rs"]
 mod codec;
 

@@ -1,0 +1,156 @@
+{
+  "baseCommit": "4ad06539c9b6cef2032204363b9ac659d589e796",
+  "sourceFinal": "source-final.json",
+  "sourceBeforeSmokeFixtureFix": "source-before-smoke-fixture-fix.json",
+  "librarySourceUnchangedAcrossFixtureFix": true,
+  "defaultMinkowski": {
+    "name": "default-minkowski",
+    "exitCode": 0,
+    "passed": 123,
+    "sourceIds": [],
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "brep-core",
+      "--lib",
+      "minkowski3d::curved::"
+    ],
+    "log": "curved-native-default-minkowski.log.gz"
+  },
+  "nativeFinal": [
+    {
+      "name": "default",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--test",
+        "native_curved_without_codec",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "passed": 3,
+      "sourceIds": [
+        "b7a81a94c10c47691bedfd347a37a397dc983310cd5525f77ea643576a68b7f3"
+      ],
+      "log": "curved-native-default-final.log.gz"
+    },
+    {
+      "name": "no-codec",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--no-default-features",
+        "--test",
+        "native_curved_without_codec",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "passed": 3,
+      "sourceIds": [
+        "b7a81a94c10c47691bedfd347a37a397dc983310cd5525f77ea643576a68b7f3"
+      ],
+      "log": "curved-native-no-codec-final.log.gz"
+    }
+  ],
+  "totalPassed": 129,
+  "crossFeatureSourceSha256": "b7a81a94c10c47691bedfd347a37a397dc983310cd5525f77ea643576a68b7f3",
+  "noCodecLibraryAndInitialTestTargetCheck": {
+    "exitCode": 0,
+    "log": "curved-native-identity-check-r3.log.gz"
+  },
+  "defaultAllTestTargetsCheck": {
+    "exitCode": 0,
+    "log": "curved-native-identity-default-check.log.gz",
+    "variant": "Initial smoke fixture. Final fixture compiled and executed by both final native commands."
+  },
+  "normalDependencyTree": {
+    "valueCodecPresent": false,
+    "rows": 46,
+    "log": "curved-native-dependencies.log.gz"
+  },
+  "codecMoves": "codec-move-check.json",
+  "architecture": {
+    "passed": true,
+    "remainingLegacyPins": 55,
+    "raisedOrAddedPins": 0,
+    "atlasPinBefore": 861,
+    "atlasPinAfter": 801
+  },
+  "initialRuntimeFailures": {
+    "runs": [
+      {
+        "name": "default-native",
+        "exitCode": 101,
+        "passed": 2,
+        "sourceIds": [
+          "b7a81a94c10c47691bedfd347a37a397dc983310cd5525f77ea643576a68b7f3"
+        ],
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--offline",
+          "--manifest-path",
+          "crates/Cargo.toml",
+          "-p",
+          "brep-core",
+          "--test",
+          "native_curved_without_codec",
+          "--",
+          "--nocapture"
+        ],
+        "log": "curved-native-default-native.log.gz"
+      },
+      {
+        "name": "no-codec-native",
+        "exitCode": 101,
+        "passed": 2,
+        "sourceIds": [
+          "b7a81a94c10c47691bedfd347a37a397dc983310cd5525f77ea643576a68b7f3"
+        ],
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--offline",
+          "--manifest-path",
+          "crates/Cargo.toml",
+          "-p",
+          "brep-core",
+          "--no-default-features",
+          "--test",
+          "native_curved_without_codec",
+          "--",
+          "--nocapture"
+        ],
+        "log": "curved-native-no-codec-native.log.gz"
+      }
+    ],
+    "cause": "New smoke fixture incorrectly requested seam normalization for ordinary cuboids without artificial seams. Correct refusal retained as an explicit negative case; positive case now partitions a nonplanar original face and verifies difference/intersection, seam removal, material and replay. No production algorithm weakened."
+  },
+  "limits": {
+    "binaryBytes": 33554432,
+    "binaryDepth": 128,
+    "proofWork": "unchanged"
+  },
+  "scope": "Typed curved computations compile without optional codec; actual source IDs match both modes. Default native geometry/refusal regressions and byte parity only. Not a complete workspace, full featureless unit suite, frontend runtime, packaged WASM, exchange or global qualification."
+}

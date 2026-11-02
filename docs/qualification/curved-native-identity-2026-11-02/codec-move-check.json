@@ -1,0 +1,31 @@
+{
+  "baseCommit": "4ad06539c9b6cef2032204363b9ac659d589e796",
+  "passed": 5,
+  "checks": [
+    {
+      "path": "crates/brep-core/src/minkowski3d/curved/atlas/codec.rs",
+      "sha256": "17be4463cefc418cb337a3da88a57eca8417f1d2528b3d421686922429faff3e",
+      "unchangedTransportBodies": true
+    },
+    {
+      "path": "crates/brep-core/src/minkowski3d/curved/atlas_legacy/codec.rs",
+      "sha256": "17be4463cefc418cb337a3da88a57eca8417f1d2528b3d421686922429faff3e",
+      "unchangedTransportBodies": true
+    },
+    {
+      "path": "crates/brep-core/src/minkowski3d/curved/prismatic/codec.rs",
+      "sha256": "d26537e9ecada4b7b165738157a5122b6bf83178151f68c6775224e909beb736",
+      "unchangedTransportBodies": true
+    },
+    {
+      "path": "crates/brep-core/src/minkowski3d/curved/shear/codec.rs",
+      "sha256": "6bbbda3de269c95437c8e428883c6f7902d301612bf03521ada769e645b13951",
+      "unchangedTransportBodies": true
+    },
+    {
+      "path": "crates/brep-core/src/minkowski3d/curved/topology/codec.rs",
+      "sha256": "f67ff5b092b7150f646617e52a380d958ce0b98d9aa6d51f3856fe9482192957",
+      "unchangedTransportBodies": true
+    }
+  ]
+}

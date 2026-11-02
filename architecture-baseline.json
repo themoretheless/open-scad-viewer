@@ -14,7 +14,7 @@
     "crates/brep-core/src/intersections/sphere_cone.rs": 880,
     "crates/brep-core/src/intersections/sphere_cylinder.rs": 1083,
     "crates/brep-core/src/intersections/torus_torus.rs": 926,
-    "crates/brep-core/src/minkowski3d/curved/atlas.rs": 861,
+    "crates/brep-core/src/minkowski3d/curved/atlas.rs": 801,
     "crates/brep-core/src/region_replacement/central_graph.rs": 925,
     "crates/brep-core/src/step_interchange_v3.rs": 3354,
     "crates/brep-core/src/step_interchange.rs": 2208,

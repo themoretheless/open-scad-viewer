@@ -9,7 +9,6 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 use nurbs_core::{Error, Result};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
-#[cfg(feature = "codec")]
 pub mod curved;
 mod poly;
 pub mod difference;
