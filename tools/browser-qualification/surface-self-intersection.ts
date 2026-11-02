@@ -1,4 +1,4 @@
-import {nonlinearSurfaceCases,spatialSurfaceCases} from './surface-self-fixtures'
+import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from './surface-self-fixtures'
 import {SurfaceSelfIntersectionBrowser} from '../../src/services/surfaceSelfIntersectionBrowser'
 import type {NurbsSurface} from '../../src/services/nurbsSurface'
 function graph():NurbsSurface{return{degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,.5,1].map(x=>[[x,0,x*x],[x,1,x*x]]),weights:[[1,1],[1,1],[1,1]],periodicU:false,periodicV:false}}
@@ -30,11 +30,17 @@ async function qualify(){
   separated.weights=separated.weights.map(()=>[1,1])
   for(const row of separated.controlPoints)row[1]![2]=row[0]![2]!+1/64
   const separatedReport=await lane.inspect(separated,10000)
+  const isoTargets=[]
+  for(const axis of [0,1] as const){const q=isoTargetFixture(axis),before=JSON.stringify(q);isoTargets.push({axis,report:await lane.inspectIsoTarget(q)});if(JSON.stringify(q)!==before)throw new Error('Iso target input changed')}
+  const isoShort=await lane.inspectIsoTarget({...isoTargetFixture(0),maxCells:1})
+  const separate=isoTargetFixture(0);for(const row of separate.target.controlPoints)for(const p of row)p[0]=10
+  const isoAbsent=await lane.inspectIsoTarget(separate)
+  const offCenterSpatial=await lane.inspect(offCenterSpatialSurface(),10000)
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}

@@ -34,9 +34,9 @@ try{
  assert.equal(result.rational.status,'present');assert.deepEqual(result.rational.exactWitness[1][0],{numerator:'8',denominator:'9'})
  for(const [key,pattern] of Object.entries({busy:/busy/,cancelled:/cancelled/,deadline:/deadline/,nativeRefusal:/NURBS_INVALID_INPUT/,cloneFailure:/clone|request/i,preAbort:/cancelled/,badBudget:/budget/}))assert.match(result[key],pattern,key)
  assert.equal(result.inputIntact,true);assert.equal(result.noEarlyWorkers,true);assert(result.ticks>0)
- assert.deepEqual(result.ownership,{active:false,workersStarted:16,workersTerminated:16})
+ assert.deepEqual(result.ownership,{active:false,workersStarted:21,workersTerminated:21})
  const platformAudit=await page.evaluate(()=>globalThis.surfaceWorkerAudit)
- assert.deepEqual(platformAudit,{started:16,terminated:16});assert.deepEqual(errors,[])
+ assert.deepEqual(platformAudit,{started:21,terminated:21});assert.deepEqual(errors,[])
  assert.equal(result.nonlinear.length,5)
  const x=(11-4*Math.sqrt(6))/25,t=(1+Math.sqrt(6))/5
  const expected=[[x,x,1],[0,0,1],[0,0,1],[79/63,79/63,8/7],[79/63,79/63,8/7]]
@@ -55,6 +55,11 @@ try{
  }
  assert.equal(result.spatial.length,2)
  assert.notEqual(result.separatedReport.status,'present');assert.equal(result.separatedReport.certifiedCrossing,null)
+ assert.equal(result.isoTargets.length,2)
+ for(const {report:r} of result.isoTargets){assert.equal(r.roots.length,2);assert.equal(r.windowCoverageComplete,true);assert.equal(r.allSurfaceBranchesEnumerated,false);assert.equal(r.bodyAdmission,false);for(const t of [.25,.75]){const root=r.roots.find(x=>x.parameterBox[0][0]<=t&&t<=x.parameterBox[0][1]);assert(root);const z=4/3+t*t*t/4;assert(root.parameterBox[2][0]<=10+2*z&&10+2*z<=root.parameterBox[2][1])}}
+ assert.equal(result.isoShort.status,'unresolved');assert.equal(result.isoShort.windowCoverageComplete,false)
+ assert.equal(result.isoAbsent.status,'absent-in-window');assert.equal(result.isoAbsent.allSurfaceBranchesEnumerated,false)
+ assert.equal(result.offCenterSpatial.status,'present');assert.equal(result.offCenterSpatial.certifiedCrossing.method,'original-curve-surface-krawczyk');assert.notEqual(result.offCenterSpatial.certifiedCrossing.parameterBoxes[0][1][0],.5)
  const report={passed:true,browser:browser.version(),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,installedPackageUpdated:false,result,platformAudit,workers,scope:'Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification'}
  await writeFile(resolve(output,'report.json'),JSON.stringify(report,null,2)+'\n')
  console.log(JSON.stringify(report,null,2))

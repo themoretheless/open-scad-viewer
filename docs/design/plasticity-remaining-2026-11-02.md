@@ -90,6 +90,8 @@ Bridge iso–target: публичный `nurbs_surface_iso_target_window` при
 
 Клиентский Worker iso–target: `SurfaceSelfIntersectionBrowser.inspectIsoTarget` использует общую очередь/ownership с whole-surface audit и отдельный native op. Клиент валидирует отчёт и связывает axis/parameter/window/budget с исходным запросом, включая snapshot window при последующем изменении caller input. **49 unit/protocol тестов (6 новых browser ownership) и vue-tsc прошли**; [receipt](../qualification/iso-target-worker-client-2026-11-02/results.json). Это пока mock-Worker evidence; actual WASM/Chromium нового op ожидают отдельную текущую сборку и не объявляются прошедшими.
 
+Actual WASM iso–target/off-center: frozen source `6495f1b9b` собран в raw import-free candidate SHA `ac9ae2b9c2c7e983a06136e34fa9656d25668d97ef398145613ddab81a1e65c1` (20919544 bytes), сохранён независимой копией. **29 ABI сценариев и 21 Chromium Worker прошли** на одном SHA: новые U/V iso–target запросы с двумя roots и полным окном, budgets, separated-target absence, forged evidence refusal и off-center пространственный контакт. Реальные ответы прошли клиентский валидатор и query binding. [Общий receipt](../qualification/iso-target-wasm-2026-11-02/results.json), [ABI](../qualification/iso-target-wasm-2026-11-02/abi/results.json), [browser](../qualification/iso-target-wasm-2026-11-02/browser/report.json). Временный чистый worktree удалён; installed package не заменён. Полнота всех surface branches, tangencies/periodic, trims/Body и production editor/provider qualification остаются открытыми.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

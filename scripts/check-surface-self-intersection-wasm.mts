@@ -2,9 +2,10 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
+import {isSurfaceIsoTargetReport} from '../src/services/surfaceIsoTargetProtocol.ts'
 import {isSurfaceIsoAuditReport} from '../src/services/surfaceIsoSelfIntersectionProtocol.ts'
 import {isSurfaceAuditReport} from '../src/services/surfaceSelfIntersectionProtocol.ts'
-import {nonlinearSurfaceCases,spatialSurfaceCases} from '../tools/browser-qualification/surface-self-fixtures.ts'
+import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from '../tools/browser-qualification/surface-self-fixtures.ts'
 import { encodeBinary, decodeBinary } from '../src/services/valueBinaryCodec.ts'
 const [wasmPath, directory, sourceCommit] = process.argv.slice(2)
 assert(wasmPath && directory && /^[a-f0-9]{40}$/.test(sourceCommit ?? ''))
@@ -116,6 +117,25 @@ for(const parameter of [.25,.75]){
  for(const c of r.crossings)for(const p of c.parameterBoxes)assert.deepEqual(p[1],[parameter,parameter])
  cases.push({name:`explicit-iso-${parameter}`,status:r.status,scope:'selected fiber only'})
 }
-const result={status:'passed',nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
+for(const axis of [0,1] as const){
+ const q=isoTargetFixture(axis),before=JSON.stringify(q),reply=request({op:'nurbs_surface_iso_target_window',...q})
+ assert.equal(JSON.stringify(q),before);assert.equal(reply.ok,true);const r=reply.value;assert(isSurfaceIsoTargetReport(r));assert.equal(r.roots.length,2);assert.equal(r.windowCoverageComplete,true)
+ for(const t of [.25,.75]){const root=r.roots.find((x:any)=>x.parameterBox[0][0]<=t&&t<=x.parameterBox[0][1]);assert(root);const z=4/3+t*t*t/4;assert(root.parameterBox[2][0]<=10+2*z&&10+2*z<=root.parameterBox[2][1])}
+ cases.push({name:`iso-target-two-roots-axis-${axis}`,status:r.status,roots:r.roots.length,complete:r.windowCoverageComplete})
+}
+const q=isoTargetFixture(0)
+const shortReply=request({op:'nurbs_surface_iso_target_window',...q,maxCells:1})
+assert.equal(shortReply.ok,true);assert(isSurfaceIsoTargetReport(shortReply.value));assert.equal(shortReply.value.status,'unresolved');assert.equal(shortReply.value.windowCoverageComplete,false)
+cases.push({name:'iso-target-one-cell-incomplete',status:shortReply.value.status})
+for(const row of q.target.controlPoints)for(const p of row)p[0]=10
+const absentReply=request({op:'nurbs_surface_iso_target_window',...q})
+assert.equal(absentReply.ok,true);assert(isSurfaceIsoTargetReport(absentReply.value));assert.equal(absentReply.value.status,'absent-in-window');assert.equal(absentReply.value.allSurfaceBranchesEnumerated,false)
+cases.push({name:'iso-target-separated-window-absence',status:absentReply.value.status})
+reject('iso-target-forged-evidence',{op:'nurbs_surface_iso_target_window',...q,bodyAdmission:true})
+const offCenter=run('off-center-spatial-contact',offCenterSpatialSurface(),'present',{maxSpans:10000})
+assert.equal(offCenter.certifiedCrossing.method,'original-curve-surface-krawczyk')
+assert.notEqual(offCenter.certifiedCrossing.parameterBoxes[0][1][0],.5)
+assert(offCenter.probeSearch.attempts.some((p:any)=>p.kind?.startsWith('curve-surface')&&p.parameter!==.5))
+const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

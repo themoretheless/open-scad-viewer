@@ -18,3 +18,11 @@ export const spatialSurfaceCases=([0,1] as const).map(axis=>({axis,name:`origina
  if(axis===1){s.controlPoints=[0,1].map(j=>s.controlPoints.map(row=>row[j]!));s.weights=[0,1].map(j=>s.weights.map(row=>row[j]!));[s.degreeU,s.degreeV]=[s.degreeV,s.degreeU];[s.knotsU,s.knotsV]=[s.knotsV,s.knotsU]}
  return s
 }}))
+
+export function isoTargetFixture(axis:0|1){return{
+ source:spatialSurfaceCases[axis]!.surface(),axis,parameter:.5,
+ target:{degreeU:1,degreeV:1,knotsU:[-2,-2,2,2],knotsV:[10,10,14,14],controlPoints:[[[0,-1,0],[0,-1,2]],[[0,1,0],[0,1,2]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false},
+ window:[[0,1],[-2,2],[10,14]] as [[number,number],[number,number],[number,number]],maxCells:10000
+}}
+
+export function offCenterSpatialSurface(){const s=spatialSurfaceCases[0]!.surface();s.weights=s.weights.map(()=>[1,1]);s.controlPoints.forEach((row,i)=>{row[0]![2]=i*.375;row[1]![2]=i*.375+1});return s}
