@@ -9964,8 +9964,14 @@
 
     }
 
+#[path="c2_bowl.rs"]
+
 mod c2_bowl;
 
+#[path="exact_regular.rs"]
+
 mod exact_regular;
+
+#[path="exact_g1.rs"]
 
 mod exact_g1;

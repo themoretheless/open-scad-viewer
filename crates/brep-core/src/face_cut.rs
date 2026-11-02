@@ -71,7 +71,7 @@ use endpoint_loop::owned_boundary;
 mod closed;
 pub use closed::{
     BridgePartition, BridgePath, ClosedCutLimits, ClosedPartition, HolePartition,
-    PathGraphPartition, partition_bridges, partition_closed, partition_path_graph,
+    PathGraphPartition, partition_bridges, partition_path_graph,
     partition_same_hole,
 };
 pub(crate) use closed::{partition_bridges_with_tolerances, partition_path_graph_with_tolerances};
@@ -769,3 +769,6 @@ pub(crate) fn partition_with_shared_limits(
         trim_pairs: pairs,
     })
 }
+
+mod closed_api;
+pub use closed_api::{ClosedCutBudget, partition_closed};

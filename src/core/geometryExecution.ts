@@ -427,8 +427,10 @@ export interface GeometryProviderAdmissionDecision {
  * catalog entry is still baseline-pending.
  */
 export const ACTIVE_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
-  mesh: qualifiedRuntimeManifestVersion('mesh'),
-  brep: qualifiedRuntimeManifestVersion('brep'),
+  // Importing a diagnostic API must not instantiate a production provider.
+  // Every actual route still performs the same artifact-bound admission.
+  get mesh() { return qualifiedRuntimeManifestVersion('mesh') },
+  get brep() { return qualifiedRuntimeManifestVersion('brep') },
 })
 
 export interface GeometryEngineRegistrySnapshot {

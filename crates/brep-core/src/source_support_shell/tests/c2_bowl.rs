@@ -426,4 +426,5 @@ fn folded_quadratic_closed_caps_have_c1_neighborhoods_without_c2_credit() {
     );
 }
 
+#[path="c2_bowl/unified.rs"]
 mod unified;
