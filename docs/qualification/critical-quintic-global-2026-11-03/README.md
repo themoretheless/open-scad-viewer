@@ -80,3 +80,20 @@ native model. All 4411 final-rank source hashes still match.
 The full default BRep run is still a separate active phase; this checkpoint
 makes no claim that it has passed. Its five pre-existing ignored cases are
 measurement/benchmark diagnostics, not new exclusions introduced here.
+
+## Terminal full BRep phase
+
+Final frozen native BRep: **2312 passed, 0 failed, 5 pre-existing ignored,
+0 filtered**, 1231.32 seconds. All previous failures pass. The expensive actual
+hollow quarter-turn constructor is included; no per-test omission is used.
+All 4411 final source hashes and the frozen binary SHA-256 still match after
+the run. `brep-core-full-final.log.gz` and `full-native-result.json` record this
+terminal phase, superseding earlier running-state receipts. The five ignored
+cases remain explicit measurements/benchmarks: assembly edit timing, retained
+injectivity work diagnostic, paired owned-chart constructor measurement, repeated
+station winding-cache benchmark, and affine batch timing.
+
+This closes current native regressions and the new critical-body geometric
+certificate. It does not prove every arbitrary-frame/filled-cap/closed-seam
+G1/G2 combination, republish WASM, or certify current concurrent main work.
+The full original goal therefore remains open.
