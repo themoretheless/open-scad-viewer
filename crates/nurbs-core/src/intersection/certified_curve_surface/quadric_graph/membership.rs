@@ -123,9 +123,15 @@ pub(super) fn contact(
             (&s.knots_v, s.degree_v, s.control_points[0].len())
         };
         let width = q(knots[n]) - q(knots[p]);
+        let lo = chart.inverse_clock(axis, &ranges[axis][0]);
+        let hi = if ranges[axis][0] == ranges[axis][1] {
+            lo.clone()
+        } else {
+            chart.inverse_clock(axis, &ranges[axis][1])
+        };
         Ok([
-            bound(&(q(knots[p]) + &width * &ranges[axis][0]))?[0],
-            bound(&(q(knots[p]) + width * &ranges[axis][1]))?[1],
+            bound(&(q(knots[p]) + &width * &lo[0]))?[0],
+            bound(&(q(knots[p]) + width * &hi[1]))?[1],
         ])
     };
     Ok(Decision::Contact(OriginalQuadricGraphContact {

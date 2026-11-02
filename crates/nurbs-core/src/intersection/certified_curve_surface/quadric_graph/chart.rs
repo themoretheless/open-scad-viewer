@@ -1,8 +1,10 @@
-//! Original polynomial graph chart and single implicit branch proof.
+//! Original graph chart, exact rational clocks and single implicit branch proof.
 use super::*;
 use num_traits::Zero;
 pub(super) struct Chart {
     pub axes: [usize; 2],
+    pub parameterization: OriginalQuadricGraphParameterization,
+    clocks: [super::clock::Clock; 2],
     origin: [Q; 2],
     u: [Q; 2],
     v: [Q; 2],
@@ -20,16 +22,37 @@ impl Chart {
                 && s.control_points.len() == p + 1
                 && s.control_points[0].len() == r + 1
                 && s.control_points.iter().flatten().all(|x| x.len() == 3),
-            "Quadric graph needs one nonperiodic 3D polynomial Bezier patch",
+            "Quadric graph needs one nonperiodic 3D Bezier patch",
         )?;
         check(
-            s.weights.iter().flatten().all(|w| *w == s.weights[0][0])
-                && s.knots_u[..=p].iter().all(|x| *x == s.knots_u[p])
+            s.knots_u[..=p].iter().all(|x| *x == s.knots_u[p])
                 && s.knots_u[p + 1..].iter().all(|x| *x == s.knots_u[p + 1])
                 && s.knots_v[..=r].iter().all(|x| *x == s.knots_v[r])
                 && s.knots_v[r + 1..].iter().all(|x| *x == s.knots_v[r + 1]),
-            "Quadric graph requires original clamped knots and constant positive weights",
+            "Quadric graph requires original clamped knots",
         )?;
+        let w0 = q(s.weights[0][0]);
+        // Rank-one positive weights give independent weighted Bernstein
+        // clocks. Their strict monotonicity and endpoint coverage are proved
+        // by the variance identity in clock.rs; no geometric assumption is
+        // needed for coverage. Geometric vectors only accelerate inversion.
+        check(
+            (0..=p).all(|i| {
+                (0..=r).all(|j| q(s.weights[i][j]) * &w0 == q(s.weights[i][0]) * q(s.weights[0][j]))
+            }),
+            "Quadric graph requires exactly separable original positive weights",
+        )?;
+        let clocks = [
+            super::clock::Clock::original((0..=p).map(|i| q(s.weights[i][0])).collect()),
+            super::clock::Clock::original((0..=r).map(|j| q(s.weights[0][j])).collect()),
+        ];
+        let parameterization = if clocks.iter().all(|c| c.identity()) {
+            OriginalQuadricGraphParameterization::PolynomialAffine
+        } else if clocks.iter().all(|c| c.projective()) {
+            OriginalQuadricGraphParameterization::SeparableProjective
+        } else {
+            OriginalQuadricGraphParameterization::SeparableRational
+        };
         for axes in [[0, 1], [0, 2], [1, 2]] {
             let dependent = 3 - axes[0] - axes[1];
             if matrix[dependent][dependent] != 0. {
@@ -78,6 +101,8 @@ impl Chart {
             }
             return Ok(Self {
                 axes,
+                parameterization,
+                clocks,
                 origin,
                 u,
                 v,
@@ -87,6 +112,9 @@ impl Chart {
         Err(crate::input(
             "No proved globally single-valued original quadric graph chart",
         ))
+    }
+    pub(super) fn inverse_clock(&self, axis: usize, a: &Q) -> [Q; 2] {
+        self.clocks[axis].inverse(a)
     }
     pub(super) fn fractions(&self, p: &[Q; 3]) -> [Q; 2] {
         let x = &p[self.axes[0]] - &self.origin[0];

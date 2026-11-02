@@ -57,3 +57,28 @@ for(const delta of [-(2**-40),0,2**-40]){
  const q=graphQuery(),d=2**-8,x=[.1+d,.1-d,.1+d],f=[d,0,-d];q.patch.controlPoints=[[[.1,0,0],[.1,1,.1]],[[1.1,0,0],[1.1,1,1.1]]];q.curve={degree:2,knots:[2,2,2,6,6,6],controlPoints:x.map((a,i)=>[a,.5,.5*a-f[i]!]),weights:[1,2,4],periodic:false}
  quadricGraphCases.push({name:'graph-original-nonrepresentable-frame',query:q,check:r=>present(r,[[2+4/3,-2,12,1]],'quadric-coordinate-sign')})
 }
+for(const gauge of [1,7]){
+ const q=graphQuery();q.patch.weights=[[gauge,3*gauge],[2*gauge,6*gauge]]
+ quadricGraphCases.push({name:`graph-projective-target-gauge-${gauge}`,query:q,check:r=>{present(r,[[4,-2+4/3,11,2]]);require(r.targetParameterization==='separable-projective','Missing projective target proof')}})
+}
+{
+ const q=graphQuery(),a=Math.sqrt(.5);Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,2,2,2],knotsV:[10,10,10,14,14,14],controlPoints:[0,1,2].map(i=>[0,1,2].map(j=>[i/2,j/2,Number(i===2)+Number(j===2)])),weights:[[1,3,9],[2,6,18],[4,12,36]]});q.quadric=[[1,0,0,0],[0,1,0,0],[0,0,0,-.5],[0,0,-.5,0]];q.curve.controlPoints=[[0,.5,.75],[1,.5,.75]]
+ quadricGraphCases.push({name:'graph-projective-degree-two-target',query:q,check:r=>{present(r,[[2+4*a,-2+4*a/(2-a),11,1]]);require(r.targetParameterization==='separable-projective','Wrong degree-two target clock')}})
+}
+function generalTarget(q:OriginalQuadricGraphQuery){Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,2,2,2],knotsV:[10,10,10,14,14,14],controlPoints:[0,1,2].map(i=>[0,1,2].map(j=>[i/2,j/2,i*j/4])),weights:[[1,3,7],[2,6,14],[5,15,35]]});return q}
+{
+ const q=generalTarget(graphQuery()),u=(Math.sqrt(5)-1)/4,v=(Math.sqrt(7)-1)/6
+ quadricGraphCases.push({name:'graph-general-separable-target-clocks',query:q,check:r=>{present(r,[[4,-2+4*u,10+4*v,2]]);require(r.targetParameterization==='separable-rational','General target clock not proven');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[0]<b[1]&&b[1]-b[0]<1e-12,'Clock inverse was not refined')}})
+}
+{
+ const q=generalTarget(boundaryQuery()),v=(Math.sqrt(7)-1)/6
+ quadricGraphCases.push({name:'graph-general-rational-target-edge',query:q,check:r=>{present(r,[[2+4/3,-2,10+4*v,2]],'quadric-coordinate-sign');require(r.targetParameterization==='separable-rational','General edge clock not proven')}})
+}
+for(let edge=0;edge<6;edge++){
+ const q=boundaryQuery(edge);q.patch.weights=[[1,3],[2,6]];const uv=edge===0?[-2,11]:edge===1?[2,11]:edge===2?[-2+4/3,10]:edge===3?[-2+4/3,14]:edge===4?[-2,10]:[2,14]
+ quadricGraphCases.push({name:`graph-projective-target-edge-${edge}`,query:q,check:r=>present(r,[[2+4/3,uv[0]!,uv[1]!,2]],'quadric-coordinate-sign')})
+}
+{
+ const q=generalTarget(graphQuery());q.patch.controlPoints=[0,1,2].map(i=>[0,1,2].map(j=>[i/2,j/2,Number(i===2)+Number(j===2)]));q.patch.weights=[[1,3,9],[2,6,18],[5,15,45]];q.quadric=[[1,0,0,0],[0,1,0,0],[0,0,0,-.5],[0,0,-.5,0]]
+ quadricGraphCases.push({name:'graph-separable-clock-wrong-quadric-refuses',query:q,check:r=>require(!r.targetGraphProven&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved weighted geometry admitted')})
+}

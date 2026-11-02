@@ -149,7 +149,7 @@ fn caller_admission_and_excessive_work_are_refused() {
     assert!(dispatch(q).is_err());
 }
 #[test]
-fn ambiguous_surface_sheets_and_nonconstant_target_weights_refuse() {
+fn ambiguous_surface_sheets_and_nonseparable_target_weights_refuse() {
     let mut q = query();
     q["patch"]["weights"][1][1] = json!(2.);
     assert!(dispatch(q).is_err());
@@ -161,4 +161,42 @@ fn ambiguous_surface_sheets_and_nonconstant_target_weights_refuse() {
         [0., 0., 0., -1.]
     ]);
     assert!(dispatch(q).is_err());
+}
+
+#[test]
+fn rational_target_projective_clocks_have_explicit_parameterization_metadata() {
+    let mut q = query();
+    q["patch"]["weights"] = json!([[1., 3.], [2., 6.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "separable-projective");
+    assert_eq!(r["status"], "present-on-patch");
+    let uv = &r["contacts"][0]["parameterBox"];
+    let u = -2. + 4. / 3.;
+    assert!(uv[1][0].as_f64().unwrap() <= u && u <= uv[1][1].as_f64().unwrap());
+    assert_eq!(uv[2], json!([11., 11.]));
+    ledger(&r);
+}
+#[test]
+fn arbitrary_separable_bernstein_clocks_produce_refined_finite_uv_boxes() {
+    let mut q = query();
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["degreeV"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 10., 14., 14., 14.]);
+    q["patch"]["controlPoints"] = json!(
+        (0..3)
+            .map(|i| (0..3)
+                .map(|j| vec![i as f64 / 2., j as f64 / 2., i as f64 * j as f64 / 4.])
+                .collect::<Vec<_>>())
+            .collect::<Vec<_>>()
+    );
+    q["patch"]["weights"] = json!([[1., 3., 7.], [2., 6., 14.], [5., 15., 35.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "separable-rational");
+    assert_eq!(r["finiteSurfaceUvAdmission"], true);
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    let b = &r["contacts"][0]["parameterBox"][1];
+    assert!(b[0].as_f64().unwrap() < b[1].as_f64().unwrap());
+    assert!(b[1].as_f64().unwrap() - b[0].as_f64().unwrap() < 1e-12);
+    ledger(&r);
 }

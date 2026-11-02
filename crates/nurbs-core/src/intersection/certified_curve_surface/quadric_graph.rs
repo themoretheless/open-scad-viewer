@@ -4,10 +4,17 @@ use super::*;
 use cad_predicates::{BezierIdentity, BezierIdentityDecision};
 use num_rational::BigRational as Q;
 mod chart;
+mod clock;
 mod edge;
 mod identity;
 pub use edge::GraphBoundaryProof;
 mod membership;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginalQuadricGraphParameterization {
+    PolynomialAffine,
+    SeparableProjective,
+    SeparableRational,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {
     ExactSingleton,
@@ -29,6 +36,7 @@ pub struct OriginalQuadricGraphContacts {
     pub contacts: Vec<OriginalQuadricGraphContact>,
     pub ambiguous_parameters: Vec<[f64; 2]>,
     pub target_graph_proven: bool,
+    pub target_parameterization: OriginalQuadricGraphParameterization,
     pub target_membership: BezierIdentityDecision,
     pub carrier: Option<OriginalQuadricCarrierRoots>,
     pub boundary_exact_work: u64,
@@ -36,13 +44,15 @@ pub struct OriginalQuadricGraphContacts {
     pub exact_work: u64,
     pub complete: bool,
 }
-/// Original constant-weight Bezier graph over an exact affine projection;
+/// Original Bezier graph with positive separable weighted Bernstein clocks
+/// over an exact affine control-grid projection;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its
 /// carrier. Other charts/branches refuse this contract. No trim/Body credit.
 /// max_exact_work bounds target, carrier and coordinate predicate work. Fixed
-/// degree-bounded rational chart and singleton checks are separate operations.
+/// degree-bounded rational chart, inverse-clock schedules and singleton checks
+/// are separate operations.
 pub fn original_quadric_graph_contacts(
     c: &Curve,
     s: &Surface,
@@ -88,6 +98,7 @@ pub fn original_quadric_graph_contacts(
         contacts: vec![],
         ambiguous_parameters: vec![],
         target_graph_proven: proven,
+        target_parameterization: chart.parameterization,
         target_membership,
         carrier: None,
         exact_work: work,

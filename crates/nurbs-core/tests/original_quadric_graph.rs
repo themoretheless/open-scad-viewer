@@ -154,7 +154,7 @@ fn perturbed_original_height_never_receives_the_unmodified_quadric_proof() {
     assert!(r.carrier.is_none() && r.contacts.is_empty());
 }
 #[test]
-fn unknown_sheets_collapsed_projection_and_nonconstant_weights_refuse_chart_admission() {
+fn unknown_sheets_collapsed_projection_and_nonseparable_weights_refuse_chart_admission() {
     let (mut s, q) = saddle();
     s.weights[1][1] = 2.;
     assert!(original_quadric_graph_contacts(
@@ -513,4 +513,143 @@ fn irrational_quadric_root_has_exact_boundary_and_both_nearby_side_classificatio
             r.boundary_proofs.iter().map(|p| p.work_delta).sum()
         );
     }
+}
+
+#[test]
+fn original_geometric_target_weights_invert_both_projective_clocks() {
+    use nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization as P;
+    for (ru, rv, gauge) in [(2., 3., 1.), (2., 3., 7.), (1., 3., 1.), (0.25, 0.5, 4.)] {
+        let (mut s, q) = saddle();
+        s.weights = vec![vec![gauge, gauge * rv], vec![gauge * ru, gauge * ru * rv]];
+        let r = inspect(&line([0., 0., -0.25], [1., 1., 0.75]), &s, q);
+        present(&r, &[(4., -2. + 4. / (1. + ru), 10. + 4. / (1. + rv), 2)]);
+        assert_eq!(r.target_parameterization, P::SeparableProjective);
+    }
+    let (s, q) = saddle();
+    assert_eq!(
+        inspect(&line([0., 0., -0.25], [1., 1., 0.75]), &s, q).target_parameterization,
+        P::PolynomialAffine
+    );
+}
+#[test]
+fn rational_degree_two_graph_uses_neighbor_weights_not_endpoint_weight_ratio() {
+    let (mut s, q) = paraboloid();
+    s.weights = (0..3)
+        .map(|i| (0..3).map(|j| 2f64.powi(i) * 3f64.powi(j)).collect())
+        .collect();
+    let a = 0.5f64.sqrt();
+    let r = inspect(&line([0., 0.5, 0.75], [1., 0.5, 0.75]), &s, q);
+    present(&r, &[(2. + 4. * a, -2. + 4. * a / (2. - a), 11., 1)]);
+    let r = inspect(&line([-0.5, 0.5, 0.25], [0.5, 0.5, 0.25]), &s, q);
+    present(&r, &[(4., -2., 11., 2)]);
+}
+#[test]
+fn projective_target_clocks_preserve_exact_algebraic_edges_and_corners() {
+    for edge in 0..6 {
+        let (mut s, q) = saddle();
+        s.weights = vec![vec![1., 3.], vec![2., 6.]];
+        let l = [1., 0., -1., -2.];
+        let f = [1., -1., 0., 4.];
+        let c = Curve {
+            degree: 3,
+            knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+            control_points: (0..4)
+                .map(|i| match edge {
+                    0 => vec![l[i], 0.5, 0.5 * l[i] - f[i]],
+                    1 => vec![1. + l[i], 0.5, 0.5 * (1. + l[i]) - f[i]],
+                    2 => vec![0.5, l[i], 0.5 * l[i] - f[i]],
+                    3 => vec![0.5, 1. + l[i], 0.5 * (1. + l[i]) - f[i]],
+                    4 => vec![l[i], l[i], 0.],
+                    _ => vec![1. + l[i], 1. + l[i], [3., 1., -1., -3.][i]],
+                })
+                .collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let (u, v) = match edge {
+            0 => (-2., 11.),
+            1 => (2., 11.),
+            2 => (-2. + 4. / 3., 10.),
+            3 => (-2. + 4. / 3., 14.),
+            4 => (-2., 10.),
+            _ => (2., 14.),
+        };
+        present(&inspect(&c, &s, q), &[(2. + 4. / 3., u, v, 2)]);
+    }
+}
+#[test]
+fn one_ulp_factorization_errors_and_unproved_rational_geometry_never_admit() {
+    let (mut s, q) = paraboloid();
+    s.weights = vec![
+        vec![1., 3., 9.],
+        vec![2., 6., 18.],
+        vec![4., 12., 36f64.next_up()],
+    ];
+    let c = line([0., 0.5, 0.75], [1., 0.5, 0.75]);
+    assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1000000).is_err());
+    // Still exactly separable, but no binomial projective clock identity.
+    s.weights = vec![vec![1., 3., 9.], vec![2., 6., 18.], vec![5., 15., 45.]];
+    let r = original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1000000).unwrap();
+    assert!(!r.target_graph_proven && !r.complete);
+    assert!(r.contacts.is_empty());
+}
+
+fn general_rational_saddle() -> (Surface, [[f64; 4]; 4]) {
+    let (mut s, q) = saddle();
+    s.degree_u = 2;
+    s.degree_v = 2;
+    s.knots_u = vec![-2., -2., -2., 2., 2., 2.];
+    s.knots_v = vec![10., 10., 10., 14., 14., 14.];
+    s.control_points = (0..3)
+        .map(|i| {
+            (0..3)
+                .map(|j| vec![i as f64 / 2., j as f64 / 2., i as f64 * j as f64 / 4.])
+                .collect()
+        })
+        .collect();
+    s.weights = [1., 2., 5.]
+        .into_iter()
+        .map(|u| [1., 3., 7.].into_iter().map(|v| u * v).collect())
+        .collect();
+    (s, q)
+}
+#[test]
+fn arbitrary_positive_separable_weights_have_certified_nongeometric_uv_inverses() {
+    let (s, q) = general_rational_saddle();
+    let r = inspect(&line([0., 0., -0.25], [1., 1., 0.75]), &s, q);
+    let u = (5f64.sqrt() - 1.) / 4.;
+    let v = (7f64.sqrt() - 1.) / 6.;
+    present(&r, &[(4., -2. + 4. * u, 10. + 4. * v, 2)]);
+    assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::SeparableRational);
+    for axis in 1..3 {
+        let b = r.contacts[0].parameter_box[axis];
+        assert!(b[0] < b[1]);
+        assert!(
+            b[1] - b[0] < 1e-12,
+            "Expected a refined clock inverse, not a whole chart: {b:?}"
+        );
+    }
+}
+#[test]
+fn general_rational_clocks_keep_global_edge_coverage_and_weight_gauge() {
+    let (mut s, q) = general_rational_saddle();
+    for row in &mut s.weights {
+        for w in row {
+            *w *= 8.;
+        }
+    }
+    let c = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![
+            vec![1., 0.5, -0.5],
+            vec![0., 0.5, 1.],
+            vec![-1., 0.5, -0.5],
+            vec![-2., 0.5, -5.],
+        ],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let v = (7f64.sqrt() - 1.) / 6.;
+    present(&inspect(&c, &s, q), &[(2. + 4. / 3., -2., 10. + 4. * v, 2)]);
 }

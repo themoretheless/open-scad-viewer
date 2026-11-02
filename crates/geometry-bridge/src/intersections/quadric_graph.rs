@@ -4,7 +4,8 @@ use cad_predicates::{BezierIdentity, MAX_WORK, Sign};
 use nurbs_core::{
     curve::Curve,
     intersection::certified_curve_surface::{
-        OriginalQuadricGraphUvProof, original_quadric_graph_contacts,
+        OriginalQuadricGraphParameterization, OriginalQuadricGraphUvProof,
+        original_quadric_graph_contacts,
     },
     surface::Surface,
 };
@@ -54,7 +55,7 @@ pub(crate) fn run(v: Value) -> Result<Value> {
     let absence = r.complete && !presence;
     Ok(
         json!({"schema":"nurbs-original-quadric-graph-contacts/1","status":if presence{"present-on-patch"}else if absence{"absent-on-patch"}else{"unresolved"},
-        "presenceProven":presence,"patchAbsenceProven":absence,"curvePatchCoverageComplete":r.complete,"targetGraphProven":r.target_graph_proven,
+        "presenceProven":presence,"patchAbsenceProven":absence,"curvePatchCoverageComplete":r.complete,"targetGraphProven":r.target_graph_proven,"targetParameterization":match r.target_parameterization{OriginalQuadricGraphParameterization::PolynomialAffine=>"polynomial-affine",OriginalQuadricGraphParameterization::SeparableProjective=>"separable-projective",OriginalQuadricGraphParameterization::SeparableRational=>"separable-rational"},
         "targetMembership":{"status":status,"reason":reason,"workUsed":target_work},"carrier":carrier,
         "contacts":contacts,"ambiguousParameters":r.ambiguous_parameters,"parameterCoordinates":["curve-natural-t","patch-natural-u","patch-natural-v"],
         "boundaryProofs":boundary,"boundaryExactWork":r.boundary_exact_work,"exactWork":r.exact_work,"maxExactWork":max_work,"maxSpans":max_spans,
