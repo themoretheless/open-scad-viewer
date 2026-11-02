@@ -182,7 +182,7 @@ pub fn intersect_curve_curve_certified_report(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<CertifiedCurveIntersection> {
-    intersect_selected(a, b, tolerance, max_cells, false)
+    intersect_selected(a, b, tolerance, max_cells, false, false)
 }
 
 /// Certifies crossings between distinct original spans of one planar curve.
@@ -194,7 +194,19 @@ pub fn intersect_distinct_spans_certified_report(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<CertifiedCurveIntersection> {
-    intersect_selected(curve, curve, tolerance, max_cells, true)
+    intersect_selected(curve, curve, tolerance, max_cells, true, false)
+}
+
+/// Self-crossing audit including pairs within each original span. Diagonal
+/// regions are excluded only by original derivative monotonicity, or split
+/// into two smaller diagonal regions and one disjoint-interior pair. Cusps,
+/// contacts at subdivision boundaries and exhausted work remain unresolved.
+pub fn intersect_self_curve_certified_report(
+    curve: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    intersect_selected(curve, curve, tolerance, max_cells, true, true)
 }
 
 fn intersect_selected(
@@ -203,6 +215,7 @@ fn intersect_selected(
     tolerance: f64,
     max_cells: usize,
     self_pairs: bool,
+    diagonal: bool,
 ) -> Result<CertifiedCurveIntersection> {
     a.validate()?;
     b.validate()?;
@@ -258,7 +271,7 @@ fn intersect_selected(
     let mut stack = Vec::new();
     for &(sa, da) in &aa {
         for &(sb, db) in &bb {
-            if self_pairs && sa >= sb {
+            if self_pairs && (sa > sb || (sa == sb && !diagonal)) {
                 continue;
             }
             if stack.len() == 4096 {
@@ -276,6 +289,27 @@ fn intersect_selected(
             break;
         }
         out.cells += 1;
+        if diagonal && sa == sb {
+            let union = [d[0][0].min(d[1][0]), d[0][1].max(d[1][1])];
+            if let Ok(jet) = curve_jets::enclose(a, sa, union) {
+                if jet[1].iter().any(|x| x.lo > 0. || x.hi < 0.) {
+                    continue;
+                }
+            }
+        }
+        if diagonal && sa == sb && d[0] == d[1] {
+            let mid = d[0][0] + (d[0][1] - d[0][0]) * 0.4375;
+            if depth == 64 || mid <= d[0][0] || mid >= d[0][1] {
+                out.unresolved.push(d);
+                continue;
+            }
+            let left = [d[0][0], mid];
+            let right = [mid, d[0][1]];
+            stack.push((sa, sa, [right, right], depth + 1));
+            stack.push((sa, sa, [left, left], depth + 1));
+            stack.push((sa, sa, [left, right], depth + 1));
+            continue;
+        }
         let pa = hull(a, sa, d[0])?;
         let pb = hull(b, sb, d[1])?;
         if box_distance(&pa, &pb)?.0 > 0. {

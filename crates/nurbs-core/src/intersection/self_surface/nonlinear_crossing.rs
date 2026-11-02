@@ -46,7 +46,7 @@ pub(super) fn find(s: &Surface, max_cells: usize) -> Result<Option<CertifiedCros
         }
         let [start, end] = c.domain();
         let width = I::point(end).sub(I::point(start))?;
-        let report = crate::intersection::intersect_distinct_spans_certified_report(
+        let report = crate::intersection::intersect_self_curve_certified_report(
             &c,
             1e-7,
             max_cells - cells,

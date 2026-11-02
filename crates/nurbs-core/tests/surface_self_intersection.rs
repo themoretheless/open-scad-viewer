@@ -768,3 +768,6 @@ fn nonrepresentable_iso_controls_are_not_rounded_into_a_crossing_proof() {
 
 #[path = "surface_self_intersection/distinct_spans.rs"]
 mod distinct_spans;
+
+#[path = "surface_self_intersection/within_span.rs"]
+mod within_span;
