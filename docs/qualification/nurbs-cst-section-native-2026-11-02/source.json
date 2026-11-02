@@ -1,0 +1,17 @@
+{
+  "baseCommit": "ad92f3486",
+  "files": [
+    {
+      "path": "crates/nurbs-core/src/construct/curves/airfoil.rs",
+      "sha256": "b63031712985bfbb8c0709b9b5c49df24621f920c3ea4a748846c554a249c5db"
+    },
+    {
+      "path": "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+      "sha256": "423c0ccabb758557e5f1dc69bbc204eefeeee51fde2f0b8b7ed43413c3a8cbb7"
+    },
+    {
+      "path": "crates/nurbs-core/tests/cst_section_contracts.rs",
+      "sha256": "923d5bc8ea73f0b3af88b05c1c77e712a0dec4571a3244abebf4d252d3b06c5e"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 221,
-  "unallocatedCount": 779,
+  "specifiedCount": 222,
+  "unallocatedCount": 778,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6085,6 +6085,25 @@
       ],
       "remainingQualification": [
         "numerical construction and discrete fit diagnostics only; no continuous error, exact frame or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0222",
+      "name": "площадь и центроид исходного CST-сечения с интервальными границами",
+      "status": "native",
+      "prioritySet": "native-1000-source-section-properties",
+      "category": "Анализ профилей",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::cst_section_properties",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil.rs",
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+        "crates/nurbs-core/tests/cst_section_contracts.rs",
+        "docs/design/nurbs-cst-profiles.md",
+        "docs/qualification/nurbs-cst-section-native-2026-11-02/no-codec-check.json"
+      ],
+      "remainingQualification": [
+        "original CST algebraic subset and sufficient coefficientwise side ordering only; no transformed frame, second moments, B-rep or volume authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

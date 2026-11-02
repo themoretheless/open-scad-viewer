@@ -690,4 +690,4 @@ mod cst_frame;
 pub use cst_frame::{CstFrame, cst_airfoil};
 #[path="airfoil/cst_algebraic.rs"]
 mod cst_algebraic;
-pub use cst_algebraic::{AlgebraicCst,cst_algebraic};
+pub use cst_algebraic::{AlgebraicCst,cst_algebraic,CstSectionProperties,cst_section_properties};
