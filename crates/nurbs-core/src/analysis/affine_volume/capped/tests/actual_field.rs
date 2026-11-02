@@ -57,3 +57,35 @@ fn actual_hollow_quarter_turn_complete_field_has_a_global_certificate() {
     let short=run(full.cells,full.exact_work-1);
     assert!(!short.embedding_certified && short.exact_work<full.exact_work);
 }
+
+#[test]
+fn actual_hollow_quarter_turn_keeps_the_same_field_across_exact_c1_motion_pieces() {
+    let packet:Value=value_codec::from_str(include_str!("fixtures/actual-quarter-turn-bits.json")).unwrap();
+    let caps=[surface(&packet["caps"][0]),surface(&packet["caps"][1])];
+    let m=&packet["motion"];
+    let controls=array(&m["controls"][0]).iter().map(|pose|
+        array(pose).iter().map(vector).collect::<Vec<_>>().try_into().unwrap()).collect::<Vec<Pose>>();
+    assert_eq!(controls.len(),2);assert_eq!(values(&m["weights"][0]),vec![1.,1.]);
+    // These original controls contain only -1,0,1,2. The dyadic midpoint
+    // is EXACT, so two equal-duration linear pieces define the SAME source
+    // field and its global-time derivatives, not a fitted frame law.
+    let mid=std::array::from_fn(|col|std::array::from_fn(|axis|{
+        let a=controls[0][col][axis];let b=controls[1][col][axis];
+        assert!([-1.,0.,1.,2.].contains(&a) && [-1.,0.,1.,2.].contains(&b));
+        (a+b)*0.5
+    }));
+    let pieces=vec![RationalPiece{controls:vec![controls[0],mid],weights:vec![1.;2]},
+        RationalPiece{controls:vec![mid,controls[1]],weights:vec![1.;2]}];
+    assert_eq!(motion_c1::inspect(Motion::Rational(&pieces),&mut 0,1000),Some(true));
+    let projection=array(&m["projection"]).iter().map(vector).collect::<Vec<_>>().try_into().unwrap();
+    let origin=vector(&m["origin"]);
+    let run=|cells,work|certify_rational_caps([&caps[0],&caps[1]],origin,&pieces,projection,cells,work).unwrap();
+    let full=run(m["max_cells"].as_u64().unwrap() as usize,m["max_exact_work"].as_u64().unwrap());
+    eprintln!("actual captured C1 multi-piece carrier field: {full:?}");
+    assert!(full.embedding_certified && full.regularity_certified && full.parameter_topology_preserved,"{full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells<full.cells,"{short:?}");
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work<full.exact_work,"{short:?}");
+}

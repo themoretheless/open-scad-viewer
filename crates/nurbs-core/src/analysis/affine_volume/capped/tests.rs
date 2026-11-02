@@ -240,3 +240,39 @@ fn smooth_endpoint_carriers_and_regular_frames_cannot_hide_a_time_fold() {
     c0.control_points.insert(1,c0.control_points[0].clone());c0.weights.insert(1,c0.weights[0].clone());
     c0.validate().unwrap();assert!(!charts::surface_c1(&c0));assert!(charts::surface_c1(&a));
 }
+
+#[test]
+fn c1_multispan_caps_and_independent_degree_motion_own_the_complete_volume() {
+    // Two original U spans, with literal C1 knot multiplicity and independent
+    // raw UV domains. Greville coefficients make x exactly affine, not fitted.
+    let a=Surface {
+        degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,0.5,1.,1.,1.],
+        knots_v:vec![0.,0.,1.,1.],
+        control_points:[0.,0.25,0.75,1.].into_iter().map(|u|
+            [0.,1.].into_iter().map(|v|vec![u/64.,v/64.,0.]).collect()).collect(),
+        weights:vec![vec![1.;2];4],periodic_u:false,periodic_v:false,
+    };
+    let mut b=a.clone();
+    b.knots_u=b.knots_u.iter().map(|u|-2.+8.*u).collect();
+    b.knots_v=b.knots_v.iter().map(|v|7.+4.*v).collect();
+    for (i,row) in b.control_points.iter_mut().enumerate() {for p in row {
+        p[1]+=1./128.;if i==1 || i==2 {p[2]=1./1024.;}
+    }}
+    let pose=|z|[[1.,0.,0.],[z/64.,1.,0.],[0.,0.,1.],[0.,0.,z]];
+    let motion=vec![RationalPiece{controls:vec![pose(0.),pose(1.)],weights:vec![1.,2.]},
+        RationalPiece{controls:vec![pose(1.),pose(2.),pose(3.)],weights:vec![4.,1.,8.]}];
+    a.validate().unwrap();b.validate().unwrap();
+    assert!(charts::surface_c1(&a) && charts::surface_c1(&b));
+    let before=(a.clone(),b.clone(),format!("{motion:?}"));
+    assert_eq!(motion_c1::inspect(Motion::Rational(&motion),&mut 0,1000),Some(true));
+    let run=|cells,exact|certify_rational_caps([&a,&b],[0.;3],&motion,P,cells,exact).unwrap();
+    let full=run(100000,1000000);
+    assert!(full.embedding_certified && full.regularity_certified && full.parameter_topology_preserved,"{full:?}");
+    eprintln!("C1 multi-span original volume: {full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells<full.cells,"{short:?}");
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work<full.exact_work,"{short:?}");
+    assert_eq!((a,b,format!("{motion:?}")),before);
+}
