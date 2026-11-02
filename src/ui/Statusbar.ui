@@ -1,19 +1,16 @@
 component Statusbar {
-    Grid {
-        width: 1180;
-        height: 26;
-        columns: [*];
-        rows: [26];
-        background: state.theme.canvas;
-
-        StatusBar {
-            cell: 1 1;
-            key: 'mainStatusBar';
-            width: *;
-            height: 26;
-            first: 'WebGPU · Metal · Manifold CSG · Forma UI';
-            second: 'planetary_gearbox.scad · Сохранено в браузере';
-            third: '12 480 треугольников · UTF-8';
+    tokens { gap: "14px"; }
+    Footer {
+        class: "statusbar"; ariaLabel: state.statusAriaLabel; gap: tokens.gap;
+        Span { class: "status-item"; StatusDot { class: state.gpuDotClass; } Text { text: state.backendLabel; } }
+        Text { class: "kernel-badge"; text: "Manifold · Forma"; }
+        if state.showSortedTransparency { Text { text: state.transparencySortedLabel; } }
+        if state.showPersistence { Text { text: state.persistenceLabel; } }
+        if state.conversionPending {
+            Text { text: state.conversionLabel; }
+            ProgressBar { max: state.conversionMax; value: state.conversionValue; ariaLabel: state.conversionLabel; }
+            Button { text: state.cancelLabel; clicked -> actions.cancelConversion(); }
         }
+        Text { class: "status-hint"; text: state.hintLabel; }
     }
 }

@@ -1,0 +1,104 @@
+{
+  "schema": "forma-regions-browser/1",
+  "passed": true,
+  "cases": [
+    {
+      "width": 1440,
+      "events": [
+        {
+          "name": "openWorkspaceMode",
+          "args": [
+            "mesh"
+          ]
+        },
+        {
+          "name": "toggleEditor",
+          "args": []
+        },
+        {
+          "name": "renderFull",
+          "args": []
+        },
+        {
+          "name": "cancelGeometryBuild",
+          "args": []
+        },
+        {
+          "name": "setDisplayMode",
+          "args": [
+            "edges"
+          ]
+        },
+        {
+          "name": "selectDockTab",
+          "args": [
+            "inspector"
+          ]
+        },
+        {
+          "name": "toggleIsolate",
+          "args": []
+        },
+        {
+          "name": "runGeometryAnalysis",
+          "args": []
+        },
+        {
+          "name": "cancelGeometryAnalysis",
+          "args": []
+        }
+      ],
+      "overflow": 0
+    },
+    {
+      "width": 390,
+      "events": [
+        {
+          "name": "openWorkspaceMode",
+          "args": [
+            "mesh"
+          ]
+        },
+        {
+          "name": "toggleEditor",
+          "args": []
+        },
+        {
+          "name": "renderFull",
+          "args": []
+        },
+        {
+          "name": "cancelGeometryBuild",
+          "args": []
+        },
+        {
+          "name": "setDisplayMode",
+          "args": [
+            "edges"
+          ]
+        },
+        {
+          "name": "selectDockTab",
+          "args": [
+            "inspector"
+          ]
+        },
+        {
+          "name": "toggleIsolate",
+          "args": []
+        },
+        {
+          "name": "runGeometryAnalysis",
+          "args": []
+        },
+        {
+          "name": "cancelGeometryAnalysis",
+          "args": []
+        }
+      ],
+      "overflow": 0
+    }
+  ],
+  "errors": [],
+  "scope": "Actual browser DOM and interaction of finite App-state Forma region fixtures at desktop/mobile widths. No full application, GPU computation, CAD geometry or production runtime admission claim."
+}

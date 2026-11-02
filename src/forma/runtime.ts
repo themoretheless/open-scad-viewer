@@ -46,10 +46,6 @@ export function evalFormaExpr(expr: string, ctx: FormaRenderContext): unknown {
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed)
   if (/^-?\d+(\.\d+)?(px|%|rem|em|vh|vw|dvh|fr)$/.test(trimmed)) return trimmed
 
-  if (trimmed.startsWith('!')) {
-    return !Boolean(evalFormaExpr(trimmed.slice(1), ctx))
-  }
-
   // Ternary expression: cond ? a : b (top-level)
   const qIdx = findTopLevelChar(trimmed, '?')
   if (qIdx !== -1) {
@@ -85,6 +81,10 @@ export function evalFormaExpr(expr: string, ctx: FormaRenderContext): unknown {
           return Number(left) + Number(right)
       }
     }
+  }
+
+  if (trimmed.startsWith('!')) {
+    return !Boolean(evalFormaExpr(trimmed.slice(1), ctx))
   }
 
   if (trimmed.startsWith('state.')) return getByPath(ctx.state, trimmed.slice(6))
