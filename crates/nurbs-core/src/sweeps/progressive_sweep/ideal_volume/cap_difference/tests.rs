@@ -48,7 +48,7 @@ fn original_rational_difference_retains_zero_components_and_raw_domain_jets() {
         let d = Difference::prepare(pair, &mut spent, 10000)
             .unwrap()
             .unwrap();
-        assert_eq!(spent, 45);
+        assert_eq!(spent, 45 + 160);
         let mut exact = 0;
         assert!(
             Difference::prepare(pair, &mut exact, spent)
@@ -163,4 +163,31 @@ fn restricted_original_homogeneous_jets_sharpen_unequal_weight_difference() {
             }
         }
     }
+}
+
+#[test]
+fn coefficient_quotient_jets_prove_a_whole_rational_difference_derivative_sign() {
+    let a=Surface {degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+        control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],
+        weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+    let mut b=a.clone();b.weights[1][1]=2.;b.control_points[1][1]=vec![0.5,0.5,0.];
+    let before=[a.clone(),b.clone()];let uv=[[0.5,1.];2];
+    let run=|max| {
+        let mut spent=0;
+        let Some(owner)=Difference::prepare([&a,&b],&mut spent,max).unwrap() else {return (None,spent);};
+        let Some(first)=cap_jets(&a,uv,&mut spent,max).unwrap() else{return(None,spent);};
+        let result=owner.enclose([&a,&b],first,uv,&mut spent,max).unwrap();
+        (result,spent)
+    };
+    let (bound,work)=run(10000);let bound=bound.unwrap();
+    // C1=(u,v,0)/(1+uv), C0=(u,v,0).
+    // d(Dx)/du=-uv(2+uv)/(1+uv)^2 < 0 on the ENTIRE positive rectangle.
+    assert!(bound[1][0].hi<0.,"{bound:?}");
+    for u in [0.5,0.75,1.] {for v in [0.5,0.75,1.] {
+        let exact=-u*v*(2.+u*v)/(1_f64+u*v).powi(2);
+        assert!(bound[1][0].lo<=exact && exact<=bound[1][0].hi);
+    }}
+    assert!(run(work).0.is_some());let (short,spent)=run(work-1);
+    assert!(short.is_none() && spent<work);
+    assert_eq!([a,b],before);
 }

@@ -550,6 +550,25 @@ fn certify_motion_impl(
             }
         }
     }
+    // A single positive rational pose is C-infinity. Literal C1 carrier
+    // knots permit the separate Gale-Nikaido rectangular-domain theorem.
+    // No arbitrary C0 station join or closed quotient borrows that premise.
+    if second.is_some() && !closed
+        && matches!(pieces,Motion::Rational(p) if p.len()==1) {
+        let end=second.unwrap();
+        let cost=1+(carrier.knots_u.len()+carrier.knots_v.len()+end.knots_u.len()+end.knots_v.len()) as u64;
+        if cost>max_exact_work-out.exact_work {
+            out.exact_work=max_exact_work;out.reason=Some("affine-volume-c1-premise-work-limit");return Ok(out);
+        }
+        out.exact_work+=cost;
+        if charts::surface_c1(carrier) && charts::surface_c1(end) {
+            if atlas::certify_c1_rectangular_map(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells)? {
+                out.embedding_certified=true;out.regularity_certified=true;
+                out.parameter_topology_preserved=true;out.reason=None;return Ok(out);
+            }
+            if out.cells==max_cells {return Ok(out);}
+        }
+    }
     // The whole-field metric theorem has no constant-frame premise. For
     // open paired carriers, attempt the SAME bounded global proof before
     // pair refinement; source points still supply no admission credit.

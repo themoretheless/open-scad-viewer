@@ -11,6 +11,8 @@ use super::{cell::Enclosed, *};
 use std::collections::BTreeMap;
 mod weighted;
 mod refinement;
+mod p_matrix;
+pub(crate) use p_matrix::certify as certify_c1_rectangular_map;
 
 fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     let mut p = [[I::point(0.); 3]; 3];
@@ -178,7 +180,7 @@ fn monotone_hull(
     // Point checks only discard unpromising proposals. They supply zero
     // admission credit. A promising fixed metric gets a deeper source-paid
     // complete field cover, including spatially nonlinear rational carriers.
-    let promising=refinement::promising(pieces,projection,scale,inverse,query,out,max)?;
+    let promising=refinement::promising(pieces,projection,scale,inverse,symmetric_positive,query,out,max)?;
     #[cfg(test)]
     if std::env::var_os("OSV_TRACE_ACTUAL_METRIC").is_some() {
         eprintln!("METRIC proposal pieces={pieces:?} cells={} promising={promising} scale={scale:?} inverse={inverse:?}",out.cells);
@@ -208,16 +210,23 @@ fn monotone_hull(
                 }
             }
         }
-        let axis = match e {
-            Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>i,
-            _ => match refinement::axis(b,projection,scale,inverse,query,out,max)? {
-                Some(axis)=>axis,None=>return Ok(false),
-            },
+        let choice = match e {
+            Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>
+                refinement::Choice::Split{axis:i,complete:[false;2]},
+            _ => refinement::axis(b,projection,scale,inverse,symmetric_positive,query,out,max)?,
         };
-        let Some(children) = split_axis(b, axis) else {
-            return Ok(false);
+        let (axis,complete)=match choice {
+            refinement::Choice::Covered=>continue,
+            refinement::Choice::Unavailable=>return Ok(false),
+            refinement::Choice::Split{axis,complete}=>(axis,complete),
         };
-        pending.extend(children);
+        let Some(children)=split_axis(b,axis) else{return Ok(false);};
+        // Pending is precisely the not-yet-proved part of the original cover.
+        // Child proofs from source-paid lookahead already cover their ENTIRE
+        // boxes under this same metric. Retain every unresolved sibling.
+        for (child,proved) in children.into_iter().zip(complete) {
+            if !proved {pending.push(child);}
+        }
     }
     Ok(true)
 }

@@ -3,9 +3,10 @@
 use super::*;
 /// F(u,v,t)=T(t)+A(t)((1-t)C0(u,v)+t*C1(u,v)-origin).
 /// Both source carriers have independent original degrees, knots and weights.
-/// One fixed-metric atlas covers the whole normalized UV x [0,1] volume,
-/// every original affine motion piece and all one-sided derivatives. A local
-/// Jacobian, coincident traces or source reports supply no global credit.
+/// A source-C1 P-matrix proof or a fixed-metric/exhaustive-pair atlas covers
+/// the whole normalized UV x [0,1] volume. Every original motion piece and
+/// one-sided derivative remains owned. Point Jacobians, coincident traces and
+/// caller-supplied reports supply no global credit.
 pub fn certify_rational_caps(
     caps: [&Surface; 2],
     origin: [f64; 3],

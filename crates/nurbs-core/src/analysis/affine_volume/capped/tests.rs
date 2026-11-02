@@ -223,3 +223,20 @@ fn rotating_carrier_tangents_refine_time_instead_of_only_uv() {
 
 #[cfg(feature = "codec")]
 mod actual_field;
+
+#[test]
+fn smooth_endpoint_carriers_and_regular_frames_cannot_hide_a_time_fold() {
+    let a=cap(false);let mut b=a.clone();
+    for p in b.control_points.iter_mut().flatten() {p[2]=-1.;}
+    let pieces=vec![RationalPiece {controls:vec![
+        [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.],[0.,0.,0.]],
+        [[1.,0.,0.],[0.,1.,0.],[0.,0.,2.],[0.,0.,2.]],
+    ],weights:vec![1.;2]}];
+    // F=(u,v,2t-(1+t)t)=(u,v,t-t^2): distinct t=1/4,3/4 coincide.
+    // Omitting A*Qt would instead produce the wrong positive time jet 2-t.
+    let r=certify_rational_caps([&a,&b],[0.;3],&pieces,P,10000,1000000).unwrap();
+    assert!(!r.embedding_certified && !r.regularity_certified && !r.parameter_topology_preserved);
+    let mut c0=a.clone();c0.knots_u=vec![0.,0.,0.5,1.,1.];
+    c0.control_points.insert(1,c0.control_points[0].clone());c0.weights.insert(1,c0.weights[0].clone());
+    c0.validate().unwrap();assert!(!charts::surface_c1(&c0));assert!(charts::surface_c1(&a));
+}
