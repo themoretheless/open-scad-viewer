@@ -5,7 +5,11 @@ fn exact_f64(q: &BigRational) -> Option<f64> {
     let x = q.to_f64()?;
     (BigRational::from_f64(x).as_ref() == Some(q)).then_some(x)
 }
-fn original_iso(s: &Surface, axis: usize, homogeneous: &[[BigRational; 4]]) -> Option<Curve> {
+pub(super) fn original_iso(
+    s: &Surface,
+    axis: usize,
+    homogeneous: &[[BigRational; 4]],
+) -> Option<Curve> {
     let mut controls = Vec::new();
     let mut weights = Vec::new();
     for h in homogeneous {
@@ -53,6 +57,7 @@ pub(super) fn find(
             }
             search.cells += 1;
             let mut attempt = ProbeAttempt {
+                kind: "planar-iso",
                 axis,
                 parameter,
                 cells: 1,
@@ -130,6 +135,7 @@ pub(super) fn find(
                         || boxes[1][axis][1] < boxes[0][axis][0])
                 {
                     let crossing = CertifiedCrossing {
+                        proof: CrossingProof::PlanarCurve,
                         parameter_boxes: boxes,
                         position_bounds: crossing.position_bounds,
                         cells: search.cells,

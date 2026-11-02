@@ -31,8 +31,16 @@ pub(crate) fn run(v: Value) -> Result<Value> {
         Status::Unresolved => "unresolved",
     };
     let crossing = report.certified_crossing.as_ref().map(|c| {
+        let method = match c.proof {
+            nurbs_core::surface_self_intersection::CrossingProof::PlanarCurve => {
+                "original-planar-krawczyk"
+            }
+            nurbs_core::surface_self_intersection::CrossingProof::CurveSurface => {
+                "original-curve-surface-krawczyk"
+            }
+        };
         json!({
-            "method":"original-planar-krawczyk",
+            "method":method,
             "parameterBoxes":c.parameter_boxes,"positionBounds":c.position_bounds,"cells":c.cells
         })
     });
@@ -42,7 +50,7 @@ pub(crate) fn run(v: Value) -> Result<Value> {
         .iter()
         .map(|p| {
             json!({
-                "axis":p.axis,"parameter":p.parameter,"chargedCells":p.cells,
+            "kind":p.kind,"axis":p.axis,"parameter":p.parameter,"chargedCells":p.cells,
                 "isoCoverageComplete":p.iso_coverage_complete,"refusal":p.refusal
             })
         })

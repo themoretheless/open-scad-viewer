@@ -10,7 +10,7 @@ export interface SurfaceSelfIntersectionReport {
  witness:[[number,number],[number,number]]|null
  exactWitness:ExactUvPair|null
  certifiedCrossing?:{
-  method:'original-planar-krawczyk'
+  method:'original-planar-krawczyk'|'original-curve-surface-krawczyk'
   parameterBoxes:[[[number,number],[number,number]],[[number,number],[number,number]]]
   positionBounds:[[number,number],[number,number],[number,number]]
   cells:number
@@ -20,7 +20,7 @@ export interface SurfaceSelfIntersectionReport {
  injectivity:{proven:boolean;spans:number;reason:string}
  maxSpans:number
  probeSearch?:{
-  attempts:{axis:0|1;parameter:number;chargedCells:number;isoCoverageComplete:boolean;refusal:string|null}[]
+  attempts:{kind?:'planar-iso'|'curve-surface-forward'|'curve-surface-reverse';axis:0|1;parameter:number;chargedCells:number;isoCoverageComplete:boolean;refusal:string|null}[]
   chargedCells:number;budgetExhausted:boolean;surfaceCoverageComplete:false
  }
 }
@@ -37,11 +37,12 @@ export function isSurfaceAuditReport(value:unknown):value is SurfaceSelfIntersec
  if(r.injectivity.proven!==(r.status==='absent'))return false
  if(r.probeSearch!==undefined){
   const p=r.probeSearch
-  if(!p||p.surfaceCoverageComplete!==false||typeof p.budgetExhausted!=='boolean'||!Number.isInteger(p.chargedCells)||p.chargedCells<0||p.chargedCells>r.maxSpans||!Array.isArray(p.attempts)||p.attempts.length>30)return false
+  if(!p||p.surfaceCoverageComplete!==false||typeof p.budgetExhausted!=='boolean'||!Number.isInteger(p.chargedCells)||p.chargedCells<0||p.chargedCells>r.maxSpans||!Array.isArray(p.attempts)||p.attempts.length>34)return false
   let charged=0
   for(const a of p.attempts){
    if(!a||![0,1].includes(a.axis)||typeof a.parameter!=='number'||!Number.isFinite(a.parameter)||a.parameter<=0||a.parameter>=1||!Number.isInteger(a.chargedCells)||a.chargedCells<1||a.chargedCells>r.maxSpans||typeof a.isoCoverageComplete!=='boolean'||!(a.refusal===null||(typeof a.refusal==='string'&&a.refusal.length<=1024))||(a.refusal!==null&&a.isoCoverageComplete))return false
    charged+=a.chargedCells
+   if(a.kind!==undefined&&!['planar-iso','curve-surface-forward','curve-surface-reverse'].includes(a.kind))return false
   }
   if(charged!==p.chargedCells)return false
  }
@@ -50,7 +51,7 @@ export function isSurfaceAuditReport(value:unknown):value is SurfaceSelfIntersec
  if(exact===null){
   const c=r.certifiedCrossing
   const interval=(x:unknown):x is [number,number]=>Array.isArray(x)&&x.length===2&&x.every(v=>typeof v==='number'&&Number.isFinite(v))&&x[0]<=x[1]
-  if(r.witness!==null||!c||c.method!=='original-planar-krawczyk'||!Number.isInteger(c.cells)||c.cells<1||c.cells>r.maxSpans)return false
+  if(r.witness!==null||!c||!['original-planar-krawczyk','original-curve-surface-krawczyk'].includes(c.method)||!Number.isInteger(c.cells)||c.cells<1||c.cells>r.maxSpans)return false
   if(!Array.isArray(c.parameterBoxes)||c.parameterBoxes.length!==2||!c.parameterBoxes.every(uv=>Array.isArray(uv)&&uv.length===2&&uv.every(x=>interval(x)&&x[0]>0&&x[1]<1)))return false
   if(!Array.isArray(c.positionBounds)||c.positionBounds.length!==3||!c.positionBounds.every(interval))return false
   return [0,1].some(axis=>c.parameterBoxes[0][axis]![1]<c.parameterBoxes[1][axis]![0]||c.parameterBoxes[1][axis]![1]<c.parameterBoxes[0][axis]![0])

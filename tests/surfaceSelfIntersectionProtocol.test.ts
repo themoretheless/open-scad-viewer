@@ -37,10 +37,16 @@ describe('finite automatic probe metadata',()=>{
  it('rejects a global coverage claim or inconsistent resource receipt',()=>{
   expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),surfaceCoverageComplete:true}})).toBe(false)
   expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),chargedCells:6}})).toBe(false)
-  expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),attempts:Array(31).fill(search().attempts[0]),chargedCells:155}})).toBe(false)
+  expect(isSurfaceAuditReport({...present(),probeSearch:{...search(),attempts:Array(35).fill(search().attempts[0]),chargedCells:175}})).toBe(false)
  })
  it('complete sampled isos still leave the surface unresolved',()=>{
   const r={...present(),status:'unresolved',presenceProven:false,exactWitness:null,probeSearch:{...search(),attempts:[{...search().attempts[0],isoCoverageComplete:true}]}}
   expect(isSurfaceAuditReport(r)).toBe(true)
  })
+})
+
+describe('3D curve-surface source proofs',()=>{
+ const report=()=>({...present(),reflectedAxis:null,exactWitness:null,certifiedCrossing:{method:'original-curve-surface-krawczyk',parameterBoxes:[[[.24,.26],[.5,.5]],[[.74,.76],[.44,.46]]],positionBounds:[[-.01,.01],[-.01,.01],[1.,1.01]],cells:50},probeSearch:{attempts:[{kind:'curve-surface-forward',axis:0,parameter:.5,chargedCells:50,isoCoverageComplete:false,refusal:null}],chargedCells:50,budgetExhausted:false,surfaceCoverageComplete:false}})
+ it('accepts different transverse UVs with an explicit 3D proof kind',()=>expect(isSurfaceAuditReport(report())).toBe(true))
+ it('rejects an unknown proof method',()=>{const r=report();r.certifiedCrossing.method='sampled-root';expect(isSurfaceAuditReport(r)).toBe(false)})
 })

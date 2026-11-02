@@ -41,7 +41,11 @@ fn zero_initial_solver_work_is_not_an_unbounded_probe_loop() {
         row[1][2] = 2. + z;
     }
     let r = surface_self_intersection::inspect(&s, 1000).unwrap();
-    assert_eq!(r.status, Status::Unresolved);
-    assert!(r.probe_search.attempts.len() <= 30);
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(
+        r.certified_crossing.as_ref().unwrap().proof,
+        nurbs_core::surface_self_intersection::CrossingProof::CurveSurface
+    );
+    assert!(r.probe_search.attempts.len() <= 34);
     assert!(r.probe_search.cells <= 1000);
 }

@@ -784,3 +784,6 @@ mod iso_probe;
 
 #[path = "surface_self_intersection/automatic_probes.rs"]
 mod automatic_probes;
+
+#[path = "surface_self_intersection/spatial_windows.rs"]
+mod spatial_windows;

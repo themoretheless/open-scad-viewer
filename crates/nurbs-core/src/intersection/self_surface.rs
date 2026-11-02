@@ -4,8 +4,15 @@ use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive};
 pub(super) mod linear_crossing;
 mod nonlinear_crossing;
+mod spatial_crossing;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CrossingProof {
+    PlanarCurve,
+    CurveSurface,
+}
 #[derive(Clone, Debug)]
 pub struct CertifiedCrossing {
+    pub proof: CrossingProof,
     /// Two original normalized UV boxes, each enclosing a distinct preimage.
     pub parameter_boxes: [[[f64; 2]; 2]; 2],
     pub position_bounds: [[f64; 2]; 3],
@@ -13,6 +20,7 @@ pub struct CertifiedCrossing {
 }
 #[derive(Clone, Debug)]
 pub struct ProbeAttempt {
+    pub kind: &'static str,
     pub axis: usize,
     pub parameter: f64,
     pub cells: usize,
@@ -79,7 +87,10 @@ fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
 /// degree-one iso-curve spans. The latter checks all three world coordinates
 /// and original rational parameter clocks. Up to 15 interior dyadic proposals
 /// per axis steer planar iso-curve Krawczyk proofs on original curve/surface
-/// bounds. Probe admissions and solver cells share max_spans search units.
+/// bounds. Four further central iso/surface windows can prove nonplanar
+/// contacts with different transverse parameters. That route requires an
+/// exactly binary64-representable source iso and uses original 3D bounds.
+/// Probe admissions and solver cells share max_spans search units.
 /// Probes select candidates only; finite exhaustion never proves absence.
 /// Local reflection spans and linear span pairs each have max_spans work caps.
 /// All other cases (including unsupported periodic charts and insufficient
@@ -145,7 +156,10 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
     } else if let Some(witness) = linear_crossing::find(s, max_spans) {
         record(&mut out, None, witness);
     } else {
-        let (crossing, search) = nonlinear_crossing::find(s, max_spans)?;
+        let (mut crossing, mut search) = nonlinear_crossing::find(s, max_spans)?;
+        if crossing.is_none() && search.cells < max_spans {
+            crossing = spatial_crossing::find(s, max_spans, &mut search)?;
+        }
         out.probe_search = search;
         if let Some(crossing) = crossing {
             out.status = Status::Present;

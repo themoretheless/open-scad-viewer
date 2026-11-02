@@ -281,3 +281,47 @@ fn default_surface_audit_reports_automatic_off_center_search_without_full_covera
         );
     }
 }
+
+#[test]
+fn bridge_distinguishes_a_full_3d_contact_from_planar_iso_proofs() {
+    let s = Surface {
+        degree_u: 3,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [
+            [9. / 16., -9. / 32.],
+            [-7. / 16., 13. / 32.],
+            [-7. / 16., -13. / 32.],
+            [9. / 16., 9. / 32.],
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, [x, y])| {
+            let z = if i == 3 { 0.25 } else { 0. };
+            vec![vec![x, y, z], vec![x, y, 2. + z]]
+        })
+        .collect(),
+        weights: vec![vec![1.; 2]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let mut v = request(s);
+    v["maxSpans"] = json!(10000);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["allContactBranchesEnumerated"], false);
+    let c = &r["certifiedCrossing"];
+    assert_eq!(c["method"], "original-curve-surface-krawczyk");
+    assert!(r["witness"].is_null() && r["exactWitness"].is_null());
+    let target = &c["parameterBoxes"][1][1];
+    assert!(target[0].as_f64().unwrap() <= 0.44921875 && 0.44921875 <= target[1].as_f64().unwrap());
+    assert!(target[1].as_f64().unwrap() < 0.5);
+    assert!(
+        r["probeSearch"]["attempts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["kind"] == "curve-surface-forward")
+    );
+}
