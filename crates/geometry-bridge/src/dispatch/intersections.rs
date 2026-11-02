@@ -2,6 +2,7 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "nurbs_surface_self_intersection_audit",
     "brep_intersect_surface_surface",
     "brep_intersect_curve_segment",
     "brep_intersect_curve_plane",
@@ -36,6 +37,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "nurbs_surface_self_intersection_audit" => intersections::self_surface::run(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"
