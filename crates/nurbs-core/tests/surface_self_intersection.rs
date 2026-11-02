@@ -121,13 +121,17 @@ fn rounded_knot_symmetry_does_not_prove_a_fold() {
 }
 
 #[test]
-fn asymmetric_weights_do_not_prove_a_fold() {
+fn asymmetric_global_weights_can_still_have_a_proven_local_fold() {
     let mut s = multispan_fold();
     s.weights[0][0] = 1.01;
-    assert_eq!(
-        surface_self_intersection::inspect(&s, 100).unwrap().status,
-        Status::Unresolved
-    );
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.375, 0.5], [0.625, 0.5]]));
+    let a = s.evaluate(-0.5, 0.5).unwrap().point;
+    let b = s.evaluate(0.5, 0.5).unwrap().point;
+    for i in 0..3 {
+        assert!((a[i] - b[i]).abs() < 1e-13);
+    }
 }
 
 #[test]
@@ -227,4 +231,75 @@ fn local_search_budget_does_not_skip_unvisited_spans() {
     let r = surface_self_intersection::inspect(&s, 100).unwrap();
     assert_eq!(r.status, Status::Present);
     assert_eq!(r.witness, Some([[0.625, 0.5], [0.875, 0.5]]));
+}
+
+fn non_bernstein_fold() -> Surface {
+    let mut s = graph();
+    s.knots_u = vec![0., 0., 0., 0.5, 1., 1., 1.];
+    s.control_points = [0., 1., -3., 4.]
+        .into_iter()
+        .map(|x| vec![vec![x, 0., 2. * x], vec![x, 1., 2. * x]])
+        .collect();
+    s.weights = [1., 1.5, 0.5, 1.].into_iter().map(|w| vec![w; 2]).collect();
+    s
+}
+#[test]
+fn exact_original_bspline_basis_proves_a_fold_without_knot_insertion() {
+    let s = non_bernstein_fold();
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.125, 0.5], [0.375, 0.5]]));
+    let a = s.evaluate(0.125, 0.5).unwrap().point;
+    let b = s.evaluate(0.375, 0.5).unwrap().point;
+    for i in 0..3 {
+        assert!((a[i] - b[i]).abs() < 1e-13);
+    }
+}
+#[test]
+fn original_bspline_proof_rejects_one_ulp_pole_and_weight_changes() {
+    for weight in [false, true] {
+        let mut s = non_bernstein_fold();
+        if weight {
+            s.weights[2][0] = 0.5_f64.next_up();
+        } else {
+            s.control_points[2][0][0] = (-3_f64).next_up();
+        }
+        assert_ne!(
+            surface_self_intersection::inspect(&s, 100).unwrap().status,
+            Status::Present
+        );
+    }
+}
+#[test]
+fn exact_original_bspline_basis_also_handles_v_folds() {
+    let mut s = non_bernstein_fold();
+    s.control_points = (0..2)
+        .map(|j| (0..4).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..4).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.5, 0.125], [0.5, 0.375]]));
+}
+
+#[test]
+fn exact_cubic_span_recurrence_detects_a_non_global_fold() {
+    let mut s = graph();
+    s.degree_u = 3;
+    s.knots_u = vec![0., 0., 0., 0., 0.5, 1., 1., 1., 1.];
+    s.control_points = [0., 1., 1., -3., 4.]
+        .into_iter()
+        .map(|x| vec![vec![x, 0., 2. * x], vec![x, 1., 2. * x]])
+        .collect();
+    s.weights = vec![vec![1.; 2]; 5];
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.125, 0.5], [0.375, 0.5]]));
+    for u in [0.125, 0.375] {
+        assert!((s.evaluate(u, 0.5).unwrap().point[0] - 0.5625).abs() < 1e-13);
+    }
 }

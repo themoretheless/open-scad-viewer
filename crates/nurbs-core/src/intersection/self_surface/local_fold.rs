@@ -1,5 +1,6 @@
-//! Exact interior fold on an original Bernstein span; no rounded extraction.
+//! Exact interior fold on an original B-spline span; no rounded extraction.
 use super::*;
+mod exact_span;
 
 pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[f64; 2]; 2])> {
     let q = |x| BigRational::from_f64(x).unwrap();
@@ -26,11 +27,9 @@ pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[f64; 2]; 2
             // Multiplicity >=degree at both ends means the active original
             // controls already ARE the Bernstein net. Do not manufacture an
             // exact proof from floating-point knot insertion or trimmed data.
-            if !knots[span - degree + 1..=span].iter().all(|&t| t == a)
-                || !knots[span + 1..=span + degree].iter().all(|&t| t == b)
-            {
-                continue;
-            }
+            // Other spans use exact Cox-de Boor homogeneous polynomials.
+            let bernstein = knots[span - degree + 1..=span].iter().all(|&t| t == a)
+                && knots[span + 1..=span + degree].iter().all(|&t| t == b);
             let start = span - degree;
             let other_count = if axis == 0 {
                 s.control_points[0].len()
@@ -46,7 +45,7 @@ pub(super) fn find(s: &Surface, max_spans: usize) -> Option<(usize, [[f64; 2]; 2
                         && s.weights[u][v] == s.weights[r][t]
                 })
             });
-            if !reflected {
+            if !(bernstein && reflected) && !exact_span::reflected_span(s, axis, span) {
                 continue;
             }
             let domain_start = q(knots[degree]);

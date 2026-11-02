@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "testsPassed": 24,
+  "newTests": 4,
+  "updatedExpectation": "Asymmetric weights outside the central span no longer mask an exactly provable local fold; concrete witness and evaluated equality checked",
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Exact original Cox-de Boor homogeneous polynomial reflection on B-spline spans, degree <=16, both axes, rational weights; cubic and one-ULP adversaries",
+  "remaining": "General nonsymmetric self-contact, full branch enumeration, periodic charts, exact normalized witnesses not representable in binary64, and downstream material trimming remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface/local_fold.rs": "b0fdba75d7b19cebf660268ffb11da12e3529e99641ea5c868841f0eb01684c0",
+    "crates/nurbs-core/src/intersection/self_surface/local_fold/exact_span.rs": "fc14c4f267e5b6780777ee5b479ebc71b2d3fddb1bdbdfe72ba92c887f311a72",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "4f95c1cd68294305cd7af2f76b3e13cd4567238e87bb6b39c0baea63b6cc5f73"
+  }
+}
