@@ -258,3 +258,26 @@ fn iso_simple_never_hides_a_proven_contact_on_another_fiber() {
     assert_eq!(simple["isoAbsenceProven"], true);
     assert_eq!(simple["surfaceAbsenceProven"], false);
 }
+
+#[test]
+fn default_surface_audit_reports_automatic_off_center_search_without_full_coverage() {
+    let r = dispatch(request(off_center_surface())).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["allContactBranchesEnumerated"], false);
+    let search = &r["probeSearch"];
+    assert_eq!(search["surfaceCoverageComplete"], false);
+    assert!(search["chargedCells"].as_u64().unwrap() <= 100);
+    assert!(
+        search["attempts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["axis"] == 0 && p["parameter"] == 0.25)
+    );
+    for i in 0..2 {
+        assert_eq!(
+            r["certifiedCrossing"]["parameterBoxes"][i][1],
+            json!([0.25, 0.25])
+        );
+    }
+}

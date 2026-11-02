@@ -781,3 +781,6 @@ mod original_iso;
 
 #[path = "surface_self_intersection/iso_probe.rs"]
 mod iso_probe;
+
+#[path = "surface_self_intersection/automatic_probes.rs"]
+mod automatic_probes;

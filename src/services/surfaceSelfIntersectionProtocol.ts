@@ -19,6 +19,10 @@ export interface SurfaceSelfIntersectionReport {
  reflectedAxis:0|1|null
  injectivity:{proven:boolean;spans:number;reason:string}
  maxSpans:number
+ probeSearch?:{
+  attempts:{axis:0|1;parameter:number;chargedCells:number;isoCoverageComplete:boolean;refusal:string|null}[]
+  chargedCells:number;budgetExhausted:boolean;surfaceCoverageComplete:false
+ }
 }
 export interface SurfaceAuditRequest {type:'surface-self-audit/1';id:string;module:WebAssembly.Module;surface:NurbsSurface;maxSpans:number}
 export function isSurfaceAuditReport(value:unknown):value is SurfaceSelfIntersectionReport {
@@ -31,6 +35,16 @@ export function isSurfaceAuditReport(value:unknown):value is SurfaceSelfIntersec
  if(!r.injectivity||typeof r.injectivity.proven!=='boolean'||!Number.isInteger(r.injectivity.spans)
   ||r.injectivity.spans<0||r.injectivity.spans>r.maxSpans||typeof r.injectivity.reason!=='string'||r.injectivity.reason.length>1024)return false
  if(r.injectivity.proven!==(r.status==='absent'))return false
+ if(r.probeSearch!==undefined){
+  const p=r.probeSearch
+  if(!p||p.surfaceCoverageComplete!==false||typeof p.budgetExhausted!=='boolean'||!Number.isInteger(p.chargedCells)||p.chargedCells<0||p.chargedCells>r.maxSpans||!Array.isArray(p.attempts)||p.attempts.length>30)return false
+  let charged=0
+  for(const a of p.attempts){
+   if(!a||![0,1].includes(a.axis)||typeof a.parameter!=='number'||!Number.isFinite(a.parameter)||a.parameter<=0||a.parameter>=1||!Number.isInteger(a.chargedCells)||a.chargedCells<1||a.chargedCells>r.maxSpans||typeof a.isoCoverageComplete!=='boolean'||!(a.refusal===null||(typeof a.refusal==='string'&&a.refusal.length<=1024))||(a.refusal!==null&&a.isoCoverageComplete))return false
+   charged+=a.chargedCells
+  }
+  if(charged!==p.chargedCells)return false
+ }
  if(r.status!=='present')return r.witness===null&&r.exactWitness===null&&r.certifiedCrossing==null
  const exact=r.exactWitness
  if(exact===null){

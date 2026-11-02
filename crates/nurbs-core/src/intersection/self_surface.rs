@@ -1,4 +1,4 @@
-//! Global nonintersection proof or exact interior fold witness; no sampled verdict.
+//! Global nonintersection proof or original-source interior contact witness.
 use crate::{Result, surface::Surface, surface_injectivity};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -10,6 +10,21 @@ pub struct CertifiedCrossing {
     pub parameter_boxes: [[[f64; 2]; 2]; 2],
     pub position_bounds: [[f64; 2]; 3],
     pub cells: usize,
+}
+#[derive(Clone, Debug)]
+pub struct ProbeAttempt {
+    pub axis: usize,
+    pub parameter: f64,
+    pub cells: usize,
+    pub iso_coverage_complete: bool,
+    pub refusal: Option<String>,
+}
+#[derive(Clone, Debug, Default)]
+pub struct ProbeSearch {
+    pub attempts: Vec<ProbeAttempt>,
+    /// Charged search units, including admissions and interval solver cells.
+    pub cells: usize,
+    pub exhausted: bool,
 }
 mod local_fold;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -30,6 +45,8 @@ pub struct Report {
     pub exact_witness: Option<[[BigRational; 2]; 2]>,
     /// Existence proof with interval UV boxes; no rounded point is authoritative.
     pub certified_crossing: Option<CertifiedCrossing>,
+    /// Finite search proposals, never evidence of whole-surface coverage.
+    pub probe_search: ProbeSearch,
     /// Reflection axis for fold proofs; None for proper span crossings.
     pub reflected_axis: Option<usize>,
 }
@@ -60,10 +77,10 @@ fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
 /// Absence follows a single global contraction bound across every source span.
 /// Presence uses exact rational reflection or proper crossings of original
 /// degree-one iso-curve spans. The latter checks all three world coordinates
-/// and original rational parameter clocks. The transverse midpoint selects a
-/// candidate iso-curve; only an exact identity supplies the presence verdict.
-/// Exactly representable planar nonlinear iso-curves additionally use strict
-/// Krawczyk inclusion on literal original spans, returning interval UV boxes.
+/// and original rational parameter clocks. Up to 15 interior dyadic proposals
+/// per axis steer planar iso-curve Krawczyk proofs on original curve/surface
+/// bounds. Probe admissions and solver cells share max_spans search units.
+/// Probes select candidates only; finite exhaustion never proves absence.
 /// Local reflection spans and linear span pairs each have max_spans work caps.
 /// All other cases (including unsupported periodic charts and insufficient
 /// budgets) stay Unresolved. Isolated local regularity never proves absence.
@@ -79,6 +96,7 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
         witness: None,
         exact_witness: None,
         certified_crossing: None,
+        probe_search: ProbeSearch::default(),
         reflected_axis: None,
     };
     if out.status == Status::Absent {
@@ -126,9 +144,13 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
         record(&mut out, Some(axis), witness);
     } else if let Some(witness) = linear_crossing::find(s, max_spans) {
         record(&mut out, None, witness);
-    } else if let Some(crossing) = nonlinear_crossing::find(s, max_spans)? {
-        out.status = Status::Present;
-        out.certified_crossing = Some(crossing);
+    } else {
+        let (crossing, search) = nonlinear_crossing::find(s, max_spans)?;
+        out.probe_search = search;
+        if let Some(crossing) = crossing {
+            out.status = Status::Present;
+            out.certified_crossing = Some(crossing);
+        }
     }
     Ok(out)
 }

@@ -36,6 +36,17 @@ pub(crate) fn run(v: Value) -> Result<Value> {
             "parameterBoxes":c.parameter_boxes,"positionBounds":c.position_bounds,"cells":c.cells
         })
     });
+    let attempts = report
+        .probe_search
+        .attempts
+        .iter()
+        .map(|p| {
+            json!({
+                "axis":p.axis,"parameter":p.parameter,"chargedCells":p.cells,
+                "isoCoverageComplete":p.iso_coverage_complete,"refusal":p.refusal
+            })
+        })
+        .collect::<Vec<_>>();
     Ok(json!({
         "schema":"nurbs-surface-self-intersection/1",
         "status":status,
@@ -44,6 +55,8 @@ pub(crate) fn run(v: Value) -> Result<Value> {
         "allContactBranchesEnumerated":false,
         "witness":report.witness,"exactWitness":exact,
         "certifiedCrossing":crossing,
+        "probeSearch":{"attempts":attempts,"chargedCells":report.probe_search.cells,
+            "budgetExhausted":report.probe_search.exhausted,"surfaceCoverageComplete":false},
         "witnessCoordinates":"normalized-original-active-domain",
         "reflectedAxis":report.reflected_axis,
         "injectivity":{"proven":report.injectivity.proven,
