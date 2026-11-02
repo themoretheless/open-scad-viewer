@@ -7,3 +7,5 @@ pub mod curve;
 pub mod surface;
 pub(crate) mod vec3_ext;
 pub(crate) mod curve_identity;
+
+pub(crate) mod bounded_rational;

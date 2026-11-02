@@ -15,6 +15,14 @@ pub enum Refusal {
     DifferentDefinition,
     PredicateIndeterminate(cad_predicates::Reason),
 }
+impl From<crate::core::bounded_rational::Error> for Refusal {
+    fn from(error: crate::core::bounded_rational::Error) -> Self {
+        match error {
+            crate::core::bounded_rational::Error::ResourceLimit => Self::ResourceLimit,
+            crate::core::bounded_rational::Error::NotRepresentable => Self::NotRepresentable,
+        }
+    }
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     /// Literal source on every refusal, never a partially simplified curve.

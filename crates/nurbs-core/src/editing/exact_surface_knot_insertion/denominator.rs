@@ -24,7 +24,7 @@ pub(crate) fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<P
         .knots
         .iter()
         .map(|&x| w.lift(x))
-        .collect::<PResult<Vec<_>>>()?;
+        .collect::<std::result::Result<Vec<_>, _>>()?;
     let a = w.lift(lo)?;
     let b = w.lift(hi)?;
     let width = w.op(&b, &a, |x, y| x - y)?;
@@ -65,7 +65,7 @@ pub(crate) fn polynomial(c: &Curve, lo: f64, hi: f64, w: &mut Work) -> PResult<P
         let p = p
             .iter()
             .map(|x| w.op(x, &weight, |x, y| x * y))
-            .collect::<PResult<Vec<_>>>()?;
+            .collect::<std::result::Result<Vec<_>, _>>()?;
         add(&mut out, &p, w)?;
     }
     Ok(out)

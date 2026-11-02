@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 235,
-  "unallocatedCount": 765,
+  "specifiedCount": 236,
+  "unallocatedCount": 764,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6393,6 +6393,26 @@
       "remainingQualification": [
         "One selected nonperiodic clamped Bezier axis; untouched basis may be multispan/periodic. Exact positive binary64 storage or unchanged-source refusal under existing degree1..25,256-pole,4096-bit and shared1m-work caps. No evaluator-bit identity or old source/topology certificate reuse.",
         "Native qualification only. JSON/WASM/Rush/editor/exchange and complete current-source distribution remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0236",
+      "name": "Точный полный аффинный эллипс с рациональными весами и доказательством всей ориентированной геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-exact-construction",
+      "category": "Точное построение",
+      "nativeApi": "nurbs_core::primitives::exact_conics::ellipse",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/primitives/exact_conics.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_conics/proof.rs",
+        "crates/nurbs-core/tests/exact_conics_contracts.rs",
+        "docs/design/nurbs-exact-conics.md",
+        "docs/qualification/nurbs-exact-conics-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-conics-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Finite exactly independent authored axes; whole closed ellipse, variable rational angular clock, positive binary64 rational weights and exact pole storage or atomic refusal under unchanged1m-work/4096-bit limits. No legacy-clock/evaluator-bit identity.",
+        "Native only; JSON/WASM/Rush/editor/STEP and current-source distribution remain separate."
       ]
     }
   ],
