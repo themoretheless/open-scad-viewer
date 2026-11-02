@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 232,
-  "unallocatedCount": 768,
+  "specifiedCount": 233,
+  "unallocatedCount": 767,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6331,6 +6331,26 @@
       "remainingQualification": [
         "One validated nonperiodic clamped Bezier segment only; exact binary64 positive-weight output or atomic refusal under original1m work and declared4096-bit proposal cap. No evaluator-bit or old source/topology certificate reuse.",
         "JSON, WASM, Rush, editor, exchange and whole-workspace qualification remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0233",
+      "name": "Точная пакетная вставка внутренних узлов рациональной B-spline-кривой с сохранением всей параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_knot_insertion::insert",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
+        "docs/design/nurbs-exact-knot-insertion.md",
+        "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-knot-insertion-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Validated nonperiodic curves and strictly internal knots only; exact binary64 output or atomic refusal; unchanged degree, multiplicity, 256-pole, 1m-work and 4096-bit proposal bounds. No floating-evaluator bit identity or downstream certificate reuse.",
+        "Periodic seams, boundary clamping, JSON, WASM, Rush, editor and exchange remain separate."
       ]
     }
   ],

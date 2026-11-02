@@ -18,3 +18,5 @@ pub mod exact_surface_merge;
 pub mod exact_curve_merge;
 pub mod rational_gauge;
 pub mod rational_factor;
+mod rational_edit;
+pub mod exact_knot_insertion;
