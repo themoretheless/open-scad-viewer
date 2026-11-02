@@ -5,7 +5,7 @@ dist
 src/**/*.js
 *.log
 *.tmp
-coverage
+/coverage/
 .env*
 .vscode/*.log
 .open-scad-viewer.duckdb*
