@@ -103,3 +103,37 @@ pub fn remove(source:&Curve,knot:f64,max_work:u64)->Result<Report> {
         BezierIdentity::Indeterminate(reason)=>Ok(refusal(Refusal::PredicateIndeterminate(reason),used)),
     }
 }
+
+/// Result of one bounded pass; completion does not assert minimality.
+#[derive(Clone, Debug)]
+pub struct SimplificationReport {
+    pub curve: Curve,
+    pub removed: usize,
+    pub attempts: Vec<(f64, Option<Refusal>)>,
+    pub work_used: u64,
+    pub completed_pass: bool,
+}
+/// Try each original interior knot occurrence with one shared arithmetic budget.
+/// Only independently proved steps are retained. No failed edit is emitted.
+/// Validation/copying remain outside the arithmetic ledger, as in `remove`.
+pub fn simplify(source: &Curve, max_work: u64) -> Result<SimplificationReport> {
+    source.validate()?;
+    check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Exact knot work must be in1..=1000000")?;
+    let [start, end] = source.domain();
+    let n = source.control_points.len();
+    check(!source.periodic && source.knots[..=source.degree].iter().all(|&u| u == start)
+        && source.knots[n..].iter().all(|&u| u == end), "Exact knot removal requires nonperiodic clamped storage")?;
+    let knots: Vec<_> = source.knots.iter().copied().filter(|&u| start < u && u < end).collect();
+    let mut report = SimplificationReport { curve: source.clone(), removed: 0,
+        attempts: Vec::new(), work_used: 0, completed_pass: true };
+    for knot in knots {
+        if report.work_used == max_work { report.completed_pass = false; break; }
+        let step = remove(&report.curve, knot, max_work - report.work_used)?;
+        report.work_used += step.work_used;
+        let exhausted = step.refusal == Some(Refusal::ResourceLimit);
+        report.attempts.push((knot, step.refusal));
+        if step.removed { report.curve = step.curve; report.removed += 1; }
+        if exhausted { report.completed_pass = false; break; }
+    }
+    Ok(report)
+}

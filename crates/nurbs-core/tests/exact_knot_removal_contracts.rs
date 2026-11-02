@@ -52,3 +52,25 @@ fn subnormal_scale_perturbation_cannot_become_a_zero_tolerance_edit() {
     let r=remove(&source,0.5,1_000_000).unwrap();assert!(!r.removed,"subnormal residual was lost");assert_eq!(r.curve,source);assert!(r.refusal.is_some());
     let source=Curve{degree:2,knots:vec![-2.,-1.,0.,0.25,1.,2.,3.],control_points:vec![vec![0.,0.],vec![1.,1.],vec![2.,0.],vec![3.,2.]],weights:vec![1.;4],periodic:false};source.validate().unwrap();assert!(remove(&source,0.25,1_000_000).is_err());
 }
+
+#[test]
+fn exact_simplification_shares_work_and_preserves_verified_partial_output() {
+    use nurbs_core::editing::exact_knot_removal::simplify;
+    let base=polynomial();
+    let source=base.insert(0.25,1).unwrap().insert(0.5,1).unwrap().insert(0.75,1).unwrap();
+    let r=simplify(&source,1_000_000).unwrap();
+    assert!(r.completed_pass);assert_eq!(r.removed,3);assert_eq!(r.curve,base);
+    let limited=simplify(&source,r.work_used-1).unwrap();
+    assert!(!limited.completed_pass);assert_eq!(limited.removed,2);assert!(limited.work_used<r.work_used);
+    assert_eq!(limited.attempts.last().unwrap().1,Some(Refusal::ResourceLimit));
+    assert_eq!(remove(&limited.curve,0.75,1_000_000).unwrap().curve,base);
+}
+#[test]
+fn exact_simplification_keeps_nonremovable_geometry_and_handles_empty_pass() {
+    use nurbs_core::editing::exact_knot_removal::simplify;
+    let base=polynomial();let empty=simplify(&base,1).unwrap();assert!(empty.completed_pass);assert_eq!(empty.work_used,0);assert_eq!(empty.curve,base);
+    let mut source=base.insert(0.5,1).unwrap();source.control_points[1][1]+=1e-10;
+    let r=simplify(&source,1_000_000).unwrap();assert!(r.completed_pass);assert_eq!(r.removed,0);assert_eq!(r.curve,source);assert_eq!(r.attempts[0].1,Some(Refusal::DifferentDefinition));
+    assert!(simplify(&base,0).is_err());assert!(simplify(&base,1_000_001).is_err());
+    let limited=simplify(&source,1).unwrap();assert!(!limited.completed_pass);assert_eq!(limited.curve,source);assert!(limited.work_used<=1);
+}
