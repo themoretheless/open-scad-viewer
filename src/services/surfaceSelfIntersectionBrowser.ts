@@ -1,3 +1,4 @@
+import {isSurfaceIsoTargetReport,type SurfaceIsoTargetReport,type SurfaceIsoTargetQuery} from './surfaceIsoTargetProtocol'
 import type {NurbsSurface} from './nurbsSurface'
 import {isSurfaceAuditReport,type SurfaceSelfIntersectionReport} from './surfaceSelfIntersectionProtocol'
 /** Read-only diagnostics on a caller-owned module; does not register a production provider. */
@@ -11,8 +12,18 @@ export class SurfaceSelfIntersectionBrowser {
  }
  snapshot(){return{active:this.active,workersStarted:this.started,workersTerminated:this.terminated}}
  inspect(surface:NurbsSurface,maxSpans:number,options:{signal?:AbortSignal;deadlineMs?:number}={}):Promise<SurfaceSelfIntersectionReport>{
-  if(this.active)return Promise.reject(new Error('Surface audit busy'))
   if(!Number.isInteger(maxSpans)||maxSpans<1||maxSpans>100000)return Promise.reject(new Error('Invalid surface audit budget'))
+  return this.run({type:'surface-self-audit/1',surface,maxSpans},(r):r is SurfaceSelfIntersectionReport=>isSurfaceAuditReport(r)&&r.maxSpans===maxSpans,options)
+ }
+ inspectIsoTarget(query:SurfaceIsoTargetQuery,options:{signal?:AbortSignal;deadlineMs?:number}={}):Promise<SurfaceIsoTargetReport>{
+  if(!query||![0,1].includes(query.axis)||!Number.isFinite(query.parameter)||query.parameter<=0||query.parameter>=1
+   ||!Number.isInteger(query.maxCells)||query.maxCells<1||query.maxCells>100000||!Array.isArray(query.window)||query.window.length!==3
+   ||![0,1,2].every(i=>{const d=query.window[i];return Array.isArray(d)&&d.length===2&&d.every(Number.isFinite)&&d[0]<d[1]}))return Promise.reject(new Error('Invalid iso target query'))
+  const {axis,parameter,maxCells}=query,window=query.window.map(d=>[...d])
+  return this.run({...query,type:'surface-iso-target-window/1'},(r):r is SurfaceIsoTargetReport=>isSurfaceIsoTargetReport(r)&&r.axis===axis&&r.parameter===parameter&&r.maxCells===maxCells&&r.window.every((d,i)=>d[0]===window[i]![0]&&d[1]===window[i]![1]),options)
+ }
+ private run<T>(request:Record<string,unknown>,validate:(r:unknown)=>r is T,options:{signal?:AbortSignal;deadlineMs?:number}):Promise<T>{
+  if(this.active)return Promise.reject(new Error('Surface audit busy'))
   const deadline=options.deadlineMs??30000
   if(!Number.isFinite(deadline)||deadline<1||deadline>120000)return Promise.reject(new Error('Invalid surface audit deadline'))
   if(options.signal?.aborted)return Promise.reject(new Error('Surface audit cancelled'))
@@ -20,7 +31,7 @@ export class SurfaceSelfIntersectionBrowser {
   return new Promise((resolve,reject)=>{
    let worker:Worker|undefined,timer:ReturnType<typeof setTimeout>|undefined,settled=false
    const id=`surface-audit-${++this.sequence}`
-   const finish=(error?:Error,result?:SurfaceSelfIntersectionReport)=>{
+   const finish=(error?:Error,result?:T)=>{
     if(settled)return
     settled=true
     if(timer!==undefined)clearTimeout(timer)
@@ -37,14 +48,14 @@ export class SurfaceSelfIntersectionBrowser {
      const reply=event.data
      if(reply?.type!=='surface-self-result/1'||reply.id!==id)return finish(new Error('Invalid surface audit response'))
      if(reply.ok!==true)return finish(new Error(typeof reply.error==='string'?reply.error:'Surface audit refused'))
-     if(!isSurfaceAuditReport(reply.report)||reply.report.maxSpans!==maxSpans)return finish(new Error('Invalid surface audit report'))
+     if(!validate(reply.report))return finish(new Error('Invalid surface audit report'))
      finish(undefined,reply.report)
     }
     worker.onerror=()=>finish(new Error('Surface audit Worker failed'))
     worker.onmessageerror=()=>finish(new Error('Surface audit message failed'))
     options.signal?.addEventListener('abort',abort,{once:true})
     timer=setTimeout(()=>finish(new Error('Surface audit deadline')),deadline)
-    worker.postMessage({type:'surface-self-audit/1',id,module:this.module,surface,maxSpans})
+    worker.postMessage({...request,id,module:this.module})
    }catch(error){finish(error instanceof Error?error:new Error('Surface audit request failed'))}
   })
  }

@@ -1,16 +1,18 @@
+import {isSurfaceIsoTargetReport,type SurfaceIsoTargetRequest} from '../services/surfaceIsoTargetProtocol'
 import {encodeBinary,decodeBinary} from '../services/valueBinaryCodec'
 import {isSurfaceAuditReport,type SurfaceAuditRequest} from '../services/surfaceSelfIntersectionProtocol'
 let admitted=false
-self.addEventListener('message',async(event:MessageEvent<SurfaceAuditRequest>)=>{
+self.addEventListener('message',async(event:MessageEvent<SurfaceAuditRequest|SurfaceIsoTargetRequest>)=>{
  if(admitted)return
  admitted=true
  const r=event.data
- if(r?.type!=='surface-self-audit/1'||typeof r.id!=='string'||r.id.length>128||!(r.module instanceof WebAssembly.Module)){self.close();return}
+ if(!['surface-self-audit/1','surface-iso-target-window/1'].includes(r?.type)||typeof r.id!=='string'||r.id.length>128||!(r.module instanceof WebAssembly.Module)){self.close();return}
  try{
   if(WebAssembly.Module.imports(r.module).length)throw new Error('Surface audit requires an import-free module')
   const instance=await WebAssembly.instantiate(r.module,{})
   const w=instance.exports as unknown as {memory:WebAssembly.Memory;abi_alloc(n:number):number;abi_free(p:number,n:number):void;abi_request(op:number,p:number,n:number):bigint}
-  const data=encodeBinary({op:'nurbs_surface_self_intersection_audit',surface:r.surface,maxSpans:r.maxSpans})
+  const payload=r.type==='surface-iso-target-window/1'?{op:'nurbs_surface_iso_target_window',source:r.source,axis:r.axis,parameter:r.parameter,target:r.target,window:r.window,maxCells:r.maxCells}:{op:'nurbs_surface_self_intersection_audit',surface:r.surface,maxSpans:r.maxSpans}
+  const data=encodeBinary(payload)
   const ptr=w.abi_alloc(data.length)
   if(!ptr)throw new Error('Surface audit allocation refused')
   let reply:any
@@ -20,7 +22,7 @@ self.addEventListener('message',async(event:MessageEvent<SurfaceAuditRequest>)=>
    try{reply=decodeBinary(new Uint8Array(w.memory.buffer,p,n))}finally{w.abi_free(p,n)}
   }finally{w.abi_free(ptr,data.length)}
   if(reply?.ok!==true)throw new Error(`${reply?.error?.code??'NATIVE_AUDIT'}: ${reply?.error?.message??'Native surface audit refused'}`)
-  if(!isSurfaceAuditReport(reply.value))throw new Error('Invalid native surface audit report')
+  if(!(r.type==='surface-iso-target-window/1'?isSurfaceIsoTargetReport(reply.value):isSurfaceAuditReport(reply.value)))throw new Error('Invalid native surface audit report')
   self.postMessage({type:'surface-self-result/1',id:r.id,ok:true,report:reply.value})
  }catch(error){
   self.postMessage({type:'surface-self-result/1',id:r.id,ok:false,error:(error instanceof Error?error.message:'Surface audit failed').slice(0,1024)})

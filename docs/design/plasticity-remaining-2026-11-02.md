@@ -88,6 +88,8 @@ Bridge iso–target: публичный `nurbs_surface_iso_target_window` при
 
 Клиентский контракт iso–target: типизированный `SurfaceIsoTargetReport` и `isSurfaceIsoTargetReport` проверяют natural coordinate ownership, root box внутри существования и запроса, бюджет/ориентацию и согласованность window-only полноты. Защищены sparse arrays и forged surface/trim/Body admissions. **43 протокольных теста (17 новых) и vue-tsc прошли**; [receipt](../qualification/iso-target-client-protocol-2026-11-02/results.json). Проверка реального нового WASM-ответа остаётся pending: frozen source `6495f1b9b` собирается отдельно; клиентский Worker ещё не подключён к этому op.
 
+Клиентский Worker iso–target: `SurfaceSelfIntersectionBrowser.inspectIsoTarget` использует общую очередь/ownership с whole-surface audit и отдельный native op. Клиент валидирует отчёт и связывает axis/parameter/window/budget с исходным запросом, включая snapshot window при последующем изменении caller input. **49 unit/protocol тестов (6 новых browser ownership) и vue-tsc прошли**; [receipt](../qualification/iso-target-worker-client-2026-11-02/results.json). Это пока mock-Worker evidence; actual WASM/Chromium нового op ожидают отдельную текущую сборку и не объявляются прошедшими.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

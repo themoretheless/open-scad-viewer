@@ -1,3 +1,4 @@
+import type {NurbsSurface} from './nurbsSurface'
 export type ParameterBox3=[[number,number],[number,number],[number,number]]
 export interface SurfaceIsoTargetReport {
  schema:'nurbs-surface-iso-target-window/1'
@@ -43,3 +44,8 @@ export function isSurfaceIsoTargetReport(value:unknown):value is SurfaceIsoTarge
  }
  return true
 }
+
+export interface SurfaceIsoTargetQuery {
+ source:NurbsSurface;axis:0|1;parameter:number;target:NurbsSurface;window:ParameterBox3;maxCells:number
+}
+export interface SurfaceIsoTargetRequest extends SurfaceIsoTargetQuery {type:'surface-iso-target-window/1';id:string;module:WebAssembly.Module}

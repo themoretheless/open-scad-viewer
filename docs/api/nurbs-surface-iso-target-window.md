@@ -21,3 +21,5 @@ Each `roots` item contains `method: original-curve-surface-krawczyk`, original s
 `unresolved` preserves remaining natural parameter boxes, including exhausted or singular regions. Tangencies and roots on unresolved subdivision/span boundaries need not be certified by this transverse solver.
 
 `allSurfaceBranchesEnumerated`, `trimAdmission`, and `bodyAdmission` remain false. Even a complete window covers only the selected source iso, not the other fibers or all branches of the surface/surface intersection. Read-only input charts remain unchanged.
+
+Browser transport: `SurfaceSelfIntersectionBrowser.inspectIsoTarget(query, options)` accepts the same source/axis/parameter/target/window/maxCells query against a caller-supplied import-free module. It shares the lane's busy state, abort/deadline handling and Worker ownership with `inspect`. The client validates `SurfaceIsoTargetReport` and binds axis, parameter, budget and window to the submitted query. It does not register a production provider or select an installed package.
