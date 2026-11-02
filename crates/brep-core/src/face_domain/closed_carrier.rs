@@ -95,8 +95,16 @@ pub(super) fn prepare(
             ));
         }
         work += cost;
-        structural &=
-            curve_partition_agreement::verify_exact_span_restriction(source, &piece.curve)?;
+        let literal=curve_partition_agreement::verify_exact_span_restriction(source, &piece.curve)?;
+        if !literal {
+            let remaining=max_work.saturating_sub(work).min(cad_predicates::MAX_WORK as usize);
+            if remaining==0 {return Err(refused("Original rational restriction proof work exhausted"));}
+            let exact=curve_partition_agreement::verify_exact_bspline_restriction(source,&piece.curve,remaining as u64)?;
+            if let Some(exact)=exact {
+                work=work.checked_add(exact.work_used as usize).ok_or_else(||refused("Original rational proof work overflow"))?;
+                structural &= exact.outcome==cad_predicates::BezierIdentity::Equal;
+            }else{structural=false;}
+        }
     }
     let curves = if structural {
         partition
@@ -138,4 +146,25 @@ pub(super) fn literal_multispan(source: &Curve) -> bool {
                 .iter()
                 .all(|v| source.knots.iter().filter(|k| *k == v).count() >= p)
         })
+}
+
+#[cfg(test)]
+mod rational_restriction_tests {
+    use super::*;
+    #[test]
+    fn rational_closed_bezier_preparation_reproves_both_original_half_intervals() {
+        let source=Curve {degree:3,knots:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            control_points:vec![vec![0.,0.],vec![10.,0.],vec![10.,10.],vec![0.,0.]],
+            weights:vec![1.,3.,3.,1.],periodic:false};
+        let before=source.clone();
+        let (curves,cells,work)=prepare(&source,1e-8,10000,1_000_000).unwrap();
+        assert_eq!(curves.len(),2);assert!(cells>0&&work>0&&work<=1_000_000);
+        for c in &curves {
+            assert!(!curve_partition_agreement::verify_exact_span_restriction(&source,c).unwrap());
+            let r=curve_partition_agreement::verify_exact_bezier_restriction(&source,c,c.domain(),false,100000).unwrap().unwrap();
+            assert_eq!(r.outcome,cad_predicates::BezierIdentity::Equal);
+        }
+        assert!(prepare(&source,1e-8,10000,1).is_err());
+        assert_eq!(source,before);
+    }
 }

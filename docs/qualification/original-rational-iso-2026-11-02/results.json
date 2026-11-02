@@ -1,0 +1,25 @@
+{
+  "status": "focused native and bridge tests passed",
+  "nurbsTestsPassed": 82,
+  "bridgeTestsPassed": 8,
+  "newTests": 7,
+  "updatedTest": "Nonrepresentable iso z=8/7 now has a certified existence witness using original surface jets; no rounded intermediate curve",
+  "scope": "Shared interval source interface for Curve and original Surface iso. Exact rational iso coefficients are recomputed internally for common-plane admission; all geometric bounds and derivatives use the original surface.",
+  "api": "intersect_surface_iso_certified_report searches first contact at the exact active-domain midpoint of the transverse axis; queued unvisited cells remain unresolved",
+  "joinProof": "A proposed fixed linear projection is admitted only when original derivative interval dot products are strictly positive on both sides of a continuous join. Reversed tangents are not admitted.",
+  "validated": "Both axes; all Cartesian iso controls can be nonrepresentable rationals; world bounds include 79/63 and 8/7; original budgets and invalid axes; C0 corner completeness and backtracking refusal",
+  "newWasmQualified": false,
+  "remaining": "General nonplanar contacts, periodic charts, singularities/tangencies, all transverse parameters and full surface contact coverage, trims/material validity and packaged WASM/Worker qualification remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/planar_curve_curve.rs": "f682a7ef569b18565e902627325ccdedffab6b8dec37587711d863cc14f34b55",
+    "crates/nurbs-core/src/intersection/planar_curve_curve/source.rs": "6f24e13256fbad341499ed045c9559a85289d4dc11c8ec02f6a73746812b0545",
+    "crates/nurbs-core/src/intersection/planar_curve_curve/coplanar.rs": "c580c303075a83ac52fa036ec70068bce11424bcd167f9068e78fa231138ffeb",
+    "crates/nurbs-core/src/intersection/mod.rs": "b6c5ee3f821954e6315ec6c839b75c546b41b0f558d994b7fd09fbcbc6297f82",
+    "crates/nurbs-core/src/intersection/self_surface.rs": "d6b31236a8b57cbbc93100c0b0fbfa986c435785aaca62d7223a9c1056fba949",
+    "crates/nurbs-core/src/intersection/self_surface/linear_crossing.rs": "5bbf1d389644b867c3765ea709dc7b63d7928c789170162293ea5bbbdf8727ad",
+    "crates/nurbs-core/src/intersection/self_surface/nonlinear_crossing.rs": "2048455af34c96c412156c479d0c5130b6dc87b5d36e9fb36ead2d701666262d",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "dd13ede830fcffd64feb4a688f09fd844e88a5c66f81e92f4d473d84d05db759",
+    "crates/nurbs-core/tests/surface_self_intersection/original_iso.rs": "97ba27c5afd941412f6d295813d3ba395d55fda246c9ae4a087945c559bf0788",
+    "crates/geometry-bridge/tests/surface_self_intersection_audit.rs": "ddb2185747fba8eea1e4f0775c9c63fa527845c07bfb7223ec6b825ed4f22d8a"
+  }
+}

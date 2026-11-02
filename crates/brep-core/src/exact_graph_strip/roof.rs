@@ -482,3 +482,47 @@ impl Strip {
         })
     }
 }
+
+impl Roof {
+    /// Transactional restriction of a natural original edge. Both children keep
+    /// one exact root, including non-dyadic endpoints. Remaining source faces
+    /// are split against these intervals by close_original_shell.
+    pub fn split_natural_edge(&mut self, edge: usize, parameter: Q, budget: &mut Budget) -> Result<SplitReport> {
+        require(edge < self.topology.edges.len() && parameter.denom().is_positive()
+            && parameter > Q::zero() && parameter < Q::one()
+            && parameter.numer().bits()<=8192 && parameter.denom().bits()<=8192,
+            "Choose an interior exact natural-edge parameter")?;
+        let old = &self.topology.edges[edge];
+        let root_id=old.curve.root.id;
+        let root_parameter = &old.curve.range[0] + (&old.curve.range[1]-&old.curve.range[0])*&parameter;
+        let def = BoundaryDefinition { points: old.curve.points.clone(), uv: [[Q::zero(),Q::zero()],[Q::one(),Q::zero()]] };
+        let left=def.restricted([Q::zero(),parameter.clone()],budget)?;
+        let right=def.restricted([parameter.clone(),Q::one()],budget)?;
+        require(left.points.last()==right.points.first(),"Natural child endpoints disagree")?;
+        let mut top=self.topology.clone();
+        let vertex=top.vertices.len();let right_edge=top.edges.len();
+        top.vertices.push(brep_topology::Vertex { point:left.points.last().unwrap().clone() });
+        top.edges[edge]=brep_topology::Edge { degenerate:false, vertices:[old.vertices[0],vertex],curve:Edge {points:left.points,root:old.curve.root.clone(),range:[old.curve.range[0].clone(),root_parameter.clone()]} };
+        top.edges.push(brep_topology::Edge { degenerate:false,vertices:[vertex,old.vertices[1]],curve:Edge {points:right.points,root:old.curve.root.clone(),range:[root_parameter.clone(),old.curve.range[1].clone()]} });
+        let mut face_uses=0;
+        for face in &mut top.faces {
+            let wire=&mut top.loops[face.outer];
+            let slots=wire.coedges.iter().enumerate().filter(|(_,c)|c.edge==edge).map(|(i,_)|i).collect::<Vec<_>>();
+            if slots.is_empty(){continue;}
+            require(slots.len()==1,"Repeated natural edge use is unsupported")?;
+            let i=slots[0];let c=wire.coedges[i].clone();
+            let FaceGeometry::Retained(region)=&face.surface else {return Err(Error::new("BREP_EXACT_GRAPH_ROOF","Natural split must belong to retained original faces"));};
+            require(matches!(c.pcurve,FaceUseGeometry::Retained(index) if index==i),"Natural split lost its source use")?;
+            face.surface=FaceGeometry::Retained(Arc::new(region.split_natural_use(i,&parameter,budget)?));
+            let a=brep_topology::Coedge::new(edge,c.reversed,FaceUseGeometry::Retained(0));
+            let z=brep_topology::Coedge::new(right_edge,c.reversed,FaceUseGeometry::Retained(0));
+            wire.coedges.splice(i..=i,if c.reversed {vec![z,a]} else {vec![a,z]});
+            for (j,c) in wire.coedges.iter_mut().enumerate(){c.pcurve=FaceUseGeometry::Retained(j);}
+            face_uses+=1;
+        }
+        require((1..=2).contains(&face_uses),"Natural split needs one or two source uses")?;
+        let geometry=inspect_roof_geometry(&top,budget)?;
+        self.topology=top;self.geometry=geometry;
+        Ok(SplitReport {left_edge:edge,right_edge,vertex,root_id,root_parameter,face_uses})
+    }
+}

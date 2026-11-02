@@ -2,6 +2,7 @@
 //! This does not append them to the transition shell or admit a solid.
 use super::*;
 use nurbs_core::original_graph_transition::SourceLine;
+#[derive(Clone)]
 pub enum RetainedUse {
     Contact(SourceBinding),
     End(SourceEndBinding),
@@ -30,6 +31,7 @@ impl RetainedUse {
         }
     }
 }
+#[derive(Clone)]
 pub struct RetainedRegion {
     source: nurbs_core::surface::Surface,
     side: usize,
@@ -196,5 +198,22 @@ impl Strip {
             .try_into()
             .map_err(|_| Error::new("BREP_EXACT_GRAPH_STRIP", "Expected two source regions"))?;
         Ok([a, b])
+    }
+}
+
+impl RetainedRegion {
+    pub(super) fn split_natural_use(&self, index: usize, parameter: &Q, b: &mut Budget) -> Result<Self> {
+        let (u, reverse) = self.uses.get(index).ok_or_else(|| Error::new("BREP_EXACT_GRAPH_ROOF", "Unknown retained use"))?;
+        let RetainedUse::Natural(line) = u else {
+            return Err(Error::new("BREP_EXACT_GRAPH_ROOF", "Only natural source edges can be split here"));
+        };
+        let uv = line.uv_points();
+        let middle = std::array::from_fn(|k| &uv[0][k] + (&uv[1][k] - &uv[0][k]) * parameter);
+        let left = RetainedUse::Natural(self.panel.source_line(self.side, [uv[0].clone(), middle.clone()], b)?);
+        let right = RetainedUse::Natural(self.panel.source_line(self.side, [middle, uv[1].clone()], b)?);
+        let mut result = self.clone();
+        let replacement = if *reverse { vec![(right,true),(left,true)] } else { vec![(left,false),(right,false)] };
+        result.uses.splice(index..=index,replacement);
+        Ok(result)
     }
 }

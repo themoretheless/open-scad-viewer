@@ -1,0 +1,29 @@
+{
+  "nativePassed": 68,
+  "newTests": 6,
+  "scope": "Original plane-expression scalar proofs bound to finite affine-patch UV membership",
+  "verified": [
+    "irreducible non-binary64 plane supports orders 2/4 inside patch",
+    "natural curve and target UV boxes",
+    "outside exclusion and unresolved boundary membership",
+    "shared exact and span budgets",
+    "coincident and nonaffine cases do not authorize contacts",
+    "shared exact knot keeps one-sided orders 2 and 1",
+    "discontinuous source storage refused"
+  ],
+  "generalFreeformTangencyComplete": false,
+  "trimBodyAdmission": false,
+  "bridgeWasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "e1ee11664ffe02f7ea466b4ef150b678fa8660a785983ba3865f4139434c2162",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "51a15f1fe0cc2bff1854ee79a36124788fb219d30f89ebfe72f79a2303224c21",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "3fe09aeafcfcf4f7d6da76b35a2778fbe6a7803177e100fa735d84e69de0e0c3",
+    "docs/api/original-affine-patch-contacts.md": "f1c04e3f6d2668f9abce30ae0cb7b83dc8f036b1b16e9a46d450ba5ac2ec711f"
+  },
+  "postMergeRetest": {
+    "nativePassed": 68,
+    "headObserved": "ae2d399dfde73fc3ca4bb459dcef1a2105f38d90",
+    "ownedSourceHashesUnchanged": true,
+    "scope": "Focused tests on shared working tree after concurrent integration; no whole-repository qualification"
+  }
+}

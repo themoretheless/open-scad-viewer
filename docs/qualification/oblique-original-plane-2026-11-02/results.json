@@ -1,0 +1,17 @@
+{
+  "status": "focused native tests passed",
+  "testsPassed": 76,
+  "newTests": 5,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test planar_curve_crossings --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Exact common affine-plane identity on all original Cartesian controls, arbitrary plane orientation. Projection drops a coordinate with nonzero exact normal, so a projected root determines the same 3D point. Positive rational weights preserve the affine plane.",
+  "validated": "Oblique single-span loop with complete coverage; surface original UV/world boxes; one-ULP nonplanarity rejected; separate exact common-plane curves; parallel offset planes rejected",
+  "newWasmQualified": false,
+  "remaining": "General nonplanar contacts, tolerance-based source plane reconstruction, unsupported exact rational iso-curves, singularities/tangencies, periodic charts, whole surface branch coverage and material/trimming/delivery remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/planar_curve_curve.rs": "9346f2df3484c159deddaa7c864b941d87b5d4a6e632798a49d17c524e665c37",
+    "crates/nurbs-core/src/intersection/planar_curve_curve/coplanar.rs": "bfaee93f9ac9f89cde6123abb5659c4eec0e9fd7e41337a9f56ca6ea18942d16",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "ffd9cfceb9cb8108eadda123fc09a0819d11c93657bf373337c7034699f1d4bc",
+    "crates/nurbs-core/tests/surface_self_intersection/within_span.rs": "4eda20c55833afd268e8b465a8a7892dfe3172fc01d40aaded49dc3f699d559b",
+    "crates/nurbs-core/tests/surface_self_intersection/oblique_plane.rs": "5c40f7421eef495b4a91a5ed8ec2d72974d7876480fe71e59bf961b66792fc6c"
+  }
+}

@@ -8,6 +8,7 @@ struct Root {
     world: Vec<[Q; 3]>,
     uv: Vec<[Q; 2]>,
 }
+#[derive(Clone)]
 pub struct SourceContact {
     root: Arc<Root>,
     range: [Q; 2],

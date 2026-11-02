@@ -1,0 +1,15 @@
+{
+  "bridgePassed": 18,
+  "newTests": 4,
+  "operation": "nurbs_surface_iso_target_window",
+  "scope": "Read-only complete selected original iso/target window when unresolved is empty",
+  "wasmQualified": false,
+  "wholeSurfaceComplete": false,
+  "sourceSha256": {
+    "crates/geometry-bridge/src/intersections.rs": "fef32d3ec315e1cdf01cdec1798869afb526493ae6a5fdde05c9917db78de1ed",
+    "crates/geometry-bridge/src/dispatch/intersections.rs": "93bd57c6ea365f27dfee19540d44941ebe9ab18e95a7cc2d5fb869effc5ecff1",
+    "crates/geometry-bridge/src/intersections/surface_iso_target.rs": "204969d8014f404f90bfc7f845dc0961e0d1897c6bab4e9f98f4fae4db161576",
+    "crates/geometry-bridge/tests/surface_iso_target_window.rs": "a4806c631adabce6005e60c0f0aa86bb2879519e5754d7692ccd0dfeecd43e55",
+    "docs/api/nurbs-surface-iso-target-window.md": "b2da6b747add0abb53586dee32567db523ccf954e5bb6b96c79b6284ac225fb2"
+  }
+}

@@ -25,6 +25,24 @@ pub(crate) fn surface_c0(s: &Surface) -> bool {
         && c0(s.degree_u, &s.knots_u, s.control_points.len())
         && c0(s.degree_v, &s.knots_v, s.control_points[0].len())
 }
+/// Sufficient literal C1 knot premise. Positive rational weights and a valid
+/// B-spline definition then make the full original carrier continuously
+/// differentiable, including a one-sided extension at the box boundary.
+pub(crate) fn surface_c1(s:&Surface)->bool {
+    fn axis(k:&[f64],p:usize,n:usize)->bool {
+        if p==0 {return false;}
+        let mut last=None;let mut count=0;
+        for &x in k {
+            if !(k[p]<x && x<k[n]) {continue;}
+            if last==Some(x) {count+=1;}else{last=Some(x);count=1;}
+            if count>=p {return false;}
+        }
+        true
+    }
+    !s.periodic_u && !s.periodic_v
+        && axis(&s.knots_u,s.degree_u,s.control_points.len())
+        && axis(&s.knots_v,s.degree_v,s.control_points[0].len())
+}
 /// Original rational surface value and first jets in NORMALIZED UV coordinates.
 /// Every intersected ORIGINAL knot cell is enclosed and charged, including
 /// one-sided derivatives at knots. No extracted floating net becomes a source.

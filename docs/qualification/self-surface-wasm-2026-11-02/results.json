@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "sourceCommit": "26d6454cc9bbfc8fad10259f22ff655d2e5c441a",
+  "wasmPath": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/cfbc28f39f290824d70227d70a3f1c165c8cae446416d42020eddb6757559da0.wasm",
+  "wasmSha256": "cfbc28f39f290824d70227d70a3f1c165c8cae446416d42020eddb6757559da0",
+  "wasmBytes": 24008265,
+  "imports": [],
+  "cases": [
+    {
+      "name": "global-absence",
+      "status": "absent",
+      "elapsedMs": 4.610917000000001
+    },
+    {
+      "name": "exact-global-fold",
+      "status": "present",
+      "elapsedMs": 3.1383749999999964
+    },
+    {
+      "name": "non-dyadic-witness",
+      "status": "present",
+      "elapsedMs": 4.1254579999999805
+    },
+    {
+      "name": "large-exact-integer-strings",
+      "status": "present",
+      "elapsedMs": 6.525749999999988
+    },
+    {
+      "name": "asymmetric-projective-gauge",
+      "status": "present",
+      "elapsedMs": 2.8132499999999823
+    },
+    {
+      "name": "rational-spatial-crossing",
+      "status": "present",
+      "elapsedMs": 1.2415829999999914
+    },
+    {
+      "name": "adjacent-backtracking-overlap",
+      "status": "present",
+      "elapsedMs": 0.2268749999999784
+    },
+    {
+      "name": "budget-unresolved",
+      "status": "unresolved",
+      "elapsedMs": 0.19687499999997726
+    },
+    {
+      "name": "forged-verdict",
+      "error": "GEOMETRY_INVALID_INPUT",
+      "elapsedMs": 0.16370799999998553
+    },
+    {
+      "name": "zero-budget",
+      "error": "NURBS_INVALID_INPUT",
+      "elapsedMs": 0.06887499999999136
+    },
+    {
+      "name": "invalid-source",
+      "error": "NURBS_INVALID_INPUT",
+      "elapsedMs": 0.041042000000004464
+    },
+    {
+      "name": "recovery-after-refusal",
+      "status": "absent",
+      "elapsedMs": 0.05954199999999332
+    }
+  ],
+  "installedPackageUpdated": false,
+  "scope": "Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification",
+  "testedWasmPath": "/tmp/osv-self-surface-wasm-target-20261102/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+  "nodeVersion": "v22.23.4",
+  "harnessSha256": "3927a082cd3bbfb3f1277b12f857972ab09640d61b59d1f760b3323e71c99ead"
+}

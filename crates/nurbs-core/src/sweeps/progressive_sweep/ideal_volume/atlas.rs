@@ -11,6 +11,10 @@ use super::{cell::Enclosed, *};
 use std::collections::BTreeMap;
 mod weighted;
 mod refinement;
+mod p_matrix;
+pub(crate) use p_matrix::certify as certify_c1_rectangular_map;
+mod smooth_p_matrix;
+pub(crate) use smooth_p_matrix::certify as certify_smooth_p_matrix;
 
 fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     let mut p = [[I::point(0.); 3]; 3];
@@ -96,6 +100,14 @@ pub(crate) fn inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
         .all(|x| x.is_finite())
         .then_some(inverse)
 }
+/// A coordinate PROPOSAL from source directions, retaining physical axis
+/// lengths for the subsequent metric scaling. Inverting the raw Jacobian
+/// instead can absorb a thin carrier/long path ratio into world coordinates.
+/// Its determinant and all transformed source jets still require independent
+/// outward verification by the caller; this supplies no geometric credit.
+pub(crate) fn normalized_inverse_proposal(columns: [V3; 3]) -> Option<[[f64; 3]; 3]> {
+    inverse_proposal(scaled(columns, coordinate_scale(columns)?).ok()?)
+}
 /// ONE invertible diagonal change x=S*xi on the complete joint chart.
 /// A thin carrier and a long path must not make the SPD proposal depend on
 /// arbitrary normalized parameter units. This never changes source jets/knots.
@@ -170,10 +182,19 @@ fn monotone_hull(
     // Point checks only discard unpromising proposals. They supply zero
     // admission credit. A promising fixed metric gets a deeper source-paid
     // complete field cover, including spatially nonlinear rational carriers.
-    if !refinement::promising(pieces,projection,scale,inverse,query,out,max)? {return Ok(false);}
+    let promising=refinement::promising(pieces,projection,scale,inverse,symmetric_positive,query,out,max)?;
+    #[cfg(test)]
+    if std::env::var_os("OSV_TRACE_ACTUAL_METRIC").is_some() {
+        eprintln!("METRIC proposal pieces={pieces:?} cells={} promising={promising} scale={scale:?} inverse={inverse:?}",out.cells);
+    }
+    if !promising {return Ok(false);}
     let visit_limit=1024;
     while let Some(b) = pending.pop() {
         if visits == visit_limit || out.cells == max {
+            #[cfg(test)]
+            if std::env::var_os("OSV_TRACE_ACTUAL_METRIC").is_some() {
+                eprintln!("METRIC stopped cells={} visits={visits} pending={} next={b:?}",out.cells,pending.len());
+            }
             return Ok(false);
         }
         visits += 1;
@@ -191,16 +212,23 @@ fn monotone_hull(
                 }
             }
         }
-        let axis = match e {
-            Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>i,
-            _ => match refinement::axis(b,projection,scale,inverse,query,out,max)? {
-                Some(axis)=>axis,None=>return Ok(false),
-            },
+        let choice = match e {
+            Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>
+                refinement::Choice::Split{axis:i,complete:[false;2]},
+            _ => refinement::axis(b,projection,scale,inverse,symmetric_positive,query,out,max)?,
         };
-        let Some(children) = split_axis(b, axis) else {
-            return Ok(false);
+        let (axis,complete)=match choice {
+            refinement::Choice::Covered=>continue,
+            refinement::Choice::Unavailable=>return Ok(false),
+            refinement::Choice::Split{axis,complete}=>(axis,complete),
         };
-        pending.extend(children);
+        let Some(children)=split_axis(b,axis) else{return Ok(false);};
+        // Pending is precisely the not-yet-proved part of the original cover.
+        // Child proofs from source-paid lookahead already cover their ENTIRE
+        // boxes under this same metric. Retain every unresolved sibling.
+        for (child,proved) in children.into_iter().zip(complete) {
+            if !proved {pending.push(child);}
+        }
     }
     Ok(true)
 }
@@ -208,6 +236,13 @@ fn monotone_hull(
 // Proof/search results belong to ONE immutable source context and aggregate
 // ledger. Negative entries only skip a completed bounded metric proposal;
 // they never classify geometry. Budget-stopped proposals are not cached.
+#[derive(Default)]
+struct MetricCache {
+    attempts: BTreeMap<Vec<[[u64; 2]; 3]>, bool>,
+    // Only complete proofs of ONE convex source hull. This cache is created
+    // inside a single immutable-source/projection owner and never escapes it.
+    domains: Vec<Box3>,
+}
 fn cached_metric(
     pieces: &[Box3],
     columns: [V3; 3],
@@ -215,16 +250,28 @@ fn cached_metric(
     query: &mut impl FnMut(Box3, &mut IdealVolumeReport) -> Result<Enclosed>,
     out: &mut IdealVolumeReport,
     max: usize,
-    cache: &mut BTreeMap<Vec<[[u64; 2]; 3]>, bool>,
+    cache: &mut MetricCache,
 ) -> Result<bool> {
     let k = pieces.iter().map(|b| key(*b)).collect::<Vec<_>>();
-    if let Some(proven) = cache.get(&k) {
-        return Ok(*proven);
+    if cache.attempts.get(&k) == Some(&true) {return Ok(true);}
+    if pieces.len() == 1 {
+        for domain in cache.domains.iter().rev() {
+            // Failed containment trials also spend the same owner budget.
+            if out.cells == max {return Ok(false);}
+            out.cells += 1;
+            if (0..3).all(|i| domain[i][0] <= pieces[0][i][0]
+                && pieces[0][i][1] <= domain[i][1]) {
+                // A complete injectivity/regularity proof on H applies to
+                // every convex subset of H. No union of different metrics,
+                // failed proposal, foreign source or serialized flag is used.
+                return Ok(true);
+            }
+        }
     }
+    if let Some(proven) = cache.attempts.get(&k) {return Ok(*proven);}
     let proven = monotone_hull(pieces, columns, projection, query, out, max)?;
-    if proven || out.cells < max {
-        cache.insert(k, proven);
-    }
+    if proven || out.cells < max {cache.attempts.insert(k, proven);}
+    if proven && pieces.len() == 1 {cache.domains.push(pieces[0]);}
     Ok(proven)
 }
 fn hull(a: Box3, b: Box3) -> Box3 {
@@ -313,7 +360,7 @@ fn certify_map_impl(
 )->Result<()> {
     out.reason = Some("ideal-volume-work-limit");
     let mut cache = BTreeMap::new();
-    let mut metrics = BTreeMap::new();
+    let mut metrics = MetricCache::default();
     let mut query = |b, out: &mut IdealVolumeReport| -> Result<Enclosed> {
         if let Some(e) = cache.get(&key(b)) {
             return Ok(*e);
@@ -370,17 +417,22 @@ fn certify_map_impl(
             if regular(e.columns, projection)? {
                 continue;
             }
-            if h[2][1] - h[2][0] <= 0.125
-                && cached_metric(
-                    &[h],
-                    e.columns,
-                    projection,
-                    &mut query,
-                    out,
-                    max_cells,
-                    &mut metrics,
-                )?
-            {
+        }
+        // An unavailable coarse carrier jet is not a negative whole-field
+        // result. The same fixed-metric owner can refine ORIGINAL UV charts
+        // to obtain those jets. Otherwise adjacent boxes sharing a material
+        // boundary may refine forever while their joint coarse jet stays
+        // unavailable. All subcells, failed trials and queries use this ledger.
+        let refine_unavailable = matches!(eh, Enclosed::Unavailable(Some(0 | 1)));
+        if h[2][1] - h[2][0] <= 0.125 || refine_unavailable {
+            let columns = match eh {
+                Enclosed::Value(e) => e.columns,
+                _ => [[I::point(0.); 3]; 3],
+            };
+            // Zero fallback cannot authorize a metric: monotone_hull first
+            // requests an original center jet, then proves its complete cover.
+            if cached_metric(&[h], columns, projection, &mut query, out,
+                max_cells, &mut metrics)? {
                 continue;
             }
         }
@@ -498,6 +550,109 @@ fn certify_map_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn complete_metric_domain_reuse_is_contained_source_local_and_paid() {
+        let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let mut out=IdealVolumeReport {embedding_certified:false,regularity_certified:false,
+            parameter_topology_preserved:false,cells:0,exact_work:0,boxes:0,
+            monotonicity_lower:None,projection,reason:None};
+        let mut cache=MetricCache::default();
+        let calls=std::cell::Cell::new(0);
+        // F=(u-u^2,v,t) embeds the left quarter, but folds on the full cube.
+        let mut query=|b:Box3,out:&mut IdealVolumeReport|->Result<Enclosed>{
+            calls.set(calls.get()+1);out.cells+=1;
+            let [u,v,t]=b.map(|d|I::new(d[0],d[1]).unwrap());
+            let mut columns=projection.map(|v|v.map(I::point));
+            columns[0][0]=I::point(1.).sub(I::point(2.).mul(u)?)?;
+            Ok(Enclosed::Value(cell::Enclosure {value:[u.sub(u.mul(u)?)?,v,t],columns}))
+        };
+        let left=[[0.,0.25],[0.,1.],[0.,1.]];
+        let zero=[[I::point(0.);3];3];
+        assert!(cached_metric(&[left],zero,projection,&mut query,&mut out,10000,&mut cache).unwrap());
+        let small=[[0.0625,0.125],[0.25,0.5],[0.25,0.5]];
+        let before=out.cells;let source_calls=calls.get();
+        assert!(cached_metric(&[small],zero,projection,&mut query,&mut out,before+1,&mut cache).unwrap());
+        assert_eq!(out.cells,before+1);assert_eq!(calls.get(),source_calls);
+        // This is not an exact-key hit: another containment search requires
+        // its own unit, even when every source query is avoided.
+        let before=out.cells;
+        assert!(!cached_metric(&[small],zero,projection,&mut query,&mut out,before,&mut cache).unwrap());
+        assert_eq!(out.cells,before);assert_eq!(calls.get(),source_calls);
+        // The proved local chart cannot authorize the surrounding folded map.
+        assert!(!cached_metric(&[[[0.,1.];3]],zero,projection,&mut query,&mut out,10000,&mut cache).unwrap());
+        assert!(calls.get()>source_calls);
+    }
+    #[test]
+    fn unsuitable_corner_positive_metric_does_not_starve_the_exact_pair_proof() {
+        let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let run=|max| {
+            let mut out=IdealVolumeReport {embedding_certified:false,regularity_certified:false,
+                parameter_topology_preserved:false,cells:0,exact_work:0,boxes:0,
+                monotonicity_lower:None,projection,reason:None};
+            // F=(u,v,t+16u(1-u)v(1-v)) is globally injective: x,y fix
+            // u,v, then z fixes t. ALL its interval Jacobians are triangular
+            // with diagonal one. Center/corner Jacobians are identity, but
+            // their proposed Euclidean SPD metric fails at face midpoints.
+            let source=|b:Box3,out:&mut IdealVolumeReport,max:usize|->Result<Enclosed>{
+                if out.cells==max {return Ok(Enclosed::Unavailable(None));}out.cells+=1;
+                let [u,v,t]=b.map(|x|I::new(x[0],x[1]).unwrap());
+                let one=I::point(1.);let k=I::point(16.);
+                let a=u.mul(one.sub(u)?)?;let d=v.mul(one.sub(v)?)?;
+                let mut columns=projection.map(|v|v.map(I::point));
+                columns[0][2]=k.mul(one.sub(I::point(2.).mul(u)?)?)?.mul(d)?;
+                columns[1][2]=k.mul(a)?.mul(one.sub(I::point(2.).mul(v)?)?)?;
+                Ok(Enclosed::Value(cell::Enclosure {value:[u,v,t.add(k.mul(a)?.mul(d)?)?],columns}))
+            };
+            certify_map_global_first(source,projection,&mut out,max,false).unwrap();out
+        };
+        let full=run(256);
+        assert!(full.embedding_certified && full.regularity_certified
+            && full.parameter_topology_preserved,"{full:?}");
+        assert!(full.cells<100,"{full:?}");
+        assert!(run(full.cells).embedding_certified);
+        let short=run(full.cells-1);
+        assert!(!short.embedding_certified && short.cells<full.cells);
+        eprintln!("corner-positive unsuitable metric: cells={}",full.cells);
+    }
+    #[test]
+    fn unavailable_joint_carrier_jets_require_a_complete_refined_cover() {
+        let projection = [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let run = |max, folded| {
+            let mut out = IdealVolumeReport {
+                embedding_certified:false, regularity_certified:false,
+                parameter_topology_preserved:false, cells:0, exact_work:0,
+                boxes:0, monotonicity_lower:None, projection, reason:None,
+            };
+            let source = |b:Box3, out:&mut IdealVolumeReport, max:usize| -> Result<Enclosed> {
+                if out.cells==max {return Ok(Enclosed::Unavailable(None));}
+                out.cells+=1;
+                // A conservative primitive may need smaller ORIGINAL charts.
+                if b[0][1]-b[0][0]>0.25 {
+                    return Ok(Enclosed::Unavailable(Some(0)));
+                }
+                let mut value=b.map(|x|I::new(x[0],x[1]).unwrap());
+                let mut columns=projection.map(|v|v.map(I::point));
+                if folded {
+                    let u=value[0].sub(I::point(0.5))?;
+                    value[0]=u.mul(u)?;
+                    columns[0][0]=I::point(2.).mul(u)?;
+                }
+                Ok(Enclosed::Value(cell::Enclosure{value,columns}))
+            };
+            certify_map(source,projection,&mut out,max,false).unwrap();
+            out
+        };
+        let full=run(10000,false);
+        assert!(full.embedding_certified && full.regularity_certified
+            && full.parameter_topology_preserved, "{full:?}");
+        assert!(run(full.cells,false).embedding_certified);
+        let short=run(full.cells-1,false);
+        assert!(!short.embedding_certified && short.cells<full.cells);
+        let folded=run(10000,true);
+        assert!(!folded.embedding_certified && !folded.regularity_certified
+            && !folded.parameter_topology_preserved);
+        eprintln!("refined unavailable carrier: cells={}",full.cells);
+    }
     #[test]
     fn spatially_uncertain_monotone_field_refines_uv_under_one_fixed_metric() {
         let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];

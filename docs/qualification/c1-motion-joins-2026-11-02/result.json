@@ -1,0 +1,27 @@
+{
+  "base_commit": "cece07a52",
+  "source_files": 4406,
+  "source_guard_passed": true,
+  "nurbs_core": {
+    "passed": 2242,
+    "failed": 0,
+    "ignored": 1
+  },
+  "no_codec_check": "passed",
+  "actual_c1_split_field": {
+    "cells": 6710,
+    "exact_work": 576,
+    "boxes": 765,
+    "embedding": true,
+    "regularity": true,
+    "topology_preserved": true
+  },
+  "multispan_caps_independent_motion": {
+    "cells": 149,
+    "exact_work": 323
+  },
+  "original_budgets_unchanged": true,
+  "sharp_c0_and_periodic_theorem_exclusions_preserved": true,
+  "brep_embedding_post_merge": "running separately; not claimed passing",
+  "goal_complete": false
+}

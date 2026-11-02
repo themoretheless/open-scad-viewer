@@ -71,6 +71,40 @@ pub(super) fn same(a: &Curve, b: &Curve, reversed: bool) -> Result<()> {
     let d = a.domain();
     restriction(a, b, if reversed { [d[1], d[0]] } else { d })
 }
+pub(super) fn monotone(c: &Curve, axis: usize, increasing: bool) -> Result<()> {
+    if !clamped(c)
+        || c.control_points.len() != c.degree + 1
+        || !(1..=8).contains(&c.degree)
+        || c.weights.iter().any(|&w| w <= 0.)
+    {
+        return Err(fail(
+            "monotone clock needs one positive rational Bernstein span",
+        ));
+    }
+    let w = c.weights.iter().map(|&w| q(w)).collect::<Vec<_>>();
+    let n = c
+        .control_points
+        .iter()
+        .zip(&w)
+        .map(|(p, w)| q(p[axis]) * w)
+        .collect::<Vec<_>>();
+    let derivative = |p: &[Q]| {
+        p.windows(2)
+            .map(|p| integer(c.degree as i64) * (&p[1] - &p[0]))
+            .collect::<Vec<_>>()
+    };
+    let a = sb::multiply(&derivative(&n), &w);
+    let b = sb::multiply(&n, &derivative(&w));
+    let j = a
+        .into_iter()
+        .zip(b)
+        .map(|(a, b)| if increasing { a - b } else { b - a })
+        .collect::<Vec<_>>();
+    if j.iter().any(|q| q.is_negative()) || j.iter().all(Zero::is_zero) {
+        return Err(fail("rational free-clock derivative sign is unproved"));
+    }
+    Ok(())
+}
 pub(super) fn profile(m: &Model, f: usize) -> Result<()> {
     let f = &m.faces[f];
     let loops = std::iter::once(f.outer)

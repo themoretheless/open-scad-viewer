@@ -771,3 +771,7 @@ pub use source_curvature_law::{SourceContactCurvatureLaw,SourceCurvatureLawRepor
 #[path = "original_graph_transition/support_frame.rs"]
 mod support_frame;
 pub use support_frame::{SupportFrame,polynomial_support_frame,opposed_normal_chords_excluded,frame_distance_at_least,polynomial_plane_point,convex_uv_strict_contains};
+
+#[path="original_graph_transition/edge_display.rs"]
+mod edge_display;
+pub use edge_display::{PolynomialEdgeDisplay,sample_polynomial_edge};

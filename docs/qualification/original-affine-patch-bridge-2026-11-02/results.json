@@ -1,0 +1,24 @@
+{
+  "bridgePassed": 23,
+  "newTests": 5,
+  "operation": "nurbs_original_affine_patch_contacts",
+  "exactBudgetCap": 1000000,
+  "proofContextSerialized": false,
+  "verified": [
+    "nonrepresentable plane contacts with orders 2 and 4",
+    "shared knot preserves orders 2 and 1",
+    "no transverse crossing sign emitted",
+    "outside absence and boundary ambiguity separated",
+    "zero exact budget preserves unresolved coverage",
+    "extra verdicts and over-limit budget rejected"
+  ],
+  "wasmQualified": false,
+  "trimBodyAdmission": false,
+  "sourceSha256": {
+    "crates/geometry-bridge/src/intersections.rs": "fcd6cb3f2a4d0686c1c40688e53948a5eda85f9a2bf17a8ebd42f08300c0b7fa",
+    "crates/geometry-bridge/src/dispatch/intersections.rs": "97753a4768255a0547b4cac2336332792420e794e7c92285a34f52eb311fc3b6",
+    "crates/geometry-bridge/src/intersections/original_patch_contacts.rs": "47a684ec8c229c91e9cbefbe0c57ad8b0e4c1d32805bf3047bd66e8f56fdde58",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "ce69e4b9e3676c8fae14c59ef5a3bc00c1f5cd98ffe9d479c0135f8c66a86502",
+    "docs/api/original-affine-patch-contacts.md": "b5f412f8caa746d1443013f1addc49fb44ecc33e575b094837b6db8a5abbfe37"
+  }
+}

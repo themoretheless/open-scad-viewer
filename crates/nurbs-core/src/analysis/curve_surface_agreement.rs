@@ -1,5 +1,8 @@
 //! Bounded, conservative verification of C(t) = S(P(t)) over a full interval.
 //! Positive rational hulls cover every knot span. Exhaustion is inconclusive.
+mod trimmed_boundary;
+mod exact_trimmed;
+pub use exact_trimmed::verify_exact_trimmed;
 mod point_lift;
 pub use point_lift::verify_exact_point;
 use crate::distance_bounds::{Interval, box_distance};

@@ -8,6 +8,7 @@ const ExpressionShellCheck=defineAsyncComponent(()=>import('../components/Expres
 const SurfacePairChecks=defineAsyncComponent(()=>import('../components/SurfacePairChecks.vue'))
 const SurfaceDistanceCheck=defineAsyncComponent(()=>import('../components/SurfaceDistanceCheck.vue'))
 const ProfileBridgeCheck=defineAsyncComponent(()=>import('../components/ProfileBridgeCheck.vue'))
+const FrozenGraphBodyPanel=defineAsyncComponent(()=>import('../components/FrozenGraphBodyPanel.vue'))
 const SourceGraphG2Preview=defineAsyncComponent(()=>import('../components/SourceGraphG2Preview.vue'))
 const SourceBodyFailureNotice=defineAsyncComponent(()=>import('../components/SourceBodyFailureNotice.vue'))
 import type {ExpressionDisplayReport} from '../services/expressionDisplay'
@@ -508,6 +509,8 @@ const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selec
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
 const profileBridgePanel=ref<InstanceType<typeof SurfacePairChecks>|null>(null)
+const frozenBodyPanel=ref<InstanceType<typeof FrozenGraphBodyPanel>|null>(null),frozenBodyDisplay=shallowRef<import('../services/frozenGraphBody').FrozenGraphDisplay|null>(null),frozenBodyEdge=ref<number|null>(null)
+function showFrozenBody(value:import('../services/frozenGraphBody').FrozenGraphDisplay|null){frozenBodyDisplay.value=value;if(value){mode.value='3d';if(!document.value.sketches.length)sketchPaneOpen.value=false;void nextTick(()=>fit('3d',false,true))}}
 const sourceGraphDisplay=shallowRef<{lines:[number,number,number][][];witness:[number,number,number]|null}|null>(null)
 const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../services/nurbsSurface').NurbsSurface,import('../services/nurbsSurface').NurbsSurface]:null)
 type SolidTopology=import('../services/mainSolidProtocol').MainSolidResults['topology']
@@ -1421,12 +1424,13 @@ function wheelZoom(e: WheelEvent, pane: Pane) {
   const change = (oldSize - views.value[pane]) / pixels
   centers.value[pane] = [centers.value[pane][0] + (e.clientX-rect.left-rect.width/2)*change, centers.value[pane][1] + (e.clientY-rect.top-rect.height/2)*change]
 }
-function fit(pane: Pane, selectedOnly=false) {
-  const points = pane === '2d' ? visibleSketches.value.filter(s=>!selectedOnly||selectedIds.value.includes(s.id)).flatMap(s => (retainedDisplay.value.get(s.id)??[s.points]).flat()).concat(selectedOnly?[]:copyPreview.value.flatMap(s=>s.points)) : [
+function fit(pane: Pane, selectedOnly=false, frozenOnly=false) {
+  const points = frozenOnly&&pane==='3d'?(frozenBodyDisplay.value?.display.edges??[]).flatMap(edge=>edge.points):pane === '2d' ? visibleSketches.value.filter(s=>!selectedOnly||selectedIds.value.includes(s.id)).flatMap(s => (retainedDisplay.value.get(s.id)??[s.points]).flat()).concat(selectedOnly?[]:copyPreview.value.flatMap(s=>s.points)) : [
     ...[...sceneBodies.value.filter(b=>!selectedOnly||selectedIds.value.includes(b.id)), ...(previewBody.value ? [previewBody.value] : [])].flatMap(bodyPoints),
     ...Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)&&(!selectedOnly||sourceEdgeSelection.value.startsWith(id+':'))).flatMap(([,r])=>[...r.edges.flatMap(e=>(e.displaySegments??[]).flatMap(segment=>segment[1])),...(r.displayFaces??[]).flatMap(face=>[...face.tiles.flatMap(tile=>tile.corners),...face.unresolvedBoxes.flatMap(box=>Array.from({length:8},(_,i)=>[box[0][i&1],box[1][(i>>1)&1],box[2][(i>>2)&1]]))])]),
     ...document.value.sketches.filter(item=>objectInView(item.id)&&(!selectedOnly||selectedIds.value.includes(item.id))).flatMap(item=>(retainedDisplay.value.get(item.id)??[item.points]).flat().map(p=>worldPoint(p,item.plane))),
     ...(document.value.curves ?? []).filter(item=>objectInView(item.id)&&(!selectedOnly||selectedIds.value.includes(item.id))).flatMap(item => item.curve.controlPoints),
+    ...(frozenBodyDisplay.value?.display.edges??[]).filter(edge=>!selectedOnly||edge.edge===frozenBodyEdge.value).flatMap(edge=>edge.points),
     ...(document.value.surfaces ?? []).filter(item=>objectInView(item.id)&&(!selectedOnly||selectedIds.value.includes(item.id))).flatMap(item => item.surface.controlPoints.flat()),
   ]
   if (!points.length) { views.value[pane] = 160; centers.value[pane] = [0, 0]; return }
@@ -1907,7 +1911,7 @@ function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (e.isComposing) return
-  if (e.key === 'Escape') { e.preventDefault(); cancelSourceWall();cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
+  if (e.key === 'Escape') { e.preventDefault(); frozenBodyPanel.value?.cancel(); cancelSourceWall();cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
   if (e.key === 'Enter' && commandActive.value) {
     // Native controls retain Enter, including Cancel, operand selection and the File menu.
     if ((e.target as HTMLElement).closest?.('button, summary, a[href], select')) return
@@ -2133,6 +2137,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button type="button" @click="openNewGroupFromMenu">{{ label('Новая группа из кода', 'New group from source') }}</button>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
+        <FrozenGraphBodyPanel ref="frozenBodyPanel" :active="props.open&&!commandActive" :ru="ru" v-model:selected-edge="frozenBodyEdge" @display="showFrozenBody" @fit="fit('3d',false,true)" />
         <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
         <ManifoldSettings :locale="locale" />
@@ -2417,6 +2422,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
                 <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
+              </g>
+              <g v-if="pane==='3d'&&frozenBodyDisplay" data-diagnostic="frozen-graph-body-wire" fill="none">
+                <polyline v-for="edge in frozenBodyDisplay.display.edges" :key="edge.edge" :data-native-edge="edge.edge" role="button" tabindex="0" :aria-label="label('Точное ребро ','Exact edge ')+(edge.edge+1)" :points="edge.points.map(p=>project(p,'3d').join(',')).join(' ')" :stroke="edge.edge===frozenBodyEdge?'#ffce73':'#77eac5'" :stroke-width="edge.edge===frozenBodyEdge?3:1.5" vector-effect="non-scaling-stroke" pointer-events="stroke" @pointerdown.stop="frozenBodyEdge=edge.edge" @keydown.enter.stop.prevent="frozenBodyEdge=edge.edge" @keydown.space.stop.prevent="frozenBodyEdge=edge.edge"><title>{{ label('Точное ребро ','Exact edge ')+(edge.edge+1) }}</title></polyline>
               </g>
               <g v-if="pane==='3d' && sourceGraphDisplay" data-diagnostic="source-graph-preview" pointer-events="none" fill="none" stroke="#77eac5" stroke-width="1.5">
                 <polyline v-for="(line,i) in sourceGraphDisplay.lines" :key="i" :points="line.map(p=>project(p,'3d').join(',')).join(' ')" vector-effect="non-scaling-stroke" />
@@ -2813,7 +2821,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <div><button class="primary" :disabled="!commandReady" @click="applyCommand">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="cancelCommand">Esc</button></div>
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
-            <div v-if="pane === '3d' && !advancedOp && !document.bodies.length && !(document.sourceBodies?.length) && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
+            <div v-if="pane === '3d' && !frozenBodyDisplay && !advancedOp && !document.bodies.length && !(document.sourceBodies?.length) && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
             <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" :aria-label="label('Вычитание', 'Subtraction')">
               <strong>{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
               <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'a'" @click="subtract.active = 'a'">

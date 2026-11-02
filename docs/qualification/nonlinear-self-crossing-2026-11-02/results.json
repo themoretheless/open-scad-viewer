@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "nurbsTestsPassed": 50,
+  "bridgeTestsPassed": 7,
+  "protocolTestsPassed": 7,
+  "newNativeTests": 7,
+  "vueTypecheck": "passed",
+  "scope": "Original planar nonlinear iso-curve crossings on literal original Bernstein spans; exact representability checked before Krawczyk; rational weights; U/V; disjoint normalized UV boxes and world enclosures; pair+solver shared budget",
+  "proof": "Outward strict Krawczyk self-inclusion and contraction on original source cells. Numeric tolerance only localizes the enclosure; no rounded candidate supplies an existence proof.",
+  "report": "Present may use certifiedCrossing instead of an exact point. Existing point fields remain null in that case; allContactBranchesEnumerated stays false.",
+  "browserCompatibility": "8 real Workers passed on previous raw cfbc28f3 candidate with updated protocol; this does NOT qualify nonlinear code in WASM",
+  "nonlinearWasmQualified": false,
+  "installedPackageUpdated": false,
+  "remaining": "Single-span nonlinear self-loops, nonplanar pairs, general exact rational iso-coefficients, unsupported knot extraction, periodic charts, all-contact completeness, trimming and whole-body validity remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface.rs": "3ef9c6a750ceb88a9952bbd4bd03ac565e5c80e8121d2839dec5fc4409e37823",
+    "crates/nurbs-core/src/intersection/self_surface/linear_crossing.rs": "d85277da45d7b1f758fb8a4e5670afb0dc3a714175b07cdf51ce6b8b838302e0",
+    "crates/nurbs-core/src/intersection/self_surface/nonlinear_crossing.rs": "36a335f45c61b882a6557ff22f2b8698da4db4b4f60ba908f16fd64ab78536ad",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "4b2eb1098925b22db257142e6b501ce1daf84ce0c5dade29af7e534810098717",
+    "crates/geometry-bridge/src/intersections/self_surface.rs": "8f0d4728923ca6fabd7124483e197a60415cb8384fc768934df820dc8575f1fc",
+    "crates/geometry-bridge/tests/surface_self_intersection_audit.rs": "d0b7ddce39a1a6d68db3ae8cef1189e80a835bc8266bd091f46941bc8995a07e",
+    "src/services/surfaceSelfIntersectionProtocol.ts": "adb2a4ea396e52666dfa5011e1843edc0c3a7d3500fe2865ac7571272ff32e2c",
+    "tests/surfaceSelfIntersectionProtocol.test.ts": "5bb729b60c29441cd8fa2f6c2b8cae2aca92fe169f368d6863fd3c3a889835a3"
+  }
+}

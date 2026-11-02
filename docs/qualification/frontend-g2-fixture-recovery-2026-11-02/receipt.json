@@ -1,0 +1,22 @@
+{
+  "baseCommit": "ebe14f2e6bfb49b247d2116d07b638f6f49ec19c",
+  "fixturePath": "tests/fixtures/source-graph-g2-preview-v1.json",
+  "fixtureSha256": "8eaf1503798c7a7a7382b56f44d871fa32d54fe7be9c92443cde8fa3f4dbd1ec",
+  "geometryWasmSha256": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+  "geometryWasmBytes": 16670564,
+  "originalCompileSourceRevision": "e09ae5d3d2a1a7d0250488dcef3484af5a3f9230",
+  "commands": [
+    "node --import tsx scripts/check-source-graph-g2-preview-wasm.mts <new output directory>",
+    "node node_modules/vitest/vitest.mjs run tests/sourceGraphG2Panel.test.ts tests/sourceGraphG2Preview.test.ts tests/sourceGraphG2RealWorker.test.ts --maxWorkers=2 --reporter=json --outputFile=..."
+  ],
+  "exitCodes": [
+    0,
+    0
+  ],
+  "tests": {
+    "passed": 8,
+    "failed": 0
+  },
+  "qualifiedRuntimeAdmission": false,
+  "scope": "Fresh real packaged-WASM/actual-handler report copied verbatim to a tracked UI fixture. Panel/transport/real separate-worker regression tests only. Historical1a70 report not reconstructed, overwritten or relabelled. Current e86 artifact was compiled from e09 Rust source, not Feature native234 source."
+}

@@ -294,6 +294,7 @@ impl Bounds {
         }
         let sign = semidefinite::certificate(p, ctx)?
             || circuits::certificate(p, ctx)?
+            || gram::certificate(p, ctx)?
             || pullback::certificate(p, ctx)?;
         self.signs.insert(key, sign);
         Ok(sign)

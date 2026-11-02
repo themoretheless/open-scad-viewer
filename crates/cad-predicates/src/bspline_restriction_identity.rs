@@ -3,6 +3,8 @@ use crate::{
     Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion, InputError,
     LeafRef, PredicateContext, Reason, Sign, exact_inputs,
 };
+mod trimmed_trace;
+pub use trimmed_trace::rational_bspline_trimmed_boundary_identity;
 type Net = Vec<[Expansion; 4]>;
 fn normalize(values: &mut [Expansion], ctx: &mut PredicateContext<'_>) -> Result<(), Reason> {
     Expansion::normalize_common(values, ctx)

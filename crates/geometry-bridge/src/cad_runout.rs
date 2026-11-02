@@ -183,3 +183,9 @@ mod tests {
 #[path = "cad_runout/graph_preview.rs"]
 mod graph_preview;
 pub(crate) fn source_graph_preview(v: Value) -> Result<Value> { graph_preview::create(v) }
+
+#[path="cad_runout/graph_body.rs"]
+mod graph_body;
+pub(crate) fn restore_graph_body(v: Value) -> Result<Value> {graph_body::restore(v)}
+
+pub(crate) fn display_graph_body(v: Value) -> Result<Value> {graph_body::display(v)}

@@ -1,0 +1,14 @@
+{
+  "passed": 109,
+  "failed": 0,
+  "self_tests": 84,
+  "curve_surface_tests": 11,
+  "bridge_tests": 14,
+  "wasm_qualified": false,
+  "whole_surface_coverage": false,
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window.rs": "efddeef761aa5e2a4acf4a49c91eb96794fe1ec61676bb3b28c0da4e1985116b",
+    "crates/nurbs-core/tests/surface_self_intersection/spatial_windows.rs": "ebf0246454a9e33a5e35fe3decbfce32b8eb0426ad2082a472074dd33ba11f51",
+    "docs/design/plasticity-remaining-2026-11-02.md": "aa927e58f8df82cfa0c25e5398aa3f99828a644afa9768468273aa7e090c2010"
+  }
+}

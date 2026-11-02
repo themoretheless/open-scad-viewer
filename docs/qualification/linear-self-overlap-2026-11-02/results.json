@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "testsPassed": 44,
+  "newTests": 6,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Exact positive collinear overlap at the transverse midpoint, including adjacent backtracking; weighted original clocks; both axes; endpoint-only and offset-line rejection",
+  "proof": "Exact 3D collinearity, positive scalar interval intersection, strict interior midpoint in both spans, exact rational source parameter clocks",
+  "remaining": "General nonlinear overlaps/tangencies, other transverse parameters, periodic charts, all-branch completeness and material trimming remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface/linear_crossing.rs": "78e4018481f909d413f061e8331aa6a1339a5b670fa3f967d21a4620bb4fcad3",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "963506341ee07bc34c9f6d65a21d23a527e7c5c147103a9d79c80f1091d40288"
+  }
+}

@@ -1,7 +1,8 @@
-//! Bounded polynomial proposals. Exact lift identities, not interpolation
+//! Bounded polynomial and positive rational proposals. Exact lift identities, not interpolation
 //! residuals or root-box proximity, are the eventual admission predicate.
 use super::*;
 use exact::{float, q};
+mod rational;
 pub(super) struct ArcProposal {
     pub curve: Curve,
     pub pc: [Curve; 2],
@@ -54,14 +55,41 @@ fn interpolate(points: &[Vec<Q>], nodes: &[Q]) -> Result<Curve> {
             }
         }
     }
+    let mut controls = rows.iter().map(|r| r[n + 1..].to_vec()).collect::<Vec<_>>();
+    let mut degree = n;
+    // Reduce exact polynomial degree BEFORE storing binary64 poles. An affine
+    // pcurve's elevated i/5 controls need not be binary64 even though its exact
+    // original degree-one definition is representable.
+    while degree > 1 {
+        let mut reduced = vec![controls[0].clone()];
+        for i in 1..degree {
+            reduced.push(
+                (0..dim)
+                    .map(|k| {
+                        (integer(degree as i64) * &controls[i][k]
+                            - integer(i as i64) * &reduced[i - 1][k])
+                            / integer((degree - i) as i64)
+                    })
+                    .collect(),
+            );
+        }
+        if reduced.last() != controls.last() {
+            break;
+        }
+        controls = reduced;
+        degree -= 1;
+    }
+    if degree > 8 {
+        return Err(fail("polynomial saved trace exceeds degree eight"));
+    }
     Ok(Curve {
-        degree: n,
-        knots: [vec![0.; n + 1], vec![1.; n + 1]].concat(),
-        control_points: rows
+        degree,
+        knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
+        control_points: controls
             .iter()
-            .map(|r| r[n + 1..].iter().map(float).collect())
+            .map(|p| p.iter().map(float).collect())
             .collect::<Result<_>>()?,
-        weights: vec![1.; n + 1],
+        weights: vec![1.; degree + 1],
         periodic: false,
     })
 }
@@ -127,82 +155,119 @@ pub(super) fn construct(
             return Err(fail("exact arc endpoint clock collapsed or reversed"));
         }
         let mut accepted = None;
-        for n in 1..=4 {
-            let den = if n <= 1 {
-                1
-            } else if n <= 2 {
-                2
-            } else {
-                4
-            };
-            let nodes = (0..=n)
-                .map(|i| {
-                    if i == n {
-                        Q::one()
+        let mut cache = BTreeMap::new();
+        for n in 1usize..=8 {
+            for rational_fit in [false, true] {
+                let count = if rational_fit { 2 * n } else { n };
+                let den = count.next_power_of_two();
+                let nodes = (0..=count)
+                    .map(|i| {
+                        if i == count {
+                            Q::one()
+                        } else {
+                            Q::new(i.into(), den.into())
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                let points = joint_samples(
+                    models, graph, arc, pair, piece, &ends, free, &nodes, &mut cache,
+                )?;
+                let attempt = (|| -> Result<ArcProposal> {
+                    let p = if rational_fit {
+                        rational::fit(&points, &nodes, n)?
                     } else {
-                        Q::new(i.into(), den.into())
+                        ArcProposal {
+                            curve: interpolate(
+                                &points.iter().map(|p| p[..3].to_vec()).collect::<Vec<_>>(),
+                                &nodes,
+                            )?,
+                            pc: [
+                                interpolate(
+                                    &points.iter().map(|p| p[3..5].to_vec()).collect::<Vec<_>>(),
+                                    &nodes,
+                                )?,
+                                interpolate(
+                                    &points.iter().map(|p| p[5..7].to_vec()).collect::<Vec<_>>(),
+                                    &nodes,
+                                )?,
+                            ],
+                        }
+                    };
+                    for side in 0..2 {
+                        exact::lift(
+                            &p.curve,
+                            &p.pc[side],
+                            &models[side].faces[pair.faces[side]].surface,
+                            false,
+                        )?;
                     }
-                })
-                .collect::<Vec<_>>();
-            let requests = nodes[1..n]
-                .iter()
-                .map(|t| {
-                    Ok((
-                        piece.branch,
-                        float(&(q(ends[0][free]) + (q(ends[1][free]) - q(ends[0][free])) * t))?,
-                    ))
-                })
-                .collect::<Result<Vec<_>>>()?;
-            let boxes = intersection_graph::proposal_samples(models, graph, arc.pair, &requests)?;
-            let attempt = (|| -> Result<ArcProposal> {
-                let mut uv = vec![ends[0].map(q).to_vec()];
-                for b in boxes {
-                    uv.push(
-                        b.map(dyadic)
-                            .into_iter()
-                            .map(|x| x.map(q))
-                            .collect::<Result<Vec<_>>>()?,
-                    );
+                    Ok(p)
+                })();
+                if let Ok(p) = attempt {
+                    accepted = Some(p);
+                    break;
                 }
-                uv.push(ends[1].map(q).to_vec());
-                let mut world = Vec::new();
-                for p in &uv {
-                    let h = sb::cell(
-                        &models[0].faces[pair.faces[0]].surface,
-                        [p[0].clone(), p[0].clone()],
-                        [p[1].clone(), p[1].clone()],
-                    )?;
-                    world.push(sb::point(&h[0][0]).to_vec());
-                }
-                let curve = interpolate(&world, &nodes)?;
-                let pc = [
-                    interpolate(
-                        &uv.iter().map(|v| v[..2].to_vec()).collect::<Vec<_>>(),
-                        &nodes,
-                    )?,
-                    interpolate(
-                        &uv.iter().map(|v| v[2..].to_vec()).collect::<Vec<_>>(),
-                        &nodes,
-                    )?,
-                ];
-                for side in 0..2 {
-                    exact::lift(
-                        &curve,
-                        &pc[side],
-                        &models[side].faces[pair.faces[side]].surface,
-                        false,
-                    )?;
-                }
-                Ok(ArcProposal { curve, pc })
-            })();
-            if let Ok(p) = attempt {
-                accepted = Some(p);
+            }
+            if accepted.is_some() {
                 break;
             }
         }
         proposals.push(accepted.ok_or_else(|| {
-            fail("original intersection has no admitted EXACT polynomial saved trace")
+            fail("original intersection has no admitted EXACT polynomial/rational saved trace")
         })?);
     }
     Ok(proposals)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn joint_samples(
+    models: [&Model; 2],
+    graph: &QualifiedNurbsIntersectionGraph,
+    arc: &OriginalIntersectionArc,
+    pair: &OriginalFacePairGraph,
+    piece: &OriginalGraphPiece,
+    ends: &[[f64; 4]; 2],
+    free: usize,
+    nodes: &[Q],
+    cache: &mut BTreeMap<u64, Vec<Q>>,
+) -> Result<Vec<Vec<Q>>> {
+    let mut requests = Vec::new();
+    let mut missing = Vec::new();
+    for node in nodes {
+        let key = float(node)?.to_bits();
+        if cache.contains_key(&key) {
+            continue;
+        }
+        if node.is_zero() || node.is_one() {
+            let uv = ends[usize::from(node.is_one())].map(q).to_vec();
+            cache.insert(key, joint_point(models, pair, uv)?);
+        } else {
+            let station =
+                float(&(q(ends[0][free]) + (q(ends[1][free]) - q(ends[0][free])) * node))?;
+            missing.push(key);
+            requests.push((piece.branch, station));
+        }
+    }
+    let boxes = intersection_graph::proposal_samples(models, graph, arc.pair, &requests)?;
+    for (key, b) in missing.into_iter().zip(boxes) {
+        let uv = b
+            .into_iter()
+            .map(rational::reconstruct)
+            .collect::<Result<Vec<_>>>()?;
+        cache.insert(key, joint_point(models, pair, uv)?);
+    }
+    nodes
+        .iter()
+        .map(|n| Ok(cache[&float(n)?.to_bits()].clone()))
+        .collect()
+}
+fn joint_point(models: [&Model; 2], pair: &OriginalFacePairGraph, uv: Vec<Q>) -> Result<Vec<Q>> {
+    let h = sb::cell(
+        &models[0].faces[pair.faces[0]].surface,
+        [uv[0].clone(), uv[0].clone()],
+        [uv[1].clone(), uv[1].clone()],
+    )?;
+    let mut p = sb::point(&h[0][0]).to_vec();
+    p.extend(uv);
+    Ok(p)
 }

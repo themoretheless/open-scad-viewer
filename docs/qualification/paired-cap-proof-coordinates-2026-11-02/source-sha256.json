@@ -1,0 +1,7 @@
+{
+  "crates/nurbs-core/src/analysis/affine_volume.rs": "30bb81747999c562c397d017ba9aaf1889685c7085a8292e591bbc7ed3ed7f98",
+  "crates/nurbs-core/src/analysis/affine_volume/capped.rs": "376a31f3f364c37ce68e356a9c0e0a74869bf05f5a1c96c6dcdb8271acecd9ab",
+  "crates/nurbs-core/src/analysis/affine_volume/capped/tests.rs": "52c3c8efc58ba7b05a70c1d0bc348518f013af402774a5ce4670e81935965e8e",
+  "crates/nurbs-core/src/analysis/curve_surface_agreement/bspline_trace.rs": "923adcd6d51ae55dae460c388d2c466a8547e47748512a866d8716d7944e166f",
+  "crates/Cargo.lock": "f0b3df199fe827167e27aa21cb0de15a4561a5934a3a3df9372fe28eb1e8d7db"
+}

@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "sourceCommit": "6495f1b9b33b77ceee837f1f2f912b7fe359b16b",
+  "wasmSha256": "ac9ae2b9c2c7e983a06136e34fa9656d25668d97ef398145613ddab81a1e65c1",
+  "wasmBytes": 20919544,
+  "artifact": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/ac9ae2b9c2c7e983a06136e34fa9656d25668d97ef398145613ddab81a1e65c1.wasm",
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 29,
+  "workers": {
+    "started": 21,
+    "terminated": 21
+  },
+  "installedPackageUpdated": false,
+  "temporaryWorktreeRemoved": true,
+  "scope": "Actual raw import-free WASM ABI and Chromium Workers for original rational iso/target windows and off-center spatial probes",
+  "remaining": [
+    "whole surface/surface branch completeness",
+    "tangent singular periodic cases",
+    "trim and Body admission",
+    "installed packaged/provider/editor qualification"
+  ],
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "97dda295ffe00a8325f2263846bc2012470404cdb11dd2293880b85312e738d0",
+    "tools/browser-qualification/surface-self-fixtures.ts": "6994808f6ab28afc2de7dcd78c7488088937715a976bbe5240dc0460f375e924",
+    "tools/browser-qualification/surface-self-intersection.ts": "06aa4e3bb741294a45c65fc467688644491c5a8eb53f9f6548ebfb232f4debd1",
+    "tools/browser-qualification/surface-self-intersection.mjs": "1384b5023a9449775e480b7b8e8bae887b5454c4ef6525bfa5c46965051fcf7f"
+  }
+}

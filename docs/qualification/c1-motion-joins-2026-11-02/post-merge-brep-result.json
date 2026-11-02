@@ -1,0 +1,20 @@
+{
+  "source_guard_passed": true,
+  "source_files": 4406,
+  "boundary_embedding": {
+    "passed": 18,
+    "failed": 0
+  },
+  "remaining_prior_failures_selection": {
+    "passed": 4,
+    "failed": 3
+  },
+  "failures": [
+    "analytic_features::tests::enclosure_outer_round_preserves_the_open_cavity",
+    "boundary_hull_contact::extended_support::tests::coincident_geometry_without_shared_topology_is_not_authorized",
+    "face_contacts::tests::resumable_contacts_match_frozen_traversal_and_cumulative_budgets"
+  ],
+  "four_closed_hollow_regressions": "passed unchanged",
+  "whole_brep_suite_qualified": false,
+  "goal_complete": false
+}

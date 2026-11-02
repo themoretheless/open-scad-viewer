@@ -62,7 +62,17 @@ fn pieces() -> Vec<RationalPiece> {
 const P: [[f64; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 #[test]
 fn independent_rational_caps_retain_global_map_jets_and_every_budget() {
-    let a = cap(false);
+    check_independent_caps(cap(false));
+}
+#[test]
+fn tensor_weight_base_and_independent_end_keep_complete_map_and_budget_ownership() {
+    let mut a = cap(false);
+    // Positive original tensor weights; the end cap retains its independent
+    // degree, non-factorable weights and nonplanar interior.
+    a.weights = vec![vec![1.,2.],vec![4.,8.]];
+    check_independent_caps(a);
+}
+fn check_independent_caps(a: Surface) {
     let b = cap(true);
     let pieces = pieces();
     let before = (a.clone(), b.clone(), pieces.clone());
@@ -112,4 +122,157 @@ fn folded_pair_or_broken_motion_never_gains_volume_credit() {
     let r = certify_rational_caps([&a, &a], [0.; 3], &pieces, P, 100000, 1000000).unwrap();
     assert!(!r.embedding_certified);
     assert_eq!(r.reason, Some("affine-volume-station-identity-unproved"));
+}
+
+#[test]
+fn paired_cap_time_jet_survives_exact_column_factor_coordinates() {
+    let a = cap(false);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() { p[1] += 0.25; }
+    let pieces = vec![RationalPiece {
+        controls: vec![
+            [[1.,0.,0.],[0.5,1.,0.],[0.,0.,1.],[0.,0.,0.]],
+            [[1.,0.,0.],[0.5,1.,0.],[0.,0.,1.],[0.,0.,2.]],
+        ], weights: vec![1.;2],
+    }];
+    let coordinates = ProofCoordinates {
+        rows: P, offset: [0.;3], determinant: [1.,1.],
+        column_factor: Some(ColumnFactor {
+            base: 0, dependent: 1, scale: 0.5, constant: [0.,1.,0.],
+        }),
+    };
+    let mut context = Context {
+        carrier: &a, second: Some(&b), difference: None,
+        uv_window: [[0.,1.];2], origin: [0.;3],
+        pieces: Motion::Rational(&pieces), poses: BTreeMap::new(),
+        coordinates: Some(coordinates), separable: None,
+    };
+    let mut out = IdealVolumeReport {
+        embedding_certified: false, regularity_certified: false,
+        parameter_topology_preserved: false, cells: 0, exact_work: 0,
+        boxes: 0, monotonicity_lower: None, projection: P, reason: None,
+    };
+    // Independent derivative of F=(u+.5(v+t/4),v+t/4,2t).
+    // In particular dx/dt=1/8 must not disappear in proof coordinates.
+    for t in [0.,0.25,0.5,1.] {
+        let Enclosed::Value(e) = context.enclose([[0.5;2],[0.5;2],[t;2]], &mut out, 10000).unwrap()
+            else { panic!("point enclosure unavailable"); };
+        for (bound, expected) in e.columns[2].iter().zip([0.125,0.25,2.]) {
+            assert!(bound.lo <= expected && expected <= bound.hi, "{bound:?} misses {expected}");
+            assert!(bound.hi-bound.lo < 1e-10);
+        }
+    }
+}
+
+#[test]
+fn moving_paired_caps_use_one_global_chart_and_preserve_refusal_budgets() {
+    let mut a = cap(false);
+    for p in a.control_points.iter_mut().flatten() { p[0] /= 64.; p[1] /= 64.; }
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() { p[1] += 1./128.; }
+    let pieces = vec![RationalPiece {
+        controls: vec![
+            [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.],[0.,0.,0.]],
+            [[0.,1.,0.],[-1.,0.,0.],[0.,0.,1.],[0.,0.,2.]],
+        ], weights: vec![1.;2],
+    }];
+    let run = |cells, exact| certify_rational_caps([&a,&b],[0.;3],&pieces,P,cells,exact).unwrap();
+    let full = run(100000,1000000);
+    assert!(full.embedding_certified && full.regularity_certified && full.parameter_topology_preserved, "{full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells < full.cells);
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work < full.exact_work);
+    let mut folded=pieces.clone();
+    folded[0].controls[1][0]=[-1.,0.,0.];
+    folded[0].controls[1][1]=[0.,-1.,0.];
+    let refused=certify_rational_caps([&a,&b],[0.;3],&folded,P,100000,1000000).unwrap();
+    assert!(!refused.embedding_certified && !refused.regularity_certified && !refused.parameter_topology_preserved);
+    eprintln!("moving paired caps: cells={} exact={}",full.cells,full.exact_work);
+}
+
+#[test]
+fn rotating_carrier_tangents_refine_time_instead_of_only_uv() {
+    let mut a=cap(false);
+    for p in a.control_points.iter_mut().flatten() {p[0]/=64.;p[1]/=64.;}
+    let mut b=a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        let x=p[0];p[0]=-p[1];p[1]=x;
+    }
+    // Constant pose axes: the rotation is in the ORIGINAL cap interpolation,
+    // not its temporal affine law. Each fixed-t XY map has determinant
+    // ((1-t)^2+t^2)/64^2 > 0 and z=2t separates different times.
+    let pieces=pieces();
+    let run=|cells,exact|certify_rational_caps([&a,&b],[0.;3],&pieces,P,cells,exact).unwrap();
+    let full=run(10000,1000000);
+    assert!(full.embedding_certified && full.regularity_certified
+        && full.parameter_topology_preserved,"{full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells<full.cells);
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work<full.exact_work);
+    // Reversing BOTH axes makes the interpolated cap collapse at t=1/2.
+    let mut folded=a.clone();
+    for p in folded.control_points.iter_mut().flatten() {p[0]=-p[0];p[1]=-p[1];}
+    let bad=certify_rational_caps([&a,&folded],[0.;3],&pieces,P,10000,1000000).unwrap();
+    assert!(!bad.embedding_certified && !bad.regularity_certified && !bad.parameter_topology_preserved);
+    eprintln!("rotating original cap tangents: cells={} exact={}",full.cells,full.exact_work);
+}
+
+#[cfg(feature = "codec")]
+mod actual_field;
+
+#[test]
+fn smooth_endpoint_carriers_and_regular_frames_cannot_hide_a_time_fold() {
+    let a=cap(false);let mut b=a.clone();
+    for p in b.control_points.iter_mut().flatten() {p[2]=-1.;}
+    let pieces=vec![RationalPiece {controls:vec![
+        [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.],[0.,0.,0.]],
+        [[1.,0.,0.],[0.,1.,0.],[0.,0.,2.],[0.,0.,2.]],
+    ],weights:vec![1.;2]}];
+    // F=(u,v,2t-(1+t)t)=(u,v,t-t^2): distinct t=1/4,3/4 coincide.
+    // Omitting A*Qt would instead produce the wrong positive time jet 2-t.
+    let r=certify_rational_caps([&a,&b],[0.;3],&pieces,P,10000,1000000).unwrap();
+    assert!(!r.embedding_certified && !r.regularity_certified && !r.parameter_topology_preserved);
+    let mut c0=a.clone();c0.knots_u=vec![0.,0.,0.5,1.,1.];
+    c0.control_points.insert(1,c0.control_points[0].clone());c0.weights.insert(1,c0.weights[0].clone());
+    c0.validate().unwrap();assert!(!charts::surface_c1(&c0));assert!(charts::surface_c1(&a));
+}
+
+#[test]
+fn c1_multispan_caps_and_independent_degree_motion_own_the_complete_volume() {
+    // Two original U spans, with literal C1 knot multiplicity and independent
+    // raw UV domains. Greville coefficients make x exactly affine, not fitted.
+    let a=Surface {
+        degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,0.5,1.,1.,1.],
+        knots_v:vec![0.,0.,1.,1.],
+        control_points:[0.,0.25,0.75,1.].into_iter().map(|u|
+            [0.,1.].into_iter().map(|v|vec![u/64.,v/64.,0.]).collect()).collect(),
+        weights:vec![vec![1.;2];4],periodic_u:false,periodic_v:false,
+    };
+    let mut b=a.clone();
+    b.knots_u=b.knots_u.iter().map(|u|-2.+8.*u).collect();
+    b.knots_v=b.knots_v.iter().map(|v|7.+4.*v).collect();
+    for (i,row) in b.control_points.iter_mut().enumerate() {for p in row {
+        p[1]+=1./128.;if i==1 || i==2 {p[2]=1./1024.;}
+    }}
+    let pose=|z|[[1.,0.,0.],[z/64.,1.,0.],[0.,0.,1.],[0.,0.,z]];
+    let motion=vec![RationalPiece{controls:vec![pose(0.),pose(1.)],weights:vec![1.,2.]},
+        RationalPiece{controls:vec![pose(1.),pose(2.),pose(3.)],weights:vec![4.,1.,8.]}];
+    a.validate().unwrap();b.validate().unwrap();
+    assert!(charts::surface_c1(&a) && charts::surface_c1(&b));
+    let before=(a.clone(),b.clone(),format!("{motion:?}"));
+    assert_eq!(motion_c1::inspect(Motion::Rational(&motion),&mut 0,1000),Some(true));
+    let run=|cells,exact|certify_rational_caps([&a,&b],[0.;3],&motion,P,cells,exact).unwrap();
+    let full=run(100000,1000000);
+    assert!(full.embedding_certified && full.regularity_certified && full.parameter_topology_preserved,"{full:?}");
+    eprintln!("C1 multi-span original volume: {full:?}");
+    assert!(run(full.cells,full.exact_work).embedding_certified);
+    let short=run(full.cells-1,full.exact_work);
+    assert!(!short.embedding_certified && short.cells<full.cells,"{short:?}");
+    let short=run(full.cells,full.exact_work-1);
+    assert!(!short.embedding_certified && short.exact_work<full.exact_work,"{short:?}");
+    assert_eq!((a,b,format!("{motion:?}")),before);
 }

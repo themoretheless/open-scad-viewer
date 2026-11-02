@@ -1,0 +1,126 @@
+{
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "wasmSha256": "cfbc28f39f290824d70227d70a3f1c165c8cae446416d42020eddb6757559da0",
+  "wasmBytes": 24008265,
+  "installedPackageUpdated": false,
+  "result": {
+    "absence": "absent",
+    "exact": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "4",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "reflectedAxis": 0,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "recovered": "absent",
+    "rational": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "9",
+            "numerator": "8"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "reflectedAxis": null,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "busy": "Error: Surface audit busy",
+    "cancelled": "Error: Surface audit cancelled",
+    "deadline": "Error: Surface audit deadline",
+    "nativeRefusal": "Error: NURBS_INVALID_INPUT: Weights must be positive, finite, and in [1e-12, 1e12]",
+    "cloneFailure": "DataCloneError: Failed to execute 'postMessage' on 'Worker': ()=>0 could not be cloned.",
+    "preAbort": "Error: Surface audit cancelled",
+    "badBudget": "Error: Invalid surface audit budget",
+    "inputIntact": true,
+    "noEarlyWorkers": true,
+    "ticks": 19,
+    "ownership": {
+      "active": false,
+      "workersStarted": 8,
+      "workersTerminated": 8
+    }
+  },
+  "platformAudit": {
+    "started": 8,
+    "terminated": 8
+  },
+  "workers": [
+    "http://127.0.0.1:50102/assets/surfaceSelfIntersection.worker-DfnQ3fao.js",
+    "http://127.0.0.1:50102/assets/surfaceSelfIntersection.worker-DfnQ3fao.js",
+    "http://127.0.0.1:50102/assets/surfaceSelfIntersection.worker-DfnQ3fao.js",
+    "http://127.0.0.1:50102/assets/surfaceSelfIntersection.worker-DfnQ3fao.js",
+    "http://127.0.0.1:50102/assets/surfaceSelfIntersection.worker-DfnQ3fao.js"
+  ],
+  "scope": "Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification",
+  "sourceSha256": {
+    "src/services/surfaceSelfIntersectionBrowser.ts": "1ee5b26864b5e182623497cc87514f956bb3b24358091d2d7df8f20ffaa12312",
+    "src/services/surfaceSelfIntersectionProtocol.ts": "15f5f66b597f037afb8ed71def75afdf0efb4e53a1877493236db1647a78b4d5",
+    "src/workers/surfaceSelfIntersection.worker.ts": "35039522f79eeac9f62227eca6a8e6effa0e86ea02e209e2b3924f67ae2d9299",
+    "tools/browser-qualification/surface-self-intersection.ts": "5b188e0d5833d1df6d2c2584c0e053bd54f820ae3c1763243f36c2e5d83505ed",
+    "tools/browser-qualification/surface-self-intersection.mjs": "de2aaf33b71457f512cfee8c5c5d5b72bdaebe754c5c0bc3fa912c19c4e01ef5",
+    "tests/surfaceSelfIntersectionProtocol.test.ts": "c35723523a283d5c9b3e912b2a9a8d36f27088e0a7163bdec2ff5a34e513fb52"
+  },
+  "protocolTestsPassed": 5,
+  "vueTypecheck": "passed",
+  "cancellationScope": "Pending Worker job termination; no claim of interrupting an executing native instruction",
+  "rawWasmSourceCommit": "26d6454cc9bbfc8fad10259f22ff655d2e5c441a"
+}

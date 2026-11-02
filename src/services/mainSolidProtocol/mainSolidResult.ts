@@ -1,3 +1,4 @@
+import {validFrozenGraphBody,validFrozenGraphDisplay} from '../frozenGraphBody'
 import {validExpressionShell} from '../expressionShell'
 import {validExpressionInspection} from '../expressionShellInspection'
 import {validOffsetDeviation} from '../nurbsOffsetDeviation'
@@ -87,6 +88,8 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
   if(job.kind==='sourceBodyRestore')return validSourceBody(job,value)
   if(job.kind==='profileBridgeChords')return validProfileBridgeChordReport(job,value)
   if (!value || typeof value!=='object') return false
+  if(job.kind==='frozenGraphBodyDisplay')return validFrozenGraphDisplay(value,job.expected,job.segments)
+  if(job.kind==='frozenGraphBodyRestore')return validFrozenGraphBody(value,job.expected)
   if(job.kind==='sourceGraphG2Preview')return validSourceGraphG2Preview(value,job.options)
   if(job.kind==='g2RunoutSurface')return validG2RunoutResult(value,job.maxCells,job.maxExactWork,job.maxPatches,job.tolerances)
 if(job.kind==='minkowski3d')return validMinkowskiResult(job,value,document=>mainSolidResult({kind:'extrusion'},document))

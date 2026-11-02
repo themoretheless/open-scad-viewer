@@ -6,6 +6,59 @@ use crate::{
     curve::Curve,
     surface::Surface,
 };
+#[path = "../../../../tests/support/gram_seam_map.rs"]
+mod gram_fixture;
+#[test]
+fn original_quintic_gram_curve_is_regular_but_true_rank_loss_refuses() {
+    let (a, b) = gram_fixture::fixture();
+    for u in [0., 0.25, 0.5, 0.75, 1.] {
+        for (surface, q, z) in [(&a, 2. * u - 1., 0.5), (&b, 2. * u / (2. - u) - 1., 1.5)] {
+            let p = surface.evaluate(u, 0.5).unwrap().point;
+            for (actual, expected) in
+                p.into_iter()
+                    .zip([10. * q.powi(5), 10. * (q * q + q / 4.), z])
+            {
+                assert!((actual - expected).abs() < 1e-12);
+            }
+        }
+    }
+    let saved = (a.clone(), b.clone());
+    let proof = inferred(&a, &b, "vMax", "vMin", 2, 1., 1000000).unwrap();
+    assert!(proof.certified, "{proof:?}");
+    assert!(
+        !inferred(&a, &b, "vMax", "vMin", 2, 1., proof.work - 1)
+            .unwrap()
+            .certified
+    );
+    let mut bad = b.clone();
+    bad.control_points[2][0][0] = bad.control_points[2][0][0].next_up();
+    assert!(
+        !inferred(&a, &bad, "vMax", "vMin", 2, 1., 1000000)
+            .unwrap()
+            .certified
+    );
+    let (singular_a, singular_b) = gram_fixture::rank_loss();
+    assert!(
+        !inferred(&singular_a, &singular_b, "vMax", "vMin", 2, 1., 1000000)
+            .unwrap()
+            .certified
+    );
+    let mut curvature = b.clone();
+    for row in &mut curvature.control_points {
+        row[2][0] += 0.125;
+    }
+    assert!(
+        inferred(&a, &curvature, "vMax", "vMin", 1, 1., 1000000)
+            .unwrap()
+            .certified
+    );
+    assert!(
+        !inferred(&a, &curvature, "vMax", "vMin", 2, 1., 1000000)
+            .unwrap()
+            .certified
+    );
+    assert_eq!((a, b), saved);
+}
 #[path = "../../../../tests/support/authored_seam_map.rs"]
 mod fixture;
 #[test]

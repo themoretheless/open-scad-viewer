@@ -1,0 +1,16 @@
+{
+  "nativePassed": 108,
+  "newTests": 3,
+  "scope": "Exact common-scale reduction of all four original affine plane coefficients before binary64 scalar-root admission",
+  "verified": [
+    "decimal-scale plane with nonrepresentable raw normal admitted exactly",
+    "nonzero offset preserved by same scale",
+    "irreducible nonrepresentable coefficients refused"
+  ],
+  "generalFreeformTangencyComplete": false,
+  "wasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/plane_contacts.rs": "13efe11488f517f8afd828c4599ac250109609404682c2330108603a2f461147",
+    "crates/nurbs-core/tests/affine_plane_contacts.rs": "0b26e99b3576259e473dbf51ab8f3711d7e94fe5e8f51dc75c6372bbebe305fe"
+  }
+}

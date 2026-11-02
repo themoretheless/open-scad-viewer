@@ -4,13 +4,14 @@ use crate::Model;
 use nurbs_core::{curve::Curve,surface::Surface};
 use value_codec::{Value,json};
 pub const FORMAT:&str="native-convex-graph-volume/1";
+pub const FORMAT_WITH_NATURAL_CUTS:&str="native-convex-graph-volume/2";
 const PROFILE:&str="convex-core-six/1";
 pub struct RootCut {pub root:usize,pub parameter:Q}
 pub struct VolumeRecipe {
  pub source:Model,pub supports:[usize;2],pub widths:Vec<Curve>,pub cuts:Vec<RootCut>,
  pub tolerance_mm:f64,pub bounds:VolumeBounds,
 }
-pub struct FrozenGraphVolume {recipe:VolumeRecipe,body:NativeVolume}
+pub struct FrozenGraphVolume {recipe:VolumeRecipe,natural_cuts:Vec<RootCut>,body:NativeVolume}
 fn fail(s:impl Into<String>)->Error{Error::new("BREP_GRAPH_TRANSPORT",s)}
 fn fields(v:&Value,keys:&[&str])->Result<()>{
  let o=v.as_object().ok_or_else(||fail("Expected graph transport object"))?;
@@ -61,6 +62,10 @@ fn bounded(v:&Value,max_bytes:usize)->Result<()>{
 impl FrozenGraphVolume {
  pub fn body(&self)->&NativeVolume{&self.body}
  pub fn construct(recipe:VolumeRecipe,max_pairs:usize,b:&mut Budget)->Result<Self>{
+  Self::construct_with_natural_cuts(recipe,Vec::new(),max_pairs,b)
+ }
+ pub fn construct_with_natural_cuts(recipe:VolumeRecipe,natural_cuts:Vec<RootCut>,max_pairs:usize,b:&mut Budget)->Result<Self>{
+  require(natural_cuts.len()<=4096 && recipe.cuts.len().saturating_add(natural_cuts.len())<=4096,"Too many combined root cuts")?;
   require(recipe.tolerance_mm.is_finite()&&recipe.tolerance_mm>0.&&recipe.tolerance_mm<=1e-7&&!recipe.widths.is_empty()&&recipe.widths.len()<=128&&recipe.cuts.len()<=4096&&recipe.supports[0]!=recipe.supports[1]&&recipe.supports.iter().all(|&i|i<recipe.source.faces.len()),"Invalid frozen graph recipe dimensions")?;
   let supports=recipe.supports.map(|i|&recipe.source.faces[i].surface);
   let patches=recipe.widths.iter().map(|w|nurbs_core::original_graph_transition::build_convex_g2(supports,w,b)).collect::<Result<Vec<_>>>()?;
@@ -69,31 +74,51 @@ impl FrozenGraphVolume {
   require(patches.iter().all(|p|p.profile_coefficients()==expected),"Frozen graph profile version mismatch")?;
   let mut strip=assemble(patches,recipe.tolerance_mm,b)?;
   for cut in &recipe.cuts{
-   require(cut.parameter>Q::zero()&&cut.parameter<Q::one()&&cut.parameter.numer().bits()<=8192&&cut.parameter.denom().bits()<=8192,"Invalid root split parameter")?;
+   require(cut.parameter.denom().is_positive()&&cut.parameter>Q::zero()&&cut.parameter<Q::one()&&cut.parameter.numer().bits()<=8192&&cut.parameter.denom().bits()<=8192,"Invalid root split parameter")?;
    let edge=strip.topology().edges.iter().position(|e|e.curve.root_id()==cut.root&&e.curve.root_parameters()[0]<cut.parameter&&cut.parameter<e.curve.root_parameters()[1]).ok_or_else(||fail("Root cut is duplicate or outside the current root interval"))?;
    let range=strip.topology().edges[edge].curve.root_parameters();
    let local=(&cut.parameter-&range[0])/(&range[1]-&range[0]);strip.split_edge(edge,local,b)?;
   }
   for split in strip.source_end_splits()?{strip.apply_source_end_split(&split,b)?;}
-  let shell=strip.sew_retained(b)?.close_original_shell(&recipe.source,recipe.supports,b)?;
+  let mut roof=strip.sew_retained(b)?;
+  for cut in &natural_cuts {
+   require(cut.parameter.denom().is_positive()&&cut.parameter>Q::zero()&&cut.parameter<Q::one()&&cut.parameter.numer().bits()<=8192&&cut.parameter.denom().bits()<=8192,"Invalid natural root split parameter")?;
+   let edge=roof.topology().edges.iter().position(|e|e.curve.root_id()==cut.root&&e.curve.root_parameters()[0]<cut.parameter&&cut.parameter<e.curve.root_parameters()[1]).ok_or_else(||fail("Natural root cut is duplicate or outside the current root interval"))?;
+   let range=roof.topology().edges[edge].curve.root_parameters();
+   let local=(&cut.parameter-&range[0])/(&range[1]-&range[0]);roof.split_natural_edge(edge,local,b)?;
+  }
+  let shell=roof.close_original_shell(&recipe.source,recipe.supports,b)?;
   let body=shell.admit_volume(VolumeBounds::new(recipe.bounds.minimum().clone(),recipe.bounds.maximum().clone())?,max_pairs,b)?;
-  Ok(Self{recipe,body})
+  Ok(Self{recipe,natural_cuts,body})
  }
  pub fn export(&self,max_bytes:usize)->Result<Value>{
   let r=&self.recipe;
-  let v=json!({"format":FORMAT,"recipe":{"profile":PROFILE,"source":r.source,"supports":r.supports,"widths":r.widths,"cuts":r.cuts.iter().map(|c|json!({"root":c.root,"at":q(&c.parameter)})).collect::<Vec<_>>(),"toleranceMm":r.tolerance_mm,"volumeBounds":[q(r.bounds.minimum()),q(r.bounds.maximum())]},"geometry":geometry(&self.body)});
+  let mut v=json!({"format":FORMAT,"recipe":{"profile":PROFILE,"source":r.source,"supports":r.supports,"widths":r.widths,"cuts":r.cuts.iter().map(|c|json!({"root":c.root,"at":q(&c.parameter)})).collect::<Vec<_>>(),"toleranceMm":r.tolerance_mm,"volumeBounds":[q(r.bounds.minimum()),q(r.bounds.maximum())]},"geometry":geometry(&self.body)});
+  if !self.natural_cuts.is_empty(){
+   v["format"]=json!(FORMAT_WITH_NATURAL_CUTS);
+   v["recipe"]["naturalCuts"]=json!(self.natural_cuts.iter().map(|c|json!({"root":c.root,"at":q(&c.parameter)})).collect::<Vec<_>>());
+  }
   bounded(&v,max_bytes)?;Ok(v)
  }
  pub fn restore(v:&Value,max_bytes:usize,max_pairs:usize,b:&mut Budget)->Result<Self>{
   bounded(v,max_bytes)?;fields(v,&["format","recipe","geometry"])?;
-  require(v["format"].as_str()==Some(FORMAT),"Unknown frozen graph format")?;
-  let r=&v["recipe"];fields(r,&["profile","source","supports","widths","cuts","toleranceMm","volumeBounds"])?;
+  let expanded=v["format"].as_str()==Some(FORMAT_WITH_NATURAL_CUTS);
+  require(expanded||v["format"].as_str()==Some(FORMAT),"Unknown frozen graph format")?;
+  let r=&v["recipe"];
+  if expanded {fields(r,&["profile","source","supports","widths","cuts","naturalCuts","toleranceMm","volumeBounds"])?;}
+  else {fields(r,&["profile","source","supports","widths","cuts","toleranceMm","volumeBounds"])?;}
+  let mut natural=Vec::new();
+  if expanded {
+   let cuts=r["naturalCuts"].as_array().ok_or_else(||fail("Invalid natural root cuts"))?;
+   require(!cuts.is_empty()&&cuts.len()<=4096,"Invalid natural root cut count")?;
+   for c in cuts {fields(c,&["root","at"])?;natural.push(RootCut{root:field(c,"root")?,parameter:rational(&c["at"])?});}
+  }
   require(r["profile"].as_str()==Some(PROFILE),"Unknown frozen graph profile")?;
   let cuts=r["cuts"].as_array().ok_or_else(||fail("Invalid root cuts"))?;
   require(cuts.len()<=4096,"Too many root cuts")?;
   let mut decoded=Vec::new();for c in cuts{fields(c,&["root","at"])?;decoded.push(RootCut{root:field(c,"root")?,parameter:rational(&c["at"])?});}
   let bounds=r["volumeBounds"].as_array().ok_or_else(||fail("Invalid volume bounds"))?;require(bounds.len()==2,"Invalid volume bounds")?;
-  let result=Self::construct(VolumeRecipe{source:field(r,"source")?,supports:field(r,"supports")?,widths:field(r,"widths")?,cuts:decoded,tolerance_mm:field(r,"toleranceMm")?,bounds:VolumeBounds::new(rational(&bounds[0])?,rational(&bounds[1])?)?},max_pairs,b)?;
+  let result=Self::construct_with_natural_cuts(VolumeRecipe{source:field(r,"source")?,supports:field(r,"supports")?,widths:field(r,"widths")?,cuts:decoded,tolerance_mm:field(r,"toleranceMm")?,bounds:VolumeBounds::new(rational(&bounds[0])?,rational(&bounds[1])?)?},natural,max_pairs,b)?;
   require(geometry(result.body())==v["geometry"],"Frozen graph geometry differs from its freshly proven source recipe")?;Ok(result)
  }
 }

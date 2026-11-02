@@ -508,3 +508,126 @@ fn convex_g2_rolloff_closes_with_independent_exact_volume() {
     assert_eq!(wall.exact_minimum_with(&witness),Some(&Q::from_integer(2.into())));
     assert_eq!(source,before);
 }
+
+#[test]
+fn original_shell_sews_independent_trimmed_uv_clocks_without_changing_world_roots() {
+    let (mut source, request, _, _) = fixture::fixture();
+    let plan = brep_core::region_replacement::plan_radius_network(&source,0,&[request],10000).unwrap();
+    let world_domains = source.edges.iter().map(|e|e.curve.domain()).collect::<Vec<_>>();
+    for wire in &mut source.loops {
+        for c in &mut wire.coedges {
+            let mut edited = c.clone();
+            let a = c.pcurve.control_points[0].clone();
+            let b = c.pcurve.control_points[1].clone();
+            edited.pcurve.control_points = vec![
+                a.iter().zip(&b).map(|(a,b)| 2.*a-b).collect(),
+                a.iter().zip(&b).map(|(a,b)| 3.*b-2.*a).collect(),
+            ];
+            edited.pcurve.knots = vec![2.,2.,6.,6.];
+            *c = edited.with_trim(brep_topology::CoedgeTrim {
+                curve_parameter: world_domains[c.edge],
+                pcurve_parameter: [3.,4.],
+                periodic_lift: [[0;2];2],
+            }).unwrap();
+        }
+    }
+    let before = source.clone();
+    let close = |source: &brep_core::Model| {
+        let mut b = Budget::new(8_000_000).unwrap();
+        let mut proposal = strip::assemble(panels(),1e-7,&mut b).unwrap();
+        for p in proposal.source_end_splits().unwrap() { proposal.apply_source_end_split(&p,&mut b).unwrap(); }
+        proposal.sew_retained(&mut b).unwrap().close_original_shell(source,plan.edges[0].supports,&mut b)
+    };
+    let closed = close(&source).unwrap();
+    assert!(closed.geometry().open_edges.is_empty());
+    assert_eq!(closed.topology().edges.len(),25);
+    assert_eq!(closed.original_source(),&before);
+    assert_eq!(source,before);
+    assert!(closed.imported_fields().iter().all(|f|f.absolute_curvature_upper<=10.));
+    assert!(closed.inherited_roof().transition_joins().iter().all(|j|j.within));
+    // Import and source-binding paths both reject changed clocks, partial
+    // world ownership and periodic metadata rather than dropping the trim.
+    let floor = source.faces.iter().position(|f| f.surface.control_points.iter().flatten().all(|p|p[2]==-4.)).unwrap();
+    for face in [floor,plan.edges[0].supports[0]] {
+        for defect in 0..3 {
+            let mut bad = source.clone();
+            let outer = bad.faces[face].outer;
+            let c = &mut bad.loops[outer].coedges[0];
+            let mut trim = c.trim().unwrap();
+            match defect {
+                0 => trim.pcurve_parameter[1] = 4.125,
+                1 => trim.curve_parameter[1] *= 0.5,
+                _ => trim.periodic_lift[1][0] = 1,
+            }
+            *c = c.clone().with_trim(trim).unwrap();
+            assert!(close(&bad).is_err(),"accepted defect {defect} on face {face}");
+        }
+    }
+}
+
+#[test]
+fn partial_original_world_edges_sew_both_faces_with_shared_nondyadic_root_ends() {
+    use num_rational::BigRational as Q;
+    let (source,request,_,_)=fixture::fixture();
+    let before=source.clone();
+    let plan=brep_core::region_replacement::plan_radius_network(&source,0,&[request],10000).unwrap();
+    let mut b=Budget::new(10_000_000).unwrap();
+    let mut proposal=strip::assemble(panels_profile(true),1e-7,&mut b).unwrap();
+    for p in proposal.source_end_splits().unwrap(){proposal.apply_source_end_split(&p,&mut b).unwrap();}
+    let mut roof=proposal.sew_retained(&mut b).unwrap();
+    let links=roof.bind_original_boundaries(&source,plan.edges[0].supports,&mut b).unwrap();
+    let candidates=links.edges().iter().filter(|l| roof.geometry().open_edges.contains(&l.roof_edge)
+        && l.source_range==[Q::from_integer(0.into()),Q::from_integer(1.into())]).cloned().collect::<Vec<_>>();
+    assert!(!candidates.is_empty());
+    // Split every natural outer boundary, covering straight and curved source
+    // edges and opposite neighboring coedge traversal directions.
+    let mut children=Vec::new();
+    for link in &candidates {
+        let first=roof.split_natural_edge(link.roof_edge,Q::new(1.into(),3.into()),&mut b).unwrap();
+        let second=roof.split_natural_edge(first.right_edge,Q::new(1.into(),2.into()),&mut b).unwrap();
+        assert_eq!(first.root_id,second.root_id);
+        assert_eq!(second.root_parameter,Q::new(2.into(),3.into()));
+        children.push((link.source_edge,[first.left_edge,second.left_edge,second.right_edge]));
+    }
+    let closed=roof.close_original_shell(&source,plan.edges[0].supports,&mut b).unwrap();
+    assert!(closed.geometry().open_edges.is_empty());
+    for (source_edge,edges) in children {
+        let links=closed.source_edge_links().iter().filter(|l|l.source_edge==source_edge).collect::<Vec<_>>();
+        assert_eq!(links.len(),3);
+        for edge in edges {
+            let top=closed.topology();
+            let uses=top.shells[0].faces.iter().flat_map(|f|top.loops[top.faces[f.face].outer].coedges.iter().filter(move |c|c.edge==edge).map(move |c|c.reversed^f.reversed)).collect::<Vec<_>>();
+            assert_eq!(uses.len(),2);
+            assert_ne!(uses[0],uses[1]);
+        }
+    }
+    let native=closed.admit_volume(strip::VolumeBounds::new(Q::from_integer(0.into()),Q::from_integer(40.into())).unwrap(),100,&mut b).unwrap();
+    assert!(native.qualification().embedding().globally_embedded());
+    assert_eq!(native.topology().bodies.len(),1);
+    assert_eq!(native.original_shell().original_source(),&before);
+    assert!(native.original_shell().inherited_roof().transition_joins().iter().all(|j|j.within));
+    assert!(native.original_shell().inherited_roof().transition_fields().iter().all(|f|f.absolute_curvature_upper.is_some_and(|k|k<=10.)));
+    assert_eq!(source,before);
+}
+
+#[test]
+fn natural_root_split_refuses_invalid_or_unproved_edits_without_publishing_children() {
+    use num_rational::BigRational as Q;
+    let mut b=Budget::new(10_000_000).unwrap();
+    let mut proposal=strip::assemble(panels_profile(true),1e-7,&mut b).unwrap();
+    for p in proposal.source_end_splits().unwrap(){proposal.apply_source_end_split(&p,&mut b).unwrap();}
+    let mut roof=proposal.sew_retained(&mut b).unwrap();
+    let edge=roof.geometry().open_edges[0];
+    let counts=(roof.topology().vertices.len(),roof.topology().edges.len(),roof.topology().loops.iter().map(|l|l.coedges.len()).collect::<Vec<_>>());
+    let points=roof.topology().edges.iter().map(|e|e.curve.points().to_vec()).collect::<Vec<_>>();
+    for q in [Q::from_integer(0.into()),Q::from_integer(1.into()),Q::new_raw(1.into(),0.into())] {
+        assert!(roof.split_natural_edge(edge,q,&mut b).is_err());
+    }
+    assert!(roof.split_natural_edge(edge,Q::new(1.into(),3.into()),&mut Budget::new(0).unwrap()).is_err());
+    let transition=roof.topology().faces.iter().find(|f|matches!(f.surface,strip::FaceGeometry::Transition(_))).unwrap();
+    let bound=roof.topology().loops[transition.outer].coedges[0].edge;
+    assert!(roof.split_natural_edge(bound,Q::new(1.into(),3.into()),&mut b).is_err());
+    assert_eq!(counts,(roof.topology().vertices.len(),roof.topology().edges.len(),roof.topology().loops.iter().map(|l|l.coedges.len()).collect::<Vec<_>>()));
+    assert_eq!(points,roof.topology().edges.iter().map(|e|e.curve.points().to_vec()).collect::<Vec<_>>());
+    strip::inspect_roof_geometry(roof.topology(),&mut b).unwrap();
+}

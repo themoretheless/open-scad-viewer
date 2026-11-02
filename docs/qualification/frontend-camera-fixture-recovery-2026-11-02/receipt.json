@@ -1,0 +1,20 @@
+{
+  "originalGitObject": "c1f2b3e59^:crates/math-core/camera-gestures-reference-v1.json",
+  "restoredPath": "tests/fixtures/camera-gestures-reference-v1.json",
+  "sha256": "8a33fd536ff0dc688fa1b9d822ba942a3ce7704ed732f951924345d8013c804b",
+  "caseCount": 81,
+  "policy": "Original frozen pre-migration bytes restored verbatim; no expected values generated from current implementation.",
+  "originalCommit": "e723540068c73c31f9b65447a4bb7c82cf7a5c32",
+  "originalBlob": "1ac641361cb078a4e7d53ca62b5cd7cf1a9e3b17",
+  "baseCommit": "e09ae5d3d2a1a7d0250488dcef3484af5a3f9230",
+  "geometryWasmSha256": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+  "testFileSha256": "99e790f3c810f65d274dbc6a6b3da004c20cecdb9d6f7aa056da0a9811d777fc",
+  "command": "node node_modules/vitest/vitest.mjs run tests/cameraGestures.test.ts --maxWorkers=2 --reporter=json --outputFile=...",
+  "testResult": {
+    "passed": 6,
+    "failed": 0,
+    "exitCode": 0
+  },
+  "qualificationClaim": "none",
+  "scope": "Original frozen81-state fixture restored byte-for-byte from its last tracked pre-removal tree. Six current direct-WASM camera tests only; no full frontend/provider/native/current-source compilation claim."
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "Bounded original-source 3D iso/surface self-contact witnesses; no whole-surface coverage",
+  "native_final": {
+    "passed": 120,
+    "failed": 0,
+    "surface_self_intersection": 81,
+    "bridge": 14,
+    "other_focused": 25
+  },
+  "protocol_tests": 12,
+  "vue_tsc": "passed",
+  "new_path_wasm_qualified": false,
+  "remaining": [
+    "arbitrary rational iso representation",
+    "all surface contact branches",
+    "tangencies and singularities",
+    "periodic charts",
+    "trims and Body integration",
+    "WASM/Worker qualification"
+  ],
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "47ec17b6afd3a35b7fb36a7ef15e41e796dc0cc17fb80202262cfef60425db69",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window.rs": "fe62315da383563b875b6a150b79541ad9b5375307d0deff31ab37bcc360fc7a",
+    "crates/nurbs-core/src/intersection/self_surface.rs": "0f8776a5a93c59166708cde025ff45d439aa6a7f1234d69da2b40d461afb5767",
+    "crates/nurbs-core/src/intersection/self_surface/nonlinear_crossing.rs": "db217b6957076765851d7135a7da70dc498c2d399225c21be4de666cec153567",
+    "crates/nurbs-core/src/intersection/self_surface/spatial_crossing.rs": "91a3abcac2c2992d3e6a85601085ac0a4238b75a58d447d52b7a95cb83226228",
+    "crates/geometry-bridge/src/intersections/self_surface.rs": "16572ab2f1f483f88798c069b30fac6ea94f569eee6522b549c0eb628e54edc4",
+    "crates/geometry-bridge/tests/surface_self_intersection_audit.rs": "b54425c077ba4e189dd02024442779880b2358275e772649c7d0f7ae9a508413",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "6d3d68ea4cfcfce19e1859e8530ee30b38914c95857bf7542aa106644bc63451",
+    "crates/nurbs-core/tests/surface_self_intersection/automatic_probes.rs": "646cf9b5ed8b09edc8a2a8259af38a0bb6a3a545984ae1cc73b1974ea77d40c0",
+    "crates/nurbs-core/tests/surface_self_intersection/spatial_windows.rs": "34177a7e0a5047898a8007ee47cb129e3e73323ac817d6673fd18546c91215fa",
+    "src/services/surfaceSelfIntersectionProtocol.ts": "40688a4f3542087599be98eef1b8a8e0496f460da08b8e23e61e02a40cabd14a",
+    "tests/surfaceSelfIntersectionProtocol.test.ts": "531f7076cfcc121d928400d6bd3683ac5a0563a179b08a2a1583b4ac0a3e5499"
+  }
+}

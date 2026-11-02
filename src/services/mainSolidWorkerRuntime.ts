@@ -1,3 +1,4 @@
+import {restoreFrozenGraphBody,displayFrozenGraphBody} from './frozenGraphBody'
 import {inspectNurbsOffsetDeviation} from './nurbsOffsetDeviation'
 import {createSourceGraphG2Preview} from './sourceGraphG2Preview'
 import {createG2RunoutSurface} from './geometricG2'
@@ -69,6 +70,8 @@ import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainS
 
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
+case 'frozenGraphBodyDisplay':return displayFrozenGraphBody(job.artifact,job.segments,job.options)
+case 'frozenGraphBodyRestore':return restoreFrozenGraphBody(job.artifact,job.options)
 case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.width,job.options)
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
 case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)

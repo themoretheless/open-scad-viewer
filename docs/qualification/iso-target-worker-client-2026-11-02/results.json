@@ -1,0 +1,14 @@
+{
+  "unitTestsPassed": 49,
+  "newBrowserTests": 6,
+  "vueTsc": "passed",
+  "actualNewWasmWorkerQualified": false,
+  "scope": "Client transport, report binding and mocked Worker ownership only",
+  "sourceSha256": {
+    "src/services/surfaceSelfIntersectionBrowser.ts": "6186f353237b9376801a3ceb19f2ef6033e7a045134e5d307314d36bf8471cdd",
+    "src/workers/surfaceSelfIntersection.worker.ts": "724b42bb79055b5cad63328daa6214fd2f7411019da1cff50b26bc3c07cd75b9",
+    "src/services/surfaceIsoTargetProtocol.ts": "e6b2584b24bc9524ad50516d15ae6494e69fb49380fcc913945b2aeebf9018dc",
+    "tests/surfaceIsoTargetBrowser.test.ts": "b804870bf69c9aea5c1f520bd9d10f45faafdba2df231d099441d7f849a8cd86",
+    "docs/api/nurbs-surface-iso-target-window.md": "71b50d9141dd2a065bf9498f0fa27a0d9f6c33b75791812d91b31820b81fb8b3"
+  }
+}

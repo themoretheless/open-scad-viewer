@@ -9,6 +9,8 @@ use crate::{
     distance_bounds::{Interval, box_distance, midpoint as mid},
     resource,
 };
+mod trimmed_joins;
+pub use trimmed_joins::{exact_trimmed_loop_joins,TrimmedLoopJoins};
 pub mod curve_cover;
 #[cfg(feature = "codec")]
 mod serialization;

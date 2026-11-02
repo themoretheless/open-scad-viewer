@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "testsPassed": 6,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --test surface_self_intersection_audit",
+  "operation": "nurbs_surface_self_intersection_audit",
+  "schema": "nurbs-surface-self-intersection/1",
+  "scope": "Native public dispatch and string execute protocol; exact rational UV integer strings; absence/presence/unresolved; original-source recomputation; forged request fields and invalid input rejected",
+  "remaining": "Packaged WASM update and actual WASM ABI/Worker qualification, editor integration, full contact branch enumeration and general nonlinear geometry remain open",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/dispatch/intersections.rs": "f60f41aa34f51f1118a8c3e26eb59b63ef8b4f7151ce47ca340f8c5764138bf5",
+    "crates/geometry-bridge/src/intersections.rs": "44221d13fcce7857d34c0f98fd8718c72d9fa928123b78df8d2af84aafd39a0f",
+    "crates/geometry-bridge/src/intersections/self_surface.rs": "4744352ab3903962d97344bbbe3841e5036fec166577f6460b44d4585b53daa3",
+    "crates/geometry-bridge/tests/surface_self_intersection_audit.rs": "b82c5d0119bc7d7350f929ca1662e63d970453a0132210cfa03a760cda3e7180"
+  }
+}

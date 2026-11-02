@@ -1,0 +1,18 @@
+{
+  "nativePassed": 98,
+  "scope": "Complete caller-selected curve/surface parameter-product window only when unresolved is empty",
+  "tests": [
+    "two analytic transverse roots are both enumerated with complete coverage",
+    "first-root mode preserves unvisited unresolved windows",
+    "one-cell budget remains incomplete",
+    "tangent root remains unresolved"
+  ],
+  "wholeSurfaceComplete": false,
+  "newApisWasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "e0e184e4b412fe5768dfd137f39f85fc49764f22eb0ec22b7c7cde30da1c4b13",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window.rs": "adf36b3df3214a28656db3ff32be8585b1c7c01a23a186203e22cf59ddb53149",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window_source.rs": "73246756b1cbcc138a1ab1daf6cda184d47f7ce15b15020ad4b2d99c1eb33971",
+    "crates/nurbs-core/tests/surface_self_intersection/spatial_windows.rs": "7db45e67bf7a98bf9dcfbe621fcf7c3a81c347b1f394806e137d7fe660efea21"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "sourceCommit": "867360982f0f31b7e52c55fdc8d0597f93234cf9",
+  "sourceCheckoutClean": true,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-wasm-target-20261102 cargo build --locked --manifest-path crates/Cargo.toml -p geometry-wasm --target wasm32-unknown-unknown --release",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "cargoLockSha256": "f0b3df199fe827167e27aa21cb0de15a4561a5934a3a3df9372fe28eb1e8d7db",
+  "installedPackageUpdated": false,
+  "temporarySourceWorktreeRemoved": true
+}

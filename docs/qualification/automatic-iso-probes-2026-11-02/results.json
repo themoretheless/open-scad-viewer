@@ -1,0 +1,25 @@
+{
+  "status": "focused native, bridge and transport tests passed",
+  "nurbsTestsPassed": 90,
+  "bridgeTestsPassed": 13,
+  "protocolTestsPassed": 10,
+  "newTests": 7,
+  "vueTypecheck": "passed",
+  "scope": "Default surface audit steers up to 15 interior dyadic parameters per axis. Probe admissions and interval solver work share one bounded search budget. Only source-bound proofs admit presence; probe exhaustion never admits absence.",
+  "metadata": "probeSearch includes attempts, chargedCells, isoCoverageComplete, refusal, budgetExhausted; surfaceCoverageComplete is always false for this finite search",
+  "validated": "Default audit finds contact at fiber 0.25 without caller selecting it. One-unit admission exhaustion remains unresolved. Nonplanar space-curve extrusion with real off-fiber contacts is not declared absent after finite probing.",
+  "browserCompatibility": "Updated protocol passed 13 real Workers with previous c7d71d78 raw module; new automatic Rust search itself has not been qualified in WASM",
+  "newAutomaticSearchWasmQualified": false,
+  "installedPackageUpdated": false,
+  "remaining": "Continuous whole-surface coverage, different-transverse-parameter and general nonplanar contacts, tangencies/periodic cases, trims/material validity, new runtime qualification and editor/provider integration remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface.rs": "751615dcc0367659499f0fca1130bcbafb5b34bf2481e24bd3459370deb2576d",
+    "crates/nurbs-core/src/intersection/self_surface/nonlinear_crossing.rs": "653b8ccefb798dfbee7d947baf86b5a3172f9a3ea10624319efd7c834f2a2f9c",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "42b60aa871d1a28011744d1da51ab72023fd0eb50aba4cc511921c2ad29424ba",
+    "crates/nurbs-core/tests/surface_self_intersection/automatic_probes.rs": "d600ab3ddac04265372fd0967a23f4403226d3b84ea157b89b293c2e51f416f4",
+    "crates/geometry-bridge/src/intersections/self_surface.rs": "34261175b1e1e03892d00c5d440fcf4ba7cbdc9497ad02b9ae72779e1a1a3d4f",
+    "crates/geometry-bridge/tests/surface_self_intersection_audit.rs": "58ee2708c9dc9dff5fcbc275a19dcff53585fa04a7df8818c36cd553c5f602a5",
+    "src/services/surfaceSelfIntersectionProtocol.ts": "ac3f19c03ed5ff53581f255416599773b2239c5a393f6f4f0e9b4df17a32a6c5",
+    "tests/surfaceSelfIntersectionProtocol.test.ts": "f0ded8b14bd68b5423a6e01bb8026e5e66d04592ed6eb7ec94c252f09563f44e"
+  }
+}

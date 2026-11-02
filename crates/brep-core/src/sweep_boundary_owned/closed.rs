@@ -685,6 +685,19 @@ pub fn construct_closed_with_ideal_atlas(
         },
     )?;
     let proven = volume.proven;
+    #[cfg(all(test, feature = "codec"))]
+    if !proven {
+        if let Ok(directory) = std::env::var("OSV_SWEEP_DIAGNOSTICS_DIR") {
+            let name = std::thread::current().name().unwrap_or("unnamed").replace(':', "_");
+            let directory = std::path::PathBuf::from(directory).join(name);
+            std::fs::create_dir_all(&directory).unwrap();
+            std::fs::write(directory.join("candidate.json"), value_codec::to_string(&value_codec::to_value(&model).unwrap()).unwrap()).unwrap();
+            let pairs = &volume.boundary.intersections.pairs;
+            let data = value_codec::json!({"proven":false,"cells":pairs.cells,"domainCells":pairs.domain_cells,"nextPair":pairs.next_pair,
+                "pairs":pairs.pairs.iter().filter(|p|p.reason=="pair-unresolved").map(|p|value_codec::json!({"faces":p.faces,"cells":p.boundary_cells,"charts":p.source_chart_cells,"hull":p.hull_cells,"reason":p.reason})).collect::<Vec<_>>()});
+            std::fs::write(directory.join("diagnostic.json"),value_codec::to_string(&data).unwrap()).unwrap();
+        }
+    }
     out.volume = Some(volume);
     if !proven {
         return Ok(refused(out, "retained-periodic-volume-unproved"));

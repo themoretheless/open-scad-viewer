@@ -8,6 +8,10 @@ use crate::{
     distance_bounds::{Interval as I, box_distance},
 };
 
+mod exact_bspline_restriction;
+pub use exact_bspline_restriction::{verify_exact_bspline_restriction,verify_exact_bspline_root_partition,ExactBsplineRootPartition};
+mod exact_restriction;
+pub use exact_restriction::verify_exact_bezier_restriction;
 pub(crate) mod correlated;
 pub mod mapped;
 pub mod concatenate;

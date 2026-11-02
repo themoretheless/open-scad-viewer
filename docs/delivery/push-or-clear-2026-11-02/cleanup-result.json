@@ -1,0 +1,15 @@
+{
+  "main": "14defb95b42ca3eeef3347f2de4244af429d5224",
+  "localBranchesDeleted": 23,
+  "remoteBranchesDeleted": 58,
+  "worktreesRemoved": 8,
+  "staleWorktreeRecordsPruned": 1,
+  "ignoredEvidenceFilesPreserved": 296,
+  "tagsUnchanged": true,
+  "colima": "stopped with explicit user authorization",
+  "status": "merged branch and worktree cleanup complete",
+  "stashEntriesInInitialInventory": 3,
+  "stashEntriesCurrentlyVisible": 0,
+  "stashRecovery": "refs/stash absent, reflog empty; git fsck --no-reflogs --unreachable found no unreachable commits; original stashes not recovered",
+  "newConcurrentWorktreeRetained": "/Users/themoretheless/.codex/worktrees/nurbs-plan-next/open-scad-viewer"
+}

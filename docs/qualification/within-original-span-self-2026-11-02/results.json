@@ -1,0 +1,19 @@
+{
+  "status": "focused native tests passed",
+  "testsPassed": 71,
+  "newTests": 9,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test planar_curve_crossings --test curve_self_intersection --test surface_rectangle_injectivity",
+  "api": "intersect_self_curve_certified_report",
+  "scope": "Original planar curve self-pairs including within-span loops. Diagonal exclusions require strict original derivative monotonicity on the whole parameter union; otherwise diagonal tasks subdivide under the shared cell budget.",
+  "validatedCoverage": "A regular single-span cubic loop has complete coverage and one transverse crossing; a simple arc has complete diagonal coverage without a strict coordinate on the whole domain. U/V, rational weights and nonunit domains checked.",
+  "surfaceBoundary": "Curve complete is not promoted to whole-surface absence or branch completeness. Surface uses only existence witnesses from this solver.",
+  "remaining": "Non-axis-aligned planar and general nonplanar contacts, singularities/tangencies, unsupported rational iso-coefficients, periodic charts, full surface coverage, trims/material validity and new WASM qualification remain open",
+  "newWasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/planar_curve_curve.rs": "61a93ab740abfc1f355eb407c2ce873e1bf9e30c87db8640f5c4c64d2d70196f",
+    "crates/nurbs-core/src/intersection/mod.rs": "746fe22ac95d52473c4bac6721cf5d178cdabae2010fc75871f7414bc7900516",
+    "crates/nurbs-core/src/intersection/self_surface/nonlinear_crossing.rs": "e15226da2964a422357bfb729c306efb46e8068e94ed6513fcd371f6bb05fc26",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "82a883ed00d18838df30f755d1d227f6a4502cf497ad7ed435e40a8bdaed00cc",
+    "crates/nurbs-core/tests/surface_self_intersection/within_span.rs": "7b7f7c08d5c1f6817a3a243fa4672da2c104f75cc3c1630b0bfc2d967917672a"
+  }
+}

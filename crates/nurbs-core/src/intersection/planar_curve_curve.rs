@@ -8,6 +8,9 @@ use crate::{
     distance_bounds::{Interval as I, box_distance},
 };
 type Domain = [[f64; 2]; 2];
+mod coplanar;
+mod source;
+use source::Bounds;
 #[derive(Clone, Debug)]
 pub struct CertifiedCurveCrossing {
     pub parameters: Domain,
@@ -22,23 +25,19 @@ pub struct CertifiedCurveIntersection {
     pub cells: usize,
     pub complete: bool,
 }
-fn spans(c: &Curve) -> Vec<(usize, [f64; 2])> {
-    (c.degree..c.control_points.len())
-        .filter(|&i| c.knots[i] < c.knots[i + 1])
-        .map(|i| (i, [c.knots[i], c.knots[i + 1]]))
-        .collect()
+fn spans(c: &impl Bounds) -> Vec<(usize, [f64; 2])> {
+    c.spans()
 }
-fn hull(c: &Curve, span: usize, d: [f64; 2]) -> Result<Vec<I>> {
-    curve_distance::enclosure(c, span, I::new(d[0], d[1])?)
+fn hull(c: &impl Bounds, span: usize, d: [f64; 2]) -> Result<Vec<I>> {
+    c.hull(span, d)
 }
-fn jacobian(c: &Curve, span: usize, d: [f64; 2], axes: [usize; 2]) -> Result<[I; 2]> {
-    let jet = curve_jets::enclose(c, span, d)?;
-    let width = I::point(d[1]).sub(I::point(d[0]))?;
-    Ok([jet[1][axes[0]].div(width)?, jet[1][axes[1]].div(width)?])
+fn jacobian(c: &impl Bounds, span: usize, d: [f64; 2], axes: [usize; 2]) -> Result<[I; 2]> {
+    let j = c.derivative(span, d)?;
+    Ok([j[axes[0]], j[axes[1]]])
 }
 fn krawczyk(
-    a: &Curve,
-    b: &Curve,
+    a: &impl Bounds,
+    b: &impl Bounds,
     sa: usize,
     sb: usize,
     d: Domain,
@@ -182,6 +181,41 @@ pub fn intersect_curve_curve_certified_report(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<CertifiedCurveIntersection> {
+    intersect_selected(a, b, tolerance, max_cells, false, false)
+}
+
+/// Certifies crossings between distinct original spans of one planar curve.
+/// `complete` covers only those pairs: it does not audit self-loops wholly
+/// inside one span. The diagonal and the identical-curve overlap shortcut are
+/// deliberately excluded. Knots and controls are never extracted or rounded.
+pub fn intersect_distinct_spans_certified_report(
+    curve: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    intersect_selected(curve, curve, tolerance, max_cells, true, false)
+}
+
+/// Self-crossing audit including pairs within each original span. Diagonal
+/// regions are excluded only by original derivative monotonicity, or split
+/// into two smaller diagonal regions and one disjoint-interior pair. Cusps,
+/// contacts at subdivision boundaries and exhausted work remain unresolved.
+pub fn intersect_self_curve_certified_report(
+    curve: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    intersect_selected(curve, curve, tolerance, max_cells, true, true)
+}
+
+fn intersect_selected(
+    a: &Curve,
+    b: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+    self_pairs: bool,
+    diagonal: bool,
+) -> Result<CertifiedCurveIntersection> {
     a.validate()?;
     b.validate()?;
     check(
@@ -203,39 +237,68 @@ pub fn intersect_curve_curve_certified_report(
         cells: 0,
         complete: false,
     };
-    if a == b {
+    if !self_pairs && a == b {
         out.identical_parameter_overlap = true;
         out.complete = true;
         return Ok(out);
     }
-    if let Some((crossings, complete)) = exact_line_pair(a, b) {
+    if let Some((crossings, complete)) = (!self_pairs).then(|| exact_line_pair(a, b)).flatten() {
         out.crossings = crossings;
         out.complete = complete;
         return Ok(out);
     }
-    let plane = (0..3).find(|&k| {
-        a.control_points
-            .iter()
-            .all(|p| p[k] == a.control_points[0][k])
-            && b.control_points
-                .iter()
-                .all(|p| p[k] == a.control_points[0][k])
-    });
-    let Some(plane) = plane else {
+    let Some(axes) = coplanar::axes(a, b) else {
         out.unresolved.push(whole);
         return Ok(out);
     };
-    let free: Vec<_> = (0..3).filter(|&k| k != plane).collect();
-    let axes = [free[0], free[1]];
+    solve(
+        a, b, axes, tolerance, max_cells, self_pairs, diagonal, false,
+    )
+}
+
+fn solve(
+    a: &impl Bounds,
+    b: &impl Bounds,
+    axes: [usize; 2],
+    tolerance: f64,
+    max_cells: usize,
+    self_pairs: bool,
+    diagonal: bool,
+    stop_after_first: bool,
+) -> Result<CertifiedCurveIntersection> {
+    let whole = [a.domain(), b.domain()];
+    let mut out = CertifiedCurveIntersection {
+        crossings: vec![],
+        identical_parameter_overlap: false,
+        unresolved: vec![],
+        cells: 0,
+        complete: false,
+    };
     let aa = spans(a);
     let bb = spans(b);
     check(
-        aa.len().saturating_mul(bb.len()) <= 4096,
+        self_pairs || aa.len().saturating_mul(bb.len()) <= 4096,
         "Planar intersection initial span-pair limit exceeded",
     )?;
     let mut stack = Vec::new();
+    if diagonal {
+        for &(span, domain) in &aa {
+            if stack.len() == 4096 {
+                out.unresolved.push(whole);
+                return Ok(out);
+            }
+            stack.push((span, span, [domain; 2], 0usize));
+        }
+    }
     for &(sa, da) in &aa {
         for &(sb, db) in &bb {
+            if self_pairs && sa >= sb {
+                continue;
+            }
+            if stack.len() == 4096 {
+                out.unresolved.push(whole);
+                return Ok(out);
+            }
             stack.push((sa, sb, [da, db], 0usize));
         }
     }
@@ -247,6 +310,34 @@ pub fn intersect_curve_curve_certified_report(
             break;
         }
         out.cells += 1;
+        if diagonal && sa == sb {
+            let union = [d[0][0].min(d[1][0]), d[0][1].max(d[1][1])];
+            if let Ok(jet) = a.derivative(sa, union) {
+                if jet.iter().any(|x| x.lo > 0. || x.hi < 0.) {
+                    continue;
+                }
+            }
+        }
+        if self_pairs && d[0][1] == d[1][0] {
+            if let (Ok(left), Ok(right)) = (a.derivative(sa, d[0]), b.derivative(sb, d[1])) {
+                if source::ordered_join(&left, &right).unwrap_or(false) {
+                    continue;
+                }
+            }
+        }
+        if diagonal && sa == sb && d[0] == d[1] {
+            let mid = d[0][0] + (d[0][1] - d[0][0]) * 0.4375;
+            if depth == 64 || mid <= d[0][0] || mid >= d[0][1] {
+                out.unresolved.push(d);
+                continue;
+            }
+            let left = [d[0][0], mid];
+            let right = [mid, d[0][1]];
+            stack.push((sa, sa, [right, right], depth + 1));
+            stack.push((sa, sa, [left, left], depth + 1));
+            stack.push((sa, sa, [left, right], depth + 1));
+            continue;
+        }
         let pa = hull(a, sa, d[0])?;
         let pb = hull(b, sb, d[1])?;
         if box_distance(&pa, &pb)?.0 > 0. {
@@ -268,6 +359,12 @@ pub fn intersect_curve_curve_certified_report(
                     position_bounds: bounds,
                     contact: ContactClass::Transverse,
                 });
+                if stop_after_first {
+                    out.unresolved
+                        .extend(stack.into_iter().map(|(_, _, d, _)| d));
+                    out.complete = out.unresolved.is_empty();
+                    return Ok(out);
+                }
                 continue;
             }
             // Every root of the parent lies in its Krawczyk image. Preserve
@@ -293,4 +390,70 @@ pub fn intersect_curve_curve_certified_report(
     }
     out.complete = out.unresolved.is_empty();
     Ok(out)
+}
+
+/// Searches for the first planar iso self-crossing at the exact active-domain
+/// midpoint of the other axis (axis 0 = U, 1 = V). Recomputed exact homogeneous
+/// coefficients own the plane identity; bounds use the original surface.
+/// Unvisited cells remain unresolved. This does not prove surface completeness.
+pub fn intersect_surface_iso_certified_report(
+    surface: &crate::surface::Surface,
+    axis: usize,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    intersect_surface_iso_at_certified_report(surface, axis, 0.5, tolerance, max_cells)
+}
+
+/// The transverse parameter is a strict-interior normalized binary64 value,
+/// mapped to the original domain in exact rational arithmetic. This examines
+/// one iso-curve and never asserts whole-surface absence or coverage.
+pub fn intersect_surface_iso_at_certified_report(
+    surface: &crate::surface::Surface,
+    axis: usize,
+    parameter: f64,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<CertifiedCurveIntersection> {
+    surface.validate()?;
+    check(
+        axis < 2
+            && parameter.is_finite()
+            && parameter > 0.
+            && parameter < 1.
+            && !surface.periodic_u
+            && !surface.periodic_v
+            && tolerance.is_finite()
+            && tolerance > 0.
+            && (1..=100000).contains(&max_cells),
+        "Invalid original iso audit",
+    )?;
+    let source = source::Iso::new_at(surface, axis, parameter)?;
+    let Some(homogeneous) =
+        crate::intersection::self_surface::linear_crossing::iso_at(surface, axis, parameter)
+    else {
+        return Ok(CertifiedCurveIntersection {
+            crossings: vec![],
+            identical_parameter_overlap: false,
+            unresolved: vec![[source.domain(); 2]],
+            cells: 0,
+            complete: false,
+        });
+    };
+    let points = homogeneous
+        .iter()
+        .map(|h| std::array::from_fn(|i| &h[i] / &h[3]))
+        .collect();
+    let Some(axes) = coplanar::axes_from_points(points) else {
+        return Ok(CertifiedCurveIntersection {
+            crossings: vec![],
+            identical_parameter_overlap: false,
+            unresolved: vec![[source.domain(); 2]],
+            cells: 0,
+            complete: false,
+        });
+    };
+    solve(
+        &source, &source, axes, tolerance, max_cells, true, true, true,
+    )
 }

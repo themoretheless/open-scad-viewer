@@ -3,11 +3,13 @@
 //! D=C1-C0=[(N1-kN0)-C0(W1-kW0)]/W1 holds for ANY such k, so unequal rational
 //! weights require no equality assumption or rounded replacement surface.
 use super::*;
+mod quotient;
 type H = [I; 5]; // numerator delta XYZ, weight delta, original end weight
 pub(crate) struct Difference<'s> {
     caps: [&'s Surface; 2],
     jets: [H; 3],
     nets: [Vec<Vec<H>>; 3],
+    quotient: Option<quotient::Jets>,
 }
 fn bezier(s: &Surface) -> bool {
     let n = s.control_points.len();
@@ -121,6 +123,14 @@ impl<'s> Difference<'s> {
             return Ok(None);
         }
         *spent += charge;
+        // Bound product degrees before constructing the optional coefficient
+        // quotient owner. Higher degrees retain the original enclosure path.
+        let stable = a.degree_u<=5 && a.degree_v<=5 && !std::ptr::eq(a,b);
+        if stable {
+            let cost=quotient::coefficient_cost(a.degree_u,a.degree_v);
+            if cost>max-*spent {*spent=max;return Ok(None);}
+            *spent+=cost;
+        }
         let k = b.weights[0][0] / a.weights[0][0];
         if !k.is_finite() || k <= 0. {
             return Ok(None);
@@ -154,8 +164,16 @@ impl<'s> Difference<'s> {
                     }
                 }
             }
+            let quotient=if stable {
+                match quotient::Jets::prepare(&net) {
+                    Ok(q)=>Some(q),
+                    Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>None,
+                    Err(e)=>return Err(e),
+                }
+            }else{None};
             Ok(Self {
                 caps,
+                quotient,
                 jets: [
                     value,
                     hull(du.iter().flatten().copied()),
@@ -186,7 +204,9 @@ impl<'s> Difference<'s> {
         {
             return Ok(None);
         }
-        *spent += 1;
+        let cost=1+if self.quotient.is_some(){2}else{0};
+        if cost>max-*spent {*spent=max;return Ok(None);}
+        *spent += cost;
         let calculation = (|| -> Result<[V3; 3]> {
             let mut jets = self.jets;
             for j in 0..3 {
@@ -205,6 +225,20 @@ impl<'s> Difference<'s> {
                         .sub(a[0][k].mul(jets[axis][3])?)?;
                     out[axis][k] = r.sub(out[0][k].mul(jets[axis][4])?)?.div(w)?;
                 }
+            }
+            if let Some(q)=&self.quotient {
+                // D=Hxyz/W-C0*(Hweight/W). Restrict coefficient-owned
+                // numerators BEFORE division, retaining H'W-HW' cancellation.
+                // Intersect two independent original enclosures; neither is a
+                // new source surface or an assumed common weight gauge.
+                let derivatives=q.enclose(uv,w)?;
+                let ratio=jets[0][3].div(w)?;
+                for k in 0..3 {for axis in 1..3 {
+                    let bound=derivatives[axis-1][k]
+                        .sub(a[axis][k].mul(ratio)?)?
+                        .sub(a[0][k].mul(derivatives[axis-1][3])?)?;
+                    out[axis][k]=out[axis][k].intersect(bound.lo,bound.hi)?;
+                }}
             }
             Ok(out)
         })();

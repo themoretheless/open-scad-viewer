@@ -1,0 +1,20 @@
+{
+  "predicatePassed": 6,
+  "newPredicateTests": 3,
+  "nurbsRegressionPassed": 62,
+  "scope": "Exact original B-spline span roots against infinite plane expressed by original affine patch vertices",
+  "verified": [
+    "nonrepresentable normal/offset require no rounding",
+    "double contact and original non-Bezier source span",
+    "exact four-vertex affine identity",
+    "one-ULP identity change refused",
+    "zero exact-work budget remains indeterminate"
+  ],
+  "finitePatchMembershipIntegrated": false,
+  "wasmQualified": false,
+  "sourceSha256": {
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "8d50136eb19c683bc95a0ab7f172bfd7c1a3174fbd73d22b404c4b17f9d662c6",
+    "crates/cad-predicates/src/bspline_plane_roots/solve.rs": "6993a1a11e289b32d63e8ba43004e010b682fd279cbd9fcb873b966e40267810",
+    "crates/cad-predicates/src/bspline_plane_roots/patch.rs": "a6098e01a6560410eb0622e432f81a774c02e3240f9815db911bb99a646f1796"
+  }
+}
