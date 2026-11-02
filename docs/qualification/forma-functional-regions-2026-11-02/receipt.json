@@ -1,0 +1,112 @@
+{
+  "baseCommit": "f13369cd80db444d3dc0687965e03dd2652c769b",
+  "sourceSha256": {
+    "src/forma/parser.ts": "09d7f935bd1b2d393bd9010539ab17a9a1941f8c78afd21a9d837f6980ddb445",
+    "src/forma/runtime.ts": "6fa8d0aa7fcb0c3cafd8c2c0eebf101b7f73ca9a885c9fd8ce55bbf066cc7f82",
+    "src/components/FormaRegion.vue": "bc2fa2ade05a0b2702cff4574964b78832cea1bce0b191d7252a38de689750d3",
+    "src/App.vue": "c185fb2f307a4712e0a41fb86c1f71288ebbf98030e8cfeab75ce1cd5c453627",
+    "tests/formaUi.test.ts": "6819af794de16c7f52ba012a50ed0f5cf5a19291e07f0e4e8e57d8a6f7ed6ad8",
+    "tests/fixtures/forma-regions-browser.ts": "cd8cb6d9555dd206c4e707a9fe2e2851186028b74aabc0ed1712c267f7ea4a62",
+    "tests/fixtures/forma-regions-browser.html": "aa09fa736c5019ecdc732f7edd9254760ef5fb23b106ecdd375661b023abb17d",
+    "tools/browser-qualification/forma-regions.mjs": "bb5fbe41c9807cfe9a6f9209b8b34c2fac4f95d428b10468965a16ef17f4f4d8",
+    "src/ui/Statusbar.ui": "9601c35387a3fdf60611bf70fe7dad8d9aa421642f04a907cc42d3421b61df85",
+    "src/ui/WorkspaceActionBar.ui": "fdf7d9bacad2edcac0e89a49da6a2853100657c0a8e2c1804dbbd6473b580e2a",
+    "src/ui/EditorToolbar.ui": "7b60294d8b89fbf748121cc57f981ceaa6e24687a942514bc050128bd0cf5416",
+    "src/ui/SelectionModes.ui": "df62459464fb31020a009485ddb1248bfddc538c28e6985e52bc4ca940a04129",
+    "src/ui/EditorStats.ui": "fca28823ba18eeefcbb1a2c8e2e81c1a55a9f300bea30ad2cc61598cedb6bb75",
+    "src/ui/OpenScadStudio.design.ui": "da6893b374dff74a4fd7a317147ed45532d9fa92faf12a034c57a005a53effa8",
+    "src/ui/DockRail.ui": "59ae07d98faccdb1b33a76887fbd318f642dae85bd19d63421a0c00d8d740c4e",
+    "src/ui/ComputeInspector.ui": "25d93085f9e3472418d79b2f5400e88f12023f12222c2b48d1e1ae045e07579a",
+    "src/ui/ExportDialog.ui": "52cdfd2dc984d087074976195800ce596c789909ea2b94e06bff23e2315a68b8",
+    "src/ui/ViewerToolbar.ui": "0ca2e0a783b70e8653a12c04b8a1572abdc4c567e99fda5c0922a5668c13a7d8",
+    "src/ui/Topbar.ui": "9076cc1ac475ab933e313f004ad40ffc1833aa0fe1ef437a9aa7e86c3166be7e",
+    "src/ui/OpenScadStudio.ui": "dde20bc76db364107126bba03308bd2a0d5bb988ab88d16357c8840639f14d45",
+    "src/ui/studio/Statusbar.ui": "ccb1a4d542f6f4b9d91e31ed596e69ea45d43c849c0fa7f6164e8a903b195c8e",
+    "src/ui/studio/WorkspaceActionBar.ui": "b75471ecc0e8c25f1e677dc64c27388629660596f85b0f27b61d481d99afd523",
+    "src/ui/studio/EditorToolbar.ui": "a6902fd120db646fb2ab1e49f79a978a5f2116d003f24b7ce318cf95e4d3c909",
+    "src/ui/studio/SelectionModes.ui": "2b4f7c8e2c13a9d614635dde16c09b7319b7e08257b0457673a5a7a87692c385",
+    "src/ui/studio/EditorStats.ui": "1c068b8f64f4b79b82459d2f270eda4c9d4bf171f03b67fce3a637f05f6b568c",
+    "src/ui/studio/DockRail.ui": "7f0d9561dda3f457e8fe823dbe712edb8ca123d09c6193792eccacaaadfa62bf",
+    "src/ui/studio/ComputeInspector.ui": "7467cd6e15525b966e9ddee011c5bac1266b06010ccc461734cb475c8ed50517",
+    "src/ui/studio/ViewerToolbar.ui": "1be97b178c7c887ddf2bdcf935709e912e9974b258def2e122ae5296364983a2",
+    "src/ui/studio/Topbar.ui": "1761911bee85676048501142361f4c8d416f43e63c4a67c040914b09b38cf6ea",
+    "src/forma/tokens.ts": "bd4a2a4f3a3a476eac43e8b383866b743ba511c20dff3d8fc4472ccae20505ad",
+    "src/styles/app-shell.css": "2f319346c6f31fb3352c563c8c3e902a02d1afa4b21e2e95e04da822e8ba7b30",
+    "package-lock.json": "d847e1ca83d25dae9d9243ce1c64bce6f4ee2067a7dfb9b5ff3e8fa0686e286b",
+    "tools/browser-qualification/package-lock.json": "0a2e7f09703398ff090367d55e1f39b88b363e5267126edf699a2e78fedc471f",
+    "vite.config.ts": "eb3239e1231639a7ea3a48aa3ef0364b3b6442ae10d6f1e9103860b344a70c6c",
+    "env.d.ts": "e60ddc4551dc27f3d55ad8d519511467b7c33d7c18e53cd9b380a172e25f1e7d"
+  },
+  "originalStudioDesignsSha256": {
+    "src/ui/Topbar.ui": "1761911bee85676048501142361f4c8d416f43e63c4a67c040914b09b38cf6ea",
+    "src/ui/EditorToolbar.ui": "a6902fd120db646fb2ab1e49f79a978a5f2116d003f24b7ce318cf95e4d3c909",
+    "src/ui/ViewerToolbar.ui": "1be97b178c7c887ddf2bdcf935709e912e9974b258def2e122ae5296364983a2",
+    "src/ui/SelectionModes.ui": "2b4f7c8e2c13a9d614635dde16c09b7319b7e08257b0457673a5a7a87692c385",
+    "src/ui/DockRail.ui": "7f0d9561dda3f457e8fe823dbe712edb8ca123d09c6193792eccacaaadfa62bf",
+    "src/ui/Statusbar.ui": "ccb1a4d542f6f4b9d91e31ed596e69ea45d43c849c0fa7f6164e8a903b195c8e",
+    "src/ui/EditorStats.ui": "1c068b8f64f4b79b82459d2f270eda4c9d4bf171f03b67fce3a637f05f6b568c",
+    "src/ui/ComputeInspector.ui": "7467cd6e15525b966e9ddee011c5bac1266b06010ccc461734cb475c8ed50517",
+    "src/ui/WorkspaceActionBar.ui": "b75471ecc0e8c25f1e677dc64c27388629660596f85b0f27b61d481d99afd523"
+  },
+  "studioDesignsPreservedByteForByte": 9,
+  "tests": {
+    "passed": 25,
+    "failed": 0,
+    "pending": 0,
+    "formaCases": 11,
+    "cameraRegressions": 6,
+    "g2PanelTransportWorkerRegressions": 8
+  },
+  "browser": {
+    "passed": true,
+    "widths": [
+      1440,
+      390
+    ],
+    "pageErrors": 0,
+    "horizontalOverflow": 0,
+    "visualReview": "Both final screenshots inspected. Finite view-model fixture; no complete application or geometry-computation claim."
+  },
+  "typeChecks": {
+    "vue": 0,
+    "mcp": 0,
+    "browserFixture": 0,
+    "note": "Initial direct-file CLI invocation rejected tsconfig ambiguity with TS5112; corrected invocation uses --ignoreConfig and passes."
+  },
+  "architecture": {
+    "exitCode": 0,
+    "legacyPins": 55,
+    "layerViolations": 0
+  },
+  "build": {
+    "vite": 0,
+    "verifyDist": 1,
+    "deliveryMeasurement": {
+      "geometryChunk": {
+        "path": "assets/geometry-kernel-bytes-CBg_mNVm.js",
+        "bytes": 5888240,
+        "sha256": "9e318deda627a440d3decc49e8786ef5fc36576245a5f3de77f22dfd264432c8"
+      },
+      "assetBytes": 10638879,
+      "geometryRaw": {
+        "path": "wasm/geometry-kernel.wasm",
+        "bytes": 16670564,
+        "sha256": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121"
+      },
+      "existingCaps": {
+        "geometryChunkBytes": 5370000,
+        "assetBytes": 10080000,
+        "geometryRawBytes": 16000000
+      },
+      "actualProfileAdmission": false,
+      "verifyDistExitCode": 1,
+      "verifyDistStoppedAt": "Geometry artifact has no reviewed delivery budget profile",
+      "scope": "Read-only measurement against existing limits; no new artifact/profile admission, budget change, proof transfer or complete verifier success."
+    }
+  },
+  "artifactState": {
+    "public/wasm/geometry-kernel.wasm": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+    "public/wasm/language-kernel.wasm": "4bd5335a71e8be94b90eab6f735b6aa68eb3f3ae3f445ae8609b6bad1f9fffa2"
+  },
+  "scope": "Functional state/actions/slots in nine web UI regions plus UI expression tokenization/unary precedence. Original static native Studio templates retained. Historical failure runs archived. Underlying Rust computation unchanged; native capability count unchanged. Vite builds but distribution remains unqualified: exact artifact profile absent and measured delivery sizes exceed unchanged caps. No full frontend, workspace, GPU, B-rep or main delivery claim."
+}
