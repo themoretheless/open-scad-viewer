@@ -75,7 +75,11 @@ pub(super) fn build(
     g: &QualifiedNurbsIntersectionGraph,
     p: &[NurbsFacePartition; 2],
     regions: &[RetainedRegionMaterial],
-) -> Result<(Model, Option<SourceAtlasCertificate>)> {
+) -> Result<(
+    Model,
+    Option<SourceAtlasCertificate>,
+    Option<NurbsShellForestCertificate>,
+)> {
     let keys = [keys(models, g, &p[0], 0)?, keys(models, g, &p[1], 1)?];
     let mut out = Model::empty(models[0].tolerance_mm.max(models[1].tolerance_mm))?;
     let mut vertices = BTreeMap::<VertexKey, usize>::new();
@@ -162,7 +166,7 @@ pub(super) fn build(
         });
     }
     if out.faces.is_empty() {
-        return Ok((out, None));
+        return Ok((out, None, None));
     }
     let mut incidence = vec![Vec::<(usize, bool)>::new(); out.edges.len()];
     for u in &face_uses {
@@ -250,18 +254,10 @@ pub(super) fn build(
     }
     out.refresh_change_set(&models);
     out.validate()?;
-    // Independently qualify every connected result component. Negative cavity
-    // components need a separate containment/body-role proof; do not pretend
-    // that each connected shell is automatically an outward solid.
+    // Independently prove complete shell nesting, including negative cavity
+    // components, before assigning body roles. Connectivity is not ownership.
+    let shells =
+        atlas::point_material::assign_bodies(&mut out, g.certificate().limits.source_depth)?;
     let atlas = certify_source_atlas(&out, g.certificate().limits.source_depth)?;
-    if out.shells.len() == 1 {
-        atlas::difference::connected_outer_volume(&out, &atlas)?;
-    } else {
-        for shell in 0..out.shells.len() {
-            let (component, _) = crate::body_edit::extract(&out, shell);
-            let c = certify_source_atlas(&component, g.certificate().limits.source_depth)?;
-            atlas::difference::connected_outer_volume(&component, &c)?;
-        }
-    }
-    Ok((out, Some(atlas)))
+    Ok((out, Some(atlas), Some(shells)))
 }

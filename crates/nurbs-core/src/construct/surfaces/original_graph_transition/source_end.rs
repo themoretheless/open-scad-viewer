@@ -1,6 +1,7 @@
 //! Exact source use of one end-rim half. G2 requires actual original h,h',h''
 //! to vanish at the end; a merely close or tangent-looking end is refused.
 use super::*;
+#[derive(Clone)]
 pub struct SourceEndContact {
     source: Surface,
     side: usize,

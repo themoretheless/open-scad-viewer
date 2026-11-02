@@ -92,6 +92,12 @@ pub(crate) fn extrude_merged_intervals(
 /// Concatenate independently owned topology after proving spatial separation.
 /// No coordinate weld, surface fitting or mesh reconstruction is involved.
 pub(crate) fn separated_union(a: &Model, b: &Model) -> Result<Model> {
+    concatenate_bodies(a,b)
+}
+/// Topology-only concatenation. The caller must separately prove disjoint
+/// material interiors and any permitted boundary contacts; this grants no
+/// global embedding or spatial-separation certificate.
+pub(crate) fn concatenate_bodies(a:&Model,b:&Model)->Result<Model> {
     let mut result = a.clone();
     result.tolerance_mm = a.tolerance_mm.max(b.tolerance_mm);
     let (v, e, l, f, s) = (

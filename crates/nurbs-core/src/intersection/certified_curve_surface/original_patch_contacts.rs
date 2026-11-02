@@ -1,0 +1,238 @@
+//! Original affine-patch expressions through scalar isolation and finite UV admission.
+use super::affine_plane::{enclosure, q, subtract};
+use super::*;
+use cad_predicates::{
+    AuthoredScalar, Limits, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome,
+    PredicateContext, SourceArena, ToleranceContext, rational_bspline_affine_patch_roots,
+};
+use num_traits::Zero;
+#[derive(Debug)]
+pub struct OriginalPatchContact {
+    pub parameter_box: Box3,
+    pub position_bounds: [[f64; 2]; 3],
+    /// Original one-sided spans and their exact scalar multiplicities.
+    pub source_spans: Vec<usize>,
+    pub multiplicities: Vec<usize>,
+}
+#[derive(Debug)]
+pub struct OriginalPatchContacts {
+    pub contacts: Vec<OriginalPatchContact>,
+    pub unresolved_spans: Vec<usize>,
+    pub ambiguous_parameters: Vec<[f64; 2]>,
+    pub scalar_proofs: Vec<(usize, OriginalPlaneRootsDecision)>,
+    pub exact_work: u64,
+    pub spans: usize,
+    pub complete: bool,
+}
+/// All original curve contacts with an exact untrimmed affine parallelogram.
+/// The plane is an expression of the original vertices, so derived normal and
+/// offset need not be representable as binary64. Source continuity is required
+/// at interior knots. Boundary membership and coincident spans stay unresolved.
+/// This is neither a freeform tangency solver nor a trim/Body admission.
+pub fn original_affine_patch_contacts(
+    c: &Curve,
+    s: &Surface,
+    tolerance: f64,
+    max_spans: usize,
+    max_exact_work: u64,
+) -> Result<OriginalPatchContacts> {
+    c.validate()?;
+    s.validate()?;
+    check(
+        !c.periodic
+            && !s.periodic_u
+            && !s.periodic_v
+            && c.control_points[0].len() == 3
+            && s.control_points[0][0].len() == 3,
+        "Original patch contacts need nonperiodic 3D sources",
+    )?;
+    check(
+        (1..=25).contains(&c.degree)
+            && c.control_points.len() <= 256
+            && (1..=100000).contains(&max_spans)
+            && tolerance.is_finite()
+            && tolerance > 0.,
+        "Invalid original patch contact limits",
+    )?;
+    let [a, b] = c.domain();
+    check(
+        c.knots
+            .iter()
+            .filter(|&&t| a < t && t < b)
+            .all(|t| c.knots.iter().filter(|v| *v == t).count() <= c.degree),
+        "Original patch contacts require C0 source knots",
+    )?;
+    check(
+        s.degree_u == 1
+            && s.degree_v == 1
+            && s.control_points.len() == 2
+            && s.control_points[0].len() == 2
+            && s.weights.iter().flatten().all(|w| *w == s.weights[0][0])
+            && s.knots_u[0] == s.knots_u[1]
+            && s.knots_u[2] == s.knots_u[3]
+            && s.knots_v[0] == s.knots_v[1]
+            && s.knots_v[2] == s.knots_v[3],
+        "Target must be a clamped uniform-weight affine patch",
+    )?;
+    let pole = |i: usize, j: usize| std::array::from_fn(|k| q(s.control_points[i][j][k]));
+    let origin = pole(0, 0);
+    let u = subtract(&pole(1, 0), &origin);
+    let v = subtract(&pole(0, 1), &origin);
+    check(
+        subtract(&pole(1, 1), &pole(1, 0)) == v,
+        "Target is not an exact parallelogram",
+    )?;
+    let (i, j, det) = [(0, 1), (0, 2), (1, 2)]
+        .into_iter()
+        .map(|(i, j)| (i, j, &u[i] * &v[j] - &u[j] * &v[i]))
+        .find(|(_, _, d)| !d.is_zero())
+        .ok_or_else(|| crate::input("Degenerate affine patch"))?;
+    let bound = |x| {
+        enclosure(x).ok_or_else(|| crate::numeric_err("No original affine coordinate enclosure"))
+    };
+    let determinant = bound(&det)?;
+    let oi = bound(&origin[i])?;
+    let oj = bound(&origin[j])?;
+    let ui = bound(&u[i])?;
+    let uj = bound(&u[j])?;
+    let vi = bound(&v[i])?;
+    let vj = bound(&v[j])?;
+    let mut values: Vec<f64> = c
+        .control_points
+        .iter()
+        .zip(&c.weights)
+        .flat_map(|(p, w)| [p[0], p[1], p[2], *w])
+        .collect();
+    let knot_start = values.len();
+    values.extend(&c.knots);
+    let patch_start = values.len();
+    for (i, j) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+        values.extend(&s.control_points[i][j]);
+    }
+    let arena = SourceArena::authored(
+        "nurbs-core/original-affine-patch-contacts",
+        1,
+        values
+            .into_iter()
+            .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect(),
+    )
+    .map_err(|_| crate::input("Invalid original source arena"))?;
+    let controls: Vec<_> = (0..c.control_points.len())
+        .map(|i| std::array::from_fn(|j| arena.leaf(i * 4 + j).unwrap()))
+        .collect();
+    let knots: Vec<_> = (0..c.knots.len())
+        .map(|i| arena.leaf(knot_start + i).unwrap())
+        .collect();
+    let patch = std::array::from_fn(|i| {
+        std::array::from_fn(|j| arena.leaf(patch_start + i * 3 + j).unwrap())
+    });
+    let tol = ToleranceContext::default_valid();
+    let mut out = OriginalPatchContacts {
+        contacts: vec![],
+        unresolved_spans: vec![],
+        ambiguous_parameters: vec![],
+        scalar_proofs: vec![],
+        exact_work: 0,
+        spans: 0,
+        complete: false,
+    };
+    for span in c.degree..c.control_points.len() {
+        let domain = [c.knots[span], c.knots[span + 1]];
+        if domain[0] >= domain[1] {
+            continue;
+        }
+        if out.spans == max_spans || out.exact_work == max_exact_work {
+            out.unresolved_spans.push(span);
+            continue;
+        }
+        let width = I::point(domain[1]).sub(I::point(domain[0]))?;
+        let normalized = (I::point(tolerance).div(width)?.lo * 0.125).min(0.25);
+        if normalized <= 0. || !normalized.is_finite() {
+            out.unresolved_spans.push(span);
+            continue;
+        }
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tol,
+            Limits {
+                max_work: max_exact_work - out.exact_work,
+                ..Limits::default()
+            },
+            None,
+        );
+        let decision = rational_bspline_affine_patch_roots(
+            &mut ctx, &controls, &knots, c.degree, span, patch, normalized,
+        )
+        .map_err(|_| crate::input("Invalid original patch scalar query"))?;
+        out.exact_work += decision.work_used;
+        out.spans += 1;
+        let roots = match &decision.outcome {
+            OriginalPlaneRootsOutcome::Roots(r) => r.clone(),
+            _ => {
+                out.unresolved_spans.push(span);
+                vec![]
+            }
+        };
+        out.scalar_proofs.push((span, decision));
+        for root in roots {
+            let t = if root.interval == [0., 0.] {
+                I::point(domain[0])
+            } else if root.interval == [1., 1.] {
+                I::point(domain[1])
+            } else {
+                I::point(domain[0])
+                    .add(width.mul(I::new(root.interval[0], root.interval[1])?)?)?
+                    .intersect(domain[0], domain[1])?
+            };
+            let p = crate::curve_distance::enclosure(c, span, t)?;
+            let di = p[i].sub(oi)?;
+            let dj = p[j].sub(oj)?;
+            let alpha = di.mul(vj)?.sub(dj.mul(vi)?)?.div_signed(determinant)?;
+            let beta = ui.mul(dj)?.sub(uj.mul(di)?)?.div_signed(determinant)?;
+            if alpha.hi < 0. || alpha.lo > 1. || beta.hi < 0. || beta.lo > 1. {
+                continue;
+            }
+            if alpha.lo <= 0. || alpha.hi >= 1. || beta.lo <= 0. || beta.hi >= 1. {
+                out.ambiguous_parameters.push([t.lo, t.hi]);
+                continue;
+            }
+            let natural =
+                |x: I, k: &[f64]| I::point(k[1]).add(I::point(k[2]).sub(I::point(k[1]))?.mul(x)?);
+            let ub = natural(alpha, &s.knots_u)?;
+            let vb = natural(beta, &s.knots_v)?;
+            let contact = OriginalPatchContact {
+                parameter_box: [[t.lo, t.hi], [ub.lo, ub.hi], [vb.lo, vb.hi]],
+                position_bounds: std::array::from_fn(|k| [p[k].lo, p[k].hi]),
+                source_spans: vec![span],
+                multiplicities: vec![root.multiplicity],
+            };
+            // Only identical exact knot parameters alias; overlapping nondegenerate
+            // root enclosures remain distinct proof events.
+            if t.lo == t.hi {
+                if let Some(previous) = out
+                    .contacts
+                    .iter_mut()
+                    .find(|x| x.parameter_box[0] == [t.lo, t.hi])
+                {
+                    previous.source_spans.push(span);
+                    previous.multiplicities.push(root.multiplicity);
+                    for k in 0..3 {
+                        previous.parameter_box[k][0] =
+                            previous.parameter_box[k][0].min(contact.parameter_box[k][0]);
+                        previous.parameter_box[k][1] =
+                            previous.parameter_box[k][1].max(contact.parameter_box[k][1]);
+                        previous.position_bounds[k][0] =
+                            previous.position_bounds[k][0].min(contact.position_bounds[k][0]);
+                        previous.position_bounds[k][1] =
+                            previous.position_bounds[k][1].max(contact.position_bounds[k][1]);
+                    }
+                    continue;
+                }
+            }
+            out.contacts.push(contact);
+        }
+    }
+    out.complete = out.unresolved_spans.is_empty() && out.ambiguous_parameters.is_empty();
+    Ok(out)
+}

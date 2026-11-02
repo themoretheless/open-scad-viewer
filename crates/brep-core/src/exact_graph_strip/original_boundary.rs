@@ -79,24 +79,46 @@ fn polynomial(c: &Curve) -> Result<Vec<[Q; 3]>> {
         .map(|p| std::array::from_fn(|k| Q::from_float(p[k]).unwrap()))
         .collect())
 }
-fn canonical_uv(c: &crate::Coedge) -> Result<[[Q; 2]; 2]> {
+/// Exact traversal endpoints of a face-local polynomial line. Explicit UV
+/// clocks are independent of the world curve clock; no float evaluation or
+/// periodic lift is silently substituted for the authored interval.
+pub(super) fn traversal_uv(c: &crate::Coedge, world: &Curve) -> Result<[[Q; 2]; 2]> {
     let p = &c.pcurve;
     p.validate()?;
+    world.validate()?;
+    let domain = p.domain();
     require(
-        c.trim().is_none()
-            && !p.periodic
-            && p.degree == 1
-            && p.control_points.len() == 2
+        !p.periodic && p.degree == 1 && p.control_points.len() == 2
             && p.weights[0] == p.weights[1]
-            && p.control_points.iter().all(|p| p.len() == 2),
-        "Original source boundary needs an untrimmed polynomial UV line",
+            && p.control_points.iter().all(|p| p.len() == 2)
+            && p.knots[..=p.degree].iter().all(|x| *x == domain[0])
+            && p.knots[p.degree + 1..].iter().all(|x| *x == domain[1]),
+        "Original source boundary needs a clamped polynomial UV line",
     )?;
-    let mut uv = std::array::from_fn(|i| {
+    let interval = if let Some(trim) = c.trim() {
+        trim.validate()?;
+        require(
+            trim.periodic_lift == [[0; 2]; 2]
+                && trim.curve_parameter == world.domain()
+                && trim.pcurve_parameter.iter().all(|t| *t >= domain[0] && *t <= domain[1]),
+            "Source UV trim needs a complete world edge and no periodic lifts",
+        )?;
+        trim.pcurve_parameter
+    } else { domain };
+    let start = Q::from_float(domain[0]).unwrap();
+    let span = Q::from_float(domain[1]).unwrap() - &start;
+    require(span > Q::zero(), "Original UV clock has no positive span")?;
+    let points: [[Q; 2]; 2] = std::array::from_fn(|i| {
         std::array::from_fn(|k| Q::from_float(p.control_points[i][k]).unwrap())
     });
-    if c.reversed {
-        uv.reverse();
-    }
+    Ok(interval.map(|t| {
+        let t = (Q::from_float(t).unwrap() - &start) / &span;
+        std::array::from_fn(|k| &points[0][k] + (&points[1][k] - &points[0][k]) * &t)
+    }))
+}
+fn canonical_uv(c: &crate::Coedge, world: &Curve) -> Result<[[Q; 2]; 2]> {
+    let mut uv = traversal_uv(c, world)?;
+    if c.reversed { uv.reverse(); }
     Ok(uv)
 }
 fn parameters(original: &[[Q; 2]; 2], actual: &[[Q; 2]; 2]) -> Option<[Q; 2]> {
@@ -179,7 +201,7 @@ impl Roof {
                 }
                 let mut matches = Vec::new();
                 for original in &map.loops[side].coedges {
-                    let uv = canonical_uv(original)?;
+                    let uv = canonical_uv(original, &source.edges[original.edge].curve)?;
                     let Some(r) = parameters(&uv, &actual) else {
                         continue;
                     };

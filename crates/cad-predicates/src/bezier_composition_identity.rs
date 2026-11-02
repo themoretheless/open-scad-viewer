@@ -2,6 +2,8 @@
 //! The caller separately proves that P lies inside the admitted surface chart.
 use crate::{Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion,
     InputError, LeafRef, PredicateContext, Reason, Sign, exact_inputs};
+mod trimmed;
+pub use trimmed::rational_bezier_trimmed_composition_identity;
 type Poly = Vec<Expansion>;
 // Exact zero leading coefficients do not change a power polynomial. Keep a
 // nonempty representation even for zero so convolution dimensions stay valid.

@@ -1,5 +1,6 @@
 //! Exact natural source-chart lines of the qualified original graph support.
 use super::*;
+#[derive(Clone)]
 pub struct SourceLine {
     source: Surface,
     side: usize,

@@ -62,9 +62,12 @@ fn continuous_validation_consumes_trim_and_checks_periodic_lift_metadata() {
         model.validate_continuous(10000).unwrap().geometry_agreement,
         "continuous_with_tolerance"
     );
-    let exact = brep_core::boundary_agreement::verify_exact(&model, 10000).unwrap();
-    assert!(!exact.all_equal);
-    assert!(exact.uses.iter().all(|entry| entry.decision.is_none()));
+    let exact = brep_core::boundary_agreement::verify_exact(&model, 1_000_000).unwrap();
+    assert!(exact.all_equal);
+    assert!(exact.uses.iter().all(|entry| entry.decision.as_ref().is_some_and(|d|
+        d.outcome==cad_predicates::BezierIdentity::Equal)));
+    let limited=brep_core::boundary_agreement::verify_exact(&model,1).unwrap();
+    assert!(!limited.all_equal);assert!(!limited.has_exact_counterexample());
 
     let outer = model.faces[0].outer;
     let coedge = model.loops[outer].coedges[0].clone();
@@ -73,6 +76,7 @@ fn continuous_validation_consumes_trim_and_checks_periodic_lift_metadata() {
     model.loops[outer].coedges[0] = coedge.with_trim(trim).unwrap();
     let error = model.validate_continuous(10000).unwrap_err();
     assert_eq!(error.code, "BREP_TRIM_PERIODIC_LIFT");
+    assert_eq!(brep_core::boundary_agreement::verify_exact(&model,1_000_000).unwrap_err().code,"BREP_TRIM_PERIODIC_LIFT");
 }
 
 #[test]

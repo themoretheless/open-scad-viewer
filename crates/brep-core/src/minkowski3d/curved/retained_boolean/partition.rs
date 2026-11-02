@@ -238,21 +238,7 @@ fn bind(
     }
     if free / 2 == side {
         let k = free % 2;
-        if pc.weights.windows(2).any(|w| w[0] != w[1]) || pc.control_points.len() != pc.degree + 1 {
-            return Err(fail(
-                "exact monotone arc clock needs one polynomial Bernstein span",
-            ));
-        }
-        let sign = if reverse { -1. } else { 1. };
-        if pc
-            .control_points
-            .windows(2)
-            .any(|w| (w[1][k] - w[0][k]) * sign <= 0.)
-        {
-            return Err(fail(
-                "saved intersection arc clock is not strictly monotone",
-            ));
-        }
+        exact::monotone(&pc, k, !reverse)?;
     }
     Ok(())
 }

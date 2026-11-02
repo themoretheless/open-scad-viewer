@@ -1,5 +1,10 @@
 //! Exact point membership transferred through the entire source homotopy.
 use super::*;
+mod shells;
+pub(crate) use shells::assign_bodies;
+pub use shells::{
+    NurbsShellForestCertificate, certify_nurbs_shell_forest, verify_nurbs_shell_forest,
+};
 
 pub(crate) struct MaterialOracle {
     patches: Vec<Patch>,
@@ -7,9 +12,14 @@ pub(crate) struct MaterialOracle {
 }
 impl MaterialOracle {
     pub(crate) fn new(model: &Model, depth: u8) -> Result<Self> {
-        let (certificate, patches) = checked_charts(model, depth)?;
-        difference::connected_outer_volume(model, &certificate)?;
-        let (_, faces) = boolean::nominal(&certificate);
+        let forest = shells::analyze(model, depth)?;
+        shells::check_roles(model, &forest.certificate)?;
+        let patches = forest
+            .shells
+            .iter()
+            .flat_map(|s| s.patches.iter().cloned())
+            .collect();
+        let faces = forest.shells.into_iter().flat_map(|s| s.faces).collect();
         Ok(Self { patches, faces })
     }
     pub(crate) fn classify(&self, point: &P, work: &mut Work) -> Result<i32> {

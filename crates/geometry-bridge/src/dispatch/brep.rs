@@ -44,6 +44,8 @@ const OPS: &[&str] = &[
     "brep_g2_surface_bridge",
     "brep_g2_runout_surface",
     "brep_source_graph_g2_preview",
+    "brep_frozen_graph_body_restore",
+    "brep_frozen_graph_body_display",
     "brep_geometric_g2_audit",
     "brep_g2_annular_cylinder",
 
@@ -82,6 +84,8 @@ fn handle(v: Value) -> Result<Value> {
         "brep_g2_surface_bridge" => cad_geometric_g2::create_surface_bridge(v),
         "brep_g2_runout_surface" => cad_runout::create(v),
         "brep_source_graph_g2_preview" => cad_runout::source_graph_preview(v),
+        "brep_frozen_graph_body_restore" => cad_runout::restore_graph_body(v),
+        "brep_frozen_graph_body_display" => cad_runout::display_graph_body(v),
         "brep_geometric_g2_audit" => cad_geometric_g2::diagnose(v),
         "brep_g2_annular_cylinder" => cad_geometric_g2::create_annular_cylinder(v),
 

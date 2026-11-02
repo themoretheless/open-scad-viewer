@@ -52,6 +52,17 @@ pub struct Split {
     relations: Vec<AuthoredRelation>,
 }
 impl Split {
+    /// Fresh exact identity for the actual stored 3D children on their original
+    /// root clock. This is stronger than the tolerance evidence used for
+    /// numerical partition proposals; None does not grant an exact identity.
+    /// The functional certificate is separate from document/solid admission.
+    pub fn exact_world_root_partition(&self,max_work:u64)
+        -> Result<Option<nurbs_core::curve_partition_agreement::ExactBsplineRootPartition>> {
+        let source=&self.source.edges[self.edge].curve;
+        let pieces=self.edges.iter().map(|&i|self.model.edges[i].curve.clone()).collect::<Vec<_>>();
+        nurbs_core::curve_partition_agreement::verify_exact_bspline_root_partition(
+            source,&pieces,source.domain(),max_work)
+    }
     pub fn relations(&self) -> &[AuthoredRelation] {
         &self.relations
     }

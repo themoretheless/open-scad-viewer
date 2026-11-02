@@ -41,6 +41,17 @@ pub struct RetainedNurbsBooleanCertificate {
     pub regions: Vec<RetainedRegionMaterial>,
     pub result: String,
     pub result_atlas: Option<SourceAtlasCertificate>,
+    pub result_shells: Option<NurbsShellForestCertificate>,
+    pub xor_decomposition: Option<RetainedXorDecomposition>,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct RetainedXorDecomposition {
+    /// Separately embedded A\\B and B\\A. Their material interiors are
+    /// disjoint by the checked source-region truth tables. Closure contact is
+    /// allowed; no global embedded-boundary atlas is asserted for their join.
+    pub parts: [Model; 2],
+    pub atlases: [Option<SourceAtlasCertificate>; 2],
+    pub shell_forests: [Option<NurbsShellForestCertificate>; 2],
 }
 pub struct CertifiedRetainedNurbsBoolean {
     model: Model,
@@ -89,16 +100,48 @@ fn construct(
     partition::paired_arcs(&graph, partitions)?;
     let regions = material::classify(models, partitions, operation, limits.source_depth)
         .map_err(|e| fail(&format!("material: {}", e.message)))?;
-    let (model, result_atlas) = assemble::build(models, &graph, partitions, &regions)
-        .map_err(|e| fail(&format!("assembly: {}", e.message)))?;
+    let (model, result_atlas, result_shells, xor_decomposition) = if operation == "xor" {
+        let mut parts = Vec::new();
+        let mut atlases = Vec::new();
+        let mut forests = Vec::new();
+        for part in 0..2 {
+            let mut selected = regions.clone();
+            for r in &mut selected {
+                let owner = if r.winding_in_other == 0 {
+                    r.operand
+                } else {
+                    1 - r.operand
+                };
+                r.keep = owner == part;
+            }
+            let (m, a, f) = assemble::build(models, &graph, partitions, &selected)?;
+            parts.push(m);
+            atlases.push(a);
+            forests.push(f);
+        }
+        let parts: [Model; 2] = parts.try_into().unwrap();
+        let joined = crate::boolean_support::concatenate_bodies(&parts[0], &parts[1])?;
+        let decomposition = RetainedXorDecomposition {
+            parts,
+            atlases: atlases.try_into().unwrap(),
+            shell_forests: forests.try_into().unwrap(),
+        };
+        (joined, None, None, Some(decomposition))
+    } else {
+        let (m, a, f) = assemble::build(models, &graph, partitions, &regions)
+            .map_err(|e| fail(&format!("assembly: {}", e.message)))?;
+        (m, a, f, None)
+    };
     let certificate = RetainedNurbsBooleanCertificate {
-        version: 1,
+        version: 3,
         operation: operation.into(),
         graph: graph.certificate().clone(),
         partitions: partitions.clone(),
         regions,
         result: source_id(&Source::Brep(model.clone()))?,
         result_atlas,
+        result_shells,
+        xor_decomposition,
     };
     Ok(CertifiedRetainedNurbsBoolean { model, certificate })
 }
@@ -146,7 +189,7 @@ pub fn verify_retained_nurbs_boolean(
     result: &Model,
     c: &RetainedNurbsBooleanCertificate,
 ) -> Result<()> {
-    if c.version != 1 || c.result != source_id(&Source::Brep(result.clone()))? {
+    if c.version != 3 || c.result != source_id(&Source::Brep(result.clone()))? {
         return Err(fail("retained Boolean result/version binding mismatch"));
     }
     let fresh = certify_retained_nurbs_boolean(a, b, &c.operation, &c.partitions, c.graph.limits)?;

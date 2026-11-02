@@ -60,22 +60,6 @@ impl ClosedShell {
         &self.face_links
     }
 }
-fn uv_line(c: &crate::Coedge) -> Result<[[Q; 2]; 2]> {
-    let p = &c.pcurve;
-    p.validate()?;
-    require(
-        c.trim().is_none()
-            && !p.periodic
-            && p.degree == 1
-            && p.control_points.len() == 2
-            && p.weights[0] == p.weights[1]
-            && p.control_points.iter().all(|p| p.len() == 2),
-        "Original face needs exact polynomial UV lines",
-    )?;
-    Ok(std::array::from_fn(|i| {
-        std::array::from_fn(|k| Q::from_float(p.control_points[i][k]).unwrap())
-    }))
-}
 fn cross(a: &[Q; 2], b: &[Q; 2], c: &[Q; 2]) -> Q {
     (&b[0] - &a[0]) * (&c[1] - &a[1]) - (&b[1] - &a[1]) * (&c[0] - &a[0])
 }
@@ -169,19 +153,23 @@ impl Roof {
         let mut fields = Vec::new();
         for link in bindings.edges() {
             if self.geometry().open_edges.contains(&link.roof_edge) {
-                require(
-                    link.source_range == [Q::zero(), Q::one()],
-                    "Outer source boundary has an unsupported partial original edge",
-                )?;
-                require(
-                    source_edges
-                        .insert(
-                            link.source_edge,
-                            (link.roof_edge, link.reversed_from_source),
-                        )
-                        .is_none(),
-                    "Ambiguous original outer edge identity",
-                )?;
+                source_edges.entry(link.source_edge).or_insert_with(Vec::new)
+                    .push((link.roof_edge,link.reversed_from_source,link.source_range.clone()));
+            }
+        }
+        // A neighboring face must consume the complete original edge exactly
+        // once. Gaps, overlaps and differently rooted joins are never welded.
+        for children in source_edges.values_mut() {
+            children.sort_by(|a,b|a.2[0].cmp(&b.2[0]));
+            require(children.first().unwrap().2[0]==Q::zero()
+                && children.last().unwrap().2[1]==Q::one(),"Incomplete outer source edge partition")?;
+            for pair in children.windows(2) {
+                let (a,ar,range)=&pair[0];let (z,zr,next)=&pair[1];
+                let left=&topology.edges[*a];let right=&topology.edges[*z];
+                require(range[1]==next[0]
+                    && left.vertices[usize::from(!*ar)]==right.vertices[usize::from(*zr)]
+                    && Arc::ptr_eq(&left.curve.root,&right.curve.root),
+                    "Original edge partition has a gap, overlap or conflicting root endpoint")?;
             }
         }
         for p in bindings.endpoints() {
@@ -206,15 +194,15 @@ impl Roof {
                 "Original source holes require separate import qualification",
             )?;
             let cs = &source.loops[original.outer].coedges;
-            let lines = cs.iter().map(uv_line).collect::<Result<Vec<_>>>()?;
+            let lines = cs.iter().map(|c| super::original_boundary::traversal_uv(c, &source.edges[c.edge].curve)).collect::<Result<Vec<_>>>()?;
             convex(&lines)?;
             let field = inspect_source_support_field(&original.surface)?;
             let mut uses = Vec::new();
             let mut coedges = Vec::new();
             for (c, uv) in cs.iter().zip(lines) {
                 let old = &source.edges[c.edge];
-                let (edge, relation) = if let Some(&mapped) = source_edges.get(&c.edge) {
-                    mapped
+                let fragments = if let Some(mapped) = source_edges.get(&c.edge) {
+                    mapped.clone()
                 } else {
                     let points = curve_points(&old.curve)?;
                     let mut vertices = [0; 2];
@@ -240,7 +228,7 @@ impl Roof {
                         vertices,
                         curve: Edge::original(points, id),
                     });
-                    source_edges.insert(c.edge, (id, false));
+                    source_edges.insert(c.edge, vec![(id,false,[Q::zero(),Q::one()])]);
                     edge_links.push(OriginalEdgeLink {
                         roof_edge: id,
                         source_edge: c.edge,
@@ -248,12 +236,16 @@ impl Roof {
                         source_range: [Q::zero(), Q::one()],
                         reversed_from_source: false,
                     });
-                    (id, false)
+                    vec![(id,false,[Q::zero(),Q::one()])]
                 };
+                let fragments = if c.reversed { fragments.into_iter().rev().collect::<Vec<_>>() } else { fragments };
+                for (edge,relation,range) in fragments {
+                let interval=if c.reversed {[Q::one()-&range[1],Q::one()-&range[0]]} else {range};
+                let part=interval.map(|t| std::array::from_fn(|k| &uv[0][k]+(&uv[1][k]-&uv[0][k])*&t));
                 let reversed = c.reversed ^ relation;
                 let index = uses.len();
                 uses.push(ImportedUse {
-                    uv,
+                    uv:part,
                     edge,
                     reversed,
                     root: topology.edges[edge].curve.root.clone(),
@@ -264,6 +256,7 @@ impl Roof {
                     reversed,
                     FaceUseGeometry::Imported(index),
                 ));
+                }
             }
             let face = topology.faces.len();
             let outer = topology.loops.len();

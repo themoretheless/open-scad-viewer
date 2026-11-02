@@ -536,6 +536,46 @@ fn certify_motion_impl(
     // open paired carriers, attempt the SAME bounded global proof before
     // pair refinement; source points still supply no admission credit.
     if second.is_some() && !closed {
+        // A single positive-weight clamped rational chart is smooth on a
+        // neighborhood of its complete normalized rectangle. No caller flag,
+        // C0 seam, periodic quotient or piecewise frame enters this theorem.
+        let smooth = |s:&Surface| !s.periodic_u && !s.periodic_v
+            && s.control_points.len()==s.degree_u+1
+            && s.control_points[0].len()==s.degree_v+1
+            && s.knots_u[..=s.degree_u].iter().all(|x|*x==s.knots_u[s.degree_u])
+            && s.knots_u[s.control_points.len()..].iter().all(|x|*x==s.knots_u[s.control_points.len()])
+            && s.knots_v[..=s.degree_v].iter().all(|x|*x==s.knots_v[s.degree_v])
+            && s.knots_v[s.control_points[0].len()..].iter().all(|x|*x==s.knots_v[s.control_points[0].len()]);
+        if pieces.len()==1 && smooth(carrier) && second.is_some_and(smooth) {
+            // Reserve part of the SAME ledger for this sufficient proposal.
+            // Unsuccessful work is retained before the existing atlas runs.
+            let trial_max=max_cells.min(out.cells.saturating_add(8192));
+            // Transform ORIGINAL pose coefficients before interval evaluation.
+            // Applying the same matrix only to final world boxes loses exact
+            // cancellation between the rotating columns of a quarter turn.
+            if out.cells<trial_max {
+                if let Ok(Enclosed::Value(seed))=context.enclose([[0.5;2];3],&mut out,trial_max) {
+                    if let Some(rows)=atlas::inverse_proposal(seed.columns) {
+                        let determinant=iv::cross(rows[1].map(I::point),rows[2].map(I::point))
+                            .and_then(|cross|iv::dot_tight(rows[0].map(I::point),cross));
+                        if let Some(d)=determinant.ok().filter(|d|d.lo>0. || d.hi<0.) {
+                            context.coordinates=Some(ProofCoordinates{rows,offset:[0.;3],determinant:[d.lo,d.hi],column_factor:None});
+                            context.poses.clear();
+                        }
+                    }
+                }
+            }
+            let accepted=atlas::certify_smooth_p_matrix(|b,out,max|context.enclose(b,out,max),projection,&mut out,trial_max).unwrap_or(false);
+            #[cfg(all(debug_assertions, not(target_arch="wasm32")))]
+            if std::env::var_os("OSV_TRACE_AFFINE_VOLUME").is_some(){
+                eprintln!("smooth-p-matrix: accepted={accepted} cells={} trial={trial_max} conditioned={}",out.cells,context.coordinates.is_some());
+            }
+            if accepted {
+                return Ok(out);
+            }
+            context.coordinates=None;
+            context.poses.clear();
+        }
         atlas::certify_map_global_first(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells,closed)?;
         return Ok(out);
     }

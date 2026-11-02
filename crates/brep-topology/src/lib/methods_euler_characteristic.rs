@@ -186,7 +186,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 s.faces.len() * 4,
                 Default::default(),
             );
-            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::with_capacity_and_hasher(
+            let mut links = FxHashMap::<usize, Vec<((usize, usize), (usize, usize))>>::with_capacity_and_hasher(
                 s.faces.len() * 4,
                 Default::default(),
             );
@@ -223,7 +223,13 @@ impl<C, S, P, V> Model<C, S, P, V> {
                             .push((u.face, c.reversed ^ u.reversed));
                         let next = &cs[(i + 1) % cs.len()];
                         let vertex = self.edges[c.edge].vertices[usize::from(!c.reversed)];
-                        links.entry(vertex).or_default().push((c.edge, next.edge));
+                        // A closed edge has two distinct incident ends even
+                        // when both ends reference the same vertex. The link
+                        // graph is on edge ENDS, not globally merged edge IDs.
+                        links.entry(vertex).or_default().push((
+                            (c.edge, usize::from(!c.reversed)),
+                            (next.edge, usize::from(next.reversed)),
+                        ));
                     }
                 }
             }
@@ -265,7 +271,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 "Shell has disconnected face components",
             )?;
             for fan in links.values() {
-                let mut graph = FxHashMap::<usize, Vec<usize>>::default();
+                let mut graph = FxHashMap::<(usize, usize), Vec<(usize, usize)>>::default();
                 for (a, b) in fan {
                     graph.entry(*a).or_default().push(*b);
                     graph.entry(*b).or_default().push(*a);

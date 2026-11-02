@@ -796,8 +796,12 @@ pub use intersection_graph::{
 };
 
 mod retained_boolean;
+mod boundary_only;
+pub use boundary_only::{BoundaryOnlyNurbsBooleanCertificate,CertifiedBoundaryOnlyNurbsBoolean,certify_nurbs_boundary_only_boolean,verify_nurbs_boundary_only_boolean};
+pub(crate) use boundary_only::try_nurbs_boundary_only_boolean;
+pub use atlas::point_material::{NurbsShellForestCertificate,certify_nurbs_shell_forest,verify_nurbs_shell_forest};
 pub use retained_boolean::{
-    CertifiedRetainedNurbsBoolean, NurbsFacePartition, RegionEdgeOrigin,
+    CertifiedRetainedNurbsBoolean, NurbsFacePartition, RegionEdgeOrigin, RetainedXorDecomposition,
     RetainedNurbsBooleanCertificate, RetainedRegionMaterial,
     certify_retained_nurbs_boolean, verify_retained_nurbs_boolean, author_retained_nurbs_boolean,
 };

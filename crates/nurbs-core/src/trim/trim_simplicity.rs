@@ -1,6 +1,7 @@
 //! Sufficient simplicity evidence for a closed rational NURBS UV loop.
 //! Failure of a sufficient test is unproven, never evidence of an intersection.
 use crate::{Result, check, curve::Curve, curve_distance, curve_jets, trim_domain};
+mod exact_subdivision;
 pub struct Pair {
     pub curves: [usize; 2],
     pub proven: bool,
@@ -549,7 +550,11 @@ pub fn inspect(
             if injective(c) {
                 Ok(true)
             } else {
-                monotone_spans(c, &mut cells, max_cells)
+                if monotone_spans(c, &mut cells, max_cells)? {
+                    Ok(true)
+                } else {
+                    exact_subdivision::prove(c, &mut cells, max_cells)
+                }
             }
         })
         .collect::<Result<Vec<_>>>()?;
