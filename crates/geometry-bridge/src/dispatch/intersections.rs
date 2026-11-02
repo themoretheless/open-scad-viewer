@@ -5,6 +5,7 @@ const OPS: &[&str] = &[
     "nurbs_surface_self_intersection_audit",
     "nurbs_surface_iso_self_intersection_audit",
     "nurbs_surface_iso_target_window",
+    "nurbs_original_affine_patch_contacts",
     "brep_intersect_surface_surface",
     "brep_intersect_curve_segment",
     "brep_intersect_curve_plane",
@@ -39,6 +40,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "nurbs_original_affine_patch_contacts" => intersections::original_patch_contacts::run(v),
         "nurbs_surface_iso_target_window" => intersections::surface_iso_target::run(v),
         "nurbs_surface_self_intersection_audit" => intersections::self_surface::run(v),
         "nurbs_surface_iso_self_intersection_audit" => intersections::self_surface::run_iso(v),
