@@ -1,0 +1,16 @@
+{
+  "clientTestsPassed": 73,
+  "newProtocolTests": 21,
+  "newBrowserTests": 3,
+  "vueTsc": "passed",
+  "scope": "Structural report validation and mocked Worker request/response ownership; not a portable predicate certificate",
+  "actualNewWasmWorkerQualified": false,
+  "sourceSha256": {
+    "src/services/originalPatchContactsProtocol.ts": "ce58e608de678f520146df0b9978c0e8862585744304c8224ff6ace9d9d1f912",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "f6529f95c6dd7832620316a8b2b6c9ada10682e7039fb141b7ad5fbf2a66a2fa",
+    "src/workers/surfaceSelfIntersection.worker.ts": "ebe064abe33ff1c2b1926d0c6ff8f81accb18aa3b3030f744fa418a597d465b2",
+    "tests/originalPatchContactsProtocol.test.ts": "858c1df04d544158a33956da3866139135f9f9c7e27de83b75e514dc057c881e",
+    "tests/surfaceIsoTargetBrowser.test.ts": "18f91030f3439d4c95c4fe8a1e65d38b00a9cfa814b5b77459bd16f9a982b7a4",
+    "docs/api/original-affine-patch-contacts.md": "01126148c8ac6fdecc0bed5ab28c3f96f1269b7027a41d82b78a3f8968e9ecbb"
+  }
+}

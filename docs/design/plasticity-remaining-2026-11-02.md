@@ -102,6 +102,8 @@ Finite-patch membership исходного выражения: новый native
 
 Bridge исходных affine patch contacts: `nurbs_original_affine_patch_contacts` принимает curve/patch/tolerance/maxSpans/maxExactWork и возвращает contacts, natural/world boxes, sourceSpans и односторонние multiplicities, scalar polynomial summaries, unresolved spans/ambiguous parameters и расход ресурсов. Контекст in-process cache не сериализуется; summaries не объявляются portable certificates. Exact budget ограничен существующим predicate MAX_WORK, дополнительные forged verdicts отвергаются. **23 bridge tests прошли (5 новых)**; [receipt](../qualification/original-affine-patch-bridge-2026-11-02/results.json), [API](../api/original-affine-patch-contacts.md). Raw WASM/Worker этого op ещё не квалифицированы; общие freeform tangencies, trims/Body и все surface branches остаются открытыми.
 
+Клиент original affine contacts: типизированный отчёт/валидатор сохраняет sourceSpan–multiplicity links, exact work summaries, incomplete/coincident/boundary coverage и не допускает придуманный crossingSign/portable context или Body admission. `inspectOriginalPatchContacts` подключён к общей Worker ownership/abort/deadline очереди, проверяет бюджеты ответа и принимает maxExactWork=0 как unresolved query. **73 client tests (21 новых protocol + 3 browser) и vue-tsc прошли**; [receipt](../qualification/original-affine-patch-client-2026-11-02/results.json). Actual WASM/Chromium нового op остаются pending: frozen source a46f426b2 сейчас собирается отдельно. General freeform tangencies, trims/Body и все surface branches открыты.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

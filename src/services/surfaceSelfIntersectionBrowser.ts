@@ -1,3 +1,4 @@
+import {MAX_PATCH_EXACT_WORK,isOriginalPatchContactsReport,type OriginalPatchContactsQuery,type OriginalPatchContactsReport} from './originalPatchContactsProtocol'
 import {isSurfaceIsoTargetReport,type SurfaceIsoTargetReport,type SurfaceIsoTargetQuery} from './surfaceIsoTargetProtocol'
 import type {NurbsSurface} from './nurbsSurface'
 import {isSurfaceAuditReport,type SurfaceSelfIntersectionReport} from './surfaceSelfIntersectionProtocol'
@@ -21,6 +22,12 @@ export class SurfaceSelfIntersectionBrowser {
    ||![0,1,2].every(i=>{const d=query.window[i];return Array.isArray(d)&&d.length===2&&d.every(Number.isFinite)&&d[0]<d[1]}))return Promise.reject(new Error('Invalid iso target query'))
   const {axis,parameter,maxCells}=query,window=query.window.map(d=>[...d])
   return this.run({...query,type:'surface-iso-target-window/1'},(r):r is SurfaceIsoTargetReport=>isSurfaceIsoTargetReport(r)&&r.axis===axis&&r.parameter===parameter&&r.maxCells===maxCells&&r.window.every((d,i)=>d[0]===window[i]![0]&&d[1]===window[i]![1]),options)
+ }
+ inspectOriginalPatchContacts(query:OriginalPatchContactsQuery,options:{signal?:AbortSignal;deadlineMs?:number}={}):Promise<OriginalPatchContactsReport>{
+  if(!query||!Number.isFinite(query.tolerance)||query.tolerance<=0||!Number.isInteger(query.maxSpans)||query.maxSpans<1||query.maxSpans>100000
+   ||!Number.isInteger(query.maxExactWork)||query.maxExactWork<0||query.maxExactWork>MAX_PATCH_EXACT_WORK)return Promise.reject(new Error('Invalid original patch query'))
+  const {maxSpans,maxExactWork}=query
+  return this.run({...query,type:'original-patch-contacts/1'},(r):r is OriginalPatchContactsReport=>isOriginalPatchContactsReport(r)&&r.maxSpans===maxSpans&&r.maxExactWork===maxExactWork,options)
  }
  private run<T>(request:Record<string,unknown>,validate:(r:unknown)=>r is T,options:{signal?:AbortSignal;deadlineMs?:number}):Promise<T>{
   if(this.active)return Promise.reject(new Error('Surface audit busy'))
