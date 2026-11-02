@@ -10,6 +10,7 @@ pub struct OriginalQuadricCarrierRoot {
     pub position_bounds: [[f64; 2]; 3],
     pub source_spans: Vec<usize>,
     pub multiplicities: Vec<usize>,
+    pub normalized_original_span_parameters: Vec<[f64; 2]>,
 }
 #[derive(Debug)]
 pub struct OriginalQuadricCarrierRoots {
@@ -157,6 +158,7 @@ pub fn original_quadric_carrier_roots(
                             position_bounds: position,
                             source_spans: vec![span],
                             multiplicities: vec![r.multiplicity],
+                            normalized_original_span_parameters: vec![r.interval],
                         },
                     );
                 }

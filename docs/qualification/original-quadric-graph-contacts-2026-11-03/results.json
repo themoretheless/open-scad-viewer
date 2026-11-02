@@ -1,0 +1,64 @@
+{
+  "status": "passed-focused-native",
+  "baseCommit": "f0bae31a12833a1b8a52e74905d7492937c440a7",
+  "rustTests": 73,
+  "newGraphTests": 13,
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 54,
+    "pinnedLayerViolations": 0,
+    "baselineChangedByThisStage": false,
+    "scope": "Current shared working tree including staged new graph source files; not a frozen full-repository qualification"
+  },
+  "api": "original_quadric_graph_contacts",
+  "targetContract": "One original nonperiodic constant-positive-weight clamped Bezier graph, degrees 1..8; exact nonsingular affine projection of original poles; quadric linear in dependent coordinate with one strict sign of its coefficient at every projected corner; exact original tensor quadric identity.",
+  "proof": "Bijective affine projection covers the full target chart. Nonvanishing dependent-coordinate coefficient gives exactly one quadric point above every projected point. Original carrier root plus finite projected membership therefore gives an actual target-surface contact. No sampled graph, fitted poles or rounded source root.",
+  "verified": [
+    "saddle transverse and tangent contacts",
+    "two finite contacts and rational source clock",
+    "finite absence despite a root on the infinite carrier",
+    "degree-two paraboloid irrational interior root and exact boundary tangency",
+    "rotated dependent coordinate/negative projected orientation and constant target weight gauge",
+    "ULP-perturbed target height refuses original quadric membership",
+    "ambiguous sheets, collapsed projection, nonconstant target weights refuse graph contract",
+    "one total target+source predicate budget",
+    "coincident components retain missing coverage",
+    "nonsingleton boundary root admitted by original active-control coordinate identity",
+    "nonproportional algebraic boundary root retains explicit ambiguity",
+    "extraneous quadric component filtered by actual finite target projection",
+    "singular sheet selection at a projected corner refuses admission",
+    "original normalized span provenance retained across shared knots"
+  ],
+  "workAccounting": "exact_work is target_membership.work_used plus carrier.exact_work. Fixed degree-bounded rational chart/singleton checks are separate from the predicate work allowance, as documented in the API.",
+  "finiteSurfaceUvAdmission": "Proved only for emitted contacts under the verified graph contract",
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "bridgeAvailable": false,
+  "rawWasmQualified": false,
+  "installedPackageUpdated": false,
+  "remaining": [
+    "general nonproportional algebraic boundary membership via quadric-root coordinate signs",
+    "finite graph bridge/client/Worker and actual WASM qualification",
+    "nonconstant rational target clocks and multi-span targets",
+    "quadric sheets requiring branch selection, general freeform surfaces",
+    "complete surface/surface branches, periodic/poles, coincident components",
+    "trim/Body/Boolean and production integration",
+    "full shared Rust regression gate including concurrent curvature work"
+  ],
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "7ecfb788ad61c3ac9cfee3064a23083244c2d26ebbe35452a971c3905e8702c5",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_exact_membership.rs": "a5b4d01ca25509a8d2ce4cf3c2a22e78411b21b06ce8a0f7fa62c7f44ac69cd3",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_carrier.rs": "ea0818ea00e95d22e3a2f717732cc7c20e530a1621ebd5af41de28c2fe8e696d",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_carrier/merge.rs": "784361637dcd2733d62c536b3934fd70b66b03a8fca00d76300279f8fbb84dc1",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "95bd6e7181ac606c080ad011b804546fa26865a39e93541a6ef48a0c0396e2f8",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "a71ac3ed597cd756a6c465e0406b7f80650b8d5bfe008d1db05d735faffa1cc5",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/identity.rs": "79b443edcb66d91e615a6adcd3f88c947855d26596c4e1c94ca23b03310d176f",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/membership.rs": "c0ab26250600623e605c23381b1475be6b5991fe16c658a7f4c57d33a72a28e2",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "5f90e7add8877de5e9e7d08f7c11c3c16c49652f029c79d64475f2f34039d61b",
+    "crates/nurbs-core/tests/original_quadric_carrier.rs": "1decfd5f0a5474593eb31a72b079460762cc192cdea35d9bb9c8a193fffff980"
+  },
+  "architectureSourceSha256": {
+    "scripts/audit-architecture.mjs": "00aeddadedd3b4017aee4bf45d0ecf0d7c668ab84f38066990b91fc698dc8f1b",
+    "architecture-baseline.json": "6462cf226ec436c4b45aefbaab2abb7261128be44c1c4f0b2ec846cba0bc488d"
+  }
+}

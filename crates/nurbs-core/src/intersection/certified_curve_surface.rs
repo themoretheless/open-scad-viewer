@@ -1,5 +1,6 @@
 //! Original-coefficient curve/surface roots with strict interval Krawczyk proofs.
-//! Natural-boundary roots, tangencies and exhausted cells remain unresolved.
+//! The generic Krawczyk path leaves boundary/tangent roots unresolved; specialized
+//! original plane and quadric graph owners below prove supported families.
 //! Monotone affine-plane proofs can cross original interior curve knots.
 use crate::{
     Result, check, curve::Curve, distance_bounds::Interval as I, resource, surface::Surface,
@@ -547,3 +548,5 @@ mod patch_exact_membership;
 mod patch_coordinate_bounds;
 mod quadric_carrier;
 pub use quadric_carrier::{OriginalQuadricCarrierRoot, OriginalQuadricCarrierRoots, original_quadric_carrier_roots};
+mod quadric_graph;
+pub use quadric_graph::{OriginalQuadricGraphContact,OriginalQuadricGraphContacts,original_quadric_graph_contacts};

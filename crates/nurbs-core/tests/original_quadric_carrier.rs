@@ -77,6 +77,10 @@ fn shared_knot_retains_two_one_sided_residual_orders() {
     assert_eq!(r.roots[0].parameter, [1., 1.]);
     assert_eq!(r.roots[0].source_spans, [2, 4]);
     assert_eq!(r.roots[0].multiplicities, [2, 1]);
+    assert_eq!(
+        r.roots[0].normalized_original_span_parameters,
+        [[1., 1.], [0., 0.]]
+    );
     let short = original_quadric_carrier_roots(&c, sphere(1.), &[], 1e-9, 1, 100000).unwrap();
     assert!(!short.complete);
     assert_eq!(short.unresolved_spans, [4]);

@@ -8,6 +8,8 @@ pub(super) fn merge(roots: &mut Vec<OriginalQuadricCarrierRoot>, root: OriginalQ
             }
             old.source_spans.extend(root.source_spans);
             old.multiplicities.extend(root.multiplicities);
+            old.normalized_original_span_parameters
+                .extend(root.normalized_original_span_parameters);
             return;
         }
     }

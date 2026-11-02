@@ -7,7 +7,7 @@ use num_traits::Zero;
 fn fail(message: &str) -> crate::Error {
     crate::Error::new("NURBS_ROOT_PROOF_CONTRADICTION", message)
 }
-fn point(c: &Curve, span: usize, t: &Q) -> Result<[Q; 3]> {
+pub(super) fn point(c: &Curve, span: usize, t: &Q) -> Result<[Q; 3]> {
     let p = c.degree;
     let mut d: Vec<[Q; 4]> = (span - p..=span)
         .map(|i| {
