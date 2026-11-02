@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 231,
-  "unallocatedCount": 769,
+  "specifiedCount": 232,
+  "unallocatedCount": 768,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6308,6 +6308,29 @@
       "remainingQualification": [
         "Native representation operation only; unchanged existing limits. No evaluator bit identity or downstream source-bound certificate reuse.",
         "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0232",
+      "name": "Точное сокращение общих полиномиальных множителей рационального сегмента Безье с сохранением параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::rational_factor::cancel",
+      "evidence": [
+        "crates/cad-predicates/src/bspline_restriction_identity.rs",
+        "crates/cad-predicates/tests/clamped_bezier_identity.rs",
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/rational_factor.rs",
+        "crates/nurbs-core/src/editing/rational_factor/polynomial.rs",
+        "crates/nurbs-core/tests/rational_factor_contracts.rs",
+        "docs/design/nurbs-rational-factor.md",
+        "docs/qualification/nurbs-rational-factor-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-rational-factor-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "One validated nonperiodic clamped Bezier segment only; exact binary64 positive-weight output or atomic refusal under original1m work and declared4096-bit proposal cap. No evaluator-bit or old source/topology certificate reuse.",
+        "JSON, WASM, Rush, editor, exchange and whole-workspace qualification remain separate."
       ]
     }
   ],
