@@ -1,0 +1,9 @@
+# G0 v100 / G1 v117 native229 amendment
+
+Preserve OwnRust85/G0v99/G1v116 and exact pre-amendment executor/test bytes. Append OwnRust86 for native229 source. All4740 clean work units remain unexecuted; qualificationClaim stays none. No earlier result is imported. Matrix rows, environments, seeds, comparator mutations, budgets and approvals remain unchanged.
+
+Native227 provides one-degree rational piecewise Bezier reduction; native228 proves complete surface row laws AND denominator laws before atomic degree changes; native229 structurally concatenates compatible adjacent tensor patches. Existing226 additionally has a shared-budget exact knot-removal pass. Curve and tensor degree reduction now support smooth original knot layouts by numeric extraction/compaction proposals followed by exact original/final definition identities. Existing control/degree/work limits remain unchanged. No exhaustive minimality, injectivity, G1/G2 seam, B-rep sewing, trim/material/volume, editor or exchange claim is added.
+
+Root226 full local Rust workspace (8538 passed,0failed,8ignored), complete frontend (6549passed,0failed,10skipped), source identity and packaging receipts are immutable historical finite evidence for OwnRust85/runtimev10 only. They are not qualification for the new native229 source. GitHub runs for pushed b041eb1ad are independently observed, not credited here.
+
+The Baf artifact remains the unchanged pre-existing runtimev10 compiled before native227..229. New native functions have not been compiled/admitted as new WASM functionality. OwnRust86 records current source and separately observed Baf bytes, without source-to-build provenance or cross-host reproducibility. Runtime v10 scopes remain in their original records. New source requires new native and metadata checks. The TS/Vue/MJS owner census is unchanged:798 files/10446callables,0unreviewed numerical files and0stale decisions; Rust-only additions do not alter its scope.

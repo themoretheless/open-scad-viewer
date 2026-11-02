@@ -1,0 +1,13 @@
+//! Прямое редактирование, морфинг и сглаживание.
+pub mod edit;
+pub mod weight_edit;
+pub mod surface_edit;
+pub mod surface_extension;
+pub mod direct_edit;
+pub mod morph;
+pub mod fairing;
+pub mod surface_fairing;
+pub mod deform;
+pub mod linear_simplification;
+pub mod exact_knot_removal;
+pub mod exact_surface_knot_removal;

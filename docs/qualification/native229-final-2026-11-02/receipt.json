@@ -1,0 +1,47 @@
+{
+  "scope": "Complete local native229 Rust workspace and complete frontend on OwnRust86 authored source with independently retained pre-existing runtimev10 Baf artifact. No native230/chain, newly compiled native227..229 WASM/UI support, hosted CI, compilation attestation, G1 execution or global CAD qualification inferred.",
+  "sourceRecord": "docs/qualification/own-rust-cad-v86.json",
+  "sourceSha256": "66b38b04b96602bcee67078d998705e27d3e49e0ca39bd7998a92fba41eb021e",
+  "sourcePaths": 7651,
+  "sourceUnchangedAfterBothFullRuns": true,
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "rust": {
+    "exitCode": 0,
+    "passed": 8566,
+    "failed": 0,
+    "ignored": 8,
+    "fullPartitionCases": 8574,
+    "serialPassed": 52,
+    "remainingPassed": 8514,
+    "partitionCompleteAndDisjoint": true,
+    "sourceDrift": []
+  },
+  "frontend": {
+    "exitCode": 0,
+    "passed": 6549,
+    "failed": 0,
+    "skipped": 10,
+    "sourceUnchanged": true,
+    "artifactUnchanged": true
+  },
+  "typedNoCodecExit": 0,
+  "partitionExit": 0,
+  "files": {
+    "native229-workspace-aag-20261102.log.gz": "336bb87716c6807f4c9508747a5de235f309961fda69fde67921038e5526c4d6",
+    "native229-workspace-remaining-20261102.log.gz": "4de192e13a3868f6fa5307fd93d9e8b32707bc1f78d0bcf12a81638c7f423d23",
+    "run-native229-workspace-gates.py.gz": "efb0dd10b18fcdb8c92d309cb9a13f67285901bbaf23f7612cca5e019137c69f",
+    "native229-workspace-gates-state.json.gz": "cf35c18237028efd9eaf1ba340f749ed373a3b5fa649ff52eef0f038a11affb2",
+    "native229-workspace-typed-no-codec-20261102.log.gz": "27883a33cb6121457f6ad3512cebeb74cf975236704fb1d1abd95d8191f55fca",
+    "native229-workspace-source-manifest.json.gz": "009010f32ffca9e0fb5ca8731f937dc511b002355fcd4d6774bad6571464e1c5",
+    "native229-workspace-partition-20261102.log.gz": "f3816561293517564f81beb5d9781e18c904549b27a7bb4e0b7f12c3e93e9855",
+    "frontend/native229-full-frontend-state.json.gz": "2d8b90bff1af93a564a8af51799f11fd20b78a06597bbb3508d194648961baf0",
+    "frontend/native229-full-frontend.log.gz": "3b8eaadd0ccc69001c402ca5920606b65b857286bb02d548aad03cb16282f9bf",
+    "frontend/native229-full-frontend.json.gz": "d7509bfaaf58bc823e6ee287cb72cff8feeece0276dee4ba973c3d388ab9367f",
+    "frontend/receipt.json": "f5dcdcd8988b7d8d824a787289d8f52ca8b30f4d46923ba64e40fc6e7472d1be",
+    "frontend/run-native229-full-frontend.py.gz": "97617fadc181ccdd580ce370b6666e4e166e72be9d96aa772fa24692b7cf9843",
+    "partition/serial.log.gz": "0d24643276499045ecfa95466a246cea6a64858ca800a25ab9b8268b548b4861",
+    "partition/partition.json.gz": "a47b616ba5811f02094bdfcc1c099e618d07722311c8af40d38bfbe4194b6100",
+    "partition/full.log.gz": "7b3b5e52180bd1980ba07e71ecfc12e67e306a2d359007c36f968a10667be4c5",
+    "partition/parallel.log.gz": "92d95bc8971d9277530b6952d0a3a26263e3fc07629475d8704e6b132eb692f1"
+  }
+}
