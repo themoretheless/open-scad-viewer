@@ -65,3 +65,14 @@ docs/qualification/**/*.txt
 
 __pycache__/
 *.pyc
+
+# Machine-local qualification dependencies and compiler caches.
+/.venv-cad-step/
+*.tsbuildinfo
+
+# Generated VR package can also be a worktree-local symlink.
+src/generated/vr-core
+
+# Local process telemetry and unfinished atomic qualification manifests.
+/docs/qualification/**/telemetry.jsonl
+/docs/qualification/**/*.writing
