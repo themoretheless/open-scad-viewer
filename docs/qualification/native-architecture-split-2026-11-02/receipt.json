@@ -1,0 +1,143 @@
+{
+  "baseCommit": "419089d79db7bd3b50c67b297e113d9bfc6694a6",
+  "sourceHashes": "source-final.json",
+  "moves": "move-check.json",
+  "focusedTests": [
+    {
+      "name": "composition",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "analysis::curve_surface_composition::"
+      ],
+      "exitCode": 0,
+      "passed": 28,
+      "log": "architecture-split-composition.log.gz"
+    },
+    {
+      "name": "authored-sweep",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "sweeps::progressive_sweep::authored_error::"
+      ],
+      "exitCode": 0,
+      "passed": 118,
+      "log": "architecture-split-authored-sweep.log.gz"
+    },
+    {
+      "name": "minkowski",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "minkowski3d::curved::"
+      ],
+      "exitCode": 0,
+      "passed": 120,
+      "log": "architecture-split-minkowski.log.gz"
+    },
+    {
+      "name": "projective-shell",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_shell_incidence::projective_qualification::"
+      ],
+      "exitCode": 0,
+      "passed": 13,
+      "log": "architecture-split-projective-shell.log.gz"
+    },
+    {
+      "name": "face-contacts",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_face_contacts::"
+      ],
+      "exitCode": 0,
+      "passed": 1,
+      "log": "architecture-split-face-contacts.log.gz"
+    },
+    {
+      "name": "corner-step",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--test",
+        "six_edge_corner",
+        "--test",
+        "architecture_step_identity",
+        "--test",
+        "guided_loft_step"
+      ],
+      "exitCode": 0,
+      "passed": 8,
+      "log": "architecture-split-corner-step.log.gz"
+    }
+  ],
+  "totalPassed": 288,
+  "defaultAllTestTargetsCheck": {
+    "exitCode": 0,
+    "log": "architecture-split-final-all-target-check.log.gz"
+  },
+  "typechecks": {
+    "vue": 0,
+    "mcp": 0,
+    "preparation": "materialize-qualification-kernels.mjs; tracked raw artifacts unchanged"
+  },
+  "architecture": {
+    "passed": true,
+    "removedPins": 69,
+    "remainingLegacyPins": 55,
+    "raisedOrAddedPins": 0,
+    "layerViolations": 0,
+    "ratchetTestsPassed": 4
+  },
+  "openFailures": {
+    "brepNoCodec": "Existing unconditional operations calls into codec-gated curved; log retained, algorithms not disabled.",
+    "qualificationDrift": "Old source bindings differ from integrated/refactored checkout; summary and full log retained,920 archives match."
+  },
+  "sourceVariantNote": "Only final blank-line cleanup of test frame helper followed the118 sweep tests; complete moved bodies compare to base. Final all-test-target compilation used final source. No source-bound global qualification inferred.",
+  "scope": "Native structural split and focused regressions; not full workspace, frontend tests, WASM, UI or exchange qualification."
+}

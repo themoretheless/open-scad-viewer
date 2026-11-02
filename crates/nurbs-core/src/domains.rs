@@ -53,6 +53,7 @@ pub mod curves {
 
 /// Existing modules for surfaces.
 pub mod surfaces {
+    pub use crate::original_graph_transition;
     // Owns fixed-weight hard fitting, original-curve admission and the
     // reference-metric variational shell submodule (no root algorithm alias).
     pub use crate::constrained_surface;

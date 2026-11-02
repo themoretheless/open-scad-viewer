@@ -6,7 +6,7 @@ import {
   computePinchUpdate,
   clampGestureDistance,
 } from '../src/services/cameraGestures'
-import reference from '../crates/math-core/camera-gestures-reference-v1.json'
+import reference from './fixtures/camera-gestures-reference-v1.json'
 
 const initial = { yaw: 0, pitch: 0, dist: 10, tx: 0, ty: 0, tz: 0 }
 

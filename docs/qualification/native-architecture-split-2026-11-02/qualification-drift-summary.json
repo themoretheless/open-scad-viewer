@@ -1,0 +1,13 @@
+{
+  "matches": false,
+  "records": {
+    "match": 7191,
+    "mismatch": 257,
+    "missing": 1220
+  },
+  "missingSourcePaths": 1219,
+  "historicalArchives": {
+    "match": 920
+  },
+  "scope": "Old v86/v100 bindings do not describe current integrated and refactored checkout. All historical archives retained byte-identically; no refreshed qualification is claimed."
+}

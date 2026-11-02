@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "complete_polynomial_identity_-30": true,
+    "complete_polynomial_identity_0": true,
+    "complete_polynomial_identity_1": true,
+    "complete_polynomial_identity_30": true,
+    "rounded_max_division_detected": true,
+    "tensor_global_factor_preserves_center": true,
+    "tensor_row_gauge_changes_center": true
+  },
+  "passed": 7,
+  "failed": 0,
+  "scope": "independent coefficient identities and tensor counterexample; not a Rust execution or whole-workspace proof"
+}

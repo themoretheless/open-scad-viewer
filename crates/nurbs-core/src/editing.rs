@@ -16,3 +16,4 @@ mod exact_tensor_edit;
 pub mod exact_surface_degree_reduction;
 pub mod exact_surface_merge;
 pub mod exact_curve_merge;
+pub mod rational_gauge;

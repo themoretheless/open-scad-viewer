@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 230,
-  "unallocatedCount": 770,
+  "specifiedCount": 231,
+  "unallocatedCount": 769,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6287,6 +6287,26 @@
       ],
       "remainingQualification": [
         "same degree/dimension, clamped nonperiodic adjacent original domains and identical endpoint Cartesian control/stored weight only; no degree/basis/gauge unification, automatic matching, G1/G2, simplicity, wire or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0231",
+      "name": "Точная общая нормализация рациональных весов кривых и поверхностей степенью двойки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное рациональное представление",
+      "nativeApi": "nurbs_core::editing::rational_gauge::normalize_curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/rational_gauge.rs",
+        "crates/nurbs-core/tests/rational_gauge_contracts.rs",
+        "docs/design/nurbs-rational-gauge.md",
+        "docs/qualification/nurbs-rational-gauge-native-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-rational-gauge-native-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Native representation operation only; unchanged existing limits. No evaluator bit identity or downstream source-bound certificate reuse.",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

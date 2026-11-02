@@ -116,7 +116,7 @@ impl AlgebraicRegionBrep {
     }
 }
 fn source(s: &Surface) -> Result<String> {
-    let bytes = value_codec::encode_binary(&s.to_value()).map_err(|e| fail(&e.to_string()))?;
+    let bytes = super::super::identity::surface(s)?;
     let mut h = Sha256::new();
     h.update(b"independent-graph-algebraic-brep-v1");
     h.update(bytes);

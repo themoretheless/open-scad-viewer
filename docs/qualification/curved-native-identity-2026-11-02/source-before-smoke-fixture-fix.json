@@ -1,0 +1,20 @@
+{
+  "architecture-baseline.json": "556f4e0c582d333c608102bffa47357ab3c71915054e3edd3adb872ffced1107",
+  "crates/brep-core/src/minkowski3d.rs": "61a007eb3dc0e41c3da30ddb2a1efe3ab26cc1108a24772fb605afb61e2921e4",
+  "crates/brep-core/src/minkowski3d/curved.rs": "66ccdb9d0c98f1a4e93f510d9fadd5d4bbe255f22257dc71dd5e01c208744e7a",
+  "crates/brep-core/src/minkowski3d/curved/atlas.rs": "216ef3422f613a0e8370c1800cabfbcf91bd57105b65a39e452e2ac8077dd7d0",
+  "crates/brep-core/src/minkowski3d/curved/atlas/codec.rs": "17be4463cefc418cb337a3da88a57eca8417f1d2528b3d421686922429faff3e",
+  "crates/brep-core/src/minkowski3d/curved/atlas/region_brep.rs": "a71e9150a010d15c08cb202b59c300feddc6a418c5663f0dc938432371795761",
+  "crates/brep-core/src/minkowski3d/curved/atlas_legacy.rs": "864f72ed1ef2f11e8d100227d7a3a083e51cc0c6175e6ced285ef73634b0ea83",
+  "crates/brep-core/src/minkowski3d/curved/atlas_legacy/codec.rs": "17be4463cefc418cb337a3da88a57eca8417f1d2528b3d421686922429faff3e",
+  "crates/brep-core/src/minkowski3d/curved/identity.rs": "b94fd923d4bff4a4fa9b7b11b6fe7bb34e819892a4fc3b470080281397c63a68",
+  "crates/brep-core/src/minkowski3d/curved/identity/schema.rs": "f2030c8a886c8f8b3b4d4d3ab00571d7f27c02a0b62537705536c8dc6c13343c",
+  "crates/brep-core/src/minkowski3d/curved/identity/tests.rs": "fa5ee38e5f14973ba44de84eaf4c00a536f5f5373db64fa384a48ec5530ff701",
+  "crates/brep-core/src/minkowski3d/curved/prismatic.rs": "6004f587f82d0517386a8924cfdac5df0e48a758ecb6f730f868cf9c4ede5b0a",
+  "crates/brep-core/src/minkowski3d/curved/prismatic/codec.rs": "d26537e9ecada4b7b165738157a5122b6bf83178151f68c6775224e909beb736",
+  "crates/brep-core/src/minkowski3d/curved/shear.rs": "c00cb4560e730d17aa04d83d8e190eeb9c6a36fd834aca89945d6dfd07e48254",
+  "crates/brep-core/src/minkowski3d/curved/shear/codec.rs": "6bbbda3de269c95437c8e428883c6f7902d301612bf03521ada769e645b13951",
+  "crates/brep-core/src/minkowski3d/curved/topology.rs": "341beb84198eabe79336ccaacb50aa5a3a93220095391e35322f152e1b55761d",
+  "crates/brep-core/src/minkowski3d/curved/topology/codec.rs": "f67ff5b092b7150f646617e52a380d958ce0b98d9aa6d51f3856fe9482192957",
+  "crates/brep-core/tests/native_curved_without_codec.rs": "d77dcb3d37b01918ec6f00b1b646ca666c14e72d3db63e2fba4a0fc8710a4f6f"
+}

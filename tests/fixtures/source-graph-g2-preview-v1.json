@@ -1,0 +1,460 @@
+{
+  "schema": "source-graph-g2-preview-wasm/1",
+  "passed": true,
+  "wasmSha256": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+  "wasmBytes": 16670564,
+  "direct": {
+    "patch": {
+      "controlPoints": [
+        [
+          [
+            0,
+            -0.0009765625,
+            -9.5367431640625e-7
+          ],
+          [
+            0,
+            -0.0006510416666666666,
+            -6.357828776041666e-7
+          ],
+          [
+            0,
+            -0.0003255208333333333,
+            -3.178914388020833e-7
+          ],
+          [
+            0,
+            0,
+            -4.450480143229167e-7
+          ],
+          [
+            0,
+            0.0003255208333333333,
+            -3.178914388020833e-7
+          ],
+          [
+            0,
+            0.0006510416666666666,
+            -6.357828776041666e-7
+          ],
+          [
+            0,
+            0.0009765625,
+            -9.5367431640625e-7
+          ]
+        ],
+        [
+          [
+            0.5,
+            -0.0009765625,
+            -9.5367431640625e-7
+          ],
+          [
+            0.5,
+            -0.0006510416666666666,
+            -6.357828776041666e-7
+          ],
+          [
+            0.5,
+            -0.0003255208333333333,
+            -3.178914388020833e-7
+          ],
+          [
+            0.5,
+            0,
+            -4.450480143229167e-7
+          ],
+          [
+            0.5,
+            0.0003255208333333333,
+            -3.178914388020833e-7
+          ],
+          [
+            0.5,
+            0.0006510416666666666,
+            -6.357828776041666e-7
+          ],
+          [
+            0.5,
+            0.0009765625,
+            -9.5367431640625e-7
+          ]
+        ],
+        [
+          [
+            1,
+            -0.0009765625,
+            -9.5367431640625e-7
+          ],
+          [
+            1,
+            -0.0006510416666666666,
+            -6.357828776041666e-7
+          ],
+          [
+            1,
+            -0.0003255208333333333,
+            -3.178914388020833e-7
+          ],
+          [
+            1,
+            0,
+            -4.450480143229167e-7
+          ],
+          [
+            1,
+            0.0003255208333333333,
+            -3.178914388020833e-7
+          ],
+          [
+            1,
+            0.0006510416666666666,
+            -6.357828776041666e-7
+          ],
+          [
+            1,
+            0.0009765625,
+            -9.5367431640625e-7
+          ]
+        ]
+      ],
+      "degreeU": 2,
+      "degreeV": 6,
+      "knotsU": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "knotsV": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "periodicU": false,
+      "periodicV": false,
+      "weights": [
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      ]
+    },
+    "report": {
+      "absoluteCurvatureUpper": 3.5034179687500364,
+      "applicationAdmitted": false,
+      "coefficientWork": 10916,
+      "curvatureDecision": "within",
+      "curvatureLimitPerMm": 10,
+      "interiorEmbeddingCertified": false,
+      "maxWork": 1000000,
+      "method": "native-source-graph-convex-G2-preview/1",
+      "previewStorageErrorMm": 3.617536545565241e-20,
+      "radiusDecision": "exceeds",
+      "radiusDomain": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "radiusMm": 1,
+      "radiusToleranceMm": 0.001,
+      "radiusWitnessMm": [
+        0.8205131715498142,
+        0.820513171549818
+      ],
+      "radiusWitnessUv": [
+        [
+          0.25,
+          0.25
+        ],
+        [
+          0.25,
+          0.25
+        ]
+      ],
+      "representation": "rounded-display",
+      "solidGeometryCertified": false,
+      "sourceContactJets": [
+        true,
+        true
+      ]
+    }
+  },
+  "worker": {
+    "version": 1,
+    "id": 1,
+    "kind": "sourceGraphG2Preview",
+    "ok": true,
+    "result": {
+      "patch": {
+        "controlPoints": [
+          [
+            [
+              0,
+              -0.0009765625,
+              -9.5367431640625e-7
+            ],
+            [
+              0,
+              -0.0006510416666666666,
+              -6.357828776041666e-7
+            ],
+            [
+              0,
+              -0.0003255208333333333,
+              -3.178914388020833e-7
+            ],
+            [
+              0,
+              0,
+              -4.450480143229167e-7
+            ],
+            [
+              0,
+              0.0003255208333333333,
+              -3.178914388020833e-7
+            ],
+            [
+              0,
+              0.0006510416666666666,
+              -6.357828776041666e-7
+            ],
+            [
+              0,
+              0.0009765625,
+              -9.5367431640625e-7
+            ]
+          ],
+          [
+            [
+              0.5,
+              -0.0009765625,
+              -9.5367431640625e-7
+            ],
+            [
+              0.5,
+              -0.0006510416666666666,
+              -6.357828776041666e-7
+            ],
+            [
+              0.5,
+              -0.0003255208333333333,
+              -3.178914388020833e-7
+            ],
+            [
+              0.5,
+              0,
+              -4.450480143229167e-7
+            ],
+            [
+              0.5,
+              0.0003255208333333333,
+              -3.178914388020833e-7
+            ],
+            [
+              0.5,
+              0.0006510416666666666,
+              -6.357828776041666e-7
+            ],
+            [
+              0.5,
+              0.0009765625,
+              -9.5367431640625e-7
+            ]
+          ],
+          [
+            [
+              1,
+              -0.0009765625,
+              -9.5367431640625e-7
+            ],
+            [
+              1,
+              -0.0006510416666666666,
+              -6.357828776041666e-7
+            ],
+            [
+              1,
+              -0.0003255208333333333,
+              -3.178914388020833e-7
+            ],
+            [
+              1,
+              0,
+              -4.450480143229167e-7
+            ],
+            [
+              1,
+              0.0003255208333333333,
+              -3.178914388020833e-7
+            ],
+            [
+              1,
+              0.0006510416666666666,
+              -6.357828776041666e-7
+            ],
+            [
+              1,
+              0.0009765625,
+              -9.5367431640625e-7
+            ]
+          ]
+        ],
+        "degreeU": 2,
+        "degreeV": 6,
+        "knotsU": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "knotsV": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "periodicU": false,
+        "periodicV": false,
+        "weights": [
+          [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        ]
+      },
+      "report": {
+        "absoluteCurvatureUpper": 3.5034179687500364,
+        "applicationAdmitted": false,
+        "coefficientWork": 10916,
+        "curvatureDecision": "within",
+        "curvatureLimitPerMm": 10,
+        "interiorEmbeddingCertified": false,
+        "maxWork": 1000000,
+        "method": "native-source-graph-convex-G2-preview/1",
+        "previewStorageErrorMm": 3.617536545565241e-20,
+        "radiusDecision": "exceeds",
+        "radiusDomain": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "radiusMm": 1,
+        "radiusToleranceMm": 0.001,
+        "radiusWitnessMm": [
+          0.8205131715498142,
+          0.820513171549818
+        ],
+        "radiusWitnessUv": [
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.25,
+            0.25
+          ]
+        ],
+        "representation": "rounded-display",
+        "solidGeometryCertified": false,
+        "sourceContactJets": [
+          true,
+          true
+        ]
+      }
+    }
+  },
+  "exhausted": {
+    "version": 1,
+    "id": 2,
+    "kind": "sourceGraphG2Preview",
+    "ok": false,
+    "error": {
+      "name": "NurbsCurveError",
+      "message": "Exact graph construction budget exhausted",
+      "code": "NURBS_INVALID_INPUT"
+    }
+  },
+  "scope": "Real packaged WASM and actual worker handler. Rounded open-surface preview only; no closed-body transport, UI interaction, general NURBS or fillet admission."
+}

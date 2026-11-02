@@ -1,0 +1,22 @@
+{
+  "head": "cbb021ac7541284f8a9e782203e30eafe8abf65d",
+  "command": "/usr/bin/caffeinate -i node node_modules/vitest/vitest.mjs run --maxWorkers=2 --reporter=json --outputFile=Q/native231-current-full-frontend.json",
+  "exitCode": 1,
+  "reported": {
+    "success": false,
+    "numTotalTests": 6273,
+    "numPassedTests": 6116,
+    "numFailedTests": 151,
+    "numPendingTests": 6,
+    "numFailedTestSuites": 92
+  },
+  "failedFiles": 74,
+  "sourceBeforeAfterStable": true,
+  "sourcePaths": 23165,
+  "artifactObserved": {
+    "geometry": "1a70b8d7c3c94767c70df5c99b4a5fcc136161151df4a12cbf8a67cbe40ce99c",
+    "scope": "Committed release bytes materialized before run; no geometry source build or runtime admission."
+  },
+  "remaining": "Runtime manifest does not admit actual packaged hash; stale source fingerprints; missing fixture/receipt imports; UI and native geometry/trace failures require separate triage. Failed import suites contain uncollected cases; reported total is not proof of complete collection. No assertion or timeout weakened.",
+  "qualificationClaim": "none"
+}

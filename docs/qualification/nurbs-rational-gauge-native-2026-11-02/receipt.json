@@ -1,0 +1,45 @@
+{
+  "baseCommit": "14defb95b42ca3eeef3347f2de4244af429d5224",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "e304e641dfbc90b4590be43c7cfe9197b8330533e9a4930c1cb74fd3df93f7ae",
+    "crates/nurbs-core/src/editing/rational_gauge.rs": "18f1b01036590534a81d31de450b6d121ae06027972e01f028a445564b1d26a3",
+    "crates/nurbs-core/tests/rational_gauge_contracts.rs": "3419f612578d3ca7edbb496e131db7866d9d29781916f62a0ece1a4091a75543",
+    "docs/design/nurbs-rational-gauge.md": "a7817f7e345180aecbd54c1635a6881d4a613cfc778b03aa5f4e36cfad6fc146",
+    "docs/qualification/nurbs-rational-gauge-native-2026-11-02/exact_oracle.py": "a7e9b4e68ee9617e4a1887a04981014e15342699f1283df33eedbd59b0e1a90e",
+    "crates/nurbs-core/src/domains.rs": "906ffa5725218f46ad542e2df2c3e3222cb30825c232e7b225911a2ca7e4e871",
+    "docs/design/nurbs-api-domains.json": "d451801d111c6c07748c248806c7b68513f9819376df6a953756b8685ddd77d8"
+  },
+  "tests": {
+    "default": {
+      "passed": 63,
+      "failed": 0,
+      "exitCode": 0,
+      "log": "default.log.gz"
+    },
+    "no-codec": {
+      "passed": 63,
+      "failed": 0,
+      "exitCode": 0,
+      "log": "no-codec.log.gz"
+    }
+  },
+  "oracle": "oracle.json",
+  "architecture": {
+    "passed": false,
+    "featureIntroducesReportedViolation": false,
+    "note": "Both audits fail on pre-existing main paths. Main curved.rs changed externally from 804 to 805 lines between observations. New module is below size limit; no pins raised."
+  },
+  "scope": "Native only; no WASM/UI/export or complete workspace qualification.",
+  "apiMap": {
+    "mappedPublicModules": 244,
+    "catalogEntries": 231,
+    "checkPassed": true,
+    "domainRepair": "Registered already existing original_graph_transition in surfaces facade and map; no new capability counted for that repair."
+  },
+  "domainFacadeFollowup": {
+    "passed": 7,
+    "failed": 0,
+    "exitCode": 0,
+    "log": "domain-facade-final.log.gz"
+  }
+}
