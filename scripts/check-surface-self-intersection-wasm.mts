@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
+import {isSurfaceAuditReport} from '../src/services/surfaceSelfIntersectionProtocol.ts'
+import {nonlinearSurfaceCases} from '../tools/browser-qualification/surface-self-fixtures.ts'
 import { encodeBinary, decodeBinary } from '../src/services/valueBinaryCodec.ts'
 const [wasmPath, directory, sourceCommit] = process.argv.slice(2)
 assert(wasmPath && directory && /^[a-f0-9]{40}$/.test(sourceCommit ?? ''))
@@ -37,9 +39,10 @@ function run(name:string, surface:object, status:string, extra:object = {}):any 
   assert.equal(r.presenceProven, status === 'present')
   assert.equal(r.absenceProven, status === 'absent')
   assert.equal(r.allContactBranchesEnumerated, false)
-  if (status === 'present') assert(r.exactWitness)
+  assert(isSurfaceAuditReport(r))
+  if (status === 'present') assert(r.exactWitness||r.certifiedCrossing)
   else { assert.equal(r.exactWitness, null); assert.equal(r.witness, null) }
-  cases.push({name, status, elapsedMs:performance.now()-start})
+  cases.push({name, status, elapsedMs:performance.now()-start,certificate:r.certifiedCrossing,inputIntact:true})
   return r
 }
 function reject(name:string, v:object):void {
@@ -74,6 +77,17 @@ reject('zero-budget',{op,surface:graph(),maxSpans:0})
 const invalid=graph();invalid.weights[0][0]=-1
 reject('invalid-source',{op,surface:invalid,maxSpans:100})
 run('recovery-after-refusal',graph(),'absent')
-const result={status:'passed',sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
+for(const fixture of nonlinearSurfaceCases){
+ const r=run(fixture.name,fixture.surface(),'present',{maxSpans:10000})
+ assert.equal(r.witness,null);assert.equal(r.exactWitness,null)
+ const c=r.certifiedCrossing;assert.equal(c?.method,'original-planar-krawczyk');assert(c.cells>0&&c.cells<=10000)
+ const axis=fixture.axis??0
+ for(let i=0;i<2;i++){assert(c.parameterBoxes[i][axis][0]<=fixture.parameters[i]!&&fixture.parameters[i]!<=c.parameterBoxes[i][axis][1]);assert.deepEqual(c.parameterBoxes[i][1-axis],[.5,.5])}
+ for(let i=0;i<3;i++)assert(c.positionBounds[i][0]<=fixture.position[i]!&&fixture.position[i]!<=c.positionBounds[i][1])
+}
+const skew=nonlinearSurfaceCases[2]!.surface()
+const bits=new DataView(new ArrayBuffer(8));for(const p of skew.controlPoints[1]!){bits.setFloat64(0,p[2]!,true);bits.setBigUint64(0,bits.getBigUint64(0,true)+1n,true);p[2]=bits.getFloat64(0,true)}
+run('one-ulp-nonplanar-source-unresolved',skew,'unresolved',{maxSpans:10000})
+const result={status:'passed',nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

@@ -34,9 +34,20 @@ try{
  assert.equal(result.rational.status,'present');assert.deepEqual(result.rational.exactWitness[1][0],{numerator:'8',denominator:'9'})
  for(const [key,pattern] of Object.entries({busy:/busy/,cancelled:/cancelled/,deadline:/deadline/,nativeRefusal:/NURBS_INVALID_INPUT/,cloneFailure:/clone|request/i,preAbort:/cancelled/,badBudget:/budget/}))assert.match(result[key],pattern,key)
  assert.equal(result.inputIntact,true);assert.equal(result.noEarlyWorkers,true);assert(result.ticks>0)
- assert.deepEqual(result.ownership,{active:false,workersStarted:8,workersTerminated:8})
+ assert.deepEqual(result.ownership,{active:false,workersStarted:13,workersTerminated:13})
  const platformAudit=await page.evaluate(()=>globalThis.surfaceWorkerAudit)
- assert.deepEqual(platformAudit,{started:8,terminated:8});assert.deepEqual(errors,[])
+ assert.deepEqual(platformAudit,{started:13,terminated:13});assert.deepEqual(errors,[])
+ assert.equal(result.nonlinear.length,5)
+ const x=(11-4*Math.sqrt(6))/25,t=(1+Math.sqrt(6))/5
+ const expected=[[x,x,1],[0,0,1],[0,0,1],[79/63,79/63,8/7],[79/63,79/63,8/7]]
+ const parameters=[[(2-Math.sqrt(2-2*x))/3,(2+t)/3],[.25,.75],[.25,.75],[5/18,5/6],[5/18,5/6]]
+ for(let i=0;i<5;i++){
+  const r=result.nonlinear[i].report,c=r.certifiedCrossing
+  assert.equal(r.status,'present');assert.equal(r.witness,null);assert.equal(r.exactWitness,null);assert.equal(r.allContactBranchesEnumerated,false);assert.equal(c?.method,'original-planar-krawczyk')
+  for(let k=0;k<3;k++){const b=c.positionBounds[k];assert(b[0]<=expected[i][k]&&expected[i][k]<=b[1])}
+  const axis=i===4?1:0
+  for(let k=0;k<2;k++){const b=c.parameterBoxes[k][axis];assert(b[0]<=parameters[i][k]&&parameters[i][k]<=b[1]);assert.deepEqual(c.parameterBoxes[k][1-axis],[.5,.5])}
+ }
  const report={passed:true,browser:browser.version(),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,installedPackageUpdated:false,result,platformAudit,workers,scope:'Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification'}
  await writeFile(resolve(output,'report.json'),JSON.stringify(report,null,2)+'\n')
  console.log(JSON.stringify(report,null,2))

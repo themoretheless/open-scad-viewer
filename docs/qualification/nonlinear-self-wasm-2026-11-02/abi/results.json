@@ -1,0 +1,329 @@
+{
+  "status": "passed",
+  "nodeVersion": "v22.23.4",
+  "sourceCommit": "867360982f0f31b7e52c55fdc8d0597f93234cf9",
+  "wasmPath": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/c7d71d788d1fd4cf60d6f5f1140fd263fce1195a8af74c6004d4f2d2788b8646.wasm",
+  "wasmSha256": "c7d71d788d1fd4cf60d6f5f1140fd263fce1195a8af74c6004d4f2d2788b8646",
+  "wasmBytes": 24046478,
+  "imports": [],
+  "cases": [
+    {
+      "name": "global-absence",
+      "status": "absent",
+      "elapsedMs": 7.393333000000013,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "exact-global-fold",
+      "status": "present",
+      "elapsedMs": 4.982709,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "non-dyadic-witness",
+      "status": "present",
+      "elapsedMs": 2.905083999999988,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "large-exact-integer-strings",
+      "status": "present",
+      "elapsedMs": 2.1041669999999897,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "asymmetric-projective-gauge",
+      "status": "present",
+      "elapsedMs": 2.6732089999999857,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "rational-spatial-crossing",
+      "status": "present",
+      "elapsedMs": 1.6602920000000267,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "adjacent-backtracking-overlap",
+      "status": "present",
+      "elapsedMs": 0.294083999999998,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "budget-unresolved",
+      "status": "unresolved",
+      "elapsedMs": 0.26400000000001,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "forged-verdict",
+      "error": "GEOMETRY_INVALID_INPUT",
+      "elapsedMs": 0.22954200000003766
+    },
+    {
+      "name": "zero-budget",
+      "error": "NURBS_INVALID_INPUT",
+      "elapsedMs": 0.0821250000000191
+    },
+    {
+      "name": "invalid-source",
+      "error": "NURBS_INVALID_INPUT",
+      "elapsedMs": 0.051040999999997894
+    },
+    {
+      "name": "recovery-after-refusal",
+      "status": "absent",
+      "elapsedMs": 0.07929200000000947,
+      "certificate": null,
+      "inputIntact": true
+    },
+    {
+      "name": "original-non-bezier-spans",
+      "status": "present",
+      "elapsedMs": 82.72108299999996,
+      "certificate": {
+        "cells": 77,
+        "method": "original-planar-krawczyk",
+        "parameterBoxes": [
+          [
+            [
+              0.20673470015013076,
+              0.20673470177429376
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          [
+            [
+              0.8966326490683824,
+              0.8966326499694438
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ]
+        ],
+        "positionBounds": [
+          [
+            0.04808163779304219,
+            0.048081644516087436
+          ],
+          [
+            0.04808163826333355,
+            0.048081644046493184
+          ],
+          [
+            1,
+            1
+          ]
+        ]
+      },
+      "inputIntact": true
+    },
+    {
+      "name": "within-single-cubic-span",
+      "status": "present",
+      "elapsedMs": 47.771457999999996,
+      "certificate": {
+        "cells": 55,
+        "method": "original-planar-krawczyk",
+        "parameterBoxes": [
+          [
+            [
+              0.24999999999222522,
+              0.25000000000777484
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          [
+            [
+              0.7499999999922247,
+              0.7500000000077754
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ]
+        ],
+        "positionBounds": [
+          [
+            -1.1663670029804509e-11,
+            1.1663336962897121e-11
+          ],
+          [
+            -2.916389352236593e-12,
+            2.916444863387824e-12
+          ],
+          [
+            1,
+            1
+          ]
+        ]
+      },
+      "inputIntact": true
+    },
+    {
+      "name": "exact-oblique-source-plane",
+      "status": "present",
+      "elapsedMs": 44.67308300000002,
+      "certificate": {
+        "cells": 47,
+        "method": "original-planar-krawczyk",
+        "parameterBoxes": [
+          [
+            [
+              0.24999999978304305,
+              0.25000000021695695
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          [
+            [
+              0.749999999868492,
+              0.7500000001315081
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ]
+        ],
+        "positionBounds": [
+          [
+            -1.9726409394849045e-10,
+            1.97263982926188e-10
+          ],
+          [
+            -4.9316772887664235e-11,
+            4.9316772887664235e-11
+          ],
+          [
+            0.9999999998372817,
+            1.0000000001627183
+          ]
+        ]
+      },
+      "inputIntact": true
+    },
+    {
+      "name": "original-rational-surface-bounds",
+      "status": "present",
+      "elapsedMs": 69.61616700000002,
+      "certificate": {
+        "cells": 44,
+        "method": "original-planar-krawczyk",
+        "parameterBoxes": [
+          [
+            [
+              0.2777777693881467,
+              0.2777777861665896
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          [
+            [
+              0.8333333257836639,
+              0.8333333408842318
+            ],
+            [
+              0.5,
+              0.5
+            ]
+          ]
+        ],
+        "positionBounds": [
+          [
+            1.253968220409717,
+            1.2539682875235132
+          ],
+          [
+            1.2539682338357974,
+            1.253968274103989
+          ],
+          [
+            1.1428571428571377,
+            1.1428571428571483
+          ]
+        ]
+      },
+      "inputIntact": true
+    },
+    {
+      "name": "original-rational-v-axis",
+      "status": "present",
+      "elapsedMs": 67.04316699999998,
+      "certificate": {
+        "cells": 48,
+        "method": "original-planar-krawczyk",
+        "parameterBoxes": [
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.2777777693881467,
+              0.27777778616658955
+            ]
+          ],
+          [
+            [
+              0.5,
+              0.5
+            ],
+            [
+              0.833333325783664,
+              0.8333333408842318
+            ]
+          ]
+        ],
+        "positionBounds": [
+          [
+            1.2539682204097164,
+            1.2539682875235132
+          ],
+          [
+            1.253968233835798,
+            1.2539682741039884
+          ],
+          [
+            1.1428571428571377,
+            1.1428571428571483
+          ]
+        ]
+      },
+      "inputIntact": true
+    },
+    {
+      "name": "one-ulp-nonplanar-source-unresolved",
+      "status": "unresolved",
+      "elapsedMs": 43.59854100000007,
+      "certificate": null,
+      "inputIntact": true
+    }
+  ],
+  "installedPackageUpdated": false,
+  "scope": "Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification",
+  "testedWasmPath": "/tmp/osv-self-surface-wasm-target-20261102/wasm32-unknown-unknown/release/geometry_wasm.wasm"
+}

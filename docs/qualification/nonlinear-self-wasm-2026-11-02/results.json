@@ -1,0 +1,36 @@
+{
+  "status": "focused raw WASM ABI and real browser Worker qualification passed",
+  "sourceCommit": "867360982f0f31b7e52c55fdc8d0597f93234cf9",
+  "wasmSha256": "c7d71d788d1fd4cf60d6f5f1140fd263fce1195a8af74c6004d4f2d2788b8646",
+  "wasmBytes": 24046478,
+  "wasmPath": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/c7d71d788d1fd4cf60d6f5f1140fd263fce1195a8af74c6004d4f2d2788b8646.wasm",
+  "abiCasesPassed": 18,
+  "browserWorkersStarted": 13,
+  "browserWorkersTerminated": 13,
+  "nonlinearFixtures": [
+    "original-non-bezier-spans",
+    "within-single-cubic-span",
+    "exact-oblique-source-plane",
+    "original-rational-surface-bounds",
+    "original-rational-v-axis"
+  ],
+  "sourceCheckoutClean": true,
+  "runtimeSourcesMatchFrozenCommit": true,
+  "installedPackageUpdated": false,
+  "packagedPipelineQualified": false,
+  "allPlasticityParityProven": false,
+  "scope": "Original B-spline spans, within-span cubic loop, oblique common plane, rational original surface bounds in both axes; exact UV/world enclosures, one-ULP nonplanar refusal and request ownership",
+  "remaining": "Packaged/provider/editor qualification, general nonplanar/tangent/periodic contacts, all transverse parameters, whole-surface coverage, trimming/material validity and broader library parity remain open",
+  "sourceSha256": {
+    "src/services/surfaceSelfIntersectionBrowser.ts": "1ee5b26864b5e182623497cc87514f956bb3b24358091d2d7df8f20ffaa12312",
+    "src/services/surfaceSelfIntersectionProtocol.ts": "adb2a4ea396e52666dfa5011e1843edc0c3a7d3500fe2865ac7571272ff32e2c",
+    "src/workers/surfaceSelfIntersection.worker.ts": "35039522f79eeac9f62227eca6a8e6effa0e86ea02e209e2b3924f67ae2d9299",
+    "src/services/valueBinaryCodec.ts": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176",
+    "scripts/check-surface-self-intersection-wasm.mts": "76d2438924369857cd999a6d6ae0058c63c7cc19cd8bf6db81e2df810e200ae8",
+    "tools/browser-qualification/surface-self-intersection.ts": "ae350365c1bdeec711489a3103f95431610dda7323e4245a6d80832f4c88cc94",
+    "tools/browser-qualification/surface-self-intersection.mjs": "742675c6c04f528f124e72ec93a449a806f9b299df67c83760bcdf09e02534e0",
+    "tools/browser-qualification/surface-self-fixtures.ts": "7d70cded3be6f32644867d2325e84a682013b2b11bcd082ff0285d392b40d6e1"
+  },
+  "temporarySourceWorktreeRemoved": true,
+  "node20RuntimeFloorQualified": false
+}

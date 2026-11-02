@@ -1,0 +1,426 @@
+{
+  "passed": true,
+  "browser": "151.0.7922.34",
+  "wasmSha256": "c7d71d788d1fd4cf60d6f5f1140fd263fce1195a8af74c6004d4f2d2788b8646",
+  "wasmBytes": 24046478,
+  "installedPackageUpdated": false,
+  "result": {
+    "nonlinear": [
+      {
+        "name": "original-non-bezier-spans",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 77,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.20673470015013076,
+                  0.20673470177429376
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.8966326490683824,
+                  0.8966326499694438
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                0.04808163779304219,
+                0.048081644516087436
+              ],
+              [
+                0.04808163826333355,
+                0.048081644046493184
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 9843
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "within-single-cubic-span",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 55,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.24999999999222522,
+                  0.25000000000777484
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.7499999999922247,
+                  0.7500000000077754
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                -1.1663670029804509e-11,
+                1.1663336962897121e-11
+              ],
+              [
+                -2.916389352236593e-12,
+                2.916444863387824e-12
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 3265
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "exact-oblique-source-plane",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 47,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.24999999978304305,
+                  0.25000000021695695
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.749999999868492,
+                  0.7500000001315081
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                -1.9726409394849045e-10,
+                1.97263982926188e-10
+              ],
+              [
+                -4.9316772887664235e-11,
+                4.9316772887664235e-11
+              ],
+              [
+                0.9999999998372817,
+                1.0000000001627183
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 3281
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "original-rational-surface-bounds",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 44,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.2777777693881467,
+                  0.2777777861665896
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ],
+              [
+                [
+                  0.8333333257836639,
+                  0.8333333408842318
+                ],
+                [
+                  0.5,
+                  0.5
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                1.253968220409717,
+                1.2539682875235132
+              ],
+              [
+                1.2539682338357974,
+                1.253968274103989
+              ],
+              [
+                1.1428571428571377,
+                1.1428571428571483
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 6530
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      },
+      {
+        "name": "original-rational-v-axis",
+        "report": {
+          "absenceProven": false,
+          "allContactBranchesEnumerated": false,
+          "certifiedCrossing": {
+            "cells": 48,
+            "method": "original-planar-krawczyk",
+            "parameterBoxes": [
+              [
+                [
+                  0.5,
+                  0.5
+                ],
+                [
+                  0.2777777693881467,
+                  0.27777778616658955
+                ]
+              ],
+              [
+                [
+                  0.5,
+                  0.5
+                ],
+                [
+                  0.833333325783664,
+                  0.8333333408842318
+                ]
+              ]
+            ],
+            "positionBounds": [
+              [
+                1.2539682204097164,
+                1.2539682875235132
+              ],
+              [
+                1.253968233835798,
+                1.2539682741039884
+              ],
+              [
+                1.1428571428571377,
+                1.1428571428571483
+              ]
+            ]
+          },
+          "exactWitness": null,
+          "injectivity": {
+            "proven": false,
+            "reason": "projection-not-proven",
+            "spans": 6530
+          },
+          "maxSpans": 10000,
+          "presenceProven": true,
+          "reflectedAxis": null,
+          "schema": "nurbs-surface-self-intersection/1",
+          "status": "present",
+          "witness": null,
+          "witnessCoordinates": "normalized-original-active-domain"
+        }
+      }
+    ],
+    "absence": "absent",
+    "exact": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "certifiedCrossing": null,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "4",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "reflectedAxis": 0,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "recovered": "absent",
+    "rational": {
+      "absenceProven": false,
+      "allContactBranchesEnumerated": false,
+      "certifiedCrossing": null,
+      "exactWitness": [
+        [
+          {
+            "denominator": "12",
+            "numerator": "1"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ],
+        [
+          {
+            "denominator": "9",
+            "numerator": "8"
+          },
+          {
+            "denominator": "2",
+            "numerator": "1"
+          }
+        ]
+      ],
+      "injectivity": {
+        "proven": false,
+        "reason": "work-limit",
+        "spans": 100
+      },
+      "maxSpans": 100,
+      "presenceProven": true,
+      "reflectedAxis": null,
+      "schema": "nurbs-surface-self-intersection/1",
+      "status": "present",
+      "witness": null,
+      "witnessCoordinates": "normalized-original-active-domain"
+    },
+    "busy": "Error: Surface audit busy",
+    "cancelled": "Error: Surface audit cancelled",
+    "deadline": "Error: Surface audit deadline",
+    "nativeRefusal": "Error: NURBS_INVALID_INPUT: Weights must be positive, finite, and in [1e-12, 1e12]",
+    "cloneFailure": "DataCloneError: Failed to execute 'postMessage' on 'Worker': ()=>0 could not be cloned.",
+    "preAbort": "Error: Surface audit cancelled",
+    "badBudget": "Error: Invalid surface audit budget",
+    "inputIntact": true,
+    "noEarlyWorkers": true,
+    "ticks": 101,
+    "ownership": {
+      "active": false,
+      "workersStarted": 13,
+      "workersTerminated": 13
+    }
+  },
+  "platformAudit": {
+    "started": 13,
+    "terminated": 13
+  },
+  "workers": [
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js",
+    "http://127.0.0.1:63148/assets/surfaceSelfIntersection.worker-CHjHmaok.js"
+  ],
+  "scope": "Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification",
+  "sourceCommit": "867360982f0f31b7e52c55fdc8d0597f93234cf9",
+  "wasmPath": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/c7d71d788d1fd4cf60d6f5f1140fd263fce1195a8af74c6004d4f2d2788b8646.wasm",
+  "cancellationScope": "Pending-job abort/deadline; interruption inside an executing native instruction is not claimed"
+}

@@ -1,3 +1,4 @@
+import {nonlinearSurfaceCases} from './surface-self-fixtures'
 import {SurfaceSelfIntersectionBrowser} from '../../src/services/surfaceSelfIntersectionBrowser'
 import type {NurbsSurface} from '../../src/services/nurbsSurface'
 function graph():NurbsSurface{return{degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,.5,1].map(x=>[[x,0,x*x],[x,1,x*x]]),weights:[[1,1],[1,1],[1,1]],periodicU:false,periodicV:false}}
@@ -21,11 +22,13 @@ async function qualify(){
   const cloneFailure=await failure(lane.inspect(Object.assign(graph(),{badFunction:()=>0}),100))
   const crossing=graph();crossing.degreeU=1;crossing.knotsU=[0,0,1,2,3,3];crossing.controlPoints=[[0,0],[1,1],[0,1],[1,0]].map(([x,y])=>[[x!,y!,0],[x!,y!,2]]);crossing.weights=[1,3,2,1].map(x=>[x,x])
   const rational=await lane.inspect(crossing,100)
+  const nonlinear=[]
+  for(const fixture of nonlinearSurfaceCases)nonlinear.push({name:fixture.name,report:await lane.inspect(fixture.surface(),10000)})
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{absence:absence.status,exact,recovered:recovered.status,rational,
+  return{nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}
