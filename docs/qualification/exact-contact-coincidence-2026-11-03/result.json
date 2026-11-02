@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "sourceBase": "79efd1963efdb89ffe185a845e1d51272da2a10b",
+  "guardedSourceFiles": 4406,
+  "nativeNurbs": {
+    "passed": 2258,
+    "failed": 0,
+    "existingIgnored": 1,
+    "filtered": 0
+  },
+  "focusedNative": {
+    "passed": 3,
+    "failed": 0,
+    "filtered": 2256
+  },
+  "noCodecNative": {
+    "passed": 3,
+    "failed": 0,
+    "filtered": 2051
+  },
+  "publicBrep": {
+    "passed": 2,
+    "failed": 0,
+    "filtered": 0,
+    "positiveCasesUnchanged": [
+      {
+        "arc": false,
+        "warped": false,
+        "hole": false,
+        "cells": 3498,
+        "exactWork": 45166,
+        "products": 52
+      },
+      {
+        "arc": false,
+        "warped": false,
+        "hole": true,
+        "cells": 3582,
+        "exactWork": 89756,
+        "products": 104
+      },
+      {
+        "arc": false,
+        "warped": true,
+        "hole": false,
+        "cells": 3466,
+        "exactWork": 53349,
+        "products": 52
+      },
+      {
+        "arc": false,
+        "warped": true,
+        "hole": true,
+        "cells": 3518,
+        "exactWork": 106773,
+        "products": 104
+      },
+      {
+        "arc": true,
+        "warped": false,
+        "hole": false,
+        "cells": 169105,
+        "exactWork": 113409,
+        "products": 52
+      },
+      {
+        "arc": true,
+        "warped": false,
+        "hole": true,
+        "cells": 169189,
+        "exactWork": 157999,
+        "products": 104
+      },
+      {
+        "arc": true,
+        "warped": true,
+        "hole": false,
+        "cells": 169076,
+        "exactWork": 121592,
+        "products": 52
+      },
+      {
+        "arc": true,
+        "warped": true,
+        "hole": true,
+        "cells": 169128,
+        "exactWork": 175016,
+        "products": 104
+      }
+    ],
+    "selfCoincidence": {
+      "reason": "ideal-volume-exact-filled-map-coincidence",
+      "cells": 741,
+      "exactWork": 91610,
+      "products": 64
+    },
+    "rankLossStillWorkLimited": true
+  },
+  "noCodecCheck": "passed",
+  "independentWitnesses": 7,
+  "exactMaterialSpanIdentities": 48,
+  "primitiveWork": {
+    "cells": 9,
+    "exactWork": 7276,
+    "rationalAnchorExactWork": 8859,
+    "primitiveMaxWork": 100000,
+    "rationalBitGuard": 4096
+  },
+  "fullBrepSuiteRun": false,
+  "wasmRebuilt": false,
+  "stepRoundTripRun": false,
+  "goalComplete": false
+}

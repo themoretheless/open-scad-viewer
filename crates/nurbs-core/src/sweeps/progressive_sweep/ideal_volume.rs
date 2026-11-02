@@ -36,6 +36,7 @@ pub(crate) mod cell;
 pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
+mod contact_coincidence;
 pub(crate) mod cap_difference;
 mod intrinsic;
 pub(crate) mod pose;
@@ -202,6 +203,9 @@ impl MultiSweep<'_> {
         } else {
             None
         };
+        if contact_coincidence::inspect(s,caps,&mut out,max_cells,max_exact_work,closed).is_some() {
+            out.reason=Some("ideal-volume-exact-filled-map-coincidence");return Ok(out);
+        }
         let transport = if s.frame_laws.is_none()
             && s.orientation_guide.is_none()
             && s.options.orientation == Orientation::RotationMinimizing
