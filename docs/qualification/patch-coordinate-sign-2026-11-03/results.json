@@ -1,0 +1,48 @@
+{
+  "status": "passed-focused-shared-library-gate-failed",
+  "baseCommit": "4e03ada2a767b09dcdb2b0a2c403079f61cfe338",
+  "coreBridgeTests": 99,
+  "focusedPredicateTests": 16,
+  "clientTests": 85,
+  "vueTsc": "passed",
+  "sharedLibrary": {
+    "passed": 162,
+    "failed": 1,
+    "failure": "bezier_curvature_bound::tests::an_exact_rational_circle_qualifies_on_the_limit_in_different_gauges",
+    "actual": "Indeterminate(PrecisionExhausted)",
+    "sourceState": "Concurrent untracked module, not modified by this stage"
+  },
+  "proof": "Exact patch-coordinate edge sign at unique original plane root via Sturm-Tarski; divide sign by exact affine determinant orientation. Inward sign clips only the enclosing coordinate range; outward sign proves finite patch exclusion. Zero retains common-root edge proof.",
+  "work": "Shared original span predicate context; all auxiliary work included in scalarProofs.workUsed and exactWork; exhaustion keeps unresolved coverage.",
+  "verified": [
+    "both sides of all four edges",
+    "negative determinant reflected patch",
+    "nearby distinct exterior roots now complete absent-on-patch",
+    "irrational near-edge interior/exterior roots",
+    "separate original-polynomial-coordinate-sign bridge/client tag",
+    "total predicate work sum"
+  ],
+  "rawWasmQualified": false,
+  "chromiumWorkerQualified": false,
+  "installedPackageUpdated": false,
+  "pending": [
+    "updated 28-family-case ABI/Worker harness: expected 86 ABI cases and 76 Workers, not yet run on new binary",
+    "general curved/freeform supports",
+    "complete surface/surface branches",
+    "periodic/poles",
+    "trim/Body and production integration"
+  ],
+  "sourceSha256": {
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "b8b8d8b821faa71bf9ec1eb5976f858c96d1689dd5a4201e925da105a3cd459c",
+    "crates/cad-predicates/src/bspline_plane_roots/edge.rs": "f8a3e3ca660d55d85c4fd0eed17e4639cf0a0c35c532fd314217fe20ef589857",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "26f2054051384dafae9b8cb6ca34314e2a38659f7c55ac5947a2e866ffca44e4",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_coordinate_bounds.rs": "45ce2ad14ea76a0a2cab4f908cd169a6b034b4b504fc709a126507b83eb0aae8",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "88ebcb8e0642c42a83f24b2af7964fead781d0a4acdaf3d64c7db6ce3f462d31",
+    "crates/geometry-bridge/src/intersections/original_patch_contacts.rs": "eb22093efe4b827aa3118a91ba66ef023db2afc7a5f5f94625e35d89cbaa09de",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "f4994ef8832a3d22c3488b1e866032c828113755a167cc07cc7079d311cbf31e",
+    "src/services/originalPatchContactsProtocol.ts": "8f9f6b5fb7b07ca18645e1e8bf075788392c3b5fb07848c0c49bb7397d8380ec",
+    "tests/originalPatchContactsProtocol.test.ts": "f70c74a8ce8e853f064f2b13cd7668bb4e66bcdb05a28dc948285283e30469ae",
+    "tools/browser-qualification/common-root-patch-fixtures.ts": "db05c10a71d92bf5a54f395b4489bd130815f4caf192ab83eff6b17a69158c5b",
+    "tools/browser-qualification/surface-self-intersection.mjs": "a44855e24402b81616fdab3533c44693e28cfe6215ab3ece85d54eab08edaa1e"
+  }
+}

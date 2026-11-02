@@ -209,3 +209,32 @@ fn nonproportional_boundary_common_root_reports_exact_proof_and_total_work() {
     assert_eq!(r["exactWork"], r["scalarProofs"][0]["workUsed"]);
     assert_eq!(r["bodyAdmission"], false);
 }
+
+#[test]
+fn algebraic_coordinate_sign_distinguishes_interior_and_exterior_reports() {
+    for delta in [-2f64.powi(-40), 2f64.powi(-40)] {
+        let mut v = request(3);
+        let controls: Vec<_> = [1., -1., 0., 4.]
+            .into_iter()
+            .zip([1., 0., -1., -2.])
+            .map(|(x, y)| vec![x, y + delta, 0.5])
+            .collect();
+        v["curve"]["controlPoints"] = json!(controls);
+        v["patch"]["controlPoints"] =
+            json!([[[0., 0., 0.], [0., 0., 1.]], [[0., 1., 0.], [0., 1., 1.]]]);
+        v["patch"]["weights"] = json!([[1., 2.], [3., 5.]]);
+        let r = dispatch(v).unwrap();
+        assert_eq!(r["curvePatchCoverageComplete"], true);
+        assert_eq!(r["exactWork"], r["scalarProofs"][0]["workUsed"]);
+        if delta > 0. {
+            assert_eq!(r["status"], "present");
+            assert_eq!(
+                r["contacts"][0]["uvMethod"],
+                "original-polynomial-coordinate-sign"
+            );
+        } else {
+            assert_eq!(r["status"], "absent-on-patch");
+            assert_eq!(r["patchAbsenceProven"], true);
+        }
+    }
+}

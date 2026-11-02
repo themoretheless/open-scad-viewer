@@ -2,9 +2,9 @@
 use super::affine_plane::{enclosure, q, subtract};
 use super::*;
 use cad_predicates::{
-    rational_bspline_affine_patch_edge_root, rational_bspline_affine_patch_roots, AuthoredScalar,
-    Limits, OriginalPlaneCommonRootOutcome, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome,
-    PredicateContext, SourceArena, ToleranceContext,
+    rational_bspline_affine_patch_edge_sign, rational_bspline_affine_patch_roots, AuthoredScalar,
+    Limits, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome, PredicateContext, Sign,
+    SourceArena, ToleranceContext,
 };
 use num_traits::Zero;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -15,6 +15,7 @@ pub enum OriginalPatchUvProof {
     ExactBoundaryProjective,
     OriginalAffineCoordinateBounds,
     OriginalPolynomialCommonRoot,
+    OriginalPolynomialCoordinateSign,
 }
 #[derive(Debug)]
 pub struct OriginalPatchContact {
@@ -234,6 +235,8 @@ pub fn original_affine_patch_contacts(
                     }
                     let mut bounds = coordinate_bounds.as_ref().unwrap().clone();
                     let mut common_root_proven = false;
+                    let mut coordinate_sign_proven = false;
+                    let mut proven_outside = false;
                     if matches!(
                         bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)?,
                         super::patch_coordinate_bounds::Decision::Unresolved
@@ -245,7 +248,7 @@ pub fn original_affine_patch_contacts(
                                 continue;
                             }
                             let before = ctx.work_used();
-                            let proof = rational_bspline_affine_patch_edge_root(
+                            let proof = rational_bspline_affine_patch_edge_sign(
                                 &mut ctx,
                                 &controls,
                                 &knots,
@@ -258,11 +261,27 @@ pub fn original_affine_patch_contacts(
                             .map_err(|_| crate::input("Invalid original edge common-root query"))?;
                             out.exact_work += ctx.work_used() - before;
                             out.scalar_proofs.last_mut().unwrap().1.work_used = ctx.work_used();
-                            if matches!(proof.outcome, OriginalPlaneCommonRootOutcome::Common) {
-                                bounds.constrain_edge(edge);
-                                common_root_proven = true;
+                            match proof.sign {
+                                Ok(Sign::Zero) => {
+                                    bounds.constrain_edge(edge);
+                                    common_root_proven = true;
+                                }
+                                Ok(sign) => {
+                                    coordinate_sign_proven = true;
+                                    if (edge % 2 == 0 && sign == Sign::Negative)
+                                        || (edge % 2 == 1 && sign == Sign::Positive)
+                                    {
+                                        proven_outside = true;
+                                        break;
+                                    }
+                                    bounds.constrain_inward(edge);
+                                }
+                                Err(_) => {}
                             }
                         }
+                    }
+                    if proven_outside {
+                        continue;
                     }
                     match bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)? {
                         super::patch_coordinate_bounds::Decision::Outside => {}
@@ -270,7 +289,10 @@ pub fn original_affine_patch_contacts(
                             out.ambiguous_parameters.push([t.lo, t.hi])
                         }
                         super::patch_coordinate_bounds::Decision::Contact(mut contact) => {
-                            if common_root_proven {
+                            if coordinate_sign_proven {
+                                contact.uv_proof =
+                                    OriginalPatchUvProof::OriginalPolynomialCoordinateSign;
+                            } else if common_root_proven {
                                 contact.uv_proof =
                                     OriginalPatchUvProof::OriginalPolynomialCommonRoot;
                             }

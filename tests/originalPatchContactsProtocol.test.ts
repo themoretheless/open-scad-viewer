@@ -33,4 +33,6 @@ describe('original patch contacts protocol',()=>{
  it('rejects original-coordinate evidence without a target bijection',()=>{const r=report();r.contacts[0].uvMethod='original-affine-coordinate-bounds';expect(isOriginalPatchContactsReport(r)).toBe(false)})
  it('accepts exact polynomial common-root evidence with target proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(true)})
  it('rejects polynomial common-root evidence without target proof',()=>{const r=report();r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('accepts polynomial coordinate-sign evidence with a target bijection',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-polynomial-coordinate-sign';expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects coordinate-sign evidence without target proof metadata',()=>{const r=report();r.contacts[0].uvMethod='original-polynomial-coordinate-sign';expect(isOriginalPatchContactsReport(r)).toBe(false)})
 })

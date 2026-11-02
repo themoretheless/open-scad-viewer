@@ -95,6 +95,16 @@ impl CoordinateBounds {
         let x = q((edge % 2) as f64);
         self.ranges[edge / 2] = [x.clone(), x];
     }
+    /// Clip only after an exact sign proves the root lies on the inward
+    /// side of this edge. This is an enclosure, not a snapped coordinate.
+    pub(super) fn constrain_inward(&mut self, edge: usize) {
+        let r = &mut self.ranges[edge / 2];
+        if edge % 2 == 0 {
+            r[0] = r[0].clone().max(q(0.));
+        } else {
+            r[1] = r[1].clone().min(q(1.));
+        }
+    }
     pub(super) fn contact(
         &self,
         s: &Surface,
