@@ -1,0 +1,49 @@
+{
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "sweep_boundary_owned::closed::classified_material::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 10,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 2063 filtered out; finished in 44.42s"
+      ],
+      "seconds": 324.99,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2068,
+      "summary": [
+        "test result: ok. 2068 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 978.81s"
+      ],
+      "seconds": 979.25,
+      "passed": true
+    }
+  ],
+  "sourceUnchanged": true,
+  "sourceFiles": 6590
+}
