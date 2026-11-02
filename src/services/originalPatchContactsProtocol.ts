@@ -10,7 +10,7 @@ export interface OriginalPatchContactsReport {
  presenceProven:boolean;patchAbsenceProven:boolean;curvePatchCoverageComplete:boolean
  parameterCoordinates:['curve-natural-t','patch-natural-u','patch-natural-v']
  targetWeightsSeparable?:boolean;targetUvInjectivityProven?:boolean
- contacts:{method:'original-patch-plane-polynomial';uvMethod?:'separable-projective'|'injective-bilinear-krawczyk'|'positive-bilinear-global-inverse'|'exact-boundary-projective'|'original-affine-coordinate-bounds';parameterBox:ParameterBox3;positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[]}[]
+ contacts:{method:'original-patch-plane-polynomial';uvMethod?:'separable-projective'|'injective-bilinear-krawczyk'|'positive-bilinear-global-inverse'|'exact-boundary-projective'|'original-affine-coordinate-bounds'|'original-polynomial-common-root';parameterBox:ParameterBox3;positionBounds:ParameterBox3;sourceSpans:number[];multiplicities:number[]}[]
  scalarProofs:{span:number;status:'roots'|'coincident'|'indeterminate';normalizedOriginalSpanRoots:{interval:[number,number];multiplicity:number}[];reason:string|null;workUsed:number}[]
  proofContextSerialized:false
  unresolvedSpans:number[];ambiguousParameters:[number,number][]
@@ -53,10 +53,10 @@ export function isOriginalPatchContactsReport(value:unknown):value is OriginalPa
   if(!c||c.method!=='original-patch-plane-polynomial'||Object.hasOwn(c,'crossingSign')||!box(c.parameterBox)||!box(c.positionBounds)
    ||!Array.isArray(c.sourceSpans)||c.sourceSpans.length<1||c.sourceSpans.length>256||!Array.isArray(c.multiplicities)||c.multiplicities.length!==c.sourceSpans.length
    ||new Set(c.sourceSpans).size!==c.sourceSpans.length)return false
-  if(c.uvMethod!==undefined&&!['separable-projective','injective-bilinear-krawczyk','positive-bilinear-global-inverse','exact-boundary-projective','original-affine-coordinate-bounds'].includes(c.uvMethod))return false
+  if(c.uvMethod!==undefined&&!['separable-projective','injective-bilinear-krawczyk','positive-bilinear-global-inverse','exact-boundary-projective','original-affine-coordinate-bounds','original-polynomial-common-root'].includes(c.uvMethod))return false
   if(c.uvMethod==='injective-bilinear-krawczyk'&&(r.targetWeightsSeparable!==false||r.targetUvInjectivityProven!==true))return false
-  if((c.uvMethod==='positive-bilinear-global-inverse'||c.uvMethod==='exact-boundary-projective'||c.uvMethod==='original-affine-coordinate-bounds')&&r.targetUvInjectivityProven!==true)return false
-  if(r.targetWeightsSeparable===false&&!['injective-bilinear-krawczyk','positive-bilinear-global-inverse','exact-boundary-projective','original-affine-coordinate-bounds'].includes(c.uvMethod??''))return false
+  if((c.uvMethod==='positive-bilinear-global-inverse'||c.uvMethod==='exact-boundary-projective'||c.uvMethod==='original-affine-coordinate-bounds'||c.uvMethod==='original-polynomial-common-root')&&r.targetUvInjectivityProven!==true)return false
+  if(r.targetWeightsSeparable===false&&!['injective-bilinear-krawczyk','positive-bilinear-global-inverse','exact-boundary-projective','original-affine-coordinate-bounds','original-polynomial-common-root'].includes(c.uvMethod??''))return false
   if(c.uvMethod==='separable-projective'&&r.targetWeightsSeparable===false)return false
   for(let i=0;i<c.sourceSpans.length;i++){
    const span=c.sourceSpans[i],multiplicity=c.multiplicities[i]

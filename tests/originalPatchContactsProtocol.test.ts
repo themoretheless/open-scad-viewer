@@ -31,4 +31,6 @@ describe('original patch contacts protocol',()=>{
 
  it('accepts original-coordinate evidence for an interval root',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-affine-coordinate-bounds';r.contacts[0].parameterBox[1]=[-2,-2];r.scalarProofs[0].normalizedOriginalSpanRoots[0].interval=[.49,.51];expect(isOriginalPatchContactsReport(r)).toBe(true)})
  it('rejects original-coordinate evidence without a target bijection',()=>{const r=report();r.contacts[0].uvMethod='original-affine-coordinate-bounds';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+ it('accepts exact polynomial common-root evidence with target proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects polynomial common-root evidence without target proof',()=>{const r=report();r.contacts[0].uvMethod='original-polynomial-common-root';expect(isOriginalPatchContactsReport(r)).toBe(false)})
 })

@@ -66,7 +66,7 @@ try{
  assert.equal(result.originalPatchZero.status,'unresolved');assert.equal(result.originalPatchZero.exactWork,0)
  assert.equal(result.originalPatchOutside.status,'absent-on-patch');assert.equal(result.originalPatchBoundary.status,'present');assert.equal(result.originalPatchBoundary.contacts[0].uvMethod,'exact-boundary-projective');assert.equal(result.originalPatchIntervalBoundary.status,'present');assert.equal(result.originalPatchIntervalBoundary.contacts[0].uvMethod,'original-affine-coordinate-bounds')
  assert.equal(result.originalPatchIrrationalBoundary.status,'present');assert.equal(result.originalPatchIrrationalBoundary.curvePatchCoverageComplete,true);assert.deepEqual(result.originalPatchIrrationalBoundary.contacts[0].positionBounds,[[0,0],[0,0],[.5,.5]])
- assert.equal(result.originalPatchCommonRootBoundary.status,'unresolved');assert(result.originalPatchCommonRootBoundary.ambiguousParameters.length>0)
+ assert.equal(result.originalPatchCommonRootBoundary.status,'present');assert.equal(result.originalPatchCommonRootBoundary.curvePatchCoverageComplete,true);assert.equal(result.originalPatchCommonRootBoundary.contacts[0].uvMethod,'original-polynomial-common-root')
  assert.equal(result.advancedPatch.length,16)
  const report={passed:true,browser:browser.version(),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,installedPackageUpdated:false,result,platformAudit,workers,scope:'Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification'}
  await writeFile(resolve(output,'report.json'),JSON.stringify(report,null,2)+'\n')

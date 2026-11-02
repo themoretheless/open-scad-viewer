@@ -2,8 +2,9 @@
 use super::affine_plane::{enclosure, q, subtract};
 use super::*;
 use cad_predicates::{
-    AuthoredScalar, Limits, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome,
-    PredicateContext, SourceArena, ToleranceContext, rational_bspline_affine_patch_roots,
+    rational_bspline_affine_patch_edge_root, rational_bspline_affine_patch_roots, AuthoredScalar,
+    Limits, OriginalPlaneCommonRootOutcome, OriginalPlaneRootsDecision, OriginalPlaneRootsOutcome,
+    PredicateContext, SourceArena, ToleranceContext,
 };
 use num_traits::Zero;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -13,6 +14,7 @@ pub enum OriginalPatchUvProof {
     PositiveBilinearGlobalInverse,
     ExactBoundaryProjective,
     OriginalAffineCoordinateBounds,
+    OriginalPolynomialCommonRoot,
 }
 #[derive(Debug)]
 pub struct OriginalPatchContact {
@@ -230,20 +232,48 @@ pub fn original_affine_patch_contacts(
                         coordinate_bounds =
                             Some(super::patch_coordinate_bounds::original(c, s, span)?);
                     }
-                    match coordinate_bounds.as_ref().unwrap().contact(
-                        s,
-                        span,
-                        root.multiplicity,
-                        t,
-                        &p,
-                        alpha,
-                        beta,
-                    )? {
+                    let mut bounds = coordinate_bounds.as_ref().unwrap().clone();
+                    let mut common_root_proven = false;
+                    if matches!(
+                        bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)?,
+                        super::patch_coordinate_bounds::Decision::Unresolved
+                    ) {
+                        for edge in 0..4 {
+                            let coordinate = [alpha, beta][edge / 2];
+                            let side = (edge % 2) as f64;
+                            if coordinate.lo > side || coordinate.hi < side {
+                                continue;
+                            }
+                            let before = ctx.work_used();
+                            let proof = rational_bspline_affine_patch_edge_root(
+                                &mut ctx,
+                                &controls,
+                                &knots,
+                                c.degree,
+                                span,
+                                patch,
+                                edge,
+                                root.interval,
+                            )
+                            .map_err(|_| crate::input("Invalid original edge common-root query"))?;
+                            out.exact_work += ctx.work_used() - before;
+                            out.scalar_proofs.last_mut().unwrap().1.work_used = ctx.work_used();
+                            if matches!(proof.outcome, OriginalPlaneCommonRootOutcome::Common) {
+                                bounds.constrain_edge(edge);
+                                common_root_proven = true;
+                            }
+                        }
+                    }
+                    match bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)? {
                         super::patch_coordinate_bounds::Decision::Outside => {}
                         super::patch_coordinate_bounds::Decision::Unresolved => {
                             out.ambiguous_parameters.push([t.lo, t.hi])
                         }
-                        super::patch_coordinate_bounds::Decision::Contact(contact) => {
+                        super::patch_coordinate_bounds::Decision::Contact(mut contact) => {
+                            if common_root_proven {
+                                contact.uv_proof =
+                                    OriginalPatchUvProof::OriginalPolynomialCommonRoot;
+                            }
                             if out.target_uv_injectivity.is_none() {
                                 out.target_uv_injectivity =
                                     Some(super::patch_uv_injectivity::certify(&s.weights)?);

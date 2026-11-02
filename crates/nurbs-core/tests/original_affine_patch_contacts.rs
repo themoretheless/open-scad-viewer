@@ -423,9 +423,9 @@ fn irrational_boundary_root_has_exact_conditional_coordinate() {
 }
 
 #[test]
-fn nonproportional_common_root_retains_boundary_ambiguity() {
+fn nonproportional_common_root_proves_boundary_membership() {
     // X=(1-3t)^2, Y=1-3t. Their common root does not imply an affine
-    // control identity; this requires a further exact common-root proof.
+    // control identity; the exact polynomial common-root proof is required.
     let c = Curve {
         degree: 3,
         knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
@@ -439,9 +439,21 @@ fn nonproportional_common_root_retains_boundary_ambiguity() {
         periodic: false,
     };
     let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
-    assert!(!r.complete, "{r:?}");
-    assert!(r.contacts.is_empty());
-    assert!(!r.ambiguous_parameters.is_empty());
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert!(r.ambiguous_parameters.is_empty());
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalPolynomialCommonRoot);
+    assert_eq!(r.contacts[0].parameter_box[1], [-2., -2.]);
+    assert_eq!(
+        r.contacts[0].position_bounds,
+        [[0., 0.], [0., 0.], [0.5, 0.5]]
+    );
+    assert_eq!(r.contacts[0].multiplicities, [2]);
+    assert!(r.exact_work <= 100000);
+    assert_eq!(
+        r.exact_work,
+        r.scalar_proofs.iter().map(|(_, p)| p.work_used).sum()
+    );
 }
 
 #[test]
@@ -520,4 +532,181 @@ fn interval_edge_identity_uses_only_original_active_span_controls() {
     assert_eq!(r.contacts.len(), 1);
     assert_eq!(r.contacts[0].source_spans, [2]);
     assert_eq!(r.contacts[0].parameter_box[2], [10., 10.]);
+}
+
+#[test]
+fn polynomial_common_roots_admit_each_edge_and_corner_without_affine_identity() {
+    use nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof;
+    for edge in 0..6 {
+        let residual = [1., 0., -1., -2.];
+        let controls = [1., -1., 0., 4.]
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| {
+                let (a, b) = match edge {
+                    0 => (residual[i], 0.5),
+                    1 => (1. + residual[i], 0.5),
+                    2 => (0.5, residual[i]),
+                    3 => (0.5, 1. + residual[i]),
+                    4 => (residual[i], residual[i]),
+                    _ => (1. + residual[i], 1. + residual[i]),
+                };
+                vec![x, a, b]
+            })
+            .collect();
+        let c = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: controls,
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+        assert!(r.complete, "edge {edge}: {r:?}");
+        assert_eq!(r.contacts.len(), 1);
+        let c = &r.contacts[0];
+        assert_eq!(
+            c.uv_proof,
+            OriginalPatchUvProof::OriginalPolynomialCommonRoot
+        );
+        let (u, v) = match edge {
+            0 => (-2., 10. + 4. / 3.),
+            1 => (2., 11.5),
+            2 => (-1., 10.),
+            3 => (-6. / 7., 14.),
+            4 => (-2., 10.),
+            _ => (2., 14.),
+        };
+        for (axis, x) in [(1, u), (2, v)] {
+            assert!(
+                c.parameter_box[axis][0] <= x && x <= c.parameter_box[axis][1],
+                "{c:?}"
+            );
+        }
+        assert_eq!(
+            r.exact_work,
+            r.scalar_proofs.iter().map(|(_, p)| p.work_used).sum()
+        );
+    }
+}
+
+#[test]
+fn nonproportional_irrational_boundary_root_is_proved_exactly() {
+    let c = Curve {
+        degree: 4,
+        knots: vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
+        control_points: [3., 3., 1., -3., 3.]
+            .into_iter()
+            .zip([-3., -3., -2., 0., 3.])
+            .map(|(x, y)| vec![x, y, 0.5])
+            .collect(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    let p = &r.contacts[0];
+    let t = 0.5f64.sqrt();
+    assert!(p.parameter_box[0][0] <= t && t <= p.parameter_box[0][1]);
+    assert_eq!(p.position_bounds, [[0., 0.], [0., 0.], [0.5, 0.5]]);
+    assert_eq!(p.multiplicities, [2]);
+    assert_eq!(p.uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalPolynomialCommonRoot);
+}
+
+#[test]
+fn boundary_common_root_exhaustion_preserves_missing_coverage_and_work_sum() {
+    let mut c = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: vec![
+            vec![1., 2., 0.5],
+            vec![-1., 2., 0.5],
+            vec![0., 2., 0.5],
+            vec![4., 2., 0.5],
+        ],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let base = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+    assert!(base.complete);
+    assert!(base.contacts.is_empty());
+    for (p, y) in c.control_points.iter_mut().zip([1., 0., -1., -2.]) {
+        p[1] = y;
+    }
+    let budget = base.exact_work + 10;
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, budget).unwrap();
+    assert!(!r.complete, "{r:?}");
+    assert!(r.contacts.is_empty());
+    assert!(r.exact_work <= budget);
+    assert_eq!(
+        r.exact_work,
+        r.scalar_proofs.iter().map(|(_, p)| p.work_used).sum()
+    );
+}
+
+#[test]
+fn common_root_boundary_uses_original_skew_patch_expressions() {
+    let mut s = flat_patch();
+    let o = [2., 3., 5.];
+    let u = [1., 2., 3.];
+    let v = [-1., 1., 2.];
+    let n = [1., -5., 3.];
+    s.control_points = (0..2)
+        .map(|i| {
+            (0..2)
+                .map(|j| {
+                    (0..3)
+                        .map(|k| o[k] + i as f64 * u[k] + j as f64 * v[k])
+                        .collect()
+                })
+                .collect()
+        })
+        .collect();
+    let c = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: [1., -1., 0., 4.]
+            .into_iter()
+            .zip([1., 0., -1., -2.])
+            .map(|(x, a)| {
+                (0..3)
+                    .map(|k| o[k] + a * u[k] + 0.5 * v[k] + x * n[k])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &s, 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    let p = &r.contacts[0];
+    assert_eq!(p.parameter_box[1], [-2., -2.]);
+    for (axis, x) in [1.5, 3.5, 6.].into_iter().enumerate() {
+        assert!(p.position_bounds[axis][0] <= x && x <= p.position_bounds[axis][1]);
+    }
+    assert_eq!(p.uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::OriginalPolynomialCommonRoot);
+}
+
+#[test]
+fn nearby_distinct_edge_root_never_admits_an_exterior_plane_contact() {
+    let delta = 2f64.powi(-40);
+    let c = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: [1., -1., 0., 4.]
+            .into_iter()
+            .zip([1., 0., -1., -2.])
+            .map(|(x, y)| vec![x, y - delta, 0.5])
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.contacts.is_empty(), "{r:?}");
+    assert!(
+        !r.complete,
+        "Near but distinct roots require a sign proof to classify exterior"
+    );
 }

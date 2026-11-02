@@ -5,6 +5,7 @@ use super::patch_exact_membership::{bound, clock};
 use super::*;
 use num_rational::BigRational as Q;
 use num_traits::Zero;
+#[derive(Clone)]
 pub(super) struct CoordinateBounds {
     origin: [Q; 3],
     u: [Q; 3],
@@ -89,6 +90,11 @@ pub(super) fn original(c: &Curve, s: &Surface, span: usize) -> Result<Coordinate
     })
 }
 impl CoordinateBounds {
+    /// Used only after an independent exact common-root proof for this root.
+    pub(super) fn constrain_edge(&mut self, edge: usize) {
+        let x = q((edge % 2) as f64);
+        self.ranges[edge / 2] = [x.clone(), x];
+    }
     pub(super) fn contact(
         &self,
         s: &Surface,

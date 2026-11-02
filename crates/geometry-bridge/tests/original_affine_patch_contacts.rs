@@ -182,3 +182,30 @@ fn nonsingleton_boundary_root_uses_original_coordinate_identity() {
     );
     assert!(r["ambiguousParameters"].as_array().unwrap().is_empty());
 }
+
+#[test]
+fn nonproportional_boundary_common_root_reports_exact_proof_and_total_work() {
+    let mut v = request(3);
+    v["curve"]["controlPoints"] = json!([
+        [1., 1., 0.5],
+        [-1., 0., 0.5],
+        [0., -1., 0.5],
+        [4., -2., 0.5]
+    ]);
+    v["patch"]["controlPoints"] =
+        json!([[[0., 0., 0.], [0., 0., 1.]], [[0., 1., 0.], [0., 1., 1.]]]);
+    v["patch"]["weights"] = json!([[1., 2.], [3., 5.]]);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["uvMethod"],
+        "original-polynomial-common-root"
+    );
+    assert_eq!(
+        r["contacts"][0]["positionBounds"],
+        json!([[0., 0.], [0., 0.], [0.5, 0.5]])
+    );
+    assert_eq!(r["exactWork"], r["scalarProofs"][0]["workUsed"]);
+    assert_eq!(r["bodyAdmission"], false);
+}

@@ -248,3 +248,6 @@ mod polynomial;
 #[path = "bspline_plane_roots/common.rs"]
 mod common;
 pub use common::{OriginalPlaneCommonRootDecision, OriginalPlaneCommonRootOutcome, rational_bspline_plane_common_root};
+#[path = "bspline_plane_roots/edge.rs"]
+mod edge;
+pub use edge::rational_bspline_affine_patch_edge_root;

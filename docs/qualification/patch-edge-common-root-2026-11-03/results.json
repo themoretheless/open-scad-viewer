@@ -1,0 +1,42 @@
+{
+  "status": "passed-native-and-client",
+  "baseCommit": "b65295054851237eb42861686a88c4d524ae2e4d",
+  "coreBridgeTests": 96,
+  "predicateTests": 168,
+  "clientTests": 83,
+  "vueTsc": "passed",
+  "rawWasmQualified": false,
+  "chromiumWorkerQualified": false,
+  "installedPackageUpdated": false,
+  "proof": "Original patch parallelogram/plane validation; exact original affine-coordinate edge equation; original homogeneous polynomial construction; unique first-plane closed root and exact PRS gcd membership; no midpoint or rounded derived plane coefficients.",
+  "exactWork": "All edge-query work uses the original span context and remaining total budget; scalarProofs.workUsed includes auxiliary common-root work, and their sum equals exactWork. Exhaustion retains ambiguous coverage.",
+  "verified": [
+    "four edges and corners with nonproportional plane/edge polynomials",
+    "irrational shared root with different multiplicities",
+    "skew patch original coefficient expressions",
+    "nearby distinct edge root does not admit exterior contact",
+    "global work exhaustion preserves missing coverage",
+    "bridge proof tag and exact-work serialization",
+    "client proof metadata requirements"
+  ],
+  "remaining": [
+    "new actual WASM/Chromium qualification",
+    "general algebraic coordinate sign proof for near-edge interior/exterior roots",
+    "general curved/freeform supports",
+    "complete surface branches and periodic/poles",
+    "trim/Body and production integration"
+  ],
+  "sourceSha256": {
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "8d6ac521f466440a8feb9b0b3536bcfa81bd767fed90f89e254222ba06595ff5",
+    "crates/cad-predicates/src/bspline_plane_roots/edge.rs": "df539087c1557ece904fa3d96e0d98894b212f28a1c0509568eab0ffb014f80f",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "696fa601b33a5becf2a546dcc6c18da77a5a9855d6b0d4530b17b8af1ab2b93e",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_coordinate_bounds.rs": "f43fb81e20ecc909e541b568c4ba6ac3c030d23db1850ec648d47b7d2e2097ad",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "0b19a3c9deb327fe3b931032a61abe8c0908b1e699c113706d6fac2c3b2d3dfe",
+    "crates/geometry-bridge/src/intersections/original_patch_contacts.rs": "b55f07879513f7675b4abb3febafea77980e0b7eefe351ed74a2a154c2b2b539",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "907c09d02e60175752f40dff8ddc7f1c17ab5e5aa033a09f21a12ead22acc18d",
+    "src/services/originalPatchContactsProtocol.ts": "a2c2b0fbc7ea5da0fc828f5235b6cadcc0b19a00ad77787e79da7a895eb7a241",
+    "tests/originalPatchContactsProtocol.test.ts": "7b88223908ccaeae68f92c1f7055ca05884e4d526b557bc07c92fe69b0ca7d33",
+    "scripts/check-surface-self-intersection-wasm.mts": "8280a756c738372e8eec1a901b9d9bae5c49e8b05431a743670d20d22a3b4fb1",
+    "tools/browser-qualification/surface-self-intersection.mjs": "9cdaec28f1d32a31ee77d9ae438a157bb16f580c4e76e6704407d02ab1cf347a"
+  }
+}
