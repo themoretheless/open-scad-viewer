@@ -24,7 +24,8 @@ pub struct OriginalPatchContacts {
     pub spans: usize,
     pub complete: bool,
 }
-/// All original curve contacts with an exact untrimmed affine parallelogram.
+/// All original curve contacts with an exact untrimmed parallelogram support.
+/// Positive separable target weights give independent projective UV clocks.
 /// The plane is an expression of the original vertices, so derived normal and
 /// offset need not be representable as binary64. Source continuity is required
 /// at interior knots. Boundary membership and coincident spans stay unresolved.
@@ -67,12 +68,12 @@ pub fn original_affine_patch_contacts(
             && s.degree_v == 1
             && s.control_points.len() == 2
             && s.control_points[0].len() == 2
-            && s.weights.iter().flatten().all(|w| *w == s.weights[0][0])
+            && q(s.weights[0][0]) * q(s.weights[1][1]) == q(s.weights[0][1]) * q(s.weights[1][0])
             && s.knots_u[0] == s.knots_u[1]
             && s.knots_u[2] == s.knots_u[3]
             && s.knots_v[0] == s.knots_v[1]
             && s.knots_v[2] == s.knots_v[3],
-        "Target must be a clamped uniform-weight affine patch",
+        "Target must be a clamped affine patch with exact separable weights",
     )?;
     let pole = |i: usize, j: usize| std::array::from_fn(|k| q(s.control_points[i][j][k]));
     let origin = pole(0, 0);
@@ -199,8 +200,18 @@ pub fn original_affine_patch_contacts(
             }
             let natural =
                 |x: I, k: &[f64]| I::point(k[1]).add(I::point(k[2]).sub(I::point(k[1]))?.mul(x)?);
-            let ub = natural(alpha, &s.knots_u)?;
-            let vb = natural(beta, &s.knots_v)?;
+            // Rank-one positive weights factor the tensor denominator. Invert
+            // each original rational clock, not the Cartesian affine fraction.
+            let clock = |x: I, w0: f64, w1: f64| -> Result<I> {
+                if w0 == w1 {
+                    return Ok(x);
+                }
+                let numerator = I::point(w0).mul(x)?;
+                let denominator = I::point(w1).mul(I::point(1.).sub(x)?)?.add(numerator)?;
+                numerator.div(denominator)?.intersect(0., 1.)
+            };
+            let ub = natural(clock(alpha, s.weights[0][0], s.weights[1][0])?, &s.knots_u)?;
+            let vb = natural(clock(beta, s.weights[0][0], s.weights[0][1])?, &s.knots_v)?;
             let contact = OriginalPatchContact {
                 parameter_box: [[t.lo, t.hi], [ub.lo, ub.hi], [vb.lo, vb.hi]],
                 position_bounds: std::array::from_fn(|k| [p[k].lo, p[k].hi]),

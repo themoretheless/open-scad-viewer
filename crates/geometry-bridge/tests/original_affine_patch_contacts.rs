@@ -134,3 +134,16 @@ fn shared_knot_preserves_the_two_one_sided_orders_in_the_public_report() {
     assert_eq!(r["contacts"][0]["multiplicities"], json!([2, 1]));
     assert_eq!(r["contacts"][0]["parameterBox"][0], json!([1., 1.]));
 }
+
+#[test]
+fn original_projective_target_clocks_are_preserved_in_public_uv_boxes() {
+    let mut v = request(2);
+    v["patch"]["weights"] = json!([[1, 3], [2, 6]]);
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    for (axis, t) in [-2. / 3., 11.].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][axis + 1];
+        assert!(b[0].as_f64().unwrap() <= t && t <= b[1].as_f64().unwrap());
+    }
+}

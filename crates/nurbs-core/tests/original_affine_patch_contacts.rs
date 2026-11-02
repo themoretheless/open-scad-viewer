@@ -151,3 +151,45 @@ fn discontinuous_source_storage_is_not_given_a_continuous_patch_contact_proof() 
     c.knots = vec![0., 0., 0., 1., 1., 1., 2., 2., 2.];
     assert!(original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).is_err());
 }
+
+#[test]
+fn separable_target_weights_use_the_original_projective_uv_clocks() {
+    for transpose in [false, true] {
+        let mut s = patch();
+        s.weights = vec![vec![1., 3.], vec![2., 6.]];
+        if transpose {
+            s.control_points = (0..2)
+                .map(|j| (0..2).map(|i| s.control_points[i][j].clone()).collect())
+                .collect();
+            s.weights = (0..2)
+                .map(|j| (0..2).map(|i| s.weights[i][j]).collect())
+                .collect();
+            std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+        }
+        for order in [2, 4] {
+            let r = original_affine_patch_contacts(&curve(order), &s, 1e-9, 10, 100000).unwrap();
+            assert!(r.complete, "{r:?}");
+            assert_eq!(r.contacts.len(), 1);
+            assert_eq!(r.contacts[0].multiplicities, vec![order]);
+            let uv = if transpose {
+                [11., -2. / 3.]
+            } else {
+                [-2. / 3., 11.]
+            };
+            for (axis, t) in uv.into_iter().enumerate() {
+                let b = r.contacts[0].parameter_box[axis + 1];
+                assert!(b[0] <= t && t <= b[1], "transpose={transpose}: {r:?}");
+            }
+        }
+    }
+}
+#[test]
+fn one_ulp_nonseparable_weights_are_not_approximated_by_rank_one() {
+    let mut s = patch();
+    s.weights = vec![vec![1., 3.], vec![2., 6f64.next_up()]];
+    assert!(original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).is_err());
+    let (a, b) = (1f64.next_up(), 1. - f64::EPSILON);
+    assert_eq!(a * b, 1.); // Rounded determinant vanishes; the exact one does not.
+    s.weights = vec![vec![a, 1.], vec![1., b]];
+    assert!(original_affine_patch_contacts(&curve(2), &s, 1e-9, 10, 100000).is_err());
+}

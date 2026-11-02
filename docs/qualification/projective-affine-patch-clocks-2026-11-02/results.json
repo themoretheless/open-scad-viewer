@@ -1,0 +1,23 @@
+{
+  "nurbsPassed": 70,
+  "bridgePassed": 6,
+  "newNurbsTests": 2,
+  "newBridgeTests": 1,
+  "scope": "Exact separable positive target weights and inverse original projective UV clocks on parallelogram support",
+  "verified": [
+    "unequal weights 1,3,2,6 preserve orders 2/4",
+    "both target axes and nonunit knot domains",
+    "public bridge UV boxes",
+    "one-ULP nonseparable net rejected",
+    "rounded f64 determinant equality does not authorize separability"
+  ],
+  "coupledNonseparableTargetsSupported": false,
+  "newClockWasmQualified": false,
+  "trimBodyAdmission": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "efb314b4f412ef9cf26c6243e9326b18d666ca8ca78450278331d040d048fb09",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "82c0e8b2c0d2d501b7f4d33b6839a58501001fc059848bb697899dc313b4d124",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "4f291fc26ee9c7e4f0fd64ab62d039abf48fa832c9c3b693ddc779f0d18e9c77",
+    "docs/api/original-affine-patch-contacts.md": "f3a11600657bcd700402228c247684421d92eccb11ca14fe989d1ecee206e9d0"
+  }
+}
