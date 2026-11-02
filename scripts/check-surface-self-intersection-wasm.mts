@@ -1,3 +1,4 @@
+import {commonRootPatchCases} from '../tools/browser-qualification/common-root-patch-fixtures.ts'
 import {advancedPatchCases} from '../tools/browser-qualification/advanced-patch-fixtures.ts'
 import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol.ts'
 import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
@@ -157,7 +158,10 @@ const irrationalEdge=patchReply(originalPatchAlgebraicBoundaryFixture());assert.
 const commonRoot=patchReply(originalPatchAlgebraicBoundaryFixture(true));assert.equal(commonRoot.status,'present');assert.equal(commonRoot.curvePatchCoverageComplete,true);assert.equal(commonRoot.contacts[0].uvMethod,'original-polynomial-common-root');cases.push({name:'original-patch-nonproportional-common-root-proven',status:commonRoot.status})
 reject('original-patch-forged-body-admission',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),bodyAdmission:true})
 reject('original-patch-over-limit-exact-budget',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),maxExactWork:1000001})
-for(const fixture of advancedPatchCases){const before=JSON.stringify(fixture.query),r=patchReply(fixture.query);assert.equal(JSON.stringify(fixture.query),before);fixture.check(r);cases.push({name:fixture.name,status:r.status,contact:r.contacts[0]??null,complete:r.curvePatchCoverageComplete})}
+for(const fixture of [...advancedPatchCases,...commonRootPatchCases]){const before=JSON.stringify(fixture.query),r=patchReply(fixture.query);assert.equal(JSON.stringify(fixture.query),before);fixture.check(r);cases.push({name:fixture.name,status:r.status,contact:r.contacts[0]??null,complete:r.curvePatchCoverageComplete})}
+const scalarOnlyQuery=originalPatchAlgebraicBoundaryFixture(true);for(const p of scalarOnlyQuery.curve.controlPoints)p[1]=2
+const scalarOnly=patchReply(scalarOnlyQuery);assert.equal(scalarOnly.status,'absent-on-patch');cases.push({name:'common-root-scalar-budget-baseline',status:scalarOnly.status,exactWork:scalarOnly.exactWork})
+const auxiliaryBudget=patchReply({...originalPatchAlgebraicBoundaryFixture(true),maxExactWork:scalarOnly.exactWork+10});assert.equal(auxiliaryBudget.status,'unresolved');assert.equal(auxiliaryBudget.contacts.length,0);assert(auxiliaryBudget.ambiguousParameters.length>0);assert(auxiliaryBudget.exactWork<=auxiliaryBudget.maxExactWork);assert.equal(auxiliaryBudget.exactWork,auxiliaryBudget.scalarProofs.reduce((sum,p)=>sum+p.workUsed,0));cases.push({name:'common-root-auxiliary-work-exhaustion',status:auxiliaryBudget.status,exactWork:auxiliaryBudget.exactWork,maxExactWork:auxiliaryBudget.maxExactWork})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))
