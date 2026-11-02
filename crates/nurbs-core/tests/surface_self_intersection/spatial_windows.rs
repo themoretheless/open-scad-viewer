@@ -143,3 +143,58 @@ fn original_rational_iso_needs_no_binary64_curve_controls() {
         nurbs_core::surface_self_intersection::CrossingProof::CurveSurface
     );
 }
+
+#[test]
+fn rational_spatial_iso_maps_both_axes_on_nonunit_domains() {
+    use nurbs_core::intersection::certified_curve_surface::first_iso_in_window;
+    for axis in 0..2 {
+        let mut s = source();
+        for row in &mut s.weights {
+            row[1] = 2.;
+        }
+        if axis == 1 {
+            s.control_points = (0..2)
+                .map(|j| s.control_points.iter().map(|row| row[j].clone()).collect())
+                .collect();
+            s.weights = (0..2)
+                .map(|j| s.weights.iter().map(|row| row[j]).collect())
+                .collect();
+            std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+            std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+        }
+        // Exact normalized .5 maps to a rational natural parameter that need
+        // not itself be representable. Original knot bit patterns own the map.
+        for t in &mut s.knots_u {
+            *t = 0.1 + 3. * *t;
+        }
+        for t in &mut s.knots_v {
+            *t = 0.1 + 3. * *t;
+        }
+        let d = [0.1, 3.1];
+        let map = |t: f64| d[0] + (d[1] - d[0]) * t;
+        let mut w = [[d[0], map(0.4375)], d, d];
+        w[axis + 1] = [map(0.4375), d[1]];
+        let r = first_iso_in_window(&s, axis, 0.5, w, 10000).unwrap();
+        assert_eq!(r.roots.len(), 1, "axis={axis}: {r:?}");
+        let mut expected = [map(0.25), map(473. / 1063.), map(473. / 1063.)];
+        expected[axis + 1] = map(0.75);
+        for (i, t) in expected.into_iter().enumerate() {
+            assert!(
+                r.roots[0].parameter_box[i][0] <= t && t <= r.roots[0].parameter_box[i][1],
+                "axis={axis}: {r:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn window_solver_rejects_non_3d_target_without_indexing_coordinates() {
+    let mut s = source();
+    let c = iso(&s);
+    for row in &mut s.control_points {
+        for p in row {
+            p.pop();
+        }
+    }
+    assert!(first_in_window(&c, &s, [[0., 0.4375], [0.4375, 1.], [0., 1.]], 100).is_err());
+}

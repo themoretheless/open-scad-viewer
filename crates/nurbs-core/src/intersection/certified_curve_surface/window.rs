@@ -41,7 +41,11 @@ pub(super) fn search(
 ) -> Result<WindowReport> {
     s.validate()?;
     check(
-        c.valid() && !s.periodic_u && !s.periodic_v && (1..=100000).contains(&max_cells),
+        c.valid()
+            && s.control_points[0][0].len() == 3
+            && !s.periodic_u
+            && !s.periodic_v
+            && (1..=100000).contains(&max_cells),
         "Window roots need bounded nonperiodic 3D sources",
     )?;
     let domains = [
