@@ -6192,7 +6192,8 @@
         "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json",
         "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json",
         "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
-        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json"
+        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",

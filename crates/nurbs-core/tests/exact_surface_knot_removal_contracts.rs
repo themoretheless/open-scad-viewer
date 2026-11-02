@@ -58,3 +58,29 @@ fn degree_twenty_five_never_resets_or_raises_shared_work() {
     let source=surface_edit::insert(&original,Axis::U,0.5,1).unwrap();let r=remove(&source,Axis::U,0.5,1_000_000).unwrap();assert!(r.work_used<=1_000_000);
     if r.removed {assert_eq!(r.surface,original);}else{assert_eq!(r.surface,source);assert!(matches!(r.refusal,Some(Refusal::ResourceLimit)|Some(Refusal::Curve{reason:curve_edit::Refusal::ResourceLimit,..})));}
 }
+
+#[test]
+fn bounded_pass_restores_original_tensor_on_each_axis() {
+    use nurbs_core::editing::exact_surface_knot_removal::simplify;
+    for (axis,knot) in [(Axis::U,4.),(Axis::V,-1.)] {
+        let original=base();let source=surface_edit::insert(&original,axis,knot,2).unwrap();
+        let r=simplify(&source,axis,1_000_000).unwrap();
+        assert!(r.completed_pass);assert_eq!(r.removed,2);assert_eq!(r.attempts.len(),2);assert_eq!(r.surface,original);
+        let exact=simplify(&source,axis,r.work_used).unwrap();assert_eq!(exact.surface,original);assert!(exact.completed_pass);
+        let partial=simplify(&source,axis,r.work_used-1).unwrap();
+        assert!(!partial.completed_pass);assert!(partial.work_used<r.work_used);assert_eq!(partial.removed,1);
+        let first=remove(&source,axis,knot,1_000_000).unwrap();assert_eq!(partial.surface,first.surface);
+    }
+}
+#[test]
+fn bounded_pass_keeps_nonremovable_law_and_reports_empty_pass() {
+    use nurbs_core::editing::exact_surface_knot_removal::simplify;
+    let original=base();let empty=simplify(&original,Axis::U,1).unwrap();
+    assert!(empty.completed_pass);assert_eq!(empty.removed,0);assert_eq!(empty.work_used,0);assert!(empty.attempts.is_empty());
+    let mut source=surface_edit::insert(&original,Axis::U,4.,1).unwrap();source.control_points[1][2][2]+=1e-10;
+    let r=simplify(&source,Axis::U,1_000_000).unwrap();assert!(r.completed_pass);assert_eq!(r.removed,0);assert_eq!(r.surface,source);assert!(r.attempts[0].1.is_some());
+    let exhausted=simplify(&source,Axis::U,1).unwrap();assert!(!exhausted.completed_pass);assert_eq!(exhausted.surface,source);
+    for budget in [0,1_000_001] {assert!(simplify(&source,Axis::U,budget).is_err());}
+    let mut invalid=source.clone();invalid.weights[0][0]=f64::NAN;assert!(simplify(&invalid,Axis::U,1_000_000).is_err());
+    let mut periodic=source;periodic.periodic_u=true;assert!(simplify(&periodic,Axis::U,1_000_000).is_err());
+}
