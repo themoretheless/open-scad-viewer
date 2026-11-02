@@ -1,0 +1,31 @@
+{
+  "schema": "runtime-provider-qualification/1",
+  "state": "complete",
+  "qualified": true,
+  "recordId": "docs/qualification/runtime-provider-442d2703d243-2026-11-01.json",
+  "scope": "Finite direct API baseline on Node and Chromium only. No application worker protocol, complete frontend/UI, production delivery, Linux or hosted CI qualification.",
+  "artifact": {
+    "wasmSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "lockfileSha256": "d847e1ca83d25dae9d9243ce1c64bce6f4ee2067a7dfb9b5ff3e8fa0686e286b",
+    "rustLockfileSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+    "recordId": "docs/qualification/runtime-provider-442d2703d243-2026-11-01.json",
+    "corpusVersion": "runtime-direct-api-442d2703d243-2026-11-01"
+  },
+  "qualificationDirectory": "docs/qualification/native-ci-fixes-2026-11-01",
+  "qualificationSha256": "626508b28e9359722e8f4948fc80d954a3292117a75dbe5ae44427041d43de07",
+  "verificationReceipt": "docs/qualification/native-ci-fixes-2026-11-01/runtime-api-baseline.json",
+  "deliveryState": "local-api-baseline-not-delivered",
+  "claimBoundary": {
+    "G0G1QualificationClaim": "none",
+    "completedCleanWorkUnits": 0,
+    "plannedCleanWorkUnits": 4740,
+    "universalCadCoverage": false,
+    "fullFrontendQualification": false,
+    "applicationWorkerProtocolQualification": false,
+    "productionPackagingQualification": false,
+    "linuxQualification": false,
+    "hostedCiQualification": false,
+    "mainPushed": false
+  }
+}

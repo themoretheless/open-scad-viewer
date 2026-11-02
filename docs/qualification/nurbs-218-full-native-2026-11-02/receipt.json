@@ -1,0 +1,79 @@
+{
+  "schema": "full-nurbs-native-checkpoint/1",
+  "scope": "All nurbs-core library tests with default features and nine selected public integration suites; not whole workspace or frontend qualification.",
+  "baseCommit": "aa46f6cdb20cbc1df06e7401dcabc090d75b4720",
+  "uncommittedFollowup": "Reconstruction fitter retains better bounded global-fit candidates after an unconverged adaptive result; no tolerance relaxed.",
+  "catalogTotal": 218,
+  "goalTotal": 1000,
+  "remainingGoal": 782,
+  "library": {
+    "passed": 2043,
+    "failed": 0,
+    "existingIgnored": 1,
+    "filteredOut": 0
+  },
+  "publicContracts": {
+    "passed": 67,
+    "failed": 0,
+    "ignored": 0,
+    "filteredOut": 0
+  },
+  "commandExitCode": 0,
+  "sourceManifestSha256": "5fbe768bd6f7f44720f9044357b04f05a65ad960ab52b2f318c7df02614e2544",
+  "sourcePaths": 5100,
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/7f81c6a1f033801c/out/nurbs_core-7f81c6a1f033801c",
+      "sha256": "ceb3f7a13366a14e8d595b83432511f96e5fbd6b09c491132374e16e50810097"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/29d1630e5e32c631/out/affine_support-29d1630e5e32c631",
+      "sha256": "89372ceb0db905164cb7ff6957e1f2ccfd5f27ab310db43f76ff5a25037d18e9"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e705ba731820a2bf/out/biarc_contracts-e705ba731820a2bf",
+      "sha256": "b34e33dd747cb72667b2c95e52fb06162076480e7bc97a4ea145e372e4be10cf"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e5ff2236962c9b4b/out/class_a_contracts-e5ff2236962c9b4b",
+      "sha256": "b7aa3505360cc662eeb9a07745ee385a304ed6e61f52e89b7ca469ce7551749e"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/80ae3ba2c25afaa9/out/cloud_processing_contracts-80ae3ba2c25afaa9",
+      "sha256": "ab75fe07a12b7d6bea0ee0d9a259cc8f61135b8b50500a70fe78bef044a09526"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5566724bf219ffb0/out/curvature_reconstruction_contracts-5566724bf219ffb0",
+      "sha256": "e100d01cca7a540453dc78262dd15aec4606d3157ec0ddd6c11f48d29890c257"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/8101cd5935423a18/out/curve_extension_contracts-8101cd5935423a18",
+      "sha256": "a88fc7dce1c1875b433b272f414b75238358a9e7ed902b4c388597f16cf5faab"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5e868672d2fcac3a/out/linear_simplification-5e868672d2fcac3a",
+      "sha256": "63ca839a3132392f2c1be4f843a3068ae957c4d5441f6888226028f192d4d614"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/befd5fa5646fc592/out/primitive_fit_contracts-befd5fa5646fc592",
+      "sha256": "4131ac89963e53c9b17412afd968dec0bbea82525c73ef20393288c382eca702"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/bd5102dc12f36f9b/out/surface_extension_contracts-bd5102dc12f36f9b",
+      "sha256": "f903f6cc6fe4c09090f9bd36e264b564ada0a09fcf35c05501310daed4782d31"
+    }
+  ],
+  "logSha256": "235a7ad350acda352273c1742a69550e06fa110230ed006d852692ab77b3e29c",
+  "nativeCommand": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 RUST_TEST_THREADS=2 caffeinate -i cargo test --manifest-path crates/Cargo.toml -p nurbs-core --lib --test curvature_reconstruction_contracts --test biarc_contracts --test curve_extension_contracts --test surface_extension_contracts --test linear_simplification --test cloud_processing_contracts --test class_a_contracts --test affine_support --test primitive_fit_contracts --locked --offline",
+  "applicationQualified": false,
+  "g0g1Qualified": false,
+  "mainPushed": false,
+  "noDefaultFeaturesCheck": {
+    "exitCode": 0,
+    "passed": true,
+    "logSha256": "60deec09142d942d41d0df8e5ca535a6d98537b5ba329a17d78179706da9b2b0",
+    "command": "CARGO_BUILD_JOBS=2 cargo check --manifest-path crates/Cargo.toml -p nurbs-core --lib --no-default-features --locked --offline"
+  },
+  "targetDir": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target",
+  "sourceManifestScope": "Tracked and nonignored untracked files under crates and .cargo, plus the toolchain file; includes fixture and shader source inputs."
+}

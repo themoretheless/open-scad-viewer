@@ -1,0 +1,31 @@
+{
+  "scope": "Append-only source/artifact identity; no source-to-build provenance or qualification inherited.",
+  "published": true,
+  "sourcePaths": 7617,
+  "sourceSha256": "9b8d5423c249a822b19790e3a077b8b36dde8ad3010f5312d1ce4e6634d67e7f",
+  "completedWorkUnits": 0,
+  "plannedWorkUnits": 4740,
+  "qualificationClaim": "none",
+  "artifacts": [
+    {
+      "path": "docs/qualification/own-rust-cad-v83.json",
+      "sha256": "685c53d434b951dd18df7f03381c47d1f2be457e094002bdd6cbc71531359869",
+      "byteLength": 475367
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v97.json",
+      "sha256": "262512d404b7187336885c547c35dfe18f0f03e5bb3b468f42a592d4569907ab",
+      "byteLength": 1799339
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v114.json",
+      "sha256": "188738308ed32642e96462e3d26732b35b02105067483b20c1ca8dcda969a355",
+      "byteLength": 79088
+    },
+    {
+      "path": "docs/qualification/g0-v97-g1-v114-refreeze-status-v1.json",
+      "sha256": "9ca8fe8bed8868cec7ae72a35525e79b43563da4e1a4500bc24ef224b6fbafd2",
+      "byteLength": 1848162
+    }
+  ]
+}

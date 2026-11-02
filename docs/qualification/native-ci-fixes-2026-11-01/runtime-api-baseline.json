@@ -1,0 +1,46 @@
+{
+  "schema": "runtime-direct-api-baseline/1",
+  "state": "complete",
+  "wasmSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+  "checks": {
+    "directNodeApiPassed": 112,
+    "chromiumMainChecks": 28,
+    "chromiumQualificationWorkerChecks": 28,
+    "nativeBridgePassed": 385,
+    "nativeBridgeIgnored": 1,
+    "nativeSweepStepRoundtrips": 2,
+    "independentOcctRoundtrips": 2
+  },
+  "evidence": [
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/direct-api-matrix.json",
+      "sha256": "640809f4ab5b4591f68b0cc3b9c58d6e2c55cbec9c89810800df164bc750fa3c"
+    },
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/direct-api-vitest.json.gz",
+      "sha256": "14ec30a0df450fc2a36a3393f93dd12e50411b145a0ca68b6d36a25db6c7f3ac"
+    },
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/chromium-direct-api.json",
+      "sha256": "709f973daf4cb294203ff4071726b15fc049e0812e3c3bdbd89c4b813b8b7fc7"
+    },
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/receipt.json",
+      "sha256": "754c86d936c25263f7e96fc6010ae1f5271e1ead314030075c2dbd6ab908352d"
+    },
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/scalar-step-roundtrips.tar.gz",
+      "sha256": "de6521060c8d16254aab2ead2cfd302ada2f90e48eb46a5d4664199aba1e4636"
+    },
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/native-ci-fixes-bridge-20261101.log.gz",
+      "sha256": "dd8d5f69f598f735c83ba53a8824f3a4ea25c03295b27bcaf40538bb1fb2d11c"
+    },
+    {
+      "path": "docs/qualification/native-ci-fixes-2026-11-01/native-ci-fixes-runtime-identities-20261101.json.gz",
+      "sha256": "10c02a1ad0e2df53770b002a5da917c998d82b3053455d38acd76751e9528c47"
+    }
+  ],
+  "scope": "Finite direct API baseline on Node and Chromium only. No application worker protocol, complete frontend/UI, production delivery, Linux or hosted CI qualification.",
+  "qualificationClaim": "finite-runtime-direct-api-only"
+}

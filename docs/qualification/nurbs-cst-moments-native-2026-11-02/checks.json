@@ -1,0 +1,29 @@
+{
+  "capability": "NURBS-0225",
+  "checks": {
+    "defaultLibraryAndPublic": {
+      "exitCode": 0,
+      "passed": 2075,
+      "failed": 0,
+      "ignored": 1,
+      "log": "cst-second-moments-library-public.log.gz"
+    },
+    "noCodecPublic": {
+      "exitCode": 0,
+      "passed": 31,
+      "failed": 0,
+      "ignored": 0,
+      "log": "cst-second-moments-no-codec-public.log.gz"
+    }
+  },
+  "exactBetaOracleExit": 0,
+  "architectureExit": 0,
+  "architectureSummary": "architecture ok: 52 pinned oversized files, 0 pinned layer violations",
+  "sources": {
+    "crates/nurbs-core/src/construct/curves/airfoil.rs": "08f3bc05186ff1ff797d75b6907b0a590b617edbf65945080c5238147a97449a",
+    "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs": "bdfefdfcc5ea22962165824d4752936cd96af521d437b4b461e80d9636b1da05",
+    "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic/moments.rs": "4dee24bf3f4cccfa380881eb94cab428708dd189ee1fddeae04c77cc73526d6f",
+    "crates/nurbs-core/tests/cst_moment_contracts.rs": "9830491dcdb7bf06f0154fbc349d1d9e719d0096d4417118249ce88291e42cda"
+  },
+  "scope": "Native original CST second-area moments only, canonical XY frame, same algebraic subset and shared arithmetic ceiling. No WASM/editor/exchange, global geometry, mass inertia, source history or B-rep authority. Full workspace qualification remains separate."
+}

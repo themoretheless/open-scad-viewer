@@ -1,0 +1,31 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "status": "passed-native-contracts-only",
+  "contracts": [
+    "NURBS-0201",
+    "NURBS-0202",
+    "NURBS-0203",
+    "NURBS-0204"
+  ],
+  "baseCommit": "67d8cbab4bb67240c10b712f9b491a5d514f19ca",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/class_a.rs": "e2821a0e329992ddf1ffe60fc2c200a8ce55e3284839ae7c1c016d31ce55bec6",
+    "crates/nurbs-core/src/analysis/class_a/methods_Field_sample.rs": "2494674f36c43ad56c990fe422f9505ee9f1b9c42b8c7a4cab2fa894251d7cf1",
+    "crates/nurbs-core/src/analysis/tests/class_a.rs": "579dc71fe5b8856d982d2373f985d8e444c58386b564b7582eace76d5ea74531",
+    "crates/nurbs-core/tests/class_a_contracts.rs": "eb2d67dda6d2b7dc924c1a4a619108104cf625e34207d8c2c705d7ecf0fed6df"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "command": "CARGO_BUILD_JOBS=1 CARGO_PROFILE_TEST_OPT_LEVEL=0 cargo test --manifest-path crates/Cargo.toml --target-dir /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target -p nurbs-core --test class_a_contracts --locked --offline",
+  "tests": {
+    "passed": 7,
+    "failed": 0,
+    "ignored": 0,
+    "filteredOut": 0
+  },
+  "logSha256": "566c031cce692d583a38415867aca2894c50892f054046a9f7721f8710c26a77",
+  "proofScope": "Sampled diagnostic contracts and invalid-input handling only. No continuous geometry bound or full Class-A certification.",
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "fullWorkspaceQualified": false,
+  "mainPushed": false
+}

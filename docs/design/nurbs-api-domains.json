@@ -99,7 +99,8 @@
     "miter_section_correction",
     "sweep_section_projection",
     "section_circle_repair",
-    "editing"
+    "editing",
+    "linear_simplification"
   ],
   "joining": [
     "curve_join",

@@ -1,0 +1,7 @@
+{
+  "baseCommit": "ffc26508f",
+  "sourcePath": "crates/nurbs-core/src/foundation/knot_removal.rs",
+  "sha256": "971b8ee80d8dde575ed09ea72b224b1949defe011d60c5eb8057b5dad9c975a4",
+  "probeBinarySha256": "86aa18b54ce861a72e93aa20441162d27872270034f713bba94b945f5c31d4f4",
+  "scope": "Existing no-codec library binary linked into external probe; does not edit frozen recovery-root test source."
+}

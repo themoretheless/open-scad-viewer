@@ -1,0 +1,25 @@
+{
+  "sourceCommit": "1d0ffcae4",
+  "source": "source.json",
+  "exitCode": 0,
+  "library": {
+    "passed": 2043,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0
+  },
+  "public": {
+    "passed": 95,
+    "failed": 0,
+    "ignored": 0,
+    "targets": 13
+  },
+  "ignoredReason": "Existing normal_alignment::tests::benchmark_closed_rational_restriction microbenchmark",
+  "env": {
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2"
+  },
+  "log": "default-library-public.log.gz",
+  "scope": "Default nurbs-core full library and thirteen public targets; not workspace, full no-codec library or application."
+}

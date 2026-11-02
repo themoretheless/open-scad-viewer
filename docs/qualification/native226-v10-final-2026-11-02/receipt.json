@@ -1,0 +1,47 @@
+{
+  "scope": "Complete local Root226 Rust workspace and full frontend on frozen OwnRust85/runtimev10. No feature227/228/229, hosted CI, source-to-build provenance, complete G1 execution or global CAD qualification inferred.",
+  "sourceRecord": "docs/qualification/own-rust-cad-v85.json",
+  "sourceSha256": "c5d33154f8cd5eaaa7e7f22f365bbc1b39c7e194c70854ba30502f0e97429101",
+  "sourcePaths": 7638,
+  "sourceUnchangedAfterBothFullRuns": true,
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "rust": {
+    "exitCode": 0,
+    "passed": 8538,
+    "failed": 0,
+    "ignored": 8,
+    "fullPartitionCases": 8546,
+    "serialPassed": 52,
+    "remainingPassed": 8486,
+    "partitionCompleteAndDisjoint": true,
+    "sourceDrift": []
+  },
+  "frontend": {
+    "exitCode": 0,
+    "passed": 6549,
+    "failed": 0,
+    "skipped": 10,
+    "sourceUnchanged": true,
+    "artifactUnchanged": true
+  },
+  "typedNoCodecExit": 0,
+  "partitionExit": 0,
+  "files": {
+    "native226-v10-workspace-typed-no-codec-20261102.log.gz": "1852d1c1991012509e0befba98aaf0de3d46d6800e30519468a640e0a22d2854",
+    "native226-v10-workspace-partition-20261102.log.gz": "9fb459c9ff3650ad7265ccc837f16e8b9ee2da9a3002d82d1f426b7b745a2b44",
+    "native226-v10-workspace-source-manifest.json.gz": "60a3b5e6d443649c845ff7a4944bf70f0ca0adecf6c416b1d172462f51916f25",
+    "native226-v10-workspace-aag-20261102.log.gz": "7d5f4f2db55f6f4a6843201df43b654607d9b61f7db34b723ebf48b863e08db1",
+    "native226-v10-workspace-gates-state.json.gz": "0142a0dd3c9ed6d19aeea98481ad954cb2f12ad9b54c300e70855378d150446b",
+    "native226-v10-workspace-remaining-20261102.log.gz": "117fdf41c11dcf946b336039ddd0b5d1e6cfe344383383e4d389971803328416",
+    "run-native226-v10-workspace-gates.py.gz": "58ff33d3eec023c1138966f812cab9c8da77c0f8b1324c2821c7d7eef4353992",
+    "frontend/native226-v10-full-frontend.log.gz": "0848e84c3639a7541531578124ac164e5d98df49aaf36be039d7493026e0884d",
+    "frontend/run-native226-v10-full-frontend.py.gz": "ef8de157f32f5b784128639a4bde6bb33cfc5fa46ad046d6428f3dad711df757",
+    "frontend/native226-v10-full-frontend.json.gz": "e06e25d838f19cfbc4a86c3e02da465260362d3c520467dda29ef96308d10f2d",
+    "frontend/native226-v10-full-frontend-state.json.gz": "1f74db31a4d24794c4bbfcbaa6cb03f285844161d19b5be1c37121d096f5e61f",
+    "frontend/receipt.json": "3dbf320c5118776fa3f9111774908e941e2526c15ec53927a6c86b279790dbc6",
+    "partition/serial.log.gz": "436709bbd22315e4b57b7dd70203a9ea36d6dcc90bba05cc1d7ab28b23e70830",
+    "partition/partition.json.gz": "87720b7c8ff1d1a892252edc4db41a3032d18617fceed3ddb4a9bb00e46230e7",
+    "partition/full.log.gz": "749b84184e3f3d37e4f90dd964f50fe7b8aa43a370b68297de60ddc570556c4d",
+    "partition/parallel.log.gz": "9ba076d215b4fe4580c1715cd349986939dd89a6839142b3e6893e5599b50ccc"
+  }
+}

@@ -53,6 +53,14 @@ impl Cases {
     fn push(&mut self, name: &str, canonical: String) {
         let hash = Sha256::digest(canonical.as_bytes());
         let hex = hash.iter().map(|b| format!("{b:02x}")).collect::<String>();
+        // Retain full diagnostic payloads without changing the exact comparison below.
+        if let Some(directory) = std::env::var_os("GOLDEN_CAPTURE_DIR") {
+            let directory = std::path::PathBuf::from(directory);
+            std::fs::create_dir_all(&directory).unwrap();
+            assert!(!name.contains(['/', '\\']));
+            std::fs::write(directory.join(format!("{name}.payload")), &canonical).unwrap();
+            std::fs::write(directory.join(format!("{name}.sha256")), &hex).unwrap();
+        }
         self.0.push((name.to_owned(), hex));
     }
     fn value(&mut self, name: &str, v: Value) {

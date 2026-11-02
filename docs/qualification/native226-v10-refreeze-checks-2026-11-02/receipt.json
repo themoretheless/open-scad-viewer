@@ -1,0 +1,13 @@
+{
+  "sourceRecord": "OwnRust85",
+  "sourceSha256": "c5d33154f8cd5eaaa7e7f22f365bbc1b39c7e194c70854ba30502f0e97429101",
+  "sourcePaths": 7638,
+  "fingerprint": "G0v99",
+  "plan": "G1v116",
+  "focusedIntegrityTestsPassed": 33,
+  "focusedExit": 0,
+  "architectureExit": 0,
+  "ownerCheckExit": 0,
+  "completedCleanWorkUnits": 0,
+  "scope": "Append-only source/artifact binding and focused integrity checks. No full frontend/workspace result or G0/G1 clean-work credit imported."
+}

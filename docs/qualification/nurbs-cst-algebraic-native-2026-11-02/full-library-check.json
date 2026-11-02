@@ -1,0 +1,18 @@
+{
+  "sourceCommit": "15328bfd0",
+  "source": "source.json",
+  "command": "cargo test --manifest-path crates/Cargo.toml -p nurbs-core --lib --locked --offline",
+  "env": {
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2"
+  },
+  "exitCode": 0,
+  "passed": 2043,
+  "failed": 0,
+  "ignored": 1,
+  "filtered": 0,
+  "ignoredReason": "Existing normal_alignment::tests::benchmark_closed_rational_restriction microbenchmark; no runtime performance claim.",
+  "log": "full-library.log.gz",
+  "scope": "Default-feature nurbs-core library only; not full workspace, no-codec unit library or application qualification."
+}

@@ -1,0 +1,26 @@
+{
+  "scope": "Exact Fraction derivative recurrence on original binary64 controls with dyadic knots and unit weights. Removing 0.5 leaves one polynomial span on [0,1], which cannot retain a nonzero third-derivative jump.",
+  "records": [
+    {
+      "runtime": "delta=0e0 reported_tolerance=0e0 control_delta=4.965068306494546e-16 feasible=true",
+      "exactThirdDerivativeJumpAtHalf": [
+        "0",
+        "0"
+      ]
+    },
+    {
+      "runtime": "delta=1e-10 reported_tolerance=0e0 control_delta=4.2778225407013105e-11 feasible=true",
+      "exactThirdDerivativeJumpAtHalf": [
+        "0",
+        "56295/8796093022208"
+      ]
+    },
+    {
+      "runtime": "delta=1e-8 reported_tolerance=4.08210010461865e-3 control_delta=4.277778131722704e-9 feasible=true",
+      "exactThirdDerivativeJumpAtHalf": [
+        "0",
+        "11258999/17592186044416"
+      ]
+    }
+  ]
+}

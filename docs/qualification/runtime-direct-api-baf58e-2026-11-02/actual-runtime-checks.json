@@ -1,0 +1,21 @@
+{
+  "runtime": "v10",
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "actualAdmissionTestsPassed": 85,
+  "deliveryBudgetTestsPassed": 6,
+  "freshProviderCubeBuilds": 2,
+  "actualMeshAndBrepIdentityMatched": true,
+  "defaultBuildExit": 0,
+  "distArtifacts": 202,
+  "assetBytes": 10064841,
+  "rawWasmBytes": 19216573,
+  "capsRaised": false,
+  "ownerCensusFiles": 798,
+  "ownerCensusCallables": 10446,
+  "unreviewedNumericalFiles": 0,
+  "staleOwnerDecisions": 0,
+  "ownerCensusCheckExit": 0,
+  "architectureExit": 0,
+  "scope": "Actual runtimev10 admission/local packaging and owner census; final source freeze, full frontend/workspace, Linux/hosted CI and main delivery remain separate.",
+  "mcpTypecheckExit": 0
+}

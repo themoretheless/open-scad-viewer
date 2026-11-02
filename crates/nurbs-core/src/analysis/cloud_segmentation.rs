@@ -5,7 +5,7 @@
 //! нормированный на радиус окрестности. Посев — в необработанной точке с
 //! минимальной кривизной; рост — очередью с проверкой угла нормалей.
 
-use crate::analysis::cloud_normals::{GridIndex, dot3, norm3};
+use crate::analysis::cloud_normals::{GridIndex, dot3, norm3, unit_normal};
 use crate::{Result, check, numeric, numeric_err};
 use math_core::{Acceleration, local_point_planes};
 
@@ -97,12 +97,6 @@ pub fn segment_cloud(
         points.iter().flatten().all(|v| v.is_finite()),
         "Point coordinates must be finite",
     )?;
-    for n in normals {
-        numeric(
-            n.iter().all(|v| v.is_finite()) && norm3(*n) > 1e-12,
-            "Normals must be finite and non-zero",
-        )?;
-    }
     check(
         options.normal_angle_threshold > 0.
             && options.normal_angle_threshold < std::f64::consts::PI,
@@ -117,13 +111,7 @@ pub fn segment_cloud(
         "Need at least 3 neighbors and a positive minimum region size",
     )?;
     let n = points.len();
-    let unit: Vec<[f64; 3]> = normals
-        .iter()
-        .map(|v| {
-            let l = norm3(*v);
-            [v[0] / l, v[1] / l, v[2] / l]
-        })
-        .collect();
+    let unit: Vec<[f64; 3]> = normals.iter().map(|&n| unit_normal(n)).collect::<Result<_>>()?;
     let curvature = estimate_curvatures(points)?;
     let cell = GridIndex::suggested_cell(points);
     let grid = GridIndex::build(points, cell)?;
@@ -145,13 +133,9 @@ pub fn segment_cloud(
         assigned[seed] = true;
         let mut queue: Vec<u32> = vec![seed as u32];
         let mut head = 0;
-        let mut normal_sum = [0.; 3];
         while head < queue.len() {
             let cur = queue[head] as usize;
             head += 1;
-            for k in 0..3 {
-                normal_sum[k] += unit[cur][k];
-            }
             for j in grid.k_nearest(cur, options.neighbor_count) {
                 let ju = j as usize;
                 if assigned[ju] {
@@ -169,6 +153,14 @@ pub fn segment_cloud(
         }
         if members.len() < options.min_region_size {
             continue;
+        }
+        // Boundary members may be accepted without entering the growth queue.
+        // Every member still contributes to the reported regional mean.
+        let mut normal_sum = [0.; 3];
+        for &member in &members {
+            for k in 0..3 {
+                normal_sum[k] += unit[member as usize][k];
+            }
         }
         let count = members.len() as f64;
         let mean = [normal_sum[0] / count, normal_sum[1] / count, normal_sum[2] / count];

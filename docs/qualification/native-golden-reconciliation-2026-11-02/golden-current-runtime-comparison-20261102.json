@@ -1,0 +1,30 @@
+{
+  "sameExecutableSha256": "d09b9a5988db29455747d346541849efed8fb380c60b963004e464a065f46f4d",
+  "cases": 43,
+  "runs": [
+    {
+      "ubuntu": "24.04",
+      "libcHeader": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39",
+      "differentPayloadsFromDebian": [],
+      "differentFromHistoricalFixture": [
+        "nurbs.intersect_surface_surface",
+        "nurbs.surface_distance",
+        "nurbs.surface_offset.1",
+        "nurbs.surface_offset.2",
+        "sketch.solve"
+      ]
+    },
+    {
+      "ubuntu": "26.04",
+      "libcHeader": "ldd (Ubuntu GLIBC 2.43-2ubuntu2.4) 2.43",
+      "differentPayloadsFromDebian": [],
+      "differentFromHistoricalFixture": [
+        "nurbs.intersect_surface_surface",
+        "nurbs.surface_distance",
+        "nurbs.surface_offset.1",
+        "nurbs.surface_offset.2",
+        "sketch.solve"
+      ]
+    }
+  ]
+}

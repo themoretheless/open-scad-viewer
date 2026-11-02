@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "targetCount": 1200,
-  "specifiedCount": 200,
-  "unallocatedCount": 1000,
+  "targetCount": 1000,
+  "specifiedCount": 226,
+  "unallocatedCount": 774,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -4374,7 +4374,9 @@
       "evidence": [
         "crates/nurbs-core/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/degree_reduction.rs",
-        "docs/design/nurbs-degree-reduction.md"
+        "docs/design/nurbs-degree-reduction.md",
+        "crates/nurbs-core/src/core/curve_identity.rs",
+        "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json"
       ]
     },
     {
@@ -5692,6 +5694,507 @@
         "crates/nurbs-core/src/core/coordinate_frame.rs",
         "crates/nurbs-core/tests/coordinate_frame.rs",
         "docs/design/nurbs-coordinate-frame.md"
+      ]
+    },
+    {
+      "id": "NURBS-0201",
+      "name": "бликовые изолинии поверхности и выборочные изломы",
+      "status": "native",
+      "prioritySet": "native-1000-analysis",
+      "category": "Диагностика качества поверхностей",
+      "nativeApi": "nurbs_core::analysis::class_a::highlight_lines",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/class_a.rs",
+        "crates/nurbs-core/src/analysis/tests/class_a.rs",
+        "crates/nurbs-core/tests/class_a_contracts.rs",
+        "docs/design/nurbs-class-a-diagnostics.md",
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled diagnostic only; no continuous Class-A or G2 certificate",
+        "JSON, WASM, Rush, editor and export integration are not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0202",
+      "name": "локализация скачков отражённых линий",
+      "status": "native",
+      "prioritySet": "native-1000-analysis",
+      "category": "Диагностика качества поверхностей",
+      "nativeApi": "nurbs_core::analysis::class_a::reflection_lines",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/class_a.rs",
+        "crates/nurbs-core/src/analysis/tests/class_a.rs",
+        "crates/nurbs-core/tests/class_a_contracts.rs",
+        "docs/design/nurbs-class-a-diagnostics.md",
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled diagnostic only; no continuous Class-A or G2 certificate",
+        "JSON, WASM, Rush, editor and export integration are not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0203",
+      "name": "изофоты поверхности и диагностика шага",
+      "status": "native",
+      "prioritySet": "native-1000-analysis",
+      "category": "Диагностика качества поверхностей",
+      "nativeApi": "nurbs_core::analysis::class_a::isophote_analysis",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/class_a.rs",
+        "crates/nurbs-core/src/analysis/tests/class_a.rs",
+        "crates/nurbs-core/tests/class_a_contracts.rs",
+        "docs/design/nurbs-class-a-diagnostics.md",
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled diagnostic only; no continuous Class-A or G2 certificate",
+        "JSON, WASM, Rush, editor and export integration are not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0204",
+      "name": "зоны локальных вмятин по карте гауссовой кривизны",
+      "status": "native",
+      "prioritySet": "native-1000-analysis",
+      "category": "Диагностика качества поверхностей",
+      "nativeApi": "nurbs_core::analysis::class_a::dent_detection",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/class_a.rs",
+        "crates/nurbs-core/src/analysis/tests/class_a.rs",
+        "crates/nurbs-core/tests/class_a_contracts.rs",
+        "docs/design/nurbs-class-a-diagnostics.md",
+        "docs/qualification/nurbs-class-a-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled diagnostic only; no continuous Class-A or G2 certificate",
+        "JSON, WASM, Rush, editor and export integration are not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0205",
+      "name": "точное распознавание аффинного носителя контрольной геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-exact-support",
+      "category": "Упрощение и распознавание",
+      "nativeApi": "nurbs_core::analysis::affine_support::curve",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/affine_support.rs",
+        "crates/nurbs-core/tests/affine_support.rs",
+        "docs/design/nurbs-affine-support.md",
+        "docs/qualification/nurbs-affine-support-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "containment only; no regularity, analytic replacement or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0206",
+      "name": "восстановление сферы по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_sphere",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0207",
+      "name": "восстановление кругового цилиндра по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_cylinder",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0208",
+      "name": "восстановление кругового конуса по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_cone",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0209",
+      "name": "восстановление кругового тора по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_torus",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0210",
+      "name": "аппроксимация плоскости по облаку точек",
+      "status": "native",
+      "prioritySet": "native-1000-reconstruction",
+      "category": "Восстановление аналитической формы",
+      "nativeApi": "nurbs_core::analysis::primitive_fit::fit_plane",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/primitive_fit.rs",
+        "crates/nurbs-core/tests/primitive_fit_contracts.rs",
+        "docs/design/nurbs-primitive-fitting.md",
+        "docs/qualification/nurbs-primitive-fit-native-2026-11-01/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "local sampled least-squares result only; no global optimum or continuous error certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0211",
+      "name": "выделение аналитических примитивов RANSAC с выбросами",
+      "status": "native",
+      "prioritySet": "native-1000-cloud-processing",
+      "category": "Облака точек и восстановление",
+      "nativeApi": "nurbs_core::analysis::ransac_primitives::detect_primitives",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/ransac_primitives.rs",
+        "crates/nurbs-core/tests/cloud_processing_contracts.rs",
+        "docs/design/nurbs-cloud-processing.md",
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled heuristic only; no complete reconstruction or B-rep certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0212",
+      "name": "согласование знаков заданных нормалей облака",
+      "status": "native",
+      "prioritySet": "native-1000-cloud-processing",
+      "category": "Облака точек и восстановление",
+      "nativeApi": "nurbs_core::analysis::cloud_normals::orient_normals_consistent",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/cloud_normals.rs",
+        "crates/nurbs-core/tests/cloud_processing_contracts.rs",
+        "docs/design/nurbs-cloud-processing.md",
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled heuristic only; no complete reconstruction or B-rep certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0213",
+      "name": "сегментация облака по нормалям и локальной кривизне",
+      "status": "native",
+      "prioritySet": "native-1000-cloud-processing",
+      "category": "Облака точек и восстановление",
+      "nativeApi": "nurbs_core::analysis::cloud_segmentation::segment_cloud",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/cloud_segmentation.rs",
+        "crates/nurbs-core/tests/cloud_processing_contracts.rs",
+        "docs/design/nurbs-cloud-processing.md",
+        "docs/qualification/nurbs-cloud-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "sampled heuristic only; no complete reconstruction or B-rep certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0214",
+      "name": "точное упрощение полилинейной NURBS без изменения параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::linear_simplification::simplify",
+      "evidence": [
+        "crates/nurbs-core/src/editing/linear_simplification.rs",
+        "crates/nurbs-core/tests/linear_simplification.rs",
+        "docs/design/nurbs-exact-linear-simplification.md",
+        "docs/qualification/nurbs-exact-linear-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "degree-one constant-weight nominal definitions only; no B-rep authority or evaluator roundoff bound",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0215",
+      "name": "продление многопролётной рациональной кривой с сохранением старых параметров",
+      "status": "native",
+      "prioritySet": "native-1000-extension",
+      "category": "Продление и редактирование",
+      "nativeApi": "nurbs_core::curve_extension::extend_curve",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/curve_extension.rs",
+        "crates/nurbs-core/tests/curve_extension_contracts.rs",
+        "docs/design/nurbs-curve-extension.md",
+        "docs/qualification/nurbs-extension-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "numerical construction only; requested continuity is not a certified G2 or B-rep claim",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0216",
+      "name": "продление совместимой тензорной поверхности по выбранной оси",
+      "status": "native",
+      "prioritySet": "native-1000-extension",
+      "category": "Продление и редактирование",
+      "nativeApi": "nurbs_core::editing::surface_extension::extend_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/surface_extension.rs",
+        "crates/nurbs-core/tests/surface_extension_contracts.rs",
+        "docs/design/nurbs-surface-extension.md",
+        "docs/qualification/nurbs-extension-native-2026-11-02/native-contract-tests.json"
+      ],
+      "remainingQualification": [
+        "numerical construction only; requested continuity is not a certified G2 or B-rep claim",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0217",
+      "name": "восстановление плоской кривой по знаковой кривизне с отчётом интегрирования",
+      "status": "native",
+      "prioritySet": "native-1000-curvature-biarc",
+      "category": "Восстановление и аппроксимация кривых",
+      "nativeApi": "nurbs_core::curve_reconstruction::reconstruct_from_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/curve_reconstruction.rs",
+        "crates/nurbs-core/tests/curvature_reconstruction_contracts.rs",
+        "docs/design/nurbs-curvature-reconstruction.md",
+        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json"
+      ],
+      "remainingQualification": [
+        "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0218",
+      "name": "численная аппроксимация конечными биарками с проверкой концов дуг",
+      "status": "native",
+      "prioritySet": "native-1000-curvature-biarc",
+      "category": "Восстановление и аппроксимация кривых",
+      "nativeApi": "nurbs_core::biarc::fit_biares_report",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/biarc.rs",
+        "crates/nurbs-core/tests/biarc_contracts.rs",
+        "docs/design/nurbs-biarc-fitting.md",
+        "docs/qualification/nurbs-curvature-biarc-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-218-full-native-2026-11-02/receipt.json"
+      ],
+      "remainingQualification": [
+        "numerical and sampled diagnostics only; no continuous error, G2 or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0219",
+      "name": "стандартные нерефлексные профили NACA5 с аналитическими сечениями",
+      "status": "native",
+      "prioritySet": "native-1000-standard-airfoils",
+      "category": "Аналитические профили и восстановление",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::naca5_airfoil",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil/algorithm_naca5_airfoil.rs",
+        "crates/nurbs-core/tests/airfoil_standard_contracts.rs",
+        "docs/design/nurbs-naca5-standard.md",
+        "docs/qualification/nurbs-naca5-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-naca5-native-2026-11-02/full-library-check.json"
+      ],
+      "remainingQualification": [
+        "nominal published coefficients and numerical fit only; no continuous error, closed B-rep or aerodynamic certificate",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0220",
+      "name": "построение CST-профиля в NURBS: численное и прямое алгебраическое",
+      "status": "native",
+      "prioritySet": "native-1000-cst",
+      "category": "Профили и восстановление",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::cst_airfoil",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_frame.rs",
+        "crates/nurbs-core/tests/cst_contracts.rs",
+        "docs/design/nurbs-cst-profiles.md",
+        "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json",
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+        "crates/nurbs-core/tests/cst_algebraic_contracts.rs",
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/default-public-check.json",
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/full-library-check.json",
+        "docs/qualification/nurbs-cst-algebraic-native-2026-11-02/no-codec-check.json"
+      ],
+      "remainingQualification": [
+        "sampled fit has discrete diagnostics; algebraic subset has a nominal continuous position bound only, excluding evaluator roundoff, derivatives, exact frame and B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0221",
+      "name": "обратная подгонка CST в авторской 3D-плоскости с разметкой сторон",
+      "status": "native",
+      "prioritySet": "native-1000-cst",
+      "category": "Профили и восстановление",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::cst_fit_sides",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil/algorithm_cst_fit.rs",
+        "crates/nurbs-core/tests/cst_contracts.rs",
+        "docs/design/nurbs-cst-profiles.md",
+        "docs/qualification/nurbs-cst-native-2026-11-02/native-contract-tests.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/full-library-check.json",
+        "docs/qualification/nurbs-cst-native-2026-11-02/public-no-codec-check.json"
+      ],
+      "remainingQualification": [
+        "numerical construction and discrete fit diagnostics only; no continuous error, exact frame or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0222",
+      "name": "площадь и центроид исходного CST-сечения с интервальными границами",
+      "status": "native",
+      "prioritySet": "native-1000-source-section-properties",
+      "category": "Анализ профилей",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::cst_section_properties",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil.rs",
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+        "crates/nurbs-core/tests/cst_section_contracts.rs",
+        "docs/design/nurbs-cst-profiles.md",
+        "docs/qualification/nurbs-cst-section-native-2026-11-02/no-codec-check.json",
+        "docs/qualification/nurbs-cst-section-native-2026-11-02/default-library-public-check.json"
+      ],
+      "remainingQualification": [
+        "original CST algebraic subset and sufficient coefficientwise side ordering only; no transformed frame, second moments, B-rep or volume authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0223",
+      "name": "точная принадлежность исходного NURBS-патча заданной квадрике и регулярная неявная опора",
+      "status": "native",
+      "prioritySet": "native-1000-analytic-support",
+      "category": "Анализ аналитических поверхностей",
+      "nativeApi": "nurbs_core::analysis::implicit_quadric::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/implicit_quadric.rs",
+        "crates/cad-predicates/src/bezier_quadric_identity.rs",
+        "crates/nurbs-core/src/foundation/knot_removal.rs",
+        "crates/nurbs-core/tests/implicit_quadric_contracts.rs",
+        "docs/design/nurbs-implicit-quadrics.md",
+        "docs/qualification/nurbs-implicit-quadric-native-2026-11-02/default-check.json",
+        "docs/qualification/nurbs-implicit-quadric-native-2026-11-02/no-codec-check.json",
+        "docs/qualification/knot-removal-zero-admission-2026-11-02/after-check.json",
+        "crates/cad-predicates/src/bspline_quadric_identity.rs",
+        "crates/nurbs-core/tests/implicit_quadric_multispan_contracts.rs",
+        "docs/qualification/nurbs-quadric-multispan-native-2026-11-02/checks.json"
+      ],
+      "remainingQualification": [
+        "clamped nonperiodic degree1..8 original tensor and authored equation only; no automatic fitting, periodic/unclamped proof, parameter regularity, injectivity, pole quotient, B-rep or solid authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0224",
+      "name": "точное удаление узла NURBS с сохранением исходной параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_knot_removal::remove",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
+        "docs/design/nurbs-exact-knot-removal.md",
+        "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json"
+      ],
+      "remainingQualification": [
+        "one verified proposal, not exhaustive representability search; nonperiodic clamped degree1..25, shared work refusal allowed; nominal geometry only, no machine-bit evaluation or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0225",
+      "name": "вторые моменты площади исходного CST-сечения с интервальными границами",
+      "status": "native",
+      "prioritySet": "native-1000-section-mechanics",
+      "category": "Геометрические характеристики сечений",
+      "nativeApi": "nurbs_core::construct::curves::airfoil::cst_section_moments",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/airfoil.rs",
+        "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic/moments.rs",
+        "crates/nurbs-core/tests/cst_moment_contracts.rs",
+        "docs/design/nurbs-cst-second-moments.md",
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact_beta_oracle.py",
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact-beta-oracle.json",
+        "docs/qualification/nurbs-cst-moments-native-2026-11-02/checks.json"
+      ],
+      "remainingQualification": [
+        "original algebraic CST law and coefficientwise ordered section only; no frame transform, solid mass inertia, principal axes or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0226",
+      "name": "точное удаление узла тензорной NURBS-поверхности с сохранением UV",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::remove",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs",
+        "docs/design/nurbs-exact-surface-knot-removal.md",
+        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json"
+      ],
+      "remainingQualification": [
+        "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
   ],

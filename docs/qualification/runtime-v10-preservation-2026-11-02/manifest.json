@@ -1,0 +1,11 @@
+{
+  "scope": "Exact pre-v10 runtime sources and v9 manifest payloads, not a historical checkout or execution qualification.",
+  "files": {
+    "docs/qualification/runtime-v10-preservation-2026-11-02/manifests-v9.json": "2e3a3eb4e30bb661e12c9311f03bde619ddd5d58375817026fd1d9daf7802560",
+    "docs/qualification/runtime-v10-preservation-2026-11-02/scripts--geometry-delivery-budgets.mjs.txt": "1873821e01091e0ba55bc673343e48de130bc20271ed74b370f500f15c58fff9",
+    "docs/qualification/runtime-v10-preservation-2026-11-02/src--core--currentRuntimeGeometryEvidence.ts.txt": "a37de175e17af86f7afe9772f9ffe77289552f40cda745cdf4add73bd532bb71",
+    "docs/qualification/runtime-v10-preservation-2026-11-02/src--core--geometryExecution.ts.txt": "0d91a9f49f152b6db0ac4d452a4fa6bfcbd42dcdfe5adc707cfae2c2f0851e4a",
+    "docs/qualification/runtime-v10-preservation-2026-11-02/tests--engineManifest.test.ts.txt": "dce046ca7fb8f783fc6b2d110709ecf20a37bd58027bc38e02fcc5817048a188",
+    "docs/qualification/runtime-v10-preservation-2026-11-02/tests--geometryManifestArchiveIsolation.test.ts.txt": "90f0a8fba55e0823dbd705cb6a580808a6335b14737b818b44a8609f0a81d422"
+  }
+}

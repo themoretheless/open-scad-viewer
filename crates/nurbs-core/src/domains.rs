@@ -96,6 +96,7 @@ pub mod surfaces {
 
 /// Existing modules for editing.
 pub mod editing {
+    pub use crate::linear_simplification;
     pub use crate::editing;
     pub use crate::affine;
     pub use crate::edit;

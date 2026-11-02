@@ -1,0 +1,32 @@
+{
+  "sourceSnapshot": "docs/qualification/own-rust-cad-v83.json",
+  "sourceSha256": "9b8d5423c249a822b19790e3a077b8b36dde8ad3010f5312d1ce4e6634d67e7f",
+  "sourcePaths": 7617,
+  "rustManifestPaths": 5112,
+  "sourceDrift": 0,
+  "frontend": {
+    "exitCode": 0,
+    "passed": 6540,
+    "failed": 0,
+    "skipped": 10,
+    "filesPassed": 719,
+    "filesSkipped": 5,
+    "filesTotal": 724
+  },
+  "nativeWorkspace": {
+    "exitCodes": {
+      "typed-no-codec": 0,
+      "partition": 0,
+      "aag": 0,
+      "remaining": 0
+    },
+    "passed": 8510,
+    "failed": 0,
+    "ignored": 8,
+    "aagPassed": 52,
+    "remainingPassed": 8458,
+    "scope": "Full --workspace CI test partitions including integration and documentation targets, not only library tests."
+  },
+  "qualificationClaim": "none",
+  "scope": "Combined recovery root through50389f74c plus OwnRust83/G0v97/G1v114 governance. Excludes featurea3f875207 exact-knot removal and any newer runtime source. Published442d WASM unchanged; no production/global G0/G1/hostedCI/STEP qualification inferred."
+}

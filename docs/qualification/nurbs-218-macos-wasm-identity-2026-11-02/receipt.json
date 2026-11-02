@@ -1,0 +1,14 @@
+{
+  "schema": "same-byte-native-wasm-build-check/1",
+  "compiledRustSourcePaths": 4310,
+  "sourceBuildRecipe": "candidate-build.json.gz",
+  "artifactSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+  "bytes": 15900166,
+  "currentPublicAndArchivedArtifactByteIdentical": true,
+  "compileExitCode": 0,
+  "newRuntimeHashAdmission": false,
+  "linuxBuildQualified": false,
+  "allNativeCapabilitiesWasmExposed": false,
+  "sourceRefreezeComplete": false,
+  "mainPushed": false
+}

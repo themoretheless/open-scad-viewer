@@ -11,6 +11,8 @@ from OCP.TopExp import TopExp_Explorer
 from OCP.TopoDS import TopoDS
 from OCP.BRepAdaptor import BRepAdaptor_Surface
 from OCP.gp import gp_Pnt
+# OCP 7 exposes static downcasts with an _s suffix; OCP 8 also exposes Face.
+face_cast=getattr(TopoDS,'Face',None) or TopoDS.Face_s
 root=Path(sys.argv[1]);manifest=json.loads((root/'manifest.json').read_text());reports=[]
 def read(path):
  r=STEPControl_Reader();assert r.ReadFile(str(path))==IFSelect_RetDone;assert r.TransferRoots()>0;return r.OneShape()
@@ -32,7 +34,7 @@ for case in manifest['cases']:
  stages=[]
  for solid in [shape,read(peer)]:
   assert BRepCheck_Analyzer(solid).IsValid();faces=entities(solid,TopAbs_FACE);assert len(faces)==6;assert len(entities(solid,TopAbs_SOLID))==1
-  surfaces=[BRepAdaptor_Surface(TopoDS.Face(f)) for f in faces];worst=0
+  surfaces=[BRepAdaptor_Surface(face_cast(f)) for f in faces];worst=0
   for samples in case['wallSamples']:
    errors=[]
    for s in surfaces:

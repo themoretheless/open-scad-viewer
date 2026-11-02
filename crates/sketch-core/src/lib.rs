@@ -172,6 +172,9 @@ mod geometry_ops;
 mod residuals;
 mod solver;
 
+#[cfg(test)]
+mod jacobian_regression;
+
 pub use solver::{
     Diagnostics, DofAnalysis, SolverOptions, analyze_dof, solve, solve_with_diagnostics,
     solve_with_diagnostics_options, solve_with_options,

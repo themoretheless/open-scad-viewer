@@ -1,0 +1,21 @@
+{
+  "scope": "Exact raw/optimized byte comparison only. Does not prove new native methods are exposed, mapped or qualified in WASM; source snapshots differ.",
+  "comparisons": [
+    {
+      "kind": "raw",
+      "sameBytes": true,
+      "sha218": "a1ace773b67f796279db18f737702b3781952808c851e63339711205851a22ef",
+      "sha223": "a1ace773b67f796279db18f737702b3781952808c851e63339711205851a22ef",
+      "bytes218": 17814921,
+      "bytes223": 17814921
+    },
+    {
+      "kind": "optimized",
+      "sameBytes": true,
+      "sha218": "13d57db09409356dd9a7fa410aeb78937f73010915e77ada400823b3d0857fda",
+      "sha223": "13d57db09409356dd9a7fa410aeb78937f73010915e77ada400823b3d0857fda",
+      "bytes218": 15908186,
+      "bytes223": 15908186
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "reviewed-native-golden-reconciliation/1",
+  "cases": 43,
+  "changedFixtureLines": 5,
+  "replaysPassed": 3,
+  "unchangedTestExecutableSha256": "d09b9a5988db29455747d346541849efed8fb380c60b963004e464a065f46f4d",
+  "rootRecoveryOnly": true,
+  "feature214Included": false,
+  "hostedCiProven": false,
+  "crossHostCompilerReproducibilityProven": false,
+  "wasmQualified": false,
+  "files": {
+    "golden-current-runtime-comparison-20261102.json": "4466a63fbd5aa559a267f0bc97dd6d51cf17b183e154f15b72ed308bc607c4da",
+    "golden-reconciled-debian-bookworm-slim-20261102.log.gz": "4865e5fce719539a575a9c482ab9697d03122b9d20a6cd467dddf9260bdd1913",
+    "golden-five-fixture-change-20261102.json": "d6fc18a5dfc33692684caf2f5155f492dee867a9a70e1e455902c4f5c992c990",
+    "golden-structured-payloads-20261102.json": "d0bfd5976a2c36c251d3580765182b3a1469357cb4f3ba76355422b5455f5ab8",
+    "verify-offset-oracle.py": "51372b166d63280c8fde5157a1de50401a3dded45905860da6a78cfbca058365",
+    "golden-five-reconciliation-20261102.json": "1c0bf2964269d49cadbd084aa1264213cf136872607ff57267ccaf9e657513b8",
+    "verify-five-goldens.py": "1a5980a2f63813a0457dc3024db42a0f4d5f66f59991e7d05e2304284bdd0364",
+    "golden-reconciled-ubuntu-24.04-20261102.log.gz": "7139148de9b823811c886fed467cc40c09f222e9a30aa7f81e343172e3bdf89c",
+    "linux-golden-rustc.txt.gz": "87d1213d2ffea6a4d3b658c997ec597e7136e24d604b8af50af8aeb0c7bcb070",
+    "canonical-payloads.tar.gz": "1893fb505786738acb09b87d86816dc994554fbefd40d09145f4e2ebeb475cc3",
+    "golden-reconciled-ubuntu-26.04-20261102.log.gz": "3b476981aea82e2237a3966c04ac37cb8fa6c9fbc74ab21829dd292efe51ecd0",
+    "golden-offset-independent-oracle-20261102.json": "d05fa2b6458443260a503491f10a0e1c96d6a1f59f3134dadf96577cbc240b6d",
+    "golden-current-libc-comparison.json": "7604b953a2121e675c18478da7f64c20b528fa203342559937d0dea2c5b0a1b5",
+    "golden-reconciled-runtime-checks-20261102.json": "0fb4e09eb7a37346fa4c563a8f5ec78c51a6fa51d91ad6fac0ece04ad4045b3e",
+    "golden-fixture-before-five-reconciliation-20261102.txt": "c7dbd0f9aafcf31acdf212433c33d61aba3ded21ff244485c6d2186cceaffddd",
+    "golden-current-linux.log.gz": "922e6956feb88d708480709a47ead94ec7d2355ffe6e425b709902105d1a5abc"
+  }
+}

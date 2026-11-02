@@ -1,0 +1,32 @@
+{
+  "sourceSnapshot": "OwnRust83",
+  "sourceSha256": "9b8d5423c249a822b19790e3a077b8b36dde8ad3010f5312d1ce4e6634d67e7f",
+  "sourceUnchanged": true,
+  "g0FingerprintArtifactDrift": [],
+  "buildWithValidatedArtifact": {
+    "exitCode": 0,
+    "command": "npm --ignore-scripts run build",
+    "purpose": "Application vue-tsc/Vite/verify-dist against restored independently validated442d artifact; skips only WASM materialization prebuild, not app checks.",
+    "artifacts": 202,
+    "assetBytes": 10068439,
+    "rawWasmBytes": 19180866
+  },
+  "mcpTypecheckExit": 0,
+  "qualificationDriftTests": {
+    "exitCode": 0,
+    "passed": 2
+  },
+  "defaultBuildWithFreshWasm": {
+    "exitCode": 1,
+    "reason": "Fresh390fb9 exact artifact lacks reviewed delivery profile; guard unchanged. Candidate retained and production442d restored. Default pipeline not declared green.",
+    "candidate": "native223-macos-390fb9-candidate",
+    "privateBrowserChecks": 56,
+    "privateBrowserExitCode": 0,
+    "candidateBytes": 15917327,
+    "geometryChunkBytes": 5368252,
+    "totalAssetBytes": 10076435,
+    "capsNotRaised": true,
+    "promoted": false
+  },
+  "scope": "Root223 only; no feature224, new390 source/provider/global qualification inherited."
+}

@@ -1,0 +1,13 @@
+{
+  "restoredSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+  "restoreExit": 0,
+  "applicationBuildAgainstRestoredArtifactExit": 0,
+  "command": "npm --ignore-scripts run build",
+  "distArtifacts": 202,
+  "assetBytes": 10068621,
+  "rawWasmBytes": 19180866,
+  "architectureExit": 0,
+  "historicalFreezeRecordsUnchanged": 4,
+  "sourceRefreezeStillRequired": true,
+  "runtime390AdmissionStillRequired": true
+}

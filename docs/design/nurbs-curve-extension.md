@@ -1,0 +1,11 @@
+# Native curve extension
+
+`nurbs_core::curve_extension::extend_curve` numerically continues the terminal rational polynomial span of a clamped nonperiodic curve. It supports either end and keeps the original parameter interval in place; the requested length is a physical arc-length estimate, not an exact arc-length constraint.
+
+A general terminal B-spline control window is not a Bezier net. The implementation first inserts the terminal span's left knot to interior multiplicity `degree`, then extrapolates that homogeneous Bezier net. This can add up to `degree - 1` controls. Requests exceeding the existing 256-control limit are refused. Start extension reflects the result around the original domain, so the added interval lies before the old start instead of translating the source parameters.
+
+Knot insertion and extrapolation use binary64 arithmetic. Analytic continuation matches the source on its original domain and matches endpoint jets in exact arithmetic; the returned control net contains rounding error. `achieved_continuity` is a compatibility field echoing the requested G1/G2/C2 class, not a numerical or exact certificate. `stable` is only a heuristic bound on coefficient growth, not a guaranteed geometric error bound or regularity certificate. No B-rep authority is granted.
+
+The parameter step starts from requested length / endpoint speed and is corrected once by 8-chord sampling, with the correction factor clamped to [0.5, 2]. Nonfinite/nonpositive lengths, a zero-speed endpoint, an unrepresentable endpoint advance, unclamped/periodic or invalid sources, inadmissible extrapolated weights and existing input/control-budget violations are refused. Long extensions can be ill-conditioned even when all values remain finite.
+
+Independent public API tests compare every old parameter sample and endpoint derivatives for a multispan rational source at both ends, compare a line against its analytic parameterization, preserve already isolated spans, and exercise invalid inputs and the unchanged control budget. Circle and unstable high-degree cases additionally test analytic geometry and the growth diagnostic. These are focused native contracts; JSON/WASM/Rush/editor/STEP qualification remains open.

@@ -1,0 +1,38 @@
+{
+  "runtime": "v9",
+  "wasmSha256": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "defaultBuildExit": 0,
+  "mcpTypecheckExit": 0,
+  "architectureExit": 0,
+  "manifestTestsPassed": 5,
+  "providerRoutingTestsPassed": 77,
+  "directNodeApiPassed": 112,
+  "chromiumMainChecks": 28,
+  "chromiumWorkerChecks": 28,
+  "freshProviderCubeBuilds": 2,
+  "freshProviderIdentityMatches": true,
+  "retainedV8ManifestDigests": [
+    "ff7de6cc61a30366ce33abc090cac42538abb228efc715210602e986859cf1ac",
+    "84044b5663d7dfd790d01ac79de118270574699fe0c059ac8b1776e2f1a8fe58"
+  ],
+  "distArtifacts": 202,
+  "assetBytes": 10078483,
+  "totalAssetLimitUnchanged": 10080000,
+  "rawWasmBytes": 19198027,
+  "sources": {
+    "src/core/currentRuntimeGeometryEvidence.ts": "a37de175e17af86f7afe9772f9ffe77289552f40cda745cdf4add73bd532bb71",
+    "src/core/runtimeGeometryEvidenceV8.ts": "97e745464deed23a846c8815d2992950d34a2feeb46dc9a2c575cea0d2b97b04",
+    "src/core/geometryExecution.ts": "0d91a9f49f152b6db0ac4d452a4fa6bfcbd42dcdfe5adc707cfae2c2f0851e4a",
+    "tests/engineManifest.test.ts": "dce046ca7fb8f783fc6b2d110709ecf20a37bd58027bc38e02fcc5817048a188",
+    "tests/geometryManifestArchiveIsolation.test.ts": "90f0a8fba55e0823dbd705cb6a580808a6335b14737b818b44a8609f0a81d422"
+  },
+  "remaining": [
+    "Append-only OwnRust84/G0v98/G1v115 source/artifact binding; prior83/97/114 immutable",
+    "Complete frontend on final newly frozen source/artifact",
+    "Linux current-source and hosted CI scopes remain separate",
+    "Feature225 remains ahead of root223",
+    "Final main delivery and original1000 scope remain incomplete"
+  ],
+  "qualificationClaim": "finite-runtime-api-and-local-packaging-only",
+  "mainPushed": false
+}

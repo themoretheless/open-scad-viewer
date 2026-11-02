@@ -1,0 +1,43 @@
+{
+  "schema": "recovery-local-suite-checkpoint/1",
+  "status": "passed-local-suites-only",
+  "sourceBinding": {
+    "record": "docs/qualification/own-rust-cad-v82.json",
+    "recordSha256": "f257246d70de5734d3c2a10d6a506616b0a08ce855ffa55f5c73e86bd524aa96",
+    "canonicalSourceSha256": "6d502e699f0b3fc34e9f0dc9a7e6f546114e76d5333c531d303a4378364f6e0d",
+    "paths": 7593,
+    "verifiedBeforeReceiptPublication": true
+  },
+  "geometryWasm": {
+    "sha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+    "byteLength": 15900166
+  },
+  "frontend": {
+    "command": "VITEST_MAX_WORKERS=2 caffeinate -i <isolated official Node 22.23.4> node_modules/vitest/vitest.mjs run --maxWorkers 2 --testTimeout 90000 --reporter=default --reporter=json",
+    "exitCode": 0,
+    "files": 724,
+    "passed": 6540,
+    "failed": 0,
+    "existingSkipped": 10,
+    "reportSha256": "a7011d945c7701f4890024b7d9cff6909f2be8028900dbc6b353a35f757096f5"
+  },
+  "rustLibraries": {
+    "command": "CARGO_TARGET_DIR=/Users/themoretheless/.codex/tmp/osv-nurbs-plan-target-recovery-20261028 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 RUST_TEST_THREADS=2 caffeinate -i cargo test --manifest-path crates/Cargo.toml --workspace --lib --locked --offline",
+    "exitCode": 0,
+    "targets": 52,
+    "passed": 6236,
+    "failed": 0,
+    "existingIgnored": 8,
+    "filteredOut": 0,
+    "logSha256": "75a17fe6e235d5179a6f995d5d8999f11b4a80e35008898c8fb269dd3ce30a3f"
+  },
+  "linuxGoldenQualified": false,
+  "hostedCiProven": false,
+  "g0g1Qualified": false,
+  "mainPushed": false,
+  "claimBoundary": [
+    "Recovery worktree at OwnRust82 only; native-1000 feature-worktree additions are not part of these runs.",
+    "Full local suite success is not a continuous geometry guarantee or completion of the 1000-capability goal.",
+    "Linux exact numeric golden reconciliation and current hosted CI remain outstanding."
+  ]
+}

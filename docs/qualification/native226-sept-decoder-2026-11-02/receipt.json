@@ -1,0 +1,24 @@
+{
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "nodePassed": 115,
+  "chromiumMainEmbeddedChecks": 40,
+  "chromiumIndependentWorkerEmbeddedChecks": 40,
+  "transportTestsPassed": 35,
+  "sourceHashes": {
+    "src/services/wasmBase91.ts": "f33bbd70022f5f0781f1331bed5d064ac210c7e594aa2457f6d9c7edd9b2dbd9",
+    "src/services/wasmBrotliPacking.ts": "a75c16cca87201aed6687f03eecc92119e14a8904c44c2735ceda8a4519c955f",
+    "scripts/pack-geometry-kernel.mjs": "2e34505883df9e62d6fc1ff9e4b53920785ad859bc0adf91b8a57772233c1fcb",
+    "scripts/verify-packed-wasm.mjs": "ee4ee5f59bc201485204ff17493049931cdc7e109808712a829173fc237f8125",
+    "tests/wasmSeptEncoding.test.ts": "65b3a57e1a494012398772ac0ebdcf3779f2ec01800f95077e68e3e997c8b5bc",
+    "tests/wasmSeptVerification.test.ts": "14114dc3d307fac19b48f2e855172567b40a75cdbb71215fb40e5e81d7c9b90d",
+    "tools/browser-qualification/isolated-packed-candidate-direct-api.mjs": "437141748acad8de1f232bdb553032b37efb2858a72dbfd7025dd463157a3f4b",
+    "tools/browser-qualification/packed-candidate-api-worker.ts": "613a8312c8bd07297f3ab890eb75c6afca3d1cc15e31a26971fcc881ee2673ad"
+  },
+  "packing": "Existing bKx sept format, exact <=49bit Number decoder, independent BigInt reference retained",
+  "savedLiteralBytes": 20226,
+  "limitsUnchanged": true,
+  "geometryChunkBytes": 5352278,
+  "totalAssetBytes": 10066293,
+  "providerPromoted": false,
+  "scope": "Private sept payload/API and actual private Vite build only. Existing v9 provider metadata in build; final exact-hash delivery/profile, runtimev10, owner census, OwnRust85 and final full checks remain required. No global G0/G1, Linux or main delivery qualification."
+}

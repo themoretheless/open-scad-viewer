@@ -1,0 +1,16 @@
+{
+  "schema": "ci-recovery-metadata-checks/1",
+  "fingerprintVersion": 96,
+  "planVersion": 113,
+  "fingerprintTestsPassed": 40,
+  "nodeTestsPassed": 50,
+  "nodeTestsSkipped": 0,
+  "nativeBinaryenTested": true,
+  "logs": {
+    "v96-v113-fingerprint-tests-20261101.json.gz": "ba0305dd9d9f400e090e33d45d6ccb9bbf0caa36fb4115d4d1ca2b490bc4c579",
+    "v96-v113-fingerprint-tests-20261101.log.gz": "d22665e5d891ca5c09a9d41290967e54aeacfe5a4be60c76a4cef4c5f19f061c",
+    "all-node-v8-20261101.log.gz": "67eba1f32b5f1aed72375ea2b13b6343f666b5f8a98c03bd238eef26272e5de7"
+  },
+  "qualificationClaim": "none",
+  "fullFrontendPending": true
+}

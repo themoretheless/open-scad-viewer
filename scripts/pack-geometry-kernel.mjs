@@ -1,14 +1,14 @@
 import {brotliCompressSync, constants} from 'node:zlib'
 import {writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {encodeVariableBase118} from './wasm-base91.mjs'
+import {encodeSeptBase118} from './wasm-base91.mjs'
 import {wasmArtifactIdentityModule} from './wasm-artifact-identity.mjs'
 import {packStampHit,writePackStamp} from './wasm-pack-stamp.mjs'
 
 // Separate packing from compilation so an existing optimized artifact can be
 // repackaged without changing its byte identity or re-running wasm-opt.
 export function packGeometryKernel(wasm, output, publicWasm) {
-const stampPath=resolve(output,'.wasm-pack-stamp-brotli24-16-font-sections-v1-base118v2-bounded-streams')
+const stampPath=resolve(output,'.wasm-pack-stamp-brotli24-16-font-sections-v1-sept118-v1-bounded-streams')
 const packOutputs=[resolve(output,'kernel_bg.wasm'),resolve(publicWasm,'geometry-kernel.wasm'),resolve(output,'identity.ts'),resolve(output,'bytes.ts')]
 if(packStampHit(stampPath,wasm,packOutputs)){
   console.log('geometry-kernels: wasm unchanged, skipping packaging (stamp hit)')
@@ -43,7 +43,7 @@ header.writeUInt32LE(wasm.length+0x80000000);header[4]=streams.length
 streams.forEach(({chunk,compressed},i)=>{header.writeUInt32LE(chunk.length,5+8*i);header.writeUInt32LE(compressed.length,9+8*i)})
 const packed=Buffer.concat([header,...streams.map(stream=>stream.compressed)])
 if(packed.length-4>8*1024*1024)throw new Error('Geometry WASM exceeds compressed input limit')
-const bytes=encodeVariableBase118(packed)
+const bytes=encodeSeptBase118(packed)
 // Prepare the complete package before publishing: compression or size failures
 // must preserve the previously installed kernel, fingerprint and embedded bytes.
 // This also avoids a compression-length window with a new identity and old bytes.

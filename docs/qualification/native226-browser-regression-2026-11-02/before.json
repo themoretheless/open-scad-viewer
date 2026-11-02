@@ -1,0 +1,8 @@
+{
+  "wasmSha256": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "expectedExitCode": 1,
+  "expectedFailures": 2,
+  "passedTrueExactCase": 1,
+  "fixtureSha256": "ce45dd522cea88275d8ca4bad36452c2480f8bd472a9a061fac9f97dad9e1d2e",
+  "scope": "Observed bug reproduction on old published390 artifact, with actual hausdorffErrorUpper transport field. Earlier first-run fixture used the wrong field and is not counted as production evidence."
+}

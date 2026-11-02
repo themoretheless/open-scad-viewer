@@ -1,0 +1,28 @@
+{
+  "schema": "exact-artifact-direct-api-matrix/1",
+  "wasmSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+  "passed": 112,
+  "failed": 0,
+  "files": 10,
+  "scope": "Direct WASM API tests only; no worker/browser admission qualification",
+  "report": "direct-api-vitest.json.gz",
+  "reportSha256": "14ec30a0df450fc2a36a3393f93dd12e50411b145a0ca68b6d36a25db6c7f3ac",
+  "uncompressedReportSha256": "ee8f2184629f1888709e2ac070211ff0fe66177b8ab1751fffa18f9d44279905",
+  "testFiles": [
+    "brepCurvedGraphBooleanV3.test.ts",
+    "brepDirectStepV3.test.ts",
+    "brepIntersections.test.ts",
+    "brepKernel.test.ts",
+    "manifoldMetricsReport.test.ts",
+    "meshManifoldDefects.test.ts",
+    "meshTopology.test.ts",
+    "nurbsBasicPaths.test.ts",
+    "nurbsPrimitives.test.ts",
+    "nurbsSurfaceDistance.test.ts"
+  ],
+  "workerTestsRemaining": [
+    "rejects surface worker results with wrong domains, scope, budgets or completion claims",
+    "dispatches complete surface distance and recovers from invalid input in the worker"
+  ],
+  "qualificationClaim": "none"
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "geometry-delivery-admission/1",
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "artifact": "docs/qualification/artifacts/geometry-baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254.wasm",
+  "profileVersion": 10,
+  "limits": {
+    "geometryChunkBytes": 5370000,
+    "totalAssetBytes": 10080000
+  },
+  "measurement": 5352278,
+  "privateViteAssetBytes": 10066293,
+  "evidence": {
+    "docs/qualification/native226-sept-decoder-2026-11-02/receipt.json": "8fe2b833a1a16ce0c1e8cb89ec8a4bf733f5691348431531cc103cd0dd20e5f0"
+  },
+  "scope": "Exact-hash packaging row with unchanged caps; private Vite build verified exact emitted WASM. Final default production build with v10 metadata remains required."
+}

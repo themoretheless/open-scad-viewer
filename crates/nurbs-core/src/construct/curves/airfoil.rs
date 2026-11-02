@@ -204,6 +204,7 @@ pub struct CstProfile {
 
 /// CST shape function value at chord fraction x.
 pub fn cst_shape(x: f64, n1: f64, n2: f64, coefficients: &[f64]) -> f64 {
+    if coefficients.is_empty() { return f64::NAN; }
     if x <= 0. || x >= 1. {
         return 0.;
     }
@@ -237,12 +238,17 @@ fn binomial(n: usize, k: usize) -> f64 {
 #[derive(Clone, Debug)]
 pub struct CstFitResult {
     pub profile: CstProfile,
-    /// Max |y_data - y_fit| over data sites (vertical residual).
+    /// Maximum physical in-plane ordinate residual at data sites.
     pub max_residual: f64,
-    /// Max distance from data sites to a dense CST sampling (Hausdorff-like).
+    /// One-way 3D distance from data sites to dense CST samples, not a
+    /// continuous or symmetric Hausdorff bound.
     pub hausdorff_residual: f64,
     /// Tikhonov factor used in (A^T A + lambda I).
     pub lambda: f64,
+    /// World placement; coefficients remain dimensionless.
+    pub frame: CstFrame,
+    /// Maximum physical source distance outside the authored plane.
+    pub max_out_of_plane: f64,
 }
 
 
@@ -668,13 +674,20 @@ mod algorithm_naca5_camber;
 pub use algorithm_naca5_camber::naca5_camber;
 #[path="airfoil/algorithm_naca5_airfoil.rs"]
 mod algorithm_naca5_airfoil;
-pub use algorithm_naca5_airfoil::naca5_airfoil;
+pub use algorithm_naca5_airfoil::{naca5_airfoil, naca5_section_at};
 #[path="airfoil/algorithm_naca_points.rs"]
 mod algorithm_naca_points;
 pub use algorithm_naca_points::naca_points;
 #[path="airfoil/algorithm_cst_points.rs"]
 mod algorithm_cst_points;
 pub use algorithm_cst_points::cst_points;
+use algorithm_cst_points::validate_cst_profile;
 #[path="airfoil/algorithm_cst_fit.rs"]
 mod algorithm_cst_fit;
-pub use algorithm_cst_fit::cst_fit;
+pub use algorithm_cst_fit::{cst_fit, cst_fit_in_frame, cst_fit_sides};
+#[path="airfoil/cst_frame.rs"]
+mod cst_frame;
+pub use cst_frame::{CstFrame, cst_airfoil};
+#[path="airfoil/cst_algebraic.rs"]
+mod cst_algebraic;
+pub use cst_algebraic::{AlgebraicCst,cst_algebraic,CstSectionProperties,cst_section_properties,CstSectionMoments,cst_section_moments};

@@ -1,0 +1,73 @@
+{
+  "schema": "native-ci-fixes-checkpoint/1",
+  "state": "partial",
+  "qualified": false,
+  "artifact": {
+    "wasmSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+    "byteLength": 15900166,
+    "lockfileSha256": "d847e1ca83d25dae9d9243ce1c64bce6f4ee2067a7dfb9b5ff3e8fa0686e286b",
+    "rustLockfileSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+  },
+  "evidence": [
+    {
+      "path": "native-ci-fixes-runtime-identities-20261101.json.gz",
+      "sha256": "10c02a1ad0e2df53770b002a5da917c998d82b3053455d38acd76751e9528c47",
+      "uncompressedSha256": "19beb23d8bafa27ee0daafbe9206f33dc88e4ec585309a441ca37e6c82849631"
+    },
+    {
+      "path": "native-ci-fixes-runtime-identities-20261101.log.gz",
+      "sha256": "b9f6070067f9cf764191746e8df2d1bbc49dad61725caed3336cf7073783535f",
+      "uncompressedSha256": "756069b9b1c9c0273d0b6b427f40004dfe43c3f7fcb3c510561af63d661bc56c"
+    },
+    {
+      "path": "native-ci-fixes-wasm-20261101.log.gz",
+      "sha256": "5e5ba8bca1cf4fa2c138dcfcc598e8ba3c12c54b4df98b0152e0348b379ea276",
+      "uncompressedSha256": "bb032f2b1b60157b972cd229156178f6c037c6e39309d8d79b0698bd954340ee"
+    },
+    {
+      "path": "native-ci-fixes-bridge-20261101.log.gz",
+      "sha256": "dd8d5f69f598f735c83ba53a8824f3a4ea25c03295b27bcaf40538bb1fb2d11c",
+      "uncompressedSha256": "d539499390e4f9e483e056f647ef300ad2b02a711f032528ab663bd6c6f0be7e"
+    },
+    {
+      "path": "native-ci-fixes-admission-refusal-20261101.log.gz",
+      "sha256": "868555b5bbd290940d0764e310b9641617d2fc4d53d8ac9e06e2116775993f03",
+      "uncompressedSha256": "4cbc579b259e7827740fefca80a233c1d34f78bbf35230848fcc830dba3adaea"
+    },
+    {
+      "path": "scalar-step-442d2703-occt-20261101.log.gz",
+      "sha256": "93163955db322f31abf5c6486f2098f604d586ac6e1e1bb24d01ec53b276cd52",
+      "uncompressedSha256": "40d21d4cd7a15138aa45f608bfac913c93a5b0c7b19d200e34bc20dbedbbbed0"
+    },
+    {
+      "path": "scalar-step-roundtrips.tar.gz",
+      "sha256": "de6521060c8d16254aab2ead2cfd302ada2f90e48eb46a5d4664199aba1e4636"
+    }
+  ],
+  "checks": {
+    "nativeGeometryBridge": {
+      "passed": 385,
+      "failed": 0,
+      "ignored": 1
+    },
+    "directStepBox": {
+      "preservedIdentities": 34,
+      "identitySetsEqual": true,
+      "vertexWorldBindingsEqual": true,
+      "edgeVertexBindingsEqual": true
+    },
+    "wholeWallFixtureValid": true,
+    "scalarSweepNativeRoundtrips": 2,
+    "scalarSweepIndependentOcctRoundtrips": 2,
+    "occtVersion": "7.7.2.0",
+    "candidateAdmissionRefused": true
+  },
+  "open": [
+    "Linux numeric reconciliation",
+    "Exact-artifact frontend, worker and browser matrix",
+    "Versioned runtime admission and delivery policy",
+    "Source ownership and source/artifact fingerprint refresh",
+    "Hosted CI and main delivery"
+  ],
+  "qualificationClaim": "none"
+}

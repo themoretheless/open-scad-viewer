@@ -1,0 +1,15 @@
+{
+  "scope": "Immutable pre-amendment owner census and its writer; native226 final census will use a new output path rather than overwrite this frozen record.",
+  "records": [
+    {
+      "originalPath": "scripts/audit-algorithm-owners.mjs",
+      "archivePath": "docs/qualification/native226-owner-preservation-2026-11-02/audit-algorithm-owners.mjs.before.txt",
+      "sha256": "685361ecc19640b1c75d911997df507c058fc0aa1662edb30783e3e840d58bba"
+    },
+    {
+      "originalPath": "docs/qualification/algorithm-owners-2026-11-01.json",
+      "archivePath": "docs/qualification/native226-owner-preservation-2026-11-02/algorithm-owners-2026-11-01.json.before.txt",
+      "sha256": "ef047e4c1f87a685bd5179431969841e18f06ad72168fdb395d3587b328cf570"
+    }
+  ]
+}

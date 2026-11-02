@@ -1,0 +1,8 @@
+{
+  "exitCode": 0,
+  "passed": 123,
+  "failed": 0,
+  "filtered": 1922,
+  "command": "cargo test -p nurbs-core --lib foundation::",
+  "scope": "Foundation unit tests only; complete library2044 result predates this correction and stays separately scoped."
+}

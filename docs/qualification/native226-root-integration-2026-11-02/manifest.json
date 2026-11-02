@@ -1,0 +1,283 @@
+{
+  "scope": "Guarded native223->226 source/design/evidence integration. Exact prior bytes retained; not a complete historical checkout or qualification of new combined root. Runtime v9 and governance are retained unchanged.",
+  "base": "50389f74c",
+  "feature": "b0fa45af52b278fefad1de81721de2a4f4a5fcf7",
+  "records": [
+    {
+      "path": "crates/nurbs-core/src/construct/curves/airfoil.rs",
+      "previousSha256": "b63031712985bfbb8c0709b9b5c49df24621f920c3ea4a748846c554a249c5db",
+      "targetSha256": "08f3bc05186ff1ff797d75b6907b0a590b617edbf65945080c5238147a97449a",
+      "bytes": 24387
+    },
+    {
+      "path": "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+      "previousSha256": "423c0ccabb758557e5f1dc69bbc204eefeeee51fde2f0b8b7ed43413c3a8cbb7",
+      "targetSha256": "bdfefdfcc5ea22962165824d4752936cd96af521d437b4b461e80d9636b1da05",
+      "bytes": 10519
+    },
+    {
+      "path": "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic/moments.rs",
+      "previousSha256": null,
+      "targetSha256": "4dee24bf3f4cccfa380881eb94cab428708dd189ee1fddeae04c77cc73526d6f",
+      "bytes": 4574
+    },
+    {
+      "path": "crates/nurbs-core/src/core.rs",
+      "previousSha256": "2b1634ee2c9ea16c546e2e9cebd2d105476840f9ce2ead30dcca0511dd8f7ea9",
+      "targetSha256": "381eec496702048c0891903f7ad5802497e400b809387c0bec94bd284602eb5e",
+      "bytes": 242
+    },
+    {
+      "path": "crates/nurbs-core/src/core/curve_identity.rs",
+      "previousSha256": null,
+      "targetSha256": "e850a58ac1ca54b82181094cffed2c2560acea6ed6ddde15db0f27b8962a7296",
+      "bytes": 2672
+    },
+    {
+      "path": "crates/nurbs-core/src/editing.rs",
+      "previousSha256": "080ec9f99ab70b899f3e36e7151f7f5c040c13aec42b1ccdd8e9f0bdb9d31a4a",
+      "targetSha256": "36e6acee5a288ddf9635b4f722893dda7f6e91b158535bcc0534fba8b6481bd4",
+      "bytes": 362
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+      "previousSha256": null,
+      "targetSha256": "491bec4f9ccf8e39a7b8807b4c28f1c85697fc1c45dd60721a754005dc92b262",
+      "bytes": 6709
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+      "previousSha256": null,
+      "targetSha256": "382d82dafe3312468b8b075e1d666455efd8a115eafb897f6ce83ebec4c36fb4",
+      "bytes": 3877
+    },
+    {
+      "path": "crates/nurbs-core/src/foundation/approximate_edits.rs",
+      "previousSha256": "25aed4dcfc89dd9ea5a7c5710740954169b04f34c31765504fa747095728a570",
+      "targetSha256": "cf8a46fe7825462091ddf3111153bffa6396cd1037a971953af046934c4898bd",
+      "bytes": 12165
+    },
+    {
+      "path": "crates/nurbs-core/tests/cst_moment_contracts.rs",
+      "previousSha256": null,
+      "targetSha256": "9830491dcdb7bf06f0154fbc349d1d9e719d0096d4417118249ce88291e42cda",
+      "bytes": 4676
+    },
+    {
+      "path": "crates/nurbs-core/tests/degree_reduction.rs",
+      "previousSha256": "01d8e8736eba8f86854416dce524d3adbe0de1f9fbecdac64807f0e545b50cb2",
+      "targetSha256": "f61fb56a227a76116062d437d28ff4878474cccd055bc890dc1cbd52d25683f9",
+      "bytes": 4189
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
+      "previousSha256": null,
+      "targetSha256": "3921e734c1d8f8fdfadfdca1665bb68f3e9953ba978062c6e388422456563981",
+      "bytes": 6801
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs",
+      "previousSha256": null,
+      "targetSha256": "2d915a7a9fe99458a117f09845a52b18a2be81eb5d17bc4b2d54569fa8ccbbba",
+      "bytes": 5253
+    },
+    {
+      "path": "docs/design/nurbs-api-map.md",
+      "previousSha256": "6f6303c016ab73d27b6ab253882d1c17d3b2d2c47adc825cac78976174169de5",
+      "targetSha256": "45412db943d3b52f240abfda78356270751b89ba9283e174dd4cda2218c8998b",
+      "bytes": 131078
+    },
+    {
+      "path": "docs/design/nurbs-catalog.json",
+      "previousSha256": "99bd705712467a0d905b48800e5f4856d3284cf8f9f478834574e7d77e3c604a",
+      "targetSha256": "49af057f9821a26e605d1a47eea2833ac05c44ba26db542dc3d17debab08acde",
+      "bytes": 259503
+    },
+    {
+      "path": "docs/design/nurbs-cst-second-moments.md",
+      "previousSha256": null,
+      "targetSha256": "95d8b9931c0952524619f966b5855b0d018af5e79372f36fd1bc5df88e534c7d",
+      "bytes": 3350
+    },
+    {
+      "path": "docs/design/nurbs-degree-reduction.md",
+      "previousSha256": "a3b8db5cc136ccec550601a30b1edea0e2574d3a7fec6c704df3328e8561c50a",
+      "targetSha256": "a868472b16f2d026d15b6afa9ca76f10e6df12f0ba28aadc92b2f6cd62c4b305",
+      "bytes": 5895
+    },
+    {
+      "path": "docs/design/nurbs-exact-knot-removal.md",
+      "previousSha256": null,
+      "targetSha256": "875564a1fcb2d8fc84a64fe42ec89e3187b97aac9a221b8f671eab752537c906",
+      "bytes": 3921
+    },
+    {
+      "path": "docs/design/nurbs-exact-surface-knot-removal.md",
+      "previousSha256": null,
+      "targetSha256": "8960e98092b998ef6ab97214de4e172e4a1e526494ff2726e57478826c9a7cb0",
+      "bytes": 3267
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/approximate_edits.before.rs.txt",
+      "previousSha256": null,
+      "targetSha256": "25aed4dcfc89dd9ea5a7c5710740954169b04f34c31765504fa747095728a570",
+      "bytes": 12010
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/before-failure.log.gz",
+      "previousSha256": null,
+      "targetSha256": "7d2c9c060cb95e58befbf81a43584bf7970a7a4fd74f06713e970013d6272208",
+      "bytes": 1231
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json",
+      "previousSha256": null,
+      "targetSha256": "399474e3ff7e1b4f02f466006ba041873ae5735349e316cc8dfafd3712b5c040",
+      "bytes": 1377
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/degree-reduction-zero-after-final.log.gz",
+      "previousSha256": null,
+      "targetSha256": "10937da19959691463587e0e990e213dd271907c876a077eb6681f1c385aa396",
+      "bytes": 1948
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/degree-reduction-zero-no-codec.log.gz",
+      "previousSha256": null,
+      "targetSha256": "0ab2d9d23c78ee1e14fed4504a7b85f4cf2150bfab602a48bdfec392fd99c5ad",
+      "bytes": 1977
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/exact-oracle.json",
+      "previousSha256": null,
+      "targetSha256": "362458487b9ce0b42365b571d9c7f7e2a714e80c1ae7e5809f740154de952e4d",
+      "bytes": 253
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/exact_oracle.py",
+      "previousSha256": null,
+      "targetSha256": "f0c057ee6ed5a60ee042bfea7895ac8d7923c8b81b3f6515b7214c2b34197aed",
+      "bytes": 596
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/foundation-check.json",
+      "previousSha256": null,
+      "targetSha256": "faf7fef46942452b1e23231fae05f2be6e719869ab6e79d7f5bfa42b8dc265ca",
+      "bytes": 256
+    },
+    {
+      "path": "docs/qualification/degree-reduction-zero-admission-2026-11-02/foundation-library.log.gz",
+      "previousSha256": null,
+      "targetSha256": "1bc17f452d76e2691b446fb28f78515395bd8dbe93568d94ef00a7060a00ef9a",
+      "bytes": 3685
+    },
+    {
+      "path": "docs/qualification/nurbs-cst-moments-native-2026-11-02/checks.json",
+      "previousSha256": null,
+      "targetSha256": "c0d3648e7d7e23a99980ee5086a40c69a3adcf9b16ba9a73ad6694bf0e739d3a",
+      "bytes": 1371
+    },
+    {
+      "path": "docs/qualification/nurbs-cst-moments-native-2026-11-02/cst-second-moments-library-public.log.gz",
+      "previousSha256": null,
+      "targetSha256": "0cc635699c025c05c0e0b910ed4bba5cb30f63ce191c346421aa9630dbbf0037",
+      "bytes": 46457
+    },
+    {
+      "path": "docs/qualification/nurbs-cst-moments-native-2026-11-02/cst-second-moments-no-codec-public.log.gz",
+      "previousSha256": null,
+      "targetSha256": "68424a4c579355d63cd164a931f17be0a477213993c2e90b7df2cdced5c8b545",
+      "bytes": 2089
+    },
+    {
+      "path": "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact-beta-oracle.json",
+      "previousSha256": null,
+      "targetSha256": "75f90a150524f0d1499a92077541e6e7892faa97e5b7c6e126b65db63610c4e6",
+      "bytes": 689
+    },
+    {
+      "path": "docs/qualification/nurbs-cst-moments-native-2026-11-02/exact_beta_oracle.py",
+      "previousSha256": null,
+      "targetSha256": "af02835bc6fff6c4885bca5c60a201044ec6f4331bd82420d6e0cdd95299ddbf",
+      "bytes": 1892
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/README.md",
+      "previousSha256": null,
+      "targetSha256": "657779fa9303a5fcfcd78d75f68456800a92e7d3242bbb60bc9ed694ef772d5e",
+      "bytes": 1354
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/checks.json",
+      "previousSha256": null,
+      "targetSha256": "811c33b0f5410f4bfed3fb43be4940f10cb0fd776656d449d3e7ac0b366dbf12",
+      "bytes": 598
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/default-library-public.log.gz",
+      "previousSha256": null,
+      "targetSha256": "cfdb305ff7b3ac988c45a995dc8cce6f06266be8e02f6988071d902dbdcae153",
+      "bytes": 48371
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/no-codec-public.log.gz",
+      "previousSha256": null,
+      "targetSha256": "c2b5d2232783e8c1a8bd4192f6c19ebb4c43668495ec8ed0f5950780aaffde56",
+      "bytes": 4676
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-knot-removal-native-2026-11-02/source.json",
+      "previousSha256": null,
+      "targetSha256": "61625ad707595f6805964c7fcd8671323f266870c003386b135c84a6054356ba",
+      "bytes": 529
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/default.log.gz",
+      "previousSha256": null,
+      "targetSha256": "63c9b8bd044d0334337aaa3f3b60b428436b45a51fa8a132cda19745bc37ceac",
+      "bytes": 1442
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/no-codec.log.gz",
+      "previousSha256": null,
+      "targetSha256": "2c411038f2a15aece9bf0e9d4998428bbfe7815e6a0cc2a6e14e72d134a50f87",
+      "bytes": 1520
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-simplification-pass-2026-11-02/receipt.json",
+      "previousSha256": null,
+      "targetSha256": "99d1f253fe23c0a71712a6a9cc8995ce98dd7f350ecfa596f82be109b064f158",
+      "bytes": 538
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json",
+      "previousSha256": null,
+      "targetSha256": "87c1308ecf5bcb92ad4376af4e055c8595fa40a9654ecd074653569a0bb3f789",
+      "bytes": 1128
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/exact-surface-knot-default-final.log.gz",
+      "previousSha256": null,
+      "targetSha256": "8af5bc68c005a8dda35b3fdfd12310bbed6c4a3b2cef73e8815ab1243da7fef6",
+      "bytes": 1659
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/exact-surface-knot-no-codec.log.gz",
+      "previousSha256": null,
+      "targetSha256": "893dda60928e79b507fe2c0e0e0c31e9a306cac780859552781ae931a45d4fa8",
+      "bytes": 1659
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json",
+      "previousSha256": null,
+      "targetSha256": "2cea89c92d7493a665f2817ed4e221cc3083127b91bd3713702b854ecbcb08f4",
+      "bytes": 1078
+    },
+    {
+      "path": "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library.log.gz",
+      "previousSha256": null,
+      "targetSha256": "94f9ee9c83eb3707199b52e27c03111998ce36e87683874de2833976add8c7aa",
+      "bytes": 44912
+    }
+  ]
+}

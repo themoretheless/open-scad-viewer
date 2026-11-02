@@ -1,0 +1,47 @@
+{
+  "scope": "Exact pre-amendment executor/test bytes, not an execution result or a complete historical checkout.",
+  "records": [
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints.mjs",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/scripts/refresh-qualification-fingerprints.mjs",
+      "sha256": "79e1d3745808196e973290da11ad84dd1af434efa1a9b3d3eabbebc618234ad2",
+      "byteLength": 21497
+    },
+    {
+      "originalPath": "scripts/run-g1-candidate-clean-fragment.mjs",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/scripts/run-g1-candidate-clean-fragment.mjs",
+      "sha256": "9849e9e89c1bb231d848737ee88d8d529b4d06534b4ea9194a57c8fd21576821",
+      "byteLength": 11408
+    },
+    {
+      "originalPath": "scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "sha256": "1eb488ddd9ab1cc653d7d5e0de634a2142bf5cd6dcb4eb8a404fc080eb7441da",
+      "byteLength": 7671
+    },
+    {
+      "originalPath": "scripts/g1-github-actions.mjs",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/scripts/g1-github-actions.mjs",
+      "sha256": "8a545c7abda8e37b55d3382c400eb95fecc6f7dae4a7c1b383425363c13c1d3a",
+      "byteLength": 32806
+    },
+    {
+      "originalPath": ".github/workflows/g1-qualification-clean.yml",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/.github/workflows/g1-qualification-clean.yml",
+      "sha256": "f1a47949ec0c83c6137abc71cf34f53af8f2e3cc764449a2cbb44f4e15c32f89",
+      "byteLength": 19116
+    },
+    {
+      "originalPath": "tests/g0ToolchainFingerprints.test.ts",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/tests/g0ToolchainFingerprints.test.ts",
+      "sha256": "467b8d81ccd957b8d4385a7ed74479f16bdbbd0aabe7b6dcbc47483e668f3a90",
+      "byteLength": 16800
+    },
+    {
+      "originalPath": "tests/g1GithubActionsQualification.test.ts",
+      "archivePath": "docs/qualification/runtime-v9-refreeze-preservation-2026-11-02/sources/tests/g1GithubActionsQualification.test.ts",
+      "sha256": "62156496342cfb2108abedbc7b4447b9be3bb020279bd4a80f3ba9ed948eb24c",
+      "byteLength": 16433
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import {NATIVE_CI_RECOVERY_ARCHIVES} from './qualificationNativeCiRecoveryArchives.mjs'
 import {DELIVERY_ARCHIVES} from './qualificationDeliveryArchives.mjs'
 import {FRONTEND_RECOVERY_ARCHIVES} from './qualificationFrontendRecoveryArchives.mjs'
 import {LEGACY_ARCHIVES} from './qualificationLegacyArchives.mjs'
@@ -43,6 +44,7 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  ...NATIVE_CI_RECOVERY_ARCHIVES,
   ...DELIVERY_ARCHIVES,
   ...FRONTEND_RECOVERY_ARCHIVES,
   ...PR58_ARCHIVES,

@@ -1,0 +1,11 @@
+# G0 v99 / G1 v116 native226 runtimev10 amendment
+
+Preserve OwnRust84/G0v98/G1v115, their status/review and exact executor bytes. Append OwnRust85 and final joint native226/runtimev10 source bindings. All4740 clean work units remain unexecuted, qualificationClaim stays none, no previous result is imported.
+
+The root includes native224 exact curve knot removal and its bounded simplification pass, native225 source CST second area moments and native226 atomic exact tensor knot removal with denominator identities. Existing133 degree reduction no longer accepts a zero bound from rounded re-elevation; independent original/candidate identity is required. Separate focused native records retain their actual source scopes.
+
+Runtimev10 binds optimized baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254 with a finite115-Node/80-Chromium baseline including the zero-degree regression. The unchanged compressed frame uses an existing sept encoding with bounded exact Number decoding; independent BigInt oracle, malformed frames, publication rollback and exact emitted WASM checks are retained. All degree/control/work, compressed stream/input/output/memory and delivery caps remain unchanged. Default local packaging,85 actual admission tests and two fresh provider builds passed in separate records; they do not qualify the complete frontend, Linux current source, hostedCI, STEP generally or G0/G1.
+
+Owner census uses a new native226 output, retaining the frozen796-file report. Current798 source files/10446 callables have zero unreviewed numerical files and zero stale owner decisions. The prior OwnRust84 complete frontend run is retained with its transient owner-document mutation disclosure and is not imported as an uninterrupted frozen-source result. Final joint source requires new complete checks.
+
+OwnRust85 records current source and independently observed Baf artifact, not a compilation provenance or cross-host reproducibility certificate. The116 candidate starts with zero clean-run bookkeeping. Oracle cases, comparator mutations, matrix rows, environments, seeds, budgets and approvals are unchanged. Exact pre-amendment executor/test captures are retained in native226-v10-refreeze-preservation-2026-11-02.

@@ -73,7 +73,12 @@ impl<'a> GridIndex<'a> {
         for dx in -reach..=reach {
             for dy in -reach..=reach {
                 for dz in -reach..=reach {
-                    let k = (base.0 + dx, base.1 + dy, base.2 + dz);
+                    // Saturating cell keys have no representable buckets beyond
+                    // either integer endpoint. Skip those empty cells safely.
+                    let Some(x) = base.0.checked_add(dx) else { continue };
+                    let Some(y) = base.1.checked_add(dy) else { continue };
+                    let Some(z) = base.2.checked_add(dz) else { continue };
+                    let k = (x, y, z);
                     if let Some(bucket) = self.buckets.get(&k) {
                         for &i in bucket {
                             let q = self.points[i as usize];
@@ -142,6 +147,18 @@ pub(crate) fn norm3(a: [f64; 3]) -> f64 {
     dot3(a, a).sqrt()
 }
 
+/// Normalize finite input without squaring its original magnitude.
+/// The scale comparison preserves the existing near-zero rejection policy.
+pub(crate) fn unit_normal(v: [f64; 3]) -> Result<[f64; 3]> {
+    numeric(v.iter().all(|x| x.is_finite()), "Normals must be finite and non-zero")?;
+    let scale = v.iter().map(|x| x.abs()).fold(0., f64::max);
+    numeric(scale > 0., "Normals must be finite and non-zero")?;
+    let scaled = v.map(|x| x / scale);
+    let length = scaled[0].hypot(scaled[1]).hypot(scaled[2]);
+    numeric(scale > 1e-12 / length, "Normals must be finite and non-zero")?;
+    Ok(scaled.map(|x| x / length))
+}
+
 /// Обертка над `f64` с тотальным порядком для бинарной кучи.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Ordered(f64);
@@ -193,7 +210,7 @@ pub struct OrientReport {
 ///
 /// - `points` — 3D-точки, `normals` — единичные (приблизительно) нормали,
 ///   возможно с разнонаправленными знаками; обе длины совпадают.
-/// - Строится граф взаимного k-соседства (k = 12), вес ребра `1 − |nᵢ·nⱼ|`,
+/// - Строится симметризованный граф k-соседства (k = 12), вес ребра `1 − |nᵢ·nⱼ|`,
 ///   лес минимальных остовных деревьев (Prim от каждой необработанной
 ///   вершины), знак распространяется от корня: сосед переворачивается, если
 ///   `n_parent · n_child < 0`. Остов согласует знаки лишь с точностью до
@@ -218,23 +235,12 @@ pub fn orient_normals_consistent(
         points.iter().flatten().all(|v| v.is_finite()),
         "Point coordinates must be finite",
     )?;
-    for n in normals {
-        numeric(
-            n.iter().all(|v| v.is_finite()) && norm3(*n) > 1e-12,
-            "Normals must be finite and non-zero",
-        )?;
-    }
     let n = points.len();
-    // Нормировка входных нормалей.
-    let mut unit: Vec<[f64; 3]> = Vec::with_capacity(n);
-    for v in normals {
-        let l = norm3(*v);
-        unit.push([v[0] / l, v[1] / l, v[2] / l]);
-    }
+    let unit: Vec<[f64; 3]> = normals.iter().map(|&n| unit_normal(n)).collect::<Result<_>>()?;
     let cell = GridIndex::suggested_cell(points);
     let grid = GridIndex::build(points, cell)?;
     let k = 12.min(n - 1);
-    // Список рёбер взаимного k-соседства: (i, j, weight).
+    // Список рёбер симметризованного k-соседства: (i, j, weight).
     let mut adj: Vec<Vec<(u32, f64)>> = vec![Vec::new(); n];
     for i in 0..n {
         for j in grid.k_nearest(i, k) {

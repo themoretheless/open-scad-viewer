@@ -1,0 +1,29 @@
+{
+  "schema": "private-native-wasm-build/1",
+  "rootNativeCount": 226,
+  "sourceFiles": 5119,
+  "rawSha256": "71d130b2a79415b9ce29727be08c97463605a44e13aee46774320be3b95d7661",
+  "rawBytes": 17844795,
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "wasmBytes": 15935873,
+  "productionUnchanged": true,
+  "compiler": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "cargoArgs": [
+    "build",
+    "--locked",
+    "--release",
+    "--config",
+    "profile.release.strip=\"symbols\"",
+    "--config",
+    "profile.release.package.brep-core.opt-level=\"z\"",
+    "--config",
+    "profile.release.package.geometry-bridge.opt-level=\"z\"",
+    "--config",
+    "build.rustflags=[\"--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\",\"--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-plan-recovery/open-scad-viewer=/src\"]",
+    "--target",
+    "wasm32-unknown-unknown",
+    "--manifest-path",
+    "crates/geometry-wasm/Cargo.toml"
+  ],
+  "scope": "Observed Mac root226 candidate with degree-zero correction; no runtime admission, delivery budget, cross-host or global qualification."
+}

@@ -1,0 +1,88 @@
+{
+  "scope": "Current combined recovery Rust source including committed50389f74c multispan extension; full workspace gates, not only --lib. No result assumed before terminal exits.",
+  "sourcePaths": 5112,
+  "commands": [
+    {
+      "name": "typed-no-codec",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "-p",
+        "nurbs-intersect",
+        "-p",
+        "brep-intersect",
+        "--no-default-features"
+      ],
+      "startedAt": "2026-11-02T00:57:37.152719+00:00",
+      "status": "terminal",
+      "log": "native223-workspace-typed-no-codec-20261102.log",
+      "exitCode": 0,
+      "finishedAt": "2026-11-02T00:58:02.792166+00:00"
+    },
+    {
+      "name": "partition",
+      "command": [
+        "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/node-runtime-22.23.4/node-v22.23.4-darwin-arm64/bin/node",
+        "scripts/verify-native-test-partition.mjs"
+      ],
+      "startedAt": "2026-11-02T00:58:02.796568+00:00",
+      "status": "terminal",
+      "log": "native223-workspace-partition-20261102.log",
+      "exitCode": 0,
+      "finishedAt": "2026-11-02T01:20:15.304564+00:00"
+    },
+    {
+      "name": "aag",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "--workspace",
+        "aag",
+        "--",
+        "--test-threads=1"
+      ],
+      "startedAt": "2026-11-02T01:20:15.305213+00:00",
+      "status": "terminal",
+      "log": "native223-workspace-aag-20261102.log",
+      "exitCode": 0,
+      "finishedAt": "2026-11-02T01:20:28.460848+00:00"
+    },
+    {
+      "name": "remaining",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "--workspace",
+        "--",
+        "--skip",
+        "aag"
+      ],
+      "startedAt": "2026-11-02T01:20:28.462682+00:00",
+      "status": "terminal",
+      "log": "native223-workspace-remaining-20261102.log",
+      "exitCode": 0,
+      "finishedAt": "2026-11-02T01:49:37.532481+00:00"
+    }
+  ],
+  "env": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-plan-target-recovery-20261028",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "sourceDrift": []
+}

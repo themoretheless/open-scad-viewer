@@ -1,0 +1,13 @@
+# Standard nonreflex NACA five-digit geometry
+
+`nurbs_core::construct::curves::airfoil::naca5_airfoil` fits a planar nonreflex LP0XX profile to analytic stations. `naca5_section_at` exposes the same nominal profile before NURBS fitting. They form one capability; station queries, lift digits and camber positions are not counted as separate figures.
+
+The previous encoded builder converted the first digit into maximum camber. For 23012 it produced approximately 0.02 chord camber at x=0.15, instead of the nominal mean-line value 0.018386447 from published coefficients. The corrected path uses the five nonreflex mean-line rows of [NACA Report 537, Table I, printed p.522](https://ntrs.nasa.gov/api/citations/19930091610/downloads/19930091610.pdf). Scaling coefficients by L/2 follows the numbering and linear scaling described in [NACA Report 824, Five-Digit Series: Mean Lines](https://ntrs.nasa.gov/api/citations/19930090976/downloads/19930090976.pdf). Constants retain their published decimal precision; they do not claim an ideal unrounded aerodynamic shape.
+
+Supported codes have five digits, L in 1..9, P in 1..5, Q=0, and thickness XX in 1..40 percent. P selects the nominal forward camber position 0.05P. Reflex Q=1 and an invented P=6 standard are explicitly refused. The custom `naca5(position, camber, ...)` and its solved maximum-camber constants remain independently available and unchanged.
+
+Station x is normalized to [0,1]. Chord is positive finite and at most 1e6 in caller coordinate units. Returned points lie in XY with z=0. The four-digit thickness polynomial is applied normal to the five-digit mean line. The trailing-edge flag retains the original open coefficient (-0.1015) or closed coefficient (-0.1036).
+
+The fitted constructor keeps the existing degree 1..25, at most 64 controls, control count below the site count and at most 4096 fitting sites. The raw sampler accepts up to 2048 stations per side, but 2048 produces 4097 sites and is refused by the constructor's unchanged fit budget; successful constructor requests therefore use at most 2047 stations per side. No budget was enlarged. Fitting is numerical least squares: no continuous geometric deviation, closure smoothness, simplicity, manufacturing tolerance or aerodynamic performance certificate is returned.
+
+Public contracts check the fitted 23012 mean line against the published equation, every tabulated P row at multiple x and lift/chord scales, both trailing-edge conventions, invalid codes/options/budgets, and preservation of the separate custom max-camber design. JSON/WASM/Rush/editor/STEP qualification remains open.

@@ -4,11 +4,11 @@ use crate::{
     Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion, InputError,
     LeafRef, PredicateContext, Reason, Sign,
 };
-type Net = Vec<Vec<Expansion>>;
+pub(super) type Net = Vec<Vec<Expansion>>;
 fn choose(n: usize, k: usize) -> u64 {
     (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
 }
-fn power(a: &Net, ctx: &mut PredicateContext<'_>) -> Result<Net, Reason> {
+pub(super) fn power(a: &Net, ctx: &mut PredicateContext<'_>) -> Result<Net, Reason> {
     let (p, q) = (a.len() - 1, a[0].len() - 1);
     let mut out = vec![vec![Expansion::scalar(0.); q + 1]; p + 1];
     for i in 0..=p {
@@ -116,6 +116,18 @@ pub fn binary_bezier_quadric_with_constant_products_identity(
             }
             h.push(power(&controls, ctx)?);
         }
+        identity(&h, &coefficients, ctx)
+    })();
+    Ok(BezierIdentityDecision {
+        outcome: result.unwrap_or_else(BezierIdentity::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
+
+/// Evaluate a homogeneous power-basis tensor against the unchanged quadric.
+pub(super) fn identity(h:&[Net],coefficients:&[Expansion],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
+    let (nu,nv)=(h[0].len(),h[0][0].len());
         let mut residual = vec![vec![Expansion::scalar(0.); 2 * nv - 1]; 2 * nu - 1];
         for i in 0..4 {
             for j in 0..4 {
@@ -150,12 +162,6 @@ pub fn binary_bezier_quadric_with_constant_products_identity(
             }
         }
         Ok(BezierIdentity::Equal)
-    })();
-    Ok(BezierIdentityDecision {
-        outcome: result.unwrap_or_else(BezierIdentity::Indeterminate),
-        work_used: ctx.work_used(),
-        context: ctx.identity(),
-    })
 }
 
 #[cfg(test)]

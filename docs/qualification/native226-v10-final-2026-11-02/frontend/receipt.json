@@ -1,0 +1,27 @@
+{
+  "sourceRecord": "OwnRust85",
+  "sourceSha256": "c5d33154f8cd5eaaa7e7f22f365bbc1b39c7e194c70854ba30502f0e97429101",
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "startedAt": "2026-11-02T04:16:20.249634+00:00",
+  "terminal": true,
+  "maxWorkers": 2,
+  "testTimeout": 90000,
+  "qualificationClaim": "none",
+  "exitCode": 0,
+  "endedAt": "2026-11-02T04:53:37.669493+00:00",
+  "sourceUnchanged": true,
+  "artifactUnchanged": true,
+  "tests": {
+    "numTotalTests": 6559,
+    "numPassedTests": 6549,
+    "numFailedTests": 0,
+    "numPendingTests": 10
+  },
+  "scope": "Complete Root226 frontend suite on OwnRust85 and runtimev10. No native228 or hosted/G1 qualification inferred.",
+  "files": {
+    "native226-v10-full-frontend.log.gz": "0848e84c3639a7541531578124ac164e5d98df49aaf36be039d7493026e0884d",
+    "run-native226-v10-full-frontend.py.gz": "ef8de157f32f5b784128639a4bde6bb33cfc5fa46ad046d6428f3dad711df757",
+    "native226-v10-full-frontend.json.gz": "e06e25d838f19cfbc4a86c3e02da465260362d3c520467dda29ef96308d10f2d",
+    "native226-v10-full-frontend-state.json.gz": "1f74db31a4d24794c4bbfcbaa6cb03f285844161d19b5be1c37121d096f5e61f"
+  }
+}

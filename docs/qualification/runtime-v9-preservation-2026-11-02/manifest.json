@@ -1,0 +1,10 @@
+{
+  "scope": "Exact pre-v9 source bytes and v8 manifest payloads; no historic checkout or execution qualification claim.",
+  "files": {
+    "docs/qualification/runtime-v9-preservation-2026-11-02/manifests-v8.json": "387d938421c929d527bf96e2eb4986587d762b3c784af497e468f33074c33e75",
+    "docs/qualification/runtime-v9-preservation-2026-11-02/src--core--currentRuntimeGeometryEvidence.ts.txt": "4a58ce5e1607cf2181912a4e7933f8679489df631669c1597da005d8d381547d",
+    "docs/qualification/runtime-v9-preservation-2026-11-02/src--core--geometryExecution.ts.txt": "70d77e6256962ed6e4864117625f3d91b9a3261b8cef97df5ab613bc6bfbb2ff",
+    "docs/qualification/runtime-v9-preservation-2026-11-02/tests--engineManifest.test.ts.txt": "40a4229b52eb8bd8353a8ff46e0580590b8b7d6963aa77dbc1c15c3f6f35db61",
+    "docs/qualification/runtime-v9-preservation-2026-11-02/tests--geometryManifestArchiveIsolation.test.ts.txt": "c2b8f85865d0f0f0ac34557c4736450bfc6c9f70893c23e78accf614f850ada4"
+  }
+}

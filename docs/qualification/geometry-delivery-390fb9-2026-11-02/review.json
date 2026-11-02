@@ -1,0 +1,31 @@
+{
+  "schema": "geometry-delivery-admission/1",
+  "wasmSha256": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "artifact": "docs/qualification/artifacts/geometry-390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201.wasm",
+  "artifactBytes": 15917327,
+  "profileVersion": 9,
+  "limits": {
+    "geometryChunkBytes": 5370000,
+    "totalAssetBytes": 10080000
+  },
+  "measurement": {
+    "scope": "Measurements only; no budget profile or provider admission added",
+    "geometryChunkBytes": 5368252,
+    "totalAssetBytes": 10076435,
+    "unchangedReferenceCaps": {
+      "geometryChunkBytes": 5370000,
+      "totalAssetBytes": 10080000
+    },
+    "qualified": false,
+    "promoted": false
+  },
+  "nodeDirectTests": 112,
+  "chromiumMainAndWorkerChecks": 56,
+  "rootRustInputDrift": [],
+  "evidence": {
+    "docs/qualification/native223-macos-candidate-api-2026-11-02/receipt.json": "52ec38103db6bea79fc598ab2172ef8204eaa007d581fc582e26e2d58852c9cc",
+    "docs/qualification/native223-macos-candidate-api-2026-11-02/native223-macos-390fb9-browser--report.json.gz": "e7e11ae59c1b0c17803dbeb8461d8d838a84f3d69a90ed44884b580151b6ad9d",
+    "docs/qualification/native223-macos-candidate-api-2026-11-02/native223-macos-390fb9-node.json.gz": "893cfd2aa5d515c969a21ab4c326369fc0685a8e3618436a29e038bdea2e1407"
+  },
+  "scope": "Exact-hash packaging budget only, unchanged v7/v8 limits. Does not admit execution provider, claim production packaging success, global geometry qualification, frontend qualification, or Linux correspondence. Original failed-build and unpromoted-candidate receipts remain historical."
+}

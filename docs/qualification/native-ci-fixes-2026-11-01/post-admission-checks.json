@@ -1,0 +1,10 @@
+{
+  "schema": "post-api-baseline-checks/1",
+  "runtimeVersion": 8,
+  "passed": 12,
+  "failed": 0,
+  "scope": "Ten admission/identity/manifest/surface-distance-handler tests and two archive-isolation tests. Not the complete frontend or worker matrix.",
+  "report": "post-admission-vitest.json.gz",
+  "reportSha256": "10b75aa325915b8a66dff8848057253f17a92b8ecb1b1208c02bac51bd19ca37",
+  "qualificationClaim": "none"
+}

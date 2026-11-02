@@ -1,0 +1,57 @@
+import {ellipseNurbsArc} from '../../src/services/nurbsConstructors'
+import {evaluateNurbsCurve} from '../../src/services/nurbsCurve'
+import {measureNurbsSurfaceDistance, type NurbsSurface} from '../../src/services/nurbsSurface'
+import {booleanNurbsBrep, createBrepBox, tessellateNurbsBrep} from '../../src/services/geometry/brep'
+import {checkManifoldInKernel} from '../../src/services/geometry/manifoldAnalysis'
+import {exportDirectStepV9, importDirectStepV9} from '../../src/services/cadNurbsStep'
+
+/** Finite candidate probes; neither provider admission nor application routing is changed. */
+export function runCandidateFixtures() {
+  let checks = 0
+  const check = (value: boolean, label: string) => {
+    checks++
+    if (!value) throw new Error(label)
+  }
+  const ellipse = ellipseNurbsArc([1, 2, 3], [4, 0, 0], [0, 2, 0])
+  for (const t of [0, 0.125, 0.37, 0.8, 1]) {
+    const p = evaluateNurbsCurve(ellipse, t).point
+    check(Math.abs((p[0] - 1) ** 2 / 16 + (p[1] - 2) ** 2 / 4 - 1) < 1e-10,
+      'ellipse equation')
+  }
+  const a = createBrepBox([0, 0, 0], [2, 3, 4])
+  const b = createBrepBox([1, 0, 0], [3, 3, 4])
+  for (const [operation, volume] of [['union', 36], ['difference', 12], ['intersection', 12]] as const) {
+    const mesh = tessellateNurbsBrep(booleanNurbsBrep(a, b, operation), 2)
+    check(mesh.report.closed, `${operation} closed`)
+    check(Math.abs(mesh.report.signedVolumeMm3 - volume) < 1e-8, `${operation} volume`)
+  }
+  const imported = importDirectStepV9(exportDirectStepV9(a).text)
+  check(imported.identity.preserved && imported.identity.preservedCount === 34, 'STEP identity count')
+  const bindings = (model: typeof a) => Object.fromEntries(model.topologyIds!.vertices
+    .map((id, index) => [id, model.vertices[index].point]))
+  const source = bindings(a), restored = bindings(imported.model)
+  check(Object.keys(source).length === Object.keys(restored).length, 'STEP vertex count')
+  for (const [id, point] of Object.entries(source)) {
+    check(JSON.stringify(point) === JSON.stringify(restored[id]), 'STEP vertex binding')
+  }
+  const points = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]
+  const indices = [0, 2, 1, 0, 1, 3, 1, 2, 3, 2, 0, 3]
+  const doublePoints = [...points, ...points.map((v, i) => v + (i % 3 === 0 ? 3 : 0))]
+  const doubleIndices = [...indices, ...indices.map(i => i + 4)]
+  for (const [p, i, components, manifold] of [
+    [points, indices, 1, true], [doublePoints, doubleIndices, 2, true],
+    [doublePoints, [...doubleIndices, 0, 0, 0], 3, false],
+  ] as const) {
+    const report = checkManifoldInKernel(Float64Array.from(p), Uint32Array.from(i))
+    check(report.componentCount === components, 'component count')
+    check(report.isManifold === manifold, 'manifold classification')
+  }
+  const plane = (z: number): NurbsSurface => ({degreeU: 1, degreeV: 1,
+    knotsU: [0, 0, 1, 1], knotsV: [0, 0, 1, 1],
+    controlPoints: [[[0, 0, z], [0, 10, z]], [[10, 0, z], [10, 10, z]]],
+    weights: [[1, 1], [1, 1]]})
+  const distance = measureNurbsSurfaceDistance(plane(0), plane(3), 0.001, 100)
+  check(distance.converged && distance.distanceIntervalMm[0] <= 3
+    && distance.distanceIntervalMm[1] >= 3, 'surface distance enclosure')
+  return {passed: true, checks}
+}

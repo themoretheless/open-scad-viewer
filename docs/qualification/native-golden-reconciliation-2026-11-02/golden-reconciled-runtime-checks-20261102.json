@@ -1,0 +1,20 @@
+[
+  {
+    "image": "debian:bookworm-slim",
+    "exitCode": 0,
+    "log": "golden-reconciled-debian-bookworm-slim-20261102.log",
+    "logSha256": "f4f29e768b436e309e6eac159a606ced834543cdc56ab7d4c279ba06c34e206a"
+  },
+  {
+    "image": "ubuntu:24.04",
+    "exitCode": 0,
+    "log": "golden-reconciled-ubuntu-24.04-20261102.log",
+    "logSha256": "9a055353a215a45801e57bf6ed213084bf3d14559e1dc66588b51aa5b652bc59"
+  },
+  {
+    "image": "ubuntu:26.04",
+    "exitCode": 0,
+    "log": "golden-reconciled-ubuntu-26.04-20261102.log",
+    "logSha256": "92c56c4e52a9bb9eed5fb07daf9a8fe67901bf99a692070e6cd2257c2270f5af"
+  }
+]

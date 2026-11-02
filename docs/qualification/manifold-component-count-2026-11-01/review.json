@@ -1,0 +1,243 @@
+{
+  "schema": "manifold-local-paired-review/1",
+  "scope": "One local macOS host; no hosted CI qualification or resolution claim for the failed hosted run.",
+  "baseCommit": "4d065b3b60f969f72ea7645911ab832eb1fbefe5",
+  "currentCommit": "67d8cbab4bb67240c10b712f9b491a5d514f19ca",
+  "currentChanges": "Union-find representative count replaces redundant HashSet; other pending CI and sketch fixes are in the worktree",
+  "order": [
+    "base-1",
+    "current-1",
+    "current-2",
+    "base-2",
+    "base-3",
+    "current-3"
+  ],
+  "raw": [
+    {
+      "path": "runs/base-1/run.json",
+      "sha256": "7a631fbf85ce8e82962aeac976d876e7e65c69e586b2d3556e3a4d2657b75f6d"
+    },
+    {
+      "path": "runs/current-1/run.json",
+      "sha256": "bb2a413c8de7cff959fc3b572f8aeb863b77f6ac7a5119f5f3a4c8906568ecf3"
+    },
+    {
+      "path": "runs/base-2/run.json",
+      "sha256": "5e5163b1f1b6b9fb4e219fda919c9bf0ad0dbee879c999ca186d767a19640a6f"
+    },
+    {
+      "path": "runs/current-2/run.json",
+      "sha256": "e4eb00f5ec95170b812b70a159384ca3691276e6c0c4684cd3e576ca60fb5ccb"
+    },
+    {
+      "path": "runs/base-3/run.json",
+      "sha256": "b0a077c672bfa9b6161d50adf2125ad419753659b57b8b6b8cd871fc9bd314c0"
+    },
+    {
+      "path": "runs/current-3/run.json",
+      "sha256": "8d315933af3b935dba1fb408139f9d10f19cc4fcdd269830f6982dfd28d4110b"
+    }
+  ],
+  "pairReports": [
+    {
+      "index": 1,
+      "report": {
+        "schema": 1,
+        "ok": true,
+        "maxRegression": 0.25,
+        "environment": {
+          "arch": "aarch64",
+          "os": "macos"
+        },
+        "cases": [
+          {
+            "id": "manifold-core/kernels/check/icosphere-1280",
+            "baselineNs": 235874.6796875,
+            "currentNs": 207559.25,
+            "regression": -0.12004438002847051,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/check/icosphere-5120",
+            "baselineNs": 1093436.21875,
+            "currentNs": 1225200.5625,
+            "regression": 0.12050482825658637,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/metrics/icosphere-5120",
+            "baselineNs": 2048322.875,
+            "currentNs": 2046606.8125,
+            "regression": -0.0008377890619417627,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+            "baselineNs": 727151.0625,
+            "currentNs": 712000,
+            "regression": -0.02083619660529612,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+            "baselineNs": 1442291.625,
+            "currentNs": 1311070.25,
+            "regression": -0.09098116686353219,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "report": {
+        "schema": 1,
+        "ok": true,
+        "maxRegression": 0.25,
+        "environment": {
+          "arch": "aarch64",
+          "os": "macos"
+        },
+        "cases": [
+          {
+            "id": "manifold-core/kernels/check/icosphere-1280",
+            "baselineNs": 210181.3125,
+            "currentNs": 205313.8046875,
+            "regression": -0.023158613649346238,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/check/icosphere-5120",
+            "baselineNs": 880398.46875,
+            "currentNs": 878195.3125,
+            "regression": -0.002502453523264392,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/metrics/icosphere-5120",
+            "baselineNs": 1883341.1875,
+            "currentNs": 1789513.0625,
+            "regression": -0.04982003559564796,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+            "baselineNs": 627878.9375,
+            "currentNs": 645992.84375,
+            "regression": 0.02884936118756176,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+            "baselineNs": 1170287.75,
+            "currentNs": 1207490.875,
+            "regression": 0.03178972436479821,
+            "ok": true
+          }
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "report": {
+        "schema": 1,
+        "ok": true,
+        "maxRegression": 0.25,
+        "environment": {
+          "arch": "aarch64",
+          "os": "macos"
+        },
+        "cases": [
+          {
+            "id": "manifold-core/kernels/check/icosphere-1280",
+            "baselineNs": 211772.1328125,
+            "currentNs": 210870.765625,
+            "regression": -0.0042563068876397825,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/check/icosphere-5120",
+            "baselineNs": 955414.0625,
+            "currentNs": 861338.5625,
+            "regression": -0.09846568487157892,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/metrics/icosphere-5120",
+            "baselineNs": 1800510.5,
+            "currentNs": 1773229.1875,
+            "regression": -0.015151987450225946,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+            "baselineNs": 728955.71875,
+            "currentNs": 631332.03125,
+            "regression": -0.1339226581107057,
+            "ok": true
+          },
+          {
+            "id": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+            "baselineNs": 1177572.9375,
+            "currentNs": 1164141.90625,
+            "regression": -0.011405689467112068,
+            "ok": true
+          }
+        ]
+      }
+    }
+  ],
+  "combined": {
+    "schema": 1,
+    "ok": true,
+    "maxRegression": 0.25,
+    "environment": {
+      "arch": "aarch64",
+      "os": "macos"
+    },
+    "cases": [
+      {
+        "id": "manifold-core/kernels/check/icosphere-1280",
+        "baselineNs": 211772.1328125,
+        "currentNs": 207559.25,
+        "regression": -0.019893471140652985,
+        "ok": true
+      },
+      {
+        "id": "manifold-core/kernels/check/icosphere-5120",
+        "baselineNs": 955414.0625,
+        "currentNs": 878195.3125,
+        "regression": -0.08082228745717257,
+        "ok": true
+      },
+      {
+        "id": "manifold-core/kernels/metrics/icosphere-5120",
+        "baselineNs": 1883341.1875,
+        "currentNs": 1789513.0625,
+        "regression": -0.04982003559564796,
+        "ok": true
+      },
+      {
+        "id": "manifold-core/kernels/repair-conservative/unwelded-icosphere-1280",
+        "baselineNs": 727151.0625,
+        "currentNs": 645992.84375,
+        "regression": -0.1116112221179626,
+        "ok": true
+      },
+      {
+        "id": "manifold-core/kernels/repair-full/defected-icosphere-1280",
+        "baselineNs": 1177572.9375,
+        "currentNs": 1207490.875,
+        "regression": 0.025406441119066647,
+        "ok": true
+      }
+    ]
+  },
+  "allPairsAndCombinedPassed": true,
+  "binarySha256": {
+    "baseline": "28f85f6701b1bad94196a8dac341e6ee377e420c82a415561c1edf0fa9a1275d",
+    "current": "7585e981e9f2368053aba78c2ccb5927444a95781f5062a3e1d3835732eddfcf"
+  },
+  "qualificationClaim": "none",
+  "rawArchive": "raw-runs.tar.gz"
+}

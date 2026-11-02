@@ -7,7 +7,7 @@ import photogrammetryBytes from '../src/generated/photogrammetry/bytes'
 import {unpackWasmBase64} from '../src/services/wasmPacking'
 import {unpackBrotliWasm, unpackBrotliWasmBase64} from '../src/services/wasmBrotliPacking'
 import {encodeBase85, decodeBase85} from '../scripts/wasm-base85.mjs'
-import {encodeVariableBase93} from '../scripts/wasm-base91.mjs'
+import {encodeVariableBase93,encodeSeptBase118} from '../scripts/wasm-base91.mjs'
 import {verifyPackedWasmChunk} from '../scripts/verify-packed-wasm.mjs'
 
 function pack(data: Uint8Array, quality = 11): Uint8Array {
@@ -139,4 +139,15 @@ describe('synchronous Brotli WASM packages', () => {
     expect(Buffer.compare(Buffer.from(decoded), original)).toBe(0)
     expect(WebAssembly.Module.imports(new WebAssembly.Module(decoded))).toEqual([])
   })
+})
+
+it('decodes sept literals through the bounded Brotli dispatcher and refuses malformed frames',()=>{
+ for(const length of [0,1,6,7,255,4096]){
+  const data=Uint8Array.from({length},(_,i)=>(i*137)&255),packed=pack(data),text=encodeSeptBase118(packed)
+  expect(unpackBrotliWasmBase64(text)).toEqual(data)
+  expect(()=>unpackBrotliWasmBase64(text.slice(0,-1))).toThrow()
+  expect(()=>unpackBrotliWasmBase64(text+'!!!!!!!')).toThrow()
+ }
+ const overflow=pack(new Uint8Array());new DataView(overflow.buffer,overflow.byteOffset,overflow.byteLength).setUint32(0,16*1024*1024+1,true)
+ expect(()=>unpackBrotliWasmBase64(encodeSeptBase118(overflow))).toThrow('output limit')
 })

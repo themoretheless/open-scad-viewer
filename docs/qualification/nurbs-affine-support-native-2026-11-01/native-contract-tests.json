@@ -1,0 +1,51 @@
+{
+  "schema": "native-nurbs-contract-checkpoint/1",
+  "status": "passed-native-contracts-only",
+  "contracts": [
+    "NURBS-0205"
+  ],
+  "baseCommit": "f91ea18f8b09bd8c558e7f612fb64bb769c23247",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "cbd22ddf9e7088db4d54b1908196419c1fe395166145d054f36d78c60dd2844a",
+    "crates/nurbs-core/src/analysis/affine_support.rs": "c5a57cd0cd34fd4b5152102888076c14cc3f8fd3923597eda286f9fd83dc25ab",
+    "crates/nurbs-core/tests/affine_support.rs": "e4b760b8503430813fe969707a05fd045a84dfd698ca4d0edb7a4e0ba9d579c2",
+    "crates/nurbs-core/tests/class_a_contracts.rs": "eb2d67dda6d2b7dc924c1a4a619108104cf625e34207d8c2c705d7ecf0fed6df"
+  },
+  "cargoLockSha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7",
+  "logSha256": "585f0acd35786e0d21ab4d584a5399165a98bbdfb8b805fb7f75da8f8faf14b1",
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/d48964860133e46f/out/affine_support-d48964860133e46f",
+      "sha256": "ffaf9cdfaeabfc39258a2c2eb31edde818ee35380ee66d439cd1c3d4dd5f7b8a"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/a263791f705befa2/out/class_a_contracts-a263791f705befa2",
+      "sha256": "616e19b023456fd9983d6aa53054915a431219c0d98c0c3978a4fb05dc578900"
+    }
+  ],
+  "testSuites": [
+    {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "filteredOut": 0
+    },
+    {
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "filteredOut": 0
+    }
+  ],
+  "command": "CARGO_BUILD_JOBS=1 CARGO_PROFILE_TEST_OPT_LEVEL=0 cargo test --manifest-path crates/Cargo.toml --target-dir /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target -p nurbs-core --test class_a_contracts --test affine_support --locked --offline",
+  "applicationIntegrationQualified": false,
+  "g0g1Qualified": false,
+  "fullWorkspaceQualified": false,
+  "mainPushed": false,
+  "noDefaultFeaturesCheck": {
+    "command": "CARGO_BUILD_JOBS=1 cargo check --manifest-path crates/Cargo.toml --target-dir /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target -p nurbs-core --lib --no-default-features --locked --offline",
+    "exitCode": 0,
+    "logSha256": "5978964d2ed92c7d73cc25651138b4a8ae505b8681f11bb0e2575d4bfb3ec62a"
+  },
+  "proofScope": "Exact affine dimension of nominal validated control coordinates, or an explicit incomplete lower bound. No analytic surface replacement, regularity or B-rep certificate."
+}

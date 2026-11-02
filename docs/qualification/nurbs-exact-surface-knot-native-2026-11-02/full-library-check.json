@@ -1,0 +1,16 @@
+{
+  "sourceCommit": "586a934d3c0981315e393771e6ffa80262086df3",
+  "command": "CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --lib",
+  "exitCode": 0,
+  "passed": 2044,
+  "failed": 0,
+  "existingIgnored": 1,
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "36e6acee5a288ddf9635b4f722893dda7f6e91b158535bcc0534fba8b6481bd4",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "382d82dafe3312468b8b075e1d666455efd8a115eafb897f6ce83ebec4c36fb4",
+    "crates/nurbs-core/src/editing/exact_knot_removal.rs": "72724c8b843341917805f7bbc38c57cfc0479564f870277f3740951e7f79030e",
+    "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs": "2d915a7a9fe99458a117f09845a52b18a2be81eb5d17bc4b2d54569fa8ccbbba",
+    "crates/nurbs-core/tests/exact_knot_removal_contracts.rs": "3921e734c1d8f8fdfadfdca1665bb68f3e9953ba978062c6e388422456563981"
+  },
+  "scope": "Full default nurbs-core library on feature226 source only; not workspace, WASM, editor, source-history, B-rep or global G0/G1 qualification."
+}

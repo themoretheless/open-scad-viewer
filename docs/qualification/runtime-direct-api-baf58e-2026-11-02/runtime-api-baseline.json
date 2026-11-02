@@ -1,0 +1,31 @@
+{
+  "schema": "runtime-direct-api-baseline/1",
+  "state": "complete",
+  "wasmSha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+  "checks": {
+    "directNodeApiPassed": 115,
+    "chromiumMainChecks": 40,
+    "chromiumIndependentWorkerChecks": 40,
+    "transportTestsPassed": 35
+  },
+  "evidence": [
+    {
+      "path": "docs/qualification/native226-sept-decoder-2026-11-02/receipt.json",
+      "sha256": "8fe2b833a1a16ce0c1e8cb89ec8a4bf733f5691348431531cc103cd0dd20e5f0"
+    },
+    {
+      "path": "docs/qualification/native226-sept-decoder-2026-11-02/browser-embedded-report.json",
+      "sha256": "afdd5489afa2452d43c76403d787f5303c00a6829f902622ddb16b20a7434c43"
+    },
+    {
+      "path": "docs/qualification/native226-sept-decoder-2026-11-02/private-dist-measurement.json",
+      "sha256": "f6ccaed437c69ddc5b9fa88f35da25de0c427e30f203490d4892a987d239bbb6"
+    },
+    {
+      "path": "docs/qualification/native226-private-api-2026-11-02/build-receipt.json",
+      "sha256": "1a732c74a03490b4ff3e01298cb205882522a4cec16dea225a6524de5b0fd72d"
+    }
+  ],
+  "scope": "Finite exact-artifact direct API baseline:115 Node tests and40 Chromium main/40 independent-worker embedded checks. No complete frontend, application worker protocol, global geometry, Linux or hosted CI qualification.",
+  "qualificationClaim": "finite-runtime-direct-api-only"
+}

@@ -1,0 +1,14 @@
+{
+  "defaultCommand": "npm run build",
+  "exitCode": 0,
+  "testsPassed": 5,
+  "wasmSha256": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "distArtifactCount": 202,
+  "assetBytes": 10076617,
+  "rawWasmBytes": 19198027,
+  "capsRaised": false,
+  "executionProviderPromoted": false,
+  "rootNativeCatalog": 223,
+  "featureNativeCatalog": 225,
+  "scope": "Packaging proof only. Node/Chromium finite API evidence separate. Runtime provider admission, append-only source fingerprints, full frontend with new artifact and Linux current source validation remain open. No push."
+}

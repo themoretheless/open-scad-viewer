@@ -1,0 +1,37 @@
+{
+  "focusedTestsPassed": 33,
+  "focusedExitCode": 0,
+  "architectureExitCode": 0,
+  "publication": {
+    "scope": "Append-only source/artifact identity; no source-to-build provenance or qualification inherited.",
+    "published": true,
+    "sourcePaths": 7621,
+    "sourceSha256": "66ec490b36ff83fee6ad06d08b5918111f53534a1f0ffa9540ab0ff4432a7c7d",
+    "completedWorkUnits": 0,
+    "plannedWorkUnits": 4740,
+    "qualificationClaim": "none",
+    "artifacts": [
+      {
+        "path": "docs/qualification/own-rust-cad-v84.json",
+        "sha256": "1fd6b43c600e9b1d0b78490c6b8c0e7b2c8f53679d860bd99d4d9a3c55e94004",
+        "byteLength": 475575
+      },
+      {
+        "path": "docs/qualification/g0-toolchain-fingerprints-v98.json",
+        "sha256": "74fd3faa2faff91695ebd3838b299b2232d5a6e2d3cc249d20897208d8abcd4c",
+        "byteLength": 1791562
+      },
+      {
+        "path": "docs/qualification/semantic-manifold-g1-plan-v115.json",
+        "sha256": "a9cc2b0a80b67defe909c38d8f7ed1e285d91fa4df0b61d0db7beb250595b1eb",
+        "byteLength": 79121
+      },
+      {
+        "path": "docs/qualification/g0-v98-g1-v115-refreeze-status-v1.json",
+        "sha256": "baa1b4d62f8648a3d9c550aef9f94da01dfcf3f5b6a89139d5745235abf451d1",
+        "byteLength": 1848439
+      }
+    ]
+  },
+  "scope": "Append-only source/artifact fingerprints and focused integrity checks only. No full frontend, global geometry, clean G1 matrix, hostedCI or main delivery claim."
+}

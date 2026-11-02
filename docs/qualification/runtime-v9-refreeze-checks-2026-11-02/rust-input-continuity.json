@@ -1,0 +1,5 @@
+{
+  "manifestInputs": 5112,
+  "drift": [],
+  "scope": "Input equality only. Earlier8510 Rust passes retain their original scoped evidence; no new test execution or G0/G1 credit is asserted."
+}

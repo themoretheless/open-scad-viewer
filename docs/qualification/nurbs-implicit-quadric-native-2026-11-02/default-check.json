@@ -1,0 +1,11 @@
+{
+  "exitCode": 0,
+  "passed": 101,
+  "failed": 0,
+  "ignored": 0,
+  "targets": 14,
+  "quadricTests": 6,
+  "scope": "Fourteen public nurbs-core targets, default features; not workspace or application qualification.",
+  "source": "source.json",
+  "log": "default.log.gz"
+}

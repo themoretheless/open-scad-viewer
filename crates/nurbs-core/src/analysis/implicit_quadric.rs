@@ -15,16 +15,14 @@ pub struct Report {
     pub gradient_lower: Option<f64>,
     pub reason: Option<&'static str>,
 }
-fn bezier(s: &Surface) -> bool {
+fn clamped(s: &Surface) -> bool {
     let (p, q) = (s.degree_u, s.degree_v);
     let (n, m) = (s.control_points.len(), s.control_points[0].len());
     !s.periodic_u
         && !s.periodic_v
-        && p + 1 == n
-        && q + 1 == m
-        && s.knots_u[..n].iter().all(|x| *x == s.knots_u[p])
+        && s.knots_u[..=p].iter().all(|x| *x == s.knots_u[p])
         && s.knots_u[n..].iter().all(|x| *x == s.knots_u[n])
-        && s.knots_v[..m].iter().all(|x| *x == s.knots_v[q])
+        && s.knots_v[..=q].iter().all(|x| *x == s.knots_v[q])
         && s.knots_v[m..].iter().all(|x| *x == s.knots_v[m])
 }
 /// Q is the literal symmetric matrix in [x,y,z,1]^T Q [x,y,z,1]=0.
@@ -78,8 +76,8 @@ pub fn inspect_with_constant_products(
         gradient_lower: None,
         reason: Some("implicit-support-unproved"),
     };
-    if !bezier(s) {
-        out.reason = Some("implicit-single-bezier-required");
+    if !clamped(s) {
+        out.reason = Some("implicit-clamped-nonperiodic-required");
         return Ok(out);
     }
     let mut scalars = Vec::new();
@@ -92,6 +90,13 @@ pub fn inspect_with_constant_products(
     let offset = scalars.len();
     scalars.extend(q.iter().flatten());
     scalars.extend(products.iter().flatten());
+    let single=s.control_points.len()==s.degree_u+1 && s.control_points[0].len()==s.degree_v+1;
+    let knot_offset=scalars.len();
+    if !single {
+        scalars.extend(&s.knots_u);scalars.extend(&s.knots_v);
+        // Bind tensor layout and degrees, not only an undelimited leaf stream.
+        scalars.extend([s.control_points.len() as f64,s.control_points[0].len() as f64,s.degree_u as f64,s.degree_v as f64]);
+    }
     let source = SourceArena::authored(
         "original-implicit-quadric-support",
         1,
@@ -124,13 +129,13 @@ pub fn inspect_with_constant_products(
         },
         None,
     );
-    let decision = cad_predicates::binary_bezier_quadric_with_constant_products_identity(
-        &mut context,
-        &surface,
-        matrix,
-        &factors,
-    )
-    .map_err(|e| crate::input(e.to_string()))?;
+    let decision = if single {
+        cad_predicates::binary_bezier_quadric_with_constant_products_identity(&mut context,&surface,matrix,&factors)
+    }else{
+        let ku=(0..s.knots_u.len()).map(|i|source.leaf(knot_offset+i).unwrap()).collect::<Vec<_>>();
+        let kv=(0..s.knots_v.len()).map(|i|source.leaf(knot_offset+s.knots_u.len()+i).unwrap()).collect::<Vec<_>>();
+        cad_predicates::binary_bspline_quadric_with_constant_products_identity(&mut context,&surface,[s.degree_u,s.degree_v],[&ku,&kv],matrix,&factors)
+    }.map_err(|e|crate::input(e.to_string()))?;
     out.exact_work = decision.work_used;
     if decision.outcome != BezierIdentity::Equal {
         out.reason = Some("exact-implicit-membership-unproved");

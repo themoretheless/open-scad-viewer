@@ -1,0 +1,12 @@
+{
+  "exitCode": 0,
+  "passed": 6540,
+  "failed": 0,
+  "existingSkipped": 10,
+  "sourceRecord": "OwnRust84 root223",
+  "wasm": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "sourceAndArtifactMatchAtEnd": true,
+  "uninterruptedSourceImmutabilityClaim": false,
+  "transientMetadataMutation": "runtime-v9-transient-census-event.json.gz",
+  "scope": "Complete frontend test execution on runtime-v9 root223. One ownership-census JSON was transiently replaced by a diagnostic adapter and restored exactly; no application TS/Rust or WASM mutation occurred. Retain raw execution results, disclose event, and do not claim uninterrupted immutable-source qualification. Native226 and degree-fix integration require a new source freeze and final validation."
+}

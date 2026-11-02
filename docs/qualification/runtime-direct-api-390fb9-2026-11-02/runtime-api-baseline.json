@@ -1,0 +1,30 @@
+{
+  "schema": "runtime-direct-api-baseline/1",
+  "state": "complete",
+  "wasmSha256": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "checks": {
+    "directNodeApiPassed": 112,
+    "chromiumMainChecks": 28,
+    "chromiumQualificationWorkerChecks": 28
+  },
+  "evidence": [
+    {
+      "path": "docs/qualification/native223-macos-candidate-api-2026-11-02/receipt.json",
+      "sha256": "52ec38103db6bea79fc598ab2172ef8204eaa007d581fc582e26e2d58852c9cc"
+    },
+    {
+      "path": "docs/qualification/native223-macos-candidate-api-2026-11-02/native223-macos-390fb9-node.json.gz",
+      "sha256": "893cfd2aa5d515c969a21ab4c326369fc0685a8e3618436a29e038bdea2e1407"
+    },
+    {
+      "path": "docs/qualification/native223-macos-candidate-api-2026-11-02/native223-macos-390fb9-browser--report.json.gz",
+      "sha256": "e7e11ae59c1b0c17803dbeb8461d8d838a84f3d69a90ed44884b580151b6ad9d"
+    },
+    {
+      "path": "docs/qualification/geometry-delivery-390fb9-2026-11-02/build-result.json",
+      "sha256": "af02d51cdee9b22d4976a52696c623ecae22586340098972bdef9ca176e50c5b"
+    }
+  ],
+  "scope": "Finite direct API baseline on Node and Chromium only. No application worker protocol, complete frontend/UI, Linux or hosted CI qualification. Packaging checks recorded separately.",
+  "qualificationClaim": "finite-runtime-direct-api-only"
+}

@@ -104,10 +104,12 @@ jobs:
         run: npm run test:rbench
       # Both revisions run on this same machine; never compare absolute times
       # from a developer workstation with a hosted runner.
+      # quick is a smoke profile (8 x 1 ms). Use 100 x 10 ms observations
+      # for the blocking comparison; the regression threshold stays at 25%.
       - name: Measure base manifold kernels
-        run: cargo run --quiet --locked --release --manifest-path baseline/crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile quick --json --output "$RUNNER_TEMP/manifold-rbench-base"
+        run: cargo run --quiet --locked --release --manifest-path baseline/crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile thorough --json --output "$RUNNER_TEMP/manifold-rbench-base"
       - name: Measure current manifold kernels
-        run: cargo run --quiet --locked --release --manifest-path crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile quick --json --output "$RUNNER_TEMP/manifold-rbench-current"
+        run: cargo run --quiet --locked --release --manifest-path crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile thorough --json --output "$RUNNER_TEMP/manifold-rbench-current"
       - name: Block manifold performance regressions over 25 percent
         working-directory: tools/manifold-bench
         run: node rbench-regression.mjs compare --baseline "$RUNNER_TEMP/manifold-rbench-base/run.json" --current "$RUNNER_TEMP/manifold-rbench-current/run.json" --max-regression 0.25 --report "$RUNNER_TEMP/manifold-rbench-comparison.json"
@@ -116,7 +118,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: manifold-rbench-comparison
-          path: ${{ runner.temp }}/manifold-rbench-comparison.json
+          path: |
+            ${{ runner.temp }}/manifold-rbench-comparison.json
+            ${{ runner.temp }}/manifold-rbench-base/run.json
+            ${{ runner.temp }}/manifold-rbench-current/run.json
           if-no-files-found: warn
 
   check:
@@ -304,9 +309,11 @@ jobs:
         os: [macos-latest, windows-latest]
     steps:
       # Generated artifacts and frozen source digests compare repository bytes.
-      - name: Preserve repository line endings on Windows
+      - name: Preserve repository bytes and long paths on Windows
         if: runner.os == 'Windows'
-        run: git config --global core.autocrlf false
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:

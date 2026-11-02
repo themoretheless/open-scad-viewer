@@ -1,0 +1,36 @@
+{
+  "schema": "native-test-partition/1",
+  "complete": true,
+  "disjoint": true,
+  "full": {
+    "cases": 8518,
+    "sha256": "0ba319796ea18439258f35373392edec51649a50c4c437372da99738f5933bbc"
+  },
+  "serial": {
+    "cases": 52,
+    "sha256": "da87e8bf67a81b0b7158ada54f967d97b769059035d8ed886902955d8326f2c8"
+  },
+  "parallel": {
+    "cases": 8466,
+    "sha256": "41b73dba1cb4ebf81a23a7ec7ac21c292dcdc1a00a990538488b3aa2e3627137"
+  },
+  "selector": "aag",
+  "qualificationClaim": "none",
+  "logs": [
+    {
+      "path": "/Users/themoretheless/.codex/worktrees/nurbs-plan-recovery/open-scad-viewer/output/qualification/native-test-catalog/full.log",
+      "sha256": "bbd45286d50b7f80aa5f68a5fc523212920b19c04476e7fc98f5c87284a9962f",
+      "byteLength": 919873
+    },
+    {
+      "path": "/Users/themoretheless/.codex/worktrees/nurbs-plan-recovery/open-scad-viewer/output/qualification/native-test-catalog/serial.log",
+      "sha256": "6ce4ff216f298566d485f69f81f96c21b4c11d41c66de0071ab54db108a693c1",
+      "byteLength": 164880
+    },
+    {
+      "path": "/Users/themoretheless/.codex/worktrees/nurbs-plan-recovery/open-scad-viewer/output/qualification/native-test-catalog/parallel.log",
+      "sha256": "08b98d952022505d88b30a7fb49d03c173a0ac066b8720d0b1b2b1ad4520bc17",
+      "byteLength": 911044
+    }
+  ]
+}

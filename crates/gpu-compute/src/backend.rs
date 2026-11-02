@@ -540,10 +540,19 @@ mod tests {
     #[test]
     fn execution_topology_and_2d_workgroup_recommendations_match_hardware_primitives() {
         let metal_topo = BackendReport::from_wgpu(wgpu::Backend::Metal).execution_topology();
-        assert_eq!(metal_topo.memory_architecture, MemoryArchitecture::Uma);
-        assert!(metal_topo.memory_architecture.profile().unified_physical_ram);
-        assert!(metal_topo.memory_architecture.profile().zero_copy_primary_upload);
-        assert!(!metal_topo.memory_architecture.profile().requires_explicit_staging_ring);
+        let apple_silicon = cfg!(all(target_os = "macos", target_arch = "aarch64"));
+        assert_eq!(
+            metal_topo.memory_architecture,
+            if apple_silicon {
+                MemoryArchitecture::Uma
+            } else {
+                MemoryArchitecture::Duma
+            }
+        );
+        let profile = metal_topo.memory_architecture.profile();
+        assert_eq!(profile.unified_physical_ram, apple_silicon);
+        assert_eq!(profile.zero_copy_primary_upload, apple_silicon);
+        assert_eq!(profile.requires_explicit_staging_ring, !apple_silicon);
         assert_eq!(metal_topo.scalar_unit_label, "ALU / Execution Pipeline");
         assert_eq!(metal_topo.simd_width, 32);
         assert_eq!(metal_topo.simd_group_label, "SIMD-group (32 threads)");

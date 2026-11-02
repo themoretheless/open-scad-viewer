@@ -1,0 +1,16 @@
+{
+  "schema": "linux-compiler-macos-optimizer-candidate/1",
+  "compiledSource": "Read-only native223 snapshotbab2c33de with NACA5/CST and knot-removal correction; excludes50389f74c multispan extension and later exact removal.",
+  "compiler": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "libc": "ldd (Debian GLIBC 2.36-9+deb12u14) 2.36",
+  "sourceManifestSha256": "59b40bb926c42bbe2612a4bcbc14857fe951cf3ccd3d5e6a1adc9f05dabc5e06",
+  "rawSha256": "a1ace773b67f796279db18f737702b3781952808c851e63339711205851a22ef",
+  "rawBytes": 17814921,
+  "optimizedSha256": "13d57db09409356dd9a7fa410aeb78937f73010915e77ada400823b3d0857fda",
+  "optimizedBytes": 15908186,
+  "optimizerPlatform": "darwin",
+  "optimizerSha256": "4c575c3d092cdfa434ead67f44c0379a28289c94b966136055d51c7946ed6523",
+  "qualified": false,
+  "promoted": false,
+  "hostedCiProven": false
+}

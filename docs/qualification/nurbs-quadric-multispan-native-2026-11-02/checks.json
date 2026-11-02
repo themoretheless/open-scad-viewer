@@ -1,0 +1,52 @@
+{
+  "exitCodes": {
+    "cad": 0,
+    "default-full": 0,
+    "no-codec": 0,
+    "default-degrees": 0,
+    "no-codec-degrees": 0
+  },
+  "cadLibrary": {
+    "passed": 103,
+    "failed": 0,
+    "ignored": 0
+  },
+  "nurbsLibrary": {
+    "passed": 2044,
+    "failed": 0,
+    "ignored": 1,
+    "filtered": 0
+  },
+  "publicDefaultUniquePassed": 110,
+  "publicNoCodecUniquePassed": 110,
+  "publicCountExplanation": "107 public tests initially (including six multispan). Final nine-test multispan runs replace those six and add three unique mixed/max-degree cases: 107-6+9=110, not116. Only integration fixtures changed between these runs; runtime source unchanged.",
+  "rawRunTotals": {
+    "cad": [
+      103,
+      0,
+      0
+    ],
+    "default-full": [
+      2151,
+      0,
+      1
+    ],
+    "no-codec": [
+      107,
+      0,
+      0
+    ],
+    "default-degrees": [
+      9,
+      0,
+      0
+    ],
+    "no-codec-degrees": [
+      9,
+      0,
+      0
+    ]
+  },
+  "scope": "Default full cad-predicates and nurbs-core libraries, fifteen selected public targets default/no-codec. Not full no-codec library, workspace, production WASM, UI, STEP or main.",
+  "source": "source.json"
+}

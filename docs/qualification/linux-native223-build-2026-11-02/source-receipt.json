@@ -1,0 +1,28 @@
+{
+  "scope": "Immutable current recovery Rust source through222 plus committed feature overlay through223 and knot-removal correction. No current-source qualification inherited from218.",
+  "rootHead": "67d8cbab4bb67240c10b712f9b491a5d514f19ca",
+  "featureOverlayCommit": "bab2c33de1dc4eb03d32d1fb8bb99d4fb0b664d1",
+  "overlayPaths": [
+    "crates/nurbs-core/src/foundation/knot_removal.rs",
+    "crates/nurbs-core/tests/implicit_quadric_contracts.rs"
+  ],
+  "sourcePaths": 5109,
+  "changedFrom218": [
+    "crates/nurbs-core/src/construct/curves/airfoil.rs",
+    "crates/nurbs-core/src/construct/curves/airfoil/algorithm_cst_fit.rs",
+    "crates/nurbs-core/src/construct/curves/airfoil/algorithm_cst_points.rs",
+    "crates/nurbs-core/src/construct/curves/airfoil/algorithm_naca5_airfoil.rs",
+    "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
+    "crates/nurbs-core/src/construct/curves/airfoil/cst_frame.rs",
+    "crates/nurbs-core/src/foundation/knot_removal.rs",
+    "crates/nurbs-core/tests/airfoil_standard_contracts.rs",
+    "crates/nurbs-core/tests/cst_algebraic_contracts.rs",
+    "crates/nurbs-core/tests/cst_contracts.rs",
+    "crates/nurbs-core/tests/cst_section_contracts.rs",
+    "crates/nurbs-core/tests/implicit_quadric_contracts.rs"
+  ],
+  "removedFrom218": [],
+  "manifestSha256": "59b40bb926c42bbe2612a4bcbc14857fe951cf3ccd3d5e6a1adc9f05dabc5e06",
+  "containerSourcePath": "/sources/native218 (legacy stable cache path; actual source is native223-linux-source)",
+  "promoted": false
+}

@@ -2,7 +2,7 @@
 use super::periodic_edits::SeamCertificate;
 use super::{
     Axis, Curve, Result, Surface, ToleranceContext, check, context,
-    exact_curve, exact_surface, numeric, rebuild_candidate, rebuild_surface_error,
+    exact_surface, numeric, rebuild_candidate, rebuild_surface_error,
     refit_curve, seam_certificate,
 };
 #[cfg(feature = "codec")]
@@ -174,11 +174,15 @@ pub fn reduce_curve_degree_report(
         }
     }
     let candidate = refit_curve(source, degree, knots)?;
-    // Recognize exact reductions exactly, as the archived contract requires:
-    // elevate the candidate back and compare control points, and only then
-    // fall back to the conservative interval bound for inexact candidates.
+    // Rounded re-elevation is only a proposal filter, never zero-error proof.
+    // Compare the actual original and candidate definitions independently.
     let reconstructed = candidate.elevate(source.degree)?;
-    let (exact, error) = if exact_curve(source, &reconstructed) {
+    let exact = if super::exact_curve(source, &reconstructed) {
+        crate::core::curve_identity::compare_definitions(
+            source, &candidate, 0., cad_predicates::MAX_WORK, false,
+        )?.outcome == cad_predicates::BezierIdentity::Equal
+    } else { false };
+    let (exact, error) = if exact {
         (true, 0.)
     } else {
         // Bound the returned candidate directly; rounded elevation is not its image.

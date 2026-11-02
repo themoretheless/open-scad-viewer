@@ -1,0 +1,25 @@
+{
+  "buildExitCode": 0,
+  "buildJobs": 1,
+  "sourceCommitOverlay": "bab2c33de",
+  "sourcePaths": 5109,
+  "compiler": "Linux x86_64 nightly2026-09-16 under QEMU",
+  "optimizer": "Pinned macOS Binaryen116, not hosted Linux CI",
+  "rawSha256": "a1ace773b67f796279db18f737702b3781952808c851e63339711205851a22ef",
+  "optimizedSha256": "13d57db09409356dd9a7fa410aeb78937f73010915e77ada400823b3d0857fda",
+  "optimizedBytes": 15908186,
+  "sameRawAndOptimizedBytesAs218": true,
+  "existingExactArtifactBrowserReceipt": "docs/qualification/linux-native218-isolated-api-2026-11-02/browser-report.json",
+  "browserClaim": "Same exact artifact previously passed28 main+28 worker direct probes. Not a new source/API integration result.",
+  "scope": "Read-only snapshot before50389f74c multispan extension and a3f875207 exact removal. Unchanged bytes do not prove new native methods are ABI reachable.",
+  "productionChanged": false,
+  "providerAdmissionChanged": false,
+  "qualified": false,
+  "promoted": false,
+  "priorAttempt": {
+    "container": "osv-nurbs-linux-wasm-223-20261102-r2",
+    "exitCode": 101,
+    "OOMKilled": true,
+    "preserved": true
+  }
+}

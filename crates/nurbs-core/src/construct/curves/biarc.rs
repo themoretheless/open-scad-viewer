@@ -1,4 +1,4 @@
-//! G1 biarc approximation of planar curves within chord tolerance (item 287).
+//! Numerical G1 biarc approximation checked at sampled sites (item 287).
 //!
 //! Every biarc is a pair of circular arcs meeting at a joint on the
 //! perpendicular bisector of the segment chord, with a shared tangent at the
@@ -63,13 +63,42 @@ struct Arc {
     normal: [f64; 3],
 }
 
-/// Point/arc distance: radial gap to the circle, or perpendicular gap to
-/// the tangent line for straight pieces.
+/// Numerical Euclidean distance to the finite arc, not its supporting
+/// circle or infinite tangent line. Endpoint distance matters for reversed
+/// or repeated source travel. Includes the out-of-plane component.
 fn deviation(arc: &Arc, q: [f64; 3]) -> f64 {
     if arc.radius.is_infinite() {
-        return dot(cross(arc.normal, arc.tangent), sub(q, arc.start)).abs();
+        let chord = sub(arc.end, arc.start);
+        let length2 = dot(chord, chord);
+        let t = (dot(sub(q, arc.start), chord) / length2).clamp(0., 1.);
+        return norm(sub(q, add(arc.start, scale(chord, t))));
     }
-    (norm(sub(q, arc.center)) - arc.radius).abs()
+    let r0 = sub(arc.start, arc.center);
+    let r1 = sub(arc.end, arc.center);
+    let r = sub(q, arc.center);
+    let normal = scale(arc.normal, 1. / norm(arc.normal));
+    let dir = dot(arc.tangent, cross(normal, r0)).signum();
+    let raw = dot(cross(r0, r1), normal).atan2(dot(r0, r1));
+    let sweep = (dir * raw).rem_euclid(std::f64::consts::TAU);
+    let projected = sub(r, scale(normal, dot(normal, r)));
+    let radial = norm(projected);
+    // Compare against the endpoints of the authored circle model. In
+    // near-planar 3D input these can differ slightly from source endpoints.
+    let start = add(arc.center, scale(r0, arc.radius / norm(r0)));
+    let end_projection = sub(r1, scale(normal, dot(normal, r1)));
+    let end = add(arc.center, scale(end_projection, arc.radius / norm(end_projection)));
+    let endpoints = norm(sub(q, start)).min(norm(sub(q, end)));
+    if radial == 0. {
+        return endpoints;
+    }
+    let angle = (dir * dot(cross(r0, projected), normal)
+        .atan2(dot(r0, projected))).rem_euclid(std::f64::consts::TAU);
+    if angle <= sweep {
+        let closest = add(arc.center, scale(projected, arc.radius / radial));
+        norm(sub(q, closest)).min(endpoints)
+    } else {
+        endpoints
+    }
 }
 
 /// Circular arc from `a` with unit tangent `ta` passing through `b`, lying in
@@ -230,8 +259,7 @@ impl Fitter<'_> {
         for i in 0..=SAMPLES {
             let u = u0 + (u1 - u0) * i as f64 / SAMPLES as f64;
             let q = point3(&self.curve.evaluate(u)?.point);
-            let arc = if 2 * i <= SAMPLES { first } else { second };
-            error = error.max(deviation(arc, q));
+            error = error.max(deviation(first, q).min(deviation(second, q)));
         }
         Ok(error)
     }
@@ -354,7 +382,8 @@ fn arc_nurbs(arc: &Arc, normal: [f64; 3]) -> Result<Curve> {
     crate::primitives::circle_arc(arc.center, normal, arc.radius, start, sweep.to_degrees())
 }
 
-/// G1 biarc approximation of `curve` within chord `tolerance`, at most
+/// Numerical G1 biarc approximation of `curve` checked at sampled sites
+/// against `tolerance`, at most
 /// `max_arcs` (≤ 256) arcs. Splits at curvature inflections before recursive
 /// bisection. See the module documentation for the 3D planarity policy.
 pub fn fit_biares_report(

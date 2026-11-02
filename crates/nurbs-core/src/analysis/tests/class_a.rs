@@ -355,3 +355,36 @@ fn chaining_budget_limits_polyline_growth() {
             assert!(k.abs() < 1e-12 && h.abs() < 1e-12);
         }
     }
+
+#[test]
+fn rejects_non_finite_class_a_scalar_settings() {
+    let s = sphere();
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        for result in [
+            reflection_lines(&s, [1., 0., 1.], [0., 0., 1.], 0.5, [4, 4], bad, &limits()).map(|_| ()),
+            isophote_analysis(&s, [0., 0., 1.], &[0.25, 0.5], [4, 4], bad, &limits()).map(|_| ()),
+            dent_detection(&s, [4, 4], bad, 0.01, &limits()).map(|_| ()),
+            dent_detection(&s, [4, 4], 1., bad, &limits()).map(|_| ()),
+        ] {
+            assert_eq!(result.unwrap_err().code, crate::INVALID_INPUT);
+        }
+    }
+}
+
+#[test]
+fn malformed_sampling_source_is_an_error_without_panicking() {
+    let mut s = sphere();
+    s.knots_u.clear();
+    assert_eq!(highlight_lines(&s, &[[1., 0., 1.]], [0., 0., 1.], 0.5, [4, 4], 0.35, &limits()).unwrap_err().code, crate::INVALID_INPUT);
+    assert_eq!(dent_detection(&s, [4, 4], 1., 0.01, &limits()).unwrap_err().code, crate::INVALID_INPUT);
+}
+
+#[test]
+fn very_large_finite_smoothing_support_keeps_an_analytic_plane_flat() {
+    let s = flat_patch([0., 0., 0.], [2., 0., 0.], [0., 3., 0.]);
+    for sigma in [1e100, f64::MAX] {
+        let report = dent_detection(&s, [4, 6], sigma, 1e-12, &limits()).unwrap();
+        assert_eq!(report.max_residual, 0.);
+        assert!(report.zones.is_empty());
+    }
+}

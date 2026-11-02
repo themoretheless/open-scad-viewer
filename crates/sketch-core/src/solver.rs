@@ -17,13 +17,13 @@ pub(crate) fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64],
             before[i_base + i..i_base + n].swap_with_slice(&mut after[i..n]);
             b.swap(i, pivot);
         }
-        let inv_diag = 1.0 / a[i_base + i];
+        let diagonal = a[i_base + i];
         let bi = b[i];
         let (before, after) = a.split_at_mut(i_base + n);
         let pivot_row = &before[i_base + i..i_base + n];
         for (j_offset, row_chunk) in after.chunks_exact_mut(n).enumerate() {
             let j = i + 1 + j_offset;
-            let f = row_chunk[i] * inv_diag;
+            let f = row_chunk[i] / diagonal;
             if f != 0.0 {
                 for (value, &pivot_val) in row_chunk[i..n].iter_mut().zip(pivot_row) {
                     *value -= f * pivot_val;

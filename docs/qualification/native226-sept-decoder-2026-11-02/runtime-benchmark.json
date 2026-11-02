@@ -1,0 +1,33 @@
+{
+  "scope": "Node22 decoder-only timings on exact4,600,060-byte packed frame; not WASM compile, full cold application startup, cross-host or browser performance.",
+  "payloadBytes": 4600060,
+  "samplesMs": {
+    "pairNumeric": [
+      30.40025,
+      26.052791999999982,
+      26.523333000000008,
+      26.588625000000008,
+      25.77291699999998
+    ],
+    "septBigInt": [
+      234.37787500000002,
+      227.25762500000002,
+      224.801875,
+      240.02429200000006,
+      226.27254200000016
+    ],
+    "septNumeric": [
+      49.965834000000086,
+      51.12179100000003,
+      50.50733300000002,
+      47.50208399999997,
+      49.68316700000014
+    ]
+  },
+  "mediansMs": {
+    "pairNumeric": 26.523333000000008,
+    "septBigInt": 227.25762500000002,
+    "septNumeric": 49.965834000000086
+  },
+  "allBytesEqual": true
+}

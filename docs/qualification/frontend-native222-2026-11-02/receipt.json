@@ -1,0 +1,39 @@
+{
+  "exitCode": 1,
+  "sourceHashValidation": {
+    "paths": 7082,
+    "changed": [],
+    "scope": "Tracked and nonignored untracked implementation/test/config/wasm files excluding docs archives"
+  },
+  "counts": {
+    "numTotalTestSuites": 1154,
+    "numPassedTestSuites": 1151,
+    "numFailedTestSuites": 3,
+    "numTotalTests": 6550,
+    "numPassedTests": 6533,
+    "numFailedTests": 7,
+    "numPendingTests": 10,
+    "success": false
+  },
+  "failedTests": [
+    "G0 toolchain fingerprints matches exact bytes for every listed artifact",
+    "G0/G1 re-freeze generator binds the published release independently of an ignored host rebuild",
+    "G0/G1 re-freeze generator prepares deterministic new versions without creating any artifact or result",
+    "G0/G1 re-freeze generator publishes exclusively, preserves every archive, and never carries forward results",
+    "G0/G1 re-freeze generator rejects a source race before publishing and preserves an existing destination",
+    "G0/G1 re-freeze generator refuses a zero-counter freeze when the new candidate already has result bookkeeping",
+    "G0/G1 re-freeze generator historical v24 executors retain run-index admission without executing or creating evidence"
+  ],
+  "productionWasm": {
+    "sha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+    "bytes": 15900166
+  },
+  "scope": "Combined recovery root through native222, before knot correction and native223. No newer source/candidate qualification inherited.",
+  "reason": "All seven failures are stale G0/G1 frozen artifact/source fingerprints after native additions. Functional frontend checks passed, but full suite exit is nonzero and no global qualification is claimed.",
+  "fileCounts": {
+    "passed": 718,
+    "failed": 1,
+    "skipped": 5,
+    "total": 724
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "exitCode": 0,
+  "passed": 47,
+  "failed": 0,
+  "scope": "Joint-root native public contracts only; currentWASM390 still lacks degree-zero fix. New candidate and final source freeze remain pending."
+}

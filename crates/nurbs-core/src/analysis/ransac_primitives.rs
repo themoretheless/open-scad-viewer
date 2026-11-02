@@ -206,6 +206,8 @@ fn cylinder_from2n(
     p2: [f64; 3],
     n2: [f64; 3],
 ) -> Option<PrimitiveParams> {
+    let n1 = super::cloud_normals::unit_normal(n1).ok()?;
+    let n2 = super::cloud_normals::unit_normal(n2).ok()?;
     let dir = unit(cross(n1, n2))?;
     // Проецируем на плоскость ⊥ dir, решаем 2x2 пересечение прямых
     // p1 + t·n1 = p2 + s·n2 в базисе {u, v}.

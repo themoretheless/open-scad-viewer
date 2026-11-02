@@ -1,0 +1,20 @@
+{
+  "schema": "same-executable-libc-comparison/1",
+  "revision": "current",
+  "binarySha256": "d09b9a5988db29455747d346541849efed8fb380c60b963004e464a065f46f4d",
+  "qualificationClaim": "none",
+  "runs": [
+    {
+      "version": "24.04",
+      "testExitCode": 101,
+      "log": "golden-current-ubuntu-24.04.log",
+      "logSha256": "1fe283d7e7b87f7cc9672e5267987dbdb84fe6028fae0c6e09b2ff1f99164784"
+    },
+    {
+      "version": "26.04",
+      "testExitCode": 101,
+      "log": "golden-current-ubuntu-26.04.log",
+      "logSha256": "27fe49b4f16b328c529ab2e11a27eb918aa3d1a3a044836692d5741f0de3f7f5"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "public-native-no-codec-check/1",
+  "sourceCommit": "4748a7202",
+  "scope": "Eleven selected public integration targets executed with --no-default-features; not the separate no-codec unit-library target or whole workspace.",
+  "passed": 82,
+  "failed": 0,
+  "ignored": 0,
+  "filteredOut": 0,
+  "exitCode": 0,
+  "testBinaries": [
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/e5f30585e5e521e5/out/affine_support-e5f30585e5e521e5",
+      "sha256": "49832bf92c3aedc2811f32007efdd49caa286e8a3ab1ecf6a817573848ec50b9"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/0e592520a0466a76/out/airfoil_standard_contracts-0e592520a0466a76",
+      "sha256": "88bf7dbfaf045acf6b5b3283d6a0ab4d449cd5fbbd1bd4a599dda0f100a7ed7e"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/f398364a96e9b9f8/out/biarc_contracts-f398364a96e9b9f8",
+      "sha256": "78a5b37816f7c0340df813e1dfafe698022fc20aa59e5ad37a05cf5a20fa2aac"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/3481434073908d2f/out/class_a_contracts-3481434073908d2f",
+      "sha256": "a4b4a87440e021b0ac85bfec6465d93069219ebc124b3278979423a984d838ac"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/5cf000b0f2cffe4d/out/cloud_processing_contracts-5cf000b0f2cffe4d",
+      "sha256": "fdd3ac402e16d8723df6c1723c71680b5887011c5dd4548d602f965ea718ae2d"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/1d50c6e10db28e1d/out/cst_contracts-1d50c6e10db28e1d",
+      "sha256": "e6f16471bab9b884692bc20c988d57b0d7001966e728b792ce1db60e65e81138"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/f41da6b34745183c/out/curvature_reconstruction_contracts-f41da6b34745183c",
+      "sha256": "f08d8fba3a36966043ecf939082c0f9f5469faed6469e4bd31ba6c47e104afb4"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/b3328602b1e01666/out/curve_extension_contracts-b3328602b1e01666",
+      "sha256": "204bf773fed748ef9b9af1079830a166a8e1365c6efea9c0f0fee46325016073"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/15419aad6304e5ca/out/linear_simplification-15419aad6304e5ca",
+      "sha256": "d9ed76e63b16e9ca8bde9067fc65d2d66c50929d694766bf1e4738e25ab347bb"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/96f0b8c06a14c188/out/primitive_fit_contracts-96f0b8c06a14c188",
+      "sha256": "5fe2885af2b3eb9f3486657efb877c6dbd139ba09ab95125fb565bd07ca5e55b"
+    },
+    {
+      "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/nurbs-native-1000-target/debug/build/nurbs-core/937e6a4d07cf120a/out/surface_extension_contracts-937e6a4d07cf120a",
+      "sha256": "40cffd21ccf6ecd37eaaa9467012bb61458e8568512f640d841d55ad20021c3c"
+    }
+  ],
+  "logSha256": "52591b7fe6439e05f5fb0e81f1adb2aababe6c9b4ccbbefc9a85181b82b1cd5d",
+  "mainPushed": false,
+  "sourceManifestSha256": "0b5d9356275cb08b099e478bde30ef89adb6de6a38521bd170e1693ba68b00f3",
+  "command": "CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 cargo test --manifest-path crates/Cargo.toml -p nurbs-core --no-default-features --test cst_contracts --test airfoil_standard_contracts --test curvature_reconstruction_contracts --test biarc_contracts --test curve_extension_contracts --test surface_extension_contracts --test linear_simplification --test cloud_processing_contracts --test class_a_contracts --test affine_support --test primitive_fit_contracts --locked --offline"
+}

@@ -9,6 +9,7 @@ on:
       - 'crates/cad-step/**'
       - 'crates/geometry-bridge/**'
       - 'scripts/export-scalar-sweep-step.mts'
+      - 'scripts/export-scalar-sweep-step.mjs'
       - 'scripts/verify-scalar-sweep-step-occt.py'
       - '.github/workflows/scalar-sweep-step.yml'
   push:
@@ -37,7 +38,7 @@ jobs:
       - run: npm ci
       - run: npm run build:geometry
       - run: python -m pip install cadquery-ocp==8.0.1.0.0
-      - run: node --import tsx scripts/export-scalar-sweep-step.mts output/qualification/scalar-sweep-step
+      - run: node scripts/export-scalar-sweep-step.mjs output/qualification/scalar-sweep-step
       - run: python scripts/verify-scalar-sweep-step-occt.py output/qualification/scalar-sweep-step
       - uses: actions/upload-artifact@v4
         if: always()

@@ -1,0 +1,31 @@
+{
+  "productionFilesUnchanged": true,
+  "candidate": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native226-private-wasm/public/geometry-kernel.wasm",
+  "schema": "candidate-direct-browser-api/1",
+  "identity": {
+    "sha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+    "byteLength": 15935873
+  },
+  "browserVersion": "151.0.7922.34",
+  "scope": "Finite Chromium development-module API probes on main thread and qualification worker. No provider admission, production packaging or whole-UI qualification.",
+  "qualificationClaim": "none",
+  "result": {
+    "main": {
+      "passed": true,
+      "checks": 40
+    },
+    "thread": {
+      "ok": true,
+      "identity": {
+        "sha256": "baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254",
+        "byteLength": 15935873
+      },
+      "result": {
+        "passed": true,
+        "checks": 40
+      }
+    }
+  },
+  "pageErrors": [],
+  "passed": true
+}

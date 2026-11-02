@@ -1,0 +1,17 @@
+{
+  "baseCommit": "50389f74c",
+  "files": [
+    {
+      "path": "crates/nurbs-core/src/editing.rs",
+      "sha256": "609ebfc3eb40b27d841817a66cfea948cc1c0f170ce7db46f7cc78ce1f356111"
+    },
+    {
+      "path": "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+      "sha256": "2c7e34b42919140e332e36fa5633073da75b9f64957a9f7c59e9a42016e3a42f"
+    },
+    {
+      "path": "crates/nurbs-core/tests/exact_knot_removal_contracts.rs",
+      "sha256": "0fafcf485603a2a9db017b56f1ba6bf3bb19bb9cc6e7322596609921c8a96b76"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "scope": "Exact pre-amendment executors/tests; not a historical checkout or execution result.",
+  "records": [
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints.mjs",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/scripts/refresh-qualification-fingerprints.mjs",
+      "sha256": "24c1e9863340b1568dd0846bfc621caae756cf816c69266341ff6f8edd97fa91",
+      "byteLength": 21497
+    },
+    {
+      "originalPath": "scripts/run-g1-candidate-clean-fragment.mjs",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/scripts/run-g1-candidate-clean-fragment.mjs",
+      "sha256": "7884a919d475d1c9790241ee68a139913d8953be65001b5a44d1d02c54f0dab3",
+      "byteLength": 11408
+    },
+    {
+      "originalPath": "scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "sha256": "f95659c95512336f0da74bedb740e482110831298cb0af06369a98b9ec2e4302",
+      "byteLength": 7671
+    },
+    {
+      "originalPath": "scripts/g1-github-actions.mjs",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/scripts/g1-github-actions.mjs",
+      "sha256": "48a88c43b5f9745e5c0ca70845eb98f5b8d8e63bccee33c1c069453f2d62d9bb",
+      "byteLength": 32806
+    },
+    {
+      "originalPath": ".github/workflows/g1-qualification-clean.yml",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/.github/workflows/g1-qualification-clean.yml",
+      "sha256": "a06adb8916114e87e8888813cbb620edfe97da27ae6b262d626125ab22be5227",
+      "byteLength": 19116
+    },
+    {
+      "originalPath": "tests/g0ToolchainFingerprints.test.ts",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/tests/g0ToolchainFingerprints.test.ts",
+      "sha256": "5d0a0f083c636452934aa4338e0bb212c68e83a5c6c4b703c9cfbbca7b7487ef",
+      "byteLength": 16800
+    },
+    {
+      "originalPath": "tests/g1GithubActionsQualification.test.ts",
+      "archivePath": "docs/qualification/native226-v10-refreeze-preservation-2026-11-02/sources/tests/g1GithubActionsQualification.test.ts",
+      "sha256": "3c010a55cab6d1a0fbe7d47fc4044e409514d26b9133662e953c64f2359caa5b",
+      "byteLength": 16433
+    }
+  ]
+}

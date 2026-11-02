@@ -1,0 +1,16 @@
+{
+  "capability": 224,
+  "newCatalogCount": false,
+  "checks": {
+    "default": {
+      "passed": 12,
+      "exitCode": 0
+    },
+    "noDefaultFeatures": {
+      "passed": 12,
+      "exitCode": 0
+    }
+  },
+  "scope": "One bounded exact-removal pass; shared 1000000 arithmetic maximum unchanged; no minimality, machine evaluator bit identity, topology, WASM, editor or export claim. Full workspace checks from prior source do not qualify this edit.",
+  "sourceSha256": "811d9b59dfc67fc8e2a27ef9ebbd01527b0e13d5a5c7a8dac1d1bae7158fe693"
+}

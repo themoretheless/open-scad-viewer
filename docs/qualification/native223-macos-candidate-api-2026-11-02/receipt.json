@@ -1,0 +1,38 @@
+{
+  "candidateSha256": "390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201",
+  "candidateBytes": 15917327,
+  "node": {
+    "passed": 112,
+    "failed": 0,
+    "files": 10
+  },
+  "browser": {
+    "main": 28,
+    "worker": 28
+  },
+  "productionSha256": "442d2703d243fe29ed8434dcbce04e7cf06c2be36be149af07b51b00e45160f6",
+  "promoted": false,
+  "scope": "Finite direct API tests only. No global geometry qualification, feature224, hosted CI or source/compiler reproducibility claim. Default prebuild delivery remains unresolved.",
+  "artifacts": [
+    {
+      "input": "native223-macos-390fb9-node.log",
+      "archive": "native223-macos-390fb9-node.log.gz",
+      "uncompressedSha256": "eb552070ae94cad2205144b601584715bb903d7ed15d10847868d65f07116457"
+    },
+    {
+      "input": "native223-macos-390fb9-node.json",
+      "archive": "native223-macos-390fb9-node.json.gz",
+      "uncompressedSha256": "1198d4b17b0f65f082fea08eb116d1912bfe6c9e42882b4846060b8d441528ce"
+    },
+    {
+      "input": "native223-macos-390fb9-browser/report.json",
+      "archive": "native223-macos-390fb9-browser--report.json.gz",
+      "uncompressedSha256": "bfab8e9a776956ae400d855425e265cc25941e792263ee686c1ba20fe57cb506"
+    },
+    {
+      "input": "native223-macos-390fb9-candidate/delivery-measurement.json",
+      "archive": "native223-macos-390fb9-candidate--delivery-measurement.json.gz",
+      "uncompressedSha256": "27d6ebe8fb5e262f209416cdb4d56a20064791fbdfaf1f6ff12dd41a4aef1a01"
+    }
+  ]
+}

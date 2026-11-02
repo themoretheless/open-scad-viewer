@@ -254,11 +254,14 @@ pub fn is_manifold(positions: &[f64], indices: &[usize]) -> bool {
 
 fn count_components(triangles: &[[usize; 3]]) -> usize {
     let labels = component_labels(triangles);
-    let mut roots = std::collections::HashSet::new();
-    for l in labels {
-        roots.insert(l);
-    }
-    roots.len()
+    // Each union-find component has exactly one representative, and that
+    // triangle labels itself. Count those fixed points without another hash
+    // table or an allocation proportional to the number of components.
+    labels
+        .iter()
+        .enumerate()
+        .filter(|(i, root)| *i == **root)
+        .count()
 }
 
 /// Union-find label (component root) per triangle; empty mesh yields an
@@ -300,6 +303,9 @@ pub(crate) fn component_labels(triangles: &[[usize; 3]]) -> Vec<usize> {
     }
     (0..triangles.len()).map(|i| find(&mut parent, i)).collect()
 }
+
+#[cfg(test)]
+mod component_count_regression;
 
 #[cfg(test)]
 mod tests {

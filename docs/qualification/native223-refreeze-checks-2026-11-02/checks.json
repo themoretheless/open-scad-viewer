@@ -1,0 +1,15 @@
+{
+  "exitCode": 0,
+  "files": 2,
+  "passed": 33,
+  "failed": 0,
+  "scope": "g0ToolchainFingerprints and g1GithubActionsQualification on OwnRust83/G0v97/G1v114. Resolves seven prior stale-identity failures; not a new complete frontend result.",
+  "sourceSnapshot": "docs/qualification/own-rust-cad-v83.json",
+  "sourceSha256": "9b8d5423c249a822b19790e3a077b8b36dde8ad3010f5312d1ce4e6634d67e7f",
+  "productionWasmChanged": false,
+  "cleanG1CompletedWork": 0,
+  "logs": [
+    "focused.log.gz",
+    "focused.json.gz"
+  ]
+}
