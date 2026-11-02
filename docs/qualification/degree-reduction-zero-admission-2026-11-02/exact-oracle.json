@@ -1,0 +1,7 @@
+{
+  "exactSourceMidpoint": "18014398509481985/18014398509481984",
+  "exactLineMidpoint": "9007199254740993/9007199254740992",
+  "nominalDeviation": "1/18014398509481984",
+  "roundedMidpointsEqual": true,
+  "roundedReelevationMatchesSourcePoles": true
+}

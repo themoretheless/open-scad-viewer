@@ -4374,7 +4374,9 @@
       "evidence": [
         "crates/nurbs-core/src/foundation/approximate_edits.rs",
         "crates/nurbs-core/tests/degree_reduction.rs",
-        "docs/design/nurbs-degree-reduction.md"
+        "docs/design/nurbs-degree-reduction.md",
+        "crates/nurbs-core/src/core/curve_identity.rs",
+        "docs/qualification/degree-reduction-zero-admission-2026-11-02/checks.json"
       ]
     },
     {

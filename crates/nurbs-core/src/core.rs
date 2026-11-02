@@ -6,3 +6,4 @@ pub mod coordinate_frame;
 pub mod curve;
 pub mod surface;
 pub(crate) mod vec3_ext;
+pub(crate) mod curve_identity;

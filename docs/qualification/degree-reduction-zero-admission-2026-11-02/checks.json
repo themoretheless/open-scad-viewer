@@ -1,0 +1,28 @@
+{
+  "capability": "NURBS-0133 correction, no new catalogue count",
+  "beforeBaseCommit": "cb6283ccb",
+  "beforeRegressionExit": 101,
+  "independentBinaryRationalOracleExit": 0,
+  "nominalMidpointDeviation": "1/18014398509481984",
+  "checks": {
+    "default": {
+      "exitCode": 0,
+      "passed": 28,
+      "failed": 0
+    },
+    "noCodec": {
+      "exitCode": 0,
+      "passed": 28,
+      "failed": 0
+    }
+  },
+  "architectureExit": 0,
+  "sources": {
+    "crates/nurbs-core/src/core.rs": "381eec496702048c0891903f7ad5802497e400b809387c0bec94bd284602eb5e",
+    "crates/nurbs-core/src/core/curve_identity.rs": "e850a58ac1ca54b82181094cffed2c2560acea6ed6ddde15db0f27b8962a7296",
+    "crates/nurbs-core/src/foundation/approximate_edits.rs": "cf8a46fe7825462091ddf3111153bffa6396cd1037a971953af046934c4898bd",
+    "crates/nurbs-core/src/editing/exact_knot_removal.rs": "491bec4f9ccf8e39a7b8807b4c28f1c85697fc1c45dd60721a754005dc92b262",
+    "crates/nurbs-core/tests/degree_reduction.rs": "f61fb56a227a76116062d437d28ff4878474cccd055bc890dc1cbd52d25683f9"
+  },
+  "scope": "Typed native candidate/source exact identity guard plus existing4096-cell interval fallback. Only exact predicate uses existing1M-work ceiling; no claim of a unified budget for the legacy refit. Prior root223/runtime-v9 artifacts still lack this fix; no frontend/WASM/B-rep/global qualification implied."
+}
