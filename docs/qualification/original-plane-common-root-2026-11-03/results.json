@@ -1,0 +1,38 @@
+{
+  "status": "passed-predicate-stage",
+  "baseCommit": "fd8f77e4c410da322818a83fa5f9cfae1c561c41",
+  "libraryTests": 160,
+  "commonRootTests": 8,
+  "input": "original positive-weight B-spline controls/knots and two authored binary64 plane equations",
+  "proof": "fraction-free exact PRS gcd plus closed square-free Sturm counts; independently prove exactly one first root in input box; endpoint roots included",
+  "verified": [
+    "nonproportional equations with different root multiplicities",
+    "irrational shared root",
+    "distinct nearby roots in the same box",
+    "original rational source weights",
+    "unclamped original B-spline span",
+    "closed endpoints and singleton boxes",
+    "zero and multiple first roots refuse proof",
+    "exhausted work refuses proof",
+    "rounded near coefficients never falsely admit"
+  ],
+  "notYetIntegrated": [
+    "affine-patch edge expressions from original vertices",
+    "nurbs-core boundary membership dispatch",
+    "bridge/client metadata and exact-work accounting",
+    "new raw WASM/Chromium qualification"
+  ],
+  "limits": [
+    "finite expansion precision/work can return Indeterminate",
+    "no portable certificate or Body/trim admission"
+  ],
+  "sourceSha256": {
+    "crates/cad-predicates/src/planar_bezier_roots.rs": "cc8b8779f425a6cf837729d5c1a71a9128aaa0414dc62733107581691ea944e6",
+    "crates/cad-predicates/src/planar_bezier_common_root.rs": "ff6896bd414ae29a872a51ad1e5429b855b84a1eb39132c3d65bf8534f8a7667",
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "02870a73283a47a5f94213f4c9660a2f8d8eed2736d44f20206b643308a38d2c",
+    "crates/cad-predicates/src/bspline_plane_roots/solve.rs": "12230d6eccc916989126b70d1cc77749c4924c4b6fa81d41e2fcd85b65cd8b03",
+    "crates/cad-predicates/src/bspline_plane_roots/polynomial.rs": "ced92dcfc7c1f077025c6e3d9715991cd3cd4ad767a4cd203e1997328b23f4f5",
+    "crates/cad-predicates/src/bspline_plane_roots/common.rs": "5f4961161701ede3f3b7e120688f127ce1feebdebcf83a93501d60982da789b7",
+    "crates/cad-predicates/tests/original_plane_common_root.rs": "93f35b2f877e17de5e62d3b6f4827998edbec7b0d7dbcba2a14b328bbeea2c4e"
+  }
+}

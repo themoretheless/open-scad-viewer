@@ -243,3 +243,8 @@ mod patch;
 #[path = "bspline_plane_roots/solve.rs"]
 mod solve;
 pub use patch::rational_bspline_affine_patch_roots;
+#[path = "bspline_plane_roots/polynomial.rs"]
+mod polynomial;
+#[path = "bspline_plane_roots/common.rs"]
+mod common;
+pub use common::{OriginalPlaneCommonRootDecision, OriginalPlaneCommonRootOutcome, rational_bspline_plane_common_root};
