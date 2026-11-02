@@ -1,3 +1,4 @@
+import {originalPatchFixture,originalPatchKnotFixture} from './original-patch-fixtures'
 import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from './surface-self-fixtures'
 import {SurfaceSelfIntersectionBrowser} from '../../src/services/surfaceSelfIntersectionBrowser'
 import type {NurbsSurface} from '../../src/services/nurbsSurface'
@@ -36,11 +37,19 @@ async function qualify(){
   const separate=isoTargetFixture(0);for(const row of separate.target.controlPoints)for(const p of row)p[0]=10
   const isoAbsent=await lane.inspectIsoTarget(separate)
   const offCenterSpatial=await lane.inspect(offCenterSpatialSurface(),10000)
+  const originalPatchReports=[]
+  for(const order of [2,4] as const){const query=originalPatchFixture(order),before=JSON.stringify(query);originalPatchReports.push({order,report:await lane.inspectOriginalPatchContacts(query)});if(JSON.stringify(query)!==before)throw new Error('Original patch input changed')}
+  const originalPatchKnot=await lane.inspectOriginalPatchContacts(originalPatchKnotFixture())
+  const originalPatchZero=await lane.inspectOriginalPatchContacts({...originalPatchFixture(2),maxExactWork:0})
+  const finite=originalPatchFixture(2);for(const p of finite.curve.controlPoints)p[1]=2
+  const originalPatchOutside=await lane.inspectOriginalPatchContacts(finite)
+  for(const p of finite.curve.controlPoints)p[1]=0
+  const originalPatchBoundary=await lane.inspectOriginalPatchContacts(finite)
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}

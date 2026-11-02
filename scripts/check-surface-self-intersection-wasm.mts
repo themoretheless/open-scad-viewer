@@ -1,3 +1,5 @@
+import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol.ts'
+import {originalPatchFixture,originalPatchKnotFixture} from '../tools/browser-qualification/original-patch-fixtures.ts'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -136,6 +138,20 @@ const offCenter=run('off-center-spatial-contact',offCenterSpatialSurface(),'pres
 assert.equal(offCenter.certifiedCrossing.method,'original-curve-surface-krawczyk')
 assert.notEqual(offCenter.certifiedCrossing.parameterBoxes[0][1][0],.5)
 assert(offCenter.probeSearch.attempts.some((p:any)=>p.kind?.startsWith('curve-surface')&&p.parameter!==.5))
+for(const order of [2,4] as const){
+ const query=originalPatchFixture(order),before=JSON.stringify(query),reply=request({op:'nurbs_original_affine_patch_contacts',...query})
+ assert.equal(JSON.stringify(query),before);assert.equal(reply.ok,true);const r=reply.value;assert(isOriginalPatchContactsReport(r));assert.equal(r.status,'present');assert.equal(r.curvePatchCoverageComplete,true);assert.equal(r.contacts.length,1);assert.deepEqual(r.contacts[0].multiplicities,[order]);assert(!Object.hasOwn(r.contacts[0],'crossingSign'))
+ cases.push({name:`original-patch-contact-order-${order}`,status:r.status,multiplicities:r.contacts[0].multiplicities,complete:r.curvePatchCoverageComplete})
+}
+function patchReply(query:any){const reply=request({op:'nurbs_original_affine_patch_contacts',...query});assert.equal(reply.ok,true);assert(isOriginalPatchContactsReport(reply.value));return reply.value}
+const knot=patchReply(originalPatchKnotFixture());assert.equal(knot.contacts.length,1);assert.deepEqual(knot.contacts[0].multiplicities,[2,1]);assert.deepEqual(knot.contacts[0].parameterBox[0],[1,1]);cases.push({name:'original-patch-one-sided-orders',status:knot.status,multiplicities:knot.contacts[0].multiplicities})
+const zero=patchReply({...originalPatchFixture(2),maxExactWork:0});assert.equal(zero.status,'unresolved');assert.equal(zero.exactWork,0);assert.equal(zero.curvePatchCoverageComplete,false);cases.push({name:'original-patch-zero-exact-work',status:zero.status})
+const finite=originalPatchFixture(2);for(const p of finite.curve.controlPoints)p[1]=2
+const exterior=patchReply(finite);assert.equal(exterior.status,'absent-on-patch');assert.equal(exterior.patchAbsenceProven,true);cases.push({name:'original-patch-finite-exclusion',status:exterior.status})
+for(const p of finite.curve.controlPoints)p[1]=0
+const boundary=patchReply(finite);assert.equal(boundary.status,'unresolved');assert(boundary.ambiguousParameters.length>0);cases.push({name:'original-patch-boundary-unresolved',status:boundary.status})
+reject('original-patch-forged-body-admission',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),bodyAdmission:true})
+reject('original-patch-over-limit-exact-budget',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),maxExactWork:1000001})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "sourceCommit": "a46f426b28957da3f9240dc3693853c65f9b6b0c",
+  "wasmSha256": "5eb2cd28f6e6b516b62e0090ad25ae89422659d6cddbf224f11e6bed0311bcea",
+  "wasmBytes": 21549962,
+  "artifact": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/5eb2cd28f6e6b516b62e0090ad25ae89422659d6cddbf224f11e6bed0311bcea.wasm",
+  "node": "v22.23.4",
+  "browser": "151.0.7922.34",
+  "abiCases": 37,
+  "newOperationAbiCases": 8,
+  "workers": {
+    "started": 27,
+    "terminated": 27
+  },
+  "newOperationWorkerCases": 6,
+  "installedPackageUpdated": false,
+  "temporaryWorktreeRemoved": true,
+  "scope": "Import-free raw WASM ABI and real Chromium Workers; original affine patch contacts including multiplicities and finite membership",
+  "verified": [
+    "nonrepresentable plane equations with multiplicities 2/4",
+    "shared exact knot retains side orders 2/1",
+    "zero exact work remains unresolved",
+    "outside finite patch excluded",
+    "boundary membership remains ambiguous",
+    "forged Body admission and excessive exact budget refused",
+    "real client reports validated, ownership terminated"
+  ],
+  "remaining": [
+    "general freeform tangencies",
+    "all surface/surface branches",
+    "periodic and pole families",
+    "trim and Body admission",
+    "installed-package provider/editor qualification"
+  ],
+  "sourceSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "7f0689dd7e5f357c70dc22dee295a90afc7232eb566681ba79d0777425c89008",
+    "tools/browser-qualification/original-patch-fixtures.ts": "4f41b6cb473684136c00906d6f081cca56333092688744840eaec8171e7626b1",
+    "tools/browser-qualification/surface-self-intersection.ts": "5b4c45d05bdffe134c1eadde2e029d9006ed24113a9cbe29f1ccd78f4b4f6c3c",
+    "tools/browser-qualification/surface-self-intersection.mjs": "73d41e018472edea4fbefbc6decdbc7ee1238782dec40900339975b63a5d19d8",
+    "src/services/originalPatchContactsProtocol.ts": "ce58e608de678f520146df0b9978c0e8862585744304c8224ff6ace9d9d1f912",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "f6529f95c6dd7832620316a8b2b6c9ada10682e7039fb141b7ad5fbf2a66a2fa",
+    "src/workers/surfaceSelfIntersection.worker.ts": "ebe064abe33ff1c2b1926d0c6ff8f81accb18aa3b3030f744fa418a597d465b2"
+  }
+}

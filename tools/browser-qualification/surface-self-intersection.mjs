@@ -34,9 +34,9 @@ try{
  assert.equal(result.rational.status,'present');assert.deepEqual(result.rational.exactWitness[1][0],{numerator:'8',denominator:'9'})
  for(const [key,pattern] of Object.entries({busy:/busy/,cancelled:/cancelled/,deadline:/deadline/,nativeRefusal:/NURBS_INVALID_INPUT/,cloneFailure:/clone|request/i,preAbort:/cancelled/,badBudget:/budget/}))assert.match(result[key],pattern,key)
  assert.equal(result.inputIntact,true);assert.equal(result.noEarlyWorkers,true);assert(result.ticks>0)
- assert.deepEqual(result.ownership,{active:false,workersStarted:21,workersTerminated:21})
+ assert.deepEqual(result.ownership,{active:false,workersStarted:27,workersTerminated:27})
  const platformAudit=await page.evaluate(()=>globalThis.surfaceWorkerAudit)
- assert.deepEqual(platformAudit,{started:21,terminated:21});assert.deepEqual(errors,[])
+ assert.deepEqual(platformAudit,{started:27,terminated:27});assert.deepEqual(errors,[])
  assert.equal(result.nonlinear.length,5)
  const x=(11-4*Math.sqrt(6))/25,t=(1+Math.sqrt(6))/5
  const expected=[[x,x,1],[0,0,1],[0,0,1],[79/63,79/63,8/7],[79/63,79/63,8/7]]
@@ -60,6 +60,11 @@ try{
  assert.equal(result.isoShort.status,'unresolved');assert.equal(result.isoShort.windowCoverageComplete,false)
  assert.equal(result.isoAbsent.status,'absent-in-window');assert.equal(result.isoAbsent.allSurfaceBranchesEnumerated,false)
  assert.equal(result.offCenterSpatial.status,'present');assert.equal(result.offCenterSpatial.certifiedCrossing.method,'original-curve-surface-krawczyk');assert.notEqual(result.offCenterSpatial.certifiedCrossing.parameterBoxes[0][1][0],.5)
+ assert.equal(result.originalPatchReports.length,2)
+ for(const {order,report:r} of result.originalPatchReports){assert.equal(r.status,'present');assert.equal(r.curvePatchCoverageComplete,true);assert.equal(r.contacts.length,1);assert.deepEqual(r.contacts[0].multiplicities,[order]);assert(!Object.hasOwn(r.contacts[0],'crossingSign'));assert.equal(r.proofContextSerialized,false);assert.equal(r.bodyAdmission,false)}
+ assert.equal(result.originalPatchKnot.contacts.length,1);assert.deepEqual(result.originalPatchKnot.contacts[0].multiplicities,[2,1]);assert.deepEqual(result.originalPatchKnot.contacts[0].parameterBox[0],[1,1])
+ assert.equal(result.originalPatchZero.status,'unresolved');assert.equal(result.originalPatchZero.exactWork,0)
+ assert.equal(result.originalPatchOutside.status,'absent-on-patch');assert.equal(result.originalPatchBoundary.status,'unresolved');assert(result.originalPatchBoundary.ambiguousParameters.length>0)
  const report={passed:true,browser:browser.version(),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,installedPackageUpdated:false,result,platformAudit,workers,scope:'Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification'}
  await writeFile(resolve(output,'report.json'),JSON.stringify(report,null,2)+'\n')
  console.log(JSON.stringify(report,null,2))
