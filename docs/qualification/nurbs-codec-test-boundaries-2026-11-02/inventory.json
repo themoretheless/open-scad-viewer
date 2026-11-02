@@ -1,0 +1,32 @@
+{
+  "defaultBefore": 2224,
+  "defaultAfter": 2224,
+  "defaultRemoved": [],
+  "defaultAdded": [],
+  "noCodecCount": 2021,
+  "newMatchingFeatureGuards": [
+    "retained_wall_domain::tests::retained_wall_domain_requires_matching_rational_parameterization",
+    "retained_wall_domain::tests::retained_wall_domain_requires_complete_trim_and_exact_world_identity",
+    "intersection::bounded_curve_tests::default_budget_keeps_existing_report_identical",
+    "intersection::bounded_curve_tests::unvisited_source_spans_remain_unresolved_at_box_limit",
+    "intersection::bounded_curve_tests::parallel_offset_lines_are_not_coincident",
+    "sweeps::progressive_sweep::authored_error::extended_regressions::closed_guided_contact_transport_preserves_tight_budget_and_refinement",
+    "sweeps::profile_certificate::tests::checked_nonplanar_closed_profile_keeps_exact_g2_and_global_surface_proofs",
+    "sweeps::scalar::tests::profile_sweep_scale_and_sampled_refusal",
+    "sweeps::scalar::tests::closed_rmf_seam_requires_matching_scale",
+    "construct::surfaces::gordon::cartesian::tests::checked_curved_rational_network_retains_all_six_authored_curves",
+    "construct::surfaces::gordon::cartesian::tests::clamped_cartesian_network_retains_weights_curves_and_tangent_fields"
+  ],
+  "mixedNativeTestsRetained": [
+    "rational_scaled_surface_preserves_formula_jets_and_source_data",
+    "differing_internal_knots_preserve_both_laws",
+    "invalid_laws_and_resource_limits_refuse",
+    "cartesian_cells_retain_boundaries_with_incompatible_weights",
+    "cartesian_cells_retain_three_by_three_rational_network",
+    "rational_boundary_derivative_includes_weight_derivative_and_authored_scale",
+    "whole_contact_band_must_be_inside_both_audited_original_regions",
+    "shared_boundary_limits_retain_unvisited_coedges_and_never_promote_approximation",
+    "rounded_complement_is_not_an_exact_nurbs_basis_reversal"
+  ],
+  "nameNormalization": "Strip only libtest execution suffix - should panic when comparing to --list names."
+}

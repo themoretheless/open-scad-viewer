@@ -59,7 +59,7 @@ mod original_curve_exclusion_tests;
 pub(crate) use context::*;
 pub use intersect_curve_surface_report::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codec"))]
 mod bounded_curve_tests;
 
 

@@ -113,10 +113,13 @@ mod tests {
             for end in [false, true] {
                 let fields = boundary_v_derivative(&candidate, end).unwrap();
                 assert_eq!(fields.len(), candidate.control_points.len() - 1);
-                let certificate =
-                    super::super::tangent_audit::verify(&surface, &fields, end, 1e-10, 1000)
-                        .unwrap();
-                assert_eq!(certificate["accepted"], true);
+                #[cfg(feature = "codec")]
+                {
+                    let certificate =
+                        super::super::tangent_audit::verify(&surface, &fields, end, 1e-10, 1000)
+                            .unwrap();
+                    assert_eq!(certificate["accepted"], true);
+                }
                 #[cfg(feature = "transport")]
                 {
                     let json_certificate=crate::transport::dispatch(value_codec::json!({
@@ -135,18 +138,22 @@ mod tests {
                         let altered = distorted.evaluate(u).unwrap().point;
                         assert!((original[0] - altered[0]).abs() < 1e-12);
                     }
-                    let rejected = super::super::tangent_audit::verify(
-                        &surface,
-                        &[distorted],
-                        end,
-                        1e-10,
-                        100,
-                    )
-                    .unwrap();
-                    assert_eq!(rejected["accepted"], false);
-                    assert_eq!(rejected["errorUpper"], value_codec::Value::Null);
+                    #[cfg(feature = "codec")]
+                    {
+                        let rejected = super::super::tangent_audit::verify(
+                            &surface,
+                            &[distorted],
+                            end,
+                            1e-10,
+                            100,
+                        )
+                        .unwrap();
+                        assert_eq!(rejected["accepted"], false);
+                        assert_eq!(rejected["errorUpper"], value_codec::Value::Null);
+                    }
                 }
 
+                #[cfg(feature = "codec")]
                 if fields.len() > 1 {
                     let incomplete =
                         super::super::tangent_audit::verify(&candidate, &fields, end, 1e-10, 1)

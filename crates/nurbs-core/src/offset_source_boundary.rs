@@ -360,10 +360,13 @@ mod tests {
         assert!(r.within_tolerance && !r.exact_identity, "{}", r.reason);
         assert_eq!(r.checked_coedges, 8);
         assert_eq!(r.exact_work, 0);
-        let json = r.to_value();
-        assert_eq!(json["worldBoundaryWithinToleranceProven"], true);
-        assert_eq!(json["worldCoedgeIdentityProven"], false);
-        assert_eq!(json["topologyAuthority"], false);
+        #[cfg(feature = "codec")]
+        {
+            let json = r.to_value();
+            assert_eq!(json["worldBoundaryWithinToleranceProven"], true);
+            assert_eq!(json["worldCoedgeIdentityProven"], false);
+            assert_eq!(json["topologyAuthority"], false);
+        }
     }
     #[test]
     fn out_of_domain_pcurves_never_gain_source_boundary_admission() {

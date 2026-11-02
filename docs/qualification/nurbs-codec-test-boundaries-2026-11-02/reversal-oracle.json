@@ -1,0 +1,13 @@
+{
+  "passed": 4,
+  "failed": 0,
+  "checks": {
+    "binary64-rounded-complement-sums-to-one": true,
+    "exact-complement-has-nonzero-residual": true,
+    "rounded-reversal-law-is-different": true,
+    "dyadic-reversal-law-is-equal": true
+  },
+  "exactComplementResidual": "1/36028797018963968",
+  "oracleSourceSha256": "11b4a9dc6bfa930d437143da65f625c07533ab0fba67f07cb8b4b2b6cace6c0b",
+  "scope": "Exact cellwise polynomial cross products for the authored regression fixture and dyadic positive control. No source-runtime, topology or whole-workspace claim."
+}

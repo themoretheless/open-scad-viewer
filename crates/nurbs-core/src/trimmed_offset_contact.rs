@@ -224,10 +224,13 @@ mod tests {
     fn whole_contact_band_must_be_inside_both_audited_original_regions() {
         let r = query(vec![rectangle([0., 0.], [1., 1.], false)], limits());
         assert!(r.admitted, "{}", r.reason);
-        let json = r.to_value();
-        assert_eq!(json["trimMembershipProven"], true);
-        assert_eq!(json["worldCoedgeIdentityProven"], false);
-        assert_eq!(json["topologyAuthority"], false);
+        #[cfg(feature = "codec")]
+        {
+            let json = r.to_value();
+            assert_eq!(json["trimMembershipProven"], true);
+            assert_eq!(json["worldCoedgeIdentityProven"], false);
+            assert_eq!(json["topologyAuthority"], false);
+        }
         assert_eq!(r.regions.len(), 2);
         assert_eq!(r.classifications.len(), 2);
         let r = query(

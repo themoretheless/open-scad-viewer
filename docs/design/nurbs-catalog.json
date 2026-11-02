@@ -6367,11 +6367,12 @@
         "crates/nurbs-core/tests/exact_tensor_denominator_contracts.rs",
         "docs/design/nurbs-exact-surface-knot-insertion.md",
         "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/receipt.json",
-        "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py"
+        "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/exact_oracle.py",
+        "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "Selected axis nonperiodic, strictly internal knots only. Untouched periodic axis preserved. Global tensor weight gauge plus complete row geometry and proportional denominator proofs; atomic refusal under unchanged limits.",
-        "Whole no-codec library unit harness currently has79 codec/transport-dependent test errors; targeted no-codec operation/actual-source denominator checks pass. JSON, WASM, Rush, editor and exchange remain separate."
+        "Full native library tests now pass in default and no-codec modes after codec-test boundary and exact border-dispatch repair; historical79-error record retained. Whole workspace, JSON/WASM adapters, Rush, editor and exchange qualification remain separate."
       ]
     }
   ],

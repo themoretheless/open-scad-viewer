@@ -1,0 +1,125 @@
+{
+  "baseCommit": "29f4cf06781f8abe64856ed58d6bf164836ecf58",
+  "sourceSha256": {
+    "crates/nurbs-core/src/retained_wall_domain.rs": "6776ab7cdc94815d568fa8961677ba935fbfe946b7eaaee6de3f9533dd826d66",
+    "crates/nurbs-core/src/intersection/mod.rs": "918ce61d71af893ae5b48a9526007269bde0b6988b7650b736166b04cfd603c6",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/tests/extended_regressions.rs": "414990f24af6a2493e612ff1054cfa8d8b575b79f6d42518f1f30f5ce3324685",
+    "crates/nurbs-core/src/sweeps/tests/profile_certificate_tests.rs": "d972da1e52fef0652b90bf99079c163094108415ec16daa3f370a1fb19a100e2",
+    "crates/nurbs-core/src/trimmed_offset_contact.rs": "547d5f4b3fef6744ca7638d253a60500d52a3b9f01e6043fccfc55aaf21619ef",
+    "crates/nurbs-core/src/offset_source_boundary.rs": "e8828affb7e8b2312bbb9a0f3cd3c5a03e34a217832b08190186324549eb75ca",
+    "crates/nurbs-core/src/offset_contact_trims.rs": "e0fe0e30bc0d7f1e44543c7c32e6866dc4ddc75f570ada9f4cfd0805324c1996",
+    "crates/nurbs-core/src/sweeps/scalar.rs": "e8a430237c0b0691ec18da17f849cfb883691b7ce14fb378cbd82f93f644686c",
+    "crates/nurbs-core/src/construct/surfaces/gordon/cartesian.rs": "9a4fab02bc1b7987db75fe3fc08c3b71b0cda00725483eeb731d0c9a34350223",
+    "crates/nurbs-core/src/construct/surfaces/gordon/tangent_fields.rs": "74633fc761b23fb91fc7711d598396ddeb461bcefb32dc9ecd9c88f7b3da0c27",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement.rs": "714d047c191c6a99d626fb0ec0aaa65fbfc6227ce2e98dbefa8ce6f55164196f",
+    "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/README.md": "d54af9ddf78a5c89b832bd56682a08a3e3014122ba7e1006d1fd243f223250a8",
+    "docs/qualification/nurbs-codec-test-boundaries-2026-11-02/reversal_oracle.py": "3e501fc57d429f016f82cd251ae43f5551e86d0bba158f82ba3e3e75f1549a3d"
+  },
+  "fullLibraryTests": {
+    "no-codec": {
+      "passed": 2020,
+      "failed": 0,
+      "ignored": 1
+    },
+    "default": {
+      "passed": 2223,
+      "failed": 0,
+      "ignored": 1
+    }
+  },
+  "runner": {
+    "native-codec-tests-route-r2-no-codec-full-lib": {
+      "status": "terminal",
+      "start": "2026-11-02T19:33:22.658846+00:00",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib"
+      ],
+      "exitCode": 0
+    },
+    "native-codec-tests-route-r2-default-full-lib": {
+      "status": "terminal",
+      "start": "2026-11-02T19:34:16.067669+00:00",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib"
+      ],
+      "exitCode": 0
+    }
+  },
+  "focusedAgreementTests": {
+    "passed": 38,
+    "failed": 0,
+    "exitCode": 0
+  },
+  "inventory": {
+    "defaultBefore": 2224,
+    "defaultAfter": 2224,
+    "defaultRemoved": [],
+    "defaultAdded": [],
+    "noCodecCount": 2021,
+    "newMatchingFeatureGuards": [
+      "retained_wall_domain::tests::retained_wall_domain_requires_matching_rational_parameterization",
+      "retained_wall_domain::tests::retained_wall_domain_requires_complete_trim_and_exact_world_identity",
+      "intersection::bounded_curve_tests::default_budget_keeps_existing_report_identical",
+      "intersection::bounded_curve_tests::unvisited_source_spans_remain_unresolved_at_box_limit",
+      "intersection::bounded_curve_tests::parallel_offset_lines_are_not_coincident",
+      "sweeps::progressive_sweep::authored_error::extended_regressions::closed_guided_contact_transport_preserves_tight_budget_and_refinement",
+      "sweeps::profile_certificate::tests::checked_nonplanar_closed_profile_keeps_exact_g2_and_global_surface_proofs",
+      "sweeps::scalar::tests::profile_sweep_scale_and_sampled_refusal",
+      "sweeps::scalar::tests::closed_rmf_seam_requires_matching_scale",
+      "construct::surfaces::gordon::cartesian::tests::checked_curved_rational_network_retains_all_six_authored_curves",
+      "construct::surfaces::gordon::cartesian::tests::clamped_cartesian_network_retains_weights_curves_and_tangent_fields"
+    ],
+    "mixedNativeTestsRetained": [
+      "rational_scaled_surface_preserves_formula_jets_and_source_data",
+      "differing_internal_knots_preserve_both_laws",
+      "invalid_laws_and_resource_limits_refuse",
+      "cartesian_cells_retain_boundaries_with_incompatible_weights",
+      "cartesian_cells_retain_three_by_three_rational_network",
+      "rational_boundary_derivative_includes_weight_derivative_and_authored_scale",
+      "whole_contact_band_must_be_inside_both_audited_original_regions",
+      "shared_boundary_limits_retain_unvisited_coedges_and_never_promote_approximation",
+      "rounded_complement_is_not_an_exact_nurbs_basis_reversal"
+    ],
+    "nameNormalization": "Strip only libtest execution suffix - should panic when comparing to --list names."
+  },
+  "independentReversalOracle": {
+    "passed": 4,
+    "failed": 0,
+    "checks": {
+      "binary64-rounded-complement-sums-to-one": true,
+      "exact-complement-has-nonzero-residual": true,
+      "rounded-reversal-law-is-different": true,
+      "dyadic-reversal-law-is-equal": true
+    },
+    "exactComplementResidual": "1/36028797018963968",
+    "oracleSourceSha256": "11b4a9dc6bfa930d437143da65f625c07533ab0fba67f07cb8b4b2b6cace6c0b",
+    "scope": "Exact cellwise polynomial cross products for the authored regression fixture and dyadic positive control. No source-runtime, topology or whole-workspace claim."
+  },
+  "historicalFailureEvidence": "docs/qualification/nurbs-exact-surface-knot-insertion-2026-11-02/native234-no-codec-denominator-unit.log.gz",
+  "historicalFailurePreserved": true,
+  "noCodecDependencyGraph": "value-codec absent; optional dependency remains optional",
+  "scope": "Complete nurbs-core library test suites in both modes on edited source. Existing native microbenchmark remains ignored; no speed claim. Test codec boundary repairs and original-source border proof dispatch correction only. No whole-workspace, WASM, frontend, STEP, deployment or compiler attestation claim.",
+  "environment": {
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2",
+    "buildMode": "locked offline"
+  }
+}
