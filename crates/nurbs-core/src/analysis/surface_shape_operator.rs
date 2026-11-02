@@ -438,3 +438,7 @@ pub use span::span_rectangle_bounds;
 #[path = "surface_shape_operator/flat_pole.rs"]
 mod flat_pole;
 pub use flat_pole::{FlatPoleCertificate, FlatPoleInspection, FlatPoleReport, inspect_original_flat_pole};
+mod region_pair;
+pub use region_pair::{RegionPairReport, ShapeDifference, compare_rectangles};
+
+pub(crate) use region_pair::compare_reports;

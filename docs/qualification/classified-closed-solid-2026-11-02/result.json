@@ -1,0 +1,77 @@
+{
+  "implementation": "73aee61c4e7b1aa9ef60b83f276f7cd7f7e686e0",
+  "frozenInputs": 6619,
+  "inputsUnchangedThroughoutChecks": true,
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "sweep_smoothness::complete::classified::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 150.6158185,
+      "log": "checker.log.gz",
+      "summary": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2106 filtered out; finished in 0.01s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "closed::classified::tests",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 14.456124708000004,
+      "log": "matrix.log.gz",
+      "summary": [
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 2099 filtered out; finished in 14.35s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "seconds": 709.956118375,
+      "log": "brep-full.log.gz",
+      "summary": [
+        "test result: ok. 2103 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 709.83s"
+      ]
+    }
+  ],
+  "unchangedDependencyQualification": {
+    "packet": "../classified-original-solid-2026-11-02/result.json",
+    "cadPredicatesPassed": 131,
+    "nurbsCorePassed": 2071,
+    "nurbsCoreIgnored": 1,
+    "rerunThisPacket": false,
+    "reason": "All nurbs-core, predicate, Cargo and toolchain inputs are byte-identical."
+  },
+  "whitespaceCheck": "git diff --check passed",
+  "packagedWasmBrowserIndependentStepRemoteCiPublicationQualified": false
+}

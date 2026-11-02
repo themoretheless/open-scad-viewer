@@ -13,6 +13,7 @@ pub struct ProjectiveUse {
     reversed: bool,
     weights: [f64; 2],
 }
+mod inverse_interval;
 impl ProjectiveUse {
     /// Save original definitions only. Authority is reconstructed on restore.
     #[cfg(feature = "codec")]
@@ -55,23 +56,12 @@ impl ProjectiveUse {
     }
     /// Unclipped inverse: unsupported canonical tails remain visible to the
     /// caller. Clipping here would hide missing retained-domain coverage.
-    pub fn inverse_normalized_unclipped(&self, canonical: I) -> Result<I> {
-        let a = I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
-        let b = I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
-        let q = canonical.sub(a)?.div_signed(b.sub(a)?)?;
-        let numerator = q.mul(I::point(self.weights[0]))?;
-        let mut denominator = I::point(1.)
-            .sub(q)?
-            .mul(I::point(self.weights[1]))?
-            .add(numerator)?;
-        if q.lo >= 0. && q.hi <= 1. {
-            denominator = denominator.intersect(
-                self.weights[0].min(self.weights[1]),
-                self.weights[0].max(self.weights[1]),
-            )?;
-        }
-        let t = numerator.div_signed(denominator)?;
-        let d = self.fragment.curve().domain();
+    pub fn inverse_normalized_unclipped(&self,canonical:I)->Result<I> {
+        let a=I::point(self.range[0][0]).div(I::point(self.range[0][1]))?;
+        let b=I::point(self.range[1][0]).div(I::point(self.range[1][1]))?;
+        let q=canonical.sub(a)?.div_signed(b.sub(a)?)?;
+        let t=inverse_interval::fraction(q,self.weights)?;
+        let d=self.fragment.curve().domain();
         I::point(d[0]).add(t.mul(I::point(d[1]).sub(I::point(d[0]))?)?)
     }
     /// Outward enclosures only: root expressions and original domains remain

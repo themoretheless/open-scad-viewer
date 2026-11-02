@@ -1,0 +1,74 @@
+{
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_vertex_contact",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 3,
+      "expectedIgnored": 0,
+      "summary": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2080 filtered out; finished in 0.09s"
+      ],
+      "seconds": 353.2,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::ordinary_vertices",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 3,
+      "expectedIgnored": 0,
+      "summary": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2080 filtered out; finished in 0.62s"
+      ],
+      "seconds": 0.87,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2078,
+      "expectedIgnored": 5,
+      "summary": [
+        "test result: ok. 2078 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 977.25s"
+      ],
+      "seconds": 977.59,
+      "passed": true
+    }
+  ],
+  "sourceUnchanged": true,
+  "sourceFiles": 6598
+}

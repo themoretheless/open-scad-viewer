@@ -71,10 +71,7 @@ pub(super) fn verify(
                 .collect()
         };
         // Existing Bezier composition retains its richer difference semantics.
-        if (s.control_points.len() == s.degree_u + 1 && s.control_points[0].len() == s.degree_v + 1)
-            || degree != c.degree
-            || target.len() != c.control_points.len()
-        {
+        if s.control_points.len() == s.degree_u + 1 && s.control_points[0].len() == s.degree_v + 1 {
             continue;
         }
         let reverse = backward ^ reversed;
@@ -83,7 +80,14 @@ pub(super) fn verify(
         } else {
             c.knots.clone()
         };
-        if ck != *knots {
+        let same_basis =
+            degree == c.degree && target.len() == c.control_points.len() && ck == *knots;
+        if !same_basis
+            && (!(1..=8).contains(&degree)
+                || !(1..=8).contains(&c.degree)
+                || target.len() > 64
+                || c.control_points.len() > 64)
+        {
             continue;
         }
         let mut actual = c
@@ -102,7 +106,7 @@ pub(super) fn verify(
             && actual.iter().zip(&target).all(|(a, b)| a[..3] == b[..3])
             && actual.iter().all(|q| q[3] == actual[0][3])
             && target.iter().all(|q| q[3] == target[0][3]);
-        if polynomial_weight_gauge {
+        if same_basis && polynomial_weight_gauge {
             return Ok(None);
         }
         let mut values = actual
@@ -118,6 +122,9 @@ pub(super) fn verify(
         values.extend(p.weights.iter().copied());
         values.extend(p.knots.iter().copied());
         values.extend(s.knots_u.iter().chain(&s.knots_v).copied());
+        // Unary negation in a reversed knot vector is exact. Retain the
+        // unmodified authored knots in the context as well.
+        values.extend(c.knots.iter().copied());
         let source = SourceArena::authored(
             "owned-multispan-tensor-border",
             1,
@@ -135,10 +142,10 @@ pub(super) fn verify(
             index += 1;
             r
         };
-        let aa = (0..actual.len())
+        let aa: Vec<[cad_predicates::LeafRef; 4]> = (0..actual.len())
             .map(|_| std::array::from_fn(|_| leaf()))
             .collect::<Vec<_>>();
-        let bb = (0..target.len())
+        let bb: Vec<[cad_predicates::LeafRef; 4]> = (0..target.len())
             .map(|_| std::array::from_fn(|_| leaf()))
             .collect::<Vec<_>>();
         let ak = (0..ck.len()).map(|_| leaf()).collect::<Vec<_>>();
@@ -153,6 +160,39 @@ pub(super) fn verify(
             },
             None,
         );
+        if !same_basis {
+            // A constant auxiliary axis reuses only original point/knot leaves.
+            // This is an exact tensor lift of the original curves, not floating
+            // degree elevation, knot insertion or a sampled replacement. The
+            // complete normalized maps are compared on every common knot cell.
+            let lift = |points: &[[cad_predicates::LeafRef; 4]]| {
+                points.iter().map(|p| vec![*p, *p]).collect::<Vec<_>>()
+            };
+            let at = lift(&aa);
+            let bt = lift(&bb);
+            let av = [ak[c.degree], ak[c.degree], ak[aa.len()], ak[aa.len()]];
+            let bv = [bk[degree], bk[degree], bk[bb.len()], bk[bb.len()]];
+            return cad_predicates::rational_bspline_tensor_normalized_identity(
+                &mut context,
+                cad_predicates::RationalTensorSource {
+                    degrees: [c.degree, 1],
+                    controls: &at,
+                    knots: [&ak, &av],
+                },
+                cad_predicates::RationalTensorSource {
+                    degrees: [degree, 1],
+                    controls: &bt,
+                    knots: [&bk, &bv],
+                },
+            )
+            .map(Some)
+            .map_err(|_| {
+                crate::Error::new(
+                    "NURBS_INVALID_INPUT",
+                    "Invalid normalized owned border identity",
+                )
+            });
+        }
         return cad_predicates::rational_bspline_same_definition(
             &mut context,
             degree,
@@ -260,3 +300,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod normalized_tests;

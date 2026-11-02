@@ -1,0 +1,73 @@
+{
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "capped_material::tests::spatial",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 4,
+      "expectedIgnored": 0,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2074 filtered out; finished in 257.61s"
+      ],
+      "seconds": 547.47,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2064,
+      "expectedIgnored": 1,
+      "summary": [
+        "test result: ok. 2064 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 96.41s"
+      ],
+      "seconds": 237.52,
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "expectedPassed": 2073,
+      "expectedIgnored": 5,
+      "summary": [
+        "test result: ok. 2073 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1291.57s"
+      ],
+      "seconds": 1291.92,
+      "passed": true
+    }
+  ],
+  "sourceUnchanged": true,
+  "sourceFiles": 6595
+}

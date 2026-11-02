@@ -33,11 +33,11 @@
         let p=Curve::from_polyline(vec![vec![0.,0.],vec![0.,1.]]).unwrap();
         let c=Curve{degree:2,knots:s.knots_v.clone(),control_points:s.control_points[0].clone(),weights:s.weights[0].clone(),periodic:false}.reverse().unwrap();
         assert_eq!(c.knots[3]+s.knots_v[3],1.);
-        // Independent original-basis proof now reports charged unresolved work.
-        // Rounded complement still MUST NOT certify the reversed source.
-        let rejected=verify_exact(&c,&p,&s,true,1_000_000).unwrap().unwrap();
-        assert!(matches!(rejected.outcome,cad_predicates::BezierIdentity::Indeterminate(_)));
-        assert!(rejected.work_used>0 && rejected.work_used<=1_000_000);
+        // The complete normalized owner can now decide this mismatch instead
+        // of merely declining the old same-basis shortcut. No rounded reversal
+        // receives equality credit.
+        assert_eq!(verify_exact(&c,&p,&s,true,1_000_000).unwrap().unwrap().outcome,
+            cad_predicates::BezierIdentity::Different);
     }
     #[test]
     fn formal_composition_does_not_claim_full_chart_membership() {

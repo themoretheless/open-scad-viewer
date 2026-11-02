@@ -37,7 +37,7 @@ fn periodic_law(c: &Curve, order: usize, spent: &mut u64, max: u64) -> Result<bo
     *spent += seam.exact_work;
     Ok(seam.certified)
 }
-fn profile_join(a: &Curve, b: &Curve, order: usize, max: u64) -> Result<(bool, u64)> {
+pub(super) fn profile_join(a: &Curve, b: &Curve, order: usize, max: u64) -> Result<(bool, u64)> {
     // Exact decomposition owns these original coefficients. Reverse only the
     // reference's storage so both endpoint arrays point into their own sides.
     let values = a
@@ -98,6 +98,69 @@ impl MultiSweep<'_> {
                 && loop_sizes.iter().sum::<usize>() == self.sweeps.len(),
             "Invalid original closed boundary smoothness limits or partition",
         )?;
+        let mut out = self.certify_closed_motion(limits)?;
+        if !(out.laws_certified && out.frame_certified) {
+            return Ok(out);
+        }
+        let mut offset = 0;
+        for &count in loop_sizes {
+            let mut pieces = Vec::new();
+            for sweep in &self.sweeps[offset..offset + count] {
+                let profile = sweep.profile;
+                let regular = crate::curve_regularity::inspect(profile, limits.cells - out.cells)?;
+                out.cells += regular.cells;
+                if !regular.spanwise_regular {
+                    out.reason = Some("original-profile-speed-unproved");
+                    return Ok(out);
+                }
+                let rows = (profile.degree..profile.control_points.len())
+                    .filter(|&i| profile.knots[i] < profile.knots[i + 1])
+                    .count()
+                    * (profile.degree + 1);
+                if rows > limits.products - out.products {
+                    out.reason = Some("original-profile-extraction-work-limit");
+                    return Ok(out);
+                }
+                out.products += rows;
+                let Some(spans) = crate::retained_wall_coefficients::exact_bezier_controls(
+                    profile,
+                    rows.min(4096),
+                ) else {
+                    out.reason = Some("original-profile-exact-extraction-unproved");
+                    return Ok(out);
+                };
+                if spans.iter().any(|c| c.degree > 32) {
+                    out.reason = Some("original-profile-jet-degree-unproved");
+                    return Ok(out);
+                }
+                pieces.extend(spans);
+            }
+            offset += count;
+            for i in 0..pieces.len() {
+                let (certified, work) = profile_join(
+                    &pieces[i],
+                    &pieces[(i + 1) % pieces.len()],
+                    limits.order,
+                    limits.exact_work - out.exact_work,
+                )?;
+                out.exact_work += work;
+                out.inspected_profile_joins += 1;
+                if !certified {
+                    out.reason = Some("original-profile-geometric-join-unproved");
+                    return Ok(out);
+                }
+            }
+        }
+        out.profiles_certified = true;
+        out.differential_compatibility_certified = true;
+        out.reason = None;
+        Ok(out)
+    }
+    /// Motion only: profiles and differential boundary compatibility stay false.
+    pub(super) fn certify_closed_motion(
+        &self,
+        limits: OriginalBoundarySmoothnessLimits,
+    ) -> Result<OriginalBoundarySmoothnessReport> {
         let s = &self.sweeps[0];
         let mut out = OriginalBoundarySmoothnessReport {
             order: limits.order,
@@ -119,19 +182,39 @@ impl MultiSweep<'_> {
         // In arc units, position closure and C^(k-1) forward unit tangent
         // prove Ck translation; raw speed derivatives need not be periodic.
         // Scalar/affine station laws still require their original Cartesian Ck.
-        let mut translation=periodic_law(s.path,limits.order,&mut out.exact_work,limits.exact_work)?;
-        if !translation && s.options.spacing!=Spacing::Parameter {
-            translation=true;
-            for endpoints in [false,true] {
-                let position=super::endpoint_jets::certify_position(s.path,endpoints,limits.exact_work-out.exact_work)?;
-                out.exact_work+=position.exact_work;
-                if !position.certified {translation=false;break;}
-                let tangent=super::endpoint_jets::certify_direction(s.path,limits.order-1,endpoints,true,limits.exact_work-out.exact_work)?;
-                out.exact_work+=tangent.exact_work;
-                if !tangent.certified {translation=false;break;}
+        let mut translation =
+            periodic_law(s.path, limits.order, &mut out.exact_work, limits.exact_work)?;
+        if !translation && s.options.spacing != Spacing::Parameter {
+            translation = true;
+            for endpoints in [false, true] {
+                let position = super::endpoint_jets::certify_position(
+                    s.path,
+                    endpoints,
+                    limits.exact_work - out.exact_work,
+                )?;
+                out.exact_work += position.exact_work;
+                if !position.certified {
+                    translation = false;
+                    break;
+                }
+                let tangent = super::endpoint_jets::certify_direction(
+                    s.path,
+                    limits.order - 1,
+                    endpoints,
+                    true,
+                    limits.exact_work - out.exact_work,
+                )?;
+                out.exact_work += tangent.exact_work;
+                if !tangent.certified {
+                    translation = false;
+                    break;
+                }
             }
         }
-        if !translation {out.reason=Some("original-boundary-periodic-law-jets-unproved");return Ok(out);}
+        if !translation {
+            out.reason = Some("original-boundary-periodic-law-jets-unproved");
+            return Ok(out);
+        }
         for law in [s.scale, s.twist]
             .into_iter()
             .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [a, c]))
@@ -194,57 +277,6 @@ impl MultiSweep<'_> {
             out.reason = reason;
             return Ok(out);
         }
-        let mut offset = 0;
-        for &count in loop_sizes {
-            let mut pieces = Vec::new();
-            for sweep in &self.sweeps[offset..offset + count] {
-                let profile = sweep.profile;
-                let regular = crate::curve_regularity::inspect(profile, limits.cells - out.cells)?;
-                out.cells += regular.cells;
-                if !regular.spanwise_regular {
-                    out.reason = Some("original-profile-speed-unproved");
-                    return Ok(out);
-                }
-                let rows = (profile.degree..profile.control_points.len())
-                    .filter(|&i| profile.knots[i] < profile.knots[i + 1])
-                    .count()
-                    * (profile.degree + 1);
-                if rows > limits.products - out.products {
-                    out.reason = Some("original-profile-extraction-work-limit");
-                    return Ok(out);
-                }
-                out.products += rows;
-                let Some(spans) = crate::retained_wall_coefficients::exact_bezier_controls(
-                    profile,
-                    rows.min(4096),
-                ) else {
-                    out.reason = Some("original-profile-exact-extraction-unproved");
-                    return Ok(out);
-                };
-                if spans.iter().any(|c| c.degree > 32) {
-                    out.reason = Some("original-profile-jet-degree-unproved");
-                    return Ok(out);
-                }
-                pieces.extend(spans);
-            }
-            offset += count;
-            for i in 0..pieces.len() {
-                let (certified, work) = profile_join(
-                    &pieces[i],
-                    &pieces[(i + 1) % pieces.len()],
-                    limits.order,
-                    limits.exact_work - out.exact_work,
-                )?;
-                out.exact_work += work;
-                out.inspected_profile_joins += 1;
-                if !certified {
-                    out.reason = Some("original-profile-geometric-join-unproved");
-                    return Ok(out);
-                }
-            }
-        }
-        out.profiles_certified = true;
-        out.differential_compatibility_certified = true;
         out.reason = None;
         Ok(out)
     }

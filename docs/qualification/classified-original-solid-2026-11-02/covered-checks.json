@@ -1,0 +1,118 @@
+{
+  "positiveCases": [
+    {
+      "mode": 1,
+      "coherentAffine": true,
+      "distinctFilledCaps": false,
+      "genuineG1CurvatureJump": false,
+      "originalWork": {
+        "cells": 113,
+        "exact_work": 1648,
+        "products": 90,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      },
+      "continuousBoundaryErrorUpper": 0.002873017692685275
+    },
+    {
+      "mode": 1,
+      "coherentAffine": false,
+      "distinctFilledCaps": false,
+      "genuineG1CurvatureJump": false,
+      "originalWork": {
+        "cells": 113,
+        "exact_work": 1648,
+        "products": 90,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      },
+      "continuousBoundaryErrorUpper": 0.002872512095048897
+    },
+    {
+      "mode": 0,
+      "coherentAffine": false,
+      "distinctFilledCaps": false,
+      "genuineG1CurvatureJump": false,
+      "originalWork": {
+        "cells": 113,
+        "exact_work": 1648,
+        "products": 90,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      },
+      "continuousBoundaryErrorUpper": 2.6679993314447695e-14
+    },
+    {
+      "mode": 0,
+      "coherentAffine": false,
+      "distinctFilledCaps": false,
+      "genuineG1CurvatureJump": true,
+      "originalWork": {
+        "cells": 115,
+        "exact_work": 1669,
+        "products": 95,
+        "material_pairs": 72,
+        "material_cells": 78,
+        "material_domain_cells": 56
+      },
+      "continuousBoundaryErrorUpper": 2.6679993314447695e-14
+    },
+    {
+      "mode": 2,
+      "coherentAffine": false,
+      "distinctFilledCaps": false,
+      "genuineG1CurvatureJump": false,
+      "originalWork": {
+        "cells": 125,
+        "exact_work": 1648,
+        "products": 90,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      },
+      "continuousBoundaryErrorUpper": 0.002872512095089455
+    },
+    {
+      "mode": 0,
+      "coherentAffine": true,
+      "distinctFilledCaps": true,
+      "genuineG1CurvatureJump": false,
+      "originalWork": {
+        "cells": 191,
+        "exact_work": 185694,
+        "products": 90,
+        "material_pairs": 72,
+        "material_cells": 54,
+        "material_domain_cells": 56
+      },
+      "continuousBoundaryErrorUpper": 2.6679993314447695e-14
+    }
+  ],
+  "modeLabels": {
+    "0": "straight authored transport",
+    "1": "nonconstant authored frame",
+    "2": "nonconstant guide frame"
+  },
+  "pairedRationalFieldWork": {
+    "cells": 388,
+    "exactWork": 12,
+    "orientationCells": 5
+  },
+  "negativeChecks": [
+    "every positive original cells/exact/products/material-pairs/material-cells/material-domain ledger replays and one-less refuses before retained construction",
+    "retained source-work exhaustion refuses after successful original material proof without exposing a model",
+    "explicit sharp C0 corners refuse a requested G2 upgrade",
+    "genuine G1 line/parabola curvature jump refuses G2",
+    "native paired carrier cell/exact/orientation budgets refuse when shortened",
+    "broken coefficient motion station continuity refuses",
+    "folded pair refuses whole-volume credit",
+    "actual paired cap with exact outer and hole traces but an interior fold reaches map proof and refuses",
+    "source definitions remain unchanged",
+    "generic cap/hole pair diagnostics stay unresolved despite successful independent actual filled map"
+  ],
+  "geometryMovedToTypeScript": false,
+  "tolerancesOrBudgetsIncreased": false
+}

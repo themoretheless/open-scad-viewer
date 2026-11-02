@@ -7,3 +7,9 @@ mod report;
 #[cfg(test)]
 mod tests;
 pub use report::*;
+
+mod collar;
+pub use collar::{PolarCollar, PolarCollarReport, certify_polar_collar};
+
+mod projected;
+pub use projected::{ProjectedPolarCollar, ProjectedPolarReport, certify_projected_polar_collar};

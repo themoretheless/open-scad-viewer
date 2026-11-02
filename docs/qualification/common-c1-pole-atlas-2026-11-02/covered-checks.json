@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "name": "genuine_c1_poles_and_an_ordinary_g2_star_share_one_material_body",
+      "physicalPoleOrder": 1,
+      "poles": 2,
+      "ordinaryOrder": 2,
+      "explicitC0": 12,
+      "volume": 3456
+    },
+    {
+      "name": "genuine_c1_poles_and_an_ordinary_g1_jump_share_one_material_body",
+      "physicalPoleOrder": 1,
+      "poles": 2,
+      "ordinaryOrder": 1,
+      "explicitC0": 12,
+      "volume": 3456.0703125
+    }
+  ],
+  "observedWorkEach": {
+    "wholeFaceRankCells": 519,
+    "wholeFaceRankSteps": 33,
+    "vertexSteps": 226,
+    "vertexNormalSpans": 4,
+    "vertexDomainCells": 32,
+    "vertexExactWork": 854
+  },
+  "checks": [
+    "original analytic volume enclosed",
+    "native physical C2 pole jets refuse folded quadratic graph",
+    "measured exact ordinary G2 budget replays and one-less refuses",
+    "whole-face rank cell/step measured budgets replay and one-less refuses",
+    "whole original parametric C2 face jets do not upgrade physical poles",
+    "complete native same-Body material orientation and exact edge evidence",
+    "complete fifteen-vertex atlas with two C1 poles and twelve explicit C0 entries",
+    "native C1 disk slice retained; no C2 disk slice substituted",
+    "all four common vertex budgets replay and one-less refuses",
+    "wrong pole axis refuses",
+    "another freshly admitted Body with byte-identical geometry cannot supply edge authority",
+    "original source definition unchanged"
+  ],
+  "budgetsRaised": false,
+  "geometryInTypeScript": false
+}

@@ -1,0 +1,49 @@
+{
+  "primitive": {
+    "work": 162,
+    "errorUpper": 0.000203281392892496,
+    "directBoundaryExactWork": 138645,
+    "modifiedAxes": [
+      false,
+      false,
+      true
+    ],
+    "sourceWeightsKnotsAndTrimsUnchanged": true,
+    "retainedCapIsNonplanar": true,
+    "zeroToleranceLiteralTranslationPasses": true,
+    "measuredWorkReplay": true,
+    "oneLessWorkRefuses": true,
+    "tolerance1eMinus8Refuses": true
+  },
+  "actualSolid": {
+    "work": 811328,
+    "cells": 1624,
+    "filledCells": 1417,
+    "filledExactWork": 108,
+    "wholeBoundaryErrorUpper": 0.00020328139289516061,
+    "requestedWholeBoundaryError": 0.05,
+    "capProposalTolerance": 0.001,
+    "workCeiling": 1000000,
+    "cellCeiling": 100000,
+    "measuredWorkReplay": true,
+    "oneLessWorkRefuses": true,
+    "measuredCellsReplay": true,
+    "oneLessCellsRefuses": true,
+    "oneOuterRingAndOneThroughHole": true,
+    "originalClasses": [
+      "G2",
+      "C0",
+      "C0",
+      "C0",
+      "C0",
+      "C0",
+      "C0",
+      "C0",
+      "C0"
+    ],
+    "capWallClass": "C0",
+    "translatedTraceTransport": true,
+    "pairedCarriers": true,
+    "originalAndActualCertifiedByIndependentNativeFactories": true
+  }
+}

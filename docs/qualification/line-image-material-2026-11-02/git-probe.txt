@@ -1,0 +1,22 @@
+git rev-parse HEAD
+5efb49cefe060d747d83368b69914fcb3fe6f601
+
+git branch --show-current
+codex/source-body-seam-collection-20261028
+
+git remote -v
+origin	git@github.com:themoretheless/open-scad-viewer.git (fetch)
+origin	git@github.com:themoretheless/open-scad-viewer.git (push)
+
+git status --short --branch
+## codex/source-body-seam-collection-20261028...origin/codex/source-body-seam-collection-20261028 [ahead 89]
+ M crates/brep-core/src/sweep_boundary_owned/closed.rs
+ M crates/brep-core/src/sweep_boundary_owned/closed/classified_material.rs
+ M crates/brep-core/src/sweep_boundary_owned/closed/classified_material/tests.rs
+ M crates/cad-predicates/src/lib.rs
+ M crates/nurbs-core/src/analysis/curve_surface_agreement.rs
+?? crates/brep-core/src/sweep_boundary_owned/closed/classified_material/tests/image.rs
+?? crates/cad-predicates/src/bezier_line_image.rs
+?? crates/cad-predicates/src/bezier_line_image/
+?? crates/nurbs-core/src/analysis/curve_surface_agreement/line_image.rs
+?? docs/qualification/line-image-material-2026-11-02/

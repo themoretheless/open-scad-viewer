@@ -1,5 +1,17 @@
 //! Whole-source seam tangent-plane qualification. Positional ownership comes
 //! from privately qualified native edge types; angular bounds cover original charts.
+mod curvature;
+pub mod material_orientation;
+pub mod vertices;
+pub use curvature::{CurvatureLimits, CurvatureReport, CurvatureSeam, qualify_curvature, ExactCurvatureReport, qualify_curvature_exact, PolarCurvatureSeam, PolarCurvatureReport, qualify_polar_curvature, qualify_polar_curvature_exact};
+mod polar;
+pub use polar::{PolarSeam, PolarReport, qualify_polar_tangency};
+mod body;
+pub use body::{qualify_boundary_with_exact_regular_curvature, qualify_boundary_with_exact_curvature, Boundary, BoundaryReport, PoleRequirement, PoleStrata, qualify_boundary, qualify_boundary_with_polar_seams, PolarBudgets, qualify_boundary_with_polar_curvature, qualify_boundary_with_exact_polar_curvature};
+mod pole_c2;
+pub use pole_c2::{C2PoleNeighborhood, C2PoleAtlas, C2PoleReport, qualify_c2_pole_neighborhoods};
+mod collection;
+pub use collection::{Class, Collection, CollectionReport, qualify_collection};
 use crate::source_shared_edge::SharedEdge;
 use nurbs_core::{Error, Result, interval_eval::Interval as I};
 pub struct Limits {
@@ -45,6 +57,9 @@ pub trait Carrier: Clone + sealed::Sealed {
     fn map_parameter(&self,side:usize,parameter:I)->Result<I>;
     fn inverse_parameter(&self,side:usize,canonical:I)->Result<I>;
     fn literal_endpoints(&self)->bool;
+    /// Complete parameter correspondence from sealed original carrier data;
+    /// exact natural-boundary layout still needs fresh qualification.
+    fn exact_parameter_curve(&self,_side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {None}
 }
 impl Carrier for SharedEdge {
     fn world(&self)->&nurbs_core::curve::Curve {SharedEdge::world(self)}
@@ -52,6 +67,7 @@ impl Carrier for SharedEdge {
     fn map_parameter(&self,side:usize,parameter:I)->Result<I> {map(self,side,parameter)}
     fn inverse_parameter(&self,side:usize,canonical:I)->Result<I> {inverse(self,side,canonical)}
     fn literal_endpoints(&self)->bool {self.ranges().is_none()}
+    fn exact_parameter_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {<Self as SynchronizedCarrier>::synchronized_curve(self,side)}
 }
 impl Carrier for crate::source_projective_edge::Edge {
     fn world(&self)->&nurbs_core::curve::Curve {crate::source_projective_edge::Edge::world(self)}
@@ -62,6 +78,7 @@ impl Carrier for crate::source_projective_edge::Edge {
         self.uses()[side].inverse_normalized_unclipped(canonical)?.intersect(d[0],d[1])
     }
     fn literal_endpoints(&self)->bool {false}
+    fn exact_parameter_curve(&self,side:usize)->Option<(&nurbs_core::curve::Curve,bool,[f64;2])> {<Self as SynchronizedCarrier>::synchronized_curve(self,side)}
 }
 pub(crate) fn ranges(edge: &SharedEdge) -> [[[f64; 2]; 2]; 2] {
     edge.ranges().unwrap_or_else(|| {
@@ -393,6 +410,9 @@ mod tests {
         let restored=restored.edge.expect(restored.reason);
         assert_eq!(restored.definition(),trimmed_definition);
         for source in [&trimmed,&restored] {
+            let g2=qualify_curvature(source, CurvatureLimits {normal_distance:0.01,curvature_distance:0.05,
+                cells:10000,curve_spans:40000,shape_cells:40000}).unwrap();
+            assert_eq!(g2.seam.expect(g2.reason).edge().definition(),trimmed_definition);
             let proof=qualify_with_synchronized_boundaries(source,
                 Limits{max_sine_squared:1e-10,cells:1,curve_spans:2,normal_spans:2},100000).unwrap();
             assert!(proof.report.seam.is_some());
@@ -402,7 +422,7 @@ mod tests {
         assert!(crate::source_projective_edge::restore(wrong,10000,100000000,10000).unwrap().edge.is_none());
     }
 
-    fn limits() -> Limits {
+    pub(super) fn limits() -> Limits {
         Limits {
             max_sine_squared: 1e-3,
             cells: 10000,
@@ -474,7 +494,7 @@ mod tests {
             periodic_v: false,
         }
     }
-    fn shared(crease: bool) -> SharedEdge {
+    pub(super) fn shared(crease: bool) -> SharedEdge {
         let mut a = patch(false);
         for row in &mut a.control_points {
             for (v, p) in row.iter_mut().enumerate() {
@@ -618,6 +638,11 @@ mod tests {
                 .edge
                 .unwrap();
         let before = [a.definition(), b.definition()];
+        let g2 = qualify_curvature(&edge, CurvatureLimits {normal_distance:1e-7,curvature_distance:1e-6,
+            cells:1000,curve_spans:4000,shape_cells:4000}).unwrap();
+        let g2 = g2.seam.expect(g2.reason);
+        assert_eq!(g2.edge().uses()[0].definition(), before[0]);
+        assert_eq!(g2.edge().uses()[1].definition(), before[1]);
         let r = qualify(&edge, limits()).unwrap();
         assert!(r.seam.is_some(), "{}", r.reason);
         let seam = r.seam.unwrap();
@@ -664,6 +689,11 @@ mod tests {
         .unwrap()
         .edge
         .unwrap();
+        for source in [&full, &partial] {
+            let g2=qualify_curvature(source, CurvatureLimits {normal_distance:1e-7,curvature_distance:1e-6,
+                cells:1000,curve_spans:4000,shape_cells:4000}).unwrap();
+            assert_eq!(g2.seam.expect(g2.reason).edge().definition(),source.definition());
+        }
         let report = qualify(&partial, limits()).unwrap();
         assert!(report.seam.is_some(), "{}", report.reason);
         assert_eq!(report.seam.unwrap().edge().ranges(), Some(ranges));
@@ -692,6 +722,11 @@ mod tests {
                 .unwrap()
                 .edge
                 .unwrap();
+        let curvature = qualify_curvature(&edge, CurvatureLimits {
+            normal_distance:1e-7,curvature_distance:1e-6,cells:32,curve_spans:128,shape_cells:128,
+        }).unwrap();
+        assert!(curvature.seam.is_none(), "A singular closed endpoint cannot inherit regular G2");
+        assert!(curvature.cells<=32 && curvature.curve_spans<=128 && curvature.shape_cells<=128);
         let mut budget = limits();
         budget.cells = 32;
         let report = qualify(&edge, budget).unwrap();
@@ -702,3 +737,15 @@ mod tests {
         assert!(uncertain[0] <= 0. && uncertain[1] >= 0.);
     }
 }
+
+mod pole_c1;
+pub use pole_c1::{C1PoleNeighborhood,C1PoleAtlas,C1PoleReport,C1PoleLimits,qualify_c1_pole_neighborhoods};
+
+mod exact_collection;
+pub use exact_collection::{ExactCurvatureCollection, ExactCollectionLimits, ExactCollectionReport, qualify_exact_curvature_collection};
+
+mod exact_tangency;
+pub use exact_tangency::{ExactTangencySeam,ExactTangencyReport,qualify_tangency_exact};
+
+mod exact_smooth;
+pub use exact_smooth::{ExactSmoothCollection,ExactSmoothLimits,ExactSmoothReport,qualify_exact_smooth_collection};

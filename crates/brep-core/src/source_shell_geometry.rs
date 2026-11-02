@@ -96,8 +96,9 @@ pub fn qualify_projective(shell:Shell<crate::source_projective_edge::Edge>,limit
     }
     if out.spans==limits.spans {out.reason="source-shell-contact-work-limit";out.next_pair=Some([0,1]);return Ok(out);}
     let contacts=source_face_contacts::inspect_shell_with_projective_fibers(&shell,limits.tolerance_uv,limits.pairs,limits.exact_work,limits.spans-out.spans,limits.driver_cells,limits.linear_cells-out.linear_cells)?;
-    out.spans+=contacts.spans;out.linear_cells+=contacts.linear_cells;out.driver_cells+=contacts.driver_cells;out.exact_work=contacts.exact_work;out.pairs=contacts.pairs.len();out.next_pair=contacts.next_pair;
-    if !contacts.all_pairs_qualified || contacts.next_pair.is_some() {out.reason="source-shell-extra-contact-unproven";return Ok(out);}
+    out.spans+=contacts.spans;out.linear_cells+=contacts.linear_cells;out.driver_cells+=contacts.driver_cells;out.exact_work=contacts.exact_work;out.pairs=contacts.pairs.len();
+    out.next_pair=contacts.pairs.iter().find(|p|!p.qualification_proven()).map(|p|p.faces).or(contacts.next_pair);
+    if !contacts.all_pairs_qualified || out.next_pair.is_some() || contacts.pairs.len()!=contacts.total_pairs {out.reason="source-shell-extra-contact-unproven";return Ok(out);}
     out.geometry=Some(Geometry{shell,topology,charts,contacts,inverse_shear:None});
     out.reason="source-projective-shell-embedded-qualified";Ok(out)
 }
@@ -186,18 +187,7 @@ fn qualify_impl(
     out.next_pair = contacts
         .pairs
         .iter()
-        .find(|p| {
-            p.allowed.is_none()
-                && p.fiber.is_none()
-                && p.interior_fiber.is_none()
-                && p.paired_fiber.is_none()
-                && p.vertex_contact.is_none()
-                && p.disjoint_hull.is_none()
-                && p.pole_paired.is_none()
-                && p.pole_planar.is_none()
-                && p.ruled_projection.is_none()
-                && !p.result.as_ref().is_some_and(|r| r.absence_proven)
-        })
+        .find(|p| !p.qualification_proven())
         .map(|p| p.faces)
         .or(contacts.next_pair);
     let mut inverse_shear = None;

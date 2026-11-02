@@ -1,0 +1,147 @@
+{
+  "expectedCases": 10,
+  "observedCases": 10,
+  "caseSetComplete": true,
+  "cases": [
+    {
+      "authored": true,
+      "arc": false,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 371,
+        "exact_work": 189641,
+        "products": 50,
+        "material_pairs": 20,
+        "material_cells": 10,
+        "material_domain_cells": 20
+      }
+    },
+    {
+      "authored": true,
+      "arc": false,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 394,
+        "exact_work": 377553,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": true,
+      "arc": false,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 406,
+        "exact_work": 377727,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": true,
+      "arc": true,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 6626,
+        "exact_work": 382856,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": true,
+      "arc": true,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 6657,
+        "exact_work": 383030,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": false,
+      "arc": false,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 2249,
+        "exact_work": 377553,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": false,
+      "arc": false,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 43956,
+        "exact_work": 377727,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": false,
+      "arc": false,
+      "affine": true,
+      "rational": true,
+      "work": {
+        "cells": 65502,
+        "exact_work": 189641,
+        "products": 50,
+        "material_pairs": 20,
+        "material_cells": 10,
+        "material_domain_cells": 20
+      }
+    },
+    {
+      "authored": false,
+      "arc": true,
+      "affine": false,
+      "rational": false,
+      "work": {
+        "cells": 252194,
+        "exact_work": 379843,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    },
+    {
+      "authored": false,
+      "arc": true,
+      "affine": true,
+      "rational": false,
+      "work": {
+        "cells": 491894,
+        "exact_work": 380017,
+        "products": 100,
+        "material_pairs": 90,
+        "material_cells": 70,
+        "material_domain_cells": 60
+      }
+    }
+  ]
+}

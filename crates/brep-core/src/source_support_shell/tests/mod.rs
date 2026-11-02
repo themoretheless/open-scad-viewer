@@ -9487,3 +9487,5 @@ fn source_support_claims_do_not_authorize_geometric_lifts() {
     low.faces = 26;
     assert!(prepare(&model, low).is_err());
 }
+
+mod projective_qualification;

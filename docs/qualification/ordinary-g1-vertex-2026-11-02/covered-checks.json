@@ -1,0 +1,24 @@
+{
+  "namedChecks": [
+    "nonplanar_grid_body_owns_face_jets_and_oriented_exact_edge_classes",
+    "original_interior_contact_refusal_names_the_actual_unproved_face_pair",
+    "ordinary_vertex_has_g1_graph_with_a_proved_interior_curvature_jump"
+  ],
+  "g1GraphStarWork": {
+    "steps": 508,
+    "normal_spans": 24,
+    "domain_cells": 192,
+    "exact_work": 5168
+  },
+  "assertedClassCounts": {
+    "G1": 1,
+    "G2": 5,
+    "C0": 20
+  },
+  "assertedExactG1Joins": 2,
+  "assertedExactG2Joins": 22,
+  "assertedUnprovedContactPair": [
+    0,
+    4
+  ]
+}

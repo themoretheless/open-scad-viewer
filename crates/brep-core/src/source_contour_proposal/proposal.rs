@@ -1,4 +1,5 @@
 use super::*;
+mod rectangle;
 
 pub struct Proposal {
     pub search: SourcePointSearch,
@@ -358,21 +359,7 @@ pub fn qualify_original_region(
             surface.knots_v[surface.control_points[0].len()],
         ],
     ];
-    let whole_chart = wires.len() == 1
-        && wires[0].len() == 4
-        && (0..4).any(|start| {
-            wires[0].iter().enumerate().all(|(i, b)| {
-                let c = &b.pcurve;
-                let d = c.domain();
-                c.degree == 1
-                    && !c.periodic
-                    && c.control_points.len() == 2
-                    && c.knots[..2].iter().all(|&t| t == d[0])
-                    && c.knots[2..].iter().all(|&t| t == d[1])
-                    && c.control_points[0] == corners[(start + i) % 4]
-                    && c.control_points[1] == corners[(start + i + 1) % 4]
-            })
-        });
+    let whole_chart = rectangle::covers(wires, corners);
     out.region = Some(SourceRegion {
         recipe: Recipe::Original(Original::new(context, surface, wires, tolerance_uv)),
         whole_chart,

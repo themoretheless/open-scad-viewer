@@ -64,3 +64,5 @@ pub use rational_loft::{
     progressive_profile_body_with_rmf_policy_and_corrections,
 };
 use revolve_region_angle::revolve_g2_annular_meridian;
+
+pub(crate) use rational_loft::affine_station_controls;

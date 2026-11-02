@@ -33,6 +33,16 @@ pub struct Report {
     pub volume: Option<volume_validity::Report>,
     pub reason: Option<&'static str>,
     pub ideal_volume: Option<nurbs_core::progressive_sweep::IdealVolumeReport>,
+    pub affine_candidate: Option<AffineBoundaryReport>,
+    pub affine_volume: Option<AffineFilledVolumeReport>,
+}
+impl Report {
+    /// A generic pair census and an exact complete filled map are independent
+    /// routes; an unresolved census stays unresolved in its own diagnostics.
+    pub fn solid_geometry_proven(&self)->bool {
+        self.volume.as_ref().is_some_and(|v|v.proven)
+            || self.affine_volume.as_ref().is_some_and(|v|v.certified)
+    }
 }
 pub struct CertifiedBody {
     model: Model,
@@ -71,6 +81,11 @@ pub fn construct(
     error_budget: f64,
     limits: Limits,
 ) -> Result<Attempt> {
+    construct_impl(sweep,loop_sizes,sections,source_caps,retained_caps,tolerance_uv,error_budget,limits,None)
+}
+fn construct_impl(sweep:&MultiSweep<'_>,loop_sizes:&[usize],sections:usize,
+    source_caps:[&LoftCap;2],retained_caps:[&LoftCap;2],tolerance_uv:f64,error_budget:f64,
+    limits:Limits,affine:Option<(crate::AffineStationLimits,[[f64;3];3])>)->Result<Attempt> {
     if !error_budget.is_finite()
         || error_budget <= 0.
         || !tolerance_uv.is_finite()
@@ -124,12 +139,15 @@ pub fn construct(
         volume: None,
         reason: Some("source-wall-bound-unproved"),
         ideal_volume: None,
+        affine_candidate: None,
+        affine_volume: None,
     };
     if !out.wall.continuous_bound || out.wall.continuous_error_upper.is_none() {
         return Ok(Attempt::Refused(Box::new(out)));
     }
     // Bind both complete original contours, including every hole, to the
     // authored cap carriers. Exact algebraic identity also checks UV inclusion.
+    let mut original_profiles=Vec::new();
     for endpoint in 0..2 {
         source_caps[endpoint].surface.validate()?;
         retained_caps[endpoint].surface.validate()?;
@@ -165,6 +183,7 @@ pub fn construct(
                 out.reason = Some("source-cap-contour-count-mismatch");
                 return Ok(Attempt::Refused(Box::new(out)));
             }
+            if endpoint==0 {original_profiles.push(boundary.clone());}
             for (world, uv) in boundary.iter().zip(&source_caps[endpoint].trims[ring]) {
                 let remaining = limits.source_exact_work - out.source_exact_work;
                 let proof = nurbs_core::curve_surface_agreement::verify_exact(
@@ -187,6 +206,22 @@ pub fn construct(
             }
         }
     }
+    let mut sides=Vec::new();let mut offset=0;
+    for &size in loop_sizes {
+        let range=[level.profile_patch_ranges[offset][0],level.profile_patch_ranges[offset+size-1][1]];
+        let mut ring=Vec::new();
+        for patch in &level.patches[range[0]..range[1]] {ring.extend(retained_profile_domain::patches(patch)?);}
+        sides.push(ring);offset+=size;
+    }
+    let candidate=if let Some((l,_))=affine {
+        let (candidate,report)=affine_candidate::prepare(&original_profiles,&sides,source_caps,l)?;
+        let reason=report.reason;out.affine_candidate=Some(report);
+        let Some(candidate)=candidate else {
+            out.reason=Some(reason);return Ok(Attempt::Refused(Box::new(out)));
+        };
+        Some(candidate)
+    } else {None};
+    let retained_caps=if let Some(c)=&candidate {[&c.caps[0],&c.caps[1]]} else {retained_caps};
     let mut caps = [0_f64; 2];
     for endpoint in 0..2 {
         let image = sweep.endpoint_surface_image(
@@ -226,12 +261,13 @@ pub fn construct(
         out.caps.push(bound);
     }
     out.cap_errors = Some(caps);
-    let bound = out
-        .wall
-        .continuous_error_upper
-        .unwrap()
-        .max(caps[0])
-        .max(caps[1]);
+    let wall=out.wall.continuous_error_upper.unwrap();
+    let wall=if let Some(c)=&out.affine_candidate {
+        let Some(bound)=c.wall_displacement_upper.and_then(|d|error_upper::add(wall,d)) else {
+            out.reason=Some("affine-boundary-error-unproved");return Ok(Attempt::Refused(Box::new(out)));
+        };bound
+    } else {wall};
+    let bound=wall.max(caps[0]).max(caps[1]);
     out.boundary_error_upper = Some(bound);
     out.continuous_bound = true;
     out.within_budget = bound <= error_budget;
@@ -239,33 +275,19 @@ pub fn construct(
         out.reason = Some("boundary-error-budget-exceeded");
         return Ok(Attempt::Refused(Box::new(out)));
     }
-    // Build from this exact level, not from a caller-supplied model or station report.
-    let rows = sweep.sections_at(sections)?;
-    let mut start = Vec::new();
-    let mut end = Vec::new();
-    let mut sides = Vec::new();
-    let mut offset = 0;
-    for &size in loop_sizes {
-        start.push(
-            rows[offset..offset + size]
-                .iter()
-                .map(|p| p[0].clone())
-                .collect::<Vec<Curve>>(),
-        );
-        end.push(
-            rows[offset..offset + size]
-                .iter()
-                .map(|p| p.last().unwrap().clone())
-                .collect::<Vec<Curve>>(),
-        );
-        let range = [
-            level.profile_patch_ranges[offset][0],
-            level.profile_patch_ranges[offset + size - 1][1],
-        ];
-        sides.push(level.patches[range[0]..range[1]].to_vec());
-        offset += size;
-    }
-    let model = crate::capped_loft_with_caps(&start, &end, &sides, retained_caps)?;
+    // All source-law and complete cap errors above concern this actual packet.
+    let model=if let Some(c)=&candidate {
+        crate::capped_loft_with_caps(&c.start,&c.end,&c.sides,retained_caps)?
+    } else {
+        let rows=sweep.sections_at(sections)?;
+        let mut start=Vec::new();let mut end=Vec::new();let mut offset=0;
+        for &size in loop_sizes {
+            start.push(rows[offset..offset+size].iter().map(|p|p[0].clone()).collect());
+            end.push(rows[offset..offset+size].iter().map(|p|p.last().unwrap().clone()).collect());
+            offset+=size;
+        }
+        crate::capped_loft_with_caps(&start,&end,&sides,retained_caps)?
+    };
     let regular = regularity::inspect(&model, limits.regularity_cells)?;
     let regular_proven = regular.all_faces_regular_modulo_poles;
     out.regularity = Some(regular);
@@ -279,12 +301,19 @@ pub fn construct(
         limits.volume,
         limits.linear_cells,
     )?;
-    out.certified = regular_proven && volume.proven;
+    if !volume.proven {
+        if let (Some(candidate),Some((l,projection)))=(&candidate,affine) {
+            let spent=out.affine_candidate.as_ref().unwrap().work;
+            out.affine_volume=Some(affine_volume::qualify(&model,candidate,source_caps,
+                tolerance_uv,projection,l,spent)?);
+        }
+    }
     out.volume = Some(volume);
+    out.certified = regular_proven && out.solid_geometry_proven();
     out.reason = if !regular_proven {
         Some("whole-boundary-regularity-unproved")
     } else if !out.certified {
-        Some("solid-geometry-unproved")
+        out.affine_volume.as_ref().map(|r|r.reason).or(Some("solid-geometry-unproved"))
     } else {
         None
     };
@@ -449,6 +478,8 @@ pub use closed::{
 };
 
 mod common_trim_region;
+mod smooth_original;
+pub use smooth_original::{construct_affine_with_original_smooth_volume,construct_with_original_smooth_volume,OriginalSmoothBody,OriginalSmoothBodyAttempt,OriginalSmoothBodyRefusal,OriginalSmoothBodyWork};
 
 fn ideal_refused(
     mut body: Box<CertifiedBody>,
@@ -478,3 +509,31 @@ pub mod joint;
 
 /// Original filled-volume proof transfer under an exact clock conjugacy.
 pub mod clock;
+mod smooth_boundary;
+pub use smooth_boundary::{qualify_original_smooth_boundary,OriginalBoundaryBody,
+    OriginalBoundaryBodyAttempt,OriginalBoundaryBodyRefusal};
+
+mod retained_profile_domain;
+
+mod affine_candidate;
+pub use affine_candidate::AffineBoundaryReport;
+
+mod affine_volume;
+pub use affine_volume::AffineFilledVolumeReport;
+
+pub use closed::{MaterialSpanBinding, MaterialSpanBindingKind, OriginalClassifiedClosedMaterialLimits, OriginalClassifiedClosedMaterialWork,
+    OriginalClassifiedClosedMaterial, OriginalClassifiedClosedMaterialRefusal,
+    OriginalClassifiedClosedMaterialAttempt, certify_original_classified_closed_material};
+
+pub use closed::{OriginalClassifiedCappedMaterial, OriginalClassifiedCappedMaterialAttempt,
+    OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
+    OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material};
+
+mod classified_original;
+pub use classified_original::{OriginalClassifiedBody, OriginalClassifiedBodyAttempt,
+    OriginalClassifiedBodyRefusal, construct_with_original_classified_material,
+    construct_affine_with_original_classified_material};
+
+pub use closed::{ClassifiedClosedAttempt, ClassifiedClosedBody, ClassifiedClosedLimits,
+    ClassifiedClosedReport, ClassifiedClosedEdgeRole, ClassifiedClosedEdgeRoles,
+    construct_classified_closed_with_original_material, verify_classified_closed_with_original_material};

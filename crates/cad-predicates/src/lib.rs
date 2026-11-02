@@ -11,6 +11,10 @@ mod bezier_quadric_identity;
 pub use bezier_quadric_identity::*;
 mod bspline_quadric_identity;
 pub use bspline_quadric_identity::*;
+mod bezier_line_image;
+mod oriented_ray_fan;
+pub use oriented_ray_fan::{RayFanOutcome, RayFanDecision, oriented_ray_fan};
+pub use bezier_line_image::{LineImageOutcome, LineImageDecision, rational_bezier_axis_line_image};
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
 mod line_chart_identity;
@@ -23,6 +27,8 @@ mod bspline_projective_correspondence;
 pub use bspline_projective_correspondence::*;
 mod bezier_projective_correspondence;
 pub use bezier_projective_correspondence::*;
+mod tensor_identity;
+pub use tensor_identity::*;
 mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;
@@ -729,3 +735,11 @@ pub use algorithm_segment_intersects_segment_2d::segment_intersects_segment_2d;
 #[path="lib/algorithm_point_in_triangle_2d.rs"]
 mod algorithm_point_in_triangle_2d;
 pub use algorithm_point_in_triangle_2d::point_in_triangle_2d;
+mod pole_quadratic_jet;
+pub use pole_quadratic_jet::{PoleQuadraticJet, PoleQuadraticJetDecision, rational_surface_pole_quadratic_jet, compare_pole_quadratic_jets};
+
+mod natural_meridian_g2;
+pub use natural_meridian_g2::{rational_natural_meridian_g1, rational_natural_meridian_g2};
+
+mod paired_graph_projection;
+pub use paired_graph_projection::{CurveGraphProjectionDecision, PairedGraphProjectionDecision, binary_curve_graph_projection, binary_paired_graph_projection};

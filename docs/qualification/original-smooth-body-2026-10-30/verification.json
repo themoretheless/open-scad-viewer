@@ -1,0 +1,626 @@
+{
+  "implementationCommit": null,
+  "publicationStatus": "not-published",
+  "gitStatus": "repository metadata reads stalled; no commit was attempted",
+  "nativeGroups": 27,
+  "nativeUniqueTests": 261,
+  "nativeFailed": 0,
+  "nodeInfrastructureTests": 10,
+  "sourceFiles": 4908,
+  "sourceUnchanged": true,
+  "sourceCensus": "Merged tracked crate census from source-body-main-merge-2026-10-30/source-after.json plus every current Rust file; excludes target directories. Git metadata reads were unavailable.",
+  "architecture": {
+    "officialCliStatus": "stalled in git ls-files; only that audit process and its git child were terminated after native checks completed",
+    "filesystemAuditExitCode": 1,
+    "diagnostics": 68,
+    "method": "Unmodified exported audit functions with frozen crate census and all current src/scripts files; baseline unchanged"
+  },
+  "ownedSourceBackup": "/Users/themoretheless/.codex/tmp/osv-owned-smooth-body-frozen-checks-20261030/owned-source-backup.tar.gz",
+  "ownedSourceBackupSha256": "dd583179b8ab18c3104c7148f76ab205b601875a5a9c1b49a91e383d7dd4ca4a",
+  "changedRustSources": [
+    "crates/brep-core/src/analytic/rational_loft_legacy.rs",
+    "crates/brep-core/src/analytic/rational_loft_legacy/cap_reference.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/tensor.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/weighted.rs",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary/normalized_tests.rs",
+    "crates/nurbs-core/src/tests/curve_surface_agreement_tests.rs"
+  ],
+  "checks": [
+    {
+      "name": "quotient",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_quotient_injectivity::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.112,
+      "summary": [
+        "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2025 filtered out; finished in 0.03s"
+      ],
+      "log": "quotient.log.gz"
+    },
+    {
+      "name": "predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "projected_surface_jacobian::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.077,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 107 filtered out; finished in 0.00s"
+      ],
+      "log": "predicates.log.gz"
+    },
+    {
+      "name": "limits",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "factored_surface_normals::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.152,
+      "summary": [
+        "test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 2022 filtered out; finished in 0.08s"
+      ],
+      "log": "limits.log.gz"
+    },
+    {
+      "name": "legacy-pole-differential",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "rational_pole_differential::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.084,
+      "summary": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2040 filtered out; finished in 0.00s"
+      ],
+      "log": "legacy-pole-differential.log.gz"
+    },
+    {
+      "name": "binding",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_pole_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.089,
+      "summary": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 0.00s"
+      ],
+      "log": "binding.log.gz"
+    },
+    {
+      "name": "body",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 3.665,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 3.57s"
+      ],
+      "log": "body.log.gz"
+    },
+    {
+      "name": "seams",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_seam_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 21.156,
+      "summary": [
+        "test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 2024 filtered out; finished in 21.07s"
+      ],
+      "log": "seams.log.gz"
+    },
+    {
+      "name": "incidence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_shell_incidence::tests::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 2.229,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 2039 filtered out; finished in 2.14s"
+      ],
+      "log": "incidence.log.gz"
+    },
+    {
+      "name": "cylinder",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.16,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.07s"
+      ],
+      "log": "cylinder.log.gz"
+    },
+    {
+      "name": "source_vertex_links",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_vertex_links::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.091,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.00s"
+      ],
+      "log": "source_vertex_links.log.gz"
+    },
+    {
+      "name": "source_face_contacts",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_face_contacts::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.102,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.01s"
+      ],
+      "log": "source_face_contacts.log.gz"
+    },
+    {
+      "name": "quadratic-jets",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "pole_quadratic_jet::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.071,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.00s"
+      ],
+      "log": "quadratic-jets.log.gz"
+    },
+    {
+      "name": "body-curvature",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "flattened_canal_caps_qualify_exact_common_pole_curvature",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.316,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 1.23s"
+      ],
+      "log": "body-curvature.log.gz"
+    },
+    {
+      "name": "projective-uses",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_projective_use::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.092,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2048 filtered out; finished in 0.00s"
+      ],
+      "log": "projective-uses.log.gz"
+    },
+    {
+      "name": "projective-edges",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_projective_edge::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.094,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.00s"
+      ],
+      "log": "projective-edges.log.gz"
+    },
+    {
+      "name": "shape-operators",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_shape_operator::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.078,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 0.00s"
+      ],
+      "log": "shape-operators.log.gz"
+    },
+    {
+      "name": "exact-meridian-predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "natural_meridian_g2::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.073,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.00s"
+      ],
+      "log": "exact-meridian-predicates.log.gz"
+    },
+    {
+      "name": "nonzero-c2-poles",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.716,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.63s"
+      ],
+      "log": "nonzero-c2-poles.log.gz"
+    },
+    {
+      "name": "folded-c1-poles",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "folded_quadratic_closed_caps_have_c1_neighborhoods_without_c2_credit",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.948,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.86s"
+      ],
+      "log": "folded-c1-poles.log.gz"
+    },
+    {
+      "name": "owned-regular-g2",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "closed_split_prism_owns_every_exact_regular_g2_carrier_and_aggregate_budget",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.099,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.01s"
+      ],
+      "log": "owned-regular-g2.log.gz"
+    },
+    {
+      "name": "owned-g1-curvature-jump",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "closed_curved_prism_has_exact_g1_with_an_actual_curvature_jump",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.094,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.01s"
+      ],
+      "log": "owned-g1-curvature-jump.log.gz"
+    },
+    {
+      "name": "ideal-volume-global",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "ideal_volume::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 5.2,
+      "summary": [
+        "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 2010 filtered out; finished in 5.12s"
+      ],
+      "log": "ideal-volume-global.log.gz"
+    },
+    {
+      "name": "owned-source-sweeps",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "sweep_boundary_owned",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 52.24,
+      "summary": [
+        "test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 2007 filtered out; finished in 52.15s"
+      ],
+      "log": "owned-source-sweeps.log.gz"
+    },
+    {
+      "name": "tensor-map-identity",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "tensor_identity::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.081,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 110 filtered out; finished in 0.00s"
+      ],
+      "log": "tensor-map-identity.log.gz"
+    },
+    {
+      "name": "original-smooth-volume",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "original_smooth_volume::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 2.532,
+      "summary": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 2.45s"
+      ],
+      "log": "original-smooth-volume.log.gz"
+    },
+    {
+      "name": "original-border-correspondence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "curve_surface_agreement::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.086,
+      "summary": [
+        "test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 2020 filtered out; finished in 0.01s"
+      ],
+      "log": "original-border-correspondence.log.gz"
+    },
+    {
+      "name": "cap-reference",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "cap_reference::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.088,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2051 filtered out; finished in 0.00s"
+      ],
+      "log": "cap-reference.log.gz"
+    }
+  ]
+}

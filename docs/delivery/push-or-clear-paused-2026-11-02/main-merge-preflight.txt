@@ -1,0 +1,29 @@
+dac8094f21d16abf97594ecf9f3f6668deed7dde
+crates/brep-core/src/source_shell_incidence.rs
+crates/brep-core/src/source_support_shell.rs
+crates/brep-core/src/source_support_shell/tests/mod.rs
+crates/cad-predicates/src/lib.rs
+crates/nurbs-core/src/analysis/curve_surface_agreement.rs
+crates/nurbs-core/src/analysis/surface_shape_operator.rs
+crates/nurbs-core/src/surface_quotient_injectivity/report.rs
+
+Auto-merging .github/workflows/ci.yml
+Auto-merging crates/brep-core/src/lib.rs
+Auto-merging crates/brep-core/src/source_face_contacts.rs
+Auto-merging crates/brep-core/src/source_projective_use.rs
+Auto-merging crates/brep-core/src/source_shell_incidence.rs
+CONFLICT (content): Merge conflict in crates/brep-core/src/source_shell_incidence.rs
+Auto-merging crates/brep-core/src/source_support_shell.rs
+CONFLICT (content): Merge conflict in crates/brep-core/src/source_support_shell.rs
+Auto-merging crates/brep-core/src/source_support_shell/tests/mod.rs
+CONFLICT (add/add): Merge conflict in crates/brep-core/src/source_support_shell/tests/mod.rs
+Auto-merging crates/cad-predicates/src/lib.rs
+CONFLICT (content): Merge conflict in crates/cad-predicates/src/lib.rs
+Auto-merging crates/cad-predicates/src/projected_surface_jacobian.rs
+Auto-merging crates/nurbs-core/src/analysis.rs
+Auto-merging crates/nurbs-core/src/analysis/curve_surface_agreement.rs
+CONFLICT (content): Merge conflict in crates/nurbs-core/src/analysis/curve_surface_agreement.rs
+Auto-merging crates/nurbs-core/src/analysis/surface_shape_operator.rs
+CONFLICT (content): Merge conflict in crates/nurbs-core/src/analysis/surface_shape_operator.rs
+Auto-merging crates/nurbs-core/src/surface_quotient_injectivity/report.rs
+CONFLICT (content): Merge conflict in crates/nurbs-core/src/surface_quotient_injectivity/report.rs

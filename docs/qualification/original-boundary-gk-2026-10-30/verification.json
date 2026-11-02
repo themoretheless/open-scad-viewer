@@ -1,0 +1,769 @@
+{
+  "implementationCommit": null,
+  "baselineCommit": "b846ca701effcb9502f3ea203a77b8a168c65c8e",
+  "publicationStatus": "not-published",
+  "gitStatus": "Last read-only metadata probe timed out after 3 seconds; no Git mutation attempted.",
+  "nativeGroups": 29,
+  "nativeUniqueTests": 292,
+  "nativeFailed": 0,
+  "nodeInfrastructureTests": 10,
+  "sourceFiles": 4916,
+  "sourceUnchanged": true,
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "environment": {
+    "CARGO_BUILD_JOBS": "2",
+    "RUST_TEST_THREADS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1"
+  },
+  "sourceCensus": "Merged tracked crate packet plus every current Rust file, excluding target directories; Git metadata unavailable. This is not a transitive external dependency census.",
+  "architecture": {
+    "mode": "Unmodified exported audit functions; frozen crate census plus every current src/scripts file; Git metadata unavailable",
+    "exitCode": 1,
+    "diagnostics": 68,
+    "errors": [
+      "crates/brep-core/src/boundary_embedding.rs: 1297 lines exceeds limit 800; split it",
+      "crates/brep-core/src/boundary_hull_contact.rs: 1538 lines exceeds limit 800; split it",
+      "crates/brep-core/src/boundary_hull_contact/extended_support.rs: 878 lines exceeds limit 800; split it",
+      "crates/brep-core/src/feature_graph.rs: 982 lines exceeds limit 800; split it",
+      "crates/brep-core/src/feature_history.rs: 960 lines exceeds limit 800; split it",
+      "crates/brep-core/src/healing_report.rs: 1332 lines exceeds limit 800; split it",
+      "crates/brep-core/src/iges_interchange_v2.rs: grew to 3091 lines (pinned at 1413); oversized files may only shrink",
+      "crates/brep-core/src/imprint_assembly.rs: 887 lines exceeds limit 800; split it",
+      "crates/brep-core/src/minkowski3d/curved/atlas.rs: 922 lines exceeds limit 800; split it",
+      "crates/brep-core/src/model_identity.rs: 830 lines exceeds limit 800; split it",
+      "crates/brep-core/src/profile_certificate.rs: 1000 lines exceeds limit 800; split it",
+      "crates/brep-core/src/profile_certificate/span_intersections.rs: 931 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_face_contacts.rs: 855 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_fiber_contact.rs: 1811 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_profile_body.rs: 3019 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_profile_shell.rs: 1040 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_profile_shell_refinement.rs: 957 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_profile_shell_wall.rs: 946 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_projective_use.rs: 1007 lines exceeds limit 800; split it",
+      "crates/brep-core/src/source_shell_incidence.rs: 3625 lines exceeds limit 800; split it",
+      "crates/brep-core/src/step_v3_export.rs: 1380 lines exceeds limit 800; split it",
+      "crates/brep-topology/src/lib.rs: grew to 1194 lines (pinned at 1039); oversized files may only shrink",
+      "crates/cad-predicates/src/lib.rs: 1223 lines exceeds limit 800; split it",
+      "crates/cad-predicates/src/projected_surface_jacobian.rs: 1226 lines exceeds limit 800; split it",
+      "crates/gcode-optimize/src/lib.rs: 1185 lines exceeds limit 800; split it",
+      "crates/geometry-bridge/src/cad_source_body.rs: 974 lines exceeds limit 800; split it",
+      "crates/math-core/src/spatial.rs: 1593 lines exceeds limit 800; split it",
+      "crates/mechanical-core/src/standard_parts.rs: 1078 lines exceeds limit 800; split it",
+      "crates/mechanics-core/src/lib.rs: 871 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/analysis/class_a.rs: 845 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/analysis/ray_surface.rs: 943 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/analysis/surface_injectivity.rs: 935 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/construct/curves/airfoil.rs: 1258 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/core/surface.rs: 1004 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/normal_alignment.rs: 1768 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/numerics/compensated.rs: 846 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/profile_expression_bernstein.rs: 870 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/profile_expression_radius.rs: 1760 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/profile_section_bridge.rs: 2122 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/rational_pole_differential.rs: 1094 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/surface_self_chord.rs: 2180 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/surface_self_chord_coverage.rs: 891 lines exceeds limit 800; split it",
+      "crates/nurbs-core/src/surface_weight_profile.rs: 2674 lines exceeds limit 800; split it",
+      "crates/polygon-core/src/solid/primitives.rs: 934 lines exceeds limit 800; split it",
+      "crates/raster-core/src/postprocess.rs: 882 lines exceeds limit 800; split it",
+      "crates/sdf-core/src/differential_and_queries.rs: 801 lines exceeds limit 800; split it",
+      "crates/sdf-core/src/serialization.rs: 1046 lines exceeds limit 800; split it",
+      "crates/sketch-core/src/serialization.rs: 885 lines exceeds limit 800; split it",
+      "crates/slicer-core/src/lib.rs: 1015 lines exceeds limit 800; split it",
+      "crates/subdivision-core/src/lib.rs: 820 lines exceeds limit 800; split it",
+      "crates/tensor-core/src/host_tensor.rs: 1232 lines exceeds limit 800; split it",
+      "crates/vr-core/src/lib.rs: 972 lines exceeds limit 800; split it",
+      "src/composables/useBuildAndRendererLifecycle.ts: 687 lines exceeds limit 500; split it",
+      "src/features/MeshModeler.vue: grew to 1048 lines (pinned at 857); oversized files may only shrink",
+      "src/features/directModeler/useViewportLayerAndPolygons.ts: 761 lines exceeds limit 500; split it",
+      "src/importers/dxfImporter.ts: 555 lines exceeds limit 500; split it",
+      "src/importers/xmlAndArchive.ts: 1208 lines exceeds limit 500; split it",
+      "src/mcp/server/registerResourcesAndPrompts.ts: 548 lines exceeds limit 500; split it",
+      "src/mcp/server/registerTools.ts: 936 lines exceeds limit 500; split it",
+      "src/mcp/server/schemas.ts: 875 lines exceeds limit 500; split it",
+      "src/parser/assetEvaluator.ts: 704 lines exceeds limit 500; split it",
+      "src/parser/geometryEvaluator.ts: 1079 lines exceeds limit 500; split it",
+      "src/renderer/framePassEncoder.ts: 597 lines exceeds limit 500; split it",
+      "src/semantic/lowererBuilder.ts: 1056 lines exceeds limit 500; split it",
+      "src/semantic/lowererGeometryOps.ts: 540 lines exceeds limit 500; split it",
+      "src/semantic/occurrenceValidator.ts: 543 lines exceeds limit 500; split it",
+      "src/semantic/schemaPrimitives.ts: 588 lines exceeds limit 500; split it",
+      "scripts/qualificationFrozenArchives.mjs: 583 lines exceeds limit 500; split it"
+    ]
+  },
+  "sourceDeltaBackup": "/Users/themoretheless/.codex/tmp/osv-original-boundary-gk-final-20261030/source-delta-from-main-merge.tar.gz",
+  "sourceDeltaBackupSha256": "2a5792cbcd0f76207006f67ce880ce80f2966fc80d6171b3bda519bdbcca4528",
+  "changedCrateFilesSinceBaseline": [
+    "crates/brep-core/src/analytic/mod.rs",
+    "crates/brep-core/src/analytic/rational_loft.rs",
+    "crates/brep-core/src/analytic/rational_loft/affine_stations.rs",
+    "crates/brep-core/src/analytic/rational_loft_legacy.rs",
+    "crates/brep-core/src/analytic/rational_loft_legacy/cap_reference.rs",
+    "crates/brep-core/src/sweep_boundary_owned.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_candidate.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_volume.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_volume/tests.rs",
+    "crates/brep-core/src/sweep_boundary_owned/retained_profile_domain.rs",
+    "crates/brep-core/src/sweep_boundary_owned/smooth_boundary.rs",
+    "crates/brep-core/src/sweep_boundary_owned/smooth_original.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/smooth_boundary.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/smooth_boundary/curved_affine.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/tensor.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests/weighted.rs",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary.rs",
+    "crates/nurbs-core/src/analysis/curve_surface_agreement/owned_boundary/normalized_tests.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/mod.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/original_boundary_smoothness.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/original_profile_boundary.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/original_smooth_volume/tests.rs",
+    "crates/nurbs-core/src/tests/curve_surface_agreement_tests.rs"
+  ],
+  "checks": [
+    {
+      "name": "quotient",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_quotient_injectivity::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.119,
+      "summary": [
+        "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2025 filtered out; finished in 0.04s"
+      ],
+      "log": "quotient.log.gz"
+    },
+    {
+      "name": "predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "projected_surface_jacobian::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.08,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 107 filtered out; finished in 0.00s"
+      ],
+      "log": "predicates.log.gz"
+    },
+    {
+      "name": "limits",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "factored_surface_normals::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.163,
+      "summary": [
+        "test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 2022 filtered out; finished in 0.08s"
+      ],
+      "log": "limits.log.gz"
+    },
+    {
+      "name": "legacy-pole-differential",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "rational_pole_differential::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.087,
+      "summary": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2040 filtered out; finished in 0.00s"
+      ],
+      "log": "legacy-pole-differential.log.gz"
+    },
+    {
+      "name": "binding",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_pole_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.108,
+      "summary": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2052 filtered out; finished in 0.01s"
+      ],
+      "log": "binding.log.gz"
+    },
+    {
+      "name": "body",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 3.738,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 3.64s"
+      ],
+      "log": "body.log.gz"
+    },
+    {
+      "name": "seams",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_seam_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 21.269,
+      "summary": [
+        "test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 2029 filtered out; finished in 21.18s"
+      ],
+      "log": "seams.log.gz"
+    },
+    {
+      "name": "incidence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_shell_incidence::tests::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 2.277,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 2044 filtered out; finished in 2.19s"
+      ],
+      "log": "incidence.log.gz"
+    },
+    {
+      "name": "cylinder",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.168,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.07s"
+      ],
+      "log": "cylinder.log.gz"
+    },
+    {
+      "name": "source_vertex_links",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_vertex_links::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.102,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s"
+      ],
+      "log": "source_vertex_links.log.gz"
+    },
+    {
+      "name": "source_face_contacts",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_face_contacts::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.105,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.01s"
+      ],
+      "log": "source_face_contacts.log.gz"
+    },
+    {
+      "name": "quadratic-jets",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "pole_quadratic_jet::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.077,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.00s"
+      ],
+      "log": "quadratic-jets.log.gz"
+    },
+    {
+      "name": "body-curvature",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "flattened_canal_caps_qualify_exact_common_pole_curvature",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.325,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 1.23s"
+      ],
+      "log": "body-curvature.log.gz"
+    },
+    {
+      "name": "projective-uses",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_projective_use::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.093,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2053 filtered out; finished in 0.00s"
+      ],
+      "log": "projective-uses.log.gz"
+    },
+    {
+      "name": "projective-edges",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_projective_edge::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.096,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s"
+      ],
+      "log": "projective-edges.log.gz"
+    },
+    {
+      "name": "shape-operators",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_shape_operator::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.084,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 0.00s"
+      ],
+      "log": "shape-operators.log.gz"
+    },
+    {
+      "name": "exact-meridian-predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "natural_meridian_g2::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.076,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.00s"
+      ],
+      "log": "exact-meridian-predicates.log.gz"
+    },
+    {
+      "name": "nonzero-c2-poles",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.717,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.62s"
+      ],
+      "log": "nonzero-c2-poles.log.gz"
+    },
+    {
+      "name": "folded-c1-poles",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "folded_quadratic_closed_caps_have_c1_neighborhoods_without_c2_credit",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.96,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.86s"
+      ],
+      "log": "folded-c1-poles.log.gz"
+    },
+    {
+      "name": "owned-regular-g2",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "closed_split_prism_owns_every_exact_regular_g2_carrier_and_aggregate_budget",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.111,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.01s"
+      ],
+      "log": "owned-regular-g2.log.gz"
+    },
+    {
+      "name": "owned-g1-curvature-jump",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "closed_curved_prism_has_exact_g1_with_an_actual_curvature_jump",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.103,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.01s"
+      ],
+      "log": "owned-g1-curvature-jump.log.gz"
+    },
+    {
+      "name": "ideal-volume-global",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "ideal_volume::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 5.454,
+      "summary": [
+        "test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 2010 filtered out; finished in 5.38s"
+      ],
+      "log": "ideal-volume-global.log.gz"
+    },
+    {
+      "name": "owned-source-sweeps",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "sweep_boundary_owned",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 52.261,
+      "summary": [
+        "test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 2007 filtered out; finished in 52.17s"
+      ],
+      "log": "owned-source-sweeps.log.gz"
+    },
+    {
+      "name": "tensor-map-identity",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "tensor_identity::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.109,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 110 filtered out; finished in 0.03s"
+      ],
+      "log": "tensor-map-identity.log.gz"
+    },
+    {
+      "name": "original-smooth-volume",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "original_smooth_volume::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 2.554,
+      "summary": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 2.47s"
+      ],
+      "log": "original-smooth-volume.log.gz"
+    },
+    {
+      "name": "original-border-correspondence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "curve_surface_agreement::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.091,
+      "summary": [
+        "test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 2020 filtered out; finished in 0.01s"
+      ],
+      "log": "original-border-correspondence.log.gz"
+    },
+    {
+      "name": "cap-reference",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "cap_reference::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.097,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2056 filtered out; finished in 0.00s"
+      ],
+      "log": "cap-reference.log.gz"
+    },
+    {
+      "name": "affine-station-candidates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "affine_stations::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.725,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 1.63s"
+      ],
+      "log": "affine-station-candidates.log.gz"
+    },
+    {
+      "name": "actual-affine-atlas",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "affine_volume::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.269,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 2031 filtered out; finished in 0.18s"
+      ],
+      "log": "actual-affine-atlas.log.gz"
+    }
+  ],
+  "remainingScope": [
+    "Closed traversal with mixed declared C0/G1/G2 under one owned material-boundary route; the older closed smooth-volume gate still requires uniform profile order.",
+    "The additional actual affine-filled admission currently requires literal identical source carriers; independent normalized cap representations and differing filled carriers need their own verified extension.",
+    "General contact/polar and non-affine loft families must retain their separate obligations/refusals.",
+    "Architecture gate and Git metadata access still prevent publication; no WASM/browser/STEP/remote CI result is claimed."
+  ],
+  "qualificationStage": "Final explicit positive outer UV winding check covers ALL actual faces, followed by a complete frozen rerun."
+}

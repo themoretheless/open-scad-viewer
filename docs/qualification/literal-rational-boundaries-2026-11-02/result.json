@@ -1,0 +1,38 @@
+{
+  "implementation": "0c0d8b06173bc8c3d6f422de5d1ab5aa9b8680cb",
+  "checks": [
+    {
+      "package": "nurbs-core",
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib",
+      "exitCode": 0,
+      "passed": 2073,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 56.18
+    },
+    {
+      "package": "brep-core",
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib",
+      "exitCode": 0,
+      "passed": 2107,
+      "failed": 0,
+      "ignored": 5,
+      "seconds": 676.29
+    }
+  ],
+  "focusedLiteralTests": {
+    "passed": 4,
+    "failed": 0
+  },
+  "sourceInputs": 6619,
+  "sourcesFrozenDuringBrepAndAfter": true,
+  "changedInputs": [
+    "crates/brep-core/src/analytic/rational_loft_legacy.rs",
+    "crates/brep-core/src/sweep_boundary_owned/closed/capped_material/tests/rational_hollow.rs",
+    "crates/brep-core/src/sweep_boundary_owned_tests.rs",
+    "crates/nurbs-core/src/core/curve/decompose.rs"
+  ],
+  "cadPredicatesUnchanged": true,
+  "cadPredicatesRerun": false,
+  "packagedWasmBrowserStepOrCiRun": false
+}

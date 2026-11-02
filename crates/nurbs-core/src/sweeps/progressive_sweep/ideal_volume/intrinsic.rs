@@ -5,15 +5,18 @@ use super::*;
 
 pub(super) struct Tube {
     radius: I,
+    spatial_cover: Option<spatial::Cover>,
     path_aligned: bool,
     closed: bool,
     extended_laws: bool,
+    pub(super) transverse_carrier: bool,
 }
 mod affine;
 mod atlas;
 mod carrier;
 mod frame_bounds;
 mod plane;
+mod spatial;
 impl Tube {
     pub(super) fn certify(
         &self,
@@ -34,7 +37,7 @@ impl Tube {
         closed: bool,
     ) -> Result<Option<Self>> {
         let s = c.s;
-        if c.arc.is_none() || (closed && c.caps[0] != c.caps[1]) || s.contact_point.is_some() {
+        if c.arc.is_none() || (closed && !c.same_cap()) || s.contact_point.is_some() {
             return Ok(None);
         }
         let path = s.path;
@@ -60,26 +63,24 @@ impl Tube {
         if c.transport.is_none() && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
             return Ok(None);
         }
-        if !plane::certify_frame(
+        let mut transverse_carrier = plane::certify_frame(
             path,
             cap,
             s.frame_laws.map(|(a, _)| a),
             &mut out.exact_work,
             exact,
-        )? || out.cells == max
-        {
+        )?;
+        if out.cells == max {
             return Ok(None);
         }
-        if c.caps[0] != c.caps[1]
-            && !plane::certify_frame(
+        if !c.same_cap() {
+            transverse_carrier &= plane::certify_frame(
                 path,
                 c.caps[1],
                 s.frame_laws.map(|(a, _)| a),
                 &mut out.exact_work,
                 exact,
-            )?
-        {
-            return Ok(None);
+            )?;
         }
         if c.transport.is_none() {
             let stage = max.min(out.cells.saturating_add(100000));
@@ -98,7 +99,7 @@ impl Tube {
         // This global contraction proves BOTH injectivity and rank two over
         // the complete natural carrier rectangle, including one-sided knots.
         // Validity and binding of its material trims remain BRep obligations.
-        if c.caps[0] == c.caps[1] {
+        if c.same_cap() {
             let cover = crate::surface_injectivity::certify_contraction(
                 cap,
                 (max - out.cells).min(100000),
@@ -117,7 +118,7 @@ impl Tube {
             .collect::<Vec<_>>();
         let mut radius = 0_f64;
         for (i, cap) in c.caps.iter().enumerate() {
-            if i == 1 && c.caps[0] == c.caps[1] {
+            if i == 1 && c.same_cap() {
                 continue;
             }
             for q in cap.control_points.iter().flatten() {
@@ -134,13 +135,27 @@ impl Tube {
                 );
             }
         }
-        let Some(radius) = affine::radius(s, radius, out, max)? else {
+        let radius = if transverse_carrier {
+            affine::radius(s, radius, out, max)?
+        } else {
+            affine::full_radius(s, radius, out, max)?
+        };
+        let Some(radius) = radius else {
             return Ok(None);
+        };
+        let path_aligned = s.frame_laws.is_none()
+            && (s.orientation_guide.is_some() || s.options.orientation != Orientation::Fixed);
+        let spatial_cover = if !transverse_carrier && c.same_cap() {
+            let stage = max.min(out.cells.saturating_add(100000));
+            spatial::Cover::build(c, out, stage, path_aligned)?
+        } else {
+            None
         };
         Ok(Some(Self {
             radius: I::point(radius),
-            path_aligned: s.frame_laws.is_none()
-                && (s.orientation_guide.is_some() || s.options.orientation != Orientation::Fixed),
+            spatial_cover,
+            transverse_carrier,
+            path_aligned,
             closed,
             extended_laws: s.affine_laws.is_some()
                 || s.scale
@@ -168,6 +183,14 @@ impl Tube {
         // Proposal only. A whole loop must never be treated as a convex lift.
         if self.closed && width.hi > 0.125 {
             return Ok(false);
+        }
+        if !self.transverse_carrier {
+            // A spatial carrier is never extended as a transverse disk. The
+            // actual whole UV chart must prove its own complete Jacobian map.
+            if self.spatial_cover.is_some() {
+                return spatial::certify(self, c, pieces, out, max);
+            }
+            return super::atlas::local_source(c, pieces, out, max);
         }
         let map = c.arc.as_ref().unwrap();
         let length = map.length();

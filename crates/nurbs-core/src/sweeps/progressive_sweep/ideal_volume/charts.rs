@@ -195,11 +195,28 @@ pub(in crate::sweeps::progressive_sweep) fn exact_offset(
     max: usize,
 ) -> Result<Option<Curve>> {
     if path.degree != guide.degree
-        || path.knots != guide.knots
         || path.weights != guide.weights
         || path.periodic != guide.periodic
+        || path.control_points.len() != guide.control_points.len()
     {
         return Ok(None);
+    }
+    if path.knots != guide.knots {
+        // A single clamped Bezier span has the same normalized Bernstein
+        // basis under ANY positive affine raw-domain change. No rounded
+        // normalized knots or fitted difference supplies identity here.
+        let charge = path.knots.len() + guide.knots.len();
+        if charge > max - *spent { return Ok(None); }
+        *spent += charge;
+        let bezier = |c: &Curve| {
+            let n = c.control_points.len();
+            !c.periodic && n == c.degree + 1 && c.knots.len() == 2*n
+                && c.knots[0].is_finite() && c.knots[n].is_finite()
+                && c.knots[0] < c.knots[n]
+                && c.knots[..n].iter().all(|&k| k == c.knots[0])
+                && c.knots[n..].iter().all(|&k| k == c.knots[n])
+        };
+        if !bezier(path) || !bezier(guide) { return Ok(None); }
     }
     let charge = 3 * path.control_points.len();
     if charge > max - *spent {
@@ -231,6 +248,28 @@ pub(in crate::sweeps::progressive_sweep) fn exact_offset(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn normalized_bezier_guide_difference_owns_raw_clock_changes_and_exact_work() {
+        let mut path = Curve::from_polyline(vec![vec![0.;3],vec![0.125,0.25,2.]]).unwrap();
+        path.knots = vec![-5.,-5.,7.,7.];
+        let mut guide = Curve::from_polyline(vec![vec![1.,0.,0.],vec![1.125,0.5,2.125]]).unwrap();
+        guide.knots = vec![23.,23.,47.,47.];
+        let before = (path.clone(),guide.clone());
+        let mut work = 0;
+        let offset = exact_offset(&path,&guide,&mut work,100).unwrap().unwrap();
+        assert_eq!(offset.knots,path.knots);
+        assert_eq!(offset.control_points,vec![vec![1.,0.,0.],vec![1.,0.25,0.125]]);
+        assert_eq!(work,14);
+        let mut exact = 0;
+        assert!(exact_offset(&path,&guide,&mut exact,work).unwrap().is_some());
+        assert_eq!(exact,work);
+        for max in [0,work-1] {
+            let mut short=0;
+            assert!(exact_offset(&path,&guide,&mut short,max).unwrap().is_none());
+            assert!(short<=max);
+        }
+        assert_eq!((path,guide),before);
+    }
     #[test]
     fn original_difference_keeps_exact_coefficients_or_refuses_the_shortcut() {
         let p = constant_vector_law([1e9, 0., 0.]).unwrap();

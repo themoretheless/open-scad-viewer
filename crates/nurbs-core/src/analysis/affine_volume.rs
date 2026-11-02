@@ -22,6 +22,8 @@ mod source_shear;
 pub use material_plane::{
     MaterialPlaneChart, MaterialPlaneInspection, MaterialPlaneReport, inspect_material_plane,
 };
+mod capped;
+pub use capped::{certify_rational_caps, jacobian_orientation_rational_caps};
 pub use rational::{
     ColumnFactor, PreconditionedReport, ProofCoordinates, RationalPiece, certify_rational,
     certify_rational_preconditioned, certify_rational_preconditioned_window,
@@ -142,6 +144,8 @@ fn union(a: &mut EnclosedPose, b: EnclosedPose) -> Result<()> {
 struct Context<'a> {
     carrier: &'a Surface,
     uv_window: [[f64; 2]; 2],
+    second: Option<&'a Surface>,
+    difference: Option<crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference<'a>>,
     origin: [f64; 3],
     pieces: Motion<'a>,
     poses: BTreeMap<[u64; 2], EnclosedPose>,
@@ -213,12 +217,15 @@ impl Context<'_> {
                 query[k] = [q.lo, q.hi];
             }
         }
-        let jets = if let Some(carrier) = &self.separable {
-            carrier.enclose(query, &mut out.cells, max)?
+        let jets = if self.second.is_some() {
+            capped::jets(self.carrier, self.second, self.difference.as_ref(), [query[0],query[1],b[2]], out, max)?
         } else {
-            charts::cap_jets(self.carrier, query, &mut out.cells, max)?
+            let q = if let Some(carrier) = &self.separable {
+                carrier.enclose(query, &mut out.cells, max)?
+            } else { charts::cap_jets(self.carrier, query, &mut out.cells, max)? };
+            q.map(|q| (q, [I::point(0.);3]))
         };
-        let Some(mut q) = jets else {
+        let Some((mut q, qt)) = jets else {
             return Ok(Enclosed::Unavailable(None));
         };
         for k in 0..2 {
@@ -254,7 +261,7 @@ impl Context<'_> {
         let Some(pose) = self.temporal(b[2], out, max)? else {
             return Ok(Enclosed::Unavailable(Some(2)));
         };
-        let e: Enclosure = pose.enclose(q, [I::point(0.); 3])?;
+        let e: Enclosure = pose.enclose(q, qt)?;
         Ok(Enclosed::Value(e))
     }
 }
@@ -309,6 +316,7 @@ pub fn certify_preconditioned(
         &mut coordinates,
         &mut source_shear,
         [[0., 1.]; 2],
+        None,
     )?;
     Ok(PreconditionedReport {
         volume,
@@ -337,6 +345,7 @@ fn certify_motion(
         &mut None,
         &mut None,
         [[0., 1.]; 2],
+        None,
     )
 }
 fn certify_motion_impl(
@@ -351,8 +360,14 @@ fn certify_motion_impl(
     coordinates: &mut Option<ProofCoordinates>,
     source_shear_report: &mut Option<SourceShearReport>,
     uv_window: [[f64; 2]; 2],
+    second: Option<&Surface>,
 ) -> Result<IdealVolumeReport> {
     carrier.validate()?;
+    if let Some(end) = second {
+        end.validate()?;
+        check(!closed && !precondition && end.control_points.iter().flatten().all(|p|p.len()==3),
+            "Paired affine carriers require open normalized charts and world coordinates")?;
+    }
     check(
         carrier
             .control_points
@@ -383,7 +398,7 @@ fn certify_motion_impl(
         projection,
         reason: Some("affine-volume-work-limit"),
     };
-    if !charts::surface_c0(carrier) {
+    if !charts::surface_c0(carrier) || second.is_some_and(|s|!charts::surface_c0(s)) {
         out.reason = Some("affine-volume-carrier-basis-unproved");
         return Ok(out);
     }
@@ -405,7 +420,7 @@ fn certify_motion_impl(
             }
         }
     }
-    let source_shear = if precondition && out.cells < max_cells {
+    let source_shear = if precondition && second.is_none() && out.cells < max_cells {
         match source_shear::prepare(carrier, origin, pieces, &mut out.exact_work, max_exact_work) {
             Ok(value) => value,
             Err(()) => {
@@ -422,7 +437,7 @@ fn certify_motion_impl(
     } else {
         (carrier, origin, pieces)
     };
-    if graph_translation::certify(carrier, pieces, closed, &mut out, max_cells, max_exact_work)? {
+    if second.is_none() && graph_translation::certify(carrier, pieces, closed, &mut out, max_cells, max_exact_work)? {
         return Ok(out);
     }
     let separated = if source_shear.is_some()
@@ -442,9 +457,15 @@ fn certify_motion_impl(
     } else {
         None
     };
+    let difference = if let Some(end)=second {
+        crate::sweeps::progressive_sweep::ideal_volume::cap_difference::Difference::prepare(
+            [carrier,end],&mut out.cells,max_cells)?
+    } else { None };
     let mut context = Context {
         uv_window,
         carrier,
+        second,
+        difference,
         origin,
         pieces,
         poses: BTreeMap::new(),
@@ -511,6 +532,13 @@ fn certify_motion_impl(
             }
         }
     }
+    // The whole-field metric theorem has no constant-frame premise. For
+    // open paired carriers, attempt the SAME bounded global proof before
+    // pair refinement; source points still supply no admission credit.
+    if second.is_some() && !closed {
+        atlas::certify_map_global_first(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells,closed)?;
+        return Ok(out);
+    }
     atlas::certify_map(
         |b, out, max| context.enclose(b, out, max),
         projection,
@@ -546,10 +574,16 @@ fn orientation_motion(
     point: [f64; 3],
     max_cells: usize,
 ) -> Result<OrientationReport> {
+    orientation_motion_with_caps(carrier, None, origin, pieces, point, max_cells)
+}
+fn orientation_motion_with_caps(
+    carrier: &Surface, second: Option<&Surface>, origin: [f64;3], pieces: Motion<'_>,
+    point: [f64;3], max_cells: usize,
+) -> Result<OrientationReport> {
     // Reuse complete raw-input validation; a zero-budget certificate performs
     // no geometry queries and supplies no atlas/closure credit to this helper.
     let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
-    let mut work = certify_motion(carrier, origin, pieces, false, projection, 0, 0)?;
+    let mut work = certify_motion_impl(carrier, origin, pieces, false, projection, 0, 0, false, &mut None, &mut None, [[0.,1.];2], second)?;
     check(
         max_cells <= 100000
             && point
@@ -563,12 +597,14 @@ fn orientation_motion(
         cells: 0,
         reason: "affine-orientation-unproved",
     };
-    if !charts::surface_c0(carrier) {
+    if !charts::surface_c0(carrier) || second.is_some_and(|s|!charts::surface_c0(s)) {
         return Ok(out);
     }
     let mut context = Context {
         uv_window: [[0., 1.]; 2],
         carrier,
+        second,
+        difference: None,
         origin,
         pieces,
         poses: BTreeMap::new(),

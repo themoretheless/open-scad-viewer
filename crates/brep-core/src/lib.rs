@@ -486,6 +486,7 @@ pub mod source_body_model;
 pub mod source_body_topology;
 
 pub mod source_seam_tangency;
+pub mod source_pole_tangency;
 
 pub mod source_inverse_shear;
 
@@ -541,3 +542,9 @@ mod cuboid_primitive;
 pub use cuboid_primitive::cuboid;
 
 pub mod exact_graph_strip;
+pub mod source_curved_boundary_contact;
+pub mod source_paired_projection_contact;
+
+pub mod rational_cap_translation;
+
+pub mod rational_cap_affine;

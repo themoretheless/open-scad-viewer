@@ -1,0 +1,62 @@
+{
+  "scope": "native original material boundary, volume and common regular/polar vertex atlas",
+  "commonAtlasCases": [
+    {
+      "name": "complete_common_vertex_atlas_retains_physical_poles_and_explicit_c0",
+      "vertices": 10,
+      "physicalC2Poles": 2,
+      "explicitC0": 8,
+      "volume": 16,
+      "volumeCells": 390,
+      "vertexWork": {
+        "steps": 140,
+        "normalSpans": 0,
+        "domainCells": 0,
+        "exactWork": 0
+      }
+    },
+    {
+      "name": "common_atlas_contains_poles_and_an_ordinary_g2_star",
+      "vertices": 15,
+      "physicalC2Poles": 2,
+      "ordinaryG2": 1,
+      "explicitC0": 12,
+      "volume": 3456,
+      "volumeCells": 1719,
+      "vertexWork": {
+        "steps": 226,
+        "normalSpans": 4,
+        "domainCells": 32,
+        "exactWork": 854
+      }
+    },
+    {
+      "name": "common_atlas_keeps_an_ordinary_g1_curvature_jump_beside_c2_poles",
+      "vertices": 15,
+      "physicalC2Poles": 2,
+      "ordinaryG1": 1,
+      "explicitC0": 12,
+      "volume": 3456.0703125,
+      "volumeCells": 1797,
+      "vertexWork": {
+        "steps": 226,
+        "normalSpans": 4,
+        "domainCells": 32,
+        "exactWork": 854
+      }
+    }
+  ],
+  "negativeChecks": [
+    "G1 curvature jump refuses exact G2 upgrade",
+    "combined ordinary/polar exact-work measured replay and one-less refusal",
+    "paired graph and cropped boundary exact/driver measured replay and one-less refusal",
+    "whole-face knot-jet cell/exact measured replay and one-less refusal when positive",
+    "common vertex incidence/normal/domain/exact measured replay and one-less refusal when positive",
+    "wrong pole projection proposal refuses",
+    "explicit all-C0 declaration stays C0 with stronger retained pole evidence",
+    "gaps, holes, interior rectangles, diagonals and duplicate winding refuse whole-chart credit",
+    "source definitions unchanged by qualification"
+  ],
+  "limitsRaised": false,
+  "typeScriptGeometryChanges": false
+}

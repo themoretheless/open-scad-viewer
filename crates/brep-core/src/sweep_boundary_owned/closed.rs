@@ -106,20 +106,77 @@ fn refused_source(mut report: ClosedReport, reason: &'static str) -> PreparedAtt
     report.reason = Some(reason);
     PreparedAttempt::Refused(Box::new(report))
 }
-fn prepare_closed_source(
+struct PreparedMaterial {
+    bindings: Vec<classified_material::MaterialSpanBinding>,
+    line_image_spans: usize,
+    projective_image_spans: usize,
+    report: ClosedReport,
+    profiles: Vec<Vec<Curve>>,
+    material: LoftCap,
+}
+enum PreparedMaterialAttempt {
+    Ready(Box<PreparedMaterial>),
+    Refused(Box<ClosedReport>),
+}
+fn refused_material(mut report: ClosedReport, reason: &'static str) -> PreparedMaterialAttempt {
+    report.reason = Some(reason);
+    PreparedMaterialAttempt::Refused(Box::new(report))
+}
+fn prepare_closed_material(
     sweep: &MultiSweep<'_>,
     loop_sizes: &[usize],
-    sections: usize,
     material: &LoftCap,
     tolerance_uv: f64,
-    error_budget: f64,
     limits: OriginalClosedLimits,
-) -> Result<PreparedAttempt> {
+) -> Result<PreparedMaterialAttempt> {
+    prepare_material_with_binding(
+        sweep,
+        loop_sizes,
+        material,
+        tolerance_uv,
+        limits,
+        MaterialBinding::NormalizedMap,
+        MaterialTraversal::Closed,
+    )
+}
+#[derive(Clone, Copy)]
+enum MaterialBinding {
+    NormalizedMap,
+    OrientedImages,
+}
+fn prepare_classified_closed_material(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    material: &LoftCap,
+    tolerance_uv: f64,
+    limits: OriginalClosedLimits,
+) -> Result<PreparedMaterialAttempt> {
+    prepare_material_with_binding(
+        sweep,
+        loop_sizes,
+        material,
+        tolerance_uv,
+        limits,
+        MaterialBinding::OrientedImages,
+        MaterialTraversal::Closed,
+    )
+}
+#[derive(Clone, Copy)]
+enum MaterialTraversal {
+    Closed,
+    Open,
+}
+fn prepare_material_with_binding(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    material: &LoftCap,
+    tolerance_uv: f64,
+    limits: OriginalClosedLimits,
+    binding: MaterialBinding,
+    traversal: MaterialTraversal,
+) -> Result<PreparedMaterialAttempt> {
     let b = limits;
-    if !(4..=1025).contains(&sections)
-        || !error_budget.is_finite()
-        || error_budget <= 0.
-        || !tolerance_uv.is_finite()
+    if !tolerance_uv.is_finite()
         || tolerance_uv <= 0.
         || b.source_cells > 100000
         || b.source_products > 1000000
@@ -194,23 +251,31 @@ fn prepare_closed_source(
         ideal_volume: None,
         reason: None,
     };
-    if !sweep.source_is_closed()? {
-        return Ok(refused_source(out, "original-closed-source-required"));
+    match (traversal, sweep.source_is_closed()?) {
+        (MaterialTraversal::Closed, false) => {
+            return Ok(refused_material(out, "original-closed-source-required"));
+        }
+        (MaterialTraversal::Open, true) => {
+            return Ok(refused_material(out, "original-open-source-required"));
+        }
+        _ => {}
     }
     // The exact original UV chain may itself be multispan or one closed
     // curve. Normalize only through exact coefficient decomposition; rounded
     // UV extraction cannot prove the original material region or its binding.
+    let mut trim_sources = Vec::with_capacity(material.trims.len());
     let mut trims = Vec::with_capacity(material.trims.len());
     let mut trim_count = 0usize;
     for ring in &material.trims {
         let mut pieces = Vec::new();
-        for curve in ring {
+        let mut sources = Vec::new();
+        for (curve_index, curve) in ring.iter().enumerate() {
             let rows = (curve.degree..curve.control_points.len())
                 .filter(|&i| curve.knots[i] < curve.knots[i + 1])
                 .count()
                 * (curve.degree + 1);
             if rows > b.source_products - out.source_products {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-uv-decomposition-work-limit",
                 ));
@@ -219,25 +284,27 @@ fn prepare_closed_source(
             let Some(parts) =
                 retained_wall_coefficients::exact_bezier_controls(curve, rows.min(4096))
             else {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-exact-uv-decomposition-unproved",
                 ));
             };
             trim_count += parts.len();
             if trim_count > 256 {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-trim-complexity-unproved",
                 ));
             }
+            sources.extend((0..parts.len()).map(|span| (curve_index, span)));
             pieces.extend(parts);
         }
+        trim_sources.push(sources);
         trims.push(pieces);
     }
     if limits.material.pairs == 0 || limits.material.cells == 0 || limits.material.domain_cells == 0
     {
-        return Ok(refused_source(out, "original-material-region-work-limit"));
+        return Ok(refused_material(out, "original-material-region-work-limit"));
     }
     let trim = trim_region_audit::inspect(
         &trims,
@@ -249,19 +316,23 @@ fn prepare_closed_source(
     let valid = trim.valid == Some(true);
     out.material.trim = Some(trim);
     if !valid {
-        return Ok(refused_source(out, "original-material-region-unproved"));
+        return Ok(refused_material(out, "original-material-region-unproved"));
     }
+    let mut bindings = Vec::new();
+    let mut line_image_spans = 0;
+    let mut projective_image_spans = 0;
     let mut original_profiles = Vec::with_capacity(loop_sizes.len());
     let mut offset = 0;
     for (ring, &size) in loop_sizes.iter().enumerate() {
         let mut spans = Vec::new();
-        for profile in &profiles[offset..offset + size] {
+        let mut profile_sources = Vec::new();
+        for (profile_index, profile) in profiles[offset..offset + size].iter().enumerate() {
             let regular = curve_regularity::inspect(profile, b.source_cells - out.source_cells)?;
             out.source_cells += regular.cells;
             let proven = regular.spanwise_regular;
             out.material.profiles.push(regular);
             if !proven {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-profile-regularity-unproved",
                 ));
@@ -271,7 +342,7 @@ fn prepare_closed_source(
                 .count()
                 * (profile.degree + 1);
             if rows > b.source_products - out.source_products {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-decomposition-work-limit",
                 ));
@@ -280,21 +351,23 @@ fn prepare_closed_source(
             let Some(parts) =
                 retained_wall_coefficients::exact_bezier_controls(profile, rows.min(4096))
             else {
-                return Ok(refused_source(
+                return Ok(refused_material(
                     out,
                     "original-material-exact-decomposition-unproved",
                 ));
             };
+            profile_sources.extend((0..parts.len()).map(|span| (offset + profile_index, span)));
             spans.extend(parts);
         }
         offset += size;
         if spans.len() != trims[ring].len() {
-            return Ok(refused_source(
+            return Ok(refused_material(
                 out,
                 "original-material-contour-count-mismatch",
             ));
         }
-        for (world, uv) in spans.iter().zip(&trims[ring]) {
+        for (span_index, (world, uv)) in spans.iter().zip(&trims[ring]).enumerate() {
+            let mut kind = classified_material::MaterialSpanBindingKind::NormalizedMap;
             let remaining = b.source_exact_work - out.ownership_exact_work;
             let Some(proof) = nurbs_core::curve_surface_agreement::verify_exact(
                 world,
@@ -306,18 +379,115 @@ fn prepare_closed_source(
             else {
                 out.ownership_exact_work = b.source_exact_work;
                 out.material.exact_work = out.ownership_exact_work;
-                return Ok(refused_source(out, "original-material-boundary-unproved"));
+                return Ok(refused_material(out, "original-material-boundary-unproved"));
             };
             out.ownership_exact_work += proof.work_used;
             out.material.exact_work = out.ownership_exact_work;
             if proof.outcome != cad_predicates::BezierIdentity::Equal {
-                return Ok(refused_source(out, "original-material-boundary-unproved"));
+                // Only the ORIGINAL classified material owner can use image
+                // correspondence. Retained/error-bound routes keep normalized
+                // map identity and never receive this weaker kind of binding.
+                if !matches!(binding, MaterialBinding::OrientedImages) {
+                    return Ok(refused_material(out, "original-material-boundary-unproved"));
+                }
+                let remaining = b.source_exact_work - out.ownership_exact_work;
+                let image = nurbs_core::curve_surface_agreement::verify_axis_line_image(
+                    world,
+                    uv,
+                    &material.surface,
+                    remaining,
+                )?;
+                let mut line_proven = false;
+                if let Some(image) = image {
+                    out.ownership_exact_work += image.work_used;
+                    out.material.exact_work = out.ownership_exact_work;
+                    line_proven =
+                        image.outcome == cad_predicates::LineImageOutcome::SameOrientedSegment;
+                }
+                if line_proven {
+                    line_image_spans += 1;
+                    kind = classified_material::MaterialSpanBindingKind::OrientedLineImage;
+                } else {
+                    let remaining = b.source_exact_work - out.ownership_exact_work;
+                    let Some(image) = nurbs_core::curve_surface_agreement::verify_projective_image(
+                        world,
+                        uv,
+                        &material.surface,
+                        remaining,
+                    )?
+                    else {
+                        return Ok(refused_material(out, "original-material-boundary-unproved"));
+                    };
+                    out.ownership_exact_work += image.work_used;
+                    out.material.exact_work = out.ownership_exact_work;
+                    if image.outcome
+                        != cad_predicates::ProjectiveImageOutcome::SameOrientedProjectiveImage
+                    {
+                        return Ok(refused_material(out, "original-material-boundary-unproved"));
+                    }
+                    projective_image_spans += 1;
+                    kind = classified_material::MaterialSpanBindingKind::OrientedProjectiveImage;
+                }
             }
+            bindings.push(classified_material::MaterialSpanBinding::new(
+                ring,
+                profile_sources[span_index],
+                trim_sources[ring][span_index],
+                kind,
+            ));
             out.material.bound_spans += 1;
         }
         original_profiles.push(spans);
     }
     out.material.certified = true;
+    Ok(PreparedMaterialAttempt::Ready(Box::new(PreparedMaterial {
+        bindings,
+        line_image_spans,
+        projective_image_spans,
+        report: out,
+        profiles: original_profiles,
+        material: LoftCap {
+            surface: material.surface.clone(),
+            trims,
+        },
+    })))
+}
+
+fn prepare_closed_source(
+    sweep: &MultiSweep<'_>,
+    loop_sizes: &[usize],
+    sections: usize,
+    material: &LoftCap,
+    tolerance_uv: f64,
+    error_budget: f64,
+    limits: OriginalClosedLimits,
+) -> Result<PreparedAttempt> {
+    prepare_closed_source_with_binding(sweep,loop_sizes,sections,material,tolerance_uv,error_budget,limits,MaterialBinding::NormalizedMap)
+}
+// Closed reference carriers need oriented image ownership. Unlike two distinct
+// open caps, there is no Cartesian cap interpolation on a moving boundary that
+// could require equal normalized UV/profile clocks. Legacy routes stay strict.
+fn prepare_closed_source_with_binding(
+    sweep:&MultiSweep<'_>,loop_sizes:&[usize],sections:usize,material:&LoftCap,
+    tolerance_uv:f64,error_budget:f64,limits:OriginalClosedLimits,binding:MaterialBinding,
+)->Result<PreparedAttempt>{
+    if !(4..=1025).contains(&sections) || !error_budget.is_finite() || error_budget <= 0. {
+        return Err(fail("Invalid closed material sweep limits"));
+    }
+    let PreparedMaterial {
+        report: mut out,
+        profiles: original_profiles,
+        material: bound_material,
+        ..
+    } = match match binding {
+        MaterialBinding::NormalizedMap=>prepare_closed_material(sweep,loop_sizes,material,tolerance_uv,limits),
+        MaterialBinding::OrientedImages=>prepare_classified_closed_material(sweep,loop_sizes,material,tolerance_uv,limits),
+    }? {
+        PreparedMaterialAttempt::Ready(p) => *p,
+        PreparedMaterialAttempt::Refused(r) => return Ok(PreparedAttempt::Refused(r)),
+    };
+    let b = limits;
+    let profiles = sweep.source_profiles();
     let Some(faces) = out.material.bound_spans.checked_mul(sections - 1) else {
         return Err(fail("Closed periodic face count overflow"));
     };
@@ -409,10 +579,7 @@ fn prepare_closed_source(
     Ok(PreparedAttempt::Ready(Box::new(PreparedSource {
         report: out,
         profiles: original_profiles,
-        material: LoftCap {
-            surface: material.surface.clone(),
-            trims,
-        },
+        material: bound_material,
         sections: retained,
     })))
 }
@@ -543,3 +710,23 @@ pub use smooth::{
     SmoothClosedAttempt, SmoothClosedBody, SmoothClosedLimits, SmoothClosedReport,
     construct_smooth_closed_with_ideal_atlas, verify_smooth_closed_with_ideal_atlas,
 };
+
+mod classified_material;
+pub use classified_material::{
+    MaterialSpanBinding, MaterialSpanBindingKind, OriginalClassifiedClosedMaterial,
+    OriginalClassifiedClosedMaterialAttempt, OriginalClassifiedClosedMaterialLimits,
+    OriginalClassifiedClosedMaterialRefusal, OriginalClassifiedClosedMaterialWork,
+    certify_original_classified_closed_material,
+};
+
+mod capped_material;
+pub use capped_material::{
+    OriginalClassifiedCappedMaterial, OriginalClassifiedCappedMaterialAttempt,
+    OriginalClassifiedCappedMaterialLimits, OriginalClassifiedCappedMaterialRefusal,
+    OriginalClassifiedCappedMaterialWork, certify_original_classified_capped_material,
+};
+
+mod classified;
+pub use classified::{ClassifiedClosedAttempt, ClassifiedClosedBody, ClassifiedClosedLimits,
+    ClassifiedClosedReport, EdgeRole as ClassifiedClosedEdgeRole, EdgeRoles as ClassifiedClosedEdgeRoles,
+    construct_classified_closed_with_original_material, verify_classified_closed_with_original_material};

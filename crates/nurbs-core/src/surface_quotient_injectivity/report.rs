@@ -26,6 +26,9 @@ pub struct PolarReport {
     pub derivative_bounds: Option<[f64; 4]>,
     pub dominance_margin_lower: Option<f64>,
 }
+mod polar;
+pub use polar::certify_polar_source_frame;
+pub(super) use polar::{certify_polar_collar_inner, certify_projected_polar_collar_inner};
 
 fn source_coefficients(frame: [[f64; 3]; 4]) -> Result<Option<[[I; 3]; 2]>> {
     let difference = |a: [f64; 3], b: [f64; 3]| -> Result<[I; 3]> {
@@ -545,13 +548,4 @@ fn restrict(a: &Poly, domain: [[f64; 2]; 2]) -> Result<Poly> {
 }
 
 #[cfg(test)]
-#[path = "report/tests/mod.rs"]
 mod tests;
-
-
-#[path="report/algorithm_certify_polar_source_frame.rs"]
-mod algorithm_certify_polar_source_frame;
-pub use algorithm_certify_polar_source_frame::certify_polar_source_frame;
-#[path="report/algorithm_certify_inner.rs"]
-mod algorithm_certify_inner;
-use algorithm_certify_inner::certify_inner;

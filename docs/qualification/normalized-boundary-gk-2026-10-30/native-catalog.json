@@ -1,0 +1,1186 @@
+[
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::a_nonplanar_cubic_original_profile_keeps_all_g2_joins_under_spatial_motion"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::actual_closed_quintic_filled_carrier_has_a_global_parameter_volume_atlas"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::authored_spatial_frame_scale_twist_and_affine_laws_keep_every_owned_g2_seam"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::bounded_affine_candidate_refuses_every_short_stage_and_changed_basis"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::declared_sharp_station_and_short_complete_boundary_budgets_cannot_receive_g2_credit"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::guided_spatial_frame_scale_twist_and_affine_laws_keep_every_owned_g2_seam"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::invertible_station_samples_cannot_hide_a_singular_affine_motion_between_them"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::one_affine_spatial_motion_preserves_all_original_profile_and_closed_station_g2_joins"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::original_sharp_profile_is_not_rounded_into_a_smooth_profile"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft::affine_stations::tests::singular_affine_section_has_no_positive_matrix_certificate"
+  },
+  {
+    "crate": "brep-core",
+    "test": "analytic::rational_loft_legacy::cap_reference::tests::seed_avoids_original_knot_lines_and_never_claims_an_endpoint_derivative"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_face_contacts::tests::original_interior_contact_is_removed_only_after_root_valued_region_clipping"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_pole_tangency::fan::tests::oriented_limits_distinguish_a_fold_from_a_reflected_parameter_chart"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_pole_tangency::star_boundary::tests::weighted_nonunit_cut_is_inverted_before_transport_and_partial_edges_refuse"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_pole_tangency::tests::collapse_identity_alone_cannot_supply_a_common_plane"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_pole_tangency::tests::limit_token_keeps_the_actual_original_collapsed_restriction"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_pole_tangency::tests::owned_partial_pole_gets_local_quotient_without_losing_source_binding"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_projective_edge::fraction_tests::nonlinear_rational_root_candidates_admit_shared_edge_and_replay"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_projective_use::inverse_interval::tests::actual_inverse_poles_and_crossing_intervals_still_refuse"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_projective_use::inverse_interval::tests::full_interval_with_outward_endpoint_slack_preserves_positive_denominator"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_projective_use::inverse_interval::tests::unclipped_tails_remain_visible_and_contain_the_inverse"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_projective_use::tests::original_root_endpoint_is_retained_under_projective_mapping"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::collection::tests::complete_curved_seams_share_every_budget_without_reset"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::collection::tests::sharp_join_is_explicit_and_never_silently_downgraded"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::polar::tests::changing_projection_uses_original_regular_jets_without_cropping_the_far_end"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::polar::tests::identical_polar_tangent_fields_do_not_hide_a_curvature_jump"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::polar::tests::matching_polar_endpoint_shapes_do_not_admit_an_interior_curvature_jump"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::polar::tests::nonzero_polar_curvature_preserves_coherent_opposite_orientation_and_all_budgets"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::polar::tests::strict_identity_still_requires_far_endpoint_regularity_and_orientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::polar::tests::strict_zero_tolerance_uses_exact_jets_and_complete_regularity_coverage"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::authored_affine_frames_and_independent_positive_weight_scales_keep_g2"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::each_budget_and_singular_endpoints_prevent_partial_curvature_certificates"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::exact_regular_g2_crosses_projection_zero_with_independent_native_regularity"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::exact_regular_identity_never_hides_jumps_singular_ends_or_bad_projection"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::exact_regular_nonzero_jets_use_complete_native_shapes_and_one_orientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::matching_endpoint_curvatures_cannot_admit_an_interior_jump"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::matching_tangent_planes_do_not_hide_a_curvature_jump"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::nonzero_second_jets_keep_one_coherent_opposite_orientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::curvature::tests::normal_and_curvature_cannot_choose_different_orientation_branches"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::exact_tangency::tests::exact_regular_g1_keeps_hessian_jumps_under_affine_frames_and_weight_scales"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::exact_tangency::tests::exact_regular_g1_projection_zero_does_not_authorize_a_singular_endpoint"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::exact_tangency::tests::exact_regular_g1_refuses_real_derivative_jumps_and_identically_zero_projections"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::matching_endpoint_planes_do_not_admit_an_interior_crease"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::owned_endpoint_limits_preserve_sharp_tip_and_exact_work_budget"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::positional_coincidence_does_not_hide_a_crease"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::projective_rational_shared_boundary_tangency_survives_original_definition_replay"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::rational_root_ends_keep_their_source_definitions"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::reversed_original_curve_and_affine_partial_carriers_preserve_correspondence"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::rotating_tangent_planes_are_certified_over_the_complete_curved_seam"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_seam_tangency::tests::singular_endpoint_is_not_a_regular_tangent_plane"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::curved_shell_preserves_roots_and_replays_inverse_contacts_volume"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::disconnected_closed_components_and_exhausted_work_are_not_a_shell"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::exact_geometry_mismatch_never_produces_partial_shell"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::full_turn_caps_contract_poles_and_have_one_vertex_link_cycle"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::irrational_root_partition_preserves_closed_body_and_exact_source_topology"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::mapped_root_partitions_qualify_complete_chain_without_complete_fragments"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::nonlinear_fraction_candidates_preserve_closed_incidence_and_material_replay"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::projective_octahedron_proves_owned_four_edge_vertex_contacts"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::projective_tetrahedron_has_closed_edges_and_manifold_vertex_links"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::qualified_source_pole_enables_the_existing_weighted_quotient_proof"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_shell_incidence::tests::tetrahedron_pairs_produce_shared_vertex_owners_and_refuse_missing_or_duplicate_uses"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::c2_bowl::folded_quadratic_closed_caps_have_c1_neighborhoods_without_c2_credit"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::c2_bowl::parabolic_closed_body_has_owned_nonzero_c2_pole_neighborhoods"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::exact_g1::closed_curved_prism_has_exact_g1_with_an_actual_curvature_jump"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::exact_regular::closed_split_prism_owns_every_exact_regular_g2_carrier_and_aggregate_budget"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::flattened_canal_caps_qualify_exact_common_pole_curvature"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay"
+  },
+  {
+    "crate": "brep-core",
+    "test": "source_vertex_links::tests::link_requires_one_cycle_and_preserves_parallel_edges"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::affine_volume::tests::fresh_actual_filled_map_owns_hole_roles_and_never_uses_a_successful_report_as_input"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::affine_volume::tests::independent_cap_degrees_weights_and_uv_domains_share_the_actual_filled_certificate"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::affine_volume::tests::modified_actual_surfaces_uv_domains_hole_uses_and_orientation_refuse_fresh_admission"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::rational::tests::all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_partial_solids"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::rational::tests::curvature_jump_preserves_explicit_g1_and_refuses_strict_cap_g2"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::rational::tests::filled_cap_charts_survive_moving_affine_axes_translation_and_weight_gauges"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::rational::tests::original_and_actual_rational_body_own_full_filled_planar_and_nonplanar_cap_g2"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::rational::tests::sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::rational::tests::supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::authored_frame_scale_twist_affine_owned_g2_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::geometric_clock::geometric_arc_source_clock_has_complete_original_and_actual_g2_solid_with_global_atlases"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::geometric_clock::guided_geometric_clock_has_complete_original_and_actual_g2_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::geometric_clock::tilted_authored_geometric_clock_has_complete_original_and_actual_g2_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::guided_frame_scale_twist_affine_owned_g2_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::hollow_spatial_owned_g2_has_correct_material_shell_roles"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::original_spatial_material_and_actual_g2_solid_have_independent_global_certificates"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::ownership::every_zero_or_one_short_owner_stage_returns_no_partial_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::ownership::exact_wall_binding_refuses_sub_tolerance_geometry_weights_and_domain_changes"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::ownership::geometric_g1_is_preserved_without_claiming_g2_at_a_curvature_jump"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::ownership::nonplanar_filled_carrier_and_nonplanar_original_boundary_have_owned_global_g2"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::ownership::reversed_carrier_chart_uses_world_jacobian_and_uv_winding_for_orientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::reversed_original_hole_and_outer_keep_owned_g2_orientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::smooth::tests::spatial_owned_g2_supports_forty_nonbinary_station_intervals"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::closed_original_spatial_nonplanar_material_is_owned_by_a_certified_periodic_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::closed_owned_spatial_polynomial_arc"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::closed_owned_spatial_polynomial_parameter"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::closed_owned_spatial_rational_arc"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::closed_owned_spatial_rational_parameter"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::closed_owner_refuses_invalid_original_material_and_each_incomplete_stage"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_original_material_reverse_roles_and_wrong_hole_orientation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_original_multispan_world_and_uv_chains_keep_exact_material_ownership"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_owned_hollow_authored_arc"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_owned_hollow_authored_parameter"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_owned_hollow_fixed_arc"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_owned_hollow_fixed_parameter"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_owned_hollow_guided_arc"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::material_holes::closed_owned_hollow_guided_parameter"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::closed::tests::original_interior_fold_is_refused_even_when_the_same_retained_boundary_is_a_valid_solid"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::common_trim_region::tests::a_sub_tolerance_trim_change_never_receives_region_identity"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned::common_trim_region::tests::original_uv_domain_and_curve_phase_pullbacks_own_exact_work"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::moving_frame_guide_affine_weights_and_station_policy_matrix"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::original_moving_authored_frame_and_saddle_caps_receive_a_joint_native_certificate"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::original_volume_preserves_a_hole_only_after_complete_native_trim_binding"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::quadratic_filled_caps_glue_to_ruled_walls_without_degree_elevation"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::smooth_boundary::curved_affine::curved_g2_moving_frame_and_independent_weighted_cap_representations_are_jointly_owned"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::smooth_boundary::curved_affine::curved_original_g2_survives_moving_frames_and_nonplanar_filled_caps_together"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::smooth_boundary::longitudinal_g2_is_bound_to_the_actual_moving_tilted_frame_and_nonplanar_filled_caps"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::smooth_boundary::original_rational_wall_g2_and_mixed_sharp_g1_classes_belong_to_the_complete_material_body"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::smooth_original::owned_c1_filled_cap_keeps_curvature_jump_and_c0_cap_wall_class_without_c2_credit"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::spatial_bishop_transport_and_saddle_caps_work_at_six_nondyadic_stations"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::tensor::different_original_cap_degrees_and_gauges_bind_the_complete_owned_saddle_body"
+  },
+  {
+    "crate": "brep-core",
+    "test": "sweep_boundary_owned_tests::weighted::moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "natural_meridian_g2::tests::endpoint_matching_does_not_hide_an_interior_hessian_jump"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "natural_meridian_g2::tests::exact_first_order_identity_does_not_require_or_infer_hessian_identity"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "natural_meridian_g2::tests::exact_nonzero_graph_jets_follow_original_projective_and_uv_line_weights"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "natural_meridian_g2::tests::exact_work_cancellation_and_foreign_sources_never_admit"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "pole_quadratic_jet::tests::agreement_at_three_meridians_does_not_admit_a_quadratic_jet"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "pole_quadratic_jet::tests::budgets_cancellation_and_foreign_source_refs_never_admit"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "pole_quadratic_jet::tests::exact_comparison_rejects_changed_curvature_and_different_world_graphs"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "pole_quadratic_jet::tests::exact_nonbinary_hessian_survives_mobius_parameter_weights"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::interval_filter::tests::outward_filter_agrees_with_exact_signs_and_never_rounds_zero"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::normal_line::tests::one_coefficient_cannot_grant_the_whole_original_normal_row"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::normal_line::tests::source_provenance_and_exact_work_cannot_be_replaced_by_flags"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::collapsed_boundary_and_flat_endpoint_preserve_interior_sign"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::exact_normal_component_bounds_preserve_common_scale_and_refuse_exhaustion"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::factorized_weights_preserve_exact_orientation_and_refuse_partial_work"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::independently_bounded_rows_match_whole_original_chart"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::interior_fold_has_both_signs"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::plane_orientation_and_axis_reversal"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::rank_deficient_projection_has_no_strict_sign"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::rational_derivative_rows_preserve_quadratic_factor_and_refuse_partial_work"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::rational_weights_and_work_refusal"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "projected_surface_jacobian::tests::transverse_derivative_retains_small_leading_tangent_and_detects_real_transverse_term"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::continuity::tests::c1_curvature_jump_and_hidden_interior_along_line_changes_refuse_c2"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::continuity::tests::complete_rational_knot_lines_certify_nonuniform_cartesian_c2_in_both_axes"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::continuity::tests::knot_line_identity_retains_one_work_budget_and_resource_refusals"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::continuity::tests::nonpolynomial_rational_c2_crosses_both_original_knot_directions_and_their_vertex"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::tests::foreign_original_leaf_is_rejected_before_a_zero_budget_refusal"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::tests::full_tensor_identity_preserves_aggregate_budget_cancellation_and_deadline"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::tests::genuine_rational_refinement_and_curved_higher_degree_maps_keep_exact_identity"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::tests::independent_degrees_homogeneous_gauges_and_complete_knot_partitions_are_equal"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::tests::invalid_weights_knots_and_disconnected_sources_never_supply_identity"
+  },
+  {
+    "crate": "cad-predicates",
+    "test": "tensor_identity::tests::matching_boundaries_or_geometric_images_do_not_supply_a_map_identity"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::factor::tests::exact_factor_arithmetic_never_certifies_underflow_as_zero"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::factor::tests::exact_identity_refuses_one_ulp_tail_mutation_and_short_proof_work"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::exact_rational_azimuth_owns_an_annular_body_volume_and_rejects_double_cover"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::fixed_original_coordinate_change_has_no_point_or_budget_admission_shortcut"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::moving_affine_original_source_preconditioning_preserves_regular_thin_time_boxes"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::nonbinary_time_knots_enclose_both_original_rational_one_sided_jets"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::positive_rational_source_volume_and_original_derivatives_survive_all_short_budgets"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::projected_original_coefficient_jets_enclose_translation_and_rational_derivatives"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::rational_degree_eight_preserves_original_endpoint_derivatives_and_refuses_degree_nine"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::rational::tests::rational_geometry_validation_precedes_zero_budget_refusals"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::tests::actual_affine_volume_proves_regular_global_map_and_all_short_stages_refuse"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::tests::literal_pose_identity_and_real_volume_rank_cannot_be_replaced_by_samples"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::tests::malformed_geometry_and_oversized_budgets_do_not_masquerade_as_refusal"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::tests::normalized_original_rational_nonplanar_carrier_and_variable_pose_are_owned"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::tests::owned_world_orientation_is_signed_and_refuses_short_or_invalid_queries"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::affine_volume::tests::temporal_piece_boundaries_enclose_both_one_sided_derivatives"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::owned_boundary::normalized_tests::different_degree_multispan_borders_keep_normalized_domains_reversal_and_exact_budgets"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::owned_boundary::normalized_tests::different_degrees_keep_nonpolynomial_rational_speed_instead_of_only_the_same_image"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::owned_boundary::normalized_tests::whole_multispan_border_rejects_hidden_control_damage_and_partial_uv_coverage"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::owned_boundary::tests::complete_multispan_rows_are_owned_with_exact_reversal_and_bounded_work"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::affine_chart_identity_uses_exact_poles_and_bounded_work"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::both_periodic_axes_cross_seams_together"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::constant_coordinates_are_exact_with_independent_positive_rational_weights"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::degree_five_rational_plane_composition_is_bounded_and_detects_damage"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::departure_has_enclosed_witness_and_invalid_uv_is_unresolved"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::exact_identity_is_distinct_from_tolerance_and_preserves_reversal"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::exact_identity_leaves_multispan_definitions_unproven"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::formal_composition_does_not_claim_full_chart_membership"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::identity_plane_preserves_rational_boundaries_on_nonunit_domains"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::matching_reversed_and_exhausted"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::multispan_natural_boundaries_preserve_basis_senses_and_work_limits"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::natural_rational_boundary_keeps_direction_and_parameterization"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::pcurve_crosses_surface_knots_at_strict_tolerance"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::periodic_lift_crosses_seam_and_negative_periods"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::rational_curved_support_is_verified_without_planar_assumption"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::rational_multispan_and_nonbinary_domains"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::rational_pcurve_composition_preserves_the_shared_parameter"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::rational_quadratic_periodic_surface_seam"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::rational_subinterval_world_proposal_is_checked_against_original_definition"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::rounded_complement_is_not_an_exact_nurbs_basis_reversal"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::sweep_coedge_transport_retains_zero_budget_and_mismatch"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::tensor_boundary_identity_preserves_domains_reversal_weights_and_limits"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::curve_surface_agreement::tests::unchanged_original_pcurve_interval_preserves_nonunit_and_reversed_mapping"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "analysis::surface_shape_operator::tests::tangential_speed_shear_and_nonlinear_terms_preserve_world_tensor"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::exact_meridian::tests::first_order_token_owns_original_sources_without_granting_second_order"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::exact_meridian::tests::original_natural_axes_nonunit_domains_rational_lines_and_reversed_maps_agree_exactly"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::exact_meridian::tests::unsupported_truncated_layout_and_insufficient_exact_work_do_not_admit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::graph_shape::pair::tests::projection_zero_at_far_end_needs_paid_original_regular_queries"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::graph_shape::tests::original_polar_hessian_is_finite_at_the_pole_for_axes_weights_and_nonunit_domains"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::graph_shape::tests::quadratic_bowl_retains_mixed_and_angular_curvature_at_the_pole"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::graph_shape::tests::unsupported_radial_orders_and_missing_projection_do_not_produce_shape_tokens"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::normal_rectangles::tests::factored_closed_rectangles_cover_all_axes_domains_and_work_limits"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::normal_rectangles::tests::matching_pole_planes_do_not_hide_oblique_meridian_interiors"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::projection::tests::a_uniform_pole_plane_does_not_hide_a_projected_fold"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::projection::tests::high_order_poles_do_not_erase_interior_projected_folds"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::projection::tests::invalid_projection_requests_refuse"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::projection::tests::retained_high_order_normal_nets_cover_all_natural_sides_and_rational_weights"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::quadratic_jet::tests::original_rational_jets_cover_nonunit_axes_endpoints_and_exact_comparisons"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::tests::affine_rational_limits_compare_exactly_without_rounded_normal_candidates"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::tests::collapse_nonzero_normal_and_one_short_work_are_mandatory"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::tests::equal_meridian_endpoint_normals_do_not_prove_one_whole_pole_plane"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::pole_plane::tests::original_rational_plane_limits_cover_all_boundary_axes_and_vanishing_orders"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::collapsed_boundary_distinguishes_tangent_limits_without_regularizing_pole"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::convex_restriction_retains_constant_and_parent_hulls_at_closed_endpoints"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::distinct_limits_at_different_points_do_not_prove_pole_divergence"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::exact_factor_covers_boundary_and_reversed_original_normals"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::limiting_bounds_cover_subnormal_rectangles_without_regularizing_the_pole"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::missing_factor_and_missing_work_never_admit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "factored_surface_normals::tests::restricted_bounds_contain_independent_cubic_graph_normal_formula"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::analytic_cubic_chords_and_endpoint_frames_are_enclosed"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::coordinate_path_bounds_entire_prefix_before_endpoint"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::coordinate_path_refuses_unconfined_or_nonmonotone_chart"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::independent_rational_endpoint_frames_survive_scaled_domains"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::local_inverse_chart_encloses_independent_frames_without_global_monotonicity"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::partial_work_and_nonzero_transverse_coefficient_refuse"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "rational_pole_differential::tests::rational_tangent_term_is_retained_and_original_frame_is_owned"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::collar::tests::all_boundaries_preserve_original_identity_and_parameter_domains"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::collar::tests::local_original_collar_succeeds_while_global_fold_refuses"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::collar::tests::repeated_rays_noncollapsed_and_invalid_requests_refuse"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::collar::tests::source_plane_and_topology_compose_without_admitting_the_remote_fold"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::projected::tests::all_world_projections_and_natural_sides_keep_original_identity"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::projected::tests::collapsed_projection_invalid_inputs_and_partial_work_never_admit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::projected::tests::source_injectivity_is_not_projected_injectivity_and_radius_is_a_bound"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::collapsed_triangle_is_injective_only_after_identifying_its_pole_boundary"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::exact_profile_quotient_uses_original_controls_and_refuses_folds"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::folding_the_transverse_parameter_is_not_hidden_by_a_collapsed_boundary"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::polar_blowup_preserves_original_nonunit_charts_and_both_pole_ends"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::polar_blowup_refuses_fold_repeated_direction_nonpole_and_work_limit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::ruled_budget_exhaustion_has_no_direction_certificate"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::ruled_fold_repeated_ray_and_nonconstant_pole_remain_unproven"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::report::tests::ruled_ray_ratio_covers_nonunit_domains_and_independent_weight_rows"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::collapsed_triangle_is_injective_only_after_identifying_its_pole_boundary"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::folding_the_transverse_parameter_is_not_hidden_by_a_collapsed_boundary"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::polar_blowup_preserves_original_nonunit_charts_and_both_pole_ends"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::polar_blowup_refuses_fold_repeated_direction_nonpole_and_work_limit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::ruled_budget_exhaustion_has_no_direction_certificate"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::ruled_fold_repeated_ray_and_nonconstant_pole_remain_unproven"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "surface_quotient_injectivity::tests::ruled_ray_ratio_covers_nonunit_domains_and_independent_weight_rows"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::arc::tests::an_original_interior_zero_speed_never_produces_an_inverse_map"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::arc::tests::curved_inverse_phase_matches_an_independent_exact_parabola_length_formula"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::arc::tests::inverse_normalized_length_derivatives_preserve_original_domain_units"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::arc::tests::refined_original_arc_jets_remove_fictitious_bending_on_a_nonuniform_line"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::arc_frames::tests::original_inverse_arc_phase_composes_both_correction_jets_in_station_units"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::tests::one_fixed_coordinate_scale_balances_thin_carrier_and_long_traversal"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::tests::one_metric_spd_uses_all_interval_principal_minors_without_diagonal_dominance"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::tests::regular_interval_matrix_is_stronger_than_endpoint_determinant_signs"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::tests::whole_interval_neumann_bound_proves_invertibility_without_pointwise_or_determinant_credit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::weighted::source_tests::nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificate"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::weighted::tests::dense_whole_interval_matrices_pass_without_determinant_or_frobenius_credit"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::atlas::weighted::tests::positive_scaling_proves_large_triangular_coupling_but_not_a_focal_cycle"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::closed_tests::different_original_tensor_partitions_keep_the_spatial_g2_frame_and_complete_closed_body"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::closed_tests::exact_normalized_caps_keep_the_authored_g2_closed_original_quotient"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::tensor_tests::complete_open_original_body_accepts_different_cap_degrees_and_partitions_but_not_rank_loss"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::tensor_tests::different_original_tensor_layouts_own_map_jets_references_and_exact_budget"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::tests::near_weight_knot_or_control_agreement_never_supplies_exact_normalized_identity"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::tests::normalized_rational_cap_first_and_second_derivatives_preserve_original_units"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::tests::original_affine_tensor_identity_owns_multispan_knots_weights_and_one_ledger"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::cap_identity::tests::rational_normalized_cap_identity_preserves_the_complete_open_original_body"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::charts::tests::original_difference_keeps_exact_coefficients_or_refuses_the_shortcut"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::affine_tests::axial_center_cancellation_never_certifies_a_rank_two_body"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::affine_tests::original_tilted_affine_tube_keeps_positive_rational_laws_g2_and_global_topology"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::affine_tests::original_uv_chart_can_prove_an_outward_offset_outside_the_containing_disk_focal_bound"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::affine_tests::positive_affine_radius_and_axial_rate_own_domain_units_and_work"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::carrier_tests::common_carrier_metric_owns_rational_weights_normalized_domains_and_work"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::carrier_tests::interpolated_rational_carriers_and_large_affine_transverse_motion_keep_global_topology"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::carrier_tests::separately_regular_endpoint_carriers_cannot_hide_an_interior_rank_loss"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::frame_bounds::tests::tangent_rate_integration_requires_original_joins_even_when_the_authored_frame_is_smooth"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::frame_bounds::tests::tilted_anchor_spectral_floor_requires_transversality_and_encloses_exact_gram_eigenvalue"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::general_tests::smooth_authored_frame_cannot_certify_a_rank_two_filled_body"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::general_tests::tilted_authored_spatial_arc_body_has_original_global_and_frame_g2_certificates"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::plane::tests::authored_source_plane_is_owned_by_frame_longitudinal_not_path_tangent"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::plane::tests::translated_nonaxial_original_plane_requires_exact_coefficients_and_budget"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::intrinsic::tests::transverse_tube_bound_requires_both_turn_and_focal_radius"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::normalized_identity::tests::complete_original_normalized_identity_is_opaque_borrowed_and_budgeted_across_representations"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::normalized_identity::tests::equal_boundaries_do_not_replace_full_carrier_identity_and_literal_queries_keep_scope"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::pose::tests::affine_source_pose_differentiates_both_the_pose_and_the_moving_carrier"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::ideal_volume::pose::tests::composed_basis_encloses_original_world_jets_and_both_time_terms"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::original_smooth_volume::tests::complete_closed_spatial_original_c2_embedding_includes_caps_and_periodic_motion"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::original_smooth_volume::tests::complete_original_c2_embedding_owns_filled_cap_knots_motion_and_one_budget"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::original_smooth_volume::tests::positive_arc_clock_proves_complete_c2_volume_despite_a_raw_speed_jump"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::original_smooth_volume::tests::smooth_frame_does_not_hide_an_original_scale_crease"
+  },
+  {
+    "crate": "nurbs-core",
+    "test": "sweeps::progressive_sweep::original_smooth_volume::tests::smooth_frame_does_not_hide_an_original_translation_crease"
+  }
+]

@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-28",
+  "implementationCommit": "c24e00a04f5de0e686f8799c9abc7faeb9a11981",
+  "baseCommit": "ab5a622795ae0310833e0299de049b7add29b231",
+  "claim": "finite original-source local pole collar quotient homeomorphism and regularity away from the collapsed side, composed with exact uniform plane limits and retained BRep ownership",
+  "fullGoalComplete": false,
+  "completeIncidentFanRegularityClaim": false,
+  "globalOtherFaceDisjointnessClaim": false,
+  "poleG2Claim": false,
+  "idealLoftSweepLawQualificationClaim": false,
+  "releaseQualification": false,
+  "wasmRebuilt": false,
+  "typescriptChanged": false,
+  "sourceInputsUnchangedDuringFinalChecks": true,
+  "testsPassed": 84,
+  "testsFailed": 0,
+  "checks": [
+    {
+      "name": "quotient",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "surface_quotient_injectivity::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.16,
+      "summary": [
+        "test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 1975 filtered out; finished in 0.03s"
+      ],
+      "log": "quotient.log.gz",
+      "logSha256": "243c33aa92cc32e84a766e5d13466fb8d35ade0f2b92bb87b04a1a4597e101e2"
+    },
+    {
+      "name": "predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "projected_surface_jacobian::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.089,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.00s"
+      ],
+      "log": "predicates.log.gz",
+      "logSha256": "9f9a927ec9441f2474c140a838a00c780e09e0e730a7473b7de2abec7dde06fb"
+    },
+    {
+      "name": "limits",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "factored_surface_normals::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.127,
+      "summary": [
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 1983 filtered out; finished in 0.04s"
+      ],
+      "log": "limits.log.gz",
+      "logSha256": "557122fb22f6dfcb6ebe3441ec0b6211b3f0e9ad015fc6b764ff9b6cec8123d5"
+    },
+    {
+      "name": "legacy-pole-differential",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "rational_pole_differential::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.091,
+      "summary": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 1987 filtered out; finished in 0.01s"
+      ],
+      "log": "legacy-pole-differential.log.gz",
+      "logSha256": "9172eb11a4f1f2217d6486d66ff2fabc775e9e5178ee78256788b38c4039a155"
+    },
+    {
+      "name": "binding",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_pole_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 279.313,
+      "summary": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1897 filtered out; finished in 0.00s"
+      ],
+      "log": "binding.log.gz",
+      "logSha256": "d99132c8d08ead24bdf8a2cedb48d819ee15455306846bd88df7e7b817a99b0a"
+    },
+    {
+      "name": "body",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 3.263,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1899 filtered out; finished in 2.99s"
+      ],
+      "log": "body.log.gz",
+      "logSha256": "f9c1fd8e918295bd495e1d134f4e50df775d44756307337b5b9284fa7562088a"
+    },
+    {
+      "name": "seams",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_seam_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.184,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 1884 filtered out; finished in 0.08s"
+      ],
+      "log": "seams.log.gz",
+      "logSha256": "2c94510c7fea42b42fe947e36190de3a951f0bc3cd026791918793f3cdbfbcdd"
+    },
+    {
+      "name": "incidence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_shell_incidence::tests::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.55,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1887 filtered out; finished in 1.42s"
+      ],
+      "log": "incidence.log.gz",
+      "logSha256": "12e0bdbcec499f1a6e7763364fb0ebf7c9878103c885ae02f6135da0c0983a73"
+    },
+    {
+      "name": "cylinder",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.172,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1899 filtered out; finished in 0.07s"
+      ],
+      "log": "cylinder.log.gz",
+      "logSha256": "261a7dbc5bd41fdf80e0e42e99ffd07f0de674ce275ebd7e877819f05a4146fb"
+    }
+  ],
+  "sourceInputs": [
+    {
+      "path": "crates/Cargo.lock",
+      "sha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+    },
+    {
+      "path": "crates/brep-core/src/lib.rs",
+      "sha256": "63340b37b5f030e206bbb48bfc110ccfdc1636ad0be960ada8a269c8557fd595"
+    },
+    {
+      "path": "crates/brep-core/src/source_pole_tangency.rs",
+      "sha256": "3e9072ffc5381719bbfe320496ccfc0bdfb36fa64ec73a48778338855fecf197"
+    },
+    {
+      "path": "crates/brep-core/src/source_pole_tangency/tests.rs",
+      "sha256": "eafbc2efdff88398b0ff0f1d50a4b04482b163d00e282dc8fc7abf885b733b0b"
+    },
+    {
+      "path": "crates/brep-core/src/source_support_shell.rs",
+      "sha256": "945eb0ed7c1f9359ba4cb4065c2ab3b3ad4e348296d9173bfe3253b480b6d249"
+    },
+    {
+      "path": "crates/cad-predicates/src/projected_surface_jacobian.rs",
+      "sha256": "2d7a6768be2a885bab3878c436bd83ed050e7e6c63a470bf8a20092ce6e8a7bd"
+    },
+    {
+      "path": "crates/cad-predicates/src/projected_surface_jacobian/normal_line.rs",
+      "sha256": "f3c1ea85c324b3fecd2efb0cd305d279b4820fc015a06a04ed1817d53ff3e1fc"
+    },
+    {
+      "path": "crates/cad-predicates/src/projected_surface_jacobian/normal_line/tests.rs",
+      "sha256": "cd7a1d2d7456a86616e297ed20f5d9fc1da27f7b2163d78f7cbbb8b7da75f845"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals.rs",
+      "sha256": "308ec61694a94490ee8cc77987375e67d4d8d4d6b44dded857596d75a95a03d3"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals/pole_neighborhood.rs",
+      "sha256": "1bdc5ef229ee8b14276aed73aadc6b81b84ce50611025eaafc0023170681959e"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals/pole_plane.rs",
+      "sha256": "6ccf2959c157972130be792245c26bc987e081b31d56e2f1c49638bb4e7ee76e"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals/pole_plane/tests.rs",
+      "sha256": "3811da1f7023bb224336358875b3bf684e5ec6554ae2c41c294477061f4c1e80"
+    },
+    {
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/collar.rs",
+      "sha256": "3e817b9f7e23fc7266c77cca1a8fe917bfb0ef0d5b30b70d91a49b74fc90cf25"
+    },
+    {
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/mod.rs",
+      "sha256": "5eedebfe98c5d88d75bc53664e543fce91e670f0e901cc924e03cdc03e529720"
+    },
+    {
+      "path": "crates/nurbs-core/src/surface_quotient_injectivity/report.rs",
+      "sha256": "f9613dcb0a9ff103ca59ad19448ef543941fc762c9b39a7b80aa094bd2cf94c7"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a"
+    }
+  ],
+  "ciState": "PR61 remains red: historical archive identities restored, general architecture size/baseline violations remain"
+}

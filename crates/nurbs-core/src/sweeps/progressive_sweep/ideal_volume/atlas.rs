@@ -9,6 +9,8 @@
 //! the owner has independently established continuity across the source knots.
 use super::{cell::Enclosed, *};
 use std::collections::BTreeMap;
+mod weighted;
+mod refinement;
 
 fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     let mut p = [[I::point(0.); 3]; 3];
@@ -19,7 +21,7 @@ fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     }
     Ok(p)
 }
-fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
+pub(super) fn regular(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<bool> {
     let c = projected(columns, projection)?;
     let det = iv::dot_tight(c[0], iv::cross(c[1], c[2])?)?;
     if det.lo>0. || det.hi<0. {return Ok(true);}
@@ -29,15 +31,22 @@ fn frobenius_upper(m:[[I;3];3])->Result<f64>{
     let values=m.iter().flatten().copied().collect::<Vec<_>>();
     Ok(crate::distance_bounds::box_distance(&values,&[I::point(0.);9])?.1)
 }
+/// Two sufficient whole-interval proofs under one fixed positive coordinate
+/// scale: verified weighted infinity residual, then the Frobenius bound.
+/// Rounded proposals authorize neither branch without outward verification.
+fn uniformly_invertible(columns:[V3;3])->Result<bool>{
+    let Some(scale)=coordinate_scale(columns) else{return Ok(false);};
+    let a=scaled(columns,scale)?;
+    let Some(r)=inverse_proposal(a) else{return Ok(false);};
+    if weighted::certify(a,r)? {return Ok(true);}
+    frobenius_invertible(a,r)
+}
 /// ALL matrices A in the original whole-hull interval box satisfy
 /// ||I-R A S||2 <= ||I-R Ac||F + ||R||2 ||A S-Ac||F < 1.
 /// Neumann's theorem makes EVERY such matrix invertible, including any
 /// averaged Jacobian. R/Ac/S are only rounded proposals; all residuals, Gram
 /// bounds and perturbations are independently enclosed with outward arithmetic.
-fn uniformly_invertible(columns:[V3;3])->Result<bool>{
-    let Some(scale)=coordinate_scale(columns) else{return Ok(false);};
-    let a=scaled(columns,scale)?;
-    let Some(r)=inverse_proposal(a) else{return Ok(false);};
+fn frobenius_invertible(a:[V3;3],r:[[f64;3];3])->Result<bool>{
     let center=a.map(|col|col.map(|x|crate::distance_bounds::midpoint(x.lo,x.hi)));
     let mut perturb=[[I::point(0.);3];3];let mut residual=perturb;let mut gram=perturb;
     for i in 0..3 {for j in 0..3 {
@@ -158,13 +167,11 @@ fn monotone_hull(
     };
     let mut pending = pieces.to_vec();
     let mut visits = 0;
-    // A fixed metric on a wide turning interval may be a poor proposal even
-    // when smaller joint charts are regular. Spend a short probe first and
-    // let the exhaustive PAIR cover refine, rather than exhausting the ledger
-    // on spatial splits that cannot repair the temporal metric. Small joint
-    // charts retain the deeper bounded proposal. Neither limit admits geometry.
-    let temporal_width=pieces.iter().map(|b|b[2][1]-b[2][0]).sum::<f64>();
-    let visit_limit=if temporal_width>1./64. {16}else{256};
+    // Point checks only discard unpromising proposals. They supply zero
+    // admission credit. A promising fixed metric gets a deeper source-paid
+    // complete field cover, including spatially nonlinear rational carriers.
+    if !refinement::promising(pieces,projection,scale,inverse,query,out,max)? {return Ok(false);}
+    let visit_limit=1024;
     while let Some(b) = pending.pop() {
         if visits == visit_limit || out.cells == max {
             return Ok(false);
@@ -186,7 +193,9 @@ fn monotone_hull(
         }
         let axis = match e {
             Enclosed::Unavailable(Some(i)) if split_axis(b,i).is_some()=>i,
-            _ => match widest(b) {Some((axis,_))=>axis,None=>return Ok(false)},
+            _ => match refinement::axis(b,projection,scale,inverse,query,out,max)? {
+                Some(axis)=>axis,None=>return Ok(false),
+            },
         };
         let Some(children) = split_axis(b, axis) else {
             return Ok(false);
@@ -247,7 +256,17 @@ pub(super) fn certify(
     let tube=if regular(identity,projection)? {
         intrinsic::Tube::prepare(context,out,max_cells,max_exact_work,closed)?
     }else {None};
-    if let Some(tube)=tube {return tube.certify(context,out,max_cells,closed);}
+    if let Some(tube)=tube {
+        if tube.transverse_carrier { return tube.certify(context,out,max_cells,closed); }
+        // A full spatial section ball supplies separation only. Local credit
+        // must come from the actual complete UV/time map, never the disk
+        // theorem. Keep a bounded trial so UV refinement remains available.
+        // A fixed ceiling preserves replay at the observed exact work count;
+        // a fraction of the caller budget could select a different proof.
+        let trial = out.cells + (max_cells-out.cells).min(750000);
+        tube.certify(context,out,trial,closed)?;
+        if out.embedding_certified || out.cells==max_cells { return Ok(()); }
+    }
     certify_map(|b,out,max|context.enclose(b,out,max),projection,out,max_cells,closed)
 }
 /// One complete original UV/time chart, also usable as a fallback when a
@@ -273,11 +292,24 @@ pub(super) fn local_source(
 /// Internal query engine shared by original transport and coefficient-owned
 /// affine volumes. No public callback can fabricate geometry enclosures.
 pub(crate) fn certify_map(
+    enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
+    projection:[[f64;3];3], out:&mut IdealVolumeReport, max_cells:usize, closed:bool,
+)->Result<()> { certify_map_impl(enclose,projection,out,max_cells,closed,false) }
+
+/// Search-order proposal only. ONE fixed metric must cover the ENTIRE source
+/// box; point jets supply zero credit. Failed trials share the pair atlas ledger.
+pub(crate) fn certify_map_global_first(
+    enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
+    projection:[[f64;3];3], out:&mut IdealVolumeReport, max_cells:usize, closed:bool,
+)->Result<()> { certify_map_impl(enclose,projection,out,max_cells,closed,true) }
+
+fn certify_map_impl(
     mut enclose:impl FnMut(Box3,&mut IdealVolumeReport,usize)->Result<Enclosed>,
     projection:[[f64;3];3],
     out:&mut IdealVolumeReport,
     max_cells:usize,
     closed:bool,
+    global_first:bool,
 )->Result<()> {
     out.reason = Some("ideal-volume-work-limit");
     let mut cache = BTreeMap::new();
@@ -291,6 +323,15 @@ pub(crate) fn certify_map(
         Ok(e)
     };
     let root = [[0., 1.]; 3];
+    if global_first && !closed && out.cells<max_cells {
+        out.cells+=1;
+        if let Enclosed::Value(seed)=query([[0.5;2];3],out)? {
+            if cached_metric(&[root],seed.columns,projection,&mut query,out,max_cells,&mut metrics)? {
+                out.embedding_certified=true;out.regularity_certified=true;
+                out.parameter_topology_preserved=true;out.reason=None;return Ok(());
+            }
+        }
+    }
     let mut pairs = vec![(root, root)];
     while let Some((a, b)) = pairs.pop() {
         // Pair inspection itself is bounded, including cache-only visits.
@@ -457,6 +498,35 @@ pub(crate) fn certify_map(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn spatially_uncertain_monotone_field_refines_uv_under_one_fixed_metric() {
+        let projection=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+        let source=|b:Box3,out:&mut IdealVolumeReport,max:usize|->Result<Enclosed>{
+            if out.cells==max {return Ok(Enclosed::Unavailable(None));}out.cells+=1;
+            let mut value=[I::point(0.);3];let mut columns=[[I::point(0.);3];3];
+            for k in 0..2 {
+                let u=I::new(b[k][0],b[k][1])?;
+                value[k]=u.mul(u)?.mul(u)?.sub(I::point(1.5).mul(u.mul(u)?)?)?.add(u)?;
+                columns[k][k]=I::point(3.).mul(u.mul(u)?)?.sub(I::point(3.).mul(u)?)?.add(I::point(1.))?;
+            }
+            value[2]=I::new(b[2][0],b[2][1])?;columns[2][2]=I::point(1.);
+            Ok(Enclosed::Value(cell::Enclosure{value,columns}))
+        };
+        let run=|max| {
+            let mut report=IdealVolumeReport{embedding_certified:false,regularity_certified:false,
+                parameter_topology_preserved:false,cells:0,exact_work:0,boxes:0,monotonicity_lower:None,projection,reason:None};
+            let mut query=|b,out:&mut IdealVolumeReport|source(b,out,max);
+            let root=[[0.,1.];3];let Enclosed::Value(e)=source(root,&mut report,max).unwrap() else {panic!()};
+            let proven=monotone_hull(&[root],e.columns,projection,&mut query,&mut report,max).unwrap();
+            (proven,report.cells)
+        };
+        // f'(u)=3u²-3u+1>=1/4. The original interval expression on [0,1]
+        // contains zero; temporal subdivision cannot repair that UV ambiguity.
+        let (proven,work)=run(10000);assert!(proven,"source field budget: {work}");assert!(work<10000);
+        let (exact,used)=run(work);assert!(exact);assert_eq!(used,work);
+        let (short,used)=run(work-1);assert!(!short);assert!(used<work);
+
+    }
     #[test]
     fn regular_interval_matrix_is_stronger_than_endpoint_determinant_signs() {
         // A and B both have det=11, but their convex average is singular

@@ -635,3 +635,8 @@ pub fn lift(
 
 mod structured_boundary;
 mod partial_boundary;
+mod line_image;
+pub use line_image::verify_axis_line_image;
+
+mod projective_image;
+pub use projective_image::verify_projective_image;

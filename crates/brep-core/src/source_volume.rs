@@ -416,3 +416,4 @@ pub fn qualify<E: crate::source_planar_flux::FluxSupport>(
 }
 
 mod replay;
+pub mod regularity;

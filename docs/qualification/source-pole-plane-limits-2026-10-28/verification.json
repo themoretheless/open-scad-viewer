@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-28",
+  "baseCommit": "3e1b2dac1",
+  "implementationCommit": "6280cb767b037b6c9859e4231a9d4d3759721080",
+  "claim": "finite native exact uniform pole-plane limits with complete incident-face coverage and source-bound body fan agreement",
+  "fullGoalComplete": false,
+  "quotientRegularityClaim": false,
+  "poleG2Claim": false,
+  "ordinarySeamPoleRefusalPreserved": true,
+  "releaseQualification": false,
+  "wasmRebuilt": false,
+  "typescriptChanged": false,
+  "testsPassed": 64,
+  "testsFailed": 0,
+  "checks": [
+    {
+      "name": "predicates",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "--lib",
+        "projected_surface_jacobian::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.335,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.05s"
+      ],
+      "log": "predicates.log.gz",
+      "logSha256": "dfd619a3c96bce0417fc8556757563f60323d952c365c073466e55ec3a74cf43"
+    },
+    {
+      "name": "limits",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "factored_surface_normals::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 175.818,
+      "summary": [
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 1979 filtered out; finished in 0.04s"
+      ],
+      "log": "limits.log.gz",
+      "logSha256": "7c1c497887a864b6c5f794178d8a6c2d113fa68d0d6be24400a81d6d87db7c64"
+    },
+    {
+      "name": "legacy-pole-differential",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "rational_pole_differential::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.187,
+      "summary": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 1983 filtered out; finished in 0.01s"
+      ],
+      "log": "legacy-pole-differential.log.gz",
+      "logSha256": "3b369dc60a7fb1f240f3d4f1bd866d757c1cf1a3e9bf2047ccd396e967428f98"
+    },
+    {
+      "name": "binding",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_pole_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 288.866,
+      "summary": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 1897 filtered out; finished in 0.00s"
+      ],
+      "log": "binding.log.gz",
+      "logSha256": "4a82be0984f056a2d97369487ab35e7040dfd9300968ba4e6ed40c069ec4cff6"
+    },
+    {
+      "name": "body",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::projective_generated_end_caps_keep_exact_poles_and_replay",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 3.228,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1898 filtered out; finished in 3.03s"
+      ],
+      "log": "body.log.gz",
+      "logSha256": "e1cdcb9accb0daccbb2ed8e2e0a5aebed25f108dc117c198d01aa72116eecfce"
+    },
+    {
+      "name": "seams",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_seam_tangency::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.189,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 1883 filtered out; finished in 0.08s"
+      ],
+      "log": "seams.log.gz",
+      "logSha256": "04dabc2521a6a92b4cdb2759c044815537ce932ed73b1033c66a185f9005b918"
+    },
+    {
+      "name": "incidence",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_shell_incidence::tests::",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.502,
+      "summary": [
+        "test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1886 filtered out; finished in 1.40s"
+      ],
+      "log": "incidence.log.gz",
+      "logSha256": "21a4a5bfec9e65511612cc6bf9a11dd85720dc8bd5b1b28b43afe36ef697b548"
+    },
+    {
+      "name": "cylinder",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "source_support_shell::tests::cylinder_straight_shared_edge_has_owned_paired_contact",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.17,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1898 filtered out; finished in 0.07s"
+      ],
+      "log": "cylinder.log.gz",
+      "logSha256": "8bc1c8c41e13ddab0fd7323ad3235e023ebac08c033feb500f9781004544572b"
+    }
+  ],
+  "sourceInputsUnchangedDuringFinalChecks": true,
+  "sourceInputs": [
+    {
+      "path": "crates/brep-core/src/lib.rs",
+      "sha256": "63340b37b5f030e206bbb48bfc110ccfdc1636ad0be960ada8a269c8557fd595"
+    },
+    {
+      "path": "crates/brep-core/src/source_pole_tangency.rs",
+      "sha256": "8311cddcae50f9f4eccdf009b550ebd0465b3a235c1300d6f6659e78bf682c2d"
+    },
+    {
+      "path": "crates/brep-core/src/source_pole_tangency/tests.rs",
+      "sha256": "1d591c9609275bc0f99281bba49a02c98be2adccf2f9fba2d5496702434cf3b4"
+    },
+    {
+      "path": "crates/brep-core/src/source_support_shell.rs",
+      "sha256": "945eb0ed7c1f9359ba4cb4065c2ab3b3ad4e348296d9173bfe3253b480b6d249"
+    },
+    {
+      "path": "crates/cad-predicates/src/projected_surface_jacobian.rs",
+      "sha256": "2d7a6768be2a885bab3878c436bd83ed050e7e6c63a470bf8a20092ce6e8a7bd"
+    },
+    {
+      "path": "crates/cad-predicates/src/projected_surface_jacobian/normal_line.rs",
+      "sha256": "f3c1ea85c324b3fecd2efb0cd305d279b4820fc015a06a04ed1817d53ff3e1fc"
+    },
+    {
+      "path": "crates/cad-predicates/src/projected_surface_jacobian/normal_line/tests.rs",
+      "sha256": "cd7a1d2d7456a86616e297ed20f5d9fc1da27f7b2163d78f7cbbb8b7da75f845"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals.rs",
+      "sha256": "1ff9b0b6246d4ed591125bd91c94b3fcc98bc4813e64466680cd07fa3f18bfca"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals/pole_plane.rs",
+      "sha256": "6ccf2959c157972130be792245c26bc987e081b31d56e2f1c49638bb4e7ee76e"
+    },
+    {
+      "path": "crates/nurbs-core/src/factored_surface_normals/pole_plane/tests.rs",
+      "sha256": "3811da1f7023bb224336358875b3bf684e5ec6554ae2c41c294477061f4c1e80"
+    },
+    {
+      "path": "crates/Cargo.lock",
+      "sha256": "587be4396e8e3266b4bf6ffcbb2274dbac751661efb09566613b5ff1756fd7a7"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a"
+    }
+  ],
+  "rustVersion": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "cargoVersion": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)",
+  "configuration": {
+    "CARGO_BUILD_JOBS": 2,
+    "RUST_TEST_THREADS": 2,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1
+  },
+  "verifiedFiniteCases": [
+    "All U/V boundary ends, exact normal vanishing orders 1/3/5, positive rational weights.",
+    "Non-axis-aligned affine plane limits from unequal original rational pole charts, and an exact plane disagreement.",
+    "Equal meridian endpoint directions with different interior limiting planes: no token.",
+    "Private original collapsed restrictions and complete incident-face plane agreement at both pole vertices of an admitted source body.",
+    "One-short exact work, foreign source provenance, degenerate normals and incomplete coefficient predicates never authorize a certificate.",
+    "Legacy U-squared differential contracts and original C0/G1/G2 ordinary-edge collection regressions."
+  ],
+  "remainingRequirements": [
+    "Link uniform plane limits to proved regular quotient neighborhoods, not merely normal traces.",
+    "Prove finite common curvature/G2 at applicable pole and vertex strata.",
+    "Complete ideal original loft/sweep source-law regularity, absence of self-intersections and topology preservation across the full frame/cap/closed-seam matrix.",
+    "The ordinary seam collection still refuses collapsed poles; this plane-limit token does not bypass its missing regularity/G2 gates.",
+    "WASM/browser/STEP delivery and complete semantic G1 release qualification remain separate."
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "implementation": "6df457f444e8d1b15447bef0e711a1c67bfc5357",
+  "frozenInputs": 6614,
+  "inputsUnchangedThroughoutQualification": true,
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "sweep_boundary_owned_tests::classified_original",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 145.21539775,
+      "log": "focused.log.gz",
+      "summary": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2091 filtered out; finished in 1.64s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "brep-core",
+        "--lib",
+        "classified_paired_caps_refuse",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 1.413661874999974,
+      "log": "adversarial.log.gz",
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2096 filtered out; finished in 1.31s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "affine_volume::capped",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.11567329199999676,
+      "log": "paired.log.gz",
+      "summary": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2070 filtered out; finished in 0.03s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "curved_outer_and_hole_replay",
+        "--",
+        "--nocapture"
+      ],
+      "exitCode": 0,
+      "seconds": 0.08266212500001302,
+      "log": "trim.log.gz",
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2071 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "cad-predicates",
+        "-p",
+        "nurbs-core",
+        "-p",
+        "brep-core",
+        "--lib"
+      ],
+      "exitCode": 0,
+      "seconds": 987.9878147080001,
+      "log": "native-full.log.gz",
+      "summary": [
+        "test result: ok. 2092 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 667.34s",
+        "test result: ok. 131 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 2071 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 58.56s"
+      ]
+    }
+  ],
+  "whitespaceCheck": "git diff --check passed",
+  "packagedWasmBrowserIndependentStepRemoteCiPublicationQualified": false
+}

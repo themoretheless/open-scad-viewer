@@ -10,8 +10,7 @@ fn split(t: Range) -> Option<[Range; 2]> {
     let m = crate::distance_bounds::midpoint(t[0], t[1]);
     (t[0] < m && m < t[1]).then_some([[t[0], m], [m, t[1]]])
 }
-fn source_value(
-    tube: &Tube,
+fn source_center(
     c: &cell::Context<'_, '_>,
     t: Range,
     out: &mut IdealVolumeReport,
@@ -36,12 +35,16 @@ fn source_value(
     let Some(value) = report.value else {
         return Ok(None);
     };
-    // The freshly proved frame is orthonormal. EVERY point of the complete
-    // original section is within rho of C(s), irrespective of frame direction.
-    Ok(Some(iv::add(
-        decode(value)?,
-        [I::new(-tube.radius.hi, tube.radius.hi)?; 3],
-    )?))
+    // Keep the path-center enclosure. A sphere predicate preserves its
+    // Euclidean separation; expanding to axis cubes would discard that proof.
+    Ok(Some(decode(value)?))
+}
+/// Each complete original section is inside its certified Euclidean ball.
+/// A lower distance between center boxes must exceed BOTH upper radii. A
+/// midpoint distance, axis-cube overlap or pointwise observation is insufficient.
+fn separated_section_balls(a: V3, b: V3, radius: I) -> Result<bool> {
+    let lower = crate::distance_bounds::box_distance(&a, &b)?.0;
+    Ok(lower > radius.add(radius)?.hi)
 }
 pub(super) fn certify(
     tube: &Tube,
@@ -62,12 +65,12 @@ pub(super) fn certify(
             return Ok(*proved);
         }
         let mut proved = tube.local(c, pieces, out, max)?;
-        if !proved && tube.extended_laws && out.cells<max {
+        if !proved && tube.transverse_carrier && tube.extended_laws && out.cells < max {
             // A containing physical disk can include a focal point outside
             // the actual carrier. Its failure must not suppress a successful
             // original UV-chart proof. Both cover exactly the same source
             // pairs, including the diagonal and the closed seam.
-            proved=super::super::atlas::local_source(c,pieces,out,max)?;
+            proved = super::super::atlas::local_source(c, pieces, out, max)?;
         }
         if proved || out.cells < max {
             charts.insert(key, proved);
@@ -79,7 +82,7 @@ pub(super) fn certify(
         if let Some(v) = values.get(&key) {
             return Ok(*v);
         }
-        let v = source_value(tube, c, t, out, max)?;
+        let v = source_center(c, t, out, max)?;
         if v.is_some() || out.cells < max {
             values.insert(key, v);
         }
@@ -92,13 +95,24 @@ pub(super) fn certify(
             return Ok(());
         }
         out.cells += 1;
+        if !tube.transverse_carrier && a != b {
+            // Spatial balls are a cheap complete separation proof. Do not
+            // spend a UV metric trial after this pair has already finished.
+            if let (Some(x), Some(y)) = (value(a, out)?, value(b, out)?) {
+                if separated_section_balls(x, y, tube.radius)? {
+                    continue;
+                }
+            }
+        }
         let h = [a[0].min(b[0]), a[1].max(b[1])];
         if local(&[box_for(h)], out)? {
             continue;
         }
-        if out.cells == max {
-            return Ok(());
-        }
+        // This pair visit is already paid. Even at the exact limit, an
+        // existing wrapped chart or two cached source boxes may finish it
+        // without any new source work. Uncached queries guard their own
+        // ledger before arithmetic; failure still reaches the limit gate
+        // below, and the next pair always requires its own paid visit.
         if closed && a != b {
             let (early, late) = if a[0] <= b[0] { (a, b) } else { (b, a) };
             if early[1] < late[0] && local(&[box_for([late[0], 1.]), box_for([0., early[1]])], out)?
@@ -106,12 +120,9 @@ pub(super) fn certify(
                 continue;
             }
         }
-        if out.cells == max {
-            return Ok(());
-        }
         if a != b {
             if let (Some(x), Some(y)) = (value(a, out)?, value(b, out)?) {
-                if (0..3).any(|i| x[i].hi < y[i].lo || y[i].hi < x[i].lo) {
+                if separated_section_balls(x, y, tube.radius)? {
                     continue;
                 }
             }
@@ -146,4 +157,27 @@ pub(super) fn certify(
     out.parameter_topology_preserved = true;
     out.reason = None;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn diagonal_section_balls_use_complete_center_boxes_and_strict_distance() {
+        let origin = [0., 0., 0.].map(I::point);
+        let diagonal = [1.5, 1.5, 0.].map(I::point);
+        let radius = I::point(1.);
+        // The axis cubes overlap in every coordinate, but the two full balls
+        // are separated: sqrt(1.5^2+1.5^2)>2. This is a whole-section proof.
+        assert!(separated_section_balls(origin, diagonal, radius).unwrap());
+        assert!(!separated_section_balls(origin, [2., 0., 0.].map(I::point), radius).unwrap());
+        assert!(!separated_section_balls(origin, [1., 1., 0.].map(I::point), radius).unwrap());
+        let uncertain = [
+            I::new(1., 2.).unwrap(),
+            I::new(1., 2.).unwrap(),
+            I::point(0.),
+        ];
+        // Its midpoint is separated, but allowed centers at (1,1,0) are not.
+        assert!(!separated_section_balls(origin, uncertain, radius).unwrap());
+    }
 }

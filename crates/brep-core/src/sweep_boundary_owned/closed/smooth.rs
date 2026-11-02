@@ -90,6 +90,15 @@ impl BindingReport {
             .flatten()
             .filter(|i| *i != usize::MAX)
     }
+    /// Decode an actual normalized natural side through the freshly proved
+    /// signed tensor permutation. Only closed native constructors use this.
+    pub(super) fn source_side(&self, face: usize, axis: usize, upper: bool) -> Option<(usize,bool)> {
+        if !self.certified || axis>1 { return None; }
+        let gauge=*self.gauges.get(face)?;
+        let source_axis=if gauge&4!=0 {1-axis}else{axis};
+        let flip=gauge & (1<<axis)!=0;
+        Some((source_axis,upper^flip))
+    }
     pub fn reparameterized_faces(&self) -> usize {
         self.gauges.iter().filter(|&&g| g != 0).count()
     }
@@ -278,7 +287,7 @@ fn matches_face(
     }
     Ok(None)
 }
-fn binding(
+pub(super) fn binding(
     model: &Model,
     profiles: &[Vec<Curve>],
     poses: &[[AffinePose; 6]],

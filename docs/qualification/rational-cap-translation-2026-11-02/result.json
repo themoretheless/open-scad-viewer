@@ -1,0 +1,63 @@
+{
+  "implementation": "ba4d5d1fa8b1f94ba209b3a0504a2109217507a2",
+  "checks": [
+    {
+      "name": "nurbs-core",
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib",
+      "exitCode": 0,
+      "passed": 2073,
+      "failed": 0,
+      "ignored": 1,
+      "filtered": 0,
+      "testSeconds": 55.33
+    },
+    {
+      "name": "brep-core",
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib",
+      "exitCode": 0,
+      "passed": 2108,
+      "failed": 0,
+      "ignored": 5,
+      "filtered": 0,
+      "testSeconds": 677.25
+    },
+    {
+      "name": "focused-correction",
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib rational_hollow_cap_amplitude_translation -- --nocapture",
+      "exitCode": 0,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 2112,
+      "testSeconds": 18.33
+    }
+  ],
+  "sourceInputs": 6621,
+  "beforeAndAfterEqual": true,
+  "previousPacket": "../literal-rational-boundaries-2026-11-02/QUALIFICATION.md",
+  "changedExistingInputs": [
+    "crates/brep-core/src/analytic/rational_loft/affine_stations.rs",
+    "crates/brep-core/src/lib.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_candidate.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_volume.rs",
+    "crates/brep-core/src/sweep_boundary_owned/closed/capped_material/tests/rational_hollow.rs",
+    "crates/nurbs-core/src/analysis/affine_volume.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/capped.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/rational/tests.rs",
+    "crates/nurbs-core/src/analysis/affine_volume/tests.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/atlas.rs",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/cap_difference.rs"
+  ],
+  "newInputs": [
+    "crates/brep-core/src/rational_cap_translation.rs",
+    "crates/brep-core/src/sweep_boundary_owned/affine_volume/translated.rs"
+  ],
+  "cadPredicatesInputsUnchanged": true,
+  "cargoAndToolchainInputsUnchanged": true,
+  "cadPredicatesReusedResult": {
+    "passed": 131,
+    "failed": 0,
+    "rerun": false
+  }
+}

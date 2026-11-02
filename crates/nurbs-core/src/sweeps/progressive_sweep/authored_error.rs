@@ -6,6 +6,7 @@ use crate::sweeps::progressive_miter::{
     authored_frame_certificate, scalar_certificate::Status, vector_certificate,
 };
 mod arc_position;
+mod authored_chord_cover;
 mod spatial_parameter;
 mod spatial_first;
 mod corrected_regular;

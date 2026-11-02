@@ -22,6 +22,8 @@ pub(crate) enum Enclosed {
 pub(super) struct Context<'a, 'b> {
     pub(super) s: &'b Sweep<'a>,
     pub(super) caps: [&'b Surface; 2],
+    pub(super) cap_identity: Option<cap_identity::Identity<'b>>,
+    pub(super) cap_difference: Option<cap_difference::Difference<'b>>,
     pub(super) basis: [V3; 3],
     pub(super) start: V3,
     pub(super) zero: Curve,
@@ -33,9 +35,12 @@ pub(super) struct Context<'a, 'b> {
     pub(super) shared_guide: bool,
     // Allocated only for ONE atlas certificate and its ONE aggregate ledger.
     // No source proof or cache credit escapes into another call/budget.
-    pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::Pose>>>,
+    pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::PairedPose>>>,
 }
 impl Context<'_, '_> {
+    pub(super) fn same_cap(&self) -> bool {
+        self.cap_identity.as_ref().is_some_and(|p| p.matches(self.caps))
+    }
     pub(super) fn bound(
         &self,
         b: Box3,
@@ -71,7 +76,7 @@ impl Context<'_, '_> {
         let Some(a) = cap_jets(caps[0], [b[0], b[1]], &mut out.cells, max_cells)? else {
             return Ok(Enclosed::Unavailable(None));
         };
-        let z = if caps[0] == caps[1] {
+        let z = if self.same_cap() {
             a
         } else {
             let Some(z) = cap_jets(caps[1], [b[0], b[1]], &mut out.cells, max_cells)? else {
@@ -79,29 +84,39 @@ impl Context<'_, '_> {
             };
             z
         };
+        let mut difference = [[I::point(0.);3];3];
+        if !self.same_cap() {
+            for j in 0..3 { difference[j] = iv::sub(z[j],a[j])?; }
+            if let Some(owner) = &self.cap_difference {
+                if let Some(bound) = owner.enclose(caps,a,[b[0],b[1]],&mut out.cells,max_cells)? {
+                    for j in 0..3 {for k in 0..3 {
+                        difference[j][k] = difference[j][k].intersect(bound[j][k].lo,bound[j][k].hi)?;
+                    }}
+                }
+            }
+        }
         let t = I::new(b[2][0], b[2][1])?;
         let one = I::point(1.).sub(t)?;
         let mut q = [[I::point(0.); 3]; 3];
+        let mut world_q = q;
         for j in 0..3 {
-            // Literal source identity preserves correlation. Independent
-            // boxes for (1-t)C+tC or C-C would invent a moving carrier.
-            let blended = if caps[0] == caps[1] {
-                a[j]
-            } else {
-                iv::add(iv::scale(a[j], one)?, iv::scale(z[j], t)?)?
+            let blended = if self.same_cap() { a[j] } else {
+                let former = iv::add(iv::scale(a[j],one)?,iv::scale(z[j],t)?)?;
+                let correlated = iv::add(a[j],iv::scale(difference[j],t)?)?;
+                let mut result = former;
+                for k in 0..3 {result[k]=former[k].intersect(correlated[k].lo,correlated[k].hi)?;}
+                result
             };
-            q[j] = local(blended, basis)?;
+            world_q[j] = blended;
+            q[j] = local(blended,basis)?;
         }
-        // q[0] is an affine position, q[1..] are linear differential vectors.
-        q[0] = iv::sub(q[0], local(start, basis)?)?;
-        let qt = if caps[0] == caps[1] {
-            [I::point(0.); 3]
-        } else {
-            local(iv::sub(z[0], a[0])?, basis)?
-        };
+        q[0] = iv::sub(q[0],local(start,basis)?)?;
+        world_q[0] = iv::sub(world_q[0],start)?;
+        let world_qt = difference[0];
+        let qt = if self.same_cap() { [I::point(0.);3] } else { local(world_qt,basis)? };
         if let Some(cache) = &self.poses {
             if let Some(pose) = cache.borrow().get(&b[2].map(f64::to_bits)) {
-                return Ok(Enclosed::Value(pose.enclose(q, qt)?));
+                return Ok(Enclosed::Value(pose.enclose(q, qt, world_q, world_qt)?));
             }
         }
         let phase = if let Some(map) = &self.arc {
@@ -265,7 +280,8 @@ impl Context<'_, '_> {
                     [decode(linear[2].value)?, decode(linear[2].first)?],
                 ],
             };
-            let e = pose.enclose(q, qt)?;
+            let pose = pose::PairedPose::new(pose, basis)?;
+            let e = pose.enclose(q, qt, world_q, world_qt)?;
             cache.borrow_mut().insert(b[2].map(f64::to_bits), pose);
             return Ok(Enclosed::Value(e));
         }

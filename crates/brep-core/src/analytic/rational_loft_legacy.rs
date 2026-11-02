@@ -2,6 +2,7 @@
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
 type P = [f64; 3];
+mod cap_reference;
 fn err(message: impl Into<String>) -> Error {
     Error::new("BREP_RATIONAL_SWEEP_REFUSED", message)
 }
@@ -71,8 +72,8 @@ fn supplied_cap(definition: &LoftCap, sections: &[Vec<Curve>]) -> Result<Cap> {
     if audit.valid != Some(true) || audit.winding.first() != Some(&Some(1)) {
         return Err(err("Authored cap trim region must have a resolved positive outer winding"));
     }
-    let u=s.knots_u[s.degree_u]*0.5+s.knots_u[s.control_points.len()]*0.5;
-    let v=s.knots_v[s.degree_v]*0.5+s.knots_v[s.control_points[0].len()]*0.5;
+    let u=cap_reference::parameter(&s.knots_u,s.degree_u,s.control_points.len())?;
+    let v=cap_reference::parameter(&s.knots_v,s.degree_v,s.control_points[0].len())?;
     let sample = s.evaluate(u,v)?;
     let (u,v) = sample.first_derivatives().ok_or_else(|| err("Cap reference derivatives are unavailable"))?;
     let normal = unit(cross(u,v))?;
@@ -204,7 +205,8 @@ pub fn capped_loft_with_caps(start: &[Vec<Curve>], end: &[Vec<Curve>],
     let model = section_loft(&[start.to_vec(),end.to_vec()],None,Some(sides),false,Some(caps))?;
     let agreement = crate::boundary_agreement::verify_exact(&model,1_000_000)?;
     if !agreement.all_equal || !agreement.all_joins_exact {
-        return Err(err("Authored cap whole-boundary agreement is not proven exact"));
+        let unresolved = agreement.uses.iter().find(|u| !u.decision.as_ref().is_some_and(|d| d.outcome == cad_predicates::BezierIdentity::Equal));
+        return Err(err(format!("Authored cap whole-boundary agreement is not proven exact: work={}, first={:?}", agreement.work, unresolved)));
     }
     Ok(model)
 }

@@ -1,0 +1,20 @@
+{
+  "command": "CARGO_TARGET_DIR=/Users/themoretheless/.codex/tmp/osv-source-projective-image-target-20261102 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2 CARGO_PROFILE_TEST_OPT_LEVEL=1 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed::classified::tests -- --nocapture",
+  "exitCode": 0,
+  "passed": 12,
+  "failed": 0,
+  "ignored": 0,
+  "testSeconds": 17.66,
+  "sourceInputs": 6619,
+  "changedFromPriorPacket": [
+    "crates/brep-core/src/sweep_boundary_owned/closed/classified/tests.rs"
+  ],
+  "productionSourcesUnchanged": true,
+  "fullBrepRerun": false,
+  "priorFullBrep": {
+    "passed": 2103,
+    "failed": 0,
+    "ignored": 5,
+    "packet": "../classified-closed-solid-2026-11-02/QUALIFICATION.md"
+  }
+}

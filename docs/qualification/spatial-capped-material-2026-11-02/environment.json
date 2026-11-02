@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "e2bb8e3aced7f3f9bfd1b306c1119d3a48cf9f7e",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "cargo": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)",
+  "CARGO_BUILD_JOBS": "2",
+  "RUST_TEST_THREADS": "2",
+  "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+  "CARGO_PROFILE_TEST_DEBUG": "0",
+  "CARGO_PROFILE_DEV_DEBUG": "0"
+}

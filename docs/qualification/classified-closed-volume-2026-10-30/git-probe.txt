@@ -1,0 +1,1 @@
+Publication held. Last read-only worktree HEAD and commondir probes timed out after 3 seconds in the preceding user turn. No further Git mutation attempted during the classified closed-volume implementation.

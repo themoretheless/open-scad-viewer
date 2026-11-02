@@ -253,6 +253,7 @@ pub fn certify_rational_preconditioned(
         &mut coordinates,
         &mut source_shear,
         [[0., 1.]; 2],
+        None,
     )?;
     Ok(PreconditionedReport {
         volume,
@@ -301,6 +302,7 @@ pub fn certify_rational_preconditioned_window(
         &mut coordinates,
         &mut source_shear,
         uv_window,
+        None,
     )?;
     Ok(PreconditionedReport {
         volume,

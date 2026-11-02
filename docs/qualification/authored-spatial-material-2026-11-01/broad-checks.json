@@ -1,0 +1,46 @@
+[
+  {
+    "crate": "nurbs-core",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "nurbs-core",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "exitCode": 0,
+    "seconds": 53.182,
+    "summary": [
+      "test result: ok. 2057 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 53.09s"
+    ],
+    "failures": [],
+    "log": "full-nurbs-core.log.gz"
+  },
+  {
+    "crate": "brep-core",
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "brep-core",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "exitCode": 0,
+    "seconds": 573.605,
+    "summary": [
+      "test result: ok. 2059 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 573.49s"
+    ],
+    "failures": [],
+    "log": "full-brep-core.log.gz"
+  }
+]

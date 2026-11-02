@@ -31,6 +31,11 @@ pub use retained_smoothness::{RetainedSeamReport,RetainedSmoothnessReport,Retain
 mod endpoint_surface;
 pub(crate) mod ideal_volume;
 pub use ideal_volume::IdealVolumeReport;
+mod original_profile_boundary;
+pub use original_profile_boundary::{OriginalProfileClass,OriginalProfileBoundaryLimits,
+    OriginalProfileBoundaryReport,OriginalProfileBoundary,OriginalProfileBoundaryAttempt};
+mod original_smooth_volume;
+pub use original_smooth_volume::{OriginalSmoothVolumeLimits,OriginalSmoothVolumeReport,OriginalSmoothVolume,OriginalSmoothVolumeAttempt};
 pub use endpoint_surface::EndpointSurfaceReport;
 mod profile_domain;
 pub use profile_domain::{IdealEndpointDomainsReport,IdealEndpointPlanesReport,EndpointCapProjectionReport};
@@ -56,3 +61,10 @@ mod source_jets;
 mod rmf_first_images;
 
 pub mod endpoint_points;
+
+pub use ideal_volume::normalized_identity::{certify_normalized_carrier_identity,
+    NormalizedCarrierIdentityLimits,NormalizedCarrierIdentityReport,
+    NormalizedCarrierIdentity,NormalizedCarrierIdentityAttempt};
+
+mod original_classified_volume;
+pub use original_classified_volume::{OriginalClassifiedVolumeLimits, OriginalClassifiedVolumeReport, OriginalClassifiedVolume, OriginalClassifiedVolumeAttempt};
