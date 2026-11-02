@@ -541,3 +541,5 @@ mod patch_uv;
 
 mod patch_uv_injectivity;
 pub use patch_uv_injectivity::BilinearUvInjectivity;
+
+mod patch_exact_membership;

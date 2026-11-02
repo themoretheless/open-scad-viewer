@@ -11,6 +11,7 @@ pub enum OriginalPatchUvProof {
     SeparableProjective,
     InjectiveBilinearKrawczyk,
     PositiveBilinearGlobalInverse,
+    ExactBoundaryProjective,
 }
 #[derive(Debug)]
 pub struct OriginalPatchContact {
@@ -37,7 +38,8 @@ pub struct OriginalPatchContacts {
 /// Positive separable target weights give independent projective UV clocks.
 /// The plane is an expression of the original vertices, so derived normal and
 /// offset need not be representable as binary64. Source continuity is required
-/// at interior knots. Boundary membership and coincident spans stay unresolved.
+/// at interior knots. Non-singleton boundary membership and coincident spans
+/// stay unresolved.
 /// This is neither a freeform tangency solver nor a trim/Body admission.
 pub fn original_affine_patch_contacts(
     c: &Curve,
@@ -207,7 +209,23 @@ pub fn original_affine_patch_contacts(
                 continue;
             }
             if alpha.lo <= 0. || alpha.hi >= 1. || beta.lo <= 0. || beta.hi >= 1. {
-                out.ambiguous_parameters.push([t.lo, t.hi]);
+                if root.interval[0] == root.interval[1] {
+                    if let Some(contact) = super::patch_exact_membership::contact(
+                        c,
+                        s,
+                        span,
+                        root.interval[0],
+                        root.multiplicity,
+                    )? {
+                        if out.target_uv_injectivity.is_none() {
+                            out.target_uv_injectivity =
+                                Some(super::patch_uv_injectivity::certify(&s.weights)?);
+                        }
+                        merge_contact(&mut out.contacts, contact);
+                    }
+                } else {
+                    out.ambiguous_parameters.push([t.lo, t.hi]);
+                }
                 continue;
             }
             let natural =
@@ -284,32 +302,32 @@ pub fn original_affine_patch_contacts(
                 source_spans: vec![span],
                 multiplicities: vec![root.multiplicity],
             };
-            // Only identical exact knot parameters alias; overlapping nondegenerate
-            // root enclosures remain distinct proof events.
-            if t.lo == t.hi {
-                if let Some(previous) = out
-                    .contacts
-                    .iter_mut()
-                    .find(|x| x.parameter_box[0] == [t.lo, t.hi])
-                {
-                    previous.source_spans.push(span);
-                    previous.multiplicities.push(root.multiplicity);
-                    for k in 0..3 {
-                        previous.parameter_box[k][0] =
-                            previous.parameter_box[k][0].min(contact.parameter_box[k][0]);
-                        previous.parameter_box[k][1] =
-                            previous.parameter_box[k][1].max(contact.parameter_box[k][1]);
-                        previous.position_bounds[k][0] =
-                            previous.position_bounds[k][0].min(contact.position_bounds[k][0]);
-                        previous.position_bounds[k][1] =
-                            previous.position_bounds[k][1].max(contact.position_bounds[k][1]);
-                    }
-                    continue;
-                }
-            }
-            out.contacts.push(contact);
+            merge_contact(&mut out.contacts, contact);
         }
     }
     out.complete = out.unresolved_spans.is_empty() && out.ambiguous_parameters.is_empty();
     Ok(out)
+}
+
+// Only identical exact parameters alias. Overlapping interval roots stay separate.
+fn merge_contact(contacts: &mut Vec<OriginalPatchContact>, contact: OriginalPatchContact) {
+    let t = contact.parameter_box[0];
+    if t[0] == t[1] {
+        if let Some(previous) = contacts.iter_mut().find(|x| x.parameter_box[0] == t) {
+            previous.source_spans.extend(contact.source_spans);
+            previous.multiplicities.extend(contact.multiplicities);
+            for k in 0..3 {
+                previous.parameter_box[k][0] =
+                    previous.parameter_box[k][0].min(contact.parameter_box[k][0]);
+                previous.parameter_box[k][1] =
+                    previous.parameter_box[k][1].max(contact.parameter_box[k][1]);
+                previous.position_bounds[k][0] =
+                    previous.position_bounds[k][0].min(contact.position_bounds[k][0]);
+                previous.position_bounds[k][1] =
+                    previous.position_bounds[k][1].max(contact.position_bounds[k][1]);
+            }
+            return;
+        }
+    }
+    contacts.push(contact);
 }

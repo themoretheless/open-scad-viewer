@@ -59,7 +59,7 @@ fn unrepresentable_plane_contacts_are_admitted_inside_the_original_patch() {
     }
 }
 #[test]
-fn finite_membership_excludes_outside_and_preserves_boundary_ambiguity() {
+fn finite_membership_separates_exterior_exact_boundary_and_interval_ambiguity() {
     let mut c = curve(2);
     for p in &mut c.control_points {
         p[1] = 2.;
@@ -70,6 +70,12 @@ fn finite_membership_excludes_outside_and_preserves_boundary_ambiguity() {
     for p in &mut c.control_points {
         p[1] = 0.;
     }
+    let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::ExactBoundaryProjective);
+    assert_eq!(r.contacts[0].parameter_box[2], [10., 10.]);
+    c.weights = vec![1., 2., 4.];
     let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
     assert!(!r.complete);
     assert!(r.contacts.is_empty());
@@ -256,4 +262,132 @@ fn a_global_bijection_proof_preserves_contact_when_a_tight_numeric_uv_box_fails(
     assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::PositiveBilinearGlobalInverse);
     assert_eq!(r.contacts[0].parameter_box[1], [-2., 2.]);
     assert_eq!(r.contacts[0].parameter_box[2], [10., 14.]);
+}
+
+fn flat_patch() -> Surface {
+    Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![-2., -2., 2., 2.],
+        knots_v: vec![10., 10., 14., 14.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0., 1.]],
+            vec![vec![0., 1., 0.], vec![0., 1., 1.]],
+        ],
+        weights: vec![vec![1., 2.], vec![3., 5.]],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+#[test]
+fn exact_edge_and_corner_contacts_preserve_coupled_projective_clocks() {
+    for (a, b, uv) in [
+        (0., 0.5, [-2., 10. + 4. / 3.]),
+        (1., 0.5, [2., 11.5]),
+        (0.5, 0., [-1., 10.]),
+        (0.5, 1., [-6. / 7., 14.]),
+        (0., 0., [-2., 10.]),
+        (1., 1., [2., 14.]),
+    ] {
+        let c = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: [0.25, -0.25, 0.25]
+                .into_iter()
+                .map(|x| vec![x, a, b])
+                .collect(),
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+        assert!(r.complete, "{r:?}");
+        assert_eq!(r.contacts.len(), 1);
+        let p = &r.contacts[0];
+        assert_eq!(p.uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::ExactBoundaryProjective);
+        assert_eq!(p.parameter_box[0], [0.5, 0.5]);
+        for (axis, x) in uv.into_iter().enumerate() {
+            let d = p.parameter_box[axis + 1];
+            assert!(d[0] <= x && x <= d[1], "{r:?}");
+        }
+    }
+}
+#[test]
+fn exact_membership_does_not_snap_tiny_offsets_to_the_boundary() {
+    for sign in [-1., 1.] {
+        let mut c = curve(2);
+        let delta = sign * f64::from_bits(1);
+        for p in &mut c.control_points {
+            p[1] = delta;
+        }
+        let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
+        assert!(r.complete, "{r:?}");
+        if sign < 0. {
+            assert!(r.contacts.is_empty());
+        } else {
+            assert_eq!(r.contacts.len(), 1);
+            assert_eq!(r.contacts[0].position_bounds[1], [delta, delta]);
+            assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::PositiveBilinearGlobalInverse);
+        }
+    }
+}
+#[test]
+fn singleton_root_uses_an_exact_nonbinary_natural_parameter() {
+    let mut c = curve(2);
+    c.knots = vec![0.1, 0.1, 0.1, 3.1, 3.1, 3.1];
+    for p in &mut c.control_points {
+        p[1] = 0.;
+    }
+    let r = original_affine_patch_contacts(&c, &patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    let t = r.contacts[0].parameter_box[0];
+    assert!(t[0] < t[1]);
+    assert!(t[0] <= 1.6 && 1.6 <= t[1]);
+    assert_eq!(r.contacts[0].parameter_box[2], [10., 10.]);
+}
+#[test]
+fn degree_25_corner_contact_retains_the_exact_order() {
+    let c = Curve {
+        degree: 25,
+        knots: [vec![0.; 26], vec![1.; 26]].concat(),
+        control_points: (0..26)
+            .map(|i| vec![if i % 2 == 0 { 1. } else { -1. }, 0., 0.])
+            .collect(),
+        weights: vec![1.; 26],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 1000000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert_eq!(r.contacts[0].multiplicities, vec![25]);
+    assert_eq!(
+        r.contacts[0].parameter_box,
+        [[0.5, 0.5], [-2., -2.], [10., 10.]]
+    );
+}
+
+#[test]
+fn exact_boundary_point_uses_original_rational_curve_weights() {
+    let c = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [1., -0.5, 0.25]
+            .into_iter()
+            .map(|x| vec![x, 0.5, 0.])
+            .collect(),
+        weights: vec![1., 2., 4.],
+        periodic: false,
+    };
+    let r = original_affine_patch_contacts(&c, &flat_patch(), 1e-9, 10, 100000).unwrap();
+    assert!(r.complete, "{r:?}");
+    assert_eq!(r.contacts.len(), 1);
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalPatchUvProof::ExactBoundaryProjective);
+    assert_eq!(
+        r.contacts[0].parameter_box,
+        [[0.5, 0.5], [-1., -1.], [10., 10.]]
+    );
+    assert_eq!(
+        r.contacts[0].position_bounds,
+        [[0., 0.], [0.5, 0.5], [0., 0.]]
+    );
 }

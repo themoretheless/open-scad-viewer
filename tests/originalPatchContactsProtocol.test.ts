@@ -26,4 +26,7 @@ describe('original patch contacts protocol',()=>{
 
  it('accepts an explicitly broad UV box with a global bijection proof',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='positive-bilinear-global-inverse';r.contacts[0].parameterBox[1]=[-2,2];r.contacts[0].parameterBox[2]=[10,14];expect(isOriginalPatchContactsReport(r)).toBe(true)})
 
+ it('accepts an exact boundary-projective contact with target proof metadata',()=>{const r=report();r.targetWeightsSeparable=false;r.targetUvInjectivityProven=true;r.contacts[0].uvMethod='exact-boundary-projective';r.contacts[0].parameterBox[1]=[-2,-2];expect(isOriginalPatchContactsReport(r)).toBe(true)})
+ it('rejects a boundary proof tag without target proof metadata',()=>{const r=report();r.contacts[0].uvMethod='exact-boundary-projective';expect(isOriginalPatchContactsReport(r)).toBe(false)})
+
 })

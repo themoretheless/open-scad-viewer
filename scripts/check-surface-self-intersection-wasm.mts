@@ -149,7 +149,9 @@ const zero=patchReply({...originalPatchFixture(2),maxExactWork:0});assert.equal(
 const finite=originalPatchFixture(2);for(const p of finite.curve.controlPoints)p[1]=2
 const exterior=patchReply(finite);assert.equal(exterior.status,'absent-on-patch');assert.equal(exterior.patchAbsenceProven,true);cases.push({name:'original-patch-finite-exclusion',status:exterior.status})
 for(const p of finite.curve.controlPoints)p[1]=0
-const boundary=patchReply(finite);assert.equal(boundary.status,'unresolved');assert(boundary.ambiguousParameters.length>0);cases.push({name:'original-patch-boundary-unresolved',status:boundary.status})
+const boundary=patchReply(finite);assert.equal(boundary.status,'present');assert.equal(boundary.contacts[0].uvMethod,'exact-boundary-projective');cases.push({name:'original-patch-exact-boundary',status:boundary.status})
+const intervalBoundary=structuredClone(finite);intervalBoundary.curve.weights=[1,2,4]
+const unresolvedBoundary=patchReply(intervalBoundary);assert.equal(unresolvedBoundary.status,'unresolved');assert(unresolvedBoundary.ambiguousParameters.length>0);cases.push({name:'original-patch-interval-boundary-unresolved',status:unresolvedBoundary.status})
 reject('original-patch-forged-body-admission',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),bodyAdmission:true})
 reject('original-patch-over-limit-exact-budget',{op:'nurbs_original_affine_patch_contacts',...originalPatchFixture(2),maxExactWork:1000001})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}

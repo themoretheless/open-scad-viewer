@@ -1,0 +1,33 @@
+{
+  "nurbsPassed": 77,
+  "bridgePassed": 8,
+  "rustTotalPassed": 85,
+  "clientPassed": 79,
+  "vueTsc": "passed",
+  "scope": "Exact singleton original-span root membership on affine-patch edges/corners with original rational UV clocks",
+  "verified": [
+    "all four edges and corners with coupled target weights",
+    "nonuniform rational source weights",
+    "degree-25 contact order",
+    "exact non-binary natural source parameter",
+    "positive/negative subnormal offsets are not snapped to boundary",
+    "non-singleton boundary roots preserve ambiguity"
+  ],
+  "updatedWasmHarnessExecuted": false,
+  "newBoundaryWasmQualified": false,
+  "trimBodyAdmission": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "5f07989fe84b1affcfbbe6cbca667a7ee9071771ccca9d7432ed0e28ac817453",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs": "382daf10a481aceff4f14497ded314c4e296b8c31bf57a052f988226c873c070",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/patch_exact_membership.rs": "0353e8681e679ef46f21e53aa9b1532a3087bb296343a3afcfe26177124bfdad",
+    "crates/nurbs-core/tests/original_affine_patch_contacts.rs": "624b402863317b0e3eeea157b1f298f774c5bda46a554feb5d766840d478eca8",
+    "crates/geometry-bridge/src/intersections/original_patch_contacts.rs": "3fe13070554baeeac26444d948468f5416413f900d38d39a4b5f53f2c2c9466e",
+    "crates/geometry-bridge/tests/original_affine_patch_contacts.rs": "2fe2b9df1cfb94c391ff39a342f2f739ee30b8f0eeff10a11c243a65f3b32c20",
+    "src/services/originalPatchContactsProtocol.ts": "154bfd1b63d5678eef4b0e8a02efb9bf564c744f71c3a14c95c5dcf0d2331da1",
+    "tests/originalPatchContactsProtocol.test.ts": "29482fcb2a75f621d90807c1d3760fa7436022b9ef54848460b88b32cef59159",
+    "scripts/check-surface-self-intersection-wasm.mts": "9cdb5cb7290d9a15f2fad694c426dda7d11acec76a5def215cb3998a42e0119a",
+    "tools/browser-qualification/surface-self-intersection.ts": "b665062199440e15d8e86975fb431e8c1957a2737942a0589536708185374453",
+    "tools/browser-qualification/surface-self-intersection.mjs": "a0c2878c60b53ba1cbf318cdf6df5b0352a4bb9529833ba04cb90dcc353e4de8",
+    "docs/api/original-affine-patch-contacts.md": "d89cc496aa54977585dc3f4632b8b16cb95b4cb4d01f4a5c7d35e6a713a9b340"
+  }
+}

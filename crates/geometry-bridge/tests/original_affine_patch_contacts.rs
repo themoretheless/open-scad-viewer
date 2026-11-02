@@ -73,7 +73,7 @@ fn zero_exact_budget_keeps_unresolved_source_spans() {
     assert!(!r["unresolvedSpans"].as_array().unwrap().is_empty());
 }
 #[test]
-fn finite_exclusion_and_boundary_ambiguity_remain_distinct() {
+fn finite_exclusion_and_exact_boundary_contact_remain_distinct() {
     let mut v = request(2);
     for p in v["curve"]["controlPoints"].as_array_mut().unwrap() {
         p[1] = json!(2);
@@ -85,8 +85,9 @@ fn finite_exclusion_and_boundary_ambiguity_remain_distinct() {
         p[1] = json!(0);
     }
     let r = dispatch(v).unwrap();
-    assert_eq!(r["status"], "unresolved");
-    assert!(!r["ambiguousParameters"].as_array().unwrap().is_empty());
+    assert_eq!(r["status"], "present");
+    assert_eq!(r["contacts"][0]["uvMethod"], "exact-boundary-projective");
+    assert_eq!(r["contacts"][0]["parameterBox"][2], json!([10., 10.]));
 }
 #[test]
 fn extra_verdicts_and_excessive_exact_work_are_rejected() {
@@ -163,4 +164,17 @@ fn coupled_target_uv_boxes_preserve_the_injective_bilinear_proof() {
         let b = &r["contacts"][0]["parameterBox"][axis + 1];
         assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
     }
+}
+
+#[test]
+fn nonsingleton_boundary_root_preserves_ambiguous_parameter_coverage() {
+    let mut v = request(2);
+    v["curve"]["weights"] = json!([1, 2, 4]);
+    for p in v["curve"]["controlPoints"].as_array_mut().unwrap() {
+        p[1] = json!(0);
+    }
+    let r = dispatch(v).unwrap();
+    assert_eq!(r["status"], "unresolved");
+    assert_eq!(r["curvePatchCoverageComplete"], false);
+    assert!(!r["ambiguousParameters"].as_array().unwrap().is_empty());
 }

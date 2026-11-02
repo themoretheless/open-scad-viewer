@@ -45,11 +45,13 @@ async function qualify(){
   const originalPatchOutside=await lane.inspectOriginalPatchContacts(finite)
   for(const p of finite.curve.controlPoints)p[1]=0
   const originalPatchBoundary=await lane.inspectOriginalPatchContacts(finite)
+  const intervalBoundary=structuredClone(finite);intervalBoundary.curve.weights=[1,2,4]
+  const originalPatchIntervalBoundary=await lane.inspectOriginalPatchContacts(intervalBoundary)
   const preaborted=new AbortController();preaborted.abort()
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}
