@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 237,
-  "unallocatedCount": 763,
+  "specifiedCount": 238,
+  "unallocatedCount": 762,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6425,15 +6425,38 @@
       "evidence": [
         "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics.rs",
         "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics/proof.rs",
-        "crates/nurbs-core/src/construct/curves/primitives/exact_quadrics/template.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_circle.rs",
         "crates/nurbs-core/tests/exact_quadrics_contracts.rs",
         "docs/design/nurbs-exact-quadrics.md",
         "docs/qualification/nurbs-exact-quadrics-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-exact-quadrics-2026-11-03/exact_oracle.py",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_frame.rs"
       ],
       "remainingQualification": [
         "Three finite exactly independent authored axes, including oblique/reflected frames. Entire 9x5 quadratic surface with variable rational clocks, nonperiodic clamped storage, intentional collapsed poles and longitude seam. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
         "Native surface geometry only; no B-rep/solid incidence, volume, evaluator-bit identity, JSON/WASM/Rush/editor/STEP or current-source distribution qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0238",
+      "name": "Точный полный аффинный кольцевой тор с рациональными весами, доказательством покрытия, швов и отсутствия самопересечений",
+      "status": "native",
+      "prioritySet": "native-1000-exact-construction",
+      "category": "Точное построение",
+      "nativeApi": "nurbs_core::primitives::exact_tori::ring",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/primitives/exact_tori.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_tori/proof.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_circle.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/exact_frame.rs",
+        "crates/nurbs-core/tests/exact_tori_contracts.rs",
+        "docs/design/nurbs-exact-tori.md",
+        "docs/qualification/nurbs-exact-tori-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-tori-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Three finite exactly independent authored axes, R>r>0. Entire 9x9 quadratic tensor with two full variable rational clocks, exact repeated seams, nonperiodic clamped storage. Embedded ring geometry modulo seams; horn/spindle/zero-tube domains rejected. Exact positive binary64 output or atomic refusal under unchanged shared1m-work/4096-bit caps.",
+        "Native surface geometry only; no B-rep shell orientation, solid incidence, volume, evaluator-bit/numeric-normal bounds, JSON/WASM/Rush/editor/STEP or current-source distribution qualification."
       ]
     }
   ],
