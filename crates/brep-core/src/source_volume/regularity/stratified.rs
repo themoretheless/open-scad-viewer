@@ -1,6 +1,40 @@
-//! Whole-face rank away from declared poles, with owned physical C2 pole disks.
+//! Whole-face rank away from declared poles, with owned physical C1/C2 pole disks.
 //! Ordinary seams and vertices retain their declared classes, including C0.
-use crate::source_seam_tangency::{C2PoleAtlas, Carrier};
+use crate::source_seam_tangency::{
+    Boundary, C1PoleAtlas, C1PoleNeighborhood, C2PoleAtlas, C2PoleNeighborhood, Carrier,
+};
+mod sealed {
+    pub trait Sealed {}
+    impl<E: super::Carrier> Sealed for super::C1PoleAtlas<'_, '_, E> {}
+    impl<E: super::Carrier> Sealed for super::C2PoleAtlas<'_, '_, E> {}
+}
+/// Only native complete physical pole atlases can supply regularity evidence.
+/// Borrowed neighborhoods remain tied to their original immutable boundary.
+pub trait PoleEvidence<'b, 's, E: Carrier>: sealed::Sealed {
+    fn boundary(&self) -> &'b Boundary<'s, E>;
+    fn c1_neighborhoods(&self) -> &[C1PoleNeighborhood] {
+        &[]
+    }
+    fn c2_neighborhoods(&self) -> &[C2PoleNeighborhood] {
+        &[]
+    }
+}
+impl<'b, 's, E: Carrier> PoleEvidence<'b, 's, E> for C1PoleAtlas<'b, 's, E> {
+    fn boundary(&self) -> &'b Boundary<'s, E> {
+        self.boundary()
+    }
+    fn c1_neighborhoods(&self) -> &[C1PoleNeighborhood] {
+        self.neighborhoods()
+    }
+}
+impl<'b, 's, E: Carrier> PoleEvidence<'b, 's, E> for C2PoleAtlas<'b, 's, E> {
+    fn boundary(&self) -> &'b Boundary<'s, E> {
+        self.boundary()
+    }
+    fn c2_neighborhoods(&self) -> &[C2PoleNeighborhood] {
+        self.neighborhoods()
+    }
+}
 use nurbs_core::{Error, Result, surface_quotient_injectivity, surface_regularity};
 use std::collections::BTreeMap;
 
@@ -15,30 +49,40 @@ pub enum Face {
 }
 /// Private construction retains all source geometry, material, complete face
 /// coverage and physical pole-neighborhood evidence through one immutable owner.
-pub struct StratifiedBody<'p, 'b, 's, E: Carrier> {
-    poles: &'p C2PoleAtlas<'b, 's, E>,
+pub struct StratifiedBody<
+    'p,
+    'b,
+    's,
+    E: Carrier,
+    P: PoleEvidence<'b, 's, E> = C2PoleAtlas<'b, 's, E>,
+> {
+    poles: &'p P,
+    boundary: &'b Boundary<'s, E>,
     faces: Vec<Face>,
 }
-impl<'p, 'b, 's, E: Carrier> StratifiedBody<'p, 'b, 's, E> {
-    pub fn poles(&self) -> &'p C2PoleAtlas<'b, 's, E> {
+impl<'p, 'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>> StratifiedBody<'p, 'b, 's, E, P> {
+    pub fn poles(&self) -> &'p P {
         self.poles
     }
     pub fn faces(&self) -> &[Face] {
         &self.faces
     }
     pub fn body(&self) -> &crate::source_volume::Body<E> {
-        self.poles.boundary().body()
+        self.boundary.body()
     }
 }
-pub struct Report<'p, 'b, 's, E: Carrier> {
-    pub certificate: Option<StratifiedBody<'p, 'b, 's, E>>,
+pub struct Report<'p, 'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E> = C2PoleAtlas<'b, 's, E>> {
+    pub certificate: Option<StratifiedBody<'p, 'b, 's, E, P>>,
     pub cells: usize,
     pub steps: usize,
     pub completed_faces: usize,
     pub uncertain_face: Option<usize>,
     pub reason: &'static str,
 }
-fn step<E: Carrier>(out: &mut Report<'_, '_, '_, E>, max_steps: usize) -> bool {
+fn step<'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>>(
+    out: &mut Report<'_, 'b, 's, E, P>,
+    max_steps: usize,
+) -> bool {
     if out.steps == max_steps {
         out.reason = "source-stratified-incidence-work-limit";
         false
@@ -51,15 +95,15 @@ fn step<E: Carrier>(out: &mut Report<'_, '_, '_, E>, max_steps: usize) -> bool {
 /// A positive determinant of the complete polar (F,G) blow-up implies rank two
 /// of the original surface for u>0: F and G are smooth functions of its world
 /// point there, with a freshly bounded positive denominator. At u=0, the SAME
-/// body's owned C2 graph disk supplies a regular physical surface neighborhood.
+/// body's owned C1/C2 graph disk supplies a regular physical surface neighborhood.
 /// This does not turn the singular original parameters into a regular chart.
 /// Full original faces share one cell budget; all incidence shares one step
 /// budget. No partial face cover or caller-provided pole report authorizes this.
-pub fn qualify<'p, 'b, 's, E: Carrier>(
-    poles: &'p C2PoleAtlas<'b, 's, E>,
+pub fn qualify<'p, 'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>>(
+    poles: &'p P,
     max_cells: usize,
     max_steps: usize,
-) -> Result<Report<'p, 'b, 's, E>> {
+) -> Result<Report<'p, 'b, 's, E, P>> {
     if max_cells > 100000 || max_steps > 1000000 {
         return Err(Error::new(
             "BREP_SOURCE_STRATIFIED_REGULARITY",
@@ -80,15 +124,25 @@ pub fn qualify<'p, 'b, 's, E: Carrier>(
         reason: "source-stratified-regularity-unproven",
     };
     let mut neighborhoods = BTreeMap::new();
-    for n in poles.neighborhoods() {
+    for (vertex, point, faces) in poles
+        .c1_neighborhoods()
+        .iter()
+        .map(|n| (n.vertex(), n.point(), n.faces()))
+        .chain(
+            poles
+                .c2_neighborhoods()
+                .iter()
+                .map(|n| (n.vertex(), n.point(), n.faces())),
+        )
+    {
         if !step(&mut out, max_steps) {
             return Ok(out);
         }
-        for &face in n.faces() {
+        for &face in faces {
             if !step(&mut out, max_steps) {
                 return Ok(out);
             }
-            if neighborhoods.insert((n.vertex(), face), n).is_some() {
+            if neighborhoods.insert((vertex, face), point).is_some() {
                 return Ok(out);
             }
         }
@@ -102,7 +156,7 @@ pub fn qualify<'p, 'b, 's, E: Carrier>(
         let Some(n) = neighborhoods.get(&(vertex, a.face)) else {
             return Ok(out);
         };
-        if n.point() != p.point() || declarations.insert(a.face, (a, p, vertex)).is_some() {
+        if *n != p.point() || declarations.insert(a.face, (a, p, vertex)).is_some() {
             // Multiple collapsed sides need their own complete chart cover.
             return Ok(out);
         }
@@ -193,9 +247,13 @@ pub fn qualify<'p, 'b, 's, E: Carrier>(
         out.completed_faces += 1;
     }
     if !faces.is_empty() {
-        out.certificate = Some(StratifiedBody { poles, faces });
+        out.certificate = Some(StratifiedBody {
+            poles,
+            boundary: poles.boundary(),
+            faces,
+        });
         out.uncertain_face = None;
-        out.reason = "source-whole-face-ranks-and-owned-c2-poles-qualified";
+        out.reason = "source-whole-face-ranks-and-owned-physical-poles-qualified";
     }
     Ok(out)
 }

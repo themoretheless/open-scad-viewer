@@ -447,3 +447,5 @@ fn common_atlas_contains_poles_and_an_ordinary_g2_star() {
 fn common_atlas_keeps_an_ordinary_g1_curvature_jump_beside_c2_poles() {
     run(true, true);
 }
+
+mod c1;

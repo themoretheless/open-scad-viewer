@@ -5,6 +5,7 @@ mod fan;
 mod material;
 mod poles;
 use super::{Carrier, Class, material_orientation::OrientedCollection};
+use crate::source_volume::regularity::stratified::PoleEvidence;
 use crate::{
     source_vertex_links::Node,
     source_volume::{Body, regularity::smooth::SmoothFaces},
@@ -15,6 +16,9 @@ use std::collections::BTreeMap;
 trait FaceEvidence<E: Carrier> {
     fn body(&self) -> &Body<E>;
     fn order(&self) -> usize;
+    fn c1_poles(&self) -> &[super::C1PoleNeighborhood] {
+        &[]
+    }
     fn poles(&self) -> Option<&[super::C2PoleNeighborhood]> {
         None
     }
@@ -27,8 +31,8 @@ impl<E: Carrier> FaceEvidence<E> for SmoothFaces<'_, '_, E> {
         self.order()
     }
 }
-impl<E: Carrier> FaceEvidence<E>
-    for crate::source_volume::regularity::smooth::StratifiedSmoothFaces<'_, '_, '_, '_, E>
+impl<'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>> FaceEvidence<E>
+    for crate::source_volume::regularity::smooth::StratifiedSmoothFaces<'_, '_, 'b, 's, E, P>
 {
     fn body(&self) -> &Body<E> {
         self.body()
@@ -37,7 +41,10 @@ impl<E: Carrier> FaceEvidence<E>
         self.order()
     }
     fn poles(&self) -> Option<&[super::C2PoleNeighborhood]> {
-        Some(self.regular().poles().neighborhoods())
+        Some(self.regular().poles().c2_neighborhoods())
+    }
+    fn c1_poles(&self) -> &[super::C1PoleNeighborhood] {
+        self.regular().poles().c1_neighborhoods()
     }
 }
 trait EdgeEvidence<E: Carrier> {
@@ -107,6 +114,9 @@ impl<E: Carrier> Atlas<'_, E> {
     pub fn pole_neighborhoods(&self) -> &[super::C2PoleNeighborhood] {
         self.faces.poles().unwrap_or(&[])
     }
+    pub fn c1_pole_neighborhoods(&self) -> &[super::C1PoleNeighborhood] {
+        self.faces.c1_poles()
+    }
     pub fn vertices(&self) -> &[Vertex] {
         &self.vertices
     }
@@ -152,11 +162,18 @@ pub fn qualify<'a, E: Carrier + 'a>(
     qualify_impl(faces, oriented, axes, tolerance_uv, limits)
 }
 /// Complete ordinary AND pole coverage of the same original material body.
-/// Pole disks retain native C2 authority; all ordinary stars are recomputed.
+/// Pole disks retain their native C1/C2 authority; all ordinary stars are recomputed.
 /// Stronger pole evidence never upgrades current declared classes. No partial
 /// cover or foreign-source proof is accepted. Explicit C0 remains explicit C0.
-pub fn qualify_stratified<'a, E: Carrier + 'a>(
-    faces: &'a crate::source_volume::regularity::smooth::StratifiedSmoothFaces<'_, '_, '_, '_, E>,
+pub fn qualify_stratified<'a, 'b, 's, E: Carrier + 'a, P: PoleEvidence<'b, 's, E>>(
+    faces: &'a crate::source_volume::regularity::smooth::StratifiedSmoothFaces<
+        '_,
+        '_,
+        'b,
+        's,
+        E,
+        P,
+    >,
     oriented: &'a OrientedCollection<'_, '_, '_, E>,
     axes: &[usize],
     tolerance_uv: f64,
@@ -202,8 +219,13 @@ fn qualify_impl<'a, E: Carrier + 'a>(
     if (!shell.poles().is_empty() && faces.poles().is_none()) || links.is_empty() {
         return Ok(out);
     }
-    let Some(polar) = poles::cover(body, faces.poles().unwrap_or(&[]), &mut out, limits.steps)
-    else {
+    let Some(polar) = poles::cover(
+        body,
+        faces.poles().unwrap_or(&[]),
+        faces.c1_poles(),
+        &mut out,
+        limits.steps,
+    ) else {
         return Ok(out);
     };
     let mut orders = BTreeMap::new();
@@ -301,6 +323,10 @@ fn qualify_impl<'a, E: Carrier + 'a>(
         if let Some(n) = polar.get(&link.vertex) {
             if axes[vi] != n.dropped_axis() {
                 out.reason = "source-pole-projected-axis-unproven";
+                return Ok(out);
+            }
+            if order > n.order() {
+                out.reason = "source-pole-requested-order-unproven";
                 return Ok(out);
             }
             vertices.push(Vertex::Pole {

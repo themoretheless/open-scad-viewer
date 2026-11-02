@@ -196,6 +196,39 @@ pub fn qualify_boundary_with_exact_curvature<'a, E: Carrier>(
         Some(axes),
     )
 }
+/// Exact G2 on ordinary regular carriers beside C1 physical pole stars.
+/// Polar tangent coverage and exact ordinary work have distinct shared ledgers;
+/// this does not assert C2 poles or substitute tolerance G1 for exact gluing.
+pub fn qualify_boundary_with_exact_regular_curvature<'a, E: Carrier>(
+    body: &'a Body<E>,
+    classes: &[Class],
+    axes: &[usize],
+    graphs: poles::GraphLimits,
+    limits: Limits,
+    normal_coefficients: usize,
+    max_exact_work: u64,
+) -> Result<BoundaryReport<'a, E>> {
+    if axes.len() != classes.len()
+        || axes.iter().any(|a| *a > 2)
+        || !(1..=100000000).contains(&normal_coefficients)
+        || !(1..=100000000).contains(&max_exact_work)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_BOUNDARY_SMOOTHNESS",
+            "Choose complete exact projection proposals and bounded aggregate work",
+        ));
+    }
+    qualify_boundary_impl(
+        body,
+        classes,
+        PoleRequirement::TangentGraph(graphs),
+        limits,
+        Some(normal_coefficients),
+        None,
+        Some(max_exact_work),
+        Some(axes),
+    )
+}
 fn qualify_boundary_impl<'a, E: Carrier>(
     body: &'a Body<E>,
     classes: &[Class],
@@ -275,7 +308,14 @@ fn qualify_boundary_impl<'a, E: Carrier>(
             exact_axes.map(|a| (a, exact_work.unwrap())),
         )?
     } else if let (Some(planes), Some(coefficients)) = (plane_atlas, polar_coefficients) {
-        collection::qualify_owned_edges_with_poles(body, classes, limits, planes, coefficients)?
+        collection::qualify_owned_edges_with_poles(
+            body,
+            classes,
+            limits,
+            planes,
+            coefficients,
+            exact_axes.map(|a| (a, exact_work.unwrap())),
+        )?
     } else if let Some(axes) = exact_axes {
         collection::qualify_owned_edges_exact_regular(
             body,

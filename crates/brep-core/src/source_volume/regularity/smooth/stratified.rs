@@ -1,15 +1,28 @@
-//! Original parametric Ck jets on a body with owned physical C2 pole disks.
+//! Original parametric Ck jets on a body with owned physical C1/C2 pole disks.
 //! Singular source parameters remain singular; physical rank is retained by
 //! the opaque stratified regularity owner, not inferred from these jet checks.
-use super::super::{Carrier, stratified::StratifiedBody};
+use super::super::{
+    Carrier,
+    stratified::{PoleEvidence, StratifiedBody},
+};
+use crate::source_seam_tangency::C2PoleAtlas;
 use nurbs_core::{Error, Result, analysis::surface_continuity};
-pub struct StratifiedSmoothFaces<'r, 'p, 'b, 's, E: Carrier> {
-    regular: &'r StratifiedBody<'p, 'b, 's, E>,
+pub struct StratifiedSmoothFaces<
+    'r,
+    'p,
+    'b,
+    's,
+    E: Carrier,
+    P: PoleEvidence<'b, 's, E> = C2PoleAtlas<'b, 's, E>,
+> {
+    regular: &'r StratifiedBody<'p, 'b, 's, E, P>,
     faces: Vec<surface_continuity::Certificate<'s>>,
     order: usize,
 }
-impl<'r, 'p, 'b, 's, E: Carrier> StratifiedSmoothFaces<'r, 'p, 'b, 's, E> {
-    pub fn regular(&self) -> &'r StratifiedBody<'p, 'b, 's, E> {
+impl<'r, 'p, 'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>>
+    StratifiedSmoothFaces<'r, 'p, 'b, 's, E, P>
+{
+    pub fn regular(&self) -> &'r StratifiedBody<'p, 'b, 's, E, P> {
         self.regular
     }
     pub fn body(&self) -> &'s crate::source_volume::Body<E> {
@@ -22,8 +35,15 @@ impl<'r, 'p, 'b, 's, E: Carrier> StratifiedSmoothFaces<'r, 'p, 'b, 's, E> {
         self.order
     }
 }
-pub struct StratifiedReport<'r, 'p, 'b, 's, E: Carrier> {
-    pub certificate: Option<StratifiedSmoothFaces<'r, 'p, 'b, 's, E>>,
+pub struct StratifiedReport<
+    'r,
+    'p,
+    'b,
+    's,
+    E: Carrier,
+    P: PoleEvidence<'b, 's, E> = C2PoleAtlas<'b, 's, E>,
+> {
+    pub certificate: Option<StratifiedSmoothFaces<'r, 'p, 'b, 's, E, P>>,
     pub cells: usize,
     pub exact_work: u64,
     pub uncertain_face: Option<usize>,
@@ -31,12 +51,12 @@ pub struct StratifiedReport<'r, 'p, 'b, 's, E: Carrier> {
 /// Fresh whole-knot checks for EVERY original source face under one cell/exact
 /// ledger. The same original body retains its embedded material geometry,
 /// complete ordinary/polar rank coverage and physical pole-neighborhood proof.
-pub fn qualify<'r, 'p, 'b, 's, E: Carrier>(
-    regular: &'r StratifiedBody<'p, 'b, 's, E>,
+pub fn qualify<'r, 'p, 'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>>(
+    regular: &'r StratifiedBody<'p, 'b, 's, E, P>,
     order: usize,
     max_cells: usize,
     max_work: u64,
-) -> Result<StratifiedReport<'r, 'p, 'b, 's, E>> {
+) -> Result<StratifiedReport<'r, 'p, 'b, 's, E, P>> {
     if !matches!(order, 1 | 2) || max_cells > 1000000 || max_work > 100000000 {
         return Err(Error::new(
             "BREP_SOURCE_FACE_CONTINUITY",

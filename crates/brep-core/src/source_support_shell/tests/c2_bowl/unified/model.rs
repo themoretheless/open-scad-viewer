@@ -99,7 +99,15 @@ fn vertex(m: &mut crate::Model, map: &mut BTreeMap<[u64; 3], usize>, p: Vec<f64>
     })
 }
 pub(super) fn hybrid(jump: bool) -> (crate::Model, Vec<usize>, usize, Option<usize>) {
-    let original = super::super::model();
+    hybrid_from(super::super::model(), jump)
+}
+pub(super) fn hybrid_folded(jump: bool) -> (crate::Model, Vec<usize>, usize, Option<usize>) {
+    hybrid_from(super::super::model_with_folded_curvature(true), jump)
+}
+fn hybrid_from(
+    original: crate::Model,
+    jump: bool,
+) -> (crate::Model, Vec<usize>, usize, Option<usize>) {
     let target = original
         .faces
         .iter()

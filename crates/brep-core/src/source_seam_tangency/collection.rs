@@ -417,6 +417,7 @@ pub(super) fn qualify_owned_edges_with_poles<'a, E: Carrier>(
     limits: Limits,
     planes: &crate::source_pole_tangency::BodyPlaneLimits<'_, E>,
     coefficients: usize,
+    regular_exact: Option<(&[usize], u64)>,
 ) -> Result<CollectionReport<'a, E>> {
     if !std::ptr::eq(planes.body(), body) {
         return Err(Error::new(
@@ -429,7 +430,7 @@ pub(super) fn qualify_owned_edges_with_poles<'a, E: Carrier>(
         classes,
         limits,
         Some((planes, body.geometry().shell().uses(), coefficients, None)),
-        None,
+        regular_exact,
     )
 }
 pub(super) fn qualify_owned_edges_with_polar_curvature<'a, E: Carrier>(
