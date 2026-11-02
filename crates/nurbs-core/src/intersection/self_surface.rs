@@ -1,5 +1,7 @@
 //! Global nonintersection proof or exact interior fold witness; no sampled verdict.
 use crate::{Result, surface::Surface, surface_injectivity};
+use num_rational::BigRational;
+use num_traits::FromPrimitive;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     Absent,
@@ -15,11 +17,32 @@ pub struct Report {
     pub witness: Option<[[f64; 2]; 2]>,
     pub reflected_axis: Option<usize>,
 }
-fn bezier(k: &[f64], p: usize, n: usize) -> bool {
-    n == p + 1 && k[..=p].iter().all(|x| *x == k[p]) && k[n..].iter().all(|x| *x == k[n])
+fn reflected_basis(k: &[f64], p: usize, n: usize) -> bool {
+    let (a, b) = (k[p], k[n]);
+    if !k[..=p].iter().all(|x| *x == a) || !k[n..].iter().all(|x| *x == b) {
+        return false;
+    }
+    // C0 continuity makes the identity valid even when the witness lands on
+    // an internal knot: opposite one-sided endpoint conventions then agree.
+    let mut multiplicity = 0;
+    let mut previous = a;
+    for &t in &k[p + 1..n] {
+        multiplicity = if t == previous { multiplicity + 1 } else { 1 };
+        previous = t;
+        if t <= a || t >= b || multiplicity > p {
+            return false;
+        }
+    }
+    let q = |x| BigRational::from_f64(x).unwrap();
+    let sum = q(a) + q(b);
+    // Rounded binary64 sums can hide asymmetric knots by one ULP. Compare
+    // the exact dyadic values of the original input instead.
+    k.iter()
+        .zip(k.iter().rev())
+        .all(|(&x, &y)| q(x) + q(y) == sum)
 }
 /// Absence follows a single global contraction bound across every source span.
-/// Presence uses exact homogeneous reflection of a complete Bezier axis: a
+/// Presence uses exact homogeneous reflection of a complete clamped B-spline axis: a
 /// mathematical interior two-to-one fold, not a tolerance/sample coincidence.
 /// All other cases (including unsupported periodic charts and insufficient
 /// budgets) stay Unresolved. Isolated local regularity never proves absence.
@@ -44,9 +67,9 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
     }
     for axis in 0..2 {
         let eligible = if axis == 0 {
-            bezier(&s.knots_u, s.degree_u, nu)
+            reflected_basis(&s.knots_u, s.degree_u, nu)
         } else {
-            bezier(&s.knots_v, s.degree_v, nv)
+            reflected_basis(&s.knots_v, s.degree_v, nv)
         };
         if !eligible {
             continue;

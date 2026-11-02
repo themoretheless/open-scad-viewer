@@ -61,3 +61,86 @@ fn incomplete_coverage_and_invalid_input_never_claim_absence() {
     s.weights[0][0] = f64::NAN;
     assert!(surface_self_intersection::inspect(&s, 100).is_err());
 }
+
+fn multispan_fold() -> Surface {
+    let mut s = graph();
+    s.knots_u = vec![-2., -2., -2., -1., 1., 2., 2., 2.];
+    let a = s.control_points[0].clone();
+    let b = s.control_points[1].clone();
+    let c = s.control_points[2].clone();
+    s.control_points = vec![a.clone(), b.clone(), c, b, a];
+    s.weights = vec![
+        vec![1.; 2],
+        vec![2.; 2],
+        vec![3.; 2],
+        vec![2.; 2],
+        vec![1.; 2],
+    ];
+    s
+}
+
+#[test]
+fn rational_multispan_reflection_proves_interior_coincidence_in_both_axes() {
+    for transpose in [false, true] {
+        let mut s = multispan_fold();
+        if transpose {
+            s.control_points = (0..2)
+                .map(|j| (0..5).map(|i| s.control_points[i][j].clone()).collect())
+                .collect();
+            s.weights = (0..2)
+                .map(|j| (0..5).map(|i| s.weights[i][j]).collect())
+                .collect();
+            std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+            std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+        }
+        let r = surface_self_intersection::inspect(&s, 100).unwrap();
+        assert_eq!(r.status, Status::Present);
+        assert_eq!(r.reflected_axis, Some(usize::from(transpose)));
+        let w = r.witness.unwrap();
+        let point = |uv: [f64; 2]| {
+            let u = if transpose { uv[0] } else { -2. + 4. * uv[0] };
+            let v = if transpose { -2. + 4. * uv[1] } else { uv[1] };
+            s.evaluate(u, v).unwrap().point
+        };
+        let (a, b) = (point(w[0]), point(w[1]));
+        for axis in 0..3 {
+            assert!((a[axis] - b[axis]).abs() < 1e-13);
+        }
+    }
+}
+
+#[test]
+fn rounded_knot_symmetry_does_not_prove_a_fold() {
+    let mut s = multispan_fold();
+    s.knots_u = vec![0., 0., 0., 0.25, 0.75_f64.next_up(), 1., 1., 1.];
+    assert_eq!(0.25 + 0.75_f64.next_up(), 1.); // rounded equality is insufficient
+    assert_eq!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Unresolved
+    );
+}
+
+#[test]
+fn asymmetric_weights_do_not_prove_a_fold() {
+    let mut s = multispan_fold();
+    s.weights[0][0] = 1.01;
+    assert_eq!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Unresolved
+    );
+}
+
+#[test]
+fn discontinuous_reflected_charts_do_not_admit_an_endpoint_witness() {
+    let mut s = graph();
+    s.degree_u = 1;
+    s.knots_u = vec![0., 0., 0.25, 0.25, 0.75, 0.75, 1., 1.];
+    let a = s.control_points[0].clone();
+    let b = s.control_points[1].clone();
+    let c = s.control_points[2].clone();
+    s.control_points = vec![a.clone(), b.clone(), c.clone(), c, b, a];
+    s.weights = vec![vec![1.; 2]; 6];
+    let error = surface_self_intersection::inspect(&s, 100).unwrap_err();
+    assert_eq!(error.code, "NURBS_INVALID_INPUT");
+    assert!(error.message.contains("Interior multiplicity"));
+}
