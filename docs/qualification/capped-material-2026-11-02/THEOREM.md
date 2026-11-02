@@ -48,6 +48,13 @@ clockwise hole. The residual uses the original Bernstein coefficients of
 12 x(x-1/4)(x-3/4)(x-1) in both axes, so it vanishes on all physical boundary
 traces while remaining nonzero on open subsets of the filled material interior. Exact native
 composition, not the stated formula or a sampled evaluation, supplies authority.
+For this fixture, in the fixed reference frame the map is
+F(u,v,t)=(u,v,t[2+q(u)q(v)/64]). The Bernstein hull gives |q|<=5/4,
+so its normalized determinant is at least 2-25/1024=2023/1024>0.
+The first two coordinates identify u,v and the positive last coefficient
+identifies t, independently explaining full injectivity of this hollow example.
+These fixture-specific observations do not replace the generic native factory.
+
 A negative fixture separately binds both caps to the same complete world
 profiles but changes the normalized material region; common-region refusal is
 mandatory even though both individual material reports are certified.
