@@ -1,0 +1,54 @@
+{
+  "status": "passed-focused-native",
+  "baseCommit": "e9a783397ec55f2feed58f318b80fa9592f6bd98",
+  "coreBridgeTests": 78,
+  "predicateTests": 28,
+  "rustTests": 106,
+  "newTests": 9,
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 54,
+    "pinnedLayerViolations": 0,
+    "baselineChangedByThisStage": false
+  },
+  "predicate": "rational_bspline_quadric_projected_edge_sign",
+  "proof": "Original homogeneous quadric pullback reused without rounding; exact projected affine edge equation from original target frame leaves; unique original quadric root and Sturm-Tarski sign; exact determinant orientation included. No midpoint substitution or proximity snapping.",
+  "nativeIntegration": "Finite quadric graph membership queries only edges whose exact coordinate bounds cross the finite rectangle. Zero proves an edge coordinate, inward signs clip enclosing bounds, an outward sign proves exclusion. UV proof methods distinguish singleton/control bounds/coordinate signs.",
+  "budget": "One remaining total allowance for all graph coordinate queries. boundary_exact_work equals the sum of boundary_proofs.work_delta; each decision.work_used is cumulative within its root context. exact_work = target_membership.work_used + carrier.exact_work + boundary_exact_work.",
+  "verified": [
+    "all four nonproportional edges and both corners",
+    "nearby interior/exterior roots",
+    "rotated projection with negative determinant",
+    "original nonrepresentable projected frame",
+    "irrational shared boundary root and both nearby sides",
+    "zero/insufficient coordinate allowance preserves unresolved finite membership",
+    "sphere carrier primitive, rational source clock and degenerate/nonunique query refusal",
+    "old quadric roots/constant products/order 50 and plane-sign regressions"
+  ],
+  "bridgeAvailable": false,
+  "rawWasmQualified": false,
+  "finiteSurfaceUvAdmission": "Only emitted finite contacts under the existing constant-weight single-Bezier graph proof",
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "installedPackageUpdated": false,
+  "remaining": [
+    "finite graph native bridge/client/Worker and actual WASM qualification",
+    "nonconstant rational target weights and multi-span graph charts",
+    "non-graph quadric sheets and general freeform supports",
+    "complete surface/surface branches, periodic/poles and coincident components",
+    "trim/Body/Boolean and production integration",
+    "full shared-library runtime/regression qualification"
+  ],
+  "sourceSha256": {
+    "crates/cad-predicates/src/bspline_plane_roots.rs": "820fa68a3bc797d245733396d3889ddeef7cfbcf58bc593376abf8be5da87bf7",
+    "crates/cad-predicates/src/bspline_plane_roots/quadric.rs": "8c77c74c079e1c7b58b51b09d70e93809d88576294037d2ea70c024f9fc619c1",
+    "crates/cad-predicates/src/bspline_plane_roots/quadric/polynomial.rs": "a0352d7b5961a3cdbbca9dca57e0b2d03cd11633867a1b299d18bdd4f4eaa07c",
+    "crates/cad-predicates/src/bspline_plane_roots/quadric_edge.rs": "48eac4d1bd963b7c5527bcfe7139087c5779afb94e87539f00b5fe7bc461ce37",
+    "crates/cad-predicates/tests/original_quadric_edge_sign.rs": "ed8dcb83a7a1f264c852fbc2b09ba54e8f3639f02890599dc38b915a4ce7ca4a",
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "7423060f57fa6520bb0fd6643d5bbc237b4e5657b99bac3b84815fa52b118a09",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "cfb51ea83a840d176b5fd5fa975ff611e062785536a51cbbf2e6eeb9eb477516",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/edge.rs": "69443d4384a2a8a7b08fa250533ad32b5b5c59342d694b7610b3141a6fdced0e",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/membership.rs": "fdb21b375a639ff88aaede761a274c41c6556d72e95c3d8f4d1dbc4ad3ece42f",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "4fe995e7bdcef3bf6fba74281686efd285e9bbb10d6c310ac7d942dd43431a00"
+  }
+}

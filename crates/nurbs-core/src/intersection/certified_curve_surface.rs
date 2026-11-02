@@ -549,4 +549,4 @@ mod patch_coordinate_bounds;
 mod quadric_carrier;
 pub use quadric_carrier::{OriginalQuadricCarrierRoot, OriginalQuadricCarrierRoots, original_quadric_carrier_roots};
 mod quadric_graph;
-pub use quadric_graph::{OriginalQuadricGraphContact,OriginalQuadricGraphContacts,original_quadric_graph_contacts};
+pub use quadric_graph::{OriginalQuadricGraphContact,OriginalQuadricGraphContacts,OriginalQuadricGraphUvProof,GraphBoundaryProof,original_quadric_graph_contacts};

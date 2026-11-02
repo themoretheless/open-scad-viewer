@@ -4,7 +4,7 @@ use super::*;
 use num_traits::Zero;
 pub(super) enum Decision {
     Outside,
-    Unresolved,
+    Unresolved([bool; 4]),
     Contact(OriginalQuadricGraphContact),
 }
 fn contradiction() -> crate::Error {
@@ -20,12 +20,13 @@ pub(super) fn contact(
     matrix: [[f64; 4]; 4],
     products: &[[f64; 2]],
     root: &OriginalQuadricCarrierRoot,
+    signs: &[Option<cad_predicates::Sign>; 4],
 ) -> Result<Decision> {
     let span = root.source_spans[0];
     let normalized = root.normalized_original_span_parameters[0];
     let mut parameter = root.parameter;
     let mut position = root.position_bounds;
-    let ranges = if normalized[0] == normalized[1] {
+    let mut ranges = if normalized[0] == normalized[1] {
         let t = q(c.knots[span]) + (q(c.knots[span + 1]) - q(c.knots[span])) * q(normalized[0]);
         let p = point(c, span, &t)?;
         let h = [p[0].clone(), p[1].clone(), p[2].clone(), q(1.)];
@@ -76,6 +77,29 @@ pub(super) fn contact(
             [lo, hi]
         })
     };
+    for (edge, sign) in signs.iter().enumerate() {
+        use cad_predicates::Sign;
+        let r = &mut ranges[edge / 2];
+        match sign {
+            Some(Sign::Zero) => {
+                let x = q((edge % 2) as f64);
+                *r = [x.clone(), x];
+            }
+            Some(sign) => {
+                if (edge % 2 == 0 && *sign == Sign::Negative)
+                    || (edge % 2 == 1 && *sign == Sign::Positive)
+                {
+                    return Ok(Decision::Outside);
+                }
+                if edge % 2 == 0 {
+                    r[0] = r[0].clone().max(q(0.));
+                } else {
+                    r[1] = r[1].clone().min(q(1.));
+                }
+            }
+            None => {}
+        }
+    }
     if ranges.iter().any(|r| r[0] > r[1]) {
         return Err(contradiction());
     }
@@ -83,7 +107,14 @@ pub(super) fn contact(
         return Ok(Decision::Outside);
     }
     if ranges.iter().any(|r| r[0] < Q::zero() || r[1] > q(1.)) {
-        return Ok(Decision::Unresolved);
+        return Ok(Decision::Unresolved(std::array::from_fn(|edge| {
+            let r = &ranges[edge / 2];
+            if edge % 2 == 0 {
+                r[0] < q(0.) && r[1] >= q(0.)
+            } else {
+                r[0] <= q(1.) && r[1] > q(1.)
+            }
+        })));
     }
     let natural = |axis: usize| -> Result<[f64; 2]> {
         let (knots, p, n) = if axis == 0 {
@@ -99,6 +130,13 @@ pub(super) fn contact(
     };
     Ok(Decision::Contact(OriginalQuadricGraphContact {
         parameter_box: [parameter, natural(0)?, natural(1)?],
+        uv_proof: if signs.iter().any(Option::is_some) {
+            OriginalQuadricGraphUvProof::QuadricCoordinateSign
+        } else if normalized[0] == normalized[1] {
+            OriginalQuadricGraphUvProof::ExactSingleton
+        } else {
+            OriginalQuadricGraphUvProof::OriginalAffineControlBounds
+        },
         position_bounds: position,
         source_spans: root.source_spans.clone(),
         multiplicities: root.multiplicities.clone(),

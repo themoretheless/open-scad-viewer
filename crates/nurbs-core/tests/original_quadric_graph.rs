@@ -54,7 +54,9 @@ fn present(r: &OriginalQuadricGraphContacts, expected: &[(f64, f64, f64, usize)]
     }
     assert_eq!(
         r.exact_work,
-        r.target_membership.work_used + r.carrier.as_ref().unwrap().exact_work
+        r.target_membership.work_used
+            + r.carrier.as_ref().unwrap().exact_work
+            + r.boundary_exact_work
     );
 }
 #[test]
@@ -241,11 +243,11 @@ fn nonsingleton_boundary_root_is_admitted_from_original_active_control_identity(
 }
 
 #[test]
-fn nonproportional_algebraic_boundary_membership_preserves_explicit_ambiguity() {
+fn nonproportional_algebraic_boundary_membership_has_an_exact_coordinate_proof() {
     let (s, q) = saddle();
     // F=X*Y-Z=(1-3t)^2, X=1-3t. At t=1/3 the point is on
     // the edge, but neither midpoint evaluation nor a control-hull clipping
-    // can prove that. A further quadric-root coordinate sign proof is needed.
+    // can prove that. The exact quadric-root coordinate sign proof is required.
     let c = Curve {
         degree: 3,
         knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
@@ -259,10 +261,13 @@ fn nonproportional_algebraic_boundary_membership_preserves_explicit_ambiguity() 
         periodic: false,
     };
     let r = inspect(&c, &s, q);
-    assert!(r.target_graph_proven && !r.complete);
-    assert!(r.contacts.is_empty());
-    assert_eq!(r.ambiguous_parameters.len(), 1);
-    assert!(r.carrier.as_ref().unwrap().complete);
+    present(&r, &[(2. + 4. / 3., -2., 12., 2)]);
+    assert!(r.boundary_exact_work > 0);
+    assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphUvProof::QuadricCoordinateSign);
+    assert_eq!(
+        r.boundary_exact_work,
+        r.boundary_proofs.iter().map(|p| p.work_delta).sum()
+    );
 }
 
 #[test]
@@ -338,4 +343,174 @@ fn finite_graph_proof_excludes_a_different_quadric_component_and_refuses_singula
         1_000_000
     )
     .is_err());
+}
+
+#[test]
+fn quadric_coordinate_signs_prove_all_nonproportional_edges_and_corners() {
+    for edge in 0..6 {
+        let (s, q) = saddle();
+        let l = [1., 0., -1., -2.];
+        let f = [1., -1., 0., 4.];
+        let points = (0..4)
+            .map(|i| match edge {
+                0 => vec![l[i], 0.5, 0.5 * l[i] - f[i]],
+                1 => vec![1. + l[i], 0.5, 0.5 * (1. + l[i]) - f[i]],
+                2 => vec![0.5, l[i], 0.5 * l[i] - f[i]],
+                3 => vec![0.5, 1. + l[i], 0.5 * (1. + l[i]) - f[i]],
+                4 => vec![l[i], l[i], 0.],
+                _ => vec![1. + l[i], 1. + l[i], [3., 1., -1., -3.][i]],
+            })
+            .collect();
+        let c = Curve {
+            degree: 3,
+            knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+            control_points: points,
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let r = inspect(&c, &s, q);
+        let (u, v) = match edge {
+            0 => (-2., 12.),
+            1 => (2., 12.),
+            2 => (0., 10.),
+            3 => (0., 14.),
+            4 => (-2., 10.),
+            _ => (2., 14.),
+        };
+        present(&r, &[(2. + 4. / 3., u, v, 2)]);
+        assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphUvProof::QuadricCoordinateSign);
+        assert_eq!(
+            r.boundary_exact_work,
+            r.boundary_proofs.iter().map(|p| p.work_delta).sum()
+        );
+    }
+}
+
+#[test]
+fn nearby_interior_exterior_and_rotated_projection_are_exactly_distinguished() {
+    for rotated in [false, true] {
+        for delta in [-2f64.powi(-40), 2f64.powi(-40)] {
+            let (mut s, mut q) = saddle();
+            let f = [1., -1., 0., 4.];
+            let mut c = Curve {
+                degree: 3,
+                knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+                control_points: [1., 0., -1., -2.]
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, l)| vec![l + delta, 0.5, 0.5 * (l + delta) - f[i]])
+                    .collect(),
+                weights: vec![1.; 4],
+                periodic: false,
+            };
+            if rotated {
+                for row in &mut s.control_points {
+                    for p in row {
+                        p.swap(0, 2);
+                    }
+                }
+                for p in &mut c.control_points {
+                    p.swap(0, 2);
+                }
+                q = [
+                    [0., 0., 0., -0.5],
+                    [0., 0., 0.5, 0.],
+                    [0., 0.5, 0., 0.],
+                    [-0.5, 0., 0., 0.],
+                ];
+            }
+            let r = inspect(&c, &s, q);
+            assert!(r.target_graph_proven && r.complete, "{r:?}");
+            assert_eq!(r.contacts.len(), usize::from(delta > 0.));
+            assert!(r.boundary_exact_work > 0);
+        }
+    }
+}
+
+#[test]
+fn original_nonrepresentable_projection_frame_keeps_the_exact_edge() {
+    let (mut s, q) = saddle();
+    s.control_points = vec![
+        vec![vec![0.1, 0., 0.], vec![0.1, 1., 0.1]],
+        vec![vec![1.1, 0., 0.], vec![1.1, 1., 1.1]],
+    ];
+    let d = 2f64.powi(-8);
+    let x = [0.1 + d, 0.1 - d, 0.1 + d];
+    let f = [d, 0., -d];
+    let c = Curve {
+        degree: 2,
+        knots: vec![2., 2., 2., 6., 6., 6.],
+        control_points: (0..3).map(|i| vec![x[i], 0.5, 0.5 * x[i] - f[i]]).collect(),
+        weights: vec![1., 2., 4.],
+        periodic: false,
+    };
+    let r = inspect(&c, &s, q);
+    present(&r, &[(2. + 4. / 3., -2., 12., 1)]);
+    assert!(r.boundary_exact_work > 0);
+}
+
+#[test]
+fn exhausted_coordinate_budget_does_not_promote_a_carrier_root_to_the_graph() {
+    let (s, q) = saddle();
+    let c = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![
+            vec![1., 0.5, -0.5],
+            vec![0., 0.5, 1.],
+            vec![-1., 0.5, -0.5],
+            vec![-2., 0.5, -5.],
+        ],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let full = inspect(&c, &s, q);
+    assert!(full.complete && full.boundary_exact_work > 0);
+    let base = full.target_membership.work_used + full.carrier.as_ref().unwrap().exact_work;
+    for extra in [0, 1] {
+        let r = original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, base + extra).unwrap();
+        assert!(r.target_graph_proven && !r.complete);
+        assert!(r.contacts.is_empty());
+        assert_eq!(r.ambiguous_parameters.len(), 1);
+        assert!(r.exact_work <= base + extra);
+        assert_eq!(
+            r.exact_work,
+            r.target_membership.work_used
+                + r.carrier.as_ref().unwrap().exact_work
+                + r.boundary_exact_work
+        );
+    }
+}
+
+#[test]
+fn irrational_quadric_root_has_exact_boundary_and_both_nearby_side_classifications() {
+    for delta in [-2f64.powi(-40), 0., 2f64.powi(-40)] {
+        let (s, q) = saddle();
+        let x = [-3., -3., -2., 0., 3.];
+        let f = [3., 3., 1., -3., 3.];
+        // F=12*(t²-1/2)², X=6*t²-3+delta. Neither source
+        // coordinate is proportional to the implicit residual polynomial.
+        let c = Curve {
+            degree: 4,
+            knots: vec![2., 2., 2., 2., 2., 6., 6., 6., 6., 6.],
+            control_points: (0..5)
+                .map(|i| vec![x[i] + delta, 0.5, 0.5 * (x[i] + delta) - f[i]])
+                .collect(),
+            weights: vec![1.; 5],
+            periodic: false,
+        };
+        let r = inspect(&c, &s, q);
+        assert!(r.target_graph_proven && r.complete, "{r:?}");
+        if delta < 0. {
+            assert!(r.contacts.is_empty());
+        } else {
+            present(&r, &[(2. + 4. * 0.5f64.sqrt(), -2. + 4. * delta, 12., 2)]);
+            assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphUvProof::QuadricCoordinateSign);
+        }
+        assert!(r.boundary_exact_work > 0);
+        assert_eq!(
+            r.boundary_exact_work,
+            r.boundary_proofs.iter().map(|p| p.work_delta).sum()
+        );
+    }
 }

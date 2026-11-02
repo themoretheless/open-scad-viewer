@@ -4,12 +4,21 @@ use super::*;
 use cad_predicates::{BezierIdentity, BezierIdentityDecision};
 use num_rational::BigRational as Q;
 mod chart;
+mod edge;
 mod identity;
+pub use edge::GraphBoundaryProof;
 mod membership;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginalQuadricGraphUvProof {
+    ExactSingleton,
+    OriginalAffineControlBounds,
+    QuadricCoordinateSign,
+}
 #[derive(Debug)]
 pub struct OriginalQuadricGraphContact {
     /// Natural coordinates [curve t, target u, target v].
     pub parameter_box: Box3,
+    pub uv_proof: OriginalQuadricGraphUvProof,
     pub position_bounds: [[f64; 2]; 3],
     pub source_spans: Vec<usize>,
     pub multiplicities: Vec<usize>,
@@ -21,6 +30,8 @@ pub struct OriginalQuadricGraphContacts {
     pub target_graph_proven: bool,
     pub target_membership: BezierIdentityDecision,
     pub carrier: Option<OriginalQuadricCarrierRoots>,
+    pub boundary_exact_work: u64,
+    pub boundary_proofs: Vec<GraphBoundaryProof>,
     pub exact_work: u64,
     pub complete: bool,
 }
@@ -29,7 +40,7 @@ pub struct OriginalQuadricGraphContacts {
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its
 /// carrier. Other charts/branches refuse this contract. No trim/Body credit.
-/// max_exact_work bounds the sum of target and curve predicate work. Fixed
+/// max_exact_work bounds target, carrier and coordinate predicate work. Fixed
 /// degree-bounded rational chart and singleton checks are separate operations.
 pub fn original_quadric_graph_contacts(
     c: &Curve,
@@ -79,6 +90,8 @@ pub fn original_quadric_graph_contacts(
         target_membership,
         carrier: None,
         exact_work: work,
+        boundary_exact_work: 0,
+        boundary_proofs: vec![],
         complete: false,
     };
     if !proven {
@@ -94,9 +107,30 @@ pub fn original_quadric_graph_contacts(
     )?;
     out.exact_work += carrier.exact_work;
     for root in &carrier.roots {
-        match membership::contact(c, s, &chart, matrix, products, root)? {
+        let mut decision = membership::contact(c, s, &chart, matrix, products, root, &[None; 4])?;
+        let eligible = match &decision {
+            membership::Decision::Unresolved(edges) => Some(*edges),
+            _ => None,
+        };
+        if let Some(eligible) = eligible {
+            let proofs = edge::prove(
+                c,
+                s,
+                &chart,
+                matrix,
+                products,
+                root,
+                eligible,
+                max_exact_work - out.exact_work,
+            )?;
+            out.exact_work += proofs.work;
+            out.boundary_exact_work += proofs.work;
+            decision = membership::contact(c, s, &chart, matrix, products, root, &proofs.signs)?;
+            out.boundary_proofs.extend(proofs.records);
+        }
+        match decision {
             membership::Decision::Outside => {}
-            membership::Decision::Unresolved => out.ambiguous_parameters.push(root.parameter),
+            membership::Decision::Unresolved(_) => out.ambiguous_parameters.push(root.parameter),
             membership::Decision::Contact(contact) => out.contacts.push(contact),
         }
     }
