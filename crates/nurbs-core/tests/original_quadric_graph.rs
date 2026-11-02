@@ -707,3 +707,39 @@ fn quadratic_multispan_graph_uses_original_basis_and_refuses_tiny_projection_dri
     s.control_points[1][0][0] = f64::from_bits(0.25f64.to_bits() + 1);
     assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).is_err());
 }
+
+#[test]
+fn separable_rational_multispan_clocks_have_global_exact_inverse_enclosures() {
+    let (mut s, q) = saddle();
+    s.knots_u = vec![-2., -2., -1., 1., 2., 2.];
+    s.knots_v = vec![10., 10., 11., 13., 14., 14.];
+    let x = [0., 0.25, 0.75, 1.];
+    let a = [1., 3., 5., 7.];
+    let b = [1., 2., 6., 8.];
+    s.control_points = x
+        .iter()
+        .map(|u| x.iter().map(|v| vec![*u, *v, u * v]).collect())
+        .collect();
+    s.weights = a
+        .iter()
+        .map(|u| b.iter().map(|v| u * v).collect())
+        .collect();
+    let c = line([0., 0., -0.25], [1., 1., 0.75]);
+    let r = inspect(&c, &s, q);
+    present(&r, &[(4., -0.25, 11.5, 2)]);
+    assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::SeparableRational);
+    for uv in &r.contacts[0].parameter_box[1..] {
+        assert!(uv[1] - uv[0] < 1e-12);
+    }
+    for (u, v, nu, nv) in [
+        (0., 0., -2., 10.),
+        (1., 1., 2., 14.),
+        (0., 0.5, -2., 11.5),
+        (0.5, 1., -0.25, 14.),
+    ] {
+        present(
+            &inspect(&line([u, v, -1.], [u, v, 2.]), &s, q),
+            &[(2. + 4. * (u * v + 1.) / 3., nu, nv, 1)],
+        );
+    }
+}

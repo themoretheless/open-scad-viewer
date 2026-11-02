@@ -101,3 +101,12 @@ for(const zero of [false,true]){
  const q=multispanTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
  quadricGraphCases.push({name:`graph-multispan-unproved-target-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved multi-span target admitted')})
 }
+
+function rationalMultispanTarget(q:OriginalQuadricGraphQuery){multispanTarget(q);q.patch.weights=[1,3,5,7].map(a=>[1,2,6,8].map(b=>a*b));return q}
+{
+ const q=rationalMultispanTarget(graphQuery());quadricGraphCases.push({name:'graph-rational-multispan-target-clocks',query:q,check:r=>{present(r,[[4,-.25,11.5,2]]);require(r.targetParameterization==='separable-rational','Missing original multi-span clock proof')}})
+}
+for(let edge=0;edge<6;edge++){
+ const q=rationalMultispanTarget(boundaryQuery(edge)),uv=edge===0?[-2,11.5]:edge===1?[2,11.5]:edge===2?[-.25,10]:edge===3?[-.25,14]:edge===4?[-2,10]:[2,14]
+ quadricGraphCases.push({name:`graph-rational-multispan-edge-${edge}`,query:q,check:r=>present(r,[[2+4/3,uv[0]!,uv[1]!,2]],'quadric-coordinate-sign')})
+}

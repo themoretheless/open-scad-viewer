@@ -1,9 +1,11 @@
 //! Positive weighted Bernstein clocks, with exact inverse enclosures.
 use super::*;
 use num_traits::Zero;
+mod spline;
 pub(super) enum Clock {
     Projective([Q; 2]),
     Bernstein(Vec<Q>),
+    Spline(Vec<spline::Span>),
 }
 impl Clock {
     pub(super) fn original(weights: Vec<Q>) -> Self {
@@ -14,6 +16,16 @@ impl Clock {
         } else {
             Self::Bernstein(weights)
         }
+    }
+    pub(super) fn bspline(
+        p: usize,
+        knots: &[f64],
+        weights: Vec<Q>,
+        ordinates: &[Q],
+    ) -> Result<Self> {
+        Ok(Self::Spline(spline::original(
+            p, knots, weights, ordinates,
+        )?))
     }
     pub(super) fn identity(&self) -> bool {
         matches!(self,Self::Projective(w) if w[0]==w[1])
@@ -40,7 +52,7 @@ impl Clock {
                 let x = w0 * a / (w1 * (q(1.) - a) + w0 * a);
                 [x.clone(), x]
             }
-            Self::Bernstein(w) => {
+            Self::Bernstein(_) | Self::Spline(_) => {
                 let mut lo = 0.;
                 let mut hi = 1.;
                 for _ in 0..64 {
@@ -48,7 +60,11 @@ impl Clock {
                     if mid <= lo || mid >= hi {
                         break;
                     }
-                    let value = evaluate(w, &q(mid));
+                    let value = match self {
+                        Self::Bernstein(w) => evaluate(w, &q(mid)),
+                        Self::Spline(s) => spline::evaluate(s, &q(mid)),
+                        _ => unreachable!(),
+                    };
                     if value == *a {
                         return [q(mid), q(mid)];
                     }

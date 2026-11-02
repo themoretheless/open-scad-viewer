@@ -44,9 +44,10 @@ pub struct OriginalQuadricGraphContacts {
     pub exact_work: u64,
     pub complete: bool,
 }
-/// Original clamped B-spline graph with constant weights and exact Greville
-/// projection, or a single Bezier graph with positive separable weighted
-/// Bernstein clocks over an exact affine control-grid projection;
+/// Original clamped B-spline graph with positive exactly separable weights
+/// and exact Greville projection. Multi-span clocks require a complete exact
+/// monotone homogeneous Bernstein restriction census and continuous joins.
+/// Single Bezier graphs use weighted Bernstein clocks and their exact shortcut;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its

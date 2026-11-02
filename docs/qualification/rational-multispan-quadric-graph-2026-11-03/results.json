@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "nativeTests": 27,
+  "bridgeTests": 12,
+  "clockTests": 2,
+  "clientTests": 70,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "e4f68de8d4bbba98f511987ea28ac54a6edac79d3088a94b38519b5398ef1360",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock.rs": "6634b0627e2199747acd16e5bfb1ac05f8f9fc673b4eb08c6bd79452547e2c26",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock/spline.rs": "95c6eda571df9ce28c1495322566871168537be6d90666a2419f7cee8ee0e75b",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "f507e903d4b088e2374cde456673e73d2d1559457ee5eea7c8c8299c2bc85265",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "bb2d0d04156ec83dc470048476c7b141a1015ab07e92d78da5286232e45a7b2e",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "e5f7b98719a4624a788c2a5c5df0ed0691dae5b76b64408dde61c96276a86a5e"
+  },
+  "scope": "Positive exactly separable original clamped multi-span rational B-spline clocks with exact Greville projected poles, positive homogeneous blossom restrictions, ordered span ordinates, strict endpoint range and continuous joins. Exact inverse enclosures use rational comparisons.",
+  "independentOracle": "Cox basis sums versus exact blossom restrictions and inverse enclosures for degrees 1 through 8 and nonuniform span lengths.",
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for new rational multi-span clocks",
+    "Coupled nonseparable target weights",
+    "General freeform branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

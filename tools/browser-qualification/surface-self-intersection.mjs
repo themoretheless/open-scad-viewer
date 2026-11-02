@@ -34,9 +34,9 @@ try{
  assert.equal(result.rational.status,'present');assert.deepEqual(result.rational.exactWitness[1][0],{numerator:'8',denominator:'9'})
  for(const [key,pattern] of Object.entries({busy:/busy/,cancelled:/cancelled/,deadline:/deadline/,nativeRefusal:/NURBS_INVALID_INPUT/,cloneFailure:/clone|request/i,preAbort:/cancelled/,badBudget:/budget/}))assert.match(result[key],pattern,key)
  assert.equal(result.inputIntact,true);assert.equal(result.noEarlyWorkers,true);assert(result.ticks>0)
- assert.deepEqual(result.ownership,{active:false,workersStarted:140,workersTerminated:140})
+ assert.deepEqual(result.ownership,{active:false,workersStarted:147,workersTerminated:147})
  const platformAudit=await page.evaluate(()=>globalThis.surfaceWorkerAudit)
- assert.deepEqual(platformAudit,{started:140,terminated:140});assert.deepEqual(errors,[])
+ assert.deepEqual(platformAudit,{started:147,terminated:147});assert.deepEqual(errors,[])
  assert.equal(result.nonlinear.length,5)
  const x=(11-4*Math.sqrt(6))/25,t=(1+Math.sqrt(6))/5
  const expected=[[x,x,1],[0,0,1],[0,0,1],[79/63,79/63,8/7],[79/63,79/63,8/7]]
@@ -70,7 +70,7 @@ try{
  assert.equal(result.advancedPatch.length,16);assert.equal(result.commonRootPatch.length,28);assert.equal(result.quadricCarriers.length,14)
  assert.equal(result.commonRootScalarOnly.status,'absent-on-patch');const budget=result.commonRootAuxiliaryBudget
  assert.equal(budget.status,'unresolved');assert.equal(budget.contacts.length,0);assert(budget.ambiguousParameters.length>0);assert(budget.exactWork<=budget.maxExactWork);assert.equal(budget.exactWork,budget.scalarProofs.reduce((sum,p)=>sum+p.workUsed,0))
- assert.equal(result.finiteGraphs.length,47);assert.equal(result.graphBoundaryBudget.status,'unresolved');assert.equal(result.graphBoundaryBudget.finiteSurfaceUvAdmission,false);assert.equal(result.graphBoundaryBudget.carrier.curveCarrierCoverageComplete,true)
+ assert.equal(result.finiteGraphs.length,54);assert.equal(result.graphBoundaryBudget.status,'unresolved');assert.equal(result.graphBoundaryBudget.finiteSurfaceUvAdmission,false);assert.equal(result.graphBoundaryBudget.carrier.curveCarrierCoverageComplete,true)
  assert.match(result.graphUnsupportedWeights,/NURBS_INVALID_INPUT/);assert.match(result.graphUnsupportedSheet,/NURBS_INVALID_INPUT/);assert.match(result.graphInvalidBudget,/Invalid original quadric graph query/)
  const report={passed:true,browser:browser.version(),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,installedPackageUpdated:false,result,platformAudit,workers,scope:'Actual Chromium module Workers on an explicit raw candidate; no installed-package or editor/provider qualification'}
  await writeFile(resolve(output,'report.json'),JSON.stringify(report,null,2)+'\n')

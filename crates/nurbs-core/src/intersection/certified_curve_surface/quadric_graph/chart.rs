@@ -34,10 +34,6 @@ impl Chart {
             "Quadric graph requires original clamped knots",
         )?;
         let w0 = q(s.weights[0][0]);
-        check(
-            single || s.weights.iter().flatten().all(|w| q(*w) == w0),
-            "Multi-span rational graph clocks are not yet proved",
-        )?;
         // Rank-one positive weights give independent weighted Bernstein
         // clocks. Their strict monotonicity and endpoint coverage are proved
         // by the variance identity in clock.rs; no geometric assumption is
@@ -48,17 +44,6 @@ impl Chart {
             }),
             "Quadric graph requires exactly separable original positive weights",
         )?;
-        let clocks = if !single {
-            [
-                super::clock::Clock::original(vec![q(1.), q(1.)]),
-                super::clock::Clock::original(vec![q(1.), q(1.)]),
-            ]
-        } else {
-            [
-                super::clock::Clock::original((0..=p).map(|i| q(s.weights[i][0])).collect()),
-                super::clock::Clock::original((0..=r).map(|j| q(s.weights[0][j])).collect()),
-            ]
-        };
         // Exact Greville linear precision certifies the polynomial multi-span
         // projection directly in the original basis, without extracted poles.
         let greville = |knots: &[f64], d: usize, n: usize| -> Vec<Q> {
@@ -71,6 +56,33 @@ impl Chart {
         };
         let gu = greville(&s.knots_u, p, nu);
         let gv = greville(&s.knots_v, r, nv);
+        let constant = s.weights.iter().flatten().all(|w| q(*w) == w0);
+        let clocks = if !single && constant {
+            [
+                super::clock::Clock::original(vec![q(1.), q(1.)]),
+                super::clock::Clock::original(vec![q(1.), q(1.)]),
+            ]
+        } else if !single {
+            [
+                super::clock::Clock::bspline(
+                    p,
+                    &s.knots_u,
+                    (0..nu).map(|i| q(s.weights[i][0])).collect(),
+                    &gu,
+                )?,
+                super::clock::Clock::bspline(
+                    r,
+                    &s.knots_v,
+                    (0..nv).map(|j| q(s.weights[0][j])).collect(),
+                    &gv,
+                )?,
+            ]
+        } else {
+            [
+                super::clock::Clock::original((0..=p).map(|i| q(s.weights[i][0])).collect()),
+                super::clock::Clock::original((0..=r).map(|j| q(s.weights[0][j])).collect()),
+            ]
+        };
         let parameterization = if clocks.iter().all(|c| c.identity()) {
             OriginalQuadricGraphParameterization::PolynomialAffine
         } else if clocks.iter().all(|c| c.projective()) {

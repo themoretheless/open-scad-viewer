@@ -219,3 +219,24 @@ fn multispan_original_graph_serializes_global_natural_coordinates() {
     );
     ledger(&r);
 }
+
+#[test]
+fn rational_multispan_graph_keeps_target_clock_proof_and_work_ledger() {
+    let mut q = query();
+    q["patch"]["knotsU"] = json!([-2., -2., -1., 1., 2., 2.]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 1., 0.]],
+        [[0.25, 0., 0.], [0.25, 1., 0.25]],
+        [[0.75, 0., 0.], [0.75, 1., 0.75]],
+        [[1., 0., 0.], [1., 1., 1.]]
+    ]);
+    q["patch"]["weights"] = json!([[1., 1.], [3., 3.], [5., 5.], [7., 7.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "separable-rational");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["parameterBox"],
+        json!([[4., 4.], [-0.25, -0.25], [12., 12.]])
+    );
+    ledger(&r);
+}
