@@ -1,0 +1,88 @@
+{
+  "sourceCommit": "0640ebd846dcfa1112cf50f60ac33337f8e4e6b3",
+  "nativeLogSha256": "85f3eb673ce4872a1cf3695d8a0a42369ac0b4dbddffdcf332d9c7011d585207",
+  "checks": 33,
+  "wasmSha256": "632f90543c1a835931b061b2543830200c9fd570dad972b25a80bfe7ad5692df",
+  "wasmBytes": 16641867,
+  "cases": [
+    {
+      "op": "curve_exact_ellipse",
+      "elapsedMs": 48.580166000000006,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_ellipsoid",
+      "elapsedMs": 2.5291249999999934,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_frustum_side",
+      "elapsedMs": 1.300750000000022,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_planar_region",
+      "elapsedMs": 1.2328329999999994,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_frustum_side",
+      "elapsedMs": 1.2155839999999785,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_planar_region",
+      "elapsedMs": 0.9912080000000003,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_frustum_side",
+      "elapsedMs": 1.0878749999999968,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_planar_region",
+      "elapsedMs": 1.0124999999999886,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_frustum_side",
+      "elapsedMs": 1.1584170000000142,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_planar_region",
+      "elapsedMs": 1.3246249999999975,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    },
+    {
+      "op": "surface_exact_ring_torus",
+      "elapsedMs": 3.56245899999999,
+      "nativeEqual": true,
+      "atomicRefusal": true,
+      "forgedAuthorityRejected": true
+    }
+  ],
+  "installedPackageUpdated": false,
+  "scope": "Actual raw WASM ABI/native parity for exact primitive records; not installed package, Worker, editor or broad performance qualification"
+}

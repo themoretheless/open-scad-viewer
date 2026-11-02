@@ -1,0 +1,28 @@
+{
+  "roundsEach": 5,
+  "casesEach": 102,
+  "timedCasesEach": 26,
+  "allCaseResultsEqual": true,
+  "scope": "Five alternating fresh-instance ABI fixture runs per variant; bounded timing observation, not broad performance qualification or production admission",
+  "totalsMs": {
+    "stock": [
+      477.4887499999999,
+      477.4840810000002,
+      480.4883310000001,
+      469.205502,
+      473.28145800000004
+    ],
+    "predicates": [
+      470.41729400000025,
+      471.71133400000014,
+      472.1160379999999,
+      470.6764609999998,
+      472.2668760000001
+    ]
+  },
+  "medianTotalMs": {
+    "stock": 477.4840810000002,
+    "predicates": 471.71133400000014
+  },
+  "candidateToStockMedianRatio": 0.9879100744303138
+}
