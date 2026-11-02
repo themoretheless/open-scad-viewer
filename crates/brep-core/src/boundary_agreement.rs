@@ -205,7 +205,8 @@ impl ExactReport {
         })
     }
 }
-/// Exact edge/lift identity, distinct from tolerance agreement. This alone is
+/// Exact edge/lift identity on each requested use (explicit trims cover only
+/// their declared intervals). Distinct from tolerance agreement. This alone is
 /// not a certificate of valid trim regions, embedding or solid volume.
 pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
     model.validate_boundary_diagnostic_inputs()?;
@@ -226,7 +227,15 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
         for &wire in std::iter::once(&face.outer).chain(&face.holes) {
             curves.clear();
             curves.extend(model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()));
-            let closed=nurbs_core::trim_domain::exact_loop_joins(&curves)?;
+            let coedges=&model.loops[wire].coedges;
+            let closed=if coedges.iter().any(|c|c.trim().is_some()) {
+                if coedges.iter().any(|c|c.trim().is_some_and(|t|t.periodic_lift!=[[0;2];2])) {None}
+                else {
+                    let ranges=coedges.iter().map(|c|c.trim().map_or_else(||c.pcurve.domain(),|t|t.pcurve_parameter)).collect::<Vec<_>>();
+                    let joins=nurbs_core::trim_domain::exact_trimmed_loop_joins(&curves,&ranges,max_work-report.work)?;
+                    report.work+=joins.work_used;joins.closed
+                }
+            }else{nurbs_core::trim_domain::exact_loop_joins(&curves)?};
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));
             for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
@@ -242,8 +251,15 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
         (c.pcurve.degree!=1,s.degree_u+s.degree_v+c.pcurve.degree+model.edges[c.edge].curve.degree)
     });
     for (index,face,coedge) in jobs {
-        let decision=if coedge.trim().is_none() && report.work<max_work {
-            curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
+        let decision=if report.work<max_work {
+            if let Some(trim)=coedge.trim() {
+                trim_nodes(model,&model.faces[face],coedge)?;
+                if trim.periodic_lift==[[0;2];2] {
+                    curve_surface_agreement::verify_exact_trimmed(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,trim.curve_parameter,trim.pcurve_parameter,max_work-report.work)?
+                }else{None}
+            }else{
+                curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
+            }
         }else{None};
         if let Some(d)=&decision{report.work+=d.work_used;}
         if decision.is_none() && coedge.trim().is_none() && report.work<max_work {

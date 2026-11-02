@@ -117,3 +117,59 @@ fn irrational_authored_endpoints_and_exhausted_graph_work_do_not_become_models()
     };
     assert!(curved::author_retained_nurbs_boolean(&a, &b, "intersection", limits).is_err());
 }
+
+#[test]
+fn whole_network_splits_paths_ending_on_original_hole_rims() {
+    let (a, b) = fixture::hole_rim_solids();
+    let r =
+        curved::author_retained_nurbs_boolean(&a, &b, "intersection", NurbsGraphLimits::default())
+            .unwrap();
+    r.model().validate().unwrap();
+    assert_eq!(r.model().bodies.len(), 1);
+    let original_holes = a
+        .faces
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| !f.holes.is_empty())
+        .map(|(f, _)| f)
+        .collect::<Vec<_>>();
+    let p = &r.certificate().partitions[0];
+    assert!(original_holes.iter().all(|f| {
+        p.face_sources
+            .iter()
+            .filter(|&&source| source == *f)
+            .count()
+            > 1
+    }));
+    assert!(r.certificate().graph.vertices.iter().any(|k| {
+        k.operand == 0
+            && a.faces
+                .iter()
+                .flat_map(|f| &f.holes)
+                .any(|&w| a.loops[w].coedges.iter().any(|c| c.edge == k.edge))
+    }));
+    curved::verify_retained_nurbs_boolean(&a, &b, r.model(), r.certificate()).unwrap();
+}
+
+#[test]
+fn xor_decomposes_four_use_contact_edges_into_separately_checked_bodies() {
+    let (a, b) = fixture::layered_solids();
+    let r =
+        curved::author_retained_nurbs_boolean(&a, &b, "xor", NurbsGraphLimits::default()).unwrap();
+    r.model().validate().unwrap();
+    assert_eq!(r.model().bodies.len(), 3);
+    let d = r.certificate().xor_decomposition.as_ref().unwrap();
+    assert_eq!(d.parts[0].bodies.len(), 2);
+    assert_eq!(d.parts[1].bodies.len(), 1);
+    assert!(r.certificate().result_atlas.is_none());
+    assert!(d.atlases.iter().all(Option::is_some));
+    let mut uses = vec![0; r.model().edges.len()];
+    for l in &r.model().loops {
+        for c in &l.coedges {
+            uses[c.edge] += 1;
+        }
+    }
+    assert!(uses.iter().all(|&n| n == 2));
+    assert!(r.model().persistent_naming_complete());
+    curved::verify_retained_nurbs_boolean(&a, &b, r.model(), r.certificate()).unwrap();
+}

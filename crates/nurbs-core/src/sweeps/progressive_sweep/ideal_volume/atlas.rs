@@ -13,6 +13,8 @@ mod weighted;
 mod refinement;
 mod p_matrix;
 pub(crate) use p_matrix::certify as certify_c1_rectangular_map;
+mod smooth_p_matrix;
+pub(crate) use smooth_p_matrix::certify as certify_smooth_p_matrix;
 
 fn projected(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<[V3; 3]> {
     let mut p = [[I::point(0.); 3]; 3];

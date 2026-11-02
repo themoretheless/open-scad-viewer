@@ -1,6 +1,6 @@
 //! Bounded exact rational candidate generation; callers recheck identities.
 use super::*;
-pub(super) fn kernel(
+pub(in crate::minkowski3d::curved) fn kernel(
     mut rows: Vec<Vec<Q>>,
     columns: usize,
     work: &mut Work,

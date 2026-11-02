@@ -1,5 +1,8 @@
 //! Bounded, conservative verification of C(t) = S(P(t)) over a full interval.
 //! Positive rational hulls cover every knot span. Exhaustion is inconclusive.
+mod trimmed_boundary;
+mod exact_trimmed;
+pub use exact_trimmed::verify_exact_trimmed;
 mod point_lift;
 pub use point_lift::verify_exact_point;
 use crate::distance_bounds::{Interval, box_distance};
@@ -276,8 +279,8 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
     if require_chart {
         if let Some(identity)=structured_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
-        if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
     }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
         && knots[..=degree].iter().all(|x|*x==knots[degree])

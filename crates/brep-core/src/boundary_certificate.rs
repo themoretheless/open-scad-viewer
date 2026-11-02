@@ -4,6 +4,7 @@
 //! A source motion law is not inferred from an authored rational reference.
 use crate::{Error, Model, Result, boundary_embedding::regularity, volume_validity};
 use nurbs_core::surface_correspondence;
+mod atlas_transport;
 
 #[derive(Clone, Copy)]
 pub struct Limits {
@@ -17,6 +18,7 @@ pub struct Limits {
     pub retained_volume: volume_validity::Limits,
 }
 pub struct Report {
+    pub uv_transport_faces: Vec<usize>,
     pub certified: bool,
     pub continuous_bound: bool,
     pub error_upper: Option<f64>,
@@ -74,6 +76,7 @@ pub fn inspect(
         ));
     }
     let mut out = Report {
+        uv_transport_faces: Vec::new(),
         certified: false,
         continuous_bound: false,
         error_upper: None,
@@ -87,9 +90,17 @@ pub fn inspect(
         retained_volume: None,
         reason: Some("boundary-correspondence-mismatch"),
     };
-    if !common_regions(reference, retained) || reference.faces.is_empty() {
+    if reference.faces.is_empty() {
         return Ok(out);
     }
+    let original_reference=reference;
+    let transported;
+    let reference=if common_regions(reference,retained){reference}else{
+        let (proposal,products)=atlas_transport::prepare(reference,retained,limits.correspondence.products);
+        out.correspondence_products+=products;
+        let Some((view,faces))=proposal else{return Ok(out)};
+        out.uv_transport_faces=faces;transported=view;&transported
+    };
     let mut maximum = 0_f64;
     let mut complete = true;
     for (a, b) in reference.faces.iter().zip(&retained.faces) {
@@ -118,7 +129,7 @@ pub fn inspect(
     }
     // A complete positional bound can coexist with a folded/self-intersecting
     // boundary. Publish these distinct facts; only the conjunction certifies.
-    let reference_regularity = regularity::inspect(reference, limits.regularity_cells)?;
+    let reference_regularity = regularity::inspect(original_reference, limits.regularity_cells)?;
     let retained_regularity = regularity::inspect(
         retained,
         limits.regularity_cells - reference_regularity.cells,
@@ -138,7 +149,7 @@ pub fn inspect(
         return Ok(out);
     }
     let reference_volume = volume_validity::inspect_with_linear(
-        reference,
+        original_reference,
         tolerance_uv,
         limits.reference_volume,
         limits.linear_cells_per_boundary,

@@ -65,7 +65,7 @@ pub fn inspect(v: Value) -> Result<Value> {
     )?;
     Ok(
         json!({"certified":r.certified,"continuousBound":r.continuous_bound,"withinBudget":r.within_budget,
-        "errorUpper":r.error_upper,"scope":"authored-rational-boundary-common-uv",
+        "errorUpper":r.error_upper,"scope":if r.uv_transport_faces.is_empty(){"authored-rational-boundary-common-uv"}else{"authored-rational-boundary-exact-reversed-uv"},"uvTransportFaces":r.uv_transport_faces,
         "sourceMotionLawCertified":false,"smoothnessCertified":false,"seamContinuity":"C0",
         "correspondenceCells":r.correspondence_cells,"correspondenceProducts":r.correspondence_products,
         "faces":r.face_bounds.iter().enumerate().map(|(face,b)|json!({"face":face,

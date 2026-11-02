@@ -5,6 +5,22 @@ use crate::{
 use nurbs_core::{Error, Result, curve::Curve, surface::{Surface, SurfaceSampler}};
 use std::collections::{BTreeMap, BTreeSet};
 
+// Preserve independent authored UV clocks during legacy sampled checks too.
+// Geometric admission still requires the continuous/exact boundary owners.
+fn coedge_uv(c: &crate::Coedge, world: &Curve, fraction: f64) -> Result<Vec<f64>> {
+    if let Some(trim) = c.trim().filter(|t| t.curve_parameter == world.domain()) {
+        // Subrange world trims also serve as diagnostic-only proof windows;
+        // they do not replace the topology's complete loop (see BoundaryUse).
+        trim.validate()?;
+        let d = c.pcurve.domain();
+        require(trim.pcurve_parameter.iter().all(|t| *t >= d[0] && *t <= d[1]),
+            "Coedge UV trim lies outside its pcurve domain")?;
+        let t = trim.pcurve_parameter[0] * (1. - fraction)
+            + trim.pcurve_parameter[1] * fraction;
+        c.pcurve.evaluate(t).map(|v| v.point)
+    } else { curve_point(&c.pcurve, fraction) }
+}
+
 impl Model {
     pub fn loop_uv(&self, id: usize, segments: usize) -> Result<Vec<[f64; 2]>> {
         require((1..=64).contains(&segments), "Edge sampling must be 1..64")?;
@@ -12,7 +28,7 @@ impl Model {
         let mut uv = Vec::new();
         for c in &wire.coedges {
             for i in 0..segments {
-                let p = curve_point(&c.pcurve, i as f64 / segments as f64)?;
+                let p = coedge_uv(c, &self.edges[c.edge].curve, i as f64 / segments as f64)?;
                 require(p.len() == 2, "pcurve must be 2D")?;
                 uv.push([p[0], p[1]]);
             }
@@ -224,8 +240,8 @@ impl Model {
                         first = Some(start);
                     }
                     previous = Some(end);
-                    let uv0 = curve_point(&c.pcurve, 0.)?;
-                    let uv1 = curve_point(&c.pcurve, 1.)?;
+                    let uv0 = coedge_uv(c, &edge.curve, 0.)?;
+                    let uv1 = coedge_uv(c, &edge.curve, 1.)?;
                     if let Some(p) = &previous_uv {
                         require(distance(p, &uv0) <= 1e-9, "Loop UV chain is disconnected")?;
                     } else {
@@ -237,7 +253,7 @@ impl Model {
                     if sampled_agreement {
                         for i in 0..=8 {
                             let t = i as f64 / 8.;
-                            let uv = curve_point(&c.pcurve, t)?;
+                            let uv = coedge_uv(c, &edge.curve, t)?;
                             let uv = if f.surface.periodic_u || f.surface.periodic_v {
                                 nurbs_core::periodic_trim::wrapped_surface_parameters(&f.surface, [uv[0], uv[1]])?
                             } else { [uv[0], uv[1]] };

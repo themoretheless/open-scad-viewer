@@ -452,6 +452,7 @@ impl Strip {
 
 /// Exact source-chart lift bound to the saved canonical edge and actual panel.
 /// Recheck `is_current` after edits; this is not an admitted source face.
+#[derive(Clone)]
 pub struct SourceBinding {
     edge: usize,
     face: usize,
@@ -538,6 +539,7 @@ impl Strip {
     }
 }
 
+#[derive(Clone)]
 pub struct SourceEndBinding {
     edge: usize,
     face: usize,

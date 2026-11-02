@@ -3,6 +3,7 @@
 use super::*;
 mod bounds;
 mod circuits;
+mod gram;
 mod pullback;
 mod semidefinite;
 use bounds::Bounds;

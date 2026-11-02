@@ -547,42 +547,6 @@ impl Inspector {
                     else {volume_separation=Some(c);}
                 }
             }
-            if boundary.is_none() && volume_separation.is_none() && joint_exact_domain
-                && source_chart_cells < pair_allowance && out.cells < limits.cells
-                && projected_trim_network::multiple_shared_edges(model,[a,b]) {
-                let attempt = projected_trim_network::certify(model,[a,b],
-                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
-                source_chart_cells += attempt.cells; out.cells += attempt.cells;
-                boundary = attempt.certificate.map(SharedBoundary::ProjectedTrimNetwork);
-            }
-            if boundary.is_none() && volume_separation.is_none() && joint_exact_domain && source_chart_cells < pair_allowance && out.cells < limits.cells {
-                let attempt = same_support_contact::certify(model, [a,b],
-                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
-                source_chart_cells += attempt.cells; out.cells += attempt.cells;
-                boundary = attempt.certificate.map(SharedBoundary::SameSupportPartition);
-            }
-            if boundary.is_none() && volume_separation.is_none() && joint_exact_domain && source_chart_cells < pair_allowance && out.cells < limits.cells {
-                let attempt = projected_trim_contact::certify(model,[a,b],
-                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
-                source_chart_cells += attempt.cells; out.cells += attempt.cells;
-                boundary = attempt.certificate.map(SharedBoundary::ProjectedTrimPartition);
-            }
-            if boundary.is_none()&&volume_separation.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
-                let joined=boundary_stitched_contact::certify(model,[a,b],
-                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
-                source_chart_cells+=joined.cells;out.cells+=joined.cells;
-                boundary=joined.certificate.map(SharedBoundary::JoinedSourceCharts);
-            }
-            if !volume_first&&boundary.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
-                let separated=source_volume_context.as_ref().unwrap().certify([a,b],
-                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
-                source_chart_cells+=separated.cells;out.cells+=separated.cells;
-                if let Some(c)=separated.certificate {
-                    if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
-                    else {volume_separation=Some(c);}
-                }
-            }
-
             // Exact control-hull separation is the fast path only for sweep
             // certification, including closed no-cap bodies: the plain face-contact
             // API keeps the frozen trim-search work accounting byte-for-byte.
@@ -608,6 +572,43 @@ impl Inspector {
                 (false, 0)
             };
             out.cells += hull_cells;
+            let pair_allowance = pair_allowance.saturating_sub(hull_cells);
+            if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain
+                && source_chart_cells < pair_allowance && out.cells < limits.cells
+                && projected_trim_network::multiple_shared_edges(model,[a,b]) {
+                let attempt = projected_trim_network::certify(model,[a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
+                source_chart_cells += attempt.cells; out.cells += attempt.cells;
+                boundary = attempt.certificate.map(SharedBoundary::ProjectedTrimNetwork);
+            }
+            if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain && source_chart_cells < pair_allowance && out.cells < limits.cells {
+                let attempt = same_support_contact::certify(model, [a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
+                source_chart_cells += attempt.cells; out.cells += attempt.cells;
+                boundary = attempt.certificate.map(SharedBoundary::SameSupportPartition);
+            }
+            if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain && source_chart_cells < pair_allowance && out.cells < limits.cells {
+                let attempt = projected_trim_contact::certify(model,[a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(100_000))?;
+                source_chart_cells += attempt.cells; out.cells += attempt.cells;
+                boundary = attempt.certificate.map(SharedBoundary::ProjectedTrimPartition);
+            }
+            if boundary.is_none()&&!hull_disjoint&&volume_separation.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
+                let joined=boundary_stitched_contact::certify(model,[a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
+                source_chart_cells+=joined.cells;out.cells+=joined.cells;
+                boundary=joined.certificate.map(SharedBoundary::JoinedSourceCharts);
+            }
+            if !volume_first&&!hull_disjoint&&boundary.is_none()&&!periodic&&joint_exact_domain&&source_chart_cells<pair_allowance&&out.cells<limits.cells {
+                let separated=source_volume_context.as_ref().unwrap().certify([a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells))?;
+                source_chart_cells+=separated.cells;out.cells+=separated.cells;
+                if let Some(c)=separated.certificate {
+                    if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
+                    else {volume_separation=Some(c);}
+                }
+            }
+
             if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain {
                 let allowance = (limits.cells - out.cells).min(limits.cells_per_pair.saturating_sub(boundary_cells + source_chart_cells + hull_cells));
                 let (certificate, used) = crate::shared_boundary::closed_graph::certify(model, [a,b], allowance);

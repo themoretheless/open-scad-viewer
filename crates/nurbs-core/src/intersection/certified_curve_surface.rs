@@ -533,3 +533,6 @@ pub use window_source::{first_iso_in_window,all_iso_in_window,first_surface_iso_
 
 mod plane_contacts;
 pub use plane_contacts::{AffinePlaneContact, AffinePlaneContacts, affine_plane_contacts};
+
+mod original_patch_contacts;
+pub use original_patch_contacts::{OriginalPatchContact,OriginalPatchContacts,original_affine_patch_contacts};

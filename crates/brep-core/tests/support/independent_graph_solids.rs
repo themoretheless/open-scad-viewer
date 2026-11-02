@@ -127,3 +127,53 @@ pub fn layered_solids() -> (Model, Model) {
     );
     (a, b)
 }
+
+pub fn hole_rim_solids() -> (Model, Model) {
+    let ring = |points: [[f64; 2]; 4]| {
+        (0..4)
+            .map(|i| {
+                Curve::from_polyline(vec![points[i].to_vec(), points[(i + 1) % 4].to_vec()])
+                    .unwrap()
+            })
+            .collect::<Vec<_>>()
+    };
+    let tube = brep_core::prism::extrude(
+        &[
+            ring([[0., 0.], [1., 0.], [1., 1.], [0., 1.]]),
+            ring([
+                [0.375, 0.375],
+                [0.375, 0.625],
+                [0.625, 0.625],
+                [0.625, 0.375],
+            ]),
+        ],
+        0.,
+        1.,
+    )
+    .unwrap();
+    assert!(tube.faces.iter().any(|f| !f.holes.is_empty()));
+    (
+        warp(tube, 1, 0., 0., 0.),
+        warp(
+            brep_core::cuboid([0.5, -0.5, -0.5], [0.875, 1.5, 1.5]).unwrap(),
+            1,
+            0.,
+            0.,
+            0.,
+        ),
+    )
+}
+
+pub fn boundary_touch_solids() -> (Model, Model) {
+    let (a, _) = layered_solids();
+    (
+        a,
+        warp(
+            brep_core::cuboid([1., 0., 0.], [2., 1., 1.]).unwrap(),
+            2,
+            1. / 16.,
+            0.,
+            0.,
+        ),
+    )
+}

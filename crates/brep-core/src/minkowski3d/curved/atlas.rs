@@ -11,7 +11,7 @@ mod conical;
 pub(super) mod difference;
 pub(super) mod domains;
 mod graph_pole;
-mod linear;
+pub(in crate::minkowski3d::curved) mod linear;
 mod nonlinear;
 mod nonlinear_cancel;
 mod planar_pole;
