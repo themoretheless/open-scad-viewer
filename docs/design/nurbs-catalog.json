@@ -6100,7 +6100,8 @@
         "crates/nurbs-core/src/construct/curves/airfoil/cst_algebraic.rs",
         "crates/nurbs-core/tests/cst_section_contracts.rs",
         "docs/design/nurbs-cst-profiles.md",
-        "docs/qualification/nurbs-cst-section-native-2026-11-02/no-codec-check.json"
+        "docs/qualification/nurbs-cst-section-native-2026-11-02/no-codec-check.json",
+        "docs/qualification/nurbs-cst-section-native-2026-11-02/default-library-public-check.json"
       ],
       "remainingQualification": [
         "original CST algebraic subset and sufficient coefficientwise side ordering only; no transformed frame, second moments, B-rep or volume authority",
