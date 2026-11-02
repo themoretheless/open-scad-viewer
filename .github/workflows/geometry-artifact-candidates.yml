@@ -1,0 +1,83 @@
+name: Observed geometry build candidates
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/geometry-artifact-candidates.yml'
+      - 'scripts/record-geometry-build-candidate.mjs'
+      - 'tests/recordGeometryBuildCandidate.test.mjs'
+jobs:
+  candidate:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Preserve repository bytes on Windows
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: {node-version: '22', cache: npm}
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - run: npm ci
+      - name: Check candidate recorder refusals
+        run: node --test tests/recordGeometryBuildCandidate.test.mjs
+      - name: Use the existing checksummed Linux Binaryen profile
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/binaryen-version_116-x86_64-linux.tar.gz"
+          curl --fail --location --retry 3 "https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz" --output "$archive"
+          echo "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "OSV_WASM_OPT_NATIVE=$RUNNER_TEMP/binaryen-version_116/bin/wasm-opt" >> "$GITHUB_ENV"
+      - name: Bind authored source before compilation
+        run: node scripts/record-geometry-build-candidate.mjs before output/qualification/geometry-source-before.json
+      - run: npm run build:geometry
+      - name: Capture actual candidate and unchanged authored inputs
+        run: node scripts/record-geometry-build-candidate.mjs after output/qualification/geometry-candidate output/qualification/geometry-source-before.json
+      # Upload before tests can fail closed on an unadmitted artifact. This
+      # workflow changes no runtime manifest, accepted hash or production gate.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geometry-build-candidate-${{ runner.os }}
+          path: output/qualification/geometry-candidate
+          if-no-files-found: error
+      - name: Verify candidate manifold ABI directly
+        run: npm run test:manifold:artifact
+      - name: Check the finite direct API baseline
+        run: node node_modules/vitest/vitest.mjs run tests/brepCurvedGraphBooleanV3.test.ts tests/brepDirectStepV3.test.ts tests/brepIntersections.test.ts tests/brepKernel.test.ts tests/manifoldMetricsReport.test.ts tests/meshManifoldDefects.test.ts tests/meshTopology.test.ts tests/nurbsBasicPaths.test.ts tests/nurbsDegreeZeroIdentity.test.ts tests/nurbsPrimitives.test.ts tests/nurbsSurfaceDistance.test.ts --maxWorkers 2 --reporter=default --reporter=json --outputFile.json=output/qualification/geometry-direct-node.json
+        env:
+          VITEST_MAX_WORKERS: '2'
+      - name: Install Chromium and Linux dependencies
+        if: runner.os == 'Linux'
+        run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Install Chromium
+        if: runner.os != 'Linux'
+        run: node node_modules/playwright/cli.js install chromium
+      - name: Check embedded candidate in independent browser realms
+        run: node tools/browser-qualification/isolated-packed-candidate-direct-api.mjs output/qualification/geometry-direct-browser public/wasm/geometry-kernel.wasm
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: geometry-candidate-direct-reports-${{ runner.os }}
+          path: |
+            output/qualification/geometry-direct-node.json
+            output/qualification/geometry-direct-browser/report.json
+          if-no-files-found: warn
