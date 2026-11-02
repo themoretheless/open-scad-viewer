@@ -1,0 +1,23 @@
+{
+  "capability": "NURBS-0230 exact compatible curve concatenation",
+  "checks": {
+    "default": {
+      "exitCode": 0,
+      "passed": 53,
+      "failed": 0
+    },
+    "no-codec": {
+      "exitCode": 0,
+      "passed": 53,
+      "failed": 0
+    }
+  },
+  "independentFractionOracleExit": 0,
+  "architectureExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing.rs": "312a5bbeedfd0f203d5b4d71b4b7670d23eeacf00f2635db636f373853c33506",
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "4288e5add2ecf56fb8403f3a804875e2214e7f1cc8e06d2532209a6e47616e44",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4266c2a80807992f65b4d235fa7bb1b47a41de36fad0065b8cf8d3a83f771ac8"
+  },
+  "scope": "Structural C0 concatenation; same degree/dimension, clamped nonperiodic exactly adjacent domains, identical seam Cartesian control/stored weight. No geometry arithmetic, additional proof budget or limit increase. No matching, rescaling, G1/G2, simplicity, wire topology, B-rep, exchange, WASM/UI or complete workspace authority."
+}

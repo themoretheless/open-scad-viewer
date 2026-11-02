@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 226,
-  "unallocatedCount": 774,
+  "specifiedCount": 230,
+  "unallocatedCount": 770,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6190,10 +6190,103 @@
         "crates/nurbs-core/tests/exact_surface_knot_removal_contracts.rs",
         "docs/design/nurbs-exact-surface-knot-removal.md",
         "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/checks.json",
-        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json"
+        "docs/qualification/nurbs-exact-surface-knot-native-2026-11-02/full-library-check.json",
+        "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-surface-pass-2026-11-02/receipt.json"
       ],
       "remainingQualification": [
         "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0227",
+      "name": "точное понижение степени составной рациональной кривой Безье с сохранением параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_degree_reduction::reduce",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_degree_reduction.rs",
+        "crates/nurbs-core/src/core/curve_identity.rs",
+        "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
+        "docs/design/nurbs-exact-degree-reduction.md",
+        "docs/qualification/nurbs-exact-degree-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py",
+        "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0228",
+      "name": "точное понижение степени NURBS-поверхности по U/V с сохранением UV и знаменателей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_degree_reduction::reduce",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+        "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs",
+        "crates/nurbs-core/tests/exact_surface_degree_contracts.rs",
+        "docs/design/nurbs-exact-surface-degree-reduction.md",
+        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-surface-degree-native-2026-11-02/exact_oracle.py",
+        "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-smooth-degree-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "clamped nonperiodic degree2..25 selected axis, including smooth knot layouts via reduce_smooth; one candidate extraction/compaction search, unchanged256 temporary control limit and shared work refusals; no completeness, minimality, evaluator bit identity or B-rep authority; tensor row denominator identity also required",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0229",
+      "name": "точное объединение совместимых соседних NURBS-патчей с сохранением исходных UV",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_merge::merge",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+        "crates/nurbs-core/tests/exact_surface_merge_contracts.rs",
+        "docs/design/nurbs-exact-surface-merge.md",
+        "docs/qualification/nurbs-exact-surface-merge-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-surface-merge-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "same degree and other basis, clamped nonperiodic adjacent selected axes, identical seam Cartesian controls and stored weights only; no automatic matching, basis/gauge unification, G1/G2, injectivity, B-rep sewing or solid authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0230",
+      "name": "точное объединение совместимых соседних NURBS-кривых с сохранением исходных параметров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::merge",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/design/nurbs-exact-curve-merge.md",
+        "docs/qualification/nurbs-exact-curve-merge-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-curve-merge-2026-11-02/exact_oracle.py",
+        "docs/qualification/nurbs-exact-curve-chain-2026-11-02/receipt.json",
+        "docs/qualification/nurbs-exact-curve-chain-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "same degree/dimension, clamped nonperiodic adjacent original domains and identical endpoint Cartesian control/stored weight only; no degree/basis/gauge unification, automatic matching, G1/G2, simplicity, wire or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }

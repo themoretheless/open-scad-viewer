@@ -1,0 +1,23 @@
+{
+  "capability": "NURBS-0229 exact compatible tensor-patch concatenation",
+  "checks": {
+    "default": {
+      "exitCode": 0,
+      "passed": 47,
+      "failed": 0
+    },
+    "no-codec": {
+      "exitCode": 0,
+      "passed": 47,
+      "failed": 0
+    }
+  },
+  "independentFractionOracleExit": 0,
+  "architectureExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing.rs": "ca70cfcfd2b7616f807a801226c2a75b112289f2dafdb89fa0d9dacdd3a3df7d",
+    "crates/nurbs-core/src/editing/exact_surface_merge.rs": "e6b1fd6cba672c1ae92b33ea890acaa7882d34aae0e712e716a0c8954a402ab3",
+    "crates/nurbs-core/tests/exact_surface_merge_contracts.rs": "d7f593d08e7b7787003ef656beb5e578ee786ca228271b7415037ca0d65e8c3d"
+  },
+  "scope": "Structural bounded concatenation only; exact selected-axis adjacency and seam Cartesian controls/stored weights, same other basis. No geometry arithmetic or new numeric budgets. Other-axis periodic storage preserved without quotient authority. No automatic basis/gauge unification, G1/G2, injectivity, B-rep sewing, trim/material/volume, WASM/UI/exchange or whole-workspace qualification."
+}

@@ -11,3 +11,8 @@ pub mod deform;
 pub mod linear_simplification;
 pub mod exact_knot_removal;
 pub mod exact_surface_knot_removal;
+pub mod exact_degree_reduction;
+mod exact_tensor_edit;
+pub mod exact_surface_degree_reduction;
+pub mod exact_surface_merge;
+pub mod exact_curve_merge;

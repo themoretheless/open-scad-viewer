@@ -1,0 +1,27 @@
+{
+  "capability": "Extensions of NURBS-0227 and0228; catalogue unchanged228",
+  "checks": {
+    "default": {
+      "exitCode": 0,
+      "passed": 41,
+      "failed": 0
+    },
+    "no-codec": {
+      "exitCode": 0,
+      "passed": 41,
+      "failed": 0
+    }
+  },
+  "independentFractionOracleExit": 0,
+  "architectureExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing/exact_degree_reduction.rs": "cee72f4a8fcd858594616ee6763dadfb5e34267e2214a96f6e72371936e944c6",
+    "crates/nurbs-core/src/editing/exact_degree_reduction/smooth.rs": "d7d12ec56ccb3996c5d21014ded25c5ddef144ad8ca7e7f9deaa5ddd41034322",
+    "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs": "eae0b9b04ea7d8649dc17406738f4ceba1b429b70d574408aff2b99231a611ca",
+    "crates/nurbs-core/src/editing/exact_tensor_edit.rs": "8dfa58c695c24122c7f89b2278c1112ff5ded4a3cfd33b38d3eb0874c496be0a",
+    "crates/nurbs-core/src/core/curve_identity.rs": "e850a58ac1ca54b82181094cffed2c2560acea6ed6ddde15db0f27b8962a7296",
+    "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs": "e5a8575327fe5e29487d8da1e415a2e9d732857e011e301d4a02914583dc32e4",
+    "crates/nurbs-core/tests/exact_surface_degree_contracts.rs": "c46b2e16974a88aa94dabcb4de3d2ef59e7e93a15f1d11a2596a32fc3e60ff52"
+  },
+  "scope": "General clamped nonperiodic degree2..25 selected-axis knot layout. Numeric extraction is a proposal; exact original/final law identity and tensor denominator equality required. One shared1M maximum across phases/rows; existing256 temporary control limit retained. Atomic original on refusal. One proposal search, no completeness/minimality/bitwise-evaluator guarantee, whole-workspace or integration qualification."
+}

@@ -1,0 +1,24 @@
+{
+  "capability": "NURBS-0227",
+  "checks": {
+    "default": {
+      "exitCode": 0,
+      "passed": 34,
+      "failed": 0
+    },
+    "noCodec": {
+      "exitCode": 0,
+      "passed": 34,
+      "failed": 0
+    }
+  },
+  "architectureExit": 0,
+  "independentRationalPolynomialOracleExit": 0,
+  "sourceHashes": {
+    "crates/nurbs-core/src/editing.rs": "f8056a1cba76fd6b84aac4112bc2cd2c46f19d4794bfe9979e18a855fb882629",
+    "crates/nurbs-core/src/editing/exact_degree_reduction.rs": "c610e89568f2fd7bf073855c27b62d94fc13be3a1b0c9cb217c2e58b88944038",
+    "crates/nurbs-core/src/core/curve_identity.rs": "e850a58ac1ca54b82181094cffed2c2560acea6ed6ddde15db0f27b8962a7296",
+    "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs": "ff015e3cf17ac1294bafe6d928095e96741d351d22b16a2333d890600683a3ca"
+  },
+  "scope": "Single-degree exact reduction of nonperiodic clamped piecewise rational Bezier storage only. One full-source identity proof, unchanged1M arithmetic cap. No arbitrary smooth B-spline basis, exhaustive minimality, machine evaluator bit identity, B-rep, WASM/editor/export or whole workspace qualification."
+}
