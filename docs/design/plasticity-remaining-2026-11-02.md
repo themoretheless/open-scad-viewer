@@ -82,6 +82,8 @@ Spatial iso в реальном WASM: frozen source `68c542a30` собран в 
 
 Полный обход заданного curve/surface window: новые `all_in_window` и `all_iso_in_window` продолжают исходный Krawczyk-поиск после первого корня; все initial/subdivision/refinement cells расходуют общий budget. Непроверенные/сингулярные/граничные клетки остаются unresolved. Complete относится только к указанному natural-parameter product window. На cubic curve / plane найдены оба аналитических поперечных корня с полным покрытием; first-root режим остаётся неполным, exhausted budget и tangent root полноту не получают. **98 нативных тестов прошли**; [receipt](../qualification/full-curve-surface-window-2026-11-02/results.json). Полнота всех surface/surface ветвей, касания, trims/Body и WASM новых API остаются открытыми.
 
+Iso против отдельной исходной поверхности: новые `first_surface_iso_in_window` / `all_surface_iso_in_window` принимают независимый target вместо обязательной собственной опоры. Natural window хранит source t и target u/v; рациональная iso остаётся выражением исходной Surface без округления controls. В U/V проверены два аналитических контакта с отдельной плоскостью, полный обход окна, разные source/target knot domains, разнесённая target без корней, budget и неизменность входов. **99 нативных тестов прошли**; [receipt](../qualification/separate-surface-iso-target-2026-11-02/results.json). Это полное выбранное 3D product window, не все fibers/ветви surface–surface, не trim/Body admission; bridge/WASM новых API ещё открыты.
+
 ## Текущие ограничения проверок
 
 - Чистая сравнительная библиотека: **11 файлов неизменны** по свежему `verify_clean.py`.

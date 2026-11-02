@@ -1,0 +1,21 @@
+{
+  "nativePassed": 99,
+  "scope": "Exact original surface iso versus separate original target within caller-selected natural parameter window",
+  "verified": [
+    "rational non-binary64 iso controls",
+    "source U and V axes",
+    "independent source/target knot domains",
+    "both analytic transverse contacts and complete window coverage",
+    "separated-target window absence",
+    "first-only and budget-exhausted incompleteness",
+    "source and target inputs preserved"
+  ],
+  "wholeSurfaceComplete": false,
+  "newApisWasmQualified": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface.rs": "a6881dfba6f8a06a7bb20752fc0da1197a4d13494895d7882a11a934e08eed03",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/window_source.rs": "503c35faca7d0fe6bda0098c70d3a68e46dea0d6af6ea1334bd1a19c2c6b91f1",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "34469f3be28ee5c393abdb907d9d04d9165e9f9805e2f9b003ad8828eb76cf6a",
+    "crates/nurbs-core/tests/surface_self_intersection/separate_iso_target.rs": "d0070dc206f2740c958a36632766c071e5e1c50615bd3e61f040069f92e5620b"
+  }
+}

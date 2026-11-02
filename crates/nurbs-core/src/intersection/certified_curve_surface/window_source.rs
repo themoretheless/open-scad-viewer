@@ -137,6 +137,7 @@ impl Source<'_> {
 /// No rounded extracted curve, trim admission or surface completeness implied.
 fn iso_search(
     s: &Surface,
+    target: &Surface,
     axis: usize,
     parameter: f64,
     window: Box3,
@@ -176,7 +177,7 @@ fn iso_search(
             fixed_span: span,
             fixed,
         },
-        s,
+        target,
         window,
         max_cells,
         stop_first,
@@ -191,7 +192,7 @@ pub fn first_iso_in_window(
     window: Box3,
     max_cells: usize,
 ) -> Result<window::WindowReport> {
-    iso_search(s, axis, parameter, window, max_cells, true)
+    iso_search(s, s, axis, parameter, window, max_cells, true)
 }
 /// Complete requested-window search on original iso/surface coefficients.
 /// This proves neither whole-surface coverage nor trim/Body admission.
@@ -202,5 +203,32 @@ pub fn all_iso_in_window(
     window: Box3,
     max_cells: usize,
 ) -> Result<window::WindowReport> {
-    iso_search(s, axis, parameter, window, max_cells, false)
+    iso_search(s, s, axis, parameter, window, max_cells, false)
+}
+
+/// First contact of an exact source iso with a separate original target chart.
+/// Window coordinates are natural source t, target u and target v.
+/// The fixed source parameter is normalized on its transverse active domain.
+pub fn first_surface_iso_in_window(
+    source: &Surface,
+    axis: usize,
+    parameter: f64,
+    target: &Surface,
+    window: Box3,
+    max_cells: usize,
+) -> Result<window::WindowReport> {
+    iso_search(source, target, axis, parameter, window, max_cells, true)
+}
+/// Enumerates exact-source iso/target contacts within the requested window.
+/// Complete coverage belongs only to that 3D parameter product, not all fibers
+/// of either surface. No source/target trims or material roles are inferred.
+pub fn all_surface_iso_in_window(
+    source: &Surface,
+    axis: usize,
+    parameter: f64,
+    target: &Surface,
+    window: Box3,
+    max_cells: usize,
+) -> Result<window::WindowReport> {
+    iso_search(source, target, axis, parameter, window, max_cells, false)
 }

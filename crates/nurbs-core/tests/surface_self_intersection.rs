@@ -791,3 +791,6 @@ mod automatic_probes;
 
 #[path = "surface_self_intersection/spatial_windows.rs"]
 mod spatial_windows;
+
+#[path="surface_self_intersection/separate_iso_target.rs"]
+mod separate_iso_target;
