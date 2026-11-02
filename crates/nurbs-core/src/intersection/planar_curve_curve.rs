@@ -8,6 +8,7 @@ use crate::{
     distance_bounds::{Interval as I, box_distance},
 };
 type Domain = [[f64; 2]; 2];
+mod coplanar;
 #[derive(Clone, Debug)]
 pub struct CertifiedCurveCrossing {
     pub parameters: Domain,
@@ -248,20 +249,10 @@ fn intersect_selected(
         out.complete = complete;
         return Ok(out);
     }
-    let plane = (0..3).find(|&k| {
-        a.control_points
-            .iter()
-            .all(|p| p[k] == a.control_points[0][k])
-            && b.control_points
-                .iter()
-                .all(|p| p[k] == a.control_points[0][k])
-    });
-    let Some(plane) = plane else {
+    let Some(axes) = coplanar::axes(a, b) else {
         out.unresolved.push(whole);
         return Ok(out);
     };
-    let free: Vec<_> = (0..3).filter(|&k| k != plane).collect();
-    let axes = [free[0], free[1]];
     let aa = spans(a);
     let bb = spans(b);
     check(

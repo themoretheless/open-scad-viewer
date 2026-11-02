@@ -771,3 +771,6 @@ mod distinct_spans;
 
 #[path = "surface_self_intersection/within_span.rs"]
 mod within_span;
+
+#[path = "surface_self_intersection/oblique_plane.rs"]
+mod oblique_plane;

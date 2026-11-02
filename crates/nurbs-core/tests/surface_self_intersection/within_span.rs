@@ -1,6 +1,6 @@
 use super::*;
 use nurbs_core::{curve::Curve, intersection::intersect_self_curve_certified_report as audit};
-fn loop_surface() -> Surface {
+pub(super) fn loop_surface() -> Surface {
     Surface {
         degree_u: 3,
         degree_v: 1,
