@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 226,
-  "unallocatedCount": 774,
+  "specifiedCount": 227,
+  "unallocatedCount": 773,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6194,6 +6194,27 @@
       ],
       "remainingQualification": [
         "one verified proposal per row with exact denominator identity; selected axis clamped and nonperiodic, shared work refusals allowed; no minimality, evaluator bit identity, topology or B-rep authority",
+        "JSON, WASM, Rush, editor and exchange not qualified"
+      ]
+    },
+    {
+      "id": "NURBS-0227",
+      "name": "точное понижение степени составной рациональной кривой Безье с сохранением параметризации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_degree_reduction::reduce",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_degree_reduction.rs",
+        "crates/nurbs-core/src/core/curve_identity.rs",
+        "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
+        "docs/design/nurbs-exact-degree-reduction.md",
+        "docs/qualification/nurbs-exact-degree-native-2026-11-02/checks.json",
+        "docs/qualification/nurbs-exact-degree-native-2026-11-02/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "clamped nonperiodic degree2..25 piecewise Bezier storage only; one proposal, shared work refusals allowed; no arbitrary smooth knot layout, minimality, evaluator bit identity or B-rep authority",
         "JSON, WASM, Rush, editor and exchange not qualified"
       ]
     }
