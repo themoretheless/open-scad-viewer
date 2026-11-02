@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "testsPassed": 20,
+  "newTests": 5,
+  "command": "CARGO_TARGET_DIR=/tmp/osv-self-surface-20261102 cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test surface_self_intersection --test curve_self_intersection --test surface_rectangle_injectivity",
+  "scope": "Original Bernstein-span local reflection with exact normalized witnesses, both axes, rational weights, bounded candidate search",
+  "remaining": "General arbitrary folds, non-Bernstein spans requiring exact extraction, periodic charts, complete branch enumeration and downstream trimming remain open",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/self_surface.rs": "2a9f6b91b43e487d1205ab6233f9832cfc34caf81a1aa0c19397c1d2d0339bc2",
+    "crates/nurbs-core/src/intersection/self_surface/local_fold.rs": "db65f0107447f71bbebda5da8a78b041860e6348ee46a1f27cb5d49918c6997a",
+    "crates/nurbs-core/tests/surface_self_intersection.rs": "d2059e32f6b20a828154feb688b8a4a49b2ca9d0ec9e475eff1504dab97d1b90"
+  }
+}

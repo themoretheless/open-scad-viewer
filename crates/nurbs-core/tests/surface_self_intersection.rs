@@ -144,3 +144,87 @@ fn discontinuous_reflected_charts_do_not_admit_an_endpoint_witness() {
     assert_eq!(error.code, "NURBS_INVALID_INPUT");
     assert!(error.message.contains("Interior multiplicity"));
 }
+
+fn local_fold() -> Surface {
+    let mut s = graph();
+    s.knots_u = vec![0., 0., 0., 0.5, 0.5, 1., 1., 1.];
+    let a = s.control_points[0].clone();
+    let b = s.control_points[1].clone();
+    let c = s.control_points[2].clone();
+    let mut d = c.clone();
+    for p in &mut d {
+        p[0] = 2.;
+    }
+    s.control_points = vec![a.clone(), b, a, c, d];
+    s.weights = vec![
+        vec![1.; 2],
+        vec![2.; 2],
+        vec![1.; 2],
+        vec![1.; 2],
+        vec![1.; 2],
+    ];
+    s
+}
+
+#[test]
+fn local_fold_is_detected_without_global_reflection() {
+    let s = local_fold();
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.125, 0.5], [0.375, 0.5]]));
+    let a = s.evaluate(0.125, 0.5).unwrap().point;
+    let b = s.evaluate(0.375, 0.5).unwrap().point;
+    for i in 0..3 {
+        assert!((a[i] - b[i]).abs() < 1e-13);
+    }
+}
+
+#[test]
+fn local_fold_does_not_round_an_unrepresentable_normalized_witness() {
+    let mut s = local_fold();
+    s.knots_u = vec![0., 0., 0., 1., 1., 3., 3., 3.];
+    assert_eq!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Unresolved
+    );
+}
+
+#[test]
+fn near_local_fold_is_not_an_exact_coincidence() {
+    let mut s = local_fold();
+    s.control_points[2][0][0] = 1e-12;
+    assert_ne!(
+        surface_self_intersection::inspect(&s, 100).unwrap().status,
+        Status::Present
+    );
+}
+
+#[test]
+fn local_v_fold_uses_original_parameter_coordinates() {
+    let mut s = local_fold();
+    s.control_points = (0..2)
+        .map(|j| (0..5).map(|i| s.control_points[i][j].clone()).collect())
+        .collect();
+    s.weights = (0..2)
+        .map(|j| (0..5).map(|i| s.weights[i][j]).collect())
+        .collect();
+    std::mem::swap(&mut s.degree_u, &mut s.degree_v);
+    std::mem::swap(&mut s.knots_u, &mut s.knots_v);
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.reflected_axis, Some(1));
+    assert_eq!(r.witness, Some([[0.5, 0.125], [0.5, 0.375]]));
+}
+
+#[test]
+fn local_search_budget_does_not_skip_unvisited_spans() {
+    let mut s = local_fold();
+    s.control_points.reverse();
+    s.weights.reverse();
+    assert_eq!(
+        surface_self_intersection::inspect(&s, 1).unwrap().status,
+        Status::Unresolved
+    );
+    let r = surface_self_intersection::inspect(&s, 100).unwrap();
+    assert_eq!(r.status, Status::Present);
+    assert_eq!(r.witness, Some([[0.625, 0.5], [0.875, 0.5]]));
+}

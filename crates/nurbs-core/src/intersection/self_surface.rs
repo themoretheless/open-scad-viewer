@@ -1,7 +1,8 @@
 //! Global nonintersection proof or exact interior fold witness; no sampled verdict.
 use crate::{Result, surface::Surface, surface_injectivity};
 use num_rational::BigRational;
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
+mod local_fold;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     Absent,
@@ -95,6 +96,11 @@ pub fn inspect(s: &Surface, max_spans: usize) -> Result<Report> {
             });
             return Ok(out);
         }
+    }
+    if let Some((axis, witness)) = local_fold::find(s, max_spans) {
+        out.status = Status::Present;
+        out.reflected_axis = Some(axis);
+        out.witness = Some(witness);
     }
     Ok(out)
 }
