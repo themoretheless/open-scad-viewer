@@ -12,7 +12,7 @@ it('preserves every installed artifact when an otherwise valid WASM exceeds the 
   const output=join(root,'generated'),publicWasm=join(root,'public');mkdirSync(output);mkdirSync(publicWasm)
   const files=[join(output,'kernel_bg.wasm'),join(output,'identity.ts'),join(output,'bytes.ts'),join(publicWasm,'geometry-kernel.wasm')]
   const before=files.map((file,i)=>{const bytes=Buffer.from(`previous-artifact-${i}`);writeFileSync(file,bytes);return bytes})
-  const payload=Buffer.alloc(16*1024*1024+1),length:number[]=[]
+  const payload=Buffer.alloc(20*1024*1024+1),length:number[]=[]
   let n=payload.length;do{const byte=n&127;n>>>=7;length.push(byte|(n?128:0))}while(n)
   const wasm=Buffer.concat([Buffer.from([0,97,115,109,1,0,0,0,0,...length]),payload])
   expect(WebAssembly.validate(wasm)).toBe(true)

@@ -4,7 +4,8 @@ import decoderBytes from '../generated/wasm-brotli/bytes'
 import {unpackWasmBase64} from './wasmPacking'
 
 const inputLimit = 8 * 1024 * 1024
-const outputLimit = 16 * 1024 * 1024
+const outputLimit = 20 * 1024 * 1024
+const streamOutputLimit = 16 * 1024 * 1024
 let decoderModule: WebAssembly.Module | undefined
 interface Decoder extends WebAssembly.Exports {
   memory: WebAssembly.Memory
@@ -36,6 +37,7 @@ export function unpackBrotliWasm(input: Uint8Array): Uint8Array<ArrayBuffer> {
     }
     if (total !== size || start !== input.length) throw new Error('Brotli WASM package size mismatch')
   } else streams.push({size, start: 4, end: input.length})
+  if (streams.some(stream => stream.size > streamOutputLimit)) throw new Error('Brotli WASM stream output limit')
   decoderModule ??= new WebAssembly.Module(unpackWasmBase64(decoderBytes))
   const output = new Uint8Array(size)
   let offset = 0

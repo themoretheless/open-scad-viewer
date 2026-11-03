@@ -33,7 +33,7 @@ export function verifyPackedWasmChunk(source, expected, label, compression = 'br
   if (!literal.startsWith('b85:') && !(literal.startsWith('b91:')||literal.startsWith('b9v:')||literal.startsWith('b92:')||literal.startsWith('b93:')||literal.startsWith('b94:')||literal.startsWith('b95:')||literal.startsWith('bAx:')||literal.startsWith('bBx:')||literal.startsWith('bKx:')) && packed.toString('base64') !== literal) throw new Error(`${label}: invalid base64`)
   if (packed.length <= 4 || packed.length - 4 > 8 * 1024 * 1024) throw new Error(`${label}: compressed size limit`)
   const word = packed.readUInt32LE(0), multiple = !!(word & 0x80000000), size = word & 0x7fffffff
-  if (size > 16 * 1024 * 1024 || size !== expected.length) throw new Error(`${label}: decoded size mismatch`)
+  if (size > 20 * 1024 * 1024 || size !== expected.length) throw new Error(`${label}: decoded size mismatch`)
   const streams=[]
   if(multiple){
     const count=packed[4]

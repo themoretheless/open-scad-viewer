@@ -11,6 +11,7 @@ const {chromium}=require('playwright')
 const rootRequire=createRequire(resolve(repo,'package.json'))
 const {createServer}=await import(rootRequire.resolve('vite'))
 const bytes=readFileSync(wasmPath),fixture=JSON.parse(readFileSync(fixturePath,'utf8'))
+const verifyHost=process.env.OSV_VERIFY_INSTALLED_HOST==='1'
 const identity={sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,sourceCommit}
 const common=`
 function request(v){
@@ -61,7 +62,7 @@ try{
  await page.route('**/__closed_ss.wasm',(route:any)=>route.fulfill({contentType:'application/wasm',body:bytes}))
  await page.route('**/__closed_ss',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Closed SS ABI qualification</title>'}))
  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/__closed_ss`)
- const result=await page.evaluate(async({fixture,common,identity}:any)=>{
+ const result=await page.evaluate(async({fixture,common,identity,verifyHost}:any)=>{
   const raw=await(await fetch('/__closed_ss.wasm')).arrayBuffer()
   const sha=[...new Uint8Array(await crypto.subtle.digest('SHA-256',raw))].map(x=>x.toString(16).padStart(2,'0')).join('')
   if(sha!==identity.sha256)throw Error('candidate mismatch')
@@ -69,11 +70,22 @@ try{
   const codec=await import('/src/services/valueBinaryCodec.ts')
   const instance=await WebAssembly.instantiate(module,{})
   const main=new Function('w','codec','fixture',common)(instance.exports,codec,fixture)
-  const workerBody=`import * as codec from ${JSON.stringify(location.origin+'/src/services/valueBinaryCodec.ts')};onmessage=async e=>{try{const w=(await WebAssembly.instantiate(e.data.module,{})).exports;const fixture=e.data.fixture;const result=(function(){${common}})();postMessage({ok:true,result});}catch(e){postMessage({ok:false,error:String(e)})}};`
+  if(verifyHost){
+   const kernel=await import('/src/services/geometry/kernel.ts');await kernel.warmGeometryKernel()
+   const {op,...args}=fixture;const host:any=kernel.callGeometryRust(op,args)
+   if(host.segments!==main.segments||host.materialClassified!==false)throw Error('host dispatch mismatch')
+   const packed=(await import('/src/generated/geometry-kernels/bytes.ts')).default
+   const {unpackBrotliWasmBase64}=await import('/src/services/wasmBrotliPacking.ts')
+   const decoded=unpackBrotliWasmBase64(packed)
+   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',decoded))].map(x=>x.toString(16).padStart(2,'0')).join('')
+   if(hash!==identity.sha256||decoded.length!==identity.bytes)throw Error('embedded package mismatch')
+   main.hostCall=true;main.embeddedHashVerified=true
+  }
+  const workerBody=`import * as codec from ${JSON.stringify(location.origin+'/src/services/valueBinaryCodec.ts')};onmessage=async e=>{try{const w=(await WebAssembly.instantiate(e.data.module,{})).exports;const fixture=e.data.fixture;const result=(function(){${common}})();if(${verifyHost}){globalThis.__G1_SHARED_GEOMETRY_MODULE__=true;const kernel=await import(${JSON.stringify(location.origin+'/src/services/geometry/kernel.ts')});await kernel.installGeometryKernelFromTrustedHost(e.data.module,${JSON.stringify({sha256:identity.sha256,byteLength:identity.bytes})});const {op,...args}=fixture;const host=kernel.callGeometryRust(op,args);if(host.segments!==result.segments||host.materialClassified!==false)throw Error('worker host mismatch');result.hostCall=true;}postMessage({ok:true,result});}catch(e){postMessage({ok:false,error:String(e)})}};`
   const url=URL.createObjectURL(new Blob([workerBody],{type:'text/javascript'})),worker=new Worker(url,{type:'module'})
   try{const thread=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('worker timeout')),120000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))};worker.postMessage({module,fixture})});return {main,thread}}
   finally{worker.terminate();URL.revokeObjectURL(url)}
- },{fixture,common,identity})
+ },{fixture,common,identity,verifyHost})
  assert.equal(result.main.passed,true);assert.equal(result.thread.ok,true,JSON.stringify(result.thread));assert.equal(result.thread.result.passed,true);assert.deepEqual(errors,[])
  const report={schema:'closed-ss-wasm-qualification/1',identity,browser:browser.version(),result,pageErrors:errors,passed:true,scope:'Finite original regular nonperiodic closed-component fixtures and paired finite-face subdivisions; no material/Boolean/general-singularity qualification.'}
  mkdirSync(out,{recursive:true});writeFileSync(resolve(out,'browser.json'),JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report))

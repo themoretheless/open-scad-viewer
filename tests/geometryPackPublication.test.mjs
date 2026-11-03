@@ -12,7 +12,7 @@ test('refused oversized geometry package preserves every published artifact',()=
  files.forEach((file,i)=>writeFileSync(file,`previous artifact ${i}`))
  try{
   // A valid, oversized custom section needs no large executable function.
-  const payload=Buffer.alloc(16*1024*1024)
+  const payload=Buffer.alloc(20*1024*1024)
   const wasm=Buffer.concat([Buffer.from([0,97,115,109,1,0,0,0,0]),leb(payload.length),payload])
   assert.throws(()=>packGeometryKernel(wasm,output,publicWasm),/exceeds decompression output limit/)
   files.forEach((file,i)=>assert.equal(readFileSync(file,'utf8'),`previous artifact ${i}`))

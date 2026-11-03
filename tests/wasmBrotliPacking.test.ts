@@ -69,7 +69,7 @@ describe('synchronous Brotli WASM packages', () => {
       expect(() => unpackBrotliWasmBase64(invalid)).toThrow()
     }
     const excessive = bytes.slice()
-    new DataView(excessive.buffer,excessive.byteOffset,excessive.byteLength).setUint32(0,16 * 1024 * 1024 + 1,true)
+    new DataView(excessive.buffer,excessive.byteOffset,excessive.byteLength).setUint32(0,20 * 1024 * 1024 + 1,true)
     expect(() => unpackBrotliWasmBase64(encodeBase85(excessive))).toThrow()
     expect(() => unpackBrotliWasmBase64('b85:'+'0'.repeat(6 + Math.ceil((8*1024*1024+4)/4)*5))).toThrow(/input limit/)
   })
@@ -116,7 +116,7 @@ describe('synchronous Brotli WASM packages', () => {
   it('checks host input/output caps and enforces the decoder memory maximum', () => {
     expect(() => unpackBrotliWasm(new Uint8Array(8 * 1024 * 1024 + 5))).toThrow(/input limit/)
     const outputOverflow = pack(new Uint8Array())
-    new DataView(outputOverflow.buffer, outputOverflow.byteOffset, outputOverflow.byteLength).setUint32(0, 16 * 1024 * 1024 + 1, true)
+    new DataView(outputOverflow.buffer, outputOverflow.byteOffset, outputOverflow.byteLength).setUint32(0, 20 * 1024 * 1024 + 1, true)
     expect(() => unpackBrotliWasm(outputOverflow)).toThrow(/output limit/)
     expect(() => unpackBrotliWasmBase64('A'.repeat(4 * Math.ceil((8 * 1024 * 1024 + 4) / 3) + 1))).toThrow(/input limit/)
     const module = new WebAssembly.Module(unpackWasmBase64(decoderBytes))
@@ -148,6 +148,16 @@ it('decodes sept literals through the bounded Brotli dispatcher and refuses malf
   expect(()=>unpackBrotliWasmBase64(text.slice(0,-1))).toThrow()
   expect(()=>unpackBrotliWasmBase64(text+'!!!!!!!')).toThrow()
  }
- const overflow=pack(new Uint8Array());new DataView(overflow.buffer,overflow.byteOffset,overflow.byteLength).setUint32(0,16*1024*1024+1,true)
+ const overflow=pack(new Uint8Array());new DataView(overflow.buffer,overflow.byteOffset,overflow.byteLength).setUint32(0,20*1024*1024+1,true)
  expect(()=>unpackBrotliWasmBase64(encodeSeptBase118(overflow))).toThrow('output limit')
+})
+
+it('decodes an above-16-MiB package through independently bounded streams', () => {
+  const chunks=[Buffer.alloc(9*1024*1024,49),Buffer.alloc(9*1024*1024,50)]
+  const compressed=chunks.map(chunk=>brotliCompressSync(chunk,{params:{[constants.BROTLI_PARAM_QUALITY]:0}}))
+  const header=Buffer.alloc(21);header.writeUInt32LE(18*1024*1024+0x80000000);header[4]=2
+  chunks.forEach((chunk,i)=>{header.writeUInt32LE(chunk.length,5+8*i);header.writeUInt32LE(compressed[i].length,9+8*i)})
+  const decoded=unpackBrotliWasm(Buffer.concat([header,...compressed]))
+  expect(Buffer.from(decoded).equals(Buffer.concat(chunks))).toBe(true)
+  expect(()=>unpackBrotliWasm(pack(Buffer.alloc(17*1024*1024),0))).toThrow(/stream output limit/)
 })

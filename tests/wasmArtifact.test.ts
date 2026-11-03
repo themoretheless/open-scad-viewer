@@ -18,7 +18,7 @@ it('attests the exact bytes with asynchronous and synchronous compilation', asyn
 
 it('rejects wrong digests, lengths and unbounded identities before instantiation', async () => {
   for (const wrong of [{...identity, sha256: '0'.repeat(64)}, {...identity, byteLength: 9},
-    {...identity, byteLength: 16 * 1024 * 1024 + 1}, {...identity, byteLength: 7},
+    {...identity, byteLength: 20 * 1024 * 1024 + 1}, {...identity, byteLength: 7},
     {...identity, byteLength: NaN}, {...identity, sha256: 'invalid'}]) {
     await expect(compileWasmArtifact(bytes, wrong)).rejects.toMatchObject({code: 'WASM_ARTIFACT_MISMATCH'})
     expect(() => compileWasmArtifactSync(bytes, wrong)).toThrow()

@@ -15,7 +15,7 @@ const verifiedModules = new WeakMap<WebAssembly.Module, WasmArtifactIdentity>()
 export function snapshotWasmIdentity(identity: WasmArtifactIdentity): WasmArtifactIdentity {
   const {sha256, byteLength} = identity
   if (!/^[a-f0-9]{64}$/.test(sha256) || !Number.isSafeInteger(byteLength)
-    || byteLength < 8 || byteLength > 16 * 1024 * 1024) {
+    || byteLength < 8 || byteLength > 20 * 1024 * 1024) {
     throw new WasmArtifactError('Invalid bounded WASM artifact identity')
   }
   return Object.freeze({sha256, byteLength})
