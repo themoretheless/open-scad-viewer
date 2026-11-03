@@ -1,0 +1,1809 @@
+{
+  "status": "delivery-refused-and-prototype-reverted",
+  "recordedAt": "2026-11-03T03:52:50.698603+00:00",
+  "sourceCommit": "262378052a0a887c2144110392949346e9540806",
+  "scope": "Fresh current-source raw-WASM and delivery investigation, not an installed-artifact/application qualification. Original1000 scope preserved.",
+  "catalogue": {
+    "target": 1000,
+    "specified": 248,
+    "integrated": 79,
+    "native": 169,
+    "unallocated": 752,
+    "newCountCredit": 0
+  },
+  "builds": {
+    "stock": {
+      "build": {
+        "sourceCommit": "262378052a0a887c2144110392949346e9540806",
+        "status": "terminal",
+        "started": "2026-11-03T02:51:50.390Z",
+        "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+        "scope": "Fresh current-source stock production WASM flags, same-version native Binaryen optimizer, private target/output only. No installed artifacts, budget profiles, precision/resource caps or application qualification changes.",
+        "dirtySourceFiles": [
+          ""
+        ],
+        "sourceDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sourceInputsSha256": "f6a640de5497e573139ea59c7e46f636c062fbc11f319fc1630c3046a98f1c5a",
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--offline",
+          "--release",
+          "--config",
+          "profile.release.opt-level=\"z\"",
+          "--config",
+          "profile.release.strip=\"symbols\"",
+          "--config",
+          "profile.release.package.brep-core.opt-level=\"z\"",
+          "--config",
+          "profile.release.package.geometry-bridge.opt-level=\"z\"",
+          "--target",
+          "wasm32-unknown-unknown",
+          "--manifest-path",
+          "crates/geometry-wasm/Cargo.toml"
+        ],
+        "buildEnv": {
+          "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+          "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+          "CARGO_BUILD_JOBS": "2"
+        },
+        "buildExit": 0,
+        "buildSignal": null,
+        "raw": {
+          "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+          "bytes": 18932344,
+          "sha256": "a80a18da6bc851aad3d8afb035aa7bd13eb38abd97d5152fb8c63e79b6fe5943"
+        },
+        "optimized": {
+          "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-optimized.wasm",
+          "bytes": 16794155,
+          "sha256": "a2b286ddd476f66b067a6e6c7e3a09220582a8db812718267f29f7447c3fcdde",
+          "valid": true
+        },
+        "finished": "2026-11-03T02:55:25.779Z"
+      },
+      "stableRawSnapshot": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-raw.wasm",
+      "merge": {
+        "status": "terminal",
+        "sourceState": {
+          "sourceCommit": "262378052a0a887c2144110392949346e9540806",
+          "status": "terminal",
+          "started": "2026-11-03T02:51:50.390Z",
+          "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+          "scope": "Fresh current-source stock production WASM flags, same-version native Binaryen optimizer, private target/output only. No installed artifacts, budget profiles, precision/resource caps or application qualification changes.",
+          "dirtySourceFiles": [
+            ""
+          ],
+          "sourceDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceInputsSha256": "f6a640de5497e573139ea59c7e46f636c062fbc11f319fc1630c3046a98f1c5a",
+          "command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--offline",
+            "--release",
+            "--config",
+            "profile.release.opt-level=\"z\"",
+            "--config",
+            "profile.release.strip=\"symbols\"",
+            "--config",
+            "profile.release.package.brep-core.opt-level=\"z\"",
+            "--config",
+            "profile.release.package.geometry-bridge.opt-level=\"z\"",
+            "--target",
+            "wasm32-unknown-unknown",
+            "--manifest-path",
+            "crates/geometry-wasm/Cargo.toml"
+          ],
+          "buildEnv": {
+            "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+            "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "buildExit": 0,
+          "buildSignal": null,
+          "raw": {
+            "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+            "bytes": 18932344,
+            "sha256": "a80a18da6bc851aad3d8afb035aa7bd13eb38abd97d5152fb8c63e79b6fe5943"
+          },
+          "optimized": {
+            "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-optimized.wasm",
+            "bytes": 16794155,
+            "sha256": "a2b286ddd476f66b067a6e6c7e3a09220582a8db812718267f29f7447c3fcdde",
+            "valid": true
+          },
+          "finished": "2026-11-03T02:55:25.779Z"
+        },
+        "input": {
+          "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-raw.wasm",
+          "sha256": "a80a18da6bc851aad3d8afb035aa7bd13eb38abd97d5152fb8c63e79b6fe5943",
+          "bytes": 18932344
+        },
+        "tool": {
+          "path": "/Users/themoretheless/.cargo/bin/wasm-opt",
+          "sha256": "4c575c3d092cdfa434ead67f44c0379a28289c94b966136055d51c7946ed6523",
+          "version": "wasm-opt version 116 (version_116)"
+        },
+        "command": [
+          "/Users/themoretheless/.cargo/bin/wasm-opt",
+          "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-raw.wasm",
+          "-Oz",
+          "--gufa-optimizing",
+          "--merge-similar-functions",
+          "--code-folding",
+          "--dae-optimizing",
+          "-Oz",
+          "--converge",
+          "--enable-bulk-memory",
+          "--enable-sign-ext",
+          "--enable-nontrapping-float-to-int",
+          "--enable-mutable-globals",
+          "--enable-reference-types",
+          "--enable-multivalue",
+          "-o",
+          "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-merge.wasm"
+        ],
+        "environment": {
+          "BINARYEN_CORES": "2"
+        },
+        "start": "2026-11-03T03:02:12.070699+00:00",
+        "scope": "Private exact-input optimizer experiment; no trapping/fast-math assumptions, production admission, resource-cap or feature changes.",
+        "exitCode": 0,
+        "end": "2026-11-03T03:11:32.304926+00:00",
+        "output": {
+          "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-merge.wasm",
+          "bytes": 16779903,
+          "sha256": "21be188430230017bead697396436235d0425768b9a28de3a9b9ffb3e9b008d9",
+          "decodedWithinCap": false
+        }
+      }
+    },
+    "outline": {
+      "build": {
+        "sourceCommit": "262378052a0a887c2144110392949346e9540806",
+        "status": "terminal",
+        "started": "2026-11-03T02:57:05.042Z",
+        "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+        "scope": "Controlled WASM-only inline-never experiment on bounded rational Work::op; otherwise stock production flags. Private output only. No precision/work/geometry caps, operation/error contracts, native profile, installed artifacts or delivery budget profiles changed.",
+        "dirtySourceFiles": [
+          "crates/nurbs-core/src/core/bounded_rational.rs"
+        ],
+        "sourceDiffSha256": "c1a8e5b5787e6ecd87aed8b1965dca91f38e612eb8411f0b40b0af127ae32182",
+        "sourceInputsSha256": "192bbaa54f36d0e98c2aedf3c2e326107517fe2065b8811c0ffad6a117b4b859",
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--offline",
+          "--release",
+          "--config",
+          "profile.release.opt-level=\"z\"",
+          "--config",
+          "profile.release.strip=\"symbols\"",
+          "--config",
+          "profile.release.package.brep-core.opt-level=\"z\"",
+          "--config",
+          "profile.release.package.geometry-bridge.opt-level=\"z\"",
+          "--target",
+          "wasm32-unknown-unknown",
+          "--manifest-path",
+          "crates/geometry-wasm/Cargo.toml"
+        ],
+        "buildEnv": {
+          "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+          "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+          "CARGO_BUILD_JOBS": "2"
+        },
+        "buildExit": 0,
+        "buildSignal": null,
+        "raw": {
+          "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+          "bytes": 18914499,
+          "sha256": "d897f27c2f3efdcdd2804c8262e033cc5f454263edd04b9c36b944f7429d32fc"
+        },
+        "optimized": {
+          "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-optimized.wasm",
+          "bytes": 16778513,
+          "sha256": "38968a985311df9aeecae75cea9c723cbd260921f92a33a0251241fb0e188ac7",
+          "valid": true
+        },
+        "finished": "2026-11-03T03:00:26.885Z"
+      },
+      "stableRawSnapshot": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-raw.wasm",
+      "merge": {
+        "status": "terminal",
+        "sourceState": {
+          "sourceCommit": "262378052a0a887c2144110392949346e9540806",
+          "status": "terminal",
+          "started": "2026-11-03T02:57:05.042Z",
+          "target": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+          "scope": "Controlled WASM-only inline-never experiment on bounded rational Work::op; otherwise stock production flags. Private output only. No precision/work/geometry caps, operation/error contracts, native profile, installed artifacts or delivery budget profiles changed.",
+          "dirtySourceFiles": [
+            "crates/nurbs-core/src/core/bounded_rational.rs"
+          ],
+          "sourceDiffSha256": "c1a8e5b5787e6ecd87aed8b1965dca91f38e612eb8411f0b40b0af127ae32182",
+          "sourceInputsSha256": "192bbaa54f36d0e98c2aedf3c2e326107517fe2065b8811c0ffad6a117b4b859",
+          "command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--offline",
+            "--release",
+            "--config",
+            "profile.release.opt-level=\"z\"",
+            "--config",
+            "profile.release.strip=\"symbols\"",
+            "--config",
+            "profile.release.package.brep-core.opt-level=\"z\"",
+            "--config",
+            "profile.release.package.geometry-bridge.opt-level=\"z\"",
+            "--target",
+            "wasm32-unknown-unknown",
+            "--manifest-path",
+            "crates/geometry-wasm/Cargo.toml"
+          ],
+          "buildEnv": {
+            "CARGO_ENCODED_RUSTFLAGS": "-Zlocation-detail=none\u001f--remap-path-prefix=/Users/themoretheless/.cargo=/cargo\u001f--remap-path-prefix=/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer=/src",
+            "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103",
+            "CARGO_BUILD_JOBS": "2"
+          },
+          "buildExit": 0,
+          "buildSignal": null,
+          "raw": {
+            "path": "/Users/themoretheless/.codex/tmp/osv-nurbs-delivery-target-20261103/wasm32-unknown-unknown/release/geometry_wasm.wasm",
+            "bytes": 18914499,
+            "sha256": "d897f27c2f3efdcdd2804c8262e033cc5f454263edd04b9c36b944f7429d32fc"
+          },
+          "optimized": {
+            "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-optimized.wasm",
+            "bytes": 16778513,
+            "sha256": "38968a985311df9aeecae75cea9c723cbd260921f92a33a0251241fb0e188ac7",
+            "valid": true
+          },
+          "finished": "2026-11-03T03:00:26.885Z"
+        },
+        "input": {
+          "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-raw.wasm",
+          "sha256": "d897f27c2f3efdcdd2804c8262e033cc5f454263edd04b9c36b944f7429d32fc",
+          "bytes": 18914499
+        },
+        "tool": {
+          "path": "/Users/themoretheless/.cargo/bin/wasm-opt",
+          "sha256": "4c575c3d092cdfa434ead67f44c0379a28289c94b966136055d51c7946ed6523",
+          "version": "wasm-opt version 116 (version_116)"
+        },
+        "command": [
+          "/Users/themoretheless/.cargo/bin/wasm-opt",
+          "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-raw.wasm",
+          "-Oz",
+          "--gufa-optimizing",
+          "--merge-similar-functions",
+          "--code-folding",
+          "--dae-optimizing",
+          "-Oz",
+          "--converge",
+          "--enable-bulk-memory",
+          "--enable-sign-ext",
+          "--enable-nontrapping-float-to-int",
+          "--enable-mutable-globals",
+          "--enable-reference-types",
+          "--enable-multivalue",
+          "-o",
+          "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-merge.wasm"
+        ],
+        "environment": {
+          "BINARYEN_CORES": "2"
+        },
+        "start": "2026-11-03T03:02:12.070495+00:00",
+        "scope": "Private exact-input optimizer experiment; no trapping/fast-math assumptions, production admission, resource-cap or feature changes.",
+        "exitCode": 0,
+        "end": "2026-11-03T03:11:34.609133+00:00",
+        "output": {
+          "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-merge.wasm",
+          "bytes": 16764253,
+          "sha256": "dcd097e813ba9ccdbf3e9821c806a2e9efc1bd31c90abc54cb6778bb1bc78382",
+          "decodedWithinCap": true
+        }
+      }
+    }
+  },
+  "decodedCap": 16777216,
+  "stockDecodedExcess": 16939,
+  "outlineDecodedExcess": 1297,
+  "stockMergeDecodedExcess": 2687,
+  "outlineMergeDecodedHeadroom": 12963,
+  "candidateVite": {
+    "wasmSha256": "dcd097e813ba9ccdbf3e9821c806a2e9efc1bd31c90abc54cb6778bb1bc78382",
+    "geometryChunkBytes": 5928455,
+    "totalAssetBytes": 10697401,
+    "artifacts": 212,
+    "productionUnchanged": true,
+    "emittedWasmIdentityVerified": true,
+    "scope": "Private actual Vite asset measurement on current source and isolated candidate payload. No runtime/profile/admission/Worker/editor qualification; installed source artifacts remain unchanged."
+  },
+  "unchangedDeliveryBudgets": {
+    "geometryChunkBytes": 5370000,
+    "totalAssetBytes": 10080000,
+    "geometryExcess": 558455,
+    "totalExcess": 617401
+  },
+  "currentNativeTransport": {
+    "passed": 19,
+    "groups": [
+      8,
+      11
+    ],
+    "scope": "Fresh native exact primitive transport/refusal contracts; no full-library rerun or whole-app credit."
+  },
+  "rawAbi": {
+    "stockGeneralCases": 102,
+    "stockExactPrimitiveChecks": 33,
+    "outlineExactPrimitiveChecks": 33,
+    "outlineMergeGeneralCases": 102,
+    "outlineMergeExactPrimitiveChecks": 33,
+    "allPrimitiveVariantsNativeEqual": true,
+    "independentPrimitiveFullDomainOracles": true
+  },
+  "largeBodyComparison": {
+    "status": "terminal",
+    "scope": "Same actual saved model/provenance re-audited through raw ABI of each explicit artifact. No old certificate or runtime admission transferred.",
+    "results": [
+      {
+        "variant": "installed-generated",
+        "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+        "wasmBytes": 16670564,
+        "wasmSha256": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+        "cases": [
+          {
+            "file": "progressive-hollow-boundary.r",
+            "faces": 514,
+            "requestBytes": 4853880,
+            "inputSha256": "e8603d0c904a1075079e41645f4fe9f1a25d6356b8d9150aab3ffa4a7c450f8c",
+            "ok": false,
+            "error": {
+              "code": "GEOMETRY_INVALID_INPUT",
+              "message": "Progressive sweep Solid geometry could not be proved: boundary embedding."
+            },
+            "proof": null,
+            "elapsedMs": 3335.256792
+          },
+          {
+            "file": "progressive-unsegmented-hollow-boundary.r",
+            "faces": 578,
+            "requestBytes": 5804617,
+            "inputSha256": "232f222cbae3496dfd3549ad3a5055f6c2e75479793ea63b98662b34b8904cbd",
+            "ok": false,
+            "error": {
+              "code": "GEOMETRY_INVALID_INPUT",
+              "message": "Progressive sweep Solid geometry could not be proved: boundary embedding."
+            },
+            "proof": null,
+            "elapsedMs": 4571.830917
+          }
+        ]
+      },
+      {
+        "variant": "current-stock",
+        "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-stock-optimized.wasm",
+        "wasmBytes": 16794155,
+        "wasmSha256": "a2b286ddd476f66b067a6e6c7e3a09220582a8db812718267f29f7447c3fcdde",
+        "cases": [
+          {
+            "file": "progressive-hollow-boundary.r",
+            "faces": 514,
+            "requestBytes": 4853880,
+            "inputSha256": "e8603d0c904a1075079e41645f4fe9f1a25d6356b8d9150aab3ffa4a7c450f8c",
+            "ok": true,
+            "proof": {
+              "solidGeometryCertified": true,
+              "boundaryEmbeddingCertified": true,
+              "allFacesInjective": true,
+              "allPairsClassified": true,
+              "nextPair": null,
+              "nesting": {
+                "cells": 0,
+                "domainCells": 0,
+                "pairs": [],
+                "parents": [
+                  null
+                ],
+                "rolesConsistent": true,
+                "totalPairs": 0,
+                "visitedPairs": 0
+              }
+            },
+            "elapsedMs": 5651.914083999999
+          },
+          {
+            "file": "progressive-unsegmented-hollow-boundary.r",
+            "faces": 578,
+            "requestBytes": 5804617,
+            "inputSha256": "232f222cbae3496dfd3549ad3a5055f6c2e75479793ea63b98662b34b8904cbd",
+            "ok": true,
+            "proof": {
+              "solidGeometryCertified": true,
+              "boundaryEmbeddingCertified": true,
+              "allFacesInjective": true,
+              "allPairsClassified": true,
+              "nextPair": null,
+              "nesting": {
+                "cells": 0,
+                "domainCells": 0,
+                "pairs": [],
+                "parents": [
+                  null
+                ],
+                "rolesConsistent": true,
+                "totalPairs": 0,
+                "visitedPairs": 0
+              }
+            },
+            "elapsedMs": 6502.326084
+          }
+        ]
+      },
+      {
+        "variant": "current-outlined-merge",
+        "path": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-outline-merge.wasm",
+        "wasmBytes": 16764253,
+        "wasmSha256": "dcd097e813ba9ccdbf3e9821c806a2e9efc1bd31c90abc54cb6778bb1bc78382",
+        "cases": [
+          {
+            "file": "progressive-hollow-boundary.r",
+            "faces": 514,
+            "requestBytes": 4853880,
+            "inputSha256": "e8603d0c904a1075079e41645f4fe9f1a25d6356b8d9150aab3ffa4a7c450f8c",
+            "ok": true,
+            "proof": {
+              "solidGeometryCertified": true,
+              "boundaryEmbeddingCertified": true,
+              "allFacesInjective": true,
+              "allPairsClassified": true,
+              "nextPair": null,
+              "nesting": {
+                "cells": 0,
+                "domainCells": 0,
+                "pairs": [],
+                "parents": [
+                  null
+                ],
+                "rolesConsistent": true,
+                "totalPairs": 0,
+                "visitedPairs": 0
+              }
+            },
+            "elapsedMs": 5752.227333999999
+          },
+          {
+            "file": "progressive-unsegmented-hollow-boundary.r",
+            "faces": 578,
+            "requestBytes": 5804617,
+            "inputSha256": "232f222cbae3496dfd3549ad3a5055f6c2e75479793ea63b98662b34b8904cbd",
+            "ok": true,
+            "proof": {
+              "solidGeometryCertified": true,
+              "boundaryEmbeddingCertified": true,
+              "allFacesInjective": true,
+              "allPairsClassified": true,
+              "nextPair": null,
+              "nesting": {
+                "cells": 0,
+                "domainCells": 0,
+                "pairs": [],
+                "parents": [
+                  null
+                ],
+                "rolesConsistent": true,
+                "totalPairs": 0,
+                "visitedPairs": 0
+              }
+            },
+            "elapsedMs": 6505.748167000002
+          }
+        ]
+      }
+    ]
+  },
+  "fullFrontend": {
+    "runner": {
+      "status": "terminal",
+      "sourceCommit": "262378052a0a887c2144110392949346e9540806",
+      "sourceDiff": [
+        "crates/nurbs-core/src/core/bounded_rational.rs"
+      ],
+      "start": "2026-11-03T03:12:18.966943+00:00",
+      "node": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/node-runtime-22.23.4/node-v22.23.4-darwin-arm64/bin/node",
+      "maxWorkers": 2,
+      "timeoutPolicy": "Unchanged committed vitest.config.ts test/hook timeout30000; no CLI timeout override.",
+      "scope": "Full frontend against currently installed historical WASM and current frontend sources; baseline only, not new stock/outline artifact admission.",
+      "command": [
+        "caffeinate",
+        "-i",
+        "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/node-runtime-22.23.4/node-v22.23.4-darwin-arm64/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers",
+        "2",
+        "--reporter",
+        "default",
+        "--reporter",
+        "json",
+        "--outputFile.json",
+        "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native252-frontend.json"
+      ],
+      "exitCode": 1,
+      "end": "2026-11-03T03:24:48.889959+00:00",
+      "sourceUnchanged": true
+    },
+    "summary": {
+      "total": 6346,
+      "passed": 6203,
+      "failed": 137,
+      "pending": 6,
+      "groups": {
+        "Error: STACK_TRACE_ERROR": 2,
+        "AssertionError: expected 'G2 and curvature \u226410/mm confirmed' to contain 'G2 confirmed'": 1,
+        "TypeError: ui.all(...).find(...).props.onUpdate:modelValue is not a function": 2,
+        "AssertionError: expected [Function] to throw error matching /coincident boundaries/ but got 'Complete NURBS intersection coverage \u2026'": 1,
+        "TypeError: No qualified runtime manifest matches the packaged artifact for mesh": 89,
+        "GeometryKernelError: Cap edges and valence-3 corner chains require an unavailable exact transition proof": 1,
+        "AssertionError: expected 1 to be greater than 1": 2,
+        "AssertionError: expected [Function] to throw error matching /match the exact source routing header/ but got 'No qualified runtime manifest matches\u2026'": 1,
+        "AssertionError: expected [Function] to throw error matching /durationMs/ but got 'No qualified runtime manifest matches\u2026'": 1,
+        "AssertionError: expected [Function] to throw error matching /provided together/ but got 'No qualified runtime manifest matches\u2026'": 1,
+        "AssertionError: expected 'sha256:baf58e7051b0a9b39b54b61525ba01\u2026' to be 'sha256:e86a0bd9073bcfc8ebde99d1e1e4b3\u2026' // Object.is equality": 1,
+        "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }": 7,
+        "AssertionError: crates/Cargo.toml: expected 6657 to be 6630 // Object.is equality": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-msGibr/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-eCQl3m/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-LwOYEI/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-OrZEIT/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-EtrXUM/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-Rj9olB/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-uU7nFN/crates/compute-core/Cargo.toml'": 1,
+        "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-s0TSDK/crates/compute-core/Cargo.toml'": 1,
+        "Error: Timed out waiting for initialize": 1,
+        "Error: Timed out waiting for qualification event": 1,
+        "GeometryKernelError: Complete NURBS intersection coverage and retained-material classification are unproved: Cone/torus Boolean is query-only and outside the frozen matrix": 1,
+        "GeometryKernelError: Progressive sweep Solid geometry could not be proved: boundary embedding.": 4,
+        "AssertionError: expected { certified: false, \u2026(6) } to match object { certified: false, work: +0 }": 1,
+        "TypeError: No qualified runtime manifest matches the packaged artifact for brep": 1,
+        "SyntaxError: Unexpected end of JSON input": 1,
+        "AssertionError: expected false to be true // Object.is equality": 4,
+        "GeometryKernelError: Complete NURBS intersection coverage and retained-material classification are unproved: Cylinder/sphere Boolean: only a sphere centred on the cylinder axis meets the wall in exact circles; a general position needs a quartic and is refused": 3,
+        "AssertionError: expected { \u2026(2) } to deeply equal { byteLength: 16554739, \u2026(1) }": 1,
+        "Error: ENOENT: no such file or directory, open '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm'": 1
+      },
+      "failures": [
+        {
+          "file": "directModelerUi.test.ts",
+          "test": "reports the stated tolerance when a subtraction falls back to the numerical trace",
+          "first": "Error: STACK_TRACE_ERROR"
+        },
+        {
+          "file": "directModelerUi.test.ts",
+          "test": "previews G2 runout roles, ignores late responses and keeps retry and history atomic",
+          "first": "AssertionError: expected 'G2 and curvature \u226410/mm confirmed' to contain 'G2 confirmed'"
+        },
+        {
+          "file": "directModelerUi.test.ts",
+          "test": "builds and restores a native G2 runout through the command panel (en)",
+          "first": "TypeError: ui.all(...).find(...).props.onUpdate:modelValue is not a function"
+        },
+        {
+          "file": "directModelerUi.test.ts",
+          "test": "builds and restores a native G2 runout through the command panel (ru)",
+          "first": "TypeError: ui.all(...).find(...).props.onUpdate:modelValue is not a function"
+        },
+        {
+          "file": "brepAnalytic.test.ts",
+          "test": "preserves separated torus and box carriers despite overlapping bounding boxes",
+          "first": "Error: STACK_TRACE_ERROR"
+        },
+        {
+          "file": "brepAnalytic.test.ts",
+          "test": "refuses torus contact coincident with existing box trim edges without a faceted fallback",
+          "first": "AssertionError: expected [Function] to throw error matching /coincident boundaries/ but got 'Complete NURBS intersection coverage \u2026'"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator coalesces repeated exact build keys without growing the worker queue",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator keeps a warm worker for preview then full and publishes both in useful order",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator never lets a late preview downgrade an already published full result",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator discards an older revision and can reuse a worker that finishes during the grace period",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator turns a worker error into a current failure and recovers on the next revision",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects a valid event whose document revision does not correlate with its job",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects a valid event whose quality does not correlate with its job",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects worker provenance that does not match the requested source route",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects a same-route terminal replayed for different exact source bytes",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects provenance spans outside the exact attested source",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects failed diagnostic spans outside the exact attested source",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects source spans that split a UTF-16 surrogate pair",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator publishes a deeply frozen snapshot with exclusively owned mesh buffers",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator rejects accessor-based terminal payloads without evaluating the accessor",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "BuildCoordinator accepts an exact EOF diagnostic span and re-freezes execution provenance",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator measurement boundaries measures main-clock latency independently of Worker time and counts coalesced requests once",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery retries a silent startup once with exact request identity and original elapsed time",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery fails after the retry stays silent and gives a new manual request its own allowance",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery retries concurrent preview/full together and cannot publish a late preview downgrade",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery gives a later full build its own retry without retrying an exhausted preview again",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery preserves a published full result when a leftover preview goes silent",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery preserves full geometry when the leftover preview Worker has a error failure",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery preserves full geometry when the leftover preview Worker has a messageerror failure",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery preserves full geometry when the leftover preview Worker has a protocol failure",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery does not replenish the full retry allowance when preview succeeds",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery leaves supersession to its grace timer and resets the retry budget on a new revision",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery ignores a stale grace callback after a warm worker accepts newer work",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery settles message deserialization failure immediately and recovers in a new Worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery recovers queued superseding work when the old Worker has a messageerror",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery settles a retry factory failure without resurrecting a sibling job",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "buildCoordinator.test.ts",
+          "test": "coordinator Worker silence recovery settles a retry post failure without resurrecting a sibling job",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "cadRoadmapHistory.test.ts",
+          "test": "preserves the bracket through 20 Boolean, face, transform and exact-fillet edits",
+          "first": "GeometryKernelError: Cap edges and valence-3 corner chains require an unavailable exact transition proof"
+        },
+        {
+          "file": "cadRoadmapHistory.test.ts",
+          "test": "preserves the enclosure through 20 mixed face, hole-Boolean, transform and layered-fillet edits",
+          "first": "AssertionError: expected 1 to be greater than 1"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore records builds and round-trips bounded binary artifacts",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore requires versioned diagnostics from new writes and enforces the frozen retry policy",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore surfaces bounded pre-contract diagnostics as legacy-unattested and rejects unknown versions",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore binds build provenance to the source route and immutable manifest",
+          "first": "AssertionError: expected [Function] to throw error matching /match the exact source routing header/ but got 'No qualified runtime manifest matches\u2026'"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore rejects artifact metadata that does not match its format or bytes",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore rejects corrupted artifact rows on read instead of serving them over MCP",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore rejects corrupted execution provenance on read instead of serving it over MCP",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore re-attests referenced source digests and routes on every build read",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore stores and re-attests an immutable source snapshot for inline build history",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore marks schema-v4 inline history as unattested and rejects corrupted migrated markers",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore never accepts B-rep history disguised as legacy backfill",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore rejects non-finite build values without adding partial history",
+          "first": "AssertionError: expected [Function] to throw error matching /durationMs/ but got 'No qualified runtime manifest matches\u2026'"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore requires complete model revision pairs and derives artifact model identity from its build",
+          "first": "AssertionError: expected [Function] to throw error matching /provided together/ but got 'No qualified runtime manifest matches\u2026'"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore migrates schema v2 builds with explicit legacy Manifold execution provenance",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore retains only the newest bounded build history",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "duckdbModelStore.test.ts",
+          "test": "DuckDbModelStore retains only the newest bounded artifact history",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "engineManifest.test.ts",
+          "test": "immutable geometry manifest archive binds the current own Rust evidence to repository artifacts",
+          "first": "AssertionError: expected 'sha256:baf58e7051b0a9b39b54b61525ba01\u2026' to be 'sha256:e86a0bd9073bcfc8ebde99d1e1e4b3\u2026' // Object.is equality"
+        },
+        {
+          "file": "frozenGraphBodyRealWorker.test.ts",
+          "test": "reproves the native exact body and original identities in a separate worker realm",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "frozenGraphBodyRealWorker.test.ts",
+          "test": "cancels a realm, rejects a corrupted identity and accepts a fresh Retry",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "frozenGraphBodyRealWorker.test.ts",
+          "test": "samples every exact edge in the actual worker without altering its artifact",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "frozenGraphBodyRealWorker.test.ts",
+          "test": "replays natural source cuts and displays their shared-root children in a separate worker",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0 toolchain fingerprints matches exact bytes for every listed artifact",
+          "first": "AssertionError: crates/Cargo.toml: expected 6657 to be 6630 // Object.is equality"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator refuses an unrecorded valid WASM edit before publishing any freeze",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-msGibr/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator binds the published release independently of an ignored host rebuild",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-eCQl3m/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator prepares deterministic new versions without creating any artifact or result",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-LwOYEI/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator publishes exclusively, preserves every archive, and never carries forward results",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-OrZEIT/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator rejects a source race before publishing and preserves an existing destination",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-EtrXUM/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator cannot refresh a historical archive or silently replace the frozen oracle",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-Rj9olB/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator refuses a zero-counter freeze when the new candidate already has result bookkeeping",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-uU7nFN/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "g0ToolchainFingerprints.test.ts",
+          "test": "G0/G1 re-freeze generator historical v24 executors retain run-index admission without executing or creating evidence",
+          "first": "Error: ENOENT: no such file or directory, copyfile '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/compute-core/Cargo.toml' -> '/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/qualification-refreeze-s0TSDK/crates/compute-core/Cargo.toml'"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "delivers queued cancellation before publishing a long selection batch",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "publishes requested selection patches through the real WASM boundary",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle does not let a malformed exact-solid request consume a display worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle publishes exact 256-code-unit entity, operation, and instance identities",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle fails a 257-code-unit entityId before success transfer and recovers on the same Worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle fails a 257-code-unit operationId before success transfer and recovers on the same Worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle fails a 257-code-unit instanceId before success transfer and recovers on the same Worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle ignores a replayed active job id without replacing or duplicating its terminal",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle tombstones a terminal job id but continues with the next monotonic id",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle executes a B-rep source without invoking the mesh parser",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle reports a malformed header before stale queue state without rerouting providers",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle does not let a malformed newer revision supersede valid running work",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle cancels initialization promptly and preserves shared warmup for the next build",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle stops a running parse cooperatively when a cancel message arrives mid-build",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle supersedes a running parse cooperatively when a newer build arrives",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle publishes one positioned failure when a model assertion rejects the build",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle keeps runtime provenance when success serialization fails after the build",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorker.test.ts",
+          "test": "geometry Worker lifecycle keeps cancellation terminal when an assertion failure settles after cancel",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerAssertion.test.ts",
+          "test": "geometry Worker assertion integration bounds hung initialization and ignores its late rejection",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerAssertion.test.ts",
+          "test": "geometry Worker assertion integration carries a real parser assertion through one terminal event after 0 ms cold startup",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerAssertion.test.ts",
+          "test": "geometry Worker assertion integration carries a real parser assertion through one terminal event after 350 ms cold startup",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation validates the status-specific phase contract",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation validates every status payload instead of accepting its envelope alone",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation requires coherent runtime engine provenance on successful publications",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects negative identifiers in requests and events",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation attests exact bounded request source and bounds terminal diagnostics",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects duplicate mesh entity identities and oversized provenance labels",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation requires non-empty sorted non-overlapping provenance runs",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects color components outside the normalized RGBA contract",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects non-finite geometry and transforms at the Worker boundary",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation accepts the complete payload produced by the geometry compiler",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects mesh indices and BVH triangle references outside their source buffers",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects incompatible strides, invalid leaf ranges and non-finite bounds",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects cyclic, shared-child and unreachable BVH graphs",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation rejects oversized success envelopes before deep payload validation",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation requires exact enumerable data properties and plain records at every wire boundary",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerProtocol.test.ts",
+          "test": "geometry worker protocol validation checks array cardinality before density scans and rejects non-owned buffers",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerRealBoundary.test.ts",
+          "test": "real structured-clone geometry Worker boundaries preflights direct-route 256/257 identities before transfer and keeps the same real Worker healthy",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerRealBoundary.test.ts",
+          "test": "streams cloned Rush previews and cancellation for progressive-sweep through a real worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerRealBoundary.test.ts",
+          "test": "streams cloned Rush previews and cancellation for contact-progressive-hollow-body through a real worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryWorkerRealBoundary.test.ts",
+          "test": "streams cloned Rush previews and cancellation for progressive-miter-hollow-body through a real worker",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpIndependentExportStdio.test.ts",
+          "test": "independent OpenSCAD export over actual MCP stdio lists the tool and serves an integrity-matched session resource",
+          "first": "Error: Timed out waiting for initialize"
+        },
+        {
+          "file": "mcpManifoldPlanQualificationStdio.test.ts",
+          "test": "qualification-only Manifold shadow over actual MCP stdio keeps stdio/admission/store primary-only while a non-cooperative shadow is hard-killed",
+          "first": "Error: Timed out waiting for qualification event"
+        },
+        {
+          "file": "meshExportFormats.test.ts",
+          "test": "preserves mirrored world transforms when exporting the existing scene",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "meshExportFormats.test.ts",
+          "test": "preserves separate 3MF objects and world placement through lossless compressed export",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "meshExportFormats.test.ts",
+          "test": "keeps touching scene parts independent instead of rejecting a welded aggregate",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "nativeBodyBoolean.test.ts",
+          "test": "refuses invalid later operands, mixed representations and unsupported curved pairs atomically",
+          "first": "GeometryKernelError: Complete NURBS intersection coverage and retained-material classification are unproved: Cone/torus Boolean is query-only and outside the frozen matrix"
+        },
+        {
+          "file": "nurbsOffsetDeviation.test.ts",
+          "test": "runs the shipped worker on the same artifact and recovers after an invalid request and cancellation",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "nurbsProgressiveBodyBoundary.test.ts",
+          "test": "qualifies corrected source wall/caps/hole and independent Solid admission: corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+          "first": "GeometryKernelError: Progressive sweep Solid geometry could not be proved: boundary embedding."
+        },
+        {
+          "file": "nurbsProgressiveBodyBoundary.test.ts",
+          "test": "qualifies corrected source wall/caps/hole and independent Solid admission: rmf-rational-straight-affine-hollow-body-boundary.r",
+          "first": "GeometryKernelError: Progressive sweep Solid geometry could not be proved: boundary embedding."
+        },
+        {
+          "file": "nurbsStraightBodyCancellationWorkload.test.ts",
+          "test": "qualifies a valid larger native cancellation body for 'progressive-hollow-boundary.r'",
+          "first": "GeometryKernelError: Progressive sweep Solid geometry could not be proved: boundary embedding."
+        },
+        {
+          "file": "nurbsStraightBodyCancellationWorkload.test.ts",
+          "test": "qualifies a valid larger native cancellation body for 'progressive-unsegmented-hollow-bounda\u2026'",
+          "first": "GeometryKernelError: Progressive sweep Solid geometry could not be proved: boundary embedding."
+        },
+        {
+          "file": "nurbsSweepProjectiveStripJets.test.ts",
+          "test": "supports a common rational multispan basis, transposed axes and an affine moving strip",
+          "first": "AssertionError: expected { certified: false, \u2026(6) } to match object { certified: false, work: +0 }"
+        },
+        {
+          "file": "runtimeGeometryActualBinding.test.ts",
+          "test": "actual packaged runtime provider binding binds both active production providers to the actual packaged WASM",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "runtimeGeometryActualBinding.test.ts",
+          "test": "refuses to borrow a qualified fingerprint for different packaged bytes",
+          "first": "TypeError: No qualified runtime manifest matches the packaged artifact for brep"
+        },
+        {
+          "file": "runtimeManifestAudit.test.ts",
+          "test": "runtime artifact binding audit runs both real providers in a fresh process and returns failure exactly when bindings disagree",
+          "first": "SyntaxError: Unexpected end of JSON input"
+        },
+        {
+          "file": "sameSupportContactProtocol.test.ts",
+          "test": "requires exact boundary admission, common carrier, owned contact and bounded injectivity evidence",
+          "first": "AssertionError: expected false to be true // Object.is equality"
+        },
+        {
+          "file": "sameSupportContactProtocol.test.ts",
+          "test": "validates projected trim contacts across different carriers with exact-scope and ownership gates",
+          "first": "AssertionError: expected false to be true // Object.is equality"
+        },
+        {
+          "file": "sameSupportContactProtocol.test.ts",
+          "test": "requires exact scope and complete owned topology for a projected boundary network",
+          "first": "AssertionError: expected false to be true // Object.is equality"
+        },
+        {
+          "file": "solidExactEdgeFeature.test.ts",
+          "test": "rounds complete enclosure chains without opening its cavity through the WASM API",
+          "first": "AssertionError: expected 1 to be greater than 1"
+        },
+        {
+          "file": "solidMeasurements.test.ts",
+          "test": "preserves tolerant Boolean mass identities within the original budget: wall sphere",
+          "first": "GeometryKernelError: Complete NURBS intersection coverage and retained-material classification are unproved: Cylinder/sphere Boolean: only a sphere centred on the cylinder axis meets the wall in exact circles; a general position needs a quartic and is refused"
+        },
+        {
+          "file": "solidMeasurements.test.ts",
+          "test": "preserves tolerant Boolean mass identities within the original budget: drilled sphere",
+          "first": "GeometryKernelError: Complete NURBS intersection coverage and retained-material classification are unproved: Cylinder/sphere Boolean: only a sphere centred on the cylinder axis meets the wall in exact circles; a general position needs a quartic and is refused"
+        },
+        {
+          "file": "solidMeasurements.test.ts",
+          "test": "preserves tolerant Boolean mass identities within the original budget: two stubs",
+          "first": "GeometryKernelError: Complete NURBS intersection coverage and retained-material classification are unproved: Cylinder/sphere Boolean: only a sphere centred on the cylinder axis meets the wall in exact circles; a general position needs a quartic and is refused"
+        },
+        {
+          "file": "solidSelfIntersection.test.ts",
+          "test": "transports complete variable-radius annular certificates from the rebuilt WASM",
+          "first": "AssertionError: expected false to be true // Object.is equality"
+        },
+        {
+          "file": "sourceGraphG2RealWorker.test.ts",
+          "test": "preserves full radius refusal through a separate real worker realm",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "sourceGraphG2RealWorker.test.ts",
+          "test": "terminates a cancelled realm and retries in a replacement",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "wasmArtifact.test.ts",
+          "test": "binds generated geometry and language identities to packaged bytes",
+          "first": "AssertionError: expected { \u2026(2) } to deeply equal { byteLength: 16554739, \u2026(1) }"
+        },
+        {
+          "file": "wasmBrotliPacking.test.ts",
+          "test": "synchronous Brotli WASM packages decodes photogrammetry to its original WASM artifact without changing the math kernel",
+          "first": "Error: ENOENT: no such file or directory, open '/Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm'"
+        }
+      ],
+      "failedAssertionFiles": 29,
+      "failedResultFiles": 68,
+      "collectionFailures": [
+        {
+          "file": "directGeometryProtocol.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "exactSolidWorker.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "g2RunoutRealWorker.test.ts",
+          "message": "expected { \u2026(2) } to deeply equal { \u2026(2) }",
+          "first": "expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "geometryBuildEngine.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "geometryRoutingContract.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mainSolidWorkerRealBoundary.test.ts",
+          "message": "expected { \u2026(2) } to deeply equal { \u2026(2) }",
+          "first": "expected { \u2026(2) } to deeply equal { \u2026(2) }"
+        },
+        {
+          "file": "mcpCli.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpDirectGeometrySupervisor.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpGeometryInitialization.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpGeometryService.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpIndependentExport.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpIndependentOpenScadFunctions.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpIndependentOpenScadModules.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpIndependentOpenScadProject.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpOfficialRuntime.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpProtocolModern.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpPublicError.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpServer.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "mcpSvgTools.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "officialOpenScadRuntimeConformance.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "orbitCameraProjection.test.ts",
+          "message": "Cannot find module '../crates/math-core/orbit-camera-reference-v1.json' imported from /Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/tests/orbitCameraProjection.test.ts",
+          "first": "Cannot find module '../crates/math-core/orbit-camera-reference-v1.json' imported from /Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/tests/orbitCameraProjection.test.ts"
+        },
+        {
+          "file": "runtimeGeometryIdentityAudit.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraph.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphAssembly.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphAssemblyAdvanced.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphCadOperations.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphFunctional.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphHttp.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphLoft.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphMechanical.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphPreview.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphProfiles.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphSketch.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "rushGraphUnits.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "sourceBodyWorker.test.ts",
+          "message": "expected 'e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4\u2026' to be '00f62e02ba9f3be7e14efc608121dbdfdbb6b\u2026' // Object.is equality",
+          "first": "expected 'e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4\u2026' to be '00f62e02ba9f3be7e14efc608121dbdfdbb6b\u2026' // Object.is equality"
+        },
+        {
+          "file": "svgDocument.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "svgGeometry.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "svgWorkerRealBoundary.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        },
+        {
+          "file": "tier4Wave5Improvements.test.ts",
+          "message": "No qualified runtime manifest matches the packaged artifact for mesh",
+          "first": "No qualified runtime manifest matches the packaged artifact for mesh"
+        }
+      ],
+      "collectionFailureFiles": 39,
+      "collectionFailureGroups": {
+        "No qualified runtime manifest matches the packaged artifact for mesh": 35,
+        "expected { \u2026(2) } to deeply equal { \u2026(2) }": 2,
+        "Cannot find module '../crates/math-core/orbit-camera-reference-v1.json' imported from /Users/themoretheless/.codex/worktrees/nurbs-rational-reduction/open-scad-viewer/tests/orbitCameraProjection.test.ts": 1,
+        "expected 'e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4\u2026' to be '00f62e02ba9f3be7e14efc608121dbdfdbb6b\u2026' // Object.is equality": 1
+      }
+    },
+    "qualificationBoundary": "Current frontend with mixed historical installed artifacts, not the new private candidate. Tracked source/public artifact inventory unchanged; ignored generated artifact files were not frozen in the whole-run pre/post inventory. A later run must explicitly freeze every generated/decoder artifact as well. Negative failures are retained, no green or current-source installation claim."
+  },
+  "installedArtifactsObservedAfterRun": {
+    "public/wasm/geometry-kernel.wasm": {
+      "bytes": 16554739,
+      "sha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+      "tracked": true
+    },
+    "src/generated/geometry-kernels/kernel_bg.wasm": {
+      "bytes": 16670564,
+      "sha256": "e86a0bd9073bcfc8ebde99d1e1e4b34bbb8e4b2f006035d04afe87b78f2f4121",
+      "tracked": false
+    },
+    "src/generated/geometry-kernels/identity.ts": {
+      "bytes": 195,
+      "sha256": "ee628f7187cd7489e760bfc9df3d615586c07569a97d26b74eb71d16144ee3bd",
+      "tracked": false
+    },
+    "src/generated/geometry-kernels/bytes.ts": {
+      "bytes": 5888291,
+      "sha256": "88e1630f03f8398359423c36464a6b407bb1e23791d552a7a3c4f97fa742cb20",
+      "tracked": false
+    }
+  },
+  "prototype": {
+    "change": "WASM-only cfg_attr inline(never) on bounded_rational::Work::op",
+    "retained": false,
+    "reason": "Default candidate fails emitted geometry and total-asset budgets; alternative packing trials also fail carrier lower bound. No production adoption.",
+    "patchArchive": "native252-outline-source.patch.gz",
+    "originalStockSourceInputsRestored": true
+  },
+  "main": {
+    "remoteAncestorOfFeature": true,
+    "ahead": 116,
+    "behind": 0,
+    "updated": false
+  },
+  "nextWork": [
+    "Repair delivery of the complete current kernel rather than substituting an older reviewed kernel merely to clear89 manifest failures. Historical OwnRust86/baf58 has a different source/artifact epoch and is not current-source proof.",
+    "Prototype binary compressed payload as an alternative to ASCII carrier overhead, with bounded loading and module initialization preserving public synchronous calls after ESM import. Node/browser loader boundaries, worker initialization, integrity and all current resource limits require explicit proof. This is a proposal, not an implementation or admission.",
+    "Requalify emitted bytes/assets, exact source/fingerprint/profile, actual browser/worker/cold-sync behavior and full frontend on the winning current-source artifact. Keep existing5,370,000/10,080,000 and stream/decode/work/precision limits.",
+    "Then fix genuine residual UI/Boolean/cap/fixture issues from the137-test baseline. Do not remove tests, loosen limits or declare the original1000 complete."
+  ],
+  "frontendRemediation": {
+    "orbitFrozenFixture": {
+      "provenance": {
+        "sourceRevision": "e723540068c73c31f9b65447a4bb7c82cf7a5c32",
+        "sourcePath": "crates/math-core/orbit-camera-reference-v1.json",
+        "gitBlob": "2cf65cd5383bc3676c9c6d17815c7686f78e12ae",
+        "sha256": "00ec659423638b0afad901f62406f1876b2b46c31b8c1df436779023ccbd34cd",
+        "restoredPath": "tests/fixtures/orbit-camera-reference-v1.json",
+        "bytes": 85277,
+        "scope": "Exact frozen historical data restored to test ownership after duplicate crate deletion. No regenerated expected values, algorithm/tolerance changes or duplicate Rust crate restoration."
+      },
+      "tests": 12,
+      "status": "focused-pass",
+      "scope": "One collection failure repaired; original137 assertion/39 collection baseline not superseded by a new full run."
+    }
+  },
+  "archives": {
+    "native252-stock-state.json.gz": {
+      "bytes": 996,
+      "sha256": "706629bd1517be40f3b105b8a9749921990840d8808ab55fd567065c2b743eff",
+      "decodedSha256": "c1810c6829e651e2d4b2f7a1111c8d6ea8f44e207d189c3f821f4fce5989dc74"
+    },
+    "native252-stock-source-inputs.json.gz": {
+      "bytes": 224159,
+      "sha256": "6c50952b3f81f5b1fd429c2364dcde317b2dae27ad1940b39e469a25407cc0fd",
+      "decodedSha256": "9fdf1303bd54acd9367b7cdc89a9952accf251da8c1deb8a652ec699836ab575"
+    },
+    "native252-stock-build.log.gz": {
+      "bytes": 6779,
+      "sha256": "b8bddc54925d5be54cbbd8681271c3d3782186b182df5367763d0a9f9326fbd3",
+      "decodedSha256": "30b6edb52ca8e0cb7e07c8401492738ccf0e61da21c95af183a147548257d334"
+    },
+    "native252-outline-state.json.gz": {
+      "bytes": 1044,
+      "sha256": "5e78222e5f1f832b6fd843c392be13a84d705d6ed4da7870c3292254e38329c4",
+      "decodedSha256": "64c766e52efc412749268ea603efaab34f6225531c4abe9eb137db362c998b6c"
+    },
+    "native252-outline-source-inputs.json.gz": {
+      "bytes": 224157,
+      "sha256": "8a9038443a8e26b43defcc63a35f16d6dfb133247ac0efb2c9ea80cdb60548ba",
+      "decodedSha256": "fb617ddc894d5f1d204daacca80dc1be0779bea95d2f944853b44287b501a5e7"
+    },
+    "native252-outline-source.patch.gz": {
+      "bytes": 320,
+      "sha256": "fb9e9357ed1954f90fd1667d4b5dbe30a431cd96cb5314724118928d1b304a4a",
+      "decodedSha256": "c1a8e5b5787e6ecd87aed8b1965dca91f38e612eb8411f0b40b0af127ae32182"
+    },
+    "native252-outline-build.log.gz": {
+      "bytes": 6616,
+      "sha256": "02d0a4dd4cb697feb3873640b02e15a445707042f848d717e0a36a2e72a3e4ba",
+      "decodedSha256": "88947c8ed18c4ba51838103445f147010f18ba465a1dfaa0aa94a727338867fa"
+    },
+    "native252-stock-merge-state.json.gz": {
+      "bytes": 1507,
+      "sha256": "34120de2e1cea507a788bf44a708b83475813cc0dabeb6875c9aeb8277413848",
+      "decodedSha256": "331abe645ff167d8e22ee478b9113ecf1abc4e9b1768bdb7d25ebce98332060d"
+    },
+    "native252-stock-merge.log.gz": {
+      "bytes": 208,
+      "sha256": "aee8d3a79d590da0982e19fda1bda05044dd46f176cbc657296d2c9176f0e867",
+      "decodedSha256": "820257a38ae1a2465f56040d0702135de76608f1832bcc5c352a7cb869744441"
+    },
+    "native252-outline-merge-state.json.gz": {
+      "bytes": 1546,
+      "sha256": "60cc8da6c6f1b34dfa9764ac1e8b3bc0f909cdb3ae7c530c45444b8542bb6fe4",
+      "decodedSha256": "8e44276eb3accf444efaba14280525a1769bcfc533fe2ea64a1131ac0544ec4c"
+    },
+    "native252-outline-merge.log.gz": {
+      "bytes": 207,
+      "sha256": "62c66ea1b47a3d1c2c04eef53dda20f8c40b1487b5414bbc18a8cfaa6baedb86",
+      "decodedSha256": "e02deb38157c5a3ae89cd668076f37cde8e01e6d6b0fec9e9c6f397df9c9e10a"
+    },
+    "native252-current-native-transport.log.gz": {
+      "bytes": 2919,
+      "sha256": "f4c5843a32f72da81378d8f76e415eb933175cb1743a3cda5da5500491949d53",
+      "decodedSha256": "b86d0d8be369f87b40ab743371806a37cad556d11956fd96047d9e400489cc6b"
+    },
+    "native252-stock-abi--results.json.gz": {
+      "bytes": 4597,
+      "sha256": "d23d39b4f14502ac2a7383ea620c8f6b332a50eca194f03de4f9b1a5c49b3b7e",
+      "decodedSha256": "58c06568de73df7773204a906900bd984638f2b2a825a10f93a80ce789784ac8"
+    },
+    "native252-stock-abi.log.gz": {
+      "bytes": 4597,
+      "sha256": "d23d39b4f14502ac2a7383ea620c8f6b332a50eca194f03de4f9b1a5c49b3b7e",
+      "decodedSha256": "58c06568de73df7773204a906900bd984638f2b2a825a10f93a80ce789784ac8"
+    },
+    "native252-stock-exact--results.json.gz": {
+      "bytes": 614,
+      "sha256": "953e6b5e90c13fb33d619489b17adc5fcc707f6a796869ab5a64be34122e7198",
+      "decodedSha256": "5f4afd14479e6205c9ae23b6c86ec4cf3ebe976252bb3d43a7b1f479338a1cd6"
+    },
+    "native252-stock-exact.log.gz": {
+      "bytes": 1833,
+      "sha256": "a5e9afa6a5dd9d41145edd45ea348feee3d29cfe8b45128381229a1a3434e473",
+      "decodedSha256": "25bade3533e445f1f8656ea17f0da25e1cc212f7f97ac9a61ea2d5bd9d6bf0d7"
+    },
+    "native252-stock-exact-oracle.json.gz": {
+      "bytes": 627,
+      "sha256": "db32206ce0e72184d94a9fe91d3a4544e35f8ed83394c6527f0f1829cc84008d",
+      "decodedSha256": "353f3513f79c7105c120299252fb9b62a26b7403d9ca5cbbc2f47645e88c0240"
+    },
+    "native252-outline-exact--results.json.gz": {
+      "bytes": 613,
+      "sha256": "16d295d805be6025cec47af4af8a10071713cff700d110a92748821ab140b504",
+      "decodedSha256": "186914164ab3fc09e987466f83fff6eb5474b901cd1e3de70edeb399666c08cc"
+    },
+    "native252-outline-exact.log.gz": {
+      "bytes": 1829,
+      "sha256": "24392bd54815406193b65ab964db99a00dcf44156f0e3f024dd27d833f9ecc3e",
+      "decodedSha256": "0c7713174c7ea240f87f7fadbd2a9930f958c95d71631d87123d81f108003a3f"
+    },
+    "native252-outline-exact-oracle.json.gz": {
+      "bytes": 627,
+      "sha256": "db32206ce0e72184d94a9fe91d3a4544e35f8ed83394c6527f0f1829cc84008d",
+      "decodedSha256": "353f3513f79c7105c120299252fb9b62a26b7403d9ca5cbbc2f47645e88c0240"
+    },
+    "native252-candidate-abi--results.json.gz": {
+      "bytes": 4600,
+      "sha256": "6296eb35d69ce016e417e2ba9d352c8c552492d9dddb9a1727a248befd487dfc",
+      "decodedSha256": "0903cfd9ed228feee5a4a7973a227a98418a74dbf7c43d933018865ae636aa1f"
+    },
+    "native252-candidate-abi.log.gz": {
+      "bytes": 4600,
+      "sha256": "6296eb35d69ce016e417e2ba9d352c8c552492d9dddb9a1727a248befd487dfc",
+      "decodedSha256": "0903cfd9ed228feee5a4a7973a227a98418a74dbf7c43d933018865ae636aa1f"
+    },
+    "native252-candidate-exact--results.json.gz": {
+      "bytes": 614,
+      "sha256": "56c970c1eecae4ccdbff568ecf08421060de6bb8bd368a3aeefcdda4107f0c99",
+      "decodedSha256": "2287b73eb82c9a1f0a0b71d515bee2096666f0d0fa5d651656aede50974c251b"
+    },
+    "native252-candidate-exact.log.gz": {
+      "bytes": 1833,
+      "sha256": "0b37fc24761638aa158c29ca2d1532af630f72f487fde07b2ab9ca14c54a00f8",
+      "decodedSha256": "896d7e26429f8f3084933246c7b09a2d149a023860e50077b58bf67405034b59"
+    },
+    "native252-candidate-exact-oracle.json.gz": {
+      "bytes": 627,
+      "sha256": "db32206ce0e72184d94a9fe91d3a4544e35f8ed83394c6527f0f1829cc84008d",
+      "decodedSha256": "353f3513f79c7105c120299252fb9b62a26b7403d9ca5cbbc2f47645e88c0240"
+    },
+    "native252-candidate-pack.json.gz": {
+      "bytes": 321,
+      "sha256": "83b9e4753b60d256109f898d2e4b7ec2282b9ae599109980126a6f2cd1b49525",
+      "decodedSha256": "1bcf5c385cf3db4c913ba8ac6e8f00db6e9311167123a5e6d9a49e6aed14cda0"
+    },
+    "native252-candidate-private-dist--measurement.json.gz": {
+      "bytes": 321,
+      "sha256": "d602574edc09c75521d13bbd6e2fa3784ba222d31c5775803dfbb9854202d195",
+      "decodedSha256": "0c682759fe475fa237319cfca769e40089feb28f8facccdc82853db1eb03a8a8"
+    },
+    "native252-private-dist.log.gz": {
+      "bytes": 5099,
+      "sha256": "165232a2007eac25b14bb121dafb903f3547625f1a7784de19d99dfe93ca332c",
+      "decodedSha256": "2a604f08fcdf020de9baa28f3aa0b0cd0f63c294d9db23db4bbcf5e682051fbb"
+    },
+    "native252-pack-midpoint.json.gz": {
+      "bytes": 604,
+      "sha256": "bef289cb5073c2201dbc5514f10034e3eeb1d28dbd06ea829cf117168bc60eec",
+      "decodedSha256": "5bc7354160237c30193ff6d01165490fd67195e2b7dcdb64a6ade8d03e5046a1"
+    },
+    "native252-pack-prefix.json.gz": {
+      "bytes": 602,
+      "sha256": "a4b909f987cda22bdfeac8413bbba03c4a909a66b2cf38361807cb210addc3ce",
+      "decodedSha256": "9f803a8da8995dc30241d5d3388d7850851e33ef042b3227d887665535bc7a43"
+    },
+    "native252-pack-whole-midpoint.json.gz": {
+      "bytes": 637,
+      "sha256": "3c951aa3ab02cdbdfabc05a9c1f01bfb84a143dd4c667e66c1e6f726e81274ff",
+      "decodedSha256": "47db1cc0cc6a45b1edce24880bbef6eb2f3e25a023f2467c8ad6368e204a7ab8"
+    },
+    "native252-pack-whole-prefix.json.gz": {
+      "bytes": 645,
+      "sha256": "570f152d45d5f0d6a9480951ba076f9905fc98c54fda625687f125d613e849e4",
+      "decodedSha256": "4d48f2b7a4fddf21cd3614be180d563ec97d62b8236fb2d8baee2621881bdcf0"
+    },
+    "native252-frontend-state.json.gz": {
+      "bytes": 568,
+      "sha256": "3a683b960af78b4f903a49a52014197e7d33bf812221c81e8cf1848d8a95904c",
+      "decodedSha256": "62fdfd39e2572992f31eb86d074a6b016e68fbe40579927cc6c96bbf8be00a6b"
+    },
+    "native252-frontend-source-inputs.json.gz": {
+      "bytes": 347592,
+      "sha256": "dab8517af96a567dc146b3f474faa4b073704d7cc533a2364dc53b0e3cc99430",
+      "decodedSha256": "d7e3e741deec0ab7bb671e2f6b2c6904d2341f2b33121d62f0308e517d1b4f0e"
+    },
+    "native252-frontend.json.gz": {
+      "bytes": 286870,
+      "sha256": "9d4e5f16c2202dbd8baaf5467e14f316e6a0b7f8c0d671c41971b22bfdaa4cbe",
+      "decodedSha256": "dc5b277d28f2a1e755f2133cf079980819369365046f83b300d05a09e7163b17"
+    },
+    "native252-frontend.log.gz": {
+      "bytes": 58932,
+      "sha256": "dbdf78a253c38d5ad4a8bb64650efdb3b6998ff84879251f176e3867192a3ccc",
+      "decodedSha256": "6f97014ac563db5d96b93ed8973f86e1423a6cbccd235b708ba57999f51cf22b"
+    },
+    "native252-frontend-failure-summary.json.gz": {
+      "bytes": 7164,
+      "sha256": "e935339c3e6df31867e657f153de09e3dd242376f7bd0651b05c1e985f87e98f",
+      "decodedSha256": "2d5749d1a2d003e8d1a7ae9395a4617964869170c2e1408a8e9f146fa4d2c32d"
+    },
+    "native252-installed-artifacts-after.json.gz": {
+      "bytes": 340,
+      "sha256": "bd8c537b809edfe21705cf87e1ec6253c6f8e28ba7cc05492c43707f01057463",
+      "decodedSha256": "6c4ade47c8abba50405d48a8ab72c1502563a8f4900b1166395de0198267f197"
+    },
+    "native252-orbit-fixture-restoration.json.gz": {
+      "bytes": 366,
+      "sha256": "e066e51cc04b2c6a1510f2c8fe01c3d8a0fe660863c75a2f03f1d4d696b1e9d9",
+      "decodedSha256": "33ec897456e578dd03830c3a3d1a6d2efe0dfa3d39470b43ca1b8f2cc1f4834d"
+    },
+    "native252-orbit-fixture-tests.json.gz": {
+      "bytes": 972,
+      "sha256": "f9a6cb7920ee63b1ccf6c746496ed744405fd2b66c3721542b488d71a3a54461",
+      "decodedSha256": "cf442c38d299ff9fbcdfc43ceaac1dc09ca5f2058e4390288a2e0c2dbd7c3d38"
+    },
+    "native252-orbit-fixture-tests.log.gz": {
+      "bytes": 373,
+      "sha256": "7431242e8282cecabf47a6291d41c4e9471cb623ec296a20d4428b17c60afe91",
+      "decodedSha256": "d09796a1eff1b595815095f247f63c0e8f83124263316476b64bb89dc5114d8c"
+    },
+    "native252-cancellation-diagnostic.json.gz": {
+      "bytes": 581,
+      "sha256": "6522f17f9064799ef09345190720626e4929ed87fb49727e4cde4b120850d797",
+      "decodedSha256": "74bc5ef8954568e1b259b0671830990a8009c5937d30eab53ca38168b68cbb61"
+    },
+    "native252-cancellation-abi.json.gz": {
+      "bytes": 1086,
+      "sha256": "afe6336f67956bc581c06c0d971f7ecc683416e8924ba5d4de2a8b563107d850",
+      "decodedSha256": "b61102ca53abc9cc35e780fa658de26990b8c0e9fa003d44d9f38bfc3065b317"
+    },
+    "native252-cancellation-input-progressive-hollow-boundary.r.json.gz": {
+      "bytes": 451465,
+      "sha256": "63a84ca7c48aabb8901b2d6b87d06224473a93199f8ff8ad6bc4119d392d788a",
+      "decodedSha256": "e8603d0c904a1075079e41645f4fe9f1a25d6356b8d9150aab3ffa4a7c450f8c"
+    },
+    "native252-cancellation-input-progressive-unsegmented-hollow-boundary.r.json.gz": {
+      "bytes": 521612,
+      "sha256": "ec5b9f91c3b4d1fc77a12eb132ad77ae31c5baff6cd1ffc24835d8dc3c72ba84",
+      "decodedSha256": "232f222cbae3496dfd3549ad3a5055f6c2e75479793ea63b98662b34b8904cbd"
+    },
+    "probe-native252-cancellation-inputs.mts.gz": {
+      "bytes": 985,
+      "sha256": "47e37b695dbfdd69752f3c9f45dcd70c64993e8f334322c9b8d7fae54859c77a",
+      "decodedSha256": "9c16fba4a6bcc574a0e8eb01dd2d8988c107f6d38f293aaf62f22d6a4b75a8b3"
+    },
+    "run-native252-stock.mjs.gz": {
+      "bytes": 1377,
+      "sha256": "b0d23b15d8362fc537dc0306071ac54cbe9dd86771099f72f3dff6d4db4c5277",
+      "decodedSha256": "63e357d8be1fde26733d1f2c017fd1f61737fa47c6ef9a38824a564f138aa61d"
+    },
+    "run-native252-outline.mjs.gz": {
+      "bytes": 1402,
+      "sha256": "b0fa4cec98346926e3e30aecc69a5fd8783394d064cbb747e90f762e6f53fe18",
+      "decodedSha256": "0c0f0560b1f7ecaf104ca12a54ba886a76be207205fb101be949d2b5bdc52008"
+    },
+    "run-native252-merge.py.gz": {
+      "bytes": 917,
+      "sha256": "89c18973c60e4a159acb596ffe56e7d0747530fe0b5f39d21124a0f4dfa975ee",
+      "decodedSha256": "4005d7b5fc5199dbb046e010d09e688a2d44ffd96ff2831165acbac9e4bb2cfe"
+    },
+    "probe-native252-packing.mjs.gz": {
+      "bytes": 1461,
+      "sha256": "6eeed47688cc59f4dc3184a172b61427fee7925e484a7c193fc3fa5514d38de2",
+      "decodedSha256": "b023cf90b75b0679212d514205c6fe71a13a4d6fbb1c416bd731c477d2e4e054"
+    },
+    "probe-native252-packing-whole.mjs.gz": {
+      "bytes": 1460,
+      "sha256": "e3f307e3a3882bcfcd3621f76159b76ec6b8a490de4587a0818d43b55a349578",
+      "decodedSha256": "693c9f2a7c3efb7c026318a3332a11cb96617942f5e7403c1ffedce86bd15308"
+    },
+    "build-native252-private-dist.mjs.gz": {
+      "bytes": 1385,
+      "sha256": "9de7ae46bc0320ce2fbda27d8d178ba557c4fccca8ec2a70aa692201a74e8781",
+      "decodedSha256": "657e3454371484ccb1d7ed19708837fdcab6c8c24bd026b0065db73ada2f2ad6"
+    },
+    "pack-native252-candidate.mjs.gz": {
+      "bytes": 568,
+      "sha256": "197197a93d74fa313cbe537d39121727fe0024f35901ef70fb3368a6a011d035",
+      "decodedSha256": "79fb54c817ee752b46a51adb512bf9185facf427a42a17f5b75057c92b93fe0c"
+    },
+    "run-native252-frontend.py.gz": {
+      "bytes": 1002,
+      "sha256": "2b1b28283db1cac89bb7af22ba116c14e32a22efe78f22540b117e8c8610bce5",
+      "decodedSha256": "ce92e1770a4d5630c0b9ca085db92c5dc7ff01d8c28a698b547e7b92606f6ca9"
+    },
+    "probe-native252-cancellation-abi.mts.gz": {
+      "bytes": 1158,
+      "sha256": "c7add2dd9f878407344dec990045e668bd7bfcc152e901e8c07f8e0cc552c6b2",
+      "decodedSha256": "ec3c8359bdaa9fc98a4751c515ea179be0d50c8a9ee7b6191c1e194e5131f6ea"
+    }
+  }
+}
