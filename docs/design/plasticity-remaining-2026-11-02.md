@@ -21,6 +21,14 @@
 - Продолжать основной геометрический scope: полнота пересечений → корректные замкнутые тела/Boolean → общие offset/replace и blend-сети. История и прочие пункты выше остаются обязательными.
 - Перед закрытием каждого семейства проверять собственно геометрию и область применимости; внешний Plasticity runtime comparison остаётся отдельной незакрытой проверкой.
 
+## Последний подтверждённый curve–surface runtime
+
+Код `42e1f84ca69558281fdac7b0855c021526abb939`, отдельный raw WASM `2bf69a07a0f82f6f07cc4eb319fa081d74111de9e803cb3a4477c56fc608e73d`: **199 ABI-сценариев, 85 graph-сценариев, 178 созданных/завершённых Chromium Workers**. [Последний receipt](../qualification/homogeneous-separable-quadric-graph-wasm-2026-11-03/results.json).
+
+Текущий конечный graph-контракт включает положительные separable rational clocks; planar coupled Bernstein charts; исходные single/multispan homogeneous affine projections; single-Bezier homogeneous identities с независимыми нелинейными ordered boundary clocks. Original quadric tensor membership и единственный implicit sheet обязательны. Это не общий surface-branch solver и не trim/Body. Fixed chart/inverse arithmetic отделена от predicate maxExactWork. Установленный пакет не обновлён.
+
+Открыты multi-span nonlinear boundary clocks, joint coupled projected maps, unordered-boundary certificates и общий UV-accuracy contract; все десять широких семейств выше остаются открытыми.
+
 ## Текущий Full Round/history: точная граница готовности
 
 - Нативное точное допущенное extrusion-семейство, frozen replay, IDs и lineage; snapshot/display и scene API; native undo/redo/rebase/reselect/branch; отдельный browser Worker для edits уже имеют локальные receipts.
@@ -216,3 +224,7 @@ Planar single-Bezier targets с положительными nonseparable tensor
 ### Неплоские coupled targets с независимыми nonlinear rational clocks, 2026-11-03
 
 Добавлен `homogeneous-separable`: исходные tensor cross-identities точно доказывают равенство проекции двум независимым исходным граничным rational Bernstein clocks. Положительные веса, упорядоченные Euclidean boundary ordinates и endpoints 0/1 доказывают строгую монотонность и полное покрытие; inverse использует 64 предложения cuts с точными сравнениями. Источник/controls не переписываются; исходная quadric tensor membership и единственный sheet обязательны. Прошли 44 native, 17 bridge, 3 clock, 1 tensor census и 74 client теста; все 64 пары степеней 1–8, independent Bernstein sums, subnormal, rotation/gauge, шесть algebraic edges/corners, ULP refusal, wrong membership и zero predicate budget проверены. Новый тест различает ширину source t (1e-8 при query tolerance 1e-9) и target UV (1e-12); это не общий arbitrary UV-accuracy contract. vue-tsc и architecture 54/0 прошли. Отчёт `docs/qualification/homogeneous-separable-quadric-graph-2026-11-03/results.json`. WASM ещё не прогнан: подготовлены 85 graph cases/178 Workers плюс ABI ULP refusal. Multispan nonlinear clocks, общие joint coupled projected maps, unordered boundary certificates, arbitrary UV precision, freeform, trim/Body и installed provider остаются открытыми.
+
+### Homogeneous separable nonlinear clocks: WASM runtime, 2026-11-03
+
+Код `42e1f84ca69558281fdac7b0855c021526abb939`, WASM SHA-256 `2bf69a07a0f82f6f07cc4eb319fa081d74111de9e803cb3a4477c56fc608e73d`: прошли 199 ABI-сценариев, 85 graph-сценариев Chromium и завершение всех 178 Workers. Actual nonlinear nonplanar coupled targets сохранили rational natural UV; rotation/gauge, шесть algebraic edges/corners прошли; zero predicate budget, wrong original membership и ULP drift не допущены. Разовый новый контакт: ABI 10.97 ms, Worker 14.5 ms; не repeat benchmark qualification. Отчёт `docs/qualification/homogeneous-separable-quadric-graph-wasm-2026-11-03/results.json`. Временный checkout удалён, установленный пакет не менялся. Multispan nonlinear clocks, общие joint coupled maps, unordered boundary/UV precision, freeform, trim/Body и installed provider остаются открытыми.
