@@ -164,6 +164,7 @@ pub mod uv_coverage;
 mod uv_regions;
 pub mod volume_validity;
 pub mod closed_solid;
+pub mod root_model;
 pub use analytic::{
     LoftCap, capped_loft_with_caps, capped_loft_with_caps_checked, FiberedBodyLimits, FiberedBodyReport, FiberedBody, FiberedBodyAttempt, construct_fibered_body, verify_fibered_body,
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,

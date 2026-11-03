@@ -73,6 +73,17 @@ copied. Unrelated changes in the primary checkout are preserved separately.
 - Original periodic flux is enabled only after exact native seam identity;
   source periodic flags are preserved.
 
+## Follow-up: native implicit BRep storage
+
+`root_model::RootBrep` now stores original SS edge restrictions, exact shared
+root vertices and paired face-local UV projections in the generic native BRep
+topology. Paired contour/holes constructors reuse literal world-edge indices
+between both original source faces. Source/vertex/projection binding and
+combinatorial shell incidence are validated. Rounded legacy coedge trims and
+unproved collapsed-pole substitutions are rejected. There is no implicit
+conversion to the legacy rational-Curve Model or to `QualifiedClosedSolid`.
+This supplies storage, not retained-region embedding/material admission.
+
 ## Still open — full scope must not be reduced
 
 1. Complete real-root isolation of the singular locus, irrational/algebraic
@@ -81,9 +92,10 @@ copied. Unrelated changes in the primary checkout are preserved separately.
 2. Build complete physical branch networks from the entire original source
    census and all singular/periodic/pole strata. Prove ownership, nondegeneracy,
    world embedding and valence; remove overlapping chart duplicates exactly.
-3. Store and split finite BRep faces using implicit world/UV carriers. Complete
-   arrangement, closed boundary incidence, holes, seam homology and collapsed
-   pole UV bridges must be established before publishing a trim cell.
+3. Extend the root BRep storage to mixed natural rational boundaries and
+   implicit intersection edges; split real finite faces. Complete arrangement,
+   Jordan/embedding checks, holes, seam homology and collapsed-pole UV bridges
+   must be established before publishing a retained trim cell.
 4. Extend source/winding/contact/body admission to implicit root geometry. The
    new closed-solid owner currently admits the legacy rational-Curve Model;
    root-valued contours must not be coerced to fitted legacy edges.

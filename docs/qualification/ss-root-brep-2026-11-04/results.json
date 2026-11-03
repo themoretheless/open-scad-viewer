@@ -1,0 +1,30 @@
+{
+  "base": "75329e317",
+  "main_equivalent_tree": "ed0fd1595",
+  "checks": [
+    {
+      "suite": "root-brep",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "suite": "root-contours",
+      "passed": 3,
+      "failed": 0
+    }
+  ],
+  "passed": 5,
+  "architecture": "passed",
+  "source_only": true,
+  "material_body_qualified": false,
+  "full_trim_complete": false,
+  "general_boolean_complete": false,
+  "source_sha256": {
+    "crates/brep-core/src/lib.rs": "88971a4099c88b51571023d6f4c02ffa5c86bfea1f74b963b0171af1f17438e8",
+    "crates/brep-core/src/root_model.rs": "c16c10a0ff25a00d8336ace8d2821dc05ce5674aedb7b71af33c4ec17e13d3cc",
+    "crates/brep-core/tests/root_model.rs": "856a798da95152cf076471d1daf510e443773cae7802e9292862dfaa7b2c99e3",
+    "crates/nurbs-core/tests/ss_root_ports.rs": "1b182f39dbc95aaa65ecc646ca77c8f0e90ee2a893dc5767571e7eb7871ea300",
+    "crates/nurbs-core/tests/support/ss_root_circle.rs": "af6ccfbdd2d6c2f1a643ce3c148a844e37587808ee5082e338931c5f765559fe",
+    "docs/design/ss-singular-material-progress-2026-11-04.md": "341fdd24426bd61071cdb1f39a693462738e313a900e79382ed455d121060630"
+  }
+}
