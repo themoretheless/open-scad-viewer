@@ -9,6 +9,7 @@ use crate::{
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
+mod content;
 mod extraction;
 mod polynomial;
 mod storage;
@@ -84,7 +85,10 @@ fn patch(s: &Surface, ku: usize, kv: usize, axis: Axis, w: &mut Work) -> PResult
         }],
         w,
     )?;
-    let proposal = polynomial::constant_field(&target, w)?.unwrap_or_else(|| target.clone());
+    let proposal = match polynomial::constant_field(&target, w)? {
+        Some(constant) => constant,
+        None => content::cancel(&target, w)?,
+    };
     let out = storage::store(&proposal, domains, w)?;
     storage::prove(&out, &target, w)?;
     Ok(out)

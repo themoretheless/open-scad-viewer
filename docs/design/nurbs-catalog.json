@@ -6617,10 +6617,15 @@
         "crates/nurbs-core/tests/support/exact_surface_derivative.rs",
         "docs/design/nurbs-exact-surface-derivative.md",
         "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/exact_oracle.py",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/content.rs",
+        "crates/nurbs-core/tests/exact_surface_derivative_content.rs",
+        "docs/design/nurbs-surface-derivative-content.md",
+        "docs/qualification/nurbs-surface-derivative-content-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-surface-derivative-content-2026-11-03/exact_oracle.py"
       ],
       "remainingQualification": [
-        "Validated3D tensor surfaces, U/V partials, complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic storage. One-sided traces and original absolute clocks; one global storage gauge per entire output net. Constant vector fields reduce before degree checks. General bivariate factor cancellation/minimal-degree admission remain separate; exact positive binary64 storage or atomic refusal under unchanged1m-work/4096-bit/degree25/geometry limits.",
+        "Validated3D tensor surfaces, U/V partials, complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic storage. One-sided traces and original absolute clocks; one global storage gauge per entire output net. Constant vector fields and one globally shared U-only/V-only content factor reduce before degree checks; all channel slices share each factor and quotient reconstructions are exact. General bivariate factor cancellation/minimal-degree admission remain separate; exact positive binary64 storage or atomic refusal under unchanged1m-work/4096-bit/degree25/geometry limits.",
         "Native default/no-codec library and contract qualification only. No JSON/WASM/Rush/editor/STEP, source/topology certificate, regularity/normal or evaluator-bit transfer. Original1000 target and whole-application delivery remain open."
       ]
     }

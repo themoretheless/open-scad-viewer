@@ -13,8 +13,12 @@ For each coordinate the derivative numerator is A_u W-A W_u (or its V analogue),
 and the denominator W². Local coordinates are scaled by the exact original
 span width. Sparse bivariate arithmetic and one ledger cover every cell.
 Proved constant vector fields, including zero, reduce before output degree
-checks. General bivariate factor cancellation and mathematically minimal degree
-are separate work; chosen representations exceeding degree25 are refused.
+checks. Common factors depending only on U or only on V are then cancelled
+globally across all numerator/denominator coefficient slices, with checked
+quotient reconstruction and the same work ledger. Separate factors or gauges
+for individual rows/columns are not used. General mixed-variable bivariate
+factor cancellation and mathematically minimal degree are separate work;
+chosen representations exceeding degree25 are refused.
 There is no exhaustive search of alternate degree/basis representations; a
 refusal does not prove that every other exact representation is impossible.
 

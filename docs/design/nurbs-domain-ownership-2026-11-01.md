@@ -74,3 +74,7 @@ NURBS-0243: `editing::exact_surface_derivative` и его закрытые polyn
 extraction/storage принадлежат зарегистрированному владельцу `editing`.
 Строятся новые поверхности векторных полей частных производных на всех
 исходных UV-ячейках; API точечных differential queries и BRep не меняется.
+
+NURBS-0243 admission: закрытый `editing::exact_surface_derivative::content`
+принадлежит тому же `editing`. Общий U-/V-множитель сокращается сразу во всех
+полиномиальных каналах сетки; это улучшение существующего API, не новый пункт.
