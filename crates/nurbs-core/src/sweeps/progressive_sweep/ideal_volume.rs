@@ -36,6 +36,8 @@ pub(crate) mod cell;
 pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
+mod exact;
+mod carrier_rank;
 mod contact_coincidence;
 pub(crate) mod cap_difference;
 mod intrinsic;
@@ -129,6 +131,13 @@ impl MultiSweep<'_> {
             return Ok(out);
         }
         let cap_identity = cap_identity::certify(caps, &mut out, max_cells, max_exact_work);
+        // An exact identity of normalized cap maps also identifies their jets.
+        // Reuse its representative so equivalent source encodings keep the
+        // same rank-query cost, in addition to the explicit identity proof.
+        let rank_caps = if cap_identity.is_some() {[caps[0],caps[0]]} else {caps};
+        if carrier_rank::inspect(rank_caps,&mut out,max_cells,max_exact_work).is_some() {
+            out.reason=Some("ideal-volume-exact-carrier-rank-loss");return Ok(out);
+        }
         // This proves frame continuity independently of cell subdivision. The
         // scalar and positional C0 premises above suffice for the piecewise
         // segment integral; the stronger frame C1 gate is conservative.
