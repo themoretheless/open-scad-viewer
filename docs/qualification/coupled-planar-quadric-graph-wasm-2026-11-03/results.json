@@ -1,0 +1,29 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/75f5b9ea5264a7df32e29145e61cafa55f08e885bfee11e5d7d0cadd8222d08b.wasm",
+  "sha256": "75f5b9ea5264a7df32e29145e61cafa55f08e885bfee11e5d7d0cadd8222d08b",
+  "bytes": 21826606,
+  "sourceCommit": "926ff2163cff4b7eda54bd0dc0f9e54b71a6a235",
+  "status": "passed",
+  "abiCases": 167,
+  "graphCases": 56,
+  "workersStarted": 149,
+  "workersTerminated": 149,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "0e72e9ff720a545219b27a60aa4ab491f98c9fa69334a5ab3606d27d08068d26",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "eb1196042ebddf2198da69ff4f344ffa1e052d717faa7bb7902914e6ed305c4f",
+    "tools/browser-qualification/surface-self-intersection.mjs": "abfb9e55fb6811c88eceb399ba3ce741c2f2fa4e3d52ccccaa568eef9a52ed7c",
+    "src/services/originalQuadricGraphProtocol.ts": "468a8af2d6227a981da8f36afbce6847ddea1f9c91941373d86f1c4ce38f21c7"
+  },
+  "nativeReceipt": "docs/qualification/coupled-planar-quadric-graph-2026-11-03/results.json",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of positive nonseparable planar bilinear graph target joint UV inverses, including algebraic outer boundary contact.",
+  "remaining": [
+    "Nonplanar coupled weights",
+    "Higher-degree and multispan coupled target charts",
+    "General freeform all-branch enumeration",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}
