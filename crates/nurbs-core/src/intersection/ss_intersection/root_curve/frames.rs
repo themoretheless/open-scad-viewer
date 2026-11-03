@@ -18,6 +18,7 @@ pub(super) fn uv(curve: &OriginalSsRootCurve, local: [[f64; 2]; 4]) -> Result<[[
     let spans = match &curve.carrier {
         Carrier::Deflated(f) => Some(f.source().original().original().spans()),
         Carrier::Pole(f) => Some(f.source().original().original().original().spans()),
+        Carrier::Blowup(f) => Some(f.source().node().source().original().original().spans()),
         _ => None,
     };
     let Some(spans) = spans else { return Ok(local) };
@@ -91,9 +92,11 @@ pub(super) fn world(
     Ok((out, used))
 }
 pub(super) fn frame(curve: &OriginalSsRootCurve) -> Result<[[Q; 2]; 4]> {
+    check(!matches!(curve.carrier,Carrier::Blowup(_)),"Nonlinear blowdown cannot use affine endpoint membership")?;
     let spans = match &curve.carrier {
         Carrier::Deflated(f) => Some(f.source().original().original().spans()),
         Carrier::Pole(f) => Some(f.source().original().original().original().spans()),
+        Carrier::Blowup(f) => Some(f.source().node().source().original().original().spans()),
         _ => None,
     };
     let Some(spans) = spans else {

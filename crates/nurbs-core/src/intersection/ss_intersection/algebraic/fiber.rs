@@ -222,3 +222,6 @@ pub fn qualify_pole_ss_root_arc(
         report,
     })
 }
+pub(super) fn certify_equations(equations:&[ExactSsPolynomial],d:[[f64;2];4],axis:FiberAxis,limits:DeflatedSsFiberLimits)->Result<DeflatedSsFiberReport> {
+    operator::certify(equations,d,axis,limits)
+}

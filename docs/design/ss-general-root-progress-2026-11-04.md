@@ -63,3 +63,8 @@ The ports target includes actual nonzero winding of a curved mixed-axis loop,
 reversal, outside classification, endpoint identity and refusal on unresolved
 boundary queries. Full final results are recorded separately after execution.
 Architecture audit passes without adding oversized-file exemptions.
+
+## Follow-up
+
+See [singular/material progress](ss-singular-material-progress-2026-11-04.md)
+for subsequent native implementation and the unchanged end-to-end obligations.

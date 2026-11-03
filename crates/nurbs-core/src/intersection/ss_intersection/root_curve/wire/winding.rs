@@ -41,7 +41,7 @@ impl QualifiedOriginalSsWinding {
         )
     }
 }
-fn charge(remaining: &mut OriginalSsCurveLimits, used: &OriginalSsCurveBounds) -> Result<()> {
+pub(super) fn charge(remaining: &mut OriginalSsCurveLimits, used: &OriginalSsCurveBounds) -> Result<()> {
     remaining.native_rectangles = remaining
         .native_rectangles
         .checked_sub(used.native_rectangles)
@@ -61,7 +61,7 @@ fn charge(remaining: &mut OriginalSsCurveLimits, used: &OriginalSsCurveBounds) -
         .ok_or_else(|| crate::resource("Original winding world work exhausted"))?;
     Ok(())
 }
-fn endpoint(
+pub(super) fn endpoint(
     point: &Arc<OriginalSsRootPoint>,
     cache: &mut Vec<(Arc<OriginalSsRootPoint>, OriginalSsCurveBounds)>,
     remaining: &mut OriginalSsCurveLimits,
@@ -107,6 +107,8 @@ pub fn qualify_original_ss_winding(
                 && s.second() == source.second()
                 && edge.start().phase() == [0; 4]
                 && edge.end().phase() == [0; 4]
+                && edge.start().kind() != OriginalSsPortKind::OriginalSourceNode
+                && edge.end().kind() != OriginalSsPortKind::OriginalSourceNode
                 && edge.start().kind() != OriginalSsPortKind::CollapsedPole
                 && edge.end().kind() != OriginalSsPortKind::CollapsedPole,
             "Original UV winding needs a common planar source chart without quotient junctions",

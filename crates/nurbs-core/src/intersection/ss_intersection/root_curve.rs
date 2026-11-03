@@ -13,6 +13,7 @@ enum Carrier {
     Quotient(QualifiedQuotientFiber),
     Deflated(QualifiedDeflatedSsFiber),
     Pole(QualifiedPoleSsRootArc),
+    Blowup(QualifiedSsBlowupRootArc),
 }
 #[derive(Clone, Debug)]
 pub struct OriginalSsRootCurve {
@@ -59,7 +60,13 @@ impl OriginalSsRootCurve {
         if matches!(self.carrier, Carrier::Pole(_)) != matches!(other.carrier, Carrier::Pole(_)) {
             return Ok(false);
         }
-        Ok(frames::frame(self)? == frames::frame(other)?)
+        match (&self.carrier,&other.carrier) {
+            (Carrier::Blowup(a),Carrier::Blowup(b)) => Ok(a.source().original_coordinate_map()==b.source().original_coordinate_map()
+                && a.source().equations()==b.source().equations()
+                && a.source().node().source().original().original().spans()==b.source().node().source().original().original().spans()),
+            (Carrier::Blowup(_),_)|(_,Carrier::Blowup(_))=>Ok(false),
+            _=>Ok(frames::frame(self)? == frames::frame(other)?),
+        }
     }
 
     pub fn from_native(fiber: QualifiedFiber) -> Self {
@@ -82,12 +89,17 @@ impl OriginalSsRootCurve {
             carrier: Carrier::Pole(fiber),
         }
     }
+    pub fn from_blowup(fiber:QualifiedSsBlowupRootArc)->Self {Self {carrier:Carrier::Blowup(fiber)}}
+    pub fn node_at(&self,parameter:f64)->Option<&QualifiedSsRootNode> {
+        match &self.carrier {Carrier::Blowup(f) if f.node_parameter()==Some(parameter)=>Some(f.source().node()),_=>None}
+    }
     pub fn source(&self) -> &FiberSources {
         match &self.carrier {
             Carrier::Native(f) => f.source(),
             Carrier::Quotient(f) => f.source(),
             Carrier::Deflated(f) => f.source().original().original().source(),
             Carrier::Pole(f) => f.source().original().original().original().source(),
+            Carrier::Blowup(f) => f.source().node().source().original().original().source(),
         }
     }
     pub fn free_axis(&self) -> FiberAxis {
@@ -96,6 +108,7 @@ impl OriginalSsRootCurve {
             Carrier::Quotient(f) => f.free_axis(),
             Carrier::Deflated(f) => f.free_axis(),
             Carrier::Pole(f) => f.free_axis(),
+            Carrier::Blowup(f) => f.free_axis(),
         }
     }
     pub fn coordinate_domain(&self) -> [[f64; 2]; 4] {
@@ -104,6 +117,7 @@ impl OriginalSsRootCurve {
             Carrier::Quotient(f) => f.domain(),
             Carrier::Deflated(f) => f.domain(),
             Carrier::Pole(f) => f.domain(),
+            Carrier::Blowup(f) => f.domain(),
         }
     }
     pub fn parameter_domain(&self) -> [f64; 2] {
@@ -115,6 +129,7 @@ impl OriginalSsRootCurve {
             Carrier::Quotient(f) => f.reverify(),
             Carrier::Deflated(f) => f.reverify(),
             Carrier::Pole(f) => f.reverify(),
+            Carrier::Blowup(f) => f.reverify(),
         }
     }
     /// Both pcurves are the exact original root projections; world is S1(root)
@@ -168,3 +183,4 @@ pub use port::{OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_por
 mod wire;
 pub use wire::{OriginalSsRootEdge,OriginalSsRootWire};
 pub use wire::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};
+pub use wire::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};

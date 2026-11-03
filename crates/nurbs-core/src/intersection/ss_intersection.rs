@@ -793,3 +793,7 @@ pub use algebraic::{QualifiedPoleSsRootArc,qualify_pole_ss_root_arc,DeflatedSsFi
 mod root_curve;
 pub use root_curve::{OriginalSsRootEdge,OriginalSsRootWire,OriginalSsPortKind,QualifiedOriginalSsPort,bind_original_ss_port,OriginalSsRootCurve,OriginalSsRootPoint,OriginalSsCurveLimits,OriginalSsCurveBounds};
 pub use root_curve::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};
+pub use algebraic::{QualifiedSsRootNode,QualifiedSsBlowupChart,QualifiedSsBlowupRootArc,qualify_ss_root_node,qualify_ss_blowup_chart,qualify_ss_blowup_root_arc};
+pub use root_curve::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};
+pub use algebraic::{SsRankStrataLimits,ExactSsRankLocation,QualifiedSsRankStrata,qualify_ss_rank_strata};
+pub(crate) use algebraic::original_polynomial_flux;

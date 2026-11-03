@@ -183,11 +183,15 @@ pub fn bound(
         axis < 3
             && origin.is_finite()
             && max_spans <= 100000
-            && s.control_points[0][0].len() == 3
-            && !s.periodic_u
-            && !s.periodic_v,
-        "Choose an original nonperiodic 3D chart and finite flux inputs",
+            && s.control_points[0][0].len() == 3,
+        "Choose an original 3D chart and finite flux inputs",
     )?;
+    for (axis,periodic) in [s.periodic_u,s.periodic_v].into_iter().enumerate() {
+        if periodic {
+            check(crate::periodic_trim::verify_surface_seam_identity(s,axis)?.is_some(),
+                "Original periodic flux requires exact native seam identity")?;
+        }
+    }
     let knots = [&s.knots_u, &s.knots_v];
     let degrees = [s.degree_u, s.degree_v];
     let counts = [s.control_points.len(), s.control_points[0].len()];
@@ -387,3 +391,10 @@ mod tests {
 #[cfg(test)]
 #[path = "surface_flux/tensor_midpoint_tests.rs"]
 mod tensor_midpoint_tests;
+/// Exact polynomial integration is optional. Arithmetic/work refusal returns
+/// no integral and reports the actual consumed allowance; no partial sum is a
+/// full-patch enclosure. Varying original weights use rational interval flux.
+pub struct PolynomialFluxReport {pub integral:Option<[f64;2]>,pub work:usize,pub spans:usize}
+pub fn polynomial_bound(s:&Surface,rectangle:[[f64;2];2],axis:usize,origin:f64,max_spans:usize,limits:crate::ss_intersection::ExactSsAlgebraLimits)->Result<PolynomialFluxReport> {
+    crate::ss_intersection::original_polynomial_flux(s,rectangle,axis,origin,max_spans,limits)
+}

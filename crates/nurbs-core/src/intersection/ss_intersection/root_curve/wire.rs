@@ -114,3 +114,5 @@ impl OriginalSsRootWire {
 }
 mod winding;
 pub use winding::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};
+mod path_parity;
+pub use path_parity::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};

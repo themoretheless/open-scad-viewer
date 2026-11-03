@@ -14,6 +14,7 @@ fn original_image(curve: &OriginalSsRootCurve) -> [[f64; 2]; 3] {
         Carrier::Quotient(f) => f.report().root_image.unwrap(),
         Carrier::Deflated(f) => f.report().root_image.unwrap(),
         Carrier::Pole(f) => f.report().root_image.unwrap(),
+        Carrier::Blowup(f) => f.report().root_image.unwrap(),
     }
 }
 fn restriction(
@@ -72,6 +73,19 @@ fn restriction(
             }))
         }
         Carrier::Pole(f) => {
+            if algebraic.max_interval_operations == 0 || projection.max_work == 0 {
+                return Ok(None);
+            }
+            algebraic.preconditioner = f.report().preconditioner;
+            let r = f.certify_restriction(d, algebraic)?;
+            w.interval += r.interval_operations;
+            w.projection += r.projection_work;
+            Ok(Some(Image {
+                status: r.status,
+                image: r.root_image,
+            }))
+        }
+        Carrier::Blowup(f) => {
             if algebraic.max_interval_operations == 0 || projection.max_work == 0 {
                 return Ok(None);
             }
@@ -153,7 +167,7 @@ pub(super) fn enclose(
             // Only the fresh root IMAGE is returned, never this padding.
             let original = curve.coordinate_domain();
             let scale = match &curve.carrier {
-                Carrier::Deflated(_) | Carrier::Pole(_) => f64::EPSILON.sqrt(),
+                Carrier::Deflated(_) | Carrier::Pole(_) | Carrier::Blowup(_) => f64::EPSILON.sqrt(),
                 _ => {
                     let source = curve.source();
                     let surface = if k < 2 { source.first() } else { source.second() };
@@ -178,6 +192,13 @@ pub(super) fn enclose(
             break;
         }
         d = next;
+    }
+    if let Carrier::Blowup(f)=&curve.carrier {
+        let mut allowance=limits.projection;
+        allowance.max_work-=work.projection;
+        let (mapped,used)=f.mapped_bounds(current,allowance)?;
+        current=mapped;
+        work.projection+=used;
     }
     let uv = frames::uv(curve, current)?;
     let (world, world_rectangles) = frames::world(curve, uv, limits.world_rectangles)?;

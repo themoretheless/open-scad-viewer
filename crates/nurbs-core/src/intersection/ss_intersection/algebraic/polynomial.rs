@@ -89,3 +89,20 @@ impl<const N: usize> SparseSsPolynomial<N> {
 }
 
 pub type ExactSsPolynomial = SparseSsPolynomial<4>;
+impl<const N: usize> SparseSsPolynomial<N> {
+    pub(super) fn derivative_bounded(&self, axis: usize, w: &mut Work) -> Result<Self> {
+        check(axis < N, "Invalid bounded SS derivative axis")?;
+        let mut out = Self::default();
+        for (e, c) in &self.terms {
+            if e[axis] > 0 {
+                w.charge()?;
+                let value = c * Q::from_integer(e[axis].into());
+                w.coefficient(&value)?;
+                let mut d = *e;
+                d[axis] -= 1;
+                out.insert(d, value, w)?;
+            }
+        }
+        Ok(out)
+    }
+}

@@ -8,6 +8,7 @@ pub enum OriginalSsPortKind {
     SameRootSelector,
     OriginalParameterRoot,
     CollapsedPole,
+    OriginalSourceNode,
 }
 #[derive(Clone, Debug)]
 pub struct QualifiedOriginalSsPort {
@@ -74,6 +75,18 @@ pub fn bind_original_ss_port(
             kind: OriginalSsPortKind::SameRootSelector,
             limits,
         });
+    }
+    if phase == [0;4] {
+        if let Some(a)=point.curve.node_at(point.parameter) {
+            if let Carrier::Blowup(b)=&target.carrier {
+                if let Some(parameter)=b.node_parameter() {
+                    if a.world()==b.source().node().world() {
+                        return Ok(QualifiedOriginalSsPort{parameter:[membership::q(parameter)?,membership::q(parameter)?],point,target,phase,
+                            kind:OriginalSsPortKind::OriginalSourceNode,limits});
+                    }
+                }
+            }
+        }
     }
     if phase == [0; 4] {
         if let (Some((parameter, a)), Some((end, b))) =
