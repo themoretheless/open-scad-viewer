@@ -1,6 +1,7 @@
 //! Sufficient open original-frame C1/C2, separate from retained seams/error.
 use super::*;
 mod guided_arc;
+mod closed_frenet;
 pub(super) mod contact_motion;
 use crate::sweeps::progressive_miter::{
     authored_frame_certificate as frame, scalar_certificate::Status,
@@ -320,7 +321,10 @@ impl Sweep<'_> {
     pub fn certify_closed_path_frame_smoothness(&self,order:usize,max_cells:usize,max_exact_work:u64)->Result<ClosedPathFrameSmoothnessReport>{
         check(matches!(order,1|2)&&max_cells<=100000&&max_exact_work<=1000000,"Invalid closed path frame proof limits")?;
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-path-frame-mode-unproved")};
-        if self.path.periodic||!path_is_closed(self.path)?||self.frame_laws.is_some()||self.orientation_guide.is_some()||!matches!(self.options.orientation,Orientation::FixedNormal|Orientation::RotationMinimizing|Orientation::CorrectedFrenet){return Ok(out);}
+        if self.path.periodic||!path_is_closed(self.path)?||self.frame_laws.is_some()||self.orientation_guide.is_some()||!matches!(self.options.orientation,Orientation::FixedNormal|Orientation::RotationMinimizing|Orientation::CorrectedFrenet|Orientation::Frenet){return Ok(out);}
+        if self.options.orientation==Orientation::Frenet {
+            return closed_frenet::certify(self,order,max_cells,max_exact_work);
+        }
         // Preserve the cheaper sufficient Cartesian route. Failed work is
         // retained when trying exact direction charts under the same owner.
         let mut path_ok=knot_continuity(self.path,order+1,&mut out.exact_work,max_exact_work)?;

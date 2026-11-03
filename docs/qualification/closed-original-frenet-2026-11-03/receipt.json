@@ -1,0 +1,141 @@
+{
+  "sourceBase": "77f36550de2964ef9f747a67754d2da06ffb6d8c",
+  "repository": "git@github.com:themoretheless/open-scad-viewer.git",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Original closed Frenet C1/C2 frame with fresh full global volume/quotient and material/G2 ownership; no partial seam admission",
+  "tests": {
+    "nurbs-full": {
+      "log": "nurbs-full.log.gz",
+      "sha256": "a19452a6b90990d5d59149e25ba40e8056ee845783a6309cc5eb667b0b0e18d7",
+      "terminalResult": "test result: ok. 2271 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 84.00s"
+    },
+    "focused": {
+      "log": "focused.log.gz",
+      "sha256": "64296ab444dcd4c437b12aac1463d302c46e8e32c46a2b4119ca44570c2914a4",
+      "terminalResult": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2267 filtered out; finished in 2.90s"
+    },
+    "brep-public": {
+      "log": "brep-public.log.gz",
+      "sha256": "4e5f2f0c0751e11c3e6887b32c48be275ed859106bdf8147422d7bf51a9f1685",
+      "terminalResult": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.64s"
+    },
+    "no-codec": {
+      "log": "no-codec.log.gz",
+      "sha256": "5f6fb2ee0fc22a95091fddee56a9cf920d2141eaa69b9450f1480ac4ab3e051d",
+      "terminalResult": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2062 filtered out; finished in 1.55s"
+    }
+  },
+  "matrix": [
+    {
+      "arc": false,
+      "warped": false,
+      "hole": false,
+      "cells": 4556,
+      "exactWork": 52006,
+      "products": 52
+    },
+    {
+      "arc": false,
+      "warped": false,
+      "hole": true,
+      "cells": 4640,
+      "exactWork": 96596,
+      "products": 104
+    },
+    {
+      "arc": false,
+      "warped": true,
+      "hole": false,
+      "cells": 4524,
+      "exactWork": 60189,
+      "products": 52
+    },
+    {
+      "arc": false,
+      "warped": true,
+      "hole": true,
+      "cells": 4576,
+      "exactWork": 113613,
+      "products": 104
+    },
+    {
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 50731,
+      "exactWork": 53857,
+      "products": 52
+    },
+    {
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 50815,
+      "exactWork": 98447,
+      "products": 104
+    },
+    {
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 42210,
+      "exactWork": 61360,
+      "products": 52
+    },
+    {
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 42262,
+      "exactWork": 114784,
+      "products": 104
+    }
+  ],
+  "independentOracle": {
+    "exactC4EndpointIdentity": true,
+    "positiveWholeCurvature": {
+      "cells": 1,
+      "numeratorLower": "3684725/3264",
+      "degree": 36
+    },
+    "c3DoesNotSupplyC4": true,
+    "c1TwistDoesNotSupplyC2": true,
+    "zeroInteriorAccelerationWithRegularTangent": true,
+    "actualDoubleCoverCollision": {
+      "normalizedStations": [
+        "0",
+        "1/2"
+      ],
+      "sourcePointScope": "every cap parameter"
+    },
+    "scope": "Exact source jets, whole curvature direction and negative alias; positive global volume embedding remains native atlas evidence.",
+    "exactMaterialLiftBindings": 8,
+    "canonicalNestedMaterialRings": 2,
+    "periodicC2MotionLaws": true,
+    "oneUlpBindingMismatchRejected": true,
+    "sourcePayloadSha256": "0e190dd8749ae66b7fa028240ded98eb46680e7de1a8faba33d115a0a9a4059e"
+  },
+  "sourceInputs": {
+    "path": "source-inputs.json.gz",
+    "sha256": "b6880899acaf999fd545bf0b9df9999fc5129715faae9976946adbbec8fdc314",
+    "files": 4354
+  },
+  "resources": {
+    "frameCellsCeiling": 100000,
+    "globalCellsCeiling": 1000000,
+    "exactWorkCeiling": 1000000,
+    "raisedCeilings": false,
+    "budgetReplay": "exact, zero and one-less frame cell/exact work; public material cell/exact-work/product/step replay"
+  },
+  "sharpMaterial": "explicit C0 with closed C2 traversal; G1 relabel refused",
+  "unqualified": [
+    "arbitrary geometric reparameterization Frenet seams without Cartesian C3/C4 closure",
+    "unsupported CorrectedFrenet and source-storage modes",
+    "all remaining general closed frame/cap cases",
+    "WASM",
+    "STEP",
+    "retained Solid/browser",
+    "full BRep unit suite",
+    "CI"
+  ]
+}

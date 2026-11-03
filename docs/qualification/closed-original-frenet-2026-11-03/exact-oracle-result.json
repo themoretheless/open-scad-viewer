@@ -1,0 +1,24 @@
+{
+  "exactC4EndpointIdentity": true,
+  "positiveWholeCurvature": {
+    "cells": 1,
+    "numeratorLower": "3684725/3264",
+    "degree": 36
+  },
+  "c3DoesNotSupplyC4": true,
+  "c1TwistDoesNotSupplyC2": true,
+  "zeroInteriorAccelerationWithRegularTangent": true,
+  "actualDoubleCoverCollision": {
+    "normalizedStations": [
+      "0",
+      "1/2"
+    ],
+    "sourcePointScope": "every cap parameter"
+  },
+  "scope": "Exact source jets, whole curvature direction and negative alias; positive global volume embedding remains native atlas evidence.",
+  "exactMaterialLiftBindings": 8,
+  "canonicalNestedMaterialRings": 2,
+  "periodicC2MotionLaws": true,
+  "oneUlpBindingMismatchRejected": true,
+  "sourcePayloadSha256": "0e190dd8749ae66b7fa028240ded98eb46680e7de1a8faba33d115a0a9a4059e"
+}
