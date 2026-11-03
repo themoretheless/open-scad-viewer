@@ -1,5 +1,5 @@
 use super::*;
-fn degrees(channels: &[Poly]) -> (usize, usize) {
+pub(in crate::editing) fn degrees(channels: &[Poly]) -> (usize, usize) {
     (
         channels
             .iter()
@@ -17,7 +17,7 @@ fn degrees(channels: &[Poly]) -> (usize, usize) {
             .max(1),
     )
 }
-fn bernstein(p: &Poly, pu: usize, pv: usize, w: &mut Work) -> PResult<Vec<Q>> {
+pub(in crate::editing) fn bernstein(p: &Poly, pu: usize, pv: usize, w: &mut Work) -> PResult<Vec<Q>> {
     let mut temp = vec![vec![Q::zero(); pv + 1]; pu + 1];
     for j in 0..=pv {
         let column = (0..=pu)
@@ -60,7 +60,7 @@ pub(super) fn store(channels: &[Poly], domains: [[f64; 2]; 2], w: &mut Work) -> 
     }
     Ok(out)
 }
-fn powers(s: &Surface, w: &mut Work) -> PResult<Vec<Poly>> {
+pub(in crate::editing) fn powers(s: &Surface, w: &mut Work) -> PResult<Vec<Poly>> {
     let pu = s.degree_u;
     let pv = s.degree_v;
     let mut rows = vec![vec![Vec::new(); pu + 1]; 4];

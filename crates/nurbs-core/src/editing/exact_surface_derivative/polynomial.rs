@@ -1,5 +1,5 @@
 use super::*;
-pub(super) fn accumulate(
+pub(in crate::editing) fn accumulate(
     p: &mut Poly,
     key: (usize, usize),
     value: &Q,
@@ -14,7 +14,7 @@ pub(super) fn accumulate(
     }
     Ok(())
 }
-pub(super) fn multiply(a: &Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
+pub(in crate::editing) fn multiply(a: &Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
     let mut out = Poly::new();
     for (&(i, j), a) in a {
         for (&(k, l), b) in b {
@@ -24,14 +24,14 @@ pub(super) fn multiply(a: &Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
     }
     Ok(out)
 }
-pub(super) fn subtract(mut a: Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
+pub(in crate::editing) fn subtract(mut a: Poly, b: &Poly, w: &mut Work) -> PResult<Poly> {
     for (&key, value) in b {
         let value = w.op(&Q::zero(), value, |a, b| a - b)?;
         accumulate(&mut a, key, &value, w)?;
     }
     Ok(a)
 }
-pub(super) fn derivative(p: &Poly, axis: Axis, width: &Q, w: &mut Work) -> PResult<Poly> {
+pub(in crate::editing) fn derivative(p: &Poly, axis: Axis, width: &Q, w: &mut Work) -> PResult<Poly> {
     let mut out = Poly::new();
     for (&(i, j), value) in p {
         let n = match axis {
@@ -57,7 +57,7 @@ pub(super) fn derivative(p: &Poly, axis: Axis, width: &Q, w: &mut Work) -> PResu
 /// Reduce a PROVEN constant vector field, including zero, before degree tests.
 /// This is not general multivariate factor cancellation; the final stored-bit
 /// proof still uses the complete original uncancelled derivative target.
-pub(super) fn constant_field(h: &[Poly], w: &mut Work) -> PResult<Option<Vec<Poly>>> {
+pub(in crate::editing) fn constant_field(h: &[Poly], w: &mut Work) -> PResult<Option<Vec<Poly>>> {
     let (&key, d) = h[3].iter().next().ok_or(Refusal::InvalidOutput)?;
     let mut result = Vec::new();
     for n in &h[..3] {

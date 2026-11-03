@@ -10,8 +10,8 @@ use crate::{
 };
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
-mod proof;
-mod storage;
+pub(super) mod proof;
+pub(super) mod storage;
 type PResult<T> = std::result::Result<T, Refusal>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Field {

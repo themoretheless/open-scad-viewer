@@ -1,0 +1,111 @@
+{
+  "baseCommit": "d52142700",
+  "status": "native-qualified",
+  "catalogueCapability": "NURBS-0252",
+  "catalogueCredited": true,
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "bfd2d72ea9fa39d2c9546e8f4266e798099b5b70f766a6ec9a07e286e3bb8fa6",
+    "crates/nurbs-core/src/editing/bounded_surface_differential/proof.rs": "0081cd42041d285e05a427265a90bd884de0124ac4beb9d3dcd3b5ec51cdc693",
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "9dc8354c0f00cdeed6f4f114f54c4011f639ec501a05beb2a9eac5f7c38b3166",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs": "61fad3e7c8cbe1880d3e146f9ac40e6dc8ff829578dd6fc15706030ecfe1fa29",
+    "crates/nurbs-core/tests/bounded_surface_differential_contracts.rs": "93e8d8b5a0eb75e5f409c7636d9e694e5822d481d13a1d81bd74d1c3c2d7c2d6"
+  },
+  "focusedDefault": {
+    "passed": 55,
+    "newSurfaceContracts": 16,
+    "existingCurveContracts": 16,
+    "existingMixedPartialContracts": 14,
+    "existingSurfacePartialContracts": 9,
+    "failed": 0
+  },
+  "independentOracle": {
+    "sourceRecords": 25,
+    "outputPatches": 50,
+    "negativeControls": 10,
+    "wholeNetGaugeControl": true,
+    "largerValidBoundControl": true,
+    "sourceReconstructionSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Exact original homogeneous tensor reconstruction and generic quotient differentiation. Full UV Bernstein nonnegative squared-error polynomials against actual stored bits; no numerical samples, native factor-cancellation trust, topology or application authority."
+  },
+  "fullProfiles": {
+    "status": "both-full-commands-exited-zero",
+    "audit": {
+      "default": {
+        "libraryAndIntegrationTargets": 286,
+        "integrationTargets": 285,
+        "passed": 4014,
+        "docTestsPassed": 2,
+        "failed": 0,
+        "ignoredMicrobenchmark": 1,
+        "singleFullCommandExitCode": 0
+      },
+      "no-codec": {
+        "libraryAndIntegrationTargets": 286,
+        "integrationTargets": 285,
+        "passed": 3785,
+        "docTestsPassed": 2,
+        "failed": 0,
+        "ignoredMicrobenchmark": 1,
+        "singleFullCommandExitCode": 0
+      },
+      "currentSourceChecked": true
+    },
+    "auditCommand": "python3 docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py --check-source",
+    "sourceInventoriesUnchanged": true
+  },
+  "initialCompileCorrections": [
+    "Remove unsupported Debug derive for existing Axis type; do not change Axis API.",
+    "Correct test domain inspection to existing knot/control fields; do not add an unrelated Surface API."
+  ],
+  "scope": "Native tensor field storage with continuous numeric carrier error and unchanged output/work/bit/conditioning limits. No per-row gauges, sampled admission, global regularity, topology, evaluator error or application qualification.",
+  "implementationCommit": "a57e29cf4",
+  "independentCurrentFullLogOracles": [
+    "native267-area-normal-oracle.json.gz",
+    "native267-binormal-oracle.json.gz",
+    "native267-bounded-curve-oracle.json.gz",
+    "native267-bounded-surface-oracle.json.gz",
+    "native267-curve-order-oracle.json.gz",
+    "native267-derivative-oracle.json.gz",
+    "native267-metric-field-oracle.json.gz",
+    "native267-mixed-partial-oracle.json.gz",
+    "native267-squared-curvature-oracle.json.gz",
+    "native267-squared-speed-oracle.json.gz",
+    "native267-surface-derivative-oracle.json.gz"
+  ],
+  "archiveSha256": {
+    "cargo-targets.json.gz": "4d2ed29502b7a29d16962f60717cc0e73d3cc48e190e8b6e25c6b73c443949f2",
+    "native266-bounded-surface-final.log.gz": "2bf5b5bdac66b7f5d37cecad5ac5740740d61145158d403aa583814d9e91a273",
+    "native266-bounded-surface-initial.log.gz": "3ab49b57d2ff30912da19ab18048c36d3955ca8d002755b13019d78cdf35d2db",
+    "native266-bounded-surface-second.log.gz": "8c1ff71915d339841ce1e7c10c6d04f118351839620e37f90b2b270bb2369e2a",
+    "native266-bounded-surface-third.log.gz": "7cab5b73bc4a99d7ec01f73f87fb862d923f23d877500e140a8bdd6e5a43a4fb",
+    "native266-full-audit.json.gz": "b3cca906418d1334b180121b25afb6090845cadc9f83ad771c1cfa4bc30d6048",
+    "native266-full-default.log.gz": "26edced0037eb9a7e87e4153c47fb5ee3cf34f913ea3c8825f7656556f757ac8",
+    "native266-full-default.source-inputs.json.gz": "25732b92ba503f6423b6331e084a5136292ce44bd5e93d04f6808da163a4ab91",
+    "native266-full-default.state.json.gz": "ec41e290a7bbc5c7021b3c054fdf3fb1e9d354b74c38d7b53ad06ffa07d1a0aa",
+    "native266-full-no-codec.log.gz": "3baca594721f77fdfc2c3b82fd352eab672bae0f5476c46cbc4ff9013221bb87",
+    "native266-full-no-codec.source-inputs.json.gz": "25732b92ba503f6423b6331e084a5136292ce44bd5e93d04f6808da163a4ab91",
+    "native266-full-no-codec.state.json.gz": "73501f1027dde687fbfb60ac257ce07b5a1505749467c8a05396bc47f452c168",
+    "native266-surface-final-independent.json.gz": "4561f1f9743c2a191ce4708a52287c50bfd8c22e03030d5ad86ce5ce300f6c84",
+    "native267-area-normal-oracle.json.gz": "2252a8c71afff04db65daf1800cc2565af3a175cb91ca7c8291a02e4d3f41999",
+    "native267-binormal-oracle.json.gz": "0414ccd6573fae15492c344fc709ea8a54a5256143e35f39c09e35b4e8b49141",
+    "native267-bounded-curve-oracle.json.gz": "d61d65c9e5bd3e6716df6cc4cae77bd48444e4a15b606d21f39b916c418fc1c4",
+    "native267-bounded-surface-oracle.json.gz": "4561f1f9743c2a191ce4708a52287c50bfd8c22e03030d5ad86ce5ce300f6c84",
+    "native267-curve-order-oracle.json.gz": "fcd497c99ff694206337195705a9c99480d87e3af90c3ed964b303e7608dfe8c",
+    "native267-derivative-oracle.json.gz": "a059e513f7e9f19be57653bfa5d24177540a54934ba7cbac1974fb25e88da5c1",
+    "native267-metric-field-oracle.json.gz": "8719dfee0e61e36436cb7d5711fd7a993e822c33ac6689ecbfca27bf6a8c4c3c",
+    "native267-mixed-partial-oracle.json.gz": "2fcb53b76090d0b5b85bc76ed954a4e3ba1e2f0c600f71147774e9e9a3b24e30",
+    "native267-squared-curvature-oracle.json.gz": "6728b7ab9d5548ae8ea46ee08bbf19ec1d493afc05d8c3abb1b379621c620b7c",
+    "native267-squared-speed-oracle.json.gz": "6346e5d77ec2bad8e6620b67fed8e2a325e60ddc0da81aa4bbeb914fc907acc0",
+    "native267-surface-derivative-oracle.json.gz": "6ce7a7b998b0ea33b6edda5b1582a81cfcba9a961366895706899bd37dce22b7"
+  },
+  "verifierSha256": {
+    "independent_oracle.py": "b32e15231cf31dc8774390dc1e75150f1edcf2956c20c081e59faf0e1a0171e2",
+    "audit_full.py": "f7fe0be70d58f9689b741e9600400d8904e2e50bc16c374b3fd9eebb84cbc302"
+  },
+  "remainingQualification": [
+    "JSON/WASM/TypeScript/Rush/editor/STEP and whole-application delivery remain separate.",
+    "No intrinsic metric norm, sign/regularity/topology, evaluator arithmetic or serialized certificate authority.",
+    "Original1000 target remains incomplete."
+  ]
+}

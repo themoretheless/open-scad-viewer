@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 251,
-  "unallocatedCount": 749,
+  "specifiedCount": 252,
+  "unallocatedCount": 748,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6595,7 +6595,9 @@
         "docs/qualification/nurbs-exact-derivative-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-derivative-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Validated2D/3D curves, full fundamental-domain span cover, multispan/unclamped/periodic storage. Piecewise clamped output keeps original absolute clock and distinct one-sided traces; no invented derivative continuity. Exact de Boor extraction, common-factor cancellation and fresh stored-bit polynomial identity under unchanged1m-work/4096-bit/degree25/geometry caps. Exact storage or atomic whole-result refusal.",
@@ -6626,7 +6628,9 @@
         "docs/qualification/nurbs-surface-derivative-content-2026-11-03/receipt.json",
         "docs/qualification/nurbs-surface-derivative-content-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Validated3D tensor surfaces, U/V partials, complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic storage. One-sided traces and original absolute clocks; one global storage gauge per entire output net. Constant vector fields and one globally shared U-only/V-only content factor reduce before degree checks; all channel slices share each factor and quotient reconstructions are exact. General bivariate factor cancellation/minimal-degree admission remain separate; exact positive binary64 storage or atomic refusal under unchanged1m-work/4096-bit/degree25/geometry limits.",
@@ -6652,7 +6656,9 @@
         "docs/qualification/nurbs-exact-area-normal-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-area-normal-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Complete original fundamental UVcell cover for validated3D tensor surfaces, including nonuniform/repeated/unclamped/periodic encodings; original absolute clocks and one-sided traces. Oriented non-unit area vector, not body-outward/unit-normal or regularity certificate. Zero field accepted. Fresh actual-output polynomial proof against original signed cross product and W^4 denominator, one whole-net storage gauge and shared unchanged1m-work/4096-bit/degree25/geometry bounds. Exact storage or atomic whole-result refusal.",
@@ -6677,7 +6683,9 @@
         "docs/qualification/nurbs-exact-metric-field-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-metric-field-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Carrier coordinates [E,F,G]=[Su dot Su,Su dot Sv,Sv dot Sv], not spatial positions or2F. Complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic and mixed rational weights, physical absolute clocks and one-sided traces. Zero/singular metric allowed without a regularity/positive-definite certificate. Fresh stored-bit Gram identities against original source, one whole-net gauge, shared unchanged1m-work/4096-bit/degree25/geometry caps; exact storage or atomic whole-result refusal.",
@@ -6702,7 +6710,9 @@
         "docs/qualification/nurbs-exact-mixed-partial-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-mixed-partial-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "One family covers total derivative orders1..3, matching existing rational jet ceiling, including rational derivatives above polynomial source degree. Complete original fundamental UVcell cover, physical absolute clocks, one-sided traces and actual stored-bit identity against original uncancelled source-derived targets. No intermediate rounded fields or finite differences. Shared unchanged1m-work/4096-bit/degree25/geometry limits; exact storage or atomic whole-result refusal.",
@@ -6726,7 +6736,9 @@
         "docs/qualification/nurbs-exact-curve-order-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-curve-order-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "One family covers orders1..3 for validated2D/3D curves, matching existing rational jets; order1 preserves prior output/work. Rational derivatives can be nonzero above source polynomial degree. Every nonempty original fundamental span, physical absolute clocks and one-sided repeated/periodic traces. Direct original homogeneous recurrence, joint content reduction and fresh actual stored-bit proof against uncancelled original-source derivative targets. Unchanged1m-work/4096-bit/degree25/geometry caps; exact storage or atomic whole-result refusal.",
@@ -6750,7 +6762,9 @@
         "docs/qualification/nurbs-exact-squared-speed-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-squared-speed-2026-11-03/exact_oracle.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Scalar carrier [dot(Cprime,Cprime),0] or [dot(Cprime,Cprime),0,0] for validated2D/3D curves, not spatial positions or speed square root. Every original nonempty fundamental span, absolute physical clocks and one-sided repeated/periodic traces. Direct original homogeneous velocity numerators squared over W^4; no rounded intermediate derivative. Zero/stationary speeds accepted, including negative control poles for a nonnegative field. Joint content reduction, one whole-piece gauge and actual stored-bit proof against original uncancelled target. Unchanged1m-work/4096-bit/degree25/geometry bounds; exact storage or atomic whole-result refusal.",
@@ -6776,7 +6790,9 @@
         "docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-differential-regression-2026-11-03/audit_coverage.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",
@@ -6802,7 +6818,9 @@
         "docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json",
         "docs/qualification/nurbs-exact-differential-regression-2026-11-03/audit_coverage.py",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",
@@ -6826,12 +6844,39 @@
         "docs/design/nurbs-bounded-differential.md",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
         "docs/qualification/nurbs-bounded-differential-2026-11-03/independent_oracle.py",
-        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py"
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
       ],
       "remainingQualification": [
         "Current-source native typed API,16 new contracts,3 upper-bound unit cases, independent continuous polynomial proofs and complete default/no-codec target coverage passed. This is one capability family; no adapter or application qualification.",
         "Explicit Euclidean field tolerance; exact storage first, then rounded poles and weights admitted by whole-span rational residual Bernstein hulls and outward float error bounds. Derivatives1..3, squared speed, unnormalized3D binormal, squared curvature are one capability family. Source regularity is never borrowed from cancellation. No adaptive fitting or degree reduction.",
         "Existing degree25,1m-work/4096-bit, coordinate, weight and conditioning limits unchanged. No topology, source-certificate transfer, JSON/WASM/Rush/editor/STEP or whole-application qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0252",
+      "name": "Дифференциальные поля NURBS-поверхности с непрерывной доказанной границей ошибки хранения",
+      "status": "native",
+      "prioritySet": "native-1000-bounded-field-storage",
+      "category": "Дифференциальная геометрия с доказанным допуском",
+      "nativeApi": "nurbs_core::editing::bounded_surface_differential::surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential/proof.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs",
+        "crates/nurbs-core/tests/bounded_surface_differential_contracts.rs",
+        "docs/design/nurbs-bounded-surface-differential.md",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/independent_oracle.py",
+        "docs/qualification/nurbs-bounded-surface-differential-2026-11-03/audit_full.py"
+      ],
+      "remainingQualification": [
+        "Native typed API,16 new contracts, independent full-UV polynomial error certificates and complete current default/no-codec target coverage passed. This is one capability family; adapters and application delivery remain separate.",
+        "First/mixed partials total order1..3, non-unit area normal and metric[E,F,G] are one capability family. Numeric carrier error with original clocks and one-sided traces, one whole-net weight gauge and actual stored-bit proof; not an intrinsic metric norm.",
+        "Existing output degrees25,1m-work/4096-bit, geometry/weight/conditioning limits unchanged. No adaptive fitting, sign/regularity/topology, evaluator arithmetic, JSON/WASM/Rush/editor/STEP or whole-application qualification."
       ]
     }
   ],

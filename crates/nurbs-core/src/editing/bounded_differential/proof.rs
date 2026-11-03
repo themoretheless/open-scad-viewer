@@ -61,7 +61,7 @@ pub(super) fn squared_error(
     }
     Ok(sum)
 }
-pub(super) fn ceil_sqrt(squared: &Q, max_error: f64, w: &mut Work) -> PResult<f64> {
+pub(in crate::editing) fn ceil_sqrt(squared: &Q, max_error: f64, w: &mut Work) -> PResult<f64> {
     if squared.is_zero() {
         return Ok(0.);
     }
