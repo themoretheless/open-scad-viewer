@@ -111,5 +111,8 @@
     "Bridge/WASM/editor integration for new native SS paths"
   ],
   "wasmTargetCheckPassed": true,
-  "apiMapCheckPassed": true
+  "apiMapCheckPassed": true,
+  "sourceCommit": "19da3917e0c0237aed3cf3a0954e2bebb1e69ce9",
+  "frozenSourceNonDocumentationFilesMatched": 8057,
+  "tempWorktreeRemoved": true
 }
