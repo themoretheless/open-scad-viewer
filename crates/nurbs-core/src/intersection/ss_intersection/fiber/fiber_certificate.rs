@@ -99,6 +99,24 @@ pub(super) fn certify(
             out.reason = "original-box-separation";
             return Ok(());
         }
+        out.support_regularity_proven = [regular(ja), regular(jb)];
+        let original_first_jacobian = ja;
+        let surfaces = source.equation_surfaces()?;
+        let (ja, jb) = if source.equations.is_some() {
+            let Some((_, ja)) = evaluate(surfaces[0], [domain[0], domain[1]], true, &mut budget)?
+            else {
+                out.reason = "rectangle-budget";
+                return Ok(());
+            };
+            let Some((_, jb)) = evaluate(surfaces[1], [domain[2], domain[3]], true, &mut budget)?
+            else {
+                out.reason = "rectangle-budget";
+                return Ok(());
+            };
+            (ja, jb)
+        } else {
+            (ja, jb)
+        };
         let mut unknown = [0_usize; 3];
         let mut u_idx = 0;
         for k in 0..4 {
@@ -107,7 +125,7 @@ pub(super) fn certify(
                 u_idx += 1;
             }
         }
-        out.support_regularity_proven = [regular(ja), regular(jb)];
+
         let mut centers = [0.; 3];
         let mut scales = [0.; 3];
         let mut center_domain = domain;
@@ -335,9 +353,10 @@ pub(super) fn certify(
             return Ok(());
         }
         out.operator = Some(FiberOperator {
+            exact_graph_shear: source.equations.is_some(),
             preconditioner: r,
             scales,
-            first_jacobian: ja.map(|row| row.map(pair)),
+            first_jacobian: original_first_jacobian.map(|row| row.map(pair)),
         });
         out.status = FiberStatus::UniformUniqueRoot;
         out.reason = "uniform-original-krawczyk-fiber";

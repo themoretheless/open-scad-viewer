@@ -20,7 +20,7 @@ mod transition;
 use crate::{Result, check, surface::Surface};
 pub use mixed::{
     MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
-    cover_mixed_fiber_box, cover_mixed_fiber_surfaces,
+    cover_mixed_fiber_box, cover_mixed_fiber_surfaces, cover_graph_fiber_surfaces,
 };
 pub use transition::{
     DiscoveredFiberTransition, FiberTransitionDiscoveryLimits, FiberTransitionDiscoveryResult,

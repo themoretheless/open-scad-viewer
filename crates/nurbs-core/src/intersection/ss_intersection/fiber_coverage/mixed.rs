@@ -1,6 +1,7 @@
 //! Closed original-product coverage by overlapping fibers with different free
 //! axes. Parameter-root coverage does not identify physical branches or trims.
 use super::*;
+mod graph_reduction;
 #[derive(Clone, Debug, PartialEq)]
 pub enum MixedCoverageKind {
     Fiber {
@@ -54,6 +55,7 @@ impl MixedFiberCoverageResult {
 }
 #[derive(Clone, Debug)]
 pub struct QualifiedMixedFiberCoverage {
+    reduction: Option<graph_reduction::Proof>,
     fibers: Vec<QualifiedFiber>,
     domain: Box4,
     nodes: Vec<MixedCoverageNode>,
@@ -103,6 +105,9 @@ impl QualifiedMixedFiberCoverage {
     fn verify_with(&self, work: &mut Work) -> Result<()> {
         self.limits.validate()?;
         validate(&self.fibers, self.domain)?;
+        if let Some(p) = &self.reduction {
+            return p.verify(self, work);
+        }
         check(
             !self.nodes.is_empty()
                 && self.nodes.len() <= self.limits.max_cells
@@ -313,8 +318,16 @@ fn split_at(cell: Box4, domain: Box4, fibers: &[QualifiedFiber]) -> Option<(usiz
             }
         }
     }
-    if let Some((_, a, t)) = best {
-        return Some((a, t));
+    let widest = (0..4)
+        .map(|a| (cell[a][1] - cell[a][0]) / (domain[a][1] - domain[a][0]))
+        .fold(0., f64::max);
+    // A chart boundary only a few ulps from a cell wall must not win over a
+    // balanced split on another coordinate. Closed children are still checked
+    // identically; this is only a proposal heuristic, not a coverage shortcut.
+    if let Some((score, a, t)) = best {
+        if score >= 0.125 * widest {
+            return Some((a, t));
+        }
     }
     let a = (0..4).max_by(|&a, &b| {
         let width = |k: usize| (cell[k][1] - cell[k][0]) / (domain[k][1] - domain[k][0]);
@@ -448,6 +461,7 @@ pub fn cover_mixed_fiber_box(
         result.report.reason = "complete-original-mixed-fiber-cover";
         result.report.unresolved_box = None;
         result.coverage = Some(QualifiedMixedFiberCoverage {
+            reduction: None,
             fibers: fibers.to_vec(),
             domain,
             nodes,
@@ -500,6 +514,13 @@ mod tests {
             .unwrap()
             .into_fiber()
             .unwrap();
+        let padded = fiber
+            .domain()
+            .map(|[lo, hi]| [lo - 2f64.powi(-40), hi + 2f64.powi(-40)]);
+        assert_eq!(
+            split_at(padded, [[-1., 2.]; 4], std::slice::from_ref(&fiber)),
+            Some((0, 0.5))
+        );
         let owner = cover_mixed_fiber_surfaces(&[fiber], CoverageLimits::default())
             .unwrap()
             .into_coverage()
@@ -560,4 +581,13 @@ mod tests {
         });
         assert!(bad.reverify().is_err());
     }
+}
+
+/// Exact same-XY polynomial reduction; None means the family does not apply.
+/// The returned root census still needs independent component/embedding proofs.
+pub fn cover_graph_fiber_surfaces(
+    fibers: &[QualifiedFiber],
+    limits: CoverageLimits,
+) -> Result<Option<MixedFiberCoverageResult>> {
+    graph_reduction::construct(fibers, limits)
 }

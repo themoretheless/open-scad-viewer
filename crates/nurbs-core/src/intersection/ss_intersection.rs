@@ -62,7 +62,7 @@ pub use fiber_coverage::{
     DiscoveredMixedFiberComponents, MixedComponentDiscoveryLimits, MixedComponentDiscoveryResult,
     MixedTransitionSearch, connect_mixed_fiber_cover_automatic,
     MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
-    cover_mixed_fiber_box, cover_mixed_fiber_surfaces,
+    cover_mixed_fiber_box, cover_mixed_fiber_surfaces, cover_graph_fiber_surfaces,
     CoverageLimits, FiberAtlasCoverageResult, FiberCoverageKind, FiberCoverageNode,
     FiberCoverageReport, FiberCoverageResult, FiberCoverageStatus, QualifiedFiberAtlasCoverage,
     QualifiedFiberCoverage, cover_fiber_atlas_box, cover_fiber_atlas_surfaces,
@@ -768,7 +768,12 @@ mod quadratic_graph;
 pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, OriginalGraphSSPoint, OriginalGraphSSVertex, OriginalGraphSSEdgeGeometry, OriginalGraphSSEdge, OriginalGraphSSBranch, OriginalGraphSSTrim, OriginalGraphSSStation, OriginalGraphSSRange, QualifiedQuadraticGraphSS, qualify_quadratic_graph_ss};
 
 mod qualified_dispatch;
-pub use qualified_dispatch::{QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_ss_branches};
+pub use qualified_dispatch::{
+    PeriodicSSBuildLimits,PeriodicPlaneSSKind,QualifiedPeriodicPlaneSS,qualify_periodic_plane_ss,
+    ClosedSSBuildLimits, IsolatedGraphContactSpec, QualifiedIsolatedGraphContact,
+    QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_closed_ss_branches,
+    construct_qualified_ss_branches, qualify_isolated_graph_contact, discover_isolated_graph_contact,
+};
 
 pub use quadratic_graph::{GraphCurveTolerances, GraphCurveBuildLimits, GraphCurveVertex, GraphEdgeCurves, QualifiedGraphCurves, construct_graph_curves};
 
@@ -777,3 +782,6 @@ pub use quadratic_graph::{GraphRootEdgeClock, GraphRootLocation, GraphRootBindin
 pub use quadratic_graph::{QualifiedGraphSupport,qualify_graph_support};
 
 pub use quadratic_graph::{QualifiedPolynomialSurface,qualify_polynomial_surface};
+
+mod polynomial_order;
+pub use polynomial_order::{GraphOrderLimits, QualifiedGraphMaterialOrder, certify_polynomial_graph_order, prove_polynomial_graph_boundary_side, prove_graph_projection_inside};

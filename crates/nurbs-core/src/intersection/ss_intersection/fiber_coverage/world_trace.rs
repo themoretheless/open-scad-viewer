@@ -142,6 +142,10 @@ pub(super) fn root_error(source: &QualifiedFiber, errors: [f64; 2]) -> Result<(f
     ) else {
         return Err(crate::input("Missing original root operator"));
     };
+    check(
+        !op.uses_exact_graph_shear(),
+        "World trace needs independently bounded error transport through the polynomial source shear",
+    )?;
     let residual = I::point(errors[0]).add(I::point(errors[1]))?;
     let mut gain = 0_f64;
     for i in 0..3 {
@@ -415,5 +419,50 @@ mod tests {
             .into_fiber()
             .unwrap();
         assert!(bad.reverify().is_err());
+    }
+}
+
+#[cfg(test)]
+mod conditioned_error_tests {
+    use super::*;
+    #[test]
+    fn nonlinear_root_conditioning_does_not_authorize_unchecked_world_error_transport() {
+        let a = crate::surface::Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0..3)
+                .map(|i| {
+                    (0..2)
+                        .map(|j| vec![i as f64 / 2., j as f64, if i == 2 { 1. } else { 0. }])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let mut b = a.clone();
+        for i in 0..3 {
+            for j in 0..2 {
+                b.control_points[i][j][2] += i as f64 / 2. - 0.5;
+            }
+        }
+        let source = crate::ss_intersection::FiberSources::with_exact_graph_shear(&a, &b).unwrap();
+        let f = source
+            .certify(
+                [[0.25, 0.75], [0.25, 0.75], [0.25, 0.75], [0., 1.]],
+                crate::ss_intersection::FiberAxis::FirstV,
+                Default::default(),
+            )
+            .unwrap()
+            .into_fiber()
+            .unwrap();
+        f.reverify().unwrap();
+        let op = f.report().operator.as_ref().unwrap();
+        assert!(op.uses_exact_graph_shear());
+        assert!(op.first_jacobian()[2][0][0] > 0.);
+        assert!(root_error(&f, [0.001, 0.001]).is_err());
     }
 }

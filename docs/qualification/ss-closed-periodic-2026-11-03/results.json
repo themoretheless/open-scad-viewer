@@ -1,0 +1,129 @@
+{
+  "status": "passed-native-ss",
+  "baseCommit": "ec786892b6d70a2dd95a81833454447933ff3899",
+  "scope": "Isolated frozen committed base plus 19 explicitly owned SS paths, including activated existing pending closed-source work; unrelated dirty CAD/curvature/Boolean edits excluded. Native Rust only.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "da66bcb5e83e0dcf37f40f45a0b15e87390bc79dd524d510717ce65e0d24604b",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber.rs": "1b5222d3c22858c11982917e6b3cc6cf42fde17d77bc9bf980685bafb3e2c464",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/fiber_certificate.rs": "b4b41e878a05018bf92c9d1ae08c7c1825fd1134d17cb854281b81611d01b713",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/tests/operator_receipt_tests_integration.rs": "bc340c553e813aa8833a86cd7fdd2cdd3ee67a75566b7e414b2dc14158ac53f9",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage.rs": "e4c6c7ff81b351936edce510a0d004de2e146f6a4538d1da5c64cb299cf2c6cc",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed.rs": "0453582cb936ef5783a3e56b3de3cf34bd8e34b113ec559ccc6631b18493d5ba",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/world_trace.rs": "687a8525f7253ec2c110e7e952a863c0c255fdbbdc3abbdf1552ac1609dcbdaf",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch.rs": "e90b77d0420fd2db2979b416e988e5488405cdfe5eb78684c1ff4cf1feb6b9d4",
+    "crates/nurbs-core/src/intersection/ss_intersection/polynomial_order.rs": "7b15c95acd2aa7c9260df1354c36313d43bb695e70f08eaadea5bc6751b02869",
+    "crates/nurbs-core/tests/ss_closed_automatic.rs": "423dcfd1a4284d2fefb0f24e40dcc031d4a66b5ae71c5f752584e6bb1dd04d3c",
+    "crates/nurbs-core/tests/ss_polynomial_order.rs": "60cea5a3375ea0c46448b723381ff27e4af4d3cdab66432fc3c93cf20d80c6a2",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch/isolated_contact.rs": "c4946fa7c09c0177eca5639ad3ba0e38061f5edf5da1cb23af16cba890d3c724",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch/closed_proposals.rs": "22883eb5bdfd46ca6e6ce91049e43bd8a612d8a11a4100587ad39bf0010d3c26",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction.rs": "b38778a603bf796ee77c65c8d739b47c981d6591f0862c0bdbda957fbfa456a3",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch/periodic_plane.rs": "6dbc0175e39ff07e0c599f6dee1920d073a48e14184e1f3afa432aa8b9f3ddac",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch/isolated_contact/discovery.rs": "d9cd165d5b8b161c83c8cd39a9f5b7074de8bd87b3534b347477eedd9bf20aac",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction/multispan.rs": "a9c045e3f82fcc7cb1c08453417c5570a88d4de0619077aab333e9eab983de71",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction/replay.rs": "4143e549be056dd6057f4ed7aeaab209d43788aabc24a7db62a678d5614e0e04",
+    "crates/nurbs-core/tests/ss_periodic_plane.rs": "6c559649d276f7a231e0ae4271053bedb75b49d05a467fd0c05b8acdc01b48dd"
+  },
+  "ssIntegration": {
+    "suites": 23,
+    "passed": 159,
+    "failed": 0,
+    "ignored": 0
+  },
+  "ssModule": {
+    "passed": 37,
+    "failed": 0,
+    "filtered": 2274
+  },
+  "architecture": "54 pinned oversized files, 0 layer violations; no baseline changes",
+  "apiMap": "244 public modules and 252 catalog entries; --check passed",
+  "features": {
+    "genericDispatch": [
+      "Original quadratic/degenerate graphs retained",
+      "Original regular-open atlas retained",
+      "Complete regular closed mixed-axis loops",
+      "Discovered exact isolated even-power graph contacts",
+      "Original periodic homothetic / finite coordinate-plane sections"
+    ],
+    "hiddenLoops": {
+      "components": 2,
+      "proceduralTrims": 4,
+      "wholeNaturalProductCoverage": true,
+      "independentReplay": true,
+      "originalControlPointsUnchanged": true,
+      "originalBasisRestriction": "Exact rational original B-spline blossoms, independently tested against Cox values over all common closed knot cells",
+      "coverageGrid": "One shared closed-cell forest, not a separate reset allowance per original span",
+      "compaction": "Only complete parameter-root enclosures or four freshly proved free slices contained in surviving original charts; no world-distance merge"
+    },
+    "isolatedContacts": {
+      "orders": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "centerInferred": true,
+      "fullOriginalGapIdentity": true,
+      "nonunitDomains": true,
+      "independentPositiveGauges": true,
+      "operandReversal": true,
+      "shiftedCenters": true,
+      "rejects": [
+        "Mixed residuals",
+        "Nonzero constant gap",
+        "Original XY projection damage"
+      ]
+    },
+    "periodic": {
+      "seamAndJordanProof": true,
+      "originalPeriodicFlagsPreserved": true,
+      "closedContour": true,
+      "collapsedPoleIsSeparatePoint": true,
+      "bothCollapsedEnds": true,
+      "axisAndOperandReversal": true,
+      "worldAxisPermutation": true,
+      "naturalParameterTwoThirdsKeptExact": true,
+      "originalLevelCoefficients": "BigRational points and weights on unchanged original periodic basis",
+      "rejects": [
+        "Partial finite-plane clipping",
+        "Double winding",
+        "Damaged original seam/homothety",
+        "Interior profile collapse",
+        "Exhausted work"
+      ]
+    }
+  },
+  "allowances": {
+    "maxCharts": 64,
+    "proposalRectangles": 100000,
+    "proposalLedgerSharedAcross": [
+      "Initial seeds",
+      "Repairs",
+      "Compaction"
+    ],
+    "coverageRectanglesPerAttempt": 100000,
+    "maxRepairsAllowedBefore": 8,
+    "maxRepairsAllowedNow": 64,
+    "defaultMaxRepairs": 4,
+    "twoOvalCallerMaxRepairs": 32,
+    "resetCoverageAllowancePerOriginalCell": false,
+    "note": "Repair attempts each run an independently bounded full census. Increased explicit repair-round cap is recorded; this is not a same-budget speed or completeness comparison."
+  },
+  "newAPIsRuntimeQualified": false,
+  "wasmPackageUpdated": false,
+  "completeAutomaticBrepTrim": false,
+  "generalBooleanQualified": false,
+  "remaining": [
+    "Arbitrary rational and multispan surface intersection branches",
+    "General singular/tangent networks and nonbinary/algebraic contact centers",
+    "General periodic quotient and arbitrary poles",
+    "Partial finite-face clipping",
+    "Original world/pcurve error transport through nonlinear conditioning",
+    "Saved complete automatic BRep trims",
+    "Closed material orientation, healing and general intersecting-NURBS Boolean",
+    "Bridge/WASM/editor integration for new SS APIs"
+  ],
+  "validationNote": "Final native SS suites all green. BRep and bridge downstream qualification still running before final delivery.",
+  "historicalDiagnostics": {
+    "two-ovals.log.gz": "Original 4D search with max_repairs=8 refused complete coverage. New admitted two-oval case uses exact knot-forest reduction, chart compaction and explicit max_repairs=32. Not a same-budget benchmark."
+  }
+}

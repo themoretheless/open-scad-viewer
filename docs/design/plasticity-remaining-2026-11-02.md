@@ -23,6 +23,12 @@
 - Продолжать основной геометрический scope: полнота пересечений → корректные замкнутые тела/Boolean → общие offset/replace и blend-сети. История и прочие пункты выше остаются обязательными.
 - Перед закрытием каждого семейства проверять собственно геометрию и область применимости; внешний Plasticity runtime comparison остаётся отдельной незакрытой проверкой.
 
+## Автоматические замкнутые SS-ветви, касания и periodic/poles
+
+Общий native `construct_qualified_ss_branches` подключён к complete mixed-axis closed owners, автоматическому exact even-power contact discovery и periodic homothetic / finite-plane sections. Две раздельные скрытые петли строятся автоматически с полным census и четырьмя процедурными границами. Для multispan polynomial graphs добавлены exact original Cox/blossom restrictions на полном общем knot-forest с независимым replay. Касания порядков 2/4/6/8 распознаются из исходных коэффициентов; periodic section хранит небинарный UV как rational и отличает collapsed pole point от closed contour.
+
+Это ограниченные доказанные семейства. Полный автоматический BRep trim, произвольные singular/periodic/pole cases и общий intersecting-NURBS Boolean **остаются открытыми**. Bridge/WASM для новых SS API этим этапом не квалифицированы. [Контракт и ограничения](ss-automatic-closed-and-periodic.md), [native receipt](../qualification/ss-closed-periodic-2026-11-03/results.json).
+
 ## Восстановление корней на границах разбиения и автоматический trim
 
 Новый original-source Krawczyk root-excision устраняет потерю регулярных curve/surface корней на искусственных границах поиска. Корни различаются по параметрическим доказательствам, включая одинаковые world points с разными t или UV; непроверенные остатки сохраняются в общем бюджете. Generic API подключён к `face_crossings` / `edge_partition` и automatic fiber trim. **162 нативных проверки и 52 клиентских теста прошли**; реальный BRep пример даёт две ветви и три валидные области с сохранением IDs, входы неизменны, отказ по бюджету атомарный. Контроль с отключённым исправлением воспроизводит пропуск корня. [Receipt](../qualification/root-excision-2026-11-03/results.json).

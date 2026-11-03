@@ -46,8 +46,13 @@ pub struct FiberOperator {
     pub(super) preconditioner: [[f64; 3]; 3],
     pub(super) scales: [f64; 3],
     pub(super) first_jacobian: [[[f64; 2]; 2]; 3],
+    exact_graph_shear: bool,
 }
 impl FiberOperator {
+    /// The root operator uses an independently checked global polynomial shear.
+    pub fn uses_exact_graph_shear(&self) -> bool {
+        self.exact_graph_shear
+    }
     /// Verified proposal R, not a claim of exact Jacobian inversion.
     pub fn preconditioner(&self) -> [[f64; 3]; 3] {
         self.preconditioner
@@ -82,17 +87,51 @@ struct Pair {
 #[derive(Clone, Debug)]
 pub struct FiberSources {
     pair: Arc<Pair>,
+    equations: Option<Arc<Pair>>,
 }
 impl FiberSources {
     pub fn new(first: &Surface, second: &Surface) -> Result<Self> {
         first.validate()?;
         second.validate()?;
         Ok(Self {
+            equations: None,
             pair: Arc::new(Pair {
                 first: first.clone(),
                 second: second.clone(),
             }),
         })
+    }
+    /// Exact nonlinear coordinate conditioning; original sources remain owned
+    /// and externally visible. The global vertical shear has an exact inverse.
+    pub fn with_exact_graph_shear(first: &Surface, second: &Surface) -> Result<Self> {
+        let mut source = Self::new(first, second)?;
+        if first.control_points[0][0].len() == 3
+            && first
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == first.control_points[0][0][2])
+        {
+            return Ok(source);
+        }
+        let [a, b] = super::polynomial_order::exact_graph_shear(first, second)?;
+        source.equations = Some(Arc::new(Pair {
+            first: a,
+            second: b,
+        }));
+        Ok(source)
+    }
+    fn equation_surfaces(&self) -> Result<[&Surface; 2]> {
+        if let Some(p) = &self.equations {
+            let [a, b] = super::polynomial_order::exact_graph_shear(self.first(), self.second())?;
+            check(
+                a == p.first && b == p.second,
+                "Exact source graph shear changed",
+            )?;
+            Ok([&p.first, &p.second])
+        } else {
+            Ok([self.first(), self.second()])
+        }
     }
     pub fn first(&self) -> &Surface {
         &self.pair.first
@@ -491,7 +530,6 @@ fn regular(j: [[I; 2]; 3]) -> bool {
         n.is_ok_and(|n| n.lo > 0. || n.hi < 0.)
     })
 }
-
 
 /// Positive weights are proposals only. Every accepted row sum is recomputed
 /// outward from the original operator bounds; no spectral-radius estimate or
