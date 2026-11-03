@@ -23,11 +23,11 @@
 
 ## Последний подтверждённый curve–surface runtime
 
-Код `42e1f84ca69558281fdac7b0855c021526abb939`, отдельный raw WASM `2bf69a07a0f82f6f07cc4eb319fa081d74111de9e803cb3a4477c56fc608e73d`: **199 ABI-сценариев, 85 graph-сценариев, 178 созданных/завершённых Chromium Workers**. [Последний receipt](../qualification/homogeneous-separable-quadric-graph-wasm-2026-11-03/results.json).
+Код `f5b3e19ab09c6b3af0219d2dc92733e0b353f5b9`, отдельный raw WASM `198b764d7b91fa4442a63a08b9289303a5057db00140e724e78fd306b012efc2`: **211 ABI-сценариев, 96 graph-сценариев, 189 созданных/завершённых Chromium Workers**. [Последний receipt](../qualification/multispan-nonlinear-boundary-clocks-wasm-2026-11-03/results.json).
 
-Текущий конечный graph-контракт включает положительные separable rational clocks; planar coupled Bernstein charts; исходные single/multispan homogeneous affine projections; single-Bezier homogeneous identities с независимыми нелинейными ordered boundary clocks. Original quadric tensor membership и единственный implicit sheet обязательны. Это не общий surface-branch solver и не trim/Body. Fixed chart/inverse arithmetic отделена от predicate maxExactWork. Установленный пакет не обновлён.
+Текущий конечный graph-контракт включает положительные separable rational clocks; planar coupled Bernstein charts; исходные single/multispan homogeneous affine projections; single/multispan homogeneous identities с независимыми нелинейными ordered boundary clocks. Original quadric tensor membership и единственный implicit sheet обязательны. Это не общий surface-branch solver и не trim/Body. Fixed chart/inverse arithmetic отделена от predicate maxExactWork. Установленный пакет не обновлён.
 
-Открыты multi-span nonlinear boundary clocks, joint coupled projected maps, unordered-boundary certificates и общий UV-accuracy contract; все десять широких семейств выше остаются открытыми.
+Открыты общие joint coupled projected maps, unordered-boundary certificates и общий UV-accuracy contract; все десять широких семейств выше остаются открытыми.
 
 ## Текущий Full Round/history: точная граница готовности
 
@@ -232,3 +232,7 @@ Planar single-Bezier targets с положительными nonseparable tensor
 ### Multi-span nonlinear global boundary clocks, 2026-11-03
 
 `homogeneous-separable` расширен на исходные clamped B-spline targets: исходная поверхность и исходные global boundary curves независимо ограничиваются на одинаковые original knot spans; tensor cross-identities проверяются по всем span. Original boundary B-spline clocks имеют положительные веса, строгую монотонность на span, непрерывные стыки и global endpoints 0/1. Общий exact homogeneous restriction helper используется affine и nonlinear proof; каждый proof attempt имеет собственный фиксированный restriction/census schedule 4,000,000 вне predicate maxExactWork. Исходные poles/knots не переписываются, predicate budget не сбрасывается. Прошли 48 native, 18 bridge, 4 homogeneous census, 3 clock и 74 client теста; all 64 degree pairs/nonuniform spans и independent Cox inverse проверены. Actual coupled nonplanar degree-(2,2), internal knot и nonlinear UV, rotations/gauges, algebraic edge, ULP, wrong membership и zero predicate budget прошли. Fixture uniformly scaled by 1/16 to preserve the existing 1e9 coordinate bound with exact binary inputs; guards не менялись. vue-tsc и architecture 54/0 прошли. Отчёт `docs/qualification/multispan-nonlinear-boundary-clocks-2026-11-03/results.json`. Новый WASM-прогон ещё не выполнен: подготовлены 96 graph cases/189 Workers плюс отдельный ABI ULP refusal. General joint coupled maps, unordered boundary/UV precision, freeform, trim/Body и installed provider остаются открытыми.
+
+### Multi-span nonlinear boundary clocks: WASM runtime, 2026-11-03
+
+Код `f5b3e19ab09c6b3af0219d2dc92733e0b353f5b9`, WASM SHA-256 `198b764d7b91fa4442a63a08b9289303a5057db00140e724e78fd306b012efc2`: прошли 211 ABI-сценариев, 96 graph-сценариев Chromium и завершение всех 189 Workers. Global nonlinear UV подтверждены на внутренних knots и вне них, rotation/gauge и algebraic edge прошли; wrong membership, zero predicate budget и ULP projection drift не допущены. Разовые Worker времена: internal knot 8.6 ms, non-knot 12.1 ms; не repeat benchmark qualification. Отчёт `docs/qualification/multispan-nonlinear-boundary-clocks-wasm-2026-11-03/results.json`. Временный checkout удалён, установленный пакет не менялся. General joint coupled maps, unordered boundary/UV precision, freeform, trim/Body и installed provider остаются открытыми.
