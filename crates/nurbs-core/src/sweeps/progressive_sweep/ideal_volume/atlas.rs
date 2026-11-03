@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 mod weighted;
 mod refinement;
 mod p_matrix;
+mod open_c1;
 pub(crate) use p_matrix::certify as certify_c1_rectangular_map;
 mod smooth_p_matrix;
 pub(crate) use smooth_p_matrix::certify as certify_smooth_p_matrix;
@@ -299,6 +300,14 @@ pub(super) fn certify(
     max_exact_work: u64,
     closed: bool,
 ) -> Result<()> {
+    // A rectangular theorem is applicable only to open, freshly proved C1
+    // maps. Failed proposals spend this same ledger and supply no credit.
+    if !closed {
+        let trial=out.cells+(max_cells-out.cells).min(10000);
+        let work=out.exact_work+(max_exact_work-out.exact_work).min(100000);
+        if open_c1::certify(context,projection,out,trial,work)? {return Ok(());}
+        if out.cells==max_cells || out.exact_work==max_exact_work {return Ok(());}
+    }
     let identity=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]].map(|v|v.map(I::point));
     let tube=if regular(identity,projection)? {
         intrinsic::Tube::prepare(context,out,max_cells,max_exact_work,closed)?

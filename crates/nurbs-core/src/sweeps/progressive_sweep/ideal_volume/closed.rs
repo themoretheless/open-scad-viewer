@@ -64,9 +64,10 @@ pub(super) fn premises(
         )
     } else {
         // Explicit spatial Bishop uses its OWN corrected derivative owner and
-        // periodic source theorem. Corrected-Frenet/implicit fallback modes
+        // periodic source theorem. Frenet owns its nonzero curvature cover.
+        // Corrected-Frenet/implicit fallback modes
         // still require their original source derivative owners.
-        if s.options.orientation != Orientation::FixedNormal
+        if !matches!(s.options.orientation,Orientation::FixedNormal|Orientation::Frenet)
             && !(s.options.orientation == Orientation::RotationMinimizing
                 && s.spatial_rmf_error_limits.is_some())
         {

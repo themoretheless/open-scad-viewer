@@ -77,6 +77,7 @@ fn refused(profiles:&[nurbs::curve::Curve],material:&LoftCap,path:&nurbs::curve:
     let OriginalClassifiedClosedMaterialAttempt::Refused(q)=result else{panic!("invalid contact material admitted: {label}")};
     assert_eq!(q.volume.is_some(),global,"{label}: {:?}",q.reason);
     if global {
+        if label=="singular-filled-carrier" {assert_eq!(q.reason,Some("ideal-volume-exact-carrier-rank-loss"));}
         if label=="genuine-material-self-intersection" {assert_eq!(q.reason,Some("ideal-volume-exact-filled-map-coincidence"));}
         assert!(q.material.certified,"{label}: {:?}",q.reason);
         let v=q.volume.as_ref().unwrap();assert!(!v.certified && !v.charts.volume.embedding_certified && !v.charts.volume.parameter_topology_preserved);

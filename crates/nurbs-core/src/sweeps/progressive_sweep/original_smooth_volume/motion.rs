@@ -1,23 +1,25 @@
 use super::*;
-pub(super) fn open(
-    s: &Sweep<'_>,
-    out: &mut OriginalSmoothVolumeReport,
-    l: OriginalSmoothVolumeLimits,
-) -> Result<bool> {
+pub(super) fn open(s:&Sweep<'_>,out:&mut OriginalSmoothVolumeReport,l:OriginalSmoothVolumeLimits)->Result<bool> {
+    let reason=certify_open(s,l.order,&mut out.cells,&mut out.exact_work,l.cells,l.exact_work)?;
+    if reason.is_some(){out.reason=reason;}Ok(reason.is_none())
+}
+/// Fresh Ck of the original pose/translation, shared by positive global owners.
+/// Arc translation requires the caller's fresh positive-speed inverse clock.
+pub(crate) fn certify_open(s:&Sweep<'_>,order:usize,cells:&mut usize,work:&mut u64,
+    max_cells:usize,max_work:u64)->Result<Option<&'static str>> {
     let f = s.certify_original_frame_smoothness(
-        l.order,
-        (l.cells - out.cells).min(100000),
-        l.exact_work - out.exact_work,
+        order,
+        (max_cells - *cells).min(100000),
+        max_work - *work,
     )?;
-    out.cells += f.cells;
-    out.exact_work += f.exact_work;
+    *cells += f.cells;
+    *work += f.exact_work;
     if !f.source_frame_smoothness_certified {
-        out.reason = f.reason;
-        return Ok(false);
+        return Ok(Some(f.reason.unwrap_or("original-motion-frame-unproved")));
     }
     let raw =
-        super::super::endpoint_jets::certify_knots(s.path, l.order, l.exact_work - out.exact_work)?;
-    out.exact_work += raw.exact_work;
+        super::super::endpoint_jets::certify_knots(s.path, order, max_work - *work)?;
+    *work += raw.exact_work;
     let mut translation = raw.certified;
     if !translation && s.options.spacing != Spacing::Parameter {
         // The fresh original-volume owner already established positive source
@@ -26,40 +28,38 @@ pub(super) fn open(
         let position = super::super::endpoint_jets::certify_position(
             s.path,
             false,
-            l.exact_work - out.exact_work,
+            max_work - *work,
         )?;
-        out.exact_work += position.exact_work;
+        *work += position.exact_work;
         if position.certified {
             let direction = super::super::endpoint_jets::certify_direction(
                 s.path,
-                l.order - 1,
+                order - 1,
                 false,
                 true,
-                l.exact_work - out.exact_work,
+                max_work - *work,
             )?;
-            out.exact_work += direction.exact_work;
+            *work += direction.exact_work;
             translation = direction.certified;
         }
     }
     if !translation {
-        out.reason = Some("original-smooth-volume-translation-unproved");
-        return Ok(false);
+        return Ok(Some("original-smooth-volume-translation-unproved"));
     }
     for law in std::iter::once(s.scale).chain(s.affine_laws.into_iter().flat_map(|(a, c)| [a, c])) {
         let proof = super::super::endpoint_jets::certify_knots(
             law,
-            l.order,
-            l.exact_work - out.exact_work,
+            order,
+            max_work - *work,
         )?;
-        out.exact_work += proof.exact_work;
+        *work += proof.exact_work;
         if !proof.certified {
-            out.reason = Some("original-smooth-volume-law-continuity-unproved");
-            return Ok(false);
+            return Ok(Some("original-smooth-volume-law-continuity-unproved"));
         }
     }
     if let Some(reason)=super::super::original_smoothness::contact_motion::certify(
-        s,l.order,false,&mut out.cells,&mut out.exact_work,l.cells,l.exact_work)? {
-        out.reason=Some(reason);return Ok(false);
+        s,order,false,cells,work,max_cells,max_work)? {
+        return Ok(Some(reason));
     }
-    Ok(true)
+    Ok(None)
 }

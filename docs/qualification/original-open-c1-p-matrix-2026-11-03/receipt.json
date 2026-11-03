@@ -1,0 +1,67 @@
+{
+  "sourceBase": "707722b997807b4177f645245baba772843a1764",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Fresh C1 open original filled-map owner and complete P-matrix global embedding route; C2 source volume charts for eight frame/clock combinations",
+  "tests": {
+    "nurbs-full": {
+      "log": "nurbs-full.log.gz",
+      "sha256": "ffcab1efd064f1296c833f93d4473e2f17007a557dd08c4b3daad6bbe22841dd",
+      "terminalResult": "test result: ok. 2266 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 72.23s"
+    },
+    "focused": {
+      "log": "focused.log.gz",
+      "sha256": "237b14c9a8ba4f4f76968ca095da84c0415b22b638d2156a7efcf3ff1e3457d4",
+      "terminalResult": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2264 filtered out; finished in 0.25s"
+    },
+    "no-codec": {
+      "log": "no-codec.log.gz",
+      "sha256": "4b2b142d96b9b4fbb1574e8d1230ff18593efcd2675860f66492326ccca33eb3",
+      "terminalResult": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2059 filtered out; finished in 0.26s"
+    }
+  },
+  "independentOracle": {
+    "records": 1,
+    "allSevenPrincipalMinorsPositive": true,
+    "completeBernsteinCells": 5,
+    "determinantLowerBound": "5/32",
+    "endpointJacobianAverageDeterminant": "-3",
+    "scope": "Original normalized filled map; material trims and arbitrary matrix modes remain native obligations"
+  },
+  "sourceInputs": {
+    "path": "source-inputs.json.gz",
+    "sha256": "b2e3e52a7b19bd2d95979747d05f3ea8339dcb54586d3722b5e9f8ff5d8ba9be",
+    "files": 4350
+  },
+  "matrix": {
+    "modes": [
+      "fixed normal",
+      "moving authored frame",
+      "moving orientation guide",
+      "moving contact guide"
+    ],
+    "clocks": [
+      "parameter",
+      "normalized arc"
+    ],
+    "sourceCaps": "different with nonplanar end carrier",
+    "laws": "nonconstant scale, affine axes and center",
+    "sourceSmoothness": "opaque C2 volume certificate",
+    "boundaryCornerScope": "explicit C0, no G1/G2 cap-wall claim"
+  },
+  "budget": {
+    "globalCellsCeiling": 1000000,
+    "globalExactWorkCeiling": 1000000,
+    "newTrialCells": 10000,
+    "newTrialExactWork": 100000,
+    "sharedAggregateLedger": true,
+    "primitiveReplay": "exact, one-less cells/work, zero cells/work"
+  },
+  "unqualified": [
+    "new public BRep material fixture",
+    "full BRep unit suite",
+    "WASM",
+    "STEP",
+    "CI",
+    "all remaining general closed seams and global geometric cases"
+  ]
+}

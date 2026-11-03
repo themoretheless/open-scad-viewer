@@ -1,0 +1,45 @@
+{
+  "sourceBase": "3704602d9b12b26a0963f830bfd74129aa9a9a95",
+  "scope": "Exact negative rank-loss witness for unchanged original filled-carrier homotopy; no positive credit from a miss",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "tests": {
+    "nurbs-full": {
+      "log": "nurbs-full.log.gz",
+      "sha256": "e2b539c9af061e26564afd40cdc967271b144e6e10f7bedb609274ed70b3cc9e",
+      "terminalResult": "test result: ok. 2263 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 66.85s"
+    },
+    "brep-public": {
+      "log": "brep-public.log.gz",
+      "sha256": "9809ab5f598cbb2f3b3fdaddd5b419a3780cb04289ac4de014f352e7a1d758c4",
+      "terminalResult": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 35.07s"
+    },
+    "no-codec": {
+      "log": "no-codec.log.gz",
+      "sha256": "0e50e25d4dd17ddaf9294fc968c293b2e7ec6af2e5023ea0d5c84a3d72212b8d",
+      "terminalResult": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2054 filtered out; finished in 0.00s"
+    }
+  },
+  "sourceSHA256": {
+    "crates/Cargo.lock": "f0b3df199fe827167e27aa21cb0de15a4561a5934a3a3df9372fe28eb1e8d7db",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume.rs": "5a37ce8f92c05ca3a8025e04711f34f0b1776f63d8c6a7eaa1a49c5695bf862d",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/exact.rs": "d79f229ab39a843b654582f4584e7a829474cc7c5974cc1ebda82cae36a6e56c",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/contact_coincidence/exact.rs": "11c05ee29acdfee4f284bd0627128197ab00ff721be82ac09de3ec00fb478299",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/carrier_rank.rs": "d71f262ba428f9010e943b08f84efa25182ee077174ac3b42725d3a9011953fc",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/carrier_rank/tensor.rs": "c5470e674611ffb6640ac4103d28a24f36a6d4f23612f85fa24e114cf7f6c093",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/carrier_rank/tests.rs": "9d208ad1eb8a5dbe88ee1410025fab8e08242d741f6be260c39518557c82875a",
+    "crates/brep-core/tests/original_contact_material.rs": "82b155856ddabbbaacaeaccafa7f96414fd71e0fb64c3dad69aa3a8472af277c"
+  },
+  "materialRankLoss": {
+    "reason": "ideal-volume-exact-carrier-rank-loss",
+    "cells": 81,
+    "exactWork": 60960,
+    "products": 64
+  },
+  "unqualified": [
+    "full brep-core unit suite",
+    "WASM",
+    "STEP",
+    "CI",
+    "complete arbitrary source global geometric certificate"
+  ]
+}
