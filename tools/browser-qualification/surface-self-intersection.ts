@@ -63,7 +63,7 @@ async function qualify(){
   const quadricCarriers=[]
   for(const fixture of quadricCarrierCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalQuadricCarrierRoots(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Quadric input changed');quadricCarriers.push({name:fixture.name,report})}
   const finiteGraphs=[]
-  for(const fixture of quadricGraphCases){const before=JSON.stringify(fixture.query),report=await lane.inspectOriginalQuadricGraphContacts(fixture.query);fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Finite graph input changed');finiteGraphs.push({name:fixture.name,report})}
+  for(const fixture of quadricGraphCases){const before=JSON.stringify(fixture.query),started=performance.now(),report=await lane.inspectOriginalQuadricGraphContacts(fixture.query),elapsedMs=performance.now()-started;fixture.check(report);if(JSON.stringify(fixture.query)!==before)throw new Error('Finite graph input changed');finiteGraphs.push({name:fixture.name,elapsedMs,report})}
   const graphBaseline=finiteGraphs.find(x=>x.name==='graph-edge-0')!.report
   if(!graphBaseline.carrier)throw new Error('Missing graph carrier baseline')
   const graphBoundaryBudget=await lane.inspectOriginalQuadricGraphContacts({...boundaryQuery(),maxExactWork:graphBaseline.targetMembership.workUsed+graphBaseline.carrier.exactWork})
