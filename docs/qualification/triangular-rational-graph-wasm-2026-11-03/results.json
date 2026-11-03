@@ -1,0 +1,38 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/9afae3fb6cd43d96b6053eee59c44ab4306d523d7f71b6b2c56e504e33185cf1.wasm",
+  "sha256": "9afae3fb6cd43d96b6053eee59c44ab4306d523d7f71b6b2c56e504e33185cf1",
+  "bytes": 21909568,
+  "sourceCommit": "36c5b4cc6b5f979aa3ec6830fe5b99207254e9b6",
+  "status": "passed",
+  "abiCases": 252,
+  "graphCases": 135,
+  "workersStarted": 228,
+  "workersTerminated": 228,
+  "newTriangularGraphCases": 22,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "nativeSourceHashesMatched": true,
+  "nativeReceipt": "docs/qualification/triangular-rational-graph-2026-11-03/results.json",
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "befa1a22ca941c3c9a89381d5950ea9a4cae4bade2ecfdb4874bf0e954c62696",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "11c681cc1f1c00ecdf309f840510e09ddb280fd45aea25ed6b483a91de9dcd8e",
+    "tools/browser-qualification/surface-self-intersection.mjs": "84a55508ae5d8e6048189d41978e2edfeb07776acbb96668d207e5d155747ac2",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "src/services/originalQuadricGraphProtocol.ts": "0e45f26d63d724f3ba90d429482a16ef6afcfa17a713b43233ad66d8dbda319b"
+  },
+  "observedTiming": {
+    "abiMs": 6.078416999999945,
+    "workerMs": 9.900000005960464
+  },
+  "timingScope": "Single run only, not repeat performance qualification. ABI request versus full Worker call.",
+  "scope": "Actual raw WASM and Chromium module Workers for original single-span triangular rational graphs. Both parameter orientations, rotations/gauges, edges/corners, exterior exclusion, original identity ULP refusal, wrong quadric membership and zero predicate budget. No differential regularity, trim or Body credit.",
+  "remaining": [
+    "General joint coupled maps without independent projection",
+    "Multi-span triangular conditional clocks",
+    "Arbitrary UV precision and differential regularity",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}
