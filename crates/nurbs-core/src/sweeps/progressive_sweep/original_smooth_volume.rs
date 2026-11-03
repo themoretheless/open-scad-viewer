@@ -49,7 +49,7 @@ pub enum OriginalSmoothVolumeAttempt<'s, 'a> {
     Certified(Box<OriginalSmoothVolume<'s, 'a>>),
     Refused(Box<OriginalSmoothVolumeReport>),
 }
-mod motion;
+pub(super) mod motion;
 fn basis_smooth(s: &Surface, order: usize) -> bool {
     for (p, k, n) in [
         (s.degree_u, &s.knots_u, s.control_points.len()),

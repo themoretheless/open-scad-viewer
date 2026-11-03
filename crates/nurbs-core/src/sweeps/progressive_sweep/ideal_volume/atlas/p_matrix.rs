@@ -30,9 +30,23 @@ pub(crate) fn certify(
     let Enclosed::Value(center)=query([[0.5;2];3],out)? else{return Ok(false);};
     let reference=projected(center.columns,projection)?;
     let Some(scale)=coordinate_scale(reference) else{return Ok(false);};
-    let Some(metric)=inverse_proposal(scaled(reference,scale)?) else{return Ok(false);};
+    // The caller's output coordinates may already define a P-map even when
+    // a midpoint inverse destroys its principal-minor signs. Both are only
+    // proposals; each must independently cover the whole original box.
+    let identity=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]];
+    let mut metrics=vec![identity];
+    if let Some(metric)=inverse_proposal(scaled(reference,scale)?) {metrics.push(metric);}
+    for metric in metrics {
+        if cover(projection,scale,metric,&mut query,out,max)? {return Ok(true);}
+        if out.cells==max {return Ok(false);}
+    }
+    Ok(false)
+}
+fn cover(projection:[[f64;3];3],scale:[f64;3],metric:[[f64;3];3],
+    query:&mut impl FnMut(Box3,&mut IdealVolumeReport)->Result<Enclosed>,
+    out:&mut IdealVolumeReport,max:usize)->Result<bool> {
     let root=[[0.,1.];3];
-    if !refinement::promising(&[root],projection,scale,metric,principal_positive,&mut query,out,max)? {return Ok(false);}
+    if !refinement::promising(&[root],projection,scale,metric,principal_positive,query,out,max)? {return Ok(false);}
     let mut pending=vec![root];let mut visits=0;
     while let Some(b)=pending.pop() {
         if visits==1024 || out.cells==max {return Ok(false);}
@@ -44,7 +58,7 @@ pub(crate) fn certify(
         let choice=match e {
             Enclosed::Unavailable(Some(axis)) if split_axis(b,axis).is_some()=>
                 refinement::Choice::Split{axis,complete:[false;2]},
-            _=>refinement::axis(b,projection,scale,metric,principal_positive,&mut query,out,max)?,
+            _=>refinement::axis(b,projection,scale,metric,principal_positive,query,out,max)?,
         };
         let (axis,complete)=match choice {
             refinement::Choice::Covered=>continue,
