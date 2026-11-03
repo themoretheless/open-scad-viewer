@@ -16,6 +16,8 @@ beforeAll(async()=>{
  // Native geometry fixtures need the same initialized runtime as interactions
  // in the browser; cold compilation belongs to setup, not one selected test.
  await geometryKernel.warmGeometryKernel()
+ // Scene rows load asynchronously; selected tests must not rely on earlier mounts.
+ await import('../src/components/SceneVirtualList.vue')
  await import('../src/components/CurvePointTrimControls.vue')
 })
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
@@ -384,24 +386,38 @@ it('removes a fully subtracted B-rep body and restores it with Undo',async()=>{
  expect(ui.doc().bodies).toEqual([])
  await ui.click('↶');expect(ui.doc().bodies.map(b=>b.id)).toEqual(['Stock','Cutter'])
 })
-it('reports the stated tolerance when a subtraction falls back to the numerical trace',async()=>{
- // An off-axis sphere in a cylinder wall has no exact family: the kernel traces the
- // intersection numerically, the body carries its tolerance and the notice says so.
- const stock=createBrepCylinder(3,5),cutter=transformNurbsBrep(createBrepSphere(2),[[1,0,0,2.5],[0,1,0,0.4],[0,0,1,2.5],[0,0,0,1]])
- const body=(id:string,brep:ReturnType<typeof createBrepCylinder>)=>{const built=tessellateNurbsBrep(brep,4);return {id,name:id,brep,mesh:{positions:built.positions,indices:built.indices}}}
- const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock',stock),body('Cutter',cutter)]}})
- await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')
- expect(ui.doc().bodies).toHaveLength(1)
- expect(ui.doc().bodies[0].brep!.toleranceMm).toBeGreaterThan(1e-6)
+it('reports the worker tolerance for a subtraction and clears it after an exact result',async()=>{
+ // Exercise the UI transaction at the worker boundary. The actual off-axis
+ // cylinder/sphere candidate and fitted-edge tolerance are audited by Rust's
+ // tolerant_ssi::short_cylinder_with_a_wall_sphere_as_in_the_solid_workspace.
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const body=(id:string)=>{const brep=createBrepBox([0,0,0],[3,3,5]),built=tessellateNurbsBrep(brep,1);return {id,name:id,brep,mesh:{positions:built.positions,indices:built.indices}}}
+ const initialDocument={version:1 as const,sketches:[],bodies:[body('Stock'),body('Cutter')]}
+ const ui=await mount({initialDocument},stringifyMeshJson(initialDocument))
+ const subtract=async()=>{await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')}
+ await subtract()
+ expect(requests).toHaveLength(1)
+ expect(requests[0].job.options).toMatchObject({operation:'difference',a:['Stock'],b:['Cutter']})
+ expect(ui.doc().bodies).toHaveLength(2)
+ const toleranceMm=0.002
+ const {toleranceContext:_context,...legacyBrep}=initialDocument.bodies[0].brep as typeof initialDocument.bodies[0]['brep'] & {toleranceContext?:unknown}
+ const resultBody={...body('Stock'),brep:{...legacyBrep,toleranceMm}}
+ requests[0].resolve({document:{version:1,sketches:[],bodies:[resultBody]},resultId:'Stock',exact:true,toleranceMm})
+ await flushClearance()
+ expect(ui.doc().bodies,ui.text(ui.all()[0])).toHaveLength(1)
+ expect(ui.doc().bodies[0].brep!.toleranceMm).toBe(toleranceMm)
  expect(ui.text(ui.all()[0])).toContain('traced numerically within')
- // An exact pair (a sphere on the axis, fully inside: a cavity) keeps the kernel
- // tolerance and shows no such notice.
+ expect(ui.text(ui.all()[0])).toContain(String(toleranceMm))
  await ui.click('↶')
- const axial=transformNurbsBrep(createBrepSphere(1.5),[[1,0,0,0],[0,1,0,0],[0,0,1,2.5],[0,0,0,1]])
- const exact=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock',stock),body('Cutter',axial)]}})
- await exact.click('Stock');await exact.click('Cutter',true);await exact.click('B-rep A − B');await exact.click('OK')
- expect(exact.doc().bodies[0].brep!.toleranceMm).toBeLessThan(1e-6)
- expect(exact.text(exact.all()[0])).not.toContain('traced numerically')
+ expect(ui.doc().bodies.map(b=>b.id)).toEqual(['Stock','Cutter'])
+ await subtract()
+ expect(requests).toHaveLength(2)
+ requests[1].resolve({document:{version:1,sketches:[],bodies:[body('Stock')]},resultId:'Stock',exact:true,toleranceMm:0})
+ await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(1)
+ expect(ui.doc().bodies[0].brep!.toleranceMm).toBeLessThan(1e-6)
+ expect(ui.text(ui.all()[0])).not.toContain('traced numerically')
 })
 it('binds an edge selection to chamfer and creates a shell with the selected opening',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!;await ui.pointer(edge)
