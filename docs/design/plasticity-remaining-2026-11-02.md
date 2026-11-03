@@ -27,6 +27,8 @@
 
 Общий native `construct_qualified_ss_branches` подключён к complete mixed-axis closed owners, автоматическому exact even-power contact discovery и periodic homothetic / finite-plane sections. Две раздельные скрытые петли строятся автоматически с полным census и четырьмя процедурными границами. Для multispan polynomial graphs добавлены exact original Cox/blossom restrictions на полном общем knot-forest с независимым replay. Касания порядков 2/4/6/8 распознаются из исходных коэффициентов; periodic section хранит небинарный UV как rational и отличает collapsed pole point от closed contour.
 
+Проверено в изолированном native checkout: **159 SS integration + 37 SS unit + 44 bridge + 38 BRep = 278 passed**; один дополнительный cap/offset-тест остановлен после 10m46s и не засчитан. Architecture: 54 pinned, 0 layer violations.
+
 Это ограниченные доказанные семейства. Полный автоматический BRep trim, произвольные singular/periodic/pole cases и общий intersecting-NURBS Boolean **остаются открытыми**. Bridge/WASM для новых SS API этим этапом не квалифицированы. [Контракт и ограничения](ss-automatic-closed-and-periodic.md), [native receipt](../qualification/ss-closed-periodic-2026-11-03/results.json).
 
 ## Восстановление корней на границах разбиения и автоматический trim

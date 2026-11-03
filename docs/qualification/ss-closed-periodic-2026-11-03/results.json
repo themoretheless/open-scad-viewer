@@ -1,5 +1,5 @@
 {
-  "status": "passed-native-ss",
+  "status": "passed-scoped-native",
   "baseCommit": "ec786892b6d70a2dd95a81833454447933ff3899",
   "scope": "Isolated frozen committed base plus 19 explicitly owned SS paths, including activated existing pending closed-source work; unrelated dirty CAD/curvature/Boolean edits excluded. Native Rust only.",
   "sourceSha256": {
@@ -108,7 +108,6 @@
     "resetCoverageAllowancePerOriginalCell": false,
     "note": "Repair attempts each run an independently bounded full census. Increased explicit repair-round cap is recorded; this is not a same-budget speed or completeness comparison."
   },
-  "newAPIsRuntimeQualified": false,
   "wasmPackageUpdated": false,
   "completeAutomaticBrepTrim": false,
   "generalBooleanQualified": false,
@@ -122,8 +121,45 @@
     "Closed material orientation, healing and general intersecting-NURBS Boolean",
     "Bridge/WASM/editor integration for new SS APIs"
   ],
-  "validationNote": "Final native SS suites all green. BRep and bridge downstream qualification still running before final delivery.",
+  "validationNote": "159 SS integration + 37 SS module + 44 bridge + 38 BRep tests passed. One expanded cap/offset test was stopped after 10m46s and excluded, not counted as passing. New APIs are native Rust only; whole-workspace and installed-WASM qualification not claimed.",
   "historicalDiagnostics": {
     "two-ovals.log.gz": "Original 4D search with max_repairs=8 refused complete coverage. New admitted two-oval case uses exact knot-forest reduction, chart compaction and explicit max_repairs=32. Not a same-budget benchmark."
-  }
+  },
+  "brepRegression": {
+    "suites": 8,
+    "passed": 38,
+    "failed": 0,
+    "filtered": 1
+  },
+  "bridgeRegression": {
+    "suites": 4,
+    "passed": 44,
+    "failed": 0,
+    "filtered": 0
+  },
+  "sourceCommit": "c5812e53b13b7ab334d0bbf20b6dd682c0ab24f7",
+  "nativePassedTotal": 278,
+  "frozenTree": {
+    "sourceCommit": "c5812e53b13b7ab334d0bbf20b6dd682c0ab24f7",
+    "allNonDocumentationTrackedFilesMatched": 8052
+  },
+  "optionalNotQualified": {
+    "test": "nonplanar_actual_cylindrical_cap_accepts_a_closed_cut_and_full_replay",
+    "status": "not-qualified",
+    "reason": "Optional expanded test stopped by agent after more than 600 seconds without completion; no assertion failure observed.",
+    "elapsed": "10:46",
+    "signal": "SIGTERM",
+    "sourceCommit": "c5812e53b",
+    "command": "/tmp/osv-ss-dispatch-target-20261103/debug/build/brep-core/05204326f94cf5b1/out/closed_face_cut-05204326f94cf5b1"
+  },
+  "newAPIsWasmRuntimeQualified": false,
+  "newAPIsBridgeIntegrated": false,
+  "fullNativeUnitSuiteRun": false,
+  "retainedBooleanTiming": {
+    "passed": 6,
+    "seconds": 669.7,
+    "scope": "One unoptimized native regression run, not production performance qualification. One-second CPU sample shows exact rational cone/curve checks in Minkowski atlas admission; no performance code changed."
+  },
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true
 }

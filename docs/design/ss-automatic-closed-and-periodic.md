@@ -62,3 +62,7 @@
 Открыты: произвольные рациональные/multispan SS-ветви и singular networks, общий periodic quotient, произвольные полюса, частичное finite-face clipping, согласованные world/pcurve traces через nonlinear conditioning, полное автоматическое BRep trimming, material/orientation/healing и общий Boolean замкнутых тел. Ни один из этих пунктов не закрывается поддержанными семействами выше.
 
 Результаты проверок: [receipt](../qualification/ss-closed-periodic-2026-11-03/results.json). Общий остаток: [Plasticity parity](plasticity-remaining-2026-11-02.md).
+
+## Следующий технический блок для настоящего trim
+
+В `fiber_coverage/world_trace.rs::root_error` сейчас намеренно отвергается nonlinear graph-shear operator: его residual/Jacobian относятся к transformed equations, а composition errors — к исходному world space. Для снятия отказа нужен независимо проверенный верхний bound `||DT||` на convex hull исходных XY-образов обеих опор, где `T(x,y,z)=(x,y,z-H_first(x,y))`. Его следует вывести из исходных exact polynomial coefficients и affine XY inverse, применить к суммарному composition residual, сохранить original first-surface Jacobian для переноса parameter error обратно в world и повторно проверить оператор. Jacobian только на root/sample point недостаточен. После этого нужны actual world/pcurve traces всех closed charts, согласованные original endpoints и сохранённые BRep loops; сами процедурные `trims()` этого не заменяют.
