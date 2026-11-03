@@ -1,12 +1,39 @@
 //! Original triangular rational charts: one independent clock, one conditional.
 use super::*;
-pub(super) struct Triangular {
+mod bspline;
+pub(super) enum Triangular {
+    Bernstein(Bernstein),
+    Spline(bspline::Spline),
+}
+impl Triangular {
+    pub(super) fn prove(
+        s: &Surface,
+        axes: [usize; 2],
+        o: &[Q; 2],
+        u: &[Q; 2],
+        v: &[Q; 2],
+        det: &Q,
+    ) -> Option<Self> {
+        if s.control_points.len() == s.degree_u + 1 && s.control_points[0].len() == s.degree_v + 1 {
+            Bernstein::prove(s, axes, o, u, v, det).map(Self::Bernstein)
+        } else {
+            bspline::prove(s, axes, o, u, v, det).map(Self::Spline)
+        }
+    }
+    pub(super) fn enclosure(&self, r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
+        match self {
+            Self::Bernstein(b) => b.enclosure(r),
+            Self::Spline(s) => s.enclosure(r),
+        }
+    }
+}
+pub(super) struct Bernstein {
     axis: usize,
     clock: super::clock::Clock,
     ordinates: Vec<Q>,
     weights: Vec<Vec<Q>>,
 }
-impl Triangular {
+impl Bernstein {
     pub(super) fn prove(
         s: &Surface,
         axes: [usize; 2],
@@ -158,7 +185,7 @@ mod tests {
                     .map(|j| q((j * j) as f64) / q((m * m) as f64))
                     .collect();
                 for axis in 0..2 {
-                    let chart = Triangular {
+                    let chart = Bernstein {
                         axis,
                         clock: super::super::clock::Clock::original(vec![q(1.), q(1.)]),
                         ordinates: ordinates.clone(),

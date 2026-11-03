@@ -503,3 +503,51 @@ fn triangular_joint_original_graph_reports_finite_uv_without_body_credit() {
     assert_eq!(r["bodyAdmission"], json!(false));
     ledger(&r);
 }
+
+#[test]
+fn multispan_triangular_joint_graph_retains_global_conditional_uv_and_no_body_credit() {
+    let mut q = query();
+    let l = 1680.;
+    let a = [0., 1., 2., 4.];
+    let c = [0., 0.25, 0.75, 1.];
+    let weights: Vec<Vec<f64>> = (0..4)
+        .map(|i| {
+            a.iter()
+                .map(|a| [1., 1. + a / 4., 1. + 3. * a / 4., 1. + a][i])
+                .collect()
+        })
+        .collect();
+    let poles: Vec<Vec<Vec<f64>>> = (0..4)
+        .map(|i| {
+            a.iter()
+                .enumerate()
+                .map(|(j, a)| {
+                    let x = [0., l / (4. + a), l * (3. + 2. * a) / (4. + 3. * a), l][i];
+                    vec![x, l * c[j], x * c[j]]
+                })
+                .collect()
+        })
+        .collect();
+    q["curve"]["controlPoints"] = json!([[840., 840., 419.], [840., 840., 421.]]);
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 0., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 11., 13., 14., 14.]);
+    q["patch"]["controlPoints"] = json!(poles);
+    q["patch"]["weights"] = json!(weights);
+    q["quadric"] = json!([
+        [0., 0.5, 0., 0.],
+        [0.5, 0., 0., 0.],
+        [0., 0., 0., -840.],
+        [0., 0., -840., 0.]
+    ]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], json!("triangular-rational"));
+    assert_eq!(r["finiteSurfaceUvAdmission"], json!(true));
+    assert_eq!(r["trimAdmission"], json!(false));
+    assert_eq!(r["bodyAdmission"], json!(false));
+    ledger(&r);
+    for (axis, x) in [4., 0., 11. + 6. / 7.].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][axis];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+}
