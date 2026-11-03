@@ -1,6 +1,12 @@
 # Plasticity: актуальный остаток библиотечного паритета
 
-Обновлено 3 ноября 2026 года, Asia/Tbilisi. Цель «все реализовано у меня» активна; **не завершена**. Scope — собственные геометрические Rust-библиотеки, а не совпадение названий команд или UI. Ни один общий пункт ниже не закрывается отдельным поддержанным семейством.
+Обновлено 4 ноября 2026 года, Asia/Tbilisi. Цель «все реализовано у меня» активна; **не завершена**. Scope — собственные геометрические Rust-библиотеки, а не совпадение названий команд или UI. Ни один общий пункт ниже не закрывается отдельным поддержанным семейством.
+
+## Последний этап: исходные closed SS → сохранённые BRep loops
+
+Добавлены ordered first-return cycles, общие root ports, actual paired world/UV curves с endpoint-tube bounds и независимым replay. Native/bridge режут обе конечные nonperiodic грани: одна петля даёт две области, две скрытые петли — три области и два holes на каждой опоре. Полный census обязателен; ни одна компонента не пропускается. Bridge APIs: `brep_partition_closed_ss`, `brep_partition_all_closed_ss`. Новый WASM установлен; public/embedded/fingerprint совпадают, реальные host-вызовы проверены в Chromium и Worker. 52 native + 22 host + 11 package tests passed; по 40 прежних API checks на main/Worker. Это scoped qualification; весь основной запрос не завершён.
+
+Это сохраняющая обе области subdivision, **не material trim и не Boolean**. Произвольные касания/кратные ветви, periodic quotient/poles, частичное finite-face clipping, выбор материала, замкнутые тела и общий Boolean остаются обязательными. Текущий receipt поставки: [SS closed BRep delivery](../qualification/ss-closed-brep-delivery-2026-11-03/results.json); подробные пределы: [контракт](ss-automatic-closed-and-periodic.md).
 
 ## Что осталось реализовать
 
@@ -29,7 +35,7 @@ Normalized knot-cells, subdivision и root images переведены в exact 
 
 Conditioning подключён к automatic boundary-connected BRep cut: на исходных nonlinear sheets сохраняются две валидные области с IDs и полным boundary-root coverage, входы неизменны. **285 scoped native tests passed** (164 SS integration, 40 SS unit, 37 BRep, 44 bridge), architecture 54/0. [Receipt](../qualification/ss-exact-knots-world-trim-2026-11-03/results.json).
 
-Полные closed BRep loops из mixed-axis charts, holes/seams, произвольные rational/singular/periodic случаи и общий Boolean остаются открыты. Следующий concrete блок: порядок closed component, shared original endpoint selectors и сохранённые world/pcurve loops; затем global material/Body admission. [Контракт и следующий блок](ss-automatic-closed-and-periodic.md).
+После этого раннего этапа closed BRep loops были следующим блоком; текущий этап выше реализует их для regular nonperiodic wholly-contained components. Seams, произвольные rational/singular/periodic случаи, partial face clipping, global material/Body admission и общий Boolean остаются открыты. [Контракт и следующий блок](ss-automatic-closed-and-periodic.md).
 
 ## Автоматические замкнутые SS-ветви, касания и periodic/poles
 
@@ -37,7 +43,7 @@ Conditioning подключён к automatic boundary-connected BRep cut: на �
 
 Проверено в изолированном native checkout: **159 SS integration + 37 SS unit + 44 bridge + 38 BRep = 278 passed**; один дополнительный cap/offset-тест остановлен после 10m46s и не засчитан. Architecture: 54 pinned, 0 layer violations.
 
-Это ограниченные доказанные семейства. Полный автоматический BRep trim, произвольные singular/periodic/pole cases и общий intersecting-NURBS Boolean **остаются открытыми**. Bridge/WASM для новых SS API этим этапом не квалифицированы. [Контракт и ограничения](ss-automatic-closed-and-periodic.md), [native receipt](../qualification/ss-closed-periodic-2026-11-03/results.json).
+Это ограниченные доказанные семейства. Полный автоматический BRep trim, произвольные singular/periodic/pole cases и общий intersecting-NURBS Boolean **остаются открытыми**. На этом раннем этапе bridge/WASM ещё не были квалифицированы; актуальные операции и receipt приведены в последнем этапе выше. [Контракт и ограничения](ss-automatic-closed-and-periodic.md), [native receipt](../qualification/ss-closed-periodic-2026-11-03/results.json).
 
 ## Восстановление корней на границах разбиения и автоматический trim
 

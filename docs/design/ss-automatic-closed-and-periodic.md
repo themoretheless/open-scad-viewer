@@ -1,6 +1,6 @@
 # Автоматические SS-пересечения: замкнутые ветви и periodic/poles
 
-3 ноября 2026. Собственные Rust-библиотеки; это ограниченные доказанные семейства, а не завершение общих NURBS-пересечений.
+4 ноября 2026. Собственные Rust-библиотеки; это ограниченные доказанные семейства, а не завершение общих NURBS-пересечений.
 
 ## Общий API
 
@@ -55,13 +55,27 @@
 
 `transverse_parameter`, `level_control_points` и `level_weights` сохраняются как точные rational values. Например, natural UV = 2/3 не округляется до f64. Эти коэффициенты используют неизменённый original periodic basis. Конвертация результата в существующее f64 curve storage требует отдельной downstream-квалификации.
 
+## Сохранённые closed world/UV loops и finite-face cut
+
+`order_closed_fiber_cycle` строит ориентированный первый возврат к одному исходному root selector. Mixed-axis arcs используют общие ports, независимые переходы и строгий порядок исходных корней. Цикл соседства и близость world-точек не являются доказательством одного полного обхода.
+
+`construct_closed_fiber_trace` сохраняет actual world-кривую и обе pcurves с буквальными общими endpoints. Исходные endpoint root tubes доказывают монотонную перепараметризацию около стыков; погрешность включает и actual saved-curve root error, и диаметр tubes. `reverify()` повторяет исходные операторы, world enclosures и проверяет полный порядок/покрытие. На исчерпании бюджета частичная цепочка не возвращается.
+
+`brep_core::face_cut::partition_closed_ss` разрезает обе реальные конечные грани по одной complete closed component. `partition_all_closed_ss` обрабатывает все компоненты одного полного natural-product census: очередная петля размещается только по whole-contour proof ровно на одной текущей грани. Новые loops сохраняют world/pcurve геометрию, original surfaces, обе области и persistent IDs; исходные модели неизменны. Hole placement проверяет существующие outer/hole rims. Для network cut allowance задаётся на одну candidate face; максимум branches+1 candidates на сторону и компоненту, максимум 64 компоненты. Это явно ограниченная сумма попыток, а не один общий cut-cell allowance.
+
+Bridge операции: `brep_partition_closed_ss` и `brep_partition_all_closed_ss`. Обязательные поля: `op,a,b,faceA,faceB,toleranceMm,toleranceUv`; network допускает также bounded `maxRepairs`. Положительные caller-verdict поля отвергаются. Возвращаются обе subdivided модели и source coverage/error counters; `materialClassified=false`.
+
+Native квалификация: одна круговая петля (174 segments, world error ≤2.501e−7 при допуске 1e−6), две раздельные скрытые петли (45+44 segments, три области и два holes на каждой опоре при 1e−4), рациональные projective carriers с непостоянными весами (явный repair=32; default=4 остаётся отказом). Отдельно проверены damaged proof/error/port/tube/order и exhaustion. Проверка существующих closed-cut holes/ориентаций включена в regressions. Квалификация отдельного рационального примера не является доказательством произвольных rational SS.
+
+Поставка проверена на установленном пакете SHA-256 `65158c6c…72417e5` (17 149 147 bytes): public, embedded bytes и fingerprint согласованы. Chromium 151 main thread и Worker выполняют обе операции через настоящий `callGeometryRust`; дополнительно по 40 прежних API checks на каждом runtime прошли. Native: 52 passed; host: 22 passed; packaging: 11 passed. Один старый долгий nonplanar cap test остановлен и не засчитан. Общий package bound — 20 МиБ; native decoder по-прежнему ограничен 16 МиБ decoded / 4 МиБ compressed на поток, compressed package 8 МиБ, максимум восемь потоков.
+
 ## Граница результата и следующий обязательный объём
 
-`RegularClosedLoops.trims()` — процедурные исходные SS-границы на обеих опорах. Это ещё не сохранённые BRep loops и не полное удаление/сохранение материала. Новые native APIs не получили bridge/WASM/editor-адаптер; прежняя runtime-квалификация других операций на них не переносится.
+Реализованный путь требует regular embedded closed component, исходных C1/ранга/инъективности, полного natural-product census и nonperiodic конечных граней. Все петли должны целиком размещаться в конечных гранях. Частичное clipping через outer/hole rims, seam quotient, singular/tangent/multiple networks и произвольные poles остаются отказами.
 
-Открыты: произвольные рациональные/multispan SS-ветви и singular networks, общий periodic quotient, произвольные полюса, частичное finite-face clipping, порядок замкнутых mixed-axis traces и совместные original endpoints, полное автоматическое BRep trimming, material/orientation/healing и общий Boolean замкнутых тел. Ни один из этих пунктов не закрывается поддержанными семействами выше.
+Разрез сохраняет обе области. Выбор material region, сборка замкнутого Body, volume/orientation/cavity admission, gap healing и общий union/intersection/difference/XOR **не реализованы этим этапом**. Их нельзя выводить из валидной subdivision или одного замкнутого контура. Все пять пользовательских направлений остаются общим scope; ни один общий пункт не объявлен завершённым.
 
-Результаты проверок: [receipt](../qualification/ss-closed-periodic-2026-11-03/results.json). Общий остаток: [Plasticity parity](plasticity-remaining-2026-11-02.md).
+Актуальная поставка и проверенные hashes/calls: [receipt](../qualification/ss-closed-brep-delivery-2026-11-03/results.json). Ранний native этап: [receipt](../qualification/ss-closed-periodic-2026-11-03/results.json). Общий остаток: [Plasticity parity](plasticity-remaining-2026-11-02.md).
 
 ## Реализованные exact knots и перенос world error
 
