@@ -1,0 +1,123 @@
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-general-ss-20261104/crates/nurbs-core)
+warning: module `methods_mean_matrix__coordinate_path` should have a snake case name
+   --> nurbs-core/src/surface_self_chord.rs:688:5
+    |
+688 | mod methods_mean_matrix__coordinate_path;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_mean_matrix_coordinate_path`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: module `methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:254:5
+    |
+254 | mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_crate_surface_weight_profile_weight_profile_inspect_self_chord_pair`
+
+warning: module `methods_rail_constrained_bridge______self_chord_continuous` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:256:5
+    |
+256 | mod methods_rail_constrained_bridge______self_chord_continuous;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_self_chord_continuous`
+
+warning: module `methods_rail_constrained_bridge______inspect_radius_on_domains` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:258:5
+    |
+258 | mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_radius_on_domains`
+
+warning: module `methods_rail_constrained_bridge______section` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:100:5
+    |
+100 | mod methods_rail_constrained_bridge______section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_section`
+
+warning: module `methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:102:5
+    |
+102 | mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_transverse_corrected_injectivity_policy`
+
+warning: module `methods_profile_section___profile` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:252:5
+    |
+252 | mod methods_profile_section___profile;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_section_profile`
+
+warning: module `methods_profile_end_transition___section` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:254:5
+    |
+254 | mod methods_profile_end_transition___section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_end_transition_section`
+
+warning: `nurbs-core` (lib) generated 8 warnings
+warning: unused import: `surface::Surface`
+ --> nurbs-core/tests/ss_pole_ideals.rs:2:41
+  |
+2 | use nurbs_core::{ss_intersection as ss, surface::Surface};
+  |                                         ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `surface::Surface`
+ --> nurbs-core/tests/ss_original_ideals.rs:3:41
+  |
+3 | use nurbs_core::{ss_intersection as ss, surface::Surface};
+  |                                         ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `nurbs-core` (test "ss_pole_ideals") generated 1 warning (run `cargo fix --test "ss_pole_ideals" -p nurbs-core` to apply 1 suggestion)
+warning: `nurbs-core` (test "ss_original_ideals") generated 1 warning (run `cargo fix --test "ss_original_ideals" -p nurbs-core` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 24.02s
+     Running tests/ss_original_ideals.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/9f4fe27ec354518b/out/ss_original_ideals-9f4fe27ec354518b)
+
+running 7 tests
+test disconnected_source_knots_are_rejected_before_a_source_equivalent_ss_owner ... ok
+test exact_original_elimination_never_publishes_a_partial_basis_on_exhaustion ... ok
+test general_elimination_preserves_tangent_multiplicity_and_source_equations ... ok
+test empty_complex_ideal_and_overlap_dimension_have_distinct_proofs ... ok
+test generic_deflation_removes_original_double_contact_without_changing_its_zero_set ... ok
+test original_rational_cox_equations_match_both_supports_without_a_shared_graph_frame ... ok
+test source_equivalent_deflation_qualifies_every_point_of_a_general_double_contact ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/ss_pole_ideals.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/d53604805fc36a65/out/ss_pole_ideals-d53604805fc36a65)
+
+running 2 tests
+test exact_source_pole_and_general_elimination_distinguish_a_contact_from_an_off_pole_arc ... ok
+test original_pole_root_arc_keeps_the_collapsed_endpoint_and_the_full_radial_interval ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/ss_quotient_fibers.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/7273576fdd25cc62/out/ss_quotient_fibers-7273576fdd25cc62)
+
+running 6 tests
+test nonperiodic_extrapolation_full_period_and_work_exhaustion_do_not_publish ... ok
+test native_chart_closure_uses_the_proved_periodic_upper_alias ... ok
+test operand_reversal_and_transposed_source_preserve_quotient_root ... ok
+test original_curved_curved_fiber_crosses_periodic_shore_without_unflagging ... ok
+test complete_original_product_census_covers_the_shore_crossing_arc ... ok
+test automatic_discovery_requires_complete_original_quotient_census ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.91s
+
+     Running tests/ss_root_geometry.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/6f6dc71e79afa6c2/out/ss_root_geometry-6f6dc71e79afa6c2)
+
+running 4 tests
+test periodic_root_carrier_keeps_lifted_uv_and_encloses_one_world_seam_point ... ok
+test root_point_identity_is_shared_without_nearest_point_welding ... ok
+test root_valued_world_and_uv_geometry_retains_original_nonunit_span_clocks ... ok
+test exact_pole_carrier_retains_a_nonartificial_world_endpoint ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ss_root_ports.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/013ba12607a28295/out/ss_root_ports-013ba12607a28295)
+
+running 3 tests
+test mixed_axis_join_preserves_root_valued_target_clock ... ok
+test wire_requires_literal_shared_selectors_and_retains_reverse_direction ... ok
+test closed_curved_mixed_axis_wire_classifies_uv_inside_and_outside ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.03s
+

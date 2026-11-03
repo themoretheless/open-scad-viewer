@@ -17,6 +17,12 @@ pub(super) fn certify(
     )?;
     let free = axis.index();
     let surfaces = [source.first(), source.second()];
+    check(
+        surfaces
+            .iter()
+            .all(|s| s.control_points.iter().flatten().all(|p| p.len() == 3)),
+        "Fiber proof requires original spatial surface carriers",
+    )?;
     for k in 0..4 {
         let s = surfaces[k / 2];
         let (knots, d, n) = if k % 2 == 0 {
@@ -56,7 +62,13 @@ pub(super) fn certify(
             (&s.knots_v, s.degree_v, s.control_points[0].len())
         };
         if (domain[k][0] == knots[p] && knots[p] == knots[p + 1])
-            || (domain[k][1] == knots[n] && knots[n - 1] == knots[n])
+            || (domain[k][1] == knots[n]
+                && knots[n - 1] == knots[n]
+                && !((if k % 2 == 0 {
+                    s.periodic_u
+                } else {
+                    s.periodic_v
+                }) && knots[p] < knots[p + 1]))
         {
             out.reason = "original-endpoint-basis-unproven";
             return Ok(out);
@@ -177,36 +189,11 @@ pub(super) fn certify(
             return Ok(());
         };
         let f = [a[0].sub(b[0])?, a[1].sub(b[1])?, a[2].sub(b[2])?];
-        let mut image = [I::point(0.); 3];
-        let mut magnitudes = [[0.; 3]; 3];
-        let mut q = 0f64;
-        for i in 0..3 {
-            let mut base = I::point(centers[i]);
-            for k in 0..3 {
-                base = base.sub(I::point(r[i][k]).mul(f[k])?)?;
-            }
-            let mut row = I::point(0.);
-            for c in 0..3 {
-                let mut v = I::point(if i == c { 1. } else { 0. });
-                for k in 0..3 {
-                    v = v.sub(I::point(r[i][k]).mul(j[k][c])?)?;
-                }
-                let magnitude = v.lo.abs().max(v.hi.abs());
-                magnitudes[i][c] = magnitude;
-                row = row
-                    .add(I::point(magnitude).mul(I::point(scales[c]).div(I::point(scales[i]))?)?)?;
-                let delta = I::new(domain[unknown[c]][0], domain[unknown[c]][1])?
-                    .sub(I::point(centers[c]))?;
-                base = base.add(v.mul(delta)?)?;
-            }
-            q = q.max(row.hi);
-            image[i] = base;
-        }
-        if q >= 1. {
-            let (new_scales, new_q) = rebalance_norm(magnitudes, scales, q)?;
-            scales = new_scales;
-            q = new_q;
-        }
+        let mapped = super::krawczyk::map(domain, unknown, centers, scales, r, j, f)?;
+        let mut image = mapped.image;
+        let mut magnitudes = mapped.magnitudes;
+        scales = mapped.scales;
+        let mut q = mapped.q;
         // Keep the existing inexpensive enclosure when it qualifies. For
         // rotated correlated coordinates, a fresh original-net R*F enclosure
         // can avoid artificial cancellation loss in R*[DF]. Both constructions

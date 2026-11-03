@@ -70,7 +70,7 @@ pub use fiber_coverage::{
     QualifiedFiberCoverage, cover_fiber_atlas_box, cover_fiber_atlas_surfaces,
     cover_fiber_box, cover_fiber_surfaces,
 };
-pub use fiber::{FiberOperator, FiberAxis, FiberLimits, FiberReport, FiberSources, FiberStatus, FiberResult, QualifiedFiber, FiberContraction};
+pub use fiber::{QuotientDiscoveryLimits,QuotientDiscoveryReport,QuotientDiscoveryResult,discover_quotient_fiber_surfaces,QualifiedQuotientCoverage,QuotientCoverageResult,QuotientCoverageKind,QuotientCoverageNode,cover_quotient_fiber_box,cover_quotient_fiber_surfaces,QualifiedQuotientFiber,QuotientFiberResult,FiberOperator, FiberAxis, FiberLimits, FiberReport, FiberSources, FiberStatus, FiberResult, QualifiedFiber, FiberContraction};
 pub(crate) use rectilinear::rectangle_chart;
 pub use rectilinear::rectangular_trace_proposal;
 
@@ -787,3 +787,9 @@ pub use quadratic_graph::{QualifiedPolynomialSurface,qualify_polynomial_surface}
 
 mod polynomial_order;
 pub use polynomial_order::{GraphOrderLimits, QualifiedGraphMaterialOrder, certify_polynomial_graph_order, prove_polynomial_graph_boundary_side, prove_graph_projection_inside};
+
+mod algebraic;
+pub use algebraic::{QualifiedPoleSsRootArc,qualify_pole_ss_root_arc,DeflatedSsFiberLimits,DeflatedSsFiberReport,QualifiedDeflatedSsFiber,DeflatedSsFiberResult,qualify_deflated_ss_fiber,QualifiedSsPoleStratum,QualifiedSsPoleSaturation,qualify_ss_pole_stratum,qualify_ss_pole_saturation,ExactSsDeflationProof,QualifiedSsDeflatedSystem,qualify_ss_deflated_system,ExactSsGroebnerLimits,QualifiedSsGroebnerBasis,qualify_ss_groebner_basis,ExactSsAlgebraLimits,ExactSsPolynomial,QualifiedOriginalSsIdeal,qualify_original_ss_ideal};
+mod root_curve;
+pub use root_curve::{OriginalSsRootEdge,OriginalSsRootWire,OriginalSsPortKind,QualifiedOriginalSsPort,bind_original_ss_port,OriginalSsRootCurve,OriginalSsRootPoint,OriginalSsCurveLimits,OriginalSsCurveBounds};
+pub use root_curve::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};

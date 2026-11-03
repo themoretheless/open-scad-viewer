@@ -489,7 +489,7 @@ fn evaluate_projected(
     }
     Ok(Some((values, derivatives)))
 }
-fn inverse(m: [[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
+pub(crate) fn inverse(m: [[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
     let mut a = [[0.; 6]; 3];
     for i in 0..3 {
         for j in 0..3 {
@@ -608,3 +608,10 @@ mod operator_receipt_tests;
 #[path = "fiber/fiber_certificate.rs"]
 mod fiber_certificate;
 use fiber_certificate::certify;
+
+pub(crate) mod krawczyk;
+mod quotient;
+pub use quotient::{QuotientDiscoveryLimits,QuotientDiscoveryReport,QuotientDiscoveryResult,discover_quotient_fiber_surfaces,QualifiedQuotientFiber,QuotientFiberResult,QualifiedQuotientCoverage,QuotientCoverageResult,QuotientCoverageKind,QuotientCoverageNode,cover_quotient_fiber_box,cover_quotient_fiber_surfaces};
+
+
+pub(crate) use quotient::original_axis_sections;

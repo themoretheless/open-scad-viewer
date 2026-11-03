@@ -1,0 +1,136 @@
+    Blocking waiting for file lock on build directory
+warning: module `methods_mean_matrix__coordinate_path` should have a snake case name
+   --> nurbs-core/src/surface_self_chord.rs:688:5
+    |
+688 | mod methods_mean_matrix__coordinate_path;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_mean_matrix_coordinate_path`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: module `methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:254:5
+    |
+254 | mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_crate_surface_weight_profile_weight_profile_inspect_self_chord_pair`
+
+warning: module `methods_rail_constrained_bridge______self_chord_continuous` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:256:5
+    |
+256 | mod methods_rail_constrained_bridge______self_chord_continuous;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_self_chord_continuous`
+
+warning: module `methods_rail_constrained_bridge______inspect_radius_on_domains` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:258:5
+    |
+258 | mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_radius_on_domains`
+
+warning: module `methods_rail_constrained_bridge______section` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:100:5
+    |
+100 | mod methods_rail_constrained_bridge______section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_section`
+
+warning: module `methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:102:5
+    |
+102 | mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_transverse_corrected_injectivity_policy`
+
+warning: module `methods_profile_section___profile` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:252:5
+    |
+252 | mod methods_profile_section___profile;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_section_profile`
+
+warning: module `methods_profile_end_transition___section` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:254:5
+    |
+254 | mod methods_profile_end_transition___section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_end_transition_section`
+
+warning: `nurbs-core` (lib) generated 8 warnings
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-general-ss-20261104/crates/nurbs-core)
+warning: function `family` is never used
+  --> nurbs-core/tests/support/ss_closed_fiber.rs:39:8
+   |
+39 | pub fn family(source: &FiberSources, ellipses: &[([f64; 2], [f64; 2])]) -> Vec<QualifiedFiber> {
+   |        ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `circle_family` is never used
+  --> nurbs-core/tests/support/ss_closed_fiber.rs:93:8
+   |
+93 | pub fn circle_family(source: &FiberSources) -> Vec<QualifiedFiber> {
+   |        ^^^^^^^^^^^^^
+
+warning: function `owner` is never used
+  --> nurbs-core/tests/support/ss_closed_fiber.rs:96:8
+   |
+96 | pub fn owner(
+   |        ^^^^^
+
+warning: function `two_ovals` is never used
+   --> nurbs-core/tests/support/ss_closed_fiber.rs:134:8
+    |
+134 | pub fn two_ovals() -> FiberSources {
+    |        ^^^^^^^^^
+
+warning: `nurbs-core` (test "ss_closed_cycle") generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.80s
+     Running tests/ss_closed_cycle.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/41b962c8578b4f6f/out/ss_closed_cycle-41b962c8578b4f6f)
+
+running 4 tests
+test missing_cycle_work_or_unknown_components_cannot_publish_a_closed_traversal ... ok
+test original_closed_component_has_an_oriented_first_return_cycle_and_shared_ports ... ok
+test whole_closed_cycle_saves_literal_paired_endpoints_with_original_root_bounds ... ok
+test rational_projective_carriers_keep_original_closed_cycle_and_saved_trace ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.00s
+
+     Running tests/ss_conditioned_world_trace.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/67bf8ed50c4c480c/out/ss_conditioned_world_trace-67bf8ed50c4c480c)
+
+running 3 tests
+test conditioning_does_not_admit_wrong_world_coefficients_missing_agreement_or_too_tight_error ... ok
+test automatic_trace_builder_owns_the_whole_conditioned_free_interval ... ok
+test original_world_trace_survives_nonlinear_conditioning_and_larger_second_footprint ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/ss_construct_trace.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/b838a8c0063db15d/out/ss_construct_trace-b838a8c0063db15d)
+
+running 4 tests
+test certified_unknown_box_contraction_keeps_every_free_value_and_actual_root ... ok
+test partial_or_failed_construction_never_returns_a_complete_trace ... ok
+test rotated_original_surfaces_and_second_support_clock_construct_the_same_root ... ok
+test adaptive_curved_curved_trace_qualifies_every_original_root_piece ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/ss_fiber_world_trace.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/43ebb1923ea729eb/out/ss_fiber_world_trace-43ebb1923ea729eb)
+
+running 7 tests
+test a_curve_on_both_supports_cannot_claim_the_wrong_original_root_branch ... ok
+test second_surface_clock_and_rotated_world_frame_use_the_actual_source_operator ... ok
+test curved_rational_world_trace_has_continuous_original_root_error_and_full_clock ... ok
+test original_multispan_clock_covers_the_whole_root_and_flat_spans_are_refused ... ok
+test actual_coefficients_clock_and_proof_work_cannot_inherit_root_trace ... ok
+test original_multispan_surface_and_authored_world_knots_preserve_full_error_cover ... ok
+test genuine_piecewise_source_curvature_has_complete_original_world_trace_cover ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/ss_transverse_fibers.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/11dde937de4bbc40/out/ss_transverse_fibers-11dde937de4bbc40)
+
+running 7 tests
+test krawczyk_excludes_a_correlated_empty_box_that_world_coordinate_hulls_do_not_exclude ... ok
+test a_parameter_fiber_does_not_turn_a_singular_supports_point_image_into_a_curve ... ok
+test rational_weights_are_original_data_and_unknown_root_is_not_a_sampled_seed ... ok
+test source_knots_and_swapped_free_axis_preserve_complete_fiber_census ... ok
+test a_free_coordinate_is_a_proposal_and_periodic_endpoints_require_actual_exact_seam_data ... ok
+test exclusion_tangency_missing_work_and_false_preconditioners_have_distinct_outcomes ... ok
+test a_uniform_nonlinear_fiber_owns_the_original_surfaces_and_every_free_value ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
