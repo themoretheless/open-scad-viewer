@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 252,
-  "unallocatedCount": 748,
+  "specifiedCount": 253,
+  "unallocatedCount": 747,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6877,6 +6877,28 @@
         "Native typed API,16 new contracts, independent full-UV polynomial error certificates and complete current default/no-codec target coverage passed. This is one capability family; adapters and application delivery remain separate.",
         "First/mixed partials total order1..3, non-unit area normal and metric[E,F,G] are one capability family. Numeric carrier error with original clocks and one-sided traces, one whole-net weight gauge and actual stored-bit proof; not an intrinsic metric norm.",
         "Existing output degrees25,1m-work/4096-bit, geometry/weight/conditioning limits unchanged. No adaptive fitting, sign/regularity/topology, evaluator arithmetic, JSON/WASM/Rush/editor/STEP or whole-application qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0253",
+      "name": "Построение точного и непрерывно ограниченного поля кручения пространственной NURBS-кривой",
+      "status": "planned",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_derivative::torsion",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/torsion.rs",
+        "crates/nurbs-core/src/editing/bounded_differential.rs",
+        "crates/nurbs-core/tests/torsion_field_contracts.rs",
+        "docs/design/nurbs-torsion-field.md",
+        "docs/qualification/nurbs-torsion-field-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-torsion-field-2026-11-03/independent_oracle.py"
+      ],
+      "remainingQualification": [
+        "Exact and bounded native APIs,16 new contracts and independent full-span proofs pass. Full native regression remains pending; no completed native credit yet.",
+        "Original squared binormal must be proved strictly positive before cancellation; unresolved or zero curvature sources refuse atomically. Scalar torsion carrier, one-sided original clocks, degree25/1m-work/4096-bit and geometry/weight limits unchanged.",
+        "No global Frenet frame, knot smoothness, topology, evaluator arithmetic, JSON/WASM/Rush/editor/STEP or whole-app qualification."
       ]
     }
   ],
