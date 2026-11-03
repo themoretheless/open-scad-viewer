@@ -1,0 +1,46 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/ed0054eadc87e725d9f751b954746563300e83a714804d16c8d3e5a046c6f3c9.wasm",
+  "sha256": "ed0054eadc87e725d9f751b954746563300e83a714804d16c8d3e5a046c6f3c9",
+  "bytes": 21851089,
+  "sourceCommit": "e858285daf9446485ff1a007dc2cc6bf1b3cfaf8",
+  "status": "passed",
+  "abiCases": 178,
+  "graphCases": 66,
+  "workersStarted": 159,
+  "workersTerminated": 159,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "36971e3824a7d42fb2020d6fc32e0e44b7fda0e3196243a66219536df80b2452",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "8dc1f6b125c5f9b59a9233a9307125b3f46d2f1616cf1c39e31d98d534269dbf",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "tools/browser-qualification/surface-self-intersection.mjs": "44c731f58c69d83391bd7bb83191f13f7f291786dcdd9506d18385fa13582a3c",
+    "src/services/originalQuadricGraphProtocol.ts": "92fd629b00b21a322c37794540726882ff514d574cf25fcf79bbf1715db2f9c0"
+  },
+  "nativeReceipt": "docs/qualification/homogeneous-affine-quadric-graph-2026-11-03/results.json",
+  "observedTimings": {
+    "graph-homogeneous-nonplanar-rotated-false-gauge-1": {
+      "abiMs": 1.070791999999983,
+      "workerMs": 6.399999976158142
+    },
+    "graph-homogeneous-nonplanar-algebraic-edge": {
+      "abiMs": 1.409541999999874,
+      "workerMs": 6.399999976158142
+    },
+    "graph-homogeneous-nonplanar-degree-three": {
+      "abiMs": 1.8451669999999467,
+      "workerMs": 6
+    }
+  },
+  "timingScope": "Single-run observations, not repeat benchmark qualification. ABI request versus complete Worker call, excluding fixture checks.",
+  "scope": "Actual raw WASM and Chromium module Worker qualification of original positive-factor nonplanar coupled graph targets with certified homogeneous affine projection: degree-(2,2), rotations and gauges, algebraic edge, degree-(3,3), invalid original target membership and ABI ULP projection refusal.",
+  "remaining": [
+    "General noncanceled nonplanar coupled weights",
+    "Multispan coupled charts",
+    "General UV precision qualification",
+    "General freeform all branches",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}
