@@ -1,0 +1,46 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/6b13bf42d05a107c37a5f59538edb84b30e31136f71c5663bd5b5a3f7ddbf788.wasm",
+  "sha256": "6b13bf42d05a107c37a5f59538edb84b30e31136f71c5663bd5b5a3f7ddbf788",
+  "bytes": 21882870,
+  "sourceCommit": "945e96585679a122497c686ad5f782e027465673",
+  "status": "passed",
+  "abiCases": 229,
+  "graphCases": 113,
+  "workersStarted": 206,
+  "workersTerminated": 206,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "c87b2e3d6d8565392a002b245fc7c67f1a99fe868944df1bd9c4af7353725c14",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "45db97b325274dc756af689d969d6b9838f6f35bef64d2f15214546c387ebab3",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "tools/browser-qualification/surface-self-intersection.mjs": "2ef43f0c65fab8c6e2a2734978177649f2350042aba05297f98b6ab427228cc6",
+    "src/services/originalQuadricGraphProtocol.ts": "851293eede7ede2d589907a1a5fd040bd647099c5b6a7dae847f6640469bfb65"
+  },
+  "nativeReceipt": "docs/qualification/unordered-monotone-clocks-2026-11-03/results.json",
+  "nativeSourceHashesMatched": true,
+  "observedTimings": {
+    "graph-unordered-monotone-kind-0-gauge-1-rotated-false": {
+      "abiMs": 0.8279160000001866,
+      "workerMs": 5.199999988079071
+    },
+    "graph-unordered-monotone-kind-1-gauge-1-rotated-false": {
+      "abiMs": 1.1099169999997684,
+      "workerMs": 4.9000000059604645
+    },
+    "graph-unordered-monotone-kind-3-gauge-1-rotated-false": {
+      "abiMs": 7.501291999999921,
+      "workerMs": 49.400000005960464
+    }
+  },
+  "timingScope": "Single-run observations, not repeat benchmark qualification. ABI request versus complete Worker call, excluding fixture checks.",
+  "scope": "Actual raw WASM and Chromium module Workers for unordered but certified-monotone original clocks. Polynomial and rational stationary clocks, multi-span stationary points at 1/2 and 1/3, rotations/gauges, zero predicate budget and rejection of a genuinely folded clock with positive endpoint slopes. Differential regularity and trim/Body credit remain unproved.",
+  "remaining": [
+    "General joint coupled projected maps without independent clocks",
+    "Arbitrary UV accuracy and differential regularity qualification",
+    "General freeform all branches",
+    "Trim and Body admission",
+    "Installed provider qualification"
+  ]
+}
