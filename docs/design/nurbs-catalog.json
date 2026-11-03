@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 241,
-  "unallocatedCount": 759,
+  "specifiedCount": 242,
+  "unallocatedCount": 758,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6576,6 +6576,28 @@
       "remainingQualification": [
         "Validated3D geometry and invertible finite4x4 matrix. All transformed control weights have one strict sign; mixed/zero signs conservatively refuse. Full original basis/clock and one global net gauge; exact positive binary64 storage or atomic refusal under existing geometry,4096-bit and1m-work limits.",
         "Native curve and surface APIs qualified in default and no-codec builds. No JSON/WASM/Rush/editor/STEP, evaluator-bit, topology, external certificate or old source-epoch authority transfer. Full1000 target and whole-application qualification remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0242",
+      "name": "Точное построение рациональных кривых поля производной на всех исходных пролётах с сохранением абсолютного параметра и односторонних следов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точное дифференцирование",
+      "nativeApi": "nurbs_core::editing::exact_derivative::curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
+        "crates/nurbs-core/tests/exact_derivative_contracts.rs",
+        "crates/nurbs-core/tests/exact_derivative_rational_spans.rs",
+        "docs/design/nurbs-exact-derivative.md",
+        "docs/qualification/nurbs-exact-derivative-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-derivative-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Validated2D/3D curves, full fundamental-domain span cover, multispan/unclamped/periodic storage. Piecewise clamped output keeps original absolute clock and distinct one-sided traces; no invented derivative continuity. Exact de Boor extraction, common-factor cancellation and fresh stored-bit polynomial identity under unchanged1m-work/4096-bit/degree25/geometry caps. Exact storage or atomic whole-result refusal.",
+        "Native default and no-codec library/contract qualification only. No JSON/WASM/Rush/editor/STEP, numerical evaluator-bit or source/topology certificate transfer. Full1000 and complete application delivery remain open."
       ]
     }
   ],

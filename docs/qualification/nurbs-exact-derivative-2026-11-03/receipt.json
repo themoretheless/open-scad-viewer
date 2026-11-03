@@ -1,0 +1,305 @@
+{
+  "baseCommit": "df6561a2e8522ad041ec0a7cf3d346751895ef81",
+  "status": "native-qualified",
+  "scope": "Native exact full original-domain derivative vector-field curve construction, including general multispan, unclamped, periodic and repeated-knot input. No JSON/WASM/Rush/editor/STEP, bitwise evaluator, topology or old source-certificate transfer.",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "119dba7203106e5253bd3061c8fbd8872c01e1c3bf33f1a7ae1f52aab8f68402",
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "672ca4a06b4882e933eeafb3cdc149964584e527af21e405c949e1be5b0aba0c",
+    "crates/nurbs-core/src/editing/exact_derivative/extraction.rs": "11c49641d17ecd5637b5112c16d46dbb875803d930f1151d3caa382816469935",
+    "crates/nurbs-core/src/editing/exact_derivative/proof.rs": "9f80d01427a8cdc06f28e85299dc9c4c970bd11eacb1e5fa8bf46becf2791fd0",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/src/editing/rational_factor/polynomial.rs": "fb5ddabb8e7b294868b5447b7eed52180febaf5bac827cec908840bb532e3da5",
+    "crates/nurbs-core/tests/exact_derivative_contracts.rs": "fb48edae6678e827a1e939480f758d68d3b24941c6e48cacc556a409f7331982",
+    "crates/nurbs-core/tests/exact_derivative_rational_spans.rs": "e4bdaf3b4109c376d70bb36a8f5032b1f343d2d05b8ca0909dde52c722d993b6",
+    "docs/qualification/nurbs-exact-derivative-2026-11-03/exact_oracle.py": "f317bc91a7130b9eabdc41d1ce5e3a251a6ef00134f8bd31a78567e95fa259be"
+  },
+  "explicitTestEnvironment": {
+    "CARGO_TARGET_DIR": "/Users/themoretheless/.codex/tmp/osv-nurbs-rational-reduction-target-20261102",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)\nbinary: rustc\ncommit-hash: 215a8af4bb4c106cccf6d6535f84eaae91818265\ncommit-date: 2026-09-15\nhost: aarch64-apple-darwin\nrelease: 1.100.0-nightly\nLLVM version: 23.1.1\n",
+  "mainTests": {
+    "default": {
+      "passed": 2304,
+      "ignored": 1
+    },
+    "no-codec": {
+      "passed": 2099,
+      "ignored": 1
+    }
+  },
+  "mainCommands": {
+    "native244-default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--lib",
+        "--test",
+        "exact_derivative_contracts",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T23:52:32.675163+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-02T23:56:06.499509+00:00"
+    },
+    "native244-no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--lib",
+        "--test",
+        "exact_derivative_contracts",
+        "--test",
+        "exact_projective_contracts",
+        "--test",
+        "exact_projective_numeric_boundaries",
+        "--test",
+        "rational_factor_contracts",
+        "--test",
+        "rational_surface_factor_contracts",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-02T23:56:06.500116+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T00:00:30.930905+00:00"
+    }
+  },
+  "previousProjectiveOracle": {
+    "acceptedDefinitions": 12,
+    "negativeControls": 8,
+    "definitionsSha256": "6ad55f0db3c0381fb740c8c2666ea40ec0f1316cf351346540111fde70fe1084",
+    "scope": "Exact permutation determinant, common homogeneous coefficient identity for actual serialized output over unchanged full basis and strictly signed whole-domain denominator. No sampled identity, evaluator-bit, topology, WASM or application claim."
+  },
+  "previousCurveFactorOracle": {
+    "passed": 8,
+    "failed": 0,
+    "checks": {
+      "elevated-primitive": true,
+      "constant": true,
+      "degree25": true,
+      "negative-factor": true,
+      "rational-clock": true,
+      "3d-clock": true,
+      "wrong-clock-detected": true,
+      "per-pole-weight-sign-change-detected": true
+    },
+    "acceptedDefinitionsSha256": "40e55a462e93a0ce29d70df5828cc2fea951f6a5ffb9ae3f7e630e5d3b875568",
+    "scope": "Exact full polynomial cross-products of actual binary64 source/output definitions, same original clocks; no sampled geometry, topology, global qualification or formal compiler claim."
+  },
+  "previousSurfaceFactorOracle": {
+    "acceptedDefinitions": 6,
+    "negativeControls": 4,
+    "failed": 0,
+    "definitionsSha256": "b71f333b265bc8091b549b81b7e1117624b110febffd7c4e81624d56c2acd6c7",
+    "independentOracleSourceSha256": "6f93b0ff135d9e613ac394b05cf7334cdb2cf9132cbc49a8a709e89b6f5f4fbf",
+    "scope": "Exact bivariate homogeneous polynomial cross-products on every original/output tensor knot cell, actual binary64 output. Degree25 and untouched periodic support included. Detects per-row gauges, oneULP output damage, clock shift and independent-row factor cancellation. No sampling, topology, current WASM or compiler claim."
+  },
+  "unitInventory": {
+    "previousNames": 2259,
+    "retainedNames": 2259,
+    "removedNames": [],
+    "namesSha256": "961fd250796271108082815873ebe7af8be2915a0cad4fd32b0b738e08e30a00",
+    "scope": "Library executable only; integration tests inventoried separately."
+  },
+  "limits": {
+    "maxExactWork": 1000000,
+    "rationalBits": 4096,
+    "sourceDegree": 25,
+    "outputDegree": 25,
+    "sourceControls": 256,
+    "geometryLimitsChanged": false
+  },
+  "historicalAttempts": [
+    {
+      "stage": "oracle negative control",
+      "reason": "Changing only an inactive outer source knot can preserve the entire active-domain curve; initial test expectation was wrong. Negative control now changes active endpoint and clamped suffix; mathematical implementation unchanged."
+    }
+  ],
+  "ownership": "Existing registered editing root, exact de Boor extraction/proof children; no new root alias.",
+  "remainingQualification": [
+    "JSON/WASM/Rush/editor/STEP integration and complete original1000 scope",
+    "Current-source production artifact delivery remains unqualified; this native addition installs no WASM or profile."
+  ],
+  "catalogueCapability": "NURBS-0242",
+  "extraCommands": {
+    "no-codec": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--no-default-features",
+        "--test",
+        "exact_derivative_rational_spans",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T00:01:15.759735+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T00:01:16.442000+00:00"
+    },
+    "default": {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "crates/Cargo.toml",
+        "-p",
+        "nurbs-core",
+        "--test",
+        "exact_derivative_rational_spans",
+        "--",
+        "--nocapture"
+      ],
+      "start": "2026-11-03T00:01:16.442320+00:00",
+      "status": "terminal",
+      "exitCode": 0,
+      "end": "2026-11-03T00:01:17.181710+00:00"
+    }
+  },
+  "tests": {
+    "default": {
+      "passed": 2307,
+      "ignored": 1,
+      "libraryPassed": 2258,
+      "newDerivativeContracts": 13,
+      "relatedContracts": 36
+    },
+    "no-codec": {
+      "passed": 2102,
+      "ignored": 1,
+      "libraryPassed": 2053,
+      "newDerivativeContracts": 13,
+      "relatedContracts": 36
+    }
+  },
+  "totalFinalRustExecutions": 4409,
+  "oracle": {
+    "acceptedDefinitions": 12,
+    "pieces": 21,
+    "negativeControls": 8,
+    "definitionsSha256": "2bc474b5aec93cb5c5b0b51d6a548c95b3f09d879647c68efbaa0e781b4346bc",
+    "scope": "Exact full-domain polynomial derivative identities from independently reconstructed original Cox-de Boor basis, absolute clock, actual stored output bits and complete one-sided span cover. No sampling, topology, JSON/WASM/editor qualification."
+  },
+  "catalogue": {
+    "target": 1000,
+    "specified": 242,
+    "integrated": 79,
+    "native": 163,
+    "unallocated": 758
+  },
+  "archives": {
+    "native244-contracts-first.log.gz": {
+      "sha256": "4557addea184ec8e3e41f58a70c74d1a65a88cae308be33ee18f81df502a9691",
+      "decodedSha256": "b3899c0c815bce145c8e5f594dc03ea5106d32f622e017ff2a3e010f1b22770d",
+      "bytes": 1693
+    },
+    "native244-default.log.gz": {
+      "sha256": "746c37b38db46a44588baf7a8cc1bed3e8835f4d777cd9641e961c06b991df32",
+      "decodedSha256": "654bc8cd4868bceb84cde2328e7ae546a9a425dfccb428881e638679d796ef6f",
+      "bytes": 60372
+    },
+    "native244-no-codec.log.gz": {
+      "sha256": "2ee0a1cb0504282ddcb9b008ca36055c36109349b519266bc884d48727cf6bbd",
+      "decodedSha256": "434942f28141f5763369a7770e31544c5308f685278501b3e9ec3cf7543d0026",
+      "bytes": 54216
+    },
+    "native244-extra-default.log.gz": {
+      "sha256": "1840152b89e9955112065708fb069c1c0f74bcfc64d5c6e812b9cd197bba6da6",
+      "decodedSha256": "c1bd37c317fe3d4ec8e9769aaae4de8c9cbf0b564126796a8fa6e55c6f72e6bc",
+      "bytes": 1242
+    },
+    "native244-extra-no-codec.log.gz": {
+      "sha256": "492ac17a5a0a3e95a4dcd69bd4df1d9bee7233bcf8bf26c50195b65a10b8407f",
+      "decodedSha256": "bde26a9e268531405e2ff916c05b746d141e8812231fd1ce7c1736cb27ff6dba",
+      "bytes": 967
+    },
+    "native244-combined-default.log.gz": {
+      "sha256": "7945d970785a67677469fd88f923573fecf78857ce9fa566e8130fb2ac489452",
+      "decodedSha256": "a4b640a7d07b6c3a7aad7ad95731af8f8528e8bb5bcd04543d723fef3e492ef9",
+      "bytes": 61369
+    },
+    "native244-runner-state.json.gz": {
+      "sha256": "57334edb7fdccf1ab0ff1def5c367acd3e55bcda327cf927be2f0f3d474829ce",
+      "decodedSha256": "ba48bf56a84a238181b398a9d54bd8467a5ffd3d787b23257bad86fe9b795724",
+      "bytes": 350
+    },
+    "native244-extra-state.json.gz": {
+      "sha256": "48a65fd31c8e581229cd838266cd2f3aa8187c91f4080289f29b5095e22307f5",
+      "decodedSha256": "c821ffec4ca9149a1f3279bed30282f7e379f1ab1645100c8367ae9596d2c53c",
+      "bytes": 284
+    },
+    "native244-source-inputs.json.gz": {
+      "sha256": "4cf46c694573dd439802bef1a923017fc0d1049dfa2e86912920e83c3abaa321",
+      "decodedSha256": "02257e440001f98aeb60c404398b3a87bc79066d1ff778ca88acdc962738dbf5",
+      "bytes": 530
+    },
+    "native244-unit-inventory.json.gz": {
+      "sha256": "27f1d2399d04d1e2ea148f828079b7834f50e6911875561a02e5c69b73d96f30",
+      "decodedSha256": "35a882c7e879e7d3a5685c0c60ff62ae65a706df60abcd9b8b6c8a91697028f5",
+      "bytes": 195
+    },
+    "native244-oracle-final.json.gz": {
+      "sha256": "a059e513f7e9f19be57653bfa5d24177540a54934ba7cbac1974fb25e88da5c1",
+      "decodedSha256": "9b371f60e06afd71287163c2a2375686103cdff70affdff63c1fc2159998fa54",
+      "bytes": 318
+    },
+    "native244-projective-regression.json.gz": {
+      "sha256": "7822c5f74876ab8c637a8f5628052688855115ee2f845c052b145c5518c5d8a4",
+      "decodedSha256": "935f079e8ec9a274cc22d7e2e2202ad231414b8da96ddd7b913eb6b1e840a29d",
+      "bytes": 304
+    },
+    "native244-curve-factor-regression.json.gz": {
+      "sha256": "4e1aa48b2019a197f03ce53bfa662a991a9726df4579036903bed18afb60ae1e",
+      "decodedSha256": "2b1149e31e59531f263438c5a69c4aa3c968ac2f15d9e236754b6016bf72a1d1",
+      "bytes": 362
+    },
+    "native244-surface-factor-regression.json.gz": {
+      "sha256": "8af4615fdbd373bef219f36da1892e09ccdc5b6aa63eda9de21e68a498f40e5d",
+      "decodedSha256": "1b2dbe9d754d84affb1ce20b38fe1e584ed65f815555ef1379e95331505f4aaf",
+      "bytes": 424
+    }
+  },
+  "sourceEpochNote": "Additional rational-span test executable was added after main regression launch; library algorithm sources stayed byte-identical. It was separately compiled/executed in both feature modes. Final actual oracle input combines both default logs. Source hashes include the final extra executable.",
+  "checks": {
+    "apiMap": "244 registered roots,242 catalogue entries; existing editing owner",
+    "catalogue": "242/1000=79integrated+163native;758unallocated;0errors",
+    "architecture": "54 existing oversized pins,0 pinned layer violations",
+    "diffCheck": "passed"
+  }
+}
