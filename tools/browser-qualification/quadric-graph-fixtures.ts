@@ -135,3 +135,22 @@ function coupledDegreeTwo(q:OriginalQuadricGraphQuery){coupledPlane(q);Object.as
  const q=coupledPlane(graphQuery());Object.assign(q.patch,{degreeU:8,degreeV:8,knotsU:[...Array(9).fill(-2),...Array(9).fill(2)],knotsV:[...Array(9).fill(10),...Array(9).fill(14)],controlPoints:Array.from({length:9},(_,i)=>Array.from({length:9},(_,j)=>[i,j,0])),weights:Array.from({length:9},(_,i)=>Array.from({length:9},(_,j)=>i===8&&j===8?65537:1))});q.curve.controlPoints=[[6,6,-1],[6,6,1]]
  quadricGraphCases.push({name:'graph-coupled-degree-eight-original-target',query:q,check:r=>present(r,[[4,0,12,1]])})
 }
+
+function homogeneousTarget(q:OriginalQuadricGraphQuery){Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,2,2,2],knotsV:[10,10,10,14,14,14],weights:[[1,1,1],[1,1.25,1.5],[1,1.5,2]],controlPoints:[[[0,0,0],[0,7.5,0],[0,15,0]],[[7.5,0,0],[6,6,45],[5,15,75]],[[15,0,0],[15,5,75],[15,15,225]]]});return q}
+for(const rotated of [false,true])for(const gauge of [1,7]){
+ const q=homogeneousTarget(graphQuery());q.curve.controlPoints=[[7.5,7.5,55.25],[7.5,7.5,57.25]];q.patch.weights=q.patch.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of q.patch.controlPoints)for(const p of row)[p[0],p[2]]=[p[2]!,p[0]!];for(const p of q.curve.controlPoints)[p[0],p[2]]=[p[2]!,p[0]!];q.quadric=[[0,0,0,-.5],[0,0,.5,0],[0,.5,0,0],[-.5,0,0,0]]}
+ quadricGraphCases.push({name:`graph-homogeneous-nonplanar-rotated-${rotated}-gauge-${gauge}`,query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='homogeneous-affine','Missing original homogeneous affine identity')}})
+}
+{
+ const q=homogeneousTarget(boundaryQuery());q.curve.controlPoints=q.curve.controlPoints.map(p=>[15*p[0]!,15*p[1]!,225*p[2]!])
+ quadricGraphCases.push({name:'graph-homogeneous-nonplanar-algebraic-edge',query:q,check:r=>present(r,[[2+4/3,-2,12,2]],'quadric-coordinate-sign')})
+}
+{
+ const q=homogeneousTarget(graphQuery());q.patch.controlPoints[1]![1]![2]!+=.125
+ quadricGraphCases.push({name:'graph-homogeneous-unproved-original-quadric',query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Wrong original quadric target admitted')})
+}
+{
+ const q=graphQuery(),l=25740;Object.assign(q.patch,{degreeU:3,degreeV:3,knotsU:[-2,-2,-2,-2,2,2,2,2],knotsV:[10,10,10,10,14,14,14,14],weights:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>9+i*j)),controlPoints:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>{const w=9+i*j;return[l*(3*i+i*(i-1)*j/2)/w,l*(3*j+j*(j-1)*i/2)/w,l*l*(i*j+i*(i-1)*j*(j-1)/4)/w]}))});q.curve.controlPoints=[[l/2,l/2,l*l/4-1],[l/2,l/2,l*l/4+1]]
+ quadricGraphCases.push({name:'graph-homogeneous-nonplanar-degree-three',query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='homogeneous-affine','Degree-three identity missing')}})
+}

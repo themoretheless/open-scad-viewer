@@ -840,18 +840,156 @@ fn nonseparable_degree_two_planar_target_has_refined_joint_uv_enclosures() {
         &inspect(&line([0., 0.5, -1.], [0., 0.5, 1.]), &s, q),
         &[(4., -2., 12., 1)],
     );
-    q[0][1]=3.;q[1][0]=-3.;
-    present(&inspect(&line([0.75,0.75,-1.],[0.75,0.75,1.]),&s,q),&[(4.,0.,12.,1)]);
+    q[0][1] = 3.;
+    q[1][0] = -3.;
+    present(
+        &inspect(&line([0.75, 0.75, -1.], [0.75, 0.75, 1.]), &s, q),
+        &[(4., 0., 12., 1)],
+    );
 }
 
 #[test]
 fn coupled_degree_eight_original_target_proves_actual_finite_contact() {
-    let (mut s,_)=saddle();s.degree_u=8;s.degree_v=8;
-    s.knots_u=[vec![-2.;9],vec![2.;9]].concat();s.knots_v=[vec![10.;9],vec![14.;9]].concat();
-    s.control_points=(0..=8).map(|i|(0..=8).map(|j|vec![i as f64,j as f64,0.]).collect()).collect();
-    s.weights=vec![vec![1.;9];9];s.weights[8][8]=65537.;
-    let mut q=[[0.;4];4];q[2][3]=0.5;q[3][2]=0.5;
+    let (mut s, _) = saddle();
+    s.degree_u = 8;
+    s.degree_v = 8;
+    s.knots_u = [vec![-2.; 9], vec![2.; 9]].concat();
+    s.knots_v = [vec![10.; 9], vec![14.; 9]].concat();
+    s.control_points = (0..=8)
+        .map(|i| (0..=8).map(|j| vec![i as f64, j as f64, 0.]).collect())
+        .collect();
+    s.weights = vec![vec![1.; 9]; 9];
+    s.weights[8][8] = 65537.;
+    let mut q = [[0.; 4]; 4];
+    q[2][3] = 0.5;
+    q[3][2] = 0.5;
     // At u=v=1/2, the corner contribution doubles W; each projected mean
     // becomes 3/4, hence world x=y=6 in this exact integer control frame.
-    let r=inspect(&line([6.,6.,-1.],[6.,6.,1.]),&s,q);present(&r,&[(4.,0.,12.,1)]);
+    let r = inspect(&line([6., 6., -1.], [6., 6., 1.]), &s, q);
+    present(&r, &[(4., 0., 12., 1)]);
+}
+
+fn homogeneous_saddle() -> (Surface, [[f64; 4]; 4]) {
+    let (mut s, q) = saddle();
+    s.degree_u = 2;
+    s.degree_v = 2;
+    s.knots_u = vec![-2., -2., -2., 2., 2., 2.];
+    s.knots_v = vec![10., 10., 10., 14., 14., 14.];
+    // H=(15u,15v,225uv,1)*(1+uv), kept in the ORIGINAL degree-(2,2) basis.
+    s.weights = vec![vec![1., 1., 1.], vec![1., 1.25, 1.5], vec![1., 1.5, 2.]];
+    s.control_points = vec![
+        vec![vec![0., 0., 0.], vec![0., 7.5, 0.], vec![0., 15., 0.]],
+        vec![vec![7.5, 0., 0.], vec![6., 6., 45.], vec![5., 15., 75.]],
+        vec![vec![15., 0., 0.], vec![15., 5., 75.], vec![15., 15., 225.]],
+    ];
+    (s, q)
+}
+#[test]
+fn nonplanar_coupled_positive_factor_preserves_original_affine_uv() {
+    for rotated in [false, true] {
+        for gauge in [1., 7.] {
+            let (mut s, mut q) = homogeneous_saddle();
+            for row in &mut s.weights {
+                for w in row {
+                    *w *= gauge;
+                }
+            }
+            let mut c = line([7.5, 7.5, 55.25], [7.5, 7.5, 57.25]);
+            if rotated {
+                for row in &mut s.control_points {
+                    for p in row {
+                        p.swap(0, 2);
+                    }
+                }
+                for p in &mut c.control_points {
+                    p.swap(0, 2);
+                }
+                q = [
+                    [0., 0., 0., -0.5],
+                    [0., 0., 0.5, 0.],
+                    [0., 0.5, 0., 0.],
+                    [-0.5, 0., 0., 0.],
+                ];
+            }
+            let before = s.clone();
+            let r = inspect(&c, &s, q);
+            present(&r, &[(4., 0., 12., 1)]);
+            assert_eq!(s, before);
+            assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::HomogeneousAffine);
+            assert_eq!(
+                r.contacts[0].parameter_box,
+                [[4., 4.], [0., 0.], [12., 12.]]
+            );
+        }
+    }
+}
+#[test]
+fn original_homogeneous_projection_retains_algebraic_edge_proof() {
+    let (s, q) = homogeneous_saddle();
+    let c = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![
+            vec![15., 7.5, -112.5],
+            vec![0., 7.5, 225.],
+            vec![-15., 7.5, -112.5],
+            vec![-30., 7.5, -1125.],
+        ],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let r = inspect(&c, &s, q);
+    present(&r, &[(2. + 4. / 3., -2., 12., 2)]);
+    assert!(r.boundary_exact_work > 0);
+}
+#[test]
+fn homogeneous_projection_never_snaps_original_ulp_drift() {
+    let (mut s, q) = homogeneous_saddle();
+    s.control_points[1][1][0] = f64::from_bits(6f64.to_bits() + 1);
+    let c = line([7.5, 7.5, 55.25], [7.5, 7.5, 57.25]);
+    assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).is_err());
+    let (mut s, q) = homogeneous_saddle();
+    s.control_points[1][1][2] += 0.125;
+    let r = inspect(&c, &s, q);
+    assert!(!r.target_graph_proven && r.contacts.is_empty() && !r.complete);
+}
+
+#[test]
+fn nonplanar_coupled_degree_three_factor_uses_authored_integer_poles() {
+    let (mut s, q) = saddle();
+    s.degree_u = 3;
+    s.degree_v = 3;
+    s.knots_u = [vec![-2.; 4], vec![2.; 4]].concat();
+    s.knots_v = [vec![10.; 4], vec![14.; 4]].concat();
+    // W=9*(1+uv); 25740 is divisible by every original weight 9+i*j.
+    // Integer Euclidean poles retain the entire rational identity exactly.
+    let l = 25740.;
+    s.weights = (0..4)
+        .map(|i| (0..4).map(|j| (9 + i * j) as f64).collect())
+        .collect();
+    s.control_points = (0..4)
+        .map(|i| {
+            (0..4)
+                .map(|j| {
+                    let (x, y) = (i as f64, j as f64);
+                    let w = (9 + i * j) as f64;
+                    vec![
+                        l * (3. * x + x * (x - 1.) * y / 2.) / w,
+                        l * (3. * y + y * (y - 1.) * x / 2.) / w,
+                        l * l * (x * y + x * (x - 1.) * y * (y - 1.) / 4.) / w,
+                    ]
+                })
+                .collect()
+        })
+        .collect();
+    let r = inspect(
+        &line(
+            [l / 2., l / 2., l * l / 4. - 1.],
+            [l / 2., l / 2., l * l / 4. + 1.],
+        ),
+        &s,
+        q,
+    );
+    present(&r, &[(4., 0., 12., 1)]);
+    assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::HomogeneousAffine);
 }

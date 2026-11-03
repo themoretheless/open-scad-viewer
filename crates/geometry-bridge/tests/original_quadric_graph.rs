@@ -293,3 +293,30 @@ fn coupled_bernstein_planar_target_serializes_joint_uv_enclosures() {
     }
     ledger(&r);
 }
+
+#[test]
+fn nonplanar_coupled_common_factor_is_proved_on_original_tensor_and_preserves_exact_uv() {
+    let mut q = query();
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["degreeV"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 10., 14., 14., 14.]);
+    q["patch"]["weights"] = json!([[1., 1., 1.], [1., 1.25, 1.5], [1., 1.5, 2.]]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 7.5, 0.], [0., 15., 0.]],
+        [[7.5, 0., 0.], [6., 6., 45.], [5., 15., 75.]],
+        [[15., 0., 0.], [15., 5., 75.], [15., 15., 225.]]
+    ]);
+    q["curve"]["controlPoints"] = json!([[7.5, 7.5, 55.25], [7.5, 7.5, 57.25]]);
+    let before = q.clone();
+    let r = dispatch(q.clone()).unwrap();
+    assert_eq!(q, before);
+    assert_eq!(r["targetParameterization"], "homogeneous-affine");
+    assert_eq!(r["targetGraphProven"], true);
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["parameterBox"],
+        json!([[4., 4.], [0., 0.], [12., 12.]])
+    );
+    ledger(&r);
+}

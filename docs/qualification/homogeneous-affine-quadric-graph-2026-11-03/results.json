@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "baseCommit": "64feb7215410f107929a7d88815544fceff54435",
+  "nativeTests": 35,
+  "bridgeTests": 15,
+  "coefficientCensusTests": 1,
+  "clientTests": 73,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/chart.rs": "c383964ebfc1ae2f44ba47d4727f57c75730005e90043534d7313369e0507e81",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_affine.rs": "786ccdfe0ae7089cd073e217230f3d24245110d93f5237d3188de300e5391ac0",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "bb88296c5a768f93a7018ba9b00e79f1f10090c89337538383d995ebe2f8be0f",
+    "crates/nurbs-core/tests/original_quadric_graph.rs": "227dd78e016b8746c957de2c7baf6e83082ebc75f219f5b55a8ab8f95778b513",
+    "crates/geometry-bridge/src/intersections/quadric_graph.rs": "c6742189526f9383699fa56dfd3434f091c577b3da4de24b066e8d5bb6e60941",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "744511292996abbc02c7a3e6a5eb9a2d9c1c878cafe851cc8a102972bbc844b1"
+  },
+  "scope": "Original positive-weight single Bezier targets with exactly proved homogeneous affine projection. Coefficient census in degree-(p+1,q+1) proves Hxy=(O+uU+vV)W; original quadric tensor membership and unique-sheet checks are still mandatory. Includes nonplanar coupled factors without factor extraction or source-pole replacement.",
+  "sourceRewritten": false,
+  "factorNumericallyExtracted": false,
+  "qualification": "All 64 degree pairs for the coefficient census and ULP refusal; actual nonplanar degree-(2,2) and degree-(3,3) coupled source targets, both axis charts, two weight gauges, exact UV, algebraic boundary, invalid projection and wrong original target membership.",
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for homogeneous-affine targets",
+    "General noncanceled nonplanar coupled weights",
+    "Multispan coupled charts",
+    "General UV precision qualification",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

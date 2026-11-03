@@ -46,7 +46,10 @@ impl Chart {
         let coupled = !separable
             && single
             && (0..3).all(|i| (0..3).all(|j| q(matrix[i][j]) + q(matrix[j][i]) == q(0.)));
-        check(separable || coupled,"Quadric graph requires exactly separable original positive weights or a coupled planar Bezier chart")?;
+        check(
+            separable || single,
+            "Multi-span quadric graphs require exactly separable original positive weights",
+        )?;
         let coupled_tensor = (coupled && (p > 1 || r > 1)).then(|| {
             s.weights
                 .iter()
@@ -129,7 +132,10 @@ impl Chart {
                     (0..2).all(|k| pole(i, j)[k] == &origin[k] + &u[k] * &gu[i] + &v[k] * &gv[j])
                 })
             });
-            if !affine {
+            let ordinary = affine && (separable || coupled);
+            let homogeneous =
+                !ordinary && single && super::homogeneous_affine::prove(s, axes, &origin, &u, &v);
+            if !ordinary && !homogeneous {
                 continue;
             }
             // The coefficient of the dependent coordinate is affine in the
@@ -158,10 +164,21 @@ impl Chart {
             }
             return Ok(Self {
                 axes,
-                parameterization,
-                clocks,
-                coupled: coupled_weights,
-                coupled_tensor,
+                parameterization: if homogeneous {
+                    OriginalQuadricGraphParameterization::HomogeneousAffine
+                } else {
+                    parameterization
+                },
+                clocks: if homogeneous {
+                    [
+                        super::clock::Clock::original(vec![q(1.), q(1.)]),
+                        super::clock::Clock::original(vec![q(1.), q(1.)]),
+                    ]
+                } else {
+                    clocks
+                },
+                coupled: if homogeneous { None } else { coupled_weights },
+                coupled_tensor: if homogeneous { None } else { coupled_tensor },
                 origin,
                 u,
                 v,

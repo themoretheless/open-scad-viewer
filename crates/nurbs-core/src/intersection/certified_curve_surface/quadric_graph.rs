@@ -9,6 +9,7 @@ mod coupled;
 mod coupled_bernstein;
 mod edge;
 mod identity;
+mod homogeneous_affine;
 pub use edge::GraphBoundaryProof;
 mod membership;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,6 +19,7 @@ pub enum OriginalQuadricGraphParameterization {
     SeparableRational,
     CoupledBilinear,
     CoupledBernstein,
+    HomogeneousAffine,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {
@@ -55,7 +57,10 @@ pub struct OriginalQuadricGraphContacts {
 /// Planar single Bezier patches additionally admit nonseparable positive weights
 /// through a proved global mean-map bijection and joint inverse enclosures.
 /// Degree-(1,1) uses its exact odds equation; higher degrees refine positive
-/// Bernstein ratio hulls on the retained parameter rectangle;
+/// Bernstein ratio hulls on the retained parameter rectangle. Single Bezier
+/// targets may also prove an affine projection directly in the original
+/// homogeneous basis, admitting canceled positive coupled factors on nonplanar
+/// graphs without changing their source geometry;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its

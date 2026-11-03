@@ -188,6 +188,8 @@ const multiDrift=structuredClone(multiBase.query);multiDrift.patch.controlPoints
 reject('graph-multispan-ulp-projection-drift',{op:'nurbs_original_quadric_graph_contacts',...multiDrift})
 const multiRational=structuredClone(multiBase.query);multiRational.patch.weights[1]=[14,14,14,14]
 const multiRationalReply=request({op:'nurbs_original_quadric_graph_contacts',...multiRational});assert.equal(multiRationalReply.ok,true);assert(isOriginalQuadricGraphReport(multiRationalReply.value));assert.equal(multiRationalReply.value.status,'present-on-patch');assert.equal(multiRationalReply.value.targetParameterization,'separable-rational');cases.push({name:'graph-multispan-rational-clock',status:multiRationalReply.value.status,contacts:multiRationalReply.value.contacts})
+const homogeneousDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-homogeneous-nonplanar-rotated-false-gauge-1')!.query);homogeneousDrift.patch.controlPoints[1]![1]![0]=6+Number.EPSILON*4
+reject('graph-homogeneous-original-ulp-projection-drift',{op:'nurbs_original_quadric_graph_contacts',...homogeneousDrift})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))
