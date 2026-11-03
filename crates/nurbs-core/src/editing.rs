@@ -28,3 +28,5 @@ pub mod rational_surface_factor;
 pub mod exact_projective;
 
 pub mod exact_derivative;
+
+pub mod exact_surface_derivative;

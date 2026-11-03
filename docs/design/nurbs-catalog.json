@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 242,
-  "unallocatedCount": 758,
+  "specifiedCount": 243,
+  "unallocatedCount": 757,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6598,6 +6598,30 @@
       "remainingQualification": [
         "Validated2D/3D curves, full fundamental-domain span cover, multispan/unclamped/periodic storage. Piecewise clamped output keeps original absolute clock and distinct one-sided traces; no invented derivative continuity. Exact de Boor extraction, common-factor cancellation and fresh stored-bit polynomial identity under unchanged1m-work/4096-bit/degree25/geometry caps. Exact storage or atomic whole-result refusal.",
         "Native default and no-codec library/contract qualification only. No JSON/WASM/Rush/editor/STEP, numerical evaluator-bit or source/topology certificate transfer. Full1000 and complete application delivery remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0243",
+      "name": "Точное построение рациональных полей частных производных поверхности по всем исходным UV-ячейкам с абсолютными параметрами и односторонними следами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точное дифференцирование",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_derivative_contracts.rs",
+        "crates/nurbs-core/tests/exact_surface_derivative_boundaries.rs",
+        "crates/nurbs-core/tests/support/exact_surface_derivative.rs",
+        "docs/design/nurbs-exact-surface-derivative.md",
+        "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-surface-derivative-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Validated3D tensor surfaces, U/V partials, complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic storage. One-sided traces and original absolute clocks; one global storage gauge per entire output net. Constant vector fields reduce before degree checks. General bivariate factor cancellation/minimal-degree admission remain separate; exact positive binary64 storage or atomic refusal under unchanged1m-work/4096-bit/degree25/geometry limits.",
+        "Native default/no-codec library and contract qualification only. No JSON/WASM/Rush/editor/STEP, source/topology certificate, regularity/normal or evaluator-bit transfer. Original1000 target and whole-application delivery remain open."
       ]
     }
   ],

@@ -69,3 +69,8 @@ NURBS-0242: `editing::exact_derivative` и закрытые `extraction`/`proof`
 принадлежат существующему владельцу `editing`. Это построение новой геометрии
 поля производной на исходных интервалах, а не изменение точечных differential
 queries. Старый API дифференциалов и topology-полномочия не изменяются.
+
+NURBS-0243: `editing::exact_surface_derivative` и его закрытые polynomial,
+extraction/storage принадлежат зарегистрированному владельцу `editing`.
+Строятся новые поверхности векторных полей частных производных на всех
+исходных UV-ячейках; API точечных differential queries и BRep не меняется.
