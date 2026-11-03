@@ -1,0 +1,65 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/813128ebae3f09ce0fc4c6ab97536cc2ee7fbc1e5b1bd586ce2f26dd754a7ad3.wasm",
+  "sha256": "813128ebae3f09ce0fc4c6ab97536cc2ee7fbc1e5b1bd586ce2f26dd754a7ad3",
+  "bytes": 21991301,
+  "sourceCommit": "cdc7e81894dcf9eb9f903355a624f388a3ae19f3",
+  "status": "passed",
+  "abiCases": 342,
+  "graphCases": 222,
+  "workersStarted": 315,
+  "workersTerminated": 315,
+  "newJointGraphCases": 49,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "nativeRustAndFixtureSourceHashesMatched": true,
+  "nativeReceipt": "docs/qualification/joint-jacobian-graph-2026-11-03/results.json",
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "304ea9f6a1de10bdaa6744f784876a48016a1fd506188556aeeae87d03bb38b7",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "ff2065afe86369b36ba7e57b9f9e0b11043bc0d6f3b7011146a8816fdb4c1b84",
+    "tools/browser-qualification/surface-self-intersection.mjs": "cbd5eeb4729de1010d834ca99793c7fa9086728069604b0a4624c168ae83c937",
+    "tools/browser-qualification/surface-self-intersection.ts": "3955ff1e310e50cdb65d673a8068c84791490707f49dfb7901fa5be921e294d5",
+    "tools/browser-qualification/joint-quadric-graph-fixtures.json": "53c6de7a62880251238090a01c709441ebf608d9b965555540557201a3bf16ea",
+    "src/services/originalQuadricGraphProtocol.ts": "c5d93f4c5efbecc2a3189f7c0fe46711470216d7047330c937ed97b04028eb77"
+  },
+  "browserHarnessChangedAfterNativeCommit": [
+    "tools/browser-qualification/surface-self-intersection.ts",
+    "tools/browser-qualification/surface-self-intersection.mjs"
+  ],
+  "browserHarnessChange": "The old unsupported-weights expectation now explicitly requires a joint chart but exact Different original membership, null carrier, no contacts and no finite admission. Initial Chromium assertion expected an input error; corrected semantic assertion passed on unchanged WASM.",
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "observedTimings": {
+    "graph-joint-polynomial-transpose-false-rotated-false-gauge-1": {
+      "abiMs": 69.44958299999985,
+      "workerMs": 64.09999999403954
+    },
+    "graph-joint-rational-transpose-false-rotated-false-gauge-1": {
+      "abiMs": 121.62462499999992,
+      "workerMs": 104.80000001192093
+    },
+    "graph-joint-original-degree-eight": {
+      "abiMs": 1270.881958,
+      "workerMs": 1052.9000000059605
+    }
+  },
+  "timingScope": "Single run only, not repeat performance qualification. ABI request versus full Worker call.",
+  "scope": "Actual raw WASM and Chromium module Workers for general single-span joint original projections. Nonplanar polynomial (4,4), rational (5,4), original elevated (8,8), orientations/rotations/gauges, noncentral contacts, edges/corners/exterior, folded-map and original boundary drift refusal, wrong original membership and zero predicate budget.",
+  "priorChartRefusalsNowExactDifferent": [
+    "graph-unsupported-target-weights",
+    "graph-perturbed-separable-target",
+    "graph-homogeneous-original-ulp-projection-drift",
+    "graph-homogeneous-separable-original-ulp-drift",
+    "graph-triangular-original-identity-ulp-drift"
+  ],
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "remaining": [
+    "Multi-span general joint maps",
+    "General projected domains, singular and periodic charts",
+    "Arbitrary UV precision contract",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

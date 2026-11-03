@@ -68,7 +68,7 @@ async function qualify(){
   if(!graphBaseline.carrier)throw new Error('Missing graph carrier baseline')
   const graphBoundaryBudget=await lane.inspectOriginalQuadricGraphContacts({...boundaryQuery(),maxExactWork:graphBaseline.targetMembership.workUsed+graphBaseline.carrier.exactWork})
   const graphBadWeights=graphQuery();graphBadWeights.patch.weights[1]![1]=2
-  const graphUnsupportedWeights=await failure(lane.inspectOriginalQuadricGraphContacts(graphBadWeights))
+  const graphUnprovedWeights=await lane.inspectOriginalQuadricGraphContacts(graphBadWeights)
   const graphBadSheet=graphQuery();graphBadSheet.quadric=[[0,0,0,0],[0,0,0,0],[0,0,1,0],[0,0,0,-1]]
   const graphUnsupportedSheet=await failure(lane.inspectOriginalQuadricGraphContacts(graphBadSheet))
   const graphWorkersBefore=lane.snapshot().workersStarted
@@ -78,7 +78,7 @@ async function qualify(){
   const before=lane.snapshot().workersStarted
   const preAbort=await failure(lane.inspect(surface,100,{signal:preaborted.signal}))
   const badBudget=await failure(lane.inspect(surface,0))
-  return{finiteGraphs,graphBoundaryBudget,graphUnsupportedWeights,graphUnsupportedSheet,graphInvalidBudget,quadricCarriers,commonRootScalarOnly,commonRootAuxiliaryBudget,commonRootPatch,advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
+  return{finiteGraphs,graphBoundaryBudget,graphUnprovedWeights,graphUnsupportedSheet,graphInvalidBudget,quadricCarriers,commonRootScalarOnly,commonRootAuxiliaryBudget,commonRootPatch,advancedPatch,originalPatchIrrationalBoundary,originalPatchCommonRootBoundary,originalPatchIntervalBoundary,originalPatchReports,originalPatchKnot,originalPatchZero,originalPatchOutside,originalPatchBoundary,offCenterSpatial,isoTargets,isoShort,isoAbsent,separatedReport,spatial,nonlinear,absence:absence.status,exact,recovered:recovered.status,rational,
    busy,cancelled,deadline,nativeRefusal,cloneFailure,preAbort,badBudget,
    inputIntact:JSON.stringify(surface)===original,noEarlyWorkers:lane.snapshot().workersStarted===before,ticks,ownership:lane.snapshot()}
  }finally{clearInterval(timer)}
