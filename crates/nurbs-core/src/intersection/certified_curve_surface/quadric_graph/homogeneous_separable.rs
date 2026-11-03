@@ -36,7 +36,7 @@ pub(super) fn prove(
     }
     Some(clocks)
 }
-fn pole(
+pub(super) fn pole(
     s: &Surface,
     i: usize,
     j: usize,

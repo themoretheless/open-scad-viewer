@@ -198,6 +198,8 @@ const multispanBoundaryClockDrift=structuredClone(quadricGraphCases.find(c=>c.na
 reject('graph-multispan-boundary-clocks-original-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...multispanBoundaryClockDrift})
 const foldedClock=structuredClone(quadricGraphCases.find(c=>c.name==='graph-unordered-monotone-kind-0-gauge-1-rotated-false')!.query);for(const [i,x] of [0,2,-1,1].entries()){foldedClock.patch.controlPoints[i]![0]![0]=x;foldedClock.patch.controlPoints[i]![1]![0]=x;foldedClock.patch.controlPoints[i]![1]![2]=x}
 reject('graph-folded-clock-positive-endpoint-slopes',{op:'nurbs_original_quadric_graph_contacts',...foldedClock})
+const triangularDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-triangular-transpose-false-rotated-false-gauge-1')!.query);triangularDrift.patch.controlPoints[1]![1]![0]=1+Number.EPSILON
+reject('graph-triangular-original-identity-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...triangularDrift})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

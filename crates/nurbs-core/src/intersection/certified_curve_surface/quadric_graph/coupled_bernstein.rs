@@ -77,7 +77,7 @@ fn split(mut d: Vec<[Q; 2]>, t: &Q) -> (Vec<[Q; 2]>, Vec<[Q; 2]>) {
     right.reverse();
     (left, right)
 }
-fn restrict(d: Vec<[Q; 2]>, r: &[Q; 2]) -> Vec<[Q; 2]> {
+pub(super) fn restrict(d: Vec<[Q; 2]>, r: &[Q; 2]) -> Vec<[Q; 2]> {
     if r[0] == q(1.) {
         return vec![d.last().unwrap().clone(); d.len()];
     }

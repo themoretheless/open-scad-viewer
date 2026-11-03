@@ -477,3 +477,29 @@ fn stationary_unordered_clock_has_finite_uv_without_differential_or_body_credit(
     );
     ledger(&r);
 }
+
+#[test]
+fn triangular_joint_original_graph_reports_finite_uv_without_body_credit() {
+    let mut q = query();
+    q["curve"]["controlPoints"] = json!([[1.5, 1.5, -0.25], [1.5, 1.5, 1.75]]);
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 2., 2., 2.]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 3., 0.]],
+        [[1.5, 0., 0.], [1., 3., 1.]],
+        [[3., 0., 0.], [3., 3., 3.]]
+    ]);
+    q["patch"]["weights"] = json!([[1., 1.], [1., 1.5], [1., 2.]]);
+    q["quadric"] = json!([
+        [0., 0.5, 0., 0.],
+        [0.5, 0., 0., 0.],
+        [0., 0., 0., -1.5],
+        [0., 0., -1.5, 0.]
+    ]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], json!("triangular-rational"));
+    assert_eq!(r["finiteSurfaceUvAdmission"], json!(true));
+    assert_eq!(r["trimAdmission"], json!(false));
+    assert_eq!(r["bodyAdmission"], json!(false));
+    ledger(&r);
+}

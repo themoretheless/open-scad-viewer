@@ -4,6 +4,7 @@ use super::*;
 use cad_predicates::{BezierIdentity, BezierIdentityDecision};
 use num_rational::BigRational as Q;
 mod chart;
+mod triangular;
 mod clock;
 mod coupled;
 mod coupled_bernstein;
@@ -22,6 +23,7 @@ pub enum OriginalQuadricGraphParameterization {
     CoupledBernstein,
     HomogeneousAffine,
     HomogeneousSeparable,
+    TriangularRational,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {

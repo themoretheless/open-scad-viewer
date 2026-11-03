@@ -211,3 +211,24 @@ for(let kind=0;kind<4;kind++)for(const gauge of [1,7])for(const rotated of [fals
  const {query:q}=monotoneClockTarget(3);q.maxExactWork=0
  quadricGraphCases.push({name:'graph-unordered-monotone-zero-predicate-budget',query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.exactWork===0,'Clock proof reset predicate budget')})
 }
+
+function triangularTarget(){const q=graphQuery();Object.assign(q.patch,{degreeU:2,knotsU:[-2,-2,-2,2,2,2],controlPoints:[[[0,0,0],[0,3,0]],[[1.5,0,0],[1,3,1]],[[3,0,0],[3,3,3]]],weights:[[1,1],[1,1.5],[1,2]]});q.quadric=[[0,.5,0,0],[.5,0,0,0],[0,0,0,-1.5],[0,0,-1.5,0]];q.curve.controlPoints=[[1.5,1.5,-.25],[1.5,1.5,1.75]];return q}
+for(const transpose of [false,true])for(const rotated of [false,true])for(const gauge of [1,7]){
+ const q=triangularTarget(),p=q.patch
+ if(transpose){p.controlPoints=[0,1].map(j=>[0,1,2].map(i=>p.controlPoints[i]![j]!));p.weights=[0,1].map(j=>[0,1,2].map(i=>p.weights[i]![j]!));[p.degreeU,p.degreeV]=[p.degreeV,p.degreeU];[p.knotsU,p.knotsV]=[p.knotsV,p.knotsU]}
+ p.weights=p.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of p.controlPoints)for(const x of row)[x[0],x[2]]=[x[2]!,x[0]!];for(const x of q.curve.controlPoints)[x[0],x[2]]=[x[2]!,x[0]!];const old=q.quadric,perm=[2,1,0,3];q.quadric=perm.map(i=>perm.map(j=>old[i]![j]!)) as OriginalQuadricGraphQuery['quadric']}
+ quadricGraphCases.push({name:`graph-triangular-transpose-${transpose}-rotated-${rotated}-gauge-${gauge}`,query:q,check:r=>{present(r,transpose?[[4,11.6,0,1]]:[[4,0,11.6,1]]);require(r.targetParameterization==='triangular-rational','Missing conditional graph certificate');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<1e-12,'Conditional inverse not refined')}})
+}
+for(const [edge,[x,y,u,v]] of [[0,0,-2,10],[3,0,2,10],[0,3,-2,14],[3,3,2,14],[0,1.5,-2,12],[3,1.5,2,10+4/3],[1.5,0,0,10],[1.5,3,0,14]].entries()){
+ const q=triangularTarget(),z=x!*y!/3;q.curve.controlPoints=[[x!,y!,z-1],[x!,y!,z+1]]
+ quadricGraphCases.push({name:`graph-triangular-edge-${edge}`,query:q,check:r=>present(r,[[4,u!,v!,1]])})
+}
+for(const [edge,[x,y]] of [[-1,1.5],[4,1.5],[1.5,-1],[1.5,4]].entries()){
+ const q=triangularTarget(),z=x!*y!/3;q.curve.controlPoints=[[x!,y!,z-1],[x!,y!,z+1]]
+ quadricGraphCases.push({name:`graph-triangular-exterior-${edge}`,query:q,check:r=>require(r.status==='absent-on-patch'&&r.patchAbsenceProven&&!r.finiteSurfaceUvAdmission,'Exterior conditional preimage admitted')})
+}
+for(const zero of [false,true]){
+ const q=triangularTarget();if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.25
+ quadricGraphCases.push({name:`graph-triangular-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission,'Unproved conditional graph admitted')})
+}

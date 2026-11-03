@@ -4,6 +4,7 @@ use num_traits::Zero;
 pub(super) struct Chart {
     pub axes: [usize; 2],
     pub parameterization: OriginalQuadricGraphParameterization,
+    triangular: Option<super::triangular::Triangular>,
     coupled: Option<[Q; 4]>,
     coupled_tensor: Option<Vec<Vec<Q>>>,
     clocks: [super::clock::Clock; 2],
@@ -138,7 +139,12 @@ impl Chart {
                 None
             };
             let independent = boundary_clocks.is_some();
-            if !ordinary && !homogeneous && !independent {
+            let triangular = if !ordinary && !homogeneous && !independent {
+                super::triangular::Triangular::prove(s, axes, &origin, &u, &v, &det)
+            } else {
+                None
+            };
+            if !ordinary && !homogeneous && !independent && triangular.is_none() {
                 continue;
             }
             // The coefficient of the dependent coordinate is affine in the
@@ -167,7 +173,9 @@ impl Chart {
             }
             return Ok(Self {
                 axes,
-                parameterization: if independent {
+                parameterization: if triangular.is_some() {
+                    OriginalQuadricGraphParameterization::TriangularRational
+                } else if independent {
                     OriginalQuadricGraphParameterization::HomogeneousSeparable
                 } else if homogeneous {
                     OriginalQuadricGraphParameterization::HomogeneousAffine
@@ -194,6 +202,7 @@ impl Chart {
                 } else {
                     coupled_tensor
                 },
+                triangular,
                 origin,
                 u,
                 v,
@@ -205,6 +214,9 @@ impl Chart {
         ))
     }
     pub(super) fn inverse_clocks(&self, r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
+        if let Some(t) = &self.triangular {
+            return t.enclosure(r);
+        }
         if let Some(w) = &self.coupled_tensor {
             return super::coupled_bernstein::enclosure(w, r);
         }
