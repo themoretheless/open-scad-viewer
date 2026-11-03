@@ -268,3 +268,13 @@ fn same_injectivity(a: &surface_injectivity::Report, b: &surface_injectivity::Re
         && a.spans == b.spans
         && a.reason == b.reason
 }
+
+mod cycle;
+pub use cycle::{
+    ClosedFiberCycleLimits, ClosedFiberRootPort, OrderedClosedFiberArc, OrderedClosedFiberCycle,
+    order_closed_fiber_cycle,
+};
+
+mod band;
+mod trace;
+pub use trace::{ClosedFiberTraceLimits,ClosedFiberTraceSegment,QualifiedClosedFiberTrace,construct_closed_fiber_trace};

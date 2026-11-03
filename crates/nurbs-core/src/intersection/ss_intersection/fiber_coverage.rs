@@ -721,6 +721,8 @@ pub use discovered_components::{
 mod closed_branches;
 mod physical_branches;
 pub use closed_branches::{
+    ClosedFiberCycleLimits,ClosedFiberRootPort,OrderedClosedFiberArc,OrderedClosedFiberCycle,order_closed_fiber_cycle,
+    ClosedFiberTraceLimits,ClosedFiberTraceSegment,QualifiedClosedFiberTrace,construct_closed_fiber_trace,
     ClosedFiberBranchLimits, OriginalClosedFiberBranch, OriginalClosedFiberTrim,
     QualifiedClosedFiberBranches, assemble_closed_fiber_branches,
 };

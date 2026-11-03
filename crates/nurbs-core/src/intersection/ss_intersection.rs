@@ -56,6 +56,8 @@ pub use fiber_coverage::{
     FiberPointConnection,
     ClosedFiberBranchLimits, OriginalClosedFiberBranch, OriginalClosedFiberTrim,
     QualifiedClosedFiberBranches, assemble_closed_fiber_branches,
+    ClosedFiberCycleLimits,ClosedFiberRootPort,OrderedClosedFiberArc,OrderedClosedFiberCycle,order_closed_fiber_cycle,
+    ClosedFiberTraceLimits,ClosedFiberTraceSegment,QualifiedClosedFiberTrace,construct_closed_fiber_trace,
     FiberTransitionResult, QualifiedFiberTransition, TransitionOrientation, qualify_fiber_transition,
     DiscoveredFiberTransition, FiberTransitionDiscoveryLimits, FiberTransitionDiscoveryResult,
     TransitionAttempt, discover_fiber_transition,

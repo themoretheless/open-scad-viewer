@@ -155,6 +155,22 @@ pub fn construct_fiber_trace(
     source: &QualifiedFiber,
     limits: FiberTraceBuildLimits,
 ) -> Result<FiberTraceBuild> {
+    construct(source, limits, true)
+}
+/// Construct pieces with their own original-source operators. Unlike the parent
+/// mode, this does not reserve accuracy for a later proof against the whole
+/// parent operator. Every returned piece still has a fresh source-root proof.
+pub(super) fn construct_local_fiber_trace(
+    source: &QualifiedFiber,
+    limits: FiberTraceBuildLimits,
+) -> Result<FiberTraceBuild> {
+    construct(source, limits, false)
+}
+fn construct(
+    source: &QualifiedFiber,
+    limits: FiberTraceBuildLimits,
+    reserve_parent: bool,
+) -> Result<FiberTraceBuild> {
     check(
         (1e-12..=1e-2).contains(&limits.tolerance_world)
             && (1..=100000).contains(&limits.max_cells)
@@ -252,9 +268,13 @@ pub fn construct_fiber_trace(
                 // Reserve composition accuracy for later admission against the
                 // WHOLE parent operator, rather than accepting only an easier
                 // local operator with a smaller contraction/gain.
-                let local_tolerance = limits
-                    .tolerance_world
-                    .min(limits.tolerance_world * (local_factor / parent_factor) * 0.25);
+                let local_tolerance = if reserve_parent {
+                    limits
+                        .tolerance_world
+                        .min(limits.tolerance_world * (local_factor / parent_factor) * 0.25)
+                } else {
+                    limits.tolerance_world
+                };
                 let local_tolerance = local_tolerance.max(1e-12);
                 let proof = qualify_fiber_world_trace(
                     &local,

@@ -1,7 +1,10 @@
 //! Bridge operations of the `brep` family.
 use crate::*;
+#[path="brep_closed_ss.rs"]
+mod closed_ss;
 
 const OPS: &[&str] = &[
+    "brep_partition_closed_ss",
     "brep_profile_normalize","brep_profile_cleanup","brep_nurbs_bezier_profiles_extrude",
     "minkowski_3d_certify",
     "minkowski_3d_verify",
@@ -77,6 +80,7 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_partition_closed_ss" => closed_ss::partition(v),
         "brep_boundary_certificate" => cad_boundary_certificate::inspect(v),
         "brep_nurbs_bezier_profiles_extrude"=>extrude_profiles(v),
         "minkowski_3d_certify" | "minkowski_3d_verify" | "minkowski_nurbs_certify" | "minkowski_nurbs_verify" | "nurbs_source_atlas_certify" | "nurbs_source_atlas_verify" => cad_minkowski3d::dispatch(v),

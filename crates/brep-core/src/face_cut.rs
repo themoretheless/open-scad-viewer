@@ -772,3 +772,6 @@ pub(crate) fn partition_with_shared_limits(
 
 mod closed_api;
 pub use closed_api::{ClosedCutBudget, partition_closed};
+
+mod closed_ss;
+pub use closed_ss::{ClosedSsLimits,ClosedSsPartition,partition_closed_ss};
