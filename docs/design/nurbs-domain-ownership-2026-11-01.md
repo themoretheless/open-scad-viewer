@@ -98,3 +98,8 @@ NURBS-0247: `editing::exact_derivative::curve_order` and its private `higher`
 helper remain under the existing editing owner. One original-source homogeneous
 recurrence builds order1..3 vector fields; no new root alias or numeric pointwise
 jet owner is introduced. Order1 retains the original public path and work trace.
+
+NURBS-0248: `editing::exact_derivative::squared_speed` and its private `speed`
+helper belong to the existing editing field-construction owner. The first
+coordinate carries the scalar squared speed; other coordinates are zero and
+not spatial positions. No new root, pointwise-analysis or topology owner.

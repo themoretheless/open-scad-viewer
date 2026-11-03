@@ -13,6 +13,7 @@ use num_traits::{One, Zero};
 mod extraction;
 mod higher;
 mod proof;
+mod speed;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
     ResourceLimit,
@@ -109,17 +110,22 @@ fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
         })
         .collect()
 }
-fn piece(source: &Curve, span: usize, order: usize, w: &mut Work) -> PResult<Curve> {
+#[derive(Clone, Copy)]
+enum Field {
+    Derivative(usize),
+    SquaredSpeed,
+}
+fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Curve> {
     let a = source.knots[span];
     let b = source.knots[span + 1];
     let qa = w.lift(a)?;
     let qb = w.lift(b)?;
     let width = w.op(&qb, &qa, |a, b| a - b)?;
     let h = extraction::span(source, span, &qa, &width, w)?;
-    let target = if order == 1 {
-        target(&h, &width, w)?
-    } else {
-        higher::target(&h, &width, order, w)?
+    let target = match field {
+        Field::Derivative(1) => target(&h, &width, w)?,
+        Field::Derivative(order) => higher::target(&h, &width, order, w)?,
+        Field::SquaredSpeed => speed::target(&h, &width, w)?,
     };
     let reduced = reduced(&target, w)?;
     let degree = reduced
@@ -157,7 +163,7 @@ fn piece(source: &Curve, span: usize, order: usize, w: &mut Work) -> PResult<Cur
 /// refusal under the shared 1m-work/4096-bit and unchanged geometry limits.
 /// No old source/topology certificate or numerical evaluator-bit transfer.
 pub fn curve(source: &Curve, max_work: u64) -> Result<Report> {
-    apply(source, 1, max_work)
+    apply(source, Field::Derivative(1), max_work)
 }
 /// Construct the original-clock derivative field of order1..3 on every source
 /// span, matching the existing rational jet ceiling. A rational derivative may
@@ -168,9 +174,15 @@ pub fn curve_order(source: &Curve, order: usize, max_work: u64) -> Result<Report
         (1..=3).contains(&order),
         "Derivative order must be in [1,3]",
     )?;
-    apply(source, order, max_work)
+    apply(source, Field::Derivative(order), max_work)
 }
-fn apply(source: &Curve, order: usize, max_work: u64) -> Result<Report> {
+/// Construct [dot(C',C'),0] or [dot(C',C'),0,0] as a scalar-field carrier on
+/// every original source span. Physical original clock; zero speed is valid.
+/// No square root, arc-length parameterization or regularity certificate.
+pub fn squared_speed(source: &Curve, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredSpeed, max_work)
+}
+fn apply(source: &Curve, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;
     check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
@@ -184,7 +196,7 @@ fn apply(source: &Curve, order: usize, max_work: u64) -> Result<Report> {
         let mut out = Vec::new();
         for span in source.degree..source.control_points.len() {
             if source.knots[span] < source.knots[span + 1] {
-                out.push(piece(source, span, order, &mut w)?);
+                out.push(piece(source, span, field, &mut w)?);
             }
         }
         Ok(out)
