@@ -1,9 +1,10 @@
 //! Original-coefficient curve/surface roots with strict interval Krawczyk proofs.
-//! The generic Krawczyk path leaves boundary/tangent roots unresolved; specialized
+//! The generic Krawczyk path leaves original-boundary/tangent roots unresolved;
+//! artificial split seams use overlapping original-source window proofs. Specialized
 //! original plane and quadric graph owners below prove supported families.
 //! Monotone affine-plane proofs can cross original interior curve knots.
 use crate::{
-    Result, check, curve::Curve, distance_bounds::Interval as I, resource, surface::Surface,
+    check, curve::Curve, distance_bounds::Interval as I, resource, surface::Surface, Result,
 };
 type Vector = [I; 3];
 type Box3 = [[f64; 2]; 3];
@@ -16,10 +17,15 @@ pub enum RootProof {
 pub struct Root {
     pub proof: RootProof,
     pub spans: [usize; 3],
-    /// Enclosure in normalized original knot spans, owning one root.
+    /// Outward normalized reference bounds. For Krawczyk roots, use the
+    /// explicit natural existence_domain as the uniqueness authority.
     /// Krawczyk cells are dyadic subdivisions; affine-plane enclosures can
     /// touch an interior C1 knot and use the closed adjacent span.
     pub normalized_cell: Box3,
+    /// Exact binary64 Krawczyk existence/uniqueness domain, potentially
+    /// crossing artificial subdivision seams but never original knot spans.
+    /// None for the separately proved monotone affine-plane family.
+    pub existence_domain: Option<Box3>,
     /// Outward natural t/u/v enclosure of that unique root.
     pub parameter_box: Box3,
     pub position_bounds: [[f64; 2]; 3],
@@ -57,45 +63,6 @@ impl Net {
         (0..self.dims[0]).flat_map(move |i| {
             (0..self.dims[1]).flat_map(move |j| (0..self.dims[2]).map(move |k| [i, j, k]))
         })
-    }
-    fn split(&self, axis: usize, fraction: I) -> Result<[Self; 2]> {
-        let complement = I::point(1.).sub(fraction)?.intersect(0., 1.)?;
-        let mut out = [self.clone(), self.clone()];
-        for base in self.coordinates().filter(|p| p[axis] == 0) {
-            let mut q: Vec<_> = (0..self.dims[axis])
-                .map(|i| {
-                    let mut p = base;
-                    p[axis] = i;
-                    self.point(p)
-                })
-                .collect();
-            let n = q.len();
-            let mut left = q.clone();
-            let mut right = q.clone();
-            for r in 1..n {
-                for i in 0..n - r {
-                    for k in 0..3 {
-                        let a = q[i][k];
-                        let b = q[i + 1][k];
-                        q[i][k] = a
-                            .mul(complement)?
-                            .add(b.mul(fraction)?)?
-                            .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
-                    }
-                }
-                left[r] = q[0];
-                right[n - 1 - r] = q[n - 1 - r];
-            }
-            for side in 0..2 {
-                for i in 0..n {
-                    let mut p = base;
-                    p[axis] = i;
-                    let at = out[side].index(p);
-                    out[side].data[at] = if side == 0 { left[i] } else { right[i] };
-                }
-            }
-        }
-        Ok(out)
     }
     fn center(&self) -> Result<Vector> {
         let mut current = self.clone();
@@ -271,11 +238,6 @@ fn field_net(c: &Curve, s: &Surface, spans: [usize; 3], domain: Box3) -> Result<
     }
     Ok(Net { dims, data })
 }
-struct Cell {
-    net: Net,
-    normalized: Box3,
-    depth: usize,
-}
 fn map_box(span: Box3, cell: Box3, local: [I; 3]) -> Result<Box3> {
     let mut out = [[0.; 2]; 3];
     for k in 0..3 {
@@ -320,12 +282,14 @@ fn refinement_box(domain: Box3, original: Box3) -> Box3 {
 }
 
 /// Complete parameter-product search on nonperiodic positive-weight NURBS.
-/// Every returned root has a strict Krawczyk inclusion and contraction proof on
-/// its original-span cell. Coefficients enclose the original homogeneous data;
+/// Generic roots own strict Krawczyk proofs on explicit natural existence
+/// domains within original knot products. The monotone affine-plane family has
+/// an independent original-source proof. Coefficients enclose homogeneous data;
 /// approximate extracted patches and sampled residuals never authorize roots.
 /// Root boxes may be broad: callers must independently establish positional
-/// accuracy before authoring a vertex. No trim, uniqueness across distinct cells,
-/// self-intersection, topology mutation or solid admission is implied.
+/// accuracy before authoring a vertex. Distinct parameter roots stay distinct
+/// even at the same world point. No trim, global self-intersection, topology
+/// mutation or solid admission follows from this root report.
 pub fn intersections(c: &Curve, s: &Surface, max_cells: usize) -> Result<Report> {
     c.validate()?;
     s.validate()?;
@@ -373,170 +337,129 @@ pub fn intersections(c: &Curve, s: &Surface, max_cells: usize) -> Result<Report>
     if let Some(report) = alternate.report {
         return Ok(report);
     }
-    let mut out = Report {
-        roots: vec![],
-        unresolved: vec![],
-        cells: alternate.cells,
-        excluded: 0,
-        complete: false,
-    };
-    for &ct in &cs {
-        for &su in &us {
-            for &sv in &vs {
-                let ids = [ct, su, sv];
-                let spans = [
-                    [c.knots[ct], c.knots[ct + 1]],
-                    [s.knots_u[su], s.knots_u[su + 1]],
-                    [s.knots_v[sv], s.knots_v[sv + 1]],
-                ];
-                if out.cells == max_cells {
-                    out.unresolved.push(Unresolved {
-                        spans: ids,
+    let full = [
+        c.domain(),
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    ];
+    if alternate.cells == max_cells {
+        let mut unresolved = Vec::new();
+        for &ct in &cs {
+            for &su in &us {
+                for &sv in &vs {
+                    unresolved.push(Unresolved {
+                        spans: [ct, su, sv],
                         normalized_cell: [[0., 1.]; 3],
-                        parameter_box: spans,
+                        parameter_box: [
+                            [c.knots[ct], c.knots[ct + 1]],
+                            [s.knots_u[su], s.knots_u[su + 1]],
+                            [s.knots_v[sv], s.knots_v[sv + 1]],
+                        ],
                     });
-                    continue;
-                }
-                let mut stack = vec![Cell {
-                    net: field_net(c, s, ids, spans)?,
-                    normalized: [[0., 1.]; 3],
-                    depth: 0,
-                }];
-                while let Some(cell) = stack.pop() {
-                    let unknown = |cell: &Cell| -> Result<Unresolved> {
-                        Ok(Unresolved {
-                            spans: ids,
-                            normalized_cell: cell.normalized,
-                            parameter_box: map_box(spans, cell.normalized, [I::new(0., 1.)?; 3])?,
-                        })
-                    };
-                    if out.cells == max_cells {
-                        out.unresolved.push(unknown(&cell)?);
-                        for pending in stack.drain(..) {
-                            out.unresolved.push(unknown(&pending)?);
-                        }
-                        break;
-                    }
-                    out.cells += 1;
-                    match krawczyk(&cell.net)? {
-                        Verdict::Excluded => {
-                            out.excluded += 1;
-                        }
-                        Verdict::Unique(root, crossing_sign) => {
-                            let mut domain = map_box(spans, cell.normalized, root)?;
-                            // Existence/uniqueness is owned by the original cell.
-                            // Rebuild refinements from original coefficients and
-                            // retain that proof if the precision budget is exhausted.
-                            for _ in 0..8 {
-                                if out.cells == max_cells || domain.iter().any(|d| d[0] == d[1]) {
-                                    break;
-                                }
-                                out.cells += 1;
-                                let search = refinement_box(domain, spans);
-                                match krawczyk(&field_net(c, s, ids, search)?)? {
-                                    Verdict::Unique(next, refined_sign) => {
-                                        if refined_sign != crossing_sign {
-                                            return Err(crate::Error::new(
-                                                "NURBS_ROOT_PROOF_CONTRADICTION",
-                                                "Root orientation changed during certified refinement",
-                                            ));
-                                        }
-                                        let refined = map_box(search, [[0., 1.]; 3], next)?;
-                                        if refined == domain {
-                                            break;
-                                        }
-                                        domain = refined;
-                                    }
-                                    Verdict::Unresolved => break,
-                                    Verdict::Excluded => {
-                                        return Err(crate::Error::new(
-                                            "NURBS_ROOT_PROOF_CONTRADICTION",
-                                            "Root refinement excluded an already certified root",
-                                        ));
-                                    }
-                                }
-                            }
-                            let position = crate::curve_distance::enclosure(
-                                c,
-                                ct,
-                                I::new(domain[0][0], domain[0][1])?,
-                            )?;
-                            out.roots.push(Root {
-                                proof: RootProof::InteriorKrawczyk,
-                                spans: ids,
-                                normalized_cell: cell.normalized,
-                                parameter_box: domain,
-                                crossing_sign,
-                                position_bounds: std::array::from_fn(|k| {
-                                    [position[k].lo, position[k].hi]
-                                }),
-                            });
-                        }
-                        Verdict::Unresolved => {
-                            if cell.depth == 48 {
-                                out.unresolved.push(unknown(&cell)?);
-                                continue;
-                            }
-                            let axis = (0..3)
-                                .max_by(|&a, &b| {
-                                    (cell.normalized[a][1] - cell.normalized[a][0])
-                                        .total_cmp(&(cell.normalized[b][1] - cell.normalized[b][0]))
-                                })
-                                .unwrap();
-                            // Bias the search cut away from common centered CAD
-                            // roots. The stored binary64 cut is authoritative;
-                            // enclose its actual ratio so rounded nonuniform
-                            // subdivision cannot change the root's parameter map.
-                            let a = cell.normalized[axis][0];
-                            let b = cell.normalized[axis][1];
-                            let middle = a + (b - a) * 0.375;
-                            if !(a < middle && middle < b) {
-                                out.unresolved.push(unknown(&cell)?);
-                                continue;
-                            }
-                            let ratio = I::point(middle)
-                                .sub(I::point(a))?
-                                .div(I::point(b).sub(I::point(a))?)?
-                                .intersect(0., 1.)?;
-                            let [left, right] = cell.net.split(axis, ratio)?;
-                            for (side, net) in [(1, right), (0, left)] {
-                                let mut normalized = cell.normalized;
-                                normalized[axis][1 - side] = middle;
-                                stack.push(Cell {
-                                    net,
-                                    normalized,
-                                    depth: cell.depth + 1,
-                                });
-                            }
-                        }
-                    }
                 }
             }
         }
+        return Ok(Report {
+            roots: vec![],
+            unresolved,
+            cells: alternate.cells,
+            excluded: 0,
+            complete: false,
+        });
     }
-    out.complete = out.unresolved.is_empty();
-    out.roots.sort_by(|a, b| {
+    let result = window::all_in_window(c, s, full, max_cells - alternate.cells)?;
+    let normalized = |ids: [usize; 3], domain: Box3| -> Result<Box3> {
+        let knots = [
+            c.knots.as_slice(),
+            s.knots_u.as_slice(),
+            s.knots_v.as_slice(),
+        ];
+        let mut out = [[0.; 2]; 3];
+        for k in 0..3 {
+            let a = I::point(knots[k][ids[k]]);
+            let width = I::point(knots[k][ids[k] + 1]).sub(a)?;
+            let x = I::new(domain[k][0], domain[k][1])?
+                .sub(a)?
+                .div(width)?
+                .intersect(0., 1.)?;
+            out[k] = [x.lo, x.hi];
+        }
+        Ok(out)
+    };
+    let mut roots = Vec::new();
+    for r in result.roots {
+        roots.push(Root {
+            proof: RootProof::InteriorKrawczyk,
+            spans: r.spans,
+            normalized_cell: normalized(r.spans, r.existence_domain)?,
+            existence_domain: Some(r.existence_domain),
+            parameter_box: r.parameter_box,
+            position_bounds: r.position_bounds,
+            crossing_sign: r.crossing_sign,
+        });
+    }
+    let mut unresolved = Vec::new();
+    let knots = [
+        c.knots.as_slice(),
+        s.knots_u.as_slice(),
+        s.knots_v.as_slice(),
+    ];
+    let degrees = [c.degree, s.degree_u, s.degree_v];
+    let counts = [
+        c.control_points.len(),
+        s.control_points.len(),
+        s.control_points[0].len(),
+    ];
+    for domain in result.unresolved {
+        let mut ids = [0; 3];
+        for k in 0..3 {
+            ids[k] = (degrees[k]..counts[k])
+                .find(|&i| {
+                    knots[k][i] < knots[k][i + 1]
+                        && knots[k][i] <= domain[k][0]
+                        && domain[k][1] <= knots[k][i + 1]
+                })
+                .ok_or_else(|| crate::input("Root coverage cell lost its original knot owner"))?;
+        }
+        unresolved.push(Unresolved {
+            spans: ids,
+            normalized_cell: normalized(ids, domain)?,
+            parameter_box: domain,
+        });
+    }
+    roots.sort_by(|a, b| {
         a.parameter_box[0][0]
             .total_cmp(&b.parameter_box[0][0])
             .then(a.parameter_box[1][0].total_cmp(&b.parameter_box[1][0]))
             .then(a.parameter_box[2][0].total_cmp(&b.parameter_box[2][0]))
     });
-    Ok(out)
+    Ok(Report {
+        roots,
+        unresolved,
+        cells: alternate.cells + result.cells,
+        excluded: result.excluded,
+        complete: result.complete,
+    })
 }
 
 mod affine_plane;
 
 mod window;
-pub use window::{WindowRoot,WindowReport,first_in_window,all_in_window};
+pub use window::{all_in_window, first_in_window, WindowReport, WindowRoot};
 
 mod window_source;
-pub use window_source::{first_iso_in_window,all_iso_in_window,first_surface_iso_in_window,all_surface_iso_in_window};
+pub use window_source::{
+    all_iso_in_window, all_surface_iso_in_window, first_iso_in_window, first_surface_iso_in_window,
+};
 
 mod plane_contacts;
-pub use plane_contacts::{AffinePlaneContact, AffinePlaneContacts, affine_plane_contacts};
+pub use plane_contacts::{affine_plane_contacts, AffinePlaneContact, AffinePlaneContacts};
 
 mod original_patch_contacts;
-pub use original_patch_contacts::{OriginalPatchContact,OriginalPatchContacts,OriginalPatchUvProof,original_affine_patch_contacts};
+pub use original_patch_contacts::{
+    original_affine_patch_contacts, OriginalPatchContact, OriginalPatchContacts,
+    OriginalPatchUvProof,
+};
 
 mod patch_uv;
 
@@ -547,6 +470,12 @@ mod patch_exact_membership;
 
 mod patch_coordinate_bounds;
 mod quadric_carrier;
-pub use quadric_carrier::{OriginalQuadricCarrierRoot, OriginalQuadricCarrierRoots, original_quadric_carrier_roots};
+pub use quadric_carrier::{
+    original_quadric_carrier_roots, OriginalQuadricCarrierRoot, OriginalQuadricCarrierRoots,
+};
 mod quadric_graph;
-pub use quadric_graph::{OriginalQuadricGraphContact,OriginalQuadricGraphContacts,OriginalQuadricGraphUvProof,OriginalQuadricGraphParameterization,GraphBoundaryProof,original_quadric_graph_contacts};
+pub use quadric_graph::{
+    original_quadric_graph_contacts, GraphBoundaryProof, OriginalQuadricGraphContact,
+    OriginalQuadricGraphContacts, OriginalQuadricGraphParameterization,
+    OriginalQuadricGraphUvProof,
+};

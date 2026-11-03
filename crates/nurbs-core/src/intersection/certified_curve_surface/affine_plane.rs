@@ -255,6 +255,7 @@ pub(super) fn attempt(c: &Curve, s: &Surface, max_cells: usize) -> Result<Attemp
         .intersect(0., 1.)?;
     let root = Root {
         proof: RootProof::MonotoneAffinePlane,
+        existence_domain: None,
         spans: [span, 1, 1],
         normalized_cell: [[norm.lo, norm.hi], [alpha.lo, alpha.hi], [beta.lo, beta.hi]],
         parameter_box: [band, [ub.lo, ub.hi], [vb.lo, vb.hi]],

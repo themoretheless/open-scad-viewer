@@ -1,3 +1,4 @@
+import {rootExcisionCases} from '../tools/browser-qualification/root-excision-fixtures.ts'
 import {quadricGraphCases,graphQuery,boundaryQuery,foldedJointQuery,multispanJointRefusalQuery} from '../tools/browser-qualification/quadric-graph-fixtures.ts'
 import {isOriginalQuadricGraphReport,type OriginalQuadricGraphReport} from '../src/services/originalQuadricGraphProtocol.ts'
 import {quadricCarrierCases} from '../tools/browser-qualification/quadric-carrier-fixtures.ts'
@@ -211,6 +212,7 @@ reject('graph-joint-original-boundary-ulp-drift',{op:'nurbs_original_quadric_gra
 for(const kind of ['folded','discontinuous'] as const)reject('graph-joint-multispan-'+kind,{op:'nurbs_original_quadric_graph_contacts',...multispanJointRefusalQuery(kind)})
 const jointMultispanBoundaryDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-joint-multispan-polynomial-point-0-transpose-false-rotated-false-gauge-1')!.query);jointMultispanBoundaryDrift.patch.controlPoints[0]![1]![0]=Number.MIN_VALUE
 reject('graph-joint-multispan-original-boundary-drift',{op:'nurbs_original_quadric_graph_contacts',...jointMultispanBoundaryDrift})
+for(const fixture of rootExcisionCases){const before=JSON.stringify(fixture.query),started=performance.now(),reply=request({op:'nurbs_surface_iso_target_window',...fixture.query}),elapsedMs=performance.now()-started;assert.equal(reply.ok,true);assert(isSurfaceIsoTargetReport(reply.value));fixture.check(reply.value);assert.equal(JSON.stringify(fixture.query),before);cases.push({name:fixture.name,elapsedMs,report:reply.value})}
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

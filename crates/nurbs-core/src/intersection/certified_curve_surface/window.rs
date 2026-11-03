@@ -1,5 +1,6 @@
 //! Natural-parameter windows on ORIGINAL curve/surface coefficients.
 use super::*;
+mod repair;
 #[derive(Debug)]
 pub struct WindowRoot {
     pub spans: [usize; 3],
@@ -14,6 +15,7 @@ pub struct WindowReport {
     pub roots: Vec<WindowRoot>,
     pub unresolved: Vec<Box3>,
     pub cells: usize,
+    pub excluded: usize,
     pub complete: bool,
 }
 struct Query {
@@ -33,8 +35,9 @@ pub fn first_in_window(
     search(Source::Curve(c), s, window, max_cells, true)
 }
 /// Enumerates certified roots over the entire requested original parameter
-/// window. Exhaustion, singular roots and subdivision boundaries stay explicit
-/// in `unresolved`; only an empty unresolved list authorizes `complete`.
+/// window. Artificial split seams may be repaired by fresh overlapping original
+/// windows. Exhaustion, singular roots and original/caller boundaries remain
+/// explicit in `unresolved`; only an empty list authorizes `complete`.
 pub fn all_in_window(
     c: &Curve,
     s: &Surface,
@@ -118,6 +121,7 @@ pub(super) fn search(
         roots: vec![],
         unresolved: vec![],
         cells: 0,
+        excluded: 0,
         complete: false,
     };
     while let Some(cell) = stack.pop() {
@@ -128,46 +132,21 @@ pub(super) fn search(
         }
         out.cells += 1;
         match krawczyk(&c.field(s, cell.ids, cell.domain)?)? {
-            Verdict::Excluded => {}
+            Verdict::Excluded => {
+                out.excluded += 1;
+            }
             Verdict::Unique(root, sign) => {
-                let mut domain = map_box(cell.domain, [[0., 1.]; 3], root)?;
-                for _ in 0..8 {
-                    if out.cells == max_cells {
-                        break;
-                    }
-                    out.cells += 1;
-                    let search = refinement_box(domain, cell.domain);
-                    match krawczyk(&c.field(s, cell.ids, search)?)? {
-                        Verdict::Unique(next, next_sign) => {
-                            if next_sign != sign {
-                                return Err(crate::Error::new(
-                                    "NURBS_ROOT_PROOF_CONTRADICTION",
-                                    "Window root orientation changed during refinement",
-                                ));
-                            }
-                            let next = map_box(search, [[0., 1.]; 3], next)?;
-                            if next == domain {
-                                break;
-                            }
-                            domain = next;
-                        }
-                        Verdict::Unresolved => break,
-                        Verdict::Excluded => {
-                            return Err(crate::Error::new(
-                                "NURBS_ROOT_PROOF_CONTRADICTION",
-                                "Certified window root excluded during refinement",
-                            ));
-                        }
-                    }
-                }
-                let p = c.position(cell.ids[0], domain[0])?;
-                out.roots.push(WindowRoot {
-                    spans: cell.ids,
-                    existence_domain: cell.domain,
-                    parameter_box: domain,
-                    position_bounds: std::array::from_fn(|i| [p[i].lo, p[i].hi]),
-                    crossing_sign: sign,
-                });
+                let record = repair::root(
+                    &c,
+                    s,
+                    cell.ids,
+                    cell.domain,
+                    root,
+                    sign,
+                    &mut out,
+                    max_cells,
+                )?;
+                out.roots.push(record);
                 if stop_first {
                     out.unresolved.extend(stack.into_iter().map(|q| q.domain));
                     out.complete = out.unresolved.is_empty();
@@ -202,6 +181,9 @@ pub(super) fn search(
                 });
             }
         }
+    }
+    if out.cells < max_cells && !out.unresolved.is_empty() {
+        repair::repair(&c, s, window, max_cells, stop_first, &mut out)?;
     }
     out.complete = out.unresolved.is_empty();
     Ok(out)
