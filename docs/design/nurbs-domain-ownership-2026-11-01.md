@@ -124,7 +124,7 @@ exact public APIs and work traces. Storage proposals carry no authority until
 fresh full-span residual bounds against actual stored bits pass. This family has native credit after full current-source default/no-codec
 regression and independent continuous error verification.
 
-Pending bounded surface differential fields belong to
+NURBS-0252 bounded surface differential fields belong to
 `editing::bounded_surface_differential` under the registered editing owner.
 Original tensor targets, reductions and coefficient conversion remain with
 `exact_surface_derivative`; only crate-private access is shared. Flat storage

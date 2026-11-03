@@ -32,5 +32,5 @@ Output degrees25, geometry/weight/conditioning limits and shared1m-work/4096-bit
 arithmetic limits are unchanged. Residual degrees are at most50 per axis. Invalid
 inputs, mixed orders, tolerances and work budgets are errors. Any late refusal
 discards ALL earlier patches and ALL earlier bounds. A conservative refusal
-does not rule out alternate constructions. Native qualification is in progress;
+does not rule out alternate constructions. Native qualification passed; see `docs/qualification/nurbs-bounded-surface-differential-2026-11-03/receipt.json`.
 JSON/WASM/Rush/editor/STEP and whole-application delivery remain separate.
