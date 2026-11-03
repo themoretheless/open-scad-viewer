@@ -200,3 +200,14 @@ for(const zero of [false,true]){
  const q=multispanBoundaryTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
  quadricGraphCases.push({name:`graph-multispan-boundary-clocks-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved original multi-span nonlinear target admitted')})
 }
+
+function monotoneClockTarget(kind:number){const q=graphQuery(),variants=[{p:3,x:[0,1,0,1],w:[1,1,1,1],multi:false,l:1,point:.5,u:0},{p:4,x:[0,63,70,15,105],w:[1,1.25,1.5,1.75,2],multi:false,l:105,point:52.5,u:0},{p:3,x:[0,.25,.625,.375,.75,1],w:[1,1,1,1,1,1],multi:true,l:1,point:.5,u:0},{p:3,x:[0,.75,21/16,.375,6,9],w:[1,1,1,1,1,1],multi:true,l:9,point:1,u:-2/3}],v=variants[kind]!;Object.assign(q.patch,{degreeU:v.p,knotsU:[...Array(v.p+1).fill(-2),...(v.multi?[-1,1]:[]),...Array(v.p+1).fill(2)],controlPoints:v.x.map(x=>[[x,0,0],[x,v.l,x]]),weights:v.w.map(w=>[w,w])});q.quadric=[[0,.5,0,0],[.5,0,0,0],[0,0,0,-v.l/2],[0,0,-v.l/2,0]];q.curve.controlPoints=[[v.point,v.l/2,v.point/2-1],[v.point,v.l/2,v.point/2+1]];return{query:q,u:v.u}}
+for(let kind=0;kind<4;kind++)for(const gauge of [1,7])for(const rotated of [false,true]){
+ const {query:q,u}=monotoneClockTarget(kind);q.patch.weights=q.patch.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of q.patch.controlPoints)for(const p of row)[p[0],p[2]]=[p[2]!,p[0]!];for(const p of q.curve.controlPoints)[p[0],p[2]]=[p[2]!,p[0]!];const old=q.quadric,perm=[2,1,0,3];q.quadric=perm.map(i=>perm.map(j=>old[i]![j]!)) as OriginalQuadricGraphQuery['quadric']}
+ quadricGraphCases.push({name:`graph-unordered-monotone-kind-${kind}-gauge-${gauge}-rotated-${rotated}`,query:q,check:r=>{present(r,[[4,u,12,1]]);require(r.targetParameterization==='homogeneous-separable','Unordered source clock not certified');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<1e-12,'Stationary inverse did not refine')}})
+}
+{
+ const {query:q}=monotoneClockTarget(3);q.maxExactWork=0
+ quadricGraphCases.push({name:'graph-unordered-monotone-zero-predicate-budget',query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.exactWork===0,'Clock proof reset predicate budget')})
+}

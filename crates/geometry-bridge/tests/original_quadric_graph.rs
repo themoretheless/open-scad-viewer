@@ -451,3 +451,29 @@ fn original_multispan_nonlinear_clocks_serialize_global_internal_knot_uv() {
     );
     ledger(&r);
 }
+
+#[test]
+fn stationary_unordered_clock_has_finite_uv_without_differential_or_body_credit() {
+    let mut q = query();
+    q["patch"]["degreeU"] = json!(3);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., -2., 2., 2., 2., 2.]);
+    q["patch"]["weights"] = json!([[1., 1.], [1., 1.], [1., 1.], [1., 1.]]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 1., 0.]],
+        [[1., 0., 0.], [1., 1., 1.]],
+        [[0., 0., 0.], [0., 1., 0.]],
+        [[1., 0., 0.], [1., 1., 1.]]
+    ]);
+    q["curve"]["controlPoints"] = json!([[0.5, 0.5, -0.75], [0.5, 0.5, 1.25]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "homogeneous-separable");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(r["finiteSurfaceUvAdmission"], true);
+    assert_eq!(r["trimAdmission"], false);
+    assert_eq!(r["bodyAdmission"], false);
+    assert_eq!(
+        r["contacts"][0]["parameterBox"],
+        json!([[4., 4.], [0., 0.], [12., 12.]])
+    );
+    ledger(&r);
+}

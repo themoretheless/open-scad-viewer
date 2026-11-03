@@ -28,8 +28,8 @@ pub(super) fn prove(
         .map(|j| [h[0][j][1].clone(), h[0][j][2].clone()])
         .collect();
     let clocks = [
-        super::clock::Clock::ordered(uc.clone())?,
-        super::clock::Clock::ordered(vc.clone())?,
+        super::clock::Clock::certified(uc.clone())?,
+        super::clock::Clock::certified(vc.clone())?,
     ];
     if !certificate(&h, &uc, &vc) {
         return None;
