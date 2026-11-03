@@ -68,6 +68,7 @@ fn target(h: &[Poly], axis: Axis, width: &Q, w: &mut Work) -> PResult<Vec<Poly>>
 enum Field {
     Partial(Axis),
     AreaNormal,
+    Metric,
 }
 fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     let u = target(h, Axis::U, &widths[0], w)?;
@@ -79,6 +80,23 @@ fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
         let left = polynomial::multiply(&u[i], &v[j], w)?;
         let right = polynomial::multiply(&u[j], &v[i], w)?;
         out.push(polynomial::subtract(left, &right, w)?);
+    }
+    out.push(polynomial::multiply(&u[3], &v[3], w)?);
+    Ok(out)
+}
+fn metric_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
+    let u = target(h, Axis::U, &widths[0], w)?;
+    let v = target(h, Axis::V, &widths[1], w)?;
+    let mut out = Vec::new();
+    for (a, b) in [(&u, &u), (&u, &v), (&v, &v)] {
+        let mut sum = Poly::new();
+        for axis in 0..3 {
+            let product = polynomial::multiply(&a[axis], &b[axis], w)?;
+            for (key, value) in product {
+                polynomial::accumulate(&mut sum, key, &value, w)?;
+            }
+        }
+        out.push(sum);
     }
     out.push(polynomial::multiply(&u[3], &v[3], w)?);
     Ok(out)
@@ -106,6 +124,7 @@ fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResu
             w,
         )?,
         Field::AreaNormal => area_target(&h, &widths, w)?,
+        Field::Metric => metric_target(&h, &widths, w)?,
     };
     let proposal = match polynomial::constant_field(&target, w)? {
         Some(constant) => constant,
@@ -134,6 +153,14 @@ pub fn surface(source: &Surface, axis: Axis, max_work: u64) -> Result<Report> {
 /// Same atomic exact-storage and1m-work/4096-bit/geometry guards as [`surface`].
 pub fn area_normal(source: &Surface, max_work: u64) -> Result<Report> {
     apply(source, Field::AreaNormal, max_work)
+}
+/// Construct the first fundamental coefficients as carrier coordinates
+/// [E,F,G]=[Su dot Su,Su dot Sv,Sv dot Sv] on EVERY original UV cell.
+/// These are scalar metric fields, not spatial points or normalized tangents.
+/// Original clocks/one-sided traces and the same atomic exact-storage guards
+/// apply. A singular metric is valid output, not a regularity certificate.
+pub fn metric(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::Metric, max_work)
 }
 fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;

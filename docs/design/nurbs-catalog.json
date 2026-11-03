@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 244,
-  "unallocatedCount": 756,
+  "specifiedCount": 245,
+  "unallocatedCount": 755,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6651,6 +6651,29 @@
       "remainingQualification": [
         "Complete original fundamental UVcell cover for validated3D tensor surfaces, including nonuniform/repeated/unclamped/periodic encodings; original absolute clocks and one-sided traces. Oriented non-unit area vector, not body-outward/unit-normal or regularity certificate. Zero field accepted. Fresh actual-output polynomial proof against original signed cross product and W^4 denominator, one whole-net storage gauge and shared unchanged1m-work/4096-bit/degree25/geometry bounds. Exact storage or atomic whole-result refusal.",
         "Native default/no-codec qualification only. No JSON/WASM/Rush/editor/STEP, evaluator-bit, topology or old source-certificate transfer. General mixed-variable GCD/alternate representation search and full1000/application delivery remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0245",
+      "name": "Точное построение полей метрических коэффициентов первой фундаментальной формы E,F,G на всех исходных UV-ячейках",
+      "status": "native",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точная дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::metric",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/content.rs",
+        "crates/nurbs-core/tests/exact_metric_field_contracts.rs",
+        "docs/design/nurbs-exact-metric-field.md",
+        "docs/qualification/nurbs-exact-metric-field-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-metric-field-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Carrier coordinates [E,F,G]=[Su dot Su,Su dot Sv,Sv dot Sv], not spatial positions or2F. Complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic and mixed rational weights, physical absolute clocks and one-sided traces. Zero/singular metric allowed without a regularity/positive-definite certificate. Fresh stored-bit Gram identities against original source, one whole-net gauge, shared unchanged1m-work/4096-bit/degree25/geometry caps; exact storage or atomic whole-result refusal.",
+        "Native default/no-codec qualification only. No JSON/WASM/Rush/editor/STEP, evaluator-bit, topology or old source-certificate transfer. General mixed-variable GCD/alternate representation search and original1000/application delivery remain separate."
       ]
     }
   ],
