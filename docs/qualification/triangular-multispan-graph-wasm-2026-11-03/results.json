@@ -1,0 +1,47 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/7fb142a4bf800bc34642aa4bb8873e7b06035b6b99e115407873fc6771dc0cfa.wasm",
+  "sha256": "7fb142a4bf800bc34642aa4bb8873e7b06035b6b99e115407873fc6771dc0cfa",
+  "bytes": 21920746,
+  "sourceCommit": "ba6c49f092c268e48f67cd4a7c51965df85bcf44",
+  "status": "passed",
+  "abiCases": 291,
+  "graphCases": 173,
+  "workersStarted": 266,
+  "workersTerminated": 266,
+  "newMultispanTriangularGraphCases": 38,
+  "installedPackageUpdated": false,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "tempWorktreeRemoved": true,
+  "nativeSourceHashesMatched": true,
+  "nativeReceipt": "docs/qualification/triangular-multispan-graph-2026-11-03/results.json",
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "f9eb880f645724b2beaa97b86fe94860b1256621372ab2e519162733ccfeda60",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "ad9097fe570fbb59f801225721c476ce8b9a96bd549e9f0d2d03194a39c664e2",
+    "tools/browser-qualification/surface-self-intersection.mjs": "8c53c2216dd16e9a4b358d2c6e50f627b6d3de48cd324b22d5303aa04f8e3e2d",
+    "tools/browser-qualification/surface-self-intersection.ts": "48cdf39747d01786a2e3875d238948bd53e7ded605747b10929bbd6720d378b4",
+    "src/services/originalQuadricGraphProtocol.ts": "0e45f26d63d724f3ba90d429482a16ef6afcfa17a713b43233ad66d8dbda319b"
+  },
+  "observedTimings": {
+    "graph-triangular-multispan-point-0-transpose-false-rotated-false-gauge-1": {
+      "abiMs": 16.289874999999938,
+      "workerMs": 19
+    },
+    "graph-triangular-multispan-point-1-transpose-false-rotated-false-gauge-1": {
+      "abiMs": 12.967750000000251,
+      "workerMs": 13.699999988079071
+    },
+    "graph-triangular-multispan-point-2-transpose-false-rotated-false-gauge-1": {
+      "abiMs": 6.347250000000258,
+      "workerMs": 9.200000017881393
+    }
+  },
+  "timingScope": "Single run only, not repeat performance qualification. ABI request versus full Worker call.",
+  "scope": "Actual raw WASM and Chromium module Workers for original multispan triangular rational graphs. Original internal knots and non-knot contacts, both parameter orientations, rotations/gauges, edges/corners, exterior exclusion, original identity ULP refusal, wrong quadric membership and zero predicate budget. No differential regularity, trim or Body credit.",
+  "remaining": [
+    "General joint maps without independent projection",
+    "Arbitrary UV precision and differential regularity",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}
