@@ -10,6 +10,8 @@ use crate::{
 };
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
+mod binormal;
+mod curvature;
 mod extraction;
 mod higher;
 mod proof;
@@ -114,6 +116,8 @@ fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
 enum Field {
     Derivative(usize),
     SquaredSpeed,
+    Binormal,
+    SquaredCurvature,
 }
 fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Curve> {
     let a = source.knots[span];
@@ -126,6 +130,8 @@ fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Cur
         Field::Derivative(1) => target(&h, &width, w)?,
         Field::Derivative(order) => higher::target(&h, &width, order, w)?,
         Field::SquaredSpeed => speed::target(&h, &width, w)?,
+        Field::Binormal => binormal::target(&h, &width, w)?,
+        Field::SquaredCurvature => curvature::target(&h, &width, w)?,
     };
     let reduced = reduced(&target, w)?;
     let degree = reduced
@@ -181,6 +187,26 @@ pub fn curve_order(source: &Curve, order: usize, max_work: u64) -> Result<Report
 /// No square root, arc-length parameterization or regularity certificate.
 pub fn squared_speed(source: &Curve, max_work: u64) -> Result<Report> {
     apply(source, Field::SquaredSpeed, max_work)
+}
+/// Construct the unnormalized spatial field C'(u) cross C''(u) on every
+/// original span. Zero fields and inflection points are valid; no unit frame,
+/// regularity, curvature or topology certificate is implied. Original-clock
+/// derivatives are combined before any intermediate binary64 storage.
+pub fn binormal(source: &Curve, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 3,
+        "Binormal field requires a 3D curve",
+    )?;
+    apply(source, Field::Binormal, max_work)
+}
+/// Construct the scalar squared-curvature field [kappa²,0] or [kappa²,0,0].
+/// Original-source squared velocity must have strictly positive Bernstein
+/// coefficients on each closed span BEFORE reduction. An unresolved or zero
+/// velocity is refused, even if quotient cancellation could fill that point.
+/// This conservative sufficient regularity check is not a complete solver.
+pub fn squared_curvature(source: &Curve, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredCurvature, max_work)
 }
 fn apply(source: &Curve, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;

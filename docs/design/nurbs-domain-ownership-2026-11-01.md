@@ -103,3 +103,15 @@ NURBS-0248: `editing::exact_derivative::squared_speed` and its private `speed`
 helper belong to the existing editing field-construction owner. The first
 coordinate carries the scalar squared speed; other coordinates are zero and
 not spatial positions. No new root, pointwise-analysis or topology owner.
+
+Pending exact curve binormal field: `editing::exact_derivative::binormal` owns
+construction of the unnormalized Cprime cross Csecond field in native editing.
+The private `binormal` module forms the target directly from original homogeneous
+polynomials. Extraction, storage and proof stay in their existing owners.
+This is not yet catalogue credit or a regularity/curvature certificate.
+
+Pending exact squared curvature: `editing::exact_derivative::squared_curvature`
+and private `curvature` remain under editing field construction. This constructs
+a scalar field, while pointwise curve analysis keeps its existing owner.
+Original source regularity must be proved before any cancellation; output
+identity alone must never extend curvature through a stationary source point.

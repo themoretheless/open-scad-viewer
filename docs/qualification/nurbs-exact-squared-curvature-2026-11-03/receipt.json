@@ -1,0 +1,67 @@
+{
+  "baseCommit": "60e7517ce1983112c31701503072dc4b6fb22d43",
+  "status": "current-focused-default-no-codec-and-independent-oracles-passed-full-regression-running",
+  "catalogueCredited": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "5ff211033c07a782181c7d09f17ecd5eef446dccc3981a73e08cfaadc53e419e",
+    "crates/nurbs-core/src/editing/exact_derivative/curvature.rs": "b22137503de5e0db881177ad31e5fcef6f4090ac2f25d7ae6fd4bec917267ca7",
+    "crates/nurbs-core/src/editing/exact_derivative/higher.rs": "a6235be169a18c8d8ddc02cd80d78fd23c85d44bdce3dc7ea65afc0fce19811a",
+    "crates/nurbs-core/src/editing/exact_derivative/extraction.rs": "11c49641d17ecd5637b5112c16d46dbb875803d930f1151d3caa382816469935",
+    "crates/nurbs-core/src/editing/exact_derivative/proof.rs": "9f80d01427a8cdc06f28e85299dc9c4c970bd11eacb1e5fa8bf46becf2791fd0",
+    "crates/nurbs-core/tests/exact_squared_curvature_contracts.rs": "1c9d639169932d1210776494d82d8c963f1ffde787a34e7fb8b9b0a7aad97320",
+    "crates/nurbs-core/Cargo.toml": "f3e97c2911b174da7b83fbd0461766b4a59270c1e5cd749ae045efc73389d5f3",
+    "crates/nurbs-core/tests/loft_capacity.rs": "98c4761de48da3a2fa6537788d2322cc0c619967dd5a767352f5d9786109a562"
+  },
+  "focusedDefault": {
+    "passed": 58,
+    "failed": 0,
+    "suites": [
+      "exact_binormal_contracts",
+      "exact_curve_order_contracts",
+      "exact_squared_curvature_contracts",
+      "exact_squared_speed_contracts",
+      "loft_capacity"
+    ],
+    "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native259-current-focused-default.log"
+  },
+  "independentOracle": {
+    "acceptedSourceRecords": 11,
+    "outputPieces": 12,
+    "negativeControls": 8,
+    "globalGaugeControl": true,
+    "clockInvarianceControl": true,
+    "stationarySourceRejectedDespiteZeroQuotient": true,
+    "sourceReconstructionSha256": "f317bc91a7130b9eabdc41d1ce5e3a251a6ef00134f8bd31a78567e95fa259be",
+    "scope": "Original-source sufficient regularity plus full-span stored-bit squared-curvature identities. No complete regularity solver, topology or application qualification."
+  },
+  "scope": "Current-source exact squared-curvature construction; conservative original-source regularity admission, exact storage or atomic refusal. No full-current-source, complete regularity solver, topology or application qualification. Older full-suite processes use pre-curvature compiled binaries and cannot qualify this new operation.",
+  "focusedNoCodec": {
+    "passed": 57,
+    "failed": 0,
+    "suites": [
+      "exact_binormal_contracts",
+      "exact_curve_order_contracts",
+      "exact_squared_curvature_contracts",
+      "exact_squared_speed_contracts",
+      "loft_capacity"
+    ],
+    "note": "Guided codec alignment test excluded; natural native capacity retained."
+  },
+  "fullCurrentRuns": {
+    "default": {
+      "sessionId": 63122,
+      "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native259-current-full-default-opt1.log"
+    },
+    "noCodec": {
+      "sessionId": 6582,
+      "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native259-current-full-no-codec-opt1.log"
+    },
+    "status": "live-builds-and-cargo-lock-queue",
+    "architectureIncludingUntracked": "passed"
+  },
+  "explicitTestEnvironment": {
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  }
+}

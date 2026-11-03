@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 248,
-  "unallocatedCount": 752,
+  "specifiedCount": 250,
+  "unallocatedCount": 750,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6741,6 +6741,50 @@
       "remainingQualification": [
         "Scalar carrier [dot(Cprime,Cprime),0] or [dot(Cprime,Cprime),0,0] for validated2D/3D curves, not spatial positions or speed square root. Every original nonempty fundamental span, absolute physical clocks and one-sided repeated/periodic traces. Direct original homogeneous velocity numerators squared over W^4; no rounded intermediate derivative. Zero/stationary speeds accepted, including negative control poles for a nonnegative field. Joint content reduction, one whole-piece gauge and actual stored-bit proof against original uncancelled target. Unchanged1m-work/4096-bit/degree25/geometry bounds; exact storage or atomic whole-result refusal.",
         "Native default/no-codec qualification only. No regularity, strict positivity, arc-length parameterization, topology, JSON/WASM/Rush/editor/STEP or source-certificate transfer. Alternate representation admission and original1000/application delivery remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0249",
+      "name": "Точное поле ненормированной бинормали пространственной NURBS-кривой",
+      "status": "planned",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точная дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_derivative::binormal",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/binormal.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
+        "crates/nurbs-core/tests/exact_binormal_contracts.rs",
+        "docs/design/nurbs-exact-binormal.md",
+        "docs/qualification/nurbs-exact-binormal-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-binormal-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Native implementation exists and current focused default/no-codec tests plus independent full-span identities pass. Status remains planned until full regression review; this entry is not credited as completed native functionality.",
+        "Original clocks, one-sided knot traces, exact binary storage or atomic whole-result refusal. No topology, certificate transfer, JSON/WASM/Rush/editor/STEP or whole-app qualification. See API documentation for specific regularity admission and degree limits."
+      ]
+    },
+    {
+      "id": "NURBS-0250",
+      "name": "Точное скалярное поле квадрата кривизны NURBS-кривой с доказательством регулярности исходного участка",
+      "status": "planned",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точная дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_derivative::squared_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
+        "crates/nurbs-core/tests/exact_squared_curvature_contracts.rs",
+        "docs/design/nurbs-exact-squared-curvature.md",
+        "docs/qualification/nurbs-exact-squared-curvature-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-squared-curvature-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Native implementation exists and current focused default/no-codec tests plus independent full-span identities pass. Status remains planned until full regression review; this entry is not credited as completed native functionality.",
+        "Original clocks, one-sided knot traces, exact binary storage or atomic whole-result refusal. No topology, certificate transfer, JSON/WASM/Rush/editor/STEP or whole-app qualification. See API documentation for specific regularity admission and degree limits."
       ]
     }
   ],
