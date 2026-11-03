@@ -116,7 +116,7 @@ pub(super) fn contact(
             }
         })));
     }
-    let inverse = chart.inverse_clocks(&ranges);
+    let inverse = chart.inverse_clocks(&ranges)?;
     let natural = |axis: usize| -> Result<[f64; 2]> {
         let (knots, p, n) = if axis == 0 {
             (&s.knots_u, s.degree_u, s.control_points.len())

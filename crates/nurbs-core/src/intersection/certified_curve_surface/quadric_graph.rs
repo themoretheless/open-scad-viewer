@@ -6,6 +6,7 @@ use num_rational::BigRational as Q;
 mod chart;
 mod clock;
 mod coupled;
+mod coupled_bernstein;
 mod edge;
 mod identity;
 pub use edge::GraphBoundaryProof;
@@ -16,6 +17,7 @@ pub enum OriginalQuadricGraphParameterization {
     SeparableProjective,
     SeparableRational,
     CoupledBilinear,
+    CoupledBernstein,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {
@@ -50,8 +52,10 @@ pub struct OriginalQuadricGraphContacts {
 /// and exact Greville projection. Multi-span clocks require a complete exact
 /// monotone homogeneous Bernstein restriction census and continuous joins.
 /// Single Bezier graphs use weighted Bernstein clocks and their exact shortcut.
-/// Planar degree-(1,1) patches additionally admit nonseparable positive weights
-/// through a joint bilinear inverse and a proved global projection bijection;
+/// Planar single Bezier patches additionally admit nonseparable positive weights
+/// through a proved global mean-map bijection and joint inverse enclosures.
+/// Degree-(1,1) uses its exact odds equation; higher degrees refine positive
+/// Bernstein ratio hulls on the retained parameter rectangle;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its

@@ -120,3 +120,18 @@ function coupledPlane(q:OriginalQuadricGraphQuery){for(const row of q.patch.cont
  const q=coupledPlane(boundaryQuery()),f=[1,-1,0,4];q.curve.controlPoints=q.curve.controlPoints.map((p,i)=>[p[0]!,.75,-f[i]!])
  quadricGraphCases.push({name:'graph-coupled-planar-algebraic-edge',query:q,check:r=>present(r,[[2+4/3,-2,12,2]],'quadric-coordinate-sign')})
 }
+
+function coupledDegreeTwo(q:OriginalQuadricGraphQuery){coupledPlane(q);Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,2,2,2],knotsV:[10,10,10,14,14,14],controlPoints:[0,.5,1].map(x=>[0,.5,1].map(y=>[x,y,0])),weights:[[1,1,1],[1,1,1],[1,1,17]]});return q}
+{
+ const q=coupledDegreeTwo(graphQuery());q.curve.controlPoints=[[.75,.75,-1],[.75,.75,1]]
+ quadricGraphCases.push({name:'graph-coupled-degree-two-planar-target',query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='coupled-bernstein','Missing coupled Bernstein mean proof');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<2,'Joint inverse did not refine')}})
+}
+{
+ const q=coupledDegreeTwo(boundaryQuery()),f=[1,-1,0,4];q.curve.controlPoints=q.curve.controlPoints.map((p,i)=>[p[0]!,.5,-f[i]!])
+ quadricGraphCases.push({name:'graph-coupled-degree-two-algebraic-edge',query:q,check:r=>present(r,[[2+4/3,-2,12,2]],'quadric-coordinate-sign')})
+}
+
+{
+ const q=coupledPlane(graphQuery());Object.assign(q.patch,{degreeU:8,degreeV:8,knotsU:[...Array(9).fill(-2),...Array(9).fill(2)],knotsV:[...Array(9).fill(10),...Array(9).fill(14)],controlPoints:Array.from({length:9},(_,i)=>Array.from({length:9},(_,j)=>[i,j,0])),weights:Array.from({length:9},(_,i)=>Array.from({length:9},(_,j)=>i===8&&j===8?65537:1))});q.curve.controlPoints=[[6,6,-1],[6,6,1]]
+ quadricGraphCases.push({name:'graph-coupled-degree-eight-original-target',query:q,check:r=>present(r,[[4,0,12,1]])})
+}

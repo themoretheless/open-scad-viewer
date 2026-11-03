@@ -810,3 +810,48 @@ fn coupled_planar_chart_retains_exact_algebraic_outer_edge_signs() {
     assert!(r.boundary_exact_work > 0);
     assert_eq!(r.contacts[0].uv_proof,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphUvProof::QuadricCoordinateSign);
 }
+
+#[test]
+fn nonseparable_degree_two_planar_target_has_refined_joint_uv_enclosures() {
+    let (mut s, _) = saddle();
+    s.degree_u = 2;
+    s.degree_v = 2;
+    s.knots_u = vec![-2., -2., -2., 2., 2., 2.];
+    s.knots_v = vec![10., 10., 10., 14., 14., 14.];
+    s.control_points = (0..3)
+        .map(|i| {
+            (0..3)
+                .map(|j| vec![i as f64 / 2., j as f64 / 2., 0.])
+                .collect()
+        })
+        .collect();
+    s.weights = vec![vec![1.; 3]; 3];
+    s.weights[2][2] = 17.;
+    let mut q = [[0.; 4]; 4];
+    q[2][3] = 0.5;
+    q[3][2] = 0.5;
+    let r = inspect(&line([0.75, 0.75, -1.], [0.75, 0.75, 1.]), &s, q);
+    present(&r, &[(4., 0., 12., 1)]);
+    assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::CoupledBernstein);
+    for b in &r.contacts[0].parameter_box[1..] {
+        assert!(b[1] - b[0] < 2.);
+    }
+    present(
+        &inspect(&line([0., 0.5, -1.], [0., 0.5, 1.]), &s, q),
+        &[(4., -2., 12., 1)],
+    );
+    q[0][1]=3.;q[1][0]=-3.;
+    present(&inspect(&line([0.75,0.75,-1.],[0.75,0.75,1.]),&s,q),&[(4.,0.,12.,1)]);
+}
+
+#[test]
+fn coupled_degree_eight_original_target_proves_actual_finite_contact() {
+    let (mut s,_)=saddle();s.degree_u=8;s.degree_v=8;
+    s.knots_u=[vec![-2.;9],vec![2.;9]].concat();s.knots_v=[vec![10.;9],vec![14.;9]].concat();
+    s.control_points=(0..=8).map(|i|(0..=8).map(|j|vec![i as f64,j as f64,0.]).collect()).collect();
+    s.weights=vec![vec![1.;9];9];s.weights[8][8]=65537.;
+    let mut q=[[0.;4];4];q[2][3]=0.5;q[3][2]=0.5;
+    // At u=v=1/2, the corner contribution doubles W; each projected mean
+    // becomes 3/4, hence world x=y=6 in this exact integer control frame.
+    let r=inspect(&line([6.,6.,-1.],[6.,6.,1.]),&s,q);present(&r,&[(4.,0.,12.,1)]);
+}

@@ -263,3 +263,33 @@ fn coupled_planar_bilinear_clock_serializes_certified_joint_uv() {
     }
     ledger(&r);
 }
+
+#[test]
+fn coupled_bernstein_planar_target_serializes_joint_uv_enclosures() {
+    let mut q = query();
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["degreeV"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 10., 14., 14., 14.]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 0.5, 0.], [0., 1., 0.]],
+        [[0.5, 0., 0.], [0.5, 0.5, 0.], [0.5, 1., 0.]],
+        [[1., 0., 0.], [1., 0.5, 0.], [1., 1., 0.]]
+    ]);
+    q["patch"]["weights"] = json!([[1., 1., 1.], [1., 1., 1.], [1., 1., 17.]]);
+    q["quadric"] = json!([
+        [0., 0., 0., 0.],
+        [0., 0., 0., 0.],
+        [0., 0., 0., 0.5],
+        [0., 0., 0.5, 0.]
+    ]);
+    q["curve"]["controlPoints"] = json!([[0.75, 0.75, -1.], [0.75, 0.75, 1.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "coupled-bernstein");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    for (i, x) in [4., 0., 12.].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][i];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+    ledger(&r);
+}

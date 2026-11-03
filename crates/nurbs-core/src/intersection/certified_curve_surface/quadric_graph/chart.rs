@@ -5,6 +5,7 @@ pub(super) struct Chart {
     pub axes: [usize; 2],
     pub parameterization: OriginalQuadricGraphParameterization,
     coupled: Option<[Q; 4]>,
+    coupled_tensor: Option<Vec<Vec<Q>>>,
     clocks: [super::clock::Clock; 2],
     origin: [Q; 2],
     u: [Q; 2],
@@ -43,14 +44,16 @@ impl Chart {
             (0..nv).all(|j| q(s.weights[i][j]) * &w0 == q(s.weights[i][0]) * q(s.weights[0][j]))
         });
         let coupled = !separable
-            && p == 1
-            && r == 1
             && single
-            && matrix[..3]
+            && (0..3).all(|i| (0..3).all(|j| q(matrix[i][j]) + q(matrix[j][i]) == q(0.)));
+        check(separable || coupled,"Quadric graph requires exactly separable original positive weights or a coupled planar Bezier chart")?;
+        let coupled_tensor = (coupled && (p > 1 || r > 1)).then(|| {
+            s.weights
                 .iter()
-                .all(|row| row[..3].iter().all(|x| *x == 0.));
-        check(separable || coupled,"Quadric graph requires exactly separable original positive weights or a coupled planar bilinear chart")?;
-        let coupled_weights = coupled.then(|| {
+                .map(|row| row.iter().map(|w| q(*w)).collect())
+                .collect()
+        });
+        let coupled_weights = (coupled && p == 1 && r == 1).then(|| {
             [
                 q(s.weights[0][0]),
                 q(s.weights[0][1]),
@@ -97,7 +100,9 @@ impl Chart {
                 super::clock::Clock::original((0..=r).map(|j| q(s.weights[0][j])).collect()),
             ]
         };
-        let parameterization = if coupled {
+        let parameterization = if coupled && (p > 1 || r > 1) {
+            OriginalQuadricGraphParameterization::CoupledBernstein
+        } else if coupled {
             OriginalQuadricGraphParameterization::CoupledBilinear
         } else if clocks.iter().all(|c| c.identity()) {
             OriginalQuadricGraphParameterization::PolynomialAffine
@@ -156,6 +161,7 @@ impl Chart {
                 parameterization,
                 clocks,
                 coupled: coupled_weights,
+                coupled_tensor,
                 origin,
                 u,
                 v,
@@ -166,11 +172,14 @@ impl Chart {
             "No proved globally single-valued original quadric graph chart",
         ))
     }
-    pub(super) fn inverse_clocks(&self, r: &[[Q; 2]; 2]) -> [[Q; 2]; 2] {
-        if let Some(w) = &self.coupled {
-            return super::coupled::enclosure(w, r);
+    pub(super) fn inverse_clocks(&self, r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
+        if let Some(w) = &self.coupled_tensor {
+            return super::coupled_bernstein::enclosure(w, r);
         }
-        std::array::from_fn(|axis| {
+        if let Some(w) = &self.coupled {
+            return Ok(super::coupled::enclosure(w, r));
+        }
+        Ok(std::array::from_fn(|axis| {
             let lo = self.clocks[axis].inverse(&r[axis][0]);
             let hi = if r[axis][0] == r[axis][1] {
                 lo.clone()
@@ -178,7 +187,7 @@ impl Chart {
                 self.clocks[axis].inverse(&r[axis][1])
             };
             [lo[0].clone(), hi[1].clone()]
-        })
+        }))
     }
     pub(super) fn fractions(&self, p: &[Q; 3]) -> [Q; 2] {
         let x = &p[self.axes[0]] - &self.origin[0];
