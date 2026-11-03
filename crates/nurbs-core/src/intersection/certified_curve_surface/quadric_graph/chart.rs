@@ -4,6 +4,7 @@ use num_traits::Zero;
 pub(super) struct Chart {
     pub axes: [usize; 2],
     pub parameterization: OriginalQuadricGraphParameterization,
+    joint: Option<super::joint::Joint>,
     triangular: Option<super::triangular::Triangular>,
     coupled: Option<[Q; 4]>,
     coupled_tensor: Option<Vec<Vec<Q>>>,
@@ -144,7 +145,13 @@ impl Chart {
             } else {
                 None
             };
-            if !ordinary && !homogeneous && !independent && triangular.is_none() {
+            let joint = if !ordinary && !homogeneous && !independent && triangular.is_none() {
+                super::joint::Joint::prove(s, axes, &origin, &u, &v, &det)
+            } else {
+                None
+            };
+            if !ordinary && !homogeneous && !independent && triangular.is_none() && joint.is_none()
+            {
                 continue;
             }
             // The coefficient of the dependent coordinate is affine in the
@@ -173,7 +180,9 @@ impl Chart {
             }
             return Ok(Self {
                 axes,
-                parameterization: if triangular.is_some() {
+                parameterization: if joint.is_some() {
+                    OriginalQuadricGraphParameterization::JointJacobian
+                } else if triangular.is_some() {
                     OriginalQuadricGraphParameterization::TriangularRational
                 } else if independent {
                     OriginalQuadricGraphParameterization::HomogeneousSeparable
@@ -202,6 +211,7 @@ impl Chart {
                 } else {
                     coupled_tensor
                 },
+                joint,
                 triangular,
                 origin,
                 u,
@@ -214,6 +224,9 @@ impl Chart {
         ))
     }
     pub(super) fn inverse_clocks(&self, r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
+        if let Some(j) = &self.joint {
+            return j.enclosure(r);
+        }
         if let Some(t) = &self.triangular {
             return t.enclosure(r);
         }

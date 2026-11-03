@@ -95,7 +95,10 @@ fn original_cross_identity_and_quadric_membership_are_both_required() {
     let (s, q, c) = target();
     let mut drift = s.clone();
     drift.control_points[1][1][0] = f64::from_bits(1f64.to_bits() + 1);
-    assert!(original_quadric_graph_contacts(&c, &drift, q, &[], 1e-9, 10, 1_000_000).is_err());
+    let r = original_quadric_graph_contacts(&c, &drift, q, &[], 1e-9, 10, 1_000_000).unwrap();
+    assert_eq!(r.target_parameterization,OriginalQuadricGraphParameterization::JointJacobian);
+    assert_eq!(r.target_membership.outcome,cad_predicates::BezierIdentity::Different);
+    assert!(!r.target_graph_proven && !r.complete && r.contacts.is_empty() && r.carrier.is_none());
     let mut wrong = s.clone();
     wrong.control_points[1][1][2] = 1.25;
     let r = original_quadric_graph_contacts(&c, &wrong, q, &[], 1e-9, 10, 1_000_000).unwrap();
