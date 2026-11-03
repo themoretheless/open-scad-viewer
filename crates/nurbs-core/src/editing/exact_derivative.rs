@@ -11,6 +11,7 @@ use crate::{
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 mod extraction;
+mod higher;
 mod proof;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
@@ -108,14 +109,18 @@ fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
         })
         .collect()
 }
-fn piece(source: &Curve, span: usize, w: &mut Work) -> PResult<Curve> {
+fn piece(source: &Curve, span: usize, order: usize, w: &mut Work) -> PResult<Curve> {
     let a = source.knots[span];
     let b = source.knots[span + 1];
     let qa = w.lift(a)?;
     let qb = w.lift(b)?;
     let width = w.op(&qb, &qa, |a, b| a - b)?;
     let h = extraction::span(source, span, &qa, &width, w)?;
-    let target = target(&h, &width, w)?;
+    let target = if order == 1 {
+        target(&h, &width, w)?
+    } else {
+        higher::target(&h, &width, order, w)?
+    };
     let reduced = reduced(&target, w)?;
     let degree = reduced
         .iter()
@@ -152,6 +157,20 @@ fn piece(source: &Curve, span: usize, w: &mut Work) -> PResult<Curve> {
 /// refusal under the shared 1m-work/4096-bit and unchanged geometry limits.
 /// No old source/topology certificate or numerical evaluator-bit transfer.
 pub fn curve(source: &Curve, max_work: u64) -> Result<Report> {
+    apply(source, 1, max_work)
+}
+/// Construct the original-clock derivative field of order1..3 on every source
+/// span, matching the existing rational jet ceiling. A rational derivative may
+/// be nonzero above the polynomial source degree. One-sided traces only; no
+/// global knot smoothness or rounded intermediate derivative curve.
+pub fn curve_order(source: &Curve, order: usize, max_work: u64) -> Result<Report> {
+    check(
+        (1..=3).contains(&order),
+        "Derivative order must be in [1,3]",
+    )?;
+    apply(source, order, max_work)
+}
+fn apply(source: &Curve, order: usize, max_work: u64) -> Result<Report> {
     source.validate()?;
     check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
@@ -165,7 +184,7 @@ pub fn curve(source: &Curve, max_work: u64) -> Result<Report> {
         let mut out = Vec::new();
         for span in source.degree..source.control_points.len() {
             if source.knots[span] < source.knots[span + 1] {
-                out.push(piece(source, span, &mut w)?);
+                out.push(piece(source, span, order, &mut w)?);
             }
         }
         Ok(out)

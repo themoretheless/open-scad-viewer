@@ -93,3 +93,8 @@ NURBS-0246: `editing::exact_surface_derivative::mixed_partial` и закрыты
 `mixed` принадлежат `editing`. Порядок1..3 согласован с существующими
 рациональными jet-ограничениями; точные поля вторых/третьих смешанных производных
 не подменяются точечными конечными разностями или сертификатом гладкости узлов.
+
+NURBS-0247: `editing::exact_derivative::curve_order` and its private `higher`
+helper remain under the existing editing owner. One original-source homogeneous
+recurrence builds order1..3 vector fields; no new root alias or numeric pointwise
+jet owner is introduced. Order1 retains the original public path and work trace.

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 246,
-  "unallocatedCount": 754,
+  "specifiedCount": 247,
+  "unallocatedCount": 753,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6697,6 +6697,28 @@
       "remainingQualification": [
         "One family covers total derivative orders1..3, matching existing rational jet ceiling, including rational derivatives above polynomial source degree. Complete original fundamental UVcell cover, physical absolute clocks, one-sided traces and actual stored-bit identity against original uncancelled source-derived targets. No intermediate rounded fields or finite differences. Shared unchanged1m-work/4096-bit/degree25/geometry limits; exact storage or atomic whole-result refusal.",
         "Native default/no-codec qualification only. No global knot smoothness, regularity, topology, JSON/WASM/Rush/editor/STEP or old source-certificate transfer. General mixed-variable GCD/alternate representation admission and original1000/application delivery remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0247",
+      "name": "Точное построение полей второй и третьей производных NURBS-кривой на всех исходных узловых участках",
+      "status": "native",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точное дифференцирование",
+      "nativeApi": "nurbs_core::editing::exact_derivative::curve_order",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/higher.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
+        "crates/nurbs-core/tests/exact_curve_order_contracts.rs",
+        "docs/design/nurbs-exact-curve-order.md",
+        "docs/qualification/nurbs-exact-curve-order-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-curve-order-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "One family covers orders1..3 for validated2D/3D curves, matching existing rational jets; order1 preserves prior output/work. Rational derivatives can be nonzero above source polynomial degree. Every nonempty original fundamental span, physical absolute clocks and one-sided repeated/periodic traces. Direct original homogeneous recurrence, joint content reduction and fresh actual stored-bit proof against uncancelled original-source derivative targets. Unchanged1m-work/4096-bit/degree25/geometry caps; exact storage or atomic whole-result refusal.",
+        "Native default/no-codec qualification only. No global knot smoothness, regularity, topology, JSON/WASM/Rush/editor/STEP or source-certificate transfer. Alternate representation admission and original1000/application delivery remain open."
       ]
     }
   ],
