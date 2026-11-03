@@ -6746,7 +6746,7 @@
     {
       "id": "NURBS-0249",
       "name": "Точное поле ненормированной бинормали пространственной NURBS-кривой",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точная дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_derivative::binormal",
@@ -6758,17 +6758,19 @@
         "crates/nurbs-core/tests/exact_binormal_contracts.rs",
         "docs/design/nurbs-exact-binormal.md",
         "docs/qualification/nurbs-exact-binormal-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-exact-binormal-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-exact-binormal-2026-11-03/exact_oracle.py",
+        "docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-differential-regression-2026-11-03/audit_coverage.py"
       ],
       "remainingQualification": [
-        "Native implementation exists and current focused default/no-codec tests plus independent full-span identities pass. Status remains planned until full regression review; this entry is not credited as completed native functionality.",
+        "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",
         "Original clocks, one-sided knot traces, exact binary storage or atomic whole-result refusal. No topology, certificate transfer, JSON/WASM/Rush/editor/STEP or whole-app qualification. See API documentation for specific regularity admission and degree limits."
       ]
     },
     {
       "id": "NURBS-0250",
       "name": "Точное скалярное поле квадрата кривизны NURBS-кривой с доказательством регулярности исходного участка",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "native-1000-exact-analysis",
       "category": "Точная дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_derivative::squared_curvature",
@@ -6780,10 +6782,12 @@
         "crates/nurbs-core/tests/exact_squared_curvature_contracts.rs",
         "docs/design/nurbs-exact-squared-curvature.md",
         "docs/qualification/nurbs-exact-squared-curvature-2026-11-03/receipt.json",
-        "docs/qualification/nurbs-exact-squared-curvature-2026-11-03/exact_oracle.py"
+        "docs/qualification/nurbs-exact-squared-curvature-2026-11-03/exact_oracle.py",
+        "docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-differential-regression-2026-11-03/audit_coverage.py"
       ],
       "remainingQualification": [
-        "Native implementation exists and current focused default/no-codec tests plus independent full-span identities pass. Status remains planned until full regression review; this entry is not credited as completed native functionality.",
+        "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",
         "Original clocks, one-sided knot traces, exact binary storage or atomic whole-result refusal. No topology, certificate transfer, JSON/WASM/Rush/editor/STEP or whole-app qualification. See API documentation for specific regularity admission and degree limits."
       ]
     }

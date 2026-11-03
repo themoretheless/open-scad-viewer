@@ -17,4 +17,4 @@ No regularity, unit orientation, curvature, topology or old certificate transfer
 The existing shared work, rational-bit, output-degree, geometry and weight
 limits remain unchanged. Invalid source, non-3D input and invalid budgets are
 errors. Any exact-storage, bound or work refusal discards the entire result.
-Native qualification is in progress; no catalogue or application credit yet.
+Native qualification passed; complete regression evidence is recorded in `docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json`. Application delivery remains separate.

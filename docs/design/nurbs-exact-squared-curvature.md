@@ -27,4 +27,4 @@ existing conversion ceiling; it is a conservative admission restriction.
 Shared1m-work/4096-bit, geometry and weight limits are unchanged. Every output
 piece must be representable exactly; a late refusal discards the full cover.
 No topology, global Frenet frame, source certificate, JSON/WASM/Rush/editor/STEP
-or whole-application authority is supplied. Native qualification is in progress.
+or whole-application authority is supplied. Native qualification passed; see `docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json`.

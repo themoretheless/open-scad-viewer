@@ -1,14 +1,14 @@
 {
   "baseCommit": "60e7517ce1983112c31701503072dc4b6fb22d43",
-  "status": "native-qualification-in-progress",
-  "catalogueCredited": false,
+  "status": "native-qualified",
+  "catalogueCredited": true,
   "sourceSha256": {
     "crates/nurbs-core/src/editing/exact_derivative/binormal.rs": "4d00454f2d6b00e8204928aa68625473300dfe357f5256889764d146dc16491b",
     "crates/nurbs-core/src/editing/exact_derivative/extraction.rs": "11c49641d17ecd5637b5112c16d46dbb875803d930f1151d3caa382816469935",
     "crates/nurbs-core/src/editing/exact_derivative/higher.rs": "a6235be169a18c8d8ddc02cd80d78fd23c85d44bdce3dc7ea65afc0fce19811a",
     "crates/nurbs-core/src/editing/exact_derivative/proof.rs": "9f80d01427a8cdc06f28e85299dc9c4c970bd11eacb1e5fa8bf46becf2791fd0",
     "crates/nurbs-core/src/editing/exact_derivative/speed.rs": "338c348b1244cc326d9ee7febfe4136204ce31c4e3b9e6b1a5872139494dffd6",
-    "crates/nurbs-core/src/editing/exact_derivative.rs": "43a35da959fd9ad9739d21e39fa81bb271b461035ced664ad311fcf68b74d493",
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "5ff211033c07a782181c7d09f17ecd5eef446dccc3981a73e08cfaadc53e419e",
     "crates/nurbs-core/tests/exact_binormal_contracts.rs": "dbf7ea10101d691358a3fdbe8d80e0b3a464d20773c4d60efc4a7a8238c08317"
   },
   "targetedTests": {
@@ -17,45 +17,70 @@
     "note": "Final frozen source; late inexact span refusal included."
   },
   "independentOracle": {
-    "command": "python3 docs/qualification/nurbs-exact-binormal-2026-11-03/exact_oracle.py /Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-binormal-direct-final.log",
     "acceptedSourceRecords": 11,
     "outputPieces": 15,
     "negativeControls": 8,
     "positiveGlobalGaugeControl": true,
-    "verifierSha256": "6a8f4a694971bcb70415579e23f4011d88b44737f4370bafbe788bfab3579fe2"
-  },
-  "fullDefault": {
-    "status": "running",
-    "sessionId": 41096,
-    "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-binormal-full-default.log"
-  },
-  "fullNoCodec": {
-    "status": "running",
-    "sessionId": 11901,
-    "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-binormal-full-no-codec-final.log",
-    "failedEarlierAttempts": [
-      {
-        "sessionId": 49240,
-        "exitCode": 101,
-        "reason": "surface_collar_diagnostics example lacked codec feature declaration"
-      },
-      {
-        "sessionId": 14107,
-        "exitCode": 101,
-        "reason": "loft_capacity test imported codec-only alignment unconditionally"
-      }
-    ],
-    "corrections": [
-      "Declare codec dependency for both JSON collar diagnostic examples",
-      "Keep the natural loft capacity test in native builds and condition only the guided alignment import/test on codec"
-    ],
-    "sourceInputs": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-no-codec-final-source-inputs.json"
+    "sourceReconstructionSha256": "f317bc91a7130b9eabdc41d1ce5e3a251a6ef00134f8bd31a78567e95fa259be",
+    "scope": "Exact original source reconstruction and actual stored full-span cross-product identities. No normalization, regularity, topology or application qualification."
   },
   "architectureIncludingUntracked": "passed",
-  "remaining": [
-    "Finish full default and no-codec qualification",
-    "Archive final logs and repeat independent proof",
-    "Catalogue entry after gates pass"
-  ],
-  "scope": "Native implementation only. No normalized frame, regularity, curvature, topology, WASM or application qualification."
+  "scope": "Current native Rust exact differential field construction with full-span stored-bit identities, default/no-codec target coverage and atomic refusal. Exact-storage and documented conservative admission limits remain. No topology, old-certificate transfer or application qualification.",
+  "fullRegressionReceipt": "docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json",
+  "regressionScope": "Full library+all283 integration targets and two doctests per profile; retained prefix plus repaired/suffix coverage. See complete source/evidence audit; old historical in-progress fields below are superseded by this receipt.",
+  "historicalInProgressSnapshotsSuperseded": {
+    "fullDefault": {
+      "status": "running",
+      "sessionId": 41096,
+      "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-binormal-full-default.log"
+    },
+    "fullNoCodec": {
+      "status": "running",
+      "sessionId": 11901,
+      "log": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-binormal-full-no-codec-final.log",
+      "failedEarlierAttempts": [
+        {
+          "sessionId": 49240,
+          "exitCode": 101,
+          "reason": "surface_collar_diagnostics example lacked codec feature declaration"
+        },
+        {
+          "sessionId": 14107,
+          "exitCode": 101,
+          "reason": "loft_capacity test imported codec-only alignment unconditionally"
+        }
+      ],
+      "corrections": [
+        "Declare codec dependency for both JSON collar diagnostic examples",
+        "Keep the natural loft capacity test in native builds and condition only the guided alignment import/test on codec"
+      ],
+      "sourceInputs": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native257-no-codec-final-source-inputs.json"
+    }
+  },
+  "historicalAttemptOutcomes": {
+    "defaultUnoptimized": "Exit101 at stale surface_correspondence cell assertion; no new failure.",
+    "noCodecUnoptimized": "Intentionally stopped after current-source complete optimized qualification; not a timeout/restart. Partial log retained in checkpoint directory."
+  },
+  "nativeRegression": {
+    "receipt": "docs/qualification/nurbs-exact-differential-regression-2026-11-03/receipt.json",
+    "status": "qualified-through-audited-complete-target-union",
+    "defaultPassed": 3979,
+    "noCodecPassed": 3750,
+    "docTestsPassedPerProfile": 2,
+    "ignoredMicrobenchmarkPerProfile": 1
+  },
+  "historicalInitialSourceSha256": {
+    "crates/nurbs-core/src/editing/exact_derivative/binormal.rs": "4d00454f2d6b00e8204928aa68625473300dfe357f5256889764d146dc16491b",
+    "crates/nurbs-core/src/editing/exact_derivative/extraction.rs": "11c49641d17ecd5637b5112c16d46dbb875803d930f1151d3caa382816469935",
+    "crates/nurbs-core/src/editing/exact_derivative/higher.rs": "a6235be169a18c8d8ddc02cd80d78fd23c85d44bdce3dc7ea65afc0fce19811a",
+    "crates/nurbs-core/src/editing/exact_derivative/proof.rs": "9f80d01427a8cdc06f28e85299dc9c4c970bd11eacb1e5fa8bf46becf2791fd0",
+    "crates/nurbs-core/src/editing/exact_derivative/speed.rs": "338c348b1244cc326d9ee7febfe4136204ce31c4e3b9e6b1a5872139494dffd6",
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "43a35da959fd9ad9739d21e39fa81bb271b461035ced664ad311fcf68b74d493",
+    "crates/nurbs-core/tests/exact_binormal_contracts.rs": "dbf7ea10101d691358a3fdbe8d80e0b3a464d20773c4d60efc4a7a8238c08317"
+  },
+  "implementationCommit": "363b2ad1e",
+  "remainingQualification": [
+    "JSON/WASM/TypeScript/Rush/editor/STEP and whole-application delivery remain separate.",
+    "Original1000 target remains incomplete."
+  ]
 }
