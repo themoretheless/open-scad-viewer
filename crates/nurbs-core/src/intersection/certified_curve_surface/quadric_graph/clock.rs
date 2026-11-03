@@ -1,11 +1,12 @@
 //! Positive weighted Bernstein clocks, with exact inverse enclosures.
 use super::*;
 use num_traits::Zero;
+mod monotone;
 mod spline;
 pub(super) enum Clock {
     Projective([Q; 2]),
     Bernstein(Vec<Q>),
-    Ordered(Vec<[Q; 2]>),
+    CertifiedBernstein(Vec<[Q; 2]>),
     Spline(Vec<spline::Span>),
 }
 impl Clock {
@@ -28,22 +29,17 @@ impl Clock {
             p, knots, weights, ordinates,
         )?))
     }
-    /// Positive weights and ordered Euclidean ordinates y_i imply strict
-    /// increase: pair terms (j-i)(y_j-y_i)w_iw_j B_iB_j are nonnegative,
-    /// with a strictly positive endpoint pair throughout (0,1).
-    pub(super) fn ordered(poles: Vec<[Q; 2]>) -> Option<Self> {
+    /// Positive weights and a complete exact derivative-sign certificate
+    /// prove strict increase, including isolated stationary points.
+    pub(super) fn certified(poles: Vec<[Q; 2]>) -> Option<Self> {
         if poles.len() < 2 || poles.iter().any(|h| h[1] <= q(0.)) || !poles[0][0].is_zero() {
             return None;
         }
         let last = poles.last()?;
-        if last[0] != last[1]
-            || !poles
-                .windows(2)
-                .all(|h| &h[0][0] * &h[1][1] <= &h[1][0] * &h[0][1])
-        {
+        if last[0] != last[1] || !monotone::Work::new().prove(&poles) {
             return None;
         }
-        Some(Self::Ordered(poles))
+        Some(Self::CertifiedBernstein(poles))
     }
     pub(super) fn identity(&self) -> bool {
         matches!(self,Self::Projective(w) if w[0]==w[1])
@@ -70,7 +66,7 @@ impl Clock {
                 let x = w0 * a / (w1 * (q(1.) - a) + w0 * a);
                 [x.clone(), x]
             }
-            Self::Bernstein(_) | Self::Spline(_) | Self::Ordered(_) => {
+            Self::Bernstein(_) | Self::Spline(_) | Self::CertifiedBernstein(_) => {
                 let mut lo = 0.;
                 let mut hi = 1.;
                 for _ in 0..64 {
@@ -80,7 +76,7 @@ impl Clock {
                     }
                     let value = match self {
                         Self::Bernstein(w) => evaluate(w, &q(mid)),
-                        Self::Ordered(h) => evaluate_poles(h, &q(mid)),
+                        Self::CertifiedBernstein(h) => evaluate_poles(h, &q(mid)),
                         Self::Spline(s) => spline::evaluate(s, &q(mid)),
                         _ => unreachable!(),
                     };
@@ -165,7 +161,7 @@ fn ordered_original_clock_inverse_matches_independent_bernstein_sum() {
                 [q((i * i) as f64) * &w / q((p * p) as f64), w]
             })
             .collect();
-        let c = Clock::ordered(poles.clone()).unwrap();
+        let c = Clock::certified(poles.clone()).unwrap();
         let direct = |t: &Q| {
             let mut n = q(0.);
             let mut d = q(0.);
@@ -183,6 +179,6 @@ fn ordered_original_clock_inverse_matches_independent_bernstein_sum() {
             assert!(direct(&e[0]) <= a && a <= direct(&e[1]), "degree {p}");
         }
     }
-    assert!(Clock::ordered(vec![[q(0.), q(1.)], [q(2.), q(1.)], [q(1.), q(1.)]]).is_none());
-    assert!(Clock::ordered(vec![[q(0.), q(1.)], [q(0.), q(0.)], [q(1.), q(1.)]]).is_none());
+    assert!(Clock::certified(vec![[q(0.), q(1.)], [q(2.), q(1.)], [q(1.), q(1.)]]).is_none());
+    assert!(Clock::certified(vec![[q(0.), q(1.)], [q(0.), q(0.)], [q(1.), q(1.)]]).is_none());
 }

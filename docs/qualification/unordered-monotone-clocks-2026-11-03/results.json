@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "baseCommit": "859ce413ef7b8259643203e6e302ff938dce4bb9",
+  "nativeTests": 51,
+  "bridgeTests": 19,
+  "clockProofTests": 7,
+  "homogeneousCensusTests": 4,
+  "clientTests": 74,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock.rs": "ad217b9615090f3d8f1e3a99ecbe24c530e9d088ddd362f9f3de1658fdd5d32f",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock/spline.rs": "e54cd3acb790cb0b763935941a444aec11c21fb5f093ea03553204eae9b6b2f8",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock/monotone.rs": "13ade9ec654d4b02143bc9b88dc7d9b00aa8fcc01df16ac3e540b9b3a8c268a2",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock/monotone/poly.rs": "a1bd79be61a0bac0d104e5fa6b75c3b65b72d33b4484a975caa80b7d79ea6baa",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/clock/monotone/tests.rs": "2f624285fc2cb67d3ef4b7a703bde424d1e1cddf89ac6e22fd4f4a0b0519e961",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_separable.rs": "49441bb1f8aa22a52fce6a9c34be423a49d1f3cabddfee74ee94db4751b9c4f7",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "a23282116d2c3a12d576d9c11e6cc011be4a7ff176f8d50da8cc3f7a9a6735c6",
+    "crates/nurbs-core/tests/original_quadric_graph_monotone_clocks.rs": "c5a4b0272a9b69ef605435d92152c5655288414331f2ac195a39dd0786fbdf80",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "f3c337109b452741fcd986e267afda26246e96750f7a50b3aa51ebb0d25dc209"
+  },
+  "scope": "Exact derivative-sign certification of positive rational Bernstein clocks, including unordered Euclidean poles and isolated stationary points. Nprime*D-N*Dprime is converted exactly to powers, Yun square-free odd-part decomposition removes only even-multiplicity sign-neutral factors, endpoint signs are preserved, and Sturm variations exclude interior odd roots. Multi-span directions retain their global endpoints and continuous joins.",
+  "checkedAlgebraStepsPerClockDirection": 65536,
+  "maxRationalNumeratorOrDenominatorBits": 32768,
+  "budgetScope": "Native chart/clock algebra has separate fixed limits outside predicate maxExactWork. Exhaustion never certifies a clock and no predicate context is reset.",
+  "qualification": "Stationary roots at 1/2 and 1/3, polynomial and rational clocks, nonuniform multi-span targets, rotations/gauges, rejection of interior folds with positive endpoint slopes, all single/multispan degree-pair regressions, mixed multiplicities, irreducible quadratic square factors, endpoint factors, signs separated by 2^-200, degree-elevated stationary/fold examples through degree 8, step/bit exhaustion.",
+  "sourceRewritten": false,
+  "differentialRegularityProven": false,
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for unordered stationary clocks",
+    "General joint coupled projected maps without independent clocks",
+    "Arbitrary UV accuracy and differential regularity qualification",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

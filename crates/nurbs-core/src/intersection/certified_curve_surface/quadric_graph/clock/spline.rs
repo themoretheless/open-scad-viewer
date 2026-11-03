@@ -18,6 +18,7 @@ pub(super) fn original(
         .map(|(w, x)| [w * x, w.clone()])
         .collect();
     let mut spans: Vec<Span> = Vec::new();
+    let mut monotonicity = super::monotone::Work::new();
     for span in p..n {
         if k[span] == k[span + 1] {
             continue;
@@ -46,12 +47,8 @@ pub(super) fn original(
             "Unproved positive restricted graph clock",
         )?;
         let x: Vec<_> = poles.iter().map(|h| &h[0] / &h[1]).collect();
-        // For ordered ordinates y_i and positive weights, W² f' has
-        // positive pair terms (j-i)(y_j-y_i) w_i w_j B_i B_j / t(1-t).
-        // Nondecreasing poles and distinct endpoints imply strict increase
-        // in the open span, including zero endpoint derivative cases.
         check(
-            x.windows(2).all(|w| w[0] <= w[1]) && x[0] < x[p],
+            monotonicity.prove(&poles),
             "Unproved monotone original rational graph clock span",
         )?;
         if let Some(previous) = spans.last() {

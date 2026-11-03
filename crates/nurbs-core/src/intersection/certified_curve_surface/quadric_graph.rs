@@ -4,6 +4,7 @@ use super::*;
 use cad_predicates::{BezierIdentity, BezierIdentityDecision};
 use num_rational::BigRational as Q;
 mod chart;
+mod triangular;
 mod clock;
 mod coupled;
 mod coupled_bernstein;
@@ -22,6 +23,7 @@ pub enum OriginalQuadricGraphParameterization {
     CoupledBernstein,
     HomogeneousAffine,
     HomogeneousSeparable,
+    TriangularRational,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {
@@ -63,7 +65,7 @@ pub struct OriginalQuadricGraphContacts {
 /// targets may also prove an affine projection on every original span in the
 /// exact homogeneous basis, admitting canceled positive coupled factors on nonplanar
 /// graphs without changing their source geometry. Clamped targets may
-/// also prove exact original tensor cross-identities with independent ordered
+/// also prove exact original tensor cross-identities with independent certified monotone
 /// rational boundary clocks, including nonlinear projected parameterizations;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
@@ -74,6 +76,10 @@ pub struct OriginalQuadricGraphContacts {
 /// are separate operations. Each multi-span affine or boundary-clock homogeneous proof attempt
 /// has a fixed 4,000,000-operation restriction/census schedule; exhausting
 /// it refuses that proof and does not spend or reset the predicate allowance.
+/// Each clock direction additionally owns 65,536 checked rational algebra steps
+/// and a 32,768-bit numerator/denominator guard for derivative-sign proofs.
+/// Isolated clock stationary points are permitted; differential chart
+/// regularity and downstream trim/Body admission do not follow.
 pub fn original_quadric_graph_contacts(
     c: &Curve,
     s: &Surface,
