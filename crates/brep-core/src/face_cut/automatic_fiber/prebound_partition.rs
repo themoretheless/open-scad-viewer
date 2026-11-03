@@ -68,7 +68,7 @@ pub(crate) fn partition_fiber_prebound(
             "Need a noncollapsed original free interval and remaining cut work",
         ));
     }
-    let sources = ss::FiberSources::new(
+    let sources = original_fiber_sources(
         &model.faces[face].surface,
         &cutter.faces[cutter_face].surface,
     )?;
@@ -293,4 +293,17 @@ pub(crate) fn partition_fiber_prebound(
         trace_pieces: count,
         root_fibers: fibers.len(),
     })
+}
+
+/// Exact conditioning is optional; authored surfaces remain the source of
+/// every endpoint, lift and saved trim proof. Resource errors are never reset.
+pub(super) fn original_fiber_sources(
+    first: &nurbs_core::surface::Surface,
+    second: &nurbs_core::surface::Surface,
+) -> Result<ss::FiberSources> {
+    match ss::FiberSources::with_exact_graph_shear(first, second) {
+        Ok(source) => Ok(source),
+        Err(error) if error.code == "NURBS_RESOURCE_LIMIT" => Err(error),
+        Err(_) => ss::FiberSources::new(first, second),
+    }
 }

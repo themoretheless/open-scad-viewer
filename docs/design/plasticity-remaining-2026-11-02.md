@@ -23,6 +23,14 @@
 - Продолжать основной геометрический scope: полнота пересечений → корректные замкнутые тела/Boolean → общие offset/replace и blend-сети. История и прочие пункты выше остаются обязательными.
 - Перед закрытием каждого семейства проверять собственно геометрию и область применимости; внешний Plasticity runtime comparison остаётся отдельной незакрытой проверкой.
 
+## Exact knot-forest, world traces и automatic BRep cut
+
+Normalized knot-cells, subdivision и root images переведены в exact rational; скрытые ветви проходят через исходные 1/3 и 2/3 knots без округления доказательства. Добавлен доказанный original-world error transport для nonlinear conditioning по обеим исходным опорам, actual world/pcurve qualification и автоматический trace builder. Adaptive turning proposals устраняют отказ от фиксированного 8h² padding; исходные операторы и общий census остаются authority, budgets/tolerances не увеличены.
+
+Conditioning подключён к automatic boundary-connected BRep cut: на исходных nonlinear sheets сохраняются две валидные области с IDs и полным boundary-root coverage, входы неизменны. **285 scoped native tests passed** (164 SS integration, 40 SS unit, 37 BRep, 44 bridge), architecture 54/0. [Receipt](../qualification/ss-exact-knots-world-trim-2026-11-03/results.json).
+
+Полные closed BRep loops из mixed-axis charts, holes/seams, произвольные rational/singular/periodic случаи и общий Boolean остаются открыты. Следующий concrete блок: порядок closed component, shared original endpoint selectors и сохранённые world/pcurve loops; затем global material/Body admission. [Контракт и следующий блок](ss-automatic-closed-and-periodic.md).
+
 ## Автоматические замкнутые SS-ветви, касания и periodic/poles
 
 Общий native `construct_qualified_ss_branches` подключён к complete mixed-axis closed owners, автоматическому exact even-power contact discovery и periodic homothetic / finite-plane sections. Две раздельные скрытые петли строятся автоматически с полным census и четырьмя процедурными границами. Для multispan polynomial graphs добавлены exact original Cox/blossom restrictions на полном общем knot-forest с независимым replay. Касания порядков 2/4/6/8 распознаются из исходных коэффициентов; periodic section хранит небинарный UV как rational и отличает collapsed pole point от closed contour.

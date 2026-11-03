@@ -345,7 +345,7 @@ pub(super) fn qualify_automatic_search(
     max_cells: usize,
 ) -> Result<ss::FiberAxis> {
     let original = *parameter_box;
-    let sources = ss::FiberSources::new(
+    let sources = prebound_partition::original_fiber_sources(
         &model.faces[face].surface,
         &cutter.faces[cutter_face].surface,
     )?;

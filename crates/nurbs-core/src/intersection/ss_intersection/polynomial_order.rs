@@ -439,3 +439,6 @@ pub(super) fn exact_graph_shear(first: &Surface, second: &Surface) -> Result<[Su
     b.validate()?;
     Ok([a, b])
 }
+
+mod shear_transport;
+pub(super) use shear_transport::graph_shear_world_gain;

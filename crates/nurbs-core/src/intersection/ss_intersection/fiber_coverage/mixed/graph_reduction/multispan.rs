@@ -1,7 +1,6 @@
 //! Exact original B-spline blossom restrictions on a common CLOSED knot grid.
 //! No inserted/rounded poles, stitched samples or locally inferred XY frame.
 use super::*;
-use num_traits::ToPrimitive;
 fn charge(work: &mut Work) -> Result<()> {
     if work.used == work.max {
         return Err(crate::resource(
@@ -136,7 +135,7 @@ fn restrict(
     }
     Ok(out)
 }
-fn net(s: &Surface, cell: Cell, work: &mut Work) -> Result<Net> {
+fn net(s: &Surface, cell: &Cell, work: &mut Work) -> Result<Net> {
     let mut spans = [0; 2];
     let mut ranges = Vec::new();
     let mut all_knots = Vec::new();
@@ -150,8 +149,8 @@ fn net(s: &Surface, cell: Cell, work: &mut Work) -> Result<Net> {
         let knots = k.iter().map(|x| q(*x)).collect::<Result<Vec<_>>>()?;
         let width = &knots[n] - &knots[p];
         let range = [
-            &knots[p] + &width * q(cell[axis][0])?,
-            &knots[p] + &width * q(cell[axis][1])?,
+            &knots[p] + &width * &cell[axis][0],
+            &knots[p] + &width * &cell[axis][1],
         ];
         spans[axis] = (p..n)
             .find(|&i| knots[i] < knots[i + 1] && knots[i] <= range[0] && range[1] <= knots[i + 1])
@@ -188,17 +187,7 @@ pub(super) fn derive(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell
         k.extend(normalized_knots(b, axis)?);
         k.sort();
         k.dedup();
-        let f = k
-            .iter()
-            .map(|x| {
-                let v = x
-                    .to_f64()
-                    .ok_or_else(|| crate::input("Graph knot is not finite"))?;
-                check(q(v)? == *x, "Common normalized graph knot needs rounding")?;
-                Ok(v)
-            })
-            .collect::<Result<Vec<_>>>()?;
-        cuts.push(f);
+        cuts.push(k);
     }
     check(
         (cuts[0].len() - 1) * (cuts[1].len() - 1) <= 64,
@@ -207,9 +196,9 @@ pub(super) fn derive(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell
     let mut patches = Vec::new();
     for u in cuts[0].windows(2) {
         for v in cuts[1].windows(2) {
-            let cell = [[u[0], u[1]], [v[0], v[1]]];
-            let mut x = net(a, cell, work)?;
-            let mut y = net(b, cell, work)?;
+            let cell = [[u[0].clone(), u[1].clone()], [v[0].clone(), v[1].clone()]];
+            let mut x = net(a, &cell, work)?;
+            let mut y = net(b, &cell, work)?;
             while x.len() < y.len() {
                 x = elevate(&x, 0);
             }
@@ -302,14 +291,20 @@ mod tests {
         for (index, (cell, net)) in patches.iter().enumerate() {
             assert_eq!(
                 *cell,
-                [[index as f64 / 4., (index + 1) as f64 / 4.], [0., 1.]]
+                [
+                    [
+                        Q::new(index.into(), 4.into()),
+                        Q::new((index + 1).into(), 4.into())
+                    ],
+                    [q(0.).unwrap(), q(1.).unwrap()]
+                ]
             );
             for i in 0..=4 {
                 for j in 0..=4 {
                     let u = Q::new(i.into(), 4.into());
                     let v = Q::new(j.into(), 4.into());
-                    let actual_u = q(cell[0][0]).unwrap()
-                        + (q(cell[0][1]).unwrap() - q(cell[0][0]).unwrap()) * &u;
+                    let actual_u =
+                        cell[0][0].clone() + (cell[0][1].clone() - cell[0][0].clone()) * &u;
                     let actual_v = v.clone();
                     let s = source.second();
                     let mut expected = Q::zero();

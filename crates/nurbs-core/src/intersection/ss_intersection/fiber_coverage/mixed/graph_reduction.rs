@@ -5,7 +5,9 @@ use super::*;
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
 type Net = Vec<Vec<Q>>;
-type Cell = [[f64; 2]; 2];
+type Cell = [[Q; 2]; 2];
+mod cells;
+use cells::{cut, diagnostic, full_cell};
 mod multispan;
 mod replay;
 #[derive(Clone, Debug, PartialEq)]
@@ -154,20 +156,20 @@ fn split(n: &Net, axis: usize) -> [Net; 2] {
 fn excluded(n: &Net) -> bool {
     n.iter().flatten().all(|v| v.is_positive()) || n.iter().flatten().all(|v| v.is_negative())
 }
-fn contained(cell: Cell, domain: Box4, f: &QualifiedFiber) -> Result<bool> {
+fn contained(cell: &Cell, domain: Box4, f: &QualifiedFiber) -> Result<bool> {
     let actual = f.domain();
     for k in 0..4 {
         let lo = q(domain[k][0])?;
         let width = q(domain[k][1])? - &lo;
-        if &lo + &width * q(cell[k % 2][0])? < q(actual[k][0])?
-            || &lo + &width * q(cell[k % 2][1])? > q(actual[k][1])?
+        if &lo + &width * &cell[k % 2][0] < q(actual[k][0])?
+            || &lo + &width * &cell[k % 2][1] > q(actual[k][1])?
         {
             return Ok(false);
         }
     }
     Ok(true)
 }
-fn root_image(cell: Cell, n: &Net, axis: usize) -> Option<[[Q; 2]; 2]> {
+fn root_image(cell: &Cell, n: &Net, axis: usize) -> Option<[[Q; 2]; 2]> {
     if axis >= 2 {
         return None;
     }
@@ -206,7 +208,7 @@ fn root_image(cell: Cell, n: &Net, axis: usize) -> Option<[[Q; 2]; 2]> {
     let half = Q::new(1.into(), 2.into());
     let lo = Q::zero().max(&half - quotients.iter().max()?);
     let hi = Q::from_integer(1.into()).min(&half - quotients.iter().min()?);
-    let mut roots = cell.map(|[lo, hi]| [Q::from_float(lo).unwrap(), Q::from_float(hi).unwrap()]);
+    let mut roots = cell.clone();
     let width = &roots[axis][1] - &roots[axis][0];
     roots[axis] = [&roots[axis][0] + &width * lo, &roots[axis][0] + &width * hi];
     Some(roots)
@@ -227,21 +229,9 @@ fn contained_image(cell: &[[Q; 2]; 2], domain: Box4, f: &QualifiedFiber) -> Resu
     }
     Ok(true)
 }
-fn cut(cell: Cell, axis: usize) -> Result<[Cell; 2]> {
-    check(axis < 2, "Invalid reduced coverage split axis")?;
-    let mid = 0.5 * cell[axis][0] + 0.5 * cell[axis][1];
-    check(
-        cell[axis][0] < mid && mid < cell[axis][1],
-        "Reduced coverage parameter resolution exhausted",
-    )?;
-    let mut out = [cell; 2];
-    out[0][axis][1] = mid;
-    out[1][axis][0] = mid;
-    Ok(out)
-}
 fn derive_patches(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell, Net)>> {
     if let Ok(net) = derive(source) {
-        return Ok(vec![([[0., 1.]; 2], net)]);
+        return Ok(vec![(full_cell(), net)]);
     }
     multispan::derive(source, work)
 }
@@ -311,19 +301,12 @@ pub(super) fn construct(
     while let Some((id, cell, net, depth)) = pending.pop() {
         if tick(&mut work).is_err() {
             r.report.reason = "reduced-graph-work-budget";
-            r.report.unresolved_box = Some(std::array::from_fn(|k| {
-                let lo = domain[k][0];
-                let width = domain[k][1] - lo;
-                [
-                    (lo + width * cell[k % 2][0]).next_down().max(lo),
-                    (lo + width * cell[k % 2][1]).next_up().min(domain[k][1]),
-                ]
-            }));
+            r.report.unresolved_box = Some(diagnostic(&cell, domain)?);
             break;
         }
         let mut owner = None;
         for (i, f) in fibers.iter().enumerate() {
-            if contained(cell, domain, f)? {
+            if contained(&cell, domain, f)? {
                 owner = Some(i);
                 break;
             }
@@ -335,7 +318,7 @@ pub(super) fn construct(
         }
         let mut image_owner = None;
         for axis in 0..2 {
-            if let Some(roots) = root_image(cell, &net, axis) {
+            if let Some(roots) = root_image(&cell, &net, axis) {
                 for (index, f) in fibers.iter().enumerate() {
                     if contained_image(&roots, domain, f)? {
                         image_owner = Some((index, axis));
@@ -360,24 +343,17 @@ pub(super) fn construct(
         if depth == limits.max_depth || nodes.len() + 2 > limits.max_cells {
             r.report.reason = "reduced-graph-subdivision-budget";
             // Diagnostic cell in ORIGINAL native coordinates, rounded outward.
-            r.report.unresolved_box = Some(std::array::from_fn(|k| {
-                let a = domain[k][0];
-                let d = domain[k][1] - a;
-                [
-                    (a + d * cell[k % 2][0]).next_down().max(a),
-                    (a + d * cell[k % 2][1]).next_up().min(domain[k][1]),
-                ]
-            }));
+            r.report.unresolved_box = Some(diagnostic(&cell, domain)?);
             break;
         }
-        let axis = usize::from(cell[1][1] - cell[1][0] > cell[0][1] - cell[0][0]);
-        let cells = cut(cell, axis)?;
+        let axis = usize::from(&cell[1][1] - &cell[1][0] > &cell[0][1] - &cell[0][0]);
+        let cells = cut(&cell, axis)?;
         let nets = split(&net, axis);
         let children = [nodes.len(), nodes.len() + 1];
         nodes.extend([Node::Excluded, Node::Excluded]);
         nodes[id] = Node::Split { axis, children };
         for k in (0..2).rev() {
-            pending.push((children[k], cells[k], nets[k].clone(), depth + 1));
+            pending.push((children[k], cells[k].clone(), nets[k].clone(), depth + 1));
         }
     }
     r.report.cells = nodes.len();

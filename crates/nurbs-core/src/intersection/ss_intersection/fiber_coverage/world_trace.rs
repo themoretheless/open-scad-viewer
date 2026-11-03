@@ -142,11 +142,14 @@ pub(super) fn root_error(source: &QualifiedFiber, errors: [f64; 2]) -> Result<(f
     ) else {
         return Err(crate::input("Missing original root operator"));
     };
-    check(
-        !op.uses_exact_graph_shear(),
-        "World trace needs independently bounded error transport through the polynomial source shear",
-    )?;
-    let residual = I::point(errors[0]).add(I::point(errors[1]))?;
+    let mut residual = I::point(errors[0]).add(I::point(errors[1]))?;
+    if op.uses_exact_graph_shear() {
+        let transport = super::super::polynomial_order::graph_shear_world_gain(
+            source.source().first(),
+            source.source().second(),
+        )?;
+        residual = residual.mul(I::point(transport))?;
+    }
     let mut gain = 0_f64;
     for i in 0..3 {
         let mut row = I::point(0.);
@@ -184,8 +187,9 @@ pub(super) fn root_error(source: &QualifiedFiber, errors: [f64; 2]) -> Result<(f
 /// Positive rational hulls bind both pcurves inside the original box; the free
 /// coordinate clock is a continuously monotone positive B-spline.
 /// Whole original C-S1(P1) and C-S2(P2) composition bounds give F(candidate).
-/// The actual verified R/scales/q give distance to the unique original root:
-/// ||root-candidate||scaled <= ||D^-1 R F(candidate)||inf/(1-q).
+/// A global original-source ||DT|| bound transports that residual into
+/// conditioned equations F' when needed. Verified R/scales/q then give:
+/// ||root-candidate||scaled <= ||D^-1 R F'(candidate)||inf/(1-q).
 /// Original whole S1 Jacobian bounds then give continuous world error + lift
 /// error. Candidate positions, fit samples and proximity to both supports are
 /// never by themselves source-root authority. Whole original agreement cells
@@ -426,7 +430,7 @@ mod tests {
 mod conditioned_error_tests {
     use super::*;
     #[test]
-    fn nonlinear_root_conditioning_does_not_authorize_unchecked_world_error_transport() {
+    fn nonlinear_root_conditioning_transports_world_errors_with_original_gain() {
         let a = crate::surface::Surface {
             degree_u: 2,
             degree_v: 1,
@@ -463,6 +467,7 @@ mod conditioned_error_tests {
         let op = f.report().operator.as_ref().unwrap();
         assert!(op.uses_exact_graph_shear());
         assert!(op.first_jacobian()[2][0][0] > 0.);
-        assert!(root_error(&f, [0.001, 0.001]).is_err());
+        let (scaled, world) = root_error(&f, [0.001, 0.001]).unwrap();
+        assert!(scaled > 0. && world > 0.002);
     }
 }

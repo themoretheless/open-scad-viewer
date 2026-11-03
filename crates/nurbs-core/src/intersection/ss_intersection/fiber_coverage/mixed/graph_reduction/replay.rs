@@ -38,13 +38,13 @@ impl Proof {
             match self.nodes[id] {
                 Node::Chart(index) => {
                     check(
-                        index < c.fibers.len() && contained(cell, c.domain, &c.fibers[index])?,
+                        index < c.fibers.len() && contained(&cell, c.domain, &c.fibers[index])?,
                         "Reduced roots leave their original fiber",
                     )?;
                     covered += 1;
                 }
                 Node::Image { index, axis } => {
-                    let roots = root_image(cell, &net, axis).ok_or_else(|| {
+                    let roots = root_image(&cell, &net, axis).ok_or_else(|| {
                         crate::input("Reduced graph derivative/zero enclosure changed")
                     })?;
                     check(
@@ -64,10 +64,10 @@ impl Proof {
                             && children.iter().all(|&i| i < self.nodes.len()),
                         "Invalid reduced closed children",
                     )?;
-                    let cells = cut(cell, axis)?;
+                    let cells = cut(&cell, axis)?;
                     let nets = split(&net, axis);
                     for k in (0..2).rev() {
-                        pending.push((children[k], cells[k], nets[k].clone(), depth + 1));
+                        pending.push((children[k], cells[k].clone(), nets[k].clone(), depth + 1));
                     }
                 }
             }

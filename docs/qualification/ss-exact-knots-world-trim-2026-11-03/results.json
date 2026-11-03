@@ -1,0 +1,115 @@
+{
+  "status": "passed-scoped-native",
+  "baseCommit": "867c5aef2e17aff7e8a9f526c0e023698f79b286",
+  "qualificationScope": "Isolated frozen base plus 13 exact owned source paths; unrelated dirty source changes excluded. Native Rust, not installed WASM/editor qualification.",
+  "tests": {
+    "all-final": {
+      "suites": 25,
+      "passed": 164,
+      "failed": 0
+    },
+    "unit-qualified": {
+      "suites": 1,
+      "passed": 40,
+      "failed": 0
+    },
+    "brep-final": {
+      "suites": 8,
+      "passed": 37,
+      "failed": 0
+    },
+    "bridge-qualified": {
+      "suites": 4,
+      "passed": 44,
+      "failed": 0
+    }
+  },
+  "sourceSha256": {
+    "crates/brep-core/src/face_cut/automatic_fiber.rs": "13b72e9f063ace9f4561c030e47ec4c5e89d0ffedc1620d934be39dc0d0dcc59",
+    "crates/brep-core/src/face_cut/automatic_fiber/prebound_partition.rs": "56bf58af5e8bfaf6b54c89222ec8d451ccafe3a56de3b96d42d949d2ab037f08",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction.rs": "db77a7610776696eee7fb33b68df7d5286f269f7aafd1242bb0f98198f734a8f",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction/multispan.rs": "f87b38eeb352033132ee9a58a9d947ec512b8b0bed62a68351eead4e67f42cef",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction/replay.rs": "6b4a0f943f38e403c887ef726a82df1994d5ca3311b02089b2c2af4c22751cd1",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/world_trace.rs": "3a079d59b7c03e0f254cdbcbea21ec3a0b41e7fc7acec4cd4d8b2bd2d71c3551",
+    "crates/nurbs-core/src/intersection/ss_intersection/polynomial_order.rs": "619a90aaeb5bf823b8f849534d828cfdc25f692d3915d9845254e2c39b6f0807",
+    "crates/nurbs-core/src/intersection/ss_intersection/qualified_dispatch/closed_proposals.rs": "ebee31342515295f09a93ad2e47c2c42d32f0f6cb29c32ccf656a6721cd1b08f",
+    "crates/brep-core/tests/conditioned_automatic_trim.rs": "fc40a034569ef1e12da1af0fd5a286647150119624e49d771b4495495b7ccaef",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber_coverage/mixed/graph_reduction/cells.rs": "e843d65cc0169107084a8dad8c80a7d3e9cf5fef03f2cf7c6cb316dca4b4eb33",
+    "crates/nurbs-core/src/intersection/ss_intersection/polynomial_order/shear_transport.rs": "5eb8f66333759234ba1cdbdb45934360c3a26c70354d4f4d3dbccaf31e09e879",
+    "crates/nurbs-core/tests/ss_conditioned_world_trace.rs": "09ab1961a140b34a34cea973bc2e31c3dab3fce203383cd04abcc46687a7bd60",
+    "crates/nurbs-core/tests/ss_exact_knot_cells.rs": "5f4b7222b5aa6ee2035052a016f3807aa8514300cafcec8c4584ad00878a6620"
+  },
+  "nativePassedTotal": 285,
+  "architecture": "54 pinned oversized files, 0 layer violations; baseline unchanged",
+  "exactKnotForest": {
+    "cellArithmetic": "BigRational for normalized knot intervals, midpoint subdivision, root images and chart containment",
+    "floatingConversion": "Outward original-coordinate diagnostics only",
+    "scope": "Continuous clamped polynomial graph supports, degree1..8, constant positive gauges, <=64 common original knot cells. Generic 4D fallback unchanged.",
+    "qualified": [
+      "Closed branch crossing normalized original knot 1/3",
+      "Closed branch crossing normalized original knot 2/3",
+      "Interior hidden loop between those knots",
+      "Natural domains [0,1] and [0,3] on different supports",
+      "Independent source/gauge preservation",
+      "Full common forest replay and exhaustion refusal"
+    ]
+  },
+  "worldErrorTransport": {
+    "transformation": "T(x,y,z)=(x,y,z-H_first(x,y))",
+    "bound": "Exact original polynomial derivatives, original affine XY inverse, convex hull of BOTH source images; ||DT||_inf <= 1+|Hx|+|Hy|",
+    "operator": "Actual conditioned R/scales/q; original first-support Jacobian for world transport",
+    "rounding": "Exact rational norm bound rounded upward, including nonbinary 5/3; nonfinite gain refuses",
+    "qualified": [
+      "Gain 3 on original unit footprints",
+      "Gain 9 on a second footprint extending to x=4",
+      "World inverse scales: gain 3/2",
+      "Coupled height u^2*v^2: gain 5",
+      "Nondyadic 5/3 upper rounding",
+      "Overflow at f64::MAX+1 refuses",
+      "Actual candidate world/pcurve agreement, nonzero residual and reversed clocks",
+      "Automatic trace of entire conditioned free interval",
+      "Wrong coefficients, tighter tolerance and missing proof work refuse"
+    ]
+  },
+  "turningProposals": {
+    "priorFailure": "A fixed 8h^2 unknown padding undershot a scaled turning branch requiring 18h^2 at EVERY step size; exact knot coverage refused with no repair owner.",
+    "new": "Two bounded numerical endpoint solves propose adaptive curvature padding. Only fresh original operators and full coverage supply authority. No tolerance or cell allowance increased.",
+    "numericalOnly": true
+  },
+  "automaticBrepTrim": {
+    "exactConditioningSelectedWhenAvailable": true,
+    "unsupportedConditioningFallsBackToOriginalSources": true,
+    "resourceErrorsPropagated": true,
+    "savedFaceSectors": 2,
+    "heightScales": [
+      1,
+      16
+    ],
+    "originalBoundaryCoverageComplete": true,
+    "persistentIds": true,
+    "modelValidity": true,
+    "originalInputsImmutable": true,
+    "sharedCallerLimits": true,
+    "exhaustionAtomic": true,
+    "scope": "Boundary-connected branch on two original nonlinear supports; complete hidden closed BRep loop construction and global material selection remain open."
+  },
+  "generalSSComplete": false,
+  "completeAutomaticTrim": false,
+  "generalBooleanComplete": false,
+  "newWasmRuntimeQualified": false,
+  "packageUpdated": false,
+  "fullWorkspaceTestsRun": false,
+  "priorLongCapTestRerun": false,
+  "priorLongBooleanSetRerun": false,
+  "remaining": [
+    "General rational SS and singular/tangent networks",
+    "General periodic quotients and arbitrary poles",
+    "Ordered closed mixed-axis traces with shared original endpoints",
+    "Saved complete BRep closed loops, holes and seams",
+    "Global finite-face trimming and material orientation",
+    "Valid closed Body, healing and general Boolean",
+    "Bridge/WASM/editor integration for new native SS paths"
+  ],
+  "wasmTargetCheckPassed": true,
+  "apiMapCheckPassed": true
+}

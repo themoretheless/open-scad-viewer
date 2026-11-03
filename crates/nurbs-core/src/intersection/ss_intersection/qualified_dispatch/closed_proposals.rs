@@ -100,6 +100,23 @@ fn proposal(
             d
         })
     });
+    // Tangent-only padding undershoots a scaled turning branch at EVERY
+    // step size (e.g. x=3u needs curvature 18h^2, not a fixed 8h^2).
+    // Two bounded numerical endpoint solves propose curvature padding only;
+    // fresh original operators still prove the entire continuum or refuse.
+    let mut deviation = [0_f64; 4];
+    if let Some(d) = slope {
+        for direction in [-1., 1.] {
+            let mut seed = x;
+            seed[free] = (x[free] + direction * h).clamp(0., 1.);
+            let delta = seed[free] - x[free];
+            if let Some(at) = polish(source, domain, seed, free) {
+                for k in 0..4 {
+                    deviation[k] = deviation[k].max((at[k] - x[k] - delta * d[k]).abs());
+                }
+            }
+        }
+    }
     std::array::from_fn(|k| {
         // Near a flat turning point, a small unknown interval can support a
         // wide free interval. Isotropic boxes unnecessarily shrink BOTH.
@@ -107,7 +124,9 @@ fn proposal(
         let radius = if k == free {
             h
         } else {
-            slope.map_or(2. * h, |d| 1.25 * h * d[k].abs() + 8. * h * h)
+            slope.map_or(2. * h, |d| {
+                1.25 * h * d[k].abs() + (1.5 * deviation[k]).max(8. * h * h)
+            })
         };
         [
             domain[k][0] + (x[k] - radius).max(0.) * (domain[k][1] - domain[k][0]),

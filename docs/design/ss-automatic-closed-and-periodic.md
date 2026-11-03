@@ -26,7 +26,7 @@
 - положительные постоянные весовые gauges каждой опоры могут различаться;
 - каждый общий knot-прямоугольник получается точным rational blossom restriction исходного Cox-базиса;
 - все замкнутые прямоугольники входят в один forest; work и cell allowance общие, replay восстанавливает весь исходный forest;
-- degree 1..8, не более 128 controls по оси и 64 общих knot-прямоугольников; normalized common knots должны точно представляться в binary64. Другие случаи остаются на общем 4D-пути, без автоматического допуска;
+- degree 1..8, не более 128 controls по оси и 64 общих knot-прямоугольников; normalized common knots и все подынтервалы теперь хранятся как exact rational, включая 1/3 и 2/3. В binary64 округляются наружу только диагностические окна; другие неподдержанные семейства остаются на общем 4D-пути, без автоматического допуска;
 - покрытие каждого листа основано на точном исключении, сертифицированном chart или точной derivative/root-image оценке.
 
 Перекрывающиеся charts уплотняются по целым сертифицированным параметрическим root enclosures. Более сильная compaction проверяет четыре замкнутых free-подынтервала свежими исходными операторами. Обе процедуры освобождают места для предложений; итоговый независимый census всё равно обязателен.
@@ -59,10 +59,22 @@
 
 `RegularClosedLoops.trims()` — процедурные исходные SS-границы на обеих опорах. Это ещё не сохранённые BRep loops и не полное удаление/сохранение материала. Новые native APIs не получили bridge/WASM/editor-адаптер; прежняя runtime-квалификация других операций на них не переносится.
 
-Открыты: произвольные рациональные/multispan SS-ветви и singular networks, общий periodic quotient, произвольные полюса, частичное finite-face clipping, согласованные world/pcurve traces через nonlinear conditioning, полное автоматическое BRep trimming, material/orientation/healing и общий Boolean замкнутых тел. Ни один из этих пунктов не закрывается поддержанными семействами выше.
+Открыты: произвольные рациональные/multispan SS-ветви и singular networks, общий periodic quotient, произвольные полюса, частичное finite-face clipping, порядок замкнутых mixed-axis traces и совместные original endpoints, полное автоматическое BRep trimming, material/orientation/healing и общий Boolean замкнутых тел. Ни один из этих пунктов не закрывается поддержанными семействами выше.
 
 Результаты проверок: [receipt](../qualification/ss-closed-periodic-2026-11-03/results.json). Общий остаток: [Plasticity parity](plasticity-remaining-2026-11-02.md).
 
-## Следующий технический блок для настоящего trim
+## Реализованные exact knots и перенос world error
 
-В `fiber_coverage/world_trace.rs::root_error` сейчас намеренно отвергается nonlinear graph-shear operator: его residual/Jacobian относятся к transformed equations, а composition errors — к исходному world space. Для снятия отказа нужен независимо проверенный верхний bound `||DT||` на convex hull исходных XY-образов обеих опор, где `T(x,y,z)=(x,y,z-H_first(x,y))`. Его следует вывести из исходных exact polynomial coefficients и affine XY inverse, применить к суммарному composition residual, сохранить original first-surface Jacobian для переноса parameter error обратно в world и повторно проверить оператор. Jacobian только на root/sample point недостаточен. После этого нужны actual world/pcurve traces всех closed charts, согласованные original endpoints и сохранённые BRep loops; сами процедурные `trims()` этого не заменяют.
+Нормализованный knot-forest, subdivision, root images и chart containment используют `BigRational`. Проверены скрытые петли, пересекающие исходные узлы 1/3 и 2/3, разные natural domains [0,1] / [0,3], весь исходный forest и отказы по бюджету. Binary64 остаётся только форматом исходного ввода и outward-диагностик.
+
+В `root_error` снят прежний отказ для nonlinear graph shear. Независимый original-source bound `||DT||_inf` вычисляется из exact polynomial coefficients и affine XY inverse на convex hull XY-образов **обеих** опор. Bound применяется к composition residual до actual conditioned R/scales/q; original first-surface Jacobian переносит parameter error обратно в world. Gain округляется вверх; overflow и неподтверждённый gain не заменяются единицей. Для unconditioned operators сохранён прежний арифметический путь.
+
+Endpoint Newton-предложения учитывают локальную кривизну: фиксированный запас 8h² не покрывал масштабированный поворот, требующий 18h² при любом h. Два дополнительных ограниченных численных решения выбирают padding; никакой sampled результат не является доказательством. Все admission-проверки и caller limits остаются исходными.
+
+Conditioning подключён к automatic boundary-connected BRep cut и actual trace construction. Неподдержанное exact conditioning использует original-source solver; resource errors не маскируются. На двух исходных nonlinear sheets с height scales 1 и 16 сохраняются две валидные области, original boundary root coverage и IDs, входы неизменны; бюджетный отказ атомарный. Это ещё не полный global trim и не Body.
+
+Квалификация этого этапа: **164 SS integration + 40 SS unit + 37 BRep + 44 bridge = 285 passed**, architecture 54 pinned / 0 layers. [Receipt](../qualification/ss-exact-knots-world-trim-2026-11-03/results.json). Новая native функциональность не получила отдельную WASM/editor квалификацию.
+
+## Следующий технический блок для полного trim
+
+Нужны actual world/pcurve traces всех closed charts с разными free axes, порядок обхода closed component, совместные original-root endpoint selectors и сохранённые BRep loops, включая holes и seams. Полнота SS-поиска и procedural `trims()` сами по себе не задают эти сохранённые границы. После этого остаются finite-face material selection, ориентированные замкнутые оболочки, healing и общий Boolean. Произвольные rational/singular/periodic/pole случаи также остаются открытыми.
