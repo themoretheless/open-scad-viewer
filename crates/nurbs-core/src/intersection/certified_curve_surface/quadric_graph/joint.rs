@@ -1,10 +1,15 @@
 //! Global projected disk certificate from an exact boundary and Jacobian.
 use super::*;
+mod bspline;
 mod inverse;
 mod poly;
 use poly::{Poly, Work, LIMIT};
 pub(super) struct Joint {
+    patches: Vec<Patch>,
+}
+struct Patch {
     h: Vec<Vec<[Q; 3]>>,
+    uv: [[Q; 2]; 2],
 }
 impl Joint {
     pub(super) fn prove(
@@ -28,7 +33,7 @@ impl Joint {
     ) -> Option<Self> {
         let (p, r) = (s.degree_u, s.degree_v);
         if s.control_points.len() != p + 1 || s.control_points[0].len() != r + 1 {
-            return None;
+            return bspline::prove(s, axes, o, u, v, det, limit);
         }
         let h: Vec<Vec<[Q; 3]>> = (0..=p)
             .map(|i| {
@@ -65,38 +70,7 @@ impl Joint {
             super::clock::Clock::certified(boundary)?;
         }
         let mut work = Work::new(limit);
-        let channel = |k: usize| {
-            Poly(
-                h.iter()
-                    .map(|row| row.iter().map(|a| a[k].clone()).collect())
-                    .collect(),
-            )
-        };
-        let (x, y, w) = (channel(0), channel(1), channel(2));
-        let (xu, xv, yu, yv, wu, wv) = (
-            x.derivative(0, &mut work)?,
-            x.derivative(1, &mut work)?,
-            y.derivative(0, &mut work)?,
-            y.derivative(1, &mut work)?,
-            w.derivative(0, &mut work)?,
-            w.derivative(1, &mut work)?,
-        );
-        // det d(X/W,Y/W) = K/W^3. K is the homogeneous 3x3
-        // determinant, assembled exactly in degree (3p-1,3r-1).
-        let a = yv
-            .mul(&w, &mut work)?
-            .sub(&y.mul(&wv, &mut work)?, &mut work)?;
-        let b = yu
-            .mul(&w, &mut work)?
-            .sub(&y.mul(&wu, &mut work)?, &mut work)?;
-        let c = yu
-            .mul(&wv, &mut work)?
-            .sub(&yv.mul(&wu, &mut work)?, &mut work)?;
-        let k = xu
-            .mul(&a, &mut work)?
-            .sub(&xv.mul(&b, &mut work)?, &mut work)?
-            .add(&x.mul(&c, &mut work)?, &mut work)?;
-        if !k.positive(&mut work, 0)? {
+        if !positive_jacobian(&h, &mut work)? {
             return None;
         }
         // Boundary winding number is one. Every interior preimage is regular
@@ -105,11 +79,45 @@ impl Joint {
         // outside points have zero. An interior point cannot map onto the
         // boundary (local openness would give exterior preimages). Together
         // with the proved edge homeomorphisms this certifies the closed disk.
-        Some(Self { h })
+        Some(Self {
+            patches: vec![Patch {
+                h,
+                uv: [[q(0.), q(1.)], [q(0.), q(1.)]],
+            }],
+        })
     }
     pub(super) fn enclosure(&self, r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
-        inverse::enclosure(&self.h, r)
+        inverse::enclosure(&self.patches, r)
     }
+}
+
+fn positive_jacobian(h: &[Vec<[Q; 3]>], work: &mut Work) -> Option<bool> {
+    let channel = |k: usize| {
+        Poly(
+            h.iter()
+                .map(|row| row.iter().map(|a| a[k].clone()).collect())
+                .collect(),
+        )
+    };
+    let (x, y, w) = (channel(0), channel(1), channel(2));
+    let (xu, xv, yu, yv, wu, wv) = (
+        x.derivative(0, work)?,
+        x.derivative(1, work)?,
+        y.derivative(0, work)?,
+        y.derivative(1, work)?,
+        w.derivative(0, work)?,
+        w.derivative(1, work)?,
+    );
+    // det d(X/W,Y/W) = K/W^3. K is the homogeneous 3x3
+    // determinant, assembled exactly in degree (3p-1,3r-1).
+    let a = yv.mul(&w, work)?.sub(&y.mul(&wv, work)?, work)?;
+    let b = yu.mul(&w, work)?.sub(&y.mul(&wu, work)?, work)?;
+    let c = yu.mul(&wv, work)?.sub(&yv.mul(&wu, work)?, work)?;
+    let k = xu
+        .mul(&a, work)?
+        .sub(&xv.mul(&b, work)?, work)?
+        .add(&x.mul(&c, work)?, work)?;
+    k.positive(work, 0)
 }
 
 #[cfg(test)]

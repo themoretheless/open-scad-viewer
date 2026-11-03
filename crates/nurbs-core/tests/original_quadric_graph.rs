@@ -697,7 +697,7 @@ fn quadratic_multispan_graph_uses_original_basis_and_refuses_tiny_projection_dri
     let c = line([0.5, 0.5, -1.], [0.5, 0.5, 1.]);
     present(&inspect(&c, &s, q), &[(4.5, 0., 12., 1)]);
     s.control_points[1][0][0] = f64::from_bits(0.25f64.to_bits() + 1);
-    assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).is_err());
+    joint_chart_without_membership(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).unwrap());
 }
 
 #[test]

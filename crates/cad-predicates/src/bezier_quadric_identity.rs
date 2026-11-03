@@ -9,26 +9,19 @@ fn choose(n: usize, k: usize) -> u64 {
     (0..k).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
 }
 pub(super) fn power(a: &Net, ctx: &mut PredicateContext<'_>) -> Result<Net, Reason> {
-    let (p, q) = (a.len() - 1, a[0].len() - 1);
-    let mut out = vec![vec![Expansion::scalar(0.); q + 1]; p + 1];
-    for i in 0..=p {
-        for j in 0..=q {
-            for u in i..=p {
-                for v in j..=q {
-                    let n =
-                        choose(p, i) * choose(p - i, u - i) * choose(q, j) * choose(q - j, v - j);
-                    let factor = Expansion::integer(n, ctx)?;
-                    let term = a[i][j].mul(&factor, ctx)?;
-                    out[u][v] = if (u - i + v - j) % 2 == 0 {
-                        out[u][v].add(&term, ctx)?
-                    } else {
-                        out[u][v].sub(&term, ctx)?
-                    };
-                }
-            }
-        }
-    }
-    Ok(out)
+    let (p,q)=(a.len()-1,a[0].len()-1);
+    // The tensor basis change is separable. Two exact one-dimensional
+    // transforms avoid repeating both binomial factors for every tensor pair.
+    let mut u=vec![vec![Expansion::scalar(0.);q+1];p+1];
+    for i in 0..=p {for k in i..=p {
+        let factor=Expansion::integer(choose(p,i)*choose(p-i,k-i),ctx)?;
+        for j in 0..=q {let term=a[i][j].mul(&factor,ctx)?;u[k][j]=if (k-i)%2==0 {u[k][j].add(&term,ctx)?}else{u[k][j].sub(&term,ctx)?};}
+    }}
+    let mut out=vec![vec![Expansion::scalar(0.);q+1];p+1];
+    for j in 0..=q {for k in j..=q {
+        let factor=Expansion::integer(choose(q,j)*choose(q-j,k-j),ctx)?;
+        for i in 0..=p {let term=u[i][j].mul(&factor,ctx)?;out[i][k]=if (k-j)%2==0 {out[i][k].add(&term,ctx)?}else{out[i][k].sub(&term,ctx)?};}
+    }}Ok(out)
 }
 /// Original Euclidean XYZ + positive weight per tensor control; degree 1..8
 /// in each direction. Q is the literal matrix in H^T Q H=0, H=(w*x,w*y,w*z,w).
@@ -127,41 +120,23 @@ pub fn binary_bezier_quadric_with_constant_products_identity(
 
 /// Evaluate a homogeneous power-basis tensor against the unchanged quadric.
 pub(super) fn identity(h:&[Net],coefficients:&[Expansion],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
-    let (nu,nv)=(h[0].len(),h[0][0].len());
-        let mut residual = vec![vec![Expansion::scalar(0.); 2 * nv - 1]; 2 * nu - 1];
-        for i in 0..4 {
-            for j in 0..4 {
-                let coefficient = &coefficients[i * 4 + j];
-                ctx.charge(1)?;
-                if coefficient.sign() == Sign::Zero {
-                    continue;
-                }
-                for u in 0..nu {
-                    for v in 0..nv {
-                        for r in 0..nu {
-                            for s in 0..nv {
-                                if h[i][u][v].sign() == Sign::Zero
-                                    || h[j][r][s].sign() == Sign::Zero
-                                {
-                                    ctx.charge(1)?;
-                                    continue;
-                                }
-                                let term =
-                                    h[i][u][v].mul(&h[j][r][s], ctx)?.mul(coefficient, ctx)?;
-                                residual[u + r][v + s] = residual[u + r][v + s].add(&term, ctx)?;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        for c in residual.iter().flatten() {
-            ctx.charge(1)?;
-            if c.sign() != Sign::Zero {
-                return Ok(BezierIdentity::Different);
-            }
-        }
-        Ok(BezierIdentity::Equal)
+    let(nu,nv)=(h[0].len(),h[0][0].len());
+    let mut residual=vec![vec![Expansion::scalar(0.);2*nv-1];2*nu-1];
+    let mut support=Vec::new();
+    for channel in h {let mut active=Vec::new();for(u,row)in channel.iter().enumerate(){for(v,a)in row.iter().enumerate(){ctx.charge(1)?;if a.sign()!=Sign::Zero {active.push((u,v,a));}}}support.push(active);}
+    // h_i*h_j is commutative. Combine the ORIGINAL Q_ij+Q_ji exactly;
+    // asymmetric and skew matrices keep their literal quadratic-form meaning.
+    for i in 0..4 {for j in i..4 {
+        ctx.charge(1)?;
+        let coefficient=if i==j{coefficients[i*4+j].clone()}else{coefficients[i*4+j].add(&coefficients[j*4+i],ctx)?};
+        if coefficient.sign()==Sign::Zero{continue;}
+        for &(u,v,a) in &support[i] {for &(r,s,b) in &support[j] {
+            let term=a.mul(b,ctx)?.mul(&coefficient,ctx)?;
+            residual[u+r][v+s]=residual[u+r][v+s].add(&term,ctx)?;
+        }}
+    }}
+    for c in residual.iter().flatten(){ctx.charge(1)?;if c.sign()!=Sign::Zero{return Ok(BezierIdentity::Different);}}
+    Ok(BezierIdentity::Equal)
 }
 
 #[cfg(test)]
@@ -300,3 +275,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path="bezier_quadric_identity_tensor_tests.rs"]
+mod tensor_tests;

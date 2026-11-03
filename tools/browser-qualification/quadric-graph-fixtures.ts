@@ -281,3 +281,27 @@ for(const kind of ['polynomial','rational']){
  const q=structuredClone(jointGraphFixtures.find(f=>f.name==='elevated')!.query)
  quadricGraphCases.push({name:'graph-joint-original-degree-eight',query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='joint-jacobian','High-degree original Jacobian unproved')}})
 }
+
+import jointMultispanFixtureData from './joint-multispan-quadric-graph-fixtures.json' with {type:'json'}
+const jointMultispanFixtures=jointMultispanFixtureData as unknown as {name:string;scale:number;query:OriginalQuadricGraphQuery}[]
+export function multispanJointRefusalQuery(kind:'folded'|'discontinuous'){return structuredClone(jointMultispanFixtures.find(f=>f.name===kind)!.query)}
+for(const kind of ['polynomial','rational','c0']){
+ const fixture=jointMultispanFixtures.find(f=>f.name===kind)!,l=fixture.scale
+ const points=kind==='c0'?[[.5,.5,0,12],[67/256,195/256,-1,13],[195/256,67/256,1,11]]:[[9/16,9/16,0,12],[73/256,201/256,-1,13]]
+ for(const [point,[a,b,u,v]] of points.entries())for(const transpose of [false,true])for(const rotated of [false,true])for(const gauge of [1,7]){
+  const q=structuredClone(fixture.query),p=q.patch,x=l*a!,y=l*b!,z=x*y/l;q.curve.controlPoints=[[x,y,z-1],[x,y,z+1]]
+  if(transpose){const n=p.controlPoints.length,m=p.controlPoints[0]!.length;p.controlPoints=Array.from({length:m},(_,j)=>Array.from({length:n},(_,i)=>p.controlPoints[i]![j]!));p.weights=Array.from({length:m},(_,j)=>Array.from({length:n},(_,i)=>p.weights[i]![j]!));[p.degreeU,p.degreeV]=[p.degreeV,p.degreeU];[p.knotsU,p.knotsV]=[p.knotsV,p.knotsU]}
+  p.weights=p.weights.map(row=>row.map(w=>w*gauge))
+  if(rotated){for(const row of p.controlPoints)for(const x of row)[x[0],x[2]]=[x[2]!,x[0]!];for(const x of q.curve.controlPoints)[x[0],x[2]]=[x[2]!,x[0]!];const old=q.quadric,perm=[2,1,0,3];q.quadric=perm.map(i=>perm.map(j=>old[i]![j]!)) as OriginalQuadricGraphQuery['quadric']}
+  quadricGraphCases.push({name:`graph-joint-multispan-${kind}-point-${point}-transpose-${transpose}-rotated-${rotated}-gauge-${gauge}`,query:q,check:r=>{present(r,transpose?[[4,v!,u!,1]]:[[4,u!,v!,1]]);require(r.targetParameterization==='joint-jacobian','Missing global multi-span original Jacobian certificate');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<1e-9,'Multi-span joint UV not refined')}})
+ }
+ for(const [edge,[a,b,u,v]] of [[0,0,-2,10],[1,0,2,10],[0,1,-2,14],[1,1,2,14],[0,.5,-2,12],[1,.5,2,12],[.5,0,0,10],[.5,1,0,14]].entries()){
+  const q=structuredClone(fixture.query),x=l*a!,y=l*b!,z=x*y/l;q.curve.controlPoints=[[x,y,z-1],[x,y,z+1]];quadricGraphCases.push({name:`graph-joint-multispan-${kind}-edge-${edge}`,query:q,check:r=>present(r,[[4,u!,v!,1]])})
+ }
+ for(const [point,[x,y]] of [[-2,l/2],[l+2,l/2],[l/2,-2],[l/2,l+2]].entries()){
+  const q=structuredClone(fixture.query),z=x!*y!/l;q.curve.controlPoints=[[x!,y!,z-1],[x!,y!,z+1]];quadricGraphCases.push({name:`graph-joint-multispan-${kind}-exterior-${point}`,query:q,check:r=>require(r.status==='absent-on-patch'&&r.patchAbsenceProven&&!r.finiteSurfaceUvAdmission,'Exterior multi-span joint point admitted')})
+ }
+ for(const zero of [false,true]){
+  const q=structuredClone(fixture.query);if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.25;quadricGraphCases.push({name:`graph-joint-multispan-${kind}-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission,'Unproved multi-span joint target admitted')})
+ }
+}

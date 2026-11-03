@@ -65,15 +65,31 @@ fn singleton(
     }
     Some(None)
 }
-pub(super) fn enclosure(h: &[Vec<[Q; 3]>], r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
-    enclose(h, r, LIMIT).ok_or_else(|| crate::input("Joint chart inverse has no candidate"))
+pub(super) fn enclosure(patches: &[Patch], r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
+    let pending = patches
+        .iter()
+        .map(|p| Cell {
+            h: p.h.clone(),
+            uv: p.uv.clone(),
+            depth: 0,
+        })
+        .collect();
+    enclose_cells(pending, r, LIMIT)
+        .ok_or_else(|| crate::input("Joint chart inverse has no candidate"))
 }
+#[cfg(test)]
 fn enclose(h: &[Vec<[Q; 3]>], r: &[[Q; 2]; 2], limit: u64) -> Option<[[Q; 2]; 2]> {
-    let mut pending = vec![Cell {
-        h: h.to_vec(),
-        uv: [[q(0.), q(1.)], [q(0.), q(1.)]],
-        depth: 0,
-    }];
+    enclose_cells(
+        vec![Cell {
+            h: h.to_vec(),
+            uv: [[q(0.), q(1.)], [q(0.), q(1.)]],
+            depth: 0,
+        }],
+        r,
+        limit,
+    )
+}
+fn enclose_cells(mut pending: Vec<Cell>, r: &[[Q; 2]; 2], limit: u64) -> Option<[[Q; 2]; 2]> {
     let mut hull: Option<[[Q; 2]; 2]> = None;
     let mut work = Work::new(limit);
     let mut nodes = 0;
@@ -183,4 +199,35 @@ fn exact_singleton_acceleration_never_collapses_a_query_rectangle() {
         assert!(b[0] <= nondyadic[k][0] && nondyadic[k][0] <= b[1]);
         assert!(&b[1] - &b[0] < q(1e-12));
     }
+}
+
+#[cfg(test)]
+#[test]
+fn all_initial_knot_cells_survive_inverse_work_exhaustion() {
+    let cells = || {
+        vec![
+            Cell {
+                h: vec![
+                    vec![[q(0.), q(0.), q(1.)], [q(0.), q(1.), q(1.)]],
+                    vec![[q(0.5), q(0.), q(1.)], [q(0.5), q(1.), q(1.)]],
+                ],
+                uv: [[q(0.), q(0.5)], [q(0.), q(1.)]],
+                depth: 0,
+            },
+            Cell {
+                h: vec![
+                    vec![[q(0.5), q(0.), q(1.)], [q(0.5), q(1.), q(1.)]],
+                    vec![[q(1.), q(0.), q(1.)], [q(1.), q(1.), q(1.)]],
+                ],
+                uv: [[q(0.5), q(1.)], [q(0.), q(1.)]],
+                depth: 0,
+            },
+        ]
+    };
+    let r = [[q(0.75), q(0.75)], [q(0.5), q(0.5)]];
+    assert_eq!(
+        enclose_cells(cells(), &r, 0),
+        Some([[q(0.), q(1.)], [q(0.), q(1.)]])
+    );
+    assert_eq!(enclose_cells(cells(), &r, LIMIT), Some(r));
 }

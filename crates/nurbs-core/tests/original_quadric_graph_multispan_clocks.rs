@@ -137,9 +137,10 @@ fn original_multispan_nonlinear_clocks_keep_global_algebraic_edge_ownership() {
 fn nonlinear_multispan_original_projection_and_quadric_checks_are_both_required() {
     let (mut s, q, l) = target();
     s.control_points[1][1][0] = f64::from_bits(s.control_points[1][1][0].to_bits() + 1);
-    assert!(
-        original_quadric_graph_contacts(&source(l, 3.), &s, q, &[], 1e-9, 10, 1_000_000).is_err()
-    );
+    let r = original_quadric_graph_contacts(&source(l, 3.), &s, q, &[], 1e-9, 10, 1_000_000).unwrap();
+    assert_eq!(r.target_parameterization, OriginalQuadricGraphParameterization::JointJacobian);
+    assert_eq!(r.target_membership.outcome, cad_predicates::BezierIdentity::Different);
+    assert!(!r.target_graph_proven && !r.complete && r.carrier.is_none() && r.contacts.is_empty());
     let (mut s, q, l) = target();
     s.control_points[1][1][2] += 0.125;
     let r =
