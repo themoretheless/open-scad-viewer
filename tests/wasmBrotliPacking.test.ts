@@ -133,8 +133,8 @@ describe('synchronous Brotli WASM packages', () => {
     expect(first).toEqual(Uint8Array.from([1, 2, 3]))
   })
 
-  it('decodes photogrammetry to its original WASM artifact without changing the math kernel', () => {
-    const original = readFileSync(new URL('../crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm', import.meta.url))
+  it('decodes photogrammetry to the published raw WASM artifact', () => {
+    const original = readFileSync(new URL('../public/wasm/photogrammetry.wasm', import.meta.url))
     const decoded = unpackBrotliWasmBase64(photogrammetryBytes)
     expect(Buffer.compare(Buffer.from(decoded), original)).toBe(0)
     expect(WebAssembly.Module.imports(new WebAssembly.Module(decoded))).toEqual([])
