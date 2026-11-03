@@ -232,3 +232,22 @@ for(const zero of [false,true]){
  const q=triangularTarget();if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.25
  quadricGraphCases.push({name:`graph-triangular-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission,'Unproved conditional graph admitted')})
 }
+
+function triangularMultispanTarget(x=840,y=840){const q=graphQuery(),l=1680,a=[0,1,2,4],c=[0,.25,.75,1];Object.assign(q.patch,{degreeU:2,knotsU:[-2,-2,-2,0,2,2,2],knotsV:[10,10,11,13,14,14],weights:[0,1,2,3].map(i=>a.map(a=>[1,1+a/4,1+3*a/4,1+a][i]!)),controlPoints:[0,1,2,3].map(i=>a.map((a,j)=>{const b=[0,l/(4+a),l*(3+2*a)/(4+3*a),l][i]!;return[b,l*c[j]!,b*c[j]!]}))});q.quadric=[[0,.5,0,0],[.5,0,0,0],[0,0,0,-l/2],[0,0,-l/2,0]];const z=x*y/l;q.curve.controlPoints=[[x,y,z-1],[x,y,z+1]];return q}
+for(const [point,[x,y,u,v]] of [[840,840,0,11+6/7],[420,840,-1,11+10/11],[840,420,0,11]].entries())for(const transpose of [false,true])for(const rotated of [false,true])for(const gauge of [1,7]){
+ const q=triangularMultispanTarget(x!,y!),p=q.patch
+ if(transpose){p.controlPoints=[0,1,2,3].map(j=>[0,1,2,3].map(i=>p.controlPoints[i]![j]!));p.weights=[0,1,2,3].map(j=>[0,1,2,3].map(i=>p.weights[i]![j]!));[p.degreeU,p.degreeV]=[p.degreeV,p.degreeU];[p.knotsU,p.knotsV]=[p.knotsV,p.knotsU]}
+ p.weights=p.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of p.controlPoints)for(const x of row)[x[0],x[2]]=[x[2]!,x[0]!];for(const x of q.curve.controlPoints)[x[0],x[2]]=[x[2]!,x[0]!];const old=q.quadric,perm=[2,1,0,3];q.quadric=perm.map(i=>perm.map(j=>old[i]![j]!)) as OriginalQuadricGraphQuery['quadric']}
+ quadricGraphCases.push({name:`graph-triangular-multispan-point-${point}-transpose-${transpose}-rotated-${rotated}-gauge-${gauge}`,query:q,check:r=>{present(r,transpose?[[4,v!,u!,1]]:[[4,u!,v!,1]]);require(r.targetParameterization==='triangular-rational','Missing original global conditional graph certificate');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<1e-11,'Global conditional inverse did not refine')}})
+}
+for(const [edge,[x,y,u,v]] of [[0,0,-2,10],[1680,0,2,10],[0,1680,-2,14],[1680,1680,2,14],[0,840,-2,12],[1680,840,2,11.8],[840,0,0,10],[840,1680,0,14]].entries()){
+ const q=triangularMultispanTarget(x!,y!);quadricGraphCases.push({name:`graph-triangular-multispan-edge-${edge}`,query:q,check:r=>present(r,[[4,u!,v!,1]])})
+}
+for(const [edge,[x,y]] of [[-2,840],[1682,840],[840,-2],[840,1682]].entries()){
+ const q=triangularMultispanTarget(x!,y!);quadricGraphCases.push({name:`graph-triangular-multispan-exterior-${edge}`,query:q,check:r=>require(r.status==='absent-on-patch'&&r.patchAbsenceProven&&!r.finiteSurfaceUvAdmission,'Exterior global conditional preimage admitted')})
+}
+for(const zero of [false,true]){
+ const q=triangularMultispanTarget();if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.25
+ quadricGraphCases.push({name:`graph-triangular-multispan-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission,'Unproved global conditional graph admitted')})
+}

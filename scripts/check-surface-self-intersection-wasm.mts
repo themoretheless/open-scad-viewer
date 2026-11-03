@@ -200,6 +200,8 @@ const foldedClock=structuredClone(quadricGraphCases.find(c=>c.name==='graph-unor
 reject('graph-folded-clock-positive-endpoint-slopes',{op:'nurbs_original_quadric_graph_contacts',...foldedClock})
 const triangularDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-triangular-transpose-false-rotated-false-gauge-1')!.query);triangularDrift.patch.controlPoints[1]![1]![0]=1+Number.EPSILON
 reject('graph-triangular-original-identity-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...triangularDrift})
+const triangularMultispanDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-triangular-multispan-point-0-transpose-false-rotated-false-gauge-1')!.query);triangularMultispanDrift.patch.controlPoints[1]![1]![0]!+=2**-44
+reject('graph-triangular-multispan-original-identity-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...triangularMultispanDrift})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

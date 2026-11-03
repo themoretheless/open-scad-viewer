@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "baseCommit": "2416bb4f403d68342b9776da02f454b424089fcd",
+  "nativeTests": 57,
+  "bridgeTests": 21,
+  "multispanProofTests": 4,
+  "clientTests": 61,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/triangular.rs": "a428a7aed8b61194f2ba190c01baa9817bc46295786cc50e253026b5c89cd177",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/triangular/bspline.rs": "e71a1ec8fcd641e1fcb40d841e5894e1a14d59b8f9fe1d05cf7545c309371554",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/triangular/bspline/tests.rs": "7f0e8702b1fde1ce91307e3ce9c2bdb03071fd122a30aade18f821558d87dc0b",
+    "crates/nurbs-core/tests/original_quadric_graph_triangular_multispan.rs": "d3f815ace76cfb4e1c835ca89537311b1c1fdaea6701dc17f57f6de81c42b56e",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "471d14f6bbf045f024fac1b7dcac03ba3b5a03f4c3e380b34988056a7ab59a8d",
+    "tools/browser-qualification/quadric-graph-fixtures.ts": "ad9097fe570fbb59f801225721c476ce8b9a96bd549e9f0d2d03194a39c664e2",
+    "tools/browser-qualification/surface-self-intersection.mjs": "8c53c2216dd16e9a4b358d2c6e50f627b6d3de48cd324b22d5303aa04f8e3e2d",
+    "scripts/check-surface-self-intersection-wasm.mts": "f9eb880f645724b2beaa97b86fe94860b1256621372ab2e519162733ccfeda60"
+  },
+  "scope": "Original clamped C0 multispan triangular rational B-spline projections, degrees 1..8. Independent original global boundary clock equality is certified by per-span exact homogeneous Bernstein cross-census for every original conditional control column. Conditional original ordinates are ordered and nonconstant on each active original span; positive knot insertion preserves ordering, proving strict monotonicity for every positive fiber weight vector.",
+  "inverse": "Exact original independent basis restriction on every span overlapping the independent inverse interval, including both sides of internal knots. Positive row-mixture inverse hulls use the original global conditional B-spline clocks; no sampled or rounded extracted poles.",
+  "restrictionCensusWorkLimit": 4000000,
+  "restrictionCensusScope": "Separate per proof attempt and inverse call; outside predicate maxExactWork. Original clock monotonicity retains its own fixed arithmetic limits. Exhaustion fails closed.",
+  "qualification": "All 64 degree pairs for exact original coefficient census and independent Cox inverse checks, both orientations, multispan projected rectangles, gauge invariance, zero internal work, flat-span/discontinuous-basis refusal; actual nonplanar xy=1680z, original internal knots and non-knot contacts, both orientations/rotations/gauges, edges/corners/exterior, original identity ULP drift, wrong quadric membership, zero predicate budget.",
+  "sourceRewritten": false,
+  "differentialRegularityProven": false,
+  "trimAdmission": false,
+  "bodyAdmission": false,
+  "wasmRuntimeQualified": false,
+  "preparedGraphCases": 173,
+  "preparedWorkerCount": 266,
+  "remaining": [
+    "Actual WASM ABI and Chromium runtime for multispan triangular graphs",
+    "General joint maps without independent projection",
+    "Arbitrary UV precision and differential regularity",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}
