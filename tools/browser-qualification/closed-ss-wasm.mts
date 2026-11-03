@@ -24,14 +24,30 @@ function request(v){
 }
 const before=JSON.stringify(fixture),start=performance.now(),r=request(fixture);
 if(!r.ok)throw Error(JSON.stringify(r));const v=r.value;
-if(v.originalSourceClosedCoverage!==true||v.materialClassified!==false||v.a.faces.length!==2||v.b.faces.length!==2||v.worldErrorUpper>1e-6||v.uvErrorUpper.some(x=>x>1e-6))throw Error('bad closed partition');
-for(const m of [v.a,v.b]){if(m.faces[0].holes.length!==1)throw Error('missing hole');}
+const branches=fixture.op==='brep_partition_all_closed_ss'?2:1;
+if(v.originalSourceClosedCoverage!==true||v.materialClassified!==false||v.a.faces.length!==branches+1||v.b.faces.length!==branches+1||v.worldErrorUpper>fixture.toleranceMm||v.uvErrorUpper.some(x=>x>fixture.toleranceUv))throw Error('bad closed partition');
+for(const m of [v.a,v.b]){
+ if(m.faces[0].holes.length!==branches)throw Error('missing hole');
+ for(const f of m.faces)for(const id of [f.outer,...f.holes]){
+  const c=m.loops[id].coedges;
+  for(let i=0;i<c.length;i++){
+   const a=c[i],b=c[(i+1)%c.length],ea=m.edges[a.edge],eb=m.edges[b.edge];
+   if(ea.vertices[a.reversed?0:1]!==eb.vertices[b.reversed?1:0])throw Error('open topology');
+   const p=a.pcurve.controlPoints.at(-1),q=b.pcurve.controlPoints[0];
+   if(Math.hypot(...p.map((x,k)=>x-q[k]))>fixture.toleranceUv)throw Error('open UV loop');
+   for(const end of [0,1]){
+    const p=ea.curve.controlPoints[end?ea.curve.controlPoints.length-1:0],q=m.vertices[ea.vertices[end]].point;
+    if(Math.hypot(...p.map((x,k)=>x-q[k]))>m.toleranceMm)throw Error('unbound world endpoint');
+   }
+  }
+ }
+}
 const failures=[];
 for(const [key,value] of [['faceA',99],['toleranceMm',0],['materialClassified',true]]){
  const q=structuredClone(fixture);q[key]=value;const bad=request(q);if(bad.ok||typeof bad.error.code!=='string')throw Error('accepted '+key);failures.push({key,code:bad.error.code});
 }
 if(JSON.stringify(fixture)!==before)throw Error('fixture mutated');
-return {passed:true,segments:v.segments,worldErrorUpper:v.worldErrorUpper,uvErrorUpper:v.uvErrorUpper,failures,elapsedMs:performance.now()-start,inputIntact:true};`
+return {passed:true,branches,segments:v.segments,worldErrorUpper:v.worldErrorUpper,uvErrorUpper:v.uvErrorUpper,failures,elapsedMs:performance.now()-start,inputIntact:true};`
 let browser:any,server:any
 try{
  server=await createServer({root:repo,configFile:false,server:{host:'127.0.0.1',port:0}})
@@ -42,6 +58,8 @@ try{
  })
  await server.listen();browser=await chromium.launch({headless:true})
  const page=await browser.newPage();const errors:string[]=[];page.on('pageerror',(e:any)=>errors.push(e.message))
+ await page.route('**/__closed_ss.wasm',(route:any)=>route.fulfill({contentType:'application/wasm',body:bytes}))
+ await page.route('**/__closed_ss',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Closed SS ABI qualification</title>'}))
  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/__closed_ss`)
  const result=await page.evaluate(async({fixture,common,identity}:any)=>{
   const raw=await(await fetch('/__closed_ss.wasm')).arrayBuffer()
@@ -57,6 +75,6 @@ try{
   finally{worker.terminate();URL.revokeObjectURL(url)}
  },{fixture,common,identity})
  assert.equal(result.main.passed,true);assert.equal(result.thread.ok,true,JSON.stringify(result.thread));assert.equal(result.thread.result.passed,true);assert.deepEqual(errors,[])
- const report={schema:'closed-ss-wasm-qualification/1',identity,browser:browser.version(),result,pageErrors:errors,passed:true,scope:'One regular nonperiodic original closed component, two finite-face subdivisions; no material/Boolean/general-singularity qualification.'}
+ const report={schema:'closed-ss-wasm-qualification/1',identity,browser:browser.version(),result,pageErrors:errors,passed:true,scope:'Finite original regular nonperiodic closed-component fixtures and paired finite-face subdivisions; no material/Boolean/general-singularity qualification.'}
  mkdirSync(out,{recursive:true});writeFileSync(resolve(out,'browser.json'),JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report))
 }finally{await browser?.close();await server?.close()}

@@ -775,3 +775,5 @@ pub use closed_api::{ClosedCutBudget, partition_closed};
 
 mod closed_ss;
 pub use closed_ss::{ClosedSsLimits,ClosedSsPartition,partition_closed_ss};
+mod closed_ss_all;
+pub use closed_ss_all::{ClosedSsNetwork,partition_all_closed_ss};
