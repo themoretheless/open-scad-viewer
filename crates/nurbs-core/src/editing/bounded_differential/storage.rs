@@ -7,7 +7,7 @@ fn rounded(q: &Q, w: &mut Work) -> PResult<f64> {
         .filter(|x| x.is_finite())
         .ok_or(Refusal::InvalidOutput)
 }
-pub(super) fn candidate(channels: &[Vec<Q>], w: &mut Work) -> PResult<(Vec<Vec<f64>>, Vec<f64>)> {
+pub(in crate::editing) fn candidate(channels: &[Vec<Q>], w: &mut Work) -> PResult<(Vec<Vec<f64>>, Vec<f64>)> {
     match super::super::rational_edit::store(channels, w) {
         Ok(out) => return Ok(out),
         Err(super::super::rational_factor::Refusal::NotRepresentable) => {}

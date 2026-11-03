@@ -1,0 +1,46 @@
+{
+  "baseCommit": "d52142700",
+  "status": "focused-default-and-independent-proof-passed-full-profiles-running",
+  "catalogueCapability": "NURBS-0252",
+  "catalogueCredited": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "bfd2d72ea9fa39d2c9546e8f4266e798099b5b70f766a6ec9a07e286e3bb8fa6",
+    "crates/nurbs-core/src/editing/bounded_surface_differential/proof.rs": "0081cd42041d285e05a427265a90bd884de0124ac4beb9d3dcd3b5ec51cdc693",
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "9dc8354c0f00cdeed6f4f114f54c4011f639ec501a05beb2a9eac5f7c38b3166",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs": "61fad3e7c8cbe1880d3e146f9ac40e6dc8ff829578dd6fc15706030ecfe1fa29",
+    "crates/nurbs-core/tests/bounded_surface_differential_contracts.rs": "93e8d8b5a0eb75e5f409c7636d9e694e5822d481d13a1d81bd74d1c3c2d7c2d6"
+  },
+  "focusedDefault": {
+    "passed": 55,
+    "newSurfaceContracts": 16,
+    "existingCurveContracts": 16,
+    "existingMixedPartialContracts": 14,
+    "existingSurfacePartialContracts": 9,
+    "failed": 0
+  },
+  "independentOracle": {
+    "sourceRecords": 25,
+    "outputPatches": 50,
+    "negativeControls": 10,
+    "wholeNetGaugeControl": true,
+    "largerValidBoundControl": true,
+    "sourceReconstructionSha256": "04c9b7067278f209e14d4b148af90dbda889e0dbe0e67aedbb4edf917c4a37f2",
+    "scope": "Exact original homogeneous tensor reconstruction and generic quotient differentiation. Full UV Bernstein nonnegative squared-error polynomials against actual stored bits; no numerical samples, native factor-cancellation trust, topology or application authority."
+  },
+  "fullProfiles": {
+    "default": {
+      "sessionId": 55225,
+      "state": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native266-full-default.state.json"
+    },
+    "noCodec": {
+      "sessionId": 79769,
+      "state": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native266-full-no-codec.state.json"
+    }
+  },
+  "initialCompileCorrections": [
+    "Remove unsupported Debug derive for existing Axis type; do not change Axis API.",
+    "Correct test domain inspection to existing knot/control fields; do not add an unrelated Surface API."
+  ],
+  "scope": "Native tensor field storage with continuous numeric carrier error and unchanged output/work/bit/conditioning limits. No per-row gauges, sampled admission, global regularity, topology, evaluator error or application qualification."
+}

@@ -32,3 +32,5 @@ pub mod exact_derivative;
 pub mod exact_surface_derivative;
 
 pub mod bounded_differential;
+
+pub mod bounded_surface_differential;

@@ -12,9 +12,9 @@ use std::collections::BTreeMap;
 mod content;
 mod extraction;
 mod mixed;
-mod polynomial;
-mod storage;
-type Poly = BTreeMap<(usize, usize), Q>;
+pub(super) mod polynomial;
+pub(super) mod storage;
+pub(super) type Poly = BTreeMap<(usize, usize), Q>;
 type PResult<T> = std::result::Result<T, Refusal>;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
@@ -66,7 +66,7 @@ fn target(h: &[Poly], axis: Axis, width: &Q, w: &mut Work) -> PResult<Vec<Poly>>
     Ok(out)
 }
 #[derive(Clone, Copy)]
-enum Field {
+pub(super) enum Field {
     Partial(Axis),
     AreaNormal,
     Metric,
@@ -103,7 +103,13 @@ fn metric_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     out.push(polynomial::multiply(&u[3], &v[3], w)?);
     Ok(out)
 }
-fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResult<Surface> {
+pub(super) fn original_target(
+    s: &Surface,
+    ku: usize,
+    kv: usize,
+    field: Field,
+    w: &mut Work,
+) -> PResult<Vec<Poly>> {
     let domains = [
         [s.knots_u[ku], s.knots_u[ku + 1]],
         [s.knots_v[kv], s.knots_v[kv + 1]],
@@ -115,7 +121,7 @@ fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResu
         widths.push(w.op(&b, &a, |a, b| a - b)?);
     }
     let h = extraction::cell(s, ku, kv, domains, &widths, w)?;
-    let target = match field {
+    Ok(match field {
         Field::Partial(axis) => target(
             &h,
             axis,
@@ -128,11 +134,21 @@ fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResu
         Field::AreaNormal => area_target(&h, &widths, w)?,
         Field::Metric => metric_target(&h, &widths, w)?,
         Field::Mixed(orders) => mixed::target(&h, orders, &widths, w)?,
-    };
-    let proposal = match polynomial::constant_field(&target, w)? {
-        Some(constant) => constant,
-        None => content::cancel(&target, w)?,
-    };
+    })
+}
+pub(super) fn reduced_target(target: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
+    match polynomial::constant_field(target, w)? {
+        Some(constant) => Ok(constant),
+        None => content::cancel(target, w),
+    }
+}
+fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResult<Surface> {
+    let domains = [
+        [s.knots_u[ku], s.knots_u[ku + 1]],
+        [s.knots_v[kv], s.knots_v[kv + 1]],
+    ];
+    let target = original_target(s, ku, kv, field, w)?;
+    let proposal = reduced_target(&target, w)?;
     let out = storage::store(&proposal, domains, w)?;
     storage::prove(&out, &target, w)?;
     Ok(out)

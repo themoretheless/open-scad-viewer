@@ -123,3 +123,11 @@ owner (no new compatibility root). Original source targets remain owned by
 exact public APIs and work traces. Storage proposals carry no authority until
 fresh full-span residual bounds against actual stored bits pass. This family has native credit after full current-source default/no-codec
 regression and independent continuous error verification.
+
+Pending bounded surface differential fields belong to
+`editing::bounded_surface_differential` under the registered editing owner.
+Original tensor targets, reductions and coefficient conversion remain with
+`exact_surface_derivative`; only crate-private access is shared. Flat storage
+proposals and outward scalar error rounding reuse the bounded curve owner.
+A surface-specific tensor residual proof must admit actual stored bits over
+every original UV cell; no per-row gauge or source certificate transfer.
