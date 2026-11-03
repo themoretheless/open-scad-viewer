@@ -45,5 +45,5 @@ budget are errors. Any work, degree, denominator, output or tolerance refusal
 discards every earlier piece AND every earlier bound. Exact APIs and their
 work accounting remain unchanged.
 
-Native qualification is in progress. JSON/WASM/Rush/editor/STEP, topology and
+Native qualification passed; see `docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json`. JSON/WASM/Rush/editor/STEP, topology and
 whole-application delivery are separate; there is no serialized proof authority.

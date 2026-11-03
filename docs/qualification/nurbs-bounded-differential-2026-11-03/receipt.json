@@ -1,7 +1,7 @@
 {
   "baseCommit": "0b30f6324",
-  "status": "new-native-contracts-and-independent-proof-passed-full-regression-running",
-  "catalogueCredited": false,
+  "status": "native-qualified",
+  "catalogueCredited": true,
   "catalogueCapability": "NURBS-0251",
   "sourceSha256": {
     "crates/nurbs-core/src/editing.rs": "04bc36425bb88eafe82d7c9d4ef0e1d9b345e9fb685bb6862eb5c197649d8145",
@@ -32,14 +32,75 @@
     "scope": "Independent Fraction original-source reconstruction, uncancelled-to-reduced exact cross identities, actual stored-bit Euclidean residual hulls and full polynomial nonnegative error certificates. No sampled acceptance, topology, serialized-certificate or application authority."
   },
   "fullCurrentRuns": {
-    "default": {
-      "sessionId": 35839,
-      "state": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native264-full-default.state.json"
+    "status": "both-single-full-commands-exited-zero",
+    "profiles": {
+      "default": {
+        "libraryAndIntegrationTargets": 285,
+        "integrationTargets": 284,
+        "passed": 3998,
+        "docTestsPassed": 2,
+        "failed": 0,
+        "ignoredMicrobenchmark": 1,
+        "singleFullCommandExitCode": 0
+      },
+      "no-codec": {
+        "libraryAndIntegrationTargets": 285,
+        "integrationTargets": 284,
+        "passed": 3769,
+        "docTestsPassed": 2,
+        "failed": 0,
+        "ignoredMicrobenchmark": 1,
+        "singleFullCommandExitCode": 0
+      },
+      "currentSourceChecked": true
     },
-    "noCodec": {
-      "sessionId": 57156,
-      "state": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native264-full-no-codec.state.json"
-    }
+    "auditCommand": "python3 docs/qualification/nurbs-bounded-differential-2026-11-03/audit_full.py --check-source",
+    "sourceInventoriesUnchanged": true
   },
-  "scope": "Continuous field-value error of actual stored binary64 geometry; no adaptive fitting, topology, evaluator arithmetic error, old certificate transfer or application qualification. Exact public APIs retain exact storage or refusal."
+  "scope": "Continuous field-value error of actual stored binary64 geometry; no adaptive fitting, topology, evaluator arithmetic error, old certificate transfer or application qualification. Exact public APIs retain exact storage or refusal.",
+  "implementationCommit": "4ce6cea1d",
+  "independentCurrentFullLogOracles": [
+    "native265-area-normal-oracle.json.gz",
+    "native265-binormal-oracle.json.gz",
+    "native265-bounded-oracle.json.gz",
+    "native265-curve-order-oracle.json.gz",
+    "native265-derivative-oracle.json.gz",
+    "native265-metric-field-oracle.json.gz",
+    "native265-mixed-partial-oracle.json.gz",
+    "native265-squared-curvature-oracle.json.gz",
+    "native265-squared-speed-oracle.json.gz",
+    "native265-surface-derivative-oracle.json.gz"
+  ],
+  "archiveSha256": {
+    "cargo-targets.json.gz": "737ba1957538efcb63391943a4b6b37a02f66d1ed5a6d073ee75e7c9826b4049",
+    "native264-bounded-differential-default.log.gz": "2d20fc721dae437665b6b87b4d1f0be864972d3e23e9b553593ff335ca5806a0",
+    "native264-bounded-release-contracts.log.gz": "2031ecdb2943e1662c49592073830cedc627ec68eb7da1fb51021331fda08d41",
+    "native264-full-audit.json.gz": "3eb42e7a77da491e3ae33dcb27252f38a586d31a4f880cd7001bd36152b31dad",
+    "native264-full-default.log.gz": "b92ef0b2da0b0b9a38609f0ab799f1713a9eb685be4c2ab30715f73527b00f7e",
+    "native264-full-default.source-inputs.json.gz": "6c5e380999b87b800f45b4c172c5fbe962c08c48096a0e87af9b1c29722f57ad",
+    "native264-full-default.state.json.gz": "09af4049e59bae3b8b3358dc7529839483637d2b3c65d50c21ccbd4dd09386be",
+    "native264-full-no-codec.log.gz": "1bffd667c4bf7403fa4e26afd3a9aa6655e568dfe4960fb36794416d0cc5a98e",
+    "native264-full-no-codec.source-inputs.json.gz": "6c5e380999b87b800f45b4c172c5fbe962c08c48096a0e87af9b1c29722f57ad",
+    "native264-full-no-codec.state.json.gz": "f1b1371ea9f266c354c4b68dda439d77c219b20d58e8783254c8f227ebe15250",
+    "native264-release-independent.json.gz": "d61d65c9e5bd3e6716df6cc4cae77bd48444e4a15b606d21f39b916c418fc1c4",
+    "native265-area-normal-oracle.json.gz": "2252a8c71afff04db65daf1800cc2565af3a175cb91ca7c8291a02e4d3f41999",
+    "native265-binormal-oracle.json.gz": "0414ccd6573fae15492c344fc709ea8a54a5256143e35f39c09e35b4e8b49141",
+    "native265-bounded-oracle.json.gz": "d61d65c9e5bd3e6716df6cc4cae77bd48444e4a15b606d21f39b916c418fc1c4",
+    "native265-curve-order-oracle.json.gz": "fcd497c99ff694206337195705a9c99480d87e3af90c3ed964b303e7608dfe8c",
+    "native265-derivative-oracle.json.gz": "a059e513f7e9f19be57653bfa5d24177540a54934ba7cbac1974fb25e88da5c1",
+    "native265-metric-field-oracle.json.gz": "8719dfee0e61e36436cb7d5711fd7a993e822c33ac6689ecbfca27bf6a8c4c3c",
+    "native265-mixed-partial-oracle.json.gz": "2fcb53b76090d0b5b85bc76ed954a4e3ba1e2f0c600f71147774e9e9a3b24e30",
+    "native265-squared-curvature-oracle.json.gz": "6728b7ab9d5548ae8ea46ee08bbf19ec1d493afc05d8c3abb1b379621c620b7c",
+    "native265-squared-speed-oracle.json.gz": "6346e5d77ec2bad8e6620b67fed8e2a325e60ddc0da81aa4bbeb914fc907acc0",
+    "native265-surface-derivative-oracle.json.gz": "6ce7a7b998b0ea33b6edda5b1582a81cfcba9a961366895706899bd37dce22b7"
+  },
+  "verifierSha256": {
+    "independent_oracle.py": "29401887075b0be554709c571721412f8d929b47f919c53811f1b97e85d82f6c",
+    "audit_full.py": "8f83af8bddedcdbf9d530b46c66a06b1d924b02f3f0a21e36c2518536c8d0f1a"
+  },
+  "remainingQualification": [
+    "JSON/WASM/TypeScript/Rush/editor/STEP and whole-application delivery remain separate.",
+    "No sampled evaluator-bit, sign, topology, old serialized certificate or universal regularity authority.",
+    "Original1000 target remains incomplete."
+  ]
 }

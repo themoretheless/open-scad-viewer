@@ -116,10 +116,10 @@ a scalar field, while pointwise curve analysis keeps its existing owner.
 Original source regularity must be proved before any cancellation; output
 identity alone must never extend curvature through a stationary source point.
 
-Pending bounded binary storage of differential fields belongs to
+NURBS-0251 bounded binary storage of differential fields belongs to
 `editing::bounded_differential`, nested under the already registered editing
 owner (no new compatibility root). Original source targets remain owned by
 `editing::exact_derivative`; shared access is crate-private and preserves the
 exact public APIs and work traces. Storage proposals carry no authority until
-fresh full-span residual bounds against actual stored bits pass. This family
-is not yet catalogue credit.
+fresh full-span residual bounds against actual stored bits pass. This family has native credit after full current-source default/no-codec
+regression and independent continuous error verification.
