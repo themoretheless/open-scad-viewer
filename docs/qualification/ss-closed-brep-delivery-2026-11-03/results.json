@@ -1,0 +1,88 @@
+{
+  "schema": "closed-ss-brep-delivery/1",
+  "updated": "2026-11-04T00:06:59.215409+04:00",
+  "taskComplete": false,
+  "deliveryComplete": true,
+  "sourceCommit": "1c83050c24a5d6a1b999ed8f20f89bbeca90b0b0",
+  "integratedSourceCommit": "55019ac71006d582c0698eeefef553e683730bbc",
+  "sourceTree": "923afe1069d5563f1f35d137bbada80f9cabf5da",
+  "tests": {
+    "passed": 52,
+    "counts": {
+      "native-core.log": 34,
+      "native-replay.log": 1,
+      "native-brep.log": 14,
+      "native-bridge.log": 3
+    },
+    "notQualified": [
+      "nonplanar_actual_cylindrical_cap_accepts_a_closed_cut_and_full_replay: interrupted, omitted from bounded regression; no pass credit"
+    ],
+    "hostPassed": 22,
+    "packagePassed": 11,
+    "existingBrowserChecksEachMainAndWorker": 40
+  },
+  "architecture": {
+    "pinnedOversized": 54,
+    "pinnedLayerViolations": 0,
+    "frozenCheckout": true
+  },
+  "nativeScope": [
+    "original-source oriented first-return cycles with shared root selectors",
+    "saved world and paired UV curves, monotone junction-root-tube rephasing and whole original-root error bounds",
+    "whole-contour finite-face placement of all components of a complete regular nonperiodic census",
+    "both sectors retained, holes assigned, persistent topology identities preserved, input models unchanged"
+  ],
+  "remaining": [
+    "arbitrary rational/singular/tangent/multiple SS networks and general periodic/poles",
+    "partial finite-face clipping across outer/hole rims and quotient seams",
+    "material-side selection and automatic retained-region trim",
+    "closed Body orientation/cavities/nesting/self-intersection/healing admission",
+    "general intersecting-NURBS union/intersection/difference/XOR and resulting volume proof"
+  ],
+  "delivery": {
+    "status": "installed-and-qualified-for-scoped-operations",
+    "artifact": {
+      "sha256": "65158c6cda6b12550c3c41134c6850a890e671047a4bf9d27e048c35572417e5",
+      "bytes": 17149147,
+      "publicPath": "public/wasm/geometry-kernel.wasm",
+      "embeddedAndFingerprintMatch": true
+    },
+    "previousSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+    "operations": [
+      "brep_partition_closed_ss",
+      "brep_partition_all_closed_ss"
+    ],
+    "actualHostCallsMainAndWorker": true,
+    "fullPackageDecodedHashVerified": true,
+    "exportsPreserved": 35,
+    "imports": 0,
+    "totalPackageLimitMiB": 20,
+    "perStreamOutputLimitMiB": 16,
+    "perStreamCompressedLimitMiB": 4,
+    "compressedPackageLimitMiB": 8,
+    "maxStreams": 8,
+    "rustDecoderLimitsUnchanged": true,
+    "hostFailureResolved": true,
+    "scope": "finite regular nonperiodic closed-component subdivision; both material sectors remain, no Body/Boolean admission",
+    "browserReports": [
+      "browser-single.json",
+      "browser-network.json"
+    ],
+    "existingApiReport": "installed-api.json"
+  },
+  "preservation": {
+    "unrelatedDirtyFilesHashChecked": 171,
+    "pushed": false
+  },
+  "externalPlasticityComparison": false,
+  "wholeLibraryParity": false,
+  "deliverySourceCommit": "6bd3099d9ee470a9485ddb01509001d059c63ac3",
+  "nativeSourceManifest": "Frozen native-source commit and tree; delivery tooling is separately hashed in delivery-files.sha256.json.",
+  "qualificationNotes": [
+    "Rational projective-carrier test needs explicit max_repairs=32; default=4 returned unproved full coverage. This is not arbitrary rational-SS qualification.",
+    "Material classification, partial finite-face clipping, general singular/periodic cases and intersecting-NURBS Boolean remain open.",
+    "Native tests used the frozen source tree; the unrelated dirty main working tree is not claimed to have passed a whole-workspace suite.",
+    "Package identity preparation now happens before publishing any of the four outputs. Overall capacity increased from 16 to 20 MiB; every stream stays within the unchanged native decoder limits.",
+    "Raw candidate probes are retained under raw-candidate as intermediate evidence; installed artifact is the single digest in delivery.artifact."
+  ]
+}

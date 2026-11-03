@@ -1,0 +1,29 @@
+{
+  "schema": "candidate-direct-browser-api/1",
+  "identity": {
+    "sha256": "65158c6cda6b12550c3c41134c6850a890e671047a4bf9d27e048c35572417e5",
+    "byteLength": 17149147
+  },
+  "browserVersion": "151.0.7922.34",
+  "scope": "Finite Chromium development-module API probes on main thread and qualification worker. No provider admission, production packaging or whole-UI qualification.",
+  "qualificationClaim": "none",
+  "result": {
+    "main": {
+      "passed": true,
+      "checks": 40
+    },
+    "thread": {
+      "ok": true,
+      "identity": {
+        "sha256": "65158c6cda6b12550c3c41134c6850a890e671047a4bf9d27e048c35572417e5",
+        "byteLength": 17149147
+      },
+      "result": {
+        "passed": true,
+        "checks": 40
+      }
+    }
+  },
+  "pageErrors": [],
+  "passed": true
+}

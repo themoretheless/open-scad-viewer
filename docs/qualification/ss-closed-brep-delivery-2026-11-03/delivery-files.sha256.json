@@ -1,0 +1,14 @@
+{
+  "public/wasm/geometry-kernel.wasm": "65158c6cda6b12550c3c41134c6850a890e671047a4bf9d27e048c35572417e5",
+  "scripts/geometry-kernel-cargo.mjs": "0c86558ee138988e613f05441b816f9e2ee27d37b41b498e4c30635c20bae2ef",
+  "scripts/pack-geometry-kernel.mjs": "42bbb5e21c92fc4e62209ef83d8e5dcc5d4c6fcfcb8d0d72b610d5930ddcb845",
+  "scripts/verify-packed-wasm.mjs": "b3eb78082bf699511ee24568f9be1606418deb42fb93a04b0b5bac02e5760640",
+  "scripts/wasm-artifact-identity.mjs": "75664902fb1731670750f7a19fa3b168e56341f3ae07795abe54dba8d5e63455",
+  "src/services/wasmArtifact.ts": "b72bd887f23445459d096d0254eb8bf9bc68269266efdfb5ec4df438be385d74",
+  "src/services/wasmBrotliPacking.ts": "a225b36ddf76b6682580c5198cd6a315598b1082932521b1e47f80359b149a32",
+  "tests/geometryPackPublication.test.mjs": "b1d5b6dbd44bff9b2b7bf885df8691bab5b583621c99884944f09ab74e0986a3",
+  "tests/geometryPackingPublication.test.ts": "0705d2c2ee45da5e997ae4d31920def300b7f840102382b3fd6d14021361ef50",
+  "tests/wasmArtifact.test.ts": "ac088b68111425c46499795cb3e88a3ec3743227412101c1e0a03f8984ae8e81",
+  "tests/wasmBrotliPacking.test.ts": "d958c03171d283b0e072a9c316d01500dd032aeee0c50ff4ced5bb688936d309",
+  "tools/browser-qualification/closed-ss-wasm.mts": "692bfccc184a1d759d3d38c6df27e31bcf95d61f1d4aad281f6415656ab3f947"
+}
