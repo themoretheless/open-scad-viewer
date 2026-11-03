@@ -1,0 +1,45 @@
+{
+  "baseCommit": "0b30f6324",
+  "status": "new-native-contracts-and-independent-proof-passed-full-regression-running",
+  "catalogueCredited": false,
+  "catalogueCapability": "NURBS-0251",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing.rs": "04bc36425bb88eafe82d7c9d4ef0e1d9b345e9fb685bb6862eb5c197649d8145",
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "a353efed23cb1993efa46ffde5050f74c4851f0534885a466a092ef1d3343f44",
+    "crates/nurbs-core/src/editing/bounded_differential.rs": "9b9d256aed7858adef1bdfc57feb17711b909cf5981cf4acb76bef645c773cbf",
+    "crates/nurbs-core/src/editing/bounded_differential/storage.rs": "92d56a72499020105405e348d63e316a66f59f7ad6acb425e4c01982dc75fa80",
+    "crates/nurbs-core/src/editing/bounded_differential/proof.rs": "bb101d1b3abbd67bc3c3eb80eb1e6968d54f91c5c18dadaaa0023824669b9034",
+    "crates/nurbs-core/tests/bounded_differential_contracts.rs": "d19849742eb5049aa64b1ae32d8a1fd2aeb9d8c898330c949514dd50e6daf1fd",
+    "crates/nurbs-core/src/core/bounded_rational.rs": "32175cd3a0264ad9a17e5ea0e3d59ae7bfc9da12e696ba6370a8eb22cde9792d"
+  },
+  "newContracts": {
+    "passed": 16,
+    "failed": 0,
+    "log": "native264-bounded-release-contracts.log.gz"
+  },
+  "initialExactRegression": {
+    "curveOrderContracts": 15,
+    "squaredCurvatureContracts": 12,
+    "status": "passed before test-only expansion; full current coverage pending"
+  },
+  "independentOracle": {
+    "sourceRecords": 14,
+    "outputPieces": 18,
+    "negativeControls": 10,
+    "globalGaugeControl": true,
+    "LargerValidUpperControl": true,
+    "sourceReconstructionSha256": "f317bc91a7130b9eabdc41d1ce5e3a251a6ef00134f8bd31a78567e95fa259be",
+    "scope": "Independent Fraction original-source reconstruction, uncancelled-to-reduced exact cross identities, actual stored-bit Euclidean residual hulls and full polynomial nonnegative error certificates. No sampled acceptance, topology, serialized-certificate or application authority."
+  },
+  "fullCurrentRuns": {
+    "default": {
+      "sessionId": 35839,
+      "state": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native264-full-default.state.json"
+    },
+    "noCodec": {
+      "sessionId": 57156,
+      "state": "/Users/themoretheless/.codex/tmp/architecture-recovery-20261031/native264-full-no-codec.state.json"
+    }
+  },
+  "scope": "Continuous field-value error of actual stored binary64 geometry; no adaptive fitting, topology, evaluator arithmetic error, old certificate transfer or application qualification. Exact public APIs retain exact storage or refusal."
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 250,
-  "unallocatedCount": 750,
+  "specifiedCount": 251,
+  "unallocatedCount": 749,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6789,6 +6789,30 @@
       "remainingQualification": [
         "Native current-source typed API, default/no-codec contracts and independent stored-bit full-span polynomial identities qualified. Full native regression target coverage verified; no adapter or whole-application qualification.",
         "Original clocks, one-sided knot traces, exact binary storage or atomic whole-result refusal. No topology, certificate transfer, JSON/WASM/Rush/editor/STEP or whole-app qualification. See API documentation for specific regularity admission and degree limits."
+      ]
+    },
+    {
+      "id": "NURBS-0251",
+      "name": "Построение дифференциальных полей кривой в binary64 с непрерывной доказанной границей ошибки",
+      "status": "planned",
+      "prioritySet": "native-1000-bounded-field-storage",
+      "category": "Дифференциальная геометрия с доказанным допуском",
+      "nativeApi": "nurbs_core::editing::bounded_differential::curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing.rs",
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/bounded_differential.rs",
+        "crates/nurbs-core/src/editing/bounded_differential/storage.rs",
+        "crates/nurbs-core/src/editing/bounded_differential/proof.rs",
+        "crates/nurbs-core/tests/bounded_differential_contracts.rs",
+        "docs/design/nurbs-bounded-differential.md",
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-bounded-differential-2026-11-03/independent_oracle.py"
+      ],
+      "remainingQualification": [
+        "Typed native implementation,16 new contracts and independent continuous identities pass. Full current default/no-codec regression is running; status remains planned and no completed native credit is assigned yet.",
+        "Explicit Euclidean field tolerance; exact storage first, then rounded poles and weights admitted by whole-span rational residual Bernstein hulls and outward float error bounds. Derivatives1..3, squared speed, unnormalized3D binormal, squared curvature are one capability family. Source regularity is never borrowed from cancellation. No adaptive fitting or degree reduction.",
+        "Existing degree25,1m-work/4096-bit, coordinate, weight and conditioning limits unchanged. No topology, source-certificate transfer, JSON/WASM/Rush/editor/STEP or whole-application qualification."
       ]
     }
   ],

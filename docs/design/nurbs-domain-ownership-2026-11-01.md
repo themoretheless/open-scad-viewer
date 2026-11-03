@@ -115,3 +115,11 @@ and private `curvature` remain under editing field construction. This constructs
 a scalar field, while pointwise curve analysis keeps its existing owner.
 Original source regularity must be proved before any cancellation; output
 identity alone must never extend curvature through a stationary source point.
+
+Pending bounded binary storage of differential fields belongs to
+`editing::bounded_differential`, nested under the already registered editing
+owner (no new compatibility root). Original source targets remain owned by
+`editing::exact_derivative`; shared access is crate-private and preserves the
+exact public APIs and work traces. Storage proposals carry no authority until
+fresh full-span residual bounds against actual stored bits pass. This family
+is not yet catalogue credit.

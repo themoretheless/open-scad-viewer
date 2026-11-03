@@ -90,7 +90,7 @@ fn target(h: &[Poly], width: &Q, w: &mut Work) -> PResult<Vec<Poly>> {
     out.push(poly::multiply(denominator, denominator, w)?);
     Ok(out)
 }
-fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
+pub(super) fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
     let mut common = h.last().unwrap().clone();
     for row in &h[..h.len() - 1] {
         common = poly::gcd(common, row.clone(), w)?;
@@ -113,26 +113,36 @@ fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
         .collect()
 }
 #[derive(Clone, Copy)]
-enum Field {
+pub(super) enum Field {
     Derivative(usize),
     SquaredSpeed,
     Binormal,
     SquaredCurvature,
 }
-fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Curve> {
+pub(super) fn original_target(
+    source: &Curve,
+    span: usize,
+    field: Field,
+    w: &mut Work,
+) -> PResult<Vec<Poly>> {
     let a = source.knots[span];
     let b = source.knots[span + 1];
     let qa = w.lift(a)?;
     let qb = w.lift(b)?;
     let width = w.op(&qb, &qa, |a, b| a - b)?;
     let h = extraction::span(source, span, &qa, &width, w)?;
-    let target = match field {
+    Ok(match field {
         Field::Derivative(1) => target(&h, &width, w)?,
         Field::Derivative(order) => higher::target(&h, &width, order, w)?,
         Field::SquaredSpeed => speed::target(&h, &width, w)?,
         Field::Binormal => binormal::target(&h, &width, w)?,
         Field::SquaredCurvature => curvature::target(&h, &width, w)?,
-    };
+    })
+}
+fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Curve> {
+    let a = source.knots[span];
+    let b = source.knots[span + 1];
+    let target = original_target(source, span, field, w)?;
     let reduced = reduced(&target, w)?;
     let degree = reduced
         .iter()
