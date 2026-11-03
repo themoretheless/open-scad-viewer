@@ -368,3 +368,36 @@ fn original_nonplanar_multispan_coupled_tensor_preserves_global_affine_uv() {
     );
     ledger(&r);
 }
+
+#[test]
+fn original_nonlinear_boundary_clocks_serialize_refined_nonplanar_uv() {
+    let mut q = query();
+    let l = 195.;
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["degreeV"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 10., 14., 14., 14.]);
+    q["patch"]["weights"] = json!([[4., 3., 2.], [3., 3.25, 2.5], [2., 2.5, 2.]]);
+    q["patch"]["controlPoints"] = json!([
+        [[0., 0., 0.], [0., 65., 0.], [0., 195., 0.]],
+        [[65., 0., 0.], [45., 45., 15.], [39., 195., 39.]],
+        [[195., 0., 0.], [195., 39., 39.], [195., 195., 195.]]
+    ]);
+    q["quadric"] = json!([
+        [0., 0.5, 0., 0.],
+        [0.5, 0., 0., 0.],
+        [0., 0., 0., -l / 2.],
+        [0., 0., -l / 2., 0.]
+    ]);
+    q["curve"]["controlPoints"] =
+        json!([[l / 2., l / 2., l / 4. - 1.], [l / 2., l / 2., l / 4. + 1.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "homogeneous-separable");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    for (axis, x) in [4., 2. / 3., 38. / 3.].into_iter().enumerate() {
+        let b = &r["contacts"][0]["parameterBox"][axis];
+        assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+        assert!(b[1].as_f64().unwrap() - b[0].as_f64().unwrap() < 1e-12);
+    }
+    ledger(&r);
+}

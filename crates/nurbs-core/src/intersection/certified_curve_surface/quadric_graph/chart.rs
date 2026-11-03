@@ -132,7 +132,13 @@ impl Chart {
             let ordinary = affine && (separable || coupled);
             let homogeneous =
                 !ordinary && super::homogeneous_affine::prove(s, axes, &origin, &u, &v);
-            if !ordinary && !homogeneous {
+            let boundary_clocks = if !ordinary && !homogeneous {
+                super::homogeneous_separable::prove(s, axes, &origin, &u, &v, &det)
+            } else {
+                None
+            };
+            let independent = boundary_clocks.is_some();
+            if !ordinary && !homogeneous && !independent {
                 continue;
             }
             // The coefficient of the dependent coordinate is affine in the
@@ -161,12 +167,16 @@ impl Chart {
             }
             return Ok(Self {
                 axes,
-                parameterization: if homogeneous {
+                parameterization: if independent {
+                    OriginalQuadricGraphParameterization::HomogeneousSeparable
+                } else if homogeneous {
                     OriginalQuadricGraphParameterization::HomogeneousAffine
                 } else {
                     parameterization
                 },
-                clocks: if homogeneous {
+                clocks: if let Some(clocks) = boundary_clocks {
+                    clocks
+                } else if homogeneous {
                     [
                         super::clock::Clock::original(vec![q(1.), q(1.)]),
                         super::clock::Clock::original(vec![q(1.), q(1.)]),
@@ -174,8 +184,16 @@ impl Chart {
                 } else {
                     clocks
                 },
-                coupled: if homogeneous { None } else { coupled_weights },
-                coupled_tensor: if homogeneous { None } else { coupled_tensor },
+                coupled: if homogeneous || independent {
+                    None
+                } else {
+                    coupled_weights
+                },
+                coupled_tensor: if homogeneous || independent {
+                    None
+                } else {
+                    coupled_tensor
+                },
                 origin,
                 u,
                 v,

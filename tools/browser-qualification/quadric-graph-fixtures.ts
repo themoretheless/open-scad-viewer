@@ -169,3 +169,18 @@ for(const zero of [false,true]){
  const q=multispanHomogeneousTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
  quadricGraphCases.push({name:`graph-multispan-homogeneous-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved original multi-span target admitted')})
 }
+
+function homogeneousSeparableTarget(q:OriginalQuadricGraphQuery){const l=195;Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,2,2,2],knotsV:[10,10,10,14,14,14],weights:[[4,3,2],[3,3.25,2.5],[2,2.5,2]],controlPoints:[[[0,0,0],[0,65,0],[0,195,0]],[[65,0,0],[45,45,15],[39,195,39]],[[195,0,0],[195,39,39],[195,195,195]]]});q.quadric=[[0,.5,0,0],[.5,0,0,0],[0,0,0,-l/2],[0,0,-l/2,0]];return q}
+for(const rotated of [false,true])for(const gauge of [1,7]){
+ const q=homogeneousSeparableTarget(graphQuery()),l=195;q.curve.controlPoints=[[l/2,l/2,l/4-1],[l/2,l/2,l/4+1]];q.patch.weights=q.patch.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of q.patch.controlPoints)for(const p of row)[p[0],p[2]]=[p[2]!,p[0]!];for(const p of q.curve.controlPoints)[p[0],p[2]]=[p[2]!,p[0]!];q.quadric=[[0,0,0,-l/2],[0,0,.5,0],[0,.5,0,0],[-l/2,0,0,0]]}
+ quadricGraphCases.push({name:`graph-homogeneous-separable-rotated-${rotated}-gauge-${gauge}`,query:q,check:r=>{present(r,[[4,2/3,38/3,1]]);require(r.targetParameterization==='homogeneous-separable','Missing original boundary clock identities');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<1e-12,'Boundary-clock inverse was not refined')}})
+}
+for(let edge=0;edge<6;edge++){
+ const q=homogeneousSeparableTarget(boundaryQuery(edge)),l=195;q.curve.controlPoints=q.curve.controlPoints.map(p=>p.map(x=>l*x));const uv=edge===0?[-2,38/3]:edge===1?[2,38/3]:edge===2?[2/3,10]:edge===3?[2/3,14]:edge===4?[-2,10]:[2,14]
+ quadricGraphCases.push({name:`graph-homogeneous-separable-algebraic-edge-${edge}`,query:q,check:r=>present(r,[[2+4/3,uv[0]!,uv[1]!,2]],'quadric-coordinate-sign')})
+}
+for(const zero of [false,true]){
+ const q=homogeneousSeparableTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
+ quadricGraphCases.push({name:`graph-homogeneous-separable-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved original nonlinear target admitted')})
+}

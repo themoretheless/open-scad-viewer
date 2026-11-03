@@ -192,6 +192,8 @@ const homogeneousDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph
 reject('graph-homogeneous-original-ulp-projection-drift',{op:'nurbs_original_quadric_graph_contacts',...homogeneousDrift})
 const multispanHomogeneousDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-multispan-homogeneous-rotated-false-gauge-1')!.query);multispanHomogeneousDrift.patch.controlPoints[1]![1]![0]!+=2**-34
 reject('graph-multispan-homogeneous-original-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...multispanHomogeneousDrift})
+const homogeneousSeparableDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-homogeneous-separable-rotated-false-gauge-1')!.query);homogeneousSeparableDrift.patch.controlPoints[1]![1]![0]!+=2**-47
+reject('graph-homogeneous-separable-original-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...homogeneousSeparableDrift})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

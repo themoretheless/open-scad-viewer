@@ -5,6 +5,7 @@ mod spline;
 pub(super) enum Clock {
     Projective([Q; 2]),
     Bernstein(Vec<Q>),
+    Ordered(Vec<[Q; 2]>),
     Spline(Vec<spline::Span>),
 }
 impl Clock {
@@ -26,6 +27,23 @@ impl Clock {
         Ok(Self::Spline(spline::original(
             p, knots, weights, ordinates,
         )?))
+    }
+    /// Positive weights and ordered Euclidean ordinates y_i imply strict
+    /// increase: pair terms (j-i)(y_j-y_i)w_iw_j B_iB_j are nonnegative,
+    /// with a strictly positive endpoint pair throughout (0,1).
+    pub(super) fn ordered(poles: Vec<[Q; 2]>) -> Option<Self> {
+        if poles.len() < 2 || poles.iter().any(|h| h[1] <= q(0.)) || !poles[0][0].is_zero() {
+            return None;
+        }
+        let last = poles.last()?;
+        if last[0] != last[1]
+            || !poles
+                .windows(2)
+                .all(|h| &h[0][0] * &h[1][1] <= &h[1][0] * &h[0][1])
+        {
+            return None;
+        }
+        Some(Self::Ordered(poles))
     }
     pub(super) fn identity(&self) -> bool {
         matches!(self,Self::Projective(w) if w[0]==w[1])
@@ -52,7 +70,7 @@ impl Clock {
                 let x = w0 * a / (w1 * (q(1.) - a) + w0 * a);
                 [x.clone(), x]
             }
-            Self::Bernstein(_) | Self::Spline(_) => {
+            Self::Bernstein(_) | Self::Spline(_) | Self::Ordered(_) => {
                 let mut lo = 0.;
                 let mut hi = 1.;
                 for _ in 0..64 {
@@ -62,6 +80,7 @@ impl Clock {
                     }
                     let value = match self {
                         Self::Bernstein(w) => evaluate(w, &q(mid)),
+                        Self::Ordered(h) => evaluate_poles(h, &q(mid)),
                         Self::Spline(s) => spline::evaluate(s, &q(mid)),
                         _ => unreachable!(),
                     };
@@ -81,13 +100,18 @@ impl Clock {
 }
 fn evaluate(w: &[Q], t: &Q) -> Q {
     let p = w.len() - 1;
-    let a = t.clone();
-    let b = q(1.) - &a;
-    let mut d: Vec<[Q; 2]> = w
+    let d: Vec<[Q; 2]> = w
         .iter()
         .enumerate()
         .map(|(i, w)| [q(i as f64) * w / q(p as f64), w.clone()])
         .collect();
+    evaluate_poles(&d, t)
+}
+fn evaluate_poles(poles: &[[Q; 2]], t: &Q) -> Q {
+    let p = poles.len() - 1;
+    let a = t.clone();
+    let b = q(1.) - &a;
+    let mut d = poles.to_vec();
     for r in 1..=p {
         for i in 0..=p - r {
             d[i] = std::array::from_fn(|k| &b * &d[i][k] + &a * &d[i + 1][k]);
@@ -129,4 +153,36 @@ mod tests {
             }
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn ordered_original_clock_inverse_matches_independent_bernstein_sum() {
+    for p in 1..=8 {
+        let poles: Vec<[Q; 2]> = (0..=p)
+            .map(|i| {
+                let w = q((i * i + 2) as f64);
+                [q((i * i) as f64) * &w / q((p * p) as f64), w]
+            })
+            .collect();
+        let c = Clock::ordered(poles.clone()).unwrap();
+        let direct = |t: &Q| {
+            let mut n = q(0.);
+            let mut d = q(0.);
+            for i in 0..=p {
+                let bin = (0..i).fold(1u64, |c, j| c * (p - j) as u64 / (j + 1) as u64);
+                let a = (0..i).fold(q(bin as f64), |a, _| a * t)
+                    * (0..p - i).fold(q(1.), |a, _| a * (q(1.) - t));
+                n += &a * &poles[i][0];
+                d += a * &poles[i][1];
+            }
+            n / d
+        };
+        for a in [q(0.), q(f64::from_bits(1)), q(0.25), q(0.5), q(0.75), q(1.)] {
+            let e = c.inverse(&a);
+            assert!(direct(&e[0]) <= a && a <= direct(&e[1]), "degree {p}");
+        }
+    }
+    assert!(Clock::ordered(vec![[q(0.), q(1.)], [q(2.), q(1.)], [q(1.), q(1.)]]).is_none());
+    assert!(Clock::ordered(vec![[q(0.), q(1.)], [q(0.), q(0.)], [q(1.), q(1.)]]).is_none());
 }

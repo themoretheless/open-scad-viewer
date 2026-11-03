@@ -10,6 +10,7 @@ mod coupled_bernstein;
 mod edge;
 mod identity;
 mod homogeneous_affine;
+mod homogeneous_separable;
 pub use edge::GraphBoundaryProof;
 mod membership;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -20,6 +21,7 @@ pub enum OriginalQuadricGraphParameterization {
     CoupledBilinear,
     CoupledBernstein,
     HomogeneousAffine,
+    HomogeneousSeparable,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphUvProof {
@@ -60,7 +62,9 @@ pub struct OriginalQuadricGraphContacts {
 /// Bernstein ratio hulls on the retained parameter rectangle. Clamped B-spline
 /// targets may also prove an affine projection on every original span in the
 /// exact homogeneous basis, admitting canceled positive coupled factors on nonplanar
-/// graphs without changing their source geometry;
+/// graphs without changing their source geometry. Single Bezier targets may
+/// also prove exact original tensor cross-identities with independent ordered
+/// rational boundary clocks, including nonlinear projected parameterizations;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
 /// and bijective projection prove the actual finite surface, not only its
