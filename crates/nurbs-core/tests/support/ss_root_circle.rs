@@ -10,13 +10,30 @@ fn port(
     ss::bind_original_ss_port(point, target, [0; 4], Default::default()).unwrap()
 }
 pub fn wire() -> ss::OriginalSsRootWire {
+    wire_on(fixture::plane(0.))
+}
+pub fn wire_on(first: nurbs_core::surface::Surface) -> ss::OriginalSsRootWire {
     let mut bowl = fixture::tangent(true);
     for row in &mut bowl.control_points {
         for p in row {
             p[2] -= 0.3125_f64.powi(2);
         }
     }
-    let source = ss::FiberSources::new(&fixture::plane(0.), &bowl).unwrap();
+    assert_eq!([first.degree_u, first.degree_v], [1, 1]);
+    let origin = first.control_points[0][0].clone();
+    let u: [f64; 3] = std::array::from_fn(|k| first.control_points[1][0][k] - origin[k]);
+    let v: [f64; 3] = std::array::from_fn(|k| first.control_points[0][1][k] - origin[k]);
+    let normal: [f64; 3] =
+        std::array::from_fn(|k| u[(k + 1) % 3] * v[(k + 2) % 3] - u[(k + 2) % 3] * v[(k + 1) % 3]);
+    for row in &mut bowl.control_points {
+        for p in row {
+            let old = p.clone();
+            for k in 0..3 {
+                p[k] = origin[k] + u[k] * old[0] + v[k] * old[1] + normal[k] * old[2];
+            }
+        }
+    }
+    let source = ss::FiberSources::new(&first, &bowl).unwrap();
     let ideal = ss::qualify_original_ss_ideal(&source, [1, 1, 2, 2], Default::default()).unwrap();
     let basis = ss::qualify_ss_groebner_basis(&ideal, Default::default()).unwrap();
     let system = ss::qualify_ss_deflated_system(&basis, Default::default()).unwrap();

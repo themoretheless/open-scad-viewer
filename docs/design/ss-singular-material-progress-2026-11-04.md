@@ -92,10 +92,10 @@ This supplies storage, not retained-region embedding/material admission.
 2. Build complete physical branch networks from the entire original source
    census and all singular/periodic/pole strata. Prove ownership, nondegeneracy,
    world embedding and valence; remove overlapping chart duplicates exactly.
-3. Extend the root BRep storage to mixed natural rational boundaries and
-   implicit intersection edges; split real finite faces. Complete arrangement,
-   Jordan/embedding checks, holes, seam homology and collapsed-pole UV bridges
-   must be established before publishing a retained trim cell.
+3. Complete mixed finite-face arrangements, including cut paths meeting rational
+   rims, Jordan/embedding checks, seam homology and collapsed-pole UV bridges.
+   Closed interior candidates now preserve original rims and transfer holes;
+   they still need geometry/material admission before publishing trim cells.
 4. Extend source/winding/contact/body admission to implicit root geometry. The
    new closed-solid owner currently admits the legacy rational-Curve Model;
    root-valued contours must not be coerced to fitted legacy edges.
@@ -117,3 +117,9 @@ geometric healing, successful source restoration, nested shell role repair,
 rational point seeds, all four Boolean face decisions, cavities and an
 independent nonplanar face volume. Finite fixtures exercise generic algorithms;
 they do not establish universal convergence or completion of the open items.
+
+## Mixed finite-face follow-up
+
+See [mixed finite trim](ss-mixed-finite-trim-progress-2026-11-04.md) for exact
+mixed storage, complete interior-contour placement and existing-hole transfer.
+Candidates still require arrangement, embedding and material/body admission.

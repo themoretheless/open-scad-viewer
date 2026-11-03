@@ -1,0 +1,69 @@
+    Blocking waiting for file lock on build directory
+   Compiling nurbs-core v0.1.0 (/private/tmp/osv-ss-mixed-trim-20261104/crates/nurbs-core)
+warning: module `methods_mean_matrix__coordinate_path` should have a snake case name
+   --> nurbs-core/src/surface_self_chord.rs:688:5
+    |
+688 | mod methods_mean_matrix__coordinate_path;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_mean_matrix_coordinate_path`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: module `methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:254:5
+    |
+254 | mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_crate_surface_weight_profile_weight_profile_inspect_self_chord_pair`
+
+warning: module `methods_rail_constrained_bridge______self_chord_continuous` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:256:5
+    |
+256 | mod methods_rail_constrained_bridge______self_chord_continuous;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_self_chord_continuous`
+
+warning: module `methods_rail_constrained_bridge______inspect_radius_on_domains` should have a snake case name
+   --> nurbs-core/src/profile_expression_radius.rs:258:5
+    |
+258 | mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_radius_on_domains`
+
+warning: module `methods_rail_constrained_bridge______section` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:100:5
+    |
+100 | mod methods_rail_constrained_bridge______section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_section`
+
+warning: module `methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy` should have a snake case name
+   --> nurbs-core/src/profile_section_bridge.rs:102:5
+    |
+102 | mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_rail_constrained_bridge_inspect_transverse_corrected_injectivity_policy`
+
+warning: module `methods_profile_section___profile` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:252:5
+    |
+252 | mod methods_profile_section___profile;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_section_profile`
+
+warning: module `methods_profile_end_transition___section` should have a snake case name
+   --> nurbs-core/src/surface_weight_profile.rs:254:5
+    |
+254 | mod methods_profile_end_transition___section;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `methods_profile_end_transition_section`
+
+warning: `nurbs-core` (lib) generated 8 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 40.43s
+     Running tests/ss_quotient_path.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/c11aae3a2fbc607b/out/ss_quotient_path-c11aae3a2fbc607b)
+
+running 1 test
+test noncontractible_periodic_boundary_has_relative_material_transitions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/ss_root_ports.rs (/tmp/osv-ss-dispatch-target-20261103/debug/build/nurbs-core/013ba12607a28295/out/ss_root_ports-013ba12607a28295)
+
+running 3 tests
+test mixed_axis_join_preserves_root_valued_target_clock ... ok
+test wire_requires_literal_shared_selectors_and_retains_reverse_direction ... ok
+test closed_curved_mixed_axis_wire_classifies_uv_inside_and_outside ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.76s

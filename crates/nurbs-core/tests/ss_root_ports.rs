@@ -82,6 +82,28 @@ fn closed_curved_mixed_axis_wire_classifies_uv_inside_and_outside() {
     let wire = circle_fixture::wire();
     let inside = ss::qualify_original_ss_winding(&wire, 0, [0.5, 0.5], Default::default()).unwrap();
     assert_eq!(inside.winding(), 1);
+    let box_inside = wire
+        .winding_box(0, [[0.49, 0.51]; 2], Default::default())
+        .unwrap();
+    assert_eq!(box_inside.winding(), 1);
+    box_inside.reverify().unwrap();
+    assert_eq!(
+        wire.winding_box(0, [[0.85, 0.95], [0.45, 0.55]], Default::default())
+            .unwrap()
+            .winding(),
+        0
+    );
+    assert!(
+        wire.winding_box(
+            0,
+            [[0.49, 0.51], [0.80, 0.83]],
+            ss::OriginalSsWindingLimits {
+                max_segments: 16,
+                ..Default::default()
+            }
+        )
+        .is_err()
+    );
     inside.reverify().unwrap();
     let reversed = ss::OriginalSsRootWire::new(
         wire.edges()

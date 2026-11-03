@@ -20,7 +20,7 @@ impl Default for OriginalSsWindingLimits {
 pub struct QualifiedOriginalSsWinding {
     wire: OriginalSsRootWire,
     support: usize,
-    point: [f64; 2],
+    query: [[f64; 2]; 2],
     winding: i32,
     segments: usize,
     limits: OriginalSsWindingLimits,
@@ -34,14 +34,17 @@ impl QualifiedOriginalSsWinding {
     }
     pub fn reverify(&self) -> Result<()> {
         self.wire.reverify()?;
-        let fresh = qualify_original_ss_winding(&self.wire, self.support, self.point, self.limits)?;
+        let fresh = qualify_box(&self.wire, self.support, self.query, self.limits)?;
         check(
             fresh.winding == self.winding && fresh.segments == self.segments,
             "Original UV winding witness changed",
         )
     }
 }
-pub(super) fn charge(remaining: &mut OriginalSsCurveLimits, used: &OriginalSsCurveBounds) -> Result<()> {
+pub(super) fn charge(
+    remaining: &mut OriginalSsCurveLimits,
+    used: &OriginalSsCurveBounds,
+) -> Result<()> {
     remaining.native_rectangles = remaining
         .native_rectangles
         .checked_sub(used.native_rectangles)
@@ -93,6 +96,21 @@ pub fn qualify_original_ss_winding(
     point: [f64; 2],
     limits: OriginalSsWindingLimits,
 ) -> Result<QualifiedOriginalSsWinding> {
+    qualify_box(wire, support, point.map(|x| [x; 2]), limits)
+}
+pub(super) fn qualify_box(
+    wire: &OriginalSsRootWire,
+    support: usize,
+    query: [[f64; 2]; 2],
+    limits: OriginalSsWindingLimits,
+) -> Result<QualifiedOriginalSsWinding> {
+    check(
+        query
+            .iter()
+            .all(|d| d.iter().all(|x| x.is_finite()) && d[0] <= d[1]),
+        "Invalid original UV winding query box",
+    )?;
+    let point = query.map(|d| (d[0] * 0.5 + d[1] * 0.5).max(d[0]).min(d[1]));
     check(
         support < 2
             && point.iter().all(|x| x.is_finite())
@@ -202,7 +220,7 @@ pub fn qualify_original_ss_winding(
                             .max(points[i + 1].uv[j][1]),
                     ]
                 });
-                if !(0..2).any(|k| point[k] < box2[k][0] || box2[k][1] < point[k]) {
+                if !(0..2).any(|k| query[k][1] < box2[k][0] || box2[k][1] < query[k][0]) {
                     separated = false;
                     break;
                 }
@@ -224,7 +242,7 @@ pub fn qualify_original_ss_winding(
             return Ok(QualifiedOriginalSsWinding {
                 wire: wire.clone(),
                 support,
-                point,
+                query,
                 winding: total,
                 segments: segments_used,
                 limits,

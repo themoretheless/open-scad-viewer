@@ -1,0 +1,37 @@
+{
+  "base": "e30eb4581",
+  "scope": "isolated native source worktree",
+  "checks": [
+    {
+      "suite": "mixed-and-root-brep",
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "suite": "winding-and-periodic",
+      "passed": 4,
+      "failed": 0
+    }
+  ],
+  "passed": 9,
+  "architecture": "passed",
+  "material_classified": false,
+  "geometry_admitted": false,
+  "full_trim_complete": false,
+  "general_boolean_complete": false,
+  "wasm_updated": false,
+  "plan": "docs/design/ss-mixed-finite-trim-progress-2026-11-04.md",
+  "source_sha256": {
+    "crates/brep-core/src/lib.rs": "88ae52f45beb097ab6379f89082d15311959329ba2ef87c9c86a641a2ef5db76",
+    "crates/brep-core/src/mixed_root_model.rs": "7820fa1f3ecdc7e52ba1f7ead707b6c2080f3cff144a7b7025221d290d87f44e",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "d4a741da58431d845a8835bfa97880dfe7c16090741ab4dd1bd59154568451e2",
+    "crates/brep-core/tests/mixed_root_cut.rs": "de711cd503724d48cc9b2c37f79bf852dbf3017110ed96f4755d26821f9d8b84",
+    "crates/brep-core/tests/support/closed_solid_policy.rs": "b48784952be7e19ab14bba29e675e839fc126d6437bc589d472c8032fa4e0efb",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire.rs": "8b279c22794d5d7318aa6b110939bcdf85a982dc2ebcaef0b6ab51b7d7d90d77",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire/winding.rs": "369e789092369bebc112a92a0aae8c8acc3508ac85126642a485dff82c4609b9",
+    "crates/nurbs-core/tests/ss_root_ports.rs": "68085a80f4ab4f83f0933c42aaaa15f30b2ee443009cea8bd8c9628b9b9466b8",
+    "crates/nurbs-core/tests/support/ss_root_circle.rs": "7521a3f528fa4ae282a80c4eda0874f9628be2bc0f58e513a21b80964c9c58c5",
+    "docs/design/ss-mixed-finite-trim-progress-2026-11-04.md": "c56a38983ed7dcdfba33f8c2b256ffce87cc8f57d8d0f61935a3310ff2fd0120",
+    "docs/design/ss-singular-material-progress-2026-11-04.md": "2f3ec757e3084b4ed76f2da8573a20ff1ed7ef710ff3354c07f2edd7dbca6b66"
+  }
+}

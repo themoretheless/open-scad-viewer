@@ -116,3 +116,10 @@ mod winding;
 pub use winding::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};
 mod path_parity;
 pub use path_parity::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};
+impl OriginalSsRootWire {
+    /// One winding for every point of a closed UV query box, not just its
+    /// midpoint. Entire original arcs must be separated from the whole box.
+    pub fn winding_box(&self,support:usize,query:[[f64;2];2],limits:OriginalSsWindingLimits)->Result<QualifiedOriginalSsWinding> {
+        winding::qualify_box(self,support,query,limits)
+    }
+}
