@@ -6,7 +6,7 @@ import {
   type Aabb3, type Vec3,
 } from '../src/services/math3d'
 import type { ProjectionMode } from '../src/services/viewportModel'
-import reference from '../crates/math-core/orbit-camera-reference-v1.json'
+import reference from './fixtures/orbit-camera-reference-v1.json'
 
 const spinner: Aabb3 = { min: [-34, -34, 0], max: [34, 34, 10] }
 const base = {

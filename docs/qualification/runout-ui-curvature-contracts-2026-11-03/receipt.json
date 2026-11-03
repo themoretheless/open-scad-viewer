@@ -1,0 +1,28 @@
+{
+  "status": "targeted-passed-full-file-one-existing-timeout",
+  "baseCommit": "60e7517ce1983112c31701503072dc4b6fb22d43",
+  "changedTestSha256": "0df85ed6be30e91648fa188f1e8a66c29a9c43b3360d82d5498ca83807b1b28d",
+  "focused": {
+    "passed": 3,
+    "skipped": 357,
+    "total": 360,
+    "command": "node node_modules/vitest/vitest.mjs run tests/directModelerUi.test.ts --testNamePattern 'previews G2 runout roles|builds and restores a native G2 runout' --maxWorkers 1"
+  },
+  "corrections": [
+    "Use current select change event rather than removed v-model handler",
+    "Await actual seeded scene readiness, retaining default waitFor deadline",
+    "Assert current G2 and curvature message exactly",
+    "Retain off-plane refusal, explicitly assert 0.1mm curvature refusal, construct 0.5mm vMax runout through controls and assert commit/Undo/Redo/reload in en and ru"
+  ],
+  "productionChanged": false,
+  "budgetsChanged": false,
+  "scope": "Custom Vue renderer plus installed raw geometry. No actual browser/Worker/current-source WASM or full application qualification; no catalogue credit.",
+  "fullFile": {
+    "passed": 359,
+    "failed": 1,
+    "total": 360,
+    "exitCode": 1,
+    "remainingFailure": "reports the stated tolerance when a subtraction falls back to the numerical trace: configured 30000ms timeout",
+    "timeoutChanged": false
+  }
+}

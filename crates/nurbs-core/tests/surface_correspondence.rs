@@ -158,14 +158,17 @@ fn affine_parameter_rates_keep_non_dyadic_original_knots_and_refuse_zero_rates()
         32,
     )
     .unwrap();
-    assert!(proof.certified && proof.cells == 5);
+    // The original constant-weight coefficient hull proves one common metric
+    // over all five spans. cells counts proof cells, not source knot spans.
+    assert!(proof.certified, "{proof:?}");
+    assert_eq!(proof.cells, 1, "{proof:?}");
     assert!(
         !nurbs_core::surface_linear_monotonicity::inspect_strong_reparameterized(
             &s,
             p,
             [1., 1.],
             [[-2., -2.], [0.5, 0.5]],
-            4
+            proof.cells - 1
         )
         .unwrap()
         .certified
@@ -180,6 +183,19 @@ fn affine_parameter_rates_keep_non_dyadic_original_knots_and_refuse_zero_rates()
         )
         .is_err()
     );
+    let mut folded = s.clone();
+    for row in &mut folded.control_points {
+        row[2][1] = -0.1;
+    }
+    let changed = nurbs_core::surface_linear_monotonicity::inspect_strong_reparameterized(
+        &folded,
+        p,
+        [1., 1.],
+        [[-2., -2.], [0.5, 0.5]],
+        32,
+    )
+    .unwrap();
+    assert!(!changed.certified, "{changed:?}");
     assert_eq!(s, original);
 }
 

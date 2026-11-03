@@ -93,3 +93,33 @@ NURBS-0246: `editing::exact_surface_derivative::mixed_partial` и закрыты
 `mixed` принадлежат `editing`. Порядок1..3 согласован с существующими
 рациональными jet-ограничениями; точные поля вторых/третьих смешанных производных
 не подменяются точечными конечными разностями или сертификатом гладкости узлов.
+
+NURBS-0247: `editing::exact_derivative::curve_order` and its private `higher`
+helper remain under the existing editing owner. One original-source homogeneous
+recurrence builds order1..3 vector fields; no new root alias or numeric pointwise
+jet owner is introduced. Order1 retains the original public path and work trace.
+
+NURBS-0248: `editing::exact_derivative::squared_speed` and its private `speed`
+helper belong to the existing editing field-construction owner. The first
+coordinate carries the scalar squared speed; other coordinates are zero and
+not spatial positions. No new root, pointwise-analysis or topology owner.
+
+NURBS-0249 exact curve binormal field: `editing::exact_derivative::binormal` owns
+construction of the unnormalized Cprime cross Csecond field in native editing.
+The private `binormal` module forms the target directly from original homogeneous
+polynomials. Extraction, storage and proof stay in their existing owners.
+Native credit is backed by exact identities and complete regression target coverage; no regularity or curvature certificate is issued by this vector-field API.
+
+NURBS-0250 exact squared curvature: `editing::exact_derivative::squared_curvature`
+and private `curvature` remain under editing field construction. This constructs
+a scalar field, while pointwise curve analysis keeps its existing owner.
+Original source regularity must be proved before any cancellation; output
+identity alone must never extend curvature through a stationary source point.
+
+NURBS-0251 bounded binary storage of differential fields belongs to
+`editing::bounded_differential`, nested under the already registered editing
+owner (no new compatibility root). Original source targets remain owned by
+`editing::exact_derivative`; shared access is crate-private and preserves the
+exact public APIs and work traces. Storage proposals carry no authority until
+fresh full-span residual bounds against actual stored bits pass. This family has native credit after full current-source default/no-codec
+regression and independent continuous error verification.

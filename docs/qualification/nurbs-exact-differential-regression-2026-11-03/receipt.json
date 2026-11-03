@@ -1,0 +1,111 @@
+{
+  "status": "native-regression-qualified",
+  "baseImplementationCommit": "363b2ad1e",
+  "capabilities": [
+    "NURBS-0249",
+    "NURBS-0250"
+  ],
+  "profiles": {
+    "default": {
+      "coveredLibraryAndIntegrationTargets": 284,
+      "integrationTargets": 283,
+      "passedCases": 3979,
+      "failedCasesAfterRepair": 0,
+      "ignoredMicrobenchmark": 1,
+      "docTestsPassed": 2,
+      "initialExitCode": 101,
+      "resumeExitCode": 0,
+      "initialFailure": "Stale five-cell assertion; repaired source_correspondence replaced in final target union"
+    },
+    "no-codec": {
+      "coveredLibraryAndIntegrationTargets": 284,
+      "integrationTargets": 283,
+      "passedCases": 3750,
+      "failedCasesAfterRepair": 0,
+      "ignoredMicrobenchmark": 1,
+      "docTestsPassed": 2,
+      "initialExitCode": 101,
+      "resumeExitCode": 0,
+      "initialFailure": "Stale five-cell assertion; repaired source_correspondence replaced in final target union"
+    }
+  },
+  "sourceAudit": {
+    "onlyChangeSinceInitialFrozenBuild": [
+      "crates/nurbs-core/tests/surface_correspondence.rs"
+    ],
+    "allLibraryAlgorithmSourcesUnchanged": true,
+    "correctedTestSha256": "1c1893024b67f3ce43292b020424b0d1dfcd5859d582b26304c2de4d35729cbe",
+    "testPolicy": "Complete current target set equals Cargo metadata. Passed prefix retained, failed target replaced by corrected target, every unexecuted suffix target run; two doctests separately pass per feature profile. No full-run single-command exit0 claim."
+  },
+  "explicitEnvironment": {
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "RUST_TEST_THREADS": "2"
+  },
+  "correction": "Constant-weight global strong-metric certificate legitimately covers all source spans in one cell. Test now requires one-cell success, one-under budget refusal, invalid zero rates and changed folded-source refusal. No production algorithm or numeric/work budget change.",
+  "independentOracles": [
+    "native262-area-normal-oracle.json",
+    "native262-binormal-oracle.json",
+    "native262-curve-order-oracle.json",
+    "native262-derivative-oracle.json",
+    "native262-metric-field-oracle.json",
+    "native262-mixed-partial-oracle.json",
+    "native262-squared-curvature-oracle.json",
+    "native262-squared-speed-oracle.json",
+    "native262-surface-derivative-oracle.json"
+  ],
+  "evidenceSha256": {
+    "native259-current-full-default-opt1.log": "3edc65cd9c5af305feb108d04bae6581c9995ccd8e37c94ccdaf430accac8445",
+    "native259-current-full-no-codec-opt1.log": "5b0232495656d5ffcff6be4cdd0a024f5103c37e83804a1adcfa2e8b1900c1cc",
+    "native263-resume-default.log": "6cc66687b02ea203d6c4466e78d749fd6d4497eb4814319f79d3647af0b3c2e8",
+    "native263-resume-no-codec.log": "a39050e4e1d668a0b6d597d1af154535a460a06e87b8c210ad98db891e643cd8",
+    "native263-resume-default.state.json": "a3465f2f9a9f9f9744388a499597dec60ead5a454a09c7306c6a128fda7731b7",
+    "native263-resume-no-codec.state.json": "041bac3ba9da600e272ed764a0931bfdd3be606aa38ea3febf1696205a02a8a4",
+    "native263-resume-plan.json": "c42e9de97927442f3481a602f75b827b0f0b9866076bd7203d40e219dd4b5256",
+    "native263-coverage-audit.json": "b7782c2be7826800a777b1b39f5295267985c557f06ccc924821594c7b2ea3fe",
+    "native259-current-full-source-inputs.json": "20fae9b1b49d3382ddaa1a7dd80241b997c57a7a6605acb4aa50a8457c359798",
+    "native263-resume-default.source-inputs.json": "b912eec342f76856864568544c8e6b535750b5e097e80cc73572bf1c9765dde7",
+    "native263-surface-correspondence-default.log": "f88481222630b517e0ec0bc80222b91c4b64620930f124de53be4ec54ac9d579",
+    "native263-doc-default.log": "5f62113c3c54261d9a65a083e2c5d67d99d332c394c0980651b466c65e08b07d",
+    "native263-doc-no-codec.log": "4148dd139aed8230f1edf4c91510f4b4a8511955e24f1671459ae0c79ed8203c",
+    "native262-area-normal-oracle.json": "1fce532284c604a6c373dc0d758d07b7c72c3ec357c92169953082730d5a6d65",
+    "native262-binormal-oracle.json": "1da51f7e038ca0b9bdd499d68df5a68eff64e5514d77ce803b5c24503afbd08e",
+    "native262-curve-order-oracle.json": "77867c14782aa6af04e425517a4fc17eae8c27c6d01bfc787d00fd3f433220e5",
+    "native262-derivative-oracle.json": "9b371f60e06afd71287163c2a2375686103cdff70affdff63c1fc2159998fa54",
+    "native262-metric-field-oracle.json": "f91d64190be56a966c94c72bea1abd1bfec47bed36628347edb1f15a8e071434",
+    "native262-mixed-partial-oracle.json": "0c5de02808b11caf31f25f77061e44917aea5fa7d16e6d8a147f811413cb2fea",
+    "native262-squared-curvature-oracle.json": "467d938d415b8a2e86578cdede71f7c5236d1aa88832e022c35dc1e158e08a0c",
+    "native262-squared-speed-oracle.json": "feccc06f56377e8777eb91a13b3d94dd3a5faab3d642623ac0d5d2550ea8f96f",
+    "native262-surface-derivative-oracle.json": "eabaf64f042c42fd2fa92bb847ae5cf5334e48badd4117b01ae2385d7536647f"
+  },
+  "scope": "Current native Rust algorithms; complete library/integration target coverage assembled from passed prefix and repaired/suffix runs plus doctests. Initial failures retained. No claim of a single exit0 full command, microbenchmark, application, JSON/WASM/Rush/editor/STEP qualification.",
+  "portableReplayCommand": "python3 docs/qualification/nurbs-exact-differential-regression-2026-11-03/audit_coverage.py --check-source",
+  "archiveSha256": {
+    "cargo-targets.json.gz": "3671761f43e2bfb741aaae9db5d6f0bc287230fe93c65f4599477e166c865e5d",
+    "native259-current-full-default-opt1.log.gz": "bce748ca3340a5d05252c0e756ceeb66aa9b8a18cbd6eeb706ce973d2bc7b35f",
+    "native259-current-full-no-codec-opt1.log.gz": "77c04fa5391b25cb5b2588920b52194667849109c2f92712da603428029d3827",
+    "native259-current-full-source-inputs.json.gz": "863d661d0dc76b26831f27a42a28892ffde526f1ea7d236b3003843c15b1ca70",
+    "native262-area-normal-oracle.json.gz": "2252a8c71afff04db65daf1800cc2565af3a175cb91ca7c8291a02e4d3f41999",
+    "native262-binormal-oracle.json.gz": "0414ccd6573fae15492c344fc709ea8a54a5256143e35f39c09e35b4e8b49141",
+    "native262-curve-order-oracle.json.gz": "fcd497c99ff694206337195705a9c99480d87e3af90c3ed964b303e7608dfe8c",
+    "native262-derivative-oracle.json.gz": "a059e513f7e9f19be57653bfa5d24177540a54934ba7cbac1974fb25e88da5c1",
+    "native262-metric-field-oracle.json.gz": "8719dfee0e61e36436cb7d5711fd7a993e822c33ac6689ecbfca27bf6a8c4c3c",
+    "native262-mixed-partial-oracle.json.gz": "2fcb53b76090d0b5b85bc76ed954a4e3ba1e2f0c600f71147774e9e9a3b24e30",
+    "native262-squared-curvature-oracle.json.gz": "6728b7ab9d5548ae8ea46ee08bbf19ec1d493afc05d8c3abb1b379621c620b7c",
+    "native262-squared-speed-oracle.json.gz": "6346e5d77ec2bad8e6620b67fed8e2a325e60ddc0da81aa4bbeb914fc907acc0",
+    "native262-surface-derivative-oracle.json.gz": "6ce7a7b998b0ea33b6edda5b1582a81cfcba9a961366895706899bd37dce22b7",
+    "native263-coverage-audit.json.gz": "34d4aabd9fd2259484fcb3f4a8df5cbbe064149207c3f081cc1d1ccf37b7651d",
+    "native263-doc-default.log.gz": "9101a53ab6d3037083edea657040580355559b7175c73572db13e99ef2e69f10",
+    "native263-doc-no-codec.log.gz": "e8c9c7f244ba20d31a5672996854846b7e894d8245f1243424defdafb9eef9e4",
+    "native263-portable-coverage-audit.json.gz": "dfe4952c787ee2aa9701e7b37227bb0daca557176832afdf594b674dd68ee8fd",
+    "native263-resume-default.log.gz": "29fb10290f8583afe53b421616938b6b78c82688819e80a07ce28347ddc4ae93",
+    "native263-resume-default.source-inputs.json.gz": "61728e4abbfa855ee0594adb801729c0f7abbe1ab1640805450bb40d4f434fe1",
+    "native263-resume-default.state.json.gz": "f544d00ef90b5db0e63822c802f1eb05bec0966f734acfe8c5f2d0b61f1d9a10",
+    "native263-resume-no-codec.log.gz": "33bdee3de5e8cb4badc4fc34bafb788e9af5964518f02b6aa275187b768c699c",
+    "native263-resume-no-codec.source-inputs.json.gz": "61728e4abbfa855ee0594adb801729c0f7abbe1ab1640805450bb40d4f434fe1",
+    "native263-resume-no-codec.state.json.gz": "bd9938e6049cdcb660ce03d42346cbcf665a4797223726079db025c8a920ea54",
+    "native263-resume-plan.json.gz": "373cdb3c7ea21c5f12b088ef9c006d63c0e90d8ec6fd88a09f7cc18f239c83a3",
+    "native263-surface-correspondence-default.log.gz": "2ad58ac0eac5f2e650059be62390016f3eb98fda4459c0056f2e39f09ae94d2c"
+  },
+  "coverageVerifierSha256": "2d83e973d1ee08e9c61b5b80a7888856d0109e582ca48dfef5c658fa6f7d328b"
+}

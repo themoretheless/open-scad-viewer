@@ -4481,6 +4481,7 @@ it('previews G2 runout roles, ignores late responses and keeps retry and history
  const plane={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],1,p[1]]))}
  const seed={version:1,bodies:[],sketches:[],surfaces:[{id:'source-runout',name:'Source runout',surface:source,segmentsU:4,segmentsV:4},{id:'end-runout',name:'End runout',surface:plane,segmentsU:4,segmentsV:4}],curves:[{id:'runout-curve',name:'Runout curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.1],[1,1,.1]],weights:[1,1]}}]}
  const ui=await mount({seedDocument:seed})
+ await vi.waitFor(()=>ui.button('Source runout'))
  await ui.click('Source runout');await ui.click('End runout',true);await ui.click('Runout curve',true)
  const before=ui.doc();await ui.click('G2 end transition');await flushClearance()
  expect(requests).toHaveLength(1);expect(requests[0].job.options.ids).toEqual(['source-runout','end-runout','runout-curve'])
@@ -4492,7 +4493,7 @@ it('previews G2 runout roles, ignores late responses and keeps retry and history
  const latest=response(requests[1].job);requests[1].resolve(latest);await flushClearance()
  requests[0].reject(Error('stale runout failure'));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
- expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toContain('G2 confirmed')
+ expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toBe('G2 and curvature ≤10/mm confirmed')
  await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(3)
  const committed=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(committed)
  await ui.click('↶');await ui.click('G2 end transition');await flushClearance()
@@ -4506,7 +4507,10 @@ it.each(['en','ru'])('builds and restores a native G2 runout through the command
  const source={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
  const plane={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],1,p[1]]))}
  const seed={version:1,bodies:[],sketches:[],surfaces:[{id:'native-runout-a',name:'Native source',surface:source,segmentsU:4,segmentsV:4},{id:'native-runout-b',name:'Native end',surface:plane,segmentsU:4,segmentsV:4}],curves:[{id:'native-runout-curve',name:'Native end curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.1],[1,1,.1]],weights:[1,1]}},{id:'bad-native-runout-curve',name:'Off-plane end curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,.5,.1],[1,1,.1]],weights:[1,1]}}]}
+ // A 0.1mm transition must fail the 10/mm curvature guard; 0.5mm is the independent positive fixture.
+ seed.curves.push({id:'wide-native-runout-curve',name:'Wide end curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.5],[1,1,.5]],weights:[1,1]}})
  const ui=await mount({locale,seedDocument:seed})
+ await vi.waitFor(()=>ui.button('Native source'))
  await ui.click('Native source');await ui.click('Native end',true);await ui.click('Off-plane end curve',true)
  const before=ui.doc();await ui.click(locale==='ru'?'Концевой переход G2':'G2 end transition')
  const apply=locale==='ru'?'Готово · Enter':'Apply · Enter'
@@ -4514,10 +4518,16 @@ it.each(['en','ru'])('builds and restores a native G2 runout through the command
  await vi.waitFor(()=>expect(ui.all().find(n=>n.props['aria-label']===curveRole)!.props['aria-invalid']).toBe(true),{timeout:5000})
  expect(ui.button(apply).props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
  expect(ui.all().filter(n=>n.props['data-diagnostic']==='runout-target')).toHaveLength(1)
- ui.all().find(n=>n.props['aria-label']===curveRole)!.props['onUpdate:modelValue']('native-runout-curve');await flushClearance()
- await vi.waitFor(()=>expect(ui.button(apply).props.disabled).toBe(false),{timeout:5000})
+ ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===(locale==='ru'?'Край исходной поверхности':'Source edge'))!.props['onUpdate:modelValue']('vMax');await nextTick()
+ ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===curveRole)!.props.onChange({target:{value:'native-runout-curve'}});await flushClearance()
+ await vi.waitFor(()=>expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toBe(locale==='ru'?'Кривизна превышает 10 мм⁻¹. Измените размер или форму перехода.':'Curvature exceeds 10/mm. Change the transition size or shape.'))
+ expect(ui.button(apply).props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===curveRole)!.props.onChange({target:{value:'wide-native-runout-curve'}})
+ ui.all().find(n=>n.props['aria-label']===(locale==='ru'?'Положение шва, %':'Seam position, %'))!.props['onUpdate:modelValue'](50)
+ quantityField(ui,locale==='ru'?'Длина касательных, мм':'Tangent length, mm').props['onUpdate:modelValue']('0.5 mm');await flushClearance()
+ await vi.waitFor(()=>expect(ui.button(apply).props.disabled,ui.text(ui.all()[0])).toBe(false),{timeout:5000})
  expect(ui.doc()).toEqual(before)
- expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toContain(locale==='ru'?'G2 подтверждена':'G2 confirmed')
+ expect(ui.text(ui.all().find(n=>n.props['data-testid']==='runout-report')!)).toBe(locale==='ru'?'G2 и кривизна ≤10 мм⁻¹ подтверждены':'G2 and curvature ≤10/mm confirmed')
  await commandKey(ui,'Enter');const committed=ui.doc()
  expect(committed.surfaces).toHaveLength(3);expect(committed.surfaces?.slice(0,2)).toEqual(before.surfaces);expect(committed.curves).toEqual(before.curves)
  expect(committed.surfaces?.[2].surface.degreeV).toBe(5)

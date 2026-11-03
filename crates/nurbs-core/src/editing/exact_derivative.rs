@@ -10,8 +10,12 @@ use crate::{
 };
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
+mod binormal;
+mod curvature;
 mod extraction;
+mod higher;
 mod proof;
+mod speed;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
     ResourceLimit,
@@ -86,7 +90,7 @@ fn target(h: &[Poly], width: &Q, w: &mut Work) -> PResult<Vec<Poly>> {
     out.push(poly::multiply(denominator, denominator, w)?);
     Ok(out)
 }
-fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
+pub(super) fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
     let mut common = h.last().unwrap().clone();
     for row in &h[..h.len() - 1] {
         common = poly::gcd(common, row.clone(), w)?;
@@ -108,14 +112,37 @@ fn reduced(h: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
         })
         .collect()
 }
-fn piece(source: &Curve, span: usize, w: &mut Work) -> PResult<Curve> {
+#[derive(Clone, Copy)]
+pub(super) enum Field {
+    Derivative(usize),
+    SquaredSpeed,
+    Binormal,
+    SquaredCurvature,
+}
+pub(super) fn original_target(
+    source: &Curve,
+    span: usize,
+    field: Field,
+    w: &mut Work,
+) -> PResult<Vec<Poly>> {
     let a = source.knots[span];
     let b = source.knots[span + 1];
     let qa = w.lift(a)?;
     let qb = w.lift(b)?;
     let width = w.op(&qb, &qa, |a, b| a - b)?;
     let h = extraction::span(source, span, &qa, &width, w)?;
-    let target = target(&h, &width, w)?;
+    Ok(match field {
+        Field::Derivative(1) => target(&h, &width, w)?,
+        Field::Derivative(order) => higher::target(&h, &width, order, w)?,
+        Field::SquaredSpeed => speed::target(&h, &width, w)?,
+        Field::Binormal => binormal::target(&h, &width, w)?,
+        Field::SquaredCurvature => curvature::target(&h, &width, w)?,
+    })
+}
+fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Curve> {
+    let a = source.knots[span];
+    let b = source.knots[span + 1];
+    let target = original_target(source, span, field, w)?;
     let reduced = reduced(&target, w)?;
     let degree = reduced
         .iter()
@@ -152,6 +179,46 @@ fn piece(source: &Curve, span: usize, w: &mut Work) -> PResult<Curve> {
 /// refusal under the shared 1m-work/4096-bit and unchanged geometry limits.
 /// No old source/topology certificate or numerical evaluator-bit transfer.
 pub fn curve(source: &Curve, max_work: u64) -> Result<Report> {
+    apply(source, Field::Derivative(1), max_work)
+}
+/// Construct the original-clock derivative field of order1..3 on every source
+/// span, matching the existing rational jet ceiling. A rational derivative may
+/// be nonzero above the polynomial source degree. One-sided traces only; no
+/// global knot smoothness or rounded intermediate derivative curve.
+pub fn curve_order(source: &Curve, order: usize, max_work: u64) -> Result<Report> {
+    check(
+        (1..=3).contains(&order),
+        "Derivative order must be in [1,3]",
+    )?;
+    apply(source, Field::Derivative(order), max_work)
+}
+/// Construct [dot(C',C'),0] or [dot(C',C'),0,0] as a scalar-field carrier on
+/// every original source span. Physical original clock; zero speed is valid.
+/// No square root, arc-length parameterization or regularity certificate.
+pub fn squared_speed(source: &Curve, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredSpeed, max_work)
+}
+/// Construct the unnormalized spatial field C'(u) cross C''(u) on every
+/// original span. Zero fields and inflection points are valid; no unit frame,
+/// regularity, curvature or topology certificate is implied. Original-clock
+/// derivatives are combined before any intermediate binary64 storage.
+pub fn binormal(source: &Curve, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 3,
+        "Binormal field requires a 3D curve",
+    )?;
+    apply(source, Field::Binormal, max_work)
+}
+/// Construct the scalar squared-curvature field [kappa²,0] or [kappa²,0,0].
+/// Original-source squared velocity must have strictly positive Bernstein
+/// coefficients on each closed span BEFORE reduction. An unresolved or zero
+/// velocity is refused, even if quotient cancellation could fill that point.
+/// This conservative sufficient regularity check is not a complete solver.
+pub fn squared_curvature(source: &Curve, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredCurvature, max_work)
+}
+fn apply(source: &Curve, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;
     check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
@@ -165,7 +232,7 @@ pub fn curve(source: &Curve, max_work: u64) -> Result<Report> {
         let mut out = Vec::new();
         for span in source.degree..source.control_points.len() {
             if source.knots[span] < source.knots[span + 1] {
-                out.push(piece(source, span, &mut w)?);
+                out.push(piece(source, span, field, &mut w)?);
             }
         }
         Ok(out)
