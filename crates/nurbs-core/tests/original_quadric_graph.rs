@@ -154,19 +154,11 @@ fn perturbed_original_height_never_receives_the_unmodified_quadric_proof() {
     assert!(r.carrier.is_none() && r.contacts.is_empty());
 }
 #[test]
-fn unknown_sheets_collapsed_projection_and_nonseparable_weights_refuse_chart_admission() {
+fn unknown_sheets_and_collapsed_projection_refuse_while_joint_weights_require_membership() {
     let (mut s, q) = saddle();
     s.weights[1][1] = 2.;
-    assert!(original_quadric_graph_contacts(
-        &line([0., 0., 0.], [1., 1., 1.]),
-        &s,
-        q,
-        &[],
-        1e-9,
-        10,
-        100000
-    )
-    .is_err());
+    let r = original_quadric_graph_contacts(&line([0., 0., 0.], [1., 1., 1.]), &s, q, &[], 1e-9, 10, 100000).unwrap();
+    joint_chart_without_membership(r);
     let (mut s, _) = saddle();
     for row in &mut s.control_points {
         for p in row {
@@ -586,7 +578,7 @@ fn one_ulp_factorization_errors_and_unproved_rational_geometry_never_admit() {
         vec![4., 12., 36f64.next_up()],
     ];
     let c = line([0., 0.5, 0.75], [1., 0.5, 0.75]);
-    assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1000000).is_err());
+    joint_chart_without_membership(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1000000).unwrap());
     // Still exactly separable, but no binomial projective clock identity.
     s.weights = vec![vec![1., 3., 9.], vec![2., 6., 18.], vec![5., 15., 45.]];
     let r = original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1000000).unwrap();
@@ -947,7 +939,7 @@ fn homogeneous_projection_never_snaps_original_ulp_drift() {
     let (mut s, q) = homogeneous_saddle();
     s.control_points[1][1][0] = f64::from_bits(6f64.to_bits() + 1);
     let c = line([7.5, 7.5, 55.25], [7.5, 7.5, 57.25]);
-    assert!(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).is_err());
+    joint_chart_without_membership(original_quadric_graph_contacts(&c, &s, q, &[], 1e-9, 10, 1_000_000).unwrap());
     let (mut s, q) = homogeneous_saddle();
     s.control_points[1][1][2] += 0.125;
     let r = inspect(&c, &s, q);
@@ -992,4 +984,10 @@ fn nonplanar_coupled_degree_three_factor_uses_authored_integer_poles() {
     );
     present(&r, &[(4., 0., 12., 1)]);
     assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::HomogeneousAffine);
+}
+
+fn joint_chart_without_membership(r: OriginalQuadricGraphContacts) {
+    assert_eq!(r.target_parameterization,nurbs_core::intersection::certified_curve_surface::OriginalQuadricGraphParameterization::JointJacobian);
+    assert_eq!(r.target_membership.outcome,cad_predicates::BezierIdentity::Different);
+    assert!(!r.target_graph_proven && !r.complete && r.contacts.is_empty() && r.carrier.is_none());
 }

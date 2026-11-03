@@ -149,10 +149,11 @@ fn caller_admission_and_excessive_work_are_refused() {
     assert!(dispatch(q).is_err());
 }
 #[test]
-fn ambiguous_surface_sheets_and_nonseparable_target_weights_refuse() {
+fn ambiguous_sheets_refuse_and_joint_weights_still_require_original_membership() {
     let mut q = query();
     q["patch"]["weights"][1][1] = json!(2.);
-    assert!(dispatch(q).is_err());
+    let r=dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"],json!("joint-jacobian"));assert_eq!(r["targetMembership"]["status"],json!("different"));assert_eq!(r["targetGraphProven"],json!(false));assert_eq!(r["finiteSurfaceUvAdmission"],json!(false));assert_eq!(r["carrier"],Value::Null);assert_eq!(r["contacts"],json!([]));
     let mut q = query();
     q["quadric"] = json!([
         [0., 0., 0., 0.],
@@ -549,5 +550,26 @@ fn multispan_triangular_joint_graph_retains_global_conditional_uv_and_no_body_cr
     for (axis, x) in [4., 0., 11. + 6. / 7.].into_iter().enumerate() {
         let b = &r["contacts"][0]["parameterBox"][axis];
         assert!(b[0].as_f64().unwrap() <= x && x <= b[1].as_f64().unwrap());
+    }
+}
+
+#[test]
+fn general_joint_projected_map_serializes_original_finite_uv_without_body_credit() {
+    let fixtures: Vec<Value> = value_codec::from_str(include_str!(
+        "../../../tools/browser-qualification/joint-quadric-graph-fixtures.json"
+    ))
+    .unwrap();
+    for fixture in fixtures.into_iter().take(2) {
+        let mut q = fixture["query"].clone();
+        q["op"] = json!("nurbs_original_quadric_graph_contacts");
+        let r = dispatch(q).unwrap();
+        assert_eq!(r["targetParameterization"], json!("joint-jacobian"));
+        assert_eq!(r["finiteSurfaceUvAdmission"], json!(true));
+        assert_eq!(r["trimAdmission"], json!(false));
+        assert_eq!(r["bodyAdmission"], json!(false));
+        ledger(&r);
+        for (axis, x) in [4., 0., 12.].into_iter().enumerate() {
+            assert_eq!(r["contacts"][0]["parameterBox"][axis], json!([x, x]));
+        }
     }
 }
