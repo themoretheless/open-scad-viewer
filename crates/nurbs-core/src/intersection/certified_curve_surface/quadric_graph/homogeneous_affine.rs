@@ -1,6 +1,6 @@
 //! Exact original Bernstein certificate for Hxy=(O+u*U+v*V)*W.
 use super::*;
-mod bspline;
+pub(super) mod bspline;
 /// Elevate the original Hxy and W once in both directions. Multiplication
 /// by u (respectively v) selects the lower-index source coefficient with
 /// elevation factor I/(p+1) (respectively J/(q+1)). The following census

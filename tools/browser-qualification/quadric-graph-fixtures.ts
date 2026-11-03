@@ -184,3 +184,19 @@ for(const zero of [false,true]){
  const q=homogeneousSeparableTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
  quadricGraphCases.push({name:`graph-homogeneous-separable-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved original nonlinear target admitted')})
 }
+
+function multispanBoundaryTarget(q:OriginalQuadricGraphQuery){const l=117733140,g=[0,1,3,4],k=[0,0,2,4],d=(i:number,j:number)=>64-8*g[i]!-8*g[j]!+5*g[i]!*g[j]!-2*k[i]!*g[j]!-2*g[i]!*k[j]!+k[i]!*k[j]!;Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,0,2,2,2],knotsV:[10,10,10,12,14,14,14],weights:g.map((_,i)=>g.map((_,j)=>d(i,j)/16)),controlPoints:g.map((a,i)=>g.map((b,j)=>[l*(8*a-a*b+2*k[i]!*b-k[i]!*k[j]!)/d(i,j),l*(8*b-a*b+2*a*k[j]!-k[i]!*k[j]!)/d(i,j),l*(a*b+k[i]!*k[j]!)/d(i,j)]))});q.quadric=[[0,.5,0,0],[.5,0,0,0],[0,0,0,-l/2],[0,0,-l/2,0]];return q}
+for(const rotated of [false,true])for(const gauge of [1,7])for(const denominator of [2,3]){
+ const q=multispanBoundaryTarget(graphQuery()),l=117733140;q.curve.controlPoints=[[l/denominator,l/denominator,l/denominator**2-1],[l/denominator,l/denominator,l/denominator**2+1]];q.patch.weights=q.patch.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of q.patch.controlPoints)for(const p of row)[p[0],p[2]]=[p[2]!,p[0]!];for(const p of q.curve.controlPoints)[p[0],p[2]]=[p[2]!,p[0]!];q.quadric=[[0,0,0,-l/2],[0,0,.5,0],[0,.5,0,0],[-l/2,0,0,0]]}
+ const u=denominator===3?0:2/3
+ quadricGraphCases.push({name:`graph-multispan-boundary-clocks-rotated-${rotated}-gauge-${gauge}-denominator-${denominator}`,query:q,check:r=>{present(r,[[4,u,u+12,1]]);require(r.targetParameterization==='homogeneous-separable','Global original boundary clocks missing');for(const b of r.contacts[0]!.parameterBox.slice(1))require(b[1]-b[0]<1e-12,'Multi-span inverse did not refine')}})
+}
+{
+ const q=multispanBoundaryTarget(boundaryQuery()),l=117733140,a=[1,0,-1,-2],f=[1,-1,0,4];q.curve.controlPoints=a.map((x,i)=>[l*x,l/3,(l/3)*x-l*f[i]!])
+ quadricGraphCases.push({name:'graph-multispan-boundary-clocks-algebraic-edge',query:q,check:r=>present(r,[[2+4/3,-2,12,2]],'quadric-coordinate-sign')})
+}
+for(const zero of [false,true]){
+ const q=multispanBoundaryTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
+ quadricGraphCases.push({name:`graph-multispan-boundary-clocks-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved original multi-span nonlinear target admitted')})
+}

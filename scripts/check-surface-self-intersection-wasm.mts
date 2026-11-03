@@ -194,6 +194,8 @@ const multispanHomogeneousDrift=structuredClone(quadricGraphCases.find(c=>c.name
 reject('graph-multispan-homogeneous-original-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...multispanHomogeneousDrift})
 const homogeneousSeparableDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-homogeneous-separable-rotated-false-gauge-1')!.query);homogeneousSeparableDrift.patch.controlPoints[1]![1]![0]!+=2**-47
 reject('graph-homogeneous-separable-original-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...homogeneousSeparableDrift})
+const multispanBoundaryClockDrift=structuredClone(quadricGraphCases.find(c=>c.name==='graph-multispan-boundary-clocks-rotated-false-gauge-1-denominator-3')!.query);multispanBoundaryClockDrift.patch.controlPoints[1]![1]![0]!+=2**-29
+reject('graph-multispan-boundary-clocks-original-ulp-drift',{op:'nurbs_original_quadric_graph_contacts',...multispanBoundaryClockDrift})
 const result={status:'passed' ,nodeVersion:process.version,sourceCommit,wasmPath:resolve(wasmPath),wasmSha256:createHash('sha256').update(bytes).digest('hex'),wasmBytes:bytes.length,imports:[],cases,installedPackageUpdated:false,scope:'Actual import-free raw WASM binary ABI; not packaged-WASM, Worker, editor or full parity qualification'}
 writeFileSync(resolve(directory,'results.json'),JSON.stringify(result,null,2)+'\n')
 console.log(JSON.stringify(result,null,2))

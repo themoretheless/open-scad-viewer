@@ -1,5 +1,6 @@
 //! Exact original tensor identities against independent boundary clocks.
 use super::*;
+mod bspline;
 fn choose(n: usize, k: usize) -> Q {
     q((0..k).fold(1u64, |c, j| c * (n - j) as u64 / (j + 1) as u64) as f64)
 }
@@ -13,25 +14,12 @@ pub(super) fn prove(
 ) -> Option<[super::clock::Clock; 2]> {
     let (p, r) = (s.degree_u, s.degree_v);
     if s.control_points.len() != p + 1 || s.control_points[0].len() != r + 1 {
-        return None;
+        return bspline::prove(s, axes, o, u, v, det);
     }
     // Channels [projected-u numerator, projected-v numerator, W], all
     // authored Euclidean source poles multiplied by their ORIGINAL weights.
     let h: Vec<Vec<[Q; 3]>> = (0..=p)
-        .map(|i| {
-            (0..=r)
-                .map(|j| {
-                    let x = q(s.control_points[i][j][axes[0]]) - &o[0];
-                    let y = q(s.control_points[i][j][axes[1]]) - &o[1];
-                    let w = q(s.weights[i][j]);
-                    [
-                        (&x * &v[1] - &y * &v[0]) / det * &w,
-                        (&u[0] * &y - &u[1] * &x) / det * &w,
-                        w,
-                    ]
-                })
-                .collect()
-        })
+        .map(|i| (0..=r).map(|j| pole(s, i, j, axes, o, u, v, det)).collect())
         .collect();
     let uc: Vec<_> = (0..=p)
         .map(|i| [h[i][0][0].clone(), h[i][0][2].clone()])
@@ -40,9 +28,35 @@ pub(super) fn prove(
         .map(|j| [h[0][j][1].clone(), h[0][j][2].clone()])
         .collect();
     let clocks = [
-        super::clock::Clock::ordered(uc)?,
-        super::clock::Clock::ordered(vc)?,
+        super::clock::Clock::ordered(uc.clone())?,
+        super::clock::Clock::ordered(vc.clone())?,
     ];
+    if !certificate(&h, &uc, &vc) {
+        return None;
+    }
+    Some(clocks)
+}
+fn pole(
+    s: &Surface,
+    i: usize,
+    j: usize,
+    axes: [usize; 2],
+    o: &[Q; 2],
+    u: &[Q; 2],
+    v: &[Q; 2],
+    det: &Q,
+) -> [Q; 3] {
+    let x = q(s.control_points[i][j][axes[0]]) - &o[0];
+    let y = q(s.control_points[i][j][axes[1]]) - &o[1];
+    let w = q(s.weights[i][j]);
+    [
+        (&x * &v[1] - &y * &v[0]) / det * &w,
+        (&u[0] * &y - &u[1] * &x) / det * &w,
+        w,
+    ]
+}
+fn certificate(h: &[Vec<[Q; 3]>], uc: &[[Q; 2]], vc: &[[Q; 2]]) -> bool {
+    let (p, r) = (h.len() - 1, h[0].len() - 1);
     // Au*Du_boundary-W*Nu_boundary = 0 in degree (2p,r).
     // Common positive binomial denominators can be omitted for equality.
     // No sampled points, rounded extracted poles or caller factors are used.
@@ -56,10 +70,10 @@ pub(super) fn prove(
                 let k = n - i;
                 residual += choose(p, i)
                     * choose(p, k)
-                    * (&h[i][j][0] * &h[k][0][2] - &h[i][j][2] * &h[k][0][0]);
+                    * (&h[i][j][0] * &uc[k][1] - &h[i][j][2] * &uc[k][0]);
             }
             if residual != q(0.) {
-                return None;
+                return false;
             }
         }
     }
@@ -73,14 +87,14 @@ pub(super) fn prove(
                 let k = n - j;
                 residual += choose(r, j)
                     * choose(r, k)
-                    * (&h[i][j][1] * &h[0][k][2] - &h[i][j][2] * &h[0][k][1]);
+                    * (&h[i][j][1] * &vc[k][1] - &h[i][j][2] * &vc[k][0]);
             }
             if residual != q(0.) {
-                return None;
+                return false;
             }
         }
     }
-    Some(clocks)
+    true
 }
 
 #[cfg(test)]

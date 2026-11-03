@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "baseCommit": "1e63b84cb68e7f0cc1086f175c104d9c103af815",
+  "nativeTests": 48,
+  "bridgeTests": 18,
+  "homogeneousCensusTests": 4,
+  "clockTests": 3,
+  "clientTests": 74,
+  "typecheckPassed": true,
+  "architecture": "54 pinned oversized files, 0 layer violations",
+  "sourceSha256": {
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_affine.rs": "62f80f4cfd1ac2fed0eb5cae93262ab97cf93448b9ef034a533f192ede068afc",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_affine/bspline.rs": "60eaaee1f758dade03f5c27d45d2ed69a6e16e5d447e427ccc63f2137fe4ebff",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_separable.rs": "18dab2b31740c3719c0e240cbee5f04a0e6734e8fb4e31d50a3abedfa5ed5675",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/homogeneous_separable/bspline.rs": "b6f4f28c2a7bdcfff5ccc5d959a079078071df20f7a280872caf47e9a74b37e3",
+    "crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph.rs": "e0d33fe7576f71f91d3986f92ddaf4c1c430afbb576516361897ad6c28955280",
+    "crates/nurbs-core/tests/original_quadric_graph_multispan_clocks.rs": "1c371ff3a7f7ba6db120ba7618b93a24369afe5855d4012f7df6dc1a3fd147d1",
+    "crates/geometry-bridge/tests/original_quadric_graph.rs": "d4041768b77285228330d2af8b04ecf3219b7a844032aabb75a2424f86987d1f"
+  },
+  "scope": "Original clamped multi-span graph targets with independent nonlinear global rational boundary clocks. Surface cells and original owner boundary curves are restricted independently to matching original knot spans; exact tensor cross-identities prove the projection. Original quadric tensor membership and unique-sheet checks remain required.",
+  "sourceRewritten": false,
+  "restrictionCensusSchedulePerProofAttempt": 4000000,
+  "budgetScope": "Each affine or boundary-clock restriction/census proof attempt has a separate fixed schedule; clock construction/inversion retain their fixed control/degree schedule, outside predicate maxExactWork. No predicate budget is reset.",
+  "qualification": "All 64 degree pairs 1 through 8, nonuniform spans, exact tensor/clock census, independent Cox inverse, ULP and bounded refusal. Actual degree-(2,2) nonplanar coupled target with global nonlinear and internal-knot UV, rotations/gauges, algebraic edge, wrong original membership and zero predicate budget.",
+  "fixtureScale": 117733140,
+  "nativeCoordinateLimitPreserved": 1000000000,
+  "censusSeconds": 29.08,
+  "wasmRuntimeQualified": false,
+  "remaining": [
+    "WASM ABI and Worker runtime for multi-span nonlinear boundary clocks",
+    "General joint coupled projected maps without independent clocks",
+    "Unordered boundary clock certificates and general UV precision",
+    "General freeform all branches",
+    "Trim and closed Body admission",
+    "Installed provider qualification"
+  ]
+}

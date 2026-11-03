@@ -1,14 +1,21 @@
 //! Original homogeneous tensor restriction, never binary64 extracted poles.
 use super::*;
-const MAX_RESTRICTION_WORK: u64 = 4_000_000;
-struct Work(u64);
+pub(in crate::intersection::certified_curve_surface::quadric_graph) const MAX_RESTRICTION_WORK:
+    u64 = 4_000_000;
+pub(in crate::intersection::certified_curve_surface::quadric_graph) struct Work(u64);
 impl Work {
-    fn charge(&mut self, n: u64) -> Option<()> {
+    pub(in crate::intersection::certified_curve_surface::quadric_graph) fn new(n: u64) -> Self {
+        Self(n)
+    }
+    pub(in crate::intersection::certified_curve_surface::quadric_graph) fn charge(
+        &mut self,
+        n: u64,
+    ) -> Option<()> {
         self.0 = self.0.checked_sub(n)?;
         Some(())
     }
 }
-fn restrict<const N: usize>(
+pub(in crate::intersection::certified_curve_surface::quadric_graph) fn restrict<const N: usize>(
     base: Vec<[Q; N]>,
     knots: &[Q],
     p: usize,

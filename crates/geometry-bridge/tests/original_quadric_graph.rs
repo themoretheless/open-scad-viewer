@@ -401,3 +401,53 @@ fn original_nonlinear_boundary_clocks_serialize_refined_nonplanar_uv() {
     }
     ledger(&r);
 }
+
+#[test]
+fn original_multispan_nonlinear_clocks_serialize_global_internal_knot_uv() {
+    let mut q = query();
+    let l = 117733140.;
+    let g = [0., 1., 3., 4.];
+    let k = [0., 0., 2., 4.];
+    let d = |i: usize, j: usize| {
+        64. - 8. * g[i] - 8. * g[j] + 5. * g[i] * g[j] - 2. * k[i] * g[j] - 2. * g[i] * k[j]
+            + k[i] * k[j]
+    };
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["degreeV"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 0., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 10., 12., 14., 14., 14.]);
+    let w: Vec<Vec<f64>> = (0..4)
+        .map(|i| (0..4).map(|j| d(i, j) / 16.).collect())
+        .collect();
+    let p: Vec<Vec<Vec<f64>>> = (0..4)
+        .map(|i| {
+            (0..4)
+                .map(|j| {
+                    vec![
+                        l * (8. * g[i] - g[i] * g[j] + 2. * k[i] * g[j] - k[i] * k[j]) / d(i, j),
+                        l * (8. * g[j] - g[i] * g[j] + 2. * g[i] * k[j] - k[i] * k[j]) / d(i, j),
+                        l * (g[i] * g[j] + k[i] * k[j]) / d(i, j),
+                    ]
+                })
+                .collect()
+        })
+        .collect();
+    q["patch"]["weights"] = json!(w);
+    q["patch"]["controlPoints"] = json!(p);
+    q["quadric"] = json!([
+        [0., 0.5, 0., 0.],
+        [0.5, 0., 0., 0.],
+        [0., 0., 0., -l / 2.],
+        [0., 0., -l / 2., 0.]
+    ]);
+    q["curve"]["controlPoints"] =
+        json!([[l / 3., l / 3., l / 9. - 1.], [l / 3., l / 3., l / 9. + 1.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "homogeneous-separable");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["parameterBox"],
+        json!([[4., 4.], [0., 0.], [12., 12.]])
+    );
+    ledger(&r);
+}
