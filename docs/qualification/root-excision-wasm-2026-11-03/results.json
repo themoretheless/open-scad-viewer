@@ -1,0 +1,58 @@
+{
+  "path": "/Users/themoretheless/.codex/artifacts/open-scad-viewer/self-surface-20261102/c7822e4c691d1666781641cc4c9526260edc947cdf918905f6664563f0c8b130.wasm",
+  "sha256": "c7822e4c691d1666781641cc4c9526260edc947cdf918905f6664563f0c8b130",
+  "bytes": 21995214,
+  "sourceCommit": "bce4df44132d13a741b8c6e4228e57b4756bb7f7",
+  "installedPackageUpdated": false,
+  "independentCopy": true,
+  "buildCommand": "CARGO_TARGET_DIR=/tmp/osv-self-surface-wasm-target-20261102 cargo build --locked --release --config profile.release.opt-level=\"z\" --config profile.release.strip=\"symbols\" --target wasm32-unknown-unknown --manifest-path crates/geometry-wasm/Cargo.toml",
+  "frozenTree": {
+    "sourceCommit": "bce4df44132d13a741b8c6e4228e57b4756bb7f7",
+    "allNonDocumentationTrackedFilesVerified": 8041,
+    "matched": true
+  },
+  "status": "passed",
+  "abiCases": 457,
+  "graphCases": 320,
+  "newRootExcisionCases": 14,
+  "workersStarted": 427,
+  "workersTerminated": 427,
+  "browser": "151.0.7922.34",
+  "imports": [],
+  "nativeReceipt": "docs/qualification/root-excision-2026-11-03/results.json",
+  "nativeFocusedTests": 162,
+  "clientTests": 52,
+  "typecheckPassed": true,
+  "installedPackageSha256": "00f62e02ba9f3be7e14efc608121dbdfdbb6beb18605efa51240c99fafc92629",
+  "scope": "Actual raw WASM ABI and Chromium module Workers qualify original-coefficient curve/surface window root excision. Native BRep integration separately qualifies boundary-connected automatic fiber trims (two branches, three regions). No all-SS branch census, Body or installed-provider credit.",
+  "harnessSha256": {
+    "scripts/check-surface-self-intersection-wasm.mts": "3db0d475477a2ac1e9a8b4f863f1d6793daef530e6e35d8b8f4d8fb14123128f",
+    "tools/browser-qualification/root-excision-fixtures.ts": "7fd7123669ca0baece742e5d69f653653270991ca26ead41e8fd3d5e13822cb0",
+    "tools/browser-qualification/surface-self-intersection.ts": "aa29d236bf5bec280c19df071f3d0c69d251890cf928ae8dbf8203ee5da66d6c",
+    "tools/browser-qualification/surface-self-intersection.mjs": "d4d7f6f008841a0f371ec9f8cb91e4c0c4c7b7203e1e9054f001fd62b978d6b7",
+    "src/workers/surfaceSelfIntersection.worker.ts": "aa9949a919e82e7f84396bf4cad3083d55c48c5afd1aa70deae15c0d58bb4d92",
+    "src/services/surfaceSelfIntersectionBrowser.ts": "f4765a00bcc6ab75d34bdd5c4e0e20e36a62d4b13514f3a415310e4232b38cb5",
+    "src/services/surfaceIsoTargetProtocol.ts": "e6b2584b24bc9524ad50516d15ae6494e69fb49380fcc913945b2aeebf9018dc"
+  },
+  "allSurfaceBranchesEnumerated": false,
+  "wasmTrimAdmission": false,
+  "bodyAdmission": false,
+  "generalBooleanQualified": false,
+  "remaining": [
+    "Cross-original-knot and caller-boundary proof",
+    "Tangencies and singular roots",
+    "Periodic seams and poles",
+    "General hidden/closed surface-surface branch completeness",
+    "Complete global automatic trims",
+    "Valid closed Body and general Boolean",
+    "Installed package/provider qualification"
+  ],
+  "nativeModuleTests": {
+    "passed": 2306,
+    "failed": 0,
+    "ignored": 1,
+    "suite": "nurbs-core --lib",
+    "seconds": 518.12
+  },
+  "tempWorktreesRemoved": true
+}
