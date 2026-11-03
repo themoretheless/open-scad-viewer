@@ -46,10 +46,7 @@ impl Chart {
         let coupled = !separable
             && single
             && (0..3).all(|i| (0..3).all(|j| q(matrix[i][j]) + q(matrix[j][i]) == q(0.)));
-        check(
-            separable || single,
-            "Multi-span quadric graphs require exactly separable original positive weights",
-        )?;
+
         let coupled_tensor = (coupled && (p > 1 || r > 1)).then(|| {
             s.weights
                 .iter()
@@ -77,7 +74,7 @@ impl Chart {
         let gu = greville(&s.knots_u, p, nu);
         let gv = greville(&s.knots_v, r, nv);
         let constant = s.weights.iter().flatten().all(|w| q(*w) == w0);
-        let clocks = if !single && constant {
+        let clocks = if !separable || (!single && constant) {
             [
                 super::clock::Clock::original(vec![q(1.), q(1.)]),
                 super::clock::Clock::original(vec![q(1.), q(1.)]),
@@ -134,7 +131,7 @@ impl Chart {
             });
             let ordinary = affine && (separable || coupled);
             let homogeneous =
-                !ordinary && single && super::homogeneous_affine::prove(s, axes, &origin, &u, &v);
+                !ordinary && super::homogeneous_affine::prove(s, axes, &origin, &u, &v);
             if !ordinary && !homogeneous {
                 continue;
             }

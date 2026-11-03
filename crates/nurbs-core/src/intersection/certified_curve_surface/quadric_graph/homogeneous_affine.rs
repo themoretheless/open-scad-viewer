@@ -1,5 +1,6 @@
 //! Exact original Bernstein certificate for Hxy=(O+u*U+v*V)*W.
 use super::*;
+mod bspline;
 /// Elevate the original Hxy and W once in both directions. Multiplication
 /// by u (respectively v) selects the lower-index source coefficient with
 /// elevation factor I/(p+1) (respectively J/(q+1)). The following census
@@ -13,7 +14,27 @@ pub(super) fn prove(
     u: &[Q; 2],
     v: &[Q; 2],
 ) -> bool {
-    let (p, r) = (s.degree_u, s.degree_v);
+    if s.control_points.len() != s.degree_u + 1 || s.control_points[0].len() != s.degree_v + 1 {
+        return bspline::prove(s, axes, origin, u, v);
+    }
+    let h: Vec<Vec<[Q; 3]>> = s
+        .control_points
+        .iter()
+        .enumerate()
+        .map(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .map(|(j, p)| {
+                    let w = q(s.weights[i][j]);
+                    [q(p[axes[0]]) * &w, q(p[axes[1]]) * &w, w]
+                })
+                .collect()
+        })
+        .collect();
+    certificate(&h, origin, u, v)
+}
+fn certificate(h: &[Vec<[Q; 3]>], origin: &[Q; 2], u: &[Q; 2], v: &[Q; 2]) -> bool {
+    let (p, r) = (h.len() - 1, h[0].len() - 1);
     for i in 0..=p + 1 {
         for j in 0..=r + 1 {
             for axis in 0..2 {
@@ -35,11 +56,11 @@ pub(super) fn prove(
                         };
                         residual += a
                             * b
-                            * q(s.weights[i - du][j - dv])
-                            * (q(s.control_points[i - du][j - dv][axes[axis]])
-                                - &origin[axis]
-                                - &u[axis] * q(du as f64)
-                                - &v[axis] * q(dv as f64));
+                            * (&h[i - du][j - dv][axis]
+                                - (&origin[axis]
+                                    + &u[axis] * q(du as f64)
+                                    + &v[axis] * q(dv as f64))
+                                    * &h[i - du][j - dv][2]);
                     }
                 }
                 if residual != q(0.) {

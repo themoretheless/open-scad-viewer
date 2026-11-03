@@ -320,3 +320,51 @@ fn nonplanar_coupled_common_factor_is_proved_on_original_tensor_and_preserves_ex
     );
     ledger(&r);
 }
+
+#[test]
+fn original_nonplanar_multispan_coupled_tensor_preserves_global_affine_uv() {
+    let mut q = query();
+    let l = 1808800.;
+    let g = [0., 1., 3., 4.];
+    let k = [0., 0., 2., 4.];
+    q["patch"]["degreeU"] = json!(2);
+    q["patch"]["degreeV"] = json!(2);
+    q["patch"]["knotsU"] = json!([-2., -2., -2., 0., 2., 2., 2.]);
+    q["patch"]["knotsV"] = json!([10., 10., 10., 12., 14., 14., 14.]);
+    let w: Vec<Vec<f64>> = g
+        .iter()
+        .map(|a| g.iter().map(|b| (16. + a * b) / 16.).collect())
+        .collect();
+    let p: Vec<Vec<Vec<f64>>> = (0..4)
+        .map(|i| {
+            (0..4)
+                .map(|j| {
+                    let d = 16. + g[i] * g[j];
+                    vec![
+                        l * (4. * g[i] + k[i] * g[j]) / d,
+                        l * (4. * g[j] + g[i] * k[j]) / d,
+                        l * (g[i] * g[j] + k[i] * k[j]) / d,
+                    ]
+                })
+                .collect()
+        })
+        .collect();
+    q["patch"]["weights"] = json!(w);
+    q["patch"]["controlPoints"] = json!(p);
+    q["quadric"] = json!([
+        [0., 0.5, 0., 0.],
+        [0.5, 0., 0., 0.],
+        [0., 0., 0., -l / 2.],
+        [0., 0., -l / 2., 0.]
+    ]);
+    q["curve"]["controlPoints"] =
+        json!([[l / 2., l / 2., l / 4. - 1.], [l / 2., l / 2., l / 4. + 1.]]);
+    let r = dispatch(q).unwrap();
+    assert_eq!(r["targetParameterization"], "homogeneous-affine");
+    assert_eq!(r["curvePatchCoverageComplete"], true);
+    assert_eq!(
+        r["contacts"][0]["parameterBox"],
+        json!([[4., 4.], [0., 0.], [12., 12.]])
+    );
+    ledger(&r);
+}

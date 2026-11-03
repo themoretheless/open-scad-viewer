@@ -57,9 +57,9 @@ pub struct OriginalQuadricGraphContacts {
 /// Planar single Bezier patches additionally admit nonseparable positive weights
 /// through a proved global mean-map bijection and joint inverse enclosures.
 /// Degree-(1,1) uses its exact odds equation; higher degrees refine positive
-/// Bernstein ratio hulls on the retained parameter rectangle. Single Bezier
-/// targets may also prove an affine projection directly in the original
-/// homogeneous basis, admitting canceled positive coupled factors on nonplanar
+/// Bernstein ratio hulls on the retained parameter rectangle. Clamped B-spline
+/// targets may also prove an affine projection on every original span in the
+/// exact homogeneous basis, admitting canceled positive coupled factors on nonplanar
 /// graphs without changing their source geometry;
 /// implicit residual is linear in the remaining coordinate with a nonzero
 /// coefficient throughout the projected rectangle. Exact tensor membership
@@ -67,7 +67,9 @@ pub struct OriginalQuadricGraphContacts {
 /// carrier. Other charts/branches refuse this contract. No trim/Body credit.
 /// max_exact_work bounds target, carrier and coordinate predicate work. Fixed
 /// control/degree-bounded rational chart, inverse-clock schedules and singleton checks
-/// are separate operations.
+/// are separate operations. Multi-span homogeneous affine chart candidates
+/// have an additional fixed 4,000,000-operation restriction schedule; exhausting
+/// it refuses that chart and does not spend or reset the predicate allowance.
 pub fn original_quadric_graph_contacts(
     c: &Curve,
     s: &Surface,

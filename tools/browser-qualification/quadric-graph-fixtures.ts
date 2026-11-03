@@ -154,3 +154,18 @@ for(const rotated of [false,true])for(const gauge of [1,7]){
  const q=graphQuery(),l=25740;Object.assign(q.patch,{degreeU:3,degreeV:3,knotsU:[-2,-2,-2,-2,2,2,2,2],knotsV:[10,10,10,10,14,14,14,14],weights:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>9+i*j)),controlPoints:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>{const w=9+i*j;return[l*(3*i+i*(i-1)*j/2)/w,l*(3*j+j*(j-1)*i/2)/w,l*l*(i*j+i*(i-1)*j*(j-1)/4)/w]}))});q.curve.controlPoints=[[l/2,l/2,l*l/4-1],[l/2,l/2,l*l/4+1]]
  quadricGraphCases.push({name:'graph-homogeneous-nonplanar-degree-three',query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='homogeneous-affine','Degree-three identity missing')}})
 }
+
+function multispanHomogeneousTarget(q:OriginalQuadricGraphQuery){const l=1808800,g=[0,1,3,4],k=[0,0,2,4];Object.assign(q.patch,{degreeU:2,degreeV:2,knotsU:[-2,-2,-2,0,2,2,2],knotsV:[10,10,10,12,14,14,14],weights:g.map(a=>g.map(b=>(16+a*b)/16)),controlPoints:g.map((a,i)=>g.map((b,j)=>{const d=16+a*b;return[l*(4*a+k[i]!*b)/d,l*(4*b+a*k[j]!)/d,l*(a*b+k[i]!*k[j]!)/d]}))});q.quadric=[[0,.5,0,0],[.5,0,0,0],[0,0,0,-l/2],[0,0,-l/2,0]];return q}
+for(const rotated of [false,true])for(const gauge of [1,7]){
+ const q=multispanHomogeneousTarget(graphQuery()),l=1808800;q.curve.controlPoints=[[l/2,l/2,l/4-1],[l/2,l/2,l/4+1]];q.patch.weights=q.patch.weights.map(row=>row.map(w=>w*gauge))
+ if(rotated){for(const row of q.patch.controlPoints)for(const p of row)[p[0],p[2]]=[p[2]!,p[0]!];for(const p of q.curve.controlPoints)[p[0],p[2]]=[p[2]!,p[0]!];q.quadric=[[0,0,0,-l/2],[0,0,.5,0],[0,.5,0,0],[-l/2,0,0,0]]}
+ quadricGraphCases.push({name:`graph-multispan-homogeneous-rotated-${rotated}-gauge-${gauge}`,query:q,check:r=>{present(r,[[4,0,12,1]]);require(r.targetParameterization==='homogeneous-affine','Original multi-span affine certificate missing')}})
+}
+{
+ const q=multispanHomogeneousTarget(boundaryQuery()),l=1808800;q.curve.controlPoints=q.curve.controlPoints.map(p=>p.map(x=>l*x))
+ quadricGraphCases.push({name:'graph-multispan-homogeneous-algebraic-edge',query:q,check:r=>present(r,[[2+4/3,-2,12,2]],'quadric-coordinate-sign')})
+}
+for(const zero of [false,true]){
+ const q=multispanHomogeneousTarget(graphQuery());if(zero)q.maxExactWork=0;else q.patch.controlPoints[1]![1]![2]!+=.125
+ quadricGraphCases.push({name:`graph-multispan-homogeneous-unproved-zero-${zero}`,query:q,check:r=>require(!r.targetGraphProven&&r.carrier===null&&!r.finiteSurfaceUvAdmission&&r.status==='unresolved','Unproved original multi-span target admitted')})
+}
