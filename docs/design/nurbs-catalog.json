@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 243,
-  "unallocatedCount": 757,
+  "specifiedCount": 244,
+  "unallocatedCount": 756,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6627,6 +6627,30 @@
       "remainingQualification": [
         "Validated3D tensor surfaces, U/V partials, complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic storage. One-sided traces and original absolute clocks; one global storage gauge per entire output net. Constant vector fields and one globally shared U-only/V-only content factor reduce before degree checks; all channel slices share each factor and quotient reconstructions are exact. General bivariate factor cancellation/minimal-degree admission remain separate; exact positive binary64 storage or atomic refusal under unchanged1m-work/4096-bit/degree25/geometry limits.",
         "Native default/no-codec library and contract qualification only. No JSON/WASM/Rush/editor/STEP, source/topology certificate, regularity/normal or evaluator-bit transfer. Original1000 target and whole-application delivery remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0244",
+      "name": "Точное построение ориентированного неединичного поля нормалей площади S_u × S_v по всем исходным UV-ячейкам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точная дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::area_normal",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/polynomial.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/content.rs",
+        "crates/nurbs-core/tests/exact_area_normal_contracts.rs",
+        "crates/nurbs-core/tests/exact_area_normal_mixed_weights.rs",
+        "docs/design/nurbs-exact-area-normal.md",
+        "docs/qualification/nurbs-exact-area-normal-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-area-normal-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "Complete original fundamental UVcell cover for validated3D tensor surfaces, including nonuniform/repeated/unclamped/periodic encodings; original absolute clocks and one-sided traces. Oriented non-unit area vector, not body-outward/unit-normal or regularity certificate. Zero field accepted. Fresh actual-output polynomial proof against original signed cross product and W^4 denominator, one whole-net storage gauge and shared unchanged1m-work/4096-bit/degree25/geometry bounds. Exact storage or atomic whole-result refusal.",
+        "Native default/no-codec qualification only. No JSON/WASM/Rush/editor/STEP, evaluator-bit, topology or old source-certificate transfer. General mixed-variable GCD/alternate representation search and full1000/application delivery remain separate."
       ]
     }
   ],

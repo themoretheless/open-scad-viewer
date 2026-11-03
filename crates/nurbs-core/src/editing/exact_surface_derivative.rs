@@ -64,7 +64,26 @@ fn target(h: &[Poly], axis: Axis, width: &Q, w: &mut Work) -> PResult<Vec<Poly>>
     out.push(polynomial::multiply(&h[3], &h[3], w)?);
     Ok(out)
 }
-fn patch(s: &Surface, ku: usize, kv: usize, axis: Axis, w: &mut Work) -> PResult<Surface> {
+#[derive(Clone, Copy)]
+enum Field {
+    Partial(Axis),
+    AreaNormal,
+}
+fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
+    let u = target(h, Axis::U, &widths[0], w)?;
+    let v = target(h, Axis::V, &widths[1], w)?;
+    let mut out = Vec::new();
+    for axis in 0..3 {
+        let i = (axis + 1) % 3;
+        let j = (axis + 2) % 3;
+        let left = polynomial::multiply(&u[i], &v[j], w)?;
+        let right = polynomial::multiply(&u[j], &v[i], w)?;
+        out.push(polynomial::subtract(left, &right, w)?);
+    }
+    out.push(polynomial::multiply(&u[3], &v[3], w)?);
+    Ok(out)
+}
+fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResult<Surface> {
     let domains = [
         [s.knots_u[ku], s.knots_u[ku + 1]],
         [s.knots_v[kv], s.knots_v[kv + 1]],
@@ -76,15 +95,18 @@ fn patch(s: &Surface, ku: usize, kv: usize, axis: Axis, w: &mut Work) -> PResult
         widths.push(w.op(&b, &a, |a, b| a - b)?);
     }
     let h = extraction::cell(s, ku, kv, domains, &widths, w)?;
-    let target = target(
-        &h,
-        axis,
-        &widths[match axis {
-            Axis::U => 0,
-            Axis::V => 1,
-        }],
-        w,
-    )?;
+    let target = match field {
+        Field::Partial(axis) => target(
+            &h,
+            axis,
+            &widths[match axis {
+                Axis::U => 0,
+                Axis::V => 1,
+            }],
+            w,
+        )?,
+        Field::AreaNormal => area_target(&h, &widths, w)?,
+    };
     let proposal = match polynomial::constant_field(&target, w)? {
         Some(constant) => constant,
         None => content::cancel(&target, w)?,
@@ -102,6 +124,18 @@ fn patch(s: &Surface, ku: usize, kv: usize, axis: Axis, w: &mut Work) -> PResult
 /// existing degree25/geometry bounds. General bivariate factor cancellation
 /// and minimal-degree admission are not claimed.
 pub fn surface(source: &Surface, axis: Axis, max_work: u64) -> Result<Report> {
+    apply(source, Field::Partial(axis), max_work)
+}
+/// Construct the oriented NON-UNIT field dS/du cross dS/dv on every original
+/// fundamental UV cell. Direction follows the authored parameter order and
+/// magnitude is the source area density. Original absolute clocks and one-sided
+/// traces are retained. A zero vector is valid geometry, not a regularity proof.
+/// No body outward orientation, unit-normal, topology or old certificate credit.
+/// Same atomic exact-storage and1m-work/4096-bit/geometry guards as [`surface`].
+pub fn area_normal(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::AreaNormal, max_work)
+}
+fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;
     check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
@@ -119,7 +153,7 @@ pub fn surface(source: &Surface, axis: Axis, max_work: u64) -> Result<Report> {
             }
             for kv in source.degree_v..source.control_points[0].len() {
                 if source.knots_v[kv] < source.knots_v[kv + 1] {
-                    out.push(patch(source, ku, kv, axis, &mut w)?);
+                    out.push(patch(source, ku, kv, field, &mut w)?);
                 }
             }
         }
