@@ -11,6 +11,7 @@ use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 mod content;
 mod extraction;
+mod mixed;
 mod polynomial;
 mod storage;
 type Poly = BTreeMap<(usize, usize), Q>;
@@ -69,6 +70,7 @@ enum Field {
     Partial(Axis),
     AreaNormal,
     Metric,
+    Mixed([usize; 2]),
 }
 fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     let u = target(h, Axis::U, &widths[0], w)?;
@@ -125,6 +127,7 @@ fn patch(s: &Surface, ku: usize, kv: usize, field: Field, w: &mut Work) -> PResu
         )?,
         Field::AreaNormal => area_target(&h, &widths, w)?,
         Field::Metric => metric_target(&h, &widths, w)?,
+        Field::Mixed(orders) => mixed::target(&h, orders, &widths, w)?,
     };
     let proposal = match polynomial::constant_field(&target, w)? {
         Some(constant) => constant,
@@ -161,6 +164,20 @@ pub fn area_normal(source: &Surface, max_work: u64) -> Result<Report> {
 /// apply. A singular metric is valid output, not a regularity certificate.
 pub fn metric(source: &Surface, max_work: u64) -> Result<Report> {
     apply(source, Field::Metric, max_work)
+}
+/// Construct d^(a+b)S/du^a dv^b over every original UV cell for total order1..3,
+/// matching the existing rational jet ceiling. Higher rational derivatives may
+/// remain nonzero even when their order exceeds the source polynomial degree.
+/// Original clocks and one-sided traces, not global knot differentiability.
+/// One Work ledger and fresh original-source proof cover the complete result.
+pub fn mixed_partial(source: &Surface, orders: [usize; 2], max_work: u64) -> Result<Report> {
+    check(
+        orders[0]
+            .checked_add(orders[1])
+            .is_some_and(|n| (1..=3).contains(&n)),
+        "Mixed derivative total order must be in [1,3]",
+    )?;
+    apply(source, Field::Mixed(orders), max_work)
 }
 fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 245,
-  "unallocatedCount": 755,
+  "specifiedCount": 246,
+  "unallocatedCount": 754,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6674,6 +6674,29 @@
       "remainingQualification": [
         "Carrier coordinates [E,F,G]=[Su dot Su,Su dot Sv,Sv dot Sv], not spatial positions or2F. Complete original fundamental UVcell cover including nonuniform/repeated/unclamped/periodic and mixed rational weights, physical absolute clocks and one-sided traces. Zero/singular metric allowed without a regularity/positive-definite certificate. Fresh stored-bit Gram identities against original source, one whole-net gauge, shared unchanged1m-work/4096-bit/degree25/geometry caps; exact storage or atomic whole-result refusal.",
         "Native default/no-codec qualification only. No JSON/WASM/Rush/editor/STEP, evaluator-bit, topology or old source-certificate transfer. General mixed-variable GCD/alternate representation search and original1000/application delivery remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0246",
+      "name": "Точное построение полей смешанных производных NURBS-поверхности до третьего порядка по всем исходным UV-ячейкам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-analysis",
+      "category": "Точное дифференцирование",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::mixed_partial",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/mixed.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/content.rs",
+        "crates/nurbs-core/tests/exact_mixed_partial_contracts.rs",
+        "docs/design/nurbs-exact-mixed-partial.md",
+        "docs/qualification/nurbs-exact-mixed-partial-2026-11-03/receipt.json",
+        "docs/qualification/nurbs-exact-mixed-partial-2026-11-03/exact_oracle.py"
+      ],
+      "remainingQualification": [
+        "One family covers total derivative orders1..3, matching existing rational jet ceiling, including rational derivatives above polynomial source degree. Complete original fundamental UVcell cover, physical absolute clocks, one-sided traces and actual stored-bit identity against original uncancelled source-derived targets. No intermediate rounded fields or finite differences. Shared unchanged1m-work/4096-bit/degree25/geometry limits; exact storage or atomic whole-result refusal.",
+        "Native default/no-codec qualification only. No global knot smoothness, regularity, topology, JSON/WASM/Rush/editor/STEP or old source-certificate transfer. General mixed-variable GCD/alternate representation admission and original1000/application delivery remain open."
       ]
     }
   ],
