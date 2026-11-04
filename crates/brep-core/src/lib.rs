@@ -68,6 +68,7 @@ mod cylinder_sphere_boolean;
 pub mod face_contact;
 pub mod face_contacts;
 pub mod face_domain;
+pub mod ss_trimmed_face;
 pub mod face_curvature;
 pub mod face_injectivity;
 pub mod iges_interchange_v2;

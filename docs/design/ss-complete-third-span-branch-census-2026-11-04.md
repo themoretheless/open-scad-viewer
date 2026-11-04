@@ -41,3 +41,8 @@ Remaining work includes algebraic UV extensions and nonisolated contacts,
 trimmed-face holes and periodic/pole arrangements, cross-source junctions,
 complete physical branch assembly and winding, full trim/material/Boolean/healing,
 lineage/history, actual bridge/WASM calls and the wider quad/offset/fillet/G2 scope.
+
+Follow-up: native branch events can now be classified against an authored BRep
+face with holes and complete third-surface Cox-span coverage; see
+`ss-trimmed-face-census-2026-11-04.md`. Ordered arrangements, general contacts
+and actual trim/topology construction remain separate requirements.

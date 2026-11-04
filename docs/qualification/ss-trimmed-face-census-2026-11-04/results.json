@@ -1,0 +1,11 @@
+{
+  "distinct_tests_passed": 63,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/brep-core/src/lib.rs": "29cd74be743698c1f0a3d85c687a7a20f76f5ecd391fb7dc04d3b9d5441ca9c7",
+    "crates/brep-core/src/ss_trimmed_face.rs": "ba64226c9f5c01a3c5e07c1bf19edd2e938054f5d6c3cd2950e7ad4a5f58e163",
+    "crates/brep-core/tests/ss_trimmed_face.rs": "36ebafc6e18f8f774f13600ea19ba9cc690a163a511ec0d8650d1e5d80fb7a35"
+  },
+  "scope": "Whole-UV-box original BRep face/hole event classification with exact third-surface identity, all Cox spans, continuous boundary checks and immutable snapshot ownership",
+  "remaining": "General curved boundary contacts, restricted/periodic/pole coedges, algebraic UV extensions, cross-source junctions, canonical aliases/lineage, ordered arrangements and actual face splitting/material/Boolean/healing/history/bridge/WASM/quad/offset/fillet/G2"
+}
