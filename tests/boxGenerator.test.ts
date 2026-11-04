@@ -118,5 +118,20 @@ describe('box generator', () => {
       expect(result.volume).toBeGreaterThan(0)
       expect(result.meshes.length).toBe(1)
     }
+    for (const cell_size of [4, 8, 10, 14, 18]) {
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:20,print_optimized:false,hook_chamfer:true}).replace('cell_size = 20;', `cell_size = ${cell_size};`),request)
+      expect(result.volume).toBeGreaterThan(0)
+      expect(result.meshes.length).toBe(1)
+    }
+    const volumes: number[] = []
+    for (const cell_size of [18, 26, 40, 60]) {
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size,print_optimized:false,hook_chamfer:true}),request)
+      expect(result.volume).toBeGreaterThan(0)
+      expect(result.meshes.length).toBe(1)
+      volumes.push(result.volume)
+    }
+    for (let i = 1; i < volumes.length; i++) {
+      expect(Math.abs(volumes[i] - volumes[i - 1])).toBeGreaterThan(50)
+    }
   }, 120000)
 })

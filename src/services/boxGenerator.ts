@@ -113,7 +113,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
     rows=max(1,ceil(usable_h*mesh_density/(cell_size*0.65)));
     ch=usable_h/(0.542*rows+0.28);
-    cw=ch*0.56*local_ratio;
+    cw=min(ch*0.56,max(rib*2.8,cell_size*0.8/mesh_density))*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
     // Side/bottom clipping is supported; every roof apex remains below the top frame.
     if(cw>rib*2) intersection() {
@@ -136,7 +136,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  r = max(rib*5.8,min(cell_size,floor_cell_size*1.1)*0.58/mesh_density);
+  r = max(rib*4.6,cell_size*0.55/mesh_density);
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
   frame = max(wall,rib*1.3);
@@ -158,7 +158,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
-      cell_r = radius>0 || bend_radius>0 ? 0 : min(local_rib*0.8,r*0.24);
+      cell_r = radius>0 || bend_radius>0 || r<rib*5.5 ? 0 : min(local_rib*0.8,r*0.24);
       if(!hook_zone) {
         if(cell_r>0) offset(r=cell_r,$fn=6) offset(delta=-local_rib/2-cell_r)
           polygon([
