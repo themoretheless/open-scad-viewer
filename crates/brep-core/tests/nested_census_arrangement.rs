@@ -296,7 +296,7 @@ fn run(with_holes: bool, mirrored: bool) {
                 "Original rational holes cannot be dropped during root-only sewing"
             );
         } else {
-            let sewn = sewn.unwrap();
+            let sewn = Arc::new(sewn.unwrap());
             assert!(sewn.boundary_embedded());
             assert!(!sewn.material_admitted());
             assert_eq!(sewn.genus(), genus);
@@ -323,8 +323,81 @@ fn run(with_holes: bool, mirrored: bool) {
                 assert_eq!(uses.len(), 2);
                 assert_ne!(uses[0], uses[1]);
             }
+            let limits = mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 4096,
+                ..Default::default()
+            };
+            let admission = sewn.admit_material(limits).unwrap();
+            eprintln!(
+                "paired volume genus={genus} mirror={mirrored}: {:?}",
+                admission.report()
+            );
+            assert!(
+                admission.report().accuracy_proven,
+                "{:?}",
+                admission.report()
+            );
+            let solid = admission
+                .into_solid()
+                .expect("Complete signed volume must admit bounded material");
+            let a = 0.3125_f64.powi(2);
+            let b = 0.15625_f64.powi(2);
+            let expected = if genus == 1 {
+                6. * std::f64::consts::PI * (a - b).powi(3)
+            } else {
+                6. * std::f64::consts::PI * b * b * (3. * a - b)
+            };
+            let volume = solid.volume();
+            assert!(volume[0] > 0. && volume[0] <= expected && expected <= volume[1]);
+            assert!(solid.material_admitted());
+            assert_eq!(solid.genus(), genus);
+            assert_eq!(solid.outward_reversed(), genus == 0);
+            assert_eq!(
+                solid.model().topology().shells[0].faces[0].reversed,
+                genus == 0
+            );
+            let denied = sewn
+                .admit_material(mixed::RootBoundaryVolumeLimits {
+                    band_queries: 0,
+                    ..limits
+                })
+                .unwrap();
+            assert!(denied.solid().is_none());
+            assert!(denied.report().signed_bounds.is_none());
             if genus == 1 {
-                sewn.reverify().unwrap();
+                let low = |cells| {
+                    sewn.admit_material(mixed::RootBoundaryVolumeLimits {
+                        cells,
+                        arc_subdivisions: 1,
+                        winding_queries: 0,
+                        ..limits
+                    })
+                    .unwrap()
+                };
+                let before = low(2);
+                let partial = low(3);
+                assert!(before.solid().is_none() && partial.solid().is_none());
+                assert_eq!(
+                    before.report().signed_bounds,
+                    partial.report().signed_bounds,
+                    "Failed sibling must preserve the complete parent sum"
+                );
+                let b = partial.report().signed_bounds.unwrap();
+                assert!(b[0] <= expected && expected <= b[1]);
+                assert_eq!(partial.report().cells, 3);
+                assert!(!partial.report().accuracy_proven);
+                solid.reverify().unwrap();
+                if !mirrored {
+                    let default = sewn.volume_bounds(Default::default()).unwrap();
+                    eprintln!("paired default volume: {default:?}");
+                    assert!(
+                        default.accuracy_proven,
+                        "Default volume policy must qualify this case: {default:?}"
+                    );
+                    let b = default.signed_bounds.unwrap();
+                    assert!(b[0] <= expected && expected <= b[1]);
+                }
             }
         }
     }

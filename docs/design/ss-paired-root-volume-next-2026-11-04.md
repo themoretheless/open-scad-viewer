@@ -1,6 +1,7 @@
-# Next: independent volume and outward material for paired root boundaries
+# Independent volume and outward material: design and implementation
 
-Proposal only; no volume/material admission is implemented by this document.
+Implemented for paired root-only boundaries; see
+`ss-paired-root-volume-progress-2026-11-04.md` and its frozen native receipt.
 The complete general Boolean goal and its other missing strata remain open.
 
 1. Integrate original `surface_flux` on the two selected face domains, with

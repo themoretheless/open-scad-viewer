@@ -1,0 +1,32 @@
+{
+  "passed": 12,
+  "failed": 0,
+  "qualified_scope": "independent interval flux on paired root-only closed shells; genus zero and one material admission; global outward reversal; original U reflection; full replay; no owner for insufficient work and no dropped failed-parent coverage",
+  "paired_root_material_admitted": true,
+  "independent_output_volume_implemented": true,
+  "default_annulus_bounds": [
+    0.007361217983925333,
+    0.007461213243135177
+  ],
+  "default_annulus_cells": 10690,
+  "default_accuracy": 0.0001,
+  "general_mixed_closed_material_complete": false,
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "general_boolean_complete": false,
+  "bridge_wasm_delivery_complete": false,
+  "sources": {
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume.rs": "9627a9858d0c7023120677dd9c5a74ddfb3b3bf0899cd3d9942e9d4c1bb7f397",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/domain.rs": "d6f24e1b703e6aaed8d956d99baf4599f37e1d528927b4d23b48c7c2d6e7cede",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/material.rs": "b09f1ee45bc413f9b7dd466f8fa0ba1b4ecda5bd0b2bdfd4fe219c255b9766a8",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "cfd54e6093081b7d76340b068ec5cf66517fc9ef45ed71d1f2133b20adfa57e5",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "ece43fd5c69ca37f4217adefc703d4dffe6d62f61e0dcdfbe5053e29d3504d9b",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "668358db8311356b9a58db383f6b2632f8c0a353cf3ca5e76c1f0e1ea60a342c",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "6d34754a16395825a481ab7dde67c356ff3b40ca4988ed321172c1adaa4dd099",
+    "crates/brep-core/src/mixed_root_model.rs": "486ab43c0c44a90532c72e877441abe47adb37adf55593cd9c11b4e431a5adba",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "13c5105472eaa48db3835f4a08310095af80ddceae86ccd75898cc3e84d1a6d3",
+    "docs/design/ss-paired-root-volume-progress-2026-11-04.md": "21b6c3dbfdff81753caacb09eeb23e8ad252671e6a5b3dac736b35a04e5b7b24",
+    "docs/design/ss-paired-root-volume-next-2026-11-04.md": "d3cf7e3ca20287ee16ff95d2907d643d69835e57f5473c7718aa8a6f812f7733",
+    "docs/design/ss-paired-root-boundary-progress-2026-11-04.md": "0114755e5448c34e715213140273e2b7840fcf1119e643dfc5474863c5b270d5"
+  }
+}

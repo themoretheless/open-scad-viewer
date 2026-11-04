@@ -44,3 +44,9 @@ then global outward sign and a separate closed-material owner. The complete
 Boolean still needs all face pairs, rational/root open rim splitting, general
 singular/coincident strata, seams/poles, cavities/nested shells, healing,
 full topology lineage and native bridge/WASM delivery.
+
+Follow-up: `ss-paired-root-volume-progress-2026-11-04.md` implements independent
+retained-domain flux, requested-accuracy checks and the separate immutable
+`QualifiedPairedRootSolid` owner. The original boundary owner remains unoriented
+material-wise; signed output flux determines global reversal for the new solid.
+General mixed/Boolean assembly requirements above remain open.
