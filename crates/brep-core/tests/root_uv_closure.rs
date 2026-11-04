@@ -99,6 +99,10 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     let chord=ss::OriginalSsRootEdge::new(cross(0),cross(1)).unwrap();
     let split=brep_core::root_model::RootFaceChordSplit::split(full.clone(),0,chord.clone(),0,vec![]).unwrap();
     assert_eq!(split.face_children(),[0,1]);assert_eq!(split.inserted_edge(),10);
+    let boundary=brep_core::root_model::QualifiedRootChordBoundary::qualify(split.clone(),Default::default()).unwrap();
+    assert_eq!(boundary.censuses().len(),10);assert!(boundary.entries()>0 && boundary.identity_queries()>0);
+    boundary.reverify().unwrap();
+    assert!(brep_core::root_model::QualifiedRootChordBoundary::qualify(split.clone(),brep_core::root_model::RootChordBoundaryLimits {max_censuses:1,..Default::default()}).is_err());
     let out=split.output();assert_eq!(out.topology().faces.len(),2);assert_eq!(out.topology().edges.len(),11);
     assert_eq!(out.topology().vertices.len(),10);assert_eq!(out.topology().shells[0].faces.len(),2);
     let uses:Vec<_>=out.topology().loops.iter().flat_map(|l|&l.coedges).filter(|c|c.edge==10).collect();
@@ -113,6 +117,10 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     let holes=vec![[0.5,0.5],[0.1953125,0.5]].into_iter().zip([0.1,0.0078125]).map(|(center,scale)| {
         RootFaceContour {wire:fixture::wire_circle_on(ab.source().first().clone(),center,scale),supports:vec![0;8]}
     }).collect();
+    let crossing_hole=RootFaceContour {wire:fixture::wire_circle_on(ab.source().first().clone(),[13./64.,0.5],0.1),supports:vec![0;8]};
+    let crossing=Arc::new(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:full_wire.clone(),supports:vec![0;10]},vec![crossing_hole],1e-7).unwrap());
+    let crossing=S::split(crossing,0,chord.clone(),0,vec![false]).unwrap();
+    assert!(brep_core::root_model::QualifiedRootChordBoundary::qualify(crossing,Default::default()).is_err());
     let with_holes=Arc::new(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:full_wire,supports:vec![0;10]},holes,1e-7).unwrap());
     let candidate_split=S::split(with_holes,0,chord.clone(),0,vec![false,false]).unwrap();
     let routed=H::qualify(candidate_split.clone(),Default::default()).unwrap();

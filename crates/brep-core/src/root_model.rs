@@ -248,3 +248,6 @@ pub use face_split::RootFaceChordSplit;
 
 mod hole_assignment;
 pub use hole_assignment::{RootHoleAssignmentLimits,QualifiedRootHoleAssignment};
+
+mod chord_boundary;
+pub use chord_boundary::{RootChordBoundaryLimits,QualifiedRootChordBoundary};

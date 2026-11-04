@@ -1,0 +1,10 @@
+{
+  "passed": 8,
+  "tests": [
+    "root_uv_closure",
+    "root_model"
+  ],
+  "complete_boundary_census_for_supported_graphs": true,
+  "general_trim_complete": false,
+  "negative_crossing_hole": "refused; unresolved lift also allowed"
+}
