@@ -89,4 +89,20 @@ describe('box generator', () => {
       expect(diagnostics.nonManifold).toBe(0)
     }
   }, 120000)
+  it('supports adjustable stress_gradient and mesh_density while preserving manifold topology', async () => {
+    const request={quality:'full',purpose:'analysis'} as const
+    const uniform=await engine.buildSource(generateBox({...BOX_DEFAULTS,hooks:false,stress_gradient:0,mesh_density:0.8}),request)
+    const graded=await engine.buildSource(generateBox({...BOX_DEFAULTS,hooks:false,stress_gradient:1.6,mesh_density:1.3}),request)
+    expect(Math.abs(uniform.result.volume-graded.result.volume)).toBeGreaterThan(20)
+    for(const res of [uniform.result,graded.result]) {
+      expect(res.meshes.length).toBe(1)
+      for(const mesh of res.meshes) {
+        const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
+        expect(diagnostics.boundary).toBe(0)
+        expect(diagnostics.nonManifold).toBe(0)
+      }
+    }
+    expect(()=>generateBox({...BOX_DEFAULTS,mesh_density:2,cell_size:15,rib:2.4})).toThrow(/плотности|Effective/)
+    expect(()=>generateBox({...BOX_DEFAULTS,stress_gradient:3})).toThrow()
+  }, 120000)
 })

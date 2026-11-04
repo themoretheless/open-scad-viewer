@@ -3,7 +3,8 @@ import { z } from 'zod/v4'
 export const BOX_DEFAULTS = {
   width: 120, depth: 75, height: 80, wall: 3, floor: 4,
   bend_radius: 0, bend_reverse: false, bend_segments: 24, corner_radius: 0, front_angle: 0,
-  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 40, rib: 2.4, pattern_seed: 1,
+  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 40, rib: 2.4,
+  stress_gradient: 1, mesh_density: 1, pattern_seed: 1,
   hole_diameter: 6, hole_pitch: 16,
   floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
   dividers: 0, drain: false, hooks: true, hook_count: 2,
@@ -18,6 +19,8 @@ const schema = z.object({
   bend_radius: z.number().finite().min(0).max(100000).default(0),
   bend_reverse: z.boolean().default(false), bend_segments: z.number().int().min(4).max(128).default(24),
   organic: z.boolean().default(true), cell_size: dimension.default(40), rib: dimension.default(2.4),
+  stress_gradient: z.number().finite().min(0).max(2).default(1),
+  mesh_density: z.number().finite().min(0.5).max(2).default(1),
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
   pattern_seed: z.number().int().min(0).max(100000).default(1),
   hole_diameter: dimension, hole_pitch: dimension,
@@ -43,9 +46,9 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
     if(p.hook_drop+p.hook_thickness>h || left<p.corner_radius || (p.hook_count>1 && p.hook_width>=step))
       throw Error('Крючки не помещаются или перекрываются: уменьшите размеры, количество или шаг / Hooks do not fit or overlap; adjust their dimensions, count or spacing')
   }
-  if (p.organic && p.porous && p.cell_size < 4*p.rib) throw Error('Размер ячейки должен быть минимум в 4 раза больше перемычки / Cell size must be at least four times the rib width')
-  if(p.floor_mesh && p.floor_cell_size<2*p.floor_rib) throw Error('Размер ячейки дна должен быть минимум вдвое больше перемычки / Floor cell size must be at least twice the rib width')
-  if(p.floor_mesh && p.floor_cell_size>Math.min(w,d)-2*Math.max(t,p.floor_rib*1.5)) throw Error('Ячейка дна не помещается в коробку: уменьшите её размер / Floor cell does not fit; reduce its size')
+  if (p.organic && p.porous && p.cell_size / p.mesh_density < 4*p.rib) throw Error('Размер ячейки с учётом плотности должен быть минимум в 4 раза больше перемычки / Effective cell size must be at least four times the rib width')
+  if(p.floor_mesh && p.floor_cell_size / p.mesh_density < 2*p.floor_rib) throw Error('Размер ячейки дна с учётом плотности должен быть минимум вдвое больше перемычки / Effective floor cell size must be at least twice the rib width')
+  if(p.floor_mesh && p.floor_cell_size / p.mesh_density > Math.min(w,d)-2*Math.max(t,p.floor_rib*1.5)) throw Error('Ячейка дна не помещается в коробку: уменьшите её размер или увеличьте плотность / Floor cell does not fit; reduce its size or increase density')
   const topDepth = d+(h-f)*Math.tan(p.front_angle*Math.PI/180)
   if (topDepth <= 4*t) throw Error('Наклон закрывает коробку: увеличьте глубину или уменьшите угол / Tilt leaves insufficient opening depth')
   if (2*p.corner_radius >= Math.min(w,d,topDepth)) throw Error('Радиус не помещается в габариты коробки / Corner radius does not fit the box dimensions')
@@ -100,7 +103,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   // Side-wall roof motion is radial; front/rear roof motion is circumferential.
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
-    rows=max(1,ceil(usable_h/(cell_size*0.65)));
+    rows=max(1,ceil(usable_h*mesh_density/(cell_size*0.65)));
     ch=usable_h/(0.5875*rows+0.32);
     cw=ch*0.64*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
@@ -117,7 +120,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
         // Moment-graded ribs: thicker near the floor cantilever root, lighter toward the top rim.
         hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - ch*0.48) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+cw*0.46;
         if(!hook_zone)
-          print_cell(2*col+(row%2),row*1.175,cw,ch,frame,z_offset+frame+ch*0.25,rib*(1.12-0.28*row/max(1,rows-1)));
+          print_cell(2*col+(row%2),row*1.175,cw,ch,frame,z_offset+frame+ch*0.25,rib*max(0.45,1+stress_gradient*(0.12-0.28*row/max(1,rows-1))));
       }
     }
   }
@@ -125,14 +128,14 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  r = cell_size/2;
+  r = cell_size/(2*mesh_density);
   frame = max(wall,rib*1.3);
-  rounding = min(rib,cell_size/12);
+  rounding = min(rib,cell_size/(12*mesh_density));
   if(a>2*frame && b-z_offset>2*frame) intersection() {
     offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([max(a,a+b*slope),b-z_offset]); }
     union() for(col=[-1:ceil(max(a,a+b*slope)/(1.5*r))+1]) for(row=[-1:ceil(b/(sqrt(3)*r))+1]) {
       ix=3*col; iy=2*row+(col%2);
-      local_rib=rib*(1.12-0.24*min(1,max(0,(iy*sqrt(3)*r/2-z_offset)/max(1,b-z_offset))));
+      local_rib=rib*max(0.45,1+stress_gradient*(0.12-0.24*min(1,max(0,(iy*sqrt(3)*r/2-z_offset)/max(1,b-z_offset)))));
       offset(r=rounding) offset(delta=-rounding-local_rib/2)
         polygon([
           [(ix+(2))*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
@@ -184,7 +187,7 @@ module footprint() {
 }
 module floor_pores() {
   frame=max(wall,floor_rib*1.25);
-  r=floor_cell_size*0.58;
+  r=floor_cell_size*0.58/mesh_density;
   ox=width/2; oy=depth/2;
   nc=ceil((width-2*frame)/(3*r))+1;
   nr=ceil((depth-2*frame)/(sqrt(3)*r))+1;
@@ -194,7 +197,7 @@ module floor_pores() {
       union() for(col=[-nc:nc]) for(row=[-nr:nr]) {
         ix=3*col; iy=2*row+(abs(col)%2);
         // Plate-stress grading: thicker ribs near the perimeter root, lighter in the center span.
-        local_floor_rib=floor_rib*(0.82+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*r)/depth)));
+        local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*r)/depth))));
         offset(delta=-local_floor_rib/2)
           polygon([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
