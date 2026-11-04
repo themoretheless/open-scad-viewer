@@ -21,7 +21,7 @@ pub struct QualifiedOriginalSsPort {
     parameter: [Q; 2],
     kind: OriginalSsPortKind,
     limits: OriginalSsCurveLimits,
-    third: Option<(Arc<QualifiedSsThirdSurfacePoint>, [usize; 2])>,
+    third: Option<(Arc<QualifiedSsThirdSurfacePoint>, [usize; 2], [[Q; 2]; 4])>,
 }
 impl QualifiedOriginalSsPort {
     pub fn point(&self) -> &Arc<OriginalSsRootPoint> {
@@ -39,9 +39,27 @@ impl QualifiedOriginalSsPort {
     pub fn kind(&self) -> OriginalSsPortKind {
         self.kind
     }
+    /// Exact normalized target UV enclosure for a sealed triple-surface port.
+    /// These coordinates belong to the target graph, not the global point graph.
+    pub fn third_target_local_uv_bounds(&self) -> Option<&[[Q; 2]; 4]> {
+        self.third.as_ref().map(|(_, _, uv)| uv)
+    }
+    /// Prove identical native UV on a common surface using the same sealed
+    /// triple witness and surface role. World incidence alone is insufficient
+    /// on self-intersecting or periodic surfaces. False means unproved.
+    pub fn same_third_surface_uv(&self, other: &Self, support: usize, other_support: usize) -> Result<bool> {
+        check(support < 2 && other_support < 2, "Invalid triple-port surface support")?;
+        Ok(match (&self.third, &other.third) {
+            (Some((a, ar, _)), Some((b, br, _))) => Arc::ptr_eq(a,b)
+                && ar[support] == br[other_support]
+                && self.point.same_selector(&other.point)
+                && self.phase == [0;4] && other.phase == [0;4],
+            _ => false,
+        })
+    }
     /// Replace an independent endpoint owner only after exact point identity.
     pub fn rebind_equivalent(&self, point: Arc<OriginalSsRootPoint>, limits: SsAlgebraicClockLimits) -> Result<Self> {
-        if let Some((witness, roles)) = &self.third {
+        if let Some((witness, roles, _)) = &self.third {
             check(point.same_selector(witness.point()), "Third-surface port requires its literal global vertex owner")?;
             let mut fresh = bind_original_ss_third_port(witness.clone(), self.target.clone(), *roles, self.limits)?;
             fresh.point = point;
@@ -53,11 +71,12 @@ impl QualifiedOriginalSsPort {
     pub fn reverify(&self) -> Result<()> {
         self.point.reverify()?;
         self.target.reverify()?;
-        if let Some((witness, roles)) = &self.third {
+        if let Some((witness, roles, _)) = &self.third {
             witness.reverify()?;
             let fresh = bind_original_ss_third_port(witness.clone(), self.target.clone(), *roles, self.limits)?;
             return check(self.point.same_selector(witness.point()) && self.parameter == fresh.parameter
-                && self.kind == fresh.kind && self.phase == [0;4], "Third-surface port proof changed");
+                && self.kind == fresh.kind && self.phase == [0;4]
+                && self.third_target_local_uv_bounds() == fresh.third_target_local_uv_bounds(), "Third-surface port proof changed");
         }
         let fresh = bind_original_ss_port(
             self.point.clone(),

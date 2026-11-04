@@ -53,5 +53,5 @@ pub fn bind_original_ss_third_port(
     let parameter = local[target.free_axis().index()].clone();
     Ok(QualifiedOriginalSsPort { point:witness.point().clone(), target,
         phase:[0;4], parameter, kind:OriginalSsPortKind::OriginalThirdSurface,
-        limits, third:Some((witness,roles)) })
+        limits, third:Some((witness,roles,local)) })
 }

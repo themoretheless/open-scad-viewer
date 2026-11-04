@@ -90,6 +90,7 @@ fn triple_vertex_binds_other_ordered_pairs_without_replacing_its_clock() {
         assert!(Arc::ptr_eq(port.point(),&selected)); assert!(Arc::ptr_eq(port.target(),&target));
         assert_eq!(port.kind(),ss::OriginalSsPortKind::OriginalThirdSurface);
         assert_eq!(port.parameter_bounds(),&witness.local_bounds()[3]);
+        assert_eq!(port.third_target_local_uv_bounds().unwrap()[if roles[0]==2 {0} else {1}],*port.parameter_bounds());
         port.reverify().unwrap();
         let policy=Arc::new(selected.with_query_policy(Default::default()).unwrap());
         assert!(port.rebind_equivalent(policy,Default::default()).is_ok());
@@ -98,4 +99,22 @@ fn triple_vertex_binds_other_ordered_pairs_without_replacing_its_clock() {
             projection:ss::ExactSsAlgebraLimits {max_work:1,..Default::default()},..Default::default()
         }).is_err());
     }
+}
+
+#[test]
+fn common_surface_uv_identity_uses_witness_roles_not_world_incidence() {
+    let wire=circle::wire();let curve=wire.edges()[2].curve().clone();
+    let source=candidate(&curve,&sheet(257./1024.,0.));let selected=point(curve,&source);
+    let witness=Arc::new(ss::QualifiedSsThirdSurfacePoint::qualify(source.clone(),selected.clone(),Default::default()).unwrap());
+    let ac=ss::bind_original_ss_third_port(witness.clone(),target_pair(&witness,[0,2]),[0,2],Default::default()).unwrap();
+    let cb=ss::bind_original_ss_third_port(witness.clone(),target_pair(&witness,[2,1]),[2,1],Default::default()).unwrap();
+    assert!(ac.same_third_surface_uv(&cb,1,0).unwrap());
+    assert!(!ac.same_third_surface_uv(&cb,0,1).unwrap());
+    assert!(ac.same_third_surface_uv(&cb,2,0).is_err());
+    let independent=Arc::new(ss::QualifiedSsThirdSurfacePoint::qualify(source,selected,Default::default()).unwrap());
+    let other=ss::bind_original_ss_third_port(independent.clone(),target_pair(&independent,[2,1]),[2,1],Default::default()).unwrap();
+    assert!(!ac.same_third_surface_uv(&other,1,0).unwrap());
+    // Its global AB UV slots differ from its target AC UV slots.
+    assert_eq!(ac.third_target_local_uv_bounds().unwrap()[3],[q(1,2),q(1,2)]);
+    assert_ne!(ac.third_target_local_uv_bounds().unwrap()[3],witness.local_bounds()[3]);
 }
