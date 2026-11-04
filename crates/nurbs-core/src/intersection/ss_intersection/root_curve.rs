@@ -145,6 +145,9 @@ impl OriginalSsRootCurve {
     ) -> Result<OriginalSsCurveBounds> {
         query::enclose(self, parameter, limits)
     }
+    pub(crate) fn original_deflated_span_ideal(&self)->Option<&QualifiedOriginalSsIdeal> {
+        match &self.carrier {Carrier::Deflated(f)=>Some(f.source().original().original()),_=>None}
+    }
     /// Necessary candidate clock constraints from a third original surface.
     /// This does not certify bounded third-UV membership or a trim vertex.
     pub fn third_surface_candidates(&self, third:&Surface, spans:[usize;2], limits:ExactSsGroebnerLimits)->Result<QualifiedSsThirdSurfaceCandidates> {

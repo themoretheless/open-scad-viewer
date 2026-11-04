@@ -39,3 +39,7 @@ candidate constraints produce both expected roots or a proved empty list.
 Next work remains finite third-UV/face membership and cross-source junctions,
 complete geometric arrangements and winding, full trim/material/Boolean/healing,
 lineage/history, bridge/WASM execution and the wider quad/offset/fillet/G2 scope.
+
+Follow-up: supported rational-univariate lifts can now prove real bounded
+third-span membership; see `ss-finite-third-span-membership-2026-11-04.md`.
+This does not supply arbitrary algebraic UV extensions or trimmed-face holes.

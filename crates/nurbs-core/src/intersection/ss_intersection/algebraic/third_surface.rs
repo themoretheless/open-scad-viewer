@@ -10,6 +10,8 @@ pub struct QualifiedSsThirdSurfaceCandidates {
     limits:ExactSsGroebnerLimits,
     polynomial:Vec<Q>,
     work:usize,
+    basis:Vec<P<7>>,
+    equations:Vec<P<7>>,
 }
 impl QualifiedSsThirdSurfaceCandidates {
     pub fn original(&self)->&QualifiedOriginalSsIdeal {&self.original}
@@ -30,7 +32,7 @@ impl QualifiedSsThirdSurfaceCandidates {
     pub fn reverify(&self)->Result<()> {
         self.original.reverify()?;
         let fresh=qualify_ss_third_surface_candidates(&self.original,&self.third,self.third_spans,self.axis,self.limits)?;
-        check(self.polynomial==fresh.polynomial && self.work==fresh.work,"Original triple-surface candidate constraint changed")
+        check(self.polynomial==fresh.polynomial && self.work==fresh.work && self.basis==fresh.basis && self.equations==fresh.equations,"Original triple-surface candidate constraint changed")
     }
 }
 fn lift(p:&ExactSsPolynomial,third:bool,w:&mut Work)->Result<P<7>> {
@@ -77,5 +79,9 @@ pub fn qualify_ss_third_surface_candidates(original:&QualifiedOriginalSsIdeal,th
     let mut polynomial=vec![Q::zero();degree+1];
     for (e,c) in &candidate.terms {polynomial[e[axis]]=c.clone();}
     let work=w.used.checked_add(third_ideal.work()).ok_or_else(||crate::resource("Triple-surface work overflow"))?;
-    Ok(QualifiedSsThirdSurfaceCandidates {original:original.clone(),third:third.clone(),third_spans,axis,limits,polynomial,work})
+    equations.truncate(6);
+    Ok(QualifiedSsThirdSurfaceCandidates {basis,equations,original:original.clone(),third:third.clone(),third_spans,axis,limits,polynomial,work})
 }
+
+mod membership;
+pub use membership::{SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint};
