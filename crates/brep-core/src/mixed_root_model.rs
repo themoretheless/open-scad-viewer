@@ -169,6 +169,7 @@ impl MixedBrep {
 }
 mod closed_cut;
 pub use closed_cut::{
+    InteriorLoopLimits, QualifiedInteriorSsLoop, qualify_paired_interior_loop,
     ClosedCutCandidate, ClosedCutLimits, CutMaterialLimits, CutRectangleLimits, CutRectangleReport,
     QualifiedCutMaterialRectangle, split_closed_contour_candidate,
 };

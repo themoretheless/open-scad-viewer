@@ -1,7 +1,9 @@
 # Next: source-qualified Jordan loops and complete branch ownership
 
-Design proposal only. It is NOT implementation or qualification evidence.
-Start after native whole-cell material (`ss-cut-region-material-progress`).
+Original design proposal. Regular affine interior joint and paired-face Jordan
+admission is now implemented; see `ss-interior-jordan-progress-2026-11-04.md`
+and its native qualification receipt. General knot unions, all physical branch
+ownership, singular/coincident strata and mixed-solid admission below remain open.
 
 ## Proposed sufficient admission for interior affine root graphs
 

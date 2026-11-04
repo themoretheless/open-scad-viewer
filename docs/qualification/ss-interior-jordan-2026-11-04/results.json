@@ -1,0 +1,16 @@
+{
+  "passed": 8,
+  "failed": 0,
+  "scope": "paired affine interior Jordan loop and mixed trim/root storage regressions",
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "mixed_solid_admitted": false,
+  "general_boolean_complete": false,
+  "sources": {
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "5268be32c8e3b79da3b8feeabd67625ef0b5a94adf84f312fcf195d539b5f645",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "afc21ec20d039d79ff69042c85734fd929f1cf5560be2de11f2f3a84c155a68c",
+    "crates/brep-core/src/mixed_root_model.rs": "b5d4acc09596d0d597282d8b081a1211bfa222f3d8497f119da899b19314c6f9",
+    "crates/brep-core/tests/mixed_cut_regions.rs": "7cf11bc227f0891a1e90960df191b4df965a833c578c97b57d40da9e952e5173",
+    "docs/design/ss-interior-jordan-progress-2026-11-04.md": "ba7af8027147b489f04b10385f25959603e21c042742f473d09f3362d9b8ab1d"
+  }
+}

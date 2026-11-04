@@ -322,3 +322,6 @@ mod classification;
 pub use classification::{CutRectangleLimits, CutRectangleReport};
 mod material;
 pub use material::{CutMaterialLimits, QualifiedCutMaterialRectangle};
+
+mod jordan;
+pub use jordan::{InteriorLoopLimits, QualifiedInteriorSsLoop, qualify_paired_interior_loop};

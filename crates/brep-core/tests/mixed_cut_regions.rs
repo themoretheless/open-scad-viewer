@@ -151,6 +151,15 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
         "Original curved input lacks complete continuous material admission"
     );
     let b = admission.into_solid().unwrap();
+    let jordan = mixed::qualify_paired_interior_loop(&a,1,&b,1,&wire,[[0.5;2];2],Default::default()).unwrap();
+    assert_eq!(jordan.joints().len(), wire.edges().len());
+    assert!(!jordan.cuts()[0].geometry_admitted());
+    jordan.reverify().unwrap();
+    let doubled = ss::OriginalSsRootWire::new(wire.edges().iter().chain(wire.edges()).cloned().collect()).unwrap();
+    assert!(mixed::qualify_paired_interior_loop(&a,1,&b,1,&doubled,[[0.5;2];2],Default::default()).is_err());
+
+    assert!(mixed::qualify_paired_interior_loop(&a,0,&b,1,&wire,[[0.5;2];2],Default::default()).is_err());
+
     let cut = mixed::split_closed_contour_candidate(&a, 1, &wire, 0, [0.5; 2], Default::default())
         .unwrap();
     let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
