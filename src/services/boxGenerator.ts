@@ -82,20 +82,20 @@ roof_ratio = sqrt(max(0,tan(overhang_angle)*tan(overhang_angle)-slope*slope))/pr
 module print_cell(ix,iy,cw,ch,ox,oy,rib_width=rib) {
   // Exact shared-vertex trivalent Voronoi/honeycomb lattice (iy = 3*row):
   // Every adjacent cell shares identical (ix, jy) node coordinates so ribs are 100% continuous with zero gaps,
-  // while multi-frequency Voronoi perturbation makes every cell organically distinct.
+  // while independent 2D Voronoi perturbation makes every wall cell an irregular 6-sided polygon like the floor lattice.
   offset(delta=-rib_width/2) polygon([
-    [ox+ix*cw/2+((sin(ix*127.1+(iy+2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(iy+2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(1.28*floor((iy+2)/3)+((iy+2)-3*floor((iy+2)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin(ix*269.5+(iy+2)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*269.5+(iy+2)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.032],
-    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(1.28*floor((iy+1)/3)+((iy+1)-3*floor((iy+1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix+1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.032],
-    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(1.28*floor((iy-1)/3)+((iy-1)-3*floor((iy-1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix+1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.032],
-    [ox+ix*cw/2+((sin(ix*127.1+(iy-2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(iy-2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(1.28*floor((iy-2)/3)+((iy-2)-3*floor((iy-2)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin(ix*269.5+(iy-2)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*269.5+(iy-2)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.032],
-    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(1.28*floor((iy-1)/3)+((iy-1)-3*floor((iy-1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix-1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.032],
-    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(1.28*floor((iy+1)/3)+((iy+1)-3*floor((iy+1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix-1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.032]
+    [ox+ix*cw/2+((sin(ix*127.1+(iy+2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(iy+2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.17,
+      oy+(1.29*floor((iy+2)/3)+((iy+2)-3*floor((iy+2)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin(ix*269.5+(iy+2)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*269.5+(iy+2)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.17,
+      oy+(1.29*floor((iy+1)/3)+((iy+1)-3*floor((iy+1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix+1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.045],
+    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.17,
+      oy+(1.29*floor((iy-1)/3)+((iy-1)-3*floor((iy-1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix+1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+ix*cw/2+((sin(ix*127.1+(iy-2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(iy-2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.17,
+      oy+(1.29*floor((iy-2)/3)+((iy-2)-3*floor((iy-2)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin(ix*269.5+(iy-2)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*269.5+(iy-2)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.045],
+    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.17,
+      oy+(1.29*floor((iy-1)/3)+((iy-1)-3*floor((iy-1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix-1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*269.5+(iy-1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.17,
+      oy+(1.29*floor((iy+1)/3)+((iy+1)-3*floor((iy+1)/3)>1.5 ? 1 : 0.16))*ch*0.42+((sin((ix-1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*269.5+(iy+1)*183.3+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.045]
   ]);
 }
 module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
@@ -106,8 +106,8 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
     rows=max(1,ceil(usable_h*mesh_density/(cell_size*0.65)));
-    ch=usable_h/(0.538*rows+0.28);
-    cw=ch*0.58*local_ratio;
+    ch=usable_h/(0.542*rows+0.28);
+    cw=ch*0.56*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
     // Side/bottom clipping is supported; every roof apex remains below the top frame.
     if(cw>rib*2) intersection() {
@@ -115,7 +115,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
       translate([0,z_offset+frame]) square([max(a,a+b*slope),b-z_offset-frame]);
       union() for(row=[0:rows-1]) for(col=[-1:cols]) {
         cx=frame+(2*col+(row%2))*cw/2;
-        cy=z_offset+frame+(1.28*row+0.5)*ch*0.42;
+        cy=z_offset+frame+(1.29*row+0.5)*ch*0.42;
         first_hook=(width-hook_step*(hook_count-1))/2-radius;
         nearest=max(0,min(hook_count-1,floor((cx-first_hook)/hook_step+0.5)));
         // Local load-bearing pad under hooks: open below the hook anchor zone to save weight.
