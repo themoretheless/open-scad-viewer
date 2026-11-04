@@ -2,6 +2,9 @@ use brep_core::{closed_solid as solid, mixed_root_model as mixed};
 use nurbs_core::{ss_intersection as ss, trim_domain::Location};
 #[path = "../../nurbs-core/tests/support/ss_root_circle.rs"]
 mod fixture;
+#[allow(dead_code)]
+#[path = "../../nurbs-core/tests/support/ss_closed_fiber.rs"]
+mod atlas_fixture;
 #[path = "support/closed_solid_policy.rs"]
 mod policy;
 fn source() -> solid::QualifiedClosedSolid {
@@ -155,6 +158,42 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     assert_eq!(jordan.joints().len(), wire.edges().len());
     assert!(!jordan.cuts()[0].geometry_admitted());
     jordan.reverify().unwrap();
+    let jordan = std::sync::Arc::new(jordan);
+    let charts: Vec<_> = atlas_fixture::family(wire.edges()[0].curve().source(), &[([0.5;2],[0.3125;2])]).into_iter().map(|c| {
+        let r = c.source().certify_quotient(c.domain(), c.free_axis(), Default::default()).unwrap();
+        let report = r.report().clone();
+        r.into_fiber().unwrap_or_else(|| panic!("census graph: {report:?}"))
+    }).collect();
+    let r = ss::cover_quotient_fiber_surfaces(&charts, Default::default()).unwrap();
+    let report = r.report().clone();
+    let coverage = r.into_coverage().unwrap_or_else(|| panic!("census coverage: {report:?}"));
+    let axis_index = |axis| match axis {ss::FiberAxis::FirstU=>0,ss::FiberAxis::FirstV=>1,ss::FiberAxis::SecondU=>2,ss::FiberAxis::SecondV=>3};
+    let anchors: Vec<_> = charts.iter().map(|c| {
+        let d = c.domain()[axis_index(c.free_axis())];
+        let parameter=(d[0]+d[1])*0.5;
+        let point=std::sync::Arc::new(ss::OriginalSsRootPoint::new(std::sync::Arc::new(ss::OriginalSsRootCurve::from_quotient(c.clone())),parameter).unwrap());
+        let edge=wire.edges().iter().position(|edge| {
+            let Ok(port)=ss::bind_original_ss_port(point.clone(),edge.curve().clone(),[0;4],Default::default()) else {return false;};
+            let p=port.parameter_bounds();
+            let (a,b)=if edge.forward() {(edge.start().parameter_bounds(),edge.end().parameter_bounds())} else {(edge.end().parameter_bounds(),edge.start().parameter_bounds())};
+            a[1]<p[0] && p[1]<b[0]
+        }).expect("No exact root anchor on the supplied wire");
+        mixed::InteriorCensusAnchor {component:0,edge,parameter,phase:[0;4]}
+    }).collect();
+    let partial=ss::cover_quotient_fiber_box(&charts,[[0.45,0.55];4],Default::default()).unwrap().into_coverage().unwrap();
+    assert!(!partial.covers_entire_surfaces());
+    assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()],partial,&anchors,Default::default()).is_err());
+    let mut wrong_edge=anchors.clone(); wrong_edge[0].edge=(wrong_edge[0].edge+4)%wire.edges().len();
+    assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()],coverage.clone(),&wrong_edge,Default::default()).is_err());
+    let census = mixed::qualify_interior_ss_census(vec![jordan.clone()], coverage.clone(), &anchors, Default::default()).unwrap();
+    assert_eq!(census.components().len(),1);
+    census.reverify().unwrap();
+    assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()], coverage.clone(), &anchors[1..], Default::default()).is_err());
+    let mut forged=anchors.clone(); forged[0].parameter=-1.;
+    assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()], coverage.clone(), &forged, Default::default()).is_err());
+    assert!(mixed::qualify_interior_ss_census(vec![jordan.clone(),jordan.clone()], coverage, &anchors,
+        mixed::InteriorCensusLimits {separation_queries:8,..Default::default()}).is_err());
+
     let doubled = ss::OriginalSsRootWire::new(wire.edges().iter().chain(wire.edges()).cloned().collect()).unwrap();
     assert!(mixed::qualify_paired_interior_loop(&a,1,&b,1,&doubled,[[0.5;2];2],Default::default()).is_err());
 

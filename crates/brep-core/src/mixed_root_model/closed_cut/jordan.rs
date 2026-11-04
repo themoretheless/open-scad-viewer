@@ -150,3 +150,6 @@ pub fn qualify_paired_interior_loop(
         limits,
     })
 }
+
+mod census;
+pub use census::{InteriorCensusAnchor, InteriorCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census};

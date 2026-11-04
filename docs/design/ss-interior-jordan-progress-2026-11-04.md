@@ -42,7 +42,11 @@ all branch ownership, open-rim arrangements, connected region material choices,
 sewing/healing and fresh mixed-solid contact/volume admission remain necessary
 before general Boolean completion. Bridge/WASM delivery remains in scope.
 
-## Next complete-census ownership gate
+## Complete-census ownership gate
+
+Implemented in `ss-interior-census-progress-2026-11-04.md`; positive evidence
+currently covers one full closed component and negative duplicate ownership.
+Multiple distinct components and all general singular strata remain unqualified.
 
 Consume a native complete original-parameter coverage certificate rather than
 assuming supplied wires exhaust the zero set. Every source-equivalent connected

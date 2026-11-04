@@ -324,4 +324,4 @@ mod material;
 pub use material::{CutMaterialLimits, QualifiedCutMaterialRectangle};
 
 mod jordan;
-pub use jordan::{InteriorLoopLimits, QualifiedInteriorSsLoop, qualify_paired_interior_loop};
+pub use jordan::{InteriorCensusAnchor, InteriorCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census,InteriorLoopLimits, QualifiedInteriorSsLoop, qualify_paired_interior_loop};
