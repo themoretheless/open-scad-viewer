@@ -65,3 +65,7 @@ logs are in `docs/qualification/ss-algebraic-clock-2026-11-04/`. Architecture
 remains at 54 pinned oversized files, zero layer violations and 799 facade
 lines. This qualifies the primitives and old-path compatibility, not general
 algebraic-vertex BRep/trim admission.
+
+Follow-up: common selector/port/wire and BRep integration is now implemented;
+see `ss-common-algebraic-vertices-progress-2026-11-04.md`. The frozen
+qualification above records the earlier primitive-only state.

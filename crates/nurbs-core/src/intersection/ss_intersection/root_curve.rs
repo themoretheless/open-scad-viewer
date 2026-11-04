@@ -152,35 +152,8 @@ impl OriginalSsRootCurve {
         }
     }
 }
-/// One exact root selector, shared by identity across incident source edges.
-/// An enclosure midpoint is never substituted for this vertex definition.
-#[derive(Clone, Debug)]
-pub struct OriginalSsRootPoint {
-    curve: Arc<OriginalSsRootCurve>,
-    parameter: f64,
-}
-impl OriginalSsRootPoint {
-    pub fn new(curve: Arc<OriginalSsRootCurve>, parameter: f64) -> Result<Self> {
-        let d = curve.parameter_domain();
-        check(
-            parameter.is_finite() && d[0] <= parameter && parameter <= d[1],
-            "Original SS vertex selector leaves its owned root graph",
-        )?;
-        Ok(Self { curve, parameter })
-    }
-    pub fn curve(&self) -> &Arc<OriginalSsRootCurve> {
-        &self.curve
-    }
-    pub fn parameter(&self) -> f64 {
-        self.parameter
-    }
-    pub fn same_selector(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.curve, &other.curve) && self.parameter == other.parameter
-    }
-    pub fn enclose(&self, limits: OriginalSsCurveLimits) -> Result<OriginalSsCurveBounds> {
-        self.curve.enclose([self.parameter; 2], limits)
-    }
-}
+mod point;
+pub use point::OriginalSsRootPoint;
 
 mod port;
 pub use port::{OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_port};

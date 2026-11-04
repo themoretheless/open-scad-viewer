@@ -1,0 +1,15 @@
+{
+  "distinct_tests_passed": 19,
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "80e895cf98edf353154ebb3346994130579eeecafd088e3746a748d2ffdefcdd",
+    "crates/brep-core/src/root_model.rs": "c72fed6f1d701cabee16c716907fab3cdf1d4e9fcd205a98915da112df26175c",
+    "crates/brep-core/tests/root_model.rs": "1bfec353bda2450cde6959076e2a73244bd667e450068a2ddc6884bef12878e3",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "6c9e1d22a5c5b2416486513555b8ce1406edb54a15a904e2bb40d106f17c1fa8",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "e017106177db9182721faff49feff765f2f215905f0cc2ecc692ad2ea61ee2be",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "49851563e57a1995641f2643007a3efc7b7b5e31a04a9a32354710c9b2bc35a9",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port/membership.rs": "6243c300b8ed97357b85c015d5456315659f17903b804388b46ff9f3eeed7364",
+    "crates/nurbs-core/tests/ss_algebraic_clock.rs": "56ce36b9943499159364b480489e561f69ad818edbda0a0785ad2d9b5916a35d"
+  },
+  "scope": "Common algebraic SS selectors, ports, wires and RootBrep storage/replay; not complete trim/material/Boolean",
+  "remaining": "See docs/design/ss-common-algebraic-vertices-progress-2026-11-04.md"
+}

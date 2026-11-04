@@ -9,8 +9,7 @@ pub(super) fn bind(
     limits: OriginalSsCurveLimits,
 ) -> Result<[Q; 2]> {
     let bounds = point.enclose(limits)?;
-    let exact = q(point.parameter)?;
-    bind_bounds(&point.curve, &bounds, [exact.clone(), exact], target, phase)
+    bind_bounds(&point.curve, &bounds, point.clock_bounds()?, target, phase)
 }
 pub(crate) fn bind_bounds(
     source: &OriginalSsRootCurve,

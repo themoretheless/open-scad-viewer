@@ -88,7 +88,7 @@ impl MixedBrep {
             MixedVertex::Rational(p) if !p.iter().all(|x| x.is_finite()) => {
                 Err(unproved("Nonfinite original vertex"))
             }
-            MixedVertex::Root(p) if !p.parameter().is_finite() => {
+            MixedVertex::Root(p) if p.validate_selector().is_err() => {
                 Err(unproved("Nonfinite root selector"))
             }
             _ => Ok(()),

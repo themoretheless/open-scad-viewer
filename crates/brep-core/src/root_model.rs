@@ -30,11 +30,7 @@ impl RootBrep {
     }
     pub fn from_topology(topology: RootTopology) -> Result<Self> {
         topology.validate_topology_with_vertices(|v| {
-            let d = v.selector.curve().parameter_domain();
-            let t = v.selector.parameter();
-            if !t.is_finite() || t < d[0] || d[1] < t {
-                return Err(unproved("BRep vertex leaves its original root selector"));
-            }
+            v.selector.validate_selector().map_err(|_| unproved("BRep vertex leaves its original root selector"))?;
             Ok(())
         })?;
         for edge in &topology.edges {

@@ -246,3 +246,27 @@ fn overlapping_clock_boxes_do_not_authorize_endpoint_order() {
     let y = ss::QualifiedSsAlgebraicPort::bind(b, curve, [0; 4], Default::default()).unwrap();
     assert!(ss::OriginalSsAlgebraicEdge::new(x, y).unwrap().forward());
 }
+#[test]
+fn common_selector_binds_algebraic_clock_to_a_different_axis() {
+    let wire = fixture::wire();
+    let source = wire.edges()[1].curve().clone();
+    let point = ss::OriginalSsAlgebraicPoint::new(source, clock(&[-257.,0.,4096.],[0.25,0.251])).unwrap();
+    assert!(ss::OriginalSsRootPoint::from_algebraic(point.clone(), ss::SsAlgebraicPointLimits {
+        clock:ss::SsAlgebraicClockLimits {max_operations:1,..Default::default()},
+        ..Default::default()
+    }).is_err());
+    let shared = Arc::new(ss::OriginalSsRootPoint::from_algebraic(point.clone(),Default::default()).unwrap());
+    assert!(shared.binary_parameter().is_none());
+    shared.validate_selector().unwrap();
+    let original = point.enclose(Default::default()).unwrap();
+    let bounds = shared.enclose(Default::default()).unwrap();
+    assert_eq!(bounds.uv,original.geometry.uv);
+    assert_eq!(bounds.world,original.geometry.world);
+    assert_eq!(bounds.projection_work,original.geometry.projection_work+original.clock_operations);
+    let port = ss::bind_original_ss_port(shared.clone(),wire.edges()[2].curve().clone(),[0;4],Default::default()).unwrap();
+    assert!(Arc::ptr_eq(port.point(),&shared));
+    assert_eq!(port.kind(),ss::OriginalSsPortKind::OriginalParameterRoot);
+    port.reverify().unwrap();
+    assert!(ss::bind_original_ss_port(shared.clone(),wire.edges()[4].curve().clone(),[0;4],Default::default()).is_err());
+    assert!(ss::bind_original_ss_port(shared,wire.edges()[2].curve().clone(),[1,0,0,0],Default::default()).is_err());
+}

@@ -36,7 +36,7 @@ impl QualifiedOriginalSsPort {
         self.kind
     }
     pub fn reverify(&self) -> Result<()> {
-        self.point.curve.reverify()?;
+        self.point.reverify()?;
         self.target.reverify()?;
         let fresh = bind_original_ss_port(
             self.point.clone(),
@@ -65,10 +65,7 @@ pub fn bind_original_ss_port(
     )?;
     if phase == [0; 4] && point.curve.same_definition(&target)? {
         return Ok(QualifiedOriginalSsPort {
-            parameter: [
-                membership::q(point.parameter)?,
-                membership::q(point.parameter)?,
-            ],
+            parameter: point.clock_bounds()?,
             point,
             target,
             phase,
@@ -77,7 +74,7 @@ pub fn bind_original_ss_port(
         });
     }
     if phase == [0;4] {
-        if let Some(a)=point.curve.node_at(point.parameter) {
+        if let Some(a)=point.binary_parameter().and_then(|t| point.curve.node_at(t)) {
             if let Carrier::Blowup(b)=&target.carrier {
                 if let Some(parameter)=b.node_parameter() {
                     if a.world()==b.source().node().world() {
@@ -92,7 +89,7 @@ pub fn bind_original_ss_port(
         if let (Some((parameter, a)), Some((end, b))) =
             (point.curve.pole_endpoint(), target.pole_endpoint())
         {
-            if point.parameter == parameter && a == b {
+            if point.binary_parameter() == Some(parameter) && a == b {
                 return Ok(QualifiedOriginalSsPort {
                     parameter: [membership::q(end)?, membership::q(end)?],
                     point,
