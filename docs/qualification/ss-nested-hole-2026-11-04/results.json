@@ -1,0 +1,21 @@
+{
+  "passed": 33,
+  "failed": 0,
+  "qualified_scope": "two original nested SS components with three authored through-holes; unique correct hole ownership, void rejection, local subtraction on both supports, exact ray subdivision fallback and native regressions",
+  "multi_contour_original_hole_transfer_positive_qualified": true,
+  "same_candidate_face_can_have_different_local_material": true,
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "whole_region_material_complete": false,
+  "mixed_solid_admitted": false,
+  "general_boolean_complete": false,
+  "sources": {
+    "crates/nurbs-core/src/analysis/ray_surface.rs": "f2af8abb987e1409456594768f8f1d4f5edea6b78010af84ae2b96caaf7e928d",
+    "crates/nurbs-core/src/analysis/ray_surface/tests/mod.rs": "39942a05a09fa6dbdd27bf59024ab889f282e0b41b29689d29ab1fdb2aa5746b",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "ffc40d54b9946e4c5721386db52f287ce882c5fbfd74c959b7519e9f63b51c86",
+    "crates/brep-core/tests/support/nested_graph_body.rs": "708984e66a9b5c16c25ad2b5d4ac7495a4cb1ba4f9d224ee482d4d2f24cecb3e",
+    "docs/design/ss-nested-hole-progress-2026-11-04.md": "d317cef79e8298af98c38acfcbc7845a100d81f3e2a870900cf1e0440af21cfd",
+    "docs/design/ss-census-arrangement-progress-2026-11-04.md": "8bac533ed5a0bce51173b5067d89094031f4e9418fbef71ddf242422a2225232",
+    "docs/design/ss-nested-census-progress-2026-11-04.md": "a3106b02cf06fa716f1e6019f0be121f7fbc9b935217a71e6c7f56a5e4fd671c"
+  }
+}

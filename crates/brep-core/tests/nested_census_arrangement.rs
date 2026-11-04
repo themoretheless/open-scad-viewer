@@ -97,13 +97,64 @@ fn wire(charts: &[ss::QualifiedFiber], radius: f64) -> ss::OriginalSsRootWire {
 }
 #[test]
 fn nested_original_components_build_three_distinct_retained_pieces() {
-    let a = solid::qualify(
-        brep_core::cuboid([0., 0., -10.], [1., 1., 0.]).unwrap(),
-        policy::policy(),
-    )
-    .unwrap()
-    .into_solid()
-    .unwrap();
+    run(false);
+}
+#[test]
+fn nested_components_assign_original_holes_to_exactly_one_piece() {
+    run(true);
+}
+fn operands(
+    with_holes: bool,
+) -> (
+    solid::QualifiedClosedSolid,
+    usize,
+    solid::QualifiedClosedSolid,
+) {
+    let model = if with_holes {
+        let square = |x: f64, y: f64, h: f64| {
+            vec![
+                [x - h, y - h],
+                [x - h, y + h],
+                [x + h, y + h],
+                [x + h, y - h],
+            ]
+        };
+        brep_core::extrude_polygon_with_holes(
+            &[[0., 0.], [1., 0.], [1., 1.], [0., 1.]],
+            &[
+                square(0.5, 0.5, 0.04),
+                square(0.5, 0.725, 0.01),
+                square(0.05, 0.05, 0.02),
+            ],
+            -10.,
+            0.,
+        )
+        .unwrap()
+    } else {
+        brep_core::cuboid([0., 0., -10.], [1., 1., 0.]).unwrap()
+    };
+    let aface = model
+        .faces
+        .iter()
+        .position(|f| {
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 0.)
+        })
+        .unwrap();
+    let a = solid::qualify(model, policy::policy())
+        .unwrap()
+        .into_solid()
+        .unwrap();
+    assert_eq!(
+        a.model().faces[aface].surface.control_points,
+        vec![
+            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+            vec![vec![1., 0., 0.], vec![1., 1., 0.]]
+        ]
+    );
     let mut p = policy::policy();
     p.geometry.boundary.contacts.cells_per_pair = 1024;
     p.geometry.boundary.contacts.domain_cells_per_pair = 10000;
@@ -113,8 +164,13 @@ fn nested_original_components_build_three_distinct_retained_pieces() {
         "Quartic original body must independently qualify"
     );
     let b = admitted.into_solid().unwrap();
+    (a, aface, b)
+}
+fn run(with_holes: bool) {
+    let (a, aface, b) = operands(with_holes);
     let source =
-        ss::FiberSources::new(&a.model().faces[1].surface, &b.model().faces[1].surface).unwrap();
+        ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[1].surface)
+            .unwrap();
     let mut charts = family(&source, 0.3125);
     charts.extend(family(&source, 0.15625));
     let wires = [
@@ -127,7 +183,7 @@ fn nested_original_components_build_three_distinct_retained_pieces() {
             Arc::new(
                 mixed::qualify_paired_interior_loop(
                     &a,
-                    1,
+                    aface,
                     &b,
                     1,
                     wire,
@@ -204,17 +260,66 @@ fn nested_original_components_build_three_distinct_retained_pieces() {
         assert_eq!(arrangement.region_faces().len(), 3);
         assert!(arrangement.face_for_signature(&[false, true]).is_err());
         let topology = arrangement.model().topology();
-        assert_eq!(topology.faces[1].holes.len(), 1);
-        assert_eq!(topology.faces[arrangement.region_faces()[1]].holes.len(), 1);
-        assert!(
-            topology.faces[arrangement.region_faces()[2]]
-                .holes
-                .is_empty()
+        assert_eq!(
+            topology.faces[arrangement.region_faces()[0]].holes.len(),
+            if with_holes && support == 0 { 2 } else { 1 }
         );
+        assert_eq!(
+            topology.faces[arrangement.region_faces()[1]].holes.len(),
+            if with_holes && support == 0 { 2 } else { 1 }
+        );
+        assert_eq!(
+            topology.faces[arrangement.region_faces()[2]].holes.len(),
+            if with_holes && support == 0 { 1 } else { 0 }
+        );
+        if with_holes && support == 0 {
+            for &hole in &a.model().faces[aface].holes {
+                let p = &a.model().loops[hole].coedges[0].pcurve.control_points[0];
+                let radius2 = (p[0] - 0.5).powi(2) + (p[1] - 0.5).powi(2);
+                let expected = if radius2 < 0.15625_f64.powi(2) {
+                    2
+                } else if radius2 < 0.3125_f64.powi(2) {
+                    1
+                } else {
+                    0
+                };
+                assert!(
+                    topology.faces[arrangement.region_faces()[expected]]
+                        .holes
+                        .contains(&hole)
+                );
+                assert_eq!(
+                    arrangement
+                        .region_faces()
+                        .iter()
+                        .filter(|&&face| topology.faces[face].holes.contains(&hole))
+                        .count(),
+                    1
+                );
+            }
+            for point in [[0.5, 0.5], [0.5, 0.725], [0.05, 0.05]] {
+                let rectangle = point.map(|x| [x - 0.001, x + 0.001]);
+                let region = census
+                    .classify_rectangle(0, rectangle, Default::default())
+                    .unwrap();
+                assert_eq!(region.location(), Location::Outside);
+                assert!(region.signature().is_none());
+                assert!(
+                    arrangement
+                        .qualify_boolean_rectangle(
+                            solid::BooleanMaterialOp::Union,
+                            rectangle,
+                            &[[1., 0.317, 0.173]],
+                            Default::default()
+                        )
+                        .is_err()
+                );
+            }
+        }
         for (rectangle, signature) in [
-            ([[0.48, 0.52]; 2], [true, true]),
-            ([[0.48, 0.52], [0.71, 0.73]], [true, false]),
-            ([[0.03, 0.05]; 2], [false, false]),
+            ([[0.49, 0.51], [0.59, 0.61]], [true, true]),
+            ([[0.71, 0.73], [0.49, 0.51]], [true, false]),
+            ([[0.94, 0.96], [0.04, 0.06]], [false, false]),
         ] {
             let region = census
                 .classify_rectangle(support, rectangle, Default::default())
@@ -223,10 +328,31 @@ fn nested_original_components_build_three_distinct_retained_pieces() {
             assert_eq!(region.signature(), Some(signature.as_slice()));
             arrangement.face_for_signature(&signature).unwrap();
         }
+        if with_holes && support == 1 {
+            let void = arrangement
+                .qualify_boolean_rectangle(
+                    solid::BooleanMaterialOp::Difference,
+                    [[0.499, 0.501], [0.724, 0.726]],
+                    &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                    Default::default(),
+                )
+                .unwrap();
+            assert_eq!(
+                void.face(),
+                arrangement.face_for_signature(&[true, false]).unwrap()
+            );
+            assert!(!void.material().boolean_material().retain());
+            assert!(!void.material().boolean_material().reverse_material_normal());
+        }
         for (rectangle, signature, first_keep, second_keep) in [
-            ([[0.499, 0.501]; 2], [true, true], false, false),
-            ([[0.499, 0.501], [0.724, 0.726]], [true, false], true, true),
-            ([[0.049, 0.051]; 2], [false, false], false, false),
+            ([[0.499, 0.501], [0.599, 0.601]], [true, true], false, false),
+            ([[0.724, 0.726], [0.499, 0.501]], [true, false], true, true),
+            (
+                [[0.949, 0.951], [0.049, 0.051]],
+                [false, false],
+                false,
+                false,
+            ),
         ] {
             let proof = arrangement
                 .qualify_boolean_rectangle(
@@ -255,6 +381,67 @@ fn nested_original_components_build_three_distinct_retained_pieces() {
                     .reverse_material_normal(),
                 support == 1 && second_keep
             );
+        }
+    }
+}
+
+#[test]
+fn nested_hole_operands_prove_material_boxes_without_census_shortcuts() {
+    let (a, aface, b) = operands(true);
+    let void = solid::qualify_boolean_face_box(
+        &a,
+        &b,
+        solid::BooleanMaterialOp::Difference,
+        solid::BooleanSourceSide::Second,
+        1,
+        [[0.499, 0.501], [0.724, 0.726]],
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(),
+    )
+    .unwrap();
+    assert!(!void.retain());
+    for (side, face) in [
+        (solid::BooleanSourceSide::First, aface),
+        (solid::BooleanSourceSide::Second, 1),
+    ] {
+        for rectangle in [
+            [[0.499, 0.501], [0.599, 0.601]],
+            [[0.724, 0.726], [0.499, 0.501]],
+            [[0.949, 0.951], [0.049, 0.051]],
+        ] {
+            let result = solid::qualify_boolean_face_box(
+                &a,
+                &b,
+                solid::BooleanMaterialOp::Difference,
+                side,
+                face,
+                rectangle,
+                &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                Default::default(),
+            );
+            if let Err(error) = result {
+                let (source, other) = match side {
+                    solid::BooleanSourceSide::First => (&a, &b),
+                    solid::BooleanSourceSide::Second => (&b, &a),
+                };
+                let point = source.model().faces[face]
+                    .surface
+                    .evaluate(
+                        (rectangle[0][0] + rectangle[0][1]) * 0.5,
+                        (rectangle[1][0] + rectangle[1][1]) * 0.5,
+                    )
+                    .unwrap()
+                    .point;
+                let parity = other
+                    .classify_point(
+                        [point[0], point[1], point[2]],
+                        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+                        100000,
+                        1000000,
+                    )
+                    .unwrap();
+                panic!("side={side:?} rectangle={rectangle:?} error={error:?} parity={parity:?}");
+            }
         }
     }
 }

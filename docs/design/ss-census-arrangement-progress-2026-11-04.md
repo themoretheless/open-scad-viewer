@@ -35,3 +35,10 @@ retain prior single-contour regressions; multi-contour hole ownership needs a
 positive combined case. All-face-pair arrangements, general singular/coincident
 branches, knots/seams/poles, open rim cuts, region-wide material, mixed contact
 admission, sewing/healing, volume and bridge/WASM remain open in the full goal.
+
+Follow-up: `ss-nested-hole-progress-2026-11-04.md` and its native receipt now
+qualify three original holes routed exactly once to the disk, annulus and
+exterior pieces of the two-component arrangement. Hole boxes cannot authorize
+material. An opposite-body through-void gives a different subtraction choice
+within the SAME pair-only candidate face, so region-wide material still needs
+all opposite-face intersection ownership. Historical receipts keep their scope.

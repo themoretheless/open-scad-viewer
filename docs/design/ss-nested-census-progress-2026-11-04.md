@@ -37,3 +37,10 @@ Qualification status and logs are recorded by the frozen receipt.
 General singular/coincident strata, knot unions, seams/poles, open rim cuts,
 all-face-pair arrangement ownership, complete region-wide material, mixed-solid
 sewing/contact/healing/volume admission and bridge/WASM remain in the full goal.
+
+Follow-up: `ss-nested-hole-progress-2026-11-04.md` and its native receipt now
+qualify three original holes routed exactly once to the disk, annulus and
+exterior pieces of the two-component arrangement. Hole boxes cannot authorize
+material. An opposite-body through-void gives a different subtraction choice
+within the SAME pair-only candidate face, so region-wide material still needs
+all opposite-face intersection ownership. Historical receipts keep their scope.
