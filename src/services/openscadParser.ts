@@ -493,6 +493,20 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       }
       return (await childShapes()).map(shape => ({ ...shape, color: [...color] as RGBA }))
     }
+    case 'viewer_bend': {
+      if(isStableProfile(ctx)) evaluationError(ctx,node.p,'viewer_bend is a viewer mesh extension, not standard OpenSCAD')
+      const radius=finiteNumber(arg(node,'radius',0,0,ctx),ctx,node.p,'bend radius')
+      const center=finiteNumber(arg(node,'center',1,0,ctx),ctx,node.p,'bend center')
+      const step=finiteNumber(arg(node,'step',2,5,ctx),ctx,node.p,'bend mesh step')
+      if(radius<=0||step<=0) evaluationError(ctx,node.p,'Bend radius and mesh step must be positive')
+      const reverse=arg(node,'reverse',3,false,ctx)===true
+      const shapes=booleanShapes(await childShapes(),'union',ctx,node.p)
+      if(!ctx.kernel.bend3) evaluationError(ctx,node.p,'Bend is unavailable for this geometry backend')
+      return shapes.map(shape=>{
+        if(shape.dimension!==3) evaluationError(ctx,node.p,'viewer_bend requires a 3D solid')
+        return {...shape,geometry:kernelCall(ctx,node.p,()=>ctx.kernel.bend3!(shape.geometry,radius,center,reverse,step))}
+      })
+    }
     case 'union': return booleanShapes(await childShapes(), 'union', ctx, node.p)
     case 'difference': return await differenceChildren(node, ctx, evalNodes, evalPreparedNodes)
     case 'intersection': return booleanShapes(await childShapes(), 'intersection', ctx, node.p)

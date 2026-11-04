@@ -1,3 +1,4 @@
+import { bendCadMesh } from './geometry/bend'
 import { tessellateBrepGear, type BrepGearSpec } from './geometry/brep'
 import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel, type KernelSolidAnalysis } from './geometry/meshAnalysis'
 import Module, {
@@ -80,6 +81,7 @@ export interface CadKernelOps {
   transform2(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
   transform3(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
   transform3Projective(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
+  bend3?(input: CadKernelHandle, radius: number, center: number, reverse: boolean, step: number): CadKernelHandle
   boolean2(
     operation: 'union' | 'intersection' | 'difference',
     inputs: readonly CadKernelHandle[],
@@ -365,6 +367,10 @@ export function createCadKernelOps(
     },
     transform3Projective(input, matrix) {
       return handle(3, geometry3(input).transformProjective(matrix4(matrix)))
+    },
+    bend3(input,radius,center,reverse,step) {
+      const bent=bendCadMesh(geometry3(input).handle,radius,center,reverse,step)
+      return ops.ofMesh(bent.positions,bent.indices)
     },
     boolean2(operation, inputs) {
       const sections = geometries2(inputs)

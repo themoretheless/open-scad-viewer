@@ -6,5 +6,5 @@ export const OPENSCAD_BUILTIN_MODULE_NAMES = Object.freeze([
   'intersection', 'intersection_for', 'let', 'linear_extrude', 'minkowski',
   'mirror', 'multmatrix', 'offset', 'polygon', 'polyhedron', 'projection',
   'render', 'resize', 'rotate', 'rotate_extrude', 'scale', 'sphere', 'square',
-  'surface', 'text', 'translate', 'union',
+  'surface', 'text', 'translate', 'union', 'viewer_bend',
 ] as const)

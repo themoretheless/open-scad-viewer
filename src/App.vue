@@ -222,12 +222,9 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
-// The source viewport is visible only when the source drawer previews a sweep.
-// Keep its GPU resources separate from the active Solid/Mesh viewport.
+// The source editor and its own model preview share the workspace.
 const sourceViewportVisible = computed(() =>
-  (!directModelerOpen.value && !meshModelerOpen.value && !functionReferenceOpen.value) ||
-  (editorOpen.value && isRushFrontend(code.value) &&
-    (code.value.includes('progressive_sweep') || code.value.includes('miter_sweep'))))
+  !functionReferenceOpen.value && (editorOpen.value || (!directModelerOpen.value && !meshModelerOpen.value)))
 watch(sourceViewportVisible, async visible => {
   if (!visible) {
     destroySourceViewportRenderer()
@@ -1009,6 +1006,8 @@ async function loadExample(id: string) {
 }
 
 async function loadMechanicalModel(source: string, name: string) {
+  groupEdit.value = null
+  editorOpen.value = true
   await loadEditorDocument(source, name)
   await doRender('full')
 }
@@ -1173,7 +1172,7 @@ function handleShellBinding(path: string, value: unknown) {
 </script>
 
 <template>
-  <div class="app" :style="{ '--workspace-top': topbarHeight + 'px' }" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
+  <div class="app" :class="{ 'group-source-open': editorOpen && Boolean(groupEdit) }" :style="{ '--workspace-top': topbarHeight + 'px' }" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
     <nav ref="topbarRef" class="topbar" aria-label="Application" :inert="functionReferenceOpen">
       <FormaRegion :source="topbarUi" :locale="lang" :state="{ workspaceModeGroupLabel: lang === 'ru' ? 'Режим работы' : 'Workspace mode', workspaceMode, modes: WORKSPACE_MODES.map(m => ({ id: m, label: workspaceModeLabel(m, lang), hint: workspaceModeHint(m, lang) })), workspaceConflict, conflictWarning: `⚠ ${t('storageConflict')}`, exportDraftLabel: t('exportDraft'), useIndexedLabel: t('useIndexed'), restoreDraftLabel: t('restoreDraft'), persistenceError: workspacePersistenceStatus === 'error', persistenceErrorTitle: storageFailureDetail || t('retrySave'), unsavedDraftLabel: `⚠ ${t('unsavedDraft')}`, editorOpen, sourceLabel: lang === 'ru' ? 'Исходный код' : 'Source', commandHelp: t('commandHelp'), commandsLabel: t('commands'), exportTitle: t('exportTitle'), exportLabel: t('export') }" @action="handleShellAction">
         <template #fileMenu>
@@ -1194,6 +1193,9 @@ function handleShellBinding(path: string, value: unknown) {
           </details>
           <input ref="fileInputRef" class="sr-only" type="file" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
           <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
+        </template>
+        <template #generators>
+          <button class="btn generators-button" type="button" aria-haspopup="dialog" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
         </template>
         <template #settingsMenu>
           <details class="menu settings-menu">
@@ -1232,7 +1234,7 @@ function handleShellBinding(path: string, value: unknown) {
     <main
       ref="mainRef"
       class="main"
-      :class="{ 'editor-drawer': editorOpen, 'sweep-source-preview': editorOpen && isRushFrontend(code) && (code.includes('progressive_sweep') || code.includes('miter_sweep')) }"
+      :class="{ 'editor-drawer': editorOpen, 'group-source-drawer': Boolean(groupEdit), 'sweep-source-preview': editorOpen && isRushFrontend(code) && (code.includes('progressive_sweep') || code.includes('miter_sweep')) }"
       :inert="!editorOpen && (directModelerOpen || meshModelerOpen || functionReferenceOpen)"
     >
       <section
@@ -1728,9 +1730,8 @@ function handleShellBinding(path: string, value: unknown) {
       @execute="executeCommand"
     />
     <DirectModeler
-      :style="{ top: topbarHeight + 'px' }"
       @backend="solidGpuActive = $event"
-      :open="directModelerOpen"
+      :open="directModelerOpen && (!editorOpen || Boolean(groupEdit))"
       :locale="lang"
       :can-append="!isRushFrontend(code)"
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
@@ -1743,7 +1744,7 @@ function handleShellBinding(path: string, value: unknown) {
       @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }"
     />
     <MeshModeler
-      :open="meshModelerOpen"
+      :open="meshModelerOpen && !editorOpen"
       :locale="lang"
       :seed-document="meshSeedDocument"
       :palette-request="meshPaletteRequest"

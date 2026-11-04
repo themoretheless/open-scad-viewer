@@ -2,7 +2,7 @@
 
 /* Top bar: three quiet zones — file, mode, tools. Nothing else competes with the viewport. */
 .topbar {
-  z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(100px, 1fr) auto auto; align-items: center; gap: 12px;
   padding: 0 8px 0 12px; background: var(--surface); border-bottom: 1px solid var(--hairline); flex-shrink: 0;
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -90,44 +90,32 @@
 /* Layout */
 .no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 13px; padding: 24px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
-/* With no Code workspace the source opens over the active one. The viewport stays
-   laid out off to the side: hiding it would resize its canvas to zero. */
+/* Source and its rendered model share the available workspace. */
 .main.editor-drawer {
   position: fixed;
-  inset: var(--workspace-top, var(--topbar-h)) auto var(--statusbar-h) 0;
+  inset: var(--workspace-top, var(--topbar-h)) 0 var(--statusbar-h) 0;
   z-index: 30;
-  width: min(520px, 82vw);
-  border-right: 1px solid var(--hairline);
-  box-shadow: 0 0 40px #0006;
+  background: var(--bg);
 }
-.main.editor-drawer > .splitter { display: none; }
-.main.editor-drawer > section:not(.editor-panel) {
-  position: absolute;
-  inset: 0 auto 0 100%;
-  width: 60vw;
-  visibility: hidden;
-  pointer-events: none;
-}
-.main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
-.main.editor-drawer.sweep-source-preview { overflow: visible; }
-.main.editor-drawer.sweep-source-preview > .canvas-panel {
-  visibility: visible;
-  pointer-events: auto;
-  width: calc(100vw - min(560px, 82vw));
-  background: var(--canvas-bg);
-}
-
+.main.editor-drawer .editor-panel { width: min(440px, 40vw) !important; max-width: 50%; }
+.main.editor-drawer > .canvas-panel { position: relative; visibility: visible; pointer-events: auto; flex: 1; min-width: 0; }
+.main.editor-drawer.group-source-drawer { width: min(440px, 40vw); right: auto; }
+.main.editor-drawer.group-source-drawer .editor-panel { width: 100% !important; max-width: none; }
+.main.editor-drawer.group-source-drawer > .canvas-panel,
+.main.editor-drawer.group-source-drawer > .splitter { display: none; }
+.app > .direct-workspace { top: var(--workspace-top, var(--topbar-h)); }
+.app.group-source-open > .direct-workspace { left: min(440px, 40vw); }
+.generators-button { white-space: nowrap; border: 1px solid var(--hairline); padding: 5px 10px; }
 @media (max-width: 900px) {
-  .main.editor-drawer.sweep-source-preview { width: 100vw; overflow: hidden; }
-  .main.editor-drawer.sweep-source-preview .editor-panel {
-    height: 45%; min-height: 0; flex: none;
-  }
-  .main.editor-drawer.sweep-source-preview > .canvas-panel {
-    inset: 45% 0 0 0; width: 100%; min-height: 0; height: auto;
-  }
+  .main.editor-drawer { flex-direction: column; }
+  .main.editor-drawer .editor-panel { width: 100% !important; max-width: none; height: 45%; flex: none; min-height: 0; }
+  .main.editor-drawer > .splitter { display: none; }
+  .main.editor-drawer > .canvas-panel { min-height: 0; }
+  .main.editor-drawer.group-source-drawer { width: 100%; height: 45%; bottom: auto; }
+  .main.editor-drawer.group-source-drawer .editor-panel { height: 100%; }
+  .app.group-source-open > .direct-workspace { left: 0; top: calc(var(--workspace-top, var(--topbar-h)) + 45dvh); }
 }
 
-.source-toggle.active { color: var(--accent); border-color: var(--accent); }
 .group-editor { display: flex; flex-direction: column; min-height: 0; }
 .group-name-input { flex: 1; min-width: 0; padding: 4px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--hairline); border-radius: 5px; font: inherit; }
 .group-editor .code-area { position: relative; flex: 1; min-height: 0; overflow: auto; }

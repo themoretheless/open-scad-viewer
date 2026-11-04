@@ -24,6 +24,7 @@ component Topbar {
     }
     Row {
         class: "topbar-right"; gap: tokens.gap;
+        Slot { name: "generators"; }
         Badge { class: "kernel-badge"; text: "Manifold · Forma"; }
         IconButton { class: "source-toggle"; active: state.editorOpen; ariaPressed: state.editorOpen; ariaLabel: state.sourceLabel; title: state.sourceLabel; text: "</>"; clicked -> actions.toggleEditor(); }
         Button { class: "command-btn"; ariaLabel: state.commandsLabel; title: state.commandHelp; clicked -> actions.openCommandPalette(); SvgIcon { path: "m21 21-4.5-4.5 M18 10a8 8 0 1 1-16 0a8 8 0 0 1 16 0"; } Span { text: state.commandsLabel; } Keycap { text: "⌘K"; } }
