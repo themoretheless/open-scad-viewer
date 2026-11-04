@@ -35,3 +35,7 @@ root isolation, localized/radical branch identity, cross-source junctions,
 complete singular/periodic arrangements and winding, finite material trim,
 general intersecting Boolean/healing, lineage/history, actual bridge/WASM calls
 and the wider quad/offset/fillet/G2 requirements.
+
+Follow-up: necessary candidate clocks can now be derived from a third original
+NURBS surface; see `ss-third-surface-candidates-2026-11-04.md`. Real bounded
+third-face membership and complete root isolation remain separate work.

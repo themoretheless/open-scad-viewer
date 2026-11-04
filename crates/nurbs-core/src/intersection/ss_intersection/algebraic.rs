@@ -141,3 +141,6 @@ pub(crate) use flux::bound as original_polynomial_flux;
 mod clock_consequence;
 pub(crate) use clock_consequence::prove as prove_clock_consequence;
 pub(crate) use clock_consequence::project as project_original_ss_clock;
+
+mod third_surface;
+pub use third_surface::{QualifiedSsThirdSurfaceCandidates,qualify_ss_third_surface_candidates};

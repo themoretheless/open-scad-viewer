@@ -145,6 +145,16 @@ impl OriginalSsRootCurve {
     ) -> Result<OriginalSsCurveBounds> {
         query::enclose(self, parameter, limits)
     }
+    /// Necessary candidate clock constraints from a third original surface.
+    /// This does not certify bounded third-UV membership or a trim vertex.
+    pub fn third_surface_candidates(&self, third:&Surface, spans:[usize;2], limits:ExactSsGroebnerLimits)->Result<QualifiedSsThirdSurfaceCandidates> {
+        let ideal=match &self.carrier {
+            Carrier::Deflated(f)=>f.source().original().original(),
+            Carrier::Pole(f)=>f.source().original().original().original(),
+            _=>return Err(crate::input("Third-surface candidates require an original affine span graph")),
+        };
+        qualify_ss_third_surface_candidates(ideal,third,spans,self.free_axis().index(),limits)
+    }
     pub fn pole_endpoint(&self) -> Option<(f64, &[Q; 3])> {
         match &self.carrier {
             Carrier::Pole(f) => Some((f.source().pole().shore() as f64, f.pole_world_point())),

@@ -1,0 +1,12 @@
+{
+  "distinct_tests_passed": 42,
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "c6f7ace2aa599d75418af182f2da1e823cfd9f418c75e19e24fec1570e1f3aa3",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "4a6149886db304a63b236bf558bca27f54ae3771aa2aa6fe5ed70eaeff59e229",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface.rs": "7415f4983257749c3a378d545d424eac20753cd799e227e0e465a1049cfc82b5",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "b625bd37619f2ed85dd80db0b128a98653781e7b97d32897361369db3ed31899",
+    "crates/nurbs-core/tests/ss_third_surface_candidates.rs": "22d6653591d884d3e64aa68e22bc9b1dc997e4a2f63438f329af201a7fd6488c"
+  },
+  "scope": "Localized exact original triple-NURBS necessary clock constraints, rational candidate owners and constant disjointness proof; no bounded third-face membership authority",
+  "remaining": "Complete root isolation, actual finite third-UV/face membership, cross-source junctions, full arrangements/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}
