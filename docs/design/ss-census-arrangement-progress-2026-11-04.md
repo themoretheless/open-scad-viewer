@@ -27,8 +27,10 @@ cell material ownership, not full region-wide material or output-solid admission
 
 Qualification currently exercises the one closed component on both the planar
 and quadratic-graph original supports, all four material operations, unresolved
-boundary boxes and original mixed trim/root regressions. Multiple distinct and
-nested components still need positive end-to-end qualification. Source holes
+boundary boxes and original mixed trim/root regressions. Two distinct nested components now have positive end-to-end qualification in
+`ss-nested-census-progress-2026-11-04.md`, including all three side signatures,
+original census replay and subtraction on both supports. Arbitrary multi-component
+arrangements still require further coverage. Source holes
 retain prior single-contour regressions; multi-contour hole ownership needs a
 positive combined case. All-face-pair arrangements, general singular/coincident
 branches, knots/seams/poles, open rim cuts, region-wide material, mixed contact

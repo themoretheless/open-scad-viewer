@@ -32,3 +32,11 @@ qualification; duplicate-component refusal is tested. Initial reuse of the eight
 wide deflated chart domains failed the original quotient inclusion operator;
 the test proposes finer charts and independently qualifies each original graph.
 No source operator acceptance rule was weakened to admit those proposals.
+
+Follow-up: `ss-nested-census-progress-2026-11-04.md` and its qualification receipt
+now positively exercise two distinct nested components of an independently
+admitted exact quartic original body. Complete coverage uses 256 original graphs,
+16,879 cells and 366,990 rectangle evaluations and is independently replayed.
+Both supports build three faces and prove whole-box subtraction material.
+Arbitrary singular/coincident components and multiple original-hole ownership
+remain outside this positive case. Earlier receipts retain their historical scope.

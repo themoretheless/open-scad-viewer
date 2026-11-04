@@ -147,6 +147,15 @@ pub(super) fn contains(
             d.iter().all(|v| v.is_finite()) && n[0] <= d[0] && d[0] <= d[1] && d[1] <= n[1],
             "Original membership box outside carrier",
         )?;
+        // Finite binary64 values are exact binary rationals. Without a deck
+        // translation their order is already exact; no rational arithmetic or
+        // rounded period subtraction is needed for this common census path.
+        if !periodic(s, k % 2) {
+            if lift[k][0] <= d[0] && d[1] <= lift[k][1] {
+                continue;
+            }
+            return Ok(false);
+        }
         let period = q(n[1])? - q(n[0])?;
         let mut inside = false;
         for shift in -1..=1 {

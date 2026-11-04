@@ -1,0 +1,27 @@
+{
+  "passed": 16,
+  "failed": 0,
+  "qualified_scope": "two nested original quartic SS components, full census replay, three finite pieces on both supports, subtraction material and second operand reversal; periodic quotient regressions and exact membership/work bounds",
+  "charts": 256,
+  "coverage_cells": 16879,
+  "coverage_rectangles": 366990,
+  "multiple_distinct_components_positive_qualified": true,
+  "nested_components_positive_qualified": true,
+  "multi_contour_original_hole_transfer_positive_qualified": false,
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "whole_region_material_complete": false,
+  "mixed_solid_admitted": false,
+  "general_boolean_complete": false,
+  "sources": {
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/axes.rs": "c7f7ef074bae0db1abe8c389e9ea550658cadcda991018983f184d5eb3058cc9",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/coverage.rs": "253518a94b1690706138adb5f6c3f1bcfbfc2b16302fe81a4cf48578ab1ef888",
+    "crates/nurbs-core/src/intersection/ss_intersection/fiber/quotient/discover.rs": "1ec55b8ef4206b793c595b70d1569e85953cb515c63beeb4c7956b127ef84f83",
+    "crates/nurbs-core/tests/ss_quotient_membership_limits.rs": "a8a8bd71514f50d693221871bf0ab2f4d93f02a90e2944a788248e4a2b0a7a45",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "fb0b97e00294e8361386e740cddfb65245587e70fc7615b9bb4df71268f92ac4",
+    "crates/brep-core/tests/support/nested_graph_body.rs": "708984e66a9b5c16c25ad2b5d4ac7495a4cb1ba4f9d224ee482d4d2f24cecb3e",
+    "docs/design/ss-nested-census-progress-2026-11-04.md": "0d7dac4cb85c56e41ea724a17faa592f3070025b4e4406a5f105691bfb43342e",
+    "docs/design/ss-interior-census-progress-2026-11-04.md": "7998392bf30b9ab41f95963b1df43847ae0dfd90f833cf7aa1a470d2b9cf3df0",
+    "docs/design/ss-census-arrangement-progress-2026-11-04.md": "1ac34a37f0ad39abc5cf0971a1fa10bd8dc46420f77ebf9cdff03111277639fa"
+  }
+}

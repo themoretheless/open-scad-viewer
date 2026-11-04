@@ -101,8 +101,8 @@ fn validate(
     check(
         (1..=256).contains(&fibers.len())
             && (1..=65536).contains(&limits.max_cells)
-            && (1..=100000).contains(&limits.max_rectangles)
-            && limits.max_depth <= 32,
+            && (1..=1000000).contains(&limits.max_rectangles)
+            && limits.max_depth <= 64,
         "Need bounded quotient census charts, cells, rectangles and depth",
     )?;
     let source = fibers[0].source();

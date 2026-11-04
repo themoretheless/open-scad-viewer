@@ -187,8 +187,8 @@ pub fn discover_quotient_fiber_surfaces(
     )?;
     check(
         (1..=65536).contains(&limits.coverage.max_cells)
-            && (1..=100000).contains(&limits.coverage.max_rectangles)
-            && limits.coverage.max_depth <= 32,
+            && (1..=1000000).contains(&limits.coverage.max_rectangles)
+            && limits.coverage.max_depth <= 64,
         "Invalid quotient census allowance",
     )?;
     let admission = natural(source).map(|d| [d[0] * 0.75 + d[1] * 0.25, d[0] * 0.25 + d[1] * 0.75]);
