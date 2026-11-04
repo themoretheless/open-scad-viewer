@@ -34,6 +34,7 @@ import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.vue'))
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
+import { BOX_DEFAULTS, generateBox } from './services/boxGenerator'
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument, DirectBody } from './services/directModeling'
 import { APP_STRINGS as L, type Language } from './i18n/appStrings'
@@ -909,6 +910,9 @@ onMounted(async () => {
     error.value = t('workerError')
   }
   if (sourceViewportVisible.value) await initializeViewportRenderer()
+  if (new URLSearchParams(location.search).get('generator') === 'box') {
+    await loadMechanicalModel(generateBox(BOX_DEFAULTS), 'box.scad')
+  }
 })
 
 onUnmounted(() => {

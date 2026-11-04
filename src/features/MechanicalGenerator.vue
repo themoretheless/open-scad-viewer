@@ -7,8 +7,8 @@ import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEF
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()
 const dialog=ref<HTMLDialogElement|null>(null)
-const kind=ref<'gear'|'planetary_gears'|'thread'|'box'>('gear')
-const values=ref<Record<string,number|boolean>>({...GEAR_DEFAULTS})
+const kind=ref<'gear'|'planetary_gears'|'thread'|'box'>('box')
+const values=ref<Record<string,number|boolean>>({...BOX_DEFAULTS})
 const visibleValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>{
   if(kind.value!=='box')return true
   if(key.startsWith('hook_'))return false
@@ -40,7 +40,10 @@ watch(values,()=>{generated.value=null;error.value=''},{deep:true})
 watch(()=>props.open,async open=>{await nextTick();if(open&&!dialog.value?.open)dialog.value?.showModal();else if(!open&&dialog.value?.open)dialog.value.close()})
 function generate(){
   error.value=''
-  try {generated.value=kind.value==='box'?{source:generateBox(values.value)}:compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))}
+  try {
+    generated.value=kind.value==='box'?{source:generateBox(values.value)}:compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))
+    if(kind.value==='box')openEditor(false)
+  }
   catch(e){generated.value=null;error.value=e instanceof Error?e.message:String(e)}
 }
 function download(){
