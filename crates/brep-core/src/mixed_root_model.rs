@@ -168,4 +168,7 @@ impl MixedBrep {
     }
 }
 mod closed_cut;
-pub use closed_cut::{ClosedCutCandidate, ClosedCutLimits, split_closed_contour_candidate};
+pub use closed_cut::{
+    ClosedCutCandidate, ClosedCutLimits, CutMaterialLimits, CutRectangleLimits, CutRectangleReport,
+    QualifiedCutMaterialRectangle, split_closed_contour_candidate,
+};

@@ -34,6 +34,7 @@ pub struct ClosedCutCandidate {
     wire: ss::OriginalSsRootWire,
     support: usize,
     seed: [f64; 2],
+    orientation: i32,
     limits: ClosedCutLimits,
     model: MixedBrep,
     inside: usize,
@@ -73,7 +74,8 @@ impl ClosedCutCandidate {
             self.seed,
             self.limits,
         )?;
-        if f.inside != self.inside
+        if f.orientation != self.orientation
+            || f.inside != self.inside
             || f.inherited_holes != self.inherited_holes
             || f.placement_work() != self.placement_work()
         {
@@ -306,6 +308,7 @@ pub fn split_closed_contour_candidate(
         wire: wire.clone(),
         support,
         seed: inside_seed,
+        orientation,
         limits,
         model,
         inside,
@@ -314,3 +317,8 @@ pub fn split_closed_contour_candidate(
         domain_cells,
     })
 }
+
+mod classification;
+pub use classification::{CutRectangleLimits, CutRectangleReport};
+mod material;
+pub use material::{CutMaterialLimits, QualifiedCutMaterialRectangle};

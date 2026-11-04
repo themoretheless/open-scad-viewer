@@ -3,10 +3,7 @@
 //! a continuously separated enclosure connects it to the original source point.
 use super::*;
 use crate::Surface;
-use nurbs_core::{
-    interval_eval::{self, Interval},
-    surface_distance,
-};
+use nurbs_core::interval_eval::{self, Interval};
 #[derive(Clone, Copy, Debug)]
 pub struct SurfaceMaterialLimits {
     pub source_spans: usize,
@@ -144,47 +141,17 @@ pub fn qualify_surface_material_seed(
         Interval::point(uv[1]),
     )?;
     let bounds = std::array::from_fn(|k| [b[k].lo, b[k].hi]);
-    let witness = std::array::from_fn(|k| b[k].lo * 0.5 + b[k].hi * 0.5);
-    let radius = surface_distance::enclosure_distance(&bounds, &witness.map(|x| [x; 2]))?.1;
-    let mut cells = 0usize;
-    for (i, face) in solid.model.faces.iter().enumerate() {
-        let remaining = limits.distance_cells - cells;
-        if remaining == 0 {
-            return Err(unproved("Original boundary separation work exhausted"));
-        }
-        let share = (remaining / (solid.model.faces.len() - i)).max(1);
-        let distance = surface_distance::nearest_point(
-            &face.surface,
-            witness,
-            solid.model.tolerance_mm,
-            share,
-        )?;
-        cells += distance.cells;
-        if !(distance.distance_interval[0] > radius) {
-            return Err(unproved(
-                "Source point enclosure is not separated from the closed material boundary",
-            ));
-        }
-    }
-    let report = solid.classify_point(
-        witness,
-        directions,
-        limits.parity_cells,
-        limits.parity_domain_cells,
-    )?;
-    let inside = report
-        .parity
-        .ok_or_else(|| unproved("Material witness parity remains unresolved"))?;
+    let material = super::separation::qualify(solid, bounds, directions, limits, 0)?;
     Ok(QualifiedSurfaceMaterialSeed {
         solid: solid.clone(),
         surface: surface.clone(),
         uv,
         bounds,
-        witness,
-        inside,
-        distance_cells: cells,
-        parity_cells: report.cells,
-        parity_domain_cells: report.domain_cells,
+        witness: material.witness,
+        inside: material.inside,
+        distance_cells: material.distance_cells,
+        parity_cells: material.parity_cells,
+        parity_domain_cells: material.parity_domain_cells,
         directions: directions.to_vec(),
         limits,
     })

@@ -57,3 +57,9 @@ rejection at a concave outer rim and an intersecting hole, and atomic work
 exhaustion. Root-model and winding/periodic-path regressions are rerun. The
 qualification directory records final logs, architecture audit and source hashes.
 Finite fixtures validate the generic mechanisms, not universal completion.
+
+## Whole-cell material follow-up
+
+See [cut region material](ss-cut-region-material-progress-2026-11-04.md) for
+whole-UV-box membership and material, trim-aware hole separation, and actual
+intersecting-body tests. Whole-candidate geometry/material admission is open.

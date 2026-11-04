@@ -99,8 +99,8 @@ This supplies storage, not retained-region embedding/material admission.
 4. Extend source/winding/contact/body admission to implicit root geometry. The
    new closed-solid owner currently admits the legacy rational-Curve Model;
    root-valued contours must not be coerced to fitted legacy edges.
-5. Propagate the proved material seed through complete connected trim cells,
-   select all sectors, sew shared edges and preserve topology lineage.
+5. Extend proved whole-cell material decisions to complete connected trim
+   regions, select all sectors, sew shared edges and preserve topology lineage.
 6. Assemble general union/intersection/difference/XOR output bodies and qualify
    their closed material geometry plus independent volume. A face-seed truth
    table or positive volume alone is not a general Boolean result.
@@ -123,3 +123,9 @@ they do not establish universal convergence or completion of the open items.
 See [mixed finite trim](ss-mixed-finite-trim-progress-2026-11-04.md) for exact
 mixed storage, complete interior-contour placement and existing-hole transfer.
 Candidates still require arrangement, embedding and material/body admission.
+
+## Whole-cell material follow-up
+
+[Cut region material](ss-cut-region-material-progress-2026-11-04.md) records
+verified finite-cell membership and Boolean material against admitted bodies.
+Complete arrangements, whole mixed bodies and general output assembly are open.

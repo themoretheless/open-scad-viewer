@@ -102,8 +102,20 @@ pub use healing::{GeometricHealing, GeometricHealingStatus, heal_and_qualify};
 mod shell_repair;
 pub use shell_repair::{ShellRepair, ShellRepairPolicy, rebuild_even_odd_shells};
 mod material_seed;
-pub use material_seed::{SurfaceMaterialLimits,QualifiedSurfaceMaterialSeed,qualify_surface_material_seed};
+pub use material_seed::{
+    QualifiedSurfaceMaterialSeed, SurfaceMaterialLimits, qualify_surface_material_seed,
+};
 mod boolean_material;
-pub use boolean_material::{BooleanMaterialOp,BooleanSourceSide,BooleanFaceSeedLimits,QualifiedBooleanFaceSeed,qualify_boolean_face_seed};
+pub use boolean_material::{
+    BooleanFaceSeedLimits, BooleanMaterialOp, BooleanSourceSide, QualifiedBooleanFaceSeed,
+    qualify_boolean_face_seed,
+};
 mod volume;
-pub use volume::{VolumeLimits,VolumeReport};
+pub use volume::{VolumeLimits, VolumeReport};
+mod material_box;
+mod separation;
+pub use material_box::{
+    QualifiedSurfaceMaterialBox, SurfaceMaterialBoxLimits, qualify_surface_material_box,
+};
+mod boolean_box;
+pub use boolean_box::{BooleanFaceBoxLimits, QualifiedBooleanFaceBox, qualify_boolean_face_box};
