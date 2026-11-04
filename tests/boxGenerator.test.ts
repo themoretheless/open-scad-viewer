@@ -102,7 +102,8 @@ describe('box generator', () => {
         expect(diagnostics.nonManifold).toBe(0)
       }
     }
-    expect(()=>generateBox({...BOX_DEFAULTS,mesh_density:2,cell_size:15,rib:2.4})).toThrow(/плотности|Effective/)
+    expect(()=>generateBox({...BOX_DEFAULTS,mesh_density:2,cell_size:4,rib:2.4})).toThrow(/плотности|Effective/)
+    expect(()=>generateBox({...BOX_DEFAULTS,cell_size:3,rib:2.4})).not.toThrow()
     expect(()=>generateBox({...BOX_DEFAULTS,stress_gradient:3})).toThrow()
   }, 120000)
   it('builds with small wall cell_size=10 and print_optimized=false without exceeding Boolean work budget', async () => {
@@ -122,7 +123,7 @@ describe('box generator', () => {
     }
     const volumes: number[] = []
     for (const cell_size of [3, 6, 10, 18, 26, 34, 40]) {
-      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:20,print_optimized:false,hook_chamfer:false}).replace('cell_size = 20;', `cell_size = ${cell_size};`),request)
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size,print_optimized:false,hook_chamfer:false}),request)
       expect(result.volume).toBeGreaterThan(0)
       expect(result.meshes.length).toBe(1)
       volumes.push(result.volume)

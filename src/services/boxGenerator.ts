@@ -50,8 +50,8 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
     if(p.hook_drop+p.hook_thickness>h || left<p.corner_radius || (p.hook_count>1 && p.hook_width>=step))
       throw Error('Крючки не помещаются или перекрываются: уменьшите размеры, количество или шаг / Hooks do not fit or overlap; adjust their dimensions, count or spacing')
   }
-  if (p.organic && p.porous && p.cell_size / p.mesh_density < 4*p.rib) throw Error('Размер ячейки с учётом плотности должен быть минимум в 4 раза больше перемычки / Effective cell size must be at least four times the rib width')
-  if(p.floor_mesh && p.floor_cell_size / p.mesh_density < 2*p.floor_rib) throw Error('Размер ячейки дна с учётом плотности должен быть минимум вдвое больше перемычки / Effective floor cell size must be at least twice the rib width')
+  if (p.organic && p.porous && p.cell_size / p.mesh_density < p.rib) throw Error('Размер ячейки с учётом плотности должен быть не меньше перемычки / Effective cell size must be at least the rib width')
+  if(p.floor_mesh && p.floor_cell_size / p.mesh_density < p.floor_rib) throw Error('Размер ячейки дна с учётом плотности должен быть не меньше перемычки / Effective floor cell size must be at least the rib width')
   if(p.floor_mesh && p.floor_cell_size / p.mesh_density > Math.min(w,d)-2*Math.max(t,p.floor_rib*1.5)) throw Error('Ячейка дна не помещается в коробку: уменьшите её размер или увеличьте плотность / Floor cell does not fit; reduce its size or increase density')
   const topDepth = d+(h-f)*Math.tan(p.front_angle*Math.PI/180)
   if (topDepth <= 4*t) throw Error('Наклон закрывает коробку: увеличьте глубину или уменьшите угол / Tilt leaves insufficient opening depth')
