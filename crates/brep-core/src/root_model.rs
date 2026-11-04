@@ -245,3 +245,6 @@ pub use winding::QualifiedRootLoopWinding;
 
 mod face_split;
 pub use face_split::RootFaceChordSplit;
+
+mod hole_assignment;
+pub use hole_assignment::{RootHoleAssignmentLimits,QualifiedRootHoleAssignment};

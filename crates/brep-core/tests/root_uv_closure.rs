@@ -94,6 +94,7 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     boundary.push(ss::OriginalSsRootEdge::new(plain(0),wire.edges()[2].end().clone()).unwrap());
     boundary.extend_from_slice(&wire.edges()[3..]);
     let full=ss::OriginalSsRootWire::new(boundary).unwrap();
+    let full_wire=full.clone();
     let full=Arc::new(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {supports:vec![0;10],wire:full},vec![],1e-7).unwrap());
     let chord=ss::OriginalSsRootEdge::new(cross(0),cross(1)).unwrap();
     let split=brep_core::root_model::RootFaceChordSplit::split(full.clone(),0,chord.clone(),0,vec![]).unwrap();
@@ -108,6 +109,18 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
         assert_eq!(W::qualify(out.clone(),face,0,[[0.195;2],[0.5;2]],Default::default()).unwrap().winding(),small);
         assert_eq!(W::qualify(out.clone(),face,0,[[0.5;2],[0.5;2]],Default::default()).unwrap().winding(),large);
     }
+    use brep_core::root_model::{QualifiedRootHoleAssignment as H,RootFaceChordSplit as S};
+    let holes=vec![[0.5,0.5],[0.1953125,0.5]].into_iter().zip([0.1,0.0078125]).map(|(center,scale)| {
+        RootFaceContour {wire:fixture::wire_circle_on(ab.source().first().clone(),center,scale),supports:vec![0;8]}
+    }).collect();
+    let with_holes=Arc::new(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:full_wire,supports:vec![0;10]},holes,1e-7).unwrap());
+    let candidate_split=S::split(with_holes,0,chord.clone(),0,vec![false,false]).unwrap();
+    let routed=H::qualify(candidate_split.clone(),Default::default()).unwrap();
+    assert_eq!(routed.sides(),&[false,true]);assert!(routed.cells()>=16 && routed.queries()>=32);
+    let routed_topology=routed.output().output().topology();
+    assert_eq!(routed_topology.faces[0].holes,vec![1]);assert_eq!(routed_topology.faces[1].holes,vec![2]);
+    routed.reverify().unwrap();
+    assert!(H::qualify(candidate_split,brep_core::root_model::RootHoleAssignmentLimits {max_queries:1,..Default::default()}).is_err());
     assert!(brep_core::root_model::RootFaceChordSplit::split(full,0,chord,1,vec![]).is_err());
     let contour=ss::OriginalSsRootWire::new(vec![ss::OriginalSsRootEdge::new(plain(0),plain(1)).unwrap(),ss::OriginalSsRootEdge::new(cross(1),cross(0)).unwrap()]).unwrap();
     let face=RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:contour.clone(),supports:vec![0,0]},vec![],1e-7).unwrap();

@@ -63,6 +63,8 @@ impl RootFaceChordSplit {
         let output=Arc::new(RootBrep::from_topology(output)?);
         Ok(Self {source,output,face,chord,support,hole_sides,new_face,new_edge})
     }
+    pub fn chord(&self)->&ss::OriginalSsRootEdge {&self.chord}
+    pub fn support(&self)->usize {self.support}
     pub fn source(&self)->&Arc<RootBrep> {&self.source}
     pub fn output(&self)->&Arc<RootBrep> {&self.output}
     pub fn face_children(&self)->[usize;2] {[self.face,self.new_face]}

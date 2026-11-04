@@ -13,6 +13,9 @@ pub fn wire() -> ss::OriginalSsRootWire {
     wire_on(fixture::plane(0.))
 }
 pub fn wire_on(first: nurbs_core::surface::Surface) -> ss::OriginalSsRootWire {
+    wire_circle_on(first,[0.5,0.5],1.)
+}
+pub fn wire_circle_on(first:nurbs_core::surface::Surface, center:[f64;2],scale:f64)->ss::OriginalSsRootWire {
     let mut bowl = fixture::tangent(true);
     for row in &mut bowl.control_points {
         for p in row {
@@ -27,7 +30,8 @@ pub fn wire_on(first: nurbs_core::surface::Surface) -> ss::OriginalSsRootWire {
         std::array::from_fn(|k| u[(k + 1) % 3] * v[(k + 2) % 3] - u[(k + 2) % 3] * v[(k + 1) % 3]);
     for row in &mut bowl.control_points {
         for p in row {
-            let old = p.clone();
+            let mut old = p.clone();
+            for k in 0..2 {old[k]=center[k]+scale*(old[k]-0.5);}
             for k in 0..3 {
                 p[k] = origin[k] + u[k] * old[0] + v[k] * old[1] + normal[k] * old[2];
             }
@@ -65,7 +69,7 @@ pub fn wire_on(first: nurbs_core::surface::Surface) -> ss::OriginalSsRootWire {
             ss::FiberAxis::SecondU
         };
         let k = if axis == ss::FiberAxis::SecondV { 1 } else { 0 };
-        let mut d = [boxes[i][0], boxes[i][1], boxes[i][0], boxes[i][1]];
+        let mut d = [boxes[i][0].map(|x|center[0]+scale*(x-0.5)), boxes[i][1].map(|x|center[1]+scale*(x-0.5)), boxes[i][0], boxes[i][1]];
         let a = vertices[i][k];
         let b = vertices[(i + 1) % 8][k];
         d[2 + k] = [a.min(b) - 0.002, b.max(a) + 0.002];
