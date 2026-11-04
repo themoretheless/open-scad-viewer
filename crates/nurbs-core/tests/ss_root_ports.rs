@@ -126,3 +126,24 @@ fn closed_curved_mixed_axis_wire_classifies_uv_inside_and_outside() {
         0
     );
 }
+
+#[test]
+fn original_graph_window_uses_exact_source_clocks_and_rejects_escape() {
+    let c = curve(ss::FiberAxis::FirstV);
+    let q = |x| num_rational::BigRational::from_float(x).unwrap();
+    let original = [[0.45, 0.55], [0.3, 0.7], [0.45, 0.55], [0.3, 0.7]]
+        .map(|d| d.map(q));
+    let other = curve(ss::FiberAxis::SecondV);
+    c.qualify_subarc_window(&other, [0.4, 0.6], Default::default()).unwrap().reverify().unwrap();
+    assert!(c.qualify_subarc_window(&other, [0.1, 0.2], Default::default()).is_err());
+    let proof = c.qualify_graph_window(original.clone()).unwrap();
+    assert_eq!(proof.original_window(), &original);
+    assert!(Arc::ptr_eq(proof.curve(), &c));
+    proof.reverify().unwrap();
+    let mut escaped = original.clone();
+    escaped[1][0] = q(0.125);
+    assert!(c.qualify_graph_window(escaped).is_err());
+    let mut inverted = original;
+    inverted[2] = [q(0.55), q(0.45)];
+    assert!(c.qualify_graph_window(inverted).is_err());
+}

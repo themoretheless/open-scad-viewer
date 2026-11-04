@@ -6,6 +6,8 @@ use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 use std::sync::Arc;
 mod frames;
+mod window;
+pub use window::QualifiedOriginalSsGraphWindow;
 mod query;
 #[derive(Clone, Debug)]
 enum Carrier {
