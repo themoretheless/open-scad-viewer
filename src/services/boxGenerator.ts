@@ -131,43 +131,39 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  r = cell_size/(2*mesh_density);
+  r = cell_size/(2.8*mesh_density);
   frame = max(wall,rib*1.3);
-  rounding = min(rib*0.65,cell_size/(10*mesh_density));
+  rounding = min(r*0.58,max(rib*0.65,cell_size/(5.5*mesh_density)));
   if(a>2*frame && b-z_offset>2*frame) intersection() {
     offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([max(a,a+b*slope),b-z_offset]); }
     union() for(col=[-1:ceil(max(a,a+b*slope)/(1.5*r))+1]) for(row=[-1:ceil(b/(sqrt(3)*r))+1]) {
       ix=3*col; iy=2*row+(abs(col)%2);
-      local_rib=rib*max(0.45,1+stress_gradient*(0.12-0.24*min(1,max(0,(iy*sqrt(3)*r/2-z_offset)/max(1,b-z_offset)))));
-      offset(r=rounding) offset(delta=-rounding-local_rib/2)
+      cx=(ix)*r/2; cy=iy*sqrt(3)*r/2;
+      first_hook=(width-hook_step*(hook_count-1))/2-radius;
+      nearest=max(0,min(hook_count-1,floor((cx-first_hook)/hook_step+0.5)));
+      hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - r*0.85) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+r*0.85;
+      local_rib=rib*max(0.45,1+stress_gradient*(0.12-0.24*min(1,max(0,(cy-z_offset)/max(1,b-z_offset)))));
+      if(!hook_zone) offset(r=rounding,$fn=16) offset(delta=-rounding-local_rib/2)
         polygon([
-          [(ix+(2))*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
-            (iy+(0))*sqrt(3)*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3],
-          [(ix+(1))*r/2+((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
-            (iy+(1))*sqrt(3)*r/2+((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3],
-          [(ix+(-1))*r/2+((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
-            (iy+(1))*sqrt(3)*r/2+((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3],
-          [(ix+(-2))*r/2+((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
-            (iy+(0))*sqrt(3)*r/2+((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3],
-          [(ix+(-1))*r/2+((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
-            (iy+(-1))*sqrt(3)*r/2+((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3],
-          [(ix+(1))*r/2+((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
-            (iy+(-1))*sqrt(3)*r/2+((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3]
+          [(ix+(2))*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.36,
+            (iy+(0))*sqrt(3)*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.36],
+          [(ix+(1))*r/2+((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.36,
+            (iy+(1))*sqrt(3)*r/2+((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.36],
+          [(ix+(-1))*r/2+((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.36,
+            (iy+(1))*sqrt(3)*r/2+((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.36],
+          [(ix+(-2))*r/2+((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.36,
+            (iy+(0))*sqrt(3)*r/2+((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.36],
+          [(ix+(-1))*r/2+((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.36,
+            (iy+(-1))*sqrt(3)*r/2+((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.36],
+          [(ix+(1))*r/2+((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.36,
+            (iy+(-1))*sqrt(3)*r/2+((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.36]
         ]);
     }
   }
 }
 }
 module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0) {
-    if(perforated && organic_panel) {
-      if(print_optimized) organic_pores(a,b,z_offset,slope,hook_pads);
-      else difference() {
-        organic_pores(a,b,z_offset,slope);
-        if(hook_pads && hooks) for(i=[0:hook_count-1])
-          translate([(width-hook_step*(hook_count-1))/2+i*hook_step-radius-hook_width/2-rib,b-hook_drop-hook_thickness-rib])
-            square([hook_width+2*rib,hook_drop+hook_thickness+rib]);
-      }
-    }
+    if(perforated && organic_panel) organic_pores(a,b,z_offset,slope,hook_pads);
     if(perforated && !organic_panel) {
       na = max(0,floor((a-4*wall-hole_diameter)/hole_pitch)+1);
       nb = max(0,floor((b-z_offset-4*wall-hole_diameter)/hole_pitch)+1);
