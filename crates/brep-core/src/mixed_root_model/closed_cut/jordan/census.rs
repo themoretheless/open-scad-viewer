@@ -191,4 +191,4 @@ mod arrangement;
 pub use arrangement::{QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement};
 
 mod sew;
-pub use sew::{PairedRootSolidAdmission, QualifiedPairedRootSolid, RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox,RootSolidPointLimits, RootSolidPointReport, RootSolidRayReport, RootBoundaryVolumeLimits, RootBoundaryVolumeReport, QualifiedPairedRootBoundary};
+pub use sew::{PairedRootSolidAdmission, QualifiedPairedRootSolid, RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid,RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox,RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox,RootSolidPointLimits, RootSolidPointReport, RootSolidRayReport, RootBoundaryVolumeLimits, RootBoundaryVolumeReport, QualifiedPairedRootBoundary};

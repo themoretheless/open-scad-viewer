@@ -1,5 +1,9 @@
 # Uniform material in original root-solid enclosures
 
+Follow-up: source-bound patches and the first complete mixed cavity covers are
+implemented in `ss-root-cavity-progress-2026-11-04.md`. General shell forests
+and intersecting Boolean assembly remain open.
+
 `QualifiedPairedRootSolid::qualify_material_box` builds an immutable proof for
 EVERY point of a closed Cartesian box. A native parity witness is used only
 after a complete original retained-boundary separation forest is exhausted.

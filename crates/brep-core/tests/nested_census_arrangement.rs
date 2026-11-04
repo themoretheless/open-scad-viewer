@@ -396,9 +396,11 @@ fn run(with_holes: bool, mirrored: bool) {
                 [[0.72, 0.73], [0.495, 0.505], [-0.025, -0.015]]
             };
             let directions = [[0., 0., 1.], [0.137, 0.283, 1.]];
-            let inside_box = solid
-                .qualify_material_box(inside_bounds, &directions, Default::default())
-                .unwrap();
+            let inside_box = Arc::new(
+                solid
+                    .qualify_material_box(inside_bounds, &directions, Default::default())
+                    .unwrap(),
+            );
             eprintln!(
                 "root material inside genus={genus} mirror={mirrored}: {:?}",
                 inside_box.separation_work()
@@ -408,6 +410,49 @@ fn run(with_holes: bool, mirrored: bool) {
             assert_eq!(inside_box.bounds(), inside_bounds);
             assert!(inside_box.separation_work().separation_cells <= 32768);
             assert!(inside_box.separation_work().domain_queries <= 4096);
+            let mut source_patch = rational_source_patch(inside_bounds);
+            let rectangle = [[2., 5.], [-3., 1.]];
+            let source_material = inside_box
+                .qualify_source(&source_patch, rectangle, 2)
+                .unwrap();
+            assert!(source_material.inside());
+            assert_eq!(source_material.source_spans(), 2);
+            assert_eq!(source_material.rectangle(), rectangle);
+            assert_eq!(source_material.surface(), &source_patch);
+            assert!(Arc::ptr_eq(source_material.material(), &inside_box));
+            assert!(inside_box
+                .qualify_source(&source_patch, rectangle, 1)
+                .is_err());
+            assert!(inside_box
+                .qualify_source(&source_patch, [[1., 5.], [-3., 1.]], 2)
+                .is_err());
+            let mut escaped = source_patch.clone();
+            escaped.control_points[0][0][2] = 10.;
+            assert!(inside_box.qualify_source(&escaped, rectangle, 2).is_err());
+            source_patch.weights[0][0] = 4.;
+            assert_eq!(
+                source_material.surface().weights[0][0],
+                1.,
+                "Source ownership must be immutable"
+            );
+            if genus == 0 && !mirrored {
+                let automatic = solid
+                    .qualify_surface_material_box(
+                        source_material.surface(),
+                        rectangle,
+                        &directions,
+                        mixed::RootSurfaceMaterialLimits {
+                            source_spans: 2,
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert!(automatic.inside());
+                assert_eq!(
+                    automatic.image_enclosure(),
+                    source_material.image_enclosure()
+                );
+            }
             if genus == 1 {
                 let hole_box = solid
                     .qualify_material_box(
@@ -454,6 +499,153 @@ fn run(with_holes: bool, mirrored: bool) {
                     .is_err(),
                 "A box crossing actual material boundary must not qualify"
             );
+            let host = Arc::new(
+                solid::qualify(
+                    brep_core::cuboid([-1.; 3], [2.; 3]).unwrap(),
+                    policy::policy(),
+                )
+                .unwrap()
+                .into_solid()
+                .unwrap(),
+            );
+            let cavity = solid
+                .qualify_cavity_in(host.clone(), &directions, Default::default())
+                .unwrap();
+            assert!(cavity.material_admitted());
+            assert!(Arc::ptr_eq(cavity.outer(), &host));
+            assert!(Arc::ptr_eq(cavity.inner(), &solid));
+            let result = cavity.model().topology();
+            assert_eq!(result.bodies.len(), 1);
+            assert_eq!(result.bodies[0].inner_shells.len(), 1);
+            assert_eq!(
+                result.faces.len(),
+                host.model().faces.len() + solid.model().topology().faces.len()
+            );
+            let cavity_shell = result.bodies[0].inner_shells[0];
+            for (new, old) in result.shells[cavity_shell]
+                .faces
+                .iter()
+                .zip(&solid.model().topology().shells[0].faces)
+            {
+                assert_eq!(new.face, old.face + host.model().faces.len());
+                assert_eq!(new.reversed, !old.reversed);
+            }
+            let cavity_volume = cavity.volume();
+            let reference = 27. - expected;
+            assert!(
+                cavity_volume[0] > 0.
+                    && cavity_volume[0] <= reference
+                    && reference <= cavity_volume[1]
+            );
+            eprintln!(
+                "cavity genus={genus} mirror={mirrored}: volume={cavity_volume:?}, cover={:?}",
+                cavity.coverage_work()
+            );
+            assert_eq!(cavity.coverage_work().accepted, [2, 6]);
+            let void_point = if genus == 0 {
+                [0.5, 0.5, 0.03]
+            } else {
+                [0.725, 0.5, -0.02]
+            };
+            assert_eq!(
+                cavity
+                    .classify_point(void_point, &directions, Default::default())
+                    .unwrap(),
+                Some(false)
+            );
+            assert_eq!(
+                cavity
+                    .classify_point([0.5, 0.5, -0.5], &directions, Default::default())
+                    .unwrap(),
+                Some(true)
+            );
+            assert_eq!(
+                cavity
+                    .classify_point([3.; 3], &directions, Default::default())
+                    .unwrap(),
+                Some(false)
+            );
+            assert_eq!(
+                cavity
+                    .classify_point([-1., 0.5, 0.5], &directions, Default::default())
+                    .unwrap(),
+                None
+            );
+            assert!(solid
+                .qualify_cavity_in(
+                    host.clone(),
+                    &directions,
+                    mixed::RootCavityLimits {
+                        coverage_cells: 1,
+                        ..Default::default()
+                    }
+                )
+                .is_err());
+            let inner_boundary_point = if genus == 0 {
+                [0.5, 0.5, 0.]
+            } else {
+                [0.725, 0.5, 0.]
+            };
+            assert_eq!(
+                cavity
+                    .classify_point(inner_boundary_point, &directions, Default::default())
+                    .unwrap(),
+                None
+            );
+            if genus == 1 {
+                assert_eq!(
+                    cavity
+                        .classify_point([0.5, 0.5, 0.], &directions, Default::default())
+                        .unwrap(),
+                    Some(true)
+                );
+            }
+            for (i, old) in solid.model().topology().edges.iter().enumerate() {
+                let (mixed::MixedEdge::Root(a), mixed::MixedEdge::Root(b)) = (
+                    &result.edges[host.model().edges.len() + i].curve,
+                    &old.curve,
+                ) else {
+                    panic!("Root edge was fitted or replaced")
+                };
+                assert!(a.curve().same_definition(b.curve()).unwrap());
+                assert!(a.start().point().same_selector(b.start().point()));
+            }
+            if genus == 0 && !mirrored {
+                assert!(solid
+                    .qualify_cavity_in(
+                        cavity.outer().clone(),
+                        &directions,
+                        mixed::RootCavityLimits {
+                            absolute_error: 1e-6,
+                            ..Default::default()
+                        }
+                    )
+                    .is_err());
+                let far = Arc::new(
+                    solid::qualify(
+                        brep_core::cuboid([2.; 3], [4.; 3]).unwrap(),
+                        policy::policy(),
+                    )
+                    .unwrap()
+                    .into_solid()
+                    .unwrap(),
+                );
+                let denied = solid
+                    .qualify_cavity_in(
+                        far,
+                        &directions,
+                        mixed::RootCavityLimits {
+                            coverage_cells: 128,
+                            ..Default::default()
+                        },
+                    )
+                    .err()
+                    .expect("A disjoint host cannot contain the cavity");
+                assert!(
+                    denied.message.contains("outside cavity host material"),
+                    "{denied:?}"
+                );
+            }
             let no_bands = solid
                 .classify_point(
                     [0.5, 0.5, 0.03],
@@ -516,7 +708,7 @@ fn run(with_holes: bool, mirrored: bool) {
                 assert!(b[0] <= expected && expected <= b[1]);
                 assert_eq!(partial.report().cells, 3);
                 assert!(!partial.report().accuracy_proven);
-                inside_box.reverify().unwrap();
+                cavity.reverify().unwrap();
                 if !mirrored {
                     let default = sewn.volume_bounds(Default::default()).unwrap();
                     eprintln!("paired default volume: {default:?}");
@@ -773,4 +965,31 @@ fn near_root_box_requires_complete_original_winding() {
         .winding_box(0, [[0.8, 0.825], [0.48, 0.52]], Default::default())
         .unwrap_err();
     assert!(contact.message.contains("boundary selector"), "{contact:?}");
+}
+
+fn rational_source_patch(bounds: [[f64; 2]; 3]) -> nurbs_core::surface::Surface {
+    let center = bounds.map(|d| d[0] * 0.5 + d[1] * 0.5);
+    let widths = bounds.map(|d| (d[1] - d[0]) * 0.1);
+    nurbs_core::surface::Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![2., 2., 3., 5., 5.],
+        knots_v: vec![-3., -3., 1., 1.],
+        control_points: (0..3)
+            .map(|i| {
+                (0..2)
+                    .map(|j| {
+                        vec![
+                            center[0] + (i as f64 - 1.) * widths[0],
+                            center[1] + (j as f64 - 0.5) * widths[1],
+                            center[2] + if i == 1 { widths[2] } else { -widths[2] },
+                        ]
+                    })
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1., 2.], vec![1.5, 1.], vec![2., 1.25]],
+        periodic_u: false,
+        periodic_v: false,
+    }
 }

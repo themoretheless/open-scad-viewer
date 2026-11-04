@@ -236,3 +236,9 @@ pub use point::{RootSolidPointLimits,RootSolidPointReport,RootSolidRayReport};
 
 mod material_box;
 pub use material_box::{RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox};
+
+mod source_box;
+pub use source_box::{RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox};
+
+mod cavity;
+pub use cavity::{RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid};
