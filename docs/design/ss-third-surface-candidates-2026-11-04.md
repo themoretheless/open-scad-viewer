@@ -41,3 +41,8 @@ finite-face membership, followed by cross-source junctions, complete arrangement
 trim/material selection and intersecting Boolean/healing. Persistent lineage/
 history, actual bridge/WASM calls and wider quad/offset/fillet/G2 requirements
 remain in the full goal.
+
+Follow-up: all distinct scalar candidate roots can now be isolated on a closed
+parameter interval, including repeated and endpoint roots; see
+`ss-complete-scalar-root-census-2026-11-04.md`. Finite third-face membership
+and physical arrangement completeness remain separate requirements.

@@ -23,6 +23,11 @@ fn actual_third_surface_generates_and_replays_a_source_clock_constraint() {
     let clock=proof.qualify_candidate_clock([q(68,100),q(70,100)],Default::default()).unwrap();
     assert!(clock.equals_rational(&q(11,16),Default::default()).unwrap().0);
     clock.reverify().unwrap();proof.reverify().unwrap();
+    let all=proof.isolate_candidate_clocks([q(0,1),q(1,1)],Default::default()).unwrap();
+    assert_eq!(all.roots().len(),2);
+    assert!(all.roots()[0].equals_rational(&q(5,16),Default::default()).unwrap().0);
+    assert!(all.roots()[1].equals_rational(&q(11,16),Default::default()).unwrap().0);
+    all.reverify().unwrap();
     let x=ss::qualify_ss_third_surface_candidates(&ideal,&third,[1,1],2,Default::default()).unwrap();
     assert_eq!(x.polynomial(),&[q(-1,4),q(1,1)]);
     let wire=circle::wire();
@@ -64,6 +69,7 @@ fn original_triple_equations_can_prove_disjointness_without_real_sampling() {
     let proof=ss::qualify_ss_third_surface_candidates(&original(),&third,[1,1],2,Default::default()).unwrap();
     assert!(proof.proves_disjoint_on_spans());
     assert_eq!(proof.polynomial(),&[q(1,1)]);
+    assert!(proof.isolate_candidate_clocks([q(0,1),q(1,1)],Default::default()).unwrap().roots().is_empty());
     assert!(proof.qualify_candidate_clock([q(0,1),q(1,1)],Default::default()).is_err());
     proof.reverify().unwrap();
 }

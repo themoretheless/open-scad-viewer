@@ -24,7 +24,7 @@ impl Default for SsAlgebraicClockLimits {
 pub struct QualifiedSsAlgebraicClock {
     polynomial: Vec<Q>,
     interval: [Q; 2],
-    chain: Vec<Vec<Q>>,
+    chain: Arc<Vec<Vec<Q>>>,
     operations: usize,
     limits: SsAlgebraicClockLimits,
 }
@@ -73,7 +73,7 @@ impl QualifiedSsAlgebraicClock {
         Ok(Self {
             polynomial,
             interval,
-            chain,
+            chain: Arc::new(chain),
             operations: w.used,
             limits,
         })
@@ -144,7 +144,7 @@ impl QualifiedSsAlgebraicClock {
             "Algebraic clock refinement allowance exceeded",
         )?;
         let mut w = Work::new(limits)?;
-        for p in &self.chain {
+        for p in self.chain.iter() {
             for c in p {
                 w.keep(c.clone())?;
             }
@@ -200,3 +200,6 @@ pub(super) fn float_bounds(bounds: &[Q; 2]) -> Result<[f64; 2]> {
     };
     Ok([convert(&bounds[0], true)?, convert(&bounds[1], false)?])
 }
+
+mod census;
+pub use census::{SsAlgebraicRootCensusLimits,QualifiedSsAlgebraicRootCensus};

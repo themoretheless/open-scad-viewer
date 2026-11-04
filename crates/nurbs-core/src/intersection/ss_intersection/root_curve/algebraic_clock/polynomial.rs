@@ -130,3 +130,29 @@ pub(super) fn gcd(a: &[Q], b: &[Q], w: &mut Work) -> Result<Vec<Q>> {
     }
     Ok(a)
 }
+
+// Sign at x +/- infinitesimal: use the first nonzero Taylor derivative.
+// This handles repeated endpoint roots without a sampled epsilon.
+fn side_variations(chain:&[Vec<Q>],x:&Q,right:bool,w:&mut Work)->Result<usize> {
+    let mut last=0;let mut changes=0;
+    for original in chain {
+        let mut p=original.clone();let mut order=0;
+        while !p.is_empty() {
+            let value=evaluate(&p,x,w)?;
+            if !value.is_zero() {
+                let mut sign=if value.is_positive() {1} else {-1};
+                if !right && order%2==1 {sign= -sign;}
+                if last!=0 && last!=sign {changes+=1;}
+                last=sign;break;
+            }
+            p=derivative(&p,w)?;order+=1;
+        }
+    }
+    Ok(changes)
+}
+pub(super) fn count_open(chain:&[Vec<Q>],d:&[Q;2],w:&mut Work)->Result<usize> {
+    if d[0]==d[1] {return Ok(0);}
+    let a=side_variations(chain,&d[0],true,w)?;
+    let b=side_variations(chain,&d[1],false,w)?;
+    a.checked_sub(b).ok_or_else(||crate::input("Open clock root count is inconsistent"))
+}

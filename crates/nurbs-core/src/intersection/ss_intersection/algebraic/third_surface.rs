@@ -22,6 +22,11 @@ impl QualifiedSsThirdSurfaceCandidates {
     pub fn qualify_candidate_clock(&self,interval:[Q;2],limits:super::super::root_curve::SsAlgebraicClockLimits)->Result<super::super::root_curve::QualifiedSsAlgebraicClock> {
         super::super::root_curve::QualifiedSsAlgebraicClock::qualify(self.polynomial.clone(),interval,limits)
     }
+    /// Complete real candidate clocks on a closed source-parameter interval.
+    /// Third-face membership is not implied by this scalar root census.
+    pub fn isolate_candidate_clocks(&self,domain:[Q;2],limits:super::super::root_curve::SsAlgebraicRootCensusLimits)->Result<super::super::root_curve::QualifiedSsAlgebraicRootCensus> {
+        super::super::root_curve::QualifiedSsAlgebraicRootCensus::isolate(self.polynomial.clone(),domain,limits)
+    }
     pub fn reverify(&self)->Result<()> {
         self.original.reverify()?;
         let fresh=qualify_ss_third_surface_candidates(&self.original,&self.third,self.third_spans,self.axis,self.limits)?;

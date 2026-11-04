@@ -173,7 +173,7 @@ pub use wire::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_origin
 pub use wire::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};
 
 mod algebraic_clock;
-pub use algebraic_clock::{SsAlgebraicClockLimits,SsAlgebraicClockEnclosure,QualifiedSsAlgebraicClock};
+pub use algebraic_clock::{SsAlgebraicRootCensusLimits,QualifiedSsAlgebraicRootCensus,SsAlgebraicClockLimits,SsAlgebraicClockEnclosure,QualifiedSsAlgebraicClock};
 mod algebraic_point;
 pub use algebraic_point::{SsAlgebraicPointLimits,SsAlgebraicPointBounds,OriginalSsAlgebraicPoint};
 
