@@ -1,0 +1,13 @@
+{
+  "distinct_tests_passed": 59,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "288bf27bda347950c0c3217bd4a31c04064c3fd5558047f26a54ed8983e730ac",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "3bd126a3aef836fed7f6c3ca23ab0fbff35f4a8a05adb8ab8f2c9f18ae3d985a",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface.rs": "1831178e4a9ab6970618e2af6c56f7090f8d65148393283440aa5bef31ce8a12",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface/branch_census.rs": "25f7f966685f6bbc20cfbb8b613606c5d311a162a8d59f1fda479b5d27a747ad",
+    "crates/nurbs-core/tests/ss_third_surface_branch_census.rs": "bc7b6f65ba3c6d23a80bcb65f38086678f24b91e42be1967a942db7d55e5197e"
+  },
+  "scope": "All-or-nothing complete scalar candidate classification for one original SS graph over its closed natural domain against one finite third span, using independent membership/exclusion proofs",
+  "remaining": "General algebraic UV extensions/nonisolated contacts, finite trimmed faces, periodic/pole arrangements, cross-source junctions, complete physical branch assembly/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

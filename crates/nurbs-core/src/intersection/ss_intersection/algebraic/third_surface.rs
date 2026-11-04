@@ -85,3 +85,6 @@ pub fn qualify_ss_third_surface_candidates(original:&QualifiedOriginalSsIdeal,th
 
 mod membership;
 pub use membership::{SsThirdSurfaceExclusionKind,QualifiedSsThirdSurfaceExclusion,SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint};
+
+mod branch_census;
+pub use branch_census::{SsThirdSurfaceBranchLimits,SsThirdSurfaceBranchEntry,QualifiedSsThirdSurfaceBranchCensus};

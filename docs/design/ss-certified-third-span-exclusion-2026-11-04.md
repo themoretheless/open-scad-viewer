@@ -36,3 +36,8 @@ candidate classification, general algebraic UV extensions, trimmed-face holes,
 cross-source junctions, arrangements/winding and full trim/material/Boolean/
 healing remain open, alongside lineage/history, bridge/WASM and the wider
 quad/offset/fillet/G2 scope.
+
+Follow-up: supported queries now classify every candidate on a whole owned SS
+graph against one finite third span; see
+`ss-complete-third-span-branch-census-2026-11-04.md`. Whole-body arrangements
+and general algebraic UV lifting remain open.
