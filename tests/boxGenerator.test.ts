@@ -111,4 +111,12 @@ describe('box generator', () => {
     expect(result.volume).toBeGreaterThan(0)
     expect(result.meshes.length).toBe(1)
   }, 120000)
+  it('builds the default ?generator=box configuration (cell_size=40, print_optimized=false, hook_chamfer=true/false) without exceeding Boolean work budget', async () => {
+    const request={quality:'full',purpose:'analysis'} as const
+    for (const hook_chamfer of [true, false]) {
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized:false,hook_chamfer}),request)
+      expect(result.volume).toBeGreaterThan(0)
+      expect(result.meshes.length).toBe(1)
+    }
+  }, 120000)
 })

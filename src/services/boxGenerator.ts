@@ -136,7 +136,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  r = max(rib*5.2,min(cell_size,floor_cell_size*1.1)*0.58/mesh_density);
+  r = max(rib*5.8,min(cell_size,floor_cell_size*1.1)*0.58/mesh_density);
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
   frame = max(wall,rib*1.3);
@@ -158,22 +158,39 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
-      cell_r = radius>0 || bend_radius>0 || cell_size<16 ? 0 : min(local_rib*0.65,r*0.2);
-      if(!hook_zone) offset(r=cell_r,$fn=6) offset(delta=-local_rib/2-cell_r)
-        polygon([
-          [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
-            oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-          [ox+(ix+seam_dir)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
-            oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48],
-          [ox+(ix+seam_dir)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
-            oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-          [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
-            oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-          [ox+(ix-seam_dir)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
-            oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-          [ox+(ix-seam_dir)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
-            oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48]
-        ]);
+      cell_r = radius>0 || bend_radius>0 ? 0 : min(local_rib*0.8,r*0.24);
+      if(!hook_zone) {
+        if(cell_r>0) offset(r=cell_r,$fn=6) offset(delta=-local_rib/2-cell_r)
+          polygon([
+            [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+seam_dir)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+seam_dir)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-seam_dir)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-seam_dir)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48]
+          ]);
+        else offset(delta=-local_rib/2)
+          polygon([
+            [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+seam_dir)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+seam_dir)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-seam_dir)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-seam_dir)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
+              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48]
+          ]);
+      }
     }
   }
 }
@@ -218,8 +235,7 @@ module floor_pores() {
         ix=3*col; iy=2*row+(abs(col)%2);
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
-        floor_cell_r = radius>0 || bend_radius>0 || print_optimized || !hooks ? 0 : min(local_floor_rib*0.6,r*0.18);
-        offset(r=floor_cell_r,$fn=6) offset(delta=-local_floor_rib/2-floor_cell_r)
+        offset(delta=-local_floor_rib/2)
           polygon([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
@@ -306,19 +322,19 @@ module assembled_box() { union() {
           cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
         translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
           cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
-        // Smooth inner root fillet at the rear wall junction & inner corner fillet inside the hook slot
         translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
-          difference() {
-            translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-            translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-          }
-          difference() {
-            translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-            translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-          }
           if(hook_chamfer) {
             polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
             polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
+          } else {
+            difference() {
+              translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+              translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
+            }
+            difference() {
+              translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+              translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
+            }
           }
         }
       }
