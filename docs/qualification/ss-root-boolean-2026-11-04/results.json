@@ -1,0 +1,65 @@
+{
+  "tested_base": "056cb4937ab86d6f9ec114d1dcd284f6aec3d33b",
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "9a5c96bcd92118ce62fe81c26e26b115b777fdece7318a1ce1b7cb9a81ee1532",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "06352cef5ea9355f8c95f253563344ecea7f71351a5ce1f797c8205c0b58598e",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "3a39d3f37433f7e84697f604980315370cfd2de2e589b9b0631162a45c68fe54",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "881ff5c8acaa557a55680a81c5363f696f7c84662692aa423ab500e514c28cfb",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "865acdf582867c333fdcc44579baa767811ad432b1f7038beb69988ea3ff52fa",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume.rs": "de3b33c99798da930ac8ee48c26bdb9180f545eecec4d1d7fe058dfc1397bca5",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "781239542b5a1e2b7736a0aa6fb20c8556980b8b95b509da1fea7319e77c4f13",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/root_boolean.rs": "cf69e6aa2de9935ab32cae9cdf5c9452ff3fd1f0490547d934e42b4faccfd272",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/root_boolean/policy.rs": "0b397722b0a191381cfa5d134f797214762a5c2eb8dbd01642ba62870f00dbc2"
+  },
+  "tests_passed": 15,
+  "suites": {
+    "native_root_forest_and_boolean": 1,
+    "boolean_policy": 2,
+    "ray_parity": 7,
+    "mixed_topology_transfer": 3,
+    "root_model": 2
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0
+  },
+  "operations": [
+    "union",
+    "intersection",
+    "directed difference",
+    "XOR"
+  ],
+  "native_cases": [
+    "separate roots",
+    "strict nested roots",
+    "reversed nested operands"
+  ],
+  "material_checks": [
+    "analytic reference volume enclosure for all 12 selections",
+    "retained source identity",
+    "source deletion and retention lineage",
+    "discarded interior boundary is material after union",
+    "discarded exterior boundary does not affect difference",
+    "explicit empty BRep and exact zero volume",
+    "retained boundary remains unresolved",
+    "empty material rejects nonfinite points",
+    "requested volume accuracy refusal"
+  ],
+  "replay": [
+    "complete original three-root forest",
+    "complete nested Boolean difference"
+  ],
+  "scope": "Boolean material selection for strictly separated source boundaries after complete pairwise relation proofs",
+  "policy_production_prefix_sha256": "5268b5186d1676c4ec8f47ca096f725fd6d1ad470c6714c17b12a0341166a22d",
+  "qualification_note": "The cfg(test) policy oracle was strengthened while native integration ran; its non-test production prefix stayed byte-identical and the final policy tests passed separately.",
+  "remaining": [
+    "general intersecting SS and finite-face trim",
+    "algebraic clocks and cross-source face-local junctions",
+    "singular/coincident and periodic/pole domains",
+    "mixed legacy/root inputs and healing",
+    "splitting lineage and persistent construction history",
+    "actual bridge/WASM calls",
+    "separate quad/offset/fillet/G2 parity audit"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

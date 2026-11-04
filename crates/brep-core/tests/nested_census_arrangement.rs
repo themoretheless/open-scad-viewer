@@ -1136,6 +1136,8 @@ fn complete_root_relations_build_a_material_shell_forest() {
     );
     assert_eq!(small_far.kind(), mixed::RootRelationKind::Disjoint);
     eprintln!("both disjoint root relations complete");
+    let boolean_replay =
+        check_strict_root_booleans(&large, &small, &far, &nested, &distant, &directions);
     let roots = vec![large.clone(), small.clone(), far.clone()];
     let relations = vec![nested.clone(), distant.clone(), small_far.clone()];
     let forest =
@@ -1255,4 +1257,110 @@ fn complete_root_relations_build_a_material_shell_forest() {
         forest.depths()
     );
     forest.reverify().unwrap();
+    boolean_replay.reverify().unwrap();
+}
+
+fn check_strict_root_booleans(
+    large: &Arc<mixed::QualifiedPairedRootSolid>,
+    small: &Arc<mixed::QualifiedPairedRootSolid>,
+    far: &Arc<mixed::QualifiedPairedRootSolid>,
+    nested: &Arc<mixed::QualifiedRootRelation>,
+    distant: &Arc<mixed::QualifiedRootRelation>,
+    directions: &[[f64; 3]],
+) -> mixed::QualifiedRootBoolean {
+    use solid::BooleanMaterialOp::*;
+    let a = 0.3125_f64.powi(2);
+    let b = 0.15625_f64.powi(2);
+    let one = 6. * std::f64::consts::PI * b * b * (3. * a - b);
+    let tiny = one * 0.25_f64.powi(3);
+    for (op, nested_keep, disjoint_keep, swapped_keep) in [
+        (Union, [true, false], [true, true], [false, true]),
+        (Intersection, [false, true], [false, false], [true, false]),
+        (Difference, [true, true], [true, false], [false, false]),
+        (Xor, [true, true], [true, true], [true, true]),
+    ] {
+        let outputs = [
+            mixed::QualifiedRootBoolean::qualify(nested.clone(), op, 0.002).unwrap(),
+            mixed::QualifiedRootBoolean::qualify(distant.clone(), op, 0.002).unwrap(),
+            mixed::QualifiedRootBoolean::qualify_swapped(nested.clone(), op, 0.002).unwrap(),
+        ];
+        let expected = match op {
+            Union => [one, 2. * one, one],
+            Intersection => [tiny, 0., tiny],
+            Difference => [one - tiny, one, 0.],
+            Xor => [one - tiny, 2. * one, one - tiny],
+        };
+        for (i, (out, keep)) in outputs
+            .iter()
+            .zip([nested_keep, disjoint_keep, swapped_keep])
+            .enumerate()
+        {
+            assert!(out.material_admitted());
+            assert_eq!(out.operation(), op);
+            assert_eq!(out.lineage().map(|m| m.is_some()), keep);
+            assert_eq!(out.is_empty(), keep == [false, false]);
+            let v = out.volume();
+            assert!(
+                v[0] <= expected[i] && expected[i] <= v[1],
+                "op={op:?} case={i} volume={v:?}"
+            );
+            if out.is_empty() {
+                assert!(out.model().is_none());
+                assert_eq!(v, [0.; 2]);
+            }
+            for (map, source) in out.lineage().into_iter().zip(out.operands()) {
+                if let Some(map) = map {
+                    assert!(map.source_matches(source.model()));
+                    assert!(map.target_matches(out.model().unwrap()));
+                }
+            }
+        }
+    }
+    let union = mixed::QualifiedRootBoolean::qualify(nested.clone(), Union, 0.002).unwrap();
+    assert!(std::ptr::eq(union.model().unwrap(), large.model()));
+    assert_eq!(
+        union
+            .classify_point([0.5, 0.5, 0.02], directions, Default::default())
+            .unwrap(),
+        Some(true),
+        "Discarded small boundary is interior material"
+    );
+    let intersection =
+        mixed::QualifiedRootBoolean::qualify(nested.clone(), Intersection, 0.002).unwrap();
+    assert!(std::ptr::eq(intersection.model().unwrap(), small.model()));
+    assert_eq!(
+        intersection
+            .classify_point([0.5, 0.5, 0.02], directions, Default::default())
+            .unwrap(),
+        None
+    );
+    let difference =
+        mixed::QualifiedRootBoolean::qualify(distant.clone(), Difference, 0.002).unwrap();
+    assert_eq!(
+        difference
+            .classify_point([1.5, 0.5, 0.], directions, Default::default())
+            .unwrap(),
+        Some(false),
+        "Discarded far boundary is exterior material"
+    );
+    let empty = mixed::QualifiedRootBoolean::qualify(distant.clone(), Intersection, 0.002).unwrap();
+    assert_eq!(
+        empty
+            .classify_point([0.5, 0.5, 0.], &[], Default::default())
+            .unwrap(),
+        Some(false)
+    );
+    assert!(empty
+        .classify_point([f64::NAN, 0., 0.], &[], Default::default())
+        .is_err());
+    let reverse_empty =
+        mixed::QualifiedRootBoolean::qualify_swapped(nested.clone(), Difference, 0.002).unwrap();
+    assert!(reverse_empty.is_empty());
+    assert!(Arc::ptr_eq(reverse_empty.operands()[0], small));
+    assert!(Arc::ptr_eq(reverse_empty.operands()[1], large));
+    assert!(Arc::ptr_eq(difference.operands()[1], far));
+    assert!(mixed::QualifiedRootBoolean::qualify(nested.clone(), Union, 1e-8).is_err());
+    assert!(mixed::QualifiedRootBoolean::qualify(nested.clone(), Union, f64::NAN).is_err());
+    eprintln!("all four root Boolean operations and reversed operands qualified");
+    mixed::QualifiedRootBoolean::qualify(nested.clone(), Difference, 0.002).unwrap()
 }

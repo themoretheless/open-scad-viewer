@@ -248,3 +248,6 @@ pub use relation::{RootRelationKind,RootRelationLimits,RootRelationWork,Qualifie
 
 mod shell_forest;
 pub use shell_forest::QualifiedRootShellForest;
+
+mod root_boolean;
+pub use root_boolean::QualifiedRootBoolean;
