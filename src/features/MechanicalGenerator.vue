@@ -9,9 +9,10 @@ const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCu
 const dialog=ref<HTMLDialogElement|null>(null)
 const kind=ref<'gear'|'planetary_gears'|'thread'|'box'>('box')
 const values=ref<Record<string,number|boolean>>({...BOX_DEFAULTS,print_optimized:false})
+const bendEnabled=ref(false)
 const visibleValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>{
   if(kind.value!=='box')return true
-  if(['bend_reverse','bend_segments'].includes(key))return Number(values.value.bend_radius)>0
+  if(['bend_radius','bend_reverse','bend_segments'].includes(key))return false
   if(key.startsWith('hook_'))return false
   if(['hole_diameter','hole_pitch'].includes(key))return !values.value.organic||Boolean(values.value.drain&&!values.value.floor_mesh)
   if(['floor_cell_size','floor_rib'].includes(key))return Boolean(values.value.floor_mesh)
@@ -26,23 +27,26 @@ const gridKeys=new Set(['porous','organic','print_optimized','overhang_angle','c
 const shapeValues=computed(()=>Object.fromEntries(Object.entries(visibleValues.value).filter(([key])=>!gridKeys.has(key))))
 const gridValues=computed(()=>Object.fromEntries(Object.entries(visibleValues.value).filter(([key])=>gridKeys.has(key))))
 const hookValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>key.startsWith('hook_'))))
+const bendValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>['bend_radius','bend_reverse','bend_segments'].includes(key))))
 const error=ref('')
 const generated=ref<{source:string;document?:ReturnType<typeof compileRushGraph>['document']}|null>(null)
 const ru=computed(()=>props.locale==='ru')
 const names:Record<string,[string,string]>={
-  bend_radius:['Радиус изгиба всей коробки, мм (0 — прямая)','Whole-box bend radius, mm (0 = straight)'],bend_reverse:['Обратное направление дуги','Reverse arc direction'],bend_segments:['Сегменты изгиба','Bend segments'],
-  corner_radius:['Радиус углов в плане, мм','Corner radius in plan, mm'],front_angle:['Наклон передней стенки, ° (+ наружу)','Front wall tilt, ° (+ outward)'],
+  bend_radius:['Радиус цилиндрической стены/трубы, мм','Cylinder / pipe radius, mm'],bend_reverse:['Вогнуть внутрь','Bend inward'],bend_segments:['Сегменты дуги','Arc segments'],
+  corner_radius:['Скругление углов коробки, мм','Corner fillet radius, mm'],front_angle:['Наклон передней стенки, ° (+ наружу)','Front wall tilt, ° (+ outward)'],
   width:['Ширина, мм','Width, mm'],depth:['Глубина, мм','Depth, mm'],height:['Высота, мм','Height, mm'],floor:['Толщина дна, мм','Floor thickness, mm'],porous:['Открытые стенки','Open walls'],organic:['Органический каркас','Organic skeleton'],print_optimized:['Ячейки для печати дном вниз','Upright FDM cells'],overhang_angle:['Предельный свес от вертикали, °','Maximum overhang from vertical, °'],cell_size:['Размер ячейки стенок, мм','Wall cell size, mm'],rib:['Перемычки стенок, мм','Wall rib width, mm'],stress_gradient:['Градиент сопромата (0 — равномерно, 1 — авто)','Structural gradient (0 = uniform, 1 = auto)'],mesh_density:['Плотность сетки (0.5–2, 1 — норма)','Mesh density scale (0.5–2, 1 = normal)'],floor_mesh:['Сетка на дне','Mesh floor'],floor_cell_size:['Размер ячейки дна, мм','Floor cell size, mm'],floor_rib:['Перемычки дна, мм','Floor rib width, mm'],pattern_seed:['Вариант рисунка','Pattern seed'],hole_diameter:['Диаметр отверстий, мм','Hole diameter, mm'],hole_pitch:['Шаг отверстий, мм','Hole pitch, mm'],dividers:['Перегородки','Dividers'],drain:['Дренаж в дне','Drain holes'],hooks:['Крючки','Hooks'],hook_count:['Количество крючков','Hook count'],hook_width:['Ширина крючка, мм','Hook width, mm'],hook_thickness:['Толщина крючка, мм','Hook thickness, mm'],hook_spacing:['Между центрами, мм (0 — автоматически)','Center spacing, mm (0 = automatic)'],hook_gap:['Зазор под рейку, мм','Rail gap, mm'],hook_drop:['Длина зацепа, мм','Hook drop, mm'],hook_chamfer:['Косынка 45° под основанием крючка','45° root gusset under hook'],
   teeth:['Число зубьев','Teeth'],module:['Модуль, мм','Module, mm'],pressure_angle:['Угол давления, °','Pressure angle, °'],thickness:['Толщина, мм','Thickness, mm'],bore:['Отверстие, мм','Bore diameter, mm'],backlash:['Боковой зазор на шестерню, мм','Backlash per gear, mm'],clearance:['Зазор, мм','Clearance, mm'],internal:['Внутренний вариант','Internal'],rim_width:['Толщина обода, мм','Rim width, mm'],flank_segments:['Сегменты боковой линии зуба','Flank segments'],sun_teeth:['Зубья солнечной шестерни','Sun teeth'],planet_teeth:['Зубья сателлита','Planet teeth'],planet_count:['Число сателлитов','Planets'],carrier_angle:['Поворот водила, °','Carrier angle, °'],diameter:['Диаметр резьбы, мм','Thread diameter, mm'],pitch:['Шаг резьбы, мм','Thread pitch, mm'],length:['Длина, мм','Length, mm'],wall:['Толщина стенки, мм','Wall thickness, mm'],starts:['Число заходов','Starts'],left_handed:['Левая резьба','Left handed'],segments_per_turn:['Сегменты на оборот','Segments per turn'],
 }
-watch(kind,()=>{values.value={...(kind.value==='box'?{...BOX_DEFAULTS,print_optimized:false}:kind.value==='gear'?GEAR_DEFAULTS:kind.value==='thread'?THREAD_DEFAULTS:PLANETARY_DEFAULTS)};generated.value=null;error.value=''})
+watch(kind,()=>{bendEnabled.value=false;values.value={...(kind.value==='box'?{...BOX_DEFAULTS,print_optimized:false}:kind.value==='gear'?GEAR_DEFAULTS:kind.value==='thread'?THREAD_DEFAULTS:PLANETARY_DEFAULTS)};generated.value=null;error.value=''})
+watch(bendEnabled,enabled=>{if(kind.value==='box')values.value.bend_radius=enabled?Math.max(150,Number(values.value.bend_radius)||150):0})
 watch(()=>values.value.internal,internal=>{if(kind.value==='gear'&&internal){values.value.bore=0;if(Number(values.value.teeth)<36)values.value.teeth=72}})
 watch(values,()=>{generated.value=null;error.value=''},{deep:true})
 watch(()=>props.open,async open=>{await nextTick();if(open&&!dialog.value?.open)dialog.value?.showModal();else if(!open&&dialog.value?.open)dialog.value.close()})
 function generate(){
   error.value=''
   try {
-    generated.value=kind.value==='box'?{source:generateBox(values.value)}:compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))
+    const boxPayload={...values.value,bend_radius:bendEnabled.value?values.value.bend_radius:0}
+    generated.value=kind.value==='box'?{source:generateBox(boxPayload)}:compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))
     if(kind.value==='box')openEditor(false)
   }
   catch(e){generated.value=null;error.value=e instanceof Error?e.message:String(e)}
@@ -89,6 +93,22 @@ function openEditor(save:boolean){
             <input v-if="typeof value==='boolean'" v-model="values[key]" type="checkbox">
             <input v-else v-model.number="values[key]" type="number" step="any" required>
           </label></div>
+        </fieldset>
+        <fieldset v-if="kind==='box'" class="hook-fields">
+          <legend>{{ru?'Изгиб корпуса по дуге (опционально)':'Curved body bend (optional)'}}</legend>
+          <div class="fields">
+            <label class="check">
+              <span>{{ru?'Изогнуть коробку по дуге (для круглой трубы/колонны)':'Curve box along an arc (for round pipe/column)'}}</span>
+              <input v-model="bendEnabled" type="checkbox">
+            </label>
+            <template v-if="bendEnabled">
+              <label v-for="(value,key) in bendValues" :key="key" :class="{check:typeof value==='boolean'}">
+                <span>{{names[key]?.[ru?0:1]??key}}</span>
+                <input v-if="typeof value==='boolean'" v-model="values[key]" type="checkbox">
+                <input v-else v-model.number="values[key]" type="number" step="any" required>
+              </label>
+            </template>
+          </div>
         </fieldset>
         <p v-if="kind==='box' && values.print_optimized && values.hooks" class="hint" role="note">{{ru?'Оптимизация относится к ячейкам при печати дном вниз. Под загнутыми вниз крючками остаются свесы: проверьте поддержки в слайсере или отключите крючки.':'Optimization applies to cells printed upright. Downturned hooks still overhang: check supports in the slicer or disable hooks.'}}</p>
         <p v-if="error" class="error" role="alert">{{error}}</p>
