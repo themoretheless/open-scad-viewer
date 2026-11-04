@@ -33,7 +33,10 @@ const schema = z.object({
 
 /** Dimensions are external; organic walls retain a solid border and hook pads. */
 export function generateBox(input: unknown = BOX_DEFAULTS): string {
-  const p = schema.parse(input)
+  const normalized = input && typeof input === 'object' && 'bend_radius' in input && Number((input as Record<string, unknown>).bend_radius) <= 0
+    ? { ...(input as Record<string, unknown>), bend_segments: Math.max(4, Math.trunc(Number((input as Record<string, unknown>).bend_segments) || 24)) }
+    : input
+  const p = schema.parse(normalized)
   const { width:w, depth:d, height:h, wall:t, floor:f } = p
   if (w <= 4*t || d <= 4*t || h <= f+2*t) throw Error('Размеры коробки слишком малы для выбранных стенок и дна / Box dimensions are too small for the wall and floor')
   if ((w-2*Math.max(t,p.corner_radius)-p.dividers*t)/(p.dividers+1) < 4) throw Error('Между перегородками должно оставаться минимум 4 мм / Compartments must be at least 4 mm wide')

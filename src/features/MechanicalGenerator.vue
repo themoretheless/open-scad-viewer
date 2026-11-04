@@ -11,6 +11,7 @@ const kind=ref<'gear'|'planetary_gears'|'thread'|'box'>('box')
 const values=ref<Record<string,number|boolean>>({...BOX_DEFAULTS,print_optimized:false})
 const visibleValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>{
   if(kind.value!=='box')return true
+  if(['bend_reverse','bend_segments'].includes(key))return Number(values.value.bend_radius)>0
   if(key.startsWith('hook_'))return false
   if(['hole_diameter','hole_pitch'].includes(key))return !values.value.organic||Boolean(values.value.drain&&!values.value.floor_mesh)
   if(['floor_cell_size','floor_rib'].includes(key))return Boolean(values.value.floor_mesh)
