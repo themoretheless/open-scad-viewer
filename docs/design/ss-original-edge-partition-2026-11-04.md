@@ -38,3 +38,8 @@ periodic/lifted restrictions, cross-source physical junctions and mixed-pair
 face arrangements, actual SURFACE/FACE region splitting and material selection.
 Full intersecting Boolean/healing, persistent split/merge lineage/history,
 bridge/WASM execution and the wider quad/offset/fillet/G2 scope remain open.
+
+Follow-up: partitions now apply directly to an existing root BRep, updating all
+coedge uses and preserving original face/shell/body data with snapshot-local
+lineage; see `ss-root-brep-subdivision-2026-11-04.md`. Actual surface-region
+splitting, cross-source junctions and material Boolean authority remain open.

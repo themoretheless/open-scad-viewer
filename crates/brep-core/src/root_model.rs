@@ -230,3 +230,6 @@ impl RootBrep {
         ])
     }
 }
+
+mod partition;
+pub use partition::{RootEdgePartitionRequest,RootBrepPartitionLimits,QualifiedRootBrepEdgeSubdivision};
