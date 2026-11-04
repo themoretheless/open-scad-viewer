@@ -41,8 +41,11 @@ it.each([{wall:2,hook_thickness:4},{wall:5,hook_thickness:2}])('keeps hook dimen
  const p={...BOX_DEFAULTS,...patch,porous:false,floor_mesh:false,hook_width:12,hook_gap:8,hook_drop:20,hook_spacing:50}
  const base=await build({...p,hooks:false}),mounted=await build(p)
  closed(mounted)
- const expected=p.hook_count*p.hook_width*p.hook_thickness*(p.hook_drop+p.hook_thickness+p.hook_gap)
- expect(mounted.volume-base.volume).toBeCloseTo(expected,1)
+ const rectVolume=p.hook_count*p.hook_width*p.hook_thickness*(p.hook_drop+p.hook_thickness+p.hook_gap)
+ const r=Math.min(p.hook_thickness*0.85,p.hook_gap*0.35,p.hook_drop*0.35)
+ const filletVolume=p.hook_count*p.hook_width*2*(1-2*Math.sqrt(2)/4)*r*r
+ expect(mounted.volume-base.volume).toBeGreaterThan(rectVolume)
+ expect(Math.abs(mounted.volume-base.volume-(rectVolume+filletVolume))).toBeLessThan(3.5)
  let left=Infinity,right=-Infinity,bottom=Infinity,outside=Infinity
  for(const m of mounted.meshes)for(let i=0;i<m.vertices.length;i+=6){
   if(m.vertices[i+1]<-p.hook_gap-0.01){

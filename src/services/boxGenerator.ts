@@ -206,28 +206,32 @@ module floor_pores() {
   frame=max(wall,floor_rib*1.25);
   r=floor_cell_size*0.58/mesh_density;
   ox=width/2; oy=depth/2;
-  nc=ceil((width-2*frame)/(3*r))+1;
+  max_s=bend_radius>0 && !print_optimized ? max(1,1+(bend_reverse ? 0 : 0.85*depth/bend_radius)) : 1;
+  nc=ceil((width-2*frame)*max_s/(3*r))+1;
   nr=ceil((depth-2*frame)/(sqrt(3)*r))+1;
   difference() {
     intersection() {
       offset(delta=-frame) footprint();
       union() for(col=[-nc:nc]) for(row=[-nr:nr]) {
         ix=3*col; iy=2*row+(abs(col)%2);
+        s0=bend_radius>0 && !print_optimized ? max(0.35,1+(bend_reverse ? -0.85 : 0.85)*min(depth,max(0,oy+iy*sqrt(3)*r/2))/bend_radius) : 1;
+        sp=bend_radius>0 && !print_optimized ? max(0.35,1+(bend_reverse ? -0.85 : 0.85)*min(depth,max(0,oy+(iy+1)*sqrt(3)*r/2))/bend_radius) : 1;
+        sm=bend_radius>0 && !print_optimized ? max(0.35,1+(bend_reverse ? -0.85 : 0.85)*min(depth,max(0,oy+(iy-1)*sqrt(3)*r/2))/bend_radius) : 1;
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
-        local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*r)/depth))));
+        local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r/s0)/width,abs(iy*sqrt(3)*r)/depth))))/max(1,sqrt(s0));
         offset(delta=-local_floor_rib/2)
           polygon([
-            [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+            [ox+((ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28)/s0,
               oy+(iy+0)*sqrt(3)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+            [ox+((ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28)/sp,
               oy+(iy+1)*sqrt(3)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+            [ox+((ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28)/sp,
               oy+(iy+1)*sqrt(3)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
-            [ox+(ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+            [ox+((ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28)/s0,
               oy+(iy+0)*sqrt(3)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+            [ox+((ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28)/sm,
               oy+(iy-1)*sqrt(3)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+            [ox+((ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28)/sm,
               oy+(iy-1)*sqrt(3)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28]
           ]);
       }
@@ -293,26 +297,40 @@ module assembled_box() { union() {
   if(dividers>0) for(i=[1:dividers])
     translate([divider_margin+i*divider_step-wall/2,wall-0.25,floor-0.1]) rotate([90,0,90])
       panel(depth-2*wall+0.5-0.5*slope,wall_height+0.1,wall,porous && radius==0,0,organic,false,slope);
-  if(hooks) for(i=[0:hook_count-1])
-    translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
-      translate([0,-hook_gap-hook_thickness,height-hook_thickness])
-        cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
-      translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
-        cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
-      if(hook_chamfer) {
-        // Self-supporting 45-degree hook profile:
-        // 1) Full 45-degree inner rail-slot corner gusset across the rail gap (eliminates horizontal bridge ceiling)
-        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
-          polygon([
-            [0,hook_drop],
-            [-hook_gap,hook_drop],
-            [0,hook_drop-min(hook_drop*0.95,hook_gap)]
-          ]);
-        // 2) 45-degree lower bevel under the outer downturned lip
-        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
-          polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
+  if(hooks) {
+    hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
+    for(i=[0:hook_count-1])
+      translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
+        translate([0,-hook_gap-hook_thickness,height-hook_thickness])
+          cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
+        translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
+          cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
+        // Smooth inner root fillet at the rear wall junction & inner corner fillet inside the hook slot
+        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
+          difference() {
+            translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+            translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=8);
+          }
+          difference() {
+            translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+            translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=8);
+          }
+        }
+        if(hook_chamfer) {
+          // Self-supporting 45-degree hook profile:
+          // 1) Full 45-degree inner rail-slot corner gusset across the rail gap (eliminates horizontal bridge ceiling)
+          translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
+            polygon([
+              [0,hook_drop],
+              [-hook_gap,hook_drop],
+              [0,hook_drop-min(hook_drop*0.95,hook_gap)]
+            ]);
+          // 2) 45-degree lower bevel under the outer downturned lip
+          translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
+            polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
+        }
       }
-    }
+  }
 } }
 module straight_box() { assembled_box(); }
 // viewer_bend is a native viewer extension; change these settings to regenerate the curved mesh.
