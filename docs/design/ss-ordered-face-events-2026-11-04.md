@@ -39,3 +39,8 @@ seam/pole/singular identity, ordered face arrangements and actual face splitting
 general algebraic UV/boundary contact proofs, full material trim and intersecting
 Boolean/healing. Persistent split/merge lineage/history, actual bridge/WASM calls
 and the wider quad/offset/fillet/G2 requirements remain open.
+
+Follow-up: exact events now partition actual original SS edges and preserve
+source endpoint ownership through closed-wire/paired-BRep reconstruction; see
+`ss-original-edge-partition-2026-11-04.md`. Surface/face region splitting and
+general material Boolean authority remain separate requirements.

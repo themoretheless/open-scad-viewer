@@ -113,3 +113,6 @@ impl QualifiedOrderedSsFaceEvents {
         need(self.events==fresh.events && self.work==fresh.work,"Exact SS event grouping, order or record lineage changed")
     }
 }
+
+mod partition;
+pub use partition::{SsEventCutSelection,SsEventCutUse,SsEventEdgePartitionLimits,QualifiedSsEventEdgePartition};

@@ -119,4 +119,4 @@ impl QualifiedSsTrimmedFaceCensus {
 }
 
 mod events;
-pub use events::{SsFaceEventLimits,SsFaceEvent,SsFaceEventWork,QualifiedOrderedSsFaceEvents};
+pub use events::{SsEventCutSelection,SsEventCutUse,SsEventEdgePartitionLimits,QualifiedSsEventEdgePartition,SsFaceEventLimits,SsFaceEvent,SsFaceEventWork,QualifiedOrderedSsFaceEvents};

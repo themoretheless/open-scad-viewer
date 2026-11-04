@@ -182,3 +182,6 @@ pub use algebraic_point::{SsAlgebraicPointLimits,SsAlgebraicPointBounds,Original
 
 mod algebraic_port;
 pub use algebraic_port::{QualifiedSsAlgebraicPort,OriginalSsAlgebraicEdge};
+
+mod partition;
+pub use partition::{SsRootEdgePartitionLimits,QualifiedOriginalSsEdgePartition};
