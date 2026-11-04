@@ -5,6 +5,13 @@ The complete general SS / trim / material body / Boolean objective remains open.
 This checkpoint supplies proof for entire finite UV cells, not complete output
 assembly or global material/embedding admission of a subdivision candidate.
 
+Follow-up checkpoints: `ss-interior-jordan-progress-2026-11-04.md`,
+`ss-interior-census-progress-2026-11-04.md`, and
+`ss-census-arrangement-progress-2026-11-04.md` add admitted regular interior
+contours, exhaustive pair-census ownership and combined closed-contour topology.
+The general requirements below remain open, including positive multi-component
+qualification and global mixed-solid admission.
+
 ## Implemented
 
 - `ClosedCutCandidate::classify_rectangle` classifies the whole UV rectangle

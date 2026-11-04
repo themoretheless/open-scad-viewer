@@ -183,3 +183,9 @@ pub fn qualify_interior_ss_census(
         separation_queries: used,
     })
 }
+
+mod regions;
+pub use regions::{CensusRectangleReport, QualifiedCensusMaterialRectangle};
+
+mod arrangement;
+pub use arrangement::{QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement};

@@ -187,7 +187,32 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()],coverage.clone(),&wrong_edge,Default::default()).is_err());
     let census = mixed::qualify_interior_ss_census(vec![jordan.clone()], coverage.clone(), &anchors, Default::default()).unwrap();
     assert_eq!(census.components().len(),1);
-    census.reverify().unwrap();
+    let census=std::sync::Arc::new(census);
+    for support in 0..2 {
+        let arrangement=census.build_face_arrangement(support,Default::default()).unwrap();
+        assert_eq!(arrangement.parents(), &[None]);
+        assert_eq!(arrangement.region_faces().len(),2);
+        assert!(!arrangement.geometry_admitted());
+        assert_eq!(arrangement.face_for_signature(&[false]).unwrap(),1);
+        assert_eq!(arrangement.face_for_signature(&[true]).unwrap(),arrangement.region_faces()[1]);
+        assert!(arrangement.face_for_signature(&[]).is_err());
+        assert_eq!(arrangement.model().topology().faces.len(),a.model().faces.len()+1);
+        assert_eq!(arrangement.model().topology().edges.len(),a.model().edges.len()+wire.edges().len());
+    }
+
+    for support in 0..2 {
+        let inner=census.classify_rectangle(support,[[0.48,0.52],[0.66,0.70]],Default::default()).unwrap();
+        assert_eq!(inner.location(),Location::Inside);
+        assert_eq!(inner.signature(),Some(&[true][..]));
+        let outer=census.classify_rectangle(support,[[0.035,0.065];2],Default::default()).unwrap();
+        assert_eq!(outer.signature(),Some(&[false][..]));
+        let boundary=census.classify_rectangle(support,[[0.49,0.51],[0.80,0.83]],mixed::CutRectangleLimits {
+            winding:ss::OriginalSsWindingLimits {max_segments:8,..Default::default()},..Default::default()
+        }).unwrap();
+        assert_eq!(boundary.location(),Location::Unresolved);
+        assert!(boundary.signature().is_none());
+    }
+    assert!(census.classify_rectangle(2,[[0.4,0.6];2],Default::default()).is_err());
     assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()], coverage.clone(), &anchors[1..], Default::default()).is_err());
     let mut forged=anchors.clone(); forged[0].parameter=-1.;
     assert!(mixed::qualify_interior_ss_census(vec![jordan.clone()], coverage.clone(), &forged, Default::default()).is_err());
@@ -202,12 +227,28 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     let cut = mixed::split_closed_contour_candidate(&a, 1, &wire, 0, [0.5; 2], Default::default())
         .unwrap();
     let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+    let arrangement=std::sync::Arc::new(census.build_face_arrangement(0,Default::default()).unwrap());
+    let bound=arrangement.qualify_boolean_rectangle(Op::Difference,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
+    assert_eq!(bound.face(),arrangement.region_faces()[1]);
+    assert!(std::sync::Arc::ptr_eq(bound.arrangement(),&arrangement));
+    assert!(bound.material().boolean_material().retain());
+    let proved=census.qualify_boolean_rectangle(Op::Difference,Side::First,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
+    assert_eq!(proved.region().signature(),Some(&[true][..]));
+    assert!(proved.boolean_material().retain());
+    proved.reverify().unwrap();
+    assert!(census.qualify_boolean_rectangle(Op::Union,Side::First,[[0.49,0.51],[0.80,0.83]],&directions,mixed::CutMaterialLimits {
+        region:mixed::CutRectangleLimits {winding:ss::OriginalSsWindingLimits {max_segments:8,..Default::default()},..Default::default()},..Default::default()
+    }).is_err());
+
     for (operation, inside_keep, outside_keep, outside_reverse) in [
         (Op::Union, true, false, false),
         (Op::Intersection, false, true, false),
         (Op::Difference, true, false, false),
         (Op::Xor, true, true, true),
     ] {
+        let complete=census.qualify_boolean_rectangle(operation,Side::First,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
+        assert_eq!(complete.region().signature(),Some(&[true][..]));
+        assert_eq!(complete.boolean_material().retain(),inside_keep);
         let inside = cut
             .qualify_boolean_rectangle(
                 &b,

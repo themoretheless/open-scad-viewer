@@ -1,0 +1,23 @@
+{
+  "passed": 8,
+  "failed": 0,
+  "qualified_scope": "one complete closed component on both original supports; census side signatures, finite mixed topology, all four material operations and literal candidate-face binding",
+  "multiple_distinct_components_positive_qualified": false,
+  "nested_components_positive_qualified": false,
+  "general_ss_complete": false,
+  "general_trim_complete": false,
+  "whole_region_material_complete": false,
+  "mixed_solid_admitted": false,
+  "general_boolean_complete": false,
+  "sources": {
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/regions.rs": "cd5ec958f12a8fdd82b139ede50cf5dd78822f5c8152af5f128bd4a158ccadf1",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/arrangement.rs": "b7b885439799aea704772a99ae4e9d28635847454bab734298402aa603efdebd",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "7c0279d3f08363a8bd0574b30cdad1a08160af826868a670189d641f7de7e3a8",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "094bb434b7ea3c8df6a74b390cae501bdbd8afb8059d46e653705c2b52431cda",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "d6fcb676f2b8d0050793c7280c5ca5542b2fda437d9a07fec6ea9542bf98dcf2",
+    "crates/brep-core/src/mixed_root_model.rs": "842d8190cbfebde0f11f0597aa968c107715533f8a32e2346b070cd1236f0610",
+    "crates/brep-core/tests/mixed_cut_regions.rs": "e1eff5431e7758365c5ae0b376c0727dcfee1a018e37b2b0192f8e9b8f46d614",
+    "docs/design/ss-census-arrangement-progress-2026-11-04.md": "fbf45c5f778b68e53e38dccc08e36145d6a9dc7c1ac39fcc4435aadba17a8332",
+    "docs/design/ss-cut-region-material-progress-2026-11-04.md": "17c062fe0d1a6b6fb9cf0142cdfcf1c306cf938c8ca82fa6bd39ce5c23bae144"
+  }
+}
