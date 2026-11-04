@@ -1,5 +1,8 @@
 # Source-bound material covers and a mixed root cavity
 
+Follow-up: assembly uses a shared lossless topology transfer and retains
+snapshot-bound lineage; see `ss-mixed-topology-lineage-progress-2026-11-04.md`.
+
 `QualifiedRootSurfaceMaterialBox` binds an immutable original rational NURBS
 surface, its original basis/weights and full closed UV restriction to a sealed
 root-solid material enclosure. Every touched original knot span is included;

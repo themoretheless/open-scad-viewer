@@ -43,6 +43,8 @@ pub struct QualifiedRootCavitySolid {
     outer: Arc<closed::QualifiedClosedSolid>,
     inner: Arc<QualifiedPairedRootSolid>,
     model: MixedBrep,
+    lineage: [crate::mixed_root_model::MixedTopologyMap; 2],
+    original_topology: MixedBrep,
     volume: [f64; 2],
     outer_volume: closed::VolumeReport,
     covers: coverage::Covers,
@@ -52,6 +54,12 @@ pub struct QualifiedRootCavitySolid {
 impl QualifiedRootCavitySolid {
     pub fn model(&self) -> &MixedBrep {
         &self.model
+    }
+    pub fn lineage_sources(&self) -> [&MixedBrep; 2] {
+        [&self.original_topology, self.inner.model()]
+    }
+    pub fn lineage(&self) -> [&crate::mixed_root_model::MixedTopologyMap; 2] {
+        [&self.lineage[0], &self.lineage[1]]
     }
     pub fn volume(&self) -> [f64; 2] {
         self.volume
@@ -72,12 +80,26 @@ impl QualifiedRootCavitySolid {
         &self.outer_volume
     }
     pub fn reverify(&self) -> Result<()> {
+        for (map, source) in self.lineage.iter().zip(self.lineage_sources()) {
+            if !map.source_matches(source) || !map.target_matches(self.model()) {
+                return Err(unproved(
+                    "Cavity lineage refers to another source or target snapshot",
+                ));
+            }
+        }
         self.outer.reverify()?;
         self.inner.reverify()?;
         let fresh =
             self.inner
                 .qualify_cavity_in(self.outer.clone(), &self.directions, self.limits)?;
-        if fresh.volume != self.volume || fresh.covers.work != self.covers.work {
+        if fresh.volume != self.volume
+            || fresh.covers.work != self.covers.work
+            || !fresh
+                .lineage
+                .iter()
+                .zip(&self.lineage)
+                .all(|(a, b)| a.same_mapping(b))
+        {
             return Err(unproved("Root cavity cover or material volume changed"));
         }
         Ok(())
@@ -138,11 +160,13 @@ impl QualifiedPairedRootSolid {
         {
             return Err(unproved("Positive cavity result volume unproved"));
         }
-        let model = topology::assemble(&outer, self)?;
+        let (model, lineage, original_topology) = topology::assemble(&outer, self)?;
         Ok(QualifiedRootCavitySolid {
             outer,
             inner: self.clone(),
             model,
+            lineage,
+            original_topology,
             volume: [volume.lo, volume.hi],
             outer_volume,
             covers,

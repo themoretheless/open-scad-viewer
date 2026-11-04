@@ -512,6 +512,27 @@ fn run(with_holes: bool, mirrored: bool) {
                 .qualify_cavity_in(host.clone(), &directions, Default::default())
                 .unwrap();
             assert!(cavity.material_admitted());
+            let lineage = cavity.lineage();
+            for (map, source) in lineage.into_iter().zip(cavity.lineage_sources()) {
+                assert!(map.source_matches(source));
+                assert!(map.target_matches(cavity.model()));
+            }
+            assert_eq!(lineage[0].body(0), Some(0));
+            assert_eq!(lineage[1].body(0), Some(0));
+            assert_eq!(lineage[0].shell_orientation_reversed(0), Some(false));
+            assert_eq!(lineage[1].shell_orientation_reversed(0), Some(true));
+            let prefix = mixed::MixedBrep::from_closed_solid(&host).unwrap();
+            let copied = prefix.concatenate(cavity.model()).unwrap();
+            let chain = lineage[1].then(copied.sources()[1]).unwrap();
+            assert!(chain.source_matches(solid.model()));
+            assert!(chain.target_matches(copied.model()));
+            assert_eq!(chain.body(0), Some(1));
+            assert_eq!(chain.shell_orientation_reversed(0), Some(true));
+            assert_eq!(
+                chain.edge(0),
+                Some(prefix.topology().edges.len() + lineage[1].edge(0).unwrap())
+            );
+
             assert!(Arc::ptr_eq(cavity.outer(), &host));
             assert!(Arc::ptr_eq(cavity.inner(), &solid));
             let result = cavity.model().topology();

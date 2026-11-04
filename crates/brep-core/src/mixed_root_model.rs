@@ -21,8 +21,15 @@ pub enum MixedPcurve {
 }
 pub type MixedTopology = brep_topology::Model<MixedEdge, Surface, MixedPcurve, MixedVertex>;
 #[derive(Clone, Debug)]
+struct StorageSnapshot(Arc<()>);
+impl PartialEq for StorageSnapshot {
+    fn eq(&self,other:&Self)->bool { Arc::ptr_eq(&self.0,&other.0) }
+}
+impl Eq for StorageSnapshot {}
+#[derive(Clone, Debug)]
 pub struct MixedBrep {
     topology: MixedTopology,
+    snapshot: StorageSnapshot,
 }
 fn unproved(s: &str) -> Error {
     Error::new("BREP_MIXED_ROOT_UNPROVED", s)
@@ -164,7 +171,7 @@ impl MixedBrep {
                 }
             }
         }
-        Ok(Self { topology })
+        Ok(Self { topology, snapshot:StorageSnapshot(Arc::new(())) })
     }
 }
 mod closed_cut;
@@ -174,3 +181,6 @@ pub use closed_cut::{
     ClosedCutCandidate, ClosedCutLimits, CutMaterialLimits, CutRectangleLimits, CutRectangleReport,
     QualifiedCutMaterialRectangle, split_closed_contour_candidate,
 };
+
+mod transfer;
+pub use transfer::{MixedTopologyMap,MixedTopologyTransfer};
