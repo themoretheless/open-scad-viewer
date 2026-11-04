@@ -4,7 +4,7 @@ export const BOX_DEFAULTS = {
   width: 120, depth: 75, height: 80, wall: 3, floor: 4,
   corner_radius: 0, front_angle: 0, dividers: 0, hooks: true,
   bend_radius: 0, bend_reverse: false, bend_segments: 24,
-  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 40, cell_radius: 2, rib: 2.4,
+  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 5, cell_radius: 2, rib: 2.4,
   stress_gradient: 1, mesh_density: 1, pattern_seed: 1,
   hole_diameter: 6, hole_pitch: 16,
   floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
@@ -19,7 +19,7 @@ const schema = z.object({
   front_angle: z.number().finite().min(-60).max(60).default(0),
   bend_radius: z.number().finite().min(0).max(100000).default(0),
   bend_reverse: z.boolean().default(false), bend_segments: z.number().int().min(4).max(128).default(24),
-  organic: z.boolean().default(true), cell_size: dimension.min(3).default(40), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
+  organic: z.boolean().default(true), cell_size: dimension.min(3).default(5), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
   stress_gradient: z.number().finite().min(0).max(2).default(1),
   mesh_density: z.number().finite().min(0.5).max(2).default(1),
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
@@ -111,9 +111,10 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   // Side-wall roof motion is radial; front/rear roof motion is circumferential.
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
-    rows=max(1,ceil(usable_h*mesh_density/(max(18,18+(cell_size-3)*0.6)*0.65)));
+    eff_cell = min(40,max(32,(32+(cell_size-3)*3)/mesh_density));
+    rows=max(1,ceil(usable_h/(eff_cell*0.65)));
     ch=usable_h/(0.542*rows+0.28);
-    cw=min(ch*0.56,max(rib*2.8,min((18+(cell_size/mesh_density-3)*0.6)*0.8,(width-2*frame)/3)))*local_ratio;
+    cw=min(ch*0.56,max(rib*2.8,min(eff_cell*0.8,(width-2*frame)/3)))*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
     // Side/bottom clipping is supported; every roof apex remains below the top frame.
     if(cw>rib*2) intersection() {
@@ -139,7 +140,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   frame = max(wall,rib*1.3);
   r_min = rib*4.6;
   r_cap = max(r_min,(max(width,depth)-2*frame)/4.8);
-  r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 3)/37);
+  r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 2.2)/14);
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
   span = max(a,a+b*slope);

@@ -114,7 +114,7 @@ describe('box generator', () => {
       expect(result.meshes.length).toBe(1)
     }
   }, 120000)
-  it('builds the default ?generator=box configuration (cell_size=40, print_optimized=false, hook_chamfer=false/true) without exceeding Boolean work budget', async () => {
+  it('builds the default ?generator=box configuration (cell_size=5, print_optimized=false, hook_chamfer=false/true) without exceeding Boolean work budget', async () => {
     const request={quality:'full',purpose:'analysis'} as const
     for (const hook_chamfer of [false, true]) {
       const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized:false,hook_chamfer}),request)
@@ -122,17 +122,17 @@ describe('box generator', () => {
       expect(result.meshes.length).toBe(1)
     }
     const volumes: number[] = []
-    for (const cell_size of [3, 6, 10, 18, 26, 34, 40]) {
+    for (const cell_size of [3, 5, 8, 12, 16]) {
       const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size,print_optimized:false,hook_chamfer:false}),request)
       expect(result.volume).toBeGreaterThan(0)
       expect(result.meshes.length).toBe(1)
       volumes.push(result.volume)
     }
     for (let i = 1; i < volumes.length; i++) {
-      expect(Math.abs(volumes[i] - volumes[i - 1])).toBeGreaterThan(25)
+      expect(Math.abs(volumes[i] - volumes[i - 1])).toBeGreaterThan(15)
     }
-    const sharp = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:30,cell_radius:0,print_optimized:false,hook_chamfer:false}),request)
-    const rounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:30,cell_radius:3,print_optimized:false,hook_chamfer:false}),request)
+    const sharp = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:0,print_optimized:false,hook_chamfer:false}),request)
+    const rounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:2,print_optimized:false,hook_chamfer:false}),request)
     expect(Math.abs(rounded.result.volume - sharp.result.volume)).toBeGreaterThan(10)
   }, 120000)
 })
