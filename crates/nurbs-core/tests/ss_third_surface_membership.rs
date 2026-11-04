@@ -63,3 +63,39 @@ fn unavailable_lifts_and_exhausted_policies_never_authorize_membership() {
     let source=candidate(&curve,&nonlinear);let selected=point(curve,&source);
     assert!(ss::QualifiedSsThirdSurfacePoint::qualify(source,selected,Default::default()).is_err());
 }
+
+fn target_pair(w:&ss::QualifiedSsThirdSurfacePoint, roles:[usize;2])->Arc<ss::OriginalSsRootCurve> {
+    let surfaces=[w.source().original().source().first(),w.source().original().source().second(),w.source().third()];
+    let src=ss::FiberSources::new(surfaces[roles[0]],surfaces[roles[1]]).unwrap();
+    let spans=roles.map(|r| if r==1 {[2,2]} else {[1,1]});
+    let ideal=ss::qualify_original_ss_ideal(&src,[spans[0][0],spans[0][1],spans[1][0],spans[1][1]],Default::default()).unwrap();
+    let gb=ss::qualify_ss_groebner_basis(&ideal,Default::default()).unwrap();
+    let sys=ss::qualify_ss_deflated_system(&gb,Default::default()).unwrap();
+    let mut domain=roles.map(|r| if r==2 {[[0.67,0.70],[0.45,0.55]]} else {[[0.24,0.27],[0.67,0.70]]});
+    domain[1][if roles[1]==2 {0} else {1}]=[0.66,0.71];
+    let axis=if roles[0]==2 {ss::FiberAxis::FirstU} else {ss::FiberAxis::FirstV};
+    let f=ss::qualify_deflated_ss_fiber(&sys,[domain[0][0],domain[0][1],domain[1][0],domain[1][1]],axis,Default::default()).unwrap();
+    let report=format!("{:?}",f.report());
+    Arc::new(ss::OriginalSsRootCurve::from_deflated(f.into_fiber().unwrap_or_else(||panic!("{report}"))))
+}
+#[test]
+fn triple_vertex_binds_other_ordered_pairs_without_replacing_its_clock() {
+    let wire=circle::wire(); let curve=wire.edges()[2].curve().clone();
+    let source=candidate(&curve,&sheet(257./1024.,0.)); let selected=point(curve,&source);
+    let witness=Arc::new(ss::QualifiedSsThirdSurfacePoint::qualify(source,selected.clone(),Default::default()).unwrap());
+    for roles in [[0,2],[1,2],[2,0],[2,1]] {
+        let target=target_pair(&witness,roles);
+        assert!(ss::bind_original_ss_port(selected.clone(),target.clone(),[0;4],Default::default()).is_err());
+        let port=ss::bind_original_ss_third_port(witness.clone(),target.clone(),roles,Default::default()).unwrap();
+        assert!(Arc::ptr_eq(port.point(),&selected)); assert!(Arc::ptr_eq(port.target(),&target));
+        assert_eq!(port.kind(),ss::OriginalSsPortKind::OriginalThirdSurface);
+        assert_eq!(port.parameter_bounds(),&witness.local_bounds()[3]);
+        port.reverify().unwrap();
+        let policy=Arc::new(selected.with_query_policy(Default::default()).unwrap());
+        assert!(port.rebind_equivalent(policy,Default::default()).is_ok());
+        assert!(ss::bind_original_ss_third_port(witness.clone(),target.clone(),[0,1],Default::default()).is_err());
+        assert!(ss::bind_original_ss_third_port(witness.clone(),target,roles,ss::OriginalSsCurveLimits {
+            projection:ss::ExactSsAlgebraLimits {max_work:1,..Default::default()},..Default::default()
+        }).is_err());
+    }
+}

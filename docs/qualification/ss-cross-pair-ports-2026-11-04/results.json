@@ -1,0 +1,9 @@
+{
+  "tests_passed": 10,
+  "tests": [
+    "ss_root_ports",
+    "ss_third_surface_membership"
+  ],
+  "architecture": "architecture ok: 54 pinned oversized files, 0 pinned layer violations",
+  "complete_general_trim": false
+}

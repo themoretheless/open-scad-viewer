@@ -157,11 +157,11 @@ pub fn qualify_original_ss_path_parity(
                 && source.second() == s.second()
                 && !matches!(
                     e.start().kind(),
-                    OriginalSsPortKind::CollapsedPole | OriginalSsPortKind::OriginalSourceNode
+                    OriginalSsPortKind::CollapsedPole | OriginalSsPortKind::OriginalSourceNode | OriginalSsPortKind::OriginalThirdSurface
                 )
                 && !matches!(
                     e.end().kind(),
-                    OriginalSsPortKind::CollapsedPole | OriginalSsPortKind::OriginalSourceNode
+                    OriginalSsPortKind::CollapsedPole | OriginalSsPortKind::OriginalSourceNode | OriginalSsPortKind::OriginalThirdSurface
                 ),
             "Quotient path needs one original source pair; collapsed or nonlinear node joins require their own UV bridges",
         )?;

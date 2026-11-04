@@ -39,6 +39,9 @@ fn short(
     depth: usize,
     limits: OriginalSsCurveLimits,
 ) -> Result<OriginalSsRootEdge> {
+    check(edge.start().kind() != OriginalSsPortKind::OriginalThirdSurface
+        && edge.end().kind() != OriginalSsPortKind::OriginalThirdSurface,
+        "Cross-pair joint needs a common-face UV proof")?;
     frames::frame(edge.curve())?; // affine injectivity, not nonlinear blowdown
     check(
         edge.start().phase() == [0; 4] && edge.end().phase() == [0; 4],

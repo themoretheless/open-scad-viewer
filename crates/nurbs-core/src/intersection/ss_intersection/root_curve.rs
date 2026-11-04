@@ -169,7 +169,7 @@ mod point;
 pub use point::OriginalSsRootPoint;
 
 mod port;
-pub use port::{OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_port};
+pub use port::{OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_port,bind_original_ss_third_port};
 mod wire;
 pub use wire::{OriginalSsRootEdge,OriginalSsRootWire};
 pub use wire::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};

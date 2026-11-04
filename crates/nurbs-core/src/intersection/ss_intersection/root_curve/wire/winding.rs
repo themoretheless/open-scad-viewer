@@ -125,6 +125,8 @@ pub(super) fn qualify_box(
                 && s.second() == source.second()
                 && edge.start().phase() == [0; 4]
                 && edge.end().phase() == [0; 4]
+                && edge.start().kind() != OriginalSsPortKind::OriginalThirdSurface
+                && edge.end().kind() != OriginalSsPortKind::OriginalThirdSurface
                 && edge.start().kind() != OriginalSsPortKind::OriginalSourceNode
                 && edge.end().kind() != OriginalSsPortKind::OriginalSourceNode
                 && edge.start().kind() != OriginalSsPortKind::CollapsedPole

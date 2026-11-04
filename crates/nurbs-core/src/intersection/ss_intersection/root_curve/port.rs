@@ -3,12 +3,15 @@
 //! no nearest midpoint or rounded period translation authorizes a join.
 use super::*;
 pub(super) mod membership;
+mod third;
+pub use third::bind_original_ss_third_port;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalSsPortKind {
     SameRootSelector,
     OriginalParameterRoot,
     CollapsedPole,
     OriginalSourceNode,
+    OriginalThirdSurface,
 }
 #[derive(Clone, Debug)]
 pub struct QualifiedOriginalSsPort {
@@ -18,6 +21,7 @@ pub struct QualifiedOriginalSsPort {
     parameter: [Q; 2],
     kind: OriginalSsPortKind,
     limits: OriginalSsCurveLimits,
+    third: Option<(Arc<QualifiedSsThirdSurfacePoint>, [usize; 2])>,
 }
 impl QualifiedOriginalSsPort {
     pub fn point(&self) -> &Arc<OriginalSsRootPoint> {
@@ -37,12 +41,24 @@ impl QualifiedOriginalSsPort {
     }
     /// Replace an independent endpoint owner only after exact point identity.
     pub fn rebind_equivalent(&self, point: Arc<OriginalSsRootPoint>, limits: SsAlgebraicClockLimits) -> Result<Self> {
+        if let Some((witness, roles)) = &self.third {
+            check(point.same_selector(witness.point()), "Third-surface port requires its literal global vertex owner")?;
+            let mut fresh = bind_original_ss_third_port(witness.clone(), self.target.clone(), *roles, self.limits)?;
+            fresh.point = point;
+            return Ok(fresh);
+        }
         check(self.point.same_source_point_in_charts(&point,limits,self.limits)?,"Independent SS endpoint identity remains unproved")?;
         bind_original_ss_port(point,self.target.clone(),self.phase,self.limits)
     }
     pub fn reverify(&self) -> Result<()> {
         self.point.reverify()?;
         self.target.reverify()?;
+        if let Some((witness, roles)) = &self.third {
+            witness.reverify()?;
+            let fresh = bind_original_ss_third_port(witness.clone(), self.target.clone(), *roles, self.limits)?;
+            return check(self.point.same_selector(witness.point()) && self.parameter == fresh.parameter
+                && self.kind == fresh.kind && self.phase == [0;4], "Third-surface port proof changed");
+        }
         let fresh = bind_original_ss_port(
             self.point.clone(),
             self.target.clone(),
@@ -76,6 +92,7 @@ pub fn bind_original_ss_port(
             phase,
             kind: OriginalSsPortKind::SameRootSelector,
             limits,
+            third: None,
         });
     }
     if phase == [0;4] {
@@ -84,7 +101,7 @@ pub fn bind_original_ss_port(
                 if let Some(parameter)=b.node_parameter() {
                     if a.world()==b.source().node().world() {
                         return Ok(QualifiedOriginalSsPort{parameter:[membership::q(parameter)?,membership::q(parameter)?],point,target,phase,
-                            kind:OriginalSsPortKind::OriginalSourceNode,limits});
+                            kind:OriginalSsPortKind::OriginalSourceNode,limits,third:None});
                     }
                 }
             }
@@ -102,6 +119,7 @@ pub fn bind_original_ss_port(
                     phase,
                     kind: OriginalSsPortKind::CollapsedPole,
                     limits,
+                    third: None,
                 });
             }
         }
@@ -114,5 +132,6 @@ pub fn bind_original_ss_port(
         parameter,
         kind: OriginalSsPortKind::OriginalParameterRoot,
         limits,
+        third: None,
     })
 }
