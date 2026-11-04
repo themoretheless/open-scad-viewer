@@ -88,7 +88,7 @@ it('places auto-spaced hooks at Bessel minimum-bending points (~0.2071L) or alig
 it('rejects overlapping hooks and floor ribs that consume the cells',()=>{
  expect(()=>generateBox({...BOX_DEFAULTS,hook_spacing:8})).toThrow(/Крючки/)
  expect(()=>generateBox({...BOX_DEFAULTS,hook_spacing:200})).toThrow(/Крючки/)
- expect(()=>generateBox({...BOX_DEFAULTS,floor_cell_size:3,floor_rib:4})).toThrow(/ячейки дна/)
- expect(()=>generateBox({...BOX_DEFAULTS,floor_cell_size:3,floor_rib:2.4})).not.toThrow()
+ expect(()=>generateBox({...BOX_DEFAULTS,floor_cell_size:1,floor_rib:4})).toThrow(/ячейки дна/)
+ expect(()=>generateBox({...BOX_DEFAULTS,floor_cell_size:1,floor_rib:2.4})).not.toThrow()
  expect(()=>generateBox({...BOX_DEFAULTS,hook_width:35})).not.toThrow()
 })

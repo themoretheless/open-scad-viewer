@@ -19,13 +19,13 @@ const schema = z.object({
   front_angle: z.number().finite().min(-60).max(60).default(0),
   bend_radius: z.number().finite().min(0).max(100000).default(0),
   bend_reverse: z.boolean().default(false), bend_segments: z.number().int().min(4).max(128).default(24),
-  organic: z.boolean().default(true), cell_size: dimension.min(3).default(5), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
+  organic: z.boolean().default(true), cell_size: dimension.min(1).default(5), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
   stress_gradient: z.number().finite().min(0).max(2).default(1),
   mesh_density: z.number().finite().min(0.5).max(2).default(1),
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
   pattern_seed: z.number().int().min(0).max(100000).default(1),
   hole_diameter: dimension, hole_pitch: dimension,
-  floor_mesh: z.boolean().default(false), floor_cell_size: dimension.min(3).default(20), floor_rib: dimension.default(2.4),
+  floor_mesh: z.boolean().default(false), floor_cell_size: dimension.min(1).default(20), floor_rib: dimension.default(2.4),
   dividers: z.number().int().min(0).max(8), drain: z.boolean(),
   hooks: z.boolean(), hook_count: z.number().int().min(1).max(6),
   hook_width: dimension, hook_thickness: dimension.default(3), hook_gap: dimension, hook_drop: dimension,
@@ -50,8 +50,8 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
     if(p.hook_drop+p.hook_thickness>h || left<p.corner_radius || (p.hook_count>1 && p.hook_width>=step))
       throw Error('Крючки не помещаются или перекрываются: уменьшите размеры, количество или шаг / Hooks do not fit or overlap; adjust their dimensions, count or spacing')
   }
-  if (p.organic && p.porous && p.cell_size / p.mesh_density < p.rib) throw Error('Размер ячейки с учётом плотности должен быть не меньше перемычки / Effective cell size must be at least the rib width')
-  if(p.floor_mesh && p.floor_cell_size / p.mesh_density < p.floor_rib) throw Error('Размер ячейки дна с учётом плотности должен быть не меньше перемычки / Effective floor cell size must be at least the rib width')
+  if (p.organic && p.porous && p.cell_size / p.mesh_density < p.rib * 0.4) throw Error('Размер ячейки с учётом плотности должен быть не меньше перемычки / Effective cell size must be at least the rib width')
+  if(p.floor_mesh && p.floor_cell_size / p.mesh_density < p.floor_rib * 0.4) throw Error('Размер ячейки дна с учётом плотности должен быть не меньше перемычки / Effective floor cell size must be at least the rib width')
   if(p.floor_mesh && p.floor_cell_size / p.mesh_density > Math.min(w,d)-2*Math.max(t,p.floor_rib*1.5)) throw Error('Ячейка дна не помещается в коробку: уменьшите её размер или увеличьте плотность / Floor cell does not fit; reduce its size or increase density')
   const topDepth = d+(h-f)*Math.tan(p.front_angle*Math.PI/180)
   if (topDepth <= 4*t) throw Error('Наклон закрывает коробку: увеличьте глубину или уменьшите угол / Tilt leaves insufficient opening depth')
@@ -111,7 +111,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   // Side-wall roof motion is radial; front/rear roof motion is circumferential.
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
-    eff_cell = min(40,max(32,(32+(cell_size-3)*3)/mesh_density));
+    eff_cell = min(40,max(30,(30+(cell_size-1)*2)/mesh_density));
     rows=max(1,ceil(usable_h/(eff_cell*0.65)));
     ch=usable_h/(0.542*rows+0.28);
     cw=min(ch*0.56,max(rib*2.8,min(eff_cell*0.8,(width-2*frame)/3)))*local_ratio;
@@ -140,7 +140,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   frame = max(wall,rib*1.3);
   r_min = rib*4.6;
   r_cap = max(r_min,(max(width,depth)-2*frame)/4.8);
-  r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 2.2)/14);
+  r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 0.8)/16);
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
   span = max(a,a+b*slope);
@@ -228,7 +228,7 @@ module floor_pores() {
   frame=max(wall,floor_rib*1.25);
   r_floor_min=floor_rib*4.8;
   r_floor_cap=max(r_floor_min,(max(width,depth)-2*frame)/4.2);
-  r=min(r_floor_cap,r_floor_min+(r_floor_cap-r_floor_min)*max(0,floor_cell_size/mesh_density-3)/37);
+  r=min(r_floor_cap,r_floor_min+(r_floor_cap-r_floor_min)*max(0,floor_cell_size/mesh_density-1)/39);
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
   ox=width/2; oy=depth/2;
   nc=ceil((width-2*frame)/(3*r))+1;
