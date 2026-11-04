@@ -94,6 +94,19 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     assert!(Arc::ptr_eq(face.topology().edges[0].curve.curve(),&ab));
     assert!(Arc::ptr_eq(face.topology().edges[1].curve.curve(),&ac));
     for i in 0..2 {assert!(face.pcurve_bounds(0,0,i,Default::default()).is_ok());}
-    QualifiedRootUvClosure::qualify(Arc::new(face),2).unwrap().reverify().unwrap();
+    let face=Arc::new(face);
+    QualifiedRootUvClosure::qualify(face.clone(),2).unwrap().reverify().unwrap();
+    use brep_core::root_model::QualifiedRootLoopWinding as W;
+    let inside=W::qualify(face.clone(),0,0,[[0.195;2],[0.5;2]],Default::default()).unwrap();
+    assert_eq!(inside.winding(),-1);inside.reverify().unwrap();
+    assert_eq!(W::qualify(face.clone(),0,0,[[0.194,0.196],[0.49,0.51]],Default::default()).unwrap().winding(),-1);
+    let mut reversed=face.topology().clone();
+    reversed.loops[0].coedges.reverse();
+    for c in &mut reversed.loops[0].coedges {c.reversed=true;c.pcurve.reversed=true;}
+    let reversed=Arc::new(RootBrep::from_topology(reversed).unwrap());
+    assert_eq!(W::qualify(reversed,0,0,[[0.195;2],[0.5;2]],Default::default()).unwrap().winding(),1);
+    assert_eq!(W::qualify(face.clone(),0,0,[[0.21;2],[0.5;2]],Default::default()).unwrap().winding(),0);
+    assert!(W::qualify(face.clone(),0,0,[[13./64.;2],[0.5;2]],ss::OriginalSsWindingLimits {max_segments:16,..Default::default()}).is_err());
+    assert!(W::qualify(face,0,0,[[0.195;2],[0.5;2]],ss::OriginalSsWindingLimits {max_segments:1,..Default::default()}).is_err());
     assert!(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:contour,supports:vec![0,1]},vec![],1e-7).is_err());
 }

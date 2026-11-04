@@ -239,3 +239,6 @@ pub use uv_closure::{QualifiedRootUvClosure,qualify_root_uv_joint};
 
 mod face_contours;
 pub use face_contours::RootFaceContour;
+
+mod winding;
+pub use winding::QualifiedRootLoopWinding;
