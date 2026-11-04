@@ -328,3 +328,16 @@ fn exact_selector_identity_does_not_follow_rounded_binary_coordinates() {
     let another=ss::OriginalSsRootPoint::new(wire.edges()[1].curve().clone(),0.25).unwrap();
     assert!(!exact.same_source_point(&another,Default::default()).unwrap());
 }
+#[test]
+fn exact_affine_clock_equality_composes_polynomials_without_rounding() {
+    let local=clock(&[-1.,0.,8.],[0.34375,0.375]);
+    let original=clock(&[17.,10.,1.],[-2.3,-1.7]); // original = 8*local-5
+    assert!(local.equals_affine(&original,&q(1,8),&q(5,8),Default::default()).unwrap().0);
+    assert!(original.equals_affine(&local,&q(8,1),&q(-5,1),Default::default()).unwrap().0);
+    assert!(!local.equals_affine(&original,&q(1,8),&q(6,8),Default::default()).unwrap().0);
+    let negative=clock(&[-1.,0.,8.],[-0.375,-0.34375]);
+    assert!(local.equals_affine(&negative,&q(-1,1),&q(0,1),Default::default()).unwrap().0);
+    assert!(local.equals_affine(&original,&q(0,1),&q(0,1),Default::default()).is_err());
+    assert!(local.equals_affine(&original,&Q::new_raw(2.into(),16.into()),&q(5,8),Default::default()).is_err());
+    assert!(local.equals_affine(&original,&q(1,8),&q(5,8),ss::SsAlgebraicClockLimits {max_operations:10,..Default::default()}).is_err());
+}

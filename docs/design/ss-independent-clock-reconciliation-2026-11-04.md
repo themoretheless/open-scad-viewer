@@ -41,3 +41,7 @@ cross-source face-local junctions, chart transitions with different free axes,
 complete singular/periodic arrangements and winding, finite material trim,
 general intersecting Boolean/healing, lineage/history, actual bridge/WASM calls
 and the wider quad/offset/fillet/G2 requirements.
+
+Follow-up: regular charts sharing the original free axis can now reconcile
+through exact affine clock maps and native branch membership; see
+`ss-affine-chart-reconciliation-2026-11-04.md`.

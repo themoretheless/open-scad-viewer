@@ -72,6 +72,41 @@ impl OriginalSsRootPoint {
             }
         }
     }
+    /// Proves identity across regular affine charts using their original free
+    /// coordinate and full native target-graph membership. No phase is inferred.
+    pub fn same_source_point_in_charts(&self, other: &Self, clock_limits: SsAlgebraicClockLimits, geometry_limits: OriginalSsCurveLimits) -> Result<bool> {
+        if self.curve.same_definition(&other.curve)? {
+            return self.same_source_point(other,clock_limits);
+        }
+        let a=self.curve.source();
+        let b=other.curve.source();
+        if self.curve.free_axis()!=other.curve.free_axis() || a.first()!=b.first() || a.second()!=b.second() {
+            return Ok(false);
+        }
+        let k=self.curve.free_axis().index();
+        let fa=frames::frame(&self.curve)?;
+        let fb=frames::frame(&other.curve)?;
+        check(fa[k][1]>Q::zero() && fb[k][1]>Q::zero(),"SS affine clock frames must increase")?;
+        let scale=&fb[k][1]/&fa[k][1];
+        let shift=(&fb[k][0]-&fa[k][0])/&fa[k][1];
+        let same=match (&self.clock,&other.clock) {
+            (Clock::Algebraic {point:a,..},Clock::Algebraic {point:b,..}) => a.clock().equals_affine(b.clock(),&scale,&shift,clock_limits)?.0,
+            (Clock::Binary(t),Clock::Algebraic {point,..}) => {
+                let value=(Q::from_float(*t).unwrap()-&shift)/&scale;
+                point.clock().equals_rational(&value,clock_limits)?.0
+            },
+            (Clock::Algebraic {point,..},Clock::Binary(t)) => {
+                let value=&scale*Q::from_float(*t).unwrap()+&shift;
+                point.clock().equals_rational(&value,clock_limits)?.0
+            },
+            (Clock::Binary(a),Clock::Binary(b)) => Q::from_float(*a).unwrap()==scale*Q::from_float(*b).unwrap()+shift,
+        };
+        if !same {return Ok(false);}
+        // Equal free clocks do not identify the branch. Prove that the whole
+        // original point enclosure lies in the target's unique root graph.
+        port::membership::bind(self,&other.curve,[0;4],geometry_limits)?;
+        Ok(true)
+    }
     pub fn same_selector(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.curve,&other.curve) && match (&self.clock,&other.clock) {
             (Clock::Binary(a),Clock::Binary(b)) => a==b,

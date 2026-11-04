@@ -2,7 +2,7 @@ use super::*;
 pub(super) fn q(x: f64) -> Result<Q> {
     Q::from_float(x).ok_or_else(|| crate::input("Nonfinite original endpoint coordinate"))
 }
-pub(super) fn bind(
+pub(in super::super) fn bind(
     point: &OriginalSsRootPoint,
     target: &OriginalSsRootCurve,
     phase: [i32; 4],
