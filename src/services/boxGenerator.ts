@@ -108,9 +108,10 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
         first_hook=(width-hook_step*(hook_count-1))/2-radius;
         nearest=max(0,min(hook_count-1,floor((cx-first_hook)/hook_step+0.5)));
         // Local load-bearing pad under hooks: open below the hook anchor zone to save weight.
+        // Moment-graded ribs: thicker near the floor cantilever root, lighter toward the top rim.
         hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - ch*0.48) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+cw*0.46;
         if(!hook_zone)
-          print_cell(2*col+(row%2),row*1.175,cw,ch,frame,z_offset+frame+ch*0.25);
+          print_cell(2*col+(row%2),row*1.175,cw,ch,frame,z_offset+frame+ch*0.25,rib*(1.12-0.28*row/max(1,rows-1)));
       }
     }
   }
@@ -119,13 +120,14 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
   r = cell_size/2;
-  frame = max(wall,rib*1.5);
+  frame = max(wall,rib*1.3);
   rounding = min(rib,cell_size/12);
   if(a>2*frame && b-z_offset>2*frame) intersection() {
     offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([max(a,a+b*slope),b-z_offset]); }
     union() for(col=[-1:ceil(max(a,a+b*slope)/(1.5*r))+1]) for(row=[-1:ceil(b/(sqrt(3)*r))+1]) {
       ix=3*col; iy=2*row+(col%2);
-      offset(r=rounding) offset(delta=-rounding-rib/2)
+      local_rib=rib*(1.12-0.24*min(1,max(0,(iy*sqrt(3)*r/2-z_offset)/max(1,b-z_offset))));
+      offset(r=rounding) offset(delta=-rounding-local_rib/2)
         polygon([
           [(ix+(2))*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.3,
             (iy+(0))*sqrt(3)*r/2+((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(2))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.3],
@@ -185,7 +187,9 @@ module floor_pores() {
       offset(delta=-frame) footprint();
       union() for(col=[-nc:nc]) for(row=[-nr:nr]) {
         ix=3*col; iy=2*row+(abs(col)%2);
-        offset(delta=-floor_rib/2)
+        // Plate-stress grading: thicker ribs near the perimeter root, lighter in the center span.
+        local_floor_rib=floor_rib*(0.82+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*r)/depth)));
+        offset(delta=-local_floor_rib/2)
           polygon([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
@@ -261,7 +265,7 @@ module assembled_box() { union() {
   walls();
   if(dividers>0) for(i=[1:dividers])
     translate([divider_margin+i*divider_step-wall/2,wall-0.05,floor-0.1]) rotate([90,0,90])
-      panel(depth-2*wall+0.1-0.1*slope,wall_height+0.1,wall,false,0,false,false,slope);
+      panel(depth-2*wall+0.1-0.1*slope,wall_height+0.1,wall,porous && radius==0,0,organic,false,slope);
   if(hooks) for(i=[0:hook_count-1])
     translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
       translate([0,-hook_thickness,height-hook_drop-hook_thickness])

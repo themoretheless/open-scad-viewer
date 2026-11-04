@@ -60,9 +60,11 @@ The editable source uses the repository-specific `viewer_bend` mesh module; it i
 
 Validation in `tests/boxBend.test.ts` covers both directions against the inner/outer annular radii and analytical warped-shell volume (bounded mesh approximation), topology of the organic/rounded/tilted/hook combination, invalid domains and malformed module inputs. Browser verification built radius100 mm, corner radius12 mm and front tilt15°. Current mesh/triangle budgets still apply at very high refinement or dense pore layouts.
 
-### Upright FDM cell optimization
+### Upright FDM cell optimization and structural grading
 
 `print_optimized` is enabled by default. With the floor on the bed and +Z as build direction, wall pores use 6-vertex organic honeycomb/Voronoi cells with trivalent 3-beam nodes, pointed roofs and mitered corners, while `floor_mesh` uses a shared-vertex organic Voronoi/honeycomb lattice instead of a rectangular grid. The shared-vertex cellular pattern clips only at side and bottom borders; every roof apex stays below the top frame, preventing a clipped horizontal ceiling. Roof slope accounts conservatively for front-wall tilt and the maximum circumferential stretch of the whole-box bend. `overhang_angle` is measured **from vertical**, default45°. A front-wall tilt at or above that angle is rejected in this mode. The old rounded/jittered cells remain available by disabling this setting.
+
+To reduce material while retaining stiffness, wall ribs are graded by height (`rib * (1.12 - 0.28 * row / max(1, rows - 1))`): thicker near the floor cantilever root where bending moment is largest, and lighter toward the upper rim. Floor ribs are similarly graded radially (`floor_rib * (0.82 + 0.32 * perimeter_ratio)`), reinforcing the clamped perimeter where plate shear and moment peak while lightening the center span. Internal dividers also receive the organic cellular web when `porous` is enabled and `corner_radius == 0`.
 
 Rear hook pads are localized to the upper anchor zone under each hook rather than full-height solid columns, keeping the lower rear wall porous where bending moment from the rail is minimal while preventing new ceilings inside upper pores. Downturned integral hooks still have unsupported lips and bridge undersides; the UI explicitly identifies this remaining support requirement. This setting does not claim the entire hook-equipped model prints without supports.
 

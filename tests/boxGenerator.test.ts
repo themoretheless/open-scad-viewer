@@ -75,4 +75,18 @@ describe('box generator', () => {
     expect(result.volume).toBeGreaterThan(0)
     expect(result.meshes.length).toBe(1)
   }, 120000)
+  it('cuts organic porous web in internal dividers to save material while staying manifold', async () => {
+    const request={quality:'full',purpose:'analysis'} as const
+    const base=await engine.buildSource(generateBox({...BOX_DEFAULTS,dividers:0}),request)
+    const withDivider=await engine.buildSource(generateBox({...BOX_DEFAULTS,dividers:1}),request)
+    const solidDivider=BOX_DEFAULTS.wall*(BOX_DEFAULTS.depth-2*BOX_DEFAULTS.wall)*(BOX_DEFAULTS.height-BOX_DEFAULTS.floor)
+    // Porous organic divider adds significantly less volume than a solid slab.
+    expect(withDivider.result.volume).toBeGreaterThan(base.result.volume)
+    expect(withDivider.result.volume-base.result.volume).toBeLessThan(solidDivider*0.85)
+    for(const mesh of withDivider.result.meshes) {
+      const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
+      expect(diagnostics.boundary).toBe(0)
+      expect(diagnostics.nonManifold).toBe(0)
+    }
+  }, 120000)
 })

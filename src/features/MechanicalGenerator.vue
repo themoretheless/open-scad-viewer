@@ -69,7 +69,7 @@ function openEditor(save:boolean){
         </label></div>
         <fieldset v-if="kind==='box'" class="hook-fields grid-fields">
           <legend>{{ru?'Сетка стенок и дна':'Wall and floor mesh'}}</legend>
-          <p class="hint">{{ru?'Размер ячейки и ширина перемычек настраиваются отдельно для стенок и дна. Толщина дна задаёт высоту его рёбер.':'Cell size and rib width are independent for walls and floor. Floor thickness sets the height of its ribs.'}}</p>
+          <p class="hint">{{ru?'Органическая сотовая/Вороной-сетка с 3-лучевыми узлами: перемычки стенок утолщаются к основанию (по эпюре момента), перемычки дна — к контуру, а площадки под крючками оставлены только в верхней зоне.':'Organic Voronoi/honeycomb web with trivalent nodes: wall ribs thicken toward the base root (moment-graded), floor ribs thicken toward the perimeter, and hook pads are localized to the upper anchor zone.'}}</p>
           <div class="fields"><label v-for="(value,key) in gridValues" :key="key" :class="{check:typeof value==='boolean'}">
             <span>{{names[key]?.[ru?0:1]??key}}</span>
             <input v-if="typeof value==='boolean'" v-model="values[key]" type="checkbox">
