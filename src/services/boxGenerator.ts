@@ -111,9 +111,9 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   // Side-wall roof motion is radial; front/rear roof motion is circumferential.
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
-    rows=max(1,ceil(usable_h*mesh_density/(cell_size*0.65)));
+    rows=max(1,ceil(usable_h*mesh_density/(max(18,18+(cell_size-3)*0.6)*0.65)));
     ch=usable_h/(0.542*rows+0.28);
-    cw=min(ch*0.56,max(rib*2.8,min(cell_size*0.8/mesh_density,(width-2*frame)/3)))*local_ratio;
+    cw=min(ch*0.56,max(rib*2.8,min((18+(cell_size/mesh_density-3)*0.6)*0.8,(width-2*frame)/3)))*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
     // Side/bottom clipping is supported; every roof apex remains below the top frame.
     if(cw>rib*2) intersection() {
@@ -137,8 +137,9 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
   frame = max(wall,rib*1.3);
-  r_cap = max(rib*4.6,(max(width,depth)-2*frame)/4.8);
-  r = max(rib*4.6,min(r_cap,cell_size*0.55/mesh_density));
+  r_min = rib*4.6;
+  r_cap = max(r_min,(max(width,depth)-2*frame)/4.8);
+  r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 3)/37);
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
   span = max(a,a+b*slope);
@@ -224,7 +225,9 @@ module footprint() {
 }
 module floor_pores() {
   frame=max(wall,floor_rib*1.25);
-  r=max(floor_rib*4.8,min((max(width,depth)-2*frame)/4.2,floor_cell_size*0.58/mesh_density));
+  r_floor_min=floor_rib*4.8;
+  r_floor_cap=max(r_floor_min,(max(width,depth)-2*frame)/4.2);
+  r=min(r_floor_cap,r_floor_min+(r_floor_cap-r_floor_min)*max(0,floor_cell_size/mesh_density-3)/37);
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
   ox=width/2; oy=depth/2;
   nc=ceil((width-2*frame)/(3*r))+1;
