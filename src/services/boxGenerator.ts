@@ -8,7 +8,7 @@ export const BOX_DEFAULTS = {
   hole_diameter: 6, hole_pitch: 16,
   floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
   dividers: 0, drain: false, hooks: true, hook_count: 2,
-  hook_width: 10, hook_thickness: 3, hook_gap: 6, hook_drop: 16, hook_spacing: 0,
+  hook_width: 10, hook_thickness: 3, hook_gap: 6, hook_drop: 16, hook_spacing: 0, hook_chamfer: false,
 }
 const dimension = z.number().finite().min(0.8).max(500)
 const schema = z.object({
@@ -28,7 +28,7 @@ const schema = z.object({
   dividers: z.number().int().min(0).max(8), drain: z.boolean(),
   hooks: z.boolean(), hook_count: z.number().int().min(1).max(6),
   hook_width: dimension, hook_thickness: dimension.default(3), hook_gap: dimension, hook_drop: dimension,
-  hook_spacing: z.number().finite().min(0).max(500).default(0),
+  hook_spacing: z.number().finite().min(0).max(500).default(0), hook_chamfer: z.boolean().default(false),
 }).strict()
 
 /** Dimensions are external; organic walls retain a solid border and hook pads. */
@@ -56,7 +56,7 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
     if(w/p.bend_radius>=2*Math.PI) throw Error('Дуга замыкается: увеличьте радиус изгиба / Increase bend radius to avoid wrapping around')
     if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+2*p.hook_thickness:0))) throw Error('Изгиб пересекает ось: увеличьте радиус / Bend reaches its axis; increase radius')
   }
-  if(p.print_optimized && p.organic && p.porous && Math.abs(p.front_angle)>=p.overhang_angle) throw Error('Наклон передней стенки превышает угол свеса для печати / Front tilt exceeds the selected print overhang angle')
+  if(p.print_optimized && p.porous && Math.abs(p.front_angle)>=p.overhang_angle) throw Error('Наклон передней стенки превышает угол свеса для печати / Front tilt exceeds the selected print overhang angle')
   return `// Organizer box. External dimensions in mm; organic skeletal walls.
 // Generic rail hooks: measure your rail. No load rating or physical fit test.
 ${Object.entries(p).map(([key,value])=>`${key} = ${value};`).join('\n')}
@@ -80,20 +80,20 @@ module outline(a,b,slope=0) { polygon([[0,0],[a,0],[a+b*slope,b],[0,b]]); }
 print_stretch = bend_radius>0 ? max(1,1+(bend_reverse ? 0 : depth+wall_height*max(0,slope))/bend_radius) : 1;
 roof_ratio = sqrt(max(0,tan(overhang_angle)*tan(overhang_angle)-slope*slope))/print_stretch*0.9;
 module print_cell(ix,iy,cw,ch,ox,oy,rib_width=rib) {
-  // Shared perturbed 6-vertex Voronoi/honeycomb lattice: trivalent 3-beam nodes and pointed FDM roof.
+  // Shared perturbed 6-vertex Voronoi/honeycomb lattice: trivalent 3-beam nodes and steep pointed FDM roof.
   offset(delta=-rib_width/2) polygon([
-    [ox+ix*cw/2+((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(2*iy+2)*ch/4+((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
-    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(2*iy+0.35)*ch/4+((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
-    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(2*iy-0.35)*ch/4+((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
-    [ox+ix*cw/2+((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(2*iy-2)*ch/4+((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
-    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(2*iy-0.35)*ch/4+((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
-    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
-      oy+(2*iy+0.35)*ch/4+((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04]
+    [ox+ix*cw/2+((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.1,
+      oy+(2*iy+2)*ch/4+((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.03],
+    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.1,
+      oy+(2*iy+0.35)*ch/4+((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.03],
+    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.1,
+      oy+(2*iy-0.35)*ch/4+((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.03],
+    [ox+ix*cw/2+((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.1,
+      oy+(2*iy-2)*ch/4+((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.03],
+    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.1,
+      oy+(2*iy-0.35)*ch/4+((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.03],
+    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.1,
+      oy+(2*iy+0.35)*ch/4+((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.03]
   ]);
 }
 module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
@@ -168,9 +168,13 @@ module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,s
     if(perforated && !organic_panel) {
       na = max(0,floor((a-4*wall-hole_diameter)/hole_pitch)+1);
       nb = max(0,floor((b-z_offset-4*wall-hole_diameter)/hole_pitch)+1);
+      tear_slope = max(0.35, min(1.5, abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.85 : roof_ratio));
+      tear_apex = hole_diameter/(2*sin(atan(tear_slope)));
       if(na>0 && nb>0) for(i=[0:na-1]) for(j=[0:nb-1])
         translate([(a-(na-1)*hole_pitch)/2+i*hole_pitch,
-          z_offset+(b-z_offset-(nb-1)*hole_pitch)/2+j*hole_pitch]) circle(d=hole_diameter);
+          z_offset+(b-z_offset-(nb-1)*hole_pitch)/2+j*hole_pitch])
+          if(print_optimized) hull() { circle(d=hole_diameter); polygon([[0,tear_apex],[-hole_diameter*0.35,0],[hole_diameter*0.35,0]]); }
+          else circle(d=hole_diameter);
     }
 }
 module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0) {
@@ -283,6 +287,12 @@ module assembled_box() { union() {
         cube([hook_width,hook_gap+2*hook_thickness+wall,hook_thickness]);
       translate([0,-hook_gap-2*hook_thickness,height-hook_drop-hook_thickness])
         cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
+      if(hook_chamfer) {
+        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
+          polygon([[-hook_thickness,0],[0,0],[0,-hook_thickness]]);
+        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
+          polygon([[-hook_thickness,hook_drop],[-hook_thickness-min(hook_drop*0.45,hook_gap*0.45),hook_drop],[-hook_thickness,hook_drop-min(hook_drop*0.45,hook_gap*0.45)]]);
+      }
     }
 } }
 module straight_box() { assembled_box(); }

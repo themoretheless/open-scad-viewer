@@ -34,12 +34,18 @@ it.each([
  {},{pattern_seed:7},{overhang_angle:35},{corner_radius:12,front_angle:15},
  {bend_radius:140,corner_radius:12,front_angle:15},{bend_radius:100,corner_radius:12,front_angle:15},
  {bend_radius:200,bend_reverse:true,front_angle:-15},
+ {organic:false,hole_diameter:8,hole_pitch:18,overhang_angle:45},
 ])('avoids over-limit wall undersides wider than one extrusion: %j',async patch=>{
  const p={...BOX_DEFAULTS,hooks:false,...patch}
  const report=await audit(p)
  expect(report.excessArea,JSON.stringify(report)).toBeLessThan(0.02)
  expect(report.criticalWorst,JSON.stringify(report)).toBeLessThanOrEqual(p.overhang_angle+0.2)
  if(!p.bend_radius)expect(report.worst).toBeLessThanOrEqual(p.overhang_angle+0.2)
+},120000)
+it('keeps default organic wall overhang well below the 45-degree limit',async()=>{
+ const report=await audit({...BOX_DEFAULTS,hooks:false})
+ expect(report.worst).toBeLessThan(40)
+ expect(report.excessArea).toBe(0)
 },120000)
 it('detects the old rounded ceilings as a failing control',async()=>{
  const report=await audit({...BOX_DEFAULTS,hooks:false,print_optimized:false})
@@ -51,6 +57,9 @@ it('keeps the downturned-hook support risk explicit instead of claiming the whol
  const report=await audit({...BOX_DEFAULTS})
  expect(report.excessArea).toBeGreaterThan(10)
  expect(report.worst).toBeGreaterThan(80)
+ // Enabling the 45-degree root gusset (hook_chamfer) reduces unsupported horizontal bridge area under the hook root.
+ const chamfered=await audit({...BOX_DEFAULTS,hook_chamfer:true})
+ expect(chamfered.excessArea).toBeLessThan(report.excessArea)
 },120000)
 it('rejects a wall tilt beyond the selected print angle',()=>{
  expect(()=>generateBox({...BOX_DEFAULTS,front_angle:40,overhang_angle:35})).toThrow(/свеса/)
