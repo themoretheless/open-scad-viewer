@@ -39,3 +39,8 @@ original third-face constraint generation, complete singular/periodic branch
 arrangements and winding, finite material trim, general intersecting
 Boolean/healing, lineage/history, actual bridge/WASM execution and the wider
 quad/offset/fillet/G2 requirements.
+
+Follow-up: different free axes can now reconcile when exact original-equation
+clock consequence and selected-root membership prove identity; see
+`ss-cross-axis-clock-consequence-2026-11-04.md`. This is a sufficient proof,
+not arbitrary branch or finite-trim completeness.

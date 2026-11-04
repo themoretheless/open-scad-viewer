@@ -66,3 +66,24 @@ fn chart_reconciliation_preserves_a_real_closed_curve_and_rejects_other_branch()
     let lower=point(contour.edges()[4].curve().clone(),&[-1.,0.,8.],[0.34375,0.375]);
     assert!(upper.same_source_point_in_charts(&lower,Default::default(),Default::default()).is_err());
 }
+#[test]
+fn different_free_axes_require_original_equations_and_selected_root_membership() {
+    let contour=circle::wire();
+    let a=point(contour.edges()[1].curve().clone(),&[-257.,0.,4096.],[0.25,0.251]);
+    let coefficients=[2576353.,-15605760.,32382976.,-33554432.,16777216.];
+    let b=point(contour.edges()[2].curve().clone(),&coefficients,[0.687,0.689]);
+    assert_ne!(a.curve().free_axis(),b.curve().free_axis());
+    assert!(a.same_source_point_in_charts(&b,Default::default(),Default::default()).unwrap());
+    assert!(b.same_source_point_in_charts(&a,Default::default(),Default::default()).unwrap());
+    let port=ss::bind_original_ss_port(a.clone(),a.curve().clone(),[0;4],Default::default()).unwrap();
+    let joined=port.rebind_equivalent(b.clone(),Default::default()).unwrap();
+    assert!(Arc::ptr_eq(joined.point(),&b));joined.reverify().unwrap();
+    let lower=point(contour.edges()[2].curve().clone(),&coefficients,[0.311,0.313]);
+    assert!(!a.same_source_point_in_charts(&lower,Default::default(),Default::default()).unwrap());
+    let mut wrong=coefficients;wrong[0]+=1.;
+    let wrong=point(contour.edges()[2].curve().clone(),&wrong,[0.687,0.689]);
+    assert!(!a.same_source_point_in_charts(&wrong,Default::default(),Default::default()).unwrap());
+    assert!(a.same_source_point_in_charts(&b,Default::default(),ss::OriginalSsCurveLimits {
+        projection:ss::ExactSsAlgebraLimits {max_work:1,..Default::default()},..Default::default()
+    }).is_err());
+}

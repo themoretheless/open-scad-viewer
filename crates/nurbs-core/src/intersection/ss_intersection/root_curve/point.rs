@@ -80,8 +80,11 @@ impl OriginalSsRootPoint {
         }
         let a=self.curve.source();
         let b=other.curve.source();
-        if self.curve.free_axis()!=other.curve.free_axis() || a.first()!=b.first() || a.second()!=b.second() {
+        if a.first()!=b.first() || a.second()!=b.second() {
             return Ok(false);
+        }
+        if self.curve.free_axis()!=other.curve.free_axis() {
+            return cross_axis::prove(self,other,clock_limits,geometry_limits);
         }
         let k=self.curve.free_axis().index();
         let fa=frames::frame(&self.curve)?;
@@ -134,3 +137,5 @@ impl OriginalSsRootPoint {
         }
     }
 }
+
+mod cross_axis;

@@ -137,3 +137,6 @@ mod rank_strata;
 pub use rank_strata::{SsRankStrataLimits,ExactSsRankLocation,QualifiedSsRankStrata,qualify_ss_rank_strata};
 mod flux;
 pub(crate) use flux::bound as original_polynomial_flux;
+
+mod clock_consequence;
+pub(crate) use clock_consequence::prove as prove_clock_consequence;

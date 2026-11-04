@@ -108,3 +108,34 @@ fn irrational_vertex_flows_through_common_ports_wire_and_paired_brep() {
         assert!(uv.iter().all(|d| d[0]<=d[1]));
     }
 }
+#[test]
+fn cross_axis_algebraic_junction_is_preserved_by_paired_brep() {
+    use nurbs_core::ss_intersection as ss;
+    use std::sync::Arc;
+    let contour=fixture::wire();
+    let edge=&contour.edges()[1];
+    let make=|curve,p:&[f64],d| {
+        let clock=Arc::new(ss::QualifiedSsAlgebraicClock::from_binary(p,d,Default::default()).unwrap());
+        Arc::new(ss::OriginalSsRootPoint::from_algebraic(ss::OriginalSsAlgebraicPoint::new(curve,clock).unwrap(),Default::default()).unwrap())
+    };
+    let x=make(edge.curve().clone(),&[-257.,0.,4096.],[0.25,0.251]);
+    let y=make(contour.edges()[2].curve().clone(),&[2576353.,-15605760.,32382976.,-33554432.,16777216.],[0.687,0.689]);
+    let bind=|point|ss::bind_original_ss_port(point,edge.curve().clone(),[0;4],Default::default()).unwrap();
+    let mut edges=vec![contour.edges()[0].clone(),
+        ss::OriginalSsRootEdge::new(edge.start().clone(),bind(x)).unwrap(),
+        ss::OriginalSsRootEdge::new(bind(y.clone()),edge.end().clone()).unwrap()];
+    edges.extend_from_slice(&contour.edges()[2..]);
+    assert!(ss::OriginalSsRootWire::new(edges.clone()).is_err());
+    let wire=ss::OriginalSsRootWire::reconcile_selectors(edges,Default::default()).unwrap();
+    wire.reverify().unwrap();
+    let brep=RootBrep::paired_contours(&wire,&[],1e-7).unwrap();
+    brep.reverify().unwrap();
+    assert_eq!(brep.topology().vertices.len(),9);
+    assert_eq!(brep.topology().edges.len(),9);
+    assert!(brep.topology().boundary_edges().is_empty());
+    assert!(brep.topology().vertices.iter().any(|v|v.point.selector.same_selector(&y)));
+    for support in 0..2 {
+        let uv=brep.pcurve_bounds(support,0,1,Default::default()).unwrap();
+        assert!(uv.iter().all(|d|d[0]<=d[1]));
+    }
+}

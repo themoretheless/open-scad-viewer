@@ -110,7 +110,7 @@ fn monic<const N: usize>(
     w.coefficient(&scale)?;
     p.scale_monomial([0; N], &scale, w)
 }
-fn normal_form<const N: usize>(
+pub(super) fn normal_form<const N: usize>(
     input: &SparseSsPolynomial<N>,
     basis: &[SparseSsPolynomial<N>],
     order: [usize; N],
