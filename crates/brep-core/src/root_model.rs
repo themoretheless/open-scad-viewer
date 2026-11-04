@@ -233,3 +233,6 @@ impl RootBrep {
 
 mod partition;
 pub use partition::{RootEdgePartitionRequest,RootBrepPartitionLimits,QualifiedRootBrepEdgeSubdivision};
+
+mod uv_closure;
+pub use uv_closure::{QualifiedRootUvClosure,qualify_root_uv_joint};
