@@ -57,7 +57,7 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
   if (2*p.corner_radius >= Math.min(w,d,topDepth)) throw Error('Радиус не помещается в габариты коробки / Corner radius does not fit the box dimensions')
   if(p.bend_radius>0) {
     if(w/p.bend_radius>=2*Math.PI) throw Error('Дуга замыкается: увеличьте радиус изгиба / Increase bend radius to avoid wrapping around')
-    if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+2*p.hook_thickness:0))) throw Error('Изгиб пересекает ось: увеличьте радиус / Bend reaches its axis; increase radius')
+    if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+p.hook_thickness:0))) throw Error('Изгиб пересекает ось: увеличьте радиус / Bend reaches its axis; increase radius')
   }
   if(p.print_optimized && p.porous && Math.abs(p.front_angle)>=p.overhang_angle) throw Error('Наклон передней стенки превышает угол свеса для печати / Front tilt exceeds the selected print overhang angle')
   return `// Organizer box. External dimensions in mm; organic skeletal walls.
@@ -291,27 +291,22 @@ module assembled_box() { union() {
       panel(depth-2*wall+0.5-0.5*slope,wall_height+0.1,wall,porous && radius==0,0,organic,false,slope);
   if(hooks) for(i=[0:hook_count-1])
     translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
-      translate([0,-hook_thickness,height-hook_drop-hook_thickness])
-        cube([hook_width,wall+hook_thickness,hook_drop+hook_thickness]);
-      translate([0,-hook_gap-2*hook_thickness,height-hook_thickness])
-        cube([hook_width,hook_gap+2*hook_thickness+wall,hook_thickness]);
-      translate([0,-hook_gap-2*hook_thickness,height-hook_drop-hook_thickness])
+      translate([0,-hook_gap-hook_thickness,height-hook_thickness])
+        cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
+      translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
         cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
       if(hook_chamfer) {
         // Self-supporting 45-degree hook profile:
-        // 1) 45-degree rear-wall root ramp
-        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
-          polygon([[-hook_thickness,0],[0,0],[0,-hook_thickness]]);
-        // 2) Full 45-degree inner rail-slot corner gusset across the entire rail gap (eliminates horizontal bridge ceiling)
+        // 1) Full 45-degree inner rail-slot corner gusset across the rail gap (eliminates horizontal bridge ceiling)
         translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
           polygon([
-            [-hook_thickness,hook_drop],
-            [-hook_thickness-hook_gap,hook_drop],
-            [-hook_thickness,hook_drop-min(hook_drop*0.95,hook_gap)]
+            [0,hook_drop],
+            [-hook_gap,hook_drop],
+            [0,hook_drop-min(hook_drop*0.95,hook_gap)]
           ]);
-        // 3) 45-degree lower bevel under the outer downturned lip
+        // 2) 45-degree lower bevel under the outer downturned lip
         translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
-          polygon([[-hook_gap-2*hook_thickness,0],[-hook_gap-hook_thickness,0],[-hook_gap-hook_thickness,-hook_thickness]]);
+          polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
       }
     }
 } }

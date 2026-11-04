@@ -35,7 +35,7 @@ it('bends organic walls, floor and hooks together while retaining front tilt and
  }
 },120000)
 it('rejects wraps and inward bends through the axis',()=>{
- expect(()=>generateBox({...BOX_DEFAULTS,bend_radius:15})).toThrow()
+ expect(()=>generateBox({...BOX_DEFAULTS,bend_radius:8})).toThrow()
  expect(()=>generateBox({...BOX_DEFAULTS,bend_radius:70,bend_reverse:true})).toThrow()
 })
 

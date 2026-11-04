@@ -41,18 +41,18 @@ it.each([{wall:2,hook_thickness:4},{wall:5,hook_thickness:2}])('keeps hook dimen
  const p={...BOX_DEFAULTS,...patch,porous:false,floor_mesh:false,hook_width:12,hook_gap:8,hook_drop:20,hook_spacing:50}
  const base=await build({...p,hooks:false}),mounted=await build(p)
  closed(mounted)
- const expected=p.hook_count*p.hook_width*p.hook_thickness*(2*p.hook_drop+2*p.hook_thickness+p.hook_gap)
+ const expected=p.hook_count*p.hook_width*p.hook_thickness*(p.hook_drop+p.hook_thickness+p.hook_gap)
  expect(mounted.volume-base.volume).toBeCloseTo(expected,1)
  let left=Infinity,right=-Infinity,bottom=Infinity,outside=Infinity
  for(const m of mounted.meshes)for(let i=0;i<m.vertices.length;i+=6){
-  if(m.vertices[i+1]<-p.hook_gap-p.hook_thickness-0.01){
+  if(m.vertices[i+1]<-p.hook_gap-0.01){
    left=Math.min(left,m.vertices[i]);right=Math.max(right,m.vertices[i]);bottom=Math.min(bottom,m.vertices[i+2]);outside=Math.min(outside,m.vertices[i+1])
   }
  }
  expect(left).toBeCloseTo((p.width-p.hook_spacing-p.hook_width)/2,2)
  expect(right-left).toBeCloseTo(p.hook_spacing+p.hook_width,2)
  expect(bottom).toBeCloseTo(p.height-p.hook_drop-p.hook_thickness,2)
- expect(outside).toBeCloseTo(-p.hook_gap-2*p.hook_thickness,2)
+ expect(outside).toBeCloseTo(-p.hook_gap-p.hook_thickness,2)
 },120000)
 it('combines a mesh floor, bend, corner rounds, tilt and custom hooks',async()=>{
  closed(await build({...BOX_DEFAULTS,bend_radius:140,corner_radius:12,front_angle:15,hook_width:12,hook_thickness:4,hook_gap:8,hook_drop:20,hook_spacing:50,floor_cell_size:30}))
@@ -62,7 +62,7 @@ it('places auto-spaced hooks at Bessel minimum-bending points (~0.2071L) or alig
  closed(bessel)
  let left=Infinity,right=-Infinity
  for(const m of bessel.meshes)for(let i=0;i<m.vertices.length;i+=6){
-  if(m.vertices[i+1]<-BOX_DEFAULTS.hook_gap-BOX_DEFAULTS.hook_thickness-0.01){
+  if(m.vertices[i+1]<-BOX_DEFAULTS.hook_gap-0.01){
    left=Math.min(left,m.vertices[i]);right=Math.max(right,m.vertices[i])
   }
  }
@@ -74,7 +74,7 @@ it('places auto-spaced hooks at Bessel minimum-bending points (~0.2071L) or alig
  closed(aligned)
  let divLeft=Infinity,divRight=-Infinity
  for(const m of aligned.meshes)for(let i=0;i<m.vertices.length;i+=6){
-  if(m.vertices[i+1]<-BOX_DEFAULTS.hook_gap-BOX_DEFAULTS.hook_thickness-0.01){
+  if(m.vertices[i+1]<-BOX_DEFAULTS.hook_gap-0.01){
    divLeft=Math.min(divLeft,m.vertices[i]);divRight=Math.max(divRight,m.vertices[i])
   }
  }
