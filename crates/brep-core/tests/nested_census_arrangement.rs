@@ -338,9 +338,11 @@ fn run(with_holes: bool, mirrored: bool) {
                 "{:?}",
                 admission.report()
             );
-            let solid = admission
-                .into_solid()
-                .expect("Complete signed volume must admit bounded material");
+            let solid = Arc::new(
+                admission
+                    .into_solid()
+                    .expect("Complete signed volume must admit bounded material"),
+            );
             let a = 0.3125_f64.powi(2);
             let b = 0.15625_f64.powi(2);
             let expected = if genus == 1 {
@@ -388,6 +390,70 @@ fn run(with_holes: bool, mirrored: bool) {
                     query.attempts.iter().map(|a| a.cells).sum::<usize>()
                 );
             }
+            let inside_bounds = if genus == 0 {
+                [[0.49, 0.51], [0.49, 0.51], [0.02, 0.025]]
+            } else {
+                [[0.72, 0.73], [0.495, 0.505], [-0.025, -0.015]]
+            };
+            let directions = [[0., 0., 1.], [0.137, 0.283, 1.]];
+            let inside_box = solid
+                .qualify_material_box(inside_bounds, &directions, Default::default())
+                .unwrap();
+            eprintln!(
+                "root material inside genus={genus} mirror={mirrored}: {:?}",
+                inside_box.separation_work()
+            );
+            assert!(inside_box.inside());
+            assert!(Arc::ptr_eq(inside_box.solid(), &solid));
+            assert_eq!(inside_box.bounds(), inside_bounds);
+            assert!(inside_box.separation_work().separation_cells <= 32768);
+            assert!(inside_box.separation_work().domain_queries <= 4096);
+            if genus == 1 {
+                let hole_box = solid
+                    .qualify_material_box(
+                        [[0.49, 0.51], [0.49, 0.51], [-0.002, 0.002]],
+                        &directions,
+                        Default::default(),
+                    )
+                    .unwrap();
+                eprintln!(
+                    "root material hole mirror={mirrored}: {:?}",
+                    hole_box.separation_work()
+                );
+                assert!(
+                    !hole_box.inside(),
+                    "The entire box through the untrimmed plane is in the hole"
+                );
+            }
+            assert!(solid
+                .qualify_material_box(
+                    inside_bounds,
+                    &directions,
+                    mixed::RootMaterialBoxLimits {
+                        separation_cells: 1,
+                        ..Default::default()
+                    }
+                )
+                .is_err());
+            let contact_bounds = if genus == 0 {
+                [[0.49, 0.51], [0.49, 0.51], [-0.001, 0.001]]
+            } else {
+                [[0.72, 0.73], [0.495, 0.505], [-0.001, 0.001]]
+            };
+            assert!(
+                solid
+                    .qualify_material_box(
+                        contact_bounds,
+                        &directions,
+                        mixed::RootMaterialBoxLimits {
+                            separation_cells: 256,
+                            domain_queries: 128,
+                            ..Default::default()
+                        }
+                    )
+                    .is_err(),
+                "A box crossing actual material boundary must not qualify"
+            );
             let no_bands = solid
                 .classify_point(
                     [0.5, 0.5, 0.03],
@@ -450,7 +516,7 @@ fn run(with_holes: bool, mirrored: bool) {
                 assert!(b[0] <= expected && expected <= b[1]);
                 assert_eq!(partial.report().cells, 3);
                 assert!(!partial.report().accuracy_proven);
-                solid.reverify().unwrap();
+                inside_box.reverify().unwrap();
                 if !mirrored {
                     let default = sewn.volume_bounds(Default::default()).unwrap();
                     eprintln!("paired default volume: {default:?}");
@@ -703,4 +769,8 @@ fn near_root_box_requires_complete_original_winding() {
         )
         .unwrap();
     assert_eq!(proof.winding(), 1);
+    let contact = wire
+        .winding_box(0, [[0.8, 0.825], [0.48, 0.52]], Default::default())
+        .unwrap_err();
+    assert!(contact.message.contains("boundary selector"), "{contact:?}");
 }

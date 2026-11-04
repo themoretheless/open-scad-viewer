@@ -1,0 +1,49 @@
+{
+  "tested_base": "64dfc86219ac82b624b183710a2d44acbca85e18",
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "2b72847e269005c8d101703f721e24ef52aeb58a65e6c93c46ed3460d84695ff",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "7e08b2c10ec3b4070876851b12321f4761c34d3b639bdb2f9da760b0fc8e3944",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "de122188180e1bbdfc152bf804b7579b44d01e565893106dbd4413dddd3cc2ec",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "1c135e6831cd6744a689c169438582c823beecc4a5849ce7d18055fb13c59cfb",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "2760b4daa0ddebc2c01ab0f9052cdd87d69a469ea4f212bf59f2c9e8b30e03ca",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume.rs": "482d4e6d648ce65ba0441377711c17707c23def54521b70cbcaff26f16e2d452",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "c99b7c14cfd9ab36d62102b7467d166ae6c26f6d237d39bda708361ab1edde0e",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire/winding.rs": "9d96db3f0015edb2ec087eec46b259f5bc40f2c8a28e22be06fe45e6e680944b",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/material_box.rs": "be7dc2ee17a60c188f604987d84476449d64792f56663684e6b69d9d795e016d"
+  },
+  "tests_passed": 18,
+  "suites": {
+    "nested_census_arrangement": 5,
+    "ss_root_ports": 5,
+    "ss_quotient_path": 1,
+    "ray_parity": 7
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0
+  },
+  "scope": "Uniform material of a complete Cartesian box relative to an admitted paired-root solid, after complete retained-boundary exclusion and native parity",
+  "measured_work": {
+    "inner_material": {
+      "separation_cells": 24,
+      "domain_queries": 11
+    },
+    "annular_material": {
+      "separation_cells": 26,
+      "domain_queries": 12
+    },
+    "central_hole": {
+      "separation_cells": 78,
+      "domain_queries": 42
+    }
+  },
+  "remaining": [
+    "complete boundary-to-boundary material covers and nesting forest",
+    "mixed cavity assembly and healing",
+    "arbitrary SS singular/coincident branches and periodic/pole arrangements",
+    "full finite-face trim and cross-source rim stitching",
+    "general Boolean and lineage",
+    "actual bridge/WASM delivery"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

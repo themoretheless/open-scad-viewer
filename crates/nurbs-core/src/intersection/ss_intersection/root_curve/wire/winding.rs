@@ -139,6 +139,17 @@ pub(super) fn qualify_box(
     for edge in wire.edges() {
         let start = endpoint(edge.start().point(), &mut endpoint_cache, &mut remaining)?;
         let end = endpoint(edge.end().point(), &mut endpoint_cache, &mut remaining)?;
+        // A complete selector enclosure contained in the query proves actual
+        // boundary contact. Refinement cannot establish whole-box separation.
+        for endpoint in [&start, &end] {
+            check(
+                !(0..2).all(|k| {
+                    let d = endpoint.uv[2 * support + k];
+                    query[k][0] <= d[0] && d[1] <= query[k][1]
+                }),
+                "Original UV winding query contains a boundary selector",
+            )?;
+        }
         let a = edge.start().parameter_bounds();
         let b = edge.end().parameter_bounds();
         let (lo, hi) = if edge.forward() {

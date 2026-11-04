@@ -233,3 +233,6 @@ impl QualifiedPairedRootBoundary {
 
 mod point;
 pub use point::{RootSolidPointLimits,RootSolidPointReport,RootSolidRayReport};
+
+mod material_box;
+pub use material_box::{RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox};
