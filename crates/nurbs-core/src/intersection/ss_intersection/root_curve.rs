@@ -7,6 +7,8 @@ use num_traits::{One, Zero};
 use std::sync::Arc;
 mod frames;
 mod window;
+mod joint;
+pub use joint::QualifiedOriginalSsJoint;
 pub use window::QualifiedOriginalSsGraphWindow;
 mod query;
 #[derive(Clone, Debug)]

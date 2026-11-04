@@ -147,3 +147,30 @@ fn original_graph_window_uses_exact_source_clocks_and_rejects_escape() {
     inverted[2] = [q(0.55), q(0.45)];
     assert!(c.qualify_graph_window(inverted).is_err());
 }
+
+#[test]
+fn common_graph_joint_proves_both_sides_and_refuses_retracing() {
+    let wire = circle_fixture::wire();
+    let edges = wire.edges();
+    for i in 0..edges.len() {
+        edges[i].qualify_successor(&edges[(i+1)%edges.len()], 10, Default::default())
+            .unwrap_or_else(|e| panic!("joint {i}: {e:?}"))
+            .reverify().unwrap();
+        let reversed = ss::OriginalSsRootEdge::new(edges[i].end().clone(), edges[i].start().clone()).unwrap();
+        assert!(edges[i].qualify_successor(&reversed, 3, Default::default()).is_err());
+    }
+    let backward: Vec<_> = edges.iter().rev().map(|e|
+        ss::OriginalSsRootEdge::new(e.end().clone(), e.start().clone()).unwrap()).collect();
+    let mut net_unit = Vec::new();
+    for _ in 0..3 { net_unit.extend_from_slice(edges); }
+    for _ in 0..2 { net_unit.extend_from_slice(&backward); }
+    let net_unit = ss::OriginalSsRootWire::new(net_unit).unwrap();
+    assert_eq!(ss::qualify_original_ss_winding(&net_unit, 0, [0.5,0.5], Default::default()).unwrap().winding(), 1);
+    assert!(net_unit.qualify_joints(3, Default::default()).is_err());
+    // The reverse traversal must admit the same physical joints.
+    let reversed: Vec<_> = edges.iter().rev().map(|e|
+        ss::OriginalSsRootEdge::new(e.end().clone(), e.start().clone()).unwrap()).collect();
+    for i in 0..reversed.len() {
+        reversed[i].qualify_successor(&reversed[(i+1)%reversed.len()], 10, Default::default()).unwrap();
+    }
+}
