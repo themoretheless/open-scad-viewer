@@ -153,3 +153,32 @@ fn explicit_face_retention_keeps_only_complete_bodies() {
     assert!(!partial.output().topology().shells[0].closed);partial.reverify().unwrap();
     assert!(RootFaceRetention::retain(source,vec![2]).is_err());
 }
+#[test]
+fn root_geometry_roundtrips_into_existing_mixed_pipeline_without_new_owners() {
+    use brep_core::mixed_root_model::{MixedBrep,MixedEdge,MixedVertex,MixedPcurve};
+    use std::sync::Arc;
+    let source=RootBrep::paired_contours(&fixture::wire(),&[],1e-7).unwrap();
+    let mixed=MixedBrep::from_root(&source).unwrap();
+    let result=mixed.to_root().unwrap();result.reverify().unwrap();
+    let joined=mixed.concatenate(&mixed).unwrap();
+    let joined_root=joined.model().to_root().unwrap();joined_root.reverify().unwrap();
+    assert_eq!(joined_root.topology().faces.len(),4);
+    assert_eq!(joined_root.topology().bodies.len(),2);
+    let a=source.topology();let b=result.topology();
+    assert_eq!(a.vertices.len(),b.vertices.len());assert_eq!(a.faces.len(),b.faces.len());
+    assert_eq!(a.euler_characteristic(),b.euler_characteristic());
+    for (i,v) in a.vertices.iter().enumerate() {
+        let MixedVertex::Root(p)=&mixed.topology().vertices[i].point else {panic!("root vertex lost")};
+        assert!(Arc::ptr_eq(p,&v.point.selector));assert!(Arc::ptr_eq(&b.vertices[i].point.selector,&v.point.selector));
+    }
+    for (i,e) in a.edges.iter().enumerate() {
+        let MixedEdge::Root(root)=&mixed.topology().edges[i].curve else {panic!("root edge lost")};
+        assert!(Arc::ptr_eq(root.curve(),e.curve.curve()));assert!(Arc::ptr_eq(b.edges[i].curve.curve(),e.curve.curve()));
+        assert_eq!(e.vertices,b.edges[i].vertices);
+    }
+    for (l,wire) in a.loops.iter().enumerate() {for (i,c) in wire.coedges.iter().enumerate() {
+        let MixedPcurve::Root(p)=&mixed.topology().loops[l].coedges[i].pcurve else {panic!("root pcurve lost")};
+        let out=&b.loops[l].coedges[i];assert_eq!((p.world_edge,p.support,p.reversed),(c.edge,c.pcurve.support,c.reversed));
+        assert_eq!((out.edge,out.pcurve.support,out.reversed),(c.edge,c.pcurve.support,c.reversed));
+    }}
+}

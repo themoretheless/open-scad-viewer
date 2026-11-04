@@ -1,0 +1,11 @@
+{
+  "distinct_tests_passed": 13,
+  "tests": [
+    "root_uv_closure",
+    "root_model",
+    "mixed_topology_transfer"
+  ],
+  "mixed_concatenate_real_call": true,
+  "geometry_bridge_wasm_exposed": false,
+  "general_boolean_complete": false
+}

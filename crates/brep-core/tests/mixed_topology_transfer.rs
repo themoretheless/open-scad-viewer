@@ -36,6 +36,8 @@ fn rooted() -> mixed::MixedBrep {
 fn root_edge_and_both_uv_bindings_transfer_together() {
     let left = mixed::MixedBrep::from_closed_solid(&cube(-2., 2.)).unwrap();
     let right = rooted();
+    assert!(left.to_root().is_err());
+    assert!(right.to_root().is_err());
     let joined = left.concatenate(&right).unwrap();
     let [a, b] = joined.sources();
     let t = joined.model().topology();

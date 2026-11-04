@@ -143,6 +143,10 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     assert!(!retained.output().topology().shells[0].closed);
     QualifiedRootUvClosure::qualify(retained.output().clone(),10).unwrap().reverify().unwrap();
     retained.reverify().unwrap();
+    let mixed=brep_core::mixed_root_model::MixedBrep::from_root(retained.output()).unwrap();
+    let roundtrip=Arc::new(mixed.to_root().unwrap());
+    QualifiedRootUvClosure::qualify(roundtrip.clone(),10).unwrap().reverify().unwrap();
+    assert_eq!(R::qualify(roundtrip,0,[[0.1953125;2],[0.5;2]],Default::default()).unwrap().region(),&Region::ExcludedByHoles(vec![0]));
     assert!(brep_core::root_model::RootFaceRetention::retain(region_source.clone(),vec![1,1]).is_err());
     let empty=brep_core::root_model::RootFaceRetention::retain(region_source.clone(),vec![]).unwrap();
     assert!(empty.output().topology().vertices.is_empty() && empty.output().topology().faces.is_empty());
