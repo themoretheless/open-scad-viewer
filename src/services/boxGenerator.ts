@@ -19,13 +19,13 @@ const schema = z.object({
   front_angle: z.number().finite().min(-60).max(60).default(0),
   bend_radius: z.number().finite().min(0).max(100000).default(0),
   bend_reverse: z.boolean().default(false), bend_segments: z.number().int().min(4).max(128).default(24),
-  organic: z.boolean().default(true), cell_size: dimension.default(40), rib: dimension.default(2.4),
+  organic: z.boolean().default(true), cell_size: dimension.min(3).default(40), rib: dimension.default(2.4),
   stress_gradient: z.number().finite().min(0).max(2).default(1),
   mesh_density: z.number().finite().min(0.5).max(2).default(1),
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
   pattern_seed: z.number().int().min(0).max(100000).default(1),
   hole_diameter: dimension, hole_pitch: dimension,
-  floor_mesh: z.boolean().default(false), floor_cell_size: dimension.default(20), floor_rib: dimension.default(2.4),
+  floor_mesh: z.boolean().default(false), floor_cell_size: dimension.min(3).default(20), floor_rib: dimension.default(2.4),
   dividers: z.number().int().min(0).max(8), drain: z.boolean(),
   hooks: z.boolean(), hook_count: z.number().int().min(1).max(6),
   hook_width: dimension, hook_thickness: dimension.default(3), hook_gap: dimension, hook_drop: dimension,
@@ -113,7 +113,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
     rows=max(1,ceil(usable_h*mesh_density/(cell_size*0.65)));
     ch=usable_h/(0.542*rows+0.28);
-    cw=min(ch*0.56,max(rib*2.8,cell_size*0.8/mesh_density))*local_ratio;
+    cw=min(ch*0.56,max(rib*2.8,min(cell_size*0.8/mesh_density,(width-2*frame)/3)))*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
     // Side/bottom clipping is supported; every roof apex remains below the top frame.
     if(cw>rib*2) intersection() {
@@ -136,10 +136,11 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  r = max(rib*4.6,cell_size*0.55/mesh_density);
+  frame = max(wall,rib*1.3);
+  r_cap = max(rib*4.6,(max(width,depth)-2*frame)/4.8);
+  r = max(rib*4.6,min(r_cap,cell_size*0.55/mesh_density));
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
-  frame = max(wall,rib*1.3);
   span = max(a,a+b*slope);
   ox = -seam_offset*seam_dir; oy = z_offset-seam_v;
   c0 = floor((seam_offset-(seam_dir<0 ? span : 0))/(2*rx))-1;
@@ -223,7 +224,7 @@ module footprint() {
 }
 module floor_pores() {
   frame=max(wall,floor_rib*1.25);
-  r=max(floor_rib*4.8,floor_cell_size*0.58/mesh_density);
+  r=max(floor_rib*4.8,min((max(width,depth)-2*frame)/4.2,floor_cell_size*0.58/mesh_density));
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
   ox=width/2; oy=depth/2;
   nc=ceil((width-2*frame)/(3*r))+1;
