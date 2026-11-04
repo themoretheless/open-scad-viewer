@@ -24,8 +24,8 @@ describe('box generator', () => {
     const {result}=await engine.buildSource(generateBox(),{quality:'full',purpose:'analysis'})
     expect(result.volume).toBeGreaterThan(0)
     expect(result.meshes.length).toBe(1)
-    // Print-oriented roofs and full-height hook columns trade some porosity for support.
-    expect(result.volume).toBeLessThan((120*75*80-114*69*76)*0.8)
+    // Organic honeycomb web and localized hook pads save >55% material vs solid shell.
+    expect(result.volume).toBeLessThan((120*75*80-114*69*76)*0.48)
     for(const mesh of result.meshes) {
       const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
       expect(diagnostics.boundary).toBe(0)

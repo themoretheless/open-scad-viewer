@@ -71,28 +71,32 @@ module outline(a,b,slope=0) { polygon([[0,0],[a,0],[a+b*slope,b],[0,b]]); }
 print_stretch = bend_radius>0 ? max(1,1+(bend_reverse ? 0 : depth+wall_height*max(0,slope))/bend_radius) : 1;
 roof_ratio = sqrt(max(0,tan(overhang_angle)*tan(overhang_angle)-slope*slope))/print_stretch*0.9;
 module print_cell(ix,iy,cw,ch,ox,oy,rib_width=rib) {
-  // Shared perturbed vertices preserve the cellular web; no rounded roof apex.
+  // Shared perturbed 6-vertex Voronoi/honeycomb lattice: trivalent 3-beam nodes and pointed FDM roof.
   offset(delta=-rib_width/2) polygon([
-    [ox+(ix+(0))*cw/2+((sin((ix+(0))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(0))*127.1+(iy+(1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.12,
-      oy+(iy+(1))*ch/2+((sin((ix+(0))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(0))*127.1+(iy+(1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.06],
-    [ox+(ix+(1))*cw/2+((sin((ix+(1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.12,
-      oy+(iy+(0))*ch/2+((sin((ix+(1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.06],
-    [ox+(ix+(0))*cw/2+((sin((ix+(0))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(0))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.12,
-      oy+(iy+(-1))*ch/2+((sin((ix+(0))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(0))*127.1+(iy+(-1))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.06],
-    [ox+(ix+(-1))*cw/2+((sin((ix+(-1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.12,
-      oy+(iy+(0))*ch/2+((sin((ix+(-1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+(-1))*127.1+(iy+(0))*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.06]
+    [ox+ix*cw/2+((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
+      oy+(2*iy+2)*ch/4+((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*127.1+(2*iy+2)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
+      oy+(2*iy+0.35)*ch/4+((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+(ix+1)*cw/2+((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
+      oy+(2*iy-0.35)*ch/4+((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+ix*cw/2+((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
+      oy+(2*iy-2)*ch/4+((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin(ix*127.1+(2*iy-2)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
+      oy+(2*iy-0.35)*ch/4+((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy-0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04],
+    [ox+(ix-1)*cw/2+((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*cw*0.14,
+      oy+(2*iy+0.35)*ch/4+((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(2*iy+0.35)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ch*0.04]
   ]);
 }
 module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
-  frame=max(wall,rib*1.5);
+  frame=max(wall,rib*1.3);
   usable_h=b-z_offset-2*frame;
   usable_w=a+min((z_offset+frame)*slope,(b-frame)*slope)-2*frame;
   // Side-wall roof motion is radial; front/rear roof motion is circumferential.
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
-    rows=max(1,ceil(usable_h/(cell_size/2)));
-    ch=usable_h/(0.5*rows+0.04);
-    cw=ch*0.75*local_ratio;
+    rows=max(1,ceil(usable_h/(cell_size*0.65)));
+    ch=usable_h/(0.5875*rows+0.32);
+    cw=ch*0.64*local_ratio;
     cols=ceil(max(a,a+b*slope)/cw)+1;
     // Side/bottom clipping is supported; every roof apex remains below the top frame.
     if(cw>rib*2) intersection() {
@@ -100,10 +104,13 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
       translate([0,z_offset+frame]) square([max(a,a+b*slope),b-z_offset-frame]);
       union() for(row=[0:rows-1]) for(col=[-1:cols]) {
         cx=frame+(2*col+(row%2))*cw/2;
+        cy=z_offset+frame+(2.35*row+1)*ch/4;
         first_hook=(width-hook_step*(hook_count-1))/2-radius;
         nearest=max(0,min(hook_count-1,floor((cx-first_hook)/hook_step+0.5)));
-        if(!reserve_hooks || !hooks || abs(cx-first_hook-nearest*hook_step)>hook_width/2+rib+cw*0.56)
-          print_cell(2*col+(row%2),row,cw,ch,frame,z_offset+frame);
+        // Local load-bearing pad under hooks: open below the hook anchor zone to save weight.
+        hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - ch*0.48) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+cw*0.46;
+        if(!hook_zone)
+          print_cell(2*col+(row%2),row*1.175,cw,ch,frame,z_offset+frame+ch*0.25);
       }
     }
   }
@@ -168,20 +175,35 @@ module footprint() {
   else square([width,depth]);
 }
 module floor_pores() {
-  frame=max(wall,floor_rib*1.5);
-  pitch=floor_cell_size+floor_rib;
-  nx=max(1,floor((width-2*frame+floor_rib)/pitch));
-  ny=max(1,floor((depth-2*frame+floor_rib)/pitch));
-  gx=(width-(nx*floor_cell_size+(nx-1)*floor_rib))/2;
-  gy=(depth-(ny*floor_cell_size+(ny-1)*floor_rib))/2;
+  frame=max(wall,floor_rib*1.25);
+  r=floor_cell_size*0.58;
+  ox=width/2; oy=depth/2;
+  nc=ceil((width-2*frame)/(3*r))+1;
+  nr=ceil((depth-2*frame)/(sqrt(3)*r))+1;
   difference() {
     intersection() {
       offset(delta=-frame) footprint();
-      union() for(ix=[0:nx-1]) for(iy=[0:ny-1])
-        translate([gx+ix*pitch,gy+iy*pitch]) square([floor_cell_size,floor_cell_size]);
+      union() for(col=[-nc:nc]) for(row=[-nr:nr]) {
+        ix=3*col; iy=2*row+(abs(col)%2);
+        offset(delta=-floor_rib/2)
+          polygon([
+            [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+              oy+(iy+0)*sqrt(3)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
+            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+              oy+(iy+1)*sqrt(3)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
+            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+              oy+(iy+1)*sqrt(3)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
+            [ox+(ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+              oy+(iy+0)*sqrt(3)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
+            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+              oy+(iy-1)*sqrt(3)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28],
+            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
+              oy+(iy-1)*sqrt(3)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*r*0.28]
+          ]);
+      }
     }
     if(dividers>0) for(i=[1:dividers])
-      translate([divider_margin+i*divider_step-wall/2-floor_rib,0]) square([wall+2*floor_rib,depth]);
+      translate([divider_margin+i*divider_step-wall/2-floor_rib*0.8,0]) square([wall+1.6*floor_rib,depth]);
   }
 }
 module rounded_outline(w,d,r) {
@@ -191,14 +213,14 @@ module rounded_outline(w,d,r) {
 module rounded_wall_shell() {
   difference() {
     hull() {
-      translate([0,0,floor]) linear_extrude(0.001) rounded_outline(width,depth,radius);
-      translate([0,0,height-0.001]) linear_extrude(0.001)
+      translate([0,0,floor]) linear_extrude(0.05) rounded_outline(width,depth,radius);
+      translate([0,0,height-0.05]) linear_extrude(0.05)
         rounded_outline(width,depth+wall_height*slope,radius);
     }
     hull() {
-      translate([wall,wall,floor-1]) linear_extrude(0.001)
+      translate([wall,wall,floor-1]) linear_extrude(0.05)
         rounded_outline(width-2*wall,depth-2*wall-slope,inner_radius);
-      translate([wall,wall,height+1]) linear_extrude(0.001)
+      translate([wall,wall,height+1]) linear_extrude(0.05)
         rounded_outline(width-2*wall,depth-2*wall+(wall_height+1)*slope,inner_radius);
     }
     translate([radius,-1,floor]) rotate([90,0,0]) translate([0,0,-wall-2]) linear_extrude(wall+2)
