@@ -251,3 +251,9 @@ pub use hole_assignment::{RootHoleAssignmentLimits,QualifiedRootHoleAssignment};
 
 mod chord_boundary;
 pub use chord_boundary::{RootChordBoundaryLimits,QualifiedRootChordBoundary};
+
+mod face_region;
+pub use face_region::{RootFaceRegion,QualifiedRootFaceRegion};
+
+mod retention;
+pub use retention::RootFaceRetention;

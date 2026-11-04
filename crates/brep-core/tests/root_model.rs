@@ -139,3 +139,17 @@ fn cross_axis_algebraic_junction_is_preserved_by_paired_brep() {
         assert!(uv.iter().all(|d|d[0]<=d[1]));
     }
 }
+
+#[test]
+fn explicit_face_retention_keeps_only_complete_bodies() {
+    use brep_core::root_model::RootFaceRetention;
+    use std::sync::Arc;
+    let source=Arc::new(RootBrep::paired_contours(&fixture::wire(),&[],1e-7).unwrap());
+    let all=RootFaceRetention::retain(source.clone(),vec![1,0]).unwrap();
+    assert_eq!(all.body_map(),&[Some(0)]);assert!(all.output().topology().shells[0].closed);
+    all.reverify().unwrap();
+    let partial=RootFaceRetention::retain(source.clone(),vec![0]).unwrap();
+    assert_eq!(partial.body_map(),&[None]);assert!(partial.output().topology().bodies.is_empty());
+    assert!(!partial.output().topology().shells[0].closed);partial.reverify().unwrap();
+    assert!(RootFaceRetention::retain(source,vec![2]).is_err());
+}
