@@ -87,3 +87,23 @@ fn different_free_axes_require_original_equations_and_selected_root_membership()
         projection:ss::ExactSsAlgebraLimits {max_work:1,..Default::default()},..Default::default()
     }).is_err());
 }
+#[test]
+fn target_clock_is_generated_from_original_equations_and_owned_source_root() {
+    let contour=circle::wire();
+    let source=point(contour.edges()[1].curve().clone(),&[-257.,0.,4096.],[0.25,0.251]);
+    let target=contour.edges()[2].curve().clone();
+    let projected=source.reparameterize_to(target.clone(),Default::default(),Default::default()).unwrap();
+    projected.reverify().unwrap();
+    assert_eq!(projected.curve().free_axis(),ss::FiberAxis::SecondV);
+    assert!(projected.binary_parameter().is_none());
+    let expected=point(target,&[2576353.,-15605760.,32382976.,-33554432.,16777216.],[0.687,0.689]);
+    assert!(projected.same_source_point(&expected,Default::default()).unwrap());
+    assert!(source.same_source_point_in_charts(&projected,Default::default(),Default::default()).unwrap());
+    let returned=projected.reparameterize_to(source.curve().clone(),Default::default(),Default::default()).unwrap();
+    assert!(source.same_source_point(&returned,Default::default()).unwrap());
+    assert!(source.reparameterize_to(contour.edges()[4].curve().clone(),Default::default(),Default::default()).is_err());
+    assert!(source.reparameterize_to(projected.curve().clone(),ss::SsAlgebraicClockLimits {max_degree:2,..Default::default()},Default::default()).is_err());
+    assert!(source.reparameterize_to(projected.curve().clone(),Default::default(),ss::OriginalSsCurveLimits {
+        projection:ss::ExactSsAlgebraLimits {max_work:1,..Default::default()},..Default::default()
+    }).is_err());
+}

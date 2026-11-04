@@ -119,7 +119,7 @@ fn cross_axis_algebraic_junction_is_preserved_by_paired_brep() {
         Arc::new(ss::OriginalSsRootPoint::from_algebraic(ss::OriginalSsAlgebraicPoint::new(curve,clock).unwrap(),Default::default()).unwrap())
     };
     let x=make(edge.curve().clone(),&[-257.,0.,4096.],[0.25,0.251]);
-    let y=make(contour.edges()[2].curve().clone(),&[2576353.,-15605760.,32382976.,-33554432.,16777216.],[0.687,0.689]);
+    let y=Arc::new(x.reparameterize_to(contour.edges()[2].curve().clone(),Default::default(),Default::default()).unwrap());
     let bind=|point|ss::bind_original_ss_port(point,edge.curve().clone(),[0;4],Default::default()).unwrap();
     let mut edges=vec![contour.edges()[0].clone(),
         ss::OriginalSsRootEdge::new(edge.start().clone(),bind(x)).unwrap(),

@@ -34,3 +34,25 @@ pub(super) fn prove(a:&OriginalSsRootPoint,b:&OriginalSsRootPoint,clock:SsAlgebr
     if directed(a,b,clock,geometry)?==Some(true) {return Ok(true);}
     Ok(directed(b,a,clock,geometry)?.unwrap_or(false))
 }
+
+pub(super) fn reparameterize(point:&OriginalSsRootPoint,target:Arc<OriginalSsRootCurve>,clock:SsAlgebraicClockLimits,geometry:OriginalSsCurveLimits)->Result<OriginalSsRootPoint> {
+    let Carrier::Deflated(f)=&point.curve.carrier else {
+        return Err(crate::input("SS clock projection requires an original deflated span graph"));
+    };
+    // Native source membership first supplies a conservative target-clock box.
+    let bounds=port::membership::bind(point,&target,[0;4],geometry)?;
+    let fa=frames::frame(&point.curve)?;
+    let fb=frames::frame(&target)?;
+    let k=point.curve.free_axis().index();
+    let j=target.free_axis().index();
+    check(fa[j][1]>Q::zero() && fb[j][1]>Q::zero(),"Projected SS frames must increase")?;
+    let scale=&fb[j][1]/&fa[j][1];
+    let shift=(&fb[j][0]-&fa[j][0])/&fa[j][1];
+    let source=polynomial(point,clock)?;
+    let (coefficients,_)=super::super::super::algebraic::project_original_ss_clock(
+        f.source().original().original(),(&source,k),(j,scale,shift),
+        ExactSsGroebnerLimits {algebra:geometry.projection,..Default::default()})?;
+    let selected=Arc::new(QualifiedSsAlgebraicClock::qualify(coefficients,bounds,clock)?);
+    OriginalSsRootPoint::from_algebraic(OriginalSsAlgebraicPoint::new(target,selected)?,
+        SsAlgebraicPointLimits {clock,geometry,..Default::default()})
+}

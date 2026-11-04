@@ -38,3 +38,7 @@ localized/radical consequences or solve cross-source face junctions. Complete
 singular/periodic arrangements and winding, finite trim/material selection,
 general intersecting Boolean/healing, lineage/history, bridge/WASM execution
 and the wider quad/offset/fillet/G2 requirements remain open.
+
+Follow-up: target-axis clock polynomials can now be generated from original
+equations and an owned source clock; see `ss-generated-target-clocks-2026-11-04.md`.
+This does not yet generate arbitrary third-face constraints or full trim.

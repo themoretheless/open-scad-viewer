@@ -110,6 +110,11 @@ impl OriginalSsRootPoint {
         port::membership::bind(self,&other.curve,[0;4],geometry_limits)?;
         Ok(true)
     }
+    /// Derive a target-axis clock from original SS equations and the owned
+    /// source clock; select its root using complete native target membership.
+    pub fn reparameterize_to(&self, target:Arc<OriginalSsRootCurve>, clock:SsAlgebraicClockLimits, geometry:OriginalSsCurveLimits)->Result<Self> {
+        cross_axis::reparameterize(self,target,clock,geometry)
+    }
     pub fn same_selector(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.curve,&other.curve) && match (&self.clock,&other.clock) {
             (Clock::Binary(a),Clock::Binary(b)) => a==b,
