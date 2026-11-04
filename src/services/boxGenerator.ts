@@ -2,12 +2,13 @@ import { z } from 'zod/v4'
 
 export const BOX_DEFAULTS = {
   width: 120, depth: 75, height: 80, wall: 3, floor: 4,
-  bend_radius: 0, bend_reverse: false, bend_segments: 24, corner_radius: 0, front_angle: 0,
+  corner_radius: 0, front_angle: 0, dividers: 0, hooks: true,
+  bend_radius: 0, bend_reverse: false, bend_segments: 24,
   porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 40, rib: 2.4,
   stress_gradient: 1, mesh_density: 1, pattern_seed: 1,
   hole_diameter: 6, hole_pitch: 16,
   floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
-  dividers: 0, drain: false, hooks: true, hook_count: 2,
+  drain: false, hook_count: 2,
   hook_width: 10, hook_thickness: 3, hook_gap: 6, hook_drop: 16, hook_spacing: 0, hook_chamfer: false,
 }
 const dimension = z.number().finite().min(0.8).max(500)
@@ -56,8 +57,9 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
   if (topDepth <= 4*t) throw Error('Наклон закрывает коробку: увеличьте глубину или уменьшите угол / Tilt leaves insufficient opening depth')
   if (2*p.corner_radius >= Math.min(w,d,topDepth)) throw Error('Радиус не помещается в габариты коробки / Corner radius does not fit the box dimensions')
   if(p.bend_radius>0) {
-    if(w/p.bend_radius>=2*Math.PI) throw Error('Дуга замыкается: увеличьте радиус изгиба / Increase bend radius to avoid wrapping around')
-    if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+p.hook_thickness:0))) throw Error('Изгиб пересекает ось: увеличьте радиус / Bend reaches its axis; increase radius')
+    const minRadius = Math.ceil(Math.max(w/(2*Math.PI)+1, (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+p.hook_thickness:0))+1))
+    if(w/p.bend_radius>=2*Math.PI) throw Error(`Дуга замыкается: для ширины ${w} мм укажите радиус изгиба минимум ${minRadius} мм (или 0 для прямой коробки) / Increase bend radius to at least ${minRadius} mm`)
+    if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+p.hook_thickness:0))) throw Error(`Изгиб пересекает ось: укажите радиус изгиба минимум ${minRadius} мм (или 0 для прямой коробки) / Bend reaches its axis; increase radius to at least ${minRadius} mm`)
   }
   if(p.print_optimized && p.porous && Math.abs(p.front_angle)>=p.overhang_angle) throw Error('Наклон передней стенки превышает угол свеса для печати / Front tilt exceeds the selected print overhang angle')
   return `// Organizer box. External dimensions in mm; organic skeletal walls.
