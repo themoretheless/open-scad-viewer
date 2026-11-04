@@ -188,3 +188,11 @@ mod wire;
 pub use wire::{OriginalSsRootEdge,OriginalSsRootWire};
 pub use wire::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};
 pub use wire::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};
+
+mod algebraic_clock;
+pub use algebraic_clock::{SsAlgebraicClockLimits,SsAlgebraicClockEnclosure,QualifiedSsAlgebraicClock};
+mod algebraic_point;
+pub use algebraic_point::{SsAlgebraicPointLimits,SsAlgebraicPointBounds,OriginalSsAlgebraicPoint};
+
+mod algebraic_port;
+pub use algebraic_port::{QualifiedSsAlgebraicPort,OriginalSsAlgebraicEdge};

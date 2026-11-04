@@ -1,0 +1,59 @@
+{
+  "tested_base": "c5be8b32ed85aefd1ae5ea587f97bc0deb3883ce",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "60a712fd340f03df963ce34cfd133b2c352428d5e1858b5c226896c29bf04416",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve.rs": "814f5c2ece50e88eb4ba3417041400c928489bf9c62487d754a75e6af25df252",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "259adce191521393bbce52189f17035514e16998c2f21690e062d2d7a9920d50",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port/membership.rs": "3c9797ad9e783ada85c49836c94649c543d067159baa91e6bdc84380ce8b62b1",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock.rs": "766b1d08501acdb0aa75813053bdd749f4886ea279add0efd6703728892d82dc",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock/polynomial.rs": "3f402067bdd2082c3672655c7d6bd5110f7ef81227e3c6723d99e70756043170",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_point.rs": "857f01aacb7dfea81a9aa8bd914e078faf5b8d3909f68a63c105b907f8bc2b86",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_port.rs": "a90a2cb097befb94036841b7de5d0bea72cc0d7cccd1aef9ebbb0c3e0226270e",
+    "crates/nurbs-core/tests/ss_algebraic_clock.rs": "e169afe32078c925b0ebb308e9a7c6e8d9f7cad423c81e0388cbbd0916509b75"
+  },
+  "tests_passed": 17,
+  "suites": {
+    "ss_algebraic_clock": 6,
+    "ss_root_ports": 5,
+    "ss_quotient_path": 1,
+    "root_model": 2,
+    "mixed_topology_transfer": 3
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0,
+    "ss_facade_lines": 799
+  },
+  "scope": "Exact unique-root clocks, original SS point enclosures, affine-frame algebraic ports and ordered candidate edge restrictions",
+  "positive_checks": [
+    "irrational simple root",
+    "irrational repeated root",
+    "rational repeated root",
+    "redundant trailing coefficient replay",
+    "mixed-axis original graph membership",
+    "two exact distinct clocks that coincide in binary64",
+    "original world and both UV enclosures",
+    "point/port/edge replay"
+  ],
+  "negative_checks": [
+    "zero/constant polynomial",
+    "no root or multiple distinct roots",
+    "unproved endpoint roots",
+    "nonfinite binary data",
+    "invalid/noncanonical rational data",
+    "degree/work/coefficient allowance",
+    "point isolator outside owned graph",
+    "wrong graph branch or unjustified period",
+    "overlapping or identical endpoint bounds"
+  ],
+  "remaining": [
+    "integrate algebraic clocks into common BRep point/port/wire representation",
+    "cross-source equality and face-local junction/winding proofs",
+    "generate constraint polynomials from actual third-face intersections",
+    "general singular/coincident and periodic/pole trim",
+    "general intersecting Boolean and healing",
+    "persistent lineage/history and actual bridge/WASM delivery",
+    "wider quad/offset/fillet/G2 audit"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

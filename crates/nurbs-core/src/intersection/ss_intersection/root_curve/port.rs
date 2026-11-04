@@ -2,7 +2,7 @@
 //! proves world-point identity. Pole aliases use their exact constant image;
 //! no nearest midpoint or rounded period translation authorizes a join.
 use super::*;
-mod membership;
+pub(super) mod membership;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalSsPortKind {
     SameRootSelector,

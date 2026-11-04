@@ -8,21 +8,37 @@ pub(super) fn bind(
     phase: [i32; 4],
     limits: OriginalSsCurveLimits,
 ) -> Result<[Q; 2]> {
-    let a = point.curve.source();
+    let bounds = point.enclose(limits)?;
+    let exact = q(point.parameter)?;
+    bind_bounds(&point.curve, &bounds, [exact.clone(), exact], target, phase)
+}
+pub(crate) fn bind_bounds(
+    source: &OriginalSsRootCurve,
+    bounds: &OriginalSsCurveBounds,
+    clock: [Q; 2],
+    target: &OriginalSsRootCurve,
+    phase: [i32; 4],
+) -> Result<[Q; 2]> {
+    let a = source.source();
     let b = target.source();
     check(
         a.first() == b.first() && a.second() == b.second(),
         "Original SS endpoint carriers or ordered roles differ",
     )?;
-    let bounds = point.enclose(limits)?;
-    let frame = frames::frame(&point.curve)?;
+    let frame = frames::frame(source)?;
     let target_frame = frames::frame(target)?;
+    check(
+        frame.iter().chain(&target_frame).all(|x| x[1] > Q::zero()),
+        "Original SS endpoint frame is not increasing",
+    )?;
     let domain = target.coordinate_domain();
     let mut target_box: [[Q; 2]; 4] =
         std::array::from_fn(|k| [q(bounds.uv[k][0]).unwrap(), q(bounds.uv[k][1]).unwrap()]);
-    let fixed = point.curve.free_axis().index();
-    let exact = &frame[fixed][0] + &frame[fixed][1] * q(point.parameter)?;
-    target_box[fixed] = [exact.clone(), exact];
+    let fixed = source.free_axis().index();
+    target_box[fixed] = [
+        &frame[fixed][0] + &frame[fixed][1] * &clock[0],
+        &frame[fixed][0] + &frame[fixed][1] * &clock[1],
+    ];
     let free = target.free_axis().index();
     for k in 0..4 {
         let surface = if k < 2 { b.first() } else { b.second() };
