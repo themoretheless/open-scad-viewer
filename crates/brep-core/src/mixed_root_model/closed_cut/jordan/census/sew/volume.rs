@@ -242,3 +242,9 @@ pub use source_box::{RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox};
 
 mod cavity;
 pub use cavity::{RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid};
+
+mod relation;
+pub use relation::{RootRelationKind,RootRelationLimits,RootRelationWork,QualifiedRootRelation};
+
+mod shell_forest;
+pub use shell_forest::QualifiedRootShellForest;

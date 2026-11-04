@@ -9,7 +9,7 @@ pub(super) struct Covers {
     _forward: Vec<closed::QualifiedSurfaceMaterialBox>,
     _reverse: Vec<QualifiedRootSurfaceMaterialBox>,
 }
-fn roots(
+pub(crate) fn roots(
     surface: &crate::Surface,
     restriction: Option<[[f64; 2]; 2]>,
     max: usize,
@@ -43,7 +43,7 @@ fn roots(
     }
     Ok(out)
 }
-fn split(
+pub(crate) fn split(
     pending: &mut VecDeque<([[f64; 2]; 2], usize)>,
     d: [[f64; 2]; 2],
     depth: usize,

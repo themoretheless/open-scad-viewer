@@ -1,0 +1,86 @@
+{
+  "tested_base": "078678e5bfb1ccfadf0a732d24dca2ae7bed4219",
+  "source_sha256": {
+    "crates/brep-core/src/mixed_root_model.rs": "af69ad04adbe46cbdacfa55a4ba56f1ffd209f9d51d4709f5faf5f95d728a6fb",
+    "crates/brep-core/src/mixed_root_model/closed_cut.rs": "af4871cdc1bc2fdf5c3e8ef9c2934e2062fba119b589052f30607319ae50b51b",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan.rs": "16fc670f7bf6c128e61f17c558d22d118747da8229788cff59f5fe0b383c4bb1",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census.rs": "f74359a9c306b7050f6544e2d4e92792e2d6ab7afe45de8ed51699b867e62fb3",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew.rs": "0a3017a7c3f582392be5d063258485af85772c58a79948c1f295265b79c34ee8",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume.rs": "0f37837f6d535d353532ea301b4b9116db441c0c9d232f5a38c54299743aadd5",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity.rs": "53bd1a350c4bcf9bff03ab300e19c135d1b6fa396c9d4e0fd62a6ae943abb086",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/cavity/coverage.rs": "71fbcef8db8341c79d341ef7348e0d4296985b1d9a1e85cabbe51f586946ea6a",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/material_box.rs": "a12eb6bc76069ca3ba870aad60131185a15ba7c1111faadc16185f54b41c4907",
+    "crates/brep-core/src/mixed_root_model/transfer.rs": "8a2710896edf23c0fafb8984094616536abeb7c05c61a76adaeb8f6bad90b2cb",
+    "crates/brep-core/tests/nested_census_arrangement.rs": "06e8dacc0f9a42fd86b94765668bc99891c6fdac1697cdae399a8dbd33c6d792",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/relation.rs": "075351a9737abf4f3b9899c2f50aad540f019cc09aeaa48f1cbaee51a638166a",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/relation/cover.rs": "61647a76b28f8d94790e16477abecba7890c0bfd119106aa3ccfac5b9abeb1e0",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/shell_forest.rs": "38215096feef075098671a3561207e01ff50ef8432350d30700ea8687cf9fc8a",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/shell_forest/nesting.rs": "a603082c72fbbf3c5c327bc4c32ae16d8d71744653c2ae8b832bbae8191b64bf",
+    "crates/brep-core/src/mixed_root_model/closed_cut/jordan/census/sew/volume/shell_forest/topology.rs": "1439589ba123ca6ef9668f5765855708b13fb0f450d2416e706e4b486f189b5a"
+  },
+  "tests_passed": 17,
+  "suites": {
+    "native_three_root_forest": 1,
+    "mirrored_cavity_regression": 1,
+    "nesting_graph_policy": 3,
+    "ray_parity": 7,
+    "mixed_topology_transfer": 3,
+    "root_model": 2
+  },
+  "architecture": {
+    "pinned_oversized": 54,
+    "pinned_layer_violations": 0
+  },
+  "scope": "Complete pairwise source-root boundary relations and even/odd material shell forest for admitted paired root owners",
+  "native_sources": 3,
+  "native_relations": 3,
+  "native_result_bodies": 2,
+  "native_result_parents": [
+    null,
+    0,
+    null
+  ],
+  "native_result_depths": [
+    0,
+    1,
+    0
+  ],
+  "native_volume_bounds": [
+    0.005518027993966231,
+    0.006527537616922255
+  ],
+  "native_result_absolute_error": 0.002,
+  "nested_cover_cells": [
+    32,
+    2
+  ],
+  "nested_cover_accepted": [
+    17,
+    2
+  ],
+  "negative_cases": [
+    "missing unordered pair",
+    "duplicated pair",
+    "foreign source owner",
+    "repeated source owner",
+    "insufficient coverage budget",
+    "insufficient result volume accuracy",
+    "coincident geometry in distinct owners cannot produce separated relation",
+    "retained boundary contained in world box cannot produce uniform material"
+  ],
+  "qualification_limits": [
+    "native physical forest covers one nested cavity and one independent body",
+    "four alternating nesting levels verified as graph policy, not physical deep-nesting geometry",
+    "source geometry uses freshly qualified quartic SS families and complete native 128-chart component atlas"
+  ],
+  "remaining": [
+    "general rational SS, singular/coincident branches and periodic/pole material",
+    "full finite-face trim and cross-source rim stitching",
+    "mixed legacy/root shell inputs, contact classification and healing",
+    "general intersecting Boolean",
+    "split/merged-edge lineage and persistent construction history",
+    "actual bridge/WASM calls",
+    "separate quad/offset/fillet/G2 parity audit"
+  ],
+  "main_preexisting_dirty_paths_preserved": 179
+}

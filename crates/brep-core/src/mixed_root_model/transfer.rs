@@ -188,6 +188,9 @@ fn map(source: &MixedBrep, offsets: [usize; 6]) -> Result<MixedTopologyMap> {
     })
 }
 impl MixedBrep {
+    pub(crate) fn identity_map(&self) -> Result<MixedTopologyMap> {
+        map(self, [0; 6])
+    }
     /// Concatenate all original topology, preserving seam/trim metadata and
     /// literal root selectors. Result is storage only, not a qualified solid.
     pub fn concatenate(&self, other: &Self) -> Result<MixedTopologyTransfer> {

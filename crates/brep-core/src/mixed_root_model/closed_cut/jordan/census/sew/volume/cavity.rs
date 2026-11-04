@@ -2,7 +2,7 @@
 //! Complete directed boundary covers precede topology or material ownership.
 use super::*;
 use crate::closed_solid as closed;
-mod coverage;
+pub(super) mod coverage;
 mod topology;
 #[derive(Clone, Copy)]
 pub struct RootCavityLimits {

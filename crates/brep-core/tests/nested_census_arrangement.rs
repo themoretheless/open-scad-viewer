@@ -7,10 +7,18 @@ use nurbs_core::{ss_intersection as ss, trim_domain::Location};
 use std::sync::Arc;
 const COUNT: usize = 128;
 fn family(source: &ss::FiberSources, radius: f64, mirrored: bool) -> Vec<ss::QualifiedFiber> {
-    (0..COUNT)
+    family_count(source, radius, mirrored, COUNT)
+}
+fn family_count(
+    source: &ss::FiberSources,
+    radius: f64,
+    mirrored: bool,
+    count: usize,
+) -> Vec<ss::QualifiedFiber> {
+    (0..count)
         .map(|i| {
-            let angle = i as f64 * std::f64::consts::TAU / COUNT as f64;
-            let half = 0.7 * std::f64::consts::TAU / COUNT as f64;
+            let angle = i as f64 * std::f64::consts::TAU / count as f64;
+            let half = 0.7 * std::f64::consts::TAU / count as f64;
             let points = [angle - half, angle, angle + half]
                 .map(|t| [0.5 + radius * t.cos(), 0.5 + radius * t.sin()]);
             let bounds: [[f64; 2]; 2] = std::array::from_fn(|k| {
@@ -70,6 +78,7 @@ fn index(axis: ss::FiberAxis) -> usize {
     }
 }
 fn wire(charts: &[ss::QualifiedFiber], radius: f64) -> ss::OriginalSsRootWire {
+    let count = charts.len();
     let curves: Vec<_> = charts
         .iter()
         .cloned()
@@ -79,13 +88,13 @@ fn wire(charts: &[ss::QualifiedFiber], radius: f64) -> ss::OriginalSsRootWire {
         .iter()
         .enumerate()
         .map(|(i, c)| {
-            let angle = (i as f64 - 0.5) * std::f64::consts::TAU / COUNT as f64;
+            let angle = (i as f64 - 0.5) * std::f64::consts::TAU / count as f64;
             let uv = [0.5 + radius * angle.cos(), 0.5 + radius * angle.sin()];
             Arc::new(ss::OriginalSsRootPoint::new(c.clone(), uv[index(c.free_axis()) % 2]).unwrap())
         })
         .collect();
     ss::OriginalSsRootWire::new(
-        (0..COUNT)
+        (0..count)
             .map(|i| {
                 let bind = |p: Arc<ss::OriginalSsRootPoint>| {
                     ss::bind_original_ss_port(p, curves[i].clone(), [0; 4], Default::default())
@@ -93,7 +102,7 @@ fn wire(charts: &[ss::QualifiedFiber], radius: f64) -> ss::OriginalSsRootWire {
                 };
                 ss::OriginalSsRootEdge::new(
                     bind(points[i].clone()),
-                    bind(points[(i + 1) % COUNT].clone()),
+                    bind(points[(i + 1) % count].clone()),
                 )
                 .unwrap()
             })
@@ -205,85 +214,7 @@ fn operands(
 }
 fn run(with_holes: bool, mirrored: bool) {
     let (a, aface, b) = operands(with_holes, mirrored);
-    let source =
-        ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[1].surface)
-            .unwrap();
-    let mut charts = family(&source, 0.3125, mirrored);
-    charts.extend(family(&source, 0.15625, mirrored));
-    let wires = [
-        wire(&charts[..COUNT], 0.3125),
-        wire(&charts[COUNT..], 0.15625),
-    ];
-    let loops: Vec<_> = wires
-        .iter()
-        .map(|wire| {
-            Arc::new(
-                mixed::qualify_paired_interior_loop(
-                    &a,
-                    aface,
-                    &b,
-                    1,
-                    wire,
-                    [[0.5; 2]; 2],
-                    Default::default(),
-                )
-                .unwrap(),
-            )
-        })
-        .collect();
-    let quotient: Vec<_> = charts
-        .iter()
-        .map(|c| {
-            let r = source
-                .certify_quotient(
-                    c.domain(),
-                    c.free_axis(),
-                    ss::FiberLimits {
-                        preconditioner: c.report().operator.as_ref().map(|o| o.preconditioner()),
-                        ..Default::default()
-                    },
-                )
-                .unwrap();
-            let diagnostic = r.report().clone();
-            r.into_fiber()
-                .unwrap_or_else(|| panic!("quartic census graph: {diagnostic:?}"))
-        })
-        .collect();
-    let r = ss::cover_quotient_fiber_surfaces(
-        &quotient,
-        ss::CoverageLimits {
-            max_cells: 65536,
-            max_rectangles: 1000000,
-            max_depth: 48,
-        },
-    )
-    .unwrap();
-    let diagnostic = r.report().clone();
-    let coverage = r
-        .into_coverage()
-        .unwrap_or_else(|| panic!("quartic census: {diagnostic:?}"));
-    eprintln!(
-        "nested census: charts={}, cells={}, rectangles={}",
-        quotient.len(),
-        coverage.report().cells,
-        coverage.report().rectangles
-    );
-    let anchors: Vec<_> = quotient
-        .iter()
-        .enumerate()
-        .map(|(i, c)| {
-            let d = c.domain()[index(c.free_axis())];
-            mixed::InteriorCensusAnchor {
-                component: i / COUNT,
-                edge: i % COUNT,
-                parameter: (d[0] + d[1]) * 0.5,
-                phase: [0; 4],
-            }
-        })
-        .collect();
-    let census = Arc::new(
-        mixed::qualify_interior_ss_census(loops, coverage, &anchors, Default::default()).unwrap(),
-    );
+    let census = census_for(&a, aface, &b, mirrored);
     assert_eq!(census.components().len(), 2);
     assert!(census.separation_queries() > 0);
     census.reverify().unwrap();
@@ -1013,4 +944,315 @@ fn rational_source_patch(bounds: [[f64; 2]; 3]) -> nurbs_core::surface::Surface 
         periodic_u: false,
         periodic_v: false,
     }
+}
+
+fn census_for(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    mirrored: bool,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    census_for_count(a, aface, b, mirrored, COUNT)
+}
+fn census_for_count(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    mirrored: bool,
+    count: usize,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    let source =
+        ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[1].surface)
+            .unwrap();
+    let mut charts = family_count(&source, 0.3125, mirrored, count);
+    charts.extend(family_count(&source, 0.15625, mirrored, count));
+    let wires = [
+        wire(&charts[..count], 0.3125),
+        wire(&charts[count..], 0.15625),
+    ];
+    let loops: Vec<_> = wires
+        .iter()
+        .map(|wire| {
+            Arc::new(
+                mixed::qualify_paired_interior_loop(
+                    &a,
+                    aface,
+                    &b,
+                    1,
+                    wire,
+                    [[0.5; 2]; 2],
+                    Default::default(),
+                )
+                .unwrap(),
+            )
+        })
+        .collect();
+    let quotient: Vec<_> = charts
+        .iter()
+        .map(|c| {
+            let r = source
+                .certify_quotient(
+                    c.domain(),
+                    c.free_axis(),
+                    ss::FiberLimits {
+                        preconditioner: c.report().operator.as_ref().map(|o| o.preconditioner()),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            let diagnostic = r.report().clone();
+            r.into_fiber()
+                .unwrap_or_else(|| panic!("quartic census graph: {diagnostic:?}"))
+        })
+        .collect();
+    let r = ss::cover_quotient_fiber_surfaces(
+        &quotient,
+        ss::CoverageLimits {
+            max_cells: 65536,
+            max_rectangles: 1000000,
+            max_depth: 48,
+        },
+    )
+    .unwrap();
+    let diagnostic = r.report().clone();
+    let coverage = r
+        .into_coverage()
+        .unwrap_or_else(|| panic!("quartic census: {diagnostic:?}"));
+    eprintln!(
+        "nested census: charts={}, cells={}, rectangles={}",
+        quotient.len(),
+        coverage.report().cells,
+        coverage.report().rectangles
+    );
+    let anchors: Vec<_> = quotient
+        .iter()
+        .enumerate()
+        .map(|(i, c)| {
+            let d = c.domain()[index(c.free_axis())];
+            mixed::InteriorCensusAnchor {
+                component: i / count,
+                edge: i % count,
+                parameter: (d[0] + d[1]) * 0.5,
+                phase: [0; 4],
+            }
+        })
+        .collect();
+    let census = Arc::new(
+        mixed::qualify_interior_ss_census(loops, coverage, &anchors, Default::default()).unwrap(),
+    );
+    census
+}
+fn placed_inner(scale: f64, shift: [f64; 3]) -> Arc<mixed::QualifiedPairedRootSolid> {
+    let (a, aface, b) = operands(false, false);
+    let place = |original: &solid::QualifiedClosedSolid| {
+        let mut m = original.model().clone();
+        for v in &mut m.vertices {
+            for k in 0..3 {
+                v.point[k] = v.point[k] * scale + shift[k];
+            }
+        }
+        for e in &mut m.edges {
+            for p in &mut e.curve.control_points {
+                for k in 0..3 {
+                    p[k] = p[k] * scale + shift[k];
+                }
+            }
+        }
+        for f in &mut m.faces {
+            for row in &mut f.surface.control_points {
+                for p in row {
+                    for k in 0..3 {
+                        p[k] = p[k] * scale + shift[k];
+                    }
+                }
+            }
+        }
+        m.rebuild_topology_ids();
+        let mut p = policy::policy();
+        p.geometry.boundary.contacts.cells_per_pair = 1024;
+        p.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+        let admission = solid::qualify(m, p).unwrap();
+        assert!(
+            admission.solid().is_some(),
+            "Placed original body scale={scale} shift={shift:?}: boundary={} orientations={} nesting={}",
+            admission.geometry().boundary.proven, admission.geometry().orientations.len(), admission.geometry().nesting.is_some()
+        );
+        admission.into_solid().unwrap()
+    };
+    let a = place(&a);
+    let b = place(&b);
+    let census = census_for_count(&a, aface, &b, false, COUNT);
+    let signature = [true, true];
+    let boundary = Arc::new(
+        census
+            .sew_paired_regions([&signature, &signature], 1e-9, [Default::default(); 2])
+            .unwrap(),
+    );
+    Arc::new(
+        boundary
+            .admit_material(mixed::RootBoundaryVolumeLimits {
+                absolute_error: if scale < 1. { 1e-5 } else { 5e-4 },
+                cells: 16384,
+                ..Default::default()
+            })
+            .unwrap()
+            .into_solid()
+            .expect("Placed root material needs fresh independent volume"),
+    )
+}
+#[test]
+fn complete_root_relations_build_a_material_shell_forest() {
+    let large = placed_inner(1., [0.; 3]);
+    let small = placed_inner(0.25, [0.375, 0.375, 0.02]);
+    let far = placed_inner(1., [1., 0., 0.]);
+    let directions = [[0., 0., 1.], [0.137, 0.283, 1.]];
+    eprintln!("three root sources independently admitted");
+    let contact = large
+        .qualify_material_box([[-1., 2.]; 3], &directions, Default::default())
+        .err()
+        .expect("A box containing retained boundary cannot have uniform material");
+    assert!(
+        contact.message.contains("retained boundary patch"),
+        "{contact:?}"
+    );
+
+    let nested = Arc::new(
+        large
+            .qualify_relation(small.clone(), &directions, Default::default())
+            .unwrap(),
+    );
+    assert_eq!(nested.kind(), mixed::RootRelationKind::SecondInsideFirst);
+    eprintln!("nested root relation work={:?}", nested.work());
+    let distant = Arc::new(
+        large
+            .qualify_relation(far.clone(), &directions, Default::default())
+            .unwrap(),
+    );
+    assert_eq!(distant.kind(), mixed::RootRelationKind::Disjoint);
+    let small_far = Arc::new(
+        small
+            .qualify_relation(far.clone(), &directions, Default::default())
+            .unwrap(),
+    );
+    assert_eq!(small_far.kind(), mixed::RootRelationKind::Disjoint);
+    eprintln!("both disjoint root relations complete");
+    let roots = vec![large.clone(), small.clone(), far.clone()];
+    let relations = vec![nested.clone(), distant.clone(), small_far.clone()];
+    let forest =
+        mixed::QualifiedRootShellForest::qualify(roots.clone(), relations.clone(), 0.002).unwrap();
+    assert!(forest.material_admitted());
+    let reordered = mixed::QualifiedRootShellForest::qualify(
+        vec![small.clone(), far.clone(), large.clone()],
+        relations.clone(),
+        0.002,
+    )
+    .unwrap();
+    assert_eq!(reordered.parents(), &[Some(2), None, None]);
+    assert_eq!(reordered.depths(), &[1, 0, 0]);
+    assert_eq!(reordered.lineage()[0].body(0), Some(1));
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        vec![large.clone(), small.clone()],
+        vec![distant.clone()],
+        0.002
+    )
+    .is_err());
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        vec![large.clone(), large.clone()],
+        vec![distant.clone()],
+        0.002
+    )
+    .is_err());
+    assert!(large
+        .qualify_relation(
+            far.clone(),
+            &directions,
+            mixed::RootRelationLimits {
+                coverage_cells: 1,
+                ..Default::default()
+            }
+        )
+        .is_err());
+    let twin = Arc::new(
+        large
+            .boundary()
+            .admit_material(mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 16384,
+                ..Default::default()
+            })
+            .unwrap()
+            .into_solid()
+            .unwrap(),
+    );
+    assert!(!Arc::ptr_eq(&large, &twin));
+    let mut contact_limits = mixed::RootRelationLimits::default();
+    contact_limits.material.material.separation_cells = 64;
+    contact_limits.material.material.domain_queries = 64;
+    assert!(large
+        .qualify_relation(twin, &directions, contact_limits)
+        .is_err());
+
+    assert_eq!(forest.parents(), &[None, Some(0), None]);
+    assert_eq!(forest.depths(), &[0, 1, 0]);
+    assert_eq!(forest.model().topology().bodies.len(), 2);
+    assert_eq!(forest.model().topology().bodies[0].inner_shells.len(), 1);
+    assert!(forest.model().topology().bodies[1].inner_shells.is_empty());
+    let a = 0.3125_f64.powi(2);
+    let b = 0.15625_f64.powi(2);
+    let one = 6. * std::f64::consts::PI * b * b * (3. * a - b);
+    let expected = one * (2. - 0.25_f64.powi(3));
+    let v = forest.volume();
+    assert!(v[0] <= expected && expected <= v[1]);
+    for (i, (map, root)) in forest.lineage().iter().zip(&roots).enumerate() {
+        assert!(map.source_matches(root.model()));
+        assert!(map.target_matches(forest.model()));
+        assert_eq!(map.shell_orientation_reversed(0), Some(i == 1));
+        assert_eq!(map.body(0), Some(if i == 2 { 1 } else { 0 }));
+    }
+    assert_eq!(
+        forest
+            .classify_point([0.5, 0.5, 0.005], &directions, Default::default())
+            .unwrap(),
+        Some(true)
+    );
+    assert_eq!(
+        forest
+            .classify_point([0.5, 0.5, 0.025], &directions, Default::default())
+            .unwrap(),
+        Some(false)
+    );
+    assert_eq!(
+        forest
+            .classify_point([1.5, 0.5, 0.03], &directions, Default::default())
+            .unwrap(),
+        Some(true)
+    );
+    assert_eq!(
+        forest
+            .classify_point([3.; 3], &directions, Default::default())
+            .unwrap(),
+        Some(false)
+    );
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        roots.clone(),
+        vec![nested.clone(), distant],
+        0.002
+    )
+    .is_err());
+    assert!(mixed::QualifiedRootShellForest::qualify(
+        roots.clone(),
+        vec![nested.clone(), nested, small_far],
+        0.002
+    )
+    .is_err());
+    assert!(mixed::QualifiedRootShellForest::qualify(roots, relations, 1e-8).is_err());
+    assert!(large
+        .qualify_relation(large.clone(), &directions, Default::default())
+        .is_err());
+    eprintln!(
+        "root forest volume={v:?} parents={:?} depths={:?}",
+        forest.parents(),
+        forest.depths()
+    );
+    forest.reverify().unwrap();
 }

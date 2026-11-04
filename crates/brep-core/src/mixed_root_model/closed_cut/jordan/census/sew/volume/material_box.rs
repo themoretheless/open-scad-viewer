@@ -2,6 +2,7 @@
 //! original root-trimmed boundary separation and a certified parity witness.
 use super::*;
 use nurbs_core::interval_eval::{evaluate_surface_interval, Interval};
+use std::collections::VecDeque;
 #[derive(Clone, Copy)]
 pub struct RootMaterialBoxLimits {
     pub separation_cells: usize,
@@ -122,7 +123,7 @@ impl QualifiedPairedRootSolid {
             band_queries: 0,
             winding_queries: 0,
         };
-        let mut pending = Vec::new();
+        let mut pending = VecDeque::new();
         for (face, f) in self.model().topology().faces.iter().enumerate() {
             let s = &f.surface;
             // The qualified outer Jordan loop bounds the complete retained
@@ -147,7 +148,7 @@ impl QualifiedPairedRootSolid {
                             "Root material enclosure initial span work exhausted",
                         ));
                     }
-                    pending.push((face, d, 0usize));
+                    pending.push_back((face, d, 0usize));
                 }
             }
         }
@@ -156,7 +157,7 @@ impl QualifiedPairedRootSolid {
                 "Root material enclosure has no complete source spans",
             ));
         }
-        while let Some((face, d, depth)) = pending.pop() {
+        while let Some((face, d, depth)) = pending.pop_front() {
             if work.separation_cells == limits.separation_cells {
                 return Err(unproved(
                     "Root material enclosure separation work exhausted",
@@ -180,6 +181,13 @@ impl QualifiedPairedRootSolid {
                 if location == Some(false) {
                     continue;
                 }
+                if location == Some(true)
+                    && (0..3).all(|k| bounds[k][0] <= image[k].lo && image[k].hi <= bounds[k][1])
+                {
+                    return Err(unproved(
+                        "Root material enclosure contains a retained boundary patch",
+                    ));
+                }
             }
             let axis = usize::from(d[1][1] - d[1][0] > d[0][1] - d[0][0]);
             let m = d[axis][0] * 0.5 + d[axis][1] * 0.5;
@@ -192,8 +200,8 @@ impl QualifiedPairedRootSolid {
             let mut b = d;
             a[axis][1] = m;
             b[axis][0] = m;
-            pending.push((face, b, depth + 1));
-            pending.push((face, a, depth + 1));
+            pending.push_back((face, b, depth + 1));
+            pending.push_back((face, a, depth + 1));
         }
         work.band_queries = domain_work.band_queries;
         work.winding_queries = domain_work.winding_queries;
