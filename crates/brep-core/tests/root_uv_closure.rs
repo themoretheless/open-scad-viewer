@@ -87,6 +87,28 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     let ac=Arc::new(ss::OriginalSsRootCurve::from_deflated(f.into_fiber().unwrap()));
     let plain=|i:usize| ss::bind_original_ss_port(witnesses[i].point().clone(),ab.clone(),[0;4],Default::default()).unwrap();
     let cross=|i:usize| ss::bind_original_ss_third_port(witnesses[i].clone(),ac.clone(),[0,2],Default::default()).unwrap();
+    // Split a complete existing face, sharing one inserted chord between children.
+    let mut boundary=wire.edges()[..2].to_vec();
+    boundary.push(ss::OriginalSsRootEdge::new(wire.edges()[2].start().clone(),plain(1)).unwrap());
+    boundary.push(ss::OriginalSsRootEdge::new(plain(1),plain(0)).unwrap());
+    boundary.push(ss::OriginalSsRootEdge::new(plain(0),wire.edges()[2].end().clone()).unwrap());
+    boundary.extend_from_slice(&wire.edges()[3..]);
+    let full=ss::OriginalSsRootWire::new(boundary).unwrap();
+    let full=Arc::new(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {supports:vec![0;10],wire:full},vec![],1e-7).unwrap());
+    let chord=ss::OriginalSsRootEdge::new(cross(0),cross(1)).unwrap();
+    let split=brep_core::root_model::RootFaceChordSplit::split(full.clone(),0,chord.clone(),0,vec![]).unwrap();
+    assert_eq!(split.face_children(),[0,1]);assert_eq!(split.inserted_edge(),10);
+    let out=split.output();assert_eq!(out.topology().faces.len(),2);assert_eq!(out.topology().edges.len(),11);
+    assert_eq!(out.topology().vertices.len(),10);assert_eq!(out.topology().shells[0].faces.len(),2);
+    let uses:Vec<_>=out.topology().loops.iter().flat_map(|l|&l.coedges).filter(|c|c.edge==10).collect();
+    assert_eq!(uses.len(),2);assert_ne!(uses[0].reversed,uses[1].reversed);
+    QualifiedRootUvClosure::qualify(out.clone(),12).unwrap().reverify().unwrap();split.reverify().unwrap();
+    for (face,small,large) in [(0,0,1),(1,1,0)] {
+        use brep_core::root_model::QualifiedRootLoopWinding as W;
+        assert_eq!(W::qualify(out.clone(),face,0,[[0.195;2],[0.5;2]],Default::default()).unwrap().winding(),small);
+        assert_eq!(W::qualify(out.clone(),face,0,[[0.5;2],[0.5;2]],Default::default()).unwrap().winding(),large);
+    }
+    assert!(brep_core::root_model::RootFaceChordSplit::split(full,0,chord,1,vec![]).is_err());
     let contour=ss::OriginalSsRootWire::new(vec![ss::OriginalSsRootEdge::new(plain(0),plain(1)).unwrap(),ss::OriginalSsRootEdge::new(cross(1),cross(0)).unwrap()]).unwrap();
     let face=RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:contour.clone(),supports:vec![0,0]},vec![],1e-7).unwrap();
     assert_eq!(face.topology().edges.len(),2);assert_eq!(face.topology().vertices.len(),2);

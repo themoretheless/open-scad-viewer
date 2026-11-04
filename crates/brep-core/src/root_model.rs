@@ -242,3 +242,6 @@ pub use face_contours::RootFaceContour;
 
 mod winding;
 pub use winding::QualifiedRootLoopWinding;
+
+mod face_split;
+pub use face_split::RootFaceChordSplit;
