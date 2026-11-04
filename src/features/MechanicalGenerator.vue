@@ -78,7 +78,7 @@ function openEditor(save:boolean){
         </fieldset>
         <fieldset v-if="kind==='box' && values.hooks" class="hook-fields">
           <legend>{{ru?'Размеры крючков':'Hook dimensions'}}</legend>
-          <p class="hint">{{ru?'Толщина крючка независима от толщины стенки. Зазор — свободное расстояние под рейку; длина зацепа измеряется от низа верхней перекладины. Шаг 0 размещает крючки автоматически.':'Hook thickness is independent of wall thickness. Gap is clear rail space; drop is measured from the underside of the top bar. Spacing 0 places hooks automatically.'}}</p>
+          <p class="hint">{{ru?'Толщина крючка независима от толщины стенки. Зазор — свободное расстояние под рейку; длина зацепа измеряется от низа верхней перекладины. Шаг 0 размещает крючки по сопромату: в точках Бесселя (~0.21 ширины от угловых стоек) или прямо напротив внутренних перегородок.':'Hook thickness is independent of wall thickness. Gap is clear rail space; drop is measured from the underside of the top bar. Spacing 0 places hooks structurally at Bessel minimum-sag points (~0.21 of span from corner posts) or aligned with internal dividers.'}}</p>
           <div class="fields"><label v-for="(value,key) in hookValues" :key="key">
             <span>{{names[key]?.[ru?0:1]??key}}</span>
             <input v-model.number="values[key]" type="number" step="any" required>

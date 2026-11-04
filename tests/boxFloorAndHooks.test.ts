@@ -57,6 +57,31 @@ it.each([{wall:2,hook_thickness:4},{wall:5,hook_thickness:2}])('keeps hook dimen
 it('combines a mesh floor, bend, corner rounds, tilt and custom hooks',async()=>{
  closed(await build({...BOX_DEFAULTS,bend_radius:140,corner_radius:12,front_angle:15,hook_width:12,hook_thickness:4,hook_gap:8,hook_drop:20,hook_spacing:50,floor_cell_size:30}))
 },120000)
+it('places auto-spaced hooks at Bessel minimum-bending points (~0.2071L) or aligned with dividers',async()=>{
+ const bessel=await build({...BOX_DEFAULTS,porous:false,floor_mesh:false,hook_count:2,hook_spacing:0})
+ closed(bessel)
+ let left=Infinity,right=-Infinity
+ for(const m of bessel.meshes)for(let i=0;i<m.vertices.length;i+=6){
+  if(m.vertices[i+1]<-BOX_DEFAULTS.hook_gap-BOX_DEFAULTS.hook_thickness-0.01){
+   left=Math.min(left,m.vertices[i]);right=Math.max(right,m.vertices[i])
+  }
+ }
+ const expectedStep=BOX_DEFAULTS.width*(1-2*0.2071)
+ expect(left).toBeCloseTo((BOX_DEFAULTS.width-expectedStep-BOX_DEFAULTS.hook_width)/2,2)
+ expect(right-left).toBeCloseTo(expectedStep+BOX_DEFAULTS.hook_width,2)
+ // When dividers == hook_count, hooks align directly behind the stiff internal dividers.
+ const aligned=await build({...BOX_DEFAULTS,porous:false,floor_mesh:false,dividers:2,hook_count:2,hook_spacing:0})
+ closed(aligned)
+ let divLeft=Infinity,divRight=-Infinity
+ for(const m of aligned.meshes)for(let i=0;i<m.vertices.length;i+=6){
+  if(m.vertices[i+1]<-BOX_DEFAULTS.hook_gap-BOX_DEFAULTS.hook_thickness-0.01){
+   divLeft=Math.min(divLeft,m.vertices[i]);divRight=Math.max(divRight,m.vertices[i])
+  }
+ }
+ const divStep=(BOX_DEFAULTS.width-2*BOX_DEFAULTS.wall)/3
+ expect(divLeft).toBeCloseTo((BOX_DEFAULTS.width-divStep-BOX_DEFAULTS.hook_width)/2,2)
+ expect(divRight-divLeft).toBeCloseTo(divStep+BOX_DEFAULTS.hook_width,2)
+},120000)
 it('rejects overlapping hooks and floor ribs that consume the cells',()=>{
  expect(()=>generateBox({...BOX_DEFAULTS,hook_spacing:8})).toThrow(/Крючки/)
  expect(()=>generateBox({...BOX_DEFAULTS,hook_spacing:200})).toThrow(/Крючки/)

@@ -37,7 +37,8 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
   if (((p.porous && !p.organic) || (p.drain && !p.floor_mesh)) && p.hole_pitch < p.hole_diameter+1.2) throw Error('Между отверстиями нужно минимум 1.2 мм материала / Leave at least 1.2 mm between holes')
   if(p.hooks) {
     const span=w-2*p.corner_radius
-    const step=p.hook_spacing||span/(p.hook_count+1)
+    const besselSpan=Math.max(0,w-2*Math.max(p.corner_radius+p.hook_width/2,p.corner_radius+0.2071*span))
+    const step=p.hook_spacing||(p.hook_count===1?0:p.dividers===p.hook_count&&p.hook_count>1?(w-2*Math.max(t,p.corner_radius))/(p.dividers+1):(besselSpan>=(p.hook_count-1)*p.hook_width*1.15?besselSpan/(p.hook_count-1):span/(p.hook_count+1)))
     const left=(w-step*(p.hook_count-1)-p.hook_width)/2
     if(p.hook_drop+p.hook_thickness>h || left<p.corner_radius || (p.hook_count>1 && p.hook_width>=step))
       throw Error('Крючки не помещаются или перекрываются: уменьшите размеры, количество или шаг / Hooks do not fit or overlap; adjust their dimensions, count or spacing')
@@ -61,9 +62,14 @@ slope = tan(front_angle);
 radius = corner_radius;
 wall_height = height-floor;
 inner_radius = max(0,radius-wall);
-hook_step = hook_spacing>0 ? hook_spacing : (width-2*radius)/(hook_count+1);
 divider_margin=max(wall,radius);
 divider_step=(width-2*divider_margin)/(dividers+1);
+// Structural hook placement: align with internal dividers when hook_count == dividers,
+// otherwise place outermost hooks at Airy/Bessel minimum-sag points (~0.2071 of straight rear span)
+// so shear transfers into the stiff corner posts / side walls instead of bending the center span.
+hook_span = width-2*radius;
+hook_bessel_span = max(0, width-2*max(radius+hook_width/2, radius+0.2071*hook_span));
+hook_step = hook_spacing>0 ? hook_spacing : (hook_count<=1 ? 0 : (dividers==hook_count ? divider_step : (hook_bessel_span>=(hook_count-1)*hook_width*1.15 ? hook_bessel_span/(hook_count-1) : hook_span/(hook_count+1))));
 // Cut holes in flat profiles before extrusion to bound 3D Boolean work.
 module outline(a,b,slope=0) { polygon([[0,0],[a,0],[a+b*slope,b],[0,b]]); }
 // Upright FDM cells have two sloping roof edges and no clipped/rounded ceiling.
