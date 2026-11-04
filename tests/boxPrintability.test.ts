@@ -57,9 +57,10 @@ it('keeps the downturned-hook support risk explicit instead of claiming the whol
  const report=await audit({...BOX_DEFAULTS})
  expect(report.excessArea).toBeGreaterThan(10)
  expect(report.worst).toBeGreaterThan(80)
- // Enabling the 45-degree root gusset (hook_chamfer) reduces unsupported horizontal bridge area under the hook root.
+ // Enabling the 45-degree root gusset (hook_chamfer) eliminates the horizontal bridge ceiling and root step,
+ // reducing the unsupported >45° area to less than a third of the plain rectangular hook.
  const chamfered=await audit({...BOX_DEFAULTS,hook_chamfer:true})
- expect(chamfered.excessArea).toBeLessThan(report.excessArea)
+ expect(chamfered.excessArea).toBeLessThan(report.excessArea*0.3)
 },120000)
 it('rejects a wall tilt beyond the selected print angle',()=>{
  expect(()=>generateBox({...BOX_DEFAULTS,front_angle:40,overhang_angle:35})).toThrow(/свеса/)

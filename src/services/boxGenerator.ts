@@ -288,10 +288,20 @@ module assembled_box() { union() {
       translate([0,-hook_gap-2*hook_thickness,height-hook_drop-hook_thickness])
         cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
       if(hook_chamfer) {
+        // Self-supporting 45-degree hook profile:
+        // 1) 45-degree rear-wall root ramp
         translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
           polygon([[-hook_thickness,0],[0,0],[0,-hook_thickness]]);
+        // 2) Full 45-degree inner rail-slot corner gusset across the entire rail gap (eliminates horizontal bridge ceiling)
         translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
-          polygon([[-hook_thickness,hook_drop],[-hook_thickness-min(hook_drop*0.45,hook_gap*0.45),hook_drop],[-hook_thickness,hook_drop-min(hook_drop*0.45,hook_gap*0.45)]]);
+          polygon([
+            [-hook_thickness,hook_drop],
+            [-hook_thickness-hook_gap,hook_drop],
+            [-hook_thickness,hook_drop-min(hook_drop*0.95,hook_gap)]
+          ]);
+        // 3) 45-degree lower bevel under the outer downturned lip
+        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width)
+          polygon([[-hook_gap-2*hook_thickness,0],[-hook_gap-hook_thickness,0],[-hook_gap-hook_thickness,-hook_thickness]]);
       }
     }
 } }
