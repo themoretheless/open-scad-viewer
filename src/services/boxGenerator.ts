@@ -4,7 +4,7 @@ export const BOX_DEFAULTS = {
   width: 120, depth: 75, height: 80, wall: 3, floor: 4,
   corner_radius: 0, front_angle: 0, dividers: 0, hooks: true,
   bend_radius: 0, bend_reverse: false, bend_segments: 24,
-  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 40, rib: 2.4,
+  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 40, cell_radius: 2, rib: 2.4,
   stress_gradient: 1, mesh_density: 1, pattern_seed: 1,
   hole_diameter: 6, hole_pitch: 16,
   floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
@@ -19,7 +19,7 @@ const schema = z.object({
   front_angle: z.number().finite().min(-60).max(60).default(0),
   bend_radius: z.number().finite().min(0).max(100000).default(0),
   bend_reverse: z.boolean().default(false), bend_segments: z.number().int().min(4).max(128).default(24),
-  organic: z.boolean().default(true), cell_size: dimension.min(3).default(40), rib: dimension.default(2.4),
+  organic: z.boolean().default(true), cell_size: dimension.min(3).default(40), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
   stress_gradient: z.number().finite().min(0).max(2).default(1),
   mesh_density: z.number().finite().min(0.5).max(2).default(1),
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
@@ -160,7 +160,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
-      cell_r = radius>0 || bend_radius>0 || r<rib*5.5 ? 0 : min(local_rib*0.8,r*0.24);
+      cell_r = radius>0 || bend_radius>0 || r<rib*5.5 || cell_radius<=0 ? 0 : min(cell_radius,r*0.24);
       if(!hook_zone) {
         if(cell_r>0) offset(r=cell_r,$fn=6) offset(delta=-local_rib/2-cell_r)
           polygon([
