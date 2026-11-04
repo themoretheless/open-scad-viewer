@@ -105,4 +105,10 @@ describe('box generator', () => {
     expect(()=>generateBox({...BOX_DEFAULTS,mesh_density:2,cell_size:15,rib:2.4})).toThrow(/плотности|Effective/)
     expect(()=>generateBox({...BOX_DEFAULTS,stress_gradient:3})).toThrow()
   }, 120000)
+  it('builds with small wall cell_size=10 and print_optimized=false without exceeding Boolean work budget', async () => {
+    const request={quality:'full',purpose:'analysis'} as const
+    const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:10,print_optimized:false,hook_chamfer:true}),request)
+    expect(result.volume).toBeGreaterThan(0)
+    expect(result.meshes.length).toBe(1)
+  }, 120000)
 })

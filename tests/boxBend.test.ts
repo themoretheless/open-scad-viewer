@@ -25,13 +25,15 @@ it.each([false,true])('bends the whole plain shell with reverse=%s and the expec
  expect(max).toBeCloseTo(reverse?200:275,2)
 },120000)
 it('bends organic walls, floor and hooks together while retaining front tilt and corner rounds',async()=>{
- const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,bend_radius:140,corner_radius:12,front_angle:15}),request)
- expect(result.volume).toBeGreaterThan(0)
- expect(result.meshes.length).toBe(1)
- for(const mesh of result.meshes) {
-  const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
-  expect(diagnostics.boundary).toBe(0)
-  expect(diagnostics.nonManifold).toBe(0)
+ for(const print_optimized of [true,false]) {
+  const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized,bend_radius:140,corner_radius:12,front_angle:15}),request)
+  expect(result.volume).toBeGreaterThan(0)
+  expect(result.meshes.length).toBe(1)
+  for(const mesh of result.meshes) {
+   const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
+   expect(diagnostics.boundary).toBe(0)
+   expect(diagnostics.nonManifold).toBe(0)
+  }
  }
 },120000)
 it('rejects wraps and inward bends through the axis',()=>{
