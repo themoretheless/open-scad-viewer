@@ -80,12 +80,21 @@ fn irrational_vertex_flows_through_common_ports_wire_and_paired_brep() {
     )).unwrap();
     assert!(!point.same_selector(&ss::OriginalSsRootPoint::from_algebraic(independent, Default::default()).unwrap()));
     let middle = ss::bind_original_ss_port(point.clone(), first.curve().clone(), [0;4], Default::default()).unwrap();
+    let independent=ss::OriginalSsAlgebraicPoint::new(first.curve().clone(),Arc::new(
+        ss::QualifiedSsAlgebraicClock::from_binary(&[2.,-1.,-16.,8.],[0.34,0.38],Default::default()).unwrap(),
+    )).unwrap();
+    let canonical=Arc::new(ss::OriginalSsRootPoint::from_algebraic(independent,Default::default()).unwrap());
+    let other_middle=ss::bind_original_ss_port(canonical.clone(),first.curve().clone(),[0;4],Default::default()).unwrap();
+    assert!(!middle.point().same_selector(other_middle.point()));
+    assert!(middle.point().same_source_point(other_middle.point(),Default::default()).unwrap());
     let mut edges = vec![
         ss::OriginalSsRootEdge::new(first.start().clone(), middle.clone()).unwrap(),
-        ss::OriginalSsRootEdge::new(middle, first.end().clone()).unwrap(),
+        ss::OriginalSsRootEdge::new(other_middle, first.end().clone()).unwrap(),
     ];
     edges.extend_from_slice(&contour.edges()[1..]);
-    let wire = ss::OriginalSsRootWire::new(edges).unwrap();
+    assert!(ss::OriginalSsRootWire::new(edges.clone()).is_err());
+    assert!(ss::OriginalSsRootWire::reconcile_selectors(edges.clone(),ss::SsAlgebraicClockLimits {max_operations:1,..Default::default()}).is_err());
+    let wire = ss::OriginalSsRootWire::reconcile_selectors(edges,Default::default()).unwrap();
     wire.reverify().unwrap();
     let model = RootBrep::paired_contours(&wire, &[], 1e-7).unwrap();
     model.reverify().unwrap();
@@ -93,7 +102,7 @@ fn irrational_vertex_flows_through_common_ports_wire_and_paired_brep() {
     assert_eq!(model.topology().edges.len(), 9);
     assert_eq!(model.topology().euler_characteristic(), 2);
     assert!(model.topology().boundary_edges().is_empty());
-    assert!(model.topology().vertices.iter().any(|v| v.point.selector.same_selector(&point)));
+    assert!(model.topology().vertices.iter().any(|v| v.point.selector.same_selector(&canonical)));
     for face in 0..2 {
         let uv = model.pcurve_bounds(face,0,0,Default::default()).unwrap();
         assert!(uv.iter().all(|d| d[0]<=d[1]));

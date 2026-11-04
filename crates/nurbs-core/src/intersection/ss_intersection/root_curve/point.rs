@@ -58,6 +58,20 @@ impl OriginalSsRootPoint {
         }
         Ok(None)
     }
+    /// Semantic identity on the same qualified original graph, proved exactly.
+    /// Different graph charts require a separate original membership proof.
+    pub fn same_source_point(&self, other: &Self, limits: SsAlgebraicClockLimits) -> Result<bool> {
+        if self.same_selector(other) {return Ok(true);}
+        if !self.curve.same_definition(&other.curve)? {return Ok(false);}
+        match (&self.clock,&other.clock) {
+            (Clock::Binary(a),Clock::Binary(b)) => Ok(a==b),
+            (Clock::Algebraic {point:a,..},Clock::Algebraic {point:b,..}) => a.clock().equals_clock(b.clock(),limits).map(|v|v.0),
+            (Clock::Binary(t),Clock::Algebraic {point,..}) | (Clock::Algebraic {point,..},Clock::Binary(t)) => {
+                let value=Q::from_float(*t).ok_or_else(||crate::input("Nonfinite SS point identity"))?;
+                point.clock().equals_rational(&value,limits).map(|v|v.0)
+            }
+        }
+    }
     pub fn same_selector(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.curve,&other.curve) && match (&self.clock,&other.clock) {
             (Clock::Binary(a),Clock::Binary(b)) => a==b,

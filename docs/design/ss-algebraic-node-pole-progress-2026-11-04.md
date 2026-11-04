@@ -32,3 +32,7 @@ owned algebraic clocks, cross-source face-local junctions/winding, complete
 singular and periodic arrangements, finite trim with material selection,
 intersecting Boolean and healing, lineage/history, bridge/WASM execution and
 the wider quad/offset/fillet/G2 requirements.
+
+Follow-up: independent algebraic clocks can now be reconciled on the same
+original graph; see `ss-independent-clock-reconciliation-2026-11-04.md`.
+Cross-chart and cross-source physical branch identity still require more proof.

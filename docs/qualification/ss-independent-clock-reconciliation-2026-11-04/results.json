@@ -1,0 +1,14 @@
+{
+  "distinct_tests_passed": 31,
+  "source_sha256": {
+    "crates/brep-core/tests/root_model.rs": "73d8b4cda39f488557a05bc50ece5a067b39b8111d429d29cc82854e44a901fc",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock.rs": "c76f3ba467ef2612e5c986bde636985356bcec1b1bf0ef8326c6d4fdf8c53bd0",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock/polynomial.rs": "b176dc03def8d6aab898d9aa4624f5a0915bdabae6acd1a00aa89bebfb9dba5c",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "8b79135b0e45bd719dce3dd136aa1d640debced3e0ef5a8a977c6f2b09af5d89",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "67fd34ddd7274b0c50d4d3428faa95dadb7956d27b0a01edae9c7fa7ece69f25",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/wire.rs": "401461e5ca5bea6b963f25d88486aa6167498cac608b3319ef8cda69fd9981ea",
+    "crates/nurbs-core/tests/ss_algebraic_clock.rs": "e363c89fa59759898e55f225cc773fff3d65a4458290c7171ae8e072b772635d"
+  },
+  "scope": "Exact common-root proof and same-graph endpoint reconciliation into ordinary shared-owner SS/BRep topology",
+  "remaining": "Cross-chart/cross-source physical junctions, generated constraints, full trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

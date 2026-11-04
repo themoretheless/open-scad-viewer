@@ -102,6 +102,21 @@ impl OriginalSsRootWire {
         }
         Ok(Self { edges })
     }
+    /// Reconcile independent endpoint owners by exact original graph/root
+    /// identity, then retain ordinary literal incidence in the returned wire.
+    pub fn reconcile_selectors(edges: Vec<OriginalSsRootEdge>, limits: SsAlgebraicClockLimits) -> Result<Self> {
+        check((1..=256).contains(&edges.len()),"SS reconciliation requires bounded nonempty edges")?;
+        let mut joined=Vec::with_capacity(edges.len());
+        for i in 0..edges.len() {
+            let edge=&edges[i];
+            let next=&edges[(i+1)%edges.len()];
+            let end=if edge.end().point().same_selector(next.start().point()) {
+                edge.end().clone()
+            } else {edge.end().rebind_equivalent(next.start().point().clone(),limits)?};
+            joined.push(OriginalSsRootEdge::new(edge.start().clone(),end)?);
+        }
+        Self::new(joined)
+    }
     pub fn edges(&self) -> &[OriginalSsRootEdge] {
         &self.edges
     }

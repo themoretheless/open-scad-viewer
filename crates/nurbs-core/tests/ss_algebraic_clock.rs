@@ -284,3 +284,47 @@ fn endpoint_equality_uses_polynomial_and_selected_root_not_box_overlap() {
     let (equal,work)=repeated.equals_rational(&q(1,2),Default::default()).unwrap();
     assert!(equal && work>0);
 }
+#[test]
+fn independent_clock_identity_requires_a_common_root_in_both_isolators() {
+    let a=clock(&[-1.,0.,8.],[0.34375,0.375]);
+    let b=clock(&[2.,-1.,-16.,8.],[0.34,0.38]);
+    let (same,work)=a.equals_clock(&b,Default::default()).unwrap();
+    assert!(same && work>0);
+    assert!(b.equals_clock(&a,Default::default()).unwrap().0);
+    let different=clock(&[-1.001,0.,8.],[0.34,0.38]);
+    assert!(!a.equals_clock(&different,Default::default()).unwrap().0);
+    // Same polynomial and overlapping isolators can still select different roots.
+    let left=clock(&[0.1875,-1.,1.],[0.2,0.6]);
+    let right=clock(&[0.1875,-1.,1.],[0.4,0.8]);
+    assert!(!left.equals_clock(&right,Default::default()).unwrap().0);
+    let point=clock(&[-0.25,1.],[0.25,0.25]);
+    assert!(point.equals_clock(&left,Default::default()).unwrap().0);
+    assert!(left.equals_clock(&point,Default::default()).unwrap().0);
+    assert!(!point.equals_clock(&right,Default::default()).unwrap().0);
+    let repeated=clock(&[1.,0.,-16.,0.,64.],[0.34,0.38]);
+    assert!(a.equals_clock(&repeated,Default::default()).unwrap().0);
+    assert!(a.equals_clock(&b,ss::SsAlgebraicClockLimits {max_operations:1,..Default::default()}).is_err());
+}
+#[test]
+fn exact_selector_identity_does_not_follow_rounded_binary_coordinates() {
+    let wire=fixture::wire();
+    let curve=wire.edges()[0].curve().clone();
+    let a=q(1,2);
+    let b=&a+Q::new(1.into(),BigInt::one()<<80);
+    let pa=Arc::new(ss::QualifiedSsAlgebraicClock::qualify(vec![-a.clone(),Q::one()],[a.clone(),a.clone()],Default::default()).unwrap());
+    let pb=Arc::new(ss::QualifiedSsAlgebraicClock::qualify(vec![-b.clone(),Q::one()],[b.clone(),b.clone()],Default::default()).unwrap());
+    assert_eq!(a.to_f64(),b.to_f64());
+    let make=|clock|ss::OriginalSsRootPoint::from_algebraic(ss::OriginalSsAlgebraicPoint::new(curve.clone(),clock).unwrap(),Default::default()).unwrap();
+    let exact=ss::OriginalSsRootPoint::new(curve.clone(),0.5).unwrap();
+    assert!(make(pa).same_source_point(&exact,Default::default()).unwrap());
+    let nearby=Arc::new(make(pb));
+    assert!(!nearby.same_source_point(&exact,Default::default()).unwrap());
+    let anchor=Arc::new(ss::OriginalSsRootPoint::new(curve.clone(),0.4).unwrap());
+    let exact=Arc::new(exact);
+    let bind=|p|ss::bind_original_ss_port(p,curve.clone(),[0;4],Default::default()).unwrap();
+    let gap=vec![ss::OriginalSsRootEdge::new(bind(anchor.clone()),bind(exact.clone())).unwrap(),
+        ss::OriginalSsRootEdge::new(bind(nearby),bind(anchor)).unwrap()];
+    assert!(ss::OriginalSsRootWire::reconcile_selectors(gap,Default::default()).is_err());
+    let another=ss::OriginalSsRootPoint::new(wire.edges()[1].curve().clone(),0.25).unwrap();
+    assert!(!exact.same_source_point(&another,Default::default()).unwrap());
+}

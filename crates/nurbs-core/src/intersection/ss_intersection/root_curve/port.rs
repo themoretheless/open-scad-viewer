@@ -35,6 +35,11 @@ impl QualifiedOriginalSsPort {
     pub fn kind(&self) -> OriginalSsPortKind {
         self.kind
     }
+    /// Replace an independent endpoint owner only after exact point identity.
+    pub fn rebind_equivalent(&self, point: Arc<OriginalSsRootPoint>, limits: SsAlgebraicClockLimits) -> Result<Self> {
+        check(self.point.same_source_point(&point,limits)?,"Independent SS endpoint identity remains unproved")?;
+        bind_original_ss_port(point,self.target.clone(),self.phase,self.limits)
+    }
     pub fn reverify(&self) -> Result<()> {
         self.point.reverify()?;
         self.target.reverify()?;

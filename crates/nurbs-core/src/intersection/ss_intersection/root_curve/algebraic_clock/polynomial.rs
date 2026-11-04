@@ -120,3 +120,13 @@ pub(super) fn count(chain: &[Vec<Q>], d: &[Q; 2], w: &mut Work) -> Result<usize>
     a.checked_sub(b)
         .ok_or_else(|| crate::input("Exact clock Sturm variations inconsistent"))
 }
+
+pub(super) fn gcd(a: &[Q], b: &[Q], w: &mut Work) -> Result<Vec<Q>> {
+    let (mut a,mut b)=(a.to_vec(),b.to_vec());
+    while !b.is_empty() {
+        let r=remainder(&a,&b,w)?;
+        a=b;
+        b=r;
+    }
+    Ok(a)
+}

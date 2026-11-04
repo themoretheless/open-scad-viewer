@@ -117,6 +117,33 @@ impl QualifiedSsAlgebraicClock {
             && evaluate(&self.polynomial, value, &mut w)?.is_zero();
         Ok((equal, w.used))
     }
+    /// Proves equality of independently selected roots through an exact gcd.
+    /// Overlap alone is never a positive answer. Returns equality and work.
+    pub fn equals_clock(&self, other: &Self, limits: SsAlgebraicClockLimits) -> Result<(bool,usize)> {
+        let mut w=Work::new(limits)?;
+        for clock in [self,other] {
+            check(clock.polynomial.len()<=limits.max_degree+1,"Common-root degree allowance exceeded")?;
+            for c in clock.polynomial.iter().chain(clock.interval.iter()) { w.keep(c.clone())?; }
+        }
+        let d=[self.interval[0].clone().max(other.interval[0].clone()),
+            self.interval[1].clone().min(other.interval[1].clone())];
+        if d[1]<d[0] {return Ok((false,w.used));}
+        if d[0]==d[1] {
+            let same=evaluate(&self.polynomial,&d[0],&mut w)?.is_zero()
+                && evaluate(&other.polynomial,&d[0],&mut w)?.is_zero();
+            return Ok((same,w.used));
+        }
+        let common=gcd(&self.polynomial,&other.polynomial,&mut w)?;
+        if common.len()<2 {return Ok((false,w.used));}
+        // Each nonpoint isolator has nonroot endpoints. Hence an intersection
+        // endpoint cannot be a common root unless one isolator was a point.
+        check(!evaluate(&common,&d[0],&mut w)?.is_zero()
+            && !evaluate(&common,&d[1],&mut w)?.is_zero(),"Common-root interval endpoint invariant failed")?;
+        let chain=sturm(&common,&mut w)?;
+        let roots=count(&chain,&d,&mut w)?;
+        check(roots<=1,"Common-root count contradicts unique selectors")?;
+        Ok((roots==1,w.used))
+    }
     pub fn enclose(
         &self,
         bisections: usize,
