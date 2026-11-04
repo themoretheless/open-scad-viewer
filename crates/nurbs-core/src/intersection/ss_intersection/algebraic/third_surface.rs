@@ -84,4 +84,4 @@ pub fn qualify_ss_third_surface_candidates(original:&QualifiedOriginalSsIdeal,th
 }
 
 mod membership;
-pub use membership::{SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint};
+pub use membership::{SsThirdSurfaceExclusionKind,QualifiedSsThirdSurfaceExclusion,SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint};

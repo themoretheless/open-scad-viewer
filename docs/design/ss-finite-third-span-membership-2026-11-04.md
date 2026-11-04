@@ -41,3 +41,8 @@ candidate exclusions, finite trimmed third-face membership, cross-source
 junctions and complete arrangements/winding, full material trim and general
 intersecting Boolean/healing. Lineage/history, actual bridge/WASM calls and the
 wider quad/offset/fillet/G2 requirements remain open.
+
+Follow-up: independent sufficient exclusion proofs now distinguish rejected
+third-span candidates from mere lift failure; see
+`ss-certified-third-span-exclusion-2026-11-04.md`. General algebraic lifting
+and complete finite-face classification remain open.

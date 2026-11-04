@@ -70,3 +70,11 @@ fn interval(p:&U,t:&[Q;2],w:&mut Work)->Result<[Q;2]> {
     }
     Ok(out)
 }
+
+pub(super) fn has_relation(basis:&[P<7>],axis:usize,clock:usize)->bool {
+    basis.iter().any(|p|p.terms.keys().all(|e|e[axis]<=1 && (0..7).all(|k|k==axis || k==clock || e[k]==0))
+        && p.terms.keys().any(|e|e[axis]==1))
+}
+pub(super) fn scalar_image(c:&[Q],m:&U,t:&[Q;2],w:&mut Work)->Result<[Q;2]> {
+    let p=reduce(poly(c,w)?,m,w)?;interval(&p,t,w)
+}

@@ -143,4 +143,4 @@ pub(crate) use clock_consequence::prove as prove_clock_consequence;
 pub(crate) use clock_consequence::project as project_original_ss_clock;
 
 mod third_surface;
-pub use third_surface::{SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint,QualifiedSsThirdSurfaceCandidates,qualify_ss_third_surface_candidates};
+pub use third_surface::{SsThirdSurfaceExclusionKind,QualifiedSsThirdSurfaceExclusion,SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint,QualifiedSsThirdSurfaceCandidates,qualify_ss_third_surface_candidates};

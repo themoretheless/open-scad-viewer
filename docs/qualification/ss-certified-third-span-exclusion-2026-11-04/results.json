@@ -1,0 +1,15 @@
+{
+  "distinct_tests_passed": 55,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection.rs": "8223ee253c3c0c4dcf56c11dfa9d4368f80ec15369bb559185774a88745d2e21",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic.rs": "0c8a1481b26a864a6ff877abdfb654538a635cddd1777f654f0783988044d2e7",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface.rs": "0a5dcd8cd15679b0e0d1e8706b9e46cf4395a1c7710bad4960226b37299c4161",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface/membership.rs": "2d058f23f96f337630f936938f79066b3be5b411395b90015d80673ee430a659",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface/membership/exclusion.rs": "ca5e89cb48cfa393c496da3fff107c2778de8bdf7597293d45085f2cb08d5d42",
+    "crates/nurbs-core/src/intersection/ss_intersection/algebraic/third_surface/membership/rational.rs": "ac4c10ff552b0112cbf991b85f65d5cbe6a40f66b9a3bbba83c119717e6a06fd",
+    "crates/nurbs-core/tests/ss_third_surface_exclusion.rs": "fae406a7d89e13c588150cb577c9e7472403062e1ded1dd123c313983357bb47"
+  },
+  "scope": "Sufficient exact necessary-constraint or forced-coordinate exclusions for an owned original SS point against one finite third NURBS span",
+  "remaining": "Complete candidate classification, general algebraic UV lifts, trimmed-face holes, cross-source junctions, complete arrangements/trim/material/Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2"
+}

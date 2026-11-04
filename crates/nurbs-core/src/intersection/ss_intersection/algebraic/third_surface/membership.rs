@@ -75,3 +75,6 @@ impl QualifiedSsThirdSurfacePoint {
             && self.clock_work==fresh.clock_work,"Original third-surface point membership changed")
     }
 }
+
+mod exclusion;
+pub use exclusion::{SsThirdSurfaceExclusionKind,QualifiedSsThirdSurfaceExclusion};
