@@ -196,7 +196,7 @@ impl QualifiedInteriorSsCensus {
 }
 
 mod volume;
-pub use volume::{RootBoundaryVolumeLimits,RootBoundaryVolumeReport};
+pub use volume::{RootSolidPointLimits, RootSolidPointReport, RootSolidRayReport, RootBoundaryVolumeLimits,RootBoundaryVolumeReport};
 
 mod material;
 pub use material::{PairedRootSolidAdmission,QualifiedPairedRootSolid};

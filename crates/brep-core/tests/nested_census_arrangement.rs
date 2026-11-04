@@ -353,6 +353,69 @@ fn run(with_holes: bool, mirrored: bool) {
             assert!(solid.material_admitted());
             assert_eq!(solid.genus(), genus);
             assert_eq!(solid.outward_reversed(), genus == 0);
+            for (point, expected) in if genus == 0 {
+                vec![
+                    ([0.5, 0.5, 0.03], Some(true)),
+                    ([0.5, 0.5, -0.02], Some(false)),
+                    ([0.5, 0.5, 0.], None),
+                ]
+            } else {
+                vec![
+                    ([0.725, 0.5, -0.02], Some(true)),
+                    (
+                        [0.5 + 0.1875 * 0.9999, 0.5 + 0.25 * 0.9999, -0.00001],
+                        Some(true),
+                    ),
+                    ([0.5, 0.5, 0.], Some(false)),
+                    ([0.725, 0.5, 0.], None),
+                    ([0.8125, 0.5, 0.], None),
+                ]
+            } {
+                let query = solid
+                    .classify_point(
+                        point,
+                        &[[0., 0., 1.], [0.137, 0.283, 1.]],
+                        Default::default(),
+                    )
+                    .unwrap();
+                assert_eq!(
+                    query.parity, expected,
+                    "genus={genus} mirror={mirrored} point={point:?}: {query:?}"
+                );
+                assert!(query.cells <= 100000 && query.domain_queries <= 8192);
+                assert_eq!(
+                    query.cells,
+                    query.attempts.iter().map(|a| a.cells).sum::<usize>()
+                );
+            }
+            let no_bands = solid
+                .classify_point(
+                    [0.5, 0.5, 0.03],
+                    &[[0., 0., 1.]],
+                    mixed::RootSolidPointLimits {
+                        band_queries: 0,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            assert!(no_bands.parity.is_none() && no_bands.attempts.is_empty());
+            let limited = solid
+                .classify_point(
+                    [0.5, 0.5, -0.02],
+                    &[[0., 0., 1.]],
+                    mixed::RootSolidPointLimits {
+                        ray_cells: 1,
+                        domain_queries: 1,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            assert!(limited.parity.is_none());
+            assert!(limited.cells <= 1 && limited.domain_queries <= 1);
+            assert!(solid
+                .classify_point([0.; 3], &[], Default::default())
+                .is_err());
+
             assert_eq!(
                 solid.model().topology().shells[0].faces[0].reversed,
                 genus == 0
@@ -401,29 +464,23 @@ fn run(with_holes: bool, mirrored: bool) {
             }
         }
     }
-    assert!(
-        census
-            .sew_paired_regions(
-                [&[false, false], &[false, false]],
-                1e-9,
-                [Default::default(); 2]
-            )
-            .is_err()
-    );
-    assert!(
-        census
-            .sew_paired_regions(
-                [&[true, true], &[true, false]],
-                1e-9,
-                [Default::default(); 2]
-            )
-            .is_err()
-    );
-    assert!(
-        census
-            .sew_paired_regions([&[true, true], &[true, true]], 0., [Default::default(); 2])
-            .is_err()
-    );
+    assert!(census
+        .sew_paired_regions(
+            [&[false, false], &[false, false]],
+            1e-9,
+            [Default::default(); 2]
+        )
+        .is_err());
+    assert!(census
+        .sew_paired_regions(
+            [&[true, true], &[true, false]],
+            1e-9,
+            [Default::default(); 2]
+        )
+        .is_err());
+    assert!(census
+        .sew_paired_regions([&[true, true], &[true, true]], 0., [Default::default(); 2])
+        .is_err());
     for support in 0..2 {
         let arrangement = Arc::new(
             census
@@ -457,11 +514,9 @@ fn run(with_holes: bool, mirrored: bool) {
                 } else {
                     0
                 };
-                assert!(
-                    topology.faces[arrangement.region_faces()[expected]]
-                        .holes
-                        .contains(&hole)
-                );
+                assert!(topology.faces[arrangement.region_faces()[expected]]
+                    .holes
+                    .contains(&hole));
                 assert_eq!(
                     arrangement
                         .region_faces()
@@ -478,16 +533,14 @@ fn run(with_holes: bool, mirrored: bool) {
                     .unwrap();
                 assert_eq!(region.location(), Location::Outside);
                 assert!(region.signature().is_none());
-                assert!(
-                    arrangement
-                        .qualify_boolean_rectangle(
-                            solid::BooleanMaterialOp::Union,
-                            rectangle,
-                            &[[1., 0.317, 0.173]],
-                            Default::default()
-                        )
-                        .is_err()
-                );
+                assert!(arrangement
+                    .qualify_boolean_rectangle(
+                        solid::BooleanMaterialOp::Union,
+                        rectangle,
+                        &[[1., 0.317, 0.173]],
+                        Default::default()
+                    )
+                    .is_err());
             }
         }
         for (rectangle, signature) in [
@@ -618,4 +671,36 @@ fn nested_hole_operands_prove_material_boxes_without_census_shortcuts() {
             }
         }
     }
+}
+
+#[test]
+fn near_root_box_requires_complete_original_winding() {
+    let a = brep_core::cuboid([0., 0., -10.], [1., 1., 0.]).unwrap();
+    let b = graph::body();
+    let aface = a
+        .faces
+        .iter()
+        .position(|f| {
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 0.)
+        })
+        .unwrap();
+    let source = ss::FiberSources::new(&a.faces[aface].surface, &b.faces[1].surface).unwrap();
+    let charts = family(&source, 0.3125, false);
+    let wire = wire(&charts, 0.3125);
+    let p: [f64; 2] = [0.5 + 0.1875 * 0.9999, 0.5 + 0.25 * 0.9999];
+    let proof = wire
+        .winding_box(
+            0,
+            p.map(|x| [x.next_down(), x.next_up()]),
+            ss::OriginalSsWindingLimits {
+                max_segments: 4096,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(proof.winding(), 1);
 }

@@ -230,3 +230,6 @@ impl QualifiedPairedRootBoundary {
         Ok(out)
     }
 }
+
+mod point;
+pub use point::{RootSolidPointLimits,RootSolidPointReport,RootSolidRayReport};

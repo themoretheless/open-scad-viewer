@@ -158,6 +158,65 @@ impl Domains {
         });
         Ok(Some(inside))
     }
+    /// A direct whole-box winding proof can resolve conservative band overlap.
+    /// Unlike a witness alone, this certifies the ENTIRE query rectangle.
+    pub fn classify_box(
+        &mut self,
+        support: usize,
+        rectangle: [[f64; 2]; 2],
+        limits: RootBoundaryVolumeLimits,
+        out: &mut RootBoundaryVolumeReport,
+    ) -> Result<Option<bool>> {
+        if let Some(parent) = self.known[support].iter().position(|k| {
+            (0..2).all(|a| {
+                k.rectangle[a][0] <= rectangle[a][0] && rectangle[a][1] <= k.rectangle[a][1]
+            })
+        }) {
+            let inside = self.known[support][parent].inside;
+            self.known[support].push(Known {
+                rectangle,
+                inside,
+                via: Some(parent),
+            });
+            out.propagations += 1;
+            return Ok(Some(inside));
+        }
+        let mut inside = true;
+        for (i, wire) in self.wires[support].iter().enumerate() {
+            if out.winding_queries == limits.winding_queries {
+                return Ok(None);
+            }
+            out.winding_queries += 1;
+            let Ok(proof) = wire.winding_box(support, rectangle, limits.winding) else {
+                return Ok(None);
+            };
+            let w = proof.winding();
+            if i == 0 {
+                if w == 0 {
+                    inside = false;
+                    break;
+                }
+                if w != 1 {
+                    return Ok(None);
+                }
+            } else {
+                if w == -1 {
+                    inside = false;
+                    break;
+                }
+                if w != 0 {
+                    return Ok(None);
+                }
+            }
+        }
+        self.known[support].push(Known {
+            rectangle,
+            inside,
+            via: None,
+        });
+        out.seeds += 1;
+        Ok(Some(inside))
+    }
     pub fn propagation_links(&self) -> usize {
         self.known
             .iter()

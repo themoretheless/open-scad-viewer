@@ -25,6 +25,7 @@ pub struct QualifiedPairedRootSolid {
     model: MixedBrep,
 }
 impl QualifiedPairedRootSolid {
+    pub fn boundary(&self) -> &Arc<QualifiedPairedRootBoundary> { &self.boundary }
     pub fn model(&self) -> &MixedBrep {
         &self.model
     }

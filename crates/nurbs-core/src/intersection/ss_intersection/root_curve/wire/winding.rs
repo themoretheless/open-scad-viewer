@@ -135,121 +135,97 @@ pub(super) fn qualify_box(
     let mut remaining = limits.geometry;
     let mut endpoint_cache = Vec::new();
     let mut segments_used = 0;
-    let mut n = 1usize;
-    loop {
-        let count = n
-            .checked_mul(wire.edges().len())
-            .ok_or_else(|| crate::resource("UV winding segment overflow"))?;
-        check(
-            count <= limits.max_segments.saturating_sub(segments_used),
-            "Original UV winding subdivision exhausted",
-        )?;
-        segments_used += count;
-        let mut total = 0i32;
-        let mut separated = true;
-        for edge in wire.edges() {
-            let start = endpoint(edge.start().point(), &mut endpoint_cache, &mut remaining)?;
-            let end = endpoint(edge.end().point(), &mut endpoint_cache, &mut remaining)?;
-            let a = edge.start().parameter_bounds();
-            let b = edge.end().parameter_bounds();
-            // Interior partition points must lie strictly between the two
-            // uncertain endpoint clocks; the first/last arc boxes include the
-            // complete endpoint intervals.
-            let (lo, hi) = if edge.forward() {
-                (&a[1], &b[0])
+    let mut total = 0i32;
+    for edge in wire.edges() {
+        let start = endpoint(edge.start().point(), &mut endpoint_cache, &mut remaining)?;
+        let end = endpoint(edge.end().point(), &mut endpoint_cache, &mut remaining)?;
+        let a = edge.start().parameter_bounds();
+        let b = edge.end().parameter_bounds();
+        let (lo, hi) = if edge.forward() {
+            (&a[1], &b[0])
+        } else {
+            (&b[1], &a[0])
+        };
+        let outer = edge.parameter_bounds();
+        let domain = edge.curve().parameter_domain();
+        let outward = |q: &Q, lower: bool| -> Result<f64> {
+            let x = q
+                .to_f64()
+                .filter(|x| x.is_finite())
+                .ok_or_else(|| crate::input("UV clock overflow"))?;
+            let exact = Q::from_float(x).unwrap();
+            Ok(if lower && exact > *q {
+                x.next_down()
+            } else if !lower && exact < *q {
+                x.next_up()
             } else {
-                (&b[1], &a[0])
-            };
-            let mut points = Vec::with_capacity(n + 1);
-            points.push(start);
-            let mut clocks = vec![None];
-            for i in 1..n {
-                let q = lo + (hi - lo) * Q::from_integer(i.into()) / Q::from_integer(n.into());
+                x
+            })
+        };
+        let lower = outward(&outer[0], true)?.max(domain[0]);
+        let upper = outward(&outer[1], false)?.min(domain[1]);
+        let (c0, c1) = if edge.forward() {
+            (lower, upper)
+        } else {
+            (upper, lower)
+        };
+        // Accepted chords form one connected polygon in source traversal order.
+        // Only arcs whose COMPLETE enclosure overlaps the query need splitting.
+        let mut pending = vec![(c0, c1, start, end, lo.clone(), hi.clone())];
+        while let Some((c0, c1, start, end, lo, hi)) = pending.pop() {
+            check(
+                segments_used < limits.max_segments,
+                "Original UV winding subdivision exhausted",
+            )?;
+            segments_used += 1;
+            let arc = edge.curve().enclose([c0.min(c1), c0.max(c1)], remaining)?;
+            charge(&mut remaining, &arc)?;
+            let box2: [[f64; 2]; 2] = std::array::from_fn(|k| {
+                let j = 2 * support + k;
+                [
+                    arc.uv[j][0].min(start.uv[j][0]).min(end.uv[j][0]),
+                    arc.uv[j][1].max(start.uv[j][1]).max(end.uv[j][1]),
+                ]
+            });
+            if !(0..2).any(|k| query[k][1] < box2[k][0] || box2[k][1] < query[k][0]) {
+                let q = (&lo + &hi) / Q::from_integer(2.into());
                 let x = q
                     .to_f64()
                     .filter(|x| x.is_finite())
                     .ok_or_else(|| crate::input("UV winding clock overflow"))?;
                 let xq = Q::from_float(x).unwrap();
                 check(
-                    lo < &xq && &xq < hi,
+                    lo < xq && xq < hi && c0.min(c1) < x && x < c0.max(c1),
                     "UV winding interior clock cannot be represented",
                 )?;
-                clocks.push(Some(x));
-            }
-            clocks.push(None);
-            if !edge.forward() {
-                clocks.reverse();
-            }
-            for clock in clocks.iter().take(n).skip(1) {
-                let value = edge.curve().enclose([clock.unwrap(); 2], remaining)?;
-                charge(&mut remaining, &value)?;
-                points.push(value);
-            }
-            points.push(end);
-            let outer = edge.parameter_bounds();
-            let domain = edge.curve().parameter_domain();
-            let outward = |q: &Q, lower: bool| -> Result<f64> {
-                let x = q
-                    .to_f64()
-                    .filter(|x| x.is_finite())
-                    .ok_or_else(|| crate::input("UV clock overflow"))?;
-                let exact = Q::from_float(x).unwrap();
-                Ok(if lower && exact > *q {
-                    x.next_down()
-                } else if !lower && exact < *q {
-                    x.next_up()
+                let mid = edge.curve().enclose([x; 2], remaining)?;
+                charge(&mut remaining, &mid)?;
+                let (left, right) = if edge.forward() {
+                    ((lo, xq.clone()), (xq, hi))
                 } else {
-                    x
-                })
-            };
-            let lower = outward(&outer[0], true)?.max(domain[0]);
-            let upper = outward(&outer[1], false)?.min(domain[1]);
-            for i in 0..n {
-                let c0 = clocks[i].unwrap_or(if edge.forward() { lower } else { upper });
-                let c1 = clocks[i + 1].unwrap_or(if edge.forward() { upper } else { lower });
-                let arc = edge.curve().enclose([c0.min(c1), c0.max(c1)], remaining)?;
-                charge(&mut remaining, &arc)?;
-                let box2: [[f64; 2]; 2] = std::array::from_fn(|k| {
-                    let j = 2 * support + k;
-                    [
-                        arc.uv[j][0]
-                            .min(points[i].uv[j][0])
-                            .min(points[i + 1].uv[j][0]),
-                        arc.uv[j][1]
-                            .max(points[i].uv[j][1])
-                            .max(points[i + 1].uv[j][1]),
-                    ]
-                });
-                if !(0..2).any(|k| query[k][1] < box2[k][0] || box2[k][1] < query[k][0]) {
-                    separated = false;
-                    break;
-                }
-                let a = sample(&points[i], support);
-                let b = sample(&points[i + 1], support);
-                let sign = orientation(a, b, point);
-                if a[1] <= point[1] && point[1] < b[1] && sign > Q::zero() {
-                    total += 1;
-                }
-                if b[1] <= point[1] && point[1] < a[1] && sign < Q::zero() {
-                    total -= 1;
-                }
+                    ((xq.clone(), hi), (lo, xq))
+                };
+                pending.push((x, c1, mid.clone(), end, right.0, right.1));
+                pending.push((c0, x, start, mid, left.0, left.1));
+                continue;
             }
-            if !separated {
-                break;
+            let a = sample(&start, support);
+            let b = sample(&end, support);
+            let sign = orientation(a, b, point);
+            if a[1] <= point[1] && point[1] < b[1] && sign > Q::zero() {
+                total += 1;
+            }
+            if b[1] <= point[1] && point[1] < a[1] && sign < Q::zero() {
+                total -= 1;
             }
         }
-        if separated {
-            return Ok(QualifiedOriginalSsWinding {
-                wire: wire.clone(),
-                support,
-                query,
-                winding: total,
-                segments: segments_used,
-                limits,
-            });
-        }
-        n = n
-            .checked_mul(2)
-            .ok_or_else(|| crate::resource("UV winding subdivisions overflow"))?;
     }
+    Ok(QualifiedOriginalSsWinding {
+        wire: wire.clone(),
+        support,
+        query,
+        winding: total,
+        segments: segments_used,
+        limits,
+    })
 }
