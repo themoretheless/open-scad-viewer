@@ -105,6 +105,18 @@ impl QualifiedSsAlgebraicClock {
         let fresh = Self::qualify(self.polynomial.clone(), self.interval.clone(), self.limits)?;
         check(fresh.chain == self.chain, "Exact clock Sturm proof changed")
     }
+    /// Exact equality to the selected root, with counted rational work.
+    /// A zero of the polynomial outside the owned isolator is a different root.
+    pub fn equals_rational(&self, value: &Q, limits: SsAlgebraicClockLimits) -> Result<(bool, usize)> {
+        let mut w = Work::new(limits)?;
+        check(self.polynomial.len() <= limits.max_degree + 1,
+            "Algebraic clock equality degree allowance exceeded")?;
+        w.input(value.clone())?;
+        for x in self.polynomial.iter().chain(self.interval.iter()) { w.keep(x.clone())?; }
+        let equal = self.interval[0] <= *value && *value <= self.interval[1]
+            && evaluate(&self.polynomial, value, &mut w)?.is_zero();
+        Ok((equal, w.used))
+    }
     pub fn enclose(
         &self,
         bisections: usize,

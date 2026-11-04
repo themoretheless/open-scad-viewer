@@ -141,6 +141,24 @@ fn original_world_root_curves_share_the_exact_crossing_node() {
         ss::bind_original_ss_port(point, curves[1].clone(), [0; 4], Default::default()).unwrap();
     assert_eq!(joined.kind(), ss::OriginalSsPortKind::OriginalSourceNode);
     joined.reverify().unwrap();
+    // The algebraic isolator is not a point and need not refine to binary 0.5.
+    let clock=Arc::new(ss::QualifiedSsAlgebraicClock::from_binary(
+        &[0.25,-1.,1.], [0.49,0.52], Default::default()).unwrap());
+    let algebraic=ss::OriginalSsAlgebraicPoint::new(curves[0].clone(),clock).unwrap();
+    let policy=ss::SsAlgebraicPointLimits {bisections:0,..Default::default()};
+    let selected=Arc::new(ss::OriginalSsRootPoint::from_algebraic(algebraic.clone(),policy).unwrap());
+    assert_ne!(selected.clock_bounds().unwrap()[0],selected.clock_bounds().unwrap()[1]);
+    assert!(selected.equals_binary_parameter(0.5).unwrap());
+    assert!(!selected.equals_binary_parameter(0.5000000000000001).unwrap());
+    let joined=ss::bind_original_ss_port(selected,curves[1].clone(),[0;4],Default::default()).unwrap();
+    assert_eq!(joined.kind(),ss::OriginalSsPortKind::OriginalSourceNode);
+    joined.reverify().unwrap();
+    let exhausted=Arc::new(ss::OriginalSsRootPoint::from_algebraic(algebraic,
+        ss::SsAlgebraicPointLimits {clock:ss::SsAlgebraicClockLimits {
+            max_operations:7,..Default::default()
+        },..policy}).unwrap());
+    assert!(ss::bind_original_ss_port(exhausted,curves[1].clone(),[0;4],Default::default()).is_err());
+
     let away = Arc::new(ss::OriginalSsRootPoint::new(curves[0].clone(), 0.6).unwrap());
     assert!(
         ss::bind_original_ss_port(away, curves[1].clone(), [0; 4], Default::default()).is_err()

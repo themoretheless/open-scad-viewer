@@ -74,7 +74,7 @@ pub fn bind_original_ss_port(
         });
     }
     if phase == [0;4] {
-        if let Some(a)=point.binary_parameter().and_then(|t| point.curve.node_at(t)) {
+        if let Some(a)=point.source_node()? {
             if let Carrier::Blowup(b)=&target.carrier {
                 if let Some(parameter)=b.node_parameter() {
                     if a.world()==b.source().node().world() {
@@ -89,7 +89,7 @@ pub fn bind_original_ss_port(
         if let (Some((parameter, a)), Some((end, b))) =
             (point.curve.pole_endpoint(), target.pole_endpoint())
         {
-            if point.binary_parameter() == Some(parameter) && a == b {
+            if point.equals_binary_parameter(parameter)? && a == b {
                 return Ok(QualifiedOriginalSsPort {
                     parameter: [membership::q(end)?, membership::q(end)?],
                     point,

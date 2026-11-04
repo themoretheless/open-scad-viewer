@@ -270,3 +270,17 @@ fn common_selector_binds_algebraic_clock_to_a_different_axis() {
     assert!(ss::bind_original_ss_port(shared.clone(),wire.edges()[4].curve().clone(),[0;4],Default::default()).is_err());
     assert!(ss::bind_original_ss_port(shared,wire.edges()[2].curve().clone(),[1,0,0,0],Default::default()).is_err());
 }
+#[test]
+fn endpoint_equality_uses_polynomial_and_selected_root_not_box_overlap() {
+    let c=clock(&[0.1875,-1.,1.],[0.2,0.3]); // roots 1/4 and 3/4
+    assert!(c.equals_rational(&q(1,4),Default::default()).unwrap().0);
+    assert!(!c.equals_rational(&q(3,4),Default::default()).unwrap().0);
+    assert!(!c.equals_rational(&q(251,1000),Default::default()).unwrap().0);
+    let irrational=clock(&[-1.,0.,8.],[0.34375,0.375]);
+    assert!(!irrational.equals_rational(&q(35,100),Default::default()).unwrap().0);
+    assert!(c.equals_rational(&Q::new_raw(2.into(),8.into()),Default::default()).is_err());
+    assert!(c.equals_rational(&q(1,4),ss::SsAlgebraicClockLimits {max_operations:1,..Default::default()}).is_err());
+    let repeated=clock(&[0.25,-1.,1.],[0.49,0.52]);
+    let (equal,work)=repeated.equals_rational(&q(1,2),Default::default()).unwrap();
+    assert!(equal && work>0);
+}

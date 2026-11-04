@@ -42,6 +42,22 @@ impl OriginalSsRootPoint {
             Clock::Algebraic {point,policy} => Ok(point.clock().enclose(policy.bisections,policy.clock)?.bounds),
         }
     }
+    /// Exact endpoint equality, never a comparison of rounded enclosures.
+    pub fn equals_binary_parameter(&self, parameter: f64) -> Result<bool> {
+        let value=Q::from_float(parameter).ok_or_else(||crate::input("Nonfinite SS endpoint comparison"))?;
+        match &self.clock {
+            Clock::Binary(t) => Ok(*t==parameter),
+            Clock::Algebraic {point,policy} => point.clock().equals_rational(&value,policy.clock).map(|v|v.0),
+        }
+    }
+    pub(super) fn source_node(&self) -> Result<Option<&QualifiedSsRootNode>> {
+        if let Carrier::Blowup(arc)=&self.curve.carrier {
+            if let Some(t)=arc.node_parameter() {
+                if self.equals_binary_parameter(t)? { return Ok(self.curve.node_at(t)); }
+            }
+        }
+        Ok(None)
+    }
     pub fn same_selector(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.curve,&other.curve) && match (&self.clock,&other.clock) {
             (Clock::Binary(a),Clock::Binary(b)) => a==b,

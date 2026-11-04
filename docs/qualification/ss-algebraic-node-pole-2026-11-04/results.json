@@ -1,0 +1,13 @@
+{
+  "tests_passed": 29,
+  "source_sha256": {
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/algebraic_clock.rs": "a3f41c113402fbb7db9c7a0b38804384a0f44cba926bf7c97c5f9e5d7a07f6d8",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "141a589c2f9fb0d34d571ed2b96a7b66e9e7265adf24e36be174569b294a71c0",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/port.rs": "a3583f928da6f72119673df8297cd6e14aba2cabe8159852eb24701512b4fd0b",
+    "crates/nurbs-core/tests/ss_algebraic_clock.rs": "efff37d4b172e94eac1ce0009b392aa5a08d624ee43fbcbcfaf4f9711a57088f",
+    "crates/nurbs-core/tests/ss_root_geometry.rs": "0001817831ade690002dcc05d0b050c6859f6452a9b8772689e5991bb9a9f9e0",
+    "crates/nurbs-core/tests/ss_singular_blowup.rs": "d741400a6a702f51693d53b2b2b12c32567f367fc1d1bc5e1c1a128be0e9ce4b"
+  },
+  "scope": "Exact algebraic-to-rational selected-root equality and common SS original node/pole port binding",
+  "remaining": "Full singular/periodic arrangements, finite material trim, general intersecting Boolean/healing, lineage/history, bridge/WASM and quad/offset/fillet/G2 remain open"
+}

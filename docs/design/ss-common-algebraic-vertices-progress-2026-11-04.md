@@ -33,3 +33,7 @@ provenance, complete cross-source face-local junctions, algebraic node/pole
 aliases, finite trim/winding across singular and periodic arrangements, material
 selection, general intersecting Boolean/healing, full lineage/history and actual
 bridge/WASM execution. The wider quad/offset/fillet/G2 requirements remain open.
+
+Follow-up: exact rational endpoint equality now supports algebraic node/pole
+aliases; see `ss-algebraic-node-pole-progress-2026-11-04.md`. This does not
+complete arbitrary singular or periodic arrangements.

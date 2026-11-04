@@ -110,4 +110,25 @@ fn exact_pole_carrier_retains_a_nonartificial_world_endpoint() {
     contains(&at.world, &[0.; 3]);
     let inside = curve.enclose([0.125; 2], Default::default()).unwrap();
     contains(&inside.world, &[0., 0.125, 0.25]);
+    let target=Arc::new(ss::OriginalSsRootCurve::from_pole(ss::qualify_pole_ss_root_arc(
+        &saturated, [[0.4,0.6],[0.,0.125],[0.4,0.8],[0.2,0.5]], Default::default(),
+    ).unwrap()));
+    let source=Arc::new(curve);
+    let clock=Arc::new(ss::QualifiedSsAlgebraicClock::from_binary(&[0.,0.,1.],[0.,0.],Default::default()).unwrap());
+    let point=Arc::new(ss::OriginalSsRootPoint::from_algebraic(
+        ss::OriginalSsAlgebraicPoint::new(source.clone(),clock).unwrap(),Default::default(),
+    ).unwrap());
+    let port=ss::bind_original_ss_port(point,target.clone(),[0;4],Default::default()).unwrap();
+    assert_eq!(port.kind(),ss::OriginalSsPortKind::CollapsedPole);
+    port.reverify().unwrap();
+    // An arbitrarily close, nonzero exact clock is not a collapsed endpoint.
+    let near=Arc::new(ss::QualifiedSsAlgebraicClock::from_binary(&[-0.000001,1.],[0.000001;2],Default::default()).unwrap());
+    let away=Arc::new(ss::OriginalSsRootPoint::from_algebraic(
+        ss::OriginalSsAlgebraicPoint::new(source,near).unwrap(),Default::default(),
+    ).unwrap());
+    assert!(!away.equals_binary_parameter(0.).unwrap());
+    if let Ok(port)=ss::bind_original_ss_port(away,target,[0;4],Default::default()) {
+        assert_ne!(port.kind(),ss::OriginalSsPortKind::CollapsedPole);
+    }
+
 }
