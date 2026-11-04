@@ -18,6 +18,16 @@ pub fn qualify_root_uv_joint(a: &ss::QualifiedOriginalSsPort, support_a: usize,
         return Err(unproved("UV joint lacks valid supports or a literal shared selector"));
     }
     if a.same_third_surface_uv(b,support_a,support_b)? { return Ok(()); }
+    for (triple, ts, plain, ps) in [(a,support_a,b,support_b),(b,support_b,a,support_a)] {
+        if let Some((witness,roles))=triple.third_surface_binding() {
+            let original=witness.source().original().source();
+            let target=plain.target().source();
+            if ordinary(plain) && roles[ts]==ps && roles[ts]<2
+                && target.first()==original.first() && target.second()==original.second() {
+                return Ok(());
+            }
+        }
+    }
     let x=a.target().source();let y=b.target().source();
     if ordinary(a) && ordinary(b) && support_a==support_b
         && x.first()==y.first() && x.second()==y.second() {

@@ -39,6 +39,10 @@ impl QualifiedOriginalSsPort {
     pub fn kind(&self) -> OriginalSsPortKind {
         self.kind
     }
+    /// Sealed original triple witness and explicit surface roles, if present.
+    pub fn third_surface_binding(&self) -> Option<(&Arc<QualifiedSsThirdSurfacePoint>, [usize;2])> {
+        self.third.as_ref().map(|(w,r,_)| (w,*r))
+    }
     /// Exact normalized target UV enclosure for a sealed triple-surface port.
     /// These coordinates belong to the target graph, not the global point graph.
     pub fn third_target_local_uv_bounds(&self) -> Option<&[[Q; 2]; 4]> {

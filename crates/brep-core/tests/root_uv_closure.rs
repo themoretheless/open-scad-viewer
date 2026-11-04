@@ -68,3 +68,32 @@ fn mixed_pair_uv_joint_uses_the_common_surface_role() {
     assert!(qualify_root_uv_joint(&ac,0,&cb,1).is_err());
     ac.reverify().unwrap();cb.reverify().unwrap();
 }
+#[test]
+fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
+    use brep_core::root_model::RootFaceContour;
+    let wire=fixture::wire();let ab=wire.edges()[2].curve().clone();
+    let third=sheet(13./64.,0.);let source=candidate(&ab,&third);
+    let mut witnesses=Vec::new();
+    for d in [[0.402,0.403],[0.597,0.598]] {
+        let clock=Arc::new(source.qualify_candidate_clock(d.map(|x|Q::from_float(x).unwrap()),Default::default()).unwrap());
+        let point=Arc::new(ss::OriginalSsRootPoint::from_algebraic(ss::OriginalSsAlgebraicPoint::new(ab.clone(),clock).unwrap(),Default::default()).unwrap());
+        witnesses.push(Arc::new(ss::QualifiedSsThirdSurfacePoint::qualify(source.clone(),point,Default::default()).unwrap()));
+    }
+    let s=ss::FiberSources::new(ab.source().first(),&third).unwrap();
+    let ideal=ss::qualify_original_ss_ideal(&s,[1;4],Default::default()).unwrap();
+    let gb=ss::qualify_ss_groebner_basis(&ideal,Default::default()).unwrap();
+    let sys=ss::qualify_ss_deflated_system(&gb,Default::default()).unwrap();
+    let f=ss::qualify_deflated_ss_fiber(&sys,[[0.19,0.22],[0.39,0.61],[0.38,0.62],[0.4,0.6]],ss::FiberAxis::FirstV,Default::default()).unwrap();
+    let ac=Arc::new(ss::OriginalSsRootCurve::from_deflated(f.into_fiber().unwrap()));
+    let plain=|i:usize| ss::bind_original_ss_port(witnesses[i].point().clone(),ab.clone(),[0;4],Default::default()).unwrap();
+    let cross=|i:usize| ss::bind_original_ss_third_port(witnesses[i].clone(),ac.clone(),[0,2],Default::default()).unwrap();
+    let contour=ss::OriginalSsRootWire::new(vec![ss::OriginalSsRootEdge::new(plain(0),plain(1)).unwrap(),ss::OriginalSsRootEdge::new(cross(1),cross(0)).unwrap()]).unwrap();
+    let face=RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:contour.clone(),supports:vec![0,0]},vec![],1e-7).unwrap();
+    assert_eq!(face.topology().edges.len(),2);assert_eq!(face.topology().vertices.len(),2);
+    assert!(!face.topology().shells[0].closed);assert!(face.topology().bodies.is_empty());
+    assert!(Arc::ptr_eq(face.topology().edges[0].curve.curve(),&ab));
+    assert!(Arc::ptr_eq(face.topology().edges[1].curve.curve(),&ac));
+    for i in 0..2 {assert!(face.pcurve_bounds(0,0,i,Default::default()).is_ok());}
+    QualifiedRootUvClosure::qualify(Arc::new(face),2).unwrap().reverify().unwrap();
+    assert!(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:contour,supports:vec![0,1]},vec![],1e-7).is_err());
+}

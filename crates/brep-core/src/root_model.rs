@@ -236,3 +236,6 @@ pub use partition::{RootEdgePartitionRequest,RootBrepPartitionLimits,QualifiedRo
 
 mod uv_closure;
 pub use uv_closure::{QualifiedRootUvClosure,qualify_root_uv_joint};
+
+mod face_contours;
+pub use face_contours::RootFaceContour;

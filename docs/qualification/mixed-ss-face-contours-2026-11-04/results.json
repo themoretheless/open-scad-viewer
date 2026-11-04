@@ -1,0 +1,9 @@
+{
+  "passed": 12,
+  "tests": [
+    "root_uv_closure",
+    "root_model",
+    "root_brep_subdivision"
+  ],
+  "general_trim_complete": false
+}
