@@ -107,25 +107,27 @@ describe('box generator', () => {
   }, 120000)
   it('builds with small wall cell_size=10 and print_optimized=false without exceeding Boolean work budget', async () => {
     const request={quality:'full',purpose:'analysis'} as const
-    const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:10,print_optimized:false,hook_chamfer:true}),request)
-    expect(result.volume).toBeGreaterThan(0)
-    expect(result.meshes.length).toBe(1)
+    for (const hook_chamfer of [false, true]) {
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:10,print_optimized:false,hook_chamfer}),request)
+      expect(result.volume).toBeGreaterThan(0)
+      expect(result.meshes.length).toBe(1)
+    }
   }, 120000)
-  it('builds the default ?generator=box configuration (cell_size=40, print_optimized=false, hook_chamfer=true/false) without exceeding Boolean work budget', async () => {
+  it('builds the default ?generator=box configuration (cell_size=40, print_optimized=false, hook_chamfer=false/true) without exceeding Boolean work budget', async () => {
     const request={quality:'full',purpose:'analysis'} as const
-    for (const hook_chamfer of [true, false]) {
+    for (const hook_chamfer of [false, true]) {
       const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized:false,hook_chamfer}),request)
       expect(result.volume).toBeGreaterThan(0)
       expect(result.meshes.length).toBe(1)
     }
     for (const cell_size of [4, 8, 10, 14, 18]) {
-      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:20,print_optimized:false,hook_chamfer:true}).replace('cell_size = 20;', `cell_size = ${cell_size};`),request)
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:20,print_optimized:false,hook_chamfer:false}).replace('cell_size = 20;', `cell_size = ${cell_size};`),request)
       expect(result.volume).toBeGreaterThan(0)
       expect(result.meshes.length).toBe(1)
     }
     const volumes: number[] = []
     for (const cell_size of [18, 26, 40, 60]) {
-      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size,print_optimized:false,hook_chamfer:true}),request)
+      const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size,print_optimized:false,hook_chamfer:false}),request)
       expect(result.volume).toBeGreaterThan(0)
       expect(result.meshes.length).toBe(1)
       volumes.push(result.volume)

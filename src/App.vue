@@ -911,7 +911,7 @@ onMounted(async () => {
   }
   if (sourceViewportVisible.value) await initializeViewportRenderer()
   if (new URLSearchParams(location.search).get('generator') === 'box') {
-    await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: true }), 'box.scad')
+    await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: false }), 'box.scad')
     if (workspaceConflict.value) await resolveWorkspaceConflict(true)
   }
 })
