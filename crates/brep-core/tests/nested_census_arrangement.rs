@@ -6,7 +6,7 @@ use brep_core::{closed_solid as solid, mixed_root_model as mixed};
 use nurbs_core::{ss_intersection as ss, trim_domain::Location};
 use std::sync::Arc;
 const COUNT: usize = 128;
-fn family(source: &ss::FiberSources, radius: f64) -> Vec<ss::QualifiedFiber> {
+fn family(source: &ss::FiberSources, radius: f64, mirrored: bool) -> Vec<ss::QualifiedFiber> {
     (0..COUNT)
         .map(|i| {
             let angle = i as f64 * std::f64::consts::TAU / COUNT as f64;
@@ -45,6 +45,12 @@ fn family(source: &ss::FiberSources, radius: f64) -> Vec<ss::QualifiedFiber> {
                     bounds[free][0] - 0.005 * radius,
                     bounds[free][1] + 0.005 * radius,
                 ];
+                if mirrored {
+                    domain[2] = [
+                        (1. - domain[2][1]).next_down(),
+                        (1. - domain[2][0]).next_up(),
+                    ];
+                }
                 let r = source.certify_contracted(domain, axis, 100000).unwrap();
                 failures.push((pad, r.reason(), r.root_image()));
                 if let Some(f) = r.into_fiber() {
@@ -97,14 +103,19 @@ fn wire(charts: &[ss::QualifiedFiber], radius: f64) -> ss::OriginalSsRootWire {
 }
 #[test]
 fn nested_original_components_build_three_distinct_retained_pieces() {
-    run(false);
+    run(false, false);
 }
 #[test]
 fn nested_components_assign_original_holes_to_exactly_one_piece() {
-    run(true);
+    run(true, false);
+}
+#[test]
+fn paired_sewing_respects_a_reversed_original_uv_clock() {
+    run(false, true);
 }
 fn operands(
     with_holes: bool,
+    mirrored: bool,
 ) -> (
     solid::QualifiedClosedSolid,
     usize,
@@ -158,7 +169,33 @@ fn operands(
     let mut p = policy::policy();
     p.geometry.boundary.contacts.cells_per_pair = 1024;
     p.geometry.boundary.contacts.domain_cells_per_pair = 10000;
-    let admitted = solid::qualify(graph::body(), p).unwrap();
+    let mut model = graph::body();
+    if mirrored {
+        model.faces[1].surface.control_points.reverse();
+        model.faces[1].surface.weights.reverse();
+        let loops: Vec<_> = std::iter::once(model.faces[1].outer)
+            .chain(model.faces[1].holes.iter().copied())
+            .collect();
+        for l in loops {
+            model.loops[l].coedges.reverse();
+            for c in &mut model.loops[l].coedges {
+                c.reversed = !c.reversed;
+                for p in &mut c.pcurve.control_points {
+                    p[0] = 1. - p[0];
+                }
+                c.pcurve.control_points.reverse();
+                c.pcurve.weights.reverse();
+            }
+        }
+        for use_ in model.shells.iter_mut().flat_map(|s| &mut s.faces) {
+            if use_.face == 1 {
+                use_.reversed = !use_.reversed;
+            }
+        }
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+    }
+    let admitted = solid::qualify(model, p).unwrap();
     assert!(
         admitted.solid().is_some(),
         "Quartic original body must independently qualify"
@@ -166,13 +203,13 @@ fn operands(
     let b = admitted.into_solid().unwrap();
     (a, aface, b)
 }
-fn run(with_holes: bool) {
-    let (a, aface, b) = operands(with_holes);
+fn run(with_holes: bool, mirrored: bool) {
+    let (a, aface, b) = operands(with_holes, mirrored);
     let source =
         ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[1].surface)
             .unwrap();
-    let mut charts = family(&source, 0.3125);
-    charts.extend(family(&source, 0.15625));
+    let mut charts = family(&source, 0.3125, mirrored);
+    charts.extend(family(&source, 0.15625, mirrored));
     let wires = [
         wire(&charts[..COUNT], 0.3125),
         wire(&charts[COUNT..], 0.15625),
@@ -250,6 +287,70 @@ fn run(with_holes: bool) {
     assert_eq!(census.components().len(), 2);
     assert!(census.separation_queries() > 0);
     census.reverify().unwrap();
+    for (signature, genus) in [([true, true], 0), ([true, false], 1)] {
+        let sewn =
+            census.sew_paired_regions([&signature, &signature], 1e-9, [Default::default(); 2]);
+        if with_holes {
+            assert!(
+                sewn.is_err(),
+                "Original rational holes cannot be dropped during root-only sewing"
+            );
+        } else {
+            let sewn = sewn.unwrap();
+            assert!(sewn.boundary_embedded());
+            assert!(!sewn.material_admitted());
+            assert_eq!(sewn.genus(), genus);
+            let t = sewn.model().topology();
+            assert_eq!(t.faces.len(), 2);
+            assert_eq!(t.shells[0].faces[1].reversed, !mirrored);
+            assert_eq!(t.shells.len(), 1);
+            assert!(t.shells[0].closed);
+            assert_eq!(t.edges.len(), COUNT * (genus + 1));
+            assert_eq!(t.vertices.len(), t.edges.len());
+            for (edge, _) in t.edges.iter().enumerate() {
+                let uses: Vec<_> = t.shells[0]
+                    .faces
+                    .iter()
+                    .flat_map(|u| {
+                        let f = &t.faces[u.face];
+                        std::iter::once(f.outer)
+                            .chain(f.holes.iter().copied())
+                            .flat_map(|l| t.loops[l].coedges.iter())
+                            .filter(move |c| c.edge == edge)
+                            .map(move |c| c.reversed ^ u.reversed)
+                    })
+                    .collect();
+                assert_eq!(uses.len(), 2);
+                assert_ne!(uses[0], uses[1]);
+            }
+            if genus == 1 {
+                sewn.reverify().unwrap();
+            }
+        }
+    }
+    assert!(
+        census
+            .sew_paired_regions(
+                [&[false, false], &[false, false]],
+                1e-9,
+                [Default::default(); 2]
+            )
+            .is_err()
+    );
+    assert!(
+        census
+            .sew_paired_regions(
+                [&[true, true], &[true, false]],
+                1e-9,
+                [Default::default(); 2]
+            )
+            .is_err()
+    );
+    assert!(
+        census
+            .sew_paired_regions([&[true, true], &[true, true]], 0., [Default::default(); 2])
+            .is_err()
+    );
     for support in 0..2 {
         let arrangement = Arc::new(
             census
@@ -387,7 +488,7 @@ fn run(with_holes: bool) {
 
 #[test]
 fn nested_hole_operands_prove_material_boxes_without_census_shortcuts() {
-    let (a, aface, b) = operands(true);
+    let (a, aface, b) = operands(true, false);
     let void = solid::qualify_boolean_face_box(
         &a,
         &b,

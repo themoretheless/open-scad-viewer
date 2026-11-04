@@ -39,8 +39,9 @@ sewing, fresh mixed-solid contact/orientation/cavity/healing/volume admission,
 complete topology lineage and bridge/WASM delivery remain in the original goal.
 The candidate does not acquire a closed-solid certificate from these tests.
 
-Next sufficient admission: assemble root-only closed shells from paired retained
-faces with exact shared edges, require complete cross-support contact ownership,
-and independently qualify orientation and volume. Do not label that a complete
-Boolean: general assembly also needs all source-face pairs, open rim endpoint
-selectors/splits, seams, poles and every singular/coincident stratum.
+Follow-up: `ss-paired-root-boundary-progress-2026-11-04.md` now implements
+source-qualified embedded root-only boundary sewing. Independent flux volume,
+global outward orientation and a closed-material owner remain next, as detailed
+in `ss-paired-root-volume-next-2026-11-04.md`. General Boolean assembly still
+needs all source-face pairs, open rim endpoints/splits, seams, poles and every
+singular/coincident stratum.

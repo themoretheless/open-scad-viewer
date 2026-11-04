@@ -189,3 +189,6 @@ pub use regions::{CensusRectangleReport, QualifiedCensusMaterialRectangle};
 
 mod arrangement;
 pub use arrangement::{QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement};
+
+mod sew;
+pub use sew::QualifiedPairedRootBoundary;

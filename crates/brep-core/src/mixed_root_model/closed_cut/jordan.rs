@@ -152,4 +152,4 @@ pub fn qualify_paired_interior_loop(
 }
 
 mod census;
-pub use census::{QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement, CensusRectangleReport, QualifiedCensusMaterialRectangle, InteriorCensusAnchor, InteriorCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census};
+pub use census::{QualifiedPairedRootBoundary, QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement, CensusRectangleReport, QualifiedCensusMaterialRectangle, InteriorCensusAnchor, InteriorCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census};
