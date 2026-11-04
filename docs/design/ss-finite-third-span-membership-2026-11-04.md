@@ -46,3 +46,9 @@ Follow-up: independent sufficient exclusion proofs now distinguish rejected
 third-span candidates from mere lift failure; see
 `ss-certified-third-span-exclusion-2026-11-04.md`. General algebraic lifting
 and complete finite-face classification remain open.
+
+Coverage invariant: each nonfree coordinate map is a NECESSARY original basis
+relation A(t)*uv+B(t)=0, with A separated from zero on the selected clock. Thus
+all real localized triple solutions at that clock share those UV coordinates.
+The supported finite-span lift is unique; multiple UV fibres must not be admitted
+by this proof without extending downstream complete face classification.

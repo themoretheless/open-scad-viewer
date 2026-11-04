@@ -45,3 +45,8 @@ periodic/pole coedges, algebraic UV extensions, cross-source junctions, canonica
 alias/lineage handling, ordered arrangements/winding and actual face splitting.
 Full material trim, intersecting Boolean/healing, history, bridge/WASM and the
 wider quad/offset/fillet/G2 requirements remain open.
+
+Follow-up: per-span records can now be canonically grouped and strictly ordered
+by exact SS parameter, with ports preserving original selector ownership; see
+`ss-ordered-face-events-2026-11-04.md`. Global physical junctions, ordered face
+arrangements and actual splitting remain separate requirements.

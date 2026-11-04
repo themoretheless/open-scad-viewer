@@ -1,0 +1,12 @@
+{
+  "distinct_tests_passed": 67,
+  "checkout": "isolated worktree; unrelated dirty main files excluded",
+  "source_sha256": {
+    "crates/brep-core/src/ss_trimmed_face.rs": "60018a133e88f150519a5123bbe5c388c7176733b890926f5f48e03fb8ab6f31",
+    "crates/brep-core/src/ss_trimmed_face/events.rs": "f0871cd70821d80b72a36c1102285ab8461b6f6e379691564ba21c37f11d9faa",
+    "crates/brep-core/tests/ss_face_events.rs": "4be762ff35bb1c4a08b3f2b7b33dae0aaa2cce48016b26f35d2e1e3da5802557",
+    "crates/nurbs-core/src/intersection/ss_intersection/root_curve/point.rs": "9c20b85bad9f407acf786d4f93b624defc8c7d19bd284248e2c9e10cc48437ce"
+  },
+  "scope": "Exact same-SS-parameter Cox-alias grouping, strict event query-box ordering, complete record lineage and native port/edge queries preserving original selector owners",
+  "remaining": "Cross-source physical junctions/global seams/poles/singularities, general algebraic UV/boundary contacts, ordered face arrangements and actual splitting/material/Boolean/healing/history/bridge/WASM/quad/offset/fillet/G2"
+}

@@ -117,3 +117,6 @@ impl QualifiedSsTrimmedFaceCensus {
         need(self.identity==fresh.identity && self.records==fresh.records && self.work==fresh.work,"Original trimmed-face snapshot, coverage or proof changed")
     }
 }
+
+mod events;
+pub use events::{SsFaceEventLimits,SsFaceEvent,SsFaceEventWork,QualifiedOrderedSsFaceEvents};

@@ -22,6 +22,14 @@ impl OriginalSsRootPoint {
         point.clock().enclose(policy.bisections, policy.clock)?;
         Ok(Self { curve: point.curve().clone(), clock: Clock::Algebraic { point, policy } })
     }
+    /// Change query allowances while preserving literal graph/clock owners.
+    /// The selected point definition and `same_selector` identity are unchanged.
+    pub fn with_query_policy(&self, policy:SsAlgebraicPointLimits)->Result<Self> {
+        match &self.clock {
+            Clock::Binary(_)=>Ok(self.clone()),
+            Clock::Algebraic {point,..}=>Self::from_algebraic(point.clone(),policy),
+        }
+    }
     pub fn curve(&self) -> &Arc<OriginalSsRootCurve> { &self.curve }
     pub fn binary_parameter(&self) -> Option<f64> {
         match self.clock { Clock::Binary(t) => Some(t), _ => None }
