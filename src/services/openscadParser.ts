@@ -500,7 +500,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const step=finiteNumber(arg(node,'step',2,5,ctx),ctx,node.p,'bend mesh step')
       if(radius<=0||step<=0) evaluationError(ctx,node.p,'Bend radius and mesh step must be positive')
       const reverse=arg(node,'reverse',3,false,ctx)===true
-      const shapes=booleanShapes(await childShapes(),'union',ctx,node.p)
+      const shapes=await childShapes()
       if(!ctx.kernel.bend3) evaluationError(ctx,node.p,'Bend is unavailable for this geometry backend')
       return shapes.map(shape=>{
         if(shape.dimension!==3) evaluationError(ctx,node.p,'viewer_bend requires a 3D solid')

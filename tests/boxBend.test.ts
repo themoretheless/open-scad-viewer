@@ -27,13 +27,15 @@ it.each([false,true])('bends the whole plain shell with reverse=%s and the expec
 it('bends organic walls, floor and hooks together while retaining front tilt and corner rounds',async()=>{
  for(const print_optimized of [true,false]) {
   for(const corner_radius of [0,12]) {
-   const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized,bend_radius:corner_radius===0?240:140,corner_radius,front_angle:corner_radius===0?0:15,floor_rib:corner_radius===0?2:2.4}),request)
-   expect(result.volume).toBeGreaterThan(0)
-   expect(result.meshes.length).toBeGreaterThanOrEqual(1)
-   for(const mesh of result.meshes) {
-    const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
-    expect(diagnostics.boundary).toBe(0)
-    expect(diagnostics.nonManifold).toBe(0)
+   for(const cell_size of (corner_radius===0&&!print_optimized?[1,12]:[12])) {
+    const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized,cell_size,bend_radius:corner_radius===0?240:140,corner_radius,front_angle:corner_radius===0?0:15,floor_rib:corner_radius===0?2:2.4}),request)
+    expect(result.volume).toBeGreaterThan(0)
+    expect(result.meshes.length).toBeGreaterThanOrEqual(1)
+    for(const mesh of result.meshes) {
+     const {diagnostics}=extractSemanticEdges(mesh.vertices,mesh.indices)
+     expect(diagnostics.boundary).toBe(0)
+     expect(diagnostics.nonManifold).toBe(0)
+    }
    }
   }
  }

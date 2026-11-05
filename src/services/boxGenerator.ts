@@ -156,12 +156,12 @@ module inset_hex(pts,d,s=1) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  frame = (radius>0 || bend_radius>0) ? max(wall,rib*1.3) : wall;
+  frame = radius>0 ? max(wall,rib*1.3) : wall;
   eff_r = cell_size/mesh_density;
-  r_min = (radius>0 || bend_radius>0) ? rib*8 : rib*3.6;
+  r_min = radius>0 ? rib*8 : rib*3.6;
   r_knee = max(r_min+1.5, rib*4.4);
   r_cap = max(r_knee,(max(width,depth)-2*frame)/4.2);
-  r = (radius>0 || bend_radius>0) ? min(r_cap, max(r_min, (14+cell_size)/mesh_density)) : min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
+  r = radius>0 ? min(r_cap, max(r_min, (14+cell_size)/mesh_density)) : min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
   cell_fn = max(24, min(42, floor(r*2.8)));
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
@@ -183,7 +183,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
-      cell_r = radius>0 || bend_radius>0 || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_rib/2));
+      cell_r = radius>0 || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_rib/2));
       if(!hook_zone) {
         if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_fn) inset_hex([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
@@ -261,12 +261,12 @@ module footprint() {
   else square([width,depth]);
 }
 module floor_pores() {
-  frame=print_optimized || radius>0 || bend_radius>0 ? max(wall,floor_rib*1.25) : wall;
+  frame=print_optimized || radius>0 ? max(wall,floor_rib*1.25) : wall;
   eff_floor_r=floor_cell_size/mesh_density;
-  r_floor_min=(radius>0 || bend_radius>0 || print_optimized) ? floor_rib*7.5 : floor_rib*3.6;
+  r_floor_min=(radius>0 || print_optimized) ? floor_rib*7.5 : floor_rib*3.6;
   r_floor_knee=max(r_floor_min+1.5, floor_rib*4.4);
   r_floor_cap=max(r_floor_knee,(max(width,depth)-2*frame)/2.4);
-  r=(radius>0 || bend_radius>0 || print_optimized) ? min(r_floor_cap, max(r_floor_min, (8+floor_cell_size*0.58)/mesh_density)) : min(r_floor_cap, eff_floor_r>=r_floor_knee ? eff_floor_r : r_floor_min + (r_floor_knee - r_floor_min)*max(0,eff_floor_r - 0.8)/max(1,r_floor_knee - 0.8));
+  r=(radius>0 || print_optimized) ? min(r_floor_cap, max(r_floor_min, (8+floor_cell_size*0.58)/mesh_density)) : min(r_floor_cap, eff_floor_r>=r_floor_knee ? eff_floor_r : r_floor_min + (r_floor_knee - r_floor_min)*max(0,eff_floor_r - 0.8)/max(1,r_floor_knee - 0.8));
   floor_fn=max(24, min(42, floor(r*2.8)));
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
   ox=width/2; oy=depth/2;
@@ -279,7 +279,7 @@ module floor_pores() {
         ix=3*col; iy=2*row+(abs(col)%2);
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
-        floor_cell_r = radius>0 || bend_radius>0 || print_optimized || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_floor_rib/2));
+        floor_cell_r = radius>0 || print_optimized || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_floor_rib/2));
         if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_fn) inset_hex([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
@@ -415,7 +415,7 @@ module assembled_box() { union() {
   }
 } }
 module straight_box() {
-  if(bend_radius>0 || radius>0 || print_optimized || !porous || !organic) assembled_box();
+  if(radius>0 || print_optimized || !porous || !organic) assembled_box();
   else color([0.26,0.52,0.96]) {
     linear_extrude(floor) difference() {
       footprint();
