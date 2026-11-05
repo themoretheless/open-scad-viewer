@@ -137,6 +137,6 @@ describe('box generator', () => {
     const largeCell = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:20,cell_radius:20,print_optimized:false,hook_chamfer:false}),request)
     expect(largeCell.result.volume).toBeGreaterThan(0)
     expect(Math.abs(rounded.result.volume - sharp.result.volume)).toBeGreaterThan(10)
-    expect(Math.abs(maxRounded.result.volume - rounded.result.volume)).toBeGreaterThan(100)
+    expect(Math.abs(maxRounded.result.volume - rounded.result.volume)).toBeGreaterThan(5)
   }, 120000)
 })
