@@ -179,7 +179,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       cx=ox+ix*rx*seam_dir; cy=oy+iy*ry;
       first_hook=(width-hook_step*(hook_count-1))/2-radius;
       nearest=max(0,min(hook_count-1,floor((cx-first_hook)/hook_step+0.5)));
-      hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - ry*1.7) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+rx*0.95;
+      hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - ry*0.9) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+rx*0.45;
       local_rib=rib*max(0.45,1+stress_gradient*(0.12-0.24*min(1,max(0,(cy-z_offset)/max(1,b-z_offset)))));
       hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;

@@ -39,6 +39,27 @@ describe('mesh selection overlays', () => {
     expect(overlay.boundaryLines.length).toBe(4 * 2 * 3)
   })
 
+  it('removes internal diagonals across split vertices that share 3D positions', () => {
+    const splitVertices = new Float32Array([
+      0, 0, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 1,
+      0, 1, 0, 0, 0, 1,
+      1, 0, 0, 0, 0, 1, // duplicate position of v1
+      1, 1, 0, 0, 0, 1,
+      0, 1, 0, 0, 0, 1, // duplicate position of v2
+    ])
+    const splitIndices = new Uint32Array([0, 1, 2, 3, 4, 5])
+    const overlay = buildFaceOverlayGeometry(
+      splitVertices,
+      splitIndices,
+      new Uint32Array([7, 7]),
+      identity(),
+      0,
+      7,
+    )
+    expect(overlay.boundaryLines.length).toBe(4 * 2 * 3)
+  })
+
   it('falls back to the picked triangle when a face exceeds the safety limit', () => {
     const overlay = buildFaceOverlayGeometry(vertices, indices, new Uint32Array([1, 1]), identity(), 1, 1, 1)
     expect(Array.from(overlay.triangles)).toEqual([1, 0, 0, 1, 1, 0, 0, 1, 0])

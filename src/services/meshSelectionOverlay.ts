@@ -87,13 +87,30 @@ function writeWorldVertex(
   return true
 }
 
-function recordEdge(edges: Map<number | string, EdgeUse>, from: number, to: number): void {
-  const low = from < to ? from : to
-  const high = from < to ? to : from
+function recordEdge(
+  edges: Map<number | string, EdgeUse>,
+  vertices: Float32Array,
+  from: number,
+  to: number,
+  canonicalByPos: Map<string, number>,
+): void {
+  const canonical = (v: number): number => {
+    const o = v * 6
+    const key = `${vertices[o]},${vertices[o + 1]},${vertices[o + 2]}`
+    const existing = canonicalByPos.get(key)
+    if (existing !== undefined) return existing
+    canonicalByPos.set(key, v)
+    return v
+  }
+  const cFrom = canonical(from)
+  const cTo = canonical(to)
+  if (cFrom === cTo) return
+  const low = cFrom < cTo ? cFrom : cTo
+  const high = cFrom < cTo ? cTo : cFrom
   const key = high < 67108864 ? low * 67108864 + high : `${low}:${high}`
   const existing = edges.get(key)
   if (existing) existing.count++
-  else edges.set(key, { from, to, count: 1 })
+  else edges.set(key, { from: cFrom, to: cTo, count: 1 })
 }
 
 /**
@@ -182,6 +199,7 @@ export function buildFaceOverlayGeometry(
   const trianglePositions = new Float32Array(faceTriangles.length * 9)
   let writtenPositions = 0
   const edges = new Map<number | string, EdgeUse>()
+  const canonicalByPos = new Map<string, number>()
   for (let idx = 0; idx < faceTriangles.length; idx++) {
     const triangle = faceTriangles[idx]
     const triOffset = triangle * 3
@@ -200,9 +218,9 @@ export function buildFaceOverlayGeometry(
       trianglePositions[writtenPositions++] = SCRATCH_TRI_PTS[k]
     }
 
-    recordEdge(edges, i0, i1)
-    recordEdge(edges, i1, i2)
-    recordEdge(edges, i2, i0)
+    recordEdge(edges, vertices, i0, i1, canonicalByPos)
+    recordEdge(edges, vertices, i1, i2, canonicalByPos)
+    recordEdge(edges, vertices, i2, i0, canonicalByPos)
   }
 
   let boundaryCapacity = 0
@@ -282,6 +300,7 @@ export function buildSourceOverlayGeometry(
   const allocationTriangles = Math.min(triangleLimit, matchingTriangles)
   const trianglePositions = new Float32Array(allocationTriangles * 9)
   const edges = new Map<number | string, EdgeUse>()
+  const canonicalByPos = new Map<string, number>()
   let writtenTriangles = 0
 
   outer: for (const run of provenance) {
@@ -310,9 +329,9 @@ export function buildSourceOverlayGeometry(
       }
       writtenTriangles++
 
-      recordEdge(edges, i0, i1)
-      recordEdge(edges, i1, i2)
-      recordEdge(edges, i2, i0)
+      recordEdge(edges, vertices, i0, i1, canonicalByPos)
+      recordEdge(edges, vertices, i1, i2, canonicalByPos)
+      recordEdge(edges, vertices, i2, i0, canonicalByPos)
     }
   }
 
