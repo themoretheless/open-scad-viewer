@@ -156,12 +156,12 @@ module inset_hex(pts,d,s=1) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  frame = wall;
+  frame = (radius>0 || bend_radius>0) ? max(wall,rib*1.3) : wall;
   eff_r = cell_size/mesh_density;
-  r_min = (radius>0 || bend_radius>0) ? rib*5.5 : rib*3.6;
+  r_min = (radius>0 || bend_radius>0) ? rib*8 : rib*3.6;
   r_knee = max(r_min+1.5, rib*4.4);
   r_cap = max(r_knee,(max(width,depth)-2*frame)/4.2);
-  r = min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
+  r = (radius>0 || bend_radius>0) ? min(r_cap, max(r_min, (14+cell_size)/mesh_density)) : min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
   cell_fn = max(24, min(42, floor(r*2.8)));
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
@@ -263,10 +263,10 @@ module footprint() {
 module floor_pores() {
   frame=print_optimized || radius>0 || bend_radius>0 ? max(wall,floor_rib*1.25) : wall;
   eff_floor_r=floor_cell_size/mesh_density;
-  r_floor_min=(radius>0 || bend_radius>0 || print_optimized) ? floor_rib*5.2 : floor_rib*3.6;
+  r_floor_min=(radius>0 || bend_radius>0 || print_optimized) ? floor_rib*7.5 : floor_rib*3.6;
   r_floor_knee=max(r_floor_min+1.5, floor_rib*4.4);
   r_floor_cap=max(r_floor_knee,(max(width,depth)-2*frame)/2.4);
-  r=min(r_floor_cap, eff_floor_r>=r_floor_knee ? eff_floor_r : r_floor_min + (r_floor_knee - r_floor_min)*max(0,eff_floor_r - 0.8)/max(1,r_floor_knee - 0.8));
+  r=(radius>0 || bend_radius>0 || print_optimized) ? min(r_floor_cap, max(r_floor_min, (8+floor_cell_size*0.58)/mesh_density)) : min(r_floor_cap, eff_floor_r>=r_floor_knee ? eff_floor_r : r_floor_min + (r_floor_knee - r_floor_min)*max(0,eff_floor_r - 0.8)/max(1,r_floor_knee - 0.8));
   floor_fn=max(24, min(42, floor(r*2.8)));
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
   ox=width/2; oy=depth/2;
