@@ -156,7 +156,7 @@ module inset_hex(pts,d,s=1) {
 module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
-  frame = max(wall,rib*1.3);
+  frame = wall;
   eff_r = cell_size/mesh_density;
   r_min = (radius>0 || bend_radius>0) ? rib*5.5 : rib*3.6;
   r_knee = max(r_min+1.5, rib*4.4);
@@ -261,7 +261,7 @@ module footprint() {
   else square([width,depth]);
 }
 module floor_pores() {
-  frame=max(wall,floor_rib*1.25);
+  frame=print_optimized || radius>0 || bend_radius>0 ? max(wall,floor_rib*1.25) : wall;
   eff_floor_r=floor_cell_size/mesh_density;
   r_floor_min=(radius>0 || bend_radius>0 || print_optimized) ? floor_rib*5.2 : floor_rib*3.6;
   r_floor_knee=max(r_floor_min+1.5, floor_rib*4.4);
@@ -377,7 +377,7 @@ module assembled_box() { union() {
       na=max(0,floor((width-4*wall-hole_diameter)/hole_pitch)+1);
       nb=max(0,floor((depth-4*wall-hole_diameter)/hole_pitch)+1);
       if(na>0 && nb>0) intersection() {
-        offset(delta=-max(wall,rib*1.5)) footprint();
+        offset(delta=-wall) footprint();
         union() for(i=[0:na-1]) for(j=[0:nb-1])
           translate([(width-(na-1)*hole_pitch)/2+i*hole_pitch,(depth-(nb-1)*hole_pitch)/2+j*hole_pitch]) circle(d=hole_diameter);
       }
@@ -424,7 +424,7 @@ module straight_box() {
         na=max(0,floor((width-4*wall-hole_diameter)/hole_pitch)+1);
         nb=max(0,floor((depth-4*wall-hole_diameter)/hole_pitch)+1);
         if(na>0 && nb>0) intersection() {
-          offset(delta=-max(wall,rib*1.5)) footprint();
+          offset(delta=-wall) footprint();
           union() for(i=[0:na-1]) for(j=[0:nb-1])
             translate([(width-(na-1)*hole_pitch)/2+i*hole_pitch,(depth-(nb-1)*hole_pitch)/2+j*hole_pitch]) circle(d=hole_diameter);
         }
