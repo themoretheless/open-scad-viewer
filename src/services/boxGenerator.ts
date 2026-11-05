@@ -163,7 +163,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
       cell_r = radius>0 || bend_radius>0 || r<rib*5.2 || cell_radius<=0 ? 0 : min(cell_radius,r*0.58-local_rib/2);
       if(!hook_zone) {
-        if(cell_r>0) offset(r=cell_r,$fn=cell_r>r*0.25?10:6) offset(delta=-local_rib/2-cell_r)
+        if(cell_r>0) offset(r=cell_r,$fn=cell_r>r*0.35?24:(cell_r>r*0.2?16:8)) offset(delta=-local_rib/2-cell_r)
           polygon([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
@@ -241,7 +241,7 @@ module floor_pores() {
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
         floor_cell_r = radius>0 || bend_radius>0 || r<floor_rib*5.2 || cell_radius<=0 ? 0 : min(cell_radius,r*0.58-local_floor_rib/2);
-        if(floor_cell_r>0) offset(r=floor_cell_r,$fn=6) offset(delta=-local_floor_rib/2-floor_cell_r)
+        if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.35?24:(floor_cell_r>r*0.2?16:8)) offset(delta=-local_floor_rib/2-floor_cell_r)
           polygon([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
