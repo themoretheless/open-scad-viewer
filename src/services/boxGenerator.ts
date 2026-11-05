@@ -157,7 +157,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
   frame = max(wall,rib*1.3);
-  r_min = rib*4.6;
+  r_min = rib*3.8;
   r_cap = max(r_min,(max(width,depth)-2*frame)/4.8);
   r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 0.8)/16);
   rx = r*sqrt(3)/2;
@@ -180,9 +180,9 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
-      cell_r = radius>0 || bend_radius>0 || r<rib*5.2 || cell_radius<=0 ? 0 : min(cell_radius, r*0.76-local_rib/2);
+      cell_r = radius>0 || bend_radius>0 || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_rib/2));
       if(!hook_zone) {
-        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_r>r*0.28?48:36) inset_hex([
+        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_r>r*0.28?36:28) inset_hex([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
             [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
@@ -259,7 +259,7 @@ module footprint() {
 }
 module floor_pores() {
   frame=max(wall,floor_rib*1.25);
-  r_floor_min=floor_rib*4.8;
+  r_floor_min=floor_rib*4.2;
   r_floor_cap=max(r_floor_min,(max(width,depth)-2*frame)/4.2);
   r=min(r_floor_cap,r_floor_min+(r_floor_cap-r_floor_min)*max(0,floor_cell_size/mesh_density-1)/39);
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
@@ -273,8 +273,8 @@ module floor_pores() {
         ix=3*col; iy=2*row+(abs(col)%2);
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
-        floor_cell_r = radius>0 || bend_radius>0 || r<floor_rib*5.2 || cell_radius<=0 ? 0 : min(cell_radius, r*0.76-local_floor_rib/2);
-        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.28?48:36) inset_hex([
+        floor_cell_r = radius>0 || bend_radius>0 || print_optimized || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_floor_rib/2));
+        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.28?36:28) inset_hex([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
             [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
@@ -409,8 +409,8 @@ module assembled_box() { union() {
   }
 } }
 module straight_box() {
-  if(bend_radius>0 || radius>0 || print_optimized || !porous || !organic || cell_radius<=0) assembled_box();
-  else {
+  if(bend_radius>0 || radius>0 || print_optimized || !porous || !organic) assembled_box();
+  else color([0.26,0.52,0.96]) {
     linear_extrude(floor) difference() {
       footprint();
       if(floor_mesh) floor_pores();
@@ -424,10 +424,6 @@ module straight_box() {
         }
       }
     }
-    translate([0,0,floor]) linear_extrude(wall_height) union() {
-      square([wall,wall]);
-      translate([width-wall,0]) square([wall,wall]);
-    }
     translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
       rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
     translate([0,wall,floor]) rotate([90,0,90])
@@ -438,8 +434,8 @@ module straight_box() {
       translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
         panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
     union() {
-      translate([wall,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
-        panel(width-2*wall,wall_height,wall,porous && organic,0,organic,true,0,-width/2+wall,1,-depth/2,1);
+      translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
+        panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
       if(hooks) {
         hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
         hook_fn = 8;

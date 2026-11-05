@@ -131,6 +131,12 @@ describe('box generator', () => {
     for (let i = 1; i < volumes.length; i++) {
       expect(Math.abs(volumes[i] - volumes[i - 1])).toBeGreaterThan(15)
     }
+    const smallSharp = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:2,cell_radius:0,print_optimized:false,hook_chamfer:false}),request)
+    const smallRounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:2,cell_radius:5,print_optimized:false,hook_chamfer:false}),request)
+    expect(Math.abs(smallRounded.result.volume - smallSharp.result.volume)).toBeGreaterThan(50)
+    for (const mesh of smallRounded.result.meshes) {
+      expect(mesh.color).toEqual([0.26, 0.52, 0.96, 1])
+    }
     const sharp = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:0,print_optimized:false,hook_chamfer:false}),request)
     const rounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:2,print_optimized:false,hook_chamfer:false}),request)
     const midRounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:8,print_optimized:false,hook_chamfer:false}),request)
