@@ -7,7 +7,7 @@ export const BOX_DEFAULTS = {
   porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 12, cell_radius: 2, rib: 2.4,
   stress_gradient: 1, mesh_density: 1, pattern_seed: 1,
   hole_diameter: 6, hole_pitch: 16,
-  floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
+  floor_mesh: true, floor_cell_size: 12, floor_rib: 2.4,
   drain: false, hook_count: 2,
   hook_width: 10, hook_thickness: 3, hook_gap: 6, hook_drop: 16, hook_spacing: 0, hook_chamfer: false,
 }
@@ -25,7 +25,7 @@ const schema = z.object({
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
   pattern_seed: z.number().int().min(0).max(100000).default(1),
   hole_diameter: dimension, hole_pitch: dimension,
-  floor_mesh: z.boolean().default(false), floor_cell_size: dimension.min(1).default(20), floor_rib: dimension.default(2.4),
+  floor_mesh: z.boolean().default(false), floor_cell_size: dimension.min(1).default(12), floor_rib: dimension.default(2.4),
   dividers: z.number().int().min(0).max(8), drain: z.boolean(),
   hooks: z.boolean(), hook_count: z.number().int().min(1).max(6),
   hook_width: dimension, hook_thickness: dimension.default(3), hook_gap: dimension, hook_drop: dimension,
@@ -262,9 +262,12 @@ module footprint() {
 }
 module floor_pores() {
   frame=max(wall,floor_rib*1.25);
-  r_floor_min=floor_rib*4.8;
-  r_floor_cap=max(r_floor_min,(max(width,depth)-2*frame)/4.2);
-  r=min(r_floor_cap,r_floor_min+(r_floor_cap-r_floor_min)*max(0,floor_cell_size/mesh_density-1)/39);
+  eff_floor_r=floor_cell_size/mesh_density;
+  r_floor_min=(radius>0 || bend_radius>0 || print_optimized) ? floor_rib*5.2 : floor_rib*3.6;
+  r_floor_knee=max(r_floor_min+1.5, floor_rib*4.4);
+  r_floor_cap=max(r_floor_knee,(max(width,depth)-2*frame)/2.4);
+  r=min(r_floor_cap, eff_floor_r>=r_floor_knee ? eff_floor_r : r_floor_min + (r_floor_knee - r_floor_min)*max(0,eff_floor_r - 0.8)/max(1,r_floor_knee - 0.8));
+  floor_fn=max(24, min(42, floor(r*2.8)));
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
   ox=width/2; oy=depth/2;
   nc=ceil((width-2*frame)/(3*r))+1;
@@ -277,7 +280,7 @@ module floor_pores() {
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
         floor_cell_r = radius>0 || bend_radius>0 || print_optimized || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_floor_rib/2));
-        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.28?36:28) inset_hex([
+        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_fn) inset_hex([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
             [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
@@ -291,7 +294,7 @@ module floor_pores() {
             [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28]
           ],local_floor_rib/2+floor_cell_r,-1);
-        else if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.14?36:28) offset(delta=-local_floor_rib/2-floor_cell_r)
+        else if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_fn) offset(delta=-local_floor_rib/2-floor_cell_r)
           polygon([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
