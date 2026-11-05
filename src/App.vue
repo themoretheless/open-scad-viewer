@@ -911,8 +911,9 @@ onMounted(async () => {
   }
   if (sourceViewportVisible.value) await initializeViewportRenderer()
   if (new URLSearchParams(location.search).get('generator') === 'box') {
+    await resolveWorkspaceConflict(true)
     await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: false }), 'box.scad')
-    if (workspaceConflict.value) await resolveWorkspaceConflict(true)
+    await resolveWorkspaceConflict(true)
   }
 })
 
@@ -991,7 +992,9 @@ async function loadEditorDocument(example: string, nextFileName: string) {
   })
   const editor = editorRef.value
   if (editor) {
-    editor.setRangeText(example, 0, editor.value.length, 'select')
+    editor.setRangeText(example, 0, editor.value.length, 'start')
+    editor.scrollTop = 0
+    editor.scrollLeft = 0
     code.value = editor.value
   } else {
     code.value = example
