@@ -171,9 +171,9 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   c1 = ceil((seam_offset+(seam_dir>0 ? span : 0))/(2*rx))+1;
   r0 = floor(seam_v/(3*ry))-1;
   r1 = ceil((seam_v+b-z_offset)/(3*ry))+1;
-  if(a>2*frame && b-z_offset>frame) intersection() {
-    if(inset_sides && slope==0) translate([0,z_offset]) square([a,b-z_offset-frame]);
-    else intersection() { offset(delta=-frame) outline(a,b+frame,slope); translate([0,z_offset]) square([span,b-z_offset-frame]); }
+  if(a>2*frame && b-z_offset>2*frame) intersection() {
+    if(inset_sides && slope==0) translate([0,z_offset+frame]) square([a,b-z_offset-2*frame]);
+    else offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([span,b-z_offset]); }
     union() for(col=[c0:c1]) for(row=[r0:r1]) {
       ix=2*col+(abs(row)%2); iy=3*row;
       cx=ox+ix*rx*seam_dir; cy=oy+iy*ry;
@@ -418,30 +418,45 @@ module assembled_box() { union() {
 module straight_box() {
   if(radius>0 || print_optimized || !porous || !organic) assembled_box();
   else color([0.26,0.52,0.96]) {
-    linear_extrude(floor) difference() {
-      footprint();
-      if(floor_mesh) floor_pores();
-      else if(drain) {
-        na=max(0,floor((width-4*wall-hole_diameter)/hole_pitch)+1);
-        nb=max(0,floor((depth-4*wall-hole_diameter)/hole_pitch)+1);
-        if(na>0 && nb>0) intersection() {
-          offset(delta=-wall) footprint();
-          union() for(i=[0:na-1]) for(j=[0:nb-1])
-            translate([(width-(na-1)*hole_pitch)/2+i*hole_pitch,(depth-(nb-1)*hole_pitch)/2+j*hole_pitch]) circle(d=hole_diameter);
+    if(floor_mesh || drain) {
+      translate([wall,wall,0]) linear_extrude(floor) difference() {
+        square([width-2*wall,depth-2*wall]);
+        if(floor_mesh) translate([-wall,-wall]) floor_pores();
+        else if(drain) {
+          na=max(0,floor((width-4*wall-hole_diameter)/hole_pitch)+1);
+          nb=max(0,floor((depth-4*wall-hole_diameter)/hole_pitch)+1);
+          if(na>0 && nb>0) translate([-wall,-wall]) intersection() {
+            offset(delta=-wall) footprint();
+            union() for(i=[0:na-1]) for(j=[0:nb-1])
+              translate([(width-(na-1)*hole_pitch)/2+i*hole_pitch,(depth-(nb-1)*hole_pitch)/2+j*hole_pitch]) circle(d=hole_diameter);
+          }
         }
       }
+      translate([0,depth,0]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
+        rotate([90,0,0]) panel(width,height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
+      translate([0,wall,0]) rotate([90,0,90])
+        panel(depth-2*wall,height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2,1,true);
+      translate([width-wall,wall,0]) rotate([90,0,90])
+        panel(depth-2*wall,height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2,1,true);
+      if(dividers>0) for(i=[1:dividers])
+        translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
+          panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
+      translate([0,0,0]) rotate([90,0,0]) translate([0,0,-wall])
+        panel(width,height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+    } else {
+      linear_extrude(floor) footprint();
+      translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
+        rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
+      translate([0,wall,floor]) rotate([90,0,90])
+        panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2,1,true);
+      translate([width-wall,wall,floor]) rotate([90,0,90])
+        panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2,1,true);
+      if(dividers>0) for(i=[1:dividers])
+        translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
+          panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
+      translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
+        panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
     }
-    translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
-      rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
-    translate([0,wall,floor]) rotate([90,0,90])
-      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2,1,true);
-    translate([width-wall,wall,floor]) rotate([90,0,90])
-      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2,1,true);
-    if(dividers>0) for(i=[1:dividers])
-      translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
-        panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
-    translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
-      panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
     if(hooks) {
       hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
       hook_fn = 8;
