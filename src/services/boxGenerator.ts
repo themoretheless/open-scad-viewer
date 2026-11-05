@@ -153,7 +153,7 @@ module inset_hex(pts,d,s=1) {
     }
   }
 }
-module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
+module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false) {
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
   frame = radius>0 ? max(wall,rib*1.3) : wall;
@@ -163,7 +163,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   r_cap = max(r_knee,(max(width,depth)-2*frame)/4.2);
   r = radius>0 ? min(r_cap, max(r_min, (14+cell_size)/mesh_density)) : min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
   cell_fn = max(24, min(42, floor(r*2.8)));
-  rx = r*sqrt(3)/(2*min(1.6,max(0.55,h_scale)));
+  rx = r*sqrt(3)/2;
   ry = r*0.58;
   span = max(a,a+b*slope);
   ox = -seam_offset*seam_dir; oy = z_offset-seam_v;
@@ -172,7 +172,8 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   r0 = floor(seam_v/(3*ry))-1;
   r1 = ceil((seam_v+b-z_offset)/(3*ry))+1;
   if(a>2*frame && b-z_offset>2*frame) intersection() {
-    offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([span,b-z_offset]); }
+    if(inset_sides && slope==0) translate([0,z_offset+frame]) square([a,b-z_offset-2*frame]);
+    else offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([span,b-z_offset]); }
     union() for(col=[c0:c1]) for(row=[r0:r1]) {
       ix=2*col+(abs(row)%2); iy=3*row;
       cx=ox+ix*rx*seam_dir; cy=oy+iy*ry;
@@ -234,8 +235,8 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   }
 }
 }
-module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
-    if(perforated && organic_panel) organic_pores(a,b,z_offset,slope,hook_pads,seam_offset,seam_dir,seam_v,h_scale);
+module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false) {
+    if(perforated && organic_panel) organic_pores(a,b,z_offset,slope,hook_pads,seam_offset,seam_dir,seam_v,h_scale,inset_sides);
     if(perforated && !organic_panel) {
       na = max(0,floor((a-4*wall-hole_diameter)/hole_pitch)+1);
       nb = max(0,floor((b-z_offset-4*wall-hole_diameter)/hole_pitch)+1);
@@ -248,10 +249,10 @@ module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,s
           else circle(d=hole_diameter);
     }
 }
-module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1) {
+module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false) {
   linear_extrude(thickness) difference() {
     outline(a,b,slope);
-    apertures(a,b,perforated,z_offset,organic_panel,hook_pads,slope,seam_offset,seam_dir,seam_v,h_scale);
+    apertures(a,b,perforated,z_offset,organic_panel,hook_pads,slope,seam_offset,seam_dir,seam_v,h_scale,inset_sides);
   }
 }
 // Positive front_angle opens the front outward; the back stays vertical.
@@ -433,41 +434,39 @@ module straight_box() {
     translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
       rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
     translate([0,wall,floor]) rotate([90,0,90])
-      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2+wall,1);
+      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2,1,true);
     translate([width-wall,wall,floor]) rotate([90,0,90])
-      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2+wall,1);
+      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2,1,true);
     if(dividers>0) for(i=[1:dividers])
       translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
         panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
-    union() {
-      translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
-        panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
-      if(hooks) {
-        hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
-        hook_fn = 8;
-        for(i=[0:hook_count-1])
-          translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
-            translate([0,-hook_gap-hook_thickness,height-hook_thickness])
-              cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
-            translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
-              cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
-            translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
-              if(hook_chamfer) {
-                polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
-                polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
-              } else {
-                difference() {
-                  translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-                  translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-                }
-                difference() {
-                  translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-                  translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-                }
+    translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
+      panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+    if(hooks) {
+      hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
+      hook_fn = 8;
+      for(i=[0:hook_count-1])
+        translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
+          translate([0,-hook_gap-hook_thickness,height-hook_thickness])
+            cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
+          translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
+            cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
+          translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
+            if(hook_chamfer) {
+              polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
+              polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
+            } else {
+              difference() {
+                translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+                translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
+              }
+              difference() {
+                translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+                translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
               }
             }
           }
-      }
+        }
     }
   }
 }

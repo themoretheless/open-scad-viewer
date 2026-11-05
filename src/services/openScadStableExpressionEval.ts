@@ -33,10 +33,10 @@ export { createStableExpressionEvaluators } from './openScadStableExpressionEval
 
 export const MAX_EXPRESSION_DEPTH = 256
 export const MAX_EVAL_DEPTH = 128
-export const MAX_EVALUATED_VALUE_UNITS = 500_000
-export const MAX_RANGE_ITEMS = 10_000
-export const MAX_EVAL_OPS = 1_000_000
-export const MAX_VALUE_ELEMENTS = 1_000_000
+export const MAX_EVALUATED_VALUE_UNITS = 2_000_000
+export const MAX_RANGE_ITEMS = 40_000
+export const MAX_EVAL_OPS = 4_000_000
+export const MAX_VALUE_ELEMENTS = 4_000_000
 
 /** Structural subset of an evaluation context the shared evaluator relies on. */
 export interface StableExpressionEvalContext {

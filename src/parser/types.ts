@@ -59,8 +59,8 @@ export type ParseResult = GeometryEvaluationResult
 
 export const MAX_SOURCE_LENGTH = 250_000
 export const MAX_AST_NODES = 25_000
-export const MAX_SHAPES = 1_000
-export const MAX_TRIANGLES = 750_000
+export const MAX_SHAPES = 4_000
+export const MAX_TRIANGLES = 3_000_000
 /** Cap on linear_extrude slices — passed straight into the geometry kernel,
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 export const MAX_EXTRUDE_SLICES = 512
