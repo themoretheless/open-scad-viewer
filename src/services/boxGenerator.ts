@@ -163,7 +163,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   r_cap = max(r_knee,(max(width,depth)-2*frame)/4.2);
   r = radius>0 ? min(r_cap, max(r_min, (14+cell_size)/mesh_density)) : min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
   cell_fn = max(24, min(42, floor(r*2.8)));
-  rx = r*sqrt(3)/2;
+  rx = r*sqrt(3)/2*h_scale;
   ry = r*0.58;
   span = max(a,a+b*slope);
   ox = -seam_offset*seam_dir; oy = z_offset-seam_v;
@@ -181,7 +181,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       nearest=max(0,min(hook_count-1,floor((cx-first_hook)/hook_step+0.5)));
       hook_zone = reserve_hooks && hooks && (cy > b - hook_drop - hook_thickness - ry*0.9) && abs(cx-first_hook-nearest*hook_step)<=hook_width/2+rib+rx*0.45;
       local_rib=rib*max(0.45,1+stress_gradient*(0.12-0.24*min(1,max(0,(cy-z_offset)/max(1,b-z_offset)))));
-      hx0=ix*127.1; hx1=(ix+seam_dir)*127.1; hxm1=(ix-seam_dir)*127.1;
+      hx0=ix*127.1; hx1=(ix+1)*127.1; hxm1=(ix-1)*127.1;
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
       cell_r = radius>0 || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_rib/2));
@@ -189,54 +189,63 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
         if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_fn) inset_hex([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin((seam_dir>0?hxm1:hx1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hym1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin((seam_dir>0?hxm1:hx1)+hym1+83)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
             [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
               oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hym1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin((seam_dir>0?hx1:hxm1)+hym1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-0.5)*ry*0.48]
+            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
           ],local_rib/2+cell_r,seam_dir);
         else if(cell_r>0) offset(r=cell_r,$fn=cell_fn) offset(delta=-local_rib/2-cell_r)
           polygon([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin((seam_dir>0?hxm1:hx1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hym1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin((seam_dir>0?hxm1:hx1)+hym1+83)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
             [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
               oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hym1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin((seam_dir>0?hx1:hxm1)+hym1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-0.5)*ry*0.48]
+            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
           ]);
         else offset(delta=-local_rib/2)
           polygon([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin((seam_dir>0?hxm1:hx1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hym1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin((seam_dir>0?hxm1:hx1)+hym1+83)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
             [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
               oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hym1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin((seam_dir>0?hx1:hxm1)+hym1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-0.5)*ry*0.48]
+            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
+              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
           ]);
       }
     }
   }
 }
 }
-module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false) {
-    if(perforated && organic_panel) organic_pores(a,b,z_offset,slope,hook_pads,seam_offset,seam_dir,seam_v,h_scale,inset_sides);
+module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false,fold_span=0) {
+    if(perforated && organic_panel && fold_span>0) {
+      intersection() {
+        translate([-1,-1]) square([fold_span/2+1,b+2]);
+        organic_pores(a,b,z_offset,slope,hook_pads,seam_offset,seam_dir,seam_v,h_scale,inset_sides);
+      }
+      intersection() {
+        translate([fold_span/2,-1]) square([a-fold_span/2+2,b+2]);
+        organic_pores(a,b,z_offset,slope,hook_pads,seam_offset+fold_span*seam_dir,-seam_dir,seam_v,h_scale,inset_sides);
+      }
+    } else if(perforated && organic_panel) organic_pores(a,b,z_offset,slope,hook_pads,seam_offset,seam_dir,seam_v,h_scale,inset_sides);
     if(perforated && !organic_panel) {
       na = max(0,floor((a-4*wall-hole_diameter)/hole_pitch)+1);
       nb = max(0,floor((b-z_offset-4*wall-hole_diameter)/hole_pitch)+1);
@@ -249,10 +258,10 @@ module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,s
           else circle(d=hole_diameter);
     }
 }
-module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false) {
+module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false,fold_span=0) {
   linear_extrude(thickness) difference() {
     outline(a,b,slope);
-    apertures(a,b,perforated,z_offset,organic_panel,hook_pads,slope,seam_offset,seam_dir,seam_v,h_scale,inset_sides);
+    apertures(a,b,perforated,z_offset,organic_panel,hook_pads,slope,seam_offset,seam_dir,seam_v,h_scale,inset_sides,fold_span);
   }
 }
 // Positive front_angle opens the front outward; the back stays vertical.
@@ -352,11 +361,11 @@ module rounded_wall_shell() {
     translate([radius,-1,floor]) rotate([90,0,0]) translate([0,0,-wall-2]) linear_extrude(wall+2)
       apertures(width-2*radius,wall_height,porous && organic,0,organic,true,0,-width/2+radius,1,-depth/2,1);
     translate([radius,depth+1,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
-      rotate([90,0,0]) linear_extrude(wall+2) apertures(width-2*radius,wall_height,porous,0,organic,false,0,-width/2-depth+radius,1,-depth/2,front_stretch);
+      rotate([90,0,0]) linear_extrude(wall+2) apertures(width-2*radius,wall_height,porous,0,organic,false,0,-width/2+radius,1,-depth/2,1);
     translate([-1,radius,floor]) rotate([90,0,90]) linear_extrude(wall+2)
-      apertures(depth-2*radius,wall_height,porous,0,organic,false,slope,-width/2-radius,-1,-depth/2,1);
+      apertures(depth-2*radius,wall_height,porous,0,organic,false,slope,-width/2+radius,-1,-depth/2,1,false,depth-2*radius);
     translate([width-wall-1,radius,floor]) rotate([90,0,90]) linear_extrude(wall+2)
-      apertures(depth-2*radius,wall_height,porous,0,organic,false,slope,width/2+radius,1,-depth/2,1);
+      apertures(depth-2*radius,wall_height,porous,0,organic,false,slope,width/2-radius,1,-depth/2,1,false,depth-2*radius);
   }
 }
 module walls() {
@@ -365,9 +374,9 @@ module walls() {
     translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
       panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
     translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
-      rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
-    translate([0,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,-width/2,-1,-depth/2,1);
-    translate([width-wall,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,width/2,1,-depth/2,1);
+      rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2,1,-depth/2,1);
+    translate([0,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,-width/2+2*wall,-1,-depth/2,1,false,depth);
+    translate([width-wall,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,width/2-2*wall,1,-depth/2,1,false,depth);
   }
 }
 module assembled_box() { union() {
@@ -433,11 +442,11 @@ module straight_box() {
         }
       }
       translate([0,depth,0]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
-        rotate([90,0,0]) panel(width,height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
+        rotate([90,0,0]) panel(width,height,wall,porous,0,organic,false,0,-width/2,1,-depth/2,1);
       translate([0,wall,0]) rotate([90,0,90])
-        panel(depth-2*wall,height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2,1,true);
+        panel(depth-2*wall,height,wall,porous,0,organic,false,slope,-width/2+wall,-1,-depth/2,1,true,depth-2*wall);
       translate([width-wall,wall,0]) rotate([90,0,90])
-        panel(depth-2*wall,height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2,1,true);
+        panel(depth-2*wall,height,wall,porous,0,organic,false,slope,width/2-wall,1,-depth/2,1,true,depth-2*wall);
       if(dividers>0) for(i=[1:dividers])
         translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
           panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
@@ -446,11 +455,11 @@ module straight_box() {
     } else {
       linear_extrude(floor) footprint();
       translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
-        rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
+        rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2,1,-depth/2,1);
       translate([0,wall,floor]) rotate([90,0,90])
-        panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2,1,true);
+        panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2+wall,-1,-depth/2,1,true,depth-2*wall);
       translate([width-wall,wall,floor]) rotate([90,0,90])
-        panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2,1,true);
+        panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2-wall,1,-depth/2,1,true,depth-2*wall);
       if(dividers>0) for(i=[1:dividers])
         translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
           panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);

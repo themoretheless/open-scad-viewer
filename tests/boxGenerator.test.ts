@@ -147,4 +147,33 @@ describe('box generator', () => {
     expect(Math.abs(midRounded.result.volume - rounded.result.volume)).toBeGreaterThan(20)
     expect(Math.abs(maxRounded.result.volume - midRounded.result.volume)).toBeGreaterThan(50)
   }, 120000)
+  it('aligns organic pattern across all 4 vertical corner seams', async () => {
+    const scad = generateBox({ ...BOX_DEFAULTS, depth: 40, bend_radius: 0, cell_size: 2, cell_radius: 2, print_optimized: false, hook_chamfer: false })
+    const built = await engine.buildSource(scad, { quality: 'preview', purpose: 'preview' })
+    const [mFloor, mFront, mLeft, mRight, mRear] = built.result.meshes
+    const zRangesAt = (m: typeof mFront, pred: (x: number, y: number) => boolean) => {
+      const zs: number[] = []
+      for (let i = 0; i < m.vertices.length; i += 6) {
+        const z = m.vertices[i + 2]
+        if (z > 0.1 && z < 79.9 && pred(m.vertices[i], m.vertices[i + 1])) zs.push(Number(z.toFixed(2)))
+      }
+      return Array.from(new Set(zs)).sort((a, b) => a - b)
+    }
+    // Rear-left corner (x=3, y=3):
+    const rearLeftZ = zRangesAt(mRear, (x, y) => Math.abs(x - 3) < 0.05 && Math.abs(y - 3) < 0.05)
+    const leftRearZ = zRangesAt(mLeft, (x, y) => Math.abs(x - 3) < 0.05 && Math.abs(y - 3) < 0.05)
+    // Rear-right corner (x=117, y=3):
+    const rearRightZ = zRangesAt(mRear, (x, y) => Math.abs(x - 117) < 0.05 && Math.abs(y - 3) < 0.05)
+    const rightRearZ = zRangesAt(mRight, (x, y) => Math.abs(x - 117) < 0.05 && Math.abs(y - 3) < 0.05)
+    // Front-left corner (x=3, y=37):
+    const frontLeftZ = zRangesAt(mFront, (x, y) => Math.abs(x - 3) < 0.05 && Math.abs(y - 37) < 0.05)
+    const leftFrontZ = zRangesAt(mLeft, (x, y) => Math.abs(x - 3) < 0.05 && Math.abs(y - 37) < 0.05)
+    // Front-right corner (x=117, y=37):
+    const frontRightZ = zRangesAt(mFront, (x, y) => Math.abs(x - 117) < 0.05 && Math.abs(y - 37) < 0.05)
+    const rightFrontZ = zRangesAt(mRight, (x, y) => Math.abs(x - 117) < 0.05 && Math.abs(y - 37) < 0.05)
+    expect(frontLeftZ).toEqual(leftFrontZ)
+    expect(frontRightZ).toEqual(rightFrontZ)
+    expect(rearLeftZ).toEqual(leftRearZ)
+    expect(rearRightZ).toEqual(rightRearZ)
+  }, 120000)
 })
