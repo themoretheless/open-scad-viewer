@@ -4,7 +4,7 @@ export const BOX_DEFAULTS = {
   width: 120, depth: 75, height: 80, wall: 3, floor: 4,
   corner_radius: 0, front_angle: 0, dividers: 0, hooks: true,
   bend_radius: 0, bend_reverse: false, bend_segments: 24,
-  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 5, cell_radius: 2, rib: 2.4,
+  porous: true, organic: true, print_optimized: true, overhang_angle: 45, cell_size: 12, cell_radius: 2, rib: 2.4,
   stress_gradient: 1, mesh_density: 1, pattern_seed: 1,
   hole_diameter: 6, hole_pitch: 16,
   floor_mesh: true, floor_cell_size: 20, floor_rib: 2.4,
@@ -19,7 +19,7 @@ const schema = z.object({
   front_angle: z.number().finite().min(-60).max(60).default(0),
   bend_radius: z.number().finite().min(0).max(100000).default(0),
   bend_reverse: z.boolean().default(false), bend_segments: z.number().int().min(4).max(128).default(24),
-  organic: z.boolean().default(true), cell_size: dimension.min(1).default(5), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
+  organic: z.boolean().default(true), cell_size: dimension.min(1).default(12), cell_radius: z.number().finite().min(0).max(50).default(2), rib: dimension.default(2.4),
   stress_gradient: z.number().finite().min(0).max(2).default(1),
   mesh_density: z.number().finite().min(0.5).max(2).default(1),
   print_optimized: z.boolean().default(true), overhang_angle: z.number().finite().min(10).max(80).default(45),
@@ -111,7 +111,7 @@ module printable_pores(a,b,z_offset=0,slope=0,reserve_hooks=false) {
   // Side-wall roof motion is radial; front/rear roof motion is circumferential.
   local_ratio=abs(slope)>0 ? (tan(overhang_angle)-abs(slope))*0.9 : roof_ratio;
   if(usable_h>rib*2 && usable_w>rib*2 && local_ratio>0) {
-    eff_cell = min(40,max(30,(30+(cell_size-1)*2)/mesh_density));
+    eff_cell = min(40,max(30,(26+cell_size)/mesh_density));
     rows=max(1,ceil(usable_h/(eff_cell*0.65)));
     ch=usable_h/(0.542*rows+0.28);
     cw=min(ch*0.56,max(rib*2.8,min(eff_cell*0.8,(width-2*frame)/3)))*local_ratio;
@@ -157,9 +157,12 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   if(print_optimized) printable_pores(a,b,z_offset,slope,reserve_hooks);
   else {
   frame = max(wall,rib*1.3);
-  r_min = rib*3.8;
-  r_cap = max(r_min,(max(width,depth)-2*frame)/4.8);
-  r = min(r_cap, r_min + (r_cap - r_min)*max(0,cell_size/mesh_density - 0.8)/16);
+  eff_r = cell_size/mesh_density;
+  r_min = (radius>0 || bend_radius>0) ? rib*5.5 : rib*3.6;
+  r_knee = max(r_min+1.5, rib*4.4);
+  r_cap = max(r_knee,(max(width,depth)-2*frame)/4.2);
+  r = min(r_cap, eff_r>=r_knee ? eff_r : r_min + (r_knee - r_min)*max(0,eff_r - 0.8)/max(1,r_knee - 0.8));
+  cell_fn = max(24, min(42, floor(r*2.8)));
   rx = r*sqrt(3)/2;
   ry = r*0.58*min(1.45,max(0.7,h_scale));
   span = max(a,a+b*slope);
@@ -182,7 +185,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
       cell_r = radius>0 || bend_radius>0 || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_rib/2));
       if(!hook_zone) {
-        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_r>r*0.28?36:28) inset_hex([
+        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_fn) inset_hex([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
             [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
@@ -196,7 +199,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
             [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+1)*ry+((sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-0.5)*ry*0.48]
           ],local_rib/2+cell_r,seam_dir);
-        else if(cell_r>0) offset(r=cell_r,$fn=cell_r>r*0.14?36:28) offset(delta=-local_rib/2-cell_r)
+        else if(cell_r>0) offset(r=cell_r,$fn=cell_fn) offset(delta=-local_rib/2-cell_r)
           polygon([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
@@ -259,7 +262,7 @@ module footprint() {
 }
 module floor_pores() {
   frame=max(wall,floor_rib*1.25);
-  r_floor_min=floor_rib*4.2;
+  r_floor_min=floor_rib*4.8;
   r_floor_cap=max(r_floor_min,(max(width,depth)-2*frame)/4.2);
   r=min(r_floor_cap,r_floor_min+(r_floor_cap-r_floor_min)*max(0,floor_cell_size/mesh_density-1)/39);
   ry=r*(bend_radius>0 && !print_optimized ? min(1.35,max(0.75,1+(bend_reverse ? -0.5 : 0.5)*depth/bend_radius)) : 1);
