@@ -171,9 +171,9 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
   c1 = ceil((seam_offset+(seam_dir>0 ? span : 0))/(2*rx))+1;
   r0 = floor(seam_v/(3*ry))-1;
   r1 = ceil((seam_v+b-z_offset)/(3*ry))+1;
-  if(a>2*frame && b-z_offset>2*frame) intersection() {
-    if(inset_sides && slope==0) translate([0,z_offset+frame]) square([a,b-z_offset-2*frame]);
-    else offset(delta=-frame) intersection() { outline(a,b,slope); translate([0,z_offset]) square([span,b-z_offset]); }
+  if(a>2*frame && b-z_offset>frame) intersection() {
+    if(inset_sides && slope==0) translate([0,z_offset]) square([a,b-z_offset-frame]);
+    else intersection() { offset(delta=-frame) outline(a,b+frame,slope); translate([0,z_offset]) square([span,b-z_offset-frame]); }
     union() for(col=[c0:c1]) for(row=[r0:r1]) {
       ix=2*col+(abs(row)%2); iy=3*row;
       cx=ox+ix*rx*seam_dir; cy=oy+iy*ry;
