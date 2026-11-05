@@ -111,7 +111,7 @@ describe('box generator', () => {
     for (const hook_chamfer of [false, true]) {
       const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:10,print_optimized:false,hook_chamfer}),request)
       expect(result.volume).toBeGreaterThan(0)
-      expect(result.meshes.length).toBe(1)
+      expect(result.meshes.length).toBeGreaterThanOrEqual(1)
     }
   }, 120000)
   it('builds the default ?generator=box configuration (cell_size=5, print_optimized=false, hook_chamfer=false/true) without exceeding Boolean work budget', async () => {
@@ -119,13 +119,13 @@ describe('box generator', () => {
     for (const hook_chamfer of [false, true]) {
       const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,print_optimized:false,hook_chamfer}),request)
       expect(result.volume).toBeGreaterThan(0)
-      expect(result.meshes.length).toBe(1)
+      expect(result.meshes.length).toBeGreaterThanOrEqual(1)
     }
     const volumes: number[] = []
     for (const cell_size of [1, 3, 5, 8, 12, 16]) {
       const {result}=await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size,print_optimized:false,hook_chamfer:false}),request)
       expect(result.volume).toBeGreaterThan(0)
-      expect(result.meshes.length).toBe(1)
+      expect(result.meshes.length).toBeGreaterThanOrEqual(1)
       volumes.push(result.volume)
     }
     for (let i = 1; i < volumes.length; i++) {

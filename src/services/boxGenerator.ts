@@ -182,7 +182,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
       cell_r = radius>0 || bend_radius>0 || r<rib*5.2 || cell_radius<=0 ? 0 : min(cell_radius, r*0.76-local_rib/2);
       if(!hook_zone) {
-        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_r>r*0.28?64:48) inset_hex([
+        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_r>r*0.28?48:36) inset_hex([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
             [ox+(ix-1)*rx*seam_dir+((sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hxm1:hx1)+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
@@ -196,7 +196,7 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
             [ox+(ix+1)*rx*seam_dir+((sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+1)*ry+((sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-floor(sin((seam_dir>0?hx1:hxm1)+hy1+83)*43758.5453)-0.5)*ry*0.48]
           ],local_rib/2+cell_r,seam_dir);
-        else if(cell_r>0) offset(r=cell_r,$fn=cell_r>r*0.14?36:24) offset(delta=-local_rib/2-cell_r)
+        else if(cell_r>0) offset(r=cell_r,$fn=cell_r>r*0.14?36:28) offset(delta=-local_rib/2-cell_r)
           polygon([
             [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*r*0.28*seam_dir,
               oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
@@ -274,7 +274,7 @@ module floor_pores() {
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
         floor_cell_r = radius>0 || bend_radius>0 || r<floor_rib*5.2 || cell_radius<=0 ? 0 : min(cell_radius, r*0.76-local_floor_rib/2);
-        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.28?64:48) inset_hex([
+        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.28?48:36) inset_hex([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
             [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
@@ -287,8 +287,8 @@ module floor_pores() {
               oy+(iy+1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
             [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28]
-          ],local_floor_rib/2+floor_cell_r);
-        else if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.14?36:24) offset(delta=-local_floor_rib/2-floor_cell_r)
+          ],local_floor_rib/2+floor_cell_r,-1);
+        else if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_cell_r>r*0.14?36:28) offset(delta=-local_floor_rib/2-floor_cell_r)
           polygon([
             [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
               oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
@@ -408,7 +408,67 @@ module assembled_box() { union() {
       }
   }
 } }
-module straight_box() { assembled_box(); }
+module straight_box() {
+  if(bend_radius>0 || radius>0 || print_optimized || !porous || !organic || cell_radius<=0) assembled_box();
+  else {
+    linear_extrude(floor) difference() {
+      footprint();
+      if(floor_mesh) floor_pores();
+      else if(drain) {
+        na=max(0,floor((width-4*wall-hole_diameter)/hole_pitch)+1);
+        nb=max(0,floor((depth-4*wall-hole_diameter)/hole_pitch)+1);
+        if(na>0 && nb>0) intersection() {
+          offset(delta=-max(wall,rib*1.5)) footprint();
+          union() for(i=[0:na-1]) for(j=[0:nb-1])
+            translate([(width-(na-1)*hole_pitch)/2+i*hole_pitch,(depth-(nb-1)*hole_pitch)/2+j*hole_pitch]) circle(d=hole_diameter);
+        }
+      }
+    }
+    translate([0,0,floor]) linear_extrude(wall_height) union() {
+      square([wall,wall]);
+      translate([width-wall,0]) square([wall,wall]);
+    }
+    translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
+      rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2-depth,1,-depth/2,front_stretch);
+    translate([0,wall,floor]) rotate([90,0,90])
+      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,-width/2-wall,-1,-depth/2+wall,1);
+    translate([width-wall,wall,floor]) rotate([90,0,90])
+      panel(depth-2*wall,wall_height,wall,porous,0,organic,false,slope,width/2+wall,1,-depth/2+wall,1);
+    if(dividers>0) for(i=[1:dividers])
+      translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
+        panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
+    union() {
+      translate([wall,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
+        panel(width-2*wall,wall_height,wall,porous && organic,0,organic,true,0,-width/2+wall,1,-depth/2,1);
+      if(hooks) {
+        hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
+        hook_fn = 8;
+        for(i=[0:hook_count-1])
+          translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
+            translate([0,-hook_gap-hook_thickness,height-hook_thickness])
+              cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
+            translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
+              cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
+            translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
+              if(hook_chamfer) {
+                polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
+                polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
+              } else {
+                difference() {
+                  translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+                  translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
+                }
+                difference() {
+                  translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+                  translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
+                }
+              }
+            }
+          }
+      }
+    }
+  }
+}
 // viewer_bend is a native viewer extension; change these settings to regenerate the curved mesh.
 bend_step = width/min(bend_segments, porous || floor_mesh ? 14 : bend_segments);
 if(bend_radius>0) viewer_bend(radius=bend_radius,center=width/2,step=bend_step,reverse=bend_reverse) straight_box();

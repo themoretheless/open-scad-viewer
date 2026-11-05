@@ -586,9 +586,22 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         })
       }
       const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
+      const hasRoundOption = node.args.r !== undefined || node.args._0 !== undefined || node.args.delta === undefined
+      const hasExplicitRoundSegments = hasRoundOption && (
+        node.args.$fn !== undefined || node.args.$fa !== undefined || node.args.$fs !== undefined
+      )
+      const circularSegments = hasExplicitRoundSegments
+        ? segments(node, ctx, 48, 3, Math.abs(distance))
+        : undefined
       return (await childShapes()).map(shape => {
         if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
-        return { ...shape, geometry: ctx.kernel.offset(shape.geometry, distance), entityId: currentEntityId(ctx) }
+        return {
+          ...shape,
+          geometry: circularSegments === undefined
+            ? ctx.kernel.offset(shape.geometry, distance)
+            : ctx.kernel.offset(shape.geometry, distance, 'Round', 2, circularSegments),
+          entityId: currentEntityId(ctx),
+        }
       })
     }
     case 'group': {
