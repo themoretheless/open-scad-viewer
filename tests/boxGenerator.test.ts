@@ -133,6 +133,8 @@ describe('box generator', () => {
     }
     const sharp = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:0,print_optimized:false,hook_chamfer:false}),request)
     const rounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:2,print_optimized:false,hook_chamfer:false}),request)
+    const maxRounded = await engine.buildSource(generateBox({...BOX_DEFAULTS,cell_size:5,cell_radius:50,print_optimized:false,hook_chamfer:false}),request)
     expect(Math.abs(rounded.result.volume - sharp.result.volume)).toBeGreaterThan(10)
+    expect(Math.abs(maxRounded.result.volume - rounded.result.volume)).toBeGreaterThan(100)
   }, 120000)
 })
