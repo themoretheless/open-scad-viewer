@@ -36,7 +36,8 @@ const nativeKernels=['cad-predicates','osv-math','mesh-topology','mesh-query','m
 const adapters=new Set(['geometry-bridge','geometry-wasm','languages-bridge','languages-wasm','photogrammetry-ffi','photogrammetry-wasm'])
 const native=[]
 for(const name of nativeKernels){
- const lines=cargo(['tree','-p',name,'--no-default-features','--edges','normal','--prefix','none','--format','{p}']).trim().split('\n')
+ const featureArgs=packages.has(name)?['--no-default-features']:[]
+ const lines=cargo(['tree','-p',name,...featureArgs,'--edges','normal','--prefix','none','--format','{p}']).trim().split('\n')
  const dependencies=[...new Set(lines.map(line=>line.split(' ')[0]))].sort()
  native.push({package:name,dependencies})
  for(const dependency of dependencies){
