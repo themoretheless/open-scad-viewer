@@ -176,4 +176,28 @@ describe('box generator', () => {
     expect(rearLeftZ).toEqual(leftRearZ)
     expect(rearRightZ).toEqual(rightRearZ)
   }, 120000)
+  it('supports separate printable hook mounts (1 = T-lock slot, 2 = dovetail slide) laid flat on z=0', async () => {
+    for (const hook_mount of [1, 2] as const) {
+      for (const print_optimized of [false, true]) {
+        const scad = generateBox({ ...BOX_DEFAULTS, hook_mount, hook_tolerance: 0.2, print_optimized, cell_size: 12 })
+        const { result } = await engine.buildSource(scad, { quality: 'preview', purpose: 'preview' })
+        expect(result.volume).toBeGreaterThan(0)
+        // Detached hooks should sit in front of y=0 (at negative y) and touch z=0
+        let minY = Infinity
+        let minZAtNegY = Infinity
+        for (const m of result.meshes) {
+          for (let i = 0; i < m.vertices.length; i += 6) {
+            const y = m.vertices[i + 1]
+            const z = m.vertices[i + 2]
+            if (y < -10) {
+              minY = Math.min(minY, y)
+              minZAtNegY = Math.min(minZAtNegY, z)
+            }
+          }
+        }
+        expect(minY).toBeLessThan(-15)
+        expect(minZAtNegY).toBeCloseTo(0, 2)
+      }
+    }
+  }, 120000)
 })

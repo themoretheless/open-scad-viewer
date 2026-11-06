@@ -10,6 +10,7 @@ export const BOX_DEFAULTS = {
   floor_mesh: true, floor_cell_size: 12, floor_rib: 2.4,
   drain: false, hook_count: 2,
   hook_width: 10, hook_thickness: 3, hook_gap: 6, hook_drop: 16, hook_spacing: 0, hook_chamfer: false,
+  hook_mount: 0, hook_tolerance: 0.2,
 }
 const dimension = z.number().finite().min(0.8).max(500)
 const schema = z.object({
@@ -30,6 +31,8 @@ const schema = z.object({
   hooks: z.boolean(), hook_count: z.number().int().min(1).max(6),
   hook_width: dimension, hook_thickness: dimension.default(3), hook_gap: dimension, hook_drop: dimension,
   hook_spacing: z.number().finite().min(0).max(500).default(0), hook_chamfer: z.boolean().default(false),
+  hook_mount: z.number().int().min(0).max(2).default(0),
+  hook_tolerance: z.number().finite().min(0.05).max(0.8).default(0.2),
 }).strict()
 
 /** Dimensions are external; organic walls retain a solid border and hook pads. */
@@ -57,9 +60,10 @@ export function generateBox(input: unknown = BOX_DEFAULTS): string {
   if (topDepth <= 4*t) throw Error('Наклон закрывает коробку: увеличьте глубину или уменьшите угол / Tilt leaves insufficient opening depth')
   if (2*p.corner_radius >= Math.min(w,d,topDepth)) throw Error('Радиус не помещается в габариты коробки / Corner radius does not fit the box dimensions')
   if(p.bend_radius>0) {
-    const minRadius = Math.ceil(Math.max(w/(2*Math.PI)+1, (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+p.hook_thickness:0))+1))
-    if(w/p.bend_radius>=2*Math.PI) throw Error(`Дуга замыкается: для ширины ${w} мм укажите радиус изгиба минимум ${minRadius} мм (или 0 для прямой коробки) / Increase bend radius to at least ${minRadius} mm`)
-    if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):(p.hooks?p.hook_gap+p.hook_thickness:0))) throw Error(`Изгиб пересекает ось: укажите радиус изгиба минимум ${minRadius} мм (или 0 для прямой коробки) / Bend reaches its axis; increase radius to at least ${minRadius} mm`)
+    const attachedOut = p.hooks && p.hook_mount === 0 ? p.hook_gap+p.hook_thickness : 0
+    const minRadius = Math.ceil(Math.max(w/(2*Math.PI)+1, (p.bend_reverse?Math.max(d,topDepth):attachedOut)+1))
+    if(w/p.bend_radius>=2*Math.PI) throw Error(`Дуга замыкается: для ширины ${w} мм укажите радиус изгиба минимум ${minRadius} мм (или 0 для прямой коробки) / Increase bend radius to at least ${minRadius} мм`)
+    if(p.bend_radius <= (p.bend_reverse?Math.max(d,topDepth):attachedOut)) throw Error(`Изгиб пересекает ось: укажите радиус изгиба минимум ${minRadius} мм (или 0 для прямой коробки) / Bend reaches its axis; increase radius to at least ${minRadius} mm`)
   }
   if(p.print_optimized && p.porous && Math.abs(p.front_angle)>=p.overhang_angle) throw Error('Наклон передней стенки превышает угол свеса для печати / Front tilt exceeds the selected print overhang angle')
   return `// Organizer box. External dimensions in mm; organic skeletal walls.
@@ -257,6 +261,78 @@ module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,s
           if(print_optimized) hull() { circle(d=hole_diameter); polygon([[0,tear_apex],[-hole_diameter*0.35,0],[hole_diameter*0.35,0]]); }
           else circle(d=hole_diameter);
     }
+    if(hook_pads && hooks && hook_mount==1) {
+      slot_w = hook_width + 2*hook_tolerance;
+      slot_h = max(hook_thickness*1.3, 3.6);
+      slot_y = max(z_offset+wall+1, b - max(wall*2.2, hook_thickness*2) - slot_h);
+      first_hook = (width-hook_step*(hook_count-1))/2-radius;
+      for(i=[0:hook_count-1])
+        translate([first_hook+i*hook_step-slot_w/2, slot_y]) square([slot_w, slot_h]);
+    }
+}
+module hook_dovetail_sockets() {
+  if(hooks && hook_mount==2) {
+    slot_h = max(10, min(wall_height-wall*1.5, hook_drop+hook_thickness));
+    slot_z = height - wall - slot_h;
+    neck_w = max(2.4, min(hook_width-1.2, hook_width*0.52)) + 2*hook_tolerance;
+    dove_d = max(1.2, wall*0.6);
+    base_w = neck_w + 2*dove_d;
+    for(i=[0:hook_count-1])
+      translate([(width-hook_step*(hook_count-1))/2+i*hook_step, 0, slot_z])
+        linear_extrude(slot_h)
+          polygon([[-neck_w/2,-0.1],[neck_w/2,-0.1],[base_w/2,dove_d],[-base_w/2,dove_d]]);
+  }
+}
+module detached_hooks() {
+  if(hooks && hook_mount>0) {
+    hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
+    hook_fn = 8;
+    slot_h1 = max(hook_thickness*1.3, 3.6);
+    stem_drop = max(wall*2.2, hook_thickness*2);
+    t_h = max(hook_thickness*1.2, 3.2);
+    slot_h2 = max(10, min(wall_height-wall*1.5, hook_drop+hook_thickness));
+    neck_w = max(2.4, min(hook_width-1.2, hook_width*0.52));
+    dove_d = max(1.2, wall*0.6);
+    base_w = neck_w + 2*dove_d;
+    hook_pitch_x = max(hook_gap+2*hook_thickness+wall+10, base_w+10);
+    base_y = -(hook_gap+hook_thickness+14);
+    for(i=[0:hook_count-1])
+      translate([(width-(hook_count-1)*hook_pitch_x)/2+i*hook_pitch_x, base_y, 0]) {
+        if(hook_mount==1) {
+          linear_extrude(max(1, hook_width - 2*hook_tolerance)) union() {
+            translate([-hook_gap-hook_thickness, -hook_drop]) square([hook_thickness, hook_drop+hook_thickness]);
+            translate([-hook_gap-hook_thickness, 0]) square([hook_gap+2*hook_thickness+wall+hook_tolerance, hook_thickness]);
+            translate([0, -stem_drop-slot_h1]) square([wall+hook_tolerance+hook_thickness, hook_thickness]);
+            translate([wall+hook_tolerance, -stem_drop-slot_h1-t_h]) square([hook_thickness, stem_drop+slot_h1+t_h]);
+            translate([wall+hook_tolerance+hook_thickness, -stem_drop-slot_h1-t_h]) square([hook_thickness*1.1, t_h+slot_h1*0.45]);
+          }
+        } else if(hook_mount==2) {
+          union() {
+            linear_extrude(hook_width) union() {
+              translate([-hook_gap-hook_thickness, -hook_drop]) square([hook_thickness, hook_drop+hook_thickness]);
+              translate([-hook_gap-hook_thickness, 0]) square([hook_gap+hook_thickness, hook_thickness]);
+              translate([-hook_thickness, -slot_h2+hook_thickness]) square([hook_thickness, slot_h2]);
+              if(hook_chamfer) {
+                polygon([[-hook_thickness,0],[-hook_gap,0],[-hook_thickness,-min(hook_drop*0.95,max(0.1,hook_gap-hook_thickness))]]);
+                polygon([[-hook_gap-hook_thickness,-hook_drop],[-hook_gap,-hook_drop],[-hook_gap,-hook_drop+hook_thickness]]);
+              } else if(hook_gap>hook_thickness+hook_r*2) {
+                difference() {
+                  translate([-hook_thickness-hook_r,-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+                  translate([-hook_thickness-hook_r,-hook_r]) circle(r=hook_r,$fn=hook_fn);
+                }
+                difference() {
+                  translate([-hook_gap-0.02,-hook_r]) square([hook_r+0.02,hook_r+0.02]);
+                  translate([-hook_gap+hook_r,-hook_r]) circle(r=hook_r,$fn=hook_fn);
+                }
+              }
+            }
+            translate([-0.1, -slot_h2+hook_thickness+hook_tolerance/2, hook_width/2]) rotate([-90,0,-90])
+              linear_extrude(max(2, slot_h2 - hook_tolerance))
+                polygon([[-neck_w/2,0],[neck_w/2,0],[base_w/2,max(0.4,dove_d-hook_tolerance)+0.1],[-base_w/2,max(0.4,dove_d-hook_tolerance)+0.1]]);
+          }
+        }
+      }
+  }
 }
 module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false,fold_span=0) {
   linear_extrude(thickness) difference() {
@@ -369,14 +445,17 @@ module rounded_wall_shell() {
   }
 }
 module walls() {
-  if(radius>0) rounded_wall_shell();
-  else {
-    translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
-      panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
-    translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
-      rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2,1,-depth/2,1);
-    translate([0,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,-width/2+2*wall,-1,-depth/2,1,false,depth);
-    translate([width-wall,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,width/2-2*wall,1,-depth/2,1,false,depth);
+  difference() {
+    if(radius>0) rounded_wall_shell();
+    else union() {
+      translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
+        panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+      translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
+        rotate([90,0,0]) panel(width,wall_height,wall,porous,0,organic,false,0,-width/2,1,-depth/2,1);
+      translate([0,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,-width/2+2*wall,-1,-depth/2,1,false,depth);
+      translate([width-wall,0,floor]) rotate([90,0,90]) panel(depth,wall_height,wall,porous,0,organic,false,slope,width/2-2*wall,1,-depth/2,1,false,depth);
+    }
+    hook_dovetail_sockets();
   }
 }
 module assembled_box() { union() {
@@ -397,7 +476,7 @@ module assembled_box() { union() {
   if(dividers>0) for(i=[1:dividers])
     translate([divider_margin+i*divider_step-wall/2,wall-0.25,floor-0.1]) rotate([90,0,90])
       panel(depth-2*wall+0.5-0.5*slope,wall_height+0.1,wall,porous && radius==0,0,organic,false,slope);
-  if(hooks) {
+  if(hooks && hook_mount==0) {
     hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
     hook_fn = 8;
     for(i=[0:hook_count-1])
@@ -450,8 +529,11 @@ module straight_box() {
       if(dividers>0) for(i=[1:dividers])
         translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
           panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
-      translate([0,0,0]) rotate([90,0,0]) translate([0,0,-wall])
-        panel(width,height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+      difference() {
+        translate([0,0,0]) rotate([90,0,0]) translate([0,0,-wall])
+          panel(width,height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+        hook_dovetail_sockets();
+      }
     } else {
       linear_extrude(floor) footprint();
       translate([0,depth,floor]) multmatrix([[1,0,0,0],[0,1,slope,0],[0,0,1,0],[0,0,0,1]])
@@ -463,10 +545,13 @@ module straight_box() {
       if(dividers>0) for(i=[1:dividers])
         translate([divider_margin+i*divider_step-wall/2,wall,floor]) rotate([90,0,90])
           panel(depth-2*wall-0.5*slope,wall_height,wall,porous,0,organic,false,slope);
-      translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
-        panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+      difference() {
+        translate([0,0,floor]) rotate([90,0,0]) translate([0,0,-wall])
+          panel(width,wall_height,wall,porous && organic,0,organic,true,0,-width/2,1,-depth/2,1);
+        hook_dovetail_sockets();
+      }
     }
-    if(hooks) {
+    if(hooks && hook_mount==0) {
       hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
       hook_fn = 8;
       for(i=[0:hook_count-1])
@@ -498,5 +583,9 @@ module straight_box() {
 bend_step = width/min(bend_segments, porous || floor_mesh ? 14 : bend_segments);
 if(bend_radius>0) viewer_bend(radius=bend_radius,center=width/2,step=bend_step,reverse=bend_reverse) straight_box();
 else straight_box();
+if(hooks && hook_mount>0) {
+  if(radius>0 || print_optimized || !porous || !organic) detached_hooks();
+  else color([0.26,0.52,0.96]) detached_hooks();
+}
 `
 }
