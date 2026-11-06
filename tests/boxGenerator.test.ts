@@ -182,9 +182,10 @@ describe('box generator', () => {
         const scad = generateBox({ ...BOX_DEFAULTS, hook_mount, hook_tolerance: 0.2, print_optimized, cell_size: 12 })
         const { result } = await engine.buildSource(scad, { quality: 'preview', purpose: 'preview' })
         expect(result.volume).toBeGreaterThan(0)
-        // Detached hooks should sit in front of y=0 (at negative y) and touch z=0
+        // Detached hooks should sit in front of y=0 (at negative y), touch z=0, and stay compact in X and Z
         let minY = Infinity
         let minZAtNegY = Infinity
+        let maxZAtNegY = -Infinity
         for (const m of result.meshes) {
           for (let i = 0; i < m.vertices.length; i += 6) {
             const y = m.vertices[i + 1]
@@ -192,11 +193,13 @@ describe('box generator', () => {
             if (y < -10) {
               minY = Math.min(minY, y)
               minZAtNegY = Math.min(minZAtNegY, z)
+              maxZAtNegY = Math.max(maxZAtNegY, z)
             }
           }
         }
         expect(minY).toBeLessThan(-15)
         expect(minZAtNegY).toBeCloseTo(0, 2)
+        expect(maxZAtNegY).toBeLessThanOrEqual(BOX_DEFAULTS.hook_width + 0.1)
       }
     }
   }, 120000)
