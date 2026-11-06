@@ -215,9 +215,13 @@ pub(crate) fn import(v: Value) -> Result<Value> {
     let object = v
         .as_object()
         .ok_or_else(|| input("AP242 LOD-0 import expects an object containing only text"))?;
-    if object.len() != 1 || !object.contains_key("text") {
+    if !object.contains_key("text")
+        || object
+            .keys()
+            .any(|key| !matches!(key.as_str(), "op" | "text"))
+    {
         return Err(input(
-            "AP242 LOD-0 import expects an object containing only text",
+            "AP242 LOD-0 import expects op and text only",
         ));
     }
     let text: String = field(&v, "text")?;

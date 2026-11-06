@@ -77,11 +77,12 @@ pub(crate) fn import(v: Value) -> Result<Value> {
         input("STEP scene import expects an object containing text and optional segments")
     })?;
     if !object.contains_key("text")
-        || object.len() > 2
-        || (object.len() == 2 && !object.contains_key("segments"))
+        || object
+            .keys()
+            .any(|key| !matches!(key.as_str(), "op" | "text" | "segments"))
     {
         return Err(input(
-            "STEP scene import expects an object containing text and optional segments",
+            "STEP scene import expects op, text and optional segments only",
         ));
     }
     let text: String = field(&v, "text")?;
