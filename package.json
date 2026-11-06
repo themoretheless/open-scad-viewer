@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:gcode": "npm run build:geometry && cargo test --locked --manifest-path crates/Cargo.toml -p gcode-core -p slicer-core && cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --test gcode && vitest run tests/meshToolpathHostApi.test.ts tests/gcodePreviewWorker.test.ts tests/gcodePanel.test.ts",
     "test:conformance": "vitest run tests/languageConformance.test.ts",
-    "test:official": "npm run verify:openscad-runtime && vitest run tests/officialOpenScadRuntimeConformance.test.ts tests/mcpOfficialRuntimeStdio.test.ts",
+    "test:official": "node --import tsx scripts/prepare-dev-runtime.mts && npm run verify:openscad-runtime && vitest run tests/officialOpenScadRuntimeConformance.test.ts tests/mcpOfficialRuntimeStdio.test.ts",
     "test:scale": "vitest run tests/scaleTargets.test.ts",
     "bench:cpu": "node scripts/bench-cpu.mjs",
     "bench:workers": "node --import tsx benchmarks/worker-lifecycle.mts",

@@ -15,12 +15,22 @@ on:
       - 'scripts/validate-step-ap242.mjs'
       - 'tests/fixtures/step-v9/**'
       - 'tools/stepcode-ap242-ed4-manifest.json'
+      - '.github/workflows/step-interchange-v9.yml'
 
 jobs:
   qualify:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    # Keep the hosted builder within its disk budget without reducing coverage.
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
     steps:
+      - name: Free hosted runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
