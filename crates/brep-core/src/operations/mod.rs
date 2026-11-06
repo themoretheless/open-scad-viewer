@@ -80,3 +80,5 @@ pub(crate) fn loop_vertices(model: &Model, loop_id: usize) -> Result<Vec<usize>>
         .map(|c| model.edges[c.edge].vertices[usize::from(c.reversed)])
         .collect())
 }
+
+pub use crate::algebraic_model::boolean_exact;

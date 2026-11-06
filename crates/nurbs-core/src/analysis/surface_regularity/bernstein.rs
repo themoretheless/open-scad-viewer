@@ -85,6 +85,41 @@ fn split(a: Normals, axis: usize) -> Result<(Normals, Normals)> {
     }
     Ok((left, right))
 }
+// This only proposes a split: the same full outward normal cover supplies
+// admission. Avoid duplicating nearly identical cells along a constant source
+// direction. Scores may be rounded; no sign or rank is inferred from them.
+fn varying_axis(net: &Normals, fallback: usize) -> usize {
+    let mut scores = [0_f64; 2];
+    for axis in 0..2 {
+        let lines = if axis == 0 { net[0].len() } else { net.len() };
+        let count = if axis == 0 { net.len() } else { net[0].len() };
+        for line in 0..lines {
+            for k in 0..3 {
+                let mut range = [f64::INFINITY, f64::NEG_INFINITY];
+                for i in 0..count {
+                    let n = if axis == 0 {
+                        net[i][line][k]
+                    } else {
+                        net[line][i][k]
+                    };
+                    let mid = 0.5 * n.lo + 0.5 * n.hi;
+                    if !mid.is_finite() {
+                        return fallback;
+                    }
+                    range[0] = range[0].min(mid);
+                    range[1] = range[1].max(mid);
+                }
+                scores[axis] = scores[axis].max(range[1] - range[0]);
+            }
+        }
+    }
+    if !scores.iter().all(|v| v.is_finite()) || scores[0] == scores[1] {
+        fallback
+    } else {
+        usize::from(scores[1] > scores[0])
+    }
+}
+
 /// Only literal single Bezier patches of bounded degree use this finite
 /// coefficient path. Other bases keep the original generic jet verifier.
 pub(super) fn inspect(s: &Surface, max: usize) -> Result<Option<Report>> {
@@ -109,8 +144,9 @@ pub(super) fn inspect(s: &Surface, max: usize) -> Result<Option<Report>> {
     ];
     // Coefficients split at exact dyadic half parameters. Keep their parameter
     // labels normalized too; rounded natural-domain midpoints need not be the
-    // same half. Depth 100 limits either axis to 50 exact binary subdivisions.
-    let mut pending = vec![(normals(s)?, [[0., 1.]; 2], 0usize)];
+    // same half. The unchanged ceilings (100 total, at most 50 per axis) and exact
+    // midpoint test bound refinement; unsupported intervals stay unresolved.
+    let mut pending = vec![(normals(s)?, [[0., 1.]; 2], [0usize; 2])];
     let mut out = Report {
         spanwise_regular: false,
         interior_basis_c1: true,
@@ -118,7 +154,8 @@ pub(super) fn inspect(s: &Surface, max: usize) -> Result<Option<Report>> {
         cells: 1,
         proven_cells: 0,
     };
-    while let Some((net, normalized, depth)) = pending.pop() {
+    while let Some((net, normalized, depths)) = pending.pop() {
+        let depth = depths[0] + depths[1];
         let separated = (0..3).any(|k| {
             net.iter().flatten().all(|x| x[k].lo > 0.) || net.iter().flatten().all(|x| x[k].hi < 0.)
         });
@@ -126,10 +163,19 @@ pub(super) fn inspect(s: &Surface, max: usize) -> Result<Option<Report>> {
             out.proven_cells += 1;
             continue;
         }
-        let axis = depth % 2;
+        let proposed = varying_axis(&net, depth % 2);
+        let axis = if depths[proposed] < 50 {
+            proposed
+        } else {
+            1 - proposed
+        };
         let [a, b] = normalized[axis];
         let m = a * 0.5 + b * 0.5;
-        if out.cells + 2 > max || depth >= 100 || !(a < m && m < b) {
+        let exact_mid = crate::exact_curve_segments::exact_mul(a, 0.5)
+            .zip(crate::exact_curve_segments::exact_mul(b, 0.5))
+            .and_then(|(x, y)| crate::exact_curve_segments::exact_add(x, y))
+            == Some(m);
+        if out.cells + 2 > max || depth >= 100 || !exact_mid || !(a < m && m < b) {
             let mut unresolved = domain;
             for k in 0..2 {
                 let width = I::point(domain[k][1]).sub(I::point(domain[k][0]))?;
@@ -145,8 +191,10 @@ pub(super) fn inspect(s: &Surface, max: usize) -> Result<Option<Report>> {
         let mut r = normalized;
         l[axis] = [a, m];
         r[axis] = [m, b];
-        pending.push((right, r, depth + 1));
-        pending.push((left, l, depth + 1));
+        let mut next = depths;
+        next[axis] += 1;
+        pending.push((right, r, next));
+        pending.push((left, l, next));
         out.cells += 2;
     }
     out.spanwise_regular = out.unresolved.is_empty();

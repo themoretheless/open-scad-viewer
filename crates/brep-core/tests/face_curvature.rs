@@ -155,3 +155,138 @@ fn exhausted_domain_budget_is_unresolved_even_with_a_hint() {
     assert_eq!(out.domain_cells, 0);
     assert!(out.witness_uv.is_none());
 }
+
+#[test]
+fn exact_original_c2_jets_cover_redundant_knots_without_borrowing_other_supports() {
+    let mut m = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let source = m.faces[0].surface.clone();
+    assert_eq!(source.degree_u, 1);
+    let middle = source.control_points[0]
+        .iter()
+        .zip(&source.control_points[1])
+        .map(|(a, b)| a.iter().zip(b).map(|(x, y)| (x + y) * 0.5).collect())
+        .collect();
+    m.faces[0].surface.control_points.insert(1, middle);
+    m.faces[0].surface.weights.insert(1, vec![1.; 2]);
+    m.faces[0].surface.knots_u = vec![0., 0., 0.5, 1., 1.];
+    m.validate().unwrap();
+    let before = m.clone();
+    let old = c::inspect(&m, 0, 10., 1e-8, work(), &[]).unwrap();
+    assert_eq!(old.decision, Decision::Unresolved);
+    assert_eq!(old.reason, "continuity_not_proven");
+    let exact =
+        nurbs_core::analysis::surface_continuity::qualify(&m.faces[0].surface, 2, 100000, 1000000)
+            .unwrap();
+    let proof = exact.certificate.unwrap();
+    let shape = nurbs_core::surface_shape_operator::rectangle_bounds_with_continuity(
+        &m.faces[0].surface,
+        [[0., 1.], [0., 1.]],
+        1000,
+        &proof,
+    )
+    .unwrap();
+    assert!(shape.shape.tensor.is_some());
+    assert!(
+        nurbs_core::surface_shape_operator::rectangle_bounds_with_continuity(
+            &before.faces[0].surface,
+            [[0., 1.], [0., 1.]],
+            1000,
+            &proof
+        )
+        .is_err()
+    );
+    let r = c::inspect_with_continuity(&m, 0, 10., 1e-8, work(), &[], &proof).unwrap();
+    assert_eq!(r.decision, Decision::Within, "{}", r.reason);
+    assert!(r.absolute_curvature_upper.unwrap() < 1e-8);
+    assert_eq!(m, before);
+    let copy = m.faces[0].surface.clone();
+    let foreign =
+        nurbs_core::analysis::surface_continuity::qualify(&copy, 2, 100000, 1000000).unwrap();
+    assert!(
+        c::inspect_with_continuity(&m, 0, 10., 1e-8, work(), &[], &foreign.certificate.unwrap())
+            .is_err()
+    );
+    let c1 =
+        nurbs_core::analysis::surface_continuity::qualify(&m.faces[0].surface, 1, 100000, 1000000)
+            .unwrap();
+    assert!(
+        c::inspect_with_continuity(&m, 0, 10., 1e-8, work(), &[], &c1.certificate.unwrap())
+            .is_err()
+    );
+    let zero =
+        c::inspect_with_continuity(&m, 0, 10., 1e-8, Limits { cells: 0, ..work() }, &[], &proof)
+            .unwrap();
+    assert_eq!(zero.decision, Decision::Unresolved);
+}
+
+#[test]
+fn original_span_curvature_requires_exact_closed_cell_ownership() {
+    let mut m = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let source = m.faces[0].surface.clone();
+    let row = source.control_points[0]
+        .iter()
+        .zip(&source.control_points[1])
+        .map(|(a, b)| a.iter().zip(b).map(|(x, y)| (x + y) * 0.5).collect())
+        .collect();
+    m.faces[0].surface.control_points.insert(1, row);
+    m.faces[0].surface.weights.insert(1, vec![1.; 2]);
+    m.faces[0].surface.knots_u = vec![0., 0., 0.5, 1., 1.];
+    m.validate().unwrap();
+    let s = &m.faces[0].surface;
+    use nurbs_core::surface_shape_operator as shape;
+    assert!(shape::rectangle_span_bounds(s, [1, 1], [[0., 1.], [0., 1.]], 1000).is_err());
+    assert!(shape::rectangle_span_bounds(s, [0, 1], [[0., 0.], [0., 1.]], 1000).is_err());
+    for u in [1, 2] {
+        let r = shape::rectangle_span_bounds(s, [u, 1], [[0.5, 0.5], [0., 1.]], 1000).unwrap();
+        assert!(r.shape.tensor.is_some() && r.shape.normal.is_some());
+    }
+    let one = c::inspect_one_sided(&m, 0, 10., 1e-8, work()).unwrap();
+    assert_eq!(one.original_spans, 2);
+    assert_eq!(one.field.decision, Decision::Within);
+    let zero = c::inspect_one_sided(&m, 0, 10., 1e-8, Limits { cells: 0, ..work() }).unwrap();
+    assert_eq!(zero.field.decision, Decision::Unresolved);
+}
+
+#[test]
+fn closed_original_span_limits_do_not_borrow_the_neighboring_curvature() {
+    // A parabolic cylinder joins its tangent plane with G1 but different
+    // one-sided curvature at exactly the SAME original U knot.
+    let xs = [0., 0.25, 0.5, 0.75, 1.];
+    let zs = [0., 0., 0.25, 0.5, 0.75];
+    let s = Surface {
+        degree_u: 2,
+        degree_v: 1,
+        knots_u: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: (0..5)
+            .map(|i| {
+                [0., 1.]
+                    .into_iter()
+                    .map(|y| vec![xs[i], y, zs[i]])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1.; 2]; 5],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    use nurbs_core::surface_shape_operator as shape;
+    let query = [[1., 1.], [0.5, 0.5]];
+    let left = shape::rectangle_span_bounds(&s, [2, 1], query, 1000).unwrap();
+    let right = shape::rectangle_span_bounds(&s, [4, 1], query, 1000).unwrap();
+    let l = shape::absolute_spectral_bounds(left.shape.tensor.unwrap())
+        .unwrap()
+        .unwrap();
+    let r = shape::absolute_spectral_bounds(right.shape.tensor.unwrap())
+        .unwrap()
+        .unwrap();
+    assert!(l[0] > 0.7 && l[1] < 0.72, "{l:?}");
+    assert!(r[1] < 1e-8, "{r:?}");
+    assert!(
+        shape::rectangle_bounds(&s, query, 1000)
+            .unwrap()
+            .shape
+            .tensor
+            .is_none()
+    );
+}

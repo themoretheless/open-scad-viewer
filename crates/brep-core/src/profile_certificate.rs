@@ -718,3 +718,6 @@ use algorithm_pieces::pieces;
 #[path="profile_certificate/algorithm_separated.rs"]
 mod algorithm_separated;
 use algorithm_separated::separated;
+
+mod algebraic_branches;
+pub use algebraic_branches::{AlgebraicSetDimension,AlgebraicBranchKind,AlgebraicBranchEdge,AlgebraicBranchVertex,AlgebraicBranchComponent,AlgebraicBranchCertificate,VerifiedAlgebraicBranches,certify_algebraic_branches,verify_algebraic_branches};

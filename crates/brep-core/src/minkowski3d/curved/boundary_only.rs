@@ -29,7 +29,7 @@ impl CertifiedBoundaryOnlyNurbsBoolean {
         self.model
     }
 }
-fn boundary(m: &Model) -> Result<([[f64; 2]; 3], usize)> {
+pub(super) fn boundary(m: &Model) -> Result<([[f64; 2]; 3], usize)> {
     if m.faces.is_empty() || m.faces.len() > 256 {
         return Err(fail(
             "boundary-only proof requires bounded nonempty original faces",

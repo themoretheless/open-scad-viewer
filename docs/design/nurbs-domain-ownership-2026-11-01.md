@@ -131,3 +131,9 @@ Original tensor targets, reductions and coefficient conversion remain with
 proposals and outward scalar error rounding reuse the bounded curve owner.
 A surface-specific tensor residual proof must admit actual stored bits over
 every original UV cell; no per-row gauge or source certificate transfer.
+
+Pending torsion-field construction remains under editing: exact targets in
+`exact_derivative::torsion` and its private helper; bounded storage in
+`bounded_differential::torsion`. The public bounded Field enum is unchanged.
+Original nonzero binormal must be proved before quotient cancellation. This
+constructs a scalar field, not a sampled point-query or a unit Frenet frame.

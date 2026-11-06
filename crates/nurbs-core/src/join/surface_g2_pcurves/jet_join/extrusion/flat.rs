@@ -1,5 +1,7 @@
 //! Original planar 2-jet collars, with owned collapsed endpoint coverage.
 use super::*;
+#[path = "flat/bernstein_jacobian.rs"]
+mod bernstein_jacobian;
 fn axis_sign(j: &jets::Jets, axis: usize) -> Result<Option<i8>> {
     let (a, b) = ((axis + 1) % 3, (axis + 2) % 3);
     let determinant = j[1][0][a]
@@ -144,6 +146,7 @@ pub fn inspect_planar_boundary(
         "Planar pcurve leaves original U domain",
     )?;
     let mut cells = Vec::new();
+    let mut exact_work = bernstein_jacobian::Work::new(max_cells);
     let mut candidate_sign = None;
     for span in p..n {
         let original = [b.knots_u[span], b.knots_u[span + 1]];
@@ -214,20 +217,26 @@ pub fn inspect_planar_boundary(
             range[1] = range[1].min(original[1]);
         }
         if range[0] < range[1] {
-            cells.push((span, range, None));
+            let exact = bernstein_jacobian::prepare(b, span, end, height, &mut exact_work);
+            cells.push((span, range, exact));
         }
     }
     check(!cells.is_empty(), "No original planar boundary spans")?;
     let mut pending = cells;
     let mut unresolved = 0;
-    while let Some((span, u, _)) = pending.pop() {
+    while let Some((span, u, exact)) = pending.pop() {
         if work == max_cells {
             unresolved += 1 + pending.len();
             break;
         }
         work += 1;
-        let j = jets::calculate_partial_stable_up_to(b, [span, q], [u, [v, v]], [None; 2], 1)?;
-        if let Some(sign) = axis_sign(&j, height)? {
+        let sign = if let Some(sign) = exact.and_then(|e| e.on(u)) {
+            Some(sign)
+        } else {
+            let j = jets::calculate_partial_stable_up_to(b, [span, q], [u, [v, v]], [None; 2], 1)?;
+            axis_sign(&j, height)?
+        };
+        if let Some(sign) = sign {
             check(
                 candidate_sign.is_none_or(|s| s == sign),
                 "Planar original Jacobian changes orientation",
@@ -240,12 +249,14 @@ pub fn inspect_planar_boundary(
             unresolved += 1;
             continue;
         }
-        pending.push((span, [u[0], mid], None::<()>));
-        pending.push((span, [mid, u[1]], None));
+        pending.push((span, [u[0], mid], exact));
+        pending.push((span, [mid, u[1]], exact));
     }
     let proven =
         positions.proven && sign_a.is_some() && candidate_sign.is_some() && unresolved == 0;
     Ok(ExtrusionBoundaryReport {
+        profile_unresolved_queries: 0,
+        source_unresolved_queries: 0,
         positions,
         decision: if proven {
             Decision::WithinTolerance

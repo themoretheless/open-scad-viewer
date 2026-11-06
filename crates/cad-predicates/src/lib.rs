@@ -747,3 +747,6 @@ pub use natural_meridian_g2::{rational_natural_meridian_g1, rational_natural_mer
 
 mod paired_graph_projection;
 pub use paired_graph_projection::{CurveGraphProjectionDecision, PairedGraphProjectionDecision, binary_curve_graph_projection, binary_paired_graph_projection};
+
+mod bezier_curvature_bound;
+pub use bezier_curvature_bound::*;

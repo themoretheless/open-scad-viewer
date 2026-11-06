@@ -18,12 +18,13 @@ fn linear(pc: &Curve) -> Result<()> {
 }
 pub(super) struct Segment {
     pub pair: Pair,
+    pub source: usize,
     pub range: [f64; 2],
     pub ends: [I; 2],
 }
 pub(super) struct Prepared<'a> {
     pub segments: Vec<Segment>,
-    pub source: source::Source<'a>,
+    pub sources: Vec<source::Source<'a>>,
     pub candidate_sign: i8,
 }
 fn endpoint(
@@ -72,6 +73,7 @@ impl<'a> Prepared<'a> {
         pc: [&Curve; 2],
         axis: usize,
         poles: [Option<&FlatPoleCertificate<'_>>; 2],
+        max_cells: usize,
     ) -> Result<Self> {
         check(axis < 3, "Invalid original extrusion world axis")?;
         for surface in s {
@@ -136,9 +138,9 @@ impl<'a> Prepared<'a> {
             "Candidate extrusion clock leaves its original domain",
         )?;
         let origin: [f64; 3] = std::array::from_fn(|k| candidate.control_points[0][row][k]);
-        let source_proof = source::Source::new(source, pc[0], origin)?;
-        let composed = source_proof.trace.clone();
+        let source_proofs = source::Source::cover(source, pc[0], origin)?;
         let mut segments = Vec::new();
+        let mut exact_work = polynomial::ExactProductWork::new(max_cells);
         let mut candidate_sign = None;
         for span in spans {
             let range = [
@@ -194,20 +196,6 @@ impl<'a> Prepared<'a> {
                     endpoint(candidate, span, row, e, axis, sv, poles[usize::from(e)])?;
                 }
             }
-            let mut ch: Homogeneous = std::array::from_fn(|_| Vec::new());
-            for i in span - p..=span {
-                let w = I::point(candidate.weights[i][row]);
-                for k in 0..3 {
-                    ch[k].push(if k == axis {
-                        I::point(0.)
-                    } else {
-                        I::point(candidate.control_points[i][row][k])
-                            .sub(I::point(origin[k]))?
-                            .mul(w)?
-                    });
-                }
-                ch[3].push(w);
-            }
             let actual = [candidate.knots_u[span], candidate.knots_u[span + 1]];
             let ends = [0, 1].map(|i| {
                 I::point(actual[i])
@@ -222,23 +210,81 @@ impl<'a> Prepared<'a> {
                 "Extrusion seam must own whole original boundary spans",
             )?;
             let ends = [ends[0].clone()?, ends[1].clone()?];
-            let mut sh = polynomial::restrict(&composed, ends)?;
-            sh[axis].fill(I::point(0.));
-            let degree = p.max(composed[0].len() - 1);
-            let pair = Pair::new(
-                polynomial::elevate(sh, degree)?,
-                polynomial::elevate(ch, degree)?,
-            )?;
-            segments.push(Segment {
-                pair,
-                range: [0., 1.],
-                ends,
-            });
+            for (index, source) in source_proofs.iter().enumerate() {
+                let dt = ends[1].sub(ends[0])?;
+                let active = I::new(source.range[0], source.range[1])?
+                    .sub(ends[0])?
+                    .div_signed(dt)?;
+                let range = [active.lo.max(0.), active.hi.min(1.)];
+                if range[0] > range[1] {
+                    continue;
+                }
+                let middle = (range[0] * 0.5 + range[1] * 0.5) * p as f64;
+                let origin_control = (middle.round() as usize).min(p);
+                let origin = std::array::from_fn(|k| {
+                    candidate.control_points[span - p + origin_control][row][k]
+                });
+                let mut ch: Homogeneous = std::array::from_fn(|_| Vec::new());
+                for i in span - p..=span {
+                    let w = I::point(candidate.weights[i][row]);
+                    for k in 0..3 {
+                        ch[k].push(if k == axis {
+                            I::point(0.)
+                        } else {
+                            I::point(candidate.control_points[i][row][k])
+                                .sub(I::point(origin[k]))?
+                                .mul(w)?
+                        });
+                    }
+                    ch[3].push(w);
+                }
+
+                // Keep the original candidate clock. Reauthoring coefficients
+                // on a root-width overlap can erase its small derivatives.
+                // Even singleton endpoint branches retain nonzero clock jets.
+                let mut sh = source.trace_on(ends, axis, origin)?;
+                sh[axis].fill(I::point(0.));
+                let candidate_surface = candidate;
+                let candidate = ch.clone();
+                let degree = p.max(sh[0].len() - 1);
+                let exact = source
+                    .original_product_profile(axis)
+                    .and_then(|(profile, path)| {
+                        polynomial::prepare_exact_product(
+                            &profile,
+                            path,
+                            candidate_surface,
+                            span,
+                            row,
+                            axis,
+                            [u0, u1],
+                            origin,
+                            &mut exact_work,
+                        )
+                    });
+                let pair = match exact {
+                    Some(pair) => pair,
+                    None => Pair::new(
+                        polynomial::elevate(sh, degree)?,
+                        polynomial::elevate(candidate, degree)?,
+                    )?,
+                };
+                segments.push(Segment {
+                    pair,
+                    source: index,
+                    range,
+                    ends,
+                });
+                check(
+                    segments.len() <= 4096,
+                    "Extrusion source/candidate knot cover exceeds 4096 pairs",
+                )?;
+            }
         }
         check(!segments.is_empty(), "No original extrusion boundary spans")?;
         Ok(Self {
             segments,
-            source: source_proof,
+            sources: source_proofs,
             candidate_sign: candidate_sign.unwrap(),
         })
     }

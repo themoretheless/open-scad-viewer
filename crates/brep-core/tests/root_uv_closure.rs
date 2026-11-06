@@ -85,8 +85,15 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     let sys=ss::qualify_ss_deflated_system(&gb,Default::default()).unwrap();
     let f=ss::qualify_deflated_ss_fiber(&sys,[[0.19,0.22],[0.39,0.61],[0.38,0.62],[0.4,0.6]],ss::FiberAxis::FirstV,Default::default()).unwrap();
     let ac=Arc::new(ss::OriginalSsRootCurve::from_deflated(f.into_fiber().unwrap()));
+    let s_bc=ss::FiberSources::new(&third,ab.source().second()).unwrap();
+    let ideal_bc=ss::qualify_original_ss_ideal(&s_bc,[1,1,2,2],Default::default()).unwrap();
+    let gb_bc=ss::qualify_ss_groebner_basis(&ideal_bc,Default::default()).unwrap();
+    let sys_bc=ss::qualify_ss_deflated_system(&gb_bc,Default::default()).unwrap();
+    let f_bc=ss::qualify_deflated_ss_fiber(&sys_bc,[[0.38,0.62],[0.35,0.65],[0.19,0.22],[0.39,0.61]],ss::FiberAxis::SecondV,Default::default()).unwrap();
+    let cb=Arc::new(ss::OriginalSsRootCurve::from_deflated(f_bc.into_fiber().unwrap()));
     let plain=|i:usize| ss::bind_original_ss_port(witnesses[i].point().clone(),ab.clone(),[0;4],Default::default()).unwrap();
     let cross=|i:usize| ss::bind_original_ss_third_port(witnesses[i].clone(),ac.clone(),[0,2],Default::default()).unwrap();
+    let cross_b=|i:usize| ss::bind_original_ss_third_port(witnesses[i].clone(),cb.clone(),[2,1],Default::default()).unwrap();
     // Split a complete existing face, sharing one inserted chord between children.
     let mut boundary=wire.edges()[..2].to_vec();
     boundary.push(ss::OriginalSsRootEdge::new(wire.edges()[2].start().clone(),plain(1)).unwrap());
@@ -95,8 +102,20 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     boundary.extend_from_slice(&wire.edges()[3..]);
     let full=ss::OriginalSsRootWire::new(boundary).unwrap();
     let full_wire=full.clone();
+    let full_b=Arc::new(RootBrep::face_contours(ab.source().second().clone(),RootFaceContour {supports:vec![1;10],wire:full.clone()},vec![],1e-7).unwrap());
     let full=Arc::new(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {supports:vec![0;10],wire:full},vec![],1e-7).unwrap());
     let chord=ss::OriginalSsRootEdge::new(cross(0),cross(1)).unwrap();
+    let chord_b=ss::OriginalSsRootEdge::new(cross_b(0),cross_b(1)).unwrap();
+    let paired=brep_core::root_model::QualifiedRootPairedChordSplit::qualify([full.clone(),full_b.clone()],[chord.clone(),chord_b.clone()],[0,1],Default::default()).unwrap();
+    assert_eq!(paired.paired_children(false),[0,0]);
+    assert_eq!(paired.paired_children(true),[1,1]);
+    for side in [false,true] {
+        let [ra,rb]=paired.retain_pair(side).unwrap();
+        assert_eq!(ra.output().topology().faces.len(),1);
+        assert_eq!(rb.output().topology().faces.len(),1);
+    }
+    paired.reverify().unwrap();
+    assert!(brep_core::root_model::QualifiedRootPairedChordSplit::qualify([full.clone(),full_b],[chord.clone(),ss::OriginalSsRootEdge::new(cross_b(1),cross_b(0)).unwrap()],[0,1],Default::default()).is_err());
     let split=brep_core::root_model::RootFaceChordSplit::split(full.clone(),0,chord.clone(),0,vec![]).unwrap();
     assert_eq!(split.face_children(),[0,1]);assert_eq!(split.inserted_edge(),10);
     let boundary=brep_core::root_model::QualifiedRootChordBoundary::qualify(split.clone(),Default::default()).unwrap();

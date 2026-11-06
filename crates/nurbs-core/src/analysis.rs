@@ -46,3 +46,4 @@ pub mod surface_occlusion;
 
 /// Exact affine support of nominal NURBS control geometry.
 pub mod affine_support;
+pub mod bezier_curvature_bound;

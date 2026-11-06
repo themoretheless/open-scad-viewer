@@ -20,6 +20,8 @@ const OPS: &[&str] = &[
     "brep_nurbs_import_step_v8",
     "brep_nurbs_export_step_v9",
     "brep_nurbs_import_step_v9",
+    "brep_nurbs_import_step_scene",
+    "brep_nurbs_import_step_lod0",
     "brep_nurbs_import_step_v10",
     "brep_nurbs_export_step_v10",
     "brep_nurbs_compose_step_v7",
@@ -312,6 +314,8 @@ fn handle(v: Value) -> Result<Value> {
                 "productHierarchy":report.product_hierarchy,"externalReferences":report.external_references,
             }))
         }
+        "brep_nurbs_import_step_scene" => crate::step_scene::import(v),
+        "brep_nurbs_import_step_lod0" => crate::step_lod0::import(v),
         "brep_nurbs_import_step_v10" => {
             let (model, cert, document) =
                 brep_core::import_step_v10(&field::<String>(&v, "text")?)?;

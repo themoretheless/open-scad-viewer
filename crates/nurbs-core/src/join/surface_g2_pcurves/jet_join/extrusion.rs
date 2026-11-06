@@ -16,9 +16,14 @@ pub struct ExtrusionBoundaryReport {
     pub orientation: Orientation,
     pub normal: [f64; 2],
     pub tensor: [f64; 2],
+    /// Every covered one-sided original cell is regular. Continuity between
+    /// knots of either surface remains a separate internal G2 obligation.
     pub regularity_proven: bool,
     pub cells: usize,
     pub pending: usize,
+    /// Query failures, including superseded subdivisions; not uncovered area.
+    pub profile_unresolved_queries: usize,
+    pub source_unresolved_queries: usize,
 }
 struct Cell {
     segment: usize,
@@ -32,6 +37,9 @@ struct Cell {
 /// projected profile extruded along the axis, despite axial shear or scale.
 /// A collapsed endpoint requires a certificate borrowing this exact source.
 /// This proves a local seam, not complete surface embedding or a sewn solid.
+/// Multispan sources retain every intersected original cell and its limiting
+/// jets. This does not grant internal continuity to a piecewise source or
+/// candidate merely because their corresponding one-sided fields agree.
 pub fn inspect_extrusion_boundary(
     curve: &Curve,
     pc: [&Curve; 2],
@@ -49,7 +57,7 @@ pub fn inspect_extrusion_boundary(
             && max_exact <= 1000000,
         "Invalid original extrusion seam limits",
     )?;
-    let prepared = prepared::Prepared::new(surface, pc, axis, poles)?;
+    let prepared = prepared::Prepared::new(surface, pc, axis, poles,max_cells)?;
     let positions = verify_positions(
         curve,
         pc,
@@ -62,18 +70,23 @@ pub fn inspect_extrusion_boundary(
     let mut work = positions.cells;
     let mut lower = [0_f64; 2];
     let mut source_sign = None;
+    let profile_unresolved = std::cell::Cell::new(0usize);
+    let source_unresolved = std::cell::Cell::new(0usize);
     let query = |segment: usize,
                  t: [f64; 2],
                  source_sign: &mut Option<i8>|
      -> Result<Option<[[f64; 2]; 2]>> {
-        let Some(profile) = prepared.segments[segment].pair.bounds(t, axis)? else {
+        let part = &prepared.segments[segment];
+        let original = &prepared.sources[part.source];
+        if original.outside(part.ends, t)? {
+            return Ok(Some([[0.; 2]; 2]));
+        }
+        let Some(profile) = part.pair.bounds(t, axis)? else {
+            profile_unresolved.set(profile_unresolved.get() + 1);
             return Ok(None);
         };
-        let Some((source, sign)) =
-            prepared
-                .source
-                .bounds(prepared.segments[segment].ends, t, axis)?
-        else {
+        let Some((source, sign)) = original.bounds(part.ends, t, axis)? else {
+            source_unresolved.set(source_unresolved.get() + 1);
             return Ok(None);
         };
         check(
@@ -115,10 +128,11 @@ pub fn inspect_extrusion_boundary(
             Some(sum)
         });
         let good = |b: [[f64; 2]; 2]| b[0][1] <= tolerances[1] && b[1][1] <= tolerances[2];
-        let done = positions.proven
+        let done = source_sign.is_some()
+            && positions.proven
             && upper.is_some_and(|x| x[0] <= tolerances[1] && x[1] <= tolerances[2]);
         let bad = lower[0] > tolerances[1] || lower[1] > tolerances[2];
-        let finish = |decision, source_sign| ExtrusionBoundaryReport {
+        let finish = |decision, source_sign: Option<i8>| ExtrusionBoundaryReport {
             positions: positions.clone(),
             decision,
             orientation: if source_sign == Some(prepared.candidate_sign) {
@@ -128,9 +142,11 @@ pub fn inspect_extrusion_boundary(
             },
             normal: [lower[0], upper.map_or(f64::INFINITY, |x| x[0])],
             tensor: [lower[1], upper.map_or(f64::INFINITY, |x| x[1])],
-            regularity_proven: upper.is_some(),
+            regularity_proven: upper.is_some() && source_sign.is_some(),
             cells: work,
             pending: cells.iter().filter(|c| !c.bound.is_some_and(good)).count(),
+            profile_unresolved_queries: profile_unresolved.get(),
+            source_unresolved_queries: source_unresolved.get(),
         };
         if done {
             return Ok(finish(Decision::WithinTolerance, source_sign));
@@ -172,7 +188,8 @@ pub fn inspect_extrusion_boundary(
             cells.swap_remove(at);
             cells.extend(children);
         }
-        if max_cells - work >= 3 {
+        let part = &prepared.segments[segment];
+        if max_cells - work >= 3 && prepared.sources[part.source].contains_point(part.ends, mid)? {
             work += 3;
             if let Some(b) = query(segment, [mid, mid], &mut source_sign)? {
                 for k in 0..2 {

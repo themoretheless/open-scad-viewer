@@ -38,9 +38,31 @@ pub(super) struct Prepared {
     pub left: usize,
     pub right: usize,
     pub v: [f64; 2],
+    pub cross_scales: [f64; 2],
+    pub unit_product_axis: Option<usize>,
+}
+// Exact authored structure: S(u,v)=(profile(u),v) on one V span.
+// Equality of the stored station coordinates with the actual V knots avoids
+// inferring an affine identity from rounded subtraction or sampled jets.
+fn unit_product_axis(s: &Surface) -> Option<usize> {
+    if s.degree_v != 1 || s.control_points[0].len() != 2 {
+        return None;
+    }
+    (0..3).find(|&axis| {
+        s.control_points.iter().zip(&s.weights).all(|(row, w)| {
+            w[0] == w[1]
+                && (0..3).all(|k| {
+                    if k == axis {
+                        row[0][k] == s.knots_v[1] && row[1][k] == s.knots_v[2]
+                    } else {
+                        row[0][k] == row[1][k]
+                    }
+                })
+        })
+    })
 }
 impl Prepared {
-    pub fn new(s: &Surface, knot: f64) -> Result<Self> {
+    pub fn new(s: &Surface, knot: f64, cross_scales: [f64; 2]) -> Result<Self> {
         let (p, q, n, m) = (
             s.degree_u,
             s.degree_v,
@@ -104,6 +126,16 @@ impl Prepared {
         let rpp = row(left + 2)?;
         let dl = I::point(s.knots_u[left + 1]).sub(I::point(s.knots_u[left]))?;
         let dr = I::point(s.knots_u[right + 1]).sub(I::point(s.knots_u[right]))?;
+        let dl = if cross_scales[0] == 1. {
+            dl
+        } else {
+            dl.div(I::point(cross_scales[0]))?
+        };
+        let dr = if cross_scales[1] == 1. {
+            dr
+        } else {
+            dr.div(I::point(cross_scales[1]))?
+        };
         let mut ul: [P; 4] = std::array::from_fn(|_| Vec::new());
         let mut ur = ul.clone();
         let mut uul = ul.clone();
@@ -165,6 +197,8 @@ impl Prepared {
             left,
             right,
             v: [s.knots_v[q], s.knots_v[q + 1]],
+            cross_scales,
+            unit_product_axis: unit_product_axis(s),
         })
     }
     pub fn jumps(&self, query: [f64; 2]) -> Result<[[I; 3]; 3]> {

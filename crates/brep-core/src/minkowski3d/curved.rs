@@ -728,3 +728,11 @@ pub use retained_boolean::{
     certify_retained_nurbs_boolean, verify_retained_nurbs_boolean, author_retained_nurbs_boolean,
 };
 pub(crate) use retained_boolean::try_retained_nurbs_boolean;
+
+mod graph_order_boolean;
+pub use graph_order_boolean::{GraphOrderBooleanCertificate,CertifiedGraphOrderBoolean,certify_graph_order_boolean,verify_graph_order_boolean};
+pub(crate) use graph_order_boolean::try_graph_order_boolean;
+
+pub use atlas::region_brep::{GraphSlab,intersect_graph_slabs};
+
+pub use atlas::region_brep::{SurfaceAlgebraicBranchCertificate,CertifiedSurfaceAlgebraicBranches,certify_surface_algebraic_branches,verify_surface_algebraic_branches};

@@ -92,3 +92,28 @@ fn injective_critical_chart_does_not_supply_the_missing_rank_certificate() {
     assert_eq!(full.reason,Some("whole-boundary-regularity-unproved"));
     assert!(full.reference_regularity.as_ref().unwrap().unresolved_faces.contains(&0));
 }
+
+#[test]
+fn affine_mixed_critical_body_owns_joint_boundary_volume_and_refusal_budgets() {
+    let original=original_body_with(false);
+    let matrix=[[1.,1.,1.,8.],[1.,2.,1.,-4.],[1.,1.,2.,2.],[0.,0.,0.,1.]];
+    let model=crate::transform::affine(&original,matrix).unwrap();let before=model.clone();
+    let full=inspect(&model,&model,1e-8,0.,limits()).unwrap();
+    assert!(full.certified,"reason={:?} volume={:?}",full.reason,
+        full.reference_volume.as_ref().map(|v|(v.boundary.intersections.faces.clone(),v.boundary.intersections.pairs.clone())));
+    assert!(full.continuous_bound && full.error_upper==Some(0.));
+    for v in [full.reference_volume.as_ref().unwrap(),full.retained_volume.as_ref().unwrap()] {
+        assert!(v.proven && v.boundary.intersections.faces.all_faces_injective && v.boundary.intersections.pairs.all_pairs_classified);
+        assert_eq!(v.nesting.as_ref().unwrap().roles_consistent,Some(true));
+        assert!(v.orientations.iter().all(|s|s.outward==Some(s.expected_outward)));
+    }
+    let mut short=limits();short.linear_cells_per_boundary=1;
+    short.reference_volume.boundary.spans=1;short.retained_volume.boundary.spans=1;
+    let refused=inspect(&model,&model,1e-8,0.,short).unwrap();
+    assert!(refused.continuous_bound && !refused.certified);
+    let singular=crate::transform::affine(&original_body_with(true),matrix).unwrap();
+    let refused=inspect(&singular,&singular,1e-8,0.,limits()).unwrap();
+    assert!(refused.continuous_bound && !refused.certified);
+    assert_eq!(refused.reason,Some("whole-boundary-regularity-unproved"));
+    assert_eq!(model,before);
+}

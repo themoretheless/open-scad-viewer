@@ -173,11 +173,37 @@ pub fn build_planar_g2_profile(
         position_tolerance,
         max_cells,
         max_exact,
-        Some(handle_fraction),
+        Some(PlanarProfile::Handles(handle_fraction)),
     )
+}
+#[derive(Clone, Copy)]
+pub(crate) enum PlanarProfile { Handles(f64), Bounded(f64), Matched(f64), Quartic(f64) }
+/// New bounded-profile proposal; contact evidence is recomputed. The full
+/// saved skin, seams, material and solid still require independent admission.
+pub fn build_bounded_planar_g2_profile(
+    supports: [&Surface;2], radius:f64, maximum:f64, options:&FilletOptions,
+    position_tolerance:f64, max_cells:usize, max_exact:u64,
+) -> Result<Report> {
+    build_variable_g2_profile(supports, RadiusLaw::Constant(radius), options,
+        position_tolerance,max_cells,max_exact,Some(PlanarProfile::Bounded(maximum)))
 }
 #[path = "fillet_contact/planar_profile.rs"]
 mod planar_profile;
+/// Matched-jet proposal; original contact/radius/G2 checks are recomputed.
+pub fn build_matched_planar_g2_profile(
+    supports:[&Surface;2],radius:f64,maximum:f64,options:&FilletOptions,
+    position_tolerance:f64,max_cells:usize,max_exact:u64,
+) -> Result<Report> {
+    build_variable_g2_profile(supports,RadiusLaw::Constant(radius),options,
+        position_tolerance,max_cells,max_exact,Some(PlanarProfile::Matched(maximum)))
+}
+pub fn build_quartic_planar_g2_profile(
+    supports:[&Surface;2],radius:f64,maximum:f64,options:&FilletOptions,
+    position_tolerance:f64,max_cells:usize,max_exact:u64,
+) -> Result<Report> {
+    build_variable_g2_profile(supports,RadiusLaw::Constant(radius),options,
+        position_tolerance,max_cells,max_exact,Some(PlanarProfile::Quartic(maximum)))
+}
 fn build_variable_g2_profile(
     supports: [&Surface; 2],
     law: RadiusLaw,
@@ -185,7 +211,7 @@ fn build_variable_g2_profile(
     position_tolerance: f64,
     max_cells: usize,
     max_exact: u64,
-    handle: Option<f64>,
+    handle: Option<PlanarProfile>,
 ) -> Result<Report> {
     if !position_tolerance.is_finite()
         || position_tolerance < 0.
@@ -197,9 +223,24 @@ fn build_variable_g2_profile(
             "Contact qualification needs finite tolerance and bounded shared work",
         ));
     }
+    let constant_radius = match &law { RadiusLaw::Constant(r) => Some(*r), _ => None };
     let mut fillet = fillet_surfaces::variable_g2_fillet(supports[0], supports[1], law, options)?;
-    if let (Some(fraction), Some(surface)) = (handle, fillet.surface.as_ref()) {
-        let updated = planar_profile::refit(surface, supports, fraction)?;
+    if let (Some(profile), Some(surface)) = (handle, fillet.surface.as_ref()) {
+        let updated = match profile {
+            PlanarProfile::Handles(fraction) => planar_profile::refit(surface,supports,fraction)?,
+            PlanarProfile::Bounded(maximum) => {
+                let Some(radius)=constant_radius else {return Err(nurbs_core::Error::new("BREP_PLANAR_G2_PROFILE","Bounded proposal requires constant radius"));};
+                planar_profile::refit_bounded(surface,supports,radius,maximum,position_tolerance,planar_profile::BoundedKind::Cubic)?
+            }
+            PlanarProfile::Matched(maximum) => {
+                let Some(radius)=constant_radius else {return Err(nurbs_core::Error::new("BREP_PLANAR_G2_PROFILE","Matched proposal requires constant radius"));};
+                planar_profile::refit_bounded(surface,supports,radius,maximum,position_tolerance,planar_profile::BoundedKind::Matched)?
+            }
+            PlanarProfile::Quartic(maximum) => {
+                let Some(radius)=constant_radius else {return Err(nurbs_core::Error::new("BREP_PLANAR_G2_PROFILE","Quartic proposal requires constant radius"));};
+                planar_profile::refit_bounded(surface,supports,radius,maximum,position_tolerance,planar_profile::BoundedKind::Quartic)?
+            }
+        };
         // Both positive-weight supports lie in their control hulls. The
         // union-hull L1 diameter is a finite bound on the profile rewrite;
         // the old loft's deviation estimate is never inherited unchanged.

@@ -133,7 +133,8 @@ pub fn build_trihedral_rim(strips: &TrihedralStrips, tolerances: [f64; 3]) -> Re
             curve_join::inspect(&curve, Endpoint::End, &cross_sections[b], ep(be), tol())?,
         ];
         if joins.iter().any(|r| r.g2 != Decision::WithinTolerance) {
-            return Err(refuse("Central rim endpoint G2 is unproven"));
+            return Err(refuse(&format!("Central rim endpoint G2 is unproven: ports={:?}, joins={:?}",
+                [(a,ae),(b,be)],joins.iter().map(|r|(r.g0,r.g1,r.g2,r.curvature_error)).collect::<Vec<_>>())));
         }
         connectors.push(RimConnector {
             source_face: face,
