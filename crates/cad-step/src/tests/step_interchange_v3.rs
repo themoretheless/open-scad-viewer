@@ -159,6 +159,39 @@
     }
 
     #[test]
+    fn v9_import_accepts_only_v6_face_authored_chart_identity() {
+        let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+        let (text, _, _) = brep_core::export_step_v6(&model).unwrap();
+        assert!(text.contains("|authored-chart-v1'"));
+
+        let (back, _, report) = import_step_v9(&text).unwrap();
+        assert!(report.identity.preserved);
+        assert_eq!(back.1.faces, model.1.faces);
+
+        let unknown = text.replace("|authored-chart-v1'", "|authored-chart-v2'");
+        assert!(import_step_v9(&unknown)
+            .unwrap_err()
+            .message
+            .contains("Unknown STEP /3 identity metadata version"));
+
+        let non_face = text
+            .lines()
+            .map(|line| {
+                if line.contains("VERTEX_POINT('OSCAD_TOPO/3|") {
+                    line.replacen("',", "|authored-chart-v1',", 1)
+                } else {
+                    line.to_owned()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(import_step_v9(&non_face)
+            .unwrap_err()
+            .message
+            .contains("Unknown STEP /3 identity metadata version"));
+    }
+
+    #[test]
     fn direct_more_than_32_bodies_and_metadata_free_identity() {
         let mut model = Model::empty(1e-7).unwrap();
         for i in 0..33 {

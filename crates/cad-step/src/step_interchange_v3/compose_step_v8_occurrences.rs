@@ -405,11 +405,14 @@ pub(super) fn restore_identity(
             continue;
         };
         let fields: Vec<_> = payload.split('|').collect();
-        if fields.len() != 3 {
+        if !matches!(fields.len(), 3 | 4) {
             return Err(refuse("Malformed STEP /3 identity metadata"));
         }
         let mk =
             TopoKind::parse(fields[0]).ok_or_else(|| refuse("Unknown STEP /3 identity kind"))?;
+        if fields.len() == 4 && (mk != TopoKind::Face || fields[3] != "authored-chart-v1") {
+            return Err(refuse("Unknown STEP /3 identity metadata version"));
+        }
         let id = TopoId::parse(fields[1]).map_err(refuse)?;
         if mk != kind || id.kind() != kind || fields[2] != entity_digest(entities, entity_id)? {
             return Err(refuse("Transplanted STEP /3 identity metadata"));
