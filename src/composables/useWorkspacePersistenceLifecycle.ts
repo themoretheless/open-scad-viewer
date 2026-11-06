@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, type ComputedRef, type Ref } from 'vue'
+import { computed, nextTick, ref, type ComputedRef, type Ref } from 'svet'
 import { replaceSharedRecoveryHash, STORAGE_NOTICE_THROTTLE_MS } from '../appHelpers'
 import type { Language } from '../i18n/appStrings'
 import {

@@ -1,6 +1,6 @@
 import {setImmediate as realSetImmediate} from 'node:timers'
 import {createSolidNurbsCurve} from '../src/services/solidNurbs'
-import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'vue'
+import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'svet'
 import {it,expect,vi,afterEach,beforeAll} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
@@ -9,16 +9,32 @@ import * as stepStore from '../src/services/cadStepIndexedDb'
 import * as geometryKernel from '../src/services/geometry/kernel'
 import * as transparencyKernel from '../src/services/geometry/transparentBspKernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
-import DirectModeler from '../src/features/DirectModeler.vue'
-beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue');await import('../src/components/ProfileIntersectionPresentation.vue')})
+import DirectModeler from '../src/features/DirectModeler.svet'
+beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.svet');await import('../src/components/ProfileIntersectionPresentation.svet')})
 
 beforeAll(async()=>{
  // Native geometry fixtures need the same initialized runtime as interactions
  // in the browser; cold compilation belongs to setup, not one selected test.
  await geometryKernel.warmGeometryKernel()
  // Scene rows load asynchronously; selected tests must not rely on earlier mounts.
- await import('../src/components/SceneVirtualList.vue')
- await import('../src/components/CurvePointTrimControls.vue')
+ await import('../src/components/SceneVirtualList.svet')
+ await import('../src/components/CurvePointTrimControls.svet')
+ await import('../src/components/CadDimensionOverlay.svet')
+ await import('../src/components/SketchDimensionPanel.svet')
+ await import('../src/components/SurfaceDistanceCheck.svet')
+ await import('../src/components/ExpressionShellCheck.svet')
+ await import('../src/components/SurfacePairChecks.svet')
+ await import('../src/components/ProfileBridgeCheck.svet')
+ await import('../src/components/FrozenGraphBodyPanel.svet')
+ await import('../src/components/SourceGraphG2Preview.svet')
+ await import('../src/components/SourceBodyFailureNotice.svet')
+ await import('../src/components/ShellDistanceSummary.svet')
+ await import('../src/components/SolidVolumeWitness.svet')
+ await import('../src/components/SolidVolumeDistance.svet')
+ await import('../src/components/MaterialPathCheck.svet')
+ await import('../src/components/VrControls.svet')
+ await import('../src/features/GcodePanel.svet')
+ await import('../src/features/LaserCamPanel.svet')
 })
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'

@@ -1,4 +1,4 @@
-import type { ComputedRef, Ref } from 'vue'
+import type { ComputedRef, Ref } from 'svet'
 import type { MeshData } from '../core/mesh'
 import type { SourceProvenanceRow } from '../components/cadPanels.types'
 import { clamp } from '../services/math3d'

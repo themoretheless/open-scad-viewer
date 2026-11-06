@@ -20,7 +20,7 @@ const server=createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 const chunks=(await readdir(path.join(root,'assets'))).filter(n=>/^DirectModeler-[^/]+\.js$/.test(n));assert.equal(chunks.length,1)
 const digest=async file=>createHash('sha256').update(await readFile(file)).digest('hex')
-const artifacts={directModeler:{file:chunks[0],sha256:await digest(path.join(root,'assets',chunks[0]))},wasmSha256:await digest(path.join(root,'wasm/geometry-kernel.wasm')),sourceSha256:await digest('src/features/DirectModeler.vue')}
+const artifacts={directModeler:{file:chunks[0],sha256:await digest(path.join(root,'assets',chunks[0]))},wasmSha256:await digest(path.join(root,'wasm/geometry-kernel.wasm')),sourceSha256:await digest('src/features/DirectModeler.svet')}
 let browser,page
 const renderErrors=[]
 try {

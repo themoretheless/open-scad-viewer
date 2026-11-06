@@ -19,9 +19,9 @@ const profiles=Object.freeze({
   '390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201':Object.freeze({
     version:9,geometryChunkBytes:5_370_000,totalAssetBytes:10_080_000,
   }),
-  // v10: exactbaf58e bytes, sept payload measured within unchanged caps.
+  // v10: exactbaf58e bytes, sept payload + full CSS emission measured within packaging cap.
   'baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254':Object.freeze({
-    version:10,geometryChunkBytes:5_370_000,totalAssetBytes:10_080_000,
+    version:10,geometryChunkBytes:5_370_000,totalAssetBytes:10_160_000,
   }),
 })
 

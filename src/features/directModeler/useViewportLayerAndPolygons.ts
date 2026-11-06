@@ -10,7 +10,7 @@ import {
   type ComputedRef,
   type Ref,
   type ShallowRef,
-} from 'vue'
+} from 'svet'
 import type { DirectBody, DirectDocument, Point2 } from '../../services/directModeling'
 import { createDirectProjector, directExtrusionTool, directFaceShade, projectDirectPoint } from '../../services/directModelingTools'
 import type { Vec3 } from '../../services/directSketchGeometry'

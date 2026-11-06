@@ -1,11 +1,11 @@
-import {createRenderer,nextTick,ref,h} from 'vue'
+import {createRenderer,nextTick,ref,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({tasks:[] as any[],worker:null as any}))
 vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{
  state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))}
  return state.worker
 }}))
-import Panel from '../src/components/OffsetDeviationCheck.vue'
+import Panel from '../src/components/OffsetDeviationCheck.svet'
 const surface=()=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],
  controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]})
 it('invalidates stale results on edits, handles cancel and retry, and preserves selected geometry',async()=>{

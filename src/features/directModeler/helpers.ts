@@ -1,4 +1,4 @@
-// Pure helpers of DirectModeler.vue: no component state, extracted by scripts/vue-extract-pure.mjs.
+// Pure helpers of DirectModeler.svet: no component state, extracted by scripts/vue-extract-pure.mjs.
 import { type PolygonMesh } from '../../services/geometry/polygon'
 import { type DisplayMesh } from '../../services/solidDisplayCache'
 

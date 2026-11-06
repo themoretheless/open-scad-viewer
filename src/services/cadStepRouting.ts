@@ -1,10 +1,15 @@
 import {importFacetedStep,importTessellatedStepV10,type StepTessellatedPresentation} from './cadStep'
-import {exportDirectStepV9,exportDirectStepV10,importDirectStepV10,type DirectStepV10Document} from './cadNurbsStep'
+import {
+  exportDirectStepV9,exportDirectStepV10,importDirectStepV10,importDirectStepScene,importDirectStepLod0,
+  type DirectStepV10Document,type DirectStepSceneTree,type DirectStepDisplay,type DirectStepSceneProduct,
+  type StepRgba,
+} from './cadNurbsStep'
 import {uncheckedStepConformance,type StepSemanticConformance} from './cadStepConformance'
 import {tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
 import {inspectNurbsBrep} from './geometry/brep'
 import type {DirectBody} from './directModeling'
 import {storageGet,storageRemove,storageSet} from './safeStorage'
+import {stepLod0Cache,type CachedStepLod0Import} from './stepLod0Cache'
 
 export type StepRoute='retained-ap242-brep'|'faceted-brep'|'tessellated-shape'|'semantic-csg'|'unsupported-product'
 export interface StepCapabilityReport {
@@ -18,12 +23,22 @@ export interface StepCapabilityReport {
   productHierarchy:string[]
   externalReferences:string[]
   semanticConformance:StepSemanticConformance
+  sceneTree?:DirectStepSceneTree
+  display?:DirectStepDisplay
+  /** XDE product records are the authoritative product subset of sceneTree. */
+  xde?:DirectStepSceneProduct[]
+  lod0CacheKey?:string
+  lod0ShellCacheKeys?:string[]
 }
 export interface RoutedStepImport {
   bodies:DirectBody[]
   retainedModel?:NurbsBrep
   retainedDocument?:DirectStepV10Document
   tessellatedPresentation?:StepTessellatedPresentation[]
+  sceneTree?:DirectStepSceneTree
+  display?:DirectStepDisplay
+  xde?:DirectStepSceneProduct[]
+  lod0?:CachedStepLod0Import
   report:StepCapabilityReport
 }
 const RETAINED_STEP_KEY='open-scad-viewer.retained-step-v1'
@@ -62,14 +77,53 @@ const RETAINED_REP_STEP_RE=/\b(ADVANCED_BREP_SHAPE_REPRESENTATION|MANIFOLD_SURFA
 const DOCUMENT_FILE_RE=/\bDOCUMENT_FILE\s*\(/i
 
 export function inspectStepRoute(text:string):StepRoute {
-  if(TESSELLATED_STEP_RE.test(text))
-    return 'tessellated-shape'
-  if(FACETED_STEP_RE.test(text) && !EXACT_BREP_STEP_RE.test(text)) return 'faceted-brep'
-  if(CSG_STEP_RE.test(text))
-    return 'semantic-csg'
-  if(!RETAINED_REP_STEP_RE.test(text))
-    return 'unsupported-product'
+  // AP242 may carry baked tessellation beside the authoritative exact B-rep.
+  if(EXACT_BREP_STEP_RE.test(text)&&RETAINED_REP_STEP_RE.test(text))return 'retained-ap242-brep'
+  if(TESSELLATED_STEP_RE.test(text))return 'tessellated-shape'
+  if(FACETED_STEP_RE.test(text))return 'faceted-brep'
+  if(CSG_STEP_RE.test(text))return 'semantic-csg'
+  if(!RETAINED_REP_STEP_RE.test(text))return 'unsupported-product'
   return 'retained-ap242-brep'
+}
+
+const errorText=(error:unknown)=>error instanceof Error?error.message:String(error)
+const unique=(values:string[])=>[...new Set(values)]
+const sceneMetadataLoss=(scene:DirectStepSceneTree)=>[
+  ...scene.unsupported.presentation.map(item=>`Unsupported STEP presentation ${item.code}${item.entity===null?'':` #${item.entity}`}: ${item.detail}`),
+  ...scene.unsupported.xde.map(item=>`Unsupported STEP XDE ${item.code}${item.entity===null?'':` #${item.entity}`}: ${item.detail}`),
+]
+const lodMetadataLoss=(lod:CachedStepLod0Import)=>[
+  ...lod.diagnostics.map(item=>`AP242 LOD-0 ${item.severity} ${item.code}: ${item.message}`),
+  ...lod.schemaDiagnostics.map(item=>`AP242 schema ${item.severity} ${item.code}: ${item.message}`),
+]
+const combineLod0=(lod:CachedStepLod0Import)=>{
+  if(!lod.lod0Shells.length)throw Error('AP242 LOD-0 contains no display shells.')
+  const positions:number[]=[],indices:number[]=[]
+  for(const shell of lod.lod0Shells){
+    const offset=positions.length/3
+    if(positions.length+shell.mesh.positions.length>300_000||indices.length+shell.mesh.indices.length>300_000)
+      throw Error('AP242 LOD-0 exceeds the direct document mesh budget.')
+    for(const position of shell.mesh.positions)positions.push(position)
+    for(const index of shell.mesh.indices)indices.push(index+offset)
+  }
+  return {positions:Float64Array.from(positions),indices:Uint32Array.from(indices)}
+}
+const color=(rgba:StepRgba|null)=>{
+  if(!rgba)return
+  const channel=(value:number)=>Math.max(0,Math.min(255,Math.round(value))).toString(16).padStart(2,'0')
+  return `#${channel(rgba[0])}${channel(rgba[1])}${channel(rgba[2])}`
+}
+const applySceneToBody=(body:DirectBody,scene:DirectStepSceneTree,display:DirectStepDisplay,lod?:CachedStepLod0Import)=>{
+  const product=scene.products.length===1?scene.products[0]:undefined
+  const name=product?.name.trim()||product?.shapeName?.trim()||(lod?.lod0Shells.length===1?lod.lod0Shells[0].name.trim():'')
+  if(name)body.name=name.slice(0,100)
+  const bodyColors=display.bodies.map(item=>item.rgba).filter((rgba):rgba is StepRgba=>!!rgba)
+  const firstBodyColor=bodyColors[0]
+  const unambiguousBodyColor=firstBodyColor&&bodyColors.every(rgba=>rgba.every((channel,index)=>channel===firstBodyColor[index]))?firstBodyColor:undefined
+  const rgba=unambiguousBodyColor??product?.display.rgba??null
+  const hex=color(rgba)
+  if(hex)body.material={name:product?.material?.trim().slice(0,100)||'STEP product',color:hex,...(rgba&&rgba[3]<255?{opacity:rgba[3]/255}: {})}
+  // Face display records remain in report.display; DirectBody/renderer material is per-body only.
 }
 
 /** Content-aware workbench import. The retained model remains authoritative; the mesh is preview-only. */
@@ -81,12 +135,13 @@ export function importStepForWorkbench(text:string):RoutedStepImport {
       definitionIdentities:[],occurrenceIdentities:[],productHierarchy:[],externalReferences:[],
       semanticConformance:uncheckedStepConformance()},
   }
-  if(route==='tessellated-shape')return {
-    ...(()=>{const imported=importTessellatedStepV10(text);return {bodies:imported.bodies,tessellatedPresentation:imported.presentation}})(),
-    report:{route,retained:false,refusalBoundary:['analytic B-rep','procedural/CSG evaluation'],
-      identityLoss:[],metadataLoss:[],
-      definitionIdentities:[],occurrenceIdentities:[],productHierarchy:[],externalReferences:[],
-      semanticConformance:uncheckedStepConformance()},
+  if(route==='tessellated-shape'){
+    const imported=importTessellatedStepV10(text)
+    return {bodies:imported.bodies,tessellatedPresentation:imported.presentation,
+      report:{route,retained:false,refusalBoundary:['analytic B-rep','procedural/CSG evaluation'],
+        identityLoss:[],metadataLoss:imported.metadataLoss,
+        definitionIdentities:[],occurrenceIdentities:[],productHierarchy:[],externalReferences:[],
+        semanticConformance:uncheckedStepConformance()}}
   }
   if(route==='semantic-csg')throw Error(
     'STEP product route semantic-csg is recognized, but this procedural entity set has no explicit semantic evaluator; no mesh relabeling was performed.',
@@ -98,21 +153,44 @@ export function importStepForWorkbench(text:string):RoutedStepImport {
   if(DOCUMENT_FILE_RE.test(text)){
     throw Error('Retained STEP import contains external references; resolve them through an explicitly authorized resolver before workbench import.')
   }
-  const preview=tessellateNurbsBrep(imported.model,8)
+  const metadataLoss=[...imported.document.metadataLoss]
+  let sceneTree:DirectStepSceneTree|undefined,display:DirectStepDisplay|undefined,xde:DirectStepSceneProduct[]|undefined
+  try{
+    const scene=importDirectStepScene(text)
+    sceneTree=scene.sceneTree;display=scene.display;xde=scene.sceneTree.products
+    metadataLoss.push(...scene.report.metadataLoss,...sceneMetadataLoss(scene.sceneTree))
+  }catch(error){
+    metadataLoss.push(`STEP scene/XDE metadata unavailable: ${errorText(error)}`)
+  }
+  let lod0:CachedStepLod0Import|undefined,mesh:DirectBody['mesh']|undefined
+  if(TESSELLATED_STEP_RE.test(text)){
+    try{
+      lod0=stepLod0Cache.getDocument(text)??stepLod0Cache.putDocument(text,importDirectStepLod0(text))
+      metadataLoss.push(...lodMetadataLoss(lod0))
+      mesh=combineLod0(lod0)
+    }catch(error){
+      metadataLoss.push(`AP242 LOD-0 display unavailable; exact B-rep was tessellated instead: ${errorText(error)}`)
+    }
+  }
+  mesh??=(()=>{const preview=tessellateNurbsBrep(imported.model,8);return {positions:preview.positions,indices:preview.indices}})()
+  const body:DirectBody={id:crypto.randomUUID(),name:'Retained AP242 STEP',brep:imported.model,mesh}
+  if(sceneTree&&display)applySceneToBody(body,sceneTree,display,lod0)
   return {
     retainedModel:imported.model,
-    bodies:[{id:crypto.randomUUID(),name:'Retained AP242 STEP',brep:imported.model,mesh:{positions:preview.positions,indices:preview.indices}}],
+    bodies:[body],
     report:{
       route,retained:true,
       refusalBoundary:['unresolved/untrusted external references','singular transforms','assembly graph beyond configured budgets'],
       identityLoss:[],
-      metadataLoss:imported.document.metadataLoss,
+      metadataLoss:unique(metadataLoss),
       definitionIdentities:imported.document.definitionIdentities,
       occurrenceIdentities:imported.document.occurrenceIdentities,
       productHierarchy:imported.document.productHierarchy,
       externalReferences:[],
       semanticConformance:uncheckedStepConformance(),
-    },retainedDocument:imported.document,
+      ...(sceneTree?{sceneTree,display,xde}: {}),
+      ...(lod0?{lod0CacheKey:lod0.cacheKey,lod0ShellCacheKeys:lod0.lod0Shells.map(shell=>shell.cacheKey)}: {}),
+    },retainedDocument:imported.document,sceneTree,display,xde,lod0,
   }
 }
 

@@ -1,6 +1,6 @@
 // Qualification page: the production notice rendered with a saved real-worker denial.
-import {createApp,h,ref} from 'vue'
-import SourceBodyFailureNotice from '../../src/components/SourceBodyFailureNotice.vue'
+import {createApp,h,ref} from 'svet'
+import SourceBodyFailureNotice from '../../src/components/SourceBodyFailureNotice.svet'
 import {SourceBodyDisplayError} from '../../src/services/sourceBodyDisplay'
 import type {SourceBodyDefinition,SourceBodyResult} from '../../src/services/sourceBody'
 import request from '../../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json'

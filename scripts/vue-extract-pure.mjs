@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Move the pure helpers of a `<script setup>` block into a sibling TypeScript module.
 //
-// usage: node scripts/vue-extract-pure.mjs <Component.vue> <out.ts>
+// usage: node scripts/vue-extract-pure.mjs <Component.svet> <out.ts>
 //
 // A top-level function is pure when every top-level name it references is an import, a
 // type, a constant with a literal-only initializer, or another pure function. Pure functions
@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, relative } from 'node:path'
 
 const [vuePath, outPath] = process.argv.slice(2)
-if (!vuePath || !outPath) throw new Error('usage: vue-extract-pure.mjs <Component.vue> <out.ts>')
+if (!vuePath || !outPath) throw new Error('usage: vue-extract-pure.mjs <Component.svet> <out.ts>')
 const vue = readFileSync(vuePath, 'utf8')
 const open = vue.match(/<script setup lang="ts">\n/)
 const start = open.index + open[0].length

@@ -6,7 +6,7 @@ import { type SourceWallCoverageResult } from '../../services/sourceWallCoverage
 import { type SourceWallScanResult } from '../../services/sourceWallScanTransport'
 import { download, type Pane } from './helpers'
 import { type DirectDocument, type Point2, type DirectBody } from '../../services/directModeling'
-import { computed, ref, shallowRef, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'vue'
+import { computed, ref, shallowRef, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface SourceBodyToolsOptions {
   document: ShallowRef<DirectDocument>

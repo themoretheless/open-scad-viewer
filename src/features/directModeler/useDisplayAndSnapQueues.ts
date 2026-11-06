@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, onUnmounted, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import type { DirectBody, DirectDocument, DirectSketch, Point2 } from '../../services/directModeling'
 import type { MainSolidResults } from '../../services/mainSolidProtocol'
 import type { NurbsCurve } from '../../services/nurbsCurve'

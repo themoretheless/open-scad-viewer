@@ -46,23 +46,23 @@
 - **Зависимости:** 793 (вне топ-250, но рядом), 794–798.
 - **Критерии приёмки:** корректная детекция всех трёх AP по golden-файлам; смешанная схема логируется с предупреждением; неизвестная схема — не паника, а fallback AP203-геометрия.
 
-#### 794. AP214 presentation слои [статус: реализовано в brep-core; viewer bridge открыт] [трудоёмкость: M]
+#### 794. AP214 presentation слои [статус: реализовано в brep-core + geometry-bridge] [трудоёмкость: M]
 - **Суть:** `styled_item` / `presentation_layer_assignment` / `fill_area_style_colour`: цвет и слой привязываются к граням/телам. Маппинг в цветовую модель вьюера с fallback на цвет продукта; экспорт обратно. Камни: переопределение цвета грани vs тела (приоритет), presentation_style_by_context, унаследованные цвета через сборку.
 - **Где в коде:** новый модуль `step_presentation.rs` в `brep-core`; приёмник — `geometry-bridge` (cad_display).
 - **Зависимости:** 792, 796 (XDE-атрибуты).
-- **Критерии приёмки:** golden-файл с цветными гранями: цвета доезжают до вьюера; round-trip сохраняет (цвет, слой) для ≥95% styled_item; приоритет face>body проверен тестом. Typed round-trip и приоритет проверены; доставка в viewer пока не подключена.
+- **Критерии приёмки:** golden-файл с цветными гранями: цвета доезжают до вьюера; round-trip сохраняет (цвет, слой) для ≥95% styled_item; приоритет face>body проверен тестом. Typed round-trip, приоритет и frontend-ready sceneTree/display через `brep_nurbs_import_step_scene` проверены.
 
-#### 795. AP242 tessellated_* как LOD-0 [статус: реализовано в brep-core; viewer/performance открыты] [трудоёмкость: M]
+#### 795. AP242 tessellated_* как LOD-0 [статус: реализовано в brep-core + geometry-bridge; physical cache/performance открыты] [трудоёмкость: M]
 - **Суть:** `tessellated_face`/`tessellated_shell` рядом с точной геометрией: при импорте запечённая тесселяция становится LOD-0 (мгновенный показ во вьюере), точная геометрия — источник истины. Экспорт: писать tessellated-реплику текущей тесселяции. Камни: согласованность tessellated vs точной геометрии (drift), связывание через `geometric_model_relationship`.
 - **Где в коде:** `brep-core/src/step_interchange_v3.rs` + мост к кэшу тесселяций (`nurbs-core`/вьюер LOD из п. 149).
 - **Зависимости:** 792, 149 (LOD), 140–142.
-- **Критерии приёмки:** время до первого кадра на большой AP242-модели с tessellated-геометрией < 200 мс без перетесселяции; Hausdorff tessellated↔точная геометрия ≤ заявленного в файле допуска. Ядро LOD-0 и directional drift estimate реализованы; viewer cache, время и Hausdorff-сертификат не проверены.
+- **Критерии приёмки:** время до первого кадра на большой AP242-модели с tessellated-геометрией < 200 мс без перетесселяции; Hausdorff tessellated↔точная геометрия ≤ заявленного в файле допуска. Ядро LOD-0, directional drift estimate и cache-ready Mesh/keys через `brep_nurbs_import_step_lod0` реализованы; физическое viewer cache storage, время и Hausdorff-сертификат не проверены.
 
-#### 796. STEP XDE-атрибуты [статус: реализовано в brep-core; scene-tree bridge открыт] [трудоёмкость: M]
+#### 796. STEP XDE-атрибуты [статус: реализовано в brep-core + geometry-bridge] [трудоёмкость: M]
 - **Суть:** Имена (`name` на product/shape), материалы, плотность, валидационные свойства (объём/площадь через `measure_representation_item`): перенос в дерево сцены как типизированные метаданные. Камни: XDE-атрибуты живут в `shape_definition_representation`-цепочках; дублирование имён; кодировки (ISO 10303-21 escape-последовательности).
 - **Где в коде:** `brep-core/src/step_interchange_v3.rs`; дерево сцены — `geometry-bridge` (brep_semantic).
 - **Зависимости:** 792; 1031 (сверка validation props с вычисленными).
-- **Критерии приёмки:** имена продуктов доезжают до дерева сцены; validation props сверяются с вычисленными масс-свойствами и расхождение > допуска — предупреждение; round-trip сохраняет имена/плотность. Typed API, diagnostics и single-product round-trip проверены; scene-tree bridge не подключён.
+- **Критерии приёмки:** имена продуктов доезжают до дерева сцены; validation props сверяются с вычисленными масс-свойствами и расхождение > допуска — предупреждение; round-trip сохраняет имена/плотность. Typed API, diagnostics, single-product round-trip и frontend-ready sceneTree проверены.
 
 #### 797. Семантическая PMI AP242 [статус: реализовано в brep-core; NIST corpus открыт] [трудоёмкость: L]
 - **Суть:** `geometric_tolerance` + `datum_feature` + `datum_reference` привязаны к граням через `shape_aspect`: построение индекса shape_aspect → face id, типизированная модель допусков (позиционный, плоскостность и т.д.). Камни: косвенная адресация через `shape_aspect_relationship`; composite datums (A-B-C); modifiers (M/L-кружки).

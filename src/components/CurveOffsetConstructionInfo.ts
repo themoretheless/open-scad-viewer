@@ -1,6 +1,6 @@
-import CurrentCurveChainInspection from './CurrentCurveChainInspection.vue'
+import CurrentCurveChainInspection from './CurrentCurveChainInspection.svet'
 import type {SolidNurbsCurve} from '../services/solidNurbs'
-import {h,type FunctionalComponent} from 'vue'
+import {h,type FunctionalComponent} from 'svet'
 import type {CurveOffsetConstruction} from '../services/curveOffsetConstruction'
 const CurveOffsetConstructionInfo:FunctionalComponent<{value?:CurveOffsetConstruction;locale:string;curves:SolidNurbsCurve[];ids:string[];onResult?:(value:{curves:SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null)=>void}>=({value:v,locale,curves,ids,onResult})=>{
  const ru=locale==='ru',text=(a:string,b:string)=>ru?a:b

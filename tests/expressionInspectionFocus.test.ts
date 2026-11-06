@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs'
-import {createRenderer,nextTick,ref,shallowRef,h} from 'vue'
+import {createRenderer,nextTick,ref,shallowRef,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({result:null as any,pending:null as any,error:null as any,run:vi.fn(),cancel:vi.fn()}))
 vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:()=>{
@@ -10,7 +10,7 @@ vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:
  state.run=vi.fn(()=>{state.pending.value=true})
  return {result:state.result,pending:state.pending,error:state.error,errorCode:ref(''),run:state.run,retry:()=>{},cancel:state.cancel}
 }}))
-import Panel from '../src/components/ExpressionShellCheck.vue'
+import Panel from '../src/components/ExpressionShellCheck.svet'
 it('focuses the replacement cancel button and routes Escape to cancellation',async()=>{
  const windowTarget=new EventTarget();vi.stubGlobal('window',windowTarget);vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {})
  let focused:any

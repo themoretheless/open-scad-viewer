@@ -845,7 +845,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
         '*.md text eol=lf',
         '*.mjs text eol=lf',
         '*.ts text eol=lf',
-        '*.vue text eol=lf',
+        '*.svet text eol=lf',
       ]))
     const oracle = objectProperty(plan, 'oracle')
     const oracleManifest = JSON.parse(readFileSync(

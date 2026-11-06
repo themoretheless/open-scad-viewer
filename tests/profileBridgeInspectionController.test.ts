@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs'
-import {effectScope,ref,shallowRef,toRaw} from 'vue'
+import {effectScope,ref,shallowRef,toRaw} from 'svet'
 import {expect,it,vi} from 'vitest'
 import {useProfileBridgeInspection} from '../src/services/useProfileBridgeInspection'
 import type {ProfileBridgeChordOptions,ProfileBridgeChordReport} from '../src/services/nurbsProfileBridgeChords'

@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 /// <reference types="@webgpu/types" />
 
-declare module '*.vue' {
-  import type { DefineComponent } from 'vue'
+declare module '*.svet' {
+  import type { DefineComponent } from './src/forma/svet-runtime'
   const component: DefineComponent<{}, {}, any>
   export default component
 }

@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, watch, type Ref } from 'vue'
+import { computed, nextTick, ref, watch, type Ref } from 'svet'
 import {
   findLiteralMatches,
   replaceAllLiteral,

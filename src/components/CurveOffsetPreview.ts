@@ -1,4 +1,4 @@
-import {h} from 'vue'
+import {h} from 'svet'
 import type {SolidNurbsCurve} from '../services/solidNurbs'
 import type {CurveOffsetReport} from '../services/solidCurveOffset'
 import {offsetPreviewSegments} from '../services/curveOffsetPreview'

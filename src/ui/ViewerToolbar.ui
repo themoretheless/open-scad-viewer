@@ -5,9 +5,11 @@ component ViewerToolbar {
         IconButton { class: "view-btn icon-only"; ariaLabel: state.fitLabel; title: state.fitLabel; text: "⊡"; clicked -> actions.fitView(); }
         IconButton { class: "view-btn icon-only"; ariaLabel: state.resetLabel; title: state.resetLabel; text: "↺"; clicked -> actions.resetView(); }
         IconButton { class: "view-btn icon-only"; ariaLabel: state.previousViewLabel; title: state.previousViewTitle; disabled: !state.canPreviousView; text: "←"; clicked -> actions.previousView(); }
+        Slot { name: "standardViewSelect"; }
         Button { class: "view-btn"; text: state.projectionLabel; title: state.projectionTitle; ariaPressed: state.isOrthographic; clicked -> actions.toggleProjection(); }
         Button { class: "view-btn"; text: state.gridLabel; active: state.gridVisible; ariaPressed: state.gridVisible; clicked -> actions.toggleGrid(); }
         Slot { name: "gridAndMaterial"; }
+        Slot { name: "scanToggle"; }
         Divider {}
         Row {
             class: "display-modes"; role: "group"; ariaLabel: state.displayLabel;
@@ -15,5 +17,6 @@ component ViewerToolbar {
             SegmentButton { class: "btn view-btn"; text: state.edgesLabel; active: state.displayMode === "edges"; ariaPressed: state.displayMode === "edges"; clicked -> actions.setDisplayMode("edges"); }
             SegmentButton { class: "btn view-btn"; text: state.xrayLabel; active: state.displayMode === "xray"; ariaPressed: state.displayMode === "xray"; clicked -> actions.setDisplayMode("xray"); }
         }
+        Slot { name: "dockToggle"; }
     }
 }

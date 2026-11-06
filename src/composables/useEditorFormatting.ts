@@ -1,4 +1,4 @@
-import { nextTick, type Ref } from 'vue'
+import { nextTick, type Ref } from 'svet'
 import { formatCode } from '../services/codeFormat'
 import { indentSelection } from '../services/editorBlocks'
 interface Options {

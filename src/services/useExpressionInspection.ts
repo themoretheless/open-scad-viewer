@@ -1,4 +1,4 @@
-import type {Ref} from 'vue'
+import type {Ref} from 'svet'
 import {createSolidPreviewWorker} from './solidPreviewWorker'
 import {expressionInspectionExpectation,type ExpressionInspectionOptions} from './expressionShellInspection'
 import type {MainSolidWorkerClient} from './mainSolidWorkerClient'

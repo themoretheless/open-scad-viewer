@@ -23,7 +23,7 @@ let browser,page
 const errors=[]
 const chunks=(await readdir(path.join(root,'assets'))).filter(name=>/^DirectModeler-[^/]+\.js$/.test(name));assert.equal(chunks.length,1)
 const sha256=async file=>createHash('sha256').update(await readFile(file)).digest('hex')
-const artifacts={directModeler:{file:chunks[0],sha256:await sha256(path.join(root,'assets',chunks[0]))},wasm:{sha256:await sha256(path.join(root,'wasm/geometry-kernel.wasm'))},sourceSha256:await sha256('src/features/DirectModeler.vue')}
+const artifacts={directModeler:{file:chunks[0],sha256:await sha256(path.join(root,'assets',chunks[0]))},wasm:{sha256:await sha256(path.join(root,'wasm/geometry-kernel.wasm'))},sourceSha256:await sha256('src/features/DirectModeler.svet')}
 
 try {
  const {playwright}=await loadQualificationPlaywrightPackage()

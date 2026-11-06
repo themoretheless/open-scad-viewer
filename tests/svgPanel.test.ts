@@ -1,6 +1,6 @@
-import { createRenderer, h, nextTick, reactive } from 'vue'
+import { createRenderer, h, nextTick, reactive } from 'svet'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import SvgPanel from '../src/features/SvgPanel.vue'
+import SvgPanel from '../src/features/SvgPanel.svet'
 
 const geometry = vi.hoisted(() => ({ preview: vi.fn(), contours: vi.fn(), exportContours: vi.fn(), extrude: vi.fn(), project: vi.fn(), run: vi.fn(), cancel: vi.fn(), dispose: vi.fn() }))
 const storage = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }))

@@ -1,4 +1,4 @@
-import { onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'svet'
 import { parseDirectDocument, serializeDirectDocument } from '../../services/directModeling'
 import { xyPlane } from '../../services/directSketchGeometry'
 import { download } from './helpers'

@@ -6,7 +6,7 @@ import { projectDirectPoint } from '../../services/directModelingTools'
 import { type Vec3 } from '../../services/directSketchGeometry'
 import { type DirectDocument, type Point2 } from '../../services/directModeling'
 import { type Pane } from './helpers'
-import { computed, ref, shallowRef, watch, onUnmounted, type Ref, type ShallowRef } from 'vue'
+import { computed, ref, shallowRef, watch, onUnmounted, type Ref, type ShallowRef } from 'svet'
 
 export interface SourceDisplayOptions {
   camera: Ref<OrbitCamera>

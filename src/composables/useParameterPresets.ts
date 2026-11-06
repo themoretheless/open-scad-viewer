@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import {
   applyParameterPreset,
   captureParameterPreset,

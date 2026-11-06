@@ -10,7 +10,7 @@ import { type BrepBooleanOperation } from '../../services/geometry/brep'
 import { type Vec3 } from '../../services/directSketchGeometry'
 import { type NurbsScreenProjection } from '../../services/nurbsCurve'
 import { type SolidNurbsCurve, type SolidNurbsSurface } from '../../services/solidNurbs'
-import { computed, ref, shallowRef, watch, nextTick, type Ref, type ShallowRef, type ComputedRef } from 'vue'
+import { computed, ref, shallowRef, watch, nextTick, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface CommandPaletteOptions {
   applyMinkowski:()=>void|Promise<void>

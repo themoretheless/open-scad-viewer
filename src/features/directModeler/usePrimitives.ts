@@ -6,7 +6,7 @@ import { validateSimpleSketch } from '../../services/directSketchGeometry'
 import { sketchDimensions } from '../../services/directDimensions'
 import { createSolidNurbsCurve, createSolidNurbsSurface } from '../../services/solidNurbs'
 import { type SolidNurbsEditOptions } from '../../services/solidNurbsEdit'
-import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'vue'
+import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface PrimitivesOptions {
   activeGroup: Ref<string>

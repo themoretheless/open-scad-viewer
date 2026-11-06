@@ -2,7 +2,7 @@ import ts from 'typescript'
 import {readFile,writeFile,mkdir} from 'node:fs/promises'
 import path from 'node:path'
 import {createHash} from 'node:crypto'
-const sourcePath='src/features/DirectModeler.vue'
+const sourcePath='src/features/DirectModeler.svet'
 const text=await readFile(sourcePath,'utf8'),start=text.indexOf('<script setup'),bodyStart=text.indexOf('>',start)+1,end=text.indexOf('</script>',bodyStart)
 if(start<0||end<=bodyStart)throw Error('Missing Vue setup script')
 const source=ts.createSourceFile(sourcePath,text.slice(bodyStart,end),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS)

@@ -1,4 +1,4 @@
-import { computed, createRenderer, defineComponent, ref, shallowRef } from 'vue'
+import { computed, createRenderer, defineComponent, ref, shallowRef } from 'svet'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { useWorkspaceFileActions } from '../src/composables/useWorkspaceFileActions'
 import type { MeshData } from '../src/core/mesh'

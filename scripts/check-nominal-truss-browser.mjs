@@ -8,8 +8,8 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
   resolveId(id){if(id==='/__truss-host.js')return '\0nominal-truss-probe'},
   load(id){if(id==='\0nominal-truss-probe')return `
     import {createApp,reactive,h} from 'vue';
-    import Panel from '/src/features/CadWorkbenchPanel.vue';
-    import Tools from '/src/features/MainModelingTools.vue';
+    import Panel from '/src/features/CadWorkbenchPanel.svet';
+    import Tools from '/src/features/MainModelingTools.svet';
     import {warmGeometryKernel} from '/src/services/geometry/kernel.ts';
     import {extrudeDirectSketch} from '/src/services/directModeling.ts';
     import {previewMeshes} from '/src/services/mainModeling.ts';

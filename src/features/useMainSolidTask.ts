@@ -1,4 +1,4 @@
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef } from 'svet'
 import type { MainSolidJob, MainSolidProgress, MainSolidResults } from '../services/mainSolidProtocol'
 import type { MainSolidWorkerClient } from '../services/mainSolidWorkerClient'
 

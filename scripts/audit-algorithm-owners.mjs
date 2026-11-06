@@ -12,10 +12,10 @@ function walk(dir){
  for(const entry of readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en-US'))){
   const absolute=resolve(dir,entry.name),file=relative(root,absolute).split(sep).join('/')
   if(entry.isDirectory()){walk(absolute);continue}
-  if(!/\.(ts|vue|mjs)$/.test(file)||/\/generated\//.test(file))continue
+  if(!/\.(ts|svet|vue|mjs)$/.test(file)||/\/generated\//.test(file))continue
   const raw=readFileSync(absolute,'utf8')
   let text=raw
-  if(file.endsWith('.vue')){const {descriptor}=parse(raw,{filename:file});text=[descriptor.script?.content,descriptor.scriptSetup?.content].filter(Boolean).join('\n')}
+  if(file.endsWith('.svet')||file.endsWith('.vue')){const {descriptor}=parse(raw,{filename:file});text=[descriptor.script?.content,descriptor.scriptSetup?.content].filter(Boolean).join('\n')}
   const source=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true)
   const functions=[],mathCalls=[]
   let loops=0
@@ -32,7 +32,7 @@ function walk(dir){
   visit(source)
   const decision=registry.decisions.find(d=>d.files.includes(file))
   const family=registry.families.find(d=>d.patterns.some(p=>file.startsWith(p)))
-  rows.push({file,sha256:createHash('sha256').update(raw).digest('hex'),generated:/\/generated\//.test(file),owner:decision?.owner??family?.owner??'application-host',decision:decision?.id??family?.id??'host',functions,loops,mathCalls:[...new Set(mathCalls)].sort(),lineCoordinates:file.endsWith('.vue')?'combined-script':'file'})
+  rows.push({file,sha256:createHash('sha256').update(raw).digest('hex'),generated:/\/generated\//.test(file),owner:decision?.owner??family?.owner??'application-host',decision:decision?.id??family?.id??'host',functions,loops,mathCalls:[...new Set(mathCalls)].sort(),lineCoordinates:(file.endsWith('.svet')||file.endsWith('.vue'))?'combined-script':'file'})
  }
 }
 walk(resolve(root,'src'))

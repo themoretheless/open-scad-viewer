@@ -300,3 +300,104 @@ export const importDirectStepV10=(text:string):DirectStepV10Import=>
   callGeometryRust('brep_nurbs_import_step_v10',{text})
 export const exportDirectStepV10=(document:DirectStepV10Document):{text:string;certificate:DirectStepV10Import['certificate']}=>
   callGeometryRust('brep_nurbs_export_step_v10',{source:document.source,graphIdentity:document.graphIdentity})
+
+export type StepRgba=[number,number,number,number]
+export interface DirectStepDisplayStyle {rgba:StepRgba|null;layers:string[]}
+export interface DirectStepValidationDiagnostic {
+  code:string
+  product:number
+  property:'volume'|'surfaceArea'
+  declared:number
+  computed:number
+  absoluteError:number
+  relativeError:number
+  tolerance:number
+}
+export interface DirectStepSceneFace {
+  faceIndex:number
+  topologyFaceId:string
+  display:DirectStepDisplayStyle
+}
+export interface DirectStepSceneBody {
+  bodyIndex:number
+  topologyBodyId:string
+  display:DirectStepDisplayStyle
+  faces:DirectStepSceneFace[]
+}
+export interface DirectStepSceneProduct {
+  entity:number
+  id:string
+  name:string
+  description:string
+  shapeName:string|null
+  appliedNames:string[]
+  material:string|null
+  densityKgPerM3:number|null
+  validation:{volumeMm3:number|null;surfaceAreaMm2:number|null}
+  validationDiagnostics:DirectStepValidationDiagnostic[]
+  display:DirectStepDisplayStyle
+  bodies:DirectStepSceneBody[]
+}
+export interface DirectStepUnsupportedMetadata {code:string;entity:number|null;detail:string}
+export interface DirectStepSceneTree {
+  kind:'stepScene'
+  products:DirectStepSceneProduct[]
+  unsupported:{presentation:DirectStepUnsupportedMetadata[];xde:DirectStepUnsupportedMetadata[]}
+}
+export interface DirectStepDisplay {
+  products:Array<{productEntity:number;rgba:StepRgba|null;layers:string[]}>
+  bodies:Array<{bodyIndex:number;topologyBodyId:string;productEntity:number|null;rgba:StepRgba|null;layers:string[]}>
+  faces:Array<{faceIndex:number;topologyFaceId:string;bodyIndex:number;productEntity:number|null;rgba:StepRgba|null;layers:string[]}>
+}
+export interface DirectStepSceneImport {
+  model:NurbsBrep
+  certificate:{capability:string;complete:boolean;notes:string[]}
+  report:DirectStepV3Report&{metadataLoss:string[]}
+  sceneTree:DirectStepSceneTree
+  display:DirectStepDisplay
+  mesh?:unknown
+}
+/** Exact model and XDE/presentation metadata; no mesh is tessellated by this wrapper. */
+export const importDirectStepScene=(text:string):DirectStepSceneImport=>
+  callGeometryRust('brep_nurbs_import_step_scene',{text})
+
+export interface DirectStepDiagnostic {
+  code:string
+  severity:'info'|'warning'
+  entityId?:number|null
+  message:string
+}
+export interface DirectStepSchemaDiagnostic {
+  code:string
+  severity:'warning'
+  schema:string|null
+  message:string
+}
+export interface DirectStepLod0Shell {
+  shellEntityId:number
+  name:string
+  source:'step-ap242-tessellated'
+  cacheKey:string
+  mesh:{positions:number[];indices:number[]}
+  triangleCount:number
+  vertexCount:number
+  bounds:{min:[number,number,number];max:[number,number,number]}|null
+  exactBrepEntityIds:number[]
+  declaredTolerance:number|null
+  drift:{status:string;hausdorffCertified:false;[key:string]:unknown}
+  diagnostics:DirectStepDiagnostic[]
+}
+export interface DirectStepLod0Import {
+  source:'step-ap242-tessellated'
+  cacheKey:string
+  cacheReady:true
+  requiresRetessellation:false
+  exactGeometryAuthoritative:true
+  lod0Shells:DirectStepLod0Shell[]
+  exactBrepEntityIds:number[]
+  diagnostics:DirectStepDiagnostic[]
+  schemaDiagnostics:DirectStepSchemaDiagnostic[]
+}
+/** Decode baked AP242 tessellation as display-only LOD-0; exact B-rep remains authoritative. */
+export const importDirectStepLod0=(text:string):DirectStepLod0Import=>
+  callGeometryRust('brep_nurbs_import_step_lod0',{text})

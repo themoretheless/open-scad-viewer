@@ -20,6 +20,7 @@ import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
 import type { SolidNurbsCurve, SolidNurbsSurface } from './solidNurbs'
 import type { NurbsBrep } from './geometry/brep'
+import type {DirectStepDisplay,DirectStepSceneProduct,DirectStepSceneTree} from './cadNurbsStep'
 import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
@@ -32,7 +33,9 @@ export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?
 export interface DirectGroup { name: string; source: string }
 export interface DirectInterchangeMetadata {
   step?:{route:string;retained:boolean;refusalBoundary:string[];identityLoss:string[];metadataLoss:string[];
-    definitionIdentities:string[];occurrenceIdentities:string[];productHierarchy:string[];externalReferences:string[]}
+    definitionIdentities:string[];occurrenceIdentities:string[];productHierarchy:string[];externalReferences:string[];
+    sceneTree?:DirectStepSceneTree;display?:DirectStepDisplay;xde?:DirectStepSceneProduct[];
+    lod0CacheKey?:string;lod0ShellCacheKeys?:string[]}
 }
 export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
@@ -91,9 +94,28 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       }
       return true
     }
+    const validStepJson=(value:unknown,depth=0):boolean=>{
+      if(depth>24)return false
+      if(value===null||typeof value==='boolean')return true
+      if(typeof value==='number')return Number.isFinite(value)
+      if(typeof value==='string')return value.length<=4096
+      if(Array.isArray(value))return value.length<=300_000&&value.every(item=>validStepJson(item,depth+1))
+      if(value&&typeof value==='object')return Object.values(value).every(item=>validStepJson(item,depth+1))
+      return false
+    }
+    const validScene=step?.sceneTree===undefined||(step.sceneTree.kind==='stepScene'&&Array.isArray(step.sceneTree.products)
+      &&step.sceneTree.products.length<=1024&&!!step.sceneTree.unsupported&&Array.isArray(step.sceneTree.unsupported.presentation)
+      &&Array.isArray(step.sceneTree.unsupported.xde)&&validStepJson(step.sceneTree))
+    const validDisplay=step?.display===undefined||(!!step.display&&Array.isArray(step.display.products)
+      &&Array.isArray(step.display.bodies)&&Array.isArray(step.display.faces)&&validStepJson(step.display))
+    const validXde=step?.xde===undefined||(Array.isArray(step.xde)&&step.xde.length<=1024&&validStepJson(step.xde))
+    const validCacheKeys=(step?.lod0CacheKey===undefined||/^[0-9a-f]{64}$/.test(step.lod0CacheKey))
+      &&(step?.lod0ShellCacheKeys===undefined||(Array.isArray(step.lod0ShellCacheKeys)&&step.lod0ShellCacheKeys.length<=1024
+        &&step.lod0ShellCacheKeys.every(key=>/^[0-9a-f]{64}$/.test(key))))
     if(step&&(typeof step.route!=='string'||typeof step.retained!=='boolean'
       ||!validStepStrings(step.refusalBoundary)||!validStepStrings(step.identityLoss)||!validStepStrings(step.metadataLoss)
-      ||!validStepStrings(step.definitionIdentities)||!validStepStrings(step.occurrenceIdentities)||!validStepStrings(step.productHierarchy)||!validStepStrings(step.externalReferences))){
+      ||!validStepStrings(step.definitionIdentities)||!validStepStrings(step.occurrenceIdentities)||!validStepStrings(step.productHierarchy)||!validStepStrings(step.externalReferences)
+      ||!validScene||!validDisplay||!validXde||!validCacheKeys)){
       throw Error('Invalid interchange metadata.')
     }
   }

@@ -1,6 +1,6 @@
-import { createApp, markRaw } from 'vue'
+import { createApp, markRaw } from 'svet'
 import { sourceFileExtension } from './services/rushFrontendDetect'
-import App from './App.vue'
+import App from './App.svet'
 import { EXAMPLES } from './data/examples'
 import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './services/safeStorage'
 import { resolveTheme, THEME_SELECTIONS, type ThemeSelection } from './services/themePreferences'

@@ -1,4 +1,4 @@
-import { computed, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import {
   MAX_DOCUMENT_CHARACTERS,
   parseDirectDocument,

@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs'
-import {effectScope,shallowRef,ref} from 'vue'
+import {effectScope,shallowRef,ref} from 'svet'
 import {it,expect,vi} from 'vitest'
 import {useExpressionInspection} from '../src/services/useExpressionInspection'
 import type {ExpressionInspectionOptions,ExpressionInspectionResult} from '../src/services/expressionShellInspection'

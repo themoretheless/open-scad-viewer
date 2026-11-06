@@ -78,7 +78,7 @@ function moduleSpecifiersFromSource(source: string, fileName = 'boundary.ts'): s
 
 function moduleSpecifiers(path: string): string[] {
   const source = readFileSync(path, 'utf8')
-  if (!path.endsWith('.vue')) return moduleSpecifiersFromSource(source, path)
+  if (!path.endsWith('.svet')) return moduleSpecifiersFromSource(source, path)
   return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
     .flatMap((match, index) => moduleSpecifiersFromSource(match[1], `${path}.${index}.ts`))
 }

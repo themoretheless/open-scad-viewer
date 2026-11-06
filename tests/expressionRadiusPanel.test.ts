@@ -1,12 +1,12 @@
 import {readFileSync} from 'node:fs'
-import {createSSRApp,shallowRef,ref} from 'vue'
-import {renderToString} from '@vue/server-renderer'
+import {createSSRApp,shallowRef,ref} from 'svet'
+import {renderToString} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({result:undefined as any,error:'',errorCode:''}))
 vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:()=>({
  result:shallowRef(state.result),pending:ref(false),error:ref(state.error),errorCode:ref(state.errorCode),run:vi.fn(),retry:vi.fn(),cancel:vi.fn(),
 })}))
-import ExpressionShellCheck from '../src/components/ExpressionShellCheck.vue'
+import ExpressionShellCheck from '../src/components/ExpressionShellCheck.svet'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-radius-dispatch-2026-10-09.json',import.meta.url),'utf8'))
 for(const ru of [true,false])it(`shows unverified contact domains without calling them self-intersections: ${ru}`,async()=>{
  state.result=structuredClone(fixture.admitted)
