@@ -189,51 +189,18 @@ module organic_pores(a,b,z_offset=0,slope=0,reserve_hooks=false,seam_offset=0,se
       hy2=(iy+2)*311.7+pattern_seed*91.3; hy1=(iy+1)*311.7+pattern_seed*91.3;
       hym1=(iy-1)*311.7+pattern_seed*91.3; hym2=(iy-2)*311.7+pattern_seed*91.3;
       cell_r = radius>0 || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_rib/2));
+      pts = [
+        [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir, oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
+        [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir, oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
+        [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir, oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+        [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir, oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
+        [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir, oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
+        [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir, oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
+      ];
       if(!hook_zone) {
-        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_fn) inset_hex([
-            [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
-          ],local_rib/2+cell_r,seam_dir);
-        else if(cell_r>0) offset(r=cell_r,$fn=cell_fn) offset(delta=-local_rib/2-cell_r)
-          polygon([
-            [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
-          ]);
-        else offset(delta=-local_rib/2)
-          polygon([
-            [ox+ix*rx*seam_dir+((sin(hx0+hy2+17)*43758.5453)-floor(sin(hx0+hy2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+2)*ry+((sin(hx0+hy2+83)*43758.5453)-floor(sin(hx0+hy2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hy1+17)*43758.5453)-floor(sin(hxm1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin(hxm1+hy1+83)*43758.5453)-floor(sin(hxm1+hy1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix-1)*rx*seam_dir+((sin(hxm1+hym1+17)*43758.5453)-floor(sin(hxm1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin(hxm1+hym1+83)*43758.5453)-floor(sin(hxm1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+ix*rx*seam_dir+((sin(hx0+hym2+17)*43758.5453)-floor(sin(hx0+hym2+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-2)*ry+((sin(hx0+hym2+83)*43758.5453)-floor(sin(hx0+hym2+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hym1+17)*43758.5453)-floor(sin(hx1+hym1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy-1)*ry+((sin(hx1+hym1+83)*43758.5453)-floor(sin(hx1+hym1+83)*43758.5453)-0.5)*ry*0.48],
-            [ox+(ix+1)*rx*seam_dir+((sin(hx1+hy1+17)*43758.5453)-floor(sin(hx1+hy1+17)*43758.5453)-0.5)*rx*0.32*seam_dir,
-              oy+(iy+1)*ry+((sin(hx1+hy1+83)*43758.5453)-floor(sin(hx1+hy1+83)*43758.5453)-0.5)*ry*0.48]
-          ]);
+        if(cell_r>r*0.24-local_rib*0.35) offset(r=cell_r,$fn=cell_fn) inset_hex(pts,local_rib/2+cell_r,seam_dir);
+        else if(cell_r>0) offset(r=cell_r,$fn=cell_fn) offset(delta=-local_rib/2-cell_r) polygon(pts);
+        else offset(delta=-local_rib/2) polygon(pts);
       }
     }
   }
@@ -264,7 +231,7 @@ module apertures(a,b,perforated,z_offset=0,organic_panel=false,hook_pads=false,s
     if(hook_pads && hooks && hook_mount==1) {
       slot_w = hook_width + 2*hook_tolerance;
       slot_h = max(hook_thickness*1.3, 3.6);
-      slot_y = max(z_offset+wall+1, b - max(wall*2.2, hook_thickness*2) - slot_h);
+      slot_y = max(z_offset+wall+1, b - max(wall*1.2, hook_thickness*1.2) - slot_h);
       first_hook = (width-hook_step*(hook_count-1))/2-radius;
       for(i=[0:hook_count-1])
         translate([first_hook+i*hook_step-slot_w/2, slot_y]) square([slot_w, slot_h]);
@@ -274,9 +241,9 @@ module hook_dovetail_sockets() {
   if(hooks && hook_mount==2) {
     slot_h = max(10, min(wall_height-wall*1.5, hook_drop+hook_thickness));
     slot_z = height - wall - slot_h;
-    neck_w = max(2.4, min(hook_width-1.2, hook_width*0.52)) + 2*hook_tolerance;
     dove_d = max(1.2, wall*0.6);
-    base_w = neck_w + 2*dove_d;
+    base_w = hook_width + 2*hook_tolerance;
+    neck_w = max(1.8, base_w - 2*dove_d);
     for(i=[0:hook_count-1])
       translate([(width-hook_step*(hook_count-1))/2+i*hook_step, 0, slot_z])
         linear_extrude(slot_h)
@@ -288,13 +255,14 @@ module detached_hooks() {
     hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
     hook_fn = 8;
     slot_h1 = max(hook_thickness*1.3, 3.6);
-    stem_drop = max(wall*2.2, hook_thickness*2);
+    stem_drop = max(wall*1.2, hook_thickness*1.2);
     t_h = max(hook_thickness*1.2, 3.2);
     slot_h2 = max(10, min(wall_height-wall*1.5, hook_drop+hook_thickness));
-    neck_w = max(2.4, min(hook_width-1.2, hook_width*0.52));
     dove_d = max(1.2, wall*0.6);
-    base_w = neck_w + 2*dove_d;
-    hook_pitch_x = max(hook_gap+2*hook_thickness+wall+10, base_w+10);
+    base_w = hook_width;
+    neck_w = max(1.8, base_w - 2*dove_d);
+    tenon_d = max(0.4, dove_d - hook_tolerance);
+    hook_pitch_x = max(hook_gap+3*hook_thickness+wall+14, base_w+14);
     base_y = -(hook_gap+hook_thickness+14);
     for(i=[0:hook_count-1])
       translate([(width-(hook_count-1)*hook_pitch_x)/2+i*hook_pitch_x, base_y, 0]) {
@@ -304,48 +272,36 @@ module detached_hooks() {
             translate([-hook_gap-hook_thickness, 0]) square([hook_gap+2*hook_thickness+wall+hook_tolerance, hook_thickness]);
             translate([0, -stem_drop-slot_h1]) square([wall+hook_tolerance+hook_thickness, hook_thickness]);
             translate([wall+hook_tolerance, -stem_drop-slot_h1-t_h]) square([hook_thickness, stem_drop+slot_h1+t_h]);
-            translate([wall+hook_tolerance+hook_thickness, -stem_drop-slot_h1-t_h]) square([hook_thickness*1.1, t_h+slot_h1*0.45]);
+            translate([wall+hook_tolerance+hook_thickness, -stem_drop-slot_h1-t_h]) square([hook_thickness*0.9, t_h]);
           }
         } else if(hook_mount==2) {
-          union() {
-            linear_extrude(hook_width) union() {
-              translate([-hook_gap-hook_thickness, -hook_drop]) square([hook_thickness, hook_drop+hook_thickness]);
-              translate([-hook_gap-hook_thickness, 0]) square([hook_gap+hook_thickness, hook_thickness]);
-              translate([-hook_thickness, -slot_h2+hook_thickness]) square([hook_thickness, slot_h2]);
-              if(hook_chamfer) {
-                polygon([[-hook_thickness,0],[-hook_gap,0],[-hook_thickness,-min(hook_drop*0.95,max(0.1,hook_gap-hook_thickness))]]);
-                polygon([[-hook_gap-hook_thickness,-hook_drop],[-hook_gap,-hook_drop],[-hook_gap,-hook_drop+hook_thickness]]);
-              } else if(hook_gap>hook_thickness+hook_r*2) {
-                difference() {
-                  translate([-hook_thickness-hook_r,-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-                  translate([-hook_thickness-hook_r,-hook_r]) circle(r=hook_r,$fn=hook_fn);
-                }
-                difference() {
-                  translate([-hook_gap-0.02,-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-                  translate([-hook_gap+hook_r,-hook_r]) circle(r=hook_r,$fn=hook_fn);
-                }
-              }
+          linear_extrude(hook_width) union() {
+            translate([-hook_gap-hook_thickness, -hook_drop]) square([hook_thickness, hook_drop+hook_thickness]);
+            translate([-hook_gap-hook_thickness, 0]) square([hook_gap+hook_thickness, hook_thickness]);
+            translate([-hook_thickness, -slot_h2+hook_thickness]) square([hook_thickness, slot_h2]);
+            if(hook_chamfer) {
+              polygon([[-hook_thickness,0],[-hook_gap,0],[-hook_thickness,-min(hook_drop*0.95,max(0.1,hook_gap-hook_thickness))]]);
+              polygon([[-hook_gap-hook_thickness,-hook_drop],[-hook_gap,-hook_drop],[-hook_gap,-hook_drop+hook_thickness]]);
+            } else if(hook_gap>hook_thickness+hook_r*2) {
+              difference() { translate([-hook_thickness-hook_r,-hook_r]) square([hook_r+0.02,hook_r+0.02]); translate([-hook_thickness-hook_r,-hook_r]) circle(r=hook_r,$fn=hook_fn); }
+              difference() { translate([-hook_gap-0.02,-hook_r]) square([hook_r+0.02,hook_r+0.02]); translate([-hook_gap+hook_r,-hook_r]) circle(r=hook_r,$fn=hook_fn); }
             }
-            translate([-0.1, -slot_h2+hook_thickness+hook_tolerance/2, hook_width/2]) rotate([-90,0,-90])
-              linear_extrude(max(2, slot_h2 - hook_tolerance))
-                polygon([[-neck_w/2,0],[neck_w/2,0],[base_w/2,max(0.4,dove_d-hook_tolerance)+0.1],[-base_w/2,max(0.4,dove_d-hook_tolerance)+0.1]]);
+          }
+          hull() {
+            translate([-0.02, -slot_h2+hook_thickness+hook_tolerance/2, (hook_width-neck_w)/2])
+              cube([0.04, max(2, slot_h2-hook_tolerance), neck_w]);
+            translate([tenon_d-0.04, -slot_h2+hook_thickness+hook_tolerance/2, 0])
+              cube([0.04, max(2, slot_h2-hook_tolerance), base_w]);
           }
         }
       }
   }
 }
 module panel(a,b,thickness,perforated,z_offset=0,organic_panel=false,hook_pads=false,slope=0,seam_offset=0,seam_dir=1,seam_v=0,h_scale=1,inset_sides=false,fold_span=0) {
-  linear_extrude(thickness) difference() {
-    outline(a,b,slope);
-    apertures(a,b,perforated,z_offset,organic_panel,hook_pads,slope,seam_offset,seam_dir,seam_v,h_scale,inset_sides,fold_span);
-  }
+  linear_extrude(thickness) difference() { outline(a,b,slope); apertures(a,b,perforated,z_offset,organic_panel,hook_pads,slope,seam_offset,seam_dir,seam_v,h_scale,inset_sides,fold_span); }
 }
 // Positive front_angle opens the front outward; the back stays vertical.
-module footprint() {
-  if(radius>0) translate([radius,radius]) offset(r=radius)
-    square([width-2*radius,depth-2*radius]);
-  else square([width,depth]);
-}
+module footprint() { if(radius>0) translate([radius,radius]) offset(r=radius) square([width-2*radius,depth-2*radius]); else square([width,depth]); }
 module floor_pores() {
   frame=print_optimized || radius>0 ? max(wall,floor_rib*1.25) : wall;
   eff_floor_r=floor_cell_size/mesh_density;
@@ -366,50 +322,17 @@ module floor_pores() {
         // Plate-stress grading: thicker ribs near the perimeter wall junction, lighter in the center span.
         local_floor_rib=floor_rib*max(0.45,1+stress_gradient*(-0.18+0.32*min(1,max(abs(ix*r)/width,abs(iy*sqrt(3)*ry)/depth))));
         floor_cell_r = radius>0 || print_optimized || cell_radius<=0 ? 0 : max(0, min(cell_radius, r*0.76-local_floor_rib/2));
-        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_fn) inset_hex([
-            [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy-1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy-1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+0)*sqrt(3)*ry/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28]
-          ],local_floor_rib/2+floor_cell_r,-1);
-        else if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_fn) offset(delta=-local_floor_rib/2-floor_cell_r)
-          polygon([
-            [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy-1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy-1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+0)*sqrt(3)*ry/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28]
-          ]);
-        else offset(delta=-local_floor_rib/2)
-          polygon([
-            [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy-1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy-1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+0)*sqrt(3)*ry/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
-            [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28,
-              oy+(iy+1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28]
-          ]);
+        fpts = [
+          [ox+(ix+2)*r/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28, oy+(iy+0)*sqrt(3)*ry/2+((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
+          [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28, oy+(iy-1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
+          [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28, oy+(iy-1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy-1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
+          [ox+(ix-2)*r/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28, oy+(iy+0)*sqrt(3)*ry/2+((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-2)*127.1+(iy+0)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
+          [ox+(ix-1)*r/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28, oy+(iy+1)*sqrt(3)*ry/2+((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix-1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28],
+          [ox+(ix+1)*r/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+17)*43758.5453))-0.5)*r*0.28, oy+(iy+1)*sqrt(3)*ry/2+((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453)-floor((sin((ix+1)*127.1+(iy+1)*311.7+pattern_seed*91.3+83)*43758.5453))-0.5)*ry*0.28]
+        ];
+        if(floor_cell_r>r*0.24-local_floor_rib*0.35) offset(r=floor_cell_r,$fn=floor_fn) inset_hex(fpts,local_floor_rib/2+floor_cell_r,-1);
+        else if(floor_cell_r>0) offset(r=floor_cell_r,$fn=floor_fn) offset(delta=-local_floor_rib/2-floor_cell_r) polygon(fpts);
+        else offset(delta=-local_floor_rib/2) polygon(fpts);
       }
     }
     if(dividers>0) for(i=[1:dividers])
@@ -458,6 +381,26 @@ module walls() {
     hook_dovetail_sockets();
   }
 }
+module attached_hooks() {
+  if(hooks && hook_mount==0) {
+    hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
+    hook_fn = 8;
+    for(i=[0:hook_count-1])
+      translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
+        translate([0,-hook_gap-hook_thickness,height-hook_thickness]) cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
+        translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness]) cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
+        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
+          if(hook_chamfer) {
+            polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
+            polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
+          } else {
+            difference() { translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]); translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn); }
+            difference() { translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]); translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn); }
+          }
+        }
+      }
+  }
+}
 module assembled_box() { union() {
   linear_extrude(floor) difference() {
     footprint();
@@ -476,32 +419,7 @@ module assembled_box() { union() {
   if(dividers>0) for(i=[1:dividers])
     translate([divider_margin+i*divider_step-wall/2,wall-0.25,floor-0.1]) rotate([90,0,90])
       panel(depth-2*wall+0.5-0.5*slope,wall_height+0.1,wall,porous && radius==0,0,organic,false,slope);
-  if(hooks && hook_mount==0) {
-    hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
-    hook_fn = 8;
-    for(i=[0:hook_count-1])
-      translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
-        translate([0,-hook_gap-hook_thickness,height-hook_thickness])
-          cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
-        translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
-          cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
-        translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
-          if(hook_chamfer) {
-            polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
-            polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
-          } else {
-            difference() {
-              translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-              translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-            }
-            difference() {
-              translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-              translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-            }
-          }
-        }
-      }
-  }
+  attached_hooks();
 } }
 module straight_box() {
   if(radius>0 || print_optimized || !porous || !organic) assembled_box();
@@ -551,32 +469,7 @@ module straight_box() {
         hook_dovetail_sockets();
       }
     }
-    if(hooks && hook_mount==0) {
-      hook_r = min(hook_thickness*0.85,hook_gap*0.35,hook_drop*0.35);
-      hook_fn = 8;
-      for(i=[0:hook_count-1])
-        translate([(width-hook_step*(hook_count-1))/2+i*hook_step-hook_width/2,0,0]) union() {
-          translate([0,-hook_gap-hook_thickness,height-hook_thickness])
-            cube([hook_width,hook_gap+hook_thickness+wall,hook_thickness]);
-          translate([0,-hook_gap-hook_thickness,height-hook_drop-hook_thickness])
-            cube([hook_width,hook_thickness,hook_drop+hook_thickness]);
-          translate([0,0,height-hook_drop-hook_thickness]) rotate([90,0,90]) linear_extrude(hook_width) union() {
-            if(hook_chamfer) {
-              polygon([[0,hook_drop],[-hook_gap,hook_drop],[0,hook_drop-min(hook_drop*0.95,hook_gap)]]);
-              polygon([[-hook_gap-hook_thickness,0],[-hook_gap,0],[-hook_gap,-hook_thickness]]);
-            } else {
-              difference() {
-                translate([-hook_r,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-                translate([-hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-              }
-              difference() {
-                translate([-hook_gap-0.02,hook_drop-hook_r]) square([hook_r+0.02,hook_r+0.02]);
-                translate([-hook_gap+hook_r,hook_drop-hook_r]) circle(r=hook_r,$fn=hook_fn);
-              }
-            }
-          }
-        }
-    }
+    attached_hooks();
   }
 }
 // viewer_bend is a native viewer extension; change these settings to regenerate the curved mesh.

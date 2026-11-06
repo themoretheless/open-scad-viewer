@@ -160,3 +160,59 @@ pub(in crate::profile_certificate) fn zero(p: &Poly, f: &Poly, i: &[Q; 2]) -> Re
 pub(in crate::profile_certificate) fn refine_root(f: &Poly, i: &[Q; 2]) -> Result<[Q; 2]> {
     refine(f, i)
 }
+
+/// Exact zero query at a particular dependent algebraic fiber node. A modular
+/// gcd selects the common roots; refined isolators only identify that root.
+pub(in crate::profile_certificate) fn zero_at_node(
+    q: &Bi,
+    relation: &Bi,
+    projection: &Poly,
+    x: &[Q; 2],
+    y: &[Q; 2],
+) -> Result<bool> {
+    let mut f = projection.clone();
+    for _ in 0..128 {
+        let attempt = (|| -> MResult<Bi> {
+            let a = reduce(relation, &f)?;
+            let b = reduce(q, &f)?;
+            if a.is_empty() {
+                return Err(refused("Dependent algebraic selector is an entire fiber").into());
+            }
+            mgcd(&a, &b, &f)
+        })();
+        match attempt {
+            Ok(common) => {
+                if common.len() < 2 {
+                    return Ok(false);
+                }
+                if y[0] == y[1] {
+                    return zero_at(&value(&common, &y[0]), &f, x);
+                }
+                let mut width = Q::new(1.into(), 65536.into());
+                for _ in 0..192 {
+                    let roots = isolate_at(&common, &f, x, &width)?;
+                    if roots.iter().any(|r| y[0] < r[0] && r[1] < y[1]) {
+                        return Ok(true);
+                    }
+                    if roots.iter().all(|r| r[1] < y[0] || y[1] < r[0]) {
+                        return Ok(false);
+                    }
+                    width /= Q::from_integer(2.into());
+                }
+                return Err(refused("Dependent algebraic zero selection exhausted"));
+            }
+            Err(ModularError::Geometry(e)) => return Err(e),
+            Err(ModularError::Split(g)) => {
+                if g.len() < 2 || g.len() >= f.len() {
+                    return Err(refused("Improper dependent algebraic field split"));
+                }
+                f = if count(&g, &x[0], &x[1])? == 1 {
+                    g
+                } else {
+                    monic(quotient(&f, &g)?)
+                };
+            }
+        }
+    }
+    Err(refused("Dependent algebraic node factor budget exhausted"))
+}

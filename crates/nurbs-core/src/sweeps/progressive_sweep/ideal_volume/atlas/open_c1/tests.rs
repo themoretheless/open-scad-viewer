@@ -32,7 +32,7 @@ fn original_open_c1_p_matrix_proves_a_complete_nonmonotone_filled_source() {
         let mut out=report();let difference=cap_difference::Difference::prepare([&a,&b],&mut out.cells,max).unwrap();
         let context=cell::Context{s:&sweep.sweeps[0],caps:[&a,&b],cap_identity:None,cap_difference:difference,
             basis:report().projection.map(|v|v.map(I::point)),start:[I::point(0.);3],zero:zero.clone(),offset:None,
-            anchor:None,transport:None,arc:None,guide_arc:None,shared_guide:false,poses:Some(Default::default())};
+            anchor:None,transport:None,arc:None,guide_arc:None,shared_guide:false,poses:Some(Default::default()),cap_jets:None};
         let ok=certify(&context,report().projection,&mut out,max,work).unwrap();(ok,out)
     };
     let (ok,full)=run(10000,100000);assert!(ok,"{full:?}");
@@ -92,7 +92,7 @@ fn original_open_c1_p_matrix_refuses_c0_laws_and_hidden_original_folds() {
         let mut out=report();let identity=cap_identity::certify([&a,&a],&mut out,10000,100000).unwrap();
         let context=cell::Context{s:&sweep.sweeps[0],caps:[&a,&a],cap_identity:Some(identity),cap_difference:None,
             basis:report().projection.map(|v|v.map(I::point)),start:[I::point(0.);3],zero:zero.clone(),offset:None,
-            anchor:None,transport:None,arc:None,guide_arc:None,shared_guide:false,poses:Some(Default::default())};
+            anchor:None,transport:None,arc:None,guide_arc:None,shared_guide:false,poses:Some(Default::default()),cap_jets:None};
         assert!(!certify(&context,report().projection,&mut out,10000,100000).unwrap());
         assert!(!out.embedding_certified && !out.regularity_certified && !out.parameter_topology_preserved);
         assert!(out.cells<=10000 && out.exact_work<=100000);

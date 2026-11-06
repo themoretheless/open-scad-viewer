@@ -944,6 +944,112 @@ fn v5_orders_distinct_occurrence_transforms_and_refuses_cycle_or_ambiguity() {
         assert!(text.contains("ADVANCED_FACE('',("));
     }
 
+fn authored_reversed_cuboid() -> Model {
+    crate::transform::affine(
+        &freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap(),
+        [
+            [-1., 0., 0., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap()
+}
+
+fn assert_exact_chart_model(actual: &Model, expected: &Model) {
+    assert_eq!(actual.0, expected.0, "exact geometry and topology");
+    assert_eq!(actual.1.vertices, expected.1.vertices);
+    assert_eq!(actual.1.edges, expected.1.edges);
+    assert_eq!(actual.1.loops, expected.1.loops);
+    assert_eq!(actual.1.faces, expected.1.faces);
+    assert_eq!(actual.1.shells, expected.1.shells);
+    assert_eq!(actual.1.bodies, expected.1.bodies);
+    assert_eq!(actual.1.lineage, expected.1.lineage);
+    assert_eq!(actual.1.local_tolerances_mm, expected.1.local_tolerances_mm);
+    assert_eq!(actual.1.sewed_edges, expected.1.sewed_edges);
+}
+
+#[test]
+fn v6_versioned_authored_chart_roundtrips_exact_poles_pcurves_and_topology() {
+    let model = authored_reversed_cuboid();
+    assert!(model.shells[0].faces.iter().any(|usage| usage.reversed));
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let entities = parse(&text).unwrap();
+    let faces = entities
+        .values()
+        .filter_map(|entity| match &entity.value {
+            Value::Call(ty, args) if ty == "ADVANCED_FACE" => Some(args),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(faces.len(), model.faces.len());
+    for args in faces {
+        let payload = name(args).unwrap().strip_prefix("OSCAD_TOPO/3|").unwrap();
+        let fields = payload.split('|').collect::<Vec<_>>();
+        assert_eq!(fields.len(), 4);
+        assert_eq!(fields[0], "face");
+        assert_eq!(fields[3], STEP_V6_AUTHORED_CHART_MARKER);
+    }
+    let (back, _, report) = import_step_v6(&text).unwrap();
+    assert!(report.identity.preserved);
+    back.validate().unwrap();
+    assert_exact_chart_model(&back, &model);
+}
+
+#[test]
+fn v6_unmarked_legacy_transitional_chart_restores_exact_original_model() {
+    let model = authored_reversed_cuboid();
+    let mut transitional = canonical_face_senses(&model).unwrap();
+    assert!(transitional.shells[0].faces.iter().all(|usage| !usage.reversed));
+    for (target, source) in transitional.shells.iter_mut().zip(&model.shells) {
+        for (target, source) in target.faces.iter_mut().zip(&source.faces) {
+            target.reversed = source.reversed;
+        }
+    }
+    let (legacy, _, _) = export_step_v6(&transitional).unwrap();
+    let legacy = legacy.replace(&format!("|{STEP_V6_AUTHORED_CHART_MARKER}"), "");
+    assert!(!legacy.contains(STEP_V6_AUTHORED_CHART_MARKER));
+    let entities = parse(&legacy).unwrap();
+    assert!(entities.values().any(|entity| match &entity.value {
+        Value::Call(ty, args) if ty == "ADVANCED_FACE" => {
+            name(args).unwrap().starts_with("OSCAD_TOPO/3|")
+                && !boolean(&args[3], "same_sense").unwrap()
+        }
+        _ => false,
+    }));
+    let (back, _, report) = import_step_v6(&legacy).unwrap();
+    assert!(report.identity.preserved);
+    back.validate().unwrap();
+    assert_exact_chart_model(&back, &model);
+}
+
+#[test]
+fn v6_authored_chart_marker_does_not_change_v5_v9_or_external_ap242() {
+    let model = authored_reversed_cuboid();
+    let canonical = canonical_face_senses(&model).unwrap();
+
+    let (v5, _, _) = export_step_v5(&model).unwrap();
+    assert!(!v5.contains(STEP_V6_AUTHORED_CHART_MARKER));
+    let (v5_back, _, _) = import_step_v5(&v5).unwrap();
+    assert_exact_chart_model(&v5_back, &canonical);
+
+    let (v9, _, _) = export_step_v9(&model).unwrap();
+    assert!(!v9.contains(STEP_V6_AUTHORED_CHART_MARKER));
+    let (v9_back, _, _) = import_step_v9(&v9).unwrap();
+    assert_exact_chart_model(&v9_back, &canonical);
+
+    let (authored, _, _) = export_step_v6(&canonical).unwrap();
+    let external = authored.replace("OSCAD_TOPO/3|", "EXTERNAL_STEP|");
+    let (external_back, _, report) = import_step_v6(&external).unwrap();
+    assert!(!report.identity.preserved);
+    external_back.validate().unwrap();
+    let external_unmarked = external.replace(&format!("|{STEP_V6_AUTHORED_CHART_MARKER}"), "");
+    let (external_unmarked_back, _, _) = import_step_v6(&external_unmarked).unwrap();
+    assert_exact_chart_model(&external_back, &external_unmarked_back);
+    assert_eq!(external_back.0, canonical.0, "external AP242 canonical chart");
+}
+
     #[test]
     fn v6_roundtrips_certified_pole_boundaries() {
         for model in [

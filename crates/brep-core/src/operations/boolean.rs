@@ -65,6 +65,9 @@ pub(super) fn boolean_impl(
                 {
                     return Ok(model);
                 }
+                if let Some(model)=crate::minkowski3d::curved::try_graph_order_boolean(a,b,operation)? {
+                    return Ok(model);
+                }
                 if let Some(model) =
                     crate::minkowski3d::curved::try_retained_nurbs_boolean(a, b, operation)?
                 {

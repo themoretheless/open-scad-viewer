@@ -6,6 +6,7 @@ use crate::{
 mod bernstein_minors;
 mod bernstein_symmetric;
 mod polynomial_projection;
+mod rational_product;
 
 #[derive(Clone, Debug)]
 pub struct ProfileParameterization {
@@ -651,6 +652,11 @@ pub fn inspect_candidate_with_hint(
 mod retained_route_tests;
 
 pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
+    s.validate()?;
+    check(max_cells<=100000 && s.control_points[0][0].len()==3,"Invalid monotonicity candidate or cell budget")?;
+    if max_cells>0 {
+        if let Some(report)=rational_product::inspect(s) {return Ok(report);}
+    }
     // Preserve every already successful original proposal and its work/report.
     // A finer integer dual map is only a proposal after the original cover
     // failed; acceptance still proves the same full-domain outward inequality.

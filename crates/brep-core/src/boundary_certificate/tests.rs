@@ -223,3 +223,7 @@ fn hole_regions_and_material_orientation_remain_independent_obligations() {
 }
 
 mod critical_projection;
+
+mod rational_product;
+
+mod rational_sign;

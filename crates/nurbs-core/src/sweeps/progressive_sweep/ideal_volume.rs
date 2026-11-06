@@ -291,6 +291,7 @@ impl MultiSweep<'_> {
             guide_arc,
             shared_guide,
             poses: atlas.then(Default::default),
+            cap_jets: atlas.then(Default::default),
         };
         if atlas {
             atlas::certify(&context, projection, &mut out, max_cells, max_exact_work, closed)?;

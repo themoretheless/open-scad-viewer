@@ -402,3 +402,9 @@ pub use model_pocket::{
 
 pub use model_pocket::{CertifiedGraphBoxBoolean, GraphBoxBooleanCertificate, certify_graph_box_boolean, verify_graph_box_boolean};
 pub(crate) use model_pocket::try_graph_box_boolean;
+
+mod graph_slabs;
+pub use graph_slabs::{GraphSlab,intersect_graph_slabs};
+
+mod intersection_branches;
+pub use intersection_branches::{SurfaceAlgebraicBranchCertificate,CertifiedSurfaceAlgebraicBranches,certify_surface_algebraic_branches,verify_surface_algebraic_branches};

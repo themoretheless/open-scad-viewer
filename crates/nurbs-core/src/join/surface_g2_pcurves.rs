@@ -12,6 +12,8 @@ use crate::{
 mod trace_mean_value;
 #[path="surface_g2_pcurves/common_basis.rs"]
 mod common_basis;
+#[path="surface_g2_pcurves/flat_endpoint.rs"]
+mod flat_endpoint;
 #[path = "surface_g2_pcurves/graph_owned.rs"]
 mod graph_owned;
 pub use graph_owned::{OwnedGraphInspection,inspect_owned_graph,inspect_owned_graph_oriented};
@@ -369,6 +371,12 @@ pub fn inspect(
             geometric,
         });
     }
+    if let Some(orientation)=flat_endpoint::orientation(s,p) {
+        work+=1;
+        let bounds=if orientation==Orientation::Same {[[0.,0.],[2.,0.]]}else{[[2.,0.],[0.,0.]]};
+        let geometric=make(Decision::WithinTolerance,work,Some(bounds),bounds,Some(orientation));
+        return Ok(Report{positions,geometric});
+    }
     let mut cells = vec![cell(
         p,
         s,
@@ -669,6 +677,6 @@ pub use span_fields::{FieldCoverage, FieldDecision, inspect_span_fields};
 
 #[path = "surface_g2_pcurves/jet_join.rs"]
 mod jet_join;
-pub use jet_join::{SpanJoinReport, inspect_original_span_join};
+pub use jet_join::{inspect_original_patch_pair, SpanJoinReport, inspect_original_span_join, inspect_original_geometric_span_join};
 
 pub use jet_join::{ExtrusionBoundaryReport,inspect_extrusion_boundary,inspect_planar_boundary};

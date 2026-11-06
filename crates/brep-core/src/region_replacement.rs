@@ -566,7 +566,7 @@ pub use trihedral_setbacks::{EdgeSetback, FacePort, TrihedralSetbacks, plan_trih
 #[path = "region_replacement/trihedral_skins.rs"]
 mod trihedral_skins;
 pub use trihedral_skins::{
-    StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips, build_trihedral_strips_with_profile,
+    StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips, build_trihedral_strips_with_profile, build_trihedral_strips_with_bounded_profile, build_trihedral_strips_with_matched_profile, build_trihedral_strips_with_quartic_profile,
 };
 
 #[path = "region_replacement/trihedral_rim.rs"]
@@ -585,10 +585,12 @@ pub use trihedral_collars::{CornerCollar, CornerCollars, prepare_trihedral_colla
 
 #[path = "region_replacement/central_loft.rs"]
 mod central_loft;
-pub use central_loft::{
+pub use central_loft::{SewnCornerNetworkCandidate,OpenCornerNetwork,NetworkSupportBinding,
+    CornerInternalG2Audit, CornerInternalJoin, QualifiedCornerInternalG2,
     CentralLoftCandidate, CentralLoftOptions, ContactReport, CornerAuditLimits, CornerBodyAudit,
     CornerSewLimits, FluxLimits, FluxReport, MaterialReport, ProjectionDiskReport,
-    QualifiedSewnCorner, SewnCornerCandidate, StripFitReport, propose_trihedral_center,
+    QualifiedSewnCorner, QualifiedG2SewnCorner, CornerCurvatureAudit, CornerCurvatureFace,
+    SEWN_CORNER_CURVATURE_LIMIT, SewnCornerCandidate, StripFitReport, propose_trihedral_center, propose_trihedral_center_at_rim,
 };
 #[path = "region_replacement/central_graph.rs"]
 mod central_graph;

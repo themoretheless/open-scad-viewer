@@ -89,6 +89,22 @@ fn cartesian(
 ) -> Result<Vec<Fraction>, Reason> {
     let w = jet(h, axis, end, 3, order, ctx)?;
     let x = jet(h, axis, end, k, order, ctx)?;
+    // Exact zero cross-weight jets eliminate the quotient-rule cross terms.
+    // W may still vary along the seam; no polynomial-weight or sampled-zero
+    // assumption is made. Keep its full original along-line denominator.
+    ctx.charge(w.iter().skip(1).map(|p| p.len() as u64).sum())?;
+    if w.iter()
+        .skip(1)
+        .all(|p| p.iter().all(|x| x.sign() == Sign::Zero))
+    {
+        let mut out = vec![Fraction::new(x[0].clone(), w[0].clone(), ctx)?];
+        let mut denominator = w[0].clone();
+        for jet in x.iter().take(order + 1).skip(1) {
+            denominator = mul(&denominator, &vec![width.clone()], ctx)?;
+            out.push(Fraction::new(jet.clone(), denominator.clone(), ctx)?);
+        }
+        return Ok(out);
+    }
     let square = mul(&w[0], &w[0], ctx)?;
     let mut out = vec![Fraction::new(x[0].clone(), w[0].clone(), ctx)?];
     let first = add(

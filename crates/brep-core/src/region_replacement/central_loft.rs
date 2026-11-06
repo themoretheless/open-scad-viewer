@@ -7,6 +7,18 @@ use nurbs_core::{
 };
 #[path = "central_loft/layers.rs"]
 mod layers;
+#[path = "central_loft/common_denominator.rs"]
+mod common_denominator;
+#[path = "central_loft/endpoint_jets.rs"]
+mod endpoint_jets;
+#[path = "central_loft/interior_fairing.rs"]
+mod interior_fairing;
+#[path = "central_loft/bivariate_fairing.rs"]
+mod bivariate_fairing;
+#[path = "central_loft/curvature_search.rs"]
+mod curvature_search;
+#[path = "central_loft/joint_seam_search.rs"]
+mod joint_seam_search;
 #[derive(Clone, Copy)]
 pub struct CentralLoftOptions {
     /// Control-handle distance in world units; never an admission tolerance.
@@ -21,6 +33,8 @@ pub struct CentralLoftCandidate<'b, 's, 'p> {
     strips: &'p TrihedralStrips,
     options: CentralLoftOptions,
     surface: Surface,
+    rim_origin: usize,
+    authored: layers::AuthoredRows,
     curves: Vec<Curve>,
     pcurves: Vec<Curve>,
     originals: Vec<(Surface, Curve)>,
@@ -62,9 +76,11 @@ impl CentralLoftCandidate<'_, '_, '_> {
         self.cells
     }
     pub fn reverify(&self) -> Result<()> {
-        let fresh = propose_trihedral_center(self.body, self.strips, self.options)?;
+        let fresh = propose_trihedral_center_at_rim(self.body, self.strips, self.options, self.rim_origin)?;
         require(
             self.surface == fresh.surface
+                && self.rim_origin == fresh.rim_origin
+                && self.authored == fresh.authored
                 && self.curves == fresh.curves
                 && self.pcurves == fresh.pcurves
                 && self.stock == fresh.stock
@@ -137,6 +153,17 @@ pub fn propose_trihedral_center<'b, 's, 'p>(
     strips: &'p TrihedralStrips,
     o: CentralLoftOptions,
 ) -> Result<CentralLoftCandidate<'b, 's, 'p>> {
+    propose_trihedral_center_at_rim(body,strips,o,0)
+}
+/// A different chart of the SAME six owned boundary curves. `rim_origin` selects
+/// one of three profile origins (cyclic offsets 0/2/4), never a source refit.
+/// Position/support checks are fresh here; G2, curvature and body admission
+/// remain separate mandatory gates. No certificate is inherited by reordering.
+pub fn propose_trihedral_center_at_rim<'b, 's, 'p>(
+    body: &'b QualifiedStockBox<'s>, strips: &'p TrihedralStrips,
+    o: CentralLoftOptions, rim_origin: usize,
+) -> Result<CentralLoftCandidate<'b, 's, 'p>> {
+    require(rim_origin<3,"Central rim origin must select one of three owned profiles")?;
     require(
         o.handle_mm.is_finite()
             && o.handle_mm > 0.
@@ -195,7 +222,11 @@ pub fn propose_trihedral_center<'b, 's, 'p>(
         d[nonzero[0]] = (origin[nonzero[0]] - p[nonzero[0]]).signum();
         axes.push(d);
     }
-    let rim = build_trihedral_rim(strips, o.tolerances)?;
+    let mut rim = build_trihedral_rim(strips, o.tolerances)?;
+    if rim_origin>0 {
+        work.charge(6)?;
+        rim.ordered.rotate_left(2*rim_origin);
+    }
     let support = inspect_rim_supports(source, &rim, o.tolerance_uv, o.cells / 3)?;
     let mut directions = [[0.; 3]; 6];
     let mut originals = Vec::new();
@@ -252,7 +283,7 @@ pub fn propose_trihedral_center<'b, 's, 'p>(
         }),
         "Central rim order must alternate cross sections and connectors",
     )?;
-    let (surface, pcurves, correction) = layers::build(
+    let (surface, pcurves, correction, authored) = layers::build(
         &rim.ordered,
         directions,
         o.handle_mm,
@@ -275,7 +306,7 @@ pub fn propose_trihedral_center<'b, 's, 'p>(
     let mut cells = support.cells;
     let mut positions = Vec::new();
     for i in 0..6 {
-        for (s, p) in [(&originals[i].0, &originals[i].1), (&surface, &pcurves[i])] {
+        for (side,(s, p)) in [(&originals[i].0, &originals[i].1), (&surface, &pcurves[i])].into_iter().enumerate() {
             require(cells < o.cells, "Central positional work exhausted")?;
             let proof = agreement::verify(
                 &rim.ordered[i],
@@ -288,7 +319,7 @@ pub fn propose_trihedral_center<'b, 's, 'p>(
             cells += proof.cells;
             if proof.status != agreement::Status::WithinTolerance {
                 return Err(refuse(&format!(
-                    "Central boundary {i} position unproven: {proof:?}"
+                    "Central boundary {i} position unproven: {proof:?}; side={side}, world_degree={}, world_poles={}, pcurve_degree={}, pcurve_poles={}, support_degrees=[{},{}]", rim.ordered[i].degree,rim.ordered[i].control_points.len(),p.degree,p.control_points.len(),s.degree_u,s.degree_v
                 )));
             }
             positions.push(proof);
@@ -299,6 +330,8 @@ pub fn propose_trihedral_center<'b, 's, 'p>(
         strips,
         options: o,
         surface,
+        rim_origin,
+        authored,
         curves: rim.ordered,
         pcurves,
         originals,
@@ -326,10 +359,14 @@ mod poles;
 
 #[path = "central_loft/exterior.rs"]
 mod exterior;
+pub use exterior::{NetworkExteriorReport, NetworkSupportReport};
 
 #[path = "central_loft/sewing.rs"]
 mod sewing;
-pub use sewing::{
-    ContactReport, CornerAuditLimits, CornerBodyAudit, CornerSewLimits, FluxLimits, FluxReport,
-    MaterialReport, ProjectionDiskReport, QualifiedSewnCorner, SewnCornerCandidate, StripFitReport,
+pub use sewing::{SewnCornerNetworkCandidate,OpenCornerNetwork,NetworkSupportBinding,
+    CornerInternalG2Audit, CornerInternalJoin, QualifiedCornerInternalG2,
+    ContactReport, CornerAuditLimits, CornerBodyAudit, CornerCurvatureAudit, CornerCurvatureFace,
+    CornerSewLimits, FluxLimits, FluxReport, MaterialReport, ProjectionDiskReport,
+    QualifiedG2SewnCorner, QualifiedSewnCorner, SEWN_CORNER_CURVATURE_LIMIT, SewnCornerCandidate,
+    StripFitReport,
 };

@@ -120,6 +120,7 @@ fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificat
         guide_arc: None,
         shared_guide: false,
         poses: Some(Default::default()),
+        cap_jets: None,
     };
     let mut local_report = report();
     let Enclosed::Value(e) = c

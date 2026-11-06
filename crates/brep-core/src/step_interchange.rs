@@ -15,6 +15,25 @@ use nurbs_core::{Error, Result};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Header-only application-protocol detection, available before entity parsing.
+#[path = "step_schema.rs"]
+pub mod schema;
+/// AP242 baked triangulation carried beside, never instead of, exact B-rep.
+#[path = "step_tessellated.rs"]
+pub mod tessellated;
+
+pub use schema::{
+    StepDiagnosticSeverity, StepGeometryRoute, StepProtocol, StepSchemaDiagnostic,
+    StepSchemaDiagnosticCode, StepSchemaReport, inspect_step_schema,
+};
+pub use tessellated::{
+    StepDriftAssessment, StepDriftNotAssessedReason, StepTessellatedDiagnostic,
+    StepTessellatedDiagnosticCode, StepTessellatedFace, StepTessellatedImport,
+    StepTessellatedLod0, StepTessellatedSeverity, assess_lod0_vertex_drift,
+    export_tessellated_replica, export_tessellated_replica_fragment,
+    import_ap242_tessellated_lod0,
+};
+
 fn refuse(message: &str) -> Error {
     Error::new("BREP_STEP_REFUSED", message)
 }
@@ -1741,6 +1760,7 @@ pub fn export_step_v2(model: &Model) -> Result<(String, FeatureCertificate, Step
 /// Import analytic STEP from surfaces + AXIS2 only → constructors.
 pub fn import_step(text: &str) -> Result<(Model, FeatureCertificate)> {
     refuse_mesh_payloads(text)?;
+    let schema = inspect_step_schema(text)?;
     let entities = parse_entities(text);
     let closure = validate_solid_graph(&entities)?;
     let linked_entities: BTreeMap<usize, (String, String)> = entities
@@ -1761,25 +1781,34 @@ pub fn import_step(text: &str) -> Result<(Model, FeatureCertificate)> {
     }
     let model = rebuild(&kind)?;
     model.validate()?;
+    let mut notes = vec![
+        "step_topology_roundtrip_constructors",
+        "step_ap214_ap242_entity_graph",
+        "step_graph_only_import",
+        "step_circle_import_gate",
+        "aabb_import_removed",
+        "oscad_solid_removed",
+        "step_schema_preflight_before_entity_parse",
+    ];
+    if schema.has_diagnostic(StepSchemaDiagnosticCode::MultipleSchemas) {
+        notes.push("step_schema_multi_schema_warning");
+    }
+    if schema.geometry_route == StepGeometryRoute::Ap203GeometryFallback {
+        notes.push("step_schema_unknown_ap203_geometry_fallback");
+    }
     Ok((
         model,
         FeatureCertificate {
             capability: "step-interchange/1",
             complete: true,
-            notes: vec![
-                "step_topology_roundtrip_constructors",
-                "step_ap214_ap242_entity_graph",
-                "step_graph_only_import",
-                "step_circle_import_gate",
-                "aabb_import_removed",
-                "oscad_solid_removed",
-            ],
+            notes,
         },
     ))
 }
 
 /// Successor import with explicit SI/context, placement and identity reporting.
 pub fn import_step_v2(text: &str) -> Result<(Model, FeatureCertificate, StepIdentityReport)> {
+    let _schema = inspect_step_schema(text)?;
     validate_v2_finite_subset(text)?;
     let scale = v2_length_scale(text)?;
     let placement = v2_nested_placement(text)?;
@@ -2204,5 +2233,22 @@ ENDSEC;
 END-ISO-10303-21;
 "#;
         assert_eq!(import_step(text).unwrap_err().code, "BREP_STEP_REFUSED");
+    }
+
+    #[test]
+    fn unknown_schema_uses_existing_exact_geometry_fallback() {
+        let (text, _) = export_step(&cuboid([0., 0., 0.], [1., 2., 3.]).unwrap()).unwrap();
+        let unknown = text.replace(
+            "FILE_SCHEMA(('AUTOMOTIVE_DESIGN','AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'))",
+            "FILE_SCHEMA(('VENDOR_PRIVATE_SCHEMA'))",
+        );
+        let (model, certificate) = import_step(&unknown).unwrap();
+        model.validate().unwrap();
+        assert!(certificate
+            .notes
+            .contains(&"step_schema_unknown_ap203_geometry_fallback"));
+        assert!(certificate
+            .notes
+            .contains(&"step_schema_preflight_before_entity_parse"));
     }
 }

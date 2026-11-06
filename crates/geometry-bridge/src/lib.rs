@@ -54,6 +54,8 @@ mod cad_client_geometry;
 mod cad_diagnostics;
 mod cad_dimensions;
 mod cad_display;
+mod step_lod0;
+mod step_scene;
 mod cad_draft;
 mod cad_edge_edit;
 mod cad_full_round_exact;
