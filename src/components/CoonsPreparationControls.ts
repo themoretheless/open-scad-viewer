@@ -1,5 +1,5 @@
 import {Fragment,h} from 'svet'
-import CadQuantityInput from './CadQuantityInput.svet'
+import CadQuantityInput from './CadQuantityInput.svt'
 import type {CoonsBoundaryPreparation} from '../services/nurbsConstructors'
 
 interface Props {

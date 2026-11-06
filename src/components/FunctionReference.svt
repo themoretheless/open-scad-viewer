@@ -7,12 +7,7 @@ import {
 } from '../data/functionReference'
 import { highlightCode } from '../services/codeHighlight'
 
-const props = defineProps<{
-  open: boolean
-  locale: 'ru' | 'en'
-  language: ReferenceLanguage
-  initialQuery?: string
-}>()
+const props = defineProps<{ open: boolean; locale: 'ru' | 'en'; language: ReferenceLanguage; initialQuery?: string }>()
 const emit = defineEmits<{ close: [] }>()
 
 const labels = {

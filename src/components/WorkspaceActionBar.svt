@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import FormaRegion from './FormaRegion.svet'
+import FormaRegion from './FormaRegion.svt'
 import workspaceActionBarUi from '../ui/WorkspaceActionBar.ui?raw'
 
 defineProps<{ label: string }>()

@@ -1,4 +1,4 @@
-import CurrentCurveChainInspection from './CurrentCurveChainInspection.svet'
+import CurrentCurveChainInspection from './CurrentCurveChainInspection.svt'
 import type {SolidNurbsCurve} from '../services/solidNurbs'
 import {h,type FunctionalComponent} from 'svet'
 import type {CurveOffsetConstruction} from '../services/curveOffsetConstruction'

@@ -87,6 +87,6 @@ for(const job of plan.jobs){
  count+=matrix.cases.length;groups.push({name:job.name,reportPath,sha256:sha(bytes),cases:matrix.cases.length,replacement:Object.hasOwn(reportMap,job.name)})
 }
 assert.equal(count,478);assert.equal(observations.length,1472)
-assert.match(read(resolve(root,'src/App.svet')).toString(),/workerSilenceTimeoutMs: 30_000/)
+assert.match(read(resolve(root,'src/App.svt')).toString(),/workerSilenceTimeoutMs: 30_000/)
 writeFileSync(output,JSON.stringify({schema:'sweep-full-ui-reconciliation/1',passed:true,scope:'Finite478-case matrix on exact isolated WASM/dist and source bytes; authenticated executing native CPU tail followed by Worker destruction, not cooperative cancellation latency or universal geometry proof',geometryWasmSha256:kernel,distIndexSha256:index,inventorySha256:sha(planBytes),verifierSha256:sha(read(new URL(import.meta.url))),cases:count,nativeObservations:observations.length,groups,observations},null,2)+'\n')
 console.log('478 UI cases and1472 authenticated native observations verified')

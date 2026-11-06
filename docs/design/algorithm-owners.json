@@ -146,8 +146,8 @@
         "src/services/uniformFill.ts",
         "src/services/transparentOrdering.ts",
         "src/services/transparentBsp.ts",
-        "src/components/ViewCube.svet",
-        "src/components/ModelingFloorGrid.svet",
+        "src/components/ViewCube.svt",
+        "src/components/ModelingFloorGrid.svt",
         "src/dev/vrEmulator.ts"
       ],
       "reason": "Camera matrices, animation, frustum, lighting and per-frame transparent traversal consume display data and do not author geometry. Retain in host; centralize duplicated projection formulas within viewport modules. BSP construction/clipping remain geometry-ops."
@@ -168,12 +168,12 @@
       "owner": "application-ui + planar-geometry + geometry-ops",
       "action": "split",
       "files": [
-        "src/features/DirectModeler.svet",
-        "src/features/MainModelingOverlay.svet",
-        "src/features/MainSketchTools.svet",
-        "src/features/MeshModeler.svet",
+        "src/features/DirectModeler.svt",
+        "src/features/MainModelingOverlay.svt",
+        "src/features/MainSketchTools.svt",
+        "src/features/MeshModeler.svt",
         "src/features/MeshModeler/useMeshModeler/meshInteraction.ts",
-        "src/features/MainModelingTools.svet",
+        "src/features/MainModelingTools.svt",
         "src/features/directModeler/helpers.ts"
       ],
       "reason": "Keep interaction/projection/draft display in Vue. Extract committed curve construction, arc snap tessellation, trim candidate geometry and face normals to domain adapters. Avoid persistent model calculations inside components."
@@ -199,9 +199,9 @@
         "src/services/openScadText.ts",
         "src/mcp/officialOpenScadRuntimeProtocol.ts",
         "src/data/functionReference.ts",
-        "src/components/SceneOutliner.svet",
-        "src/components/InspectPanel.svet",
-        "src/App.svet"
+        "src/components/SceneOutliner.svt",
+        "src/components/InspectPanel.svt",
+        "src/App.svt"
       ],
       "reason": "Gesture thresholds, search/Unicode normalization, text runtime loading, timeout budgets and presentation calculations are host responsibilities. No per-scalar ABI migration."
     },

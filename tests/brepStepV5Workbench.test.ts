@@ -49,7 +49,7 @@ describe('STEP /5 retained workbench route',()=>{
   it('keeps faceted routing explicit and refuses malformed private graphs',()=>{
     expect(inspectStepRoute('ISO-10303-21;DATA;#1=FACETED_BREP();ENDSEC;END-ISO-10303-21;')).toBe('faceted-brep')
     expect(()=>importDirectStepV5('ISO-10303-21;DATA;#1=MANIFOLD_SOLID_BREP();ENDSEC;END-ISO-10303-21;')).toThrow()
-    const component=readFileSync('src/features/CadWorkbenchPanel.svet','utf8')
+    const component=readFileSync('src/features/CadWorkbenchPanel.svt','utf8')
     expect(component).toContain('Retained AP242 B-rep')
     expect(component).toContain('@change="retainedStepImport"')
     expect(component).toContain('@click="retainedStepExport"')

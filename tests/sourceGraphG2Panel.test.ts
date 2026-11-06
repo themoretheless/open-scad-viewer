@@ -5,9 +5,9 @@ const state=vi.hoisted(()=>({tasks:[] as any[],worker:null as any}))
 vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{
  state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))};return state.worker
 }}))
-vi.mock('../src/components/CadQuantityInput.svet',()=>({default:{props:['modelValue'],render(){return h('input')}}}))
+vi.mock('../src/components/CadQuantityInput.svt',()=>({default:{props:['modelValue'],render(){return h('input')}}}))
 vi.mock('../src/services/nurbsSurface',()=>({extractNurbsSurfaceIsocurvePoints:()=>[[0,0,0],[1,1,1]],createNurbsSurfaceEvaluator:()=>Object.assign(()=>({point:[1,2,3]}),{dispose:vi.fn()})}))
-import Panel from '../src/components/SourceGraphG2Preview.svet'
+import Panel from '../src/components/SourceGraphG2Preview.svt'
 const actual=JSON.parse(readFileSync('tests/fixtures/source-graph-g2-preview-v1.json','utf8')).direct
 it('opens preview, cancels stale work, retries and clears diagnostics on source edits and close',async()=>{
  const node=(type:string)=>({type,children:[] as any[],props:{} as any,parent:null as any,text:''})

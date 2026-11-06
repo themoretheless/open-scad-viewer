@@ -9,6 +9,7 @@ import {
   effect as svetEffect,
   untrack,
 } from './svet'
+import { camelize } from './svet-props'
 import {
   DEEP_SIG_SYM,
   canObserve,
@@ -24,6 +25,14 @@ let isFlushPending = false
 const resolvedPromise = Promise.resolve()
 let setupDepth = 0
 const preSetupQueue: Array<() => void> = []
+
+function scheduleFlush(queue: Array<() => void>, cb: () => void): void {
+  if (!queue.includes(cb)) queue.push(cb)
+  if (!isFlushPending) {
+    isFlushPending = true
+    resolvedPromise.then(flushPostQueue)
+  }
+}
 
 export function enterComponentSetup(): void {
   setupDepth++
@@ -44,19 +53,11 @@ export function exitComponentSetup(): void {
 }
 
 export function queuePreFlushCb(cb: () => void): void {
-  if (!preFlushQueue.includes(cb)) preFlushQueue.push(cb)
-  if (!isFlushPending) {
-    isFlushPending = true
-    resolvedPromise.then(flushPostQueue)
-  }
+  scheduleFlush(preFlushQueue, cb)
 }
 
 export function queuePostFlushCb(cb: () => void): void {
-  if (!postFlushQueue.includes(cb)) postFlushQueue.push(cb)
-  if (!isFlushPending) {
-    isFlushPending = true
-    resolvedPromise.then(flushPostQueue)
-  }
+  scheduleFlush(postFlushQueue, cb)
 }
 
 export function flushPreQueue(): void {
@@ -288,7 +289,7 @@ export function mergeModels(a: any, b: any): any {
 }
 
 export function useModel<T = any>(props: Record<string, any>, name: string, options?: { defaultValue?: T }): Ref<T> {
-  const camelName = name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+  const camelName = camelize(name)
   const readProp = () => (camelName in props ? props[camelName] : props[name])
   const localSig = untrack(() => {
     const initial = readProp()

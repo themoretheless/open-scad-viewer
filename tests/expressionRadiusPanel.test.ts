@@ -6,7 +6,7 @@ const state=vi.hoisted(()=>({result:undefined as any,error:'',errorCode:''}))
 vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:()=>({
  result:shallowRef(state.result),pending:ref(false),error:ref(state.error),errorCode:ref(state.errorCode),run:vi.fn(),retry:vi.fn(),cancel:vi.fn(),
 })}))
-import ExpressionShellCheck from '../src/components/ExpressionShellCheck.svet'
+import ExpressionShellCheck from '../src/components/ExpressionShellCheck.svt'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-radius-dispatch-2026-10-09.json',import.meta.url),'utf8'))
 for(const ru of [true,false])it(`shows unverified contact domains without calling them self-intersections: ${ru}`,async()=>{
  state.result=structuredClone(fixture.admitted)

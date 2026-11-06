@@ -20,12 +20,58 @@ export function camelize(str: string): string {
   return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ''))
 }
 
+export function hyphenate(str: string): string {
+  return str.replace(/\B([A-Z])/g, '-$1').toLowerCase()
+}
+
 export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
 export function toHandlerKey(str: string): string {
   return str ? `on${capitalize(str)}` : ''
+}
+
+export function isReservedPropKey(key: string): boolean {
+  return key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key'
+}
+
+export function createRefUnwrapProxy<T extends object>(target: T): T {
+  return new Proxy(target, {
+    get(obj, key, receiver) {
+      const val = Reflect.get(obj, key, receiver)
+      return isRef(val) ? val.value : val
+    },
+    set(obj, key, value, receiver) {
+      const cur = Reflect.get(obj, key, receiver)
+      if (isRef(cur) && !isRef(value)) {
+        cur.value = value
+        return true
+      }
+      return Reflect.set(obj, key, value, receiver)
+    },
+  })
+}
+
+export function syncReactiveRecord(
+  current: Record<string, any>,
+  next: Record<string, any>,
+  notifyOnMutate = true,
+): boolean {
+  let changed = false
+  for (const k of Object.keys(next)) {
+    if (!Object.is(current[k], next[k])) {
+      current[k] = next[k]
+      if (notifyOnMutate) changed = true
+    }
+  }
+  for (const k of Object.keys(current)) {
+    if (!(k in next)) {
+      delete current[k]
+      changed = true
+    }
+  }
+  return changed
 }
 
 export function cloneVNode(vnode: SvetVNode): SvetVNode {
@@ -65,6 +111,9 @@ export function isSameVNodeType(n1: SvetVNode, n2: SvetVNode): boolean {
 
 export function setTemplateRef(rawRef: any, value: any): void {
   if (!rawRef) return
+  if (value && typeof value === 'object' && '__svet_asyncInnerRef' in value) {
+    value = value.__svet_asyncInnerRef
+  }
   const refTarget = rawRef.ref !== undefined ? rawRef.ref : rawRef
   const owner = rawRef.owner as SvetComponentInstance | null | undefined
   if (typeof refTarget === 'function') {
@@ -169,7 +218,7 @@ export function splitPropsAndAttrs(
 
   if (rawProps) {
     for (const rawKey of Object.keys(rawProps)) {
-      if (rawKey === 'key' || rawKey === 'ref' || rawKey === 'ref_for' || rawKey === 'ref_key') continue
+      if (isReservedPropKey(rawKey)) continue
       const val = rawProps[rawKey]
       const camelKey = camelize(rawKey)
       if (hasDeclaredProps) {
@@ -294,7 +343,7 @@ export function patchElementProps<HostElement = any>(
   if (patchFlag === 1 || patchFlag === -1) return
 
   for (const key of Object.keys(newProps)) {
-    if (key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key') continue
+    if (isReservedPropKey(key)) continue
     const next = newProps[key]
     const prev = oldProps[key]
     if (next !== prev || key === 'value' || key === 'checked' || key === 'selected') {
@@ -302,7 +351,7 @@ export function patchElementProps<HostElement = any>(
     }
   }
   for (const key of Object.keys(oldProps)) {
-    if (key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key') continue
+    if (isReservedPropKey(key)) continue
     if (!(key in newProps)) {
       hostPatchProp(el, key, oldProps[key], null, namespace)
     }

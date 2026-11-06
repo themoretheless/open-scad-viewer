@@ -1,6 +1,6 @@
 // Test-only fault injection. Open on a separate origin to isolate saved drafts.
 import {createApp,h,ref} from 'svet'
-import DirectModeler from '../../src/features/DirectModeler.svet'
+import DirectModeler from '../../src/features/DirectModeler.svt'
 import {warmGeometryKernel} from '../../src/services/geometry/kernel'
 import {createBrepBox,tessellateNurbsBrep} from '../../src/services/geometry/brep'
 import type {MainSolidRequest} from '../../src/services/mainSolidProtocol'

@@ -2,7 +2,7 @@ import {createRenderer,nextTick,ref,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({tasks:[] as any[],worker:null as any}))
 vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))};return state.worker}}))
-import Panel from '../src/components/FrozenGraphBodyPanel.svet'
+import Panel from '../src/components/FrozenGraphBodyPanel.svt'
 it('loads a display-only body, selects an edge and invalidates late data on cancel',async()=>{
  const node=(type:string):any=>({type,tagName:type.toUpperCase(),children:[],props:{},parent:null,text:'',get options(){return this.children.filter((n:any)=>n.type==='option')},addEventListener(){},removeEventListener(){},getRootNode(){return {}},setAttribute(){},removeAttribute(){}})
  const renderer=createRenderer<any,any>({createElement:node,createText:t=>({...node('text'),text:t}),createComment:node,setText:(n,t)=>n.text=t,setElementText:(n,t)=>n.text=t,parentNode:n=>n.parent,nextSibling:n=>{const a=n.parent?.children??[];return a[a.indexOf(n)+1]??null},insert(n,p,a){if(n.parent)n.parent.children.splice(n.parent.children.indexOf(n),1);n.parent=p;const i=a?p.children.indexOf(a):-1;if(i<0)p.children.push(n);else p.children.splice(i,0,n)},remove(n){const p=n.parent;if(p)p.children.splice(p.children.indexOf(n),1);n.parent=null},patchProp:(n,k,_p,v)=>{n.props[k]=v;if(k==='value'){n._value=v;n.value=v}}})

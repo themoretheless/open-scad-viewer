@@ -1,7 +1,7 @@
 /**
  * # Svet SFC & UI Vite Compiler Plugin (`svet-vite-plugin.mjs`)
  *
- * Compiles `.svet` (and legacy `.vue`) SFCs directly to Svet runtime primitives (`src/forma/svet-runtime.ts`),
+ * Compiles `.svt` (and legacy `.vue`) SFCs directly to Svet runtime primitives (`src/forma/svet-runtime.ts`),
  * eliminating all runtime dependencies on `vue` and `@vitejs/plugin-vue`.
  */
 import { createHash } from 'node:crypto'
@@ -23,11 +23,11 @@ function normalizeFsPath(filename) {
 }
 
 function isSvetSfc(filename) {
-  return filename.endsWith('.svet') || filename.endsWith('.vue')
+  return filename.endsWith('.svt')
 }
 
 function isSvetStyleVirtualId(id) {
-  return id.includes('.svet?svet&type=style') || id.includes('.vue?svet&type=style')
+  return id.includes('.svt?svet&type=style')
 }
 
 function getScopeHash(filename) {

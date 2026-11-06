@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import VrControls from '../components/VrControls.svet'
+import VrControls from '../components/VrControls.svt'
 
 import { prepareVrPolygons } from '../services/vrScene'
 
@@ -7,13 +7,13 @@ import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'svet'
 
 import { stringifyMeshJson } from '../services/meshJson'
 
-import ModelingFloorGrid from '../components/ModelingFloorGrid.svet'
+import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 
-import ModelingGridControls from '../components/ModelingGridControls.svet'
+import ModelingGridControls from '../components/ModelingGridControls.svt'
 
-import WorkspaceActionBar from '../components/WorkspaceActionBar.svet'
+import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 
-import CommandPalette from '../components/CommandPalette.svet'
+import CommandPalette from '../components/CommandPalette.svt'
 
 import type { PaletteCommand } from '../services/commandSearch'
 
@@ -65,7 +65,7 @@ import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 
 import { manifoldPreferenceSnapshot } from '../services/manifoldPreferences'
 
-import ManifoldSettings from '../components/ManifoldSettings.svet'
+import ManifoldSettings from '../components/ManifoldSettings.svt'
 
 import { formatMeshImportNotice } from '../services/meshImportReport'
 

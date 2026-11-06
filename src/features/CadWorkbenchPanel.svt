@@ -2,7 +2,7 @@
 import {fitLatticeToPrint,printBridgeWarning} from '../services/latticePrintSettings'
 import {isSpatialPattern} from '../services/solidLightening'
 import {inspectPolygonMesh} from '../services/geometry/polygon'
-import GcodePanel from './GcodePanel.svet'
+import GcodePanel from './GcodePanel.svt'
 import {MAX_WORKSPACE_SOURCE_LENGTH,workspaceSourceByteLength} from '../services/workspaceDocument'
 import {solidTopology,facePlane} from '../services/directSolidTools'
 import {resolveSketchSupport} from '../services/mainSketchAssociation'
@@ -20,11 +20,11 @@ import {computeCadOperation,computeCadInspection,cancelMainSolid} from '../servi
 import {storageKeys,storageGet,storageSet} from '../services/safeStorage'
 import {parseDirectDocument,type DirectSketch,type DirectDocument} from '../services/directModeling'
 import type {CadOptions,CadAction} from '../services/cadWorkbench'
-const LaserCamPanel=defineAsyncComponent(()=>import('./LaserCamPanel.svet'))
-const BondedSolidPanel=defineAsyncComponent(()=>import('./BondedSolidPanel.svet'))
-const StructuralSectionsPanel=defineAsyncComponent(()=>import('./StructuralSectionsPanel.svet'))
-const NominalTrussPanel=defineAsyncComponent(()=>import('./NominalTrussPanel.svet'))
-const LatticeReportPanel=defineAsyncComponent(()=>import('./LatticeReportPanel.svet'))
+const LaserCamPanel=defineAsyncComponent(()=>import('./LaserCamPanel.svt'))
+const BondedSolidPanel=defineAsyncComponent(()=>import('./BondedSolidPanel.svt'))
+const StructuralSectionsPanel=defineAsyncComponent(()=>import('./StructuralSectionsPanel.svt'))
+const NominalTrussPanel=defineAsyncComponent(()=>import('./NominalTrussPanel.svt'))
+const LatticeReportPanel=defineAsyncComponent(()=>import('./LatticeReportPanel.svt'))
 const props=defineProps<{meshes:MeshData[];selection:number[];hit:PickHit|null;source:string;ready:boolean;locale:string;initialAction?:CadAction;externalPreviewEpoch?:number}>()
 const emit=defineEmits<{apply:[source:string];preview:[meshes:MeshData[]|null];close:[]}>()
 const label=(a:string,b:string)=>props.locale==='ru'?a:b

@@ -12,14 +12,9 @@ const props = withDefaults(defineProps<{
 }>(), { selectedMeshId: null, hoveredMeshId: null, locale: 'en', busy: false })
 
 const emit = defineEmits<{
-  select: [meshId: MeshKey]
-  'clear-selection': []
-  'toggle-visibility': [meshId: MeshKey, visible: boolean]
-  preselect: [meshId: MeshKey | null]
-  focus: [meshId: MeshKey]
-  isolate: [meshId: MeshKey]
-  'reveal-source': [source: SourceProvenanceRow, meshId: MeshKey]
-  'highlight-source': [sourceId: number | null]
+  select: [meshId: MeshKey]; 'clear-selection': []; 'toggle-visibility': [meshId: MeshKey, visible: boolean]
+  preselect: [meshId: MeshKey | null]; focus: [meshId: MeshKey]; isolate: [meshId: MeshKey]
+  'reveal-source': [source: SourceProvenanceRow, meshId: MeshKey]; 'highlight-source': [sourceId: number | null]
 }>()
 
 const copy = {
@@ -46,15 +41,10 @@ const copy = {
 } as const
 
 const text = computed(() => copy[props.locale])
-const query = ref('')
-const searchOpen = ref(false)
-const expandedIds = ref<Set<MeshKey>>(new Set())
-const panelRef = ref<HTMLElement | null>(null)
-const searchRef = ref<HTMLInputElement | null>(null)
-const rowRefs = ref<HTMLButtonElement[]>([])
-const activeMeshId = ref<MeshKey | null>(null)
-const hoveredSourceId = ref<number | null>(null)
-const focusedSourceId = ref<number | null>(null)
+const query = ref(''), searchOpen = ref(false), expandedIds = ref<Set<MeshKey>>(new Set())
+const panelRef = ref<HTMLElement | null>(null), searchRef = ref<HTMLInputElement | null>(null)
+const rowRefs = ref<HTMLButtonElement[]>([]), activeMeshId = ref<MeshKey | null>(null)
+const hoveredSourceId = ref<number | null>(null), focusedSourceId = ref<number | null>(null)
 
 const selectedSignals = new Map<MeshKey, Signal<boolean>>()
 let prevSelectedKey: MeshKey | null = props.selectedMeshId ?? null
@@ -298,95 +288,50 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
     </header>
 
     <div v-if="searchOpen" class="search-wrap">
-      <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
-        <circle cx="8.5" cy="8.5" r="5" /><path d="m12.5 12.5 4 4" />
-      </svg>
-      <input
-        ref="searchRef"
-        v-model="query"
-        type="search"
-        autocomplete="off"
-        :placeholder="text.search"
-        :aria-label="text.search"
-      >
+      <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5" /><path d="m12.5 12.5 4 4" /></svg>
+      <input ref="searchRef" v-model="query" type="search" autocomplete="off" :placeholder="text.search" :aria-label="text.search">
       <button v-if="query" type="button" :aria-label="text.clearSearch" @click="query = ''">×</button>
       <kbd v-else>⌘F</kbd>
     </div>
 
     <div class="section-label">
-      <span class="chevron" aria-hidden="true">⌄</span>
-      <span>{{ text.meshes }}</span>
-      <span class="section-count">{{ filteredMeshes.length }}</span>
+      <span class="chevron" aria-hidden="true">⌄</span><span>{{ text.meshes }}</span><span class="section-count">{{ filteredMeshes.length }}</span>
     </div>
 
     <div class="mesh-list" role="tree" :aria-label="text.meshes" :aria-busy="busy" aria-multiselectable="false">
       <div
-        v-for="(mesh, index) in filteredMeshes"
-        :key="mesh.id"
-        class="mesh-item"
-        :class="{
-          selected: isSelected(mesh),
-          preselected: hoveredMeshId === mesh.id && !isSelected(mesh),
-          muted: !mesh.visible || mesh.disabled,
-        }"
-        @pointerenter="emit('preselect', mesh.id)"
-        @pointerleave="emit('preselect', null)"
+        v-for="(mesh, index) in filteredMeshes" :key="mesh.id" class="mesh-item"
+        :class="{ selected: isSelected(mesh), preselected: hoveredMeshId === mesh.id && !isSelected(mesh), muted: !mesh.visible || mesh.disabled }"
+        @pointerenter="emit('preselect', mesh.id)" @pointerleave="emit('preselect', null)"
       >
         <div class="mesh-row">
           <button
-            v-if="mesh.sources?.length"
-            class="disclosure"
-            type="button"
-            :aria-label="expandedIds.has(mesh.id) ? text.collapse : text.expand"
-            :aria-expanded="expandedIds.has(mesh.id)"
+            v-if="mesh.sources?.length" class="disclosure" type="button"
+            :aria-label="expandedIds.has(mesh.id) ? text.collapse : text.expand" :aria-expanded="expandedIds.has(mesh.id)"
             @click="toggleExpanded(mesh.id)"
           >
-            <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
-              <path :d="expandedIds.has(mesh.id) ? 'm2.5 4 3.5 3.5L9.5 4' : 'm4 2.5 3.5 3.5L4 9.5'" />
-            </svg>
+            <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path :d="expandedIds.has(mesh.id) ? 'm2.5 4 3.5 3.5L9.5 4' : 'm4 2.5 3.5 3.5L4 9.5'" /></svg>
           </button>
           <span v-else class="disclosure-spacer" />
 
           <button
-            class="visibility-button"
-            type="button"
-            :title="mesh.visible ? text.hide : text.show"
-            :aria-label="`${mesh.visible ? text.hide : text.show}: ${mesh.name}`"
-            :aria-pressed="mesh.visible"
+            class="visibility-button" type="button" :title="mesh.visible ? text.hide : text.show"
+            :aria-label="`${mesh.visible ? text.hide : text.show}: ${mesh.name}`" :aria-pressed="mesh.visible"
             @click="emit('toggle-visibility', mesh.id, !mesh.visible)"
           >
-            <svg v-if="mesh.visible" width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M2.5 10s2.7-4.5 7.5-4.5 7.5 4.5 7.5 4.5-2.7 4.5-7.5 4.5S2.5 10 2.5 10Z" />
-              <circle cx="10" cy="10" r="2.2" />
-            </svg>
-            <svg v-else width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M3 3 17 17M8.1 5.8A8.8 8.8 0 0 1 10 5.5c4.8 0 7.5 4.5 7.5 4.5a12.6 12.6 0 0 1-2 2.5M11.9 14.2a8.8 8.8 0 0 1-1.9.3C5.2 14.5 2.5 10 2.5 10a12.7 12.7 0 0 1 2-2.5" />
-            </svg>
+            <svg v-if="mesh.visible" width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.7-4.5 7.5-4.5 7.5 4.5 7.5 4.5-2.7 4.5-7.5 4.5S2.5 10 2.5 10Z" /><circle cx="10" cy="10" r="2.2" /></svg>
+            <svg v-else width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3 17 17M8.1 5.8A8.8 8.8 0 0 1 10 5.5c4.8 0 7.5 4.5 7.5 4.5a12.6 12.6 0 0 1-2 2.5M11.9 14.2a8.8 8.8 0 0 1-1.9.3C5.2 14.5 2.5 10 2.5 10a12.7 12.7 0 0 1 2-2.5" /></svg>
           </button>
 
           <span class="material-dot" :style="colorStyle(mesh.color)" aria-hidden="true" />
 
           <button
-            :ref="registerRow"
-            class="mesh-name"
-            type="button"
-            :tabindex="rowTabIndex(mesh, index)"
-            role="treeitem"
-            :aria-level="1"
-            :aria-posinset="index + 1"
-            :aria-setsize="filteredMeshes.length"
-            :aria-selected="isSelected(mesh)"
-            :aria-expanded="mesh.sources?.length ? expandedIds.has(mesh.id) : undefined"
-            :aria-disabled="mesh.locked || mesh.disabled || undefined"
-            @focus="activeMeshId = mesh.id"
-            @click="selectMesh(mesh)"
-            @dblclick="emit('focus', mesh.id)"
-            @keydown="handleRowKeydown($event, mesh, index)"
+            :ref="registerRow" class="mesh-name" type="button" :tabindex="rowTabIndex(mesh, index)" role="treeitem"
+            :aria-level="1" :aria-posinset="index + 1" :aria-setsize="filteredMeshes.length" :aria-selected="isSelected(mesh)"
+            :aria-expanded="mesh.sources?.length ? expandedIds.has(mesh.id) : undefined" :aria-disabled="mesh.locked || mesh.disabled || undefined"
+            @focus="activeMeshId = mesh.id" @click="selectMesh(mesh)" @dblclick="emit('focus', mesh.id)" @keydown="handleRowKeydown($event, mesh, index)"
           >
-            <svg class="mesh-icon" width="15" height="15" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="m10 2.5 6.5 3.7v7.6L10 17.5l-6.5-3.7V6.2L10 2.5Z" />
-              <path d="m3.5 6.2 6.5 3.7 6.5-3.7M10 9.9v7.6" />
-            </svg>
+            <svg class="mesh-icon" width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.5 6.5 3.7v7.6L10 17.5l-6.5-3.7V6.2L10 2.5Z" /><path d="m3.5 6.2 6.5 3.7 6.5-3.7M10 9.9v7.6" /></svg>
             <span class="mesh-label" :title="mesh.name">{{ mesh.name }}</span>
             <span v-if="mesh.locked" class="state-glyph" :title="text.locked" aria-hidden="true">⌑</span>
             <span v-if="mesh.disabled" class="state-glyph" :title="text.disabled" aria-hidden="true">⊘</span>
@@ -397,29 +342,18 @@ function blurSource(meshId: MeshKey, source: SourceProvenanceRow) {
         <ul v-if="mesh.sources?.length && expandedIds.has(mesh.id)" class="source-list" role="group" :aria-label="text.sources">
           <li v-for="(source, sourceIndex) in mesh.sources" :key="source.id" role="none">
             <button
-              type="button"
-              role="treeitem"
-              aria-level="2"
-              :aria-posinset="sourceIndex + 1"
-              :aria-setsize="mesh.sources.length"
-              @pointerenter="hoverSource(source)"
-              @pointerleave="leaveSource(mesh.id)"
-              @focus="focusSource(source)"
-              @blur="blurSource(mesh.id, source)"
+              type="button" role="treeitem" aria-level="2" :aria-posinset="sourceIndex + 1" :aria-setsize="mesh.sources.length"
+              @pointerenter="hoverSource(source)" @pointerleave="leaveSource(mesh.id)" @focus="focusSource(source)" @blur="blurSource(mesh.id, source)"
               @click="emit('reveal-source', source, mesh.id)"
             >
               <span class="source-rail" aria-hidden="true" />
               <span class="material-dot source-dot" :style="colorStyle(source.color ?? mesh.color)" aria-hidden="true" />
-              <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true">
-                <path d="m7 5-4 5 4 5M13 5l4 5-4 5M11.5 3l-3 14" />
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5-4 5 4 5M13 5l4 5-4 5M11.5 3l-3 14" /></svg>
               <span class="source-copy">
                 <span>{{ source.label || `${text.source} ${source.originalId ?? source.id}` }}</span>
                 <small>{{ sourceLocation(source) }}</small>
               </span>
-              <span v-if="source.triangleCount !== undefined" class="source-triangles">
-                {{ formatCount(source.triangleCount) }}
-              </span>
+              <span v-if="source.triangleCount !== undefined" class="source-triangles">{{ formatCount(source.triangleCount) }}</span>
             </button>
           </li>
         </ul>

@@ -1,6 +1,6 @@
 import { createRenderer, h, nextTick, shallowReactive } from 'svet'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import GcodePanel from '../src/features/GcodePanel.svet'
+import GcodePanel from '../src/features/GcodePanel.svt'
 import type { MeshData } from '../src/core/mesh'
 import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../src/services/gcodePreviewProtocol'
 import { PrintReadinessError } from '../src/services/printReadiness'

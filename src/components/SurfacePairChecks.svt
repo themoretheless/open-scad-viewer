@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {ref} from 'svet'
 import type {NurbsSurface} from '../services/nurbsSurface'
-import ProfileBridgeCheck from './ProfileBridgeCheck.svet'
-import OffsetDeviationCheck from './OffsetDeviationCheck.svet'
+import ProfileBridgeCheck from './ProfileBridgeCheck.svt'
+import OffsetDeviationCheck from './OffsetDeviationCheck.svt'
 defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()
 const profile=ref<InstanceType<typeof ProfileBridgeCheck>|null>(null)
 defineExpose({open:()=>profile.value?.open()})

@@ -147,7 +147,7 @@
 172. Экспорт STL — только меш [реализовано: binary STL]
 792. STEP AP203 vs AP214 vs AP242: семантика — AP203 — конфигурационно-управляемое проектирование (aerospace), AP214 — автомобильные процессы с… [реализовано в brep-core: schema preflight, diagnostics, safe fallback]
 794. AP214 presentation слои — `styled_item`/`presentation_layer_assignment` несут цвет и слои автомобильной схемы [реализовано в brep-core + geometry-bridge: sceneTree/display]
-795. AP242 managed model based 3d engineering — единственный AP с `tessellated_*` (запечённой тесселяцией) рядом с точной геометрией: храните её как… [реализовано в brep-core + geometry-bridge: cache-ready LOD-0; physical cache/performance открыты]
+795. AP242 managed model based 3d engineering — единственный AP с `tessellated_*` (запечённой тесселяцией) рядом с точной геометрией: храните её как… [реализовано в brep-core + geometry-bridge + frontend: LRU/durable LOD-0 cache; performance/Hausdorff открыты]
 796. STEP XDE-атрибуты — имена (`name` на product/shape), материалы, плотность, валидационные свойства (объём/площадь): переносите… [реализовано в brep-core + geometry-bridge: typed sceneTree]
 797. Семантическая PMI AP242 — `geometric_tolerance` + `datum_feature` + `datum_reference` привязаны к граням через `shape_aspect` [реализовано в brep-core: typed GD&T/index/JSON; NIST corpus открыт]
 798. PMI presentation vs semantic — presentation (полилинии выносок) — картинка, semantic (tolerance + datums) — данные [реализовано в brep-core: diagnostics + deterministic presentation]

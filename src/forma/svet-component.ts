@@ -7,9 +7,12 @@
 import { effect, untrack } from './svet'
 import {
   camelize,
+  createRefUnwrapProxy,
+  hyphenate,
   normalizeVNode,
   setTemplateRef,
   splitPropsAndAttrs,
+  syncReactiveRecord,
   toHandlerKey,
 } from './svet-props'
 import {
@@ -63,10 +66,6 @@ export interface ComponentRendererCallbacks<HostNode = any, HostElement = any> {
 }
 
 let uidCounter = 0
-
-function hyphenate(str: string): string {
-  return str.replace(/\B([A-Z])/g, '-$1').toLowerCase()
-}
 
 function emitComponentEvent(instance: SvetComponentInstance, event: string, ...args: any[]): void {
   const rawProps = instance.vnode.props || {}
@@ -164,24 +163,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
     })
 
     const exposeProxy = (exp?: any) => {
-      if (!exp || typeof exp !== 'object') {
-        instance.exposed = exp || {}
-        return
-      }
-      instance.exposed = new Proxy(exp, {
-        get(target, key, receiver) {
-          const val = Reflect.get(target, key, receiver)
-          return isRef(val) ? val.value : val
-        },
-        set(target, key, value, receiver) {
-          const cur = Reflect.get(target, key, receiver)
-          if (isRef(cur) && !isRef(value)) {
-            cur.value = value
-            return true
-          }
-          return Reflect.set(target, key, value, receiver)
-        },
-      })
+      instance.exposed = exp && typeof exp === 'object' ? createRefUnwrapProxy(exp) : (exp || {})
     }
 
     const scope = effectScope(true)
@@ -206,20 +188,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
           if (typeof setupResult === 'function') {
             instance.render = setupResult
           } else if (setupResult && typeof setupResult === 'object') {
-            instance.setupState = new Proxy(setupResult, {
-              get(target, key, receiver) {
-                const val = Reflect.get(target, key, receiver)
-                return isRef(val) ? val.value : val
-              },
-              set(target, key, value, receiver) {
-                const cur = Reflect.get(target, key, receiver)
-                if (isRef(cur) && !isRef(value)) {
-                  cur.value = value
-                  return true
-                }
-                return Reflect.set(target, key, value, receiver)
-              },
-            })
+            instance.setupState = createRefUnwrapProxy(setupResult)
           }
         }
         if (!instance.render && type.render) {
@@ -234,29 +203,19 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
         if (!instance.render) return createCommentVNode('empty')
         const prevRendering = setCurrentRenderingInstance(instance)
         const compScopeId = (type as any).__scopeId as string | undefined
+        const invokeRender = () =>
+          instance.render!.call(
+            instance.ctx,
+            instance.ctx,
+            instance.renderCache,
+            instance.props,
+            instance.setupState,
+            instance.ctx,
+            instance.ctx,
+          )
         let rawSubTree: any
         try {
-          rawSubTree = compScopeId
-            ? withScopeId(compScopeId)(() =>
-                instance.render!.call(
-                  instance.ctx,
-                  instance.ctx,
-                  instance.renderCache,
-                  instance.props,
-                  instance.setupState,
-                  instance.ctx,
-                  instance.ctx,
-                ),
-              )()
-            : instance.render.call(
-                instance.ctx,
-                instance.ctx,
-                instance.renderCache,
-                instance.props,
-                instance.setupState,
-                instance.ctx,
-                instance.ctx,
-              )
+          rawSubTree = compScopeId ? withScopeId(compScopeId)(invokeRender)() : invokeRender()
         } finally {
           setCurrentRenderingInstance(prevRendering)
         }
@@ -306,11 +265,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
           instance.vnode.el = nextTree.el
           instance.vnode.anchor = nextTree.anchor
           if (instance.vnode.ref != null) {
-            let refValue = instance.exposed ?? instance.ctx
-            if (refValue && typeof refValue === 'object' && '__svet_asyncInnerRef' in refValue) {
-              refValue = refValue.__svet_asyncInnerRef
-            }
-            setTemplateRef(instance.vnode.ref, refValue)
+            setTemplateRef(instance.vnode.ref, instance.exposed ?? instance.ctx)
           }
           for (const fn of instance.u) {
             queuePostFlushCb(fn)
@@ -339,60 +294,18 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
 
     const { propsValues, attrsValues } = splitPropsAndAttrs(instance.type, n2.props, instance.emit)
 
-    let changed = false
     const patchFlag = n2.patchFlag ?? 0
-    if ((patchFlag & 1024) !== 0) {
-      changed = true
-    }
+    const dynamicSlots = (patchFlag & 1024) !== 0
+    let changed = dynamicSlots
     untrack(() => {
-      const currentProps = instance.props
-      for (const k of Object.keys(propsValues)) {
-        if (!Object.is(currentProps[k], propsValues[k])) {
-          currentProps[k] = propsValues[k]
-          changed = true
-        }
-      }
-      for (const k of Object.keys(currentProps)) {
-        if (!(k in propsValues)) {
-          delete currentProps[k]
-          changed = true
-        }
-      }
-
-      const currentAttrs = instance.attrs
-      for (const k of Object.keys(attrsValues)) {
-        if (!Object.is(currentAttrs[k], attrsValues[k])) {
-          currentAttrs[k] = attrsValues[k]
-          changed = true
-        }
-      }
-      for (const k of Object.keys(currentAttrs)) {
-        if (!(k in attrsValues)) {
-          delete currentAttrs[k]
+      if (syncReactiveRecord(instance.props, propsValues)) changed = true
+      if (syncReactiveRecord(instance.attrs, attrsValues)) changed = true
+      if (n2.children && typeof n2.children === 'object' && !Array.isArray(n2.children)) {
+        if (syncReactiveRecord(instance.slots, n2.children as Record<string, any>, dynamicSlots)) {
           changed = true
         }
       }
     })
-
-    if (n2.children && typeof n2.children === 'object' && !Array.isArray(n2.children)) {
-      untrack(() => {
-        const nextSlots = n2.children as Record<string, any>
-        for (const k of Object.keys(nextSlots)) {
-          if (!Object.is(instance.slots[k], nextSlots[k])) {
-            instance.slots[k] = nextSlots[k]
-            if ((patchFlag & 1024) !== 0) {
-              changed = true
-            }
-          }
-        }
-        for (const k of Object.keys(instance.slots)) {
-          if (!(k in nextSlots)) {
-            delete instance.slots[k]
-            changed = true
-          }
-        }
-      })
-    }
     if (changed && instance.update) {
       instance.update()
     }

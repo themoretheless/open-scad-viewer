@@ -1,5 +1,5 @@
 import {createApp,h,reactive} from 'svet'
-import FormaRegion from '../../src/components/FormaRegion.svet'
+import FormaRegion from '../../src/components/FormaRegion.svt'
 import topbar from '../../src/ui/Topbar.ui?raw'
 import toolbar from '../../src/ui/EditorToolbar.ui?raw'
 import viewer from '../../src/ui/ViewerToolbar.ui?raw'

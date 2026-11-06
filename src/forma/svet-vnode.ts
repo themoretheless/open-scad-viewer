@@ -155,13 +155,13 @@ export function registerCompiledSfc(filename: string, comp: Component): void {
   const base = filename.split('/').pop()
   if (base) {
     asyncResolvedCache.set(base, comp)
-    const stem = base.replace(/\.svet$/, '')
+    const stem = base.replace(/\.svt$/, '')
     if (stem) asyncResolvedCache.set(stem, comp)
   }
 }
 
 function getAsyncCacheKey(loaderStr: string): string {
-  const match = loaderStr.match(/\/([^/?'"`()]+?)(?:\.(?:svet|ts|js))?(?:\?[^'"`()]*)?['"`)]/)
+  const match = loaderStr.match(/\/([^/?'"`()]+?)(?:\.(?:svt|ts|js))?(?:\?[^'"`()]*)?['"`)]/)
   return match ? match[1] : loaderStr
 }
 

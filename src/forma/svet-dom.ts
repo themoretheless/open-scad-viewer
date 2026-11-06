@@ -4,6 +4,7 @@
  * Implements the default browser DOM host renderer (`createApp`, `createSSRApp`)
  * and deterministic HTML string serializer (`renderToString`) for Svet.
  */
+import { hyphenate, isReservedPropKey } from './svet-props'
 import { createRenderer, type RendererOptions, type SvetApp } from './svet-renderer'
 import { Comment, Fragment, Static, Teleport, Text, Transition, isVNode, type SvetVNode } from './svet-vnode'
 
@@ -270,7 +271,7 @@ function serializeSSRNode(node: SSRNode): string {
   }
 
   for (const [key, val] of Object.entries(allProps)) {
-    if (key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key' || /^on[A-Z]/.test(key)) continue
+    if (isReservedPropKey(key) || /^on[A-Z]/.test(key)) continue
     if (key === 'innerHTML' || key === 'textContent') continue
     if (key === 'style') {
       if (typeof val === 'string' && val) {
@@ -279,8 +280,7 @@ function serializeSSRNode(node: SSRNode): string {
         const parts: string[] = []
         for (const [sk, sv] of Object.entries(val)) {
           if (sv != null && sv !== '') {
-            const cssKey = sk.replace(/\B([A-Z])/g, '-$1').toLowerCase()
-            parts.push(`${cssKey}:${sv}`)
+            parts.push(`${hyphenate(sk)}:${sv}`)
           }
         }
         if (parts.length > 0) attrs += ` style="${escapeHtml(parts.join(';'))}"`

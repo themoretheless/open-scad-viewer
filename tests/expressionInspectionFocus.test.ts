@@ -10,7 +10,7 @@ vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:
  state.run=vi.fn(()=>{state.pending.value=true})
  return {result:state.result,pending:state.pending,error:state.error,errorCode:ref(''),run:state.run,retry:()=>{},cancel:state.cancel}
 }}))
-import Panel from '../src/components/ExpressionShellCheck.svet'
+import Panel from '../src/components/ExpressionShellCheck.svt'
 it('focuses the replacement cancel button and routes Escape to cancellation',async()=>{
  const windowTarget=new EventTarget();vi.stubGlobal('window',windowTarget);vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {})
  let focused:any

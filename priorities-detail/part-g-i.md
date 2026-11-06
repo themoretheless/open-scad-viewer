@@ -52,11 +52,11 @@
 - **Зависимости:** 792, 796 (XDE-атрибуты).
 - **Критерии приёмки:** golden-файл с цветными гранями: цвета доезжают до вьюера; round-trip сохраняет (цвет, слой) для ≥95% styled_item; приоритет face>body проверен тестом. Typed round-trip, приоритет и frontend-ready sceneTree/display через `brep_nurbs_import_step_scene` проверены.
 
-#### 795. AP242 tessellated_* как LOD-0 [статус: реализовано в brep-core + geometry-bridge; physical cache/performance открыты] [трудоёмкость: M]
+#### 795. AP242 tessellated_* как LOD-0 [статус: реализовано в brep-core + geometry-bridge + frontend; performance/Hausdorff открыты] [трудоёмкость: M]
 - **Суть:** `tessellated_face`/`tessellated_shell` рядом с точной геометрией: при импорте запечённая тесселяция становится LOD-0 (мгновенный показ во вьюере), точная геометрия — источник истины. Экспорт: писать tessellated-реплику текущей тесселяции. Камни: согласованность tessellated vs точной геометрии (drift), связывание через `geometric_model_relationship`.
 - **Где в коде:** `brep-core/src/step_interchange_v3.rs` + мост к кэшу тесселяций (`nurbs-core`/вьюер LOD из п. 149).
 - **Зависимости:** 792, 149 (LOD), 140–142.
-- **Критерии приёмки:** время до первого кадра на большой AP242-модели с tessellated-геометрией < 200 мс без перетесселяции; Hausdorff tessellated↔точная геометрия ≤ заявленного в файле допуска. Ядро LOD-0, directional drift estimate и cache-ready Mesh/keys через `brep_nurbs_import_step_lod0` реализованы; физическое viewer cache storage, время и Hausdorff-сертификат не проверены.
+- **Критерии приёмки:** время до первого кадра на большой AP242-модели с tessellated-геометрией < 200 мс без перетесселяции; Hausdorff tessellated↔точная геометрия ≤ заявленного в файле допуска. Ядро LOD-0, directional drift estimate, cache-ready Mesh/keys и frontend LRU + durable cache реализованы; mixed exact+tessellated не вызывает повторную тесселяцию. Время и Hausdorff-сертификат не проверены.
 
 #### 796. STEP XDE-атрибуты [статус: реализовано в brep-core + geometry-bridge] [трудоёмкость: M]
 - **Суть:** Имена (`name` на product/shape), материалы, плотность, валидационные свойства (объём/площадь через `measure_representation_item`): перенос в дерево сцены как типизированные метаданные. Камни: XDE-атрибуты живут в `shape_definition_representation`-цепочках; дублирование имён; кодировки (ISO 10303-21 escape-последовательности).

@@ -4,7 +4,7 @@ import type {NurbsSurface} from '../services/nurbsSurface'
 import {createNurbsSurfaceEvaluator,extractNurbsSurfaceIsocurvePoints} from '../services/nurbsSurface'
 import type {SourceGraphPreview} from '../services/sourceGraphG2Preview'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
-import CadQuantityInput from './CadQuantityInput.svet'
+import CadQuantityInput from './CadQuantityInput.svt'
 type Point=[number,number,number]
 const props=defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()
 const emit=defineEmits<{display:[{lines:Point[][];witness:Point|null}|null]}>()

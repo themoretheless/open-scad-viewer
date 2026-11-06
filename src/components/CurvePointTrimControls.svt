@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CadQuantityInput from './CadQuantityInput.svet'
+import CadQuantityInput from './CadQuantityInput.svt'
 interface Values {x:number;y:number;z:number;end:'start'|'end';profileGap:number}
 const props=defineProps<{advanced:Values;locale:string;dimension:number;pick:{radius:number}|null;cut?:number[]}>()
 const emit=defineEmits<{'update:advanced':[Partial<Values>];validity:[string,boolean];numeric:[]}>()

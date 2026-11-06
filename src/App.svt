@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {useTransientNotice} from './composables/useTransientNotice'
-import FormaRegion from './components/FormaRegion.svet'
+import FormaRegion from './components/FormaRegion.svt'
 import topbarUi from './ui/Topbar.ui?raw'
 import editorToolbarUi from './ui/EditorToolbar.ui?raw'
 import editorStatsUi from './ui/EditorStats.ui?raw'
@@ -9,7 +9,7 @@ import selectionModesUi from './ui/SelectionModes.ui?raw'
 import dockRailUi from './ui/DockRail.ui?raw'
 import computeInspectorUi from './ui/ComputeInspector.ui?raw'
 import statusbarUi from './ui/Statusbar.ui?raw'
-import SweepBoundaryBadges from './components/SweepBoundaryBadges.svet'
+import SweepBoundaryBadges from './components/SweepBoundaryBadges.svt'
 import { useBuildAndRendererLifecycle, type SweepViewportProgressSnapshot } from './composables/useBuildAndRendererLifecycle'
 import { useCodeEditorViewport } from './composables/useCodeEditorViewport'
 import { useEditorFormatting } from './composables/useEditorFormatting'
@@ -20,9 +20,9 @@ import { useSourceProvenanceCaret } from './composables/useSourceProvenanceCaret
 import { useViewportDisplayControls } from './composables/useViewportDisplayControls'
 import { useWorkspaceFileActions } from './composables/useWorkspaceFileActions'
 import { useWorkspacePersistenceLifecycle } from './composables/useWorkspacePersistenceLifecycle'
-import VrControls from './components/VrControls.svet'
-import ModelingGridControls from './components/ModelingGridControls.svet'
-import MaterialControls from './features/MaterialControls.svet'
+import VrControls from './components/VrControls.svt'
+import ModelingGridControls from './components/ModelingGridControls.svt'
+import MaterialControls from './features/MaterialControls.svt'
 import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
 import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension } from './services/rushFrontendDetect'
@@ -30,10 +30,10 @@ import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBo
 import { highlightCode } from './services/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'svet'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT } from './services/meshFormats'
-import CommandPalette from './components/CommandPalette.svet'
-import CustomizerPanel from './components/CustomizerPanel.svet'
-const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.svet'))
-const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.svet'))
+import CommandPalette from './components/CommandPalette.svt'
+import CustomizerPanel from './components/CustomizerPanel.svt'
+const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.svt'))
+const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.svt'))
 import { BOX_DEFAULTS, generateBox } from './services/boxGenerator'
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument, DirectBody } from './services/directModeling'
@@ -44,16 +44,16 @@ import { emptyDirectDocument } from './services/directModeling'
 import { type WorkspaceMode, WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './services/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
-const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.svet'))
-const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.svet'))
-const MainModelingTools = defineAsyncComponent(() => import('./features/MainModelingTools.svet'))
-const ScanPlanePanel = defineAsyncComponent(() => import('./features/ScanPlanePanel.svet'))
-const SvgPanel = defineAsyncComponent(() => import('./features/SvgPanel.svet'))
-const PhotogrammetryPanel = defineAsyncComponent(() => import('./features/PhotogrammetryPanel.svet'))
-const InspectPanel = defineAsyncComponent(() => import('./components/InspectPanel.svet'))
-const SceneOutliner = defineAsyncComponent(() => import('./components/SceneOutliner.svet'))
-const KeyboardShortcuts = defineAsyncComponent(() => import('./components/KeyboardShortcuts.svet'))
-import ViewCube from './components/ViewCube.svet'
+const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.svt'))
+const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.svt'))
+const MainModelingTools = defineAsyncComponent(() => import('./features/MainModelingTools.svt'))
+const ScanPlanePanel = defineAsyncComponent(() => import('./features/ScanPlanePanel.svt'))
+const SvgPanel = defineAsyncComponent(() => import('./features/SvgPanel.svt'))
+const PhotogrammetryPanel = defineAsyncComponent(() => import('./features/PhotogrammetryPanel.svt'))
+const InspectPanel = defineAsyncComponent(() => import('./components/InspectPanel.svt'))
+const SceneOutliner = defineAsyncComponent(() => import('./components/SceneOutliner.svt'))
+const KeyboardShortcuts = defineAsyncComponent(() => import('./components/KeyboardShortcuts.svt'))
+import ViewCube from './components/ViewCube.svt'
 import type { GeometryQuality } from './core/build'
 import { type MeshData } from './core/mesh'
 import { MAX_PARAMETER_PRESETS } from './services/parameterPresets'
@@ -191,7 +191,7 @@ const {
   showNotice,
   translate: t,
 })
-const FunctionReference = defineAsyncComponent(() => import('./components/FunctionReference.svet'))
+const FunctionReference = defineAsyncComponent(() => import('./components/FunctionReference.svt'))
 const functionReferenceOpen = ref(false)
 const functionReferenceQuery = ref('')
 const functionReferenceButton = ref<HTMLButtonElement | null>(null)
@@ -1595,7 +1595,6 @@ function handleShellBinding(path: string, value: unknown) {
           <ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" />
         </div>
         <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
-          <FormaRegion :source="dockRailUi" :locale="lang" :state="{ sidebarLabel: t('sidebar'), dockTab, tabs: dockTabs.map(tab => ({ id: tab, domId: `dock-tab-${tab}`, label: t(tab), iconPath: DOCK_ICONS[tab] })), closeSidebarLabel: t('closeSidebar') }" @action="handleShellAction" />
           <div class="dock-body">
           <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">
           <SceneOutliner
@@ -1694,6 +1693,7 @@ function handleShellBinding(path: string, value: unknown) {
           </div>
           </div>
           </div>
+          <FormaRegion :source="dockRailUi" :locale="lang" :state="{ sidebarLabel: t('sidebar'), dockTab, tabs: dockTabs.map(tab => ({ id: tab, domId: `dock-tab-${tab}`, label: t(tab), iconPath: DOCK_ICONS[tab] })), closeSidebarLabel: t('closeSidebar') }" @action="handleShellAction" />
         </div>
         <div v-if="rendering" class="rendering-badge" role="status"><span class="spinner" />{{ t('compiling') }} · {{ t(renderingQuality) }}</div>
         <div v-else-if="stale" class="stale-badge">{{ t('stale') }}</div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed,onMounted,onUnmounted,ref} from 'svet'
-import CadQuantityInput from './CadQuantityInput.svet'
+import CadQuantityInput from './CadQuantityInput.svt'
 const props=defineProps<{anchor:number[];center:number[];size:number;modelValue:number;locale:string;failed:boolean;label:string}>()
 const emit=defineEmits<{'update:modelValue':[number];validity:[boolean]}>()
 const root=ref<HTMLElement>(),extent=ref([0,0,32])

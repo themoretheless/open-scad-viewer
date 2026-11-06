@@ -8,7 +8,7 @@ import {computeNominalLatticeGraph,computePrintStrengthProfile,computeStructural
 import type {AxialScreeningRow,ValidatedPrintProfile,ThermalEditorState,ThermalEvaluation} from '../services/trussScreening'
 import type {StructuralProfileProperties} from '../services/structuralProfiles'
 import type {TrussTopologyResponse} from '../services/trussAnalysis'
-import ThermalStrengthEditor from './ThermalStrengthEditor.svet'
+import ThermalStrengthEditor from './ThermalStrengthEditor.svt'
 import type {LatticePrintSettings} from '../services/latticePrintSettings'
 
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;printSettings:LatticePrintSettings;previewEpoch?:number}>()

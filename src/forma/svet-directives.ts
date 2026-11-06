@@ -5,6 +5,7 @@
  * `vModelRadio`, `vModelSelect`, `vShow`) and event modifier helpers (`withModifiers`,
  * `withKeys`, `withDirectives`).
  */
+import { hyphenate } from './svet-props'
 import { isRef } from './svet-reactivity'
 import type { Directive, DirectiveBinding, SvetVNode } from './svet-vnode'
 
@@ -48,15 +49,11 @@ const keyAliases: Record<string, string[]> = {
   delete: ['backspace', 'delete', 'del'],
 }
 
-function hyphenateKey(str: string): string {
-  return str.replace(/\B([A-Z])/g, '-$1').toLowerCase()
-}
-
 export function withKeys(fn: (...args: any[]) => any, modifiers: string[]): (event: any) => any {
   return (event: any) => {
     if (!event || !('key' in event)) return
     const eventKey = String(event.key || '').toLowerCase()
-    const hyphenKey = hyphenateKey(String(event.key || ''))
+    const hyphenKey = hyphenate(String(event.key || ''))
     const matched = modifiers.some(mod => {
       const m = mod.toLowerCase()
       if (m === eventKey || m === hyphenKey) return true
@@ -83,6 +80,17 @@ function toNumber(val: any): any {
   return Number.isNaN(n) ? val : n
 }
 
+function syncModelUpdaterProp(el: any, vnode: SvetVNode, onlyIfMissing = false): void {
+  const updater = vnode.props?.['onUpdate:modelValue']
+  if (updater && el.props && (!onlyIfMissing || !('onUpdate:modelValue' in el.props))) {
+    el.props['onUpdate:modelValue'] = updater
+  }
+}
+
+function resolveOptionValue(opt: any, vnodeProps?: Record<string, any> | null): any {
+  return '_value' in opt ? opt._value : ('value' in opt ? opt.value : (opt.props ?? vnodeProps)?.value)
+}
+
 export const vModelText: Directive = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     const updater = vnode.props?.['onUpdate:modelValue']
@@ -100,15 +108,11 @@ export const vModelText: Directive = {
     })
   },
   mounted(el, { value }, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
     el.value = value == null ? '' : value
   },
   beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
     const newVal = value == null ? '' : value
     if (el.value !== newVal) {
       if (trim && typeof el.value === 'string' && el.value.trim() === newVal) return
@@ -128,15 +132,11 @@ export const vModelCheckbox: Directive = {
     })
   },
   mounted(el, { value }, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
     el.checked = Boolean(value)
   },
   beforeUpdate(el, { value }, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
     el.checked = Boolean(value)
   },
 }
@@ -151,16 +151,12 @@ export const vModelRadio: Directive = {
     })
   },
   mounted(el, { value }, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
     const radioVal = '_value' in el ? el._value : vnode.props?.value
     el.checked = Object.is(value, radioVal)
   },
   beforeUpdate(el, { value }, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
     const radioVal = '_value' in el ? el._value : vnode.props?.value
     el.checked = Object.is(value, radioVal)
   },
@@ -174,7 +170,7 @@ function setSelected(el: any, value: any, number: boolean): void {
   }
   for (let i = 0; i < options.length; i++) {
     const opt = options[i]
-    const rawOptVal = '_value' in opt ? opt._value : ('value' in opt ? opt.value : opt.props?.value)
+    const rawOptVal = resolveOptionValue(opt)
     const optVal = number ? toNumber(rawOptVal) : rawOptVal
     const isSelected = Object.is(optVal, value) || (optVal != null && value != null && String(optVal) === String(value))
     opt.selected = isSelected
@@ -196,7 +192,7 @@ export const vModelSelect: Directive = {
       if (options && options.length > 0) {
         const selectedOpt = Array.from(options as any[]).find((o: any) => o.selected) ?? options[el.selectedIndex]
         if (selectedOpt) {
-          const rawVal = '_value' in selectedOpt ? selectedOpt._value : ('value' in selectedOpt ? selectedOpt.value : selectedOpt.props?.value)
+          const rawVal = resolveOptionValue(selectedOpt)
           updater(number ? toNumber(rawVal) : rawVal)
           return
         }
@@ -205,15 +201,11 @@ export const vModelSelect: Directive = {
     })
   },
   mounted(el, { value, modifiers: { number } }, vnode) {
-    if (vnode.props && !('onUpdate:modelValue' in (el.props || {})) && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode, true)
     setSelected(el, value, Boolean(number))
   },
   beforeUpdate(el, _binding, vnode) {
-    if (vnode.props && el.props && vnode.props['onUpdate:modelValue']) {
-      el.props['onUpdate:modelValue'] = vnode.props['onUpdate:modelValue']
-    }
+    syncModelUpdaterProp(el, vnode)
   },
   updated(el, { value, modifiers: { number } }) {
     setSelected(el, value, Boolean(number))

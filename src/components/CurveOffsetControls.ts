@@ -1,5 +1,5 @@
 import {Fragment,h} from 'svet'
-import CadQuantityInput from './CadQuantityInput.svet'
+import CadQuantityInput from './CadQuantityInput.svt'
 import type {CurveOffsetReport} from '../services/solidCurveOffset'
 type Join='smooth'|'bevel'|'trim-nonzero'|'trim-evenodd'
 interface Props {

@@ -21,6 +21,6 @@
       "svet": ["./src/forma/svet-runtime.ts"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.svet", "env.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.svt", "env.d.ts"],
   "exclude": ["src/mcp/**"]
 }

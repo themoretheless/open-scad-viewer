@@ -8,6 +8,7 @@
 import { createComponentOperations, type SvetApp } from './svet-component'
 import {
   invokeDirectiveHook,
+  isReservedPropKey,
   isSameVNodeType,
   normalizeChildrenArray,
   patchElementProps,
@@ -121,11 +122,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     }
 
     if (n2.ref != null) {
-      let refValue = n2.component ? (n2.component.exposed ?? n2.component.ctx) : n2.el
-      if (refValue && typeof refValue === 'object' && '__svet_asyncInnerRef' in refValue) {
-        refValue = refValue.__svet_asyncInnerRef
-      }
-      setTemplateRef(n2.ref, refValue)
+      setTemplateRef(n2.ref, n2.component ? (n2.component.exposed ?? n2.component.ctx) : n2.el)
     } else if (n1 && n1.ref != null) {
       setTemplateRef(n1.ref, null)
     }
@@ -275,7 +272,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
 
     if (vnode.props) {
       for (const key of Object.keys(vnode.props)) {
-        if (key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key') continue
+        if (isReservedPropKey(key)) continue
         hostPatchProp(el, key, null, vnode.props[key], namespace)
       }
     }

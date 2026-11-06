@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { createRenderer, nextTick } from 'svet'
-import VrControls from '../src/components/VrControls.svet'
+import VrControls from '../src/components/VrControls.svt'
 import type { MeshData } from '../src/core/mesh'
 
 class Node {

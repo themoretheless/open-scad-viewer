@@ -6,11 +6,11 @@ import {computed,defineAsyncComponent,ref,shallowRef,toRaw,watch,onUnmounted} fr
 import {sceneSnapPoints} from '../services/mainSnapping'
 import {patchMainSource} from '../services/mainSourceEditing'
 import {computeMainSolid,computeCadOperation,cancelMainSolid} from '../services/mainSolidWorker'
-import CadDimensionsOverlay from './CadDimensionsOverlay.svet'
+import CadDimensionsOverlay from './CadDimensionsOverlay.svt'
 import type {CadOptions} from '../services/cadWorkbench'
-const CadWorkbenchPanel=defineAsyncComponent(()=>import('./CadWorkbenchPanel.svet'))
-import MainModelingOverlay from './MainModelingOverlay.svet'
-import MainSketchTools from './MainSketchTools.svet'
+const CadWorkbenchPanel=defineAsyncComponent(()=>import('./CadWorkbenchPanel.svt'))
+import MainModelingOverlay from './MainModelingOverlay.svt'
+import MainSketchTools from './MainSketchTools.svt'
 import {facePlane} from '../services/directSolidTools'
 import {booleanPolygonMeshes} from '../services/geometry/polygon'
 import {xyPlane,type SketchPlane} from '../services/directSketchGeometry'

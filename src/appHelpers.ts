@@ -1,4 +1,4 @@
-// Pure helpers of App.svet: no component state, extracted by scripts/vue-extract-pure.mjs.
+// Pure helpers of App.svt: no component state, extracted by scripts/vue-extract-pure.mjs.
 import { type ComponentPublicInstance } from 'svet'
 import { type RovingFocusKey } from './services/rovingFocus'
 import { encodeWorkspaceShare } from './services/workspaceShare'
