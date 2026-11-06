@@ -13,6 +13,8 @@ use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, TopoId, TopoKind};
 use nurbs_core::{Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
+pub(crate) const STEP_V6_AUTHORED_CHART_MARKER: &str = "authored-chart-v1";
+
 pub(crate) struct Writer {
     next: usize,
     pub(crate) rows: BTreeMap<usize, String>,
@@ -584,8 +586,18 @@ pub(crate) fn export_step_direct(
             let digest = entity_digest(&parsed, entity_id)?;
             let entity = parsed.get_mut(&entity_id).unwrap();
             if let Value::Call(_, args) = &mut entity.value {
-                args[0] =
-                    Value::String(format!("OSCAD_TOPO/3|{}|{}|{digest}", kind.as_str(), topo));
+                let authored_chart = if capability == STEP_INTERCHANGE_V6_CAPABILITY
+                    && kind == TopoKind::Face
+                {
+                    format!("|{STEP_V6_AUTHORED_CHART_MARKER}")
+                } else {
+                    String::new()
+                };
+                args[0] = Value::String(format!(
+                    "OSCAD_TOPO/3|{}|{}|{digest}{authored_chart}",
+                    kind.as_str(),
+                    topo
+                ));
             }
         }
     }

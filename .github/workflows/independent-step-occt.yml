@@ -1,0 +1,155 @@
+name: Independent STEP OCCT
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'crates/nurbs-core/**'
+      - 'crates/brep-core/**'
+      - 'crates/nurbs-intersect/**'
+      - 'crates/brep-intersect/**'
+      - 'crates/cad-step/**'
+      - 'crates/cad-predicates/**'
+      - 'crates/brep-topology/**'
+      - 'crates/geometry-ops/**'
+      - 'crates/planar-geometry/**'
+      - 'crates/value-codec/**'
+      - 'crates/Cargo.toml'
+      - 'crates/Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'scripts/requirements-cad-step.txt'
+      - 'scripts/verify-rational-hollow-step.py'
+      - 'scripts/verify-guided-loft-step.py'
+      - 'scripts/verify-loft-step-matrix.py'
+      - 'scripts/verify-advanced-loft-solid.py'
+      - 'scripts/verify-source-capped-body-step.py'
+      - 'docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json'
+      - '.github/workflows/independent-step-occt.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'crates/nurbs-core/**'
+      - 'crates/brep-core/**'
+      - 'crates/nurbs-intersect/**'
+      - 'crates/brep-intersect/**'
+      - 'crates/cad-step/**'
+      - 'crates/cad-predicates/**'
+      - 'crates/brep-topology/**'
+      - 'crates/geometry-ops/**'
+      - 'crates/planar-geometry/**'
+      - 'crates/value-codec/**'
+      - 'crates/Cargo.toml'
+      - 'crates/Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'scripts/requirements-cad-step.txt'
+      - 'scripts/verify-rational-hollow-step.py'
+      - 'scripts/verify-guided-loft-step.py'
+      - 'scripts/verify-loft-step-matrix.py'
+      - 'scripts/verify-advanced-loft-solid.py'
+      - 'scripts/verify-source-capped-body-step.py'
+      - 'docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json'
+      - '.github/workflows/independent-step-occt.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      RUSTUP_TOOLCHAIN: nightly-2026-09-16
+      CARGO_PROFILE_TEST_OPT_LEVEL: '1'
+      STEP_OUTPUT_ROOT: ${{ github.workspace }}/output/qualification/independent-step
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-cad-step.txt
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install nightly-2026-09-16 --profile minimal --no-self-update
+
+      - name: Cache native Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: independent-step-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            independent-step-${{ runner.os }}-
+
+      - name: Install independent OCCT reader
+        # OCP links to VTK, but these verifiers use neither VTK's plotting
+        # dependencies nor the shared requirements file's matplotlib pin.
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps cadquery-ocp==8.0.1.0.0 cadquery-ocp-proxy==8.0.1.0.0 vtk==9.6.2
+          python -c 'import OCP; assert OCP.__version__ == "8.0.1.0"'
+
+      - name: Prepare absolute fixture output directories
+        run: mkdir -p "$STEP_OUTPUT_ROOT/rational" "$STEP_OUTPUT_ROOT/guided" "$STEP_OUTPUT_ROOT/loft-matrix" "$STEP_OUTPUT_ROOT/natural" "$STEP_OUTPUT_ROOT/projective"
+
+      - name: Generate rational hollow STEP v5/v6/v9
+        run: |
+          cargo run --locked --manifest-path crates/Cargo.toml -p cad-step --example generate_step_v5_fixture -- rational-hollow "$STEP_OUTPUT_ROOT/rational/rational-hollow-v5.step"
+          cargo run --locked --manifest-path crates/Cargo.toml -p cad-step --example generate_step_v5_fixture -- v6-rational-hollow "$STEP_OUTPUT_ROOT/rational/rational-hollow-v6.step"
+          cargo run --locked --manifest-path crates/Cargo.toml -p cad-step --example generate_step_v5_fixture -- v9-rational-hollow "$STEP_OUTPUT_ROOT/rational/rational-hollow-v9.step"
+
+      - name: Verify rational hollow fixtures with OCCT
+        run: |
+          python scripts/verify-rational-hollow-step.py \
+            "$STEP_OUTPUT_ROOT/rational/rational-hollow-v5.step" \
+            "$STEP_OUTPUT_ROOT/rational/rational-hollow-v6.step" \
+            "$STEP_OUTPUT_ROOT/rational/rational-hollow-v9.step" \
+            --output "$STEP_OUTPUT_ROOT/rational/rational-hollow-occt-report.json"
+
+      - name: Generate guided loft and loft matrix STEP v9
+        env:
+          LOFT_STEP_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/guided/guided-loft-v9.step
+          LOFT_STEP_MATRIX_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/loft-matrix
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test guided_loft_step
+
+      - name: Verify guided loft and loft matrix with OCCT
+        run: |
+          python scripts/verify-guided-loft-step.py "$STEP_OUTPUT_ROOT/guided/guided-loft-v9.step" "$STEP_OUTPUT_ROOT/guided/guided-loft-v9.opencascade.json"
+          python scripts/verify-loft-step-matrix.py "$STEP_OUTPUT_ROOT/loft-matrix"
+
+      - name: Generate natural capped loft STEP v9
+        env:
+          ADVANCED_LOFT_STEP_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/natural
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test rational_section_loft natural_capped_loft_step_roundtrip_and_independent_fixture -- --exact
+
+      - name: Verify natural capped loft with OCCT
+        run: python scripts/verify-advanced-loft-solid.py "$STEP_OUTPUT_ROOT/natural"
+
+      - name: Generate projective converted and source STEP v6
+        env:
+          CAD_PROJECTIVE_CAPPED_STEP_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/projective/projective-capped-v6.step
+          CAD_PROJECTIVE_CAPPED_SOURCE_STEP_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/projective/projective-capped-source-v6.step
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests::projective_qualification::projective_generated_end_caps_keep_exact_poles_and_replay -- --exact
+
+      - name: Verify projective converted and source fixtures with OCCT
+        run: |
+          python scripts/verify-source-capped-body-step.py \
+            "$STEP_OUTPUT_ROOT/projective/projective-capped-v6.step" \
+            "$STEP_OUTPUT_ROOT/projective/projective-capped-v6-verification.json" \
+            docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json
+          python scripts/verify-source-capped-body-step.py \
+            "$STEP_OUTPUT_ROOT/projective/projective-capped-source-v6.step" \
+            "$STEP_OUTPUT_ROOT/projective/projective-capped-source-v6-verification.json" \
+            docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json
+
+      - name: Upload fresh fixtures and OCCT reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-step-occt
+          path: ${{ env.STEP_OUTPUT_ROOT }}
+          if-no-files-found: error

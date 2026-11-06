@@ -10,8 +10,8 @@ use crate::step_part21::{
     number, one_ref, parse, reachable, refs, string_value, usize_value, values,
 };
 pub(crate) use crate::step_v3_export::{
-    Writer, canonical_face_senses, certify_periodic_surface, certify_step_v8_topology,
-    emit_curve_source, emit_surface_source, refs_text,
+    STEP_V6_AUTHORED_CHART_MARKER, Writer, canonical_face_senses, certify_periodic_surface,
+    certify_step_v8_topology, emit_curve_source, emit_surface_source, refs_text,
 };
 pub use crate::step_v3_export::{
     export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
@@ -1829,8 +1829,19 @@ impl<'a> DirectBuilder<'a> {
         }
         let same_sense = boolean(&a[3], "ADVANCED_FACE same_sense")?;
         let self_authored = name(a).is_some_and(|name| name.starts_with("OSCAD_TOPO/3|"));
-        let preserve_authored_chart = self_authored && self.preserve_authored_charts;
-        let authored_mirror = self_authored && !self.preserve_authored_charts;
+        let authored_chart_v1 = name(a).is_some_and(|name| {
+            name.strip_prefix("OSCAD_TOPO/3|")
+                .is_some_and(|payload| {
+                    let fields = payload.split('|').collect::<Vec<_>>();
+                    fields.len() == 4
+                        && fields[0] == "face"
+                        && fields[3] == STEP_V6_AUTHORED_CHART_MARKER
+                })
+        });
+        // Only the versioned V6 marker selects direct authored-chart import.
+        // Unmarked self-authored V6 is the legacy canonical-mirrored encoding.
+        let preserve_authored_chart = self.preserve_authored_charts && authored_chart_v1;
+        let authored_mirror = self_authored && !preserve_authored_chart;
         if !same_sense
             && !preserve_authored_chart
             && (self.ap242_composition || authored_mirror)
@@ -2631,11 +2642,16 @@ fn restore_identity(
             continue;
         };
         let fields: Vec<_> = payload.split('|').collect();
-        if fields.len() != 3 {
+        if !matches!(fields.len(), 3 | 4) {
             return Err(refuse("Malformed STEP /3 identity metadata"));
         }
         let mk =
             TopoKind::parse(fields[0]).ok_or_else(|| refuse("Unknown STEP /3 identity kind"))?;
+        if fields.len() == 4
+            && (mk != TopoKind::Face || fields[3] != STEP_V6_AUTHORED_CHART_MARKER)
+        {
+            return Err(refuse("Unknown STEP /3 identity metadata version"));
+        }
         let id = TopoId::parse(fields[1]).map_err(refuse)?;
         if mk != kind || id.kind() != kind || fields[2] != entity_digest(entities, entity_id)? {
             return Err(refuse("Transplanted STEP /3 identity metadata"));
