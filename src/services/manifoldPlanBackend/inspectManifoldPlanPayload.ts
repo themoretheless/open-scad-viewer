@@ -1,9 +1,25 @@
 import { loadCadKernelOps } from '../cadKernelOps'
 import type { CadKernelHandle, CadKernelOps, CadKernelSolidAnalysis } from '../cadKernelOps'
-import { MANIFOLD_PLAN_CARRIERS, MANIFOLD_PLAN_PAYLOAD, ManifoldPlanBackend, ManifoldPlanBackendError } from '../manifoldPlanBackend'
-import type { ManifoldPlanBackendErrorCode, ManifoldPlanCarrier, ManifoldPlanPayload, ManifoldPlanPayloadFamily, ManifoldPlanPayloadView, OwnedManifoldPlanPayload } from '../manifoldPlanBackend'
+import { MANIFOLD_PLAN_CARRIERS, MANIFOLD_PLAN_PAYLOAD, ManifoldPlanBackend } from '../manifoldPlanBackend'
+import type { ManifoldPlanCarrier, ManifoldPlanPayload, ManifoldPlanPayloadFamily, ManifoldPlanPayloadView, OwnedManifoldPlanPayload } from '../manifoldPlanBackend'
 import type { SemanticCarrierKey, SemanticRuntimeValue } from '../semanticProgramExecutor'
 import type { SemanticNode, SemanticValueType } from '../../core/semanticProgram'
+
+export type ManifoldPlanBackendErrorCode =
+  | 'E_MANIFOLD_PLAN_BUSY'
+  | 'E_MANIFOLD_PLAN_CONTRACT'
+  | 'E_MANIFOLD_PLAN_LIFECYCLE'
+  | 'E_MANIFOLD_PLAN_UNSUPPORTED'
+
+export class ManifoldPlanBackendError extends Error {
+  constructor(
+    readonly code: ManifoldPlanBackendErrorCode,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ManifoldPlanBackendError'
+  }
+}
 
 /** @internal Mesh analysis/shadow qualification boundary, never a compiler API. */
 export function inspectManifoldPlanPayload(payload: ManifoldPlanPayload): ManifoldPlanPayloadView {

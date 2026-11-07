@@ -16,25 +16,39 @@ import {
   type SvetVNode,
 } from './svet-vnode'
 
+const camelizeCache = new Map<string, string>()
 export function camelize(str: string): string {
-  return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ''))
+  let res = camelizeCache.get(str)
+  if (res === undefined) {
+    res = str.includes('-') ? str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : '')) : str
+    camelizeCache.set(str, res)
+  }
+  return res
 }
 
+const hyphenateCache = new Map<string, string>()
 export function hyphenate(str: string): string {
-  return str.replace(/\B([A-Z])/g, '-$1').toLowerCase()
+  let res = hyphenateCache.get(str)
+  if (res === undefined) {
+    res = str.replace(/\B([A-Z])/g, '-$1').toLowerCase()
+    hyphenateCache.set(str, res)
+  }
+  return res
 }
 
+const capitalizeCache = new Map<string, string>()
 export function capitalize(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1)
+  let res = capitalizeCache.get(str)
+  if (res === undefined) {
+    res = str ? str.charAt(0).toUpperCase() + str.slice(1) : ''
+    capitalizeCache.set(str, res)
+  }
+  return res
 }
 
-export function toHandlerKey(str: string): string {
-  return str ? `on${capitalize(str)}` : ''
-}
-
-export function isReservedPropKey(key: string): boolean {
-  return key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key'
-}
+export const toHandlerKey = (str: string): string => (str ? `on${capitalize(str)}` : '')
+export const isReservedPropKey = (key: string): boolean =>
+  key === 'key' || key === 'ref' || key === 'ref_for' || key === 'ref_key'
 
 export function createRefUnwrapProxy<T extends object>(target: T): T {
   return new Proxy(target, {
@@ -44,10 +58,7 @@ export function createRefUnwrapProxy<T extends object>(target: T): T {
     },
     set(obj, key, value, receiver) {
       const cur = Reflect.get(obj, key, receiver)
-      if (isRef(cur) && !isRef(value)) {
-        cur.value = value
-        return true
-      }
+      if (isRef(cur) && !isRef(value)) { cur.value = value; return true }
       return Reflect.set(obj, key, value, receiver)
     },
   })
@@ -66,10 +77,7 @@ export function syncReactiveRecord(
     }
   }
   for (const k of Object.keys(current)) {
-    if (!(k in next)) {
-      delete current[k]
-      changed = true
-    }
+    if (!(k in next)) { delete current[k]; changed = true }
   }
   return changed
 }
@@ -83,31 +91,22 @@ export function cloneVNode(vnode: SvetVNode): SvetVNode {
 }
 
 export function normalizeVNode(child: any): SvetVNode {
-  if (child == null || typeof child === 'boolean') {
-    return createCommentVNode()
-  }
-  if (Array.isArray(child)) {
-    return createVNode(Fragment, null, child.slice())
-  }
-  if (isVNode(child)) {
-    return child.el === null ? child : cloneVNode(child)
-  }
+  if (child == null || typeof child === 'boolean') return createCommentVNode()
+  if (Array.isArray(child)) return createVNode(Fragment, null, child.slice())
+  if (isVNode(child)) return child.el === null ? child : cloneVNode(child)
   return createTextVNode(String(child))
 }
 
 export function normalizeChildrenArray(children: any): SvetVNode[] {
   if (children == null) return []
   const rawList = Array.isArray(children) ? children : [children]
-  const out: SvetVNode[] = []
-  for (let i = 0; i < rawList.length; i++) {
-    out.push(normalizeVNode(rawList[i]))
-  }
+  const out: SvetVNode[] = new Array(rawList.length)
+  for (let i = 0; i < rawList.length; i++) out[i] = normalizeVNode(rawList[i])
   return out
 }
 
-export function isSameVNodeType(n1: SvetVNode, n2: SvetVNode): boolean {
-  return n1.type === n2.type && n1.key === n2.key
-}
+export const isSameVNodeType = (n1: SvetVNode, n2: SvetVNode): boolean =>
+  n1.type === n2.type && n1.key === n2.key
 
 export function setTemplateRef(rawRef: any, value: any): void {
   if (!rawRef) return
@@ -122,11 +121,8 @@ export function setTemplateRef(rawRef: any, value: any): void {
     refTarget.value = value
   } else if (typeof refTarget === 'string' && owner?.setupState) {
     const targetRef = owner.setupState[refTarget]
-    if (isRef(targetRef)) {
-      targetRef.value = value
-    } else if (refTarget in owner.setupState) {
-      owner.setupState[refTarget] = value
-    }
+    if (isRef(targetRef)) targetRef.value = value
+    else if (refTarget in owner.setupState) owner.setupState[refTarget] = value
   }
 }
 
@@ -139,21 +135,24 @@ export function invokeDirectiveHook(
   if (!bindings) return
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i]
-    if (prevVNode?.dirs?.[i]) {
-      binding.oldValue = prevVNode.dirs[i].value
-    }
+    if (prevVNode?.dirs?.[i]) binding.oldValue = prevVNode.dirs[i].value
     const hook = binding.dir[name]
-    if (hook) {
-      untrack(() => hook(vnode.el, binding, vnode, prevVNode!))
-    }
+    if (hook) untrack(() => hook(vnode.el, binding, vnode, prevVNode!))
   }
 }
 
-export function normalizePropsOptions(rawOptions: any): {
+interface NormalizedPropsMeta {
   declaredKeys: Set<string>
   defaults: Record<string, any>
   booleanKeys: Set<string>
-} {
+}
+const propsOptionsCache = new WeakMap<object, NormalizedPropsMeta>()
+
+export function normalizePropsOptions(rawOptions: any): NormalizedPropsMeta {
+  if (rawOptions && typeof rawOptions === 'object') {
+    const cached = propsOptionsCache.get(rawOptions)
+    if (cached) return cached
+  }
   const declaredKeys = new Set<string>()
   const defaults: Record<string, any> = {}
   const booleanKeys = new Set<string>()
@@ -163,7 +162,9 @@ export function normalizePropsOptions(rawOptions: any): {
     for (const k of rawOptions) {
       if (typeof k === 'string') declaredKeys.add(camelize(k))
     }
-    return { declaredKeys, defaults, booleanKeys }
+    const res = { declaredKeys, defaults, booleanKeys }
+    propsOptionsCache.set(rawOptions, res)
+    return res
   }
   if (typeof rawOptions === 'object') {
     for (const key of Object.keys(rawOptions)) {
@@ -178,17 +179,29 @@ export function normalizePropsOptions(rawOptions: any): {
         booleanKeys.add(camelKey)
       }
     }
+    const res = { declaredKeys, defaults, booleanKeys }
+    propsOptionsCache.set(rawOptions, res)
+    return res
   }
   return { declaredKeys, defaults, booleanKeys }
 }
 
+const emitsOptionsCache = new WeakMap<object, Set<string>>()
+
 export function normalizeEmitsOptions(rawEmits: any): Set<string> {
+  if (rawEmits && typeof rawEmits === 'object') {
+    const cached = emitsOptionsCache.get(rawEmits)
+    if (cached) return cached
+  }
   const declared = new Set<string>()
   if (!rawEmits) return declared
   if (Array.isArray(rawEmits)) {
     for (const e of rawEmits) declared.add(e)
   } else if (typeof rawEmits === 'object') {
     for (const e of Object.keys(rawEmits)) declared.add(e)
+  }
+  if (rawEmits && typeof rawEmits === 'object') {
+    emitsOptionsCache.set(rawEmits, declared)
   }
   return declared
 }
@@ -285,9 +298,7 @@ export function resolveTeleportTarget<HostElement = any>(
   querySelector?: (selector: string) => HostElement | null,
 ): HostElement {
   if (typeof to === 'string') {
-    if (querySelector) {
-      return querySelector(to) ?? fallback
-    }
+    if (querySelector) return querySelector(to) ?? fallback
     if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
       const found = document.querySelector(to)
       if (found) return found as unknown as HostElement
@@ -329,15 +340,11 @@ export function patchElementProps<HostElement = any>(
     return
   }
   if (patchFlag === 2) {
-    if (oldProps.class !== newProps.class) {
-      hostPatchProp(el, 'class', oldProps.class, newProps.class, namespace)
-    }
+    if (oldProps.class !== newProps.class) hostPatchProp(el, 'class', oldProps.class, newProps.class, namespace)
     return
   }
   if (patchFlag === 4) {
-    if (oldProps.style !== newProps.style) {
-      hostPatchProp(el, 'style', oldProps.style, newProps.style, namespace)
-    }
+    if (oldProps.style !== newProps.style) hostPatchProp(el, 'style', oldProps.style, newProps.style, namespace)
     return
   }
   if (patchFlag === 1 || patchFlag === -1) return
@@ -352,9 +359,7 @@ export function patchElementProps<HostElement = any>(
   }
   for (const key of Object.keys(oldProps)) {
     if (isReservedPropKey(key)) continue
-    if (!(key in newProps)) {
-      hostPatchProp(el, key, oldProps[key], null, namespace)
-    }
+    if (!(key in newProps)) hostPatchProp(el, key, oldProps[key], null, namespace)
   }
 }
 
@@ -375,16 +380,14 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
   let e2 = l2 - 1
 
   while (i <= e1 && i <= e2) {
-    if (isSameVNodeType(c1[i], c2[i])) {
-      patch(c1[i], c2[i], container, parentAnchor, namespace)
-    } else break
+    if (isSameVNodeType(c1[i], c2[i])) patch(c1[i], c2[i], container, parentAnchor, namespace)
+    else break
     i++
   }
 
   while (i <= e1 && i <= e2) {
-    if (isSameVNodeType(c1[e1], c2[e2])) {
-      patch(c1[e1], c2[e2], container, parentAnchor, namespace)
-    } else break
+    if (isSameVNodeType(c1[e1], c2[e2])) patch(c1[e1], c2[e2], container, parentAnchor, namespace)
+    else break
     e1--
     e2--
   }
@@ -393,34 +396,24 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
     if (i <= e2) {
       const nextPos = e2 + 1
       const anchor = nextPos < l2 ? getFirstHostNode(c2[nextPos]) : parentAnchor
-      while (i <= e2) {
-        patch(null, c2[i], container, anchor, namespace)
-        i++
-      }
+      while (i <= e2) patch(null, c2[i++], container, anchor, namespace)
     }
   } else if (i > e2) {
-    while (i <= e1) {
-      unmount(c1[i])
-      i++
-    }
+    while (i <= e1) unmount(c1[i++])
   } else {
-    const s1 = i
-    const s2 = i
+    const s1 = i, s2 = i
     const keyToNewIndexMap = new Map<any, number>()
     for (i = s2; i <= e2; i++) {
       if (c2[i].key != null) keyToNewIndexMap.set(c2[i].key, i)
     }
 
-    let patched = 0
+    let patched = 0, moved = false, maxNewIndexSoFar = 0
     const toBePatched = e2 - s2 + 1
     const newIndexToOldIndexMap = new Int32Array(toBePatched)
 
     for (i = s1; i <= e1; i++) {
       const prevChild = c1[i]
-      if (patched >= toBePatched) {
-        unmount(prevChild)
-        continue
-      }
+      if (patched >= toBePatched) { unmount(prevChild); continue }
       let newIndex: number | undefined
       if (prevChild.key != null) {
         newIndex = keyToNewIndexMap.get(prevChild.key)
@@ -436,10 +429,15 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
         unmount(prevChild)
       } else {
         newIndexToOldIndexMap[newIndex - s2] = i + 1
+        if (newIndex >= maxNewIndexSoFar) maxNewIndexSoFar = newIndex
+        else moved = true
         patch(prevChild, c2[newIndex], container, null, namespace)
         patched++
       }
     }
+
+    const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : []
+    let j = increasingNewIndexSequence.length - 1
 
     for (i = toBePatched - 1; i >= 0; i--) {
       const nextIndex = s2 + i
@@ -447,9 +445,46 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
       const anchor = nextIndex + 1 < l2 ? getFirstHostNode(c2[nextIndex + 1]) : parentAnchor
       if (newIndexToOldIndexMap[i] === 0) {
         patch(null, nextChild, container, anchor, namespace)
-      } else {
-        moveVNode(nextChild, container, anchor)
+      } else if (moved) {
+        if (j < 0 || i !== increasingNewIndexSequence[j]) moveVNode(nextChild, container, anchor)
+        else j--
       }
     }
   }
+}
+
+function getSequence(arr: Int32Array): number[] {
+  const p = arr.slice()
+  const result = [0]
+  let i: number, j: number, u: number, v: number, c: number
+  const len = arr.length
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i]
+    if (arrI !== 0) {
+      j = result[result.length - 1]
+      if (arr[j] < arrI) {
+        p[i] = j
+        result.push(i)
+        continue
+      }
+      u = 0
+      v = result.length - 1
+      while (u < v) {
+        c = (u + v) >> 1
+        if (arr[result[c]] < arrI) u = c + 1
+        else v = c
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) p[i] = result[u - 1]
+        result[u] = i
+      }
+    }
+  }
+  u = result.length
+  v = result[u - 1]
+  while (u-- > 0) {
+    result[u] = v
+    v = p[v]
+  }
+  return result
 }

@@ -137,9 +137,29 @@ export function evalFormaExpr(expr: string, ctx: FormaRenderContext): unknown {
   return evalCompiledAst(compileFormaExpression(expr), ctx)
 }
 
+const pathPartsCache = new Map<string, readonly string[]>()
+function splitPathCached(path: string): readonly string[] {
+  let parts = pathPartsCache.get(path)
+  if (!parts) {
+    parts = path.split('.')
+    pathPartsCache.set(path, parts)
+  }
+  return parts
+}
+
+const compiledActionArgsCache = new WeakMap<object, CompiledExprAst[]>()
+function getCompiledActionArgs(act: { args: string[] }): CompiledExprAst[] {
+  let compiled = compiledActionArgsCache.get(act)
+  if (!compiled) {
+    compiled = act.args.map(compileFormaExpression)
+    compiledActionArgsCache.set(act, compiled)
+  }
+  return compiled
+}
+
 function evalProp(el: FormaElementNode, name: string, ctx: FormaRenderContext): unknown {
   if (name in el.bindings) {
-    const path = el.bindings[name].split('.')
+    const path = splitPathCached(el.bindings[name])
     const rootVal = readStateField(ctx, path[0])
     return path.length === 1 ? rootVal : getByPathParts(rootVal, path.slice(1))
   }
@@ -218,7 +238,7 @@ function buildAriaAndDomAttrs(
 
   if (el.actions.clicked) {
     const act = el.actions.clicked
-    const compiledArgs = act.args.map(compileFormaExpression)
+    const compiledArgs = getCompiledActionArgs(act)
     attrs.onClick = (ev: Event) => {
       const evaluatedArgs = compiledArgs.map(a => evalCompiledAst(a, ctx))
       ctx.onAction?.(act.name, evaluatedArgs, ev)
@@ -226,7 +246,7 @@ function buildAriaAndDomAttrs(
   }
   if (el.actions.keydown) {
     const act = el.actions.keydown
-    const compiledArgs = act.args.map(compileFormaExpression)
+    const compiledArgs = getCompiledActionArgs(act)
     attrs.onKeydown = (ev: Event) => {
       const evaluatedArgs = compiledArgs.map(a => evalCompiledAst(a, ctx))
       ctx.onAction?.(act.name, evaluatedArgs, ev)

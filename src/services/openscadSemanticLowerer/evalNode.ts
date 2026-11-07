@@ -68,24 +68,15 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       return semanticProjectAssetRequired(ctx, node.p, node.end, `${node.name}()`)
     case 'assert': {
       if (isStableProfile(ctx)) {
-        const args = callExpressionArguments(node)
-        const resolved = resolveStableExpressionArguments(args, ['condition', 'message'], ctx)
+        const resolved = resolveStableExpressionArguments(callExpressionArguments(node), ['condition', 'message'], ctx)
         const conditionArgument = resolved.get('condition')
         const messageArgument = resolved.get('message')
-        const condition = conditionArgument === undefined
-          ? undefined
-          : evalExpression(conditionArgument.value, ctx)
-        const message = messageArgument === undefined
-          ? undefined
-          : evalExpression(messageArgument.value, ctx)
-        const conditionText = conditionArgument === undefined
-          ? 'undef'
-          : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
+        const condition = conditionArgument === undefined ? undefined : evalExpression(conditionArgument.value, ctx)
+        const message = messageArgument === undefined ? undefined : evalExpression(messageArgument.value, ctx)
+        const conditionText = conditionArgument === undefined ? 'undef' : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
         const occurrence = invoke(node, ctx, [semanticSlot('condition', condition), semanticSlot('message', message)])
         if (!openScadTruthy(condition)) {
-          const detail = messageArgument === undefined
-            ? ''
-            : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
+          const detail = messageArgument === undefined ? '' : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
           evaluationError(ctx, node.p, `Assertion '${conditionText}' failed${detail}`)
         }
         return ctx.builder.alias(occurrence, frameChildren(node, node.children, occurrence, ctx), false)
@@ -367,26 +358,15 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       return frameChildren(node, node.children, occurrence, ctx)
     }
     case 'echo': {
-      if (!isStableProfile(ctx)) {
-        evaluationError(ctx, node.p, 'Unsupported geometry operation echo()')
-      }
+      if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'Unsupported geometry operation echo()')
       const values = Object.entries(node.args).map(([name, expression]) => {
         const value = formatOpenScadValue(evalExpression(expression, ctx))
         return node.argKinds[name] === 'named' ? `${name} = ${value}` : value
       })
       const message = `ECHO:${values.length ? ` ${values.join(', ')}` : ''}`
-      ctx.builder.warn(
-        null,
-        'W_OPENSCAD_ECHO',
-        [],
-        message,
-        { start: node.p, end: node.end },
-        false,
-      )
+      ctx.builder.warn(null, 'W_OPENSCAD_ECHO', [], message, { start: node.p, end: node.end }, false)
       const viewportSlots = viewportSemanticSlots(node, ctx)
-      return evalNodes(node.children, viewportSlots.length === 0
-        ? ctx
-        : { ...ctx, pendingSlots: [...ctx.pendingSlots, ...viewportSlots] })
+      return evalNodes(node.children, viewportSlots.length === 0 ? ctx : { ...ctx, pendingSlots: [...ctx.pendingSlots, ...viewportSlots] })
     }
     case 'if': {
       const condition = arg(node, '_0', 0, false, ctx)
@@ -423,40 +403,24 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (isStableProfile(ctx)) {
         const bindings = callExpressionArguments(node)
         const output: SemanticShape[] = []
-        const visit = (
-          bindingIndex: number,
-          iterationContext: EvalContext,
-          slots: readonly SemanticDynamicSlot[],
-        ): void => {
+        const visit = (bindingIndex: number, iterationContext: EvalContext, slots: readonly SemanticDynamicSlot[]): void => {
           if (bindingIndex >= bindings.length) {
             const occurrence = invoke(node, ctx, slots)
             output.push(...frameChildren(node, node.children, occurrence, iterationContext))
-            if (output.length > MAX_SHAPES) {
-              evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
-            }
+            if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
             return
           }
           const binding = bindings[bindingIndex]
-          const values = stableIterable(
-            evalExpression(binding.value, iterationContext),
-            iterationContext,
-            binding.p,
-          )
+          const values = stableIterable(evalExpression(binding.value, iterationContext), iterationContext, binding.p)
           if (binding.name === undefined) {
             stableWarning(ctx, binding.p, 'Ignoring for() iterator without variable name')
             return
           }
           for (const value of values) {
-            if (++ctx.budget.ops > MAX_EVAL_OPS) {
-              evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
-            }
+            if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
             const env = new Map(iterationContext.env)
             env.set(binding.name, value)
-            visit(
-              bindingIndex + 1,
-              stableOverlayContext(iterationContext, env),
-              [...slots, semanticSlot(binding.name, value)],
-            )
+            visit(bindingIndex + 1, stableOverlayContext(iterationContext, env), [...slots, semanticSlot(binding.name, value)])
           }
         }
         visit(0, ctx, [])
@@ -482,34 +446,18 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'Unsupported geometry operation child()')
       stableCompatibilityDeprecation(node, ctx, 'children()')
       const authored = callExpressionArguments(node)
-      const indexValue = authored[0] === undefined
-        ? 0
-        : evalExpression(authored[0].value, ctx)
-      const childIndex = typeof indexValue === 'number' && Number.isFinite(indexValue)
-        ? Math.trunc(indexValue)
-        : 0
+      const indexValue = authored[0] === undefined ? 0 : evalExpression(authored[0].value, ctx)
+      const childIndex = typeof indexValue === 'number' && Number.isFinite(indexValue) ? Math.trunc(indexValue) : 0
       const occurrence = invoke(node, ctx, [semanticSlot('$index', indexValue)])
       if (childIndex < 0) {
-        stableWarning(
-          ctx,
-          node.p,
-          `Negative child index (${childIndex}) not allowed`,
-          'W_OPENSCAD_CHILD',
-          false,
-        )
+        stableWarning(ctx, node.p, `Negative child index (${childIndex}) not allowed`, 'W_OPENSCAD_CHILD', false)
         return []
       }
       const passed = ctx.callChildren
       if (!passed) return []
       const statement = passed.statements[childIndex]
       if (statement === undefined) {
-        stableWarning(
-          ctx,
-          node.p,
-          `Child index (${childIndex}) out of bounds (${passed.statements.length} children)`,
-          'W_OPENSCAD_CHILD',
-          false,
-        )
+        stableWarning(ctx, node.p, `Child index (${childIndex}) out of bounds (${passed.statements.length} children)`, 'W_OPENSCAD_CHILD', false)
         return []
       }
       return evalPassedCallChildren(node, ctx, occurrence, indexValue, passed, [statement])

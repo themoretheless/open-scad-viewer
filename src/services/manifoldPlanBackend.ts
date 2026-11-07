@@ -1,10 +1,5 @@
-import type { SemanticNode, SemanticValueType } from '../core/semanticProgram'
-import {
-  loadCadKernelOps,
-  type CadKernelHandle,
-  type CadKernelOps,
-  type CadKernelSolidAnalysis,
-} from './cadKernelOps'
+import type { SemanticNode } from '../core/semanticProgram'
+import type { CadKernelHandle, CadKernelOps } from './cadKernelOps'
 import type {
   SemanticBackendBeginContext,
   SemanticBackendCloseOutcome,
@@ -18,25 +13,29 @@ import type {
   SemanticProgramBackend,
   SemanticRuntimeValue,
 } from './semanticProgramExecutor'
-import { backendError, unsupportedBrepNode, carrierKey, isSupportedCarrier, matrix3FromMatrix4, requirePayload, safeDelete } from './manifoldPlanBackend/inspectManifoldPlanPayload'
-export { inspectManifoldPlanPayload, analyzeManifoldPlanSolid, loadManifoldPlanBackend } from './manifoldPlanBackend/inspectManifoldPlanPayload'
+import {
+  backendError,
+  unsupportedBrepNode,
+  carrierKey,
+  isSupportedCarrier,
+  matrix3FromMatrix4,
+  requirePayload,
+  safeDelete,
+} from './manifoldPlanBackend/inspectManifoldPlanPayload'
+export {
+  inspectManifoldPlanPayload,
+  analyzeManifoldPlanSolid,
+  loadManifoldPlanBackend,
+  ManifoldPlanBackendError,
+  type ManifoldPlanBackendErrorCode,
+} from './manifoldPlanBackend/inspectManifoldPlanPayload'
 
 const PRESERVING_EVIDENCE = Object.freeze({ tag: 'representation-preserving' as const })
-
-export const MANIFOLD_PLAN_CARRIERS = Object.freeze([
-  'solid-set/d3/mesh',
-  'region/d2/mesh',
-] as const)
-
+export const MANIFOLD_PLAN_CARRIERS = Object.freeze(['solid-set/d3/mesh', 'region/d2/mesh'] as const)
 export type ManifoldPlanCarrier = typeof MANIFOLD_PLAN_CARRIERS[number]
-
 export const MANIFOLD_PLAN_PAYLOAD = Symbol('ManifoldPlanPayload')
 
-/**
- * Opaque plan value owned by one backend session. Geometry is deliberately
- * reachable only through the narrow inspection helper below; compiler/core/UI
- * code never receives a Manifold type.
- */
+/** Opaque plan value owned by one backend session; geometry is reachable only through narrow inspection helpers. */
 export interface ManifoldPlanPayload {
   readonly carrierKey: ManifoldPlanCarrier
   readonly [MANIFOLD_PLAN_PAYLOAD]: true
@@ -63,26 +62,9 @@ interface PayloadEntry {
   released: boolean
 }
 
-export type ManifoldPlanBackendErrorCode =
-  | 'E_MANIFOLD_PLAN_BUSY'
-  | 'E_MANIFOLD_PLAN_CONTRACT'
-  | 'E_MANIFOLD_PLAN_LIFECYCLE'
-  | 'E_MANIFOLD_PLAN_UNSUPPORTED'
-
-export class ManifoldPlanBackendError extends Error {
-  constructor(
-    readonly code: ManifoldPlanBackendErrorCode,
-    message: string,
-  ) {
-    super(message)
-    this.name = 'ManifoldPlanBackendError'
-  }
-}
-
 export interface ManifoldPlanPayloadView {
   readonly carrierKey: ManifoldPlanCarrier
   readonly dimension: 2 | 3
-  /** Snapshot; callers cannot mutate the session registry. */
   readonly nodeByOriginalId: ReadonlyMap<number, number>
 }
 
@@ -158,17 +140,8 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         handle = undefined
         handle = this.promoteOriginal(unpromoted, context.nodeIndex)
       }
-      // Empty Manifold objects are still authored legacy Shape records. Keep
-      // their lease and handle through downstream operations: removing an
-      // empty operand can change Manifold's exact ordering and provenance even
-      // when the mathematical result is unchanged. The assembler alone omits
-      // a materialized-empty root from publication.
-      const result = this.allocate(
-        node,
-        expectedCarrier,
-        handle,
-        this.kernel.isEmpty(handle) ? 'materialized-empty' : 'value',
-      )
+      // Retain empty Manifold objects so downstream ordering/provenance stays intact; assembler omits empty roots.
+      const result = this.allocate(node, expectedCarrier, handle, this.kernel.isEmpty(handle) ? 'materialized-empty' : 'value')
       handle = undefined
       return result
     } catch (error) {
@@ -310,27 +283,14 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         return this.hull(node.valueType.space === 'd2' ? 2 : 3, inputs, node)
       case 'linear-extrude': {
         const input = requirePayload(inputs[0], 2, node)
-        return this.kernel.linearExtrude(
-          input.handle,
-          node.height,
-          node.slices,
-          node.twistDegrees,
-          node.scale,
-          node.center,
-        )
+        return this.kernel.linearExtrude(input.handle, node.height, node.slices, node.twistDegrees, node.scale, node.center)
       }
-      case 'rotate-extrude-polygonal': {
-        const input = requirePayload(inputs[0], 2, node)
-        return this.kernel.rotateExtrude(input.handle, node.radialSegments, node.angleDegrees)
-      }
-      case 'projection': {
-        const input = requirePayload(inputs[0], 3, node)
-        return this.kernel.projection(input.handle, node.cut)
-      }
-      case 'offset': {
-        const input = requirePayload(inputs[0], 2, node)
-        return this.kernel.offset(input.handle, node.distance)
-      }
+      case 'rotate-extrude-polygonal':
+        return this.kernel.rotateExtrude(requirePayload(inputs[0], 2, node).handle, node.radialSegments, node.angleDegrees)
+      case 'projection':
+        return this.kernel.projection(requirePayload(inputs[0], 3, node).handle, node.cut)
+      case 'offset':
+        return this.kernel.offset(requirePayload(inputs[0], 2, node).handle, node.distance)
       case 'full-round-exact':
       case 'sphere-analytic':
       case 'cylinder-analytic':
@@ -340,38 +300,24 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     }
   }
 
-  private cylinder(
-    height: number,
-    radiusBottom: number,
-    radiusTop: number,
-    radialSegments: number,
-    center: boolean,
-  ): CadKernelHandle {
-    if (radiusBottom > 0) {
-      return this.kernel.cylinder(height, radiusBottom, radiusTop, radialSegments, center)
-    }
+  private cylinder(height: number, radiusBottom: number, radiusTop: number, radialSegments: number, center: boolean): CadKernelHandle {
+    if (radiusBottom > 0) return this.kernel.cylinder(height, radiusBottom, radiusTop, radialSegments, center)
     let current = this.kernel.cylinder(height, radiusTop, 0, radialSegments, center)
     try {
       let next = this.kernel.mirrorZ(current)
       const mirrorCleanup = safeDelete(this.kernel, current)
       current = next
-      if (mirrorCleanup !== undefined) {
-        throw new AggregateError([mirrorCleanup], 'Cylinder mirror cleanup failed')
-      }
+      if (mirrorCleanup !== undefined) throw new AggregateError([mirrorCleanup], 'Cylinder mirror cleanup failed')
       if (!center) {
         next = this.kernel.translateZ(current, height)
         const translateCleanup = safeDelete(this.kernel, current)
         current = next
-        if (translateCleanup !== undefined) {
-          throw new AggregateError([translateCleanup], 'Cylinder translation cleanup failed')
-        }
+        if (translateCleanup !== undefined) throw new AggregateError([translateCleanup], 'Cylinder translation cleanup failed')
       }
       return current
     } catch (error) {
       const cleanupError = safeDelete(this.kernel, current)
-      if (cleanupError !== undefined) {
-        throw new AggregateError([error, cleanupError], 'Cylinder construction and cleanup failed')
-      }
+      if (cleanupError !== undefined) throw new AggregateError([error, cleanupError], 'Cylinder construction and cleanup failed')
       throw error
     }
   }

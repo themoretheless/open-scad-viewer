@@ -50,15 +50,10 @@ function runObserverCleanups(observer: ObserverNode): void {
 }
 
 function markSubscribers(subs: Set<ObserverNode>, state: number): void {
-  const list = Array.from(subs)
-  for (let i = 0; i < list.length; i++) {
-    const sub = list[i]
-    if (sub.disposed) continue
-    if (sub === activeObserver) continue
-    const prevState = sub.state
-    if (prevState < state) {
-      sub.state = state
-    }
+  if (subs.size === 0) return
+  for (const sub of subs) {
+    if (sub.disposed || sub === activeObserver) continue
+    if (sub.state < state) sub.state = state
     if (sub.kind === 'computed') {
       markSubscribers((sub as ComputedNode<any>).subs, STATE_CHECK)
     } else {

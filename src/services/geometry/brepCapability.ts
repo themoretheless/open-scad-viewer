@@ -1,25 +1,13 @@
 export { brepCapability, assertBrepCapabilityAllowsTopology, assertNoManifoldFallbackOnBrepFailure } from './brepCapability/brepCapability'
 /** Honest B-rep capability maturity for WASM / MCP / SemanticProgram seams. */
 
-export type BrepCapabilityMaturity =
-  | 'Unavailable'
-  | 'ResearchOnly'
-  | 'NumericUncertified'
-  | 'AnalyticComplete'
-  | 'Qualified'
+export type BrepCapabilityMaturity = 'Unavailable' | 'ResearchOnly' | 'NumericUncertified' | 'AnalyticComplete' | 'Qualified'
 
 export interface BrepCapabilityDescriptor {
-  readonly id: string
-  readonly maturity: BrepCapabilityMaturity
-  readonly permitsTopologyChange: boolean
-  readonly notes: string
-  readonly qualificationPlan?: string
+  readonly id: string; readonly maturity: BrepCapabilityMaturity; readonly permitsTopologyChange: boolean; readonly notes: string; readonly qualificationPlan?: string
 }
 
-/**
- * Append-only full-matrix registry (`brep-full-closed-matrix-v4` / G8-full).
- * Maturity bumps only after walking-slice evidence is green.
- */
+/** Append-only full-matrix registry (`brep-full-closed-matrix-v4` / G8-full). */
 export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Object.freeze([
   Object.freeze({
     id: 'planar-csg/1',
@@ -116,8 +104,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'analytic-boolean/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: true,
-    notes:
-      'Frozen analytic matrix: exact cylinder wall + sphere imprint; disjoint tube/frustum and cylinder/sphere; non-empty mixed and cone/torus refuse; no prism/mesh/Manifold authorship',
+    notes: 'Frozen analytic matrix: exact cylinder wall + sphere imprint; disjoint tube/frustum and cylinder/sphere; non-empty mixed and cone/torus refuse; no prism/mesh/Manifold authorship',
     qualificationPlan: 'docs/qualification/plans/analytic-boolean-1.json',
   }),
   Object.freeze({
@@ -131,16 +118,14 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'nurbs-ss-bezier-le3/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: false,
-    notes:
-      'G6 Phase B: non-rational Bezier deg≤3×≤3 elevated to bicubic; Complete-empty/line/curve when certified; supersedes transverse-bicubic/2',
+    notes: 'G6 Phase B: non-rational Bezier deg≤3×≤3 elevated to bicubic; Complete-empty/line/curve when certified; supersedes transverse-bicubic/2',
     qualificationPlan: 'docs/qualification/plans/nurbs-ss-bezier-le3-1.json',
   }),
   Object.freeze({
     id: 'nurbs-boolean-bezier-le3/1',
     maturity: 'Unavailable' as const,
     permitsTopologyChange: false,
-    notes:
-      'Frozen after audit: SS queries remain scoped, but contacting-solid face-split topology authorship is not qualified',
+    notes: 'Frozen after audit: SS queries remain scoped, but contacting-solid face-split topology authorship is not qualified',
     qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-1.json',
   }),
   Object.freeze({
@@ -378,10 +363,8 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'certified-generic-rational-freeform-tessellation/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes:
-      'Finite equal-weight clamped Bezier freeform shells (degree ≤3): Bernstein second-difference two-sided deviation, shared-edge incidence, adaptive 1..32 subdivisions; varying weights, periodicity, loft/sweep and higher degree typed-refuse',
-    qualificationPlan:
-      'docs/qualification/plans/certified-generic-rational-freeform-tessellation-1.json',
+    notes: 'Finite equal-weight clamped Bezier freeform shells (degree ≤3): Bernstein second-difference two-sided deviation, shared-edge incidence, adaptive 1..32 subdivisions; varying weights, periodicity, loft/sweep and higher degree typed-refuse',
+    qualificationPlan: 'docs/qualification/plans/certified-generic-rational-freeform-tessellation-1.json',
   }),
   Object.freeze({
     id: 'certified-mass-properties/2',
@@ -394,33 +377,28 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'certified-generic-rational-freeform-mass-quadrature/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes:
-      'Finite planar equal-weight Bezier AA cuboid mass enclosures (elevated freeform_cuboid_solid); bump and varying-weight freeform quadrature remain ExplicitRefuse',
-    qualificationPlan:
-      'docs/qualification/plans/certified-generic-rational-freeform-mass-quadrature-1.json',
+    notes: 'Finite planar equal-weight Bezier AA cuboid mass enclosures (elevated freeform_cuboid_solid); bump and varying-weight freeform quadrature remain ExplicitRefuse',
+    qualificationPlan: 'docs/qualification/plans/certified-generic-rational-freeform-mass-quadrature-1.json',
   }),
   Object.freeze({
     id: 'nurbs-step-bicubic-face/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes:
-      'Freeform STEP: single untrimmed bicubic open face (B_SPLINE + OPEN_SHELL); cadNurbsStep peer; solids/trims/rational refuse',
+    notes: 'Freeform STEP: single untrimmed bicubic open face (B_SPLINE + OPEN_SHELL); cadNurbsStep peer; solids/trims/rational refuse',
     qualificationPlan: 'docs/qualification/plans/nurbs-step-bicubic-face-1.json',
   }),
   Object.freeze({
     id: 'nurbs-step-trimmed-bicubic/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes:
-      'Freeform STEP: trimmed bicubic open face (FACE_OUTER_BOUND + FACE_BOUND + OPEN_SHELL); solids refuse',
+    notes: 'Freeform STEP: trimmed bicubic open face (FACE_OUTER_BOUND + FACE_BOUND + OPEN_SHELL); solids refuse',
     qualificationPlan: 'docs/qualification/plans/nurbs-step-trimmed-bicubic-1.json',
   }),
   Object.freeze({
     id: 'nurbs-step-solid/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes:
-      'Freeform STEP solid: elevated bicubic cuboid / bump / cavity via MANIFOLD_SOLID_BREP + B_SPLINE; no OSCAD_SOLID/AABB',
+    notes: 'Freeform STEP solid: elevated bicubic cuboid / bump / cavity via MANIFOLD_SOLID_BREP + B_SPLINE; no OSCAD_SOLID/AABB',
     qualificationPlan: 'docs/qualification/plans/nurbs-step-solid-1.json',
   }),
   Object.freeze({
