@@ -108,5 +108,10 @@ export const NATIVE_CI_RECOVERY_ARCHIVES=Object.freeze({
   "docs/qualification/semantic-manifold-g1-plan-v118.json": "6df06a698d5096aca525c113514a75ec729be8f55ddb601bc52350480d9af667",
   "docs/qualification/g0-v101-g1-v118-refreeze-status-v1.json": "ca8f36cafd9bbfc0593df84d658beacb71dee7dede80b9f2492647c0c7fe0b6d",
   "docs/qualification/g0-v101-g1-v118-refreeze-review.md": "a213b92929aedbbba2ead6bb71231162553bcc22d7fa53516e65e205bb647781",
-  "scripts/refresh-qualification-fingerprints-v101-v118.mjs": "aeb0e003f5b65a7dfe5cdb1bb47d603f7f424aa1f21b37401a69559c2a8e8d30"
+  "scripts/refresh-qualification-fingerprints-v101-v118.mjs": "aeb0e003f5b65a7dfe5cdb1bb47d603f7f424aa1f21b37401a69559c2a8e8d30",
+  "docs/qualification/g0-toolchain-fingerprints-v102.json": "cc38768a313da48362df3d4412a9b092ef3710e5b18b8c93df780cf2c29b35c8",
+  "docs/qualification/semantic-manifold-g1-plan-v119.json": "f27f7cbd24e011de3fcb2d2457cf953971068383b705a703c5d582d79c52aa2f",
+  "docs/qualification/g0-v102-g1-v119-refreeze-status-v1.json": "8252bc37be1d1ded0c3531691dc2cca48da3a02690a401f28bdbdb1f7de3cca3",
+  "docs/qualification/g0-v102-g1-v119-refreeze-review.md": "62681f67e58094a3bd751eca1dc5313188f8816c8f546cece796a800ab39a5b1",
+  "scripts/refresh-qualification-fingerprints-v102-v119.mjs": "5410dc718e408764928f5ec4ef005faf87f2a5f59d1754148e14f061781aa57d"
 })

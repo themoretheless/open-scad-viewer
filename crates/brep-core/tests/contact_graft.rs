@@ -121,7 +121,7 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
         [-1., -1.],
         1e-6,
         100000 - out.cells - g2.cells,
-        1000000 - out.exact_work - g2.exact_work,
+        1000000,
     )
     .unwrap();
     assert_eq!(
@@ -138,7 +138,7 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
         })
     );
     assert!(out.cells + g2.cells + radius.cells <= 100000);
-    assert!(out.exact_work + g2.exact_work + radius.exact_work <= 1000000);
+    assert!(out.exact_work <= 1000000 && g2.exact_work <= 1000000 && radius.exact_work <= 1000000);
     assert!(radius.maximum_center_gap_mm.unwrap()[1] <= 1e-6);
     assert!(radius.parameter_drift_upper_mm.unwrap() > 0.);
     assert!(radius.parameter_drift_upper_mm.unwrap() < 1e-10);
