@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from '../src/core/currentRuntimeGeometryEvidence'
 // @ts-expect-error Packaging is a Node build script without a declaration file.
@@ -12,6 +12,8 @@ const artifact = readFileSync(new URL(`../docs/qualification/artifacts/geometry-
 if (createHash('sha256').update(artifact).digest('hex') !== hash) {
   throw new Error('Archived development runtime does not match its qualification fingerprint')
 }
-packGeometryKernel(artifact,
-  fileURLToPath(new URL('../src/generated/geometry-kernels', import.meta.url)),
-  fileURLToPath(new URL('../public/wasm', import.meta.url)))
+const output = fileURLToPath(new URL('../src/generated/geometry-kernels', import.meta.url))
+const publicWasm = fileURLToPath(new URL('../public/wasm', import.meta.url))
+mkdirSync(output, { recursive: true })
+mkdirSync(publicWasm, { recursive: true })
+packGeometryKernel(artifact, output, publicWasm)
