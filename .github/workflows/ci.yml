@@ -82,9 +82,8 @@ jobs:
           npm ci
           npm run test:differential
       - run: python3 scripts/check-gpu-architecture.py
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math-compute --features gpu,tensor --all-targets -- -D warnings
+      # Forma packages are external dependencies; their source repository owns
+      # the native and WASM lint matrices for its published packages.
 
   manifold-performance:
     runs-on: macos-latest
@@ -196,7 +195,6 @@ jobs:
           if-no-files-found: error
       - name: Qualify current WASM graph caps and pole queries
         run: node --import tsx scripts/qualify-global-geometry.mts docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz global-geometry-wasm.json
-      - run: cargo check --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-mlx --target wasm32-unknown-unknown
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json
         env:
