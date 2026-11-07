@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Every supported target is an explicit reviewed amendment, never an implicit latest version.
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -69,7 +70,7 @@ export function g1RefreshInputPaths(version, repositoryRoot = defaultRoot) {
     ...previous.plan.bindings.artifacts.map(item => item.path),
     ...previous.plan.bindings.bundles.flatMap(item => item.paths),
     G1_REFRESH_SCRIPT, REFREEZE_CORE, definition.review, ...G1_EXECUTORS,
-  ])].sort()
+  ])].filter(path => existsSync(resolve(repositoryRoot, path))).sort()
 }
 
 export function assertG1RefreshStable(prepared) {
