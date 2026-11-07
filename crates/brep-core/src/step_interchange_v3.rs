@@ -15,7 +15,7 @@ pub(crate) use crate::step_v3_export::{
 };
 pub use crate::step_v3_export::{
     export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
-    export_step_v9,
+    export_step_v9, export_step_v9_with_metadata,
 };
 use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::{CoedgeTrim, Vertex};
@@ -23,6 +23,31 @@ use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 mod pcurve_binding;
+#[path = "step_presentation.rs"]
+pub mod step_presentation;
+#[path = "step_xde.rs"]
+pub mod step_xde;
+pub use step_presentation::{StepColour, StepPresentation, StepPresentationStyle};
+pub use step_xde::{StepProductMetadata, StepValidationDiagnostic, StepXdeMetadata};
+
+/// Typed AP214/XDE attributes aligned with the imported model's topology indices.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct StepSemanticMetadata {
+    pub presentation: StepPresentation,
+    pub xde: StepXdeMetadata,
+}
+
+impl StepSemanticMetadata {
+    pub fn empty(model: &Model) -> Self {
+        Self {
+            presentation: StepPresentation::empty(model),
+            xde: StepXdeMetadata {
+                body_products: vec![None; model.bodies.len()],
+                ..StepXdeMetadata::default()
+            },
+        }
+    }
+}
 
 pub const STEP_INTERCHANGE_V3_CAPABILITY: &str = "step-interchange/3";
 pub const STEP_INTERCHANGE_V4_CAPABILITY: &str = "step-interchange/4";
@@ -2759,6 +2784,16 @@ const UNREACHABLE_ALLOWLIST: &[&str] = &[
     "PROPERTY_DEFINITION_REPRESENTATION",
     "DESCRIPTIVE_REPRESENTATION_ITEM",
     "MEASURE_REPRESENTATION_ITEM",
+    "REPRESENTATION",
+    "DERIVED_UNIT",
+    "DERIVED_UNIT_ELEMENT",
+    "DENSITY_UNIT",
+    "MASS_UNIT",
+    "LENGTH_UNIT",
+    "AREA_UNIT",
+    "VOLUME_UNIT",
+    "NAMED_UNIT",
+    "NAME_ATTRIBUTE",
     "MATERIAL_DESIGNATION",
     "APPLIED_NAME_ASSIGNMENT",
     "APPLIED_DESCRIPTION_TEXT_ASSIGNMENT",
@@ -2789,13 +2824,14 @@ const UNREACHABLE_ALLOWLIST: &[&str] = &[
     "CARTESIAN_TRANSFORMATION_OPERATOR_3D",
 ];
 
-fn import_step_direct(
+fn import_step_direct_impl(
     text: &str,
     analytic_surfaces: bool,
     ap242_composition: bool,
     allow_degenerate: bool,
     capability: &'static str,
-) -> Result<(Model, FeatureCertificate, StepV3Report)> {
+    include_semantic: bool,
+) -> Result<(Model, FeatureCertificate, StepV3Report, Option<StepSemanticMetadata>)> {
     if !text.to_ascii_uppercase().contains("ISO-10303-21") {
         return Err(refuse("Not an ISO-10303-21 exchange"));
     }
@@ -3081,6 +3117,13 @@ fn import_step_direct(
         {
             continue;
         }
+        if matches!(entities[id].value, Value::List(_)) {
+            let parts = components(&entities, *id)?;
+            if parts.iter().all(|(ty, _)| UNREACHABLE_ALLOWLIST.contains(ty)) {
+                ignored.extend(parts.into_iter().map(|(ty, _)| ty.to_string()));
+                continue;
+            }
+        }
         let (ty, _) = call(&entities, *id)?;
         if allow_degenerate
             && matches!(
@@ -3242,6 +3285,21 @@ fn import_step_direct(
             "open_shell_surface_products",
         ]);
     }
+    let semantic = include_semantic
+        .then(|| {
+            let xde = step_xde::parse(&entities, &identity_map)?;
+            let presentation = step_presentation::parse(
+                &entities,
+                &identity_map,
+                &xde.body_products,
+                xde.product_parents.clone(),
+            )?;
+            Ok::<StepSemanticMetadata, Error>(StepSemanticMetadata { presentation, xde })
+        })
+        .transpose()?;
+    if semantic.is_some() {
+        certificate_notes.extend(["ap214_face_body_product_presentation", "typed_xde_product_attributes"]);
+    }
     Ok((
         model,
         FeatureCertificate {
@@ -3260,11 +3318,38 @@ fn import_step_direct(
             product_hierarchy,
             external_references,
         },
+        semantic,
     ))
+}
+
+fn import_step_direct(
+    text: &str,
+    analytic_surfaces: bool,
+    ap242_composition: bool,
+    allow_degenerate: bool,
+    capability: &'static str,
+) -> Result<(Model, FeatureCertificate, StepV3Report)> {
+    let (model, certificate, report, _) = import_step_direct_impl(
+        text,
+        analytic_surfaces,
+        ap242_composition,
+        allow_degenerate,
+        capability,
+        false,
+    )?;
+    Ok((model, certificate, report))
 }
 
 pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
     import_step_direct(text, false, false, false, STEP_INTERCHANGE_V3_CAPABILITY)
+}
+
+/// AP214 semantic route. Legacy `/3` remains permissive toward ignored metadata;
+/// this opt-in route instead returns typed unsupported-style records.
+pub fn import_step_v3_with_metadata(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report, StepSemanticMetadata)> {
+    let (model, certificate, report, semantic) =
+        import_step_direct_impl(text, false, false, false, STEP_INTERCHANGE_V3_CAPABILITY, true)?;
+    Ok((model, certificate, report, semantic.unwrap()))
 }
 
 pub fn import_step_v4(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
@@ -3289,15 +3374,13 @@ pub fn import_step_v7(text: &str) -> Result<(Model, FeatureCertificate, StepV3Re
 
 /// Qualified successor: `/7` remains rejected and immutable.
 pub fn import_step_v8(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report)> {
-    let (model, _, report) =
-        import_step_direct(text, true, true, true, STEP_INTERCHANGE_V8_CAPABILITY)?;
+    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V8_CAPABILITY)?;
     let certificate = certify_step_v8_topology(&model)?;
     Ok((model, certificate, report))
 }
 
 pub fn import_step_v9(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report)> {
-    let (model, _, report) =
-        import_step_direct(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
+    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
     let mut certificate = certify_step_v8_topology(&model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
     certificate.notes.extend([
@@ -3307,6 +3390,22 @@ pub fn import_step_v9(text: &str) -> Result<(Model, StepV8Certificate, StepV3Rep
         "retained_open_shell_products",
     ]);
     Ok((model, certificate, report))
+}
+
+pub fn import_step_v9_with_metadata(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report, StepSemanticMetadata)> {
+    let (model, _, report, semantic) =
+        import_step_direct_impl(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY, true)?;
+    let mut certificate = certify_step_v8_topology(&model)?;
+    certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
+    certificate.notes.extend([
+        "certified_interior_point_selectors",
+        "bounded_freeform_poles",
+        "general_affine_occurrences",
+        "retained_open_shell_products",
+        "ap214_face_body_product_presentation",
+        "typed_xde_product_attributes",
+    ]);
+    Ok((model, certificate, report, semantic.unwrap()))
 }
 
 fn step_v10_graph_identity(entities: &BTreeMap<usize, Entity>) -> Result<String> {
@@ -3364,6 +3463,9 @@ pub fn export_step_v10(document: &StepV10Document) -> Result<String> {
 #[cfg(test)]
 #[path = "tests/step_interchange_v3.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "tests/step_semantic_metadata.rs"]
+mod semantic_metadata_tests;
 
 #[path = "step_interchange_v3/point_inverse.rs"]
 mod point_inverse;

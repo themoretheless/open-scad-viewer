@@ -5,6 +5,9 @@
 //! A separate C1 polar proof checks all oriented principal minors globally.
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 mod separable_monotone;
+mod affine_separable;
+mod rational_clock;
+mod rational_separable;
 /// Whole-chart injectivity, allowing exact strictly monotone coordinates with
 /// isolated zero derivatives. Unlike `certify_contraction`, this does NOT prove
 /// immersion/rank. Consumers requiring regularity must prove it independently.
@@ -15,7 +18,26 @@ pub fn certify_chart(s:&Surface,max_work:usize)->Result<Report> {
     if let Some(axes)=separable_monotone::certify(s,&mut report.spans,max_work)? {
         report.proven=true;report.projection=Some(axes);
         report.reason="global-separable-coordinate-monotonicity";
-    } else if report.spans==max_work {report.reason="work-limit";}
+    } else if report.spans<max_work {
+        if let Some(rows)=affine_separable::certify(s,&mut report.spans,max_work)? {
+            report.proven=true;report.projection=None;report.linear_projection=Some(rows);
+            report.reason="global-exact-affine-separable-monotonicity";
+        }
+    }
+    if !report.proven && report.spans<max_work && rational_clock::certify(s,&mut report.spans,max_work)? {
+        report.proven=true;report.reason="global-positive-rational-product-clock";
+        // No metric, rank or source-clock Jacobian bounds transfer from the view.
+        report.projection=None;report.linear_projection=None;report.projective_projection=None;
+        report.polar_projection=None;report.polar_p_matrix=None;report.contraction_upper=None;
+    }
+    if !report.proven && report.spans<max_work {
+        if let Some(axes)=rational_separable::certify(s,&mut report.spans,max_work)? {
+            report.proven=true;report.reason="global-exact-rational-separable-monotonicity";
+            report.projection=Some(axes);report.linear_projection=None;report.projective_projection=None;
+            report.polar_projection=None;report.polar_p_matrix=None;report.contraction_upper=None;
+        }
+    }
+    if !report.proven && report.spans==max_work {report.reason="work-limit";}
     Ok(report)
 }
 #[derive(Clone, Debug)]

@@ -7,7 +7,7 @@ const server = await createServer({logLevel: 'silent', server: {host: '127.0.0.1
   resolveId(id) { if (id === '/__lattice-host.js') return '\0lattice-print-probe' },
   load(id) { if (id === '\0lattice-print-probe') return `
     import {createApp} from 'vue';
-    import Panel from '/src/features/CadWorkbenchPanel.vue';
+    import Panel from '/src/features/CadWorkbenchPanel.svt';
     import {warmGeometryKernel} from '/src/services/geometry/kernel.ts';
     await warmGeometryKernel();
     createApp(Panel,{meshes:[],selection:[],hit:null,source:'',ready:true,locale:'en',initialAction:'lighten'}).mount('#app');

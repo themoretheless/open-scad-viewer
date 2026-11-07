@@ -142,6 +142,7 @@ pub mod solid_audit;
 mod sphere_boolean;
 pub mod step_interchange;
 pub mod step_interchange_v3;
+pub mod step_pmi;
 mod step_part21;
 mod step_v3_export;
 mod stepped_prism;
@@ -552,3 +553,6 @@ pub mod source_paired_projection_contact;
 pub mod rational_cap_translation;
 
 pub mod rational_cap_affine;
+
+pub mod algebraic_model;
+pub use algebraic_model::{AlgebraicModel,ExactModel,ExactBooleanOptions};

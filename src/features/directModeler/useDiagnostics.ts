@@ -5,7 +5,7 @@ import { type SelfIntersection } from '../../services/solidSelfIntersection'
 import { type inspectSolidDisplay, inspectSolidIntersections } from '../../services/solidDiagnostics'
 import { createSolidClearanceWorker } from '../../services/solidClearanceWorker'
 import { type DirectDocument, type DirectBody } from '../../services/directModeling'
-import { computed, ref, shallowRef, watchEffect, onUnmounted, type ShallowRef, type ComputedRef } from 'vue'
+import { computed, ref, shallowRef, watchEffect, onUnmounted, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface DiagnosticsOptions {
   document: ShallowRef<DirectDocument>

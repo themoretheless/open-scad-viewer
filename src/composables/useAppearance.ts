@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref } from 'svet'
 import { resolveFormaTokens } from '../forma/tokens'
 import type { Language } from '../i18n/appStrings'
 import { storageGet, storageGetEnum, storageSet } from '../services/safeStorage'

@@ -187,6 +187,44 @@ pub fn rectangle_bounds(
     query: [[f64; 2]; 2],
     max_cells: usize,
 ) -> Result<RegionReport> {
+    rectangle_bounds_impl(surface, query, max_cells, false, None)
+}
+/// Exact original C2 jets authorize crossing storage knot lines. Regularity,
+/// full original-span tensor enclosures and the cell limit remain mandatory.
+pub fn rectangle_bounds_with_continuity(
+    surface: &Surface,
+    query: [[f64; 2]; 2],
+    max_cells: usize,
+    continuity: &super::surface_continuity::Certificate<'_>,
+) -> Result<RegionReport> {
+    crate::check(
+        continuity.order() >= 2 && std::ptr::eq(continuity.source(), surface),
+        "Shape continuity must certify this same original surface to order two",
+    )?;
+    rectangle_bounds_impl(surface, query, max_cells, true, None)
+}
+/// One-sided tensor enclosure on one specified ORIGINAL positive knot cell.
+/// Includes that cell's limiting jets at its closed boundary. No continuity,
+/// regularity on other cells, pole quotient or whole-surface admission follows.
+pub fn rectangle_span_bounds(surface: &Surface, span: [usize;2],
+    query: [[f64;2];2], max_cells: usize) -> Result<RegionReport> {
+    surface.validate()?;
+    let axes = [(surface.degree_u, &surface.knots_u, surface.control_points.len()),
+        (surface.degree_v, &surface.knots_v, surface.control_points[0].len())];
+    crate::check(surface.control_points[0][0].len() == 3 && axes.iter().enumerate().all(|(k,(p,knots,n))|
+        *p <= span[k] && span[k] < *n && knots[span[k]] < knots[span[k]+1]
+        && query[k].iter().all(|v| v.is_finite()) && query[k][0] <= query[k][1]
+        && knots[span[k]] <= query[k][0] && query[k][1] <= knots[span[k]+1]),
+        "One-sided shape query must belong to one original positive span")?;
+    rectangle_bounds_impl(surface,query,max_cells,false,Some(span))
+}
+fn rectangle_bounds_impl(
+    surface: &Surface,
+    query: [[f64; 2]; 2],
+    max_cells: usize,
+    exact_c2: bool,
+    original_span: Option<[usize;2]>,
+) -> Result<RegionReport> {
     surface.validate()?;
     crate::check(
         max_cells <= 100000,
@@ -226,7 +264,7 @@ pub fn rectangle_bounds(
         (surface.degree_v, &surface.knots_v, 1),
     ] {
         for &node in knots {
-            if domains[axis][0] < node
+            if original_span.is_none() && !exact_c2 && domains[axis][0] < node
                 && node < domains[axis][1]
                 && query[axis][0] <= node
                 && node <= query[axis][1]
@@ -254,6 +292,7 @@ pub fn rectangle_bounds(
     let mut cells = 0;
     for u in surface.degree_u..surface.control_points.len() {
         for v in surface.degree_v..surface.control_points[0].len() {
+            if original_span.is_some_and(|span| span != [u,v]) { continue; }
             let full = [
                 [surface.knots_u[u], surface.knots_u[u + 1]],
                 [surface.knots_v[v], surface.knots_v[v + 1]],

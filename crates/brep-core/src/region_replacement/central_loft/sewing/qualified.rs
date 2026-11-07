@@ -5,6 +5,8 @@ pub struct QualifiedSewnCorner<'a> {
     report: CornerBodyAudit,
 }
 impl SewnCornerCandidate {
+    /// Embedding/material/volume admission of the owned sewn candidate.
+    /// For the constructed-seam G2 and 10/mm curvature contract, use `qualify_g2`.
     pub fn qualify(
         &self,
         tolerance_uv: f64,

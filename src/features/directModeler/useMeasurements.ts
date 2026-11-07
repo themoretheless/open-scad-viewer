@@ -7,7 +7,7 @@ import { type NurbsCurveDistance } from '../../services/nurbsCurve'
 import { type DirectDocument, type DirectBody } from '../../services/directModeling'
 import type { KernelManifoldMetrics } from '../../services/geometry/manifoldAnalysis'
 import { serializeManifoldMetricsReport, type ManifoldMetricsExportFormat, type ManifoldMetricsReportRow } from '../../services/manifoldMetricsReport'
-import { computed, ref, shallowRef, watchEffect, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'vue'
+import { computed, ref, shallowRef, watchEffect, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 import { download } from './helpers'
 
 export interface MeasurementsOptions {

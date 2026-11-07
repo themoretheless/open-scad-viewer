@@ -102,3 +102,284 @@ impl CentralLoftCandidate<'_, '_, '_> {
         Ok(reports)
     }
 }
+
+/// Original exterior subinterval owned by one central network patch. A report
+/// applies only to this interval; it grants no topology or whole-body authority.
+pub struct NetworkExteriorReport {
+    pub boundary: usize,
+    pub patch: usize,
+    pub parameter: [f64; 2],
+    pub report: nurbs_core::surface_g2_pcurves::Report,
+}
+impl CentralLoftCandidate<'_, '_, '_> {
+    /// Partition all six original boundary clocks against the actual U cells.
+    /// Trim the world curve and BOTH pcurves on the same original clock, then
+    /// freshly check source agreement and G2. Never bridge an uncovered span.
+    pub fn inspect_network_exterior_jets(
+        &self,
+        patches: &[Surface],
+        max_cells: usize,
+        max_exact: u64,
+    ) -> Result<Vec<NetworkExteriorReport>> {
+        require(
+            !patches.is_empty()
+                && patches.len() <= 32
+                && (18..=100000).contains(&max_cells)
+                && max_exact <= 1000000,
+            "Bound network exterior work",
+        )?;
+        let pieces = self.network_exterior_pieces(patches, max_cells)?;
+        let count = pieces.len();
+        let mut out = Vec::new();
+        for (boundary, patch, parameter) in pieces {
+            let c = self.curves[boundary].trim(parameter[0], parameter[1])?;
+            let source_pc = self.originals[boundary]
+                .1
+                .trim(parameter[0], parameter[1])?;
+            let target_pc = self.pcurves[boundary].trim(parameter[0], parameter[1])?;
+            let report = nurbs_core::surface_g2_pcurves::inspect(
+                &c,
+                [&source_pc, &target_pc],
+                [&self.originals[boundary].0, &patches[patch]],
+                [false, false],
+                self.options.tolerances[0],
+                self.options.tolerances[1],
+                self.options.tolerances[2],
+                max_cells / count,
+                max_exact / count as u64,
+            )?;
+            out.push(NetworkExteriorReport {
+                boundary,
+                patch,
+                parameter,
+                report,
+            });
+        }
+        Ok(out)
+    }
+    pub(super) fn network_exterior_pieces(
+        &self,
+        patches: &[Surface],
+        max_cells: usize,
+    ) -> Result<Vec<(usize, usize, [f64; 2])>> {
+        require(
+            !patches.is_empty() && patches.len() <= 32,
+            "Bound network exterior partition",
+        )?;
+        let mut pieces = Vec::new();
+        for boundary in 0..6 {
+            let pc = &self.pcurves[boundary];
+            require(
+                pc.degree == 1 && pc.control_points.len() == 2 && pc.weights[0] == pc.weights[1],
+                "Network rim needs original affine clock",
+            )?;
+            let [a, b] = [pc.control_points[0][0], pc.control_points[1][0]];
+            require(
+                a != b && pc.control_points[0][1] == pc.control_points[1][1],
+                "Network rim is not a horizontal owned interval",
+            )?;
+            let d = [pc.knots[pc.degree], pc.knots[pc.control_points.len()]];
+            let mut covered = Vec::new();
+            for (index, s) in patches.iter().enumerate() {
+                s.validate()?;
+                let lo = a.min(b).max(s.knots_u[s.degree_u]);
+                let hi = a.max(b).min(s.knots_u[s.control_points.len()]);
+                if lo >= hi {
+                    continue;
+                }
+                let t0 = ((lo - a) / (b - a)).min((hi - a) / (b - a));
+                let t1 = ((lo - a) / (b - a)).max((hi - a) / (b - a));
+                let clock = [d[0] + (d[1] - d[0]) * t0, d[0] + (d[1] - d[0]) * t1];
+                covered.push([lo, hi]);
+                pieces.push((boundary, index, clock));
+            }
+            covered.sort_by(|x, y| x[0].total_cmp(&y[0]));
+            require(
+                !covered.is_empty()
+                    && covered[0][0] == a.min(b)
+                    && covered.last().unwrap()[1] == a.max(b)
+                    && covered.windows(2).all(|p| p[0][1] == p[1][0]),
+                "Network exterior partition has a gap or overlap",
+            )?;
+        }
+        require(
+            pieces.len() <= max_cells,
+            "Network exterior cell allowance exhausted",
+        )?;
+        Ok(pieces)
+    }
+    /// Specialized exact support recognition on each actual owned interval.
+    /// Pole receipts borrow the actual patch, never the old single surface.
+    pub fn inspect_network_exterior_support_jets(
+        &self,
+        patches: &[Surface],
+        max_cells: usize,
+        max_exact: u64,
+    ) -> Result<Vec<NetworkSupportReport>> {
+        require(
+            (18..=100000).contains(&max_cells) && max_exact <= 1000000,
+            "Bound network support work",
+        )?;
+        let pieces = self.network_exterior_pieces(patches, max_cells)?;
+        let count = pieces.len();
+        let mut out = Vec::new();
+        for (boundary, patch, parameter) in pieces {
+            let result = (|| {
+                let s = &patches[patch];
+                let allowance = max_cells / count;
+                let c = self.curves[boundary].trim(parameter[0], parameter[1])?;
+                let source_pc = self.originals[boundary]
+                    .1
+                    .trim(parameter[0], parameter[1])?;
+                let target_pc = self.pcurves[boundary].trim(parameter[0], parameter[1])?;
+                self.inspect_network_support_piece(
+                    s,
+                    boundary,
+                    &c,
+                    &source_pc,
+                    &target_pc,
+                    allowance,
+                    max_exact / count as u64,
+                )
+            })();
+            out.push(NetworkSupportReport {
+                boundary,
+                patch,
+                parameter,
+                report: result,
+            });
+        }
+        Ok(out)
+    }
+    /// Shared exact-support audit used both before sewing and on FINAL uses.
+    pub(super) fn inspect_network_support_piece(
+        &self,
+        s: &Surface,
+        boundary: usize,
+        c: &Curve,
+        source_pc: &Curve,
+        target_pc: &Curve,
+        allowance: usize,
+        max_exact: u64,
+    ) -> Result<nurbs_core::surface_g2_pcurves::ExtrusionBoundaryReport> {
+        require(
+            boundary < 6 && allowance <= 100000 && max_exact <= 1000000,
+            "Bound final network support audit",
+        )?;
+        let mut poles = Vec::new();
+        let mut used = 0;
+        for end in [false, true] {
+            let row = if end { s.control_points.len() - 1 } else { 0 };
+            let point = &s.control_points[row][0];
+            if !s.control_points[row].iter().all(|p| p == point) {
+                continue;
+            }
+            let axis = (0..3)
+                .min_by(|&a, &b| {
+                    let d = |k: usize| {
+                        (point[k] - self.stock[k][0])
+                            .abs()
+                            .min((point[k] - self.stock[k][1]).abs())
+                    };
+                    d(a).total_cmp(&d(b))
+                })
+                .unwrap();
+            let low = s
+                .weights
+                .iter()
+                .flatten()
+                .copied()
+                .fold(f64::INFINITY, f64::min);
+            let high = s.weights.iter().flatten().copied().fold(0., f64::max);
+            let mut band = (low / high) / 64.;
+            let proof = loop {
+                let proof = nurbs_core::surface_shape_operator::inspect_original_flat_pole(
+                    s,
+                    end,
+                    axis,
+                    band,
+                    (allowance / 2 - used).min(512),
+                )?;
+                used += proof.report.cells;
+                if proof.report.proven
+                    || proof.report.cells == 0
+                    || used == allowance / 2
+                    || band * 0.5 == 0.
+                {
+                    break proof;
+                }
+                band *= 0.5;
+            };
+            require(
+                proof.report.proven,
+                "Actual network pole quotient remains unproven",
+            )?;
+            poles.push((end, proof));
+        }
+        let receipts = std::array::from_fn(|e| {
+            poles
+                .iter()
+                .find(|(end, _)| usize::from(*end) == e)
+                .and_then(|(_, p)| p.certificate.as_ref())
+        });
+        let source = &self.originals[boundary].0;
+        let mut report = if boundary % 2 == 0 {
+            let q = s.degree_v;
+            let row = if target_pc.control_points[0][1] == s.knots_v[q] {
+                0
+            } else {
+                q
+            };
+            let next = if row == 0 { 1 } else { q - 1 };
+            let i = s.degree_u / 2;
+            let axes = (0..3)
+                .filter(|&k| s.control_points[i][row][k] != s.control_points[i][next][k])
+                .collect::<Vec<_>>();
+            require(axes.len() == 1, "Actual network collar axis is not unique")?;
+            nurbs_core::surface_g2_pcurves::inspect_extrusion_boundary(
+                c,
+                [source_pc, target_pc],
+                [source, s],
+                axes[0],
+                receipts,
+                self.options.tolerances,
+                allowance - used,
+                max_exact,
+            )
+        } else {
+            let axes = (0..3)
+                .filter(|&k| {
+                    source
+                        .control_points
+                        .iter()
+                        .flatten()
+                        .all(|p| p[k] == source.control_points[0][0][k])
+                })
+                .collect::<Vec<_>>();
+            require(
+                axes.len() == 1,
+                "Actual original support plane is not unique",
+            )?;
+            nurbs_core::surface_g2_pcurves::inspect_planar_boundary(
+                c,
+                [source_pc, target_pc],
+                [source, s],
+                axes[0],
+                receipts,
+                self.options.tolerances,
+                allowance - used,
+                max_exact,
+            )
+        }?;
+        report.cells += used;
+        Ok(report)
+    }
+}
+
+/// Failure remains attached to its owned original interval, with no admission.
+pub struct NetworkSupportReport {
+    pub boundary: usize,
+    pub patch: usize,
+    pub parameter: [f64; 2],
+    pub report: Result<nurbs_core::surface_g2_pcurves::ExtrusionBoundaryReport>,
+}

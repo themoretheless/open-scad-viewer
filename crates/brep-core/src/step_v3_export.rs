@@ -5,8 +5,8 @@ use crate::step_interchange_v3::{
     MAX_OUTPUT_BYTES, STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY,
     STEP_INTERCHANGE_V5_CAPABILITY, STEP_INTERCHANGE_V6_CAPABILITY,
     STEP_INTERCHANGE_V7_CAPABILITY, STEP_INTERCHANGE_V8_CAPABILITY,
-    STEP_INTERCHANGE_V9_CAPABILITY, StepRegularityEvidence, StepV3Report, StepV8Certificate,
-    entity_digest, refuse,
+    STEP_INTERCHANGE_V9_CAPABILITY, StepRegularityEvidence, StepSemanticMetadata, StepV3Report,
+    StepV8Certificate, entity_digest, refuse,
 };
 use crate::step_part21::{Value, parse, render_entity_value};
 use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, TopoId, TopoKind};
@@ -261,12 +261,17 @@ fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
     }
 }
 
-pub(crate) fn export_step_direct(
+fn export_step_direct_impl(
     model: &Model,
     ap242_composition: bool,
     allow_degenerate: bool,
     capability: &'static str,
+    semantic: Option<&StepSemanticMetadata>,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
+    if let Some(semantic) = semantic {
+        semantic.presentation.validate_for_model(model)?;
+        semantic.xde.validate_for_model(model)?;
+    }
     // /6 exchanges the authored chart directly, including its original face
     // senses. Other routes mirror reversed faces into canonical forward charts.
     let canonical = (capability != STEP_INTERCHANGE_V6_CAPABILITY)
@@ -552,7 +557,20 @@ pub(crate) fn export_step_direct(
         let application =
             w.emit("APPLICATION_CONTEXT('managed model based 3d engineering')".into());
         let product_context = w.emit(format!("PRODUCT_CONTEXT('',#{application},'mechanical')"));
-        let product = w.emit(format!("PRODUCT('model','model','',(#{product_context}))"));
+        let authored = semantic.and_then(|semantic| {
+            (semantic.xde.products.len() == 1)
+                .then(|| semantic.xde.products.values().next().unwrap())
+        });
+        let quote = |value: &str| format!(
+            "'{}'",
+            crate::step_interchange_v3::step_xde::encode_step_string(value).replace('\'', "''")
+        );
+        let product = w.emit(format!(
+            "PRODUCT({},{},{},(#{product_context}))",
+            quote(authored.map_or("model", |product| product.id.as_str())),
+            quote(authored.map_or("model", |product| product.name.as_str())),
+            quote(authored.map_or("", |product| product.description.as_str())),
+        ));
         let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
         let definition_context = w.emit(format!(
             "PRODUCT_DEFINITION_CONTEXT('part definition',#{application},'design')"
@@ -560,10 +578,29 @@ pub(crate) fn export_step_direct(
         let definition = w.emit(format!(
             "PRODUCT_DEFINITION('design','',#{formation},#{definition_context})"
         ));
-        let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{definition})"));
+        let shape_name = authored.and_then(|product| product.shape_name.as_deref()).unwrap_or("");
+        let shape = w.emit(format!(
+            "PRODUCT_DEFINITION_SHAPE({},'',#{definition})",
+            quote(shape_name)
+        ));
         w.emit(format!(
             "SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"
         ));
+        if let Some(semantic) = semantic {
+            crate::step_interchange_v3::step_presentation::emit(
+                &mut w,
+                &semantic.presentation,
+                &face_entities,
+                &body_entities,
+                representation,
+            )?;
+            crate::step_interchange_v3::step_xde::emit(
+                &mut w,
+                &semantic.xde,
+                definition,
+                context,
+            )?;
+        }
     }
     let header = "ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('OpenSCAD Viewer retained AP242 B-rep'),'2;1');\nFILE_NAME('model.step','',(''),(''),'OpenSCAD Viewer','OpenSCAD Viewer','');\nFILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF'));\nENDSEC;\nDATA;\n";
     let mut text = String::from(header);
@@ -644,6 +681,15 @@ pub(crate) fn export_step_direct(
     ))
 }
 
+pub(crate) fn export_step_direct(
+    model: &Model,
+    ap242_composition: bool,
+    allow_degenerate: bool,
+    capability: &'static str,
+) -> Result<(String, FeatureCertificate, StepV3Report)> {
+    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None)
+}
+
 pub fn export_step_v3(model: &Model) -> Result<(String, FeatureCertificate, StepV3Report)> {
     export_step_direct(model, false, false, STEP_INTERCHANGE_V3_CAPABILITY)
 }
@@ -695,6 +741,27 @@ pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV
     ]);
     let (text, _, report) =
         export_step_direct(model, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
+    Ok((text, certificate, report))
+}
+
+pub fn export_step_v9_with_metadata(
+    model: &Model,
+    semantic: &StepSemanticMetadata,
+) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    let mut certificate = certify_step_v8_topology(model)?;
+    certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
+    certificate.notes.extend([
+        "ap214_face_body_product_presentation",
+        "typed_xde_product_attributes",
+        "validation_properties_preserved",
+    ]);
+    let (text, _, report) = export_step_direct_impl(
+        model,
+        true,
+        true,
+        STEP_INTERCHANGE_V9_CAPABILITY,
+        Some(semantic),
+    )?;
     Ok((text, certificate, report))
 }
 

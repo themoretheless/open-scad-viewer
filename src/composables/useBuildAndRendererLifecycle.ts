@@ -1,5 +1,5 @@
 import {createRendererOperations} from './useBuildAndRendererLifecycle/rendererOperations'
-import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'vue'
+import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
 import type { GeometryQuality } from '../core/build'
 import { meshTransferables, type MeshData } from '../core/mesh'
 import { AutoBuildScheduler } from '../services/autoBuildScheduler'

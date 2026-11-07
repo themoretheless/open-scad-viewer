@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'vue'
+import { computed, ref, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
 import { hexToRgb, lineAndColumn, type DockTab } from '../appHelpers'
 import type {
   DistanceMeasurement as PanelMeasurement,

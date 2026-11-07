@@ -1,7 +1,7 @@
 // Isolated qualification surface: production panel and real production worker.
 // Does not read or write model documents or saved drafts.
-import {createApp,h,ref} from 'vue'
-import ProfileBridgeCheck from '../../src/components/ProfileBridgeCheck.vue'
+import {createApp,h,ref} from 'svet'
+import ProfileBridgeCheck from '../../src/components/ProfileBridgeCheck.svt'
 import type {NurbsSurface} from '../../src/services/nurbsSurface'
 import fixture from '../../docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json'
 createApp({setup(){

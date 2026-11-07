@@ -582,6 +582,13 @@ impl Inspector {
                 boundary=attempt.certificate.map(SharedBoundary::ExactHull);
             }
             if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain
+                && source_chart_cells<pair_allowance && out.cells<limits.cells {
+                let attempt=crate::shared_boundary::opposite_rows::certify_restricted(model,[a,b],
+                    (limits.cells-out.cells).min(pair_allowance-source_chart_cells).min(256));
+                source_chart_cells+=attempt.cells;out.cells+=attempt.cells;
+                boundary=attempt.certificate.map(SharedBoundary::ExactHull);
+            }
+            if boundary.is_none() && !hull_disjoint && volume_separation.is_none() && joint_exact_domain
                 && source_chart_cells < pair_allowance && out.cells < limits.cells
                 && projected_trim_network::multiple_shared_edges(model,[a,b]) {
                 let attempt = projected_trim_network::certify(model,[a,b],

@@ -1,6 +1,6 @@
-import {createRenderer, nextTick} from 'vue'
+import {createRenderer, nextTick} from 'svet'
 import {afterEach, expect, it, vi} from 'vitest'
-import MeshModeler from '../src/features/MeshModeler.vue'
+import MeshModeler from '../src/features/MeshModeler.svt'
 import {createBoxMesh, transformMesh} from '../src/services/meshEditing'
 
 const downloadBytes=vi.hoisted(()=>vi.fn())
@@ -43,10 +43,10 @@ vi.mock('../src/services/geometry/kernel', async importOriginal=>({
   isGeometryKernelReady:()=>false,
   warmGeometryKernel:()=>gate.promise,
 }))
-vi.mock('../src/components/VrControls.vue',()=>({default:{render:()=>null}}))
-vi.mock('../src/components/CommandPalette.vue',()=>({default:{render:()=>null}}))
-vi.mock('../src/components/ModelingGridControls.vue',()=>({default:{render:()=>null}}))
-vi.mock('../src/components/ModelingFloorGrid.vue',()=>({default:{render:()=>null}}))
+vi.mock('../src/components/VrControls.svt',()=>({default:{render:()=>null}}))
+vi.mock('../src/components/CommandPalette.svt',()=>({default:{render:()=>null}}))
+vi.mock('../src/components/ModelingGridControls.svt',()=>({default:{render:()=>null}}))
+vi.mock('../src/components/ModelingFloorGrid.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/services/safeStorage',()=>({storageGet:()=>null,storageSet:()=>{}}))
 vi.mock('../src/services/meshModelerProjection',async importOriginal=>{
   const actual=await importOriginal<typeof import('../src/services/meshModelerProjection')>()

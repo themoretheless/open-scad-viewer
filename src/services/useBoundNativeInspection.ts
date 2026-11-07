@@ -1,4 +1,4 @@
-import {ref,shallowRef,watch,onScopeDispose,toRaw,type Ref} from 'vue'
+import {ref,shallowRef,watch,onScopeDispose,toRaw,type Ref} from 'svet'
 /** Request identity guards successes and failures, including raw mutations. */
 export function useBoundNativeInspection<O,R>(options:Ref<O|undefined>,active:Ref<boolean>,
  expectation:(options:O)=>{requestIdentity:string},dispatch:(options:O)=>Promise<R>,

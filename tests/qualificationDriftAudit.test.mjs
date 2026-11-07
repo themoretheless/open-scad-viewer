@@ -70,3 +70,30 @@ test('checks binary finite evidence and reports changed or missing bytes without
     assert.equal(auditQualificationDrift(root,options).records.find(r=>r.kind==='finite-evidence').status,'missing')
   } finally {rmSync(root,{recursive:true,force:true})}
 })
+
+
+test('distinguishes retired historical sources from missing current bindings', () => {
+  const root = mkdtempSync(join(tmpdir(), 'qualification-retired-source-'))
+  try {
+    mkdirSync(join(root, 'crates'))
+    for (const name of ['THIRD_PARTY_NOTICES.md','package-lock.json','crates/Cargo.lock']) writeFileSync(join(root,name),'dependency')
+    writeFileSync(join(root,'kernel.wasm'),'wasm')
+    writeFileSync(join(root,'keep.ts'),'current')
+    const fingerprint = {artifacts: [
+      {path:'keep.ts',sha256:hash('current'),byteLength:7},
+      {path:'crates/Cargo.lock',sha256:hash('dependency'),byteLength:10},
+    ]}
+    const evidence = {wasm:{path:'kernel.wasm',sha256:hash('wasm'),byteLength:4},
+      dependencyFingerprints:{noticesSha256:hash('dependency'),npmLockfileSha256:hash('dependency'),rustLockfileSha256:hash('historical')},
+      sourceBundle:{paths:['keep.ts','retired.ts'],sha256:hash('historical bundle')}}
+    writeFileSync(join(root,'fingerprint.json'),JSON.stringify(fingerprint))
+    writeFileSync(join(root,'evidence.json'),JSON.stringify(evidence))
+    const options={fingerprintPath:'fingerprint.json',evidencePath:'evidence.json',archives:{}}
+    const report=auditQualificationDrift(root,options)
+    assert.equal(report.matches,true)
+    assert.deepEqual(report.missingSources,[])
+    assert.deepEqual(report.retiredSources,['retired.ts'])
+    rmSync(join(root,'keep.ts'))
+    assert.deepEqual(auditQualificationDrift(root,options).missingSources,['keep.ts'])
+  } finally {rmSync(root,{recursive:true,force:true})}
+})

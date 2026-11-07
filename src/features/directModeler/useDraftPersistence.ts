@@ -1,4 +1,4 @@
-import { nextTick, onUnmounted, ref, type Ref, type ShallowRef } from 'vue'
+import { nextTick, onUnmounted, ref, type Ref, type ShallowRef } from 'svet'
 import {
   emptyDirectDocument,
   MAX_DRAFT_CHARACTERS,

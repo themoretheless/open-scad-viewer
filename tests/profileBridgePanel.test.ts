@@ -1,12 +1,12 @@
 import {readFileSync} from 'node:fs'
-import {createRenderer,nextTick,ref,h} from 'vue'
+import {createRenderer,nextTick,ref,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({tasks:[] as any[],worker:null as any}))
 vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{
  state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))}
  return state.worker
 }}))
-import Panel from '../src/components/ProfileBridgeCheck.vue'
+import Panel from '../src/components/ProfileBridgeCheck.svt'
 const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8'))
 it('preserves keyboard focus through invalid input, cancel, Retry and closing; clears results on source edits',async()=>{
  vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {});vi.stubGlobal('HTMLInputElement',class {})

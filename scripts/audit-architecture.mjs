@@ -9,7 +9,7 @@ import {readFileSync, writeFileSync, readdirSync, existsSync} from 'node:fs'
 import {resolve, extname} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
-export const SIZE_LIMITS = {'.rs': 800, '.ts': 500, '.mts': 500, '.mjs': 500, '.vue': 400}
+export const SIZE_LIMITS = {'.rs': 800, '.ts': 500, '.mts': 500, '.mjs': 500, '.svt': 400}
 const SIZE_EXCLUDE = [/^crates\/vendor\//, /\/generated\//, /\.golden\.ts$/, /\.d\.ts$/, /(^|\/)tests?\//, /\.test\.[cm]?ts$/]
 
 // Lower layers never depend on higher ones; same-layer dependencies are allowed.

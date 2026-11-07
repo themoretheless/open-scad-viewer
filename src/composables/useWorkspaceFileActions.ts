@@ -1,4 +1,4 @@
-import { nextTick, onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { nextTick, onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import { useMainSolidTask } from '../features/useMainSolidTask'
 import { createSolidPreviewWorker } from '../services/solidPreviewWorker'
 import { downloadBlob, sanitizeFileName } from '../appHelpers'

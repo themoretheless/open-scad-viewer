@@ -1,4 +1,4 @@
-import {ref} from 'vue'
+import {ref} from 'svet'
 import type {MeshImportRepairMode} from './meshImport'
 import {storageGet, storageSet} from './safeStorage'
 

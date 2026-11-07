@@ -97,7 +97,7 @@
   z-index: 30;
   background: var(--bg);
 }
-.main.editor-drawer .editor-panel { width: min(440px, 40vw) !important; max-width: 50%; }
+.main.editor-drawer .editor-panel { max-width: calc(100vw - 320px); }
 .main.editor-drawer > .canvas-panel { position: relative; visibility: visible; pointer-events: auto; flex: 1; min-width: 0; }
 .main.editor-drawer.group-source-drawer { width: min(440px, 40vw); right: auto; }
 .main.editor-drawer.group-source-drawer .editor-panel { width: 100% !important; max-width: none; }
@@ -258,7 +258,7 @@
 }
 .dock-rail {
   flex: 0 0 40px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0;
-  border-right: 1px solid var(--hairline); background: var(--bg);
+  border-left: 1px solid var(--hairline); background: var(--bg);
 }
 .dock-rail button, .dock-close {
   width: 30px; height: 30px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-dim); cursor: pointer;

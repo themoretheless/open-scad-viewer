@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createRenderer, defineComponent, h, nextTick, reactive } from 'vue'
-import FormaRegion from '../src/components/FormaRegion.vue'
+import { createRenderer, defineComponent, h, nextTick, reactive } from 'svet'
+import CustomizerPanel from '../src/components/CustomizerPanel.svt'
+import FormaRegion from '../src/components/FormaRegion.svt'
+import SceneOutliner from '../src/components/SceneOutliner.svt'
 import { parseFormaUi } from '../src/forma/parser'
+import { batch, computed as svetComputed, effect, signal } from '../src/forma/svet'
 import { resolveFormaTokens } from '../src/forma/tokens'
 import computeInspectorUi from '../src/ui/ComputeInspector.ui?raw'
 import dockRailUi from '../src/ui/DockRail.ui?raw'
@@ -168,31 +171,57 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
   })
 
   it('renders ViewerToolbar.ui, SelectionModes.ui, DockRail.ui, and Statusbar.ui', () => {
-    const viewer = mountForma(viewerToolbarUi, {
-      toolbarClass: 'viewer-toolbar with-dock',
-      fitLabel: 'Вписать',
-      resetLabel: 'Сбросить вид',
-      canPreviousView: true,
-      previousViewLabel: 'Предыдущий вид',
-      previousViewTitle: 'Предыдущий вид',
-      isOrthographic: false,
-      projectionLabel: 'Перспектива',
-      projectionTitle: 'Перспектива',
-      gridVisible: true,
-      gridLabel: 'Сетка',
-      displayLabel: 'Отображение',
-      displayMode: 'shaded',
-      shadedLabel: 'Заливка',
-      edgesLabel: 'Рёбра',
-      xrayLabel: 'Рентген',
-    })
-    const fitBtn = viewer.nodes.find(
+    const viewerSlots = mountForma(
+      viewerToolbarUi,
+      {
+        toolbarClass: 'viewer-toolbar with-dock',
+        fitLabel: 'Вписать',
+        resetLabel: 'Сбросить вид',
+        canPreviousView: true,
+        previousViewLabel: 'Предыдущий вид',
+        previousViewTitle: 'Предыдущий вид',
+        isOrthographic: false,
+        projectionLabel: 'Перспектива',
+        projectionTitle: 'Перспектива',
+        gridVisible: true,
+        gridLabel: 'Сетка',
+        displayLabel: 'Отображение',
+        displayMode: 'shaded',
+        shadedLabel: 'Заливка',
+        edgesLabel: 'Рёбра',
+        xrayLabel: 'Рентген',
+      },
+    )
+    const fitBtn = viewerSlots.nodes.find(
       n => n.tag === 'button' && n.props['aria-label'] === 'Вписать',
     )
     expect(fitBtn).toBeDefined()
     fitBtn!.props.onClick({} as Event)
-    expect(viewer.onAction).toHaveBeenCalledWith('fitView', [], expect.anything())
-    viewer.unmount()
+    expect(viewerSlots.onAction).toHaveBeenCalledWith('fitView', [], expect.anything())
+    viewerSlots.unmount()
+
+    const slotRoot = new TestNode('root')
+    const slotApp = renderer.createApp({
+      render: () =>
+        h(
+          FormaRegion,
+          { source: viewerToolbarUi, state: { toolbarClass: 'viewer-toolbar', displayMode: 'shaded' } },
+          {
+            standardViewSelect: () => h('select', { class: 'view-select' }),
+            scanToggle: () => h('button', { class: 'scan-toggle' }, 'Scan'),
+            dockToggle: () => h('button', { class: 'dock-toggle' }, 'Dock'),
+          },
+        ),
+    })
+    slotApp.mount(slotRoot)
+    try {
+      const slotNodes = allNodes(slotRoot)
+      expect(slotNodes.some(n => n.tag === 'select' && n.props.class === 'view-select')).toBe(true)
+      expect(slotNodes.some(n => n.tag === 'button' && n.props.class === 'scan-toggle')).toBe(true)
+      expect(slotNodes.some(n => n.tag === 'button' && n.props.class === 'dock-toggle')).toBe(true)
+    } finally {
+      slotApp.unmount()
+    }
 
     const sel = mountForma(selectionModesUi, {
       selectionModeLabel: 'Режим выделения',
@@ -297,4 +326,80 @@ it('retains draft conflict choices and save retry actions', () => {
 it('renders actual conversion progress and dispatches cancellation', () => {
   const v=mountForma(statusbarUi,{conversionPending:true,conversionLabel:'Exporting',conversionValue:1,conversionMax:3,cancelLabel:'Stop'})
   try {const p=v.nodes.find(n=>n.tag==='progress')!;expect(p.props.value).toBe(1);expect(p.props.max).toBe(3);v.nodes.find(n=>n.tag==='button'&&textContent(n)==='Stop')!.props.onClick({});expect(v.onAction).toHaveBeenCalledWith('cancelConversion',[],expect.anything())}finally{v.unmount()}
+})
+
+it('updates Svet signals glitch-free and drives SceneOutliner + CustomizerPanel UX enhancements', async () => {
+  const count = signal(2)
+  const doubled = svetComputed(() => count() * 2)
+  const observed: number[] = []
+  const eff = effect(() => {
+    observed.push(doubled())
+  })
+  batch(() => {
+    count.set(5)
+    count.set(10)
+  })
+  expect(observed).toEqual([4, 20])
+  eff.dispose()
+
+  const outlinerRoot = new TestNode('root')
+  const toggleVisibility = vi.fn()
+  const outlinerApp = renderer.createApp({
+    render: () =>
+      h(SceneOutliner, {
+        meshes: [
+          { id: 1, name: 'Body 1', visible: true, triangleCount: 120 },
+          { id: 2, name: 'Body 2', visible: true, triangleCount: 80 },
+        ],
+        selectedMeshId: 1,
+        locale: 'ru',
+        onToggleVisibility: toggleVisibility,
+      }),
+  })
+  outlinerApp.mount(outlinerRoot)
+  try {
+    expect(textContent(outlinerRoot)).toContain('200 тр.')
+    const hideAllBtn = allNodes(outlinerRoot).find(
+      n => n.tag === 'button' && n.props['aria-label'] === 'Скрыть все объекты',
+    )
+    expect(hideAllBtn).toBeDefined()
+    hideAllBtn!.props.onClick({})
+    expect(toggleVisibility).toHaveBeenCalledWith(1, false)
+    expect(toggleVisibility).toHaveBeenCalledWith(2, false)
+  } finally {
+    outlinerApp.unmount()
+  }
+
+  const customizerRoot = new TestNode('root')
+  const onChange = vi.fn()
+  const state = reactive({
+    parameters: [
+      { name: 'width', label: 'Width', value: 20, valueStart: 0, valueEnd: 2, min: 5, max: 50, step: 1 },
+    ],
+  })
+  const customizerApp = renderer.createApp({
+    render: () =>
+      h(CustomizerPanel, {
+        parameters: state.parameters,
+        title: 'Parameters',
+        emptyLabel: 'None',
+        onChange,
+      }),
+  })
+  customizerApp.mount(customizerRoot)
+  try {
+    const rangeInput = allNodes(customizerRoot).find(n => n.tag === 'input' && n.props.type === 'range')!
+    rangeInput.props.onInput({ target: { value: '35', valueAsNumber: 35 } })
+    state.parameters = [{ ...state.parameters[0], value: 35 }]
+    await nextTick()
+    expect(onChange).toHaveBeenCalledWith('width', 35)
+    const resetBtn = allNodes(customizerRoot).find(
+      n => n.tag === 'button' && n.props['aria-label'] === 'Reset width',
+    )
+    expect(resetBtn).toBeDefined()
+    resetBtn!.props.onClick({ preventDefault() {} })
+    expect(onChange).toHaveBeenLastCalledWith('width', 20)
+  } finally {
+    customizerApp.unmount()
+  }
 })

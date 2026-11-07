@@ -55,6 +55,8 @@ pub struct TrihedralStrips {
 fn refused(s: &str) -> Error {
     Error::new("BREP_TRIHEDRAL_SKIN_UNPROVEN", s)
 }
+#[path="trihedral_skins/trim_hull_separation.rs"]
+mod trim_hull_separation;
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     (0..3).map(|k| a[k] * b[k]).sum()
 }
@@ -216,8 +218,33 @@ pub fn build_trihedral_strips_with_profile(
         runout_mm,
         span_mm,
         limits,
-        Some(handle_fraction),
+        Some(fillet_contact::PlanarProfile::Handles(handle_fraction)),
     )
+}
+/// Explicit bounded-profile proposal; the same original-contact, radius,
+/// injectivity and G2 gates apply. This alone does not qualify a closed solid.
+pub fn build_trihedral_strips_with_bounded_profile(
+    source:&Model,shell:usize,vertex:usize,requested:&[EdgeRadius],runout_mm:f64,
+    span_mm:f64,limits:StripLimits,maximum:f64,
+) -> Result<TrihedralStrips> {
+    build_strips(source,shell,vertex,requested,runout_mm,span_mm,limits,
+        Some(fillet_contact::PlanarProfile::Bounded(maximum)))
+}
+/// Matched-jet profile proposal; no whole-body authority is inherited.
+pub fn build_trihedral_strips_with_matched_profile(
+    source:&Model,shell:usize,vertex:usize,requested:&[EdgeRadius],runout_mm:f64,
+    span_mm:f64,limits:StripLimits,maximum:f64,
+) -> Result<TrihedralStrips> {
+    build_strips(source,shell,vertex,requested,runout_mm,span_mm,limits,
+        Some(fillet_contact::PlanarProfile::Matched(maximum)))
+}
+/// Single-span quartic proposal; no body certificate is inherited.
+pub fn build_trihedral_strips_with_quartic_profile(
+    source:&Model,shell:usize,vertex:usize,requested:&[EdgeRadius],runout_mm:f64,
+    span_mm:f64,limits:StripLimits,maximum:f64,
+) -> Result<TrihedralStrips> {
+    build_strips(source,shell,vertex,requested,runout_mm,span_mm,limits,
+        Some(fillet_contact::PlanarProfile::Quartic(maximum)))
 }
 fn build_strips(
     source: &Model,
@@ -227,7 +254,7 @@ fn build_strips(
     runout_mm: f64,
     span_mm: f64,
     limits: StripLimits,
-    handle: Option<f64>,
+    handle: Option<fillet_contact::PlanarProfile>,
 ) -> Result<TrihedralStrips> {
     if !span_mm.is_finite()
         || span_mm <= 0.
@@ -320,8 +347,17 @@ fn build_strips(
             sides[k] = side.signum();
         }
         let build = |surfaces, radius, options, tolerance, cells, exact| match handle {
-            Some(fraction) => fillet_contact::build_planar_g2_profile(
+            Some(fillet_contact::PlanarProfile::Handles(fraction)) => fillet_contact::build_planar_g2_profile(
                 surfaces, radius, fraction, options, tolerance, cells, exact,
+            ),
+            Some(fillet_contact::PlanarProfile::Bounded(maximum)) => fillet_contact::build_bounded_planar_g2_profile(
+                surfaces,radius,maximum,options,tolerance,cells,exact,
+            ),
+            Some(fillet_contact::PlanarProfile::Matched(maximum)) => fillet_contact::build_matched_planar_g2_profile(
+                surfaces,radius,maximum,options,tolerance,cells,exact,
+            ),
+            Some(fillet_contact::PlanarProfile::Quartic(maximum)) => fillet_contact::build_quartic_planar_g2_profile(
+                surfaces,radius,maximum,options,tolerance,cells,exact,
             ),
             None => fillet_contact::build_g2(surfaces, radius, options, tolerance, cells, exact),
         };
@@ -446,7 +482,7 @@ fn build_strips(
                 || proof.report.geometric.decision != Decision::WithinTolerance
                 || !proof.report.geometric.regularity_proven
             {
-                return Err(refused("Actual saved contact G2 remains unproven"));
+                return Err(refused(&format!("Actual saved contact G2 remains unproven: positions={}, decision={:?}, regular={}, cells={}",proof.report.positions.proven,proof.report.geometric.decision,proof.report.geometric.regularity_proven,proof.report.geometric.cells)));
             }
             let pcurve = if coedge.reversed {
                 coedge.pcurve.reverse()?
@@ -533,18 +569,31 @@ fn build_strips(
             if remaining < 2 {
                 return Err(refused("Mutual separation work exhausted"));
             }
-            let distance = crate::face_domain::distance_between_faces(
+            let pair_budget=(remaining/2).min(1024).max(1);
+            let hull=if matches!(handle,Some(fillet_contact::PlanarProfile::Bounded(_) | fillet_contact::PlanarProfile::Matched(_) | fillet_contact::PlanarProfile::Quartic(_))) {
+                trim_hull_separation::inspect(&strips[a].patch.model,&strips[b].patch.model,pair_budget.saturating_sub(1),limits.tolerance_uv)?
+            } else {None};
+            let hull_cells=hull.map_or(0,|x|x.1);
+            let mut distance = crate::face_domain::distance_between_faces(
                 &strips[a].patch.model,
                 0,
                 &strips[b].patch.model,
                 0,
                 limits.tolerances[0],
                 limits.tolerance_uv,
-                (remaining / 2).min(1024).max(1),
+                pair_budget-hull_cells,
                 // Initial broad trim queries must leave work for the actual
                 // subdivision cover; this remains inside the shared caller limit.
                 (remaining - remaining / 2).min(65536),
             )?;
+            if let Some((lower,cells))=hull {
+                distance.lower_bound_mm=distance.lower_bound_mm.max(lower);
+                distance.cells+=cells;
+                distance.max_cells=pair_budget;
+                if let Some(upper)=distance.upper_bound_mm {
+                    if lower>upper {return Err(refused("Trim-hull lower distance contradicts the inside witness"));}
+                }
+            }
             work.charge(distance.cells + distance.domain_cells, 0)?;
             // Convergence to the minimum is unnecessary for disjointness, but
             // an unresolved or zero lower bound cannot establish separation.

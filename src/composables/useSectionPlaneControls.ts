@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
+import { computed, nextTick, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import type { SectionAxis } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
 import { clamp } from '../services/math3d'

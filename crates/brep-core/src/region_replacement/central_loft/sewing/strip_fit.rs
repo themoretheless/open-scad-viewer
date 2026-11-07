@@ -10,6 +10,13 @@ pub struct StripFitReport {
 fn linear(pc: &Curve) -> bool {
     pc.degree == 1 && pc.control_points.len() == 2 && pc.weights[0] == pc.weights[1] && !pc.periodic
 }
+fn fixed_profile_weights(s: &Surface) -> bool {
+    // Either W(V) is common to every U row, or W(U) is constant in V.
+    // In both exact structural classes the normalized U blend is independent
+    // of axial station. No approximate rank-one factorization is admitted.
+    s.weights.iter().all(|r| r == &s.weights[0])
+        || s.weights.iter().all(|r| r.iter().all(|w| *w == r[0]))
+}
 fn verify(
     c: &Curve,
     p: &Curve,
@@ -45,11 +52,11 @@ pub(super) fn inspect(
         linear(pc),
         "Strip fit needs the actual affine source near section",
     )?;
-    // A V-dependent weight common to every U row makes the effective U
-    // blend independent of station. This exact structural condition is needed
-    // for the full transverse variation bound below.
+    // A common V factor or V-constant rational profile weights keep the
+    // effective U blend independent of station. The complete transverse
+    // variation bound below requires this exact structural condition.
     require(
-        original.weights.iter().all(|r| r == &original.weights[0]),
+        fixed_profile_weights(original),
         "Strip weights are not station separable",
     )?;
     let u_domain = [
@@ -225,4 +232,39 @@ pub(super) fn inspect(
         displacement_upper_mm: upper,
         cells,
     })
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn rational_u_profiles_retain_their_blend_but_mixed_weights_do_not() {
+        let mut s = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 0., 1.]],
+                vec![vec![1., 0., 0.], vec![1., 0., 1.]],
+            ],
+            weights: vec![vec![1., 1.], vec![3., 3.]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        assert!(fixed_profile_weights(&s));
+        assert_eq!(
+            s.evaluate(0.5, 0.).unwrap().point[0],
+            s.evaluate(0.5, 1.).unwrap().point[0]
+        );
+        s.weights[1][1] = 4.;
+        assert!(!fixed_profile_weights(&s));
+        assert!(
+            (s.evaluate(0.5, 0.).unwrap().point[0] - s.evaluate(0.5, 1.).unwrap().point[0]).abs()
+                > 0.04
+        );
+        s.weights[1][1] = 3f64.next_up();
+        assert!(!fixed_profile_weights(&s));
+        s.weights = vec![vec![1., 2.]; 2];
+        assert!(fixed_profile_weights(&s));
+    }
 }

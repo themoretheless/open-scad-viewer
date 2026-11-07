@@ -16,6 +16,7 @@ mod extraction;
 mod higher;
 mod proof;
 mod speed;
+mod torsion;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
     ResourceLimit,
@@ -118,6 +119,7 @@ pub(super) enum Field {
     SquaredSpeed,
     Binormal,
     SquaredCurvature,
+    Torsion,
 }
 pub(super) fn original_target(
     source: &Curve,
@@ -137,6 +139,7 @@ pub(super) fn original_target(
         Field::SquaredSpeed => speed::target(&h, &width, w)?,
         Field::Binormal => binormal::target(&h, &width, w)?,
         Field::SquaredCurvature => curvature::target(&h, &width, w)?,
+        Field::Torsion => torsion::target(&h, &width, w)?,
     })
 }
 fn piece(source: &Curve, span: usize, field: Field, w: &mut Work) -> PResult<Curve> {
@@ -217,6 +220,19 @@ pub fn binormal(source: &Curve, max_work: u64) -> Result<Report> {
 /// This conservative sufficient regularity check is not a complete solver.
 pub fn squared_curvature(source: &Curve, max_work: u64) -> Result<Report> {
     apply(source, Field::SquaredCurvature, max_work)
+}
+/// Construct [torsion,0,0] on every original spatial source span. The ORIGINAL
+/// squared binormal numerator must have strictly positive Bernstein coefficients
+/// before cancellation. Zero curvature/straight or unproved sources refuse;
+/// planar curved sources may produce zero torsion. Exact storage or atomic
+/// refusal, original clocks/one-sided traces, unchanged shared bounds.
+pub fn torsion(source: &Curve, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 3,
+        "Torsion field requires a 3D curve",
+    )?;
+    apply(source, Field::Torsion, max_work)
 }
 fn apply(source: &Curve, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;

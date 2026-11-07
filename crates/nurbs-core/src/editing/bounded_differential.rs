@@ -151,6 +151,20 @@ fn piece(
 pub fn curve(source: &Curve, field: Field, max_error: f64, max_work: u64) -> Result<Report> {
     source.validate()?;
     let field = original(field, source.control_points[0].len())?;
+    apply(source, field, max_error, max_work)
+}
+/// Construct the spatial torsion carrier with a continuous field-value error
+/// bound. Original nonzero binormal admission precedes cancellation. Existing
+/// exact-storage, positive-denominator, work/bit and geometry guards apply.
+pub fn torsion(source: &Curve, max_error: f64, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 3,
+        "Torsion field requires a 3D curve",
+    )?;
+    apply(source, exact::Field::Torsion, max_error, max_work)
+}
+fn apply(source: &Curve, field: exact::Field, max_error: f64, max_work: u64) -> Result<Report> {
     check(
         max_error.is_finite() && max_error > 0.,
         "Field error must be finite and positive",

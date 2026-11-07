@@ -2,6 +2,12 @@
 //! Closed metadata never grants embedding, material-volume or Solid authority.
 use super::*;
 use crate::Model;
+#[path="sewing/network_body.rs"]
+mod network_body;
+pub use network_body::SewnCornerNetworkCandidate;
+#[path="sewing/network_shell.rs"]
+mod network_shell;
+pub use network_shell::{OpenCornerNetwork,NetworkSupportBinding};
 #[path = "sewing/build.rs"]
 mod build;
 #[path = "sewing/planar.rs"]
@@ -127,3 +133,13 @@ pub use qualified::QualifiedSewnCorner;
 
 #[path = "sewing/strip_jets.rs"]
 mod strip_jets;
+
+#[path = "sewing/curvature.rs"]
+mod curvature;
+pub use curvature::{
+    CornerCurvatureAudit, CornerCurvatureFace, QualifiedG2SewnCorner, SEWN_CORNER_CURVATURE_LIMIT,
+};
+
+#[path = "sewing/geometric.rs"]
+mod geometric;
+pub use geometric::{CornerInternalG2Audit, CornerInternalJoin, QualifiedCornerInternalG2};

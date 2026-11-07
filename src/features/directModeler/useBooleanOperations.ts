@@ -1,4 +1,4 @@
-import {ref,shallowRef,watch,onUnmounted,type Ref} from 'vue'
+import {ref,shallowRef,watch,onUnmounted,type Ref} from 'svet'
 import type {DirectDocument} from '../../services/directModeling'
 import type {SolidBooleanOptions} from '../../services/solidBoolean'
 import type {BrepBooleanOperation} from '../../services/geometry/brep'

@@ -16,6 +16,9 @@ describe('actual packaged runtime provider binding',()=>{
 it('refuses to borrow a qualified fingerprint for different packaged bytes',async()=>{
  vi.resetModules()
  vi.doMock('../src/generated/geometry-kernels/identity',()=>({default:{sha256:'1'.repeat(64),byteLength:1}}))
- try{await expect(import('../src/core/geometryExecution')).rejects.toThrow(/No qualified runtime manifest matches the packaged artifact/)}
+ try{
+  const {ACTIVE_GEOMETRY_MANIFEST_VERSIONS}=await import('../src/core/geometryExecution')
+  expect(()=>ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh).toThrow(/No qualified runtime manifest matches the packaged artifact/)
+ }
  finally{vi.doUnmock('../src/generated/geometry-kernels/identity');vi.resetModules()}
 })

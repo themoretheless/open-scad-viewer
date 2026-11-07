@@ -257,3 +257,6 @@ pub use face_region::{RootFaceRegion,QualifiedRootFaceRegion};
 
 mod retention;
 pub use retention::RootFaceRetention;
+
+mod paired_split;
+pub use paired_split::{QualifiedRootPairedChordSplit, RootPairedChordLimits};

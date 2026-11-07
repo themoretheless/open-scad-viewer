@@ -1,8 +1,31 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
-import vue from '@vitejs/plugin-vue'
+import { svetPlugin } from './scripts/svet-vite-plugin.mjs'
+
+const SVET_RUNTIME_PATH = fileURLToPath(new URL('./src/forma/svet-runtime.ts', import.meta.url))
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [svetPlugin()],
+  resolve: {
+    alias: [
+      { find: /^vue$/, replacement: SVET_RUNTIME_PATH },
+      { find: /^@vue\/server-renderer$/, replacement: SVET_RUNTIME_PATH },
+      { find: /^svet$/, replacement: SVET_RUNTIME_PATH },
+    ],
+  },
+  environments: {
+    client: {
+      dev: {
+        inline: true,
+      },
+    },
+  },
+  ssr: {
+    noExternal: true,
+  },
+  optimizeDeps: {
+    exclude: ['vue', '@vue/server-renderer'],
+  },
   test: {
     // Geometry-heavy suites exceed the 5s default when the full run saturates all cores.
     testTimeout: 30000,

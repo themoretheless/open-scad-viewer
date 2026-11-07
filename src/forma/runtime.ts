@@ -1,13 +1,21 @@
-import { h, type Slots, type VNode, type VNodeChild } from 'vue'
+import { h, type Slots, type VNode, type VNodeChild } from 'svet'
 import {
   parseFormaUi,
   type FormaAstNode,
   type FormaComponentAst,
   type FormaElementNode,
 } from './parser'
+import {
+  batch,
+  compileFormaExpression,
+  type CompiledExprAst,
+  signal,
+  type Signal,
+} from './svet'
 
 export interface FormaRenderContext {
   state: Record<string, unknown>
+  signals?: Map<string, Signal<unknown>>
   tokens: Record<string, string>
   i18n: Record<string, string>
   locals: Record<string, unknown>
@@ -16,147 +24,127 @@ export interface FormaRenderContext {
   onBinding?: (path: string, value: unknown) => void
 }
 
-function getByPath(obj: unknown, path: string): unknown {
-  if (!path) return obj
-  const parts = path.split('.')
+function getByPathParts(obj: unknown, parts: readonly string[]): unknown {
   let cur: unknown = obj
-  for (const part of parts) {
+  for (let i = 0; i < parts.length; i++) {
     if (cur == null || typeof cur !== 'object') return undefined
-    cur = (cur as Record<string, unknown>)[part]
+    cur = (cur as Record<string, unknown>)[parts[i]]
   }
   return cur
 }
 
-export function evalFormaExpr(expr: string, ctx: FormaRenderContext): unknown {
-  const trimmed = expr.trim()
-  if (!trimmed) return ''
-  if (trimmed === 'true') return true
-  if (trimmed === 'false') return false
-  if (trimmed === 'null' || trimmed === 'none') return null
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    try {
-      return JSON.parse(trimmed)
-    } catch {
-      return trimmed.slice(1, -1)
+function readStateField(ctx: FormaRenderContext, key: string): unknown {
+  if (ctx.signals) {
+    let sig = ctx.signals.get(key)
+    if (!sig) {
+      sig = signal(ctx.state[key])
+      ctx.signals.set(key, sig)
     }
+    return sig()
   }
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed)
-  if (/^-?\d+(\.\d+)?(px|%|rem|em|vh|vw|dvh|fr)$/.test(trimmed)) return trimmed
+  return ctx.state[key]
+}
 
-  // Ternary expression: cond ? a : b (top-level)
-  const qIdx = findTopLevelChar(trimmed, '?')
-  if (qIdx !== -1) {
-    const cIdx = findTopLevelChar(trimmed, ':', qIdx + 1)
-    if (cIdx !== -1) {
-      const condVal = evalFormaExpr(trimmed.slice(0, qIdx), ctx)
-      return condVal
-        ? evalFormaExpr(trimmed.slice(qIdx + 1, cIdx), ctx)
-        : evalFormaExpr(trimmed.slice(cIdx + 1), ctx)
+export function evalCompiledAst(ast: CompiledExprAst, ctx: FormaRenderContext): unknown {
+  switch (ast.type) {
+    case 'literal':
+      return ast.value
+    case 'token':
+      return ctx.tokens[ast.key] ?? ''
+    case 'i18n':
+      return ctx.i18n[ast.key] ?? ast.key
+    case 'state': {
+      const head = ast.path[0]
+      const rootVal = readStateField(ctx, head)
+      return ast.path.length === 1 ? rootVal : getByPathParts(rootVal, ast.path.slice(1))
     }
-  }
-
-  for (const op of ['||', '&&', '===', '!==', '==', '!=', '>=', '<=', '>', '<', '+']) {
-    const idx = findTopLevelOp(trimmed, op)
-    if (idx !== -1) {
-      const left = evalFormaExpr(trimmed.slice(0, idx), ctx)
-      const right = evalFormaExpr(trimmed.slice(idx + op.length), ctx)
-      switch (op) {
-        case '||': return Boolean(left) ? left : right
-        case '&&': return Boolean(left) ? right : left
+    case 'ident': {
+      const { name, path } = ast
+      if (name in ctx.locals) {
+        return path.length === 0 ? ctx.locals[name] : getByPathParts(ctx.locals[name], path)
+      }
+      if (name in ctx.state || ctx.signals?.has(name)) {
+        const rootVal = readStateField(ctx, name)
+        return path.length === 0 ? rootVal : getByPathParts(rootVal, path)
+      }
+      if (path.length === 0) {
+        if (name in ctx.i18n) return ctx.i18n[name]
+        if (name in ctx.tokens) return ctx.tokens[name]
+      }
+      return path.length === 0 ? name : `${name}.${path.join('.')}`
+    }
+    case 'unary': {
+      const v = evalCompiledAst(ast.arg, ctx)
+      if (ast.op === '!') return !Boolean(v)
+      if (ast.op === '-') return -Number(v)
+      return +Number(v)
+    }
+    case 'binary': {
+      if (ast.op === '||') {
+        const l = evalCompiledAst(ast.left, ctx)
+        return Boolean(l) ? l : evalCompiledAst(ast.right, ctx)
+      }
+      if (ast.op === '&&') {
+        const l = evalCompiledAst(ast.left, ctx)
+        return Boolean(l) ? evalCompiledAst(ast.right, ctx) : l
+      }
+      if (ast.op === '??') {
+        const l = evalCompiledAst(ast.left, ctx)
+        return l !== null && l !== undefined ? l : evalCompiledAst(ast.right, ctx)
+      }
+      const left = evalCompiledAst(ast.left, ctx)
+      const right = evalCompiledAst(ast.right, ctx)
+      switch (ast.op) {
         case '===':
-        case '==': return left === right
+        case '==':
+          return left === right
         case '!==':
-        case '!=': return left !== right
-        case '>=': return Number(left) >= Number(right)
-        case '<=': return Number(left) <= Number(right)
-        case '>': return Number(left) > Number(right)
-        case '<': return Number(left) < Number(right)
+        case '!=':
+          return left !== right
+        case '>=':
+          return Number(left) >= Number(right)
+        case '<=':
+          return Number(left) <= Number(right)
+        case '>':
+          return Number(left) > Number(right)
+        case '<':
+          return Number(left) < Number(right)
         case '+':
           if (typeof left === 'string' || typeof right === 'string') {
             return `${left ?? ''}${right ?? ''}`
           }
           return Number(left) + Number(right)
+        case '-':
+          return Number(left) - Number(right)
+        case '*':
+          return Number(left) * Number(right)
+        case '/':
+          return Number(left) / Number(right)
+        case '%':
+          return Number(left) % Number(right)
+        default:
+          return undefined
       }
     }
+    case 'conditional':
+      return evalCompiledAst(ast.test, ctx)
+        ? evalCompiledAst(ast.consequent, ctx)
+        : evalCompiledAst(ast.alternate, ctx)
   }
-
-  if (trimmed.startsWith('!')) {
-    return !Boolean(evalFormaExpr(trimmed.slice(1), ctx))
-  }
-
-  if (trimmed.startsWith('state.')) return getByPath(ctx.state, trimmed.slice(6))
-  if (trimmed.startsWith('tokens.')) return ctx.tokens[trimmed.slice(7)] ?? ''
-  if (trimmed.startsWith('i18n.')) return ctx.i18n[trimmed.slice(5)] ?? trimmed.slice(5)
-
-  if (trimmed in ctx.locals) return ctx.locals[trimmed]
-  const dotIdx = trimmed.indexOf('.')
-  if (dotIdx !== -1) {
-    const head = trimmed.slice(0, dotIdx)
-    const tail = trimmed.slice(dotIdx + 1)
-    if (head in ctx.locals) return getByPath(ctx.locals[head], tail)
-    if (head in ctx.state) return getByPath(ctx.state[head], tail)
-  }
-  if (trimmed in ctx.state) return ctx.state[trimmed]
-  if (trimmed in ctx.i18n) return ctx.i18n[trimmed]
-  if (trimmed in ctx.tokens) return ctx.tokens[trimmed]
-
-  return trimmed
 }
 
-function findTopLevelChar(s: string, target: string, start = 0): number {
-  let depth = 0
-  let quote: string | null = null
-  for (let i = start; i < s.length; i++) {
-    const ch = s[i]
-    if (quote) {
-      if (ch === quote && s[i - 1] !== '\\') quote = null
-      continue
-    }
-    if (ch === '"' || ch === "'") {
-      quote = ch
-      continue
-    }
-    if (ch === '(' || ch === '[') depth++
-    else if (ch === ')' || ch === ']') depth = Math.max(0, depth - 1)
-    else if (ch === target && depth === 0) return i
-  }
-  return -1
-}
-
-function findTopLevelOp(s: string, op: string): number {
-  let depth = 0
-  let quote: string | null = null
-  for (let i = 0; i <= s.length - op.length; i++) {
-    const ch = s[i]
-    if (quote) {
-      if (ch === quote && s[i - 1] !== '\\') quote = null
-      continue
-    }
-    if (ch === '"' || ch === "'") {
-      quote = ch
-      continue
-    }
-    if (ch === '(' || ch === '[') depth++
-    else if (ch === ')' || ch === ']') depth = Math.max(0, depth - 1)
-    else if (depth === 0 && s.startsWith(op, i)) {
-      if (op === '=' || op === '!' || op === '<' || op === '>') {
-        if (s[i + op.length] === '=') continue
-      }
-      return i
-    }
-  }
-  return -1
+export function evalFormaExpr(expr: string, ctx: FormaRenderContext): unknown {
+  return evalCompiledAst(compileFormaExpression(expr), ctx)
 }
 
 function evalProp(el: FormaElementNode, name: string, ctx: FormaRenderContext): unknown {
   if (name in el.bindings) {
-    return getByPath(ctx.state, el.bindings[name])
+    const path = el.bindings[name].split('.')
+    const rootVal = readStateField(ctx, path[0])
+    return path.length === 1 ? rootVal : getByPathParts(rootVal, path.slice(1))
   }
   if (!(name in el.props)) return undefined
-  return evalFormaExpr(el.props[name], ctx)
+  return evalCompiledAst(compileFormaExpression(el.props[name]), ctx)
 }
 
 function buildAriaAndDomAttrs(
@@ -230,28 +218,32 @@ function buildAriaAndDomAttrs(
 
   if (el.actions.clicked) {
     const act = el.actions.clicked
+    const compiledArgs = act.args.map(compileFormaExpression)
     attrs.onClick = (ev: Event) => {
-      const evaluatedArgs = act.args.map(a => evalFormaExpr(a, ctx))
+      const evaluatedArgs = compiledArgs.map(a => evalCompiledAst(a, ctx))
       ctx.onAction?.(act.name, evaluatedArgs, ev)
     }
   }
   if (el.actions.keydown) {
     const act = el.actions.keydown
+    const compiledArgs = act.args.map(compileFormaExpression)
     attrs.onKeydown = (ev: Event) => {
-      const evaluatedArgs = act.args.map(a => evalFormaExpr(a, ctx))
+      const evaluatedArgs = compiledArgs.map(a => evalCompiledAst(a, ctx))
       ctx.onAction?.(act.name, evaluatedArgs, ev)
     }
   }
   return attrs
 }
 
-function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChild {
+function renderElement(el: FormaElementNode, ctx: FormaRenderContext, key?: unknown): VNodeChild {
   const children = renderNodes(el.children, ctx)
   const textProp = evalProp(el, 'text', ctx) ?? evalProp(el, 'label', ctx)
   const content: VNodeChild[] =
     textProp !== undefined && textProp !== null && textProp !== ''
       ? [String(textProp), ...children]
       : children
+  const withKey = (attrs: Record<string, unknown>) =>
+    key !== undefined ? { ...attrs, key } : attrs
 
   switch (el.type) {
     case 'Slot': {
@@ -259,36 +251,36 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
       return ctx.slots?.[slotName]?.() ?? children
     }
     case 'Nav':
-      return h('nav', buildAriaAndDomAttrs(el, ctx, 'forma-nav'), content)
+      return h('nav', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-nav')), content)
     case 'Footer':
-      return h('footer', buildAriaAndDomAttrs(el, ctx, 'forma-footer'), content)
+      return h('footer', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-footer')), content)
     case 'Section':
-      return h('section', buildAriaAndDomAttrs(el, ctx, 'forma-section'), content)
+      return h('section', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-section')), content)
     case 'Row':
-      return h('div', buildAriaAndDomAttrs(el, ctx, 'forma-row'), content)
+      return h('div', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-row')), content)
     case 'Column':
-      return h('div', buildAriaAndDomAttrs(el, ctx, 'forma-col'), content)
+      return h('div', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-col')), content)
     case 'Stack':
     case 'Surface':
     case 'Frame':
-      return h('div', buildAriaAndDomAttrs(el, ctx, 'forma-surface'), content)
+      return h('div', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-surface')), content)
     case 'Spacer':
-      return h('span', buildAriaAndDomAttrs(el, ctx, 'toolbar-spacer'), [])
+      return h('span', withKey(buildAriaAndDomAttrs(el, ctx, 'toolbar-spacer')), [])
     case 'Divider':
-      return h('span', buildAriaAndDomAttrs(el, ctx, 'vt-sep'), [])
+      return h('span', withKey(buildAriaAndDomAttrs(el, ctx, 'vt-sep')), [])
     case 'Text':
     case 'Span':
-      return h('span', buildAriaAndDomAttrs(el, ctx), content)
+      return h('span', withKey(buildAriaAndDomAttrs(el, ctx)), content)
     case 'Strong':
-      return h('strong', buildAriaAndDomAttrs(el, ctx), content)
+      return h('strong', withKey(buildAriaAndDomAttrs(el, ctx)), content)
     case 'Paragraph':
-      return h('p', buildAriaAndDomAttrs(el, ctx), content)
+      return h('p', withKey(buildAriaAndDomAttrs(el, ctx)), content)
     case 'Keycap':
-      return h('kbd', buildAriaAndDomAttrs(el, ctx, 'forma-kbd'), content)
+      return h('kbd', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-kbd')), content)
     case 'Badge':
-      return h('span', buildAriaAndDomAttrs(el, ctx, 'forma-badge'), content)
+      return h('span', withKey(buildAriaAndDomAttrs(el, ctx, 'forma-badge')), content)
     case 'StatusDot':
-      return h('i', buildAriaAndDomAttrs(el, ctx, 'status-dot'), [])
+      return h('i', withKey(buildAriaAndDomAttrs(el, ctx, 'status-dot')), [])
     case 'SvgIcon': {
       const size = Number(evalProp(el, 'size', ctx) ?? 15)
       const strokeWidth = Number(evalProp(el, 'strokeWidth', ctx) ?? 2)
@@ -300,7 +292,7 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
       if (path2D) svgChildren.push(h('path', { d: String(path2D) }))
       return h(
         'svg',
-        {
+        withKey({
           ...buildAriaAndDomAttrs(el, ctx),
           width: size,
           height: size,
@@ -311,7 +303,7 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
           'stroke-linecap': 'round',
           'stroke-linejoin': 'round',
           'aria-hidden': 'true',
-        },
+        }),
         [...svgChildren, ...children],
       )
     }
@@ -329,7 +321,7 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
             : el.type === 'SegmentButton'
               ? 'forma-seg-btn'
               : 'btn forma-btn'
-      const attrs = buildAriaAndDomAttrs(el, ctx, defaultCls)
+      const attrs = withKey(buildAriaAndDomAttrs(el, ctx, defaultCls))
       attrs.type = String(evalProp(el, 'buttonType', ctx) ?? 'button')
       return h('button', attrs, content)
     }
@@ -337,7 +329,7 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
       const checked = Boolean(evalProp(el, 'checked', ctx))
       const bindPath = el.bindings.checked
       const labelText = evalProp(el, 'label', ctx)
-      return h('label', buildAriaAndDomAttrs(el, ctx, 'auto-check forma-checkbox'), [
+      return h('label', withKey(buildAriaAndDomAttrs(el, ctx, 'auto-check forma-checkbox')), [
         h('input', {
           type: 'checkbox',
           checked,
@@ -356,7 +348,7 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
     case 'TextField': {
       const val = String(evalProp(el, 'value', ctx) ?? '')
       const bindPath = el.bindings.value
-      const attrs = buildAriaAndDomAttrs(el, ctx, 'forma-input')
+      const attrs = withKey(buildAriaAndDomAttrs(el, ctx, 'forma-input'))
       attrs.type = String(evalProp(el, 'inputType', ctx) ?? 'text')
       attrs.value = val
       const placeholder = evalProp(el, 'placeholder', ctx)
@@ -373,10 +365,10 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext): VNodeChil
     case 'ProgressBar': {
       const max = Number(evalProp(el, 'max', ctx) ?? 100)
       const value = Number(evalProp(el, 'value', ctx) ?? 0)
-      return h('progress', { ...buildAriaAndDomAttrs(el, ctx), max, value })
+      return h('progress', withKey({ ...buildAriaAndDomAttrs(el, ctx), max, value }))
     }
     default:
-      return h('div', buildAriaAndDomAttrs(el, ctx), content)
+      return h('div', withKey(buildAriaAndDomAttrs(el, ctx)), content)
   }
 }
 
@@ -384,18 +376,19 @@ export function renderNodes(nodes: FormaAstNode[], ctx: FormaRenderContext): VNo
   const out: VNodeChild[] = []
   for (const node of nodes) {
     if (node.kind === 'let') {
-      ctx.locals[node.name] = evalFormaExpr(node.expr, ctx)
+      ctx.locals[node.name] = evalCompiledAst(compileFormaExpression(node.expr), ctx)
       continue
     }
     if (node.kind === 'if') {
-      const cond = Boolean(evalFormaExpr(node.condition, ctx))
+      const cond = Boolean(evalCompiledAst(compileFormaExpression(node.condition), ctx))
       const branch = cond ? node.thenBranch : node.elseBranch
       out.push(...renderNodes(branch, ctx))
       continue
     }
     if (node.kind === 'for') {
-      const rawList = evalFormaExpr(node.listExpr, ctx)
+      const rawList = evalCompiledAst(compileFormaExpression(node.listExpr), ctx)
       const list = Array.isArray(rawList) ? rawList : []
+      const keyAst = node.keyExpr ? compileFormaExpression(node.keyExpr) : null
       list.forEach((item, index) => {
         const childCtx: FormaRenderContext = {
           ...ctx,
@@ -405,7 +398,14 @@ export function renderNodes(nodes: FormaAstNode[], ctx: FormaRenderContext): VNo
             ...(node.indexVar ? { [node.indexVar]: index } : {}),
           },
         }
-        out.push(...renderNodes(node.body, childCtx))
+        const itemKey = keyAst ? evalCompiledAst(keyAst, childCtx) : index
+        for (const bodyNode of node.body) {
+          if (bodyNode.kind === 'element') {
+            out.push(renderElement(bodyNode, childCtx, itemKey))
+          } else {
+            out.push(...renderNodes([bodyNode], childCtx))
+          }
+        }
       })
       continue
     }
@@ -416,11 +416,30 @@ export function renderNodes(nodes: FormaAstNode[], ctx: FormaRenderContext): VNo
   return out
 }
 
+export function syncFormaSignals(
+  signals: Map<string, Signal<unknown>>,
+  nextState: Record<string, unknown>,
+): void {
+  batch(() => {
+    for (const key of Object.keys(nextState)) {
+      const nextVal = nextState[key]
+      let sig = signals.get(key)
+      if (!sig) {
+        sig = signal(nextVal)
+        signals.set(key, sig)
+      } else {
+        sig.set(nextVal)
+      }
+    }
+  })
+}
+
 export function renderFormaAst(
   ast: FormaComponentAst,
   state: Record<string, unknown>,
   locale: string,
   options: {
+    signals?: Map<string, Signal<unknown>>
     slots?: Slots
     onAction?: (name: string, args: unknown[], event?: Event) => void
     onBinding?: (path: string, value: unknown) => void
@@ -428,6 +447,7 @@ export function renderFormaAst(
 ): VNodeChild[] {
   const ctx: FormaRenderContext = {
     state,
+    signals: options.signals,
     tokens: ast.tokens,
     i18n: ast.i18n[locale] ?? ast.i18n.ru ?? {},
     locals: {},

@@ -440,7 +440,7 @@ pub fn patch(
             )?;
             cells += r.cells;
             if r.status != curve_surface_agreement::Status::WithinTolerance {
-                return Err(unproven("Actual saved skin boundary lift is unproven"));
+                return Err(unproven(&format!("Actual saved skin boundary lift is unproven: edge={}, reversed={}, status={:?}, cells={}",c.edge,c.reversed,r.status,r.cells)));
             }
         }
     }

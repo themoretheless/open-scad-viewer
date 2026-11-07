@@ -12,10 +12,10 @@ function walk(dir){
  for(const entry of readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en-US'))){
   const absolute=resolve(dir,entry.name),file=relative(root,absolute).split(sep).join('/')
   if(entry.isDirectory()){walk(absolute);continue}
-  if(!/\.(ts|vue|mjs)$/.test(file)||/\/generated\//.test(file))continue
+  if(!/\.(ts|svt|mjs)$/.test(file)||/\/generated\//.test(file))continue
   const raw=readFileSync(absolute,'utf8')
   let text=raw
-  if(file.endsWith('.vue')){const {descriptor}=parse(raw,{filename:file});text=[descriptor.script?.content,descriptor.scriptSetup?.content].filter(Boolean).join('\n')}
+  if(file.endsWith('.svt')){const {descriptor}=parse(raw,{filename:file});text=[descriptor.script?.content,descriptor.scriptSetup?.content].filter(Boolean).join('\n')}
   const source=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true)
   const functions=[],mathCalls=[]
   let loops=0
@@ -32,7 +32,7 @@ function walk(dir){
   visit(source)
   const decision=registry.decisions.find(d=>d.files.includes(file))
   const family=registry.families.find(d=>d.patterns.some(p=>file.startsWith(p)))
-  rows.push({file,sha256:createHash('sha256').update(raw).digest('hex'),generated:/\/generated\//.test(file),owner:decision?.owner??family?.owner??'application-host',decision:decision?.id??family?.id??'host',functions,loops,mathCalls:[...new Set(mathCalls)].sort(),lineCoordinates:file.endsWith('.vue')?'combined-script':'file'})
+  rows.push({file,sha256:createHash('sha256').update(raw).digest('hex'),generated:/\/generated\//.test(file),owner:decision?.owner??family?.owner??'application-host',decision:decision?.id??family?.id??'host',functions,loops,mathCalls:[...new Set(mathCalls)].sort(),lineCoordinates:file.endsWith('.svt')?'combined-script':'file'})
  }
 }
 walk(resolve(root,'src'))
@@ -40,7 +40,7 @@ const sensitive=new Set(['sin','cos','tan','asin','acos','atan','atan2','hypot',
 const unreviewed=rows.filter(r=>!r.generated&&r.mathCalls.some(m=>sensitive.has(m))&&!registry.decisions.some(d=>d.files.includes(r.file)))
 const stale=registry.decisions.flatMap(d=>d.files.filter(f=>!rows.some(r=>r.file===f)).map(file=>({decision:d.id,file})))
 const report={schemaVersion:2,scope:'Authored production src TS/Vue/MJS; generated packages are bound by artifact fingerprints. File ownership and callable census, not a proof of algorithm completeness or migration parity.',sourceFiles:rows.length,callables:rows.reduce((n,r)=>n+r.functions.length,0),unreviewedNumericalFiles:unreviewed.map(r=>r.file),staleDecisions:stale,rows}
-const output=resolve(root,'docs/qualification/algorithm-owners-native226-2026-11-02.json')
+const output=resolve(root,'docs/qualification/algorithm-owners-svet-2026-11-07.json')
 if(process.argv.includes('--write'))writeFileSync(output,JSON.stringify(report,null,2)+'\n')
 if(process.argv.includes('--check')){
  const saved=JSON.parse(readFileSync(output,'utf8'))

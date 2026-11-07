@@ -13,6 +13,24 @@ pub(super) fn restrict(
     ctx.charge(1)?;
     let components = points[0].len();
     let base = points[span - p..=span].to_vec();
+    // A complete C0 Bernstein cell already IS this original control vector.
+    // Multiplicity p at both ends suffices (adjacent cells share one pole).
+    // Retain its single common homogeneous gauge across every component.
+    let lo = &knots[span];
+    let hi = &knots[span + 1];
+    let mut original_cell =
+        range[0].sub(lo, ctx)?.sign() == Sign::Zero && range[1].sub(hi, ctx)?.sign() == Sign::Zero;
+    if original_cell {
+        for k in &knots[span - p + 1..=span] {
+            original_cell &= k.sub(lo, ctx)?.sign() == Sign::Zero;
+        }
+        for k in &knots[span + 1..span + p + 1] {
+            original_cell &= k.sub(hi, ctx)?.sign() == Sign::Zero;
+        }
+        if original_cell && hi.sub(lo, ctx)?.sign() == Sign::Positive {
+            return Ok(base);
+        }
+    }
     let mut rows = vec![base; p + 1];
     for r in 1..=p {
         let m = p - r + 1;
@@ -69,4 +87,44 @@ pub(super) fn restrict(
         }
     }
     Ok(rows.into_iter().map(|row| row[p].clone()).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn full_c0_cell_is_original_but_partial_and_c1_cells_are_restricted() {
+        let arena = SourceArena::authored(
+            "original-blossom-cell",
+            1,
+            vec![AuthoredScalar::Binary64Bits(0f64.to_bits())],
+        )
+        .unwrap();
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+        let points = [0., 1., 2., 4., 8.].map(|x| vec![Expansion::scalar(x), Expansion::scalar(1.)]);
+        let knots = [0., 0., 0., 0.5, 0.5, 1., 1., 1.].map(Expansion::scalar);
+        let full = restrict(&points, &knots, 2, 2, [&knots[2], &knots[3]], &mut ctx).unwrap();
+        let check =
+            |rows: &[Vec<Expansion>], expected: [f64; 3], ctx: &mut PredicateContext<'_>| {
+                for (row, x) in rows.iter().zip(expected) {
+                    assert_eq!(
+                        row[0]
+                            .sub(&row[1].mul(&Expansion::scalar(x), ctx).unwrap(), ctx)
+                            .unwrap()
+                            .sign(),
+                        Sign::Zero
+                    );
+                    assert_eq!(row[1].sign(), Sign::Positive);
+                }
+            };
+        check(&full, [0., 1., 2.], &mut ctx);
+        let quarter = Expansion::scalar(0.25);
+        let partial = restrict(&points, &knots, 2, 2, [&knots[2], &quarter], &mut ctx).unwrap();
+        check(&partial, [0., 0.5, 1.], &mut ctx);
+        let c1 = [0., 0., 0., 0.5, 1., 1., 1.].map(Expansion::scalar);
+        let restricted = restrict(&points[..4], &c1, 2, 2, [&c1[2], &c1[3]], &mut ctx).unwrap();
+        check(&restricted, [0., 1., 1.5], &mut ctx);
+    }
 }

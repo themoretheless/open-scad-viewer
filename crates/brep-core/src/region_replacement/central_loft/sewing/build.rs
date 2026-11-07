@@ -18,18 +18,28 @@ pub(super) fn assemble(
     let bounded = control_fit::prepare(c)?;
     let exterior = c.inspect_surface_exterior_jets(&bounded.surface, 6000, 100000)?;
     let joins = c.inspect_surface_internal_span_joins(&bounded.surface, 6000)?;
-    require(
-        exterior.iter().all(|r| {
+    for (seam, r) in exterior.iter().enumerate() {
+        require(
             r.decision == nurbs_core::surface_join::Decision::WithinTolerance
                 && r.regularity_proven
-                && r.pending == 0
-        }) && joins.iter().all(|(_, r)| {
+                && r.pending == 0,
+            &format!(
+                "Original central exterior G2 remains unproven: seam={seam}, decision={:?}, normal={:?}, tensor={:?}, regular={}, pending={}",
+                r.decision, r.normal, r.tensor, r.regularity_proven, r.pending
+            ),
+        )?;
+    }
+    for (knot, r) in &joins {
+        require(
             r.decision == nurbs_core::surface_join::Decision::WithinTolerance
                 && r.regularity_proven
-                && r.pending == 0
-        }),
-        "Original central G2 remains unproven",
-    )?;
+                && r.pending == 0,
+            &format!(
+                "Original central internal G2 remains unproven: knot={knot}, decision={:?}, normal={:?}, tensor={:?}, regular={}, pending={}",
+                r.decision, r.normal, r.tensor, r.regularity_proven, r.pending
+            ),
+        )?;
+    }
     let mut cells = exterior.iter().map(|r| r.cells).sum::<usize>()
         + joins.iter().map(|(_, r)| r.cells).sum::<usize>();
     // Exterior inspection also recomputes the native two-pole proofs.

@@ -13,7 +13,7 @@ import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
 import { type DirectMaterial, type DirectDocument, type DirectSketch, type Point2, type DirectBody } from '../../services/directModeling'
 import { type directExtrusionTool } from '../../services/directModelingTools'
 import { type SolidNurbsSurface } from '../../services/solidNurbs'
-import { computed, ref, shallowRef, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'vue'
+import { computed, ref, shallowRef, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface AdvancedPreviewOptions {
   activePlane: Ref<{ origin: [number, number, number]; u: [number, number, number]; v: [number, number, number]; }, SketchPlane | { origin: [number, number, number]; u: [number, number, number]; v: [number, number, number]; }>

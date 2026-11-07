@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import type { Ref } from 'svet'
 import { storageSet } from '../services/safeStorage'
 import { clampEditorWidth, editorWidthBounds } from '../services/layoutSizing'
 interface Options {

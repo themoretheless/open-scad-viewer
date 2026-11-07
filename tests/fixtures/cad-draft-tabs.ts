@@ -1,4 +1,4 @@
-import {createApp,h,ref} from 'vue'
+import {createApp,h,ref} from 'svet'
 import {createSolidPreviewWorker} from '../../src/services/solidPreviewWorker'
 import {warmGeometryKernel} from '../../src/services/geometry/kernel'
 import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../../src/services/directModeling'

@@ -3,7 +3,9 @@ use super::*;
 impl CentralLoftCandidate<'_, '_, '_> {
     /// Propose each height axis from the actual admitted stock planes, then
     /// prove the literal pole factors and local quotient on the actual net.
-    /// This does not admit the exterior seam interiors or a closed corner.
+    /// `band` caps the search neighborhood. Each returned certificate records
+    /// its ACTUAL proved band; no uncovered seam interior or closed corner
+    /// is admitted by this local result.
     pub fn inspect_pole_limits(
         &self,
         band: f64,
@@ -55,13 +57,48 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 distance <= self.options.tolerances[0],
                 "Original central pole does not meet a stock support",
             )?;
-            let proof = nurbs_core::surface_shape_operator::inspect_original_flat_pole(
-                surface,
-                end,
-                axis,
-                band,
-                (max_cells - used) / (2 - i),
-            )?;
+            let allowance = (max_cells - used) / (2 - i);
+            let degree = surface.degree_u;
+            let first = if end {
+                surface.control_points.len() - degree - 1
+            } else {
+                0
+            };
+            let weights = surface.weights[first..first + degree + 1]
+                .iter()
+                .flatten()
+                .copied()
+                .collect::<Vec<_>>();
+            let low = weights.iter().copied().fold(f64::INFINITY, f64::min);
+            let high = weights.iter().copied().fold(0., f64::max);
+            // Weight ratios propose a local scale only. Every trial must
+            // still prove the ORIGINAL factors, field bounds and quotient.
+            let proposed = band * (low / high);
+            let mut actual_band = if proposed > 0. {
+                proposed.min(band)
+            } else {
+                band
+            };
+            let mut spent = 0;
+            let proof = loop {
+                let mut trial = nurbs_core::surface_shape_operator::inspect_original_flat_pole(
+                    surface,
+                    end,
+                    axis,
+                    actual_band,
+                    (allowance - spent).min(512),
+                )?;
+                spent += trial.report.cells;
+                if trial.report.proven
+                    || trial.report.cells == 0
+                    || spent == allowance
+                    || actual_band * 0.5 == 0.
+                {
+                    trial.report.cells = spent;
+                    break trial;
+                }
+                actual_band *= 0.5;
+            };
             used += proof.report.cells;
             require(
                 used <= max_cells,

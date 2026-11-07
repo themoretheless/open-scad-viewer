@@ -15,8 +15,8 @@ import {
   DRAWING_SHEET_FORMATS,
   formatDrawingDimensionWithTolerance,
 } from '../src/services/drawingSheets'
-import { computeAdaptiveGridStepMm } from '../src/components/ModelingGridControls.vue'
-import { computeSteppedOrbitAngles } from '../src/components/ViewCube.vue'
+import { computeAdaptiveGridStepMm } from '../src/services/modelingGrid'
+import { computeSteppedOrbitAngles } from '../src/services/viewportModel'
 import { formatInterferenceMarkdownReport } from '../src/mcp/rushGraphInterference'
 
 const IDENTITY_TRANSFORM = new Float32Array([

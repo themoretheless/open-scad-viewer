@@ -5,6 +5,7 @@ pub(crate) mod interval_vec3;
 pub(crate) mod bernstein_tensor;
 pub(crate) mod exact_curve_segments;
 pub(crate) mod exact_products;
+pub(crate) mod geometric_weights;
 pub(crate) mod periodic_chart;
 pub(crate) mod curve_jets;
 pub mod bezier_extraction;

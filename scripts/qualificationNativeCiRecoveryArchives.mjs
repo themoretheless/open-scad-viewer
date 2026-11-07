@@ -98,5 +98,15 @@ export const NATIVE_CI_RECOVERY_ARCHIVES=Object.freeze({
   "docs/qualification/native229-root-integration-2026-11-02/before/docs/design/nurbs-catalog.json": "49af057f9821a26e605d1a47eea2833ac05c44ba26db542dc3d17debab08acde",
   "docs/qualification/native229-root-integration-2026-11-02/before/docs/design/nurbs-exact-surface-knot-removal.md": "8960e98092b998ef6ab97214de4e172e4a1e526494ff2726e57478826c9a7cb0",
   "docs/qualification/native226-v10-final-2026-11-02/receipt.json": "3d2ae65edf815b12a40836c0074a62ed30d346d3b443c429880a63e0061e481f",
-  "docs/qualification/native226-v10-final-2026-11-02/frontend/receipt.json": "3dbf320c5118776fa3f9111774908e941e2526c15ec53927a6c86b279790dbc6"
+  "docs/qualification/native226-v10-final-2026-11-02/frontend/receipt.json": "3dbf320c5118776fa3f9111774908e941e2526c15ec53927a6c86b279790dbc6",
+  "docs/qualification/g0-toolchain-fingerprints-v100.json": "0820478b178f1bb9ea1360a0ebcf5619683519f81620173a5ff138a3533ab53c",
+  "docs/qualification/semantic-manifold-g1-plan-v117.json": "75ad3d193a6539660377bb921ac60689e9697199c24cdc9bc3d4f969837df62d",
+  "docs/qualification/g0-v100-g1-v117-refreeze-status-v1.json": "b5c2bed6a29cd39393cceaecef264020ec0eaf3fbb64486c70cb19ad461ac8e1",
+  "docs/qualification/g0-v100-g1-v117-refreeze-review.md": "88650460d26563c4c57d4123043e40d112000f29de7bcb7b596493cceafe2094",
+  "scripts/refresh-qualification-fingerprints-v100-v117.mjs": "a3ca31a1e3fa522d468864954068e9fcb6cbe7d284b87010a20870147be1bc65",
+  "docs/qualification/g0-toolchain-fingerprints-v101.json": "b6b19d346d962946799cbd94ede92f6f8dd3ad7192bbe04328da52377441706a",
+  "docs/qualification/semantic-manifold-g1-plan-v118.json": "6df06a698d5096aca525c113514a75ec729be8f55ddb601bc52350480d9af667",
+  "docs/qualification/g0-v101-g1-v118-refreeze-status-v1.json": "ca8f36cafd9bbfc0593df84d658beacb71dee7dede80b9f2492647c0c7fe0b6d",
+  "docs/qualification/g0-v101-g1-v118-refreeze-review.md": "a213b92929aedbbba2ead6bb71231162553bcc22d7fa53516e65e205bb647781",
+  "scripts/refresh-qualification-fingerprints-v101-v118.mjs": "aeb0e003f5b65a7dfe5cdb1bb47d603f7f424aa1f21b37401a69559c2a8e8d30"
 })

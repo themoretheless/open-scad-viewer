@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref } from 'svet'
 import { storageGet, storageSet } from './safeStorage'
 
 export const GRID_UNITS = { mm: 1, cm: 10, m: 1000, in: 25.4 } as const
