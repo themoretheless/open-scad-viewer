@@ -92,13 +92,14 @@ import { stableFragmentInput, stableModuleSemanticsContext, stableTransformSeman
 
 
 export function segments(node: CallNode, ctx: EvalContext, fallback: number, minimum: number, radius: number): number {
+  const boost = ctx.exportQuality === 'ultra' ? 2 : ctx.exportQuality === 'high' ? 1.5 : 1
   if (isStableProfile(ctx)) {
     const resolution = resolveOpenScadFragments(
       stableFragmentInput(node, ctx, radius),
       stableModuleSemanticsContext(ctx),
     )
     if (resolution.reduced) ctx.reduced.value = true
-    return resolution.fragments
+    return boost > 1 ? Math.min(256, Math.round(resolution.fragments * boost)) : resolution.fragments
   }
   const local = arg(node, '$fn', -1, undefined, ctx)
   const global = ctx.env.get('$fn')
@@ -107,7 +108,7 @@ export function segments(node: CallNode, ctx: EvalContext, fallback: number, min
   const selection = resolveLegacyOpenScadSegments(requested, fallback, minimum, ctx.quality)
   if (selection.clamped) warn(ctx, `$fn=${selection.beforeCap} was clamped to ${selection.maximum} for ${ctx.quality} rendering`)
   if (selection.reduced) ctx.reduced.value = true
-  return selection.segments
+  return boost > 1 ? Math.min(256, Math.round(selection.segments * boost)) : selection.segments
 }
 
 

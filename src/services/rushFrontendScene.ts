@@ -25,7 +25,10 @@ export async function buildTextNurbsScene(document: unknown, quality: GeometryQu
       } catch { /* CPU path at tessellation time */ }
     }
   }
-  const result=await buildOwnNurbsAsync(document,{action:'build',display:{segments:quality==='preview'?8:24,subdivisionLevels:quality==='preview'?1:2}},{...control,onSweepPreview:async(id,preview)=>{
+  const exportQ = control.exportQuality
+  const displaySegments = quality === 'preview' ? 8 : exportQ === 'ultra' ? 32 : exportQ === 'high' ? 28 : 24
+  const displaySubdiv = quality === 'preview' ? 1 : exportQ === 'ultra' || exportQ === 'high' ? 3 : 2
+  const result=await buildOwnNurbsAsync(document,{action:'build',display:{segments:displaySegments,subdivisionLevels:displaySubdiv}},{...control,onSweepPreview:async(id,preview)=>{
     const placed=scenePreview?.(id,preview)
     if(placed)await control.onSweepPreview?.(id,placed)
   }})

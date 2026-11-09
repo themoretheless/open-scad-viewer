@@ -5,6 +5,7 @@ import { downloadBlob, sanitizeFileName } from '../appHelpers'
 import type { MeshData } from '../core/mesh'
 import type { BuildPerformanceSample } from '../services/buildPerformance'
 import { detectMeshImportFormat, type MeshExportFormat } from '../services/meshFormats'
+import type { ExportMeshQualityPreset } from '../services/meshConvert'
 import { SOURCE_FILE_EXTENSION, withSourceExtension } from '../services/rushFrontendDetect'
 import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
 import { encodeWorkspaceShare } from '../services/workspaceShare'
@@ -46,6 +47,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   const exportDialogOpen = ref(false)
   const exportDialogRef = ref<HTMLElement | null>(null)
   const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
+  const exportMeshQuality = ref<ExportMeshQualityPreset>('high')
   const conversionTask = useMainSolidTask(createSolidPreviewWorker())
   const conversionOperation = ref<'convert' | 'export'>('convert')
   const { pending: conversionPending, progress: conversionProgress } = conversionTask
@@ -155,11 +157,20 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     const mesh = sceneMeshes.value, sourceName = fileName.value
     conversionOperation.value = 'export'
     await conversionTask.run(
-      { kind: 'meshExport', mesh, target, options: {} },
+      {
+        kind: 'meshExport',
+        mesh,
+        target,
+        options: {
+          quality: exportMeshQuality.value,
+          source: code.value,
+        },
+      },
       artifact => {
+        const stem = sanitizeFileName(sourceName).replace(sourceExtension, '') || 'model'
         downloadBlob(
           new Blob([artifact.data.slice().buffer as ArrayBuffer], { type: artifact.mimeType }),
-          sanitizeFileName(sourceName).replace(sourceExtension, '.' + artifact.extension),
+          `${stem}.${artifact.extension}`,
         )
         showNotice(translate('exported'))
       },
@@ -168,7 +179,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   }
 
   function exportAdditionalMesh() {
-    return exportScene(additionalExportFormat.value, /\.scad$/i)
+    return exportScene(additionalExportFormat.value, SOURCE_FILE_EXTENSION)
   }
 
   function exportStl() {
@@ -198,7 +209,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   }
 
   function exportObj() {
-    return exportScene('obj', /\.scad$/i)
+    return exportScene('obj', SOURCE_FILE_EXTENSION)
   }
 
   async function shareSource() {
@@ -219,6 +230,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     exportDialogOpen,
     exportDialogRef,
     additionalExportFormat,
+    exportMeshQuality,
     conversionPending,
     conversionProgress,
     conversionOperation,

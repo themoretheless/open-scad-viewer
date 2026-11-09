@@ -71,6 +71,7 @@ export interface OwnNurbsBuildControl {
  shouldAbort?:()=>boolean
  onYield?:()=>void
  onSweepPreview?:(nodeId:string,preview:ProgressiveSweepPreview)=>void|Promise<void>
+ exportQuality?:import('../parser/types').ExportMeshQuality
 }
 
 export type StationArguments=Parameters<typeof reconstructCertifiedProgressiveStations>

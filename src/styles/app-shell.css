@@ -330,6 +330,7 @@
 .dialog-header h2 { margin: 0; font-size: 14px; font-weight: 600; }
 .dialog-header p { margin: 2px 0 0; color: var(--text-dim); font-size: 11.5px; }
 .format-grid { margin: 0; padding: 16px 18px 6px; border: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.format-grid.quality-grid { padding-top: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .format-grid legend { padding: 0; margin-bottom: 8px; color: var(--text-dim); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .format-card {
   display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--hairline);

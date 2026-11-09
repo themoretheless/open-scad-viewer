@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from '../src/services/spinnerGenerator'
 import { compileRushFrontend } from '../src/services/rushFrontend'
 import { parseOpenSCAD } from '../src/services/openscadParser'
+import { exportMesh } from '../src/services/meshConvert'
 
 describe('spinner generator', () => {
   it('matches the canonical planetary-spinner.r example at default parameters', () => {
@@ -64,4 +65,20 @@ describe('spinner generator', () => {
     expect(v2SmallHole.length).toBeGreaterThan(0)
     expect(v2SmallHole[0].changes).toEqual({ gap: 0.26 })
   })
+
+  it('produces denser meshes when exporting with high or ultra quality than in the viewport', async () => {
+    const source = 'brep_gear(module = 1.5, teeth = 8, height = 5, helix = 15, herringbone = true);'
+    const viewportParsed = await parseOpenSCAD(source)
+    const viewportTris = viewportParsed.meshes.reduce((sum, m) => sum + m.indices.length / 3, 0)
+    const highParsed = await parseOpenSCAD(source, { quality: 'full', exportQuality: 'high' })
+    const highTris = highParsed.meshes.reduce((sum, m) => sum + m.indices.length / 3, 0)
+    const ultraParsed = await parseOpenSCAD(source, { quality: 'full', exportQuality: 'ultra' })
+    const ultraTris = ultraParsed.meshes.reduce((sum, m) => sum + m.indices.length / 3, 0)
+    expect(highTris).toBeGreaterThan(viewportTris)
+    expect(ultraTris).toBeGreaterThan(highTris)
+
+    const viewportStl = await exportMesh(viewportParsed.meshes, 'stl_binary', { quality: 'viewport', source })
+    const highStl = await exportMesh(viewportParsed.meshes, 'stl_binary', { quality: 'high', source })
+    expect(highStl.data.byteLength).toBeGreaterThan(viewportStl.data.byteLength)
+  }, 60000)
 })

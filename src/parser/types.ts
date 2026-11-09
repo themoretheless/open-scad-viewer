@@ -17,6 +17,8 @@ import type { OpenScadStableScope } from '../services/openScadStableScope'
 import type { PreparedOpenScadSurfaceAssets } from '../services/openScadSurface'
 import type { PreparedOpenScadTextAssets } from '../services/openScadText'
 
+export type ExportMeshQuality = 'viewport' | 'high' | 'ultra'
+
 export interface ParseOptions {
   /**
    * Record the exact solid graph beside the polygon evaluation, for the Solid
@@ -27,6 +29,8 @@ export interface ParseOptions {
   /** Versioned frontend profile. The legacy public route remains subset@1. */
   languageProfile?: OpenScadLanguageProfile
   quality?: GeometryQuality
+  /** Optional export-only tessellation density boost ('viewport' | 'high' | 'ultra'). */
+  exportQuality?: ExportMeshQuality
   /** Host animation position exposed as OpenSCAD's dynamic `$t` (0..1). */
   animationTime?: number
   /**
@@ -121,6 +125,7 @@ export interface EvalContext {
   modules: Map<string, ModuleNode>
   warnings: string[]
   quality: GeometryQuality
+  exportQuality?: ExportMeshQuality
   sourceReferences: Map<number, MeshSourceReference>
   callChildren?: Statement[] | PassedCallChildren
   functionStack: string[]

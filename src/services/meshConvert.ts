@@ -24,9 +24,15 @@ import { importMeshFile, type MeshImportOptions } from './meshImport'
 export { isMeshExportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_FORMATS, MESH_PRINTING_FORMATS }
 export type { MeshExportFormat, MeshImportFormat }
 
+export type ExportMeshQualityPreset = 'viewport' | 'high' | 'ultra'
+
 export interface MeshExportOptions {
   /** 3MF only: DEFLATE the OPC package. Default true. */
   readonly compressed?: boolean
+  /** Optional export tessellation quality ('viewport' uses existing mesh; 'high'/'ultra' rebuilds from source). */
+  readonly quality?: ExportMeshQualityPreset
+  /** Source code used to rebuild a denser mesh when quality is 'high' or 'ultra'. */
+  readonly source?: string
 }
 export interface MeshConvertOptions extends MeshImportOptions, MeshExportOptions {}
 export type MeshExportArtifact = Awaited<ReturnType<typeof exportMeshFormatCompressed>>
@@ -82,13 +88,34 @@ export async function exportMesh(
 ): Promise<MeshExportArtifact> {
   if (!isMeshExportFormat(target)) throw new Error(`Unsupported target format ${JSON.stringify(target)}.`)
   onProgress?.({ phase: 'inspect', completed: 0, total: 2 })
+  const serialize = (prepared: NurbsMesh) =>
+    options.compressed ?? true
+      ? exportMeshFormatCompressed(prepared, target)
+      : exportMeshFormat(prepared, target)
+
+  const quality = options.quality ?? 'viewport'
+  const source = typeof options.source === 'string' ? options.source.trim() : ''
+  if (Array.isArray(mesh) && quality !== 'viewport' && source.length > 0) {
+    const { evaluateExportMeshes } = await import('./geometryBuildEngine')
+    const candidateQualities: readonly ('ultra' | 'high')[] = quality === 'ultra' ? ['ultra', 'high'] : ['high']
+    for (const candidate of candidateQualities) {
+      try {
+        const rebuilt = await evaluateExportMeshes(source, candidate)
+        if (rebuilt.length > 0) {
+          const prepared = flattenExportMeshes(rebuilt)
+          onProgress?.({ phase: 'export', completed: 1, total: 2 })
+          return await serialize(prepared)
+        }
+      } catch {
+        // Fall back to next lower density or the already-rendered viewport mesh if budget is exceeded.
+      }
+    }
+  }
   const prepared = Array.isArray(mesh)
     ? flattenExportMeshes(mesh as readonly MeshData[])
     : polygonMeshToExportMesh(mesh as PolygonMesh)
   onProgress?.({ phase: 'export', completed: 1, total: 2 })
-  return options.compressed ?? true
-    ? exportMeshFormatCompressed(prepared, target)
-    : exportMeshFormat(prepared, target)
+  return serialize(prepared)
 }
 
 export function exportPolygonMesh(

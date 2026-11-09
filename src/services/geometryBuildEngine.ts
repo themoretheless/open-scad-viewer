@@ -659,4 +659,16 @@ export function evaluateExactSolids(source: string): Promise<GeometryEvaluationR
   return parseOpenSCAD(source, { recordExactSolids: true })
 }
 
+/**
+ * Evaluates source with an export-specific tessellation quality preset (`'high' | 'ultra'`),
+ * keeping viewport builds lightweight while producing denser meshes on export.
+ */
+export async function evaluateExportMeshes(
+  source: string,
+  exportQuality: 'high' | 'ultra',
+): Promise<import('../core/mesh').MeshData[]> {
+  const result = await parseOpenSCAD(source, { quality: 'full', exportQuality })
+  return result.meshes
+}
+
 export const defaultGeometryBuildEngine = new GeometryBuildEngine()

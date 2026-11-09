@@ -374,8 +374,13 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       // about 2*detail^2 triangles: keep every gear under the bridge's display
       // budget instead of letting a large ring gear fail at the user's $fn.
       const faces = brepGearFaceCount(spec)
-      let detail = Math.max(1, Math.min(12, Math.round(segments(node, ctx, 64, 16, spec.module * spec.teeth / 2) / 5)))
-      while (detail > 1 && faces * detail * detail > 36000) detail--
+      const isUltra = ctx.exportQuality === 'ultra'
+      const isHigh = ctx.exportQuality === 'high'
+      const maxDetail = isUltra ? 20 : isHigh ? 15 : 12
+      const divisor = isUltra ? 3 : isHigh ? 4 : 5
+      const faceBudget = isUltra ? 90000 : isHigh ? 64000 : 36000
+      let detail = Math.max(1, Math.min(maxDetail, Math.round(segments(node, ctx, 64, 16, spec.module * spec.teeth / 2) / divisor)))
+      while (detail > 1 && faces * detail * detail > faceBudget) detail--
       return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.gear(spec, detail)), nextColor(), node, ctx)]
     }
     case 'cylinder': return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)
@@ -959,6 +964,7 @@ async function parseInternal(
     modules,
     warnings,
     quality,
+    exportQuality: options.exportQuality,
     sourceReferences,
     depth: 0,
     functionStack: [],
@@ -1091,7 +1097,7 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
         const { buildTextNurbsScene } = await import('./rushFrontendScene')
         if (options.shouldAbort?.()) throw new AbortedError()
         try {
-          const result = await buildTextNurbsScene(compiled.document, options.quality, { shouldAbort: options.shouldAbort, onYield: options.onYield, onSweepPreview: options.onSweepPreview })
+          const result = await buildTextNurbsScene(compiled.document, options.quality, { shouldAbort: options.shouldAbort, onYield: options.onYield, onSweepPreview: options.onSweepPreview, exportQuality: options.exportQuality })
           if (options.shouldAbort?.()) throw new AbortedError()
           return result
         } catch (error) {

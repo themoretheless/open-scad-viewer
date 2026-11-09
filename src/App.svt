@@ -772,6 +772,7 @@ const {
   exportDialogOpen,
   exportDialogRef,
   additionalExportFormat,
+  exportMeshQuality,
   conversionPending,
   conversionProgress,
   conversionOperation,
@@ -928,12 +929,14 @@ onMounted(async () => {
   if (sourceViewportVisible.value) await initializeViewportRenderer()
   const generatorQuery = new URLSearchParams(location.search).get('generator')
   const needsSpinnerSafeLoad = fileName.value === 'spinner.r' && (!code.value.includes('param inner_rim') || !code.value.includes('planet_backlash'))
-  if (generatorQuery === 'box' || generatorQuery === 'bushing' || generatorQuery === 'spinner' || generatorQuery === 'spinner_safe' || generatorQuery === 'spinner1' || generatorQuery === 'planetary_spinner' || needsSpinnerSafeLoad) {
+  const needsBushingLoad = fileName.value === 'bushing.scad' && (!code.value.includes('is_tube_mf') || !code.value.includes('max_mf_teeth'))
+  if (generatorQuery === 'box' || generatorQuery === 'bushing' || generatorQuery === 'spinner' || generatorQuery === 'spinner_safe' || generatorQuery === 'spinner1' || generatorQuery === 'planetary_spinner' || needsSpinnerSafeLoad || needsBushingLoad) {
     await resolveWorkspaceConflict(true)
     if (generatorQuery === 'box') {
       await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: false }), 'box.scad')
-    } else if (generatorQuery === 'bushing') {
+    } else if (generatorQuery === 'bushing' || needsBushingLoad) {
       await loadMechanicalModel(generateBushing(BUSHING_DEFAULTS), 'bushing.scad')
+      if (generatorQuery === 'bushing') mechanicalGeneratorOpen.value = true
     } else if (generatorQuery === 'spinner1') {
       await loadMechanicalModel(generateSpinner(SPINNER_DEFAULTS), 'spinner.r')
     } else {
@@ -1633,58 +1636,15 @@ function handleShellBinding(path: string, value: unknown) {
           <span v-if="sweepViewportProgress.frameTransportCertified === false"> · {{ lang === 'ru' ? 'Не доказан перенос кадров' : 'Frame transport unproved' }}</span>
           <span v-if="sweepViewportProgress.phaseResolved === false"> · {{ lang === 'ru' ? 'Уточняется фаза twist' : 'Resolving twist phase' }}</span>
         </div>
-        <div v-if="!gpuOk" class="no-gpu" role="alert">
-          <span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span>
-          <button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button>
-        </div>
-        <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }">
-          <ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" />
-        </div>
+        <div v-if="!gpuOk" class="no-gpu" role="alert"><span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span><button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button></div>
+        <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }"><ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" /></div>
         <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
           <div class="dock-body">
           <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">
-          <SceneOutliner
-            v-if="dockTab === 'scene'"
-            :meshes="sceneRows"
-            :selected-mesh-id="selectedSceneMeshId"
-            :hovered-mesh-id="hoveredMesh"
-            :locale="lang"
-            :busy="rendering"
-            @select="selectSceneMesh"
-            @clear-selection="clearSelection"
-            @toggle-visibility="setSceneMeshVisibility"
-            @preselect="preselectSceneMesh"
-            @focus="focusSceneMesh"
-            @isolate="isolateSceneMesh"
-            @reveal-source="revealSource"
-            @highlight-source="highlightSource"
-          />
+          <SceneOutliner v-if="dockTab === 'scene'" :meshes="sceneRows" :selected-mesh-id="selectedSceneMeshId" :hovered-mesh-id="hoveredMesh" :locale="lang" :busy="rendering" @select="selectSceneMesh" @clear-selection="clearSelection" @toggle-visibility="setSceneMeshVisibility" @preselect="preselectSceneMesh" @focus="focusSceneMesh" @isolate="isolateSceneMesh" @reveal-source="revealSource" @highlight-source="highlightSource" />
           <div v-else-if="dockTab === 'inspect'" class="compute-inspector">
           <FormaRegion :source="computeInspectorUi" :locale="lang" :state="{ panelTitle: lang === 'ru' ? 'Вычисление геометрии' : 'Geometry computation', canRunCompute: selectedMesh !== null && canExport && !computeBusy, computeButtonLabel: computeBusy ? (lang === 'ru' ? 'Вычисление…' : 'Computing…') : (lang === 'ru' ? 'Рассчитать площадь на GPU' : 'Compute surface area on GPU'), computeBusy, cancelLabel: lang === 'ru' ? 'Отменить' : 'Cancel', description: lang === 'ru' ? 'Выберите деталь актуальной полной сборки. Эксперимент: WebGPU Compute со сверкой каждого результата на CPU.' : 'Select a part from a current full build. Experimental WebGPU Compute with CPU verification of every result.', hasResult: computeResult !== null, areaPrefix: `${lang === 'ru' ? 'Площадь поверхности' : 'Surface area'}: `, areaValue: computeResult ? formatNumber(computeResult.area, 4) : '', backendSummary: computeResult?.backend === 'webgpu-compute' ? 'WebGPU Compute ✓' : (lang === 'ru' ? 'Результат CPU (запасной путь)' : 'CPU result (fallback)'), timingSummary: computeResult ? `CPU: ${formatNumber(computeResult.cpuMs, 1)} ms · GPU: ${computeResult.gpuMs === null ? '—' : formatNumber(computeResult.gpuMs, 1) + ' ms'}` : '', showFallback: Boolean(computeResult?.fallback), fallbackNote: lang === 'ru' ? 'GPU недоступен, завершился с ошибкой или не прошёл сверку. Показан расчёт CPU.' : 'GPU unavailable, failed, or did not pass verification. Showing CPU calculation.', verificationNote: lang === 'ru' ? 'GPU-время включает запуск, передачу и чтение результата. Этот режим проверяет корректность, а не обещает ускорение.' : 'GPU time includes setup, upload and readback. This mode verifies correctness; it does not promise acceleration.', computeError }" @action="handleShellAction" />
-          <InspectPanel
-            :selection="currentInspection"
-            :measurement="panelMeasurement"
-            :measure-active="measureActive"
-            :section-enabled="sectionEnabled"
-            :section-axis="sectionAxis"
-            :section-offset="sectionOffset"
-            :section-min="sectionRange.min"
-            :section-max="sectionRange.max"
-            :section-step="sectionRange.step"
-            :section-flip="sectionFlip"
-            :source-reveal-enabled="sourceMatchesEditor"
-            :locale="lang"
-            @start-measure="startMeasure"
-            @cancel-measure="cancelMeasure"
-            @clear-measurement="clearMeasurement"
-            @copy-measurement="copyMeasurement"
-            @reveal-source="revealSource"
-            @update:section-enabled="setSectionEnabled"
-            @update:section-axis="setSectionAxis"
-            @update:section-offset="setSectionOffset"
-            @update:section-flip="setSectionFlip"
-            @reset-section="resetSection"
-          />
+          <InspectPanel :selection="currentInspection" :measurement="panelMeasurement" :measure-active="measureActive" :section-enabled="sectionEnabled" :section-axis="sectionAxis" :section-offset="sectionOffset" :section-min="sectionRange.min" :section-max="sectionRange.max" :section-step="sectionRange.step" :section-flip="sectionFlip" :source-reveal-enabled="sourceMatchesEditor" :locale="lang" @start-measure="startMeasure" @cancel-measure="cancelMeasure" @clear-measurement="clearMeasurement" @copy-measurement="copyMeasurement" @reveal-source="revealSource" @update:section-enabled="setSectionEnabled" @update:section-axis="setSectionAxis" @update:section-offset="setSectionOffset" @update:section-flip="setSectionFlip" @reset-section="resetSection" />
           </div>
           <div v-else-if="dockTab === 'svg'" class="dock-scroll" :ref="revealDockDetails">
           <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isRushFrontend(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
@@ -1729,14 +1689,7 @@ function handleShellBinding(path: string, value: unknown) {
               <p>{{ lang === 'ru' ? 'До 20 вариантов в локальной рабочей сессии. Файл SCAD и ссылка содержат только текущий исходник.' : 'Up to 20 presets in the local workspace. SCAD files and links contain only the current source.' }}</p>
               <p v-if="presetError" role="alert">{{ presetError }}</p>
             </section>
-            <CustomizerPanel
-              :parameters="customizerParameters"
-              :errors="compactControls.errors"
-              :title="t('parameters')"
-              :empty-label="t('noParameters')"
-              @change="updateCustomizer"
-              @batch-change="updateCustomizerBatch"
-            />
+            <CustomizerPanel :parameters="customizerParameters" :errors="compactControls.errors" :title="t('parameters')" :empty-label="t('noParameters')" @change="updateCustomizer" @batch-change="updateCustomizerBatch" />
           </div>
           </div>
           </div>
@@ -1752,10 +1705,7 @@ function handleShellBinding(path: string, value: unknown) {
     <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
       <div ref="exportDialogRef" class="dialog export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" @keydown.escape.stop="exportDialogOpen = false">
         <header class="dialog-header">
-          <div>
-            <h2 id="export-dialog-title">{{ t('exportTitle') }}</h2>
-            <p>{{ fileName }} · {{ t('meshes') }} {{ formatNumber(meshCount) }} · {{ t('triangles') }} {{ formatNumber(triangleCount) }}</p>
-          </div>
+          <div><h2 id="export-dialog-title">{{ t('exportTitle') }}</h2><p>{{ fileName }} · {{ t('meshes') }} {{ formatNumber(meshCount) }} · {{ t('triangles') }} {{ formatNumber(triangleCount) }}</p></div>
           <button class="icon-btn" type="button" :aria-label="t('close')" @click="exportDialogOpen = false">×</button>
         </header>
         <fieldset class="format-grid" :disabled="conversionPending">
@@ -1764,6 +1714,24 @@ function handleShellBinding(path: string, value: unknown) {
             <input v-model="additionalExportFormat" type="radio" name="export-format" :value="format">
             <span class="format-name">{{ MESH_FORMAT_LABELS[format] }}</span>
             <small>{{ format === 'obj' || format === 'ply' || format === 'off' ? t('forCad') : t('forPrinting') }}</small>
+          </label>
+        </fieldset>
+        <fieldset class="format-grid quality-grid" :disabled="conversionPending">
+          <legend>{{ t('exportQuality') }}</legend>
+          <label class="format-card" :class="{ active: exportMeshQuality === 'viewport' }">
+            <input v-model="exportMeshQuality" type="radio" name="export-quality" value="viewport">
+            <span class="format-name">{{ t('exportQualityViewport') }}</span>
+            <small>{{ t('exportQualityViewportHint') }}</small>
+          </label>
+          <label class="format-card" :class="{ active: exportMeshQuality === 'high' }">
+            <input v-model="exportMeshQuality" type="radio" name="export-quality" value="high">
+            <span class="format-name">{{ t('exportQualityHigh') }}</span>
+            <small>{{ t('exportQualityHighHint') }}</small>
+          </label>
+          <label class="format-card" :class="{ active: exportMeshQuality === 'ultra' }">
+            <input v-model="exportMeshQuality" type="radio" name="export-quality" value="ultra">
+            <span class="format-name">{{ t('exportQualityUltra') }}</span>
+            <small>{{ t('exportQualityUltraHint') }}</small>
           </label>
         </fieldset>
         <p class="dialog-note" :class="{ warning: !canExport }">{{ canExport ? t('exportScope') : t('needsFullBuild') }}</p>
