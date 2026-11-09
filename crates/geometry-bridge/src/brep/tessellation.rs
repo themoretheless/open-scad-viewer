@@ -285,14 +285,7 @@ impl EdgeSamplingRegistry {
                         && !(reduce_face_rulings && exact_linear_ruling(&face.surface,coedge,edge)) {
                         let divisions = if reduce_linear_rulings && model.faces.len() > 32 && segments >= 4 {
                             let is_vertical_pair = vertical_pair.is_some_and(|vp| vp.contains(&coedge.edge));
-                            let is_gentle_arc = edge.curve.degree == 2
-                                && edge.curve.weights.len() == 3
-                                && edge.curve.weights[1] > 0.996;
-                            if is_vertical_pair || is_gentle_arc {
-                                (segments / 2).max(2)
-                            } else {
-                                segments
-                            }
+                            adaptive_edge_divisions(&edge.curve, segments, is_vertical_pair)
                         } else {
                             segments
                         };
@@ -671,6 +664,51 @@ fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
         mesh.triangles.swap_remove(second);
         mesh.triangles.swap_remove(first);
         mesh.triangles.extend(replacement);
+    }
+}
+
+fn adaptive_edge_divisions(curve: &Curve, segments: usize, is_vertical_pair: bool) -> usize {
+    if is_vertical_pair {
+        return (segments / 2).max(2);
+    }
+    let pts = &curve.control_points;
+    if pts.len() < 3 || pts[0].len() < 3 {
+        return (segments / 2).max(2);
+    }
+    let p0 = [pts[0][0], pts[0][1], pts[0][2]];
+    let pn = {
+        let last = pts.last().unwrap();
+        [last[0], last[1], last[2]]
+    };
+    let dx = pn[0] - p0[0];
+    let dy = pn[1] - p0[1];
+    let dz = pn[2] - p0[2];
+    let chord_sq = dx * dx + dy * dy + dz * dz;
+    let chord = chord_sq.sqrt();
+    if chord <= 1e-9 {
+        return (segments / 2).max(2);
+    }
+    let mut max_sagitta = 0_f64;
+    for p in &pts[1..pts.len() - 1] {
+        let vx = p[0] - p0[0];
+        let vy = p[1] - p0[1];
+        let vz = p[2] - p0[2];
+        let t = ((vx * dx + vy * dy + vz * dz) / chord_sq).clamp(0., 1.);
+        let dist = (vx - t * dx).hypot(vy - t * dy).hypot(vz - t * dz);
+        max_sagitta = max_sagitta.max(dist);
+    }
+    // Rational circular arcs with middle weight w < 1 have control polygon height
+    // h = r * (1/w - 1), while actual arc sagitta is s = r * (1 - w) ≈ w * h.
+    if curve.degree == 2 && curve.weights.len() == 3 && curve.weights[1] > 0. && curve.weights[1] < 1. {
+        max_sagitta *= curve.weights[1];
+    }
+    let ratio = max_sagitta / chord;
+    if ratio < 0.018 {
+        (segments / 2).max(2)
+    } else if ratio < 0.055 {
+        ((segments * 3) / 4).max(3)
+    } else {
+        segments
     }
 }
 

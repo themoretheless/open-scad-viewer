@@ -8,6 +8,60 @@ pub struct SolidAnalysis {
     edges: mesh_topology::edges::SemanticEdges,
 }
 
+#[derive(Clone)]
+struct ZRigidAnalysisTemplate {
+    origin_id: u32,
+    normal_bits: u64,
+    edge_bits: u64,
+    rot_xy: [f64; 4],
+    trans: [f64; 3],
+    mesh: crate::mesh::RenderMesh,
+    edges: mesh_topology::edges::SemanticEdges,
+}
+
+thread_local! {
+    static Z_RIGID_TEMPLATE: std::cell::RefCell<Option<ZRigidAnalysisTemplate>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+fn transform_render_mesh_from_template(
+    tpl: &ZRigidAnalysisTemplate,
+    target: &crate::mesh::ZRigidProvenance,
+) -> crate::mesh::RenderMesh {
+    // Relative rotation: R_rel = R_target * R_tpl^T
+    let r00 = target.rot_xy[0] * tpl.rot_xy[0] + target.rot_xy[1] * tpl.rot_xy[1];
+    let r01 = target.rot_xy[0] * tpl.rot_xy[2] + target.rot_xy[1] * tpl.rot_xy[3];
+    let r10 = target.rot_xy[2] * tpl.rot_xy[0] + target.rot_xy[3] * tpl.rot_xy[1];
+    let r11 = target.rot_xy[2] * tpl.rot_xy[2] + target.rot_xy[3] * tpl.rot_xy[3];
+    let tx = target.trans[0] - (r00 * tpl.trans[0] + r01 * tpl.trans[1]);
+    let ty = target.trans[1] - (r10 * tpl.trans[0] + r11 * tpl.trans[1]);
+    let tz = target.trans[2] - tpl.trans[2];
+    let mut vertices = Vec::with_capacity(tpl.mesh.vertices.len());
+    for v in tpl.mesh.vertices.chunks_exact(6) {
+        let px = v[0] as f64;
+        let py = v[1] as f64;
+        let pz = v[2] as f64;
+        let nx = v[3] as f64;
+        let ny = v[4] as f64;
+        let nz = v[5];
+        vertices.extend([
+            (r00 * px + r01 * py + tx) as f32,
+            (r10 * px + r11 * py + ty) as f32,
+            (pz + tz) as f32,
+            (r00 * nx + r01 * ny) as f32,
+            (r10 * nx + r11 * ny) as f32,
+            nz,
+        ]);
+    }
+    crate::mesh::RenderMesh {
+        vertices,
+        indices: tpl.mesh.indices.clone(),
+        merge_from: tpl.mesh.merge_from.clone(),
+        merge_to: tpl.mesh.merge_to.clone(),
+        face_ids: tpl.mesh.face_ids.clone(),
+    }
+}
+
 /// Analyze the same f32 display buffers the host publishes, while they are
 /// still in the kernel. Merge pairs preserve the source solid's topology.
 pub fn analyze_solid(
@@ -16,6 +70,33 @@ pub fn analyze_solid(
     edge_cosine: f64,
     leaf_size: usize,
 ) -> crate::Result<SolidAnalysis> {
+    let prov = crate::mesh::solid_z_rigid_provenance(id)?;
+    let normal_bits = normal_cosine.to_bits();
+    let edge_bits = edge_cosine.to_bits();
+    if let Some(target) = prov {
+        let cached = Z_RIGID_TEMPLATE.with(|slot| {
+            slot.borrow()
+                .as_ref()
+                .filter(|tpl| {
+                    tpl.origin_id == target.origin_id
+                        && tpl.normal_bits == normal_bits
+                        && tpl.edge_bits == edge_bits
+                })
+                .map(|tpl| {
+                    (
+                        transform_render_mesh_from_template(tpl, &target),
+                        mesh_topology::edges::SemanticEdges {
+                            indices: tpl.edges.indices.clone(),
+                            diagnostics: tpl.edges.diagnostics.clone(),
+                        },
+                    )
+                })
+        });
+        if let Some((mesh, edges)) = cached {
+            let bvh = mesh_query::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
+            return Ok(SolidAnalysis { mesh, bvh, edges });
+        }
+    }
     let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
     let bvh = mesh_query::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
     let edges = mesh_topology::edges::extract_semantic_edges(
@@ -26,6 +107,22 @@ pub fn analyze_solid(
         false,
         edge_cosine,
     );
+    if let Some(target) = prov {
+        Z_RIGID_TEMPLATE.with(|slot| {
+            *slot.borrow_mut() = Some(ZRigidAnalysisTemplate {
+                origin_id: target.origin_id,
+                normal_bits,
+                edge_bits,
+                rot_xy: target.rot_xy,
+                trans: target.trans,
+                mesh: mesh.clone(),
+                edges: mesh_topology::edges::SemanticEdges {
+                    indices: edges.indices.clone(),
+                    diagnostics: edges.diagnostics.clone(),
+                },
+            });
+        });
+    }
     Ok(SolidAnalysis { mesh, bvh, edges })
 }
 
@@ -65,7 +162,33 @@ pub fn start_solid_analysis(
             .checked_add(1)
             .ok_or_else(|| crate::input("Solid analysis job IDs exhausted"))?;
         crate::mesh::check_analysis_triangle_budget(id, MAX_ANALYSIS_TRIANGLES)?;
-        let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
+        let prov = crate::mesh::solid_z_rigid_provenance(id)?;
+        let normal_bits = normal_cosine.to_bits();
+        let edge_bits = edge_cosine.to_bits();
+        let cached = prov.and_then(|target| {
+            Z_RIGID_TEMPLATE.with(|slot| {
+                slot.borrow()
+                    .as_ref()
+                    .filter(|tpl| {
+                        tpl.origin_id == target.origin_id
+                            && tpl.normal_bits == normal_bits
+                            && tpl.edge_bits == edge_bits
+                    })
+                    .map(|tpl| {
+                        (
+                            transform_render_mesh_from_template(tpl, &target),
+                            mesh_topology::edges::SemanticEdges {
+                                indices: tpl.edges.indices.clone(),
+                                diagnostics: tpl.edges.diagnostics.clone(),
+                            },
+                        )
+                    })
+            })
+        });
+        let (mesh, cached_edges) = match cached {
+            Some((mesh, edges)) => (mesh, Some(edges)),
+            None => (crate::mesh::render_buffers(id, normal_cosine)?, None),
+        };
         jobs.jobs[slot_idx] = Some((
             next,
             Box::pin(async move {
@@ -76,6 +199,9 @@ pub fn start_solid_analysis(
                     leaf_size,
                 )
                 .await;
+                if let Some(edges) = cached_edges {
+                    return SolidAnalysis { mesh, bvh, edges };
+                }
                 // Let the host observe cancellation before entering edge extraction,
                 // which also yields internally. No partial result has been published.
                 let mut yielded = false;
@@ -96,6 +222,22 @@ pub fn start_solid_analysis(
                     edge_cosine,
                 )
                 .await;
+                if let Some(target) = prov {
+                    Z_RIGID_TEMPLATE.with(|slot| {
+                        *slot.borrow_mut() = Some(ZRigidAnalysisTemplate {
+                            origin_id: target.origin_id,
+                            normal_bits,
+                            edge_bits,
+                            rot_xy: target.rot_xy,
+                            trans: target.trans,
+                            mesh: mesh.clone(),
+                            edges: mesh_topology::edges::SemanticEdges {
+                                indices: edges.indices.clone(),
+                                diagnostics: edges.diagnostics.clone(),
+                            },
+                        });
+                    });
+                }
                 SolidAnalysis { mesh, bvh, edges }
             }),
         ));
@@ -623,20 +765,9 @@ mod cooperative_tests {
             };
             assert_eq!(actual.mesh.vertices, expected.mesh.vertices);
             assert_eq!(actual.mesh.indices, expected.mesh.indices);
-            assert_eq!(
-                actual
-                    .bvh
-                    .bounds
-                    .iter()
-                    .map(|x| x.to_bits())
-                    .collect::<Vec<_>>(),
-                expected
-                    .bvh
-                    .bounds
-                    .iter()
-                    .map(|x| x.to_bits())
-                    .collect::<Vec<_>>()
-            );
+            let actual_bits: Vec<_> = actual.bvh.bounds.iter().map(|x| x.to_bits()).collect();
+            let expected_bits: Vec<_> = expected.bvh.bounds.iter().map(|x| x.to_bits()).collect();
+            assert_eq!(actual_bits, expected_bits);
             assert_eq!(actual.bvh.nodes, expected.bvh.nodes);
             assert_eq!(actual.bvh.triangles, expected.bvh.triangles);
             assert_eq!(actual.edges.indices, expected.edges.indices);

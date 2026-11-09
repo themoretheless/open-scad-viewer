@@ -6,9 +6,17 @@ use polygon_core::Mesh;
 use polygon_core::solid::{boolean, modeling, primitives as solid};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{Value, json};
+#[derive(Clone, Copy)]
+pub(crate) struct ZRigidProvenance {
+    pub(crate) origin_id: u32,
+    ///Orthonormal 2x2 XY rotation [r00, r01, r10, r11] with det = +1.
+    pub(crate) rot_xy: [f64; 4],
+    ///Translation [tx, ty, tz] from the root solid's local frame.
+    pub(crate) trans: [f64; 3],
+}
 #[derive(Clone)]
 enum Shape {
-    Solid(Mesh),
+    Solid(Mesh, Option<ZRigidProvenance>),
     Profile(Rings),
 }
 #[derive(Default)]
@@ -28,9 +36,23 @@ fn put(shape: Shape) -> Result<Value> {
             .checked_add(1)
             .ok_or_else(|| input("CAD handle ID exhausted"))?;
         let id = s.next;
+        let shape = match shape {
+            Shape::Solid(m, None) => Shape::Solid(
+                m,
+                Some(ZRigidProvenance {
+                    origin_id: id,
+                    rot_xy: [1., 0., 0., 1.],
+                    trans: [0., 0., 0.],
+                }),
+            ),
+            other => other,
+        };
         s.values.insert(id, Rc::new(shape));
         Ok(json!(id))
     })
+}
+fn put_solid(mesh: Mesh) -> Result<Value> {
+    put(Shape::Solid(mesh, None))
 }
 fn get(id: u32) -> Result<Rc<Shape>> {
     STORE.with(|s| {
@@ -43,7 +65,14 @@ fn get(id: u32) -> Result<Rc<Shape>> {
 }
 fn solid(s: &Shape) -> Result<&Mesh> {
     match s {
-        Shape::Solid(m) => Ok(m),
+        Shape::Solid(m, _) => Ok(m),
+        _ => Err(input("Expected solid")),
+    }
+}
+pub(crate) fn solid_z_rigid_provenance(id: u32) -> Result<Option<ZRigidProvenance>> {
+    let shape = get(id)?;
+    match &*shape {
+        Shape::Solid(_, prov) => Ok(*prov),
         _ => Err(input("Expected solid")),
     }
 }
@@ -128,28 +157,28 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return put(Shape::Profile(modeling::minkowski_profiles(&profiles)?));
     }
     if action == "cube" {
-        return put(Shape::Solid(solid::cube(
+        return put_solid(solid::cube(
             field(&v, "size")?,
             field(&v, "center")?,
-        )?));
+        )?);
     }
     if action == "sphere" {
-        return put(Shape::Solid(solid::sphere(
+        return put_solid(solid::sphere(
             field(&v, "radius")?,
             field(&v, "segments")?,
-        )?));
+        )?);
     }
     if action == "cylinder" {
-        return put(Shape::Solid(solid::cylinder(
+        return put_solid(solid::cylinder(
             field(&v, "height")?,
             field(&v, "bottom")?,
             field(&v, "top")?,
             field(&v, "segments")?,
             field(&v, "center")?,
-        )?));
+        )?);
     }
     if action == "mesh" {
-        return put(Shape::Solid(solid::clean(field(&v, "mesh")?)?));
+        return put_solid(solid::clean(field(&v, "mesh")?)?);
     }
     if action == "square" || action == "circle" {
         let rings = if action == "square" {
@@ -246,7 +275,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         } else {
             combine_solids(&solids, op)?
         };
-        return put(Shape::Solid(m));
+        return put_solid(m);
     }
     if matches!(
         action,
@@ -317,8 +346,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
             let cutter = solid::halfspace(mesh, field(&v, "normal")?, field(&v, "offset")?)?;
             let left = boolean(mesh, &cutter, "intersection")?;
             let right = boolean(mesh, &cutter, "difference")?;
-            let a = put(Shape::Solid(left))?;
-            let b = put(Shape::Solid(right))?;
+            let a = put_solid(left)?;
+            let b = put_solid(right)?;
             Ok(json!([a, b]))
         }
         "decompose" => {
@@ -351,14 +380,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 Some("mirror") => match math_core::affine::reflection(field(&v, "normal")?) {
                     Some(matrix) => matrix,
                     None => {
-                        return put(match &*shape {
-                            Shape::Solid(_) => Shape::Solid(Mesh {
+                        return match &*shape {
+                            Shape::Solid(_, _) => put_solid(Mesh {
                                 positions: vec![],
                                 indices: vec![],
                                 uv: None,
                             }),
-                            Shape::Profile(_) => Shape::Profile(vec![]),
-                        });
+                            Shape::Profile(_) => put(Shape::Profile(vec![])),
+                        };
                     }
                 },
                 None => field(&v, "matrix")?,
@@ -368,9 +397,9 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 return Err(input("Invalid affine matrix"));
             }
             match &*shape {
-                Shape::Solid(s) => {
+                Shape::Solid(s, prov) => {
                     if v["operation"].as_str() == Some("solid_matrix_projective") {
-                        return put(Shape::Solid(s.transform_projective(m)?));
+                        return put_solid(s.transform_projective(m)?);
                     }
                     // The pinned Manifold transform contract consumes only the
                     // affine 3x4 portion and ignores the authored fourth row.
@@ -390,7 +419,34 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     if det < 0. {
                         out.reverse_winding()
                     }
-                    put(Shape::Solid(out))
+                    let is_z_rigid = m[2][0].abs() <= 1e-12
+                        && m[2][1].abs() <= 1e-12
+                        && m[0][2].abs() <= 1e-12
+                        && m[1][2].abs() <= 1e-12
+                        && (m[2][2] - 1.).abs() <= 1e-12
+                        && (m[0][0] * m[0][0] + m[1][0] * m[1][0] - 1.).abs() <= 1e-10
+                        && (m[0][1] * m[0][1] + m[1][1] * m[1][1] - 1.).abs() <= 1e-10
+                        && (m[0][0] * m[0][1] + m[1][0] * m[1][1]).abs() <= 1e-10
+                        && (m[0][0] * m[1][1] - m[0][1] * m[1][0] - 1.).abs() <= 1e-10;
+                    let next_prov = if is_z_rigid {
+                        prov.map(|p| ZRigidProvenance {
+                            origin_id: p.origin_id,
+                            rot_xy: [
+                                m[0][0] * p.rot_xy[0] + m[0][1] * p.rot_xy[2],
+                                m[0][0] * p.rot_xy[1] + m[0][1] * p.rot_xy[3],
+                                m[1][0] * p.rot_xy[0] + m[1][1] * p.rot_xy[2],
+                                m[1][0] * p.rot_xy[1] + m[1][1] * p.rot_xy[3],
+                            ],
+                            trans: [
+                                m[0][0] * p.trans[0] + m[0][1] * p.trans[1] + m[0][3],
+                                m[1][0] * p.trans[0] + m[1][1] * p.trans[1] + m[1][3],
+                                p.trans[2] + m[2][3],
+                            ],
+                        })
+                    } else {
+                        None
+                    };
+                    put(Shape::Solid(out, next_prov))
                 }
                 Shape::Profile(r) => {
                     let mut r = r.clone();
@@ -415,14 +471,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
             v["join"].as_str().unwrap_or("Round"),
             field(&v, "segments")?,
         )?)),
-        "extrude" => put(Shape::Solid(modeling::extrude_rings(
+        "extrude" => put_solid(modeling::extrude_rings(
             profile(&shape)?,
             field(&v, "height")?,
             field(&v, "slices")?,
             field(&v, "twist")?,
             field(&v, "scale")?,
             field(&v, "center")?,
-        )?)),
+        )?),
         "revolve" => {
             let rings = profile(&shape)?;
             let mut m = solid::empty();
@@ -444,7 +500,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     },
                 )?;
             }
-            put(Shape::Solid(m))
+            put_solid(m)
         }
         "project" => put(Shape::Profile(
             mesh_section::project(&solid(&shape)?.view()).map_err(crate::legacy_mesh_error)?,
@@ -455,11 +511,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )),
         "minkowski" => {
             let b = get(field(&v, "other")?)?;
-            put(Shape::Solid(minkowski(solid(&shape)?, solid(&b)?)?))
+            put_solid(minkowski(solid(&shape)?, solid(&b)?)?)
         }
         "polygons" => encode(profile(&shape)?),
         "inspect" => match &*shape {
-            Shape::Solid(m) => {
+            Shape::Solid(m, _) => {
                 let report = m.inspect()?;
                 let mut area = 0.;
                 for t in m.indices.as_chunks::<3>().0 {
@@ -764,6 +820,6 @@ pub(crate) fn import_buffers(stride: usize, vertices: &[f64], indices: &[u32]) -
         indices: indices.iter().map(|&i| i as usize).collect(),
         uv: None,
     };
-    let id = put(Shape::Solid(solid::clean(mesh)?))?;
+    let id = put_solid(solid::clean(mesh)?)?;
     Ok(id.as_u64().unwrap() as u32)
 }

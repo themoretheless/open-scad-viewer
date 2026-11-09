@@ -3,6 +3,7 @@
 use crate::CadMeshBuffer;
 
 /// Stride-6 display vertices, property-vertex merges and authored planar face ids.
+#[derive(Clone)]
 pub struct RenderMesh {
     pub(crate) vertices: Vec<f32>,
     pub(crate) indices: Vec<u32>,
