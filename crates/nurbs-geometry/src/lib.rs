@@ -53,6 +53,7 @@ pub mod bounds;
 pub mod coordinate_frame;
 pub mod geometry;
 pub mod curve;
+pub mod derivatives;
 pub mod surface;
 /// U/V exchange of a surface (formerly `editing::surface_edit::transpose`).
 pub mod surface_transpose;

@@ -12,6 +12,7 @@ pub use nurbs_geometry::bounds;
 pub use nurbs_geometry::coordinate_frame;
 pub use nurbs_geometry::geometry;
 pub use nurbs_geometry::curve;
+pub use nurbs_geometry::derivatives;
 pub use nurbs_geometry::surface;
 pub use nurbs_geometry::surface_transpose;
 pub use nurbs_geometry::vec3_ext;
