@@ -1745,13 +1745,7 @@ function handleShellBinding(path: string, value: unknown) {
     </div>
 
     <div v-if="notice" class="toast" role="status">{{ notice }}</div>
-    <CommandPalette
-      :open="paletteOpen"
-      :commands="visiblePaletteCommands"
-      :restore-focus="!shortcutHelpOpen && !functionReferenceOpen"
-      @close="paletteOpen = false"
-      @execute="executeCommand"
-    />
+    <CommandPalette :open="paletteOpen" :commands="visiblePaletteCommands" :restore-focus="!shortcutHelpOpen && !functionReferenceOpen" @close="paletteOpen = false" @execute="executeCommand" />
     <DirectModeler
       @backend="solidGpuActive = $event"
       :open="directModelerOpen && (!editorOpen || Boolean(groupEdit))"
@@ -1766,38 +1760,11 @@ function handleShellBinding(path: string, value: unknown) {
       @to-mesh="openMeshFromSolid"
       @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }"
     />
-    <MeshModeler
-      :open="meshModelerOpen && !editorOpen"
-      :locale="lang"
-      :seed-document="meshSeedDocument"
-      :palette-request="meshPaletteRequest"
-      @close="meshModelerOpen = false"
-      @export-to-solid="meshToSolid"
-    />
+    <MeshModeler :open="meshModelerOpen && !editorOpen" :locale="lang" :seed-document="meshSeedDocument" :palette-request="meshPaletteRequest" @close="meshModelerOpen = false" @export-to-solid="meshToSolid" />
     <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
-    <ExampleGallery
-      v-if="exampleGalleryOpen"
-      :open="exampleGalleryOpen"
-      :examples="EXAMPLE_CATALOG"
-      :locale="lang"
-      @close="exampleGalleryOpen = false"
-      @select="loadExample"
-      @download-current="saveSource"
-    />
-    <FunctionReference
-      :open="functionReferenceOpen"
-      :locale="lang"
-      :language="isRushFrontend(code) ? 'rush' : 'openscad'"
-      :initial-query="functionReferenceQuery"
-      @close="functionReferenceOpen = false"
-    />
-    <KeyboardShortcuts
-      v-if="shortcutHelpOpen"
-      :open="shortcutHelpOpen"
-      :groups="shortcutHelpGroups"
-      :locale="lang"
-      @close="shortcutHelpOpen = false"
-    />
+    <ExampleGallery v-if="exampleGalleryOpen" :open="exampleGalleryOpen" :examples="EXAMPLE_CATALOG" :locale="lang" @close="exampleGalleryOpen = false" @select="loadExample" @download-current="saveSource" />
+    <FunctionReference :open="functionReferenceOpen" :locale="lang" :language="isRushFrontend(code) ? 'rush' : 'openscad'" :initial-query="functionReferenceQuery" @close="functionReferenceOpen = false" />
+    <KeyboardShortcuts v-if="shortcutHelpOpen" :open="shortcutHelpOpen" :groups="shortcutHelpGroups" :locale="lang" @close="shortcutHelpOpen = false" />
   </div>
 </template>
 

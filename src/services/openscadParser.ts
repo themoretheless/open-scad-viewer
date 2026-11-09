@@ -1072,13 +1072,7 @@ async function parseInternal(
     return {
       meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value,
       ...(exactRecorder ? { exactSolids: { nodes: exactRecorder.recording.nodes, roots: exactRoots } } : {}),
-      timings: {
-        parseMs,
-        bindMs,
-        initializeMs: Math.max(0, initializedAt - parsedAt),
-        evaluateMs: Math.max(0, evaluatedAt - initializedAt),
-        analyzeMs: Math.max(0, analyzedAt - evaluatedAt),
-      },
+      timings: { parseMs, bindMs, initializeMs: Math.max(0, initializedAt - parsedAt), evaluateMs: Math.max(0, evaluatedAt - initializedAt), analyzeMs: Math.max(0, analyzedAt - evaluatedAt) },
     }
   } finally {
     kernelSession.dispose()
@@ -1107,7 +1101,6 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
       }
       const result = await parseInternal(compiled.source, options)
       requireRushGraphChecks(await evaluateRushGraphGeometry(compiled.geometry_assertions, result.meshes, async source => (await parseInternal(source, options)).meshes))
-      // Generated SCAD spans are not spans in the authored compact document.
       for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
       return result
     }
@@ -1119,16 +1112,8 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
 }
 
 /** Compile and evaluate one bounded project snapshot with the independent full profile. */
-export function parseOpenScadProject(
-  project: OpenScadProject,
-  options: ParseOpenScadProjectOptions = {},
-): Promise<ParseResult> {
-  const run = () => parseInternal(
-    project.readEntrypoint().source,
-    { ...options, languageProfile: 'openscad/stable-2021.01' },
-    () => compileOpenScadProject(project),
-    project,
-  )
+export function parseOpenScadProject(project: OpenScadProject, options: ParseOpenScadProjectOptions = {}): Promise<ParseResult> {
+  const run = () => parseInternal(project.readEntrypoint().source, { ...options, languageProfile: 'openscad/stable-2021.01' }, () => compileOpenScadProject(project), project)
   const result = parseQueue.then(run, run)
   parseQueue = result.then(() => undefined, () => undefined)
   return result

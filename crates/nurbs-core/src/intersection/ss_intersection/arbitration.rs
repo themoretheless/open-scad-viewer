@@ -754,18 +754,9 @@ mod tests {
             let first = run().unwrap();
             let second = run().unwrap();
             let (
-                NearDegenerateSsiArbitration::CommonBranch {
-                    intervals: x,
-                    samples: xs,
-                    ..
-                },
-                NearDegenerateSsiArbitration::CommonBranch {
-                    intervals: y,
-                    samples: ys,
-                    ..
-                },
-            ) = (first, second)
-            else {
+                NearDegenerateSsiArbitration::CommonBranch { intervals: x, samples: xs, .. },
+                NearDegenerateSsiArbitration::CommonBranch { intervals: y, samples: ys, .. },
+            ) = (first, second) else {
                 panic!("transverse family lost certification")
             };
             assert_eq!(x, y);

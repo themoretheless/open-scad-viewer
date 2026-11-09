@@ -593,38 +593,21 @@ export class GeometryBuildEngine {
         )
       }
     } catch (error) {
-      if (error instanceof GeometryEngineUnavailableError
-        || error instanceof GeometryCapabilityUnavailableError
-        || error instanceof GeometryLanguageContractError) {
-        this.quarantineProvider(
-          execution.engineClass,
-          'The qualified provider was quarantined after throwing a facade-owned routing error.',
-        )
-        const contractError = new GeometryProviderContractError(
-          'Geometry provider threw a facade-owned routing error',
-        )
+      if (error instanceof GeometryEngineUnavailableError || error instanceof GeometryCapabilityUnavailableError || error instanceof GeometryLanguageContractError) {
+        this.quarantineProvider(execution.engineClass, 'The qualified provider was quarantined after throwing a facade-owned routing error.')
+        const contractError = new GeometryProviderContractError('Geometry provider threw a facade-owned routing error')
         attachGeometryExecutionToError(contractError, runtimeExecution)
         throw contractError
       }
       if (error === null || (typeof error !== 'object' && typeof error !== 'function')) {
-        this.quarantineProvider(
-          execution.engineClass,
-          'The qualified provider was quarantined after rejecting with a non-object error.',
-        )
-        const contractError = new GeometryProviderContractError(
-          'Geometry provider rejected with a non-object error',
-        )
+        this.quarantineProvider(execution.engineClass, 'The qualified provider was quarantined after rejecting with a non-object error.')
+        const contractError = new GeometryProviderContractError('Geometry provider rejected with a non-object error')
         attachGeometryExecutionToError(contractError, runtimeExecution)
         throw contractError
       }
       if (geometryExecutionForError(error) !== undefined) {
-        this.quarantineProvider(
-          execution.engineClass,
-          'The qualified provider was quarantined after reusing an error across executions.',
-        )
-        const contractError = new GeometryProviderContractError(
-          'Geometry provider reused an error object across executions',
-        )
+        this.quarantineProvider(execution.engineClass, 'The qualified provider was quarantined after reusing an error across executions.')
+        const contractError = new GeometryProviderContractError('Geometry provider reused an error object across executions')
         attachGeometryExecutionToError(contractError, runtimeExecution)
         throw contractError
       }
