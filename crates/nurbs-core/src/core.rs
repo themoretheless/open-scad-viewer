@@ -5,6 +5,7 @@ pub mod canonical;
 pub mod coordinate_frame;
 pub mod geometry;
 pub mod curve;
+pub mod derivatives;
 pub mod surface;
 pub(crate) mod vec3_ext;
 pub(crate) mod curve_identity;
