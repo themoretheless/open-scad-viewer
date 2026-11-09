@@ -374,8 +374,8 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       // about 2*detail^2 triangles: keep every gear under the bridge's display
       // budget instead of letting a large ring gear fail at the user's $fn.
       const faces = brepGearFaceCount(spec)
-      let detail = Math.max(1, Math.min(32, Math.round(segments(node, ctx, 64, 16, spec.module * spec.teeth / 2) / 5)))
-      while (detail > 1 && 4 * faces * detail * detail > 88000) detail--
+      let detail = Math.max(1, Math.min(12, Math.round(segments(node, ctx, 64, 16, spec.module * spec.teeth / 2) / 5)))
+      while (detail > 1 && faces * detail * detail > 36000) detail--
       return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.gear(spec, detail)), nextColor(), node, ctx)]
     }
     case 'cylinder': return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)

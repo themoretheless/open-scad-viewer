@@ -100,7 +100,7 @@ function displaySegments(nodes: readonly BrepNode[]): number {
     faces += brepGearFaceCount(gear)
   }
   let segments = DISPLAY_SEGMENTS
-  while (segments > 1 && 4 * faces * segments * segments > TRIANGLE_BUDGET) segments--
+  while (segments > 1 && 2 * faces * segments * segments > TRIANGLE_BUDGET) segments--
   return segments
 }
 

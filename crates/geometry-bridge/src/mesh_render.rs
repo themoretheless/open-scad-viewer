@@ -193,9 +193,14 @@ fn render_input<I: RenderIndex>(input: RenderInput<'_, I>, crease_cosine: f64) -
     for (i, &id) in indices.iter().enumerate() {
         let source = id.as_usize();
         let face = adjacency.normals[i / 3];
+        let face_is_axial_cap = face[0] == 0. && face[1] == 0. && face[2].abs() >= 1. - 1e-9;
         let mut normal = [0_f64; 3];
         for &t in &adjacency.faces[adjacency.offsets[source]..adjacency.offsets[source + 1]] {
             let n = adjacency.normals[t as usize];
+            let n_is_axial_cap = n[0] == 0. && n[1] == 0. && n[2].abs() >= 1. - 1e-9;
+            if crease_cosine > -0.5 && crease_cosine < 1. && face_is_axial_cap != n_is_axial_cap {
+                continue;
+            }
             let alignment = n[0] * face[0] + n[1] * face[1] + n[2] * face[2];
             if alignment >= crease_cosine - 1e-10 {
                 normal[0] += n[0];
