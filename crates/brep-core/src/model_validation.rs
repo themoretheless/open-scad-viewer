@@ -267,10 +267,19 @@ impl Model {
                     }
                 }
                 require(previous == first, "Loop is not closed")?;
-                require(
-                    distance(previous_uv.as_ref().unwrap(), first_uv.as_ref().unwrap()) <= 1e-9,
-                    "UV loop is not closed",
-                )?;
+                let uv_close = distance(previous_uv.as_ref().unwrap(), first_uv.as_ref().unwrap()) <= 1e-9;
+                let periodic_close = if f.surface.periodic_u || f.surface.periodic_v {
+                    let end = previous_uv.as_ref().unwrap();
+                    let start = first_uv.as_ref().unwrap();
+                    let wrapped = nurbs_core::periodic_trim::wrapped_surface_parameters(
+                        &f.surface,
+                        [end[0], end[1]],
+                    )?;
+                    distance(&wrapped, start) <= 1e-9
+                } else {
+                    false
+                };
+                require(uv_close || periodic_close, "UV loop is not closed on its lifted chart")?;
                 let uv = self.loop_uv(l, 8)?;
                 let area = (0..uv.len())
                     .map(|i| {

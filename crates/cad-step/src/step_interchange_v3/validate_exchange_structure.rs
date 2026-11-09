@@ -1,5 +1,37 @@
 use super::*;
 
+fn header_entity_offset(header: &str, name: &str) -> Option<usize> {
+    header.match_indices(name).find_map(|(offset, _)| {
+        if offset > 0 {
+            let previous = header.as_bytes()[offset - 1];
+            if previous.is_ascii_alphanumeric() || previous == b'_' {
+                return None;
+            }
+        }
+        let suffix = &header.as_bytes()[offset + name.len()..];
+        let parentheses = suffix.iter().position(|byte| !byte.is_ascii_whitespace())?;
+        (suffix[parentheses] == b'(').then_some(offset)
+    })
+}
+
+fn has_ap242_schema(schema: &str) -> bool {
+    [
+        "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING",
+        "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF",
+    ]
+    .iter()
+    .any(|name| {
+        schema.match_indices(&format!("'{name}'")).next().is_some()
+            || schema
+                .match_indices(&format!("'{name}"))
+                .any(|(offset, _)| {
+                    schema[offset + name.len() + 1..]
+                        .trim_start()
+                        .starts_with('{')
+                })
+    })
+}
+
 pub(super) fn validate_exchange_structure(text: &str) -> Result<()> {
     let (upper, structural) = part21_views(text);
     for section in ["ISO-10303-21;", "HEADER;", "DATA;", "END-ISO-10303-21;"] {
@@ -52,22 +84,20 @@ pub(super) fn validate_exchange_structure(text: &str) -> Result<()> {
         return Err(refuse("Part 21 sections are duplicated or out of order"));
     }
     let header_text = &structural[header..first_end];
-    if !header_text.contains("FILE_DESCRIPTION(")
-        || !header_text.contains("FILE_NAME(")
-        || !header_text.contains("FILE_SCHEMA(")
-    {
+    let description = header_entity_offset(header_text, "FILE_DESCRIPTION");
+    let name = header_entity_offset(header_text, "FILE_NAME");
+    let schema = header_entity_offset(header_text, "FILE_SCHEMA");
+    if description.is_none() || name.is_none() || schema.is_none() {
         return Err(refuse(
             "HEADER requires FILE_DESCRIPTION, FILE_NAME, and FILE_SCHEMA",
         ));
     }
-    let schema = header_text.find("FILE_SCHEMA(").unwrap() + header;
+    let schema = schema.unwrap() + header;
     let schema_end = structural[schema..first_end]
         .find(';')
         .map(|offset| schema + offset)
         .unwrap_or(first_end);
-    if !upper[schema..schema_end].contains("'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'")
-        && !upper[schema..schema_end].contains("'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF'")
-    {
+    if !has_ap242_schema(&upper[schema..schema_end]) {
         return Err(refuse(
             "Direct retained B-rep requires declared AP242 schema",
         ));
@@ -87,7 +117,11 @@ pub(super) fn data_payload(text: &str) -> Result<&str> {
     Ok(&text[start..end])
 }
 
-pub(super) fn rigid_frame(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Result<[[f64; 4]; 4]> {
+pub(super) fn rigid_frame(
+    entities: &BTreeMap<usize, Entity>,
+    id: usize,
+    scale: f64,
+) -> Result<[[f64; 4]; 4]> {
     let (o, x, y) = axis2(entities, id, 3, scale)?;
     let z = [
         x[1] * y[2] - x[2] * y[1],

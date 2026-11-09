@@ -24,6 +24,21 @@ pub(super) fn relationship_components(
     entities: &BTreeMap<usize, Entity>,
     id: usize,
 ) -> Result<Option<(usize, usize, usize)>> {
+    // AP242 also permits a plain representation relationship. It carries no
+    // placement operator and therefore means identity, not a missing transform.
+    if let Some(entity) = entities.get(&id)
+        && let Value::Call(name, args) = &entity.value
+        && name == "SHAPE_REPRESENTATION_RELATIONSHIP"
+    {
+        if args.len() != 4 {
+            return Err(refuse("Malformed SHAPE_REPRESENTATION_RELATIONSHIP"));
+        }
+        return Ok(Some((
+            one_ref(&args[2], "relationship source representation")?,
+            one_ref(&args[3], "relationship target representation")?,
+            0,
+        )));
+    }
     let parts = components(entities, id)?;
     let Some(base) = component(&parts, "REPRESENTATION_RELATIONSHIP") else {
         return Ok(None);
@@ -161,11 +176,26 @@ pub(super) fn representation_occurrences(
             return Err(refuse("Shape representation argument count mismatch"));
         }
         if ty == "SHAPE_REPRESENTATION" {
-            if !outgoing.contains_key(&rep) {
+            let items = list(&args[1], "assembly placement items")?;
+            let has_direct_body = items.iter().any(|item| {
+                one_ref(item, "assembly item").is_ok_and(|item| {
+                    call(entities, item).is_ok_and(|(ty, _)| {
+                        matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS")
+                    })
+                })
+            });
+            if !outgoing.contains_key(&rep) && !has_direct_body {
                 return Err(refuse("Empty product assembly container"));
             }
-            for item in list(&args[1], "assembly placement items")? {
-                if call(entities, one_ref(item, "assembly item")?)?.0 != "AXIS2_PLACEMENT_3D" {
+            for item in items {
+                if !matches!(
+                    call(entities, one_ref(item, "assembly item")?)?.0,
+                    "AXIS2_PLACEMENT_3D"
+                        | "MANIFOLD_SOLID_BREP"
+                        | "BREP_WITH_VOIDS"
+                        | "MAPPED_ITEM"
+                        | "GEOMETRIC_CURVE_SET"
+                ) {
                     return Err(refuse("Unsupported geometry in product assembly container"));
                 }
             }
@@ -196,14 +226,37 @@ pub(super) fn representation_occurrences(
             })
         }
         if let Some(edges) = outgoing.get(&rep) {
+            let exact_identity_edges = edges
+                .iter()
+                .filter(|(_, child, operator, _)| {
+                    *operator == 0
+                        && call(entities, *child)
+                            .is_ok_and(|(ty, _)| ty == "ADVANCED_BREP_SHAPE_REPRESENTATION")
+                })
+                .count();
+            if exact_identity_edges > 1 {
+                return Err(refuse(
+                    "Ambiguous multiple exact B-rep representation roots",
+                ));
+            }
             for (relationship, child, operator, product_occurrence) in edges {
-                let affine_complex = allow_affine
+                // Plain relationships can also connect PMI, wireframe and other
+                // non-exact views. They remain retained metadata, not B-rep occurrences.
+                if *operator == 0
+                    && call(entities, *child)?.0 != "ADVANCED_BREP_SHAPE_REPRESENTATION"
+                {
+                    continue;
+                }
+                let affine_complex = *operator != 0
+                    && allow_affine
                     && component(
                         &components(entities, *operator)?,
                         "CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM",
                     )
                     .is_some();
-                let edge_matrix = if affine_complex {
+                let edge_matrix = if *operator == 0 {
+                    matrix
+                } else if affine_complex {
                     cartesian_operator_affine(entities, *operator, scale, general_affine)?
                 } else {
                     let (operator_type, operator_args) = call(entities, *operator)?;
@@ -260,6 +313,44 @@ pub(super) fn representation_occurrences(
         }
         active.remove(&rep);
         Ok(())
+    }
+    fn validate_identity_cycles(
+        rep: usize,
+        outgoing: &BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
+        active: &mut BTreeSet<usize>,
+        done: &mut BTreeSet<usize>,
+        depth: usize,
+    ) -> Result<()> {
+        if depth > 32 {
+            return Err(refuse(
+                "Identity representation relationship depth exceeds 32",
+            ));
+        }
+        if done.contains(&rep) {
+            return Ok(());
+        }
+        if !active.insert(rep) {
+            return Err(refuse(
+                "Cycle in identity representation relationship graph",
+            ));
+        }
+        if let Some(edges) = outgoing.get(&rep) {
+            for (_, child, _, _) in edges.iter().filter(|edge| edge.2 == 0) {
+                validate_identity_cycles(*child, outgoing, active, done, depth + 1)?;
+            }
+        }
+        active.remove(&rep);
+        done.insert(rep);
+        Ok(())
+    }
+    for rep in selected {
+        validate_identity_cycles(
+            *rep,
+            &outgoing,
+            &mut BTreeSet::new(),
+            &mut BTreeSet::new(),
+            0,
+        )?;
     }
     let identity = [
         [1., 0., 0., 0.],
@@ -488,12 +579,43 @@ pub(super) fn restore_identity(
 }
 
 pub(super) const UNREACHABLE_ALLOWLIST: &[&str] = &[
+    // AP242 presentation/PMI and auxiliary tessellation remain source-retained
+    // metadata; none of these entities is an exact B-rep root or an LOD promise.
+    "SURFACE_STYLE_PARAMETER_LINE",
+    "SURFACE_STYLE_TRANSPARENT",
+    "TESSELLATED_SHAPE_REPRESENTATION",
+    "CONCENTRICITY_TOLERANCE",
+    "PRODUCT_DEFINITION_CONTEXT_ROLE",
+    "SYMMETRY_TOLERANCE",
+    "ROUNDNESS_TOLERANCE",
+    "CYLINDRICITY_TOLERANCE",
+    "APPLIED_DOCUMENT_REFERENCE",
+    "TOTAL_RUNOUT_TOLERANCE",
+    "OBJECT_ROLE",
+    "LIMITS_AND_FITS",
+    "DOCUMENT_PRODUCT_EQUIVALENCE",
+    "ROLE_ASSOCIATION",
     "APPLICATION_CONTEXT",
+    "APPLICATION_PROTOCOL_DEFINITION",
+    "DEFAULT_MODEL_GEOMETRIC_VIEW",
+    "MODEL_GEOMETRIC_VIEW",
+    "CAMERA_MODEL_D3",
+    "REPRESENTATION_MAP",
+    "PRODUCT_CATEGORY_RELATIONSHIP",
     "PRODUCT",
     "PRODUCT_DEFINITION",
     "PRODUCT_DEFINITION_FORMATION",
     "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE",
     "PRODUCT_RELATED_PRODUCT_CATEGORY",
+    "PRODUCT_CATEGORY",
+    "MECHANICAL_DESIGN_AND_DRAUGHTING_RELATIONSHIP",
+    "MAPPED_ITEM",
+    "REAL_REPRESENTATION_ITEM",
+    "PLANE",
+    "DRAUGHTING_MODEL",
+    "VIEW_VOLUME",
+    "DRAUGHTING_PRE_DEFINED_CURVE_FONT",
+    "DIMENSIONAL_EXPONENTS",
     "PRODUCT_CONTEXT",
     "PRODUCT_DEFINITION_CONTEXT",
     "PRODUCT_DEFINITION_SHAPE",
@@ -513,10 +635,107 @@ pub(super) const UNREACHABLE_ALLOWLIST: &[&str] = &[
     "FILL_AREA_STYLE",
     "FILL_AREA_STYLE_COLOUR",
     "DRAUGHTING_PRE_DEFINED_COLOUR",
+    "CAMERA_MODEL_D3_MULTI_CLIPPING",
     "PROPERTY_DEFINITION",
     "PROPERTY_DEFINITION_REPRESENTATION",
     "DESCRIPTIVE_REPRESENTATION_ITEM",
     "MEASURE_REPRESENTATION_ITEM",
+    "PLANAR_BOX",
+    "INVISIBILITY",
+    "VALUE_REPRESENTATION_ITEM",
+    "CURVE_STYLE",
+    "DRAUGHTING_CALLOUT_RELATIONSHIP",
+    "GENERAL_PROPERTY_ASSOCIATION",
+    "PRESENTATION_STYLE_ASSIGNMENT",
+    "DIMENSIONAL_LOCATION",
+    "SURFACE_PROFILE_TOLERANCE",
+    "LINE",
+    "GENERAL_PROPERTY",
+    "FEATURE_FOR_DATUM_TARGET_RELATIONSHIP",
+    "SHAPE_ASPECT",
+    "PRE_DEFINED_MARKER",
+    "GEOMETRIC_TOLERANCE",
+    "FLATNESS_TOLERANCE",
+    "ANGULARITY_TOLERANCE",
+    "TRIMMED_CURVE",
+    "INTEGER_REPRESENTATION_ITEM",
+    "PLACED_DATUM_TARGET_FEATURE",
+    "ID_ATTRIBUTE",
+    "POINT_STYLE",
+    "ALL_AROUND_SHAPE_ASPECT",
+    "TOLERANCE_ZONE_FORM",
+    "COMPOSITE_CURVE_SEGMENT",
+    "DRAUGHTING_MODEL_ITEM_ASSOCIATION",
+    "GEOMETRIC_CURVE_SET",
+    "GEOMETRIC_TOLERANCE_RELATIONSHIP",
+    "COMPLEX_TRIANGULATED_SURFACE_SET",
+    "DATUM_FEATURE",
+    "ITEM_IDENTIFIED_REPRESENTATION_USAGE",
+    "TOLERANCE_ZONE",
+    "COMPOSITE_CURVE",
+    "ANNOTATION_PLANE",
+    "MEASURE_WITH_UNIT",
+    "CIRCLE",
+    "DATUM_REFERENCE_ELEMENT",
+    "TESSELLATED_CURVE_SET",
+    "VERTEX_POINT",
+    "SHAPE_ASPECT_RELATIONSHIP",
+    "ANGULAR_LOCATION",
+    "PERPENDICULARITY_TOLERANCE",
+    "DATUM_REFERENCE_COMPARTMENT",
+    "PLANE_ANGLE_MEASURE_WITH_UNIT",
+    "OVER_RIDING_STYLED_ITEM",
+    "EDGE_CURVE",
+    "PARALLELISM_TOLERANCE",
+    "TESSELLATED_GEOMETRIC_SET",
+    "COMPOSITE_GROUP_SHAPE_ASPECT",
+    "DATUM",
+    "DATUM_SYSTEM",
+    "CONVERSION_BASED_UNIT",
+    "CHARACTERIZED_ITEM_WITHIN_REPRESENTATION",
+    "COMPOUND_REPRESENTATION_ITEM",
+    "ORIENTED_EDGE",
+    "TESSELLATED_ANNOTATION_OCCURRENCE",
+    "TOLERANCE_VALUE",
+    "DRAUGHTING_MODEL_ITEM_ASSOCIATION_WITH_PLACEHOLDER",
+    "EDGE_LOOP",
+    "DRAUGHTING_CALLOUT",
+    "PLUS_MINUS_TOLERANCE",
+    "SHAPE_DIMENSION_REPRESENTATION",
+    "ANNOTATION_PLACEHOLDER_OCCURRENCE",
+    "FACE_OUTER_BOUND",
+    "ANNOTATION_CURVE_OCCURRENCE",
+    "MEASURE_QUALIFICATION",
+    "GEOMETRIC_ITEM_SPECIFIC_USAGE",
+    "DIMENSIONAL_CHARACTERISTIC_REPRESENTATION",
+    "GEOMETRIC_SET",
+    "ADVANCED_FACE",
+    "POLYLINE",
+    "COMPOSITE_SHAPE_ASPECT",
+    "CYLINDRICAL_SURFACE",
+    "DIMENSIONAL_SIZE",
+    "VALUE_FORMAT_TYPE_QUALIFIER",
+    "OPEN_SHELL",
+    "GEOMETRICALLY_BOUNDED_WIREFRAME_SHAPE_REPRESENTATION",
+    "TYPE_QUALIFIER",
+    "COLOUR",
+    "LENGTH_MEASURE_WITH_UNIT",
+    "B_SPLINE_CURVE_WITH_KNOTS",
+    "PRE_DEFINED_POINT_MARKER_SYMBOL",
+    "CONSTRUCTIVE_GEOMETRY_REPRESENTATION",
+    "CIRCULAR_RUNOUT_TOLERANCE",
+    "MASS_MEASURE_WITH_UNIT",
+    "CONSTRUCTIVE_GEOMETRY_REPRESENTATION_RELATIONSHIP",
+    "PROJECTED_ZONE_DEFINITION",
+    "FACE_BOUND",
+    "SURFACE_STYLE_BOUNDARY",
+    "SURFACE_STYLE_RENDERING_WITH_PROPERTIES",
+    "ANGULAR_SIZE",
+    "STRAIGHTNESS_TOLERANCE",
+    "PRODUCT_DEFINITION_CONTEXT_ASSOCIATION",
+    "MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION",
+    "DATUM_TARGET",
+    "VECTOR",
     "MATERIAL_DESIGNATION",
     "APPLIED_NAME_ASSIGNMENT",
     "APPLIED_DESCRIPTION_TEXT_ASSIGNMENT",

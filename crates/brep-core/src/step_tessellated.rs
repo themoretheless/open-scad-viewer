@@ -221,7 +221,12 @@ fn file_uncertainty(entities: &BTreeMap<usize, Entity>) -> Result<Option<f64>> {
         let Some(value) = args.first() else {
             return Err(refuse("UNCERTAINTY_MEASURE_WITH_UNIT has no value"));
         };
-        let value = number(value, "file uncertainty")?;
+        let value = match value {
+            Value::Call(ty, measure) if ty == "LENGTH_MEASURE" && measure.len() == 1 => {
+                number(&measure[0], "file uncertainty")?
+            }
+            _ => number(value, "file uncertainty")?,
+        };
         if !value.is_finite() || value < 0.0 {
             return Err(refuse("File uncertainty must be finite and nonnegative"));
         }
@@ -687,6 +692,15 @@ mod tests {
         );
         let imported = import_ap242_tessellated_lod0(&ambiguous).unwrap();
         assert!(imported.has_diagnostic(StepTessellatedDiagnosticCode::AmbiguousExactBrepLink));
+    }
+
+    #[test]
+    fn reads_length_measure_file_uncertainty() {
+        let text = triangle_document(
+            "#4=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.01),#5,'distance_accuracy_value','');\n#5=SI_UNIT(.MILLI.,.METRE.);\n",
+        );
+        let imported = import_ap242_tessellated_lod0(&text).unwrap();
+        assert_eq!(imported.lod0_shells[0].declared_tolerance, Some(0.01));
     }
 
     #[test]

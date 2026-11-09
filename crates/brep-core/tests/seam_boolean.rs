@@ -1,4 +1,4 @@
-use brep_core::{Model, face_cut, minkowski3d::curved, operations};
+use brep_core::{face_cut, minkowski3d::curved, operations, Model};
 use nurbs_core::curve::Curve;
 #[path = "support/seam_graph.rs"]
 mod fixture;
@@ -218,4 +218,58 @@ fn a_curved_original_uv_seam_preserves_standard_operation_authority() {
     let refused =
         operations::certify_seam_normalized_boolean(&split.model, &b, "xor", 0).unwrap_err();
     assert_eq!(refused.code, expected.code);
+}
+
+#[test]
+fn bounded_same_parameterization_merge_replays_and_preserves_untouched_identity() {
+    let (mut source, faces) = split();
+    let original = source.clone();
+    let untouched = source
+        .1
+        .faces
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !faces.contains(i))
+        .map(|(_, id)| *id)
+        .collect::<Vec<_>>();
+    let delta = source.tolerance_mm / 10.;
+    for pole in source.faces[faces[1]]
+        .surface
+        .control_points
+        .iter_mut()
+        .flatten()
+    {
+        pole[2] += delta;
+    }
+    let before = source.clone();
+    let result = curved::certify_bounded_same_carrier_merge(&source, &faces, 0).unwrap();
+    assert!(result
+        .certificate()
+        .carriers
+        .iter()
+        .any(|(_, proof)| matches!(
+            proof,
+            curved::BoundedCarrierProof::SameParameterization { max_pole_deviation_mm }
+                if *max_pole_deviation_mm <= source.tolerance_mm
+        )));
+    curved::verify_bounded_same_carrier_merge(&source, result.model(), result.certificate())
+        .unwrap();
+    result.model().validate_continuous(32768).unwrap();
+    assert!(untouched
+        .iter()
+        .all(|id| result.model().1.faces.contains(id)));
+    assert_eq!(source, before);
+    assert_eq!(original.faces.len(), source.faces.len());
+
+    let mut forged = result.certificate().clone();
+    forged.carriers.clear();
+    assert!(curved::verify_bounded_same_carrier_merge(&source, result.model(), &forged).is_err());
+    let mut excessive = source.clone();
+    excessive.faces[faces[1]].surface.control_points[0][0][2] += excessive.tolerance_mm * 2.;
+    assert!(curved::certify_bounded_same_carrier_merge(&excessive, &faces, 0).is_err());
+    assert_eq!(excessive.faces.len(), source.faces.len());
+    let mut nan = source.clone();
+    nan.faces[faces[1]].surface.control_points[0][0][0] = f64::NAN;
+    assert!(curved::certify_bounded_same_carrier_merge(&nan, &faces, 0).is_err());
+    assert_eq!(source, before);
 }

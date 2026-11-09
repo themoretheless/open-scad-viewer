@@ -14,6 +14,7 @@ pub struct SnapReport {
     pub model: Model,
     pub face: usize,
     pub snapped_faces: usize,
+    pub target_kind: &'static str,
     pub analytic_faces_before: usize,
     pub analytic_faces_after: usize,
     /// Maximum sampled distance from the source surface to the boundary-
@@ -183,6 +184,147 @@ fn target_patch(boundary: &BoundaryFit) -> Result<Surface> {
     })
 }
 
+fn cylinder_target(
+    source: &Model,
+    face: usize,
+    tolerance: f64,
+    guard: &mut BudgetGuard,
+) -> Result<(Surface, f64, f64)> {
+    let original = &source.faces[face].surface;
+    let columns = original.control_points.first().map_or(0, Vec::len);
+    if columns < 2
+        || original
+            .control_points
+            .iter()
+            .any(|row| row.len() != columns)
+    {
+        return Err(error(
+            SNAP_UNSUPPORTED,
+            "Cylinder snap requires a rectangular control grid",
+        ));
+    }
+    let mut target = original.clone();
+    let mut max_control_deviation = 0f64;
+    // The two axial boundary rows are exact shared circular arcs. Reconstruct
+    // every interior axial column by homogeneous interpolation of those rows.
+    // This preserves the rational u-arcs and their weights. Scaling Euclidean
+    // poles to a fitted radius is not valid after degree elevation: interior
+    // poles are weighted blends, not independent points at R/w.
+    for row in 0..target.control_points.len() {
+        for column in 1..columns - 1 {
+            guard.tick()?;
+            let s = column as f64 / (columns - 1) as f64;
+            let w0 = original.weights[row][0];
+            let w1 = original.weights[row][columns - 1];
+            let w = (1. - s) * w0 + s * w1;
+            if !w.is_finite() || w.abs() <= 1e-12 {
+                return Err(error(
+                    SNAP_NO_FIT,
+                    "Cylinder fit has a singular homogeneous axial interpolation",
+                ));
+            }
+            let p0 = &original.control_points[row][0];
+            let p1 = &original.control_points[row][columns - 1];
+            let old = &original.control_points[row][column];
+            if p0.len() != 3 || p1.len() != 3 || old.len() != 3 {
+                return Err(error(
+                    SNAP_UNSUPPORTED,
+                    "Cylinder control points must be XYZ",
+                ));
+            }
+            let fitted =
+                std::array::from_fn(|axis| ((1. - s) * w0 * p0[axis] + s * w1 * p1[axis]) / w);
+            max_control_deviation =
+                max_control_deviation.max(dist([old[0], old[1], old[2]], fitted));
+            target.control_points[row][column] = fitted.to_vec();
+            target.weights[row][column] = w;
+        }
+    }
+    if max_control_deviation > tolerance {
+        return Err(error(
+            SNAP_NO_FIT,
+            format!(
+                "Cylinder control-hull deviation {max_control_deviation} exceeds tolerance {tolerance}"
+            ),
+        ));
+    }
+    if columns > 2 {
+        let simple_bezier = target.knots_v[..=target.degree_v]
+            .iter()
+            .all(|k| *k == target.knots_v[target.degree_v])
+            && target.knots_v[columns..]
+                .iter()
+                .all(|k| *k == target.knots_v[columns]);
+        if !simple_bezier {
+            return Err(error(
+                SNAP_UNSUPPORTED,
+                "Only single-span axial cylinder fits can be collapsed",
+            ));
+        }
+        for row in 0..target.control_points.len() {
+            for column in 1..columns - 1 {
+                guard.tick()?;
+                let s = column as f64 / (columns - 1) as f64;
+                let w0 = target.weights[row][0];
+                let w1 = target.weights[row][columns - 1];
+                let expected_w = (1. - s) * w0 + s * w1;
+                let p0 = &target.control_points[row][0];
+                let p1 = &target.control_points[row][columns - 1];
+                let p = &target.control_points[row][column];
+                let w = target.weights[row][column];
+                let scale = w0.abs().max(w1.abs()).max(1.);
+                let coordinate_ok = (0..3).all(|axis| {
+                    let expected = (1. - s) * w0 * p0[axis] + s * w1 * p1[axis];
+                    (w * p[axis] - expected).abs() <= 1e-10 * scale
+                });
+                if (w - expected_w).abs() > 1e-10 * scale || !coordinate_ok {
+                    return Err(error(
+                        SNAP_UNSUPPORTED,
+                        "Cylinder fit is not an exact axial ruling",
+                    ));
+                }
+            }
+        }
+        let domain = [target.knots_v[target.degree_v], target.knots_v[columns]];
+        for row in &mut target.control_points {
+            *row = vec![row[0].clone(), row[columns - 1].clone()];
+        }
+        for row in &mut target.weights {
+            *row = vec![row[0], row[columns - 1]];
+        }
+        target.degree_v = 1;
+        target.knots_v = vec![domain[0], domain[0], domain[1], domain[1]];
+    }
+    target.validate()?;
+    let boundary_face = &source.faces[face];
+    let mut max_boundary_deviation = 0f64;
+    for wire in std::iter::once(boundary_face.outer).chain(boundary_face.holes.iter().copied()) {
+        for coedge in &source.loops[wire].coedges {
+            guard.tick()?;
+            let domain = coedge.pcurve.domain();
+            for sample in 0..=16 {
+                let t = domain[0] + sample as f64 / 16. * (domain[1] - domain[0]);
+                let uv = coedge.pcurve.evaluate(t)?.point;
+                let uv = nurbs_core::periodic_trim::wrapped_surface_parameters(
+                    original,
+                    [uv[0], uv[1]],
+                )?;
+                let a = original.evaluate(uv[0], uv[1])?.point;
+                let b = target.evaluate(uv[0], uv[1])?.point;
+                max_boundary_deviation =
+                    max_boundary_deviation.max(dist([a[0], a[1], a[2]], [b[0], b[1], b[2]]));
+            }
+        }
+    }
+    if max_boundary_deviation > source.tolerance_mm.max(1e-7) {
+        return Err(error(
+            SNAP_UNSUPPORTED,
+            format!("Cylinder snap would move the shared boundary by {max_boundary_deviation}"),
+        ));
+    }
+    Ok((target, max_control_deviation, max_boundary_deviation))
+}
+
 /// Snap one nearly planar freeform face to an exact bilinear plane. The
 /// existing classifier performs the analytic admissibility check; the bounded
 /// min-zone fit starts from least squares over a grid with extra boundary
@@ -208,47 +350,88 @@ pub fn snap_face_to_analytic(
     let mut guard = budget.guard("snap-face-to-analytic");
     guard.check()?;
     let class = classify_surface(&source.faces[face].surface, tolerance, budget)?;
-    match class.class {
-        SurfaceClass::Plane => {}
+    let grid = sample_grid(&source.faces[face].surface, &mut guard)?;
+    let (target, target_kind, max_deviation, max_boundary_deviation) = match class.class {
+        SurfaceClass::Plane => {
+            let boundary = boundary_fit(source, face, &mut guard)?;
+            let mut weighted = grid.clone();
+            for &point in &boundary.points {
+                weighted.extend(std::iter::repeat_n(point, BOUNDARY_WEIGHT));
+            }
+            let zone = min_zone_flatness(&weighted).map_err(|e| {
+                error(
+                    SNAP_UNSUPPORTED,
+                    format!("Boundary-weighted plane fit failed: {}", e.message),
+                )
+            })?;
+            if zone.report.zone_width > 2. * tolerance
+                || 1. - dot(zone.plane_normal, boundary.plane.normal).abs() > 0.05
+            {
+                return Err(error(
+                    SNAP_NO_FIT,
+                    format!(
+                        "Face {face} has no boundary-compatible plane within tolerance {tolerance}"
+                    ),
+                ));
+            }
+            let max_deviation = grid
+                .iter()
+                .map(|&p| (dot(boundary.plane.normal, p) - boundary.plane.offset).abs())
+                .fold(0., f64::max);
+            if max_deviation > tolerance {
+                return Err(error(
+                    SNAP_NO_FIT,
+                    format!(
+                        "Face {face} plane deviation {max_deviation} exceeds tolerance {tolerance}"
+                    ),
+                ));
+            }
+            (
+                target_patch(&boundary)?,
+                "plane",
+                max_deviation,
+                boundary.max_deviation,
+            )
+        }
+        SurfaceClass::Cylinder => {
+            let axis = class
+                .axis
+                .ok_or_else(|| error(SNAP_NO_FIT, "Cylinder fit has no axis"))?;
+            let radius = class
+                .radius
+                .filter(|r| r.is_finite() && *r > 0.)
+                .ok_or_else(|| error(SNAP_NO_FIT, "Cylinder fit has no positive radius"))?;
+            let max_grid_deviation = grid
+                .iter()
+                .map(|&point| {
+                    let delta = sub(point, axis.point);
+                    let radial = sub(delta, mul(axis.direction, dot(delta, axis.direction)));
+                    (norm(radial) - radius).abs()
+                })
+                .fold(0., f64::max);
+            if max_grid_deviation > tolerance {
+                return Err(error(
+                    SNAP_NO_FIT,
+                    format!(
+                        "Face {face} cylinder deviation {max_grid_deviation} exceeds tolerance {tolerance}"
+                    ),
+                ));
+            }
+            let (target, control, boundary) = cylinder_target(source, face, tolerance, &mut guard)?;
+            (
+                target,
+                "cylinder",
+                max_grid_deviation.max(control),
+                boundary,
+            )
+        }
         other => {
             return Err(error(
                 SNAP_NO_FIT,
-                format!("Face {face} fits {other:?}, not Plane within tolerance {tolerance}"),
+                format!("Face {face} fits {other:?}; snap admits only Plane and Cylinder"),
             ));
         }
-    }
-
-    let boundary = boundary_fit(source, face, &mut guard)?;
-    let grid = sample_grid(&source.faces[face].surface, &mut guard)?;
-    let mut weighted = grid.clone();
-    for &point in &boundary.points {
-        weighted.extend(std::iter::repeat_n(point, BOUNDARY_WEIGHT));
-    }
-    let zone = min_zone_flatness(&weighted).map_err(|e| {
-        error(
-            SNAP_UNSUPPORTED,
-            format!("Boundary-weighted plane fit failed: {}", e.message),
-        )
-    })?;
-    if zone.report.zone_width > 2. * tolerance
-        || 1. - dot(zone.plane_normal, boundary.plane.normal).abs() > 0.05
-    {
-        return Err(error(
-            SNAP_NO_FIT,
-            format!("Face {face} has no boundary-compatible plane within tolerance {tolerance}"),
-        ));
-    }
-    let max_deviation = grid
-        .iter()
-        .map(|&p| (dot(boundary.plane.normal, p) - boundary.plane.offset).abs())
-        .fold(0., f64::max);
-    if max_deviation > tolerance {
-        return Err(error(
-            SNAP_NO_FIT,
-            format!("Face {face} plane deviation {max_deviation} exceeds tolerance {tolerance}"),
-        ));
-    }
-    let target = target_patch(&boundary)?;
+    };
     let watertight_before = crate::watertight::inspect(source, WATERTIGHT_CELLS)?;
     if watertight_before.status != Closure::WithinTolerance {
         return Err(error(
@@ -260,8 +443,20 @@ pub fn snap_face_to_analytic(
         ));
     }
     let analytic_faces_before = analytic_face_count(source, budget)?;
-    let replaced = replace_face(source, face, &target, budget)?;
-    let staged = replaced.model;
+    let (staged, audit) = if target_kind == "plane" {
+        let replaced = replace_face(source, face, &target, budget)?;
+        (replaced.model, replaced.audit)
+    } else {
+        let mut staged = source.clone();
+        staged.faces[face].surface = target;
+        let rebuilt = complete_incremental_rebuild(source, staged, &[face], budget)?;
+        let audit = rebuilt
+            .validation
+            .full_audit
+            .clone()
+            .unwrap_or(crate::solid_audit::audit_solid(&rebuilt.model)?);
+        (rebuilt.model, audit)
+    };
     let watertight_after = crate::watertight::inspect(&staged, WATERTIGHT_CELLS)?;
     if watertight_after.status != Closure::WithinTolerance {
         return Err(error(
@@ -278,12 +473,13 @@ pub fn snap_face_to_analytic(
         model: staged,
         face,
         snapped_faces: 1,
+        target_kind,
         analytic_faces_before,
         analytic_faces_after,
         max_deviation_mm: max_deviation,
-        max_boundary_deviation_mm: boundary.max_deviation,
+        max_boundary_deviation_mm: max_boundary_deviation,
         watertight_before: watertight_before.status,
         watertight_after: watertight_after.status,
-        audit: replaced.audit,
+        audit,
     })
 }

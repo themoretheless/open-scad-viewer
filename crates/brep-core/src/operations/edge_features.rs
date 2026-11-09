@@ -207,5 +207,34 @@ pub fn fillet_edges(
     radius: f64,
     segments: usize,
 ) -> Result<Model> {
-    edge_operation(model, edge_ids, radius, Some(segments))
+    fillet_edges_certified(model, edge_ids, radius, segments).map(|(model, _)| model)
+}
+
+/// Faceted fillet with an explicit, conservative arc-deviation hand-off.
+pub fn fillet_edges_certified(
+    model: &Model,
+    edge_ids: &[usize],
+    radius: f64,
+    segments: usize,
+) -> Result<(Model, crate::ModelToleranceHandoff)> {
+    crate::admit_operation_input(cad_predicates::OperationBoundary::Fillet, model.tolerance_mm)?;
+    model.validate()?;
+    let input_mm = model.tolerance_mm;
+    let mut measured_output_mm: f64 = 0.;
+    for &edge_id in edge_ids {
+        let adjacent = edge_faces(model, edge_id)?;
+        let a = face_plane(model, adjacent[0])?;
+        let b = face_plane(model, adjacent[1])?;
+        let alpha = dot(a.normal, b.normal).clamp(-1., 1.).acos();
+        let deviation = radius * ((alpha / (2. * segments as f64)).cos().recip() - 1.);
+        measured_output_mm = measured_output_mm.max(deviation);
+    }
+    let mut result = edge_operation(model, edge_ids, radius, Some(segments))?;
+    let handoff = crate::enforce_model_tolerance_handoff(
+        cad_predicates::OperationBoundary::Fillet,
+        input_mm,
+        measured_output_mm.next_up(),
+        &mut result,
+    )?;
+    Ok((result, handoff))
 }

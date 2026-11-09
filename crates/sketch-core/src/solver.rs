@@ -1,6 +1,6 @@
-use math_core::Result;
-use crate::{Constraint, Sketch, Solution, error, length, subtract};
 use crate::residuals::jacobian_into;
+use crate::{Constraint, Sketch, Solution, error, length, subtract};
+use math_core::Result;
 
 pub(crate) fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64], n: usize) -> bool {
     for i in 0..n {
@@ -9,7 +9,7 @@ pub(crate) fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64],
             .max_by(|&j, &k| a[j * n + i].abs().total_cmp(&a[k * n + i].abs()))
             .unwrap();
         let pivot_base = pivot * n;
-        if a[pivot_base + i].abs() < 1e-18 {
+        if !a[pivot_base + i].is_finite() || a[pivot_base + i].abs() < 1e-18 {
             return false;
         }
         if i != pivot {
@@ -39,6 +39,9 @@ pub(crate) fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64],
             sum += r_val * x_val;
         }
         x[i] = (b[i] - sum) / row[i];
+        if !x[i].is_finite() {
+            return false;
+        }
     }
     true
 }
@@ -94,7 +97,170 @@ pub fn solve(sketch: &Sketch, tolerance: f64) -> Result<Solution> {
     )
 }
 
+/// Observable stage of the bounded solver pipeline.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PipelineStage {
+    pub name: &'static str,
+    pub changes: usize,
+    pub completed: bool,
+}
+
+/// DR plan and stage report for one solve. All nonlinear iteration remains in `solve_prepared`.
+#[derive(Clone, Debug)]
+pub struct SolverPipeline {
+    pub plan: crate::DrPlan,
+    pub stages: Vec<PipelineStage>,
+}
+
 pub fn solve_with_options(sketch: &Sketch, options: SolverOptions) -> Result<Solution> {
+    if !(1..=96).contains(&options.max_iterations) {
+        return Err(error("Invalid solver iteration limit"));
+    }
+    crate::validate_tolerance(options.tolerance)?;
+    // Planning precedes iteration, while legacy solve keeps its original initial guess semantics.
+    crate::plan_dr(sketch, options.tolerance)?;
+    solve_prepared(sketch, options)
+}
+
+pub fn solve_with_pipeline(
+    sketch: &Sketch,
+    options: SolverOptions,
+) -> Result<(Solution, SolverPipeline)> {
+    if !(1..=96).contains(&options.max_iterations) {
+        return Err(error("Invalid solver iteration limit"));
+    }
+    crate::validate_tolerance(options.tolerance)?;
+    let plan = crate::plan_dr(sketch, options.tolerance)?;
+    let mut seeded = sketch.clone();
+    let analytic_changes = analytic_seed(&mut seeded)?;
+    let solution = solve_prepared(&seeded, options)?;
+    let iterations = solution.iterations;
+    let converged = solution.max_residual <= options.tolerance;
+    let rigid_clusters = plan.clusters.iter().filter(|cluster| cluster.rigid).count();
+    Ok((
+        solution,
+        SolverPipeline {
+            plan,
+            stages: vec![
+                PipelineStage {
+                    name: "dr_reduction",
+                    changes: rigid_clusters,
+                    completed: true,
+                },
+                PipelineStage {
+                    name: "local_analytic_closure",
+                    changes: analytic_changes,
+                    completed: true,
+                },
+                PipelineStage {
+                    name: "global_damped_least_squares",
+                    changes: iterations,
+                    completed: converged,
+                },
+            ],
+        },
+    ))
+}
+
+/// Seeds only exact linear facts and circle/circle distance closures; no constraints are changed.
+fn analytic_seed(sketch: &mut Sketch) -> Result<usize> {
+    let mut changes = 0;
+    for constraint in &sketch.constraints {
+        if let Constraint::Fix { point, at } = *constraint
+            && sketch.points[point] != at
+        {
+            sketch.points[point] = at;
+            changes += 1;
+        }
+    }
+    // Coincident propagation is bounded by the point budget.
+    for _ in 0..sketch.points.len() {
+        let mut pass_changes = 0;
+        for constraint in &sketch.constraints {
+            if let Constraint::Coincident { a, b } = *constraint
+                && sketch.points[a] != sketch.points[b]
+            {
+                sketch.points[b] = sketch.points[a];
+                pass_changes += 1;
+            }
+        }
+        changes += pass_changes;
+        if pass_changes == 0 {
+            break;
+        }
+    }
+    let fixed: Vec<Option<[f64; 2]>> = (0..sketch.points.len())
+        .map(|point| {
+            sketch
+                .constraints
+                .iter()
+                .rev()
+                .find_map(|constraint| match *constraint {
+                    Constraint::Fix { point: p, at } if p == point => Some(at),
+                    _ => None,
+                })
+        })
+        .collect();
+    for target in 0..sketch.points.len() {
+        if fixed[target].is_some() {
+            continue;
+        }
+        let distances: Vec<_> = sketch
+            .constraints
+            .iter()
+            .filter_map(|constraint| match *constraint {
+                Constraint::Distance { a, b, value } if a == target && fixed[b].is_some() => {
+                    Some((b, value))
+                }
+                Constraint::Distance { a, b, value } if b == target && fixed[a].is_some() => {
+                    Some((a, value))
+                }
+                _ => None,
+            })
+            .collect();
+        'pairs: for (index, &(a, ra)) in distances.iter().enumerate() {
+            for &(b, rb) in &distances[index + 1..] {
+                let pa = fixed[a].unwrap();
+                let pb = fixed[b].unwrap();
+                let delta = subtract(pb, pa);
+                let d = length(delta);
+                if d <= 1e-12 || d > ra + rb || d < (ra - rb).abs() {
+                    continue;
+                }
+                let along = (ra * ra - rb * rb + d * d) / (2.0 * d);
+                let height_sq = ra * ra - along * along;
+                if height_sq < -1e-9 || !height_sq.is_finite() {
+                    continue;
+                }
+                let height = height_sq.max(0.0).sqrt();
+                let unit = [delta[0] / d, delta[1] / d];
+                let base = [pa[0] + along * unit[0], pa[1] + along * unit[1]];
+                let current = sketch.points[target];
+                let candidates = [
+                    [base[0] - height * unit[1], base[1] + height * unit[0]],
+                    [base[0] + height * unit[1], base[1] - height * unit[0]],
+                ];
+                let candidate = if length(subtract(current, candidates[0]))
+                    <= length(subtract(current, candidates[1]))
+                {
+                    candidates[0]
+                } else {
+                    candidates[1]
+                };
+                if candidate.iter().all(|v| v.is_finite() && v.abs() <= 1e6) {
+                    if sketch.points[target] != candidate {
+                        sketch.points[target] = candidate;
+                        changes += 1;
+                    }
+                    break 'pairs;
+                }
+            }
+        }
+    }
+    Ok(changes)
+}
+
+fn solve_prepared(sketch: &Sketch, options: SolverOptions) -> Result<Solution> {
     let SolverOptions {
         tolerance,
         max_iterations,
@@ -133,16 +299,30 @@ pub fn solve_with_options(sketch: &Sketch, options: SolverOptions) -> Result<Sol
     let mut delta = vec![0.0; n];
     let mut candidate = vec![0.0; n];
 
-    sketch.residual_into(&x, &mut residual);
+    let scale = sketch.characteristic_scale();
+    let scaled_tolerance = tolerance / scale;
+    sketch.residual_into_scaled(&x, &mut residual, scale);
+    if residual.iter().any(|v| !v.is_finite()) {
+        return Err(crate::numerical_error("Non-finite sketch residual"));
+    }
     let mut current_obj: f64 = residual.iter().map(|v| v * v).sum();
+    if !current_obj.is_finite() {
+        return Err(crate::numerical_error("Non-finite sketch objective"));
+    }
 
     for _ in 0..max_iterations {
-        if residual.iter().all(|v| v.abs() <= tolerance) {
+        if residual.iter().all(|v| v.abs() <= scaled_tolerance) {
             break;
         }
         iterations += 1;
         scratch.copy_from_slice(&x);
         jacobian_into(sketch, &row_offsets, &mut scratch, &mut j_flat, n);
+        for value in &mut j_flat {
+            *value /= scale;
+        }
+        if j_flat.iter().any(|v| !v.is_finite()) {
+            return Err(crate::numerical_error("Non-finite sketch Jacobian"));
+        }
         a.fill(0.0);
         b.fill(0.0);
         for k in 0..m {
@@ -163,7 +343,7 @@ pub fn solve_with_options(sketch: &Sketch, options: SolverOptions) -> Result<Sol
             for l in i + 1..n {
                 a[l * n + i] = a[i * n + l];
             }
-            a[i * n + i] += damping;
+            a[i * n + i] += damping / (scale * scale);
         }
         if !solve_linear_in_place(&mut a, &mut b, &mut delta, n) {
             damping *= 10.;
@@ -177,9 +357,9 @@ pub fn solve_with_options(sketch: &Sketch, options: SolverOptions) -> Result<Sol
                 .iter()
                 .all(|r| *r > 1e-9);
         if valid {
-            sketch.residual_into(&candidate, &mut cand_residual);
+            sketch.residual_into_scaled(&candidate, &mut cand_residual, scale);
             let cand_obj: f64 = cand_residual.iter().map(|v| v * v).sum();
-            if cand_obj < current_obj {
+            if cand_obj.is_finite() && cand_obj < current_obj {
                 x.copy_from_slice(&candidate);
                 std::mem::swap(&mut residual, &mut cand_residual);
                 current_obj = cand_obj;
@@ -190,9 +370,21 @@ pub fn solve_with_options(sketch: &Sketch, options: SolverOptions) -> Result<Sol
         damping = (damping * 10.).min(1e12);
     }
     let residuals = sketch.residual(&x);
-    let max = residual.iter().map(|v| v.abs()).fold(0., f64::max);
+    if residuals.iter().flatten().any(|v| !v.is_finite()) {
+        return Err(crate::numerical_error("Non-finite final sketch residual"));
+    }
+    let max = residual.iter().map(|v| v.abs()).fold(0., f64::max) * scale;
+    if !max.is_finite() {
+        return Err(crate::numerical_error("Non-finite final residual norm"));
+    }
     scratch.copy_from_slice(&x);
     jacobian_into(sketch, &row_offsets, &mut scratch, &mut j_flat, n);
+    for value in &mut j_flat {
+        *value /= scale;
+    }
+    if j_flat.iter().any(|v| !v.is_finite()) {
+        return Err(crate::numerical_error("Non-finite final sketch Jacobian"));
+    }
     let dof = n - rank_flat(&mut j_flat, m, n);
     let mut result = sketch.clone();
     for (i, p) in result.points.iter_mut().enumerate() {
@@ -322,6 +514,13 @@ pub fn solve_with_diagnostics_options(
     }
     let mut j_flat = vec![0.0; m * n];
     jacobian_into(solved, &row_offsets, &mut x, &mut j_flat, n);
+    let scale = solved.characteristic_scale();
+    for value in &mut j_flat {
+        *value /= scale;
+    }
+    if j_flat.iter().any(|v| !v.is_finite()) {
+        return Err(crate::numerical_error("Non-finite diagnostics Jacobian"));
+    }
     let mut j_rank_buf = j_flat.clone();
     let jacobian_rank = rank_flat(&mut j_rank_buf, m, n);
     let residual: Vec<_> = solution.residuals.iter().flatten().copied().collect();
@@ -342,7 +541,7 @@ pub fn solve_with_diagnostics_options(
         let mut aug = Vec::with_capacity(m * (n + 1));
         for (row, &r) in j_flat.chunks_exact(n).zip(&residual) {
             aug.extend_from_slice(row);
-            aug.push(r);
+            aug.push(r / scale);
         }
         rank_flat(&mut aug, m, n + 1) > jacobian_rank
     } else {
@@ -391,6 +590,13 @@ pub fn analyze_dof(sketch: &Sketch, tolerance: f64) -> Result<DofAnalysis> {
     }
     let mut j_flat = vec![0.0; m * n];
     jacobian_into(solved, &row_offsets, &mut x, &mut j_flat, n);
+    let scale = solved.characteristic_scale();
+    for value in &mut j_flat {
+        *value /= scale;
+    }
+    if j_flat.iter().any(|v| !v.is_finite()) {
+        return Err(crate::numerical_error("Non-finite DOF Jacobian"));
+    }
 
     // Gaussian elimination with column pivot tracking to identify constrained variables.
     let mut a = j_flat;

@@ -13,9 +13,12 @@ pub const CERTIFIED_MASS_PROPERTIES_CAPABILITY: &str = "certified-mass-propertie
 
 mod certified_cylinder_radius;
 mod certified_mass_properties;
+pub mod draft;
 mod mass_properties;
+mod mechanics;
 #[cfg(test)]
 mod tests;
 pub use certified_cylinder_radius::*;
 pub use certified_mass_properties::*;
 pub use mass_properties::*;
+pub use mechanics::*;

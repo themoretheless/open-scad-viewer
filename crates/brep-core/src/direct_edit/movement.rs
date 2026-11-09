@@ -43,10 +43,7 @@ pub fn move_face(
     let snapshot = ModelSnapshot::new(model.clone())?;
     let source = snapshot.model();
     if face >= source.faces.len() {
-        return Err(error(
-            MOVE_INVALID,
-            format!("Face {face} is out of range"),
-        ));
+        return Err(error(MOVE_INVALID, format!("Face {face} is out of range")));
     }
     for (i, v) in direction.iter().enumerate() {
         if !v.is_finite() {
@@ -158,10 +155,7 @@ pub(super) fn move_face_local(
         let uses: Vec<usize> = aag_edge.uses.iter().map(|u| u.face).collect();
         if uses.contains(&face) {
             for &other in &uses {
-                if other != face
-                    && !driven.contains(&other)
-                    && !absorbing.contains(&other)
-                {
+                if other != face && !driven.contains(&other) && !absorbing.contains(&other) {
                     absorbing.push(other);
                 }
             }
@@ -319,12 +313,12 @@ pub(super) fn move_face_local(
 }
 
 /// One face's canonical (outward-oriented) polygonal boundary.
-struct CanonicalPolygon {
-    boundary: PlanarBoundary,
+pub(crate) struct CanonicalPolygon {
+    pub(crate) boundary: PlanarBoundary,
     /// Signed area vector of the outer ring (canonical orientation).
-    area_vec: [f64; 3],
+    pub(crate) area_vec: [f64; 3],
     /// Canonical outward plane of the face.
-    plane: PlaneEq,
+    pub(crate) plane: PlaneEq,
 }
 
 impl CanonicalPolygon {
@@ -338,7 +332,7 @@ impl CanonicalPolygon {
 /// Boundary of every face in canonical orientation (reversed face uses
 /// flipped), with optional vertex substitution. Faces are indexed as in
 /// `model.faces`; shell order is irrelevant.
-pub(super) fn canonical_polygons(
+pub(crate) fn canonical_polygons(
     model: &Model,
     substitute: &BTreeMap<usize, [f64; 3]>,
     guard: &mut BudgetGuard,
@@ -428,15 +422,25 @@ pub(super) fn same_point_set(a: &[[f64; 3]], b: &[[f64; 3]], tolerance: f64) -> 
 /// (outer, holes) loop sets, shells/bodies by identical face sets. Ambiguous
 /// or changed entities keep their fresh rebuild ids. This is the 871 naming
 /// criterion: ids of faces the move never touched survive the rebuild.
-pub(super) fn restore_unchanged_ids(staged: &mut Model, source: &Model, guard: &mut BudgetGuard) -> Result<()> {
+pub(crate) fn restore_unchanged_ids(
+    staged: &mut Model,
+    source: &Model,
+    guard: &mut BudgetGuard,
+) -> Result<()> {
     // Vertices: exact point equality, unique in both directions.
     let mut source_by_point: BTreeMap<[u64; 3], Vec<usize>> = BTreeMap::new();
     for (i, v) in source.vertices.iter().enumerate() {
-        source_by_point.entry(v.point.map(|x| x.to_bits())).or_default().push(i);
+        source_by_point
+            .entry(v.point.map(|x| x.to_bits()))
+            .or_default()
+            .push(i);
     }
     let mut staged_by_point: BTreeMap<[u64; 3], Vec<usize>> = BTreeMap::new();
     for (i, v) in staged.vertices.iter().enumerate() {
-        staged_by_point.entry(v.point.map(|x| x.to_bits())).or_default().push(i);
+        staged_by_point
+            .entry(v.point.map(|x| x.to_bits()))
+            .or_default()
+            .push(i);
     }
     let mut vertex_map: Vec<Option<usize>> = vec![None; staged.vertices.len()];
     for (key, staged_ids) in &staged_by_point {
@@ -455,10 +459,8 @@ pub(super) fn restore_unchanged_ids(staged: &mut Model, source: &Model, guard: &
     let mut edge_map: Vec<Option<usize>> = vec![None; staged.edges.len()];
     for (i, edge) in staged.edges.iter().enumerate() {
         guard.tick()?;
-        let (Some(a), Some(b)) = (
-            vertex_map[edge.vertices[0]],
-            vertex_map[edge.vertices[1]],
-        ) else {
+        let (Some(a), Some(b)) = (vertex_map[edge.vertices[0]], vertex_map[edge.vertices[1]])
+        else {
             continue;
         };
         let key = [a.min(b), a.max(b)];
@@ -467,7 +469,10 @@ pub(super) fn restore_unchanged_ids(staged: &mut Model, source: &Model, guard: &
             .iter()
             .enumerate()
             .filter(|(_, e)| {
-                let k = [e.vertices[0].min(e.vertices[1]), e.vertices[0].max(e.vertices[1])];
+                let k = [
+                    e.vertices[0].min(e.vertices[1]),
+                    e.vertices[0].max(e.vertices[1]),
+                ];
                 k == key && e.curve == edge.curve && e.degenerate == edge.degenerate
             })
             .map(|(j, _)| j)

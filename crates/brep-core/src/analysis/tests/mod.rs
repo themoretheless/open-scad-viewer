@@ -29,8 +29,7 @@ fn unresolved_tangent_knot_crossing_cannot_report_convergence() {
 }
 #[test]
 fn planar_and_round_solids_match_analytic_mass_properties() {
-    let b =
-        mass_properties(&cuboid([1., 2., 3.], [3., 6., 9.]).unwrap(), 1e-7, 200_000).unwrap();
+    let b = mass_properties(&cuboid([1., 2., 3.], [3., 6., 9.]).unwrap(), 1e-7, 200_000).unwrap();
     near(b.signed_volume_mm3, 48.);
     near(b.surface_area_mm2, 88.);
     assert_eq!(b.centroid, [2., 4., 6.]);
@@ -130,8 +129,7 @@ fn contains(interval: CertifiedInterval, value: f64) {
 
 #[test]
 fn certified_mass_encloses_box_cylinder_tube_and_exact_profile() {
-    let box_mass =
-        certified_mass_properties(&cuboid([1., 2., 3.], [3., 6., 9.]).unwrap()).unwrap();
+    let box_mass = certified_mass_properties(&cuboid([1., 2., 3.], [3., 6., 9.]).unwrap()).unwrap();
     contains(box_mass.volume_mm3, 48.);
     contains(box_mass.surface_area_mm2, 88.);
     assert!(box_mass.audit.ok && box_mass.naming_complete);
@@ -201,8 +199,7 @@ fn certified_successor_encloses_cone_frustum_torus_and_spherical_cavity() {
     contains(torus.inertia_mm5[0][0], 600. * std::f64::consts::PI.powi(2));
 
     let cavity =
-        crate::imprint_pipeline::cavity(&sphere(3.).unwrap(), &sphere(1.).unwrap(), 1e-7)
-            .unwrap();
+        crate::imprint_pipeline::cavity(&sphere(3.).unwrap(), &sphere(1.).unwrap(), 1e-7).unwrap();
     let hollow = certified_mass_properties(&cavity).expect("cavity");
     contains(hollow.volume_mm3, 104. * std::f64::consts::PI / 3.);
     assert_eq!(hollow.component_count, 2);
@@ -259,4 +256,20 @@ fn freeform_mass_encloses_planar_cuboid_and_refuses_bump() {
         certified_freeform_mass_properties(&bump).unwrap_err().code,
         "BREP_CERTIFIED_MASS_REFUSED"
     );
+}
+
+#[test]
+fn mass_properties_include_holes_and_convergence_evidence() {
+    let m = extrude_polygon_with_holes(
+        &[[0., 0.], [4., 0.], [4., 4.], [0., 4.]],
+        &[vec![[1., 1.], [1., 2.], [2., 2.], [2., 1.]]],
+        0.,
+        3.,
+    )
+    .unwrap();
+    assert!(m.faces.iter().any(|face| !face.holes.is_empty()));
+    let report = mass_properties(&m, 1e-8, 200_000).unwrap();
+    near(report.surface_area_mm2, 90.);
+    near(report.signed_volume_mm3, 45.);
+    assert!(report.area_error_estimate_mm2 >= 0. && report.evaluations > 0);
 }

@@ -54,6 +54,8 @@ pub use crate::construct::curves::closed_spline;
 pub use crate::join::continuity;
 pub use crate::construct::surfaces::coons;
 pub use crate::core::curve;
+pub use crate::core::geometry;
+pub use crate::analysis::point_inversion;
 pub use crate::analysis::curve_differential;
 pub use crate::analysis::surface_differential;
 pub use crate::analysis::curve_measure;

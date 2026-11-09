@@ -4,7 +4,17 @@ use nurbs_core::curve::Curve;
 use nurbs_core::foundation::project_curve_report;
 use nurbs_core::surface::{Surface, SurfaceSampler};
 
-/// Outcome of one successful face replacement.
+/// Proof that one re-authored edge and its target pcurve describe the same
+/// geometry. Exact identities report their actual predicate work; bounded
+/// certificates report the number of verified agreement cells.
+#[derive(Clone, Debug)]
+pub struct EdgeCorrespondenceCertificate {
+    pub edge: usize,
+    pub exact: bool,
+    pub agreement_cells: usize,
+    pub max_residual_mm: f64,
+}
+
 #[derive(Clone, Debug)]
 pub struct ReplaceFaceReport {
     /// The staged, validated and audited result model.
@@ -25,6 +35,9 @@ pub struct ReplaceFaceReport {
     pub dirty_faces: usize,
     /// Faces whose surface or pcurves actually changed; all others are reused.
     pub rebuilt_faces: usize,
+    pub reused_faces: usize,
+    /// Complete curve/pcurve correspondence for every replaced-face edge.
+    pub correspondences: Vec<EdgeCorrespondenceCertificate>,
     /// Max sampled |surface(pcurve(t)) − edge(t)| residual over the
     /// re-authored target-face coedges (authoring evidence, independently
     /// enforced by `Model::validate`).
@@ -100,8 +113,10 @@ impl PlaneFrame {
         ]
     }
     fn in_domain(&self, uv: [f64; 2], eps: f64) -> bool {
-        uv[0] >= self.domain_u[0] - eps && uv[0] <= self.domain_u[1] + eps
-            && uv[1] >= self.domain_v[0] - eps && uv[1] <= self.domain_v[1] + eps
+        uv[0] >= self.domain_u[0] - eps
+            && uv[0] <= self.domain_u[1] + eps
+            && uv[1] >= self.domain_v[0] - eps
+            && uv[1] <= self.domain_v[1] + eps
     }
 }
 
@@ -244,7 +259,6 @@ enum TargetGeom {
 
 struct CylinderTarget {
     axis: Axis,
-    #[allow(dead_code)]
     radius: f64,
     /// Axial coordinate of the two v rows of the target patch.
     axial: [f64; 2],
@@ -260,8 +274,10 @@ impl CylinderTarget {
                 * (self.domain_v[1] - self.domain_v[0])
     }
     fn in_domain(&self, uv: [f64; 2], eps: f64) -> bool {
-        uv[0] >= self.domain_u[0] - eps && uv[0] <= self.domain_u[1] + eps
-            && uv[1] >= self.domain_v[0] - eps && uv[1] <= self.domain_v[1] + eps
+        uv[0] >= self.domain_u[0] - eps
+            && uv[0] <= self.domain_u[1] + eps
+            && uv[1] >= self.domain_v[0] - eps
+            && uv[1] <= self.domain_v[1] + eps
     }
     /// Exact UV of a point on the cylinder, with an out-of-domain residual
     /// check (the nearest-candidate clamp must never smuggle an outside
@@ -275,16 +291,85 @@ impl CylinderTarget {
         if dist([q[0], q[1], q[2]], p) > linear {
             return Err(error(
                 REPLACE_OUT_OF_DOMAIN,
-                format!("Projection residual {} leaves the target patch (uv {uv:?}, point {p:?}, projected {q:?})", dist([q[0], q[1], q[2]], p)),
+                format!(
+                    "Projection residual {} leaves the target patch (uv {uv:?}, point {p:?}, projected {q:?})",
+                    dist([q[0], q[1], q[2]], p)
+                ),
             ));
         }
         Ok(uv)
     }
 }
 
+fn cylinder_target(
+    surface: &Surface,
+    class: &crate::analysis::surface_classify::SurfaceClassification,
+) -> Result<CylinderTarget> {
+    if surface.degree_v != 1
+        || surface.control_points.first().map_or(0, Vec::len) != 2
+        || surface
+            .control_points
+            .iter()
+            .flatten()
+            .any(|p| p.len() != 3)
+    {
+        return Err(error(
+            REPLACE_UNSUPPORTED,
+            "Cylinder target must have two degree-1 axial control-point rows",
+        ));
+    }
+    let axis = class.axis.ok_or_else(|| {
+        error(
+            REPLACE_UNSUPPORTED,
+            "Cylinder classification has no fitted axis",
+        )
+    })?;
+    let radius = class
+        .radius
+        .filter(|r| r.is_finite() && *r > 0.)
+        .ok_or_else(|| {
+            error(
+                REPLACE_UNSUPPORTED,
+                "Cylinder classification has no positive radius",
+            )
+        })?;
+    let axial = [0, 1].map(|column| {
+        let (weighted, weight) = surface.control_points.iter().enumerate().fold(
+            (0., 0.),
+            |(weighted, weight), (row, points)| {
+                let w = surface.weights[row][column];
+                let p = &points[column];
+                (
+                    weighted + dot([p[0], p[1], p[2]], axis.direction) * w,
+                    weight + w,
+                )
+            },
+        );
+        weighted / weight - dot(axis.point, axis.direction)
+    });
+    if axial.iter().any(|z| !z.is_finite()) || (axial[1] - axial[0]).abs() <= 1e-12 {
+        return Err(error(
+            REPLACE_UNSUPPORTED,
+            "Cylinder target has a degenerate axial span",
+        ));
+    }
+    Ok(CylinderTarget {
+        axis,
+        radius,
+        axial,
+        domain_u: knot_domain(&surface.knots_u, surface.degree_u),
+        domain_v: knot_domain(&surface.knots_v, surface.degree_v),
+    })
+}
+
 /// Line ∩ infinite cylinder; both roots, nearest-to-old selection happens
 /// at the call site (branch by proximity to the old geometry).
-fn line_cylinder(axis: &Axis, radius: f64, lp: [f64; 3], ld: [f64; 3]) -> Option<([f64; 3], [f64; 3])> {
+fn line_cylinder(
+    axis: &Axis,
+    radius: f64,
+    lp: [f64; 3],
+    ld: [f64; 3],
+) -> Option<([f64; 3], [f64; 3])> {
     let k = axis.direction;
     let d = sub(lp, axis.point);
     let d_perp = sub(d, mul(k, dot(d, k)));
@@ -295,9 +380,16 @@ fn line_cylinder(axis: &Axis, radius: f64, lp: [f64; 3], ld: [f64; 3]) -> Option
     }
     let b = 2. * dot(d_perp, l_perp);
     let c = dot(d_perp, d_perp) - radius * radius;
-    let disc = b * b - 4. * a * c;
-    if disc < 0. {
+    let mut disc = b * b - 4. * a * c;
+    // A tangent can acquire a few negative ulps from the independently fitted
+    // radius. Clamp only that rounding-scale band; a genuine miss still fails.
+    let rounding =
+        (64. * f64::EPSILON * (b * b + (4. * a * c).abs()).max(1.)).max(4. * a * radius * 1e-10);
+    if disc < -rounding {
         return None;
+    }
+    if disc < 0. {
+        disc = 0.;
     }
     let root = disc.sqrt();
     let t0 = (-b - root) / (2. * a);
@@ -317,7 +409,10 @@ pub fn replace_face(
     let snapshot = ModelSnapshot::new(model.clone())?;
     let source = snapshot.model();
     if face >= source.faces.len() {
-        return Err(error(REPLACE_INVALID, format!("Face {face} is out of range")));
+        return Err(error(
+            REPLACE_INVALID,
+            format!("Face {face} is out of range"),
+        ));
     }
     target.validate()?;
     let linear = source.tolerance_mm * 8.;
@@ -329,10 +424,16 @@ pub fn replace_face(
         source.tolerance_mm.max(1e-7),
         budget,
     )?;
-    if !matches!(source_class.class, SurfaceClass::Plane | SurfaceClass::Freeform) {
+    if !matches!(
+        source_class.class,
+        SurfaceClass::Plane | SurfaceClass::Freeform
+    ) {
         return Err(error(
             REPLACE_UNSUPPORTED,
-            format!("Face {face} is {:?}; replace-face/1 accepts planar source faces and freeform source faces", source_class.class),
+            format!(
+                "Face {face} is {:?}; replace-face/1 accepts planar source faces and freeform source faces",
+                source_class.class
+            ),
         ));
     }
     let class = classify_surface(target, source.tolerance_mm.max(1e-7), budget)?;
@@ -346,12 +447,7 @@ pub fn replace_face(
             })?;
             TargetGeom::Plane(frame)
         }
-        SurfaceClass::Cylinder => {
-            return Err(error(
-                REPLACE_UNSUPPORTED,
-                "Cylinder targets are deferred: replace-face/1 currently accepts only bilinear plane targets",
-            ));
-        }
+        SurfaceClass::Cylinder => TargetGeom::Cylinder(cylinder_target(target, &class)?),
         other => {
             return Err(error(
                 REPLACE_UNSUPPORTED,
@@ -375,7 +471,10 @@ pub fn replace_face(
         }
     }
     let mut planes: BTreeMap<usize, PlaneEq> = BTreeMap::new();
-    let mut plane_of = |m: &Model, f: usize, planes: &mut BTreeMap<usize, PlaneEq>| -> Result<PlaneEq> {
+    let mut plane_of = |m: &Model,
+                        f: usize,
+                        planes: &mut BTreeMap<usize, PlaneEq>|
+     -> Result<PlaneEq> {
         if let Some(p) = planes.get(&f) {
             return Ok(*p);
         }
@@ -392,11 +491,18 @@ pub fn replace_face(
     let mut frames: BTreeMap<usize, PlaneFrame> = BTreeMap::new();
     for &e in &face_edges {
         guard.tick()?;
-        let others: Vec<usize> = adjacency[e].iter().copied().filter(|&f| f != face).collect();
+        let others: Vec<usize> = adjacency[e]
+            .iter()
+            .copied()
+            .filter(|&f| f != face)
+            .collect();
         if others.len() != 1 {
             return Err(error(
                 REPLACE_UNSUPPORTED,
-                format!("Edge {e} has {} neighboring faces; exactly one is supported", others.len()),
+                format!(
+                    "Edge {e} has {} neighboring faces; exactly one is supported",
+                    others.len()
+                ),
             ));
         }
         let n = others[0];
@@ -407,7 +513,9 @@ pub fn replace_face(
         } else {
             return Err(error(
                 REPLACE_UNSUPPORTED,
-                format!("Neighbor face {n} is not a bilinear planar patch; pcurve re-map is out of scope"),
+                format!(
+                    "Neighbor face {n} is not a bilinear planar patch; pcurve re-map is out of scope"
+                ),
             ));
         }
     }
@@ -417,11 +525,18 @@ pub fn replace_face(
     let mut substitute: BTreeMap<usize, [f64; 3]> = BTreeMap::new();
     for &v in &face_vertices {
         guard.tick()?;
-        let non: Vec<usize> = incidence[v].iter().copied().filter(|&f| f != face).collect();
+        let non: Vec<usize> = incidence[v]
+            .iter()
+            .copied()
+            .filter(|&f| f != face)
+            .collect();
         if non.len() != 2 {
             return Err(error(
                 REPLACE_UNSUPPORTED,
-                format!("Vertex {v} touches {} other faces; exactly two are supported", non.len()),
+                format!(
+                    "Vertex {v} touches {} other faces; exactly two are supported",
+                    non.len()
+                ),
             ));
         }
         let p1 = plane_of(source, non[0], &mut planes)?;
@@ -482,7 +597,10 @@ pub fn replace_face(
         }
         let at = |i: usize| {
             let v = edge.vertices[i];
-            substitute.get(&v).copied().unwrap_or(source.vertices[v].point)
+            substitute
+                .get(&v)
+                .copied()
+                .unwrap_or(source.vertices[v].point)
         };
         let (a, b) = (at(0), at(1));
         let curve = if face_edges.contains(&e) {
@@ -536,7 +654,9 @@ pub fn replace_face(
             if edge.curve.degree != 1 {
                 return Err(error(
                     REPLACE_UNSUPPORTED,
-                    format!("Edge {e} is a curved slide edge; only straight slide edges are supported"),
+                    format!(
+                        "Edge {e} is a curved slide edge; only straight slide edges are supported"
+                    ),
                 ));
             }
             crate::line(a.to_vec(), b.to_vec())
@@ -557,76 +677,52 @@ pub fn replace_face(
     // Pcurves on the target and on the planar neighbors; out-of-domain
     // projections fail with the edge id before any validation attempt.
     let mut recomputed_pcurves = 0usize;
+    let mut correspondences = Vec::new();
     let mut max_residual = 0f64;
     let target_sampler = SurfaceSampler::new(target)?;
     for (f, mface) in source.faces.iter().enumerate() {
         for &ring in std::iter::once(&mface.outer).chain(&mface.holes) {
             for ci in 0..source.loops[ring].coedges.len() {
                 let coedge = source.loops[ring].coedges[ci].clone();
-                if !affected.contains(&coedge.edge) {
-                    continue;
-                }
+                if !affected.contains(&coedge.edge) { continue; }
                 guard.tick()?;
                 let e = coedge.edge;
                 let mut curve = new_curves[&e].clone();
-                if coedge.reversed {
-                    curve = curve.reverse()?;
-                }
+                if coedge.reversed { curve = curve.reverse()?; }
                 let domain = curve.domain();
                 let pcurve = if f == face {
                     match &geom {
                         TargetGeom::Plane(frame) => {
-                            let mut mapped = curve_to_uv(
-                                &curve, frame.origin, frame.u, frame.v, frame.len_u, frame.len_v,
-                            )?;
+                            let mut mapped = curve_to_uv(&curve, frame.origin, frame.u, frame.v, frame.len_u, frame.len_v)?;
                             for p in &mut mapped.control_points {
                                 let uv = frame.scale_uv([p[0], p[1]]);
                                 if !frame.in_domain(uv, 1e-7) {
-                                    return Err(error(
-                                        REPLACE_OUT_OF_DOMAIN,
-                                        format!("Edge {e} projection leaves the target plane patch domain (uv {uv:?})"),
-                                    ));
+                                    return Err(error(REPLACE_OUT_OF_DOMAIN, format!("Edge {e} projection leaves the target plane patch domain (uv {uv:?})")));
                                 }
-                                *p = uv.to_vec();
+                                *p = [uv[0].clamp(frame.domain_u[0], frame.domain_u[1]), uv[1].clamp(frame.domain_v[0], frame.domain_v[1])].to_vec();
                             }
                             mapped
                         }
                         TargetGeom::Cylinder(cyl) => {
-                            let p0 = curve.evaluate(domain[0])?.point;
-                            let p1 = curve.evaluate(domain[1])?.point;
-                            let uv0 = cyl.uv(target, [p0[0], p0[1], p0[2]], linear).map_err(|projection| {
-                                error(
-                                    REPLACE_OUT_OF_DOMAIN,
-                                    format!("Edge {e} projection leaves the target cylinder patch domain: {}", projection.message),
-                                )
-                            })?;
-                            let uv1 = cyl.uv(target, [p1[0], p1[1], p1[2]], linear).map_err(|projection| {
-                                error(
-                                    REPLACE_OUT_OF_DOMAIN,
-                                    format!("Edge {e} projection leaves the target cylinder patch domain: {}", projection.message),
-                                )
-                            })?;
+                            let (p0, p1) = (curve.evaluate(domain[0])?.point, curve.evaluate(domain[1])?.point);
+                            let uv0 = cyl.uv(target, [p0[0], p0[1], p0[2]], linear).map_err(|pr| error(REPLACE_OUT_OF_DOMAIN, format!("Edge {e} projection leaves the target cylinder patch domain: {}", pr.message)))?;
+                            let uv1 = cyl.uv(target, [p1[0], p1[1], p1[2]], linear).map_err(|pr| error(REPLACE_OUT_OF_DOMAIN, format!("Edge {e} projection leaves the target cylinder patch domain: {}", pr.message)))?;
                             if !cyl.in_domain(uv0, 1e-7) || !cyl.in_domain(uv1, 1e-7) {
-                                return Err(error(
-                                    REPLACE_OUT_OF_DOMAIN,
-                                    format!("Edge {e} projection leaves the target cylinder patch domain (uv {uv0:?}..{uv1:?})"),
-                                ));
+                                return Err(error(REPLACE_OUT_OF_DOMAIN, format!("Edge {e} projection leaves the target cylinder patch domain (uv {uv0:?}..{uv1:?})")));
                             }
-                            uv_line(uv0, uv1, domain)
+                            let clamp = |uv: [f64; 2]| [uv[0].clamp(cyl.domain_u[0], cyl.domain_u[1]), uv[1].clamp(cyl.domain_v[0], cyl.domain_v[1])];
+                            uv_line(clamp(uv0), clamp(uv1), domain)
                         }
                     }
                 } else {
-                    let frame = frames.get(&f).ok_or_else(|| {
-                        error(
-                            REPLACE_UNSUPPORTED,
-                            format!("Face {f} shares a moved edge but has no bilinear UV frame"),
-                        )
-                    })?;
-                    let mut mapped = curve_to_uv(
-                        &curve, frame.origin, frame.u, frame.v, frame.len_u, frame.len_v,
-                    )?;
+                    let frame = frames.get(&f).ok_or_else(|| error(REPLACE_UNSUPPORTED, format!("Face {f} shares a moved edge but has no bilinear UV frame")))?;
+                    let mut mapped = curve_to_uv(&curve, frame.origin, frame.u, frame.v, frame.len_u, frame.len_v)?;
                     for p in &mut mapped.control_points {
-                        *p = frame.scale_uv([p[0], p[1]]).to_vec();
+                        let uv = frame.scale_uv([p[0], p[1]]);
+                        if !frame.in_domain(uv, 1e-7) {
+                            return Err(error(REPLACE_OUT_OF_DOMAIN, format!("Edge {e} projection leaves neighbor face {f} patch domain (uv {uv:?})")));
+                        }
+                        *p = [uv[0].clamp(frame.domain_u[0], frame.domain_u[1]), uv[1].clamp(frame.domain_v[0], frame.domain_v[1])].to_vec();
                     }
                     mapped
                 };
@@ -635,20 +731,31 @@ pub fn replace_face(
                 *edited = brep_topology::Coedge::new(edited.edge, edited.reversed, pcurve.clone());
                 recomputed_pcurves += 1;
                 if f == face {
+                    let exact = nurbs_core::curve_surface_agreement::verify_exact(&staged.edges[e].curve, &pcurve, target, coedge.reversed, 100_000)?;
+                    let exact_equal = exact.as_ref().is_some_and(|d| matches!(d.outcome, cad_predicates::BezierIdentity::Equal));
+                    let (is_exact, cells) = if exact_equal {
+                        (true, exact.as_ref().map_or(0, |d| d.work_used as usize))
+                    } else {
+                        let agreement = nurbs_core::curve_surface_agreement::verify(&staged.edges[e].curve, &pcurve, target, coedge.reversed, linear, 4096)?;
+                        if agreement.status != nurbs_core::curve_surface_agreement::Status::WithinTolerance {
+                            return Err(error(REPLACE_UNSUPPORTED, format!("Edge {e} has no certified curve/pcurve correspondence ({:?}, witness {:?})", agreement.status, agreement.witness)));
+                        }
+                        (false, agreement.cells)
+                    };
+                    correspondences.push(EdgeCorrespondenceCertificate { edge: e, exact: is_exact, agreement_cells: cells, max_residual_mm: 0. });
+                    let mut edge_residual = 0f64;
                     for i in 0..=8 {
                         let frac = i as f64 / 8.;
                         let t = domain[0] + frac * (domain[1] - domain[0]);
                         let uv = pcurve.evaluate(t)?.point;
                         let sp = target_sampler.evaluate(uv[0], uv[1])?.point;
-                        let te = domain[0]
-                            + if coedge.reversed { 1. - frac } else { frac }
-                                * (domain[1] - domain[0]);
+                        let te = domain[0] + (if coedge.reversed { 1. - frac } else { frac }) * (domain[1] - domain[0]);
                         let q = staged.edges[e].curve.evaluate(te)?.point;
-                        max_residual = max_residual.max(dist(
-                            [sp[0], sp[1], sp[2]],
-                            [q[0], q[1], q[2]],
-                        ));
+                        let residual = dist([sp[0], sp[1], sp[2]], [q[0], q[1], q[2]]);
+                        edge_residual = edge_residual.max(residual);
+                        max_residual = max_residual.max(residual);
                     }
+                    correspondences.last_mut().expect("certificate just inserted").max_residual_mm = edge_residual;
                 }
             }
         }
@@ -656,28 +763,16 @@ pub fn replace_face(
 
     staged.validate()?;
     let audit = crate::solid_audit::audit_solid(&staged)?;
-    let volume_before = volume_of(source)?;
-    let volume_after = volume_of(&staged)?;
-    let dirty_faces = dirty_region_for_result(source, &staged, &[face], budget)?.len();
-    validate_staged(source, &staged, &[face], budget)?;
-    let rebuilt_faces = rebuilt_faces_in_place(source, &staged);
+    let (volume_before, volume_after) = (volume_of(source)?, volume_of(&staged)?);
+    let incremental = complete_incremental_rebuild(source, staged, &[face], budget)?;
+    let (dirty_faces, rebuilt_faces, reused_faces) = (incremental.dirty.len(), incremental.rebuilt_faces, incremental.reused_faces);
     guard.check()?;
     Ok(ReplaceFaceReport {
-        model: staged,
-        face,
-        target_kind: match &geom {
-            TargetGeom::Plane(_) => "plane",
-            TargetGeom::Cylinder(_) => "cylinder",
-        },
-        retrimmed_vertices: substitute.len(),
-        reauthored_edges: new_curves.len(),
-        recomputed_pcurves,
-        dirty_faces,
-        rebuilt_faces,
-        max_surface_residual_mm: max_residual,
-        volume_before_mm3: volume_before,
-        volume_after_mm3: volume_after,
-        delta_volume_actual_mm3: volume_after - volume_before,
-        audit,
+        model: incremental.model, face,
+        target_kind: match &geom { TargetGeom::Plane(_) => "plane", TargetGeom::Cylinder(_) => "cylinder" },
+        retrimmed_vertices: substitute.len(), reauthored_edges: new_curves.len(), recomputed_pcurves,
+        dirty_faces, rebuilt_faces, reused_faces, correspondences, max_surface_residual_mm: max_residual,
+        volume_before_mm3: volume_before, volume_after_mm3: volume_after,
+        delta_volume_actual_mm3: volume_after - volume_before, audit,
     })
 }

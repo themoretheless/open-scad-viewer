@@ -1,5 +1,160 @@
 use super::*;
 
+fn direct_circle_arc(
+    origin: &[f64],
+    x: &[f64],
+    y: &[f64],
+    radius: f64,
+    start: f64,
+    mut end: f64,
+) -> Result<Curve> {
+    if !radius.is_finite() || radius <= 0. {
+        return Err(refuse("AP242 direct CIRCLE radius must be positive"));
+    }
+    while end <= start {
+        end += std::f64::consts::TAU;
+    }
+    if end - start > std::f64::consts::TAU + 1e-10 {
+        return Err(refuse("AP242 direct CIRCLE sweep exceeds one revolution"));
+    }
+    let pieces = ((end - start) / std::f64::consts::FRAC_PI_2).ceil().max(1.) as usize;
+    let mut control_points = Vec::new();
+    let mut weights = Vec::new();
+    let mut knots = vec![0., 0., 0.];
+    for piece in 0..pieces {
+        let a = start + (end - start) * piece as f64 / pieces as f64;
+        let b = start + (end - start) * (piece + 1) as f64 / pieces as f64;
+        let middle = (a + b) / 2.;
+        let weight = ((b - a) / 2.).cos();
+        let point = |angle: f64, factor: f64| {
+            (0..3)
+                .map(|axis| {
+                    origin[axis] + factor * radius * (x[axis] * angle.cos() + y[axis] * angle.sin())
+                })
+                .collect::<Vec<_>>()
+        };
+        if piece == 0 {
+            control_points.push(point(a, 1.));
+            weights.push(1.);
+        }
+        control_points.push(point(middle, 1. / weight));
+        weights.push(weight);
+        control_points.push(point(b, 1.));
+        weights.push(1.);
+        if piece + 1 < pieces {
+            knots.extend([(piece + 1) as f64; 2]);
+        }
+    }
+    knots.extend([pieces as f64; 3]);
+    let curve = Curve {
+        degree: 2,
+        knots,
+        control_points,
+        weights,
+        periodic: false,
+    };
+    curve.validate()?;
+    Ok(curve)
+}
+
+pub(super) fn direct_bounded_curve(
+    entities: &BTreeMap<usize, Entity>,
+    geometry: usize,
+    start: &[f64],
+    end: &[f64],
+    closed: bool,
+    same_sense: bool,
+    scale: f64,
+) -> Result<Curve> {
+    let parts = components(entities, geometry)?;
+    let mut direct_types = parts
+        .iter()
+        .filter_map(|(kind, _)| matches!(*kind, "LINE" | "CIRCLE").then_some(*kind));
+    let kind = direct_types
+        .next()
+        .ok_or_else(|| refuse("AP242 direct EDGE_CURVE geometry must be LINE or CIRCLE"))?;
+    if direct_types.next().is_some() {
+        return Err(refuse(
+            "AP242 direct EDGE_CURVE has ambiguous curve components",
+        ));
+    }
+    let mut basis = curve_v5(entities, geometry, 3, scale, true)?;
+    if !same_sense && kind == "LINE" {
+        basis = basis.reverse()?;
+    } else if !same_sense && closed {
+        basis = basis.reverse()?;
+    }
+    if kind == "CIRCLE" && closed {
+        return Ok(basis);
+    }
+    let parameter = |target: &[f64]| -> Result<f64> {
+        if kind == "CIRCLE" {
+            let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").unwrap();
+            let (origin, x, y) = axis2(
+                entities,
+                one_ref(&args[1], "direct CIRCLE placement")?,
+                3,
+                scale,
+            )?;
+            let radius = number(&args[2], "direct CIRCLE radius")? * scale;
+            if !radius.is_finite() || radius <= 0. {
+                return Err(refuse("AP242 direct CIRCLE radius must be positive"));
+            }
+            let z = [
+                x[1] * y[2] - x[2] * y[1],
+                x[2] * y[0] - x[0] * y[2],
+                x[0] * y[1] - x[1] * y[0],
+            ];
+            let relative = std::array::from_fn::<_, 3, _>(|axis| target[axis] - origin[axis]);
+            let dot = |axis: &[f64]| relative.iter().zip(axis).map(|(a, b)| a * b).sum::<f64>();
+            let u = dot(&x);
+            let v = dot(&y);
+            let residual = (u * u + v * v).sqrt() - radius;
+            if !residual.is_finite() || residual.abs() > 1e-7 || dot(&z).abs() > 1e-7 {
+                return Err(refuse(
+                    "AP242 direct CIRCLE vertex is not on the authored circle",
+                ));
+            }
+            let mut angle = v.atan2(u);
+            if !same_sense {
+                angle = -angle;
+            }
+            if angle < 0. {
+                angle += std::f64::consts::TAU;
+            }
+            return Ok(angle);
+        }
+        isolate_curve_point(&basis, target).map_err(|error| {
+            refuse(format!(
+                "AP242 direct EDGE_CURVE vertex is not uniquely on {kind}: {}",
+                error.message
+            ))
+        })
+    };
+    let start_parameter = parameter(start)?;
+    let end_parameter = parameter(end)?;
+    if kind == "LINE" {
+        if start_parameter >= end_parameter {
+            return Err(refuse(
+                "AP242 direct LINE has an empty or reversed vertex-bounded interval",
+            ));
+        }
+        return basis.trim(start_parameter, end_parameter);
+    }
+    let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").unwrap();
+    let (origin, x, mut y) = axis2(
+        entities,
+        one_ref(&args[1], "direct CIRCLE placement")?,
+        3,
+        scale,
+    )?;
+    if !same_sense {
+        y.iter_mut().for_each(|value| *value = -*value);
+    }
+    let radius = number(&args[2], "direct CIRCLE radius")? * scale;
+    direct_circle_arc(&origin, &x, &y, radius, start_parameter, end_parameter)
+}
+
 impl<'a> DirectBuilder<'a> {
     pub(super) fn vertex(&mut self, id: usize) -> Result<usize> {
         if let Some(v) = self.vertex_map.get(&id) {
@@ -37,14 +192,34 @@ impl<'a> DirectBuilder<'a> {
         let va = self.vertex(one_ref(&a[1], "EDGE_CURVE start")?)?;
         let vb = self.vertex(one_ref(&a[2], "EDGE_CURVE end")?)?;
         let geometry = one_ref(&a[3], "EDGE_CURVE geometry")?;
-        let (gty, ga) = call(self.entities, geometry)?;
-        if gty != "SURFACE_CURVE" && gty != "SEAM_CURVE" {
+        let direct = self.ap242_composition
+            && components(self.entities, geometry)?
+                .iter()
+                .any(|(kind, _)| matches!(*kind, "LINE" | "CIRCLE"));
+        let (gty, ga) = if direct {
+            ("", &[][..])
+        } else {
+            call(self.entities, geometry)?
+        };
+        if !direct && gty != "SURFACE_CURVE" && gty != "SEAM_CURVE" {
             return Err(refuse("EDGE_CURVE must use SURFACE_CURVE or SEAM_CURVE"));
         }
-        if ga.len() < 3 {
+        if !direct && ga.len() < 3 {
             return Err(refuse("SURFACE_CURVE argument count mismatch"));
         }
-        let mut c3 = if self.ap242_composition {
+        let start = self.vertices[va].point;
+        let end = self.vertices[vb].point;
+        let mut c3 = if direct {
+            direct_bounded_curve(
+                self.entities,
+                geometry,
+                &start,
+                &end,
+                va == vb,
+                same_sense,
+                self.scale,
+            )?
+        } else if self.ap242_composition {
             curve_v5(
                 self.entities,
                 one_ref(&ga[1], "SURFACE_CURVE 3D curve")?,
@@ -61,7 +236,11 @@ impl<'a> DirectBuilder<'a> {
             )?
         };
         let mut matching = Vec::new();
-        for p in list(&ga[2], "SURFACE_CURVE pcurves")? {
+        for p in if direct {
+            &[]
+        } else {
+            list(&ga[2], "SURFACE_CURVE pcurves")?
+        } {
             let (_, pa) = call(self.entities, one_ref(p, "SURFACE_CURVE pcurve")?)?;
             if pa.len() != 3 {
                 return Err(refuse("Malformed PCURVE"));
@@ -97,23 +276,25 @@ impl<'a> DirectBuilder<'a> {
                 });
             }
         }
-        if matching.is_empty() {
+        if !direct && matching.is_empty() {
             return Err(refuse("No PCURVE corresponds to ADVANCED_FACE surface"));
         }
-        let mut pc = if gty == "SEAM_CURVE" || matching.len() > 1 {
+        let mut pc = if direct {
+            None
+        } else if gty == "SEAM_CURVE" || matching.len() > 1 {
             let use_index = self.seam_use.entry((id, surface_id)).or_insert(0);
             if *use_index >= matching.len() {
                 return Err(refuse("Surface curve has fewer pcurves than oriented uses"));
             }
             let selected = matching[*use_index].clone();
             *use_index += 1;
-            selected
+            Some(selected)
         } else {
-            matching.pop().unwrap()
+            matching.pop()
         };
-        if !same_sense {
+        if !direct && !same_sense {
             c3 = c3.reverse()?;
-            pc = pc.reverse()?;
+            pc = Some(pc.unwrap().reverse()?);
         }
         let curve_domain = c3.domain();
         let curve_start = c3.evaluate(curve_domain[0])?.point;
@@ -136,19 +317,27 @@ impl<'a> DirectBuilder<'a> {
         // A closed edge may share its endpoint vertex while tracing a full
         // nonconstant curve. Only a constant control hull is a pole edge.
         let pole = self.vertices[va].point;
-        let degenerate = va == vb && c3.control_points.iter().all(|point| {
-            point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b)
-        });
-        verify_correspondence(
-            &c3,
-            &pc,
-            surface,
-            reversed,
-            self.whole_domain_proofs,
-            degenerate
-                && self.interior_point_selectors
-                && certify_periodic_surface(surface)?.is_none(),
-        )
+        let degenerate = va == vb
+            && c3
+                .control_points
+                .iter()
+                .all(|point| point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b));
+        let pc = if direct {
+            brep_core::step_interchange_v3::direct_edge_pcurve(&c3, surface, reversed)
+        } else {
+            let pc = pc.unwrap();
+            verify_correspondence(
+                &c3,
+                &pc,
+                surface,
+                reversed,
+                self.whole_domain_proofs,
+                degenerate
+                    && self.interior_point_selectors
+                    && certify_periodic_surface(surface)?.is_none(),
+            )?;
+            Ok(pc)
+        }
         .map_err(|e| {
             refuse(format!(
                 "EDGE_CURVE #{id} on surface #{surface_id}: {}",
@@ -188,7 +377,12 @@ impl<'a> DirectBuilder<'a> {
         };
         Ok((index, pc))
     }
-    pub(super) fn loop_(&mut self, id: usize, surface_id: usize, surface: &Surface) -> Result<usize> {
+    pub(super) fn loop_(
+        &mut self,
+        id: usize,
+        surface_id: usize,
+        surface: &Surface,
+    ) -> Result<usize> {
         let (ty, a) = call(self.entities, id)?;
         if ty != "EDGE_LOOP" || a.len() != 2 {
             return Err(refuse("FACE_BOUND target is not EDGE_LOOP"));
@@ -207,11 +401,7 @@ impl<'a> DirectBuilder<'a> {
                 reversed,
                 surface,
             )?;
-            coedges.push(Coedge::new(
-                edge,
-                reversed,
-                pcurve,
-            ));
+            coedges.push(Coedge::new(edge, reversed, pcurve));
         }
         if coedges.is_empty() {
             return Err(refuse("EDGE_LOOP cannot be empty"));
@@ -242,7 +432,20 @@ impl<'a> DirectBuilder<'a> {
             if !matches!(bty, "FACE_OUTER_BOUND" | "FACE_BOUND") || ba.len() != 3 {
                 return Err(refuse("ADVANCED_FACE bound type is unsupported"));
             }
-            let loop_index = self.loop_(one_ref(&ba[1], "FACE_BOUND loop")?, sid, &surface)?;
+            let loop_id = one_ref(&ba[1], "FACE_BOUND loop")?;
+            if bty == "FACE_BOUND" && call(self.entities, loop_id)?.0 == "VERTEX_LOOP" {
+                let (_, la) = call(self.entities, loop_id)?;
+                if la.len() != 2 {
+                    return Err(refuse("Degenerate VERTEX_LOOP is malformed"));
+                }
+                let vertex = one_ref(&la[1], "VERTEX_LOOP vertex")?;
+                if call(self.entities, vertex)?.0 != "VERTEX_POINT" {
+                    return Err(refuse("Degenerate VERTEX_LOOP must reference VERTEX_POINT"));
+                }
+                // A point-only bound has no 2D area (typically a periodic-surface pole).
+                continue;
+            }
+            let loop_index = self.loop_(loop_id, sid, &surface)?;
             if !boolean(&ba[2], "FACE_BOUND orientation")? {
                 for c in &mut self.loops[loop_index].coedges {
                     c.reversed = !c.reversed;
@@ -490,38 +693,14 @@ pub(super) fn append_direct_model(
 ) {
     let Model(mut topology, _) = source;
     let (vo, eo, lo, fo, so, bo) = (
-        target.vertices.len(),
-        target.edges.len(),
-        target.loops.len(),
-        target.faces.len(),
-        target.shells.len(),
-        target.bodies.len(),
+        target.vertices.len(), target.edges.len(), target.loops.len(),
+        target.faces.len(), target.shells.len(), target.bodies.len(),
     );
-    for edge in &mut topology.edges {
-        edge.vertices = [edge.vertices[0] + vo, edge.vertices[1] + vo]
-    }
-    for loop_ in &mut topology.loops {
-        for coedge in &mut loop_.coedges {
-            coedge.edge += eo
-        }
-    }
-    for face in &mut topology.faces {
-        face.outer += lo;
-        for hole in &mut face.holes {
-            *hole += lo
-        }
-    }
-    for shell in &mut topology.shells {
-        for face in &mut shell.faces {
-            face.face += fo
-        }
-    }
-    for body in &mut topology.bodies {
-        body.outer_shell += so;
-        for shell in &mut body.inner_shells {
-            *shell += so
-        }
-    }
+    for edge in &mut topology.edges { edge.vertices = [edge.vertices[0] + vo, edge.vertices[1] + vo] }
+    for loop_ in &mut topology.loops { for coedge in &mut loop_.coedges { coedge.edge += eo } }
+    for face in &mut topology.faces { face.outer += lo; for hole in &mut face.holes { *hole += lo } }
+    for shell in &mut topology.shells { for face in &mut shell.faces { face.face += fo } }
+    for body in &mut topology.bodies { body.outer_shell += so; for shell in &mut body.inner_shells { *shell += so } }
     target.0.vertices.extend(topology.vertices);
     target.0.edges.extend(topology.edges);
     target.0.loops.extend(topology.loops);

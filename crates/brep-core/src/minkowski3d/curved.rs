@@ -702,9 +702,12 @@ pub(crate) use atlas::region_brep::try_graph_box_boolean;
 
 mod same_carrier;
 pub use same_carrier::{
-    CertifiedSameCarrierMerge, SameCarrierMergeCertificate,
-    certify_same_carrier_merge, verify_same_carrier_merge,
+    BoundedCarrierMergeCertificate, BoundedCarrierProof, CertifiedBoundedCarrierMerge,
+    CertifiedSameCarrierMerge, SameCarrierMergeCertificate, bounded_component,
+    certify_bounded_same_carrier_merge, certify_same_carrier_merge,
+    verify_bounded_same_carrier_merge, verify_same_carrier_merge,
 };
+#[allow(unused_imports)]
 pub(crate) use same_carrier::same_carrier_component;
 
 pub(crate) use same_carrier::seam_model_id;

@@ -7,6 +7,9 @@ import {importStepForWorkbench} from '../src/services/cadStepRouting'
 import {loadProjectStepModel,saveProjectStepModel} from '../src/services/cadStepIndexedDb'
 
 const assembly=()=>readFileSync(new URL('./fixtures/step-v6/self-authored-ap242-assembly.step',import.meta.url),'utf8')
+const identityRelationshipFixture=()=>readFileSync(new URL('./fixtures/step-v9/self-authored-ap242-cylinder.step',import.meta.url),'utf8')
+ .replace('#298=SHAPE_DEFINITION_REPRESENTATION(#297,#290);','#298=SHAPE_DEFINITION_REPRESENTATION(#297,#299);')
+ .replace('ENDSEC;\nEND-ISO',"#299=SHAPE_REPRESENTATION('',(),#289);\n#300=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#290);\n#301=SHAPE_REPRESENTATION('PMI',(),#289);\n#302=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#301);\nENDSEC;\nEND-ISO")
 const reorderIds=(text:string)=>{
  const ids=[...new Set([...text.matchAll(/#(\d+)/g)].map(match=>Number(match[1])))].sort((a,b)=>a-b)
  const remap=new Map(ids.map((id,index)=>[id,900000+ids.length-index]))
@@ -24,6 +27,31 @@ DATA;
 ENDSEC;END-ISO-10303-21;`
 
 describe('STEP /10 retained geometry products',()=>{
+ it('selects one exact B-rep through identity relationships and retains PMI as metadata',()=>{
+  const text=identityRelationshipFixture()
+  const imported=importDirectStepV10(text)
+  expect(imported.model.bodies).toHaveLength(1)
+  expect(imported.document.source).toBe(text)
+  expect(imported.document.metadataLoss).toContain('projection.non_exact_representations_retained_as_metadata')
+  expect(exportDirectStepV10(imported.document).text).toBe(text)
+
+  const multipleChildren=text.replace('ENDSEC;\nEND-ISO',"#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#286),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#303);\nENDSEC;\nEND-ISO")
+  expect(()=>importDirectStepV10(multipleChildren)).toThrow(/Ambiguous multiple exact/)
+  const multipleRoots=text.replace('ENDSEC;\nEND-ISO',"#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#286),#289);\n#304=SHAPE_DEFINITION_REPRESENTATION(#297,#303);\nENDSEC;\nEND-ISO")
+  expect(()=>importDirectStepV10(multipleRoots)).toThrow(/Ambiguous multiple exact/)
+  const cycle=text.replace('ENDSEC;\nEND-ISO',"#303=SHAPE_REPRESENTATION('PMI cycle',(),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#301,#303);\n#305=SHAPE_REPRESENTATION_RELATIONSHIP('','',#303,#301);\nENDSEC;\nEND-ISO")
+  expect(()=>importDirectStepV10(cycle)).toThrow(/Cycle in identity representation/)
+ })
+
+ it('retains presentation and PMI metadata without adding exact roots or LOD promises',()=>{
+  const text=identityRelationshipFixture().replace('ENDSEC;\nEND-ISO',"#303=SURFACE_STYLE_PARAMETER_LINE(#301,(U_DIRECTION_COUNT(2),V_DIRECTION_COUNT(2)));\n#304=SURFACE_STYLE_TRANSPARENT(0.5);\n#305=TESSELLATED_SHAPE_REPRESENTATION('auxiliary',(),#289);\n#306=CONCENTRICITY_TOLERANCE('','',#301,#301,(#301));\n#307=PRODUCT_DEFINITION_CONTEXT_ROLE('additional context','');\n#308=SYMMETRY_TOLERANCE('','',#301,#301,(#301));\n#309=ROUNDNESS_TOLERANCE('','',#301,#301,(#301));\n#310=CYLINDRICITY_TOLERANCE('','',#301,#301,(#301));\n#311=APPLIED_DOCUMENT_REFERENCE(#301,'');\n#312=TOTAL_RUNOUT_TOLERANCE('','',#301,#301,(#301));\n#313=OBJECT_ROLE('PMI');\n#314=LIMITS_AND_FITS('','',#301,#301);\n#315=DOCUMENT_PRODUCT_EQUIVALENCE('','',#301,#301);\n#316=ROLE_ASSOCIATION(#313,#301);\nENDSEC;\nEND-ISO")
+  const imported=importDirectStepV10(text)
+  expect(imported.model.bodies).toHaveLength(1)
+  expect(imported.document.source).toBe(text)
+  expect(imported.document.metadataLoss).toContain('projection.non_exact_representations_retained_as_metadata')
+  expect(exportDirectStepV10(imported.document).text).toBe(text)
+ })
+
  it('preserves the authoritative occurrence graph without baking on export',()=>{
   const imported=importDirectStepV10(assembly())
   expect(imported.certificate.capability).toBe('step-interchange/10')

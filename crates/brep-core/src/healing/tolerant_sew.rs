@@ -90,6 +90,20 @@ fn append_skip_reasons(report: &mut crate::healing_report::HealingReport) {
 /// same write-set weighting as the authorized transaction. Cap refusals and
 /// post-repair residual gaps never expose a partially sewn model.
 pub fn sew_tolerant(model: &Model, budget: SewingBudget) -> Result<HealingRun> {
+    sew_tolerant_certified(model, budget).map(|certified| certified.run)
+}
+
+#[derive(Clone, Debug)]
+pub struct CertifiedSewingRun {
+    pub run: HealingRun,
+    pub tolerance_handoff: crate::ModelToleranceHandoff,
+}
+
+pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<CertifiedSewingRun> {
+    crate::admit_operation_input(cad_predicates::OperationBoundary::Sewing, model.tolerance_mm)?;
+    // Endpoint-gap inputs are intentionally invalid solids; the existing defect
+    // audit and staged transaction validate the repaired output instead.
+    let input_mm = model.tolerance_mm;
     if !budget.user_cap_mm.is_finite()
         || budget.user_cap_mm <= 0.
         || !budget.cumulative_cap_mm.is_finite()
@@ -250,8 +264,23 @@ pub fn sew_tolerant(model: &Model, budget: SewingBudget) -> Result<HealingRun> {
         skipped_details,
     });
     append_skip_reasons(&mut run.report);
+    let measured_output_mm = if run.report.status == HealingStatus::Complete {
+        measured.into_iter().fold(0.0_f64, f64::max)
+    } else {
+        0.
+    };
+    let tolerance_handoff = crate::enforce_model_tolerance_handoff(
+        cad_predicates::OperationBoundary::Sewing,
+        input_mm,
+        measured_output_mm,
+        &mut run.model,
+    )?;
+    run.report.output_hash = model_hash(&run.model);
     run.report.validate()?;
-    Ok(run)
+    Ok(CertifiedSewingRun {
+        run,
+        tolerance_handoff,
+    })
 }
 
 #[cfg(test)]

@@ -15,7 +15,9 @@ pub use math_core::{Error, Result};
 mod serialization;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::BTreeSet;
+mod euler;
 pub mod persistent_naming;
+pub use euler::{EULER_INVALID_OPERATION, EULER_UNSUPPORTED};
 pub use persistent_naming::{
     ChangeKind, ChangeProvenance, ChangeSet, TopoId, TopoKind, TopologyChange,
 };
@@ -494,8 +496,6 @@ pub mod explorer {
     }
 }
 
-
-
 type VertexAdmission<'a, V> = dyn Fn(&V) -> Result<()> + 'a;
 type ModelAdmission<'a, C, S, P, V> = dyn Fn(&Model<C, S, P, V>) -> Result<()> + 'a;
 
@@ -655,13 +655,11 @@ impl<T: RevisionState> RevisionCheckout<T> {
 #[path = "tests/tests_integration.rs"]
 mod tests;
 
-
-#[path="lib/methods_full.rs"]
-mod methods_full;
-#[path="lib/methods_euler_characteristic.rs"]
+#[path = "lib/methods_euler_characteristic.rs"]
 mod methods_euler_characteristic;
-#[path="lib/methods_new.rs"]
+#[path = "lib/methods_full.rs"]
+mod methods_full;
+#[path = "lib/methods_new.rs"]
 mod methods_new;
 #[cfg(test)]
 mod periodic_vertex_links;
-

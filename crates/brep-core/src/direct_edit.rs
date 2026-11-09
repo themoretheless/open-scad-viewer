@@ -162,7 +162,10 @@ pub(crate) fn face_plane_fit(model: &Model, face: usize) -> Result<PlaneEq> {
         // a normal estimate, then verified by the flatness check below.
         add(
             sum,
-            cross(sub(points[i], origin), sub(points[(i + 1) % points.len()], origin)),
+            cross(
+                sub(points[i], origin),
+                sub(points[(i + 1) % points.len()], origin),
+            ),
         )
     });
     let length = norm(area);
@@ -176,7 +179,8 @@ pub(crate) fn face_plane_fit(model: &Model, face: usize) -> Result<PlaneEq> {
     let tolerance = model.tolerance_mm * 8.;
     let on_plane = |p: [f64; 3]| (dot(normal, p) - offset).abs() <= tolerance;
     if !points.iter().copied().all(&on_plane)
-        || !f.surface
+        || !f
+            .surface
             .control_points
             .iter()
             .flatten()
@@ -191,7 +195,11 @@ pub(crate) fn face_plane_fit(model: &Model, face: usize) -> Result<PlaneEq> {
 
 /// Plane ∩ plane → (point, unit direction). `None` when the planes are
 /// parallel within `tolerance` — the extension cannot close (diverging case).
-pub(crate) fn intersect_planes(a: PlaneEq, b: PlaneEq, tolerance: f64) -> Option<([f64; 3], [f64; 3])> {
+pub(crate) fn intersect_planes(
+    a: PlaneEq,
+    b: PlaneEq,
+    tolerance: f64,
+) -> Option<([f64; 3], [f64; 3])> {
     let d = cross(a.normal, b.normal);
     let len2 = dot(d, d);
     if !len2.is_finite() || len2 <= tolerance * tolerance {
@@ -213,7 +221,12 @@ pub(crate) fn intersect_planes(a: PlaneEq, b: PlaneEq, tolerance: f64) -> Option
 }
 
 /// Line ∩ plane. `None` when the line is parallel to the plane.
-pub(crate) fn line_plane(point: [f64; 3], dir: [f64; 3], plane: PlaneEq, tolerance: f64) -> Option<[f64; 3]> {
+pub(crate) fn line_plane(
+    point: [f64; 3],
+    dir: [f64; 3],
+    plane: PlaneEq,
+    tolerance: f64,
+) -> Option<[f64; 3]> {
     let denom = dot(dir, plane.normal);
     if denom.abs() <= tolerance {
         return None;
@@ -243,7 +256,10 @@ pub(crate) fn vertex_face_incidence(model: &Model) -> Vec<BTreeSet<usize>> {
 }
 
 /// edge → sorted adjacent faces (via both outer and hole loops).
-fn edge_face_adjacency(model: &Model, guard: &mut BudgetGuard) -> Result<Vec<Vec<usize>>> {
+pub(crate) fn edge_face_adjacency(
+    model: &Model,
+    guard: &mut BudgetGuard,
+) -> Result<Vec<Vec<usize>>> {
     let mut adjacency = vec![Vec::new(); model.edges.len()];
     for (face_id, face) in model.faces.iter().enumerate() {
         guard.tick()?;
@@ -261,10 +277,7 @@ fn edge_face_adjacency(model: &Model, guard: &mut BudgetGuard) -> Result<Vec<Vec
 }
 
 fn volume_of(model: &Model) -> Result<f64> {
-    Ok(
-        crate::analysis::mass_properties(model, 1e-6, 500_000)?
-            .signed_volume_mm3,
-    )
+    Ok(crate::analysis::mass_properties(model, 1e-6, 500_000)?.signed_volume_mm3)
 }
 
 // ---------------------------------------------------------------------------
@@ -285,15 +298,21 @@ pub fn suppress_feature(
     let mut guard = budget.guard("suppress-feature");
     guard.check()?;
 
-    let (staged, kind, suppressed_faces, removed_edges, new_sharp_edges, estimate) =
-        match feature {
+    let (staged, kind, suppressed_faces, removed_edges, new_sharp_edges, estimate) = match feature {
             FeatureRef::FilletChain(chain) => {
                 let (staged_model, removed, length) = suppress_fillet_chain(source, chain, &mut guard)?;
                 let radius = 0.5 * (chain.radius_min + chain.radius_max);
                 // Sharp-corner volume restored by cutting a rolling-ball blend:
                 // (1 − π/4) r² per unit length of sharp edge.
                 let estimate = (1. - std::f64::consts::FRAC_PI_4) * radius * radius * length;
-                (staged_model, "fillet-chain", chain.faces.clone(), removed, 1, estimate)
+            (
+                staged_model,
+                "fillet-chain",
+                chain.faces.clone(),
+                removed,
+                1,
+                estimate,
+            )
             }
             FeatureRef::Hole(hole) => {
                 let cluster: BTreeSet<usize> = hole
@@ -360,7 +379,6 @@ pub fn suppress_feature(
 mod suppression;
 use suppression::*;
 
-
 // ---------------------------------------------------------------------------
 // Coplanar-shard merge: rim edges landing on *outer* loops.
 //
@@ -375,7 +393,7 @@ use suppression::*;
 // ---------------------------------------------------------------------------
 
 mod rims;
-use rims::*;
+pub(crate) use rims::*;
 
 // Restored declarations for the retained 878/1038/1039 modules.
 pub const DIRTY_INVALID: &str = "BREP_DIRTY_INVALID";
@@ -384,16 +402,41 @@ use dirty::rebuilt_faces_in_place;
 pub use dirty::{DirtyRegion, dirty_region_for_result};
 mod audit;
 use audit::validate_staged;
-pub use audit::{DIRECT_EDIT_AUDIT_REFUSED, direct_edit_model_hash};
+pub use audit::{
+    DIRECT_EDIT_AUDIT_REFUSED, DirectEditCommit, DirectEditTransaction, DirectEditUndoRecord,
+    DirectEditValidationReport, IncrementalRebuildReport, complete_incremental_rebuild,
+    direct_edit_model_hash, validate_direct_edit,
+};
 pub mod defeature_fillet;
 pub mod defeature_hole_pocket;
 pub mod defeature_report;
+
+pub const TWEAK_INVALID: &str = "BREP_TWEAK_INVALID";
+pub const TWEAK_UNSUPPORTED: &str = "BREP_TWEAK_UNSUPPORTED";
+pub const TWEAK_LIMIT: &str = "BREP_TWEAK_LIMIT";
+mod tweak;
+pub use tweak::{TweakFaceReport, tweak_face};
+
+pub(crate) fn rotate_vector(axis: &Axis, angle: f64, vector: [f64; 3]) -> [f64; 3] {
+    let (sin, cos) = angle.sin_cos();
+    add(
+        add(mul(vector, cos), mul(cross(axis.direction, vector), sin)),
+        mul(axis.direction, dot(axis.direction, vector) * (1. - cos)),
+    )
+}
+
+pub(crate) fn rotate_point(axis: &Axis, angle: f64, point: [f64; 3]) -> [f64; 3] {
+    add(
+        axis.point,
+        rotate_vector(axis, angle, sub(point, axis.point)),
+    )
+}
 
 pub const REPLACE_INVALID: &str = "BREP_REPLACE_INVALID";
 pub const REPLACE_UNSUPPORTED: &str = "BREP_REPLACE_UNSUPPORTED";
 pub const REPLACE_OUT_OF_DOMAIN: &str = "BREP_REPLACE_OUT_OF_DOMAIN";
 mod replace;
-pub use replace::{ReplaceFaceReport, replace_face};
+pub use replace::{EdgeCorrespondenceCertificate, ReplaceFaceReport, replace_face};
 
 pub const DELETE_INVALID: &str = "BREP_DELETE_INVALID";
 pub const DELETE_UNSUPPORTED: &str = "BREP_DELETE_UNSUPPORTED";
@@ -451,7 +494,7 @@ pub const MOVE_INVALID: &str = "BREP_MOVE_INVALID";
 
 mod movement;
 pub use movement::{MoveFaceReport, move_face};
-
+pub(crate) use movement::{canonical_polygons, restore_unchanged_ids};
 
 // ---------------------------------------------------------------------------
 // Direct modeling: offset face (checklist 872).

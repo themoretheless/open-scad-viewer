@@ -10,6 +10,24 @@ pub use basis::{Basis, LocalBasis, basis, basis_funs_ders, find_span, find_span_
 pub use decompose::Segment;
 pub use knot_ops::{clamped, merge_near_knots, multiplicity_eps, normalize_knots};
 
+/// Dimension-flexible NURBS control data.
+///
+/// # Storage contract (AoS, not SoA)
+/// `control_points[i]` owns all coordinates of one control point (array of
+/// structures); `weights[i]` is its positive rational weight. This keeps every
+/// control net coherent during knot insertion, decomposition and editing and
+/// avoids a second parallel API for 2D/3D data. Evaluation traverses only the
+/// active `degree + 1` points and accumulates coordinates in separate scalar
+/// lanes, so a persistent SoA copy would add allocation and synchronization
+/// costs without improving the general kernel path. SIMD basis batching is a
+/// separate numerics concern and does not change this storage contract.
+///
+/// Native fixed-size [`Point3`](crate::core::geometry::Point3) and
+/// [`Vector3`](crate::core::geometry::Vector3) adapters make affine semantics
+/// explicit without breaking these established public fields. Rational control
+/// point `i` represents `(weights[i]·control_points[i], weights[i])` in
+/// homogeneous space, never an unweighted Cartesian point with an unrelated
+/// weight.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Curve {
     pub degree: usize,
@@ -581,6 +599,45 @@ impl Curve {
             "Rational evaluation exhausted finite precision",
         )?;
         Ok(point)
+    }
+
+    /// Independent rational Bézier evaluation using de Casteljau in `(w·P,w)`.
+    /// The curve must be one nonperiodic clamped 3D Bézier span. General
+    /// B-spline curves should use `evaluate` or `evaluate_de_boor`; callers can
+    /// obtain a Bézier span with `decompose` first.
+    pub fn evaluate_bezier_de_casteljau(&self, u: f64) -> Result<crate::core::geometry::Point3> {
+        use crate::core::geometry::{HomogeneousPoint3, de_casteljau_homogeneous};
+        self.validate()?;
+        check(
+            self.control_points[0].len() == 3
+                && !self.periodic
+                && self.control_points.len() == self.degree + 1
+                && self.knots[..=self.degree]
+                    .iter()
+                    .all(|k| *k == self.knots[0])
+                && self.knots[self.degree + 1..]
+                    .iter()
+                    .all(|k| *k == self.knots[self.knots.len() - 1]),
+            "de Casteljau requires one nonperiodic clamped 3D Bezier span",
+        )?;
+        let [start, end] = self.domain();
+        check(
+            u.is_finite() && u >= start && u <= end,
+            "Parameter is outside the active knot domain",
+        )?;
+        let t = (u - start) / (end - start);
+        let controls = self
+            .control_points
+            .iter()
+            .zip(&self.weights)
+            .map(|(point, &weight)| {
+                HomogeneousPoint3::from_weighted(
+                    crate::core::geometry::Point3::try_from_slice(point)?,
+                    weight,
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+        de_casteljau_homogeneous(&controls, t)
     }
 }
 

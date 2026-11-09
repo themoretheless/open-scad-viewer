@@ -14,9 +14,7 @@
 //! the interior of face A; `s = dot(normalize(d), n_b)` is negative for a
 //! convex (material-below-270°) edge and positive for a concave one.
 
-use crate::analysis::surface_classify::{
-    Axis, SurfaceClass, classify_surface, face_area,
-};
+use crate::analysis::surface_classify::{Axis, SurfaceClass, classify_surface, face_area};
 use crate::{Error, Model, Result};
 use nurbs_core::foundation::guards::{Budget, BudgetGuard, Fnv1a, require_finite_f64};
 use nurbs_core::surface::SurfaceSampler;
@@ -208,7 +206,11 @@ fn model_bbox_diagonal(model: &Model) -> f64 {
         }
     }
     let diag = norm([hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]]);
-    if diag.is_finite() && diag > 0. { diag } else { 1. }
+    if diag.is_finite() && diag > 0. {
+        diag
+    } else {
+        1.
+    }
 }
 
 /// Attributed adjacency graph over one model. Cheap to keep: only indices,
@@ -348,7 +350,8 @@ impl Aag {
             } else if uses.len() == 2 && uses[0].face == uses[1].face {
                 aag_edge.class = DihedralClass::Seam;
             } else if uses.len() == 2 {
-                let class = classify_edge(model, edge_id, &uses, samples, &mut guard, &mut aag_edge)?;
+                let class =
+                    classify_edge(model, edge_id, &uses, samples, &mut guard, &mut aag_edge)?;
                 aag_edge.class = class;
             }
             for use_ in &uses {
@@ -599,11 +602,7 @@ fn classify_edge(
         require_finite_f64(point[1], "edge.point.y")?;
         require_finite_f64(point[2], "edge.point.z")?;
         if let Some(p) = previous {
-            extent = extent.max(norm([
-                point[0] - p[0],
-                point[1] - p[1],
-                point[2] - p[2],
-            ]));
+            extent = extent.max(norm([point[0] - p[0], point[1] - p[1], point[2] - p[2]]));
         }
         previous = Some(point);
 
@@ -625,6 +624,10 @@ fn classify_edge(
             if uv.len() != 2 {
                 return Err(aag_error("AAG expects 2D pcurves"));
             }
+            let uv = nurbs_core::periodic_trim::wrapped_surface_parameters(
+                &model.faces[uses[side].face].surface,
+                [uv[0], uv[1]],
+            )?;
             let Some(mut n) = samplers[side].evaluate(uv[0], uv[1])?.unit_normal() else {
                 // A pole or a singular chart gives no reliable normal: this is
                 // exactly the garbage-normal case to flag, not to classify.

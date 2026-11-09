@@ -32,7 +32,7 @@ pub(super) fn same_plane(a: PlaneEq, b: PlaneEq, tolerance: f64) -> bool {
 
 /// Connected component of surviving faces coplanar with the seed face,
 /// linked through shared edges.
-pub(super) fn coplanar_component(
+pub(crate) fn coplanar_component(
     model: &Model,
     seed: usize,
     plane: PlaneEq,
@@ -473,14 +473,8 @@ pub(super) fn merge_coplanar_rims(
         };
         let du_cp = &merged_face.surface.control_points[1][0];
         let dv_cp = &merged_face.surface.control_points[0][1];
-        let u_vec = sub(
-            [du_cp[0], du_cp[1], du_cp[2]],
-            origin_corner,
-        );
-        let v_vec = sub(
-            [dv_cp[0], dv_cp[1], dv_cp[2]],
-            origin_corner,
-        );
+        let u_vec = sub([du_cp[0], du_cp[1], du_cp[2]], origin_corner);
+        let v_vec = sub([dv_cp[0], dv_cp[1], dv_cp[2]], origin_corner);
         let len_u = norm(u_vec);
         let len_v = norm(v_vec);
         let u = mul(u_vec, 1. / len_u);

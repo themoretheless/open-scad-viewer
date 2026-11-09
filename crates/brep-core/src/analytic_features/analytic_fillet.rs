@@ -138,7 +138,9 @@ pub fn analytic_fillet(
     edge: usize,
     radius: f64,
 ) -> Result<(Model, FeatureCertificate)> {
+    crate::admit_operation_input(cad_predicates::OperationBoundary::Fillet, model.tolerance_mm)?;
     model.validate()?;
+    let input_mm = model.tolerance_mm;
     if !(radius.is_finite() && radius > 0.) {
         return Err(refuse(
             "BREP_ANALYTIC_FILLET_REFUSED",
@@ -202,9 +204,14 @@ pub fn analytic_fillet(
     };
     let mut rounded = [false; 4];
     rounded[corner] = true;
-    let result =
+    let mut result =
         crate::imprint_pipeline::rounded_cuboid_vertical_edges(model, min, max, rounded, radius)?;
-    result.validate()?;
+    crate::enforce_model_tolerance_handoff(
+        cad_predicates::OperationBoundary::Fillet,
+        input_mm,
+        0.,
+        &mut result,
+    )?;
     let has_cyl = result
         .faces
         .iter()
@@ -270,6 +277,9 @@ pub fn analytic_fillet_chain(
     edges: &[usize],
     radius: f64,
 ) -> Result<(Model, FeatureCertificate)> {
+    crate::admit_operation_input(cad_predicates::OperationBoundary::Fillet, model.tolerance_mm)?;
+    model.validate()?;
+    let input_mm = model.tolerance_mm;
     if edges.is_empty() {
         return Err(refuse(
             "BREP_ANALYTIC_FILLET_REFUSED",
@@ -343,9 +353,14 @@ pub fn analytic_fillet_chain(
             "Fillet chain selected no distinct vertical corners",
         ));
     }
-    let result =
+    let mut result =
         crate::imprint_pipeline::rounded_cuboid_vertical_edges(model, min, max, rounded, radius)?;
-    result.validate()?;
+    crate::enforce_model_tolerance_handoff(
+        cad_predicates::OperationBoundary::Fillet,
+        input_mm,
+        0.,
+        &mut result,
+    )?;
     Ok((
         result,
         FeatureCertificate {

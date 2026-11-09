@@ -22,6 +22,7 @@ const OPS: &[&str] = &[
     "brep_nurbs_import_step_v9",
     "brep_nurbs_import_step_scene",
     "brep_nurbs_import_step_lod0",
+    "brep_nurbs_step_lod0_hausdorff_estimate",
     "brep_nurbs_import_step_v10",
     "brep_nurbs_export_step_v10",
     "brep_nurbs_compose_step_v7",
@@ -316,6 +317,7 @@ fn handle(v: Value) -> Result<Value> {
         }
         "brep_nurbs_import_step_scene" => crate::step_scene::import(v),
         "brep_nurbs_import_step_lod0" => crate::step_lod0::import(v),
+        "brep_nurbs_step_lod0_hausdorff_estimate" => crate::step_lod0::hausdorff_estimate(v),
         "brep_nurbs_import_step_v10" => {
             let (model, cert, document) =
                 brep_core::import_step_v10(&field::<String>(&v, "text")?)?;

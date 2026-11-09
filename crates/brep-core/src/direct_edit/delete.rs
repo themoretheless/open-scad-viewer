@@ -109,7 +109,12 @@ pub fn recommend_delete_face_strategy(
     })
 }
 
-fn delete_extend(source: &Model, face: usize, guard: &mut BudgetGuard) -> Result<DeleteFaceReport> {
+fn delete_extend(
+    source: &Model,
+    face: usize,
+    budget: &Budget,
+    guard: &mut BudgetGuard,
+) -> Result<DeleteFaceReport> {
     face_plane_fit(source, face).map_err(|_| {
         error(
             DELETE_UNSUPPORTED,
@@ -174,6 +179,43 @@ fn delete_extend(source: &Model, face: usize, guard: &mut BudgetGuard) -> Result
             strategy: DeleteFaceStrategy::Extend,
             extended_supports: Some(supports),
             audit: Some(audit),
+            euler_characteristic,
+            boundary_edge_count: validation.boundary_edge_count,
+            max_g0_gap_mm: None,
+        });
+    }
+    // A rectangular pocket has parallel opposite wall pairs, so no pairwise
+    // extension can close it. Reuse the already certified closed-pocket
+    // suppression path rather than inventing a second extension algorithm.
+    let mut graph = crate::aag::Aag::build(source, budget)?;
+    graph.attach_face_attrs(source, budget)?;
+    let pockets = crate::aag_features::find_pockets(source, &graph, budget)?;
+    let matching: Vec<_> = pockets
+        .into_iter()
+        .filter(|pocket| {
+            pocket.kind == crate::aag_features::PocketKind::Closed && pocket.faces.contains(&face)
+        })
+        .collect();
+    if matching.len() == 1 {
+        let suppressed =
+            suppress_feature(source, &FeatureRef::Pocket(matching[0].clone()), budget)?;
+        let validation = suppressed.model.validate()?;
+        let euler_characteristic =
+            suppressed
+                .model
+                .shell_euler_characteristic(0)
+                .ok_or_else(|| {
+                    error(
+                        DELETE_UNSUPPORTED,
+                        "Pocket extend result has no outer shell",
+                    )
+                })?;
+        return Ok(DeleteFaceReport {
+            model: suppressed.model,
+            deleted_face: face,
+            strategy: DeleteFaceStrategy::Extend,
+            extended_supports: None,
+            audit: Some(suppressed.audit),
             euler_characteristic,
             boundary_edge_count: validation.boundary_edge_count,
             max_g0_gap_mm: None,
@@ -405,7 +447,7 @@ pub fn delete_face(
         options.strategy
     };
     match strategy {
-        DeleteFaceStrategy::Extend => delete_extend(source, face, &mut guard),
+        DeleteFaceStrategy::Extend => delete_extend(source, face, budget, &mut guard),
         DeleteFaceStrategy::Cap => delete_cap(source, face, &mut guard),
         DeleteFaceStrategy::Patch => delete_patch(source, face, &mut guard),
         DeleteFaceStrategy::Auto => unreachable!("auto strategy resolved above"),

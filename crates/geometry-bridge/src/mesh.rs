@@ -673,36 +673,21 @@ impl VertexTree {
     }
 }
 fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> {
-    if mesh.indices.is_empty() {
-        return Ok(());
-    }
-    if depth > 32 || parts.len() >= 64 {
-        return Err(input("Minkowski convex decomposition budget exceeded"));
-    }
+    if mesh.indices.is_empty() { return Ok(()); }
+    if depth > 32 || parts.len() >= 64 { return Err(input("Minkowski convex decomposition budget exceeded")); }
     let mut split = None;
     let vertices = mesh.positions.as_chunks::<3>().0;
     let tree = VertexTree::build(vertices);
     for t in mesh.indices.as_chunks::<3>().0 {
-        let a = mesh.point(t[0])?;
-        let b = mesh.point(t[1])?;
-        let c = mesh.point(t[2])?;
+        let [a, b, c] = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
         let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
         let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
+        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
         let l = n[0].hypot(n[1]).hypot(n[2]);
-        if l < 1e-16 {
-            continue;
-        }
+        if l < 1e-16 { continue; }
         let n = n.map(|x| x / l);
         let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
-        if tree.any_above(vertices, n, d, 1e-8) {
-            split = Some((n, d));
-            break;
-        }
+        if tree.any_above(vertices, n, d, 1e-8) { split = Some((n, d)); break; }
     }
     if let Some((n, d)) = split {
         let cutter = solid::halfspace(mesh, n, d)?;
@@ -743,24 +728,16 @@ fn face_ids(m: &Mesh) -> Result<Vec<u32>> {
     let mut ids = Vec::with_capacity(m.indices.len() / 3);
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
     for t in m.indices.as_chunks::<3>().0 {
-        let a = m.point(t[0])?;
-        let b = m.point(t[1])?;
-        let c = m.point(t[2])?;
+        let [a, b, c] = [m.point(t[0])?, m.point(t[1])?, m.point(t[2])?];
         let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
         let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
+        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
         let length = n[0].hypot(n[1]).hypot(n[2]);
         let n = n.map(|x| x / length);
         let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
         let key = [
-            (n[0] * 1e7).round() as i64,
-            (n[1] * 1e7).round() as i64,
-            (n[2] * 1e7).round() as i64,
-            (d / scale * 1e7).round() as i64,
+            (n[0] * 1e7).round() as i64, (n[1] * 1e7).round() as i64,
+            (n[2] * 1e7).round() as i64, (d / scale * 1e7).round() as i64,
         ];
         let next = groups.len() as u32;
         ids.push(*groups.entry(key).or_insert(next));
@@ -774,13 +751,8 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
     let shape = get(id)?;
     let m = solid(&shape)?;
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
-
     Ok(crate::CadMeshBuffer {
-        positions: m
-            .positions
-            .iter()
-            .map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v })
-            .collect(),
+        positions: m.positions.iter().map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v }).collect(),
         indices: m.indices.iter().map(|&v| v as u32).collect(),
         face_ids: face_ids(m)?,
     })
@@ -793,17 +765,11 @@ pub(crate) fn check_analysis_triangle_budget(id: u32, limit: usize) -> Result<()
     }
     Ok(())
 }
-
 /// Detach the registry-owned solid before preparing its display buffers.
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
     let shape = get(id)?;
     let m = solid(&shape)?;
-    Ok(crate::mesh_render::render_parts(
-        &m.positions,
-        &m.indices,
-        face_ids(m)?,
-        crease_cosine,
-    ))
+    Ok(crate::mesh_render::render_parts(&m.positions, &m.indices, face_ids(m)?, crease_cosine))
 }
 /// Numeric contract: positions arrive as f64 (legacy f32 uploads are widened
 /// by the ABI before this call), so authored coordinates enter the kernel
@@ -813,10 +779,7 @@ pub(crate) fn import_buffers(stride: usize, vertices: &[f64], indices: &[u32]) -
         return Err(input("Invalid mesh vertex stride"));
     }
     let mesh = Mesh {
-        positions: vertices
-            .chunks_exact(stride)
-            .flat_map(|p| p[..3].iter().copied())
-            .collect(),
+        positions: vertices.chunks_exact(stride).flat_map(|p| p[..3].iter().copied()).collect(),
         indices: indices.iter().map(|&i| i as usize).collect(),
         uv: None,
     };

@@ -12,7 +12,8 @@ pub fn distance_triangles(mesh: MeshView<'_>) -> Result<Vec<DistanceTriangle>> {
         .as_chunks::<3>()
         .0
         .iter()
-        .map(|ids| {
+        .enumerate()
+        .map(|(source_index, ids)| {
             let p =
                 std::array::from_fn(|i| std::array::from_fn(|k| mesh.positions[ids[i] * 3 + k]));
             DistanceTriangle {
@@ -21,6 +22,7 @@ pub fn distance_triangles(mesh: MeshView<'_>) -> Result<Vec<DistanceTriangle>> {
                     p.iter().map(|p| p[k]).fold(f64::NEG_INFINITY, f64::max)
                 }),
                 p,
+                source_index,
             }
         })
         .collect())
@@ -28,6 +30,7 @@ pub fn distance_triangles(mesh: MeshView<'_>) -> Result<Vec<DistanceTriangle>> {
 #[derive(Clone)]
 pub struct DistanceTriangle {
     pub p: [P; 3],
+    pub source_index: usize,
     pub min: P,
     pub max: P,
 }

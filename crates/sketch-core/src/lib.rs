@@ -4,8 +4,27 @@
 mod serialization;
 pub use math_core::{Error, Result};
 const INVALID_INPUT: &str = "SKETCH_INVALID_INPUT";
+const NUMERICAL_FAILURE: &str = "SKETCH_NUMERICAL_FAILURE";
+const INVALID_PROFILE: &str = "SKETCH_INVALID_PROFILE";
+const INVALID_IDENTITY: &str = "SKETCH_INVALID_IDENTITY";
 pub(crate) fn error(message: impl Into<String>) -> Error {
     Error::new(INVALID_INPUT, message)
+}
+pub(crate) fn numerical_error(message: impl Into<String>) -> Error {
+    Error::new(NUMERICAL_FAILURE, message)
+}
+pub(crate) fn profile_error(message: impl Into<String>) -> Error {
+    Error::new(INVALID_PROFILE, message)
+}
+pub(crate) fn identity_error(message: impl Into<String>) -> Error {
+    Error::new(INVALID_IDENTITY, message)
+}
+pub(crate) fn validate_tolerance(tolerance: f64) -> Result<()> {
+    if tolerance.is_finite() && (1e-8..=0.1).contains(&tolerance) {
+        Ok(())
+    } else {
+        Err(error("Invalid solver tolerance"))
+    }
 }
 #[derive(Clone, Debug)]
 pub struct Circle {
@@ -168,17 +187,26 @@ pub(crate) fn subtract(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
     [a[0] - b[0], a[1] - b[1]]
 }
 
+mod dr;
 mod geometry_ops;
+mod identity;
+mod profile;
 mod residuals;
 mod solver;
 
+pub use dr::{DrPlan, DrStep, RigidCluster, plan_dr};
+pub use identity::{PersistentIds, RebuildMap};
+pub use profile::{ValidatedProfile, validate_profile};
+pub use solver::{
+    Diagnostics, DofAnalysis, PipelineStage, SolverOptions, SolverPipeline, analyze_dof, solve,
+    solve_with_diagnostics, solve_with_diagnostics_options, solve_with_options,
+    solve_with_pipeline,
+};
+
+#[cfg(test)]
+mod focused_tests;
 #[cfg(test)]
 mod jacobian_regression;
-
-pub use solver::{
-    Diagnostics, DofAnalysis, SolverOptions, analyze_dof, solve, solve_with_diagnostics,
-    solve_with_diagnostics_options, solve_with_options,
-};
 
 #[cfg(test)]
 mod tests {
@@ -488,14 +516,7 @@ mod tests {
     #[test]
     fn point_on_line_fix_angle_equal_angle_and_point_on_arc() {
         let s = Sketch {
-            points: vec![
-                [0., 0.],
-                [4., 3.],
-                [2., 1.],
-                [0., 5.],
-                [4., 6.],
-                [2., 3.],
-            ],
+            points: vec![[0., 0.], [4., 3.], [2., 1.], [0., 5.], [4., 6.], [2., 3.]],
             circles: vec![Circle {
                 center: 0,
                 radius: 5.,
@@ -592,12 +613,7 @@ mod tests {
     #[test]
     fn suggest_constraints_and_render_polylines() {
         let s = Sketch {
-            points: vec![
-                [0.0, 0.0],
-                [5.0, 0.0001],
-                [0.0, 5.0],
-                [0.0001, 0.0001],
-            ],
+            points: vec![[0.0, 0.0], [5.0, 0.0001], [0.0, 5.0], [0.0001, 0.0001]],
             circles: vec![
                 Circle {
                     center: 0,
@@ -656,7 +672,9 @@ mod tests {
         // Outward offset by +1.0 on a 10x10 CCW square produces a 12x12 square [-1, 11]^2.
         let offset_pts = s.offset_closed_loop(&[0, 1, 2, 3], 1.0);
         assert_eq!(offset_pts.len(), 4);
-        assert!((offset_pts[0][0] - (-1.0)).abs() < 1e-9 && (offset_pts[0][1] - (-1.0)).abs() < 1e-9);
+        assert!(
+            (offset_pts[0][0] - (-1.0)).abs() < 1e-9 && (offset_pts[0][1] - (-1.0)).abs() < 1e-9
+        );
         assert!((offset_pts[1][0] - 11.0).abs() < 1e-9 && (offset_pts[1][1] - (-1.0)).abs() < 1e-9);
         assert!((offset_pts[2][0] - 11.0).abs() < 1e-9 && (offset_pts[2][1] - 11.0).abs() < 1e-9);
         assert!((offset_pts[3][0] - (-1.0)).abs() < 1e-9 && (offset_pts[3][1] - 11.0).abs() < 1e-9);
@@ -664,9 +682,16 @@ mod tests {
         // Fillet the 90-degree corner at point 0 (between point 3=(0,10), point 0=(0,0), point 1=(10,0)) with radius 2.0.
         let (t1_idx, t2_idx, center_idx) = s.fillet_corner(3, 0, 1, 2.0).unwrap();
         assert_eq!((t1_idx, t2_idx, center_idx), (4, 5, 6));
-        assert!((s.points[t1_idx][0] - 0.0).abs() < 1e-9 && (s.points[t1_idx][1] - 2.0).abs() < 1e-9);
-        assert!((s.points[t2_idx][0] - 2.0).abs() < 1e-9 && (s.points[t2_idx][1] - 0.0).abs() < 1e-9);
-        assert!((s.points[center_idx][0] - 2.0).abs() < 1e-9 && (s.points[center_idx][1] - 2.0).abs() < 1e-9);
+        assert!(
+            (s.points[t1_idx][0] - 0.0).abs() < 1e-9 && (s.points[t1_idx][1] - 2.0).abs() < 1e-9
+        );
+        assert!(
+            (s.points[t2_idx][0] - 2.0).abs() < 1e-9 && (s.points[t2_idx][1] - 0.0).abs() < 1e-9
+        );
+        assert!(
+            (s.points[center_idx][0] - 2.0).abs() < 1e-9
+                && (s.points[center_idx][1] - 2.0).abs() < 1e-9
+        );
         assert_eq!(s.circles.len(), 1);
         assert!((s.circles[0].radius - 2.0).abs() < 1e-9);
         // Radius too large for edge length returns None.
@@ -675,14 +700,22 @@ mod tests {
         // Chamfer the corner at point 1=(10,0) between point 0=(0,0) and point 2=(10,10) with distances (3.0, 4.0).
         let (c1_idx, c2_idx) = s.chamfer_corner(0, 1, 2, 3.0, 4.0).unwrap();
         assert!((s.points[c1_idx][0] - 7.0).abs() < 1e-9 && s.points[c1_idx][1].abs() < 1e-9);
-        assert!((s.points[c2_idx][0] - 10.0).abs() < 1e-9 && (s.points[c2_idx][1] - 4.0).abs() < 1e-9);
+        assert!(
+            (s.points[c2_idx][0] - 10.0).abs() < 1e-9 && (s.points[c2_idx][1] - 4.0).abs() < 1e-9
+        );
         assert!(s.chamfer_corner(0, 1, 2, 12.0, 4.0).is_none());
 
         // Mirror points across the Y-axis segment (point 0=(0,0) -> point 3=(0,10)).
         let mirrored = s.mirror_points(&[1, 2], 0, 3, true).unwrap();
         assert_eq!(mirrored.len(), 2);
-        assert!((s.points[mirrored[0]][0] - (-10.0)).abs() < 1e-9 && s.points[mirrored[0]][1].abs() < 1e-9);
-        assert!((s.points[mirrored[1]][0] - (-10.0)).abs() < 1e-9 && (s.points[mirrored[1]][1] - 10.0).abs() < 1e-9);
+        assert!(
+            (s.points[mirrored[0]][0] - (-10.0)).abs() < 1e-9
+                && s.points[mirrored[0]][1].abs() < 1e-9
+        );
+        assert!(
+            (s.points[mirrored[1]][0] - (-10.0)).abs() < 1e-9
+                && (s.points[mirrored[1]][1] - 10.0).abs() < 1e-9
+        );
         assert!(s.constraints.contains(&Constraint::Symmetric {
             a: 1,
             b: mirrored[0],

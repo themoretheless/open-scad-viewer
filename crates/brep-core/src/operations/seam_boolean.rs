@@ -28,10 +28,13 @@ impl CertifiedSeamNormalizedBoolean {
         self.model
     }
 }
-fn refusal(code: &str) -> bool {
+pub(super) fn refusal(code: &str) -> bool {
     super::boolean::proof_refusal(code) || code.ends_with("_UNPROVEN")
 }
-fn normalize(source: &Model, depth: u8) -> Result<(Model, Vec<SameCarrierMergeCertificate>)> {
+pub(super) fn normalize(
+    source: &Model,
+    depth: u8,
+) -> Result<(Model, Vec<SameCarrierMergeCertificate>)> {
     if source.faces.len() > 64 {
         return Err(Error::new(
             "BREP_SEAM_BOOLEAN_REFUSED",
@@ -47,14 +50,15 @@ fn normalize(source: &Model, depth: u8) -> Result<(Model, Vec<SameCarrierMergeCe
             if attempted.contains(&face) {
                 continue;
             }
-            let group = curved::same_carrier_component(&model, face)?;
+            let group = curved::bounded_component(&model, face)?;
             attempted.extend(group.iter().copied());
             if group.len() < 2 {
                 continue;
             }
-            match curved::certify_same_carrier_merge(&model, &group, depth) {
+            match curved::certify_bounded_same_carrier_merge(&model, &group, depth) {
                 Ok(merge) => {
-                    next = Some(merge);
+                    merges.push(merge.certificate().exact.clone());
+                    next = Some(merge.into_model());
                     break;
                 }
                 Err(e) if refusal(e.code) => {}
@@ -70,8 +74,7 @@ fn normalize(source: &Model, depth: u8) -> Result<(Model, Vec<SameCarrierMergeCe
                 "Same-carrier Boolean exceeds eight merge steps per operand",
             ));
         }
-        merges.push(next.certificate().clone());
-        model = next.into_model();
+        model = next;
     }
 }
 /// Source equivalence is proved by whole-carrier/UV identities and exact

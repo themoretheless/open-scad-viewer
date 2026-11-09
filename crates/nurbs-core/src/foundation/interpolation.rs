@@ -31,7 +31,11 @@ pub fn parameters(points: &[[f64; 3]], param: Parameterization) -> Vec<f64> {
     if n < 2 {
         return vec![0.; n];
     }
-    let uniform = || (0..n).map(|i| i as f64 / (n - 1) as f64).collect::<Vec<_>>();
+    let uniform = || {
+        (0..n)
+            .map(|i| i as f64 / (n - 1) as f64)
+            .collect::<Vec<_>>()
+    };
     match param {
         Parameterization::Uniform => uniform(),
         Parameterization::ChordLength | Parameterization::Centripetal => {
@@ -114,7 +118,10 @@ pub fn validate_collocation(
     parameters: &[f64],
     min_basis: f64,
 ) -> Result<CollocationReport> {
-    check((1..=25).contains(&degree), "Collocation degree must be in [1, 25]")?;
+    check(
+        (1..=25).contains(&degree),
+        "Collocation degree must be in [1, 25]",
+    )?;
     check(
         knots.len() >= 2 * (degree + 1)
             && knots.len() - degree - 1 <= 256
@@ -155,6 +162,131 @@ pub fn validate_collocation(
     })
 }
 
+/// Numerical conditioning diagnostics for a square collocation matrix.
+/// `condition_one_norm` is `‖A‖₁·‖A⁻¹‖₁`, computed from the same partially
+/// pivoted LU factors used for all right-hand sides. It is a direct condition
+/// estimate in the 1-norm, not a residual or a substitute for the geometric
+/// Schoenberg–Whitney check. Values above `1e12` are flagged as ill-conditioned;
+/// no claim is made that every result below that threshold is accurate.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct InterpolationConditionReport {
+    pub condition_one_norm: f64,
+    pub min_abs_pivot: f64,
+    pub max_abs_pivot: f64,
+    pub relative_pivot: f64,
+    pub ill_conditioned: bool,
+}
+
+fn square_matrix_condition(mut lu: Vec<Vec<f64>>) -> Result<InterpolationConditionReport> {
+    let n = lu.len();
+    check(
+        n > 0 && n <= 256,
+        "Condition matrix size must be in [1, 256]",
+    )?;
+    check(
+        lu.iter().all(|row| row.len() == n) && lu.iter().flatten().all(|x| x.is_finite()),
+        "Condition matrix must be finite and square",
+    )?;
+    let matrix_norm = (0..n)
+        .map(|column| (0..n).map(|row| lu[row][column].abs()).sum::<f64>())
+        .fold(0., f64::max);
+    let mut row_swaps = Vec::with_capacity(n);
+    let mut min_abs_pivot = f64::INFINITY;
+    let mut max_abs_pivot: f64 = 0.;
+    for column in 0..n {
+        let pivot = (column..n)
+            .max_by(|&a, &b| lu[a][column].abs().total_cmp(&lu[b][column].abs()))
+            .unwrap();
+        let magnitude = lu[pivot][column].abs();
+        numeric(
+            magnitude > 0.,
+            "Interpolation collocation matrix is singular",
+        )?;
+        lu.swap(column, pivot);
+        row_swaps.push((column, pivot));
+        min_abs_pivot = min_abs_pivot.min(magnitude);
+        max_abs_pivot = max_abs_pivot.max(magnitude);
+        for row in column + 1..n {
+            let factor = lu[row][column] / lu[column][column];
+            numeric(factor.is_finite(), "Interpolation LU factor is not finite")?;
+            lu[row][column] = factor;
+            for j in column + 1..n {
+                lu[row][j] -= factor * lu[column][j];
+            }
+        }
+    }
+    let mut inverse_norm: f64 = 0.;
+    for column in 0..n {
+        let mut x = vec![0.; n];
+        x[column] = 1.;
+        // Row swaps are applied in their original order to the RHS.
+        for &(a, b) in &row_swaps {
+            x.swap(a, b);
+        }
+        for i in 0..n {
+            let correction: f64 = (0..i).map(|j| lu[i][j] * x[j]).sum();
+            x[i] -= correction;
+        }
+        for i in (0..n).rev() {
+            let correction: f64 = (i + 1..n).map(|j| lu[i][j] * x[j]).sum();
+            x[i] = (x[i] - correction) / lu[i][i];
+        }
+        numeric(
+            x.iter().all(|v| v.is_finite()),
+            "Interpolation inverse norm exhausted finite precision",
+        )?;
+        inverse_norm = inverse_norm.max(x.iter().map(|v| v.abs()).sum::<f64>());
+    }
+    let condition_one_norm = matrix_norm * inverse_norm;
+    let relative_pivot = min_abs_pivot / max_abs_pivot;
+    numeric(
+        condition_one_norm.is_finite() && relative_pivot.is_finite(),
+        "Interpolation condition estimate exhausted finite precision",
+    )?;
+    Ok(InterpolationConditionReport {
+        condition_one_norm,
+        min_abs_pivot,
+        max_abs_pivot,
+        relative_pivot,
+        ill_conditioned: condition_one_norm > 1e12,
+    })
+}
+
+/// Diagnose the actual global-interpolation collocation matrix before solving.
+/// Call [`validate_collocation`] as well: a nonzero condition number alone does
+/// not establish the support condition, and a good support check alone does not
+/// imply benign binary64 conditioning.
+pub fn collocation_condition(
+    degree: usize,
+    knots: &[f64],
+    parameters: &[f64],
+) -> Result<InterpolationConditionReport> {
+    check(
+        (1..=25).contains(&degree),
+        "Collocation degree must be in [1, 25]",
+    )?;
+    check(
+        knots.len() >= 2 * (degree + 1)
+            && knots.len() - degree - 1 <= 256
+            && knots.iter().all(|k| k.is_finite())
+            && knots.windows(2).all(|w| w[0] <= w[1]),
+        "Collocation knots must be finite, nondecreasing, and consistent with the degree",
+    )?;
+    let count = knots.len() - degree - 1;
+    check(
+        parameters.len() == count
+            && parameters
+                .iter()
+                .all(|t| t.is_finite() && *t >= knots[degree] && *t <= knots[count]),
+        "Collocation needs one finite in-domain parameter per basis function",
+    )?;
+    let matrix = parameters
+        .iter()
+        .map(|&u| basis_row(degree, knots, count, u))
+        .collect::<Result<Vec<_>>>()?;
+    square_matrix_condition(matrix)
+}
+
 /// A9.1 global interpolation of `points` with arbitrary `degree`.
 ///
 /// With `end_tangents = Some((d0, d1))` two derivative equations are appended
@@ -180,7 +312,10 @@ pub fn interpolate_curve(
         "Curve interpolation needs 2..4096 data sites",
     )?;
     check(
-        points.iter().flatten().all(|x| x.is_finite() && x.abs() <= 1e9),
+        points
+            .iter()
+            .flatten()
+            .all(|x| x.is_finite() && x.abs() <= 1e9),
         "Interpolation sites must be finite and bounded by 1e9",
     )?;
     check((1..=25).contains(&degree), "Degree must be in [1, 25]")?;
@@ -193,7 +328,9 @@ pub fn interpolate_curve(
     check(count <= 256, "Interpolation exceeds 256 control points")?;
     if let Some((d0, d1)) = end_tangents {
         check(
-            d0.iter().chain(&d1).all(|x| x.is_finite() && x.abs() <= 1e12),
+            d0.iter()
+                .chain(&d1)
+                .all(|x| x.is_finite() && x.abs() <= 1e12),
             "Endpoint tangents must be finite and bounded",
         )?;
     }
@@ -317,7 +454,11 @@ fn lsq_controls(
         }
     }
     numeric(
-        matrix.iter().flatten().chain(rhs.iter().flatten()).all(|x| x.is_finite()),
+        matrix
+            .iter()
+            .flatten()
+            .chain(rhs.iter().flatten())
+            .all(|x| x.is_finite()),
         "Fit normal equations overflowed finite precision",
     )?;
     solve(matrix, rhs)
@@ -461,9 +602,8 @@ pub fn fit_curve_adaptive(
                 }
                 found
             });
-            candidate = placed.ok_or_else(|| {
-                resource("Refinement could not place an interior knot")
-            })?;
+            candidate =
+                placed.ok_or_else(|| resource("Refinement could not place an interior knot"))?;
         }
         check(
             candidate > 0. && candidate < 1. && candidate.is_finite(),
@@ -487,8 +627,8 @@ pub fn fit_curve_adaptive(
             simplify_budget.tick()?;
             let mut removed = false;
             let interior: Vec<f64> = {
-                let mut values: Vec<f64> = curve.knots[degree + 1..curve.control_points.len()]
-                    .to_vec();
+                let mut values: Vec<f64> =
+                    curve.knots[degree + 1..curve.control_points.len()].to_vec();
                 values.dedup();
                 values
             };

@@ -675,114 +675,57 @@ pub fn profile_with_report(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeom
         if start > low + 1e-12 {
             if root_fillet_angle > 1e-9 {
                 let a2 = center + low_half + root_fillet_angle;
-                let p0 = falling_last;
-                let t0 = [p0[0] - falling_prev[0], p0[1] - falling_prev[1]];
-                let p2 = polar(low, a2);
-                let t2 = [-a2.sin(), a2.cos()];
-                let p1 = tangent_fillet_control_point(
-                    p0,
-                    t0,
-                    p2,
-                    t2,
-                    polar(low, center + flank_start_half),
-                );
+                let (p0, p2) = (falling_last, polar(low, a2));
+                let (t0, t2) = ([p0[0] - falling_prev[0], p0[1] - falling_prev[1]], [-a2.sin(), a2.cos()]);
+                let p1 = tangent_fillet_control_point(p0, t0, p2, t2, polar(low, center + flank_start_half));
                 tooth.push(corner_fillet2(p0, p1, p2));
             } else {
-                tooth.push(line2(
-                    polar(start, center + low_half),
-                    polar(low, center + low_half),
-                ));
+                tooth.push(line2(polar(start, center + low_half), polar(low, center + low_half)));
             }
         }
-        tooth.push(arc2(
-            low,
-            center + low_half + root_fillet_angle,
-            center + step - low_half - root_fillet_angle,
-        )?);
+        tooth.push(arc2(low, center + low_half + root_fillet_angle, center + step - low_half - root_fillet_angle)?);
     }
     let mut loops = Vec::new();
     if spec.internal {
-        // Material outside: the outer circle is the CCW boundary, the tooth
-        // outline runs clockwise as a hole.
-        loops.push(circle2(
-            outside,
-            arcs_clearing(outside, root).max(circle_arcs(spec.teeth)),
-        )?);
+        loops.push(circle2(outside, arcs_clearing(outside, root).max(circle_arcs(spec.teeth)))?);
         let mut hole: Vec<Curve> = tooth.iter().rev().map(reverse2).collect();
         hole.iter_mut().for_each(|_| {});
         loops.push(hole);
     } else {
         loops.push(tooth);
         if spec.bore > 0. {
-            let mut hole: Vec<Curve> = circle2(spec.bore / 2., circle_arcs(spec.teeth))?
-                .iter()
-                .rev()
-                .map(reverse2)
-                .collect();
+            let mut hole: Vec<Curve> = circle2(spec.bore / 2., circle_arcs(spec.teeth))?.iter().rev().map(reverse2).collect();
             hole.iter_mut().for_each(|_| {});
             loops.push(hole);
         }
     }
     let profile_join_adjustment_upper = profile_join::close(&mut loops, 1e-7)?;
-    let arc_radius_error_upper = ideal
-        .as_ref()
-        .and_then(|bounds| arc_radius::certify(spec, &loops, bounds, start > low + 1e-12).ok());
+    let arc_radius_error_upper = ideal.as_ref().and_then(|bounds| arc_radius::certify(spec, &loops, bounds, start > low + 1e-12).ok());
     let arc_radius_rounding_certified = arc_radius_error_upper.is_some_and(|e| e <= FLANK_FIT);
-    let transition_error_upper = ideal.as_ref().and_then(|bounds| {
-        profile_parameter::certify(spec, &loops, bounds, start > low + 1e-12).ok()
-    });
+    let transition_error_upper = ideal.as_ref().and_then(|bounds| profile_parameter::certify(spec, &loops, bounds, start > low + 1e-12).ok());
     let transition_rounding_certified = transition_error_upper.is_some_and(|e| e <= FLANK_FIT);
-    if full_flank_certified {
-        flank_deviation = flank_deviation.max(full_flank_deviation);
-    }
-    let profile_error_upper = if full_flank_certified && transition_rounding_certified {
-        transition_error_upper.map(|e| e.max(flank_deviation))
-    } else {
-        None
-    };
+    if full_flank_certified { flank_deviation = flank_deviation.max(full_flank_deviation); }
+    let profile_error_upper = if full_flank_certified && transition_rounding_certified { transition_error_upper.map(|e| e.max(flank_deviation)) } else { None };
     let geometry = GearGeometry {
-        pitch_radius: pitch,
-        base_radius: base,
-        tip_radius: tip,
-        root_radius: root,
-        outside_radius: outside,
-        flank_deviation,
-        flank_rounding_certified: full_flank_certified,
-        flank_stored_parameters_rounding_certified: true,
-        sweep_deviation: 0.,
-        sweep_rounding_certified: false,
-        face_count: 0,
-        profile_join_adjustment_upper,
-        arc_radius_error_upper,
-        arc_radius_rounding_certified,
-        transition_error_upper,
-        transition_rounding_certified,
-        profile_error_upper,
-        ideal_wall_error_upper: None,
+        pitch_radius: pitch, base_radius: base, tip_radius: tip, root_radius: root, outside_radius: outside,
+        flank_deviation, flank_rounding_certified: full_flank_certified, flank_stored_parameters_rounding_certified: true,
+        sweep_deviation: 0., sweep_rounding_certified: false, face_count: 0,
+        profile_join_adjustment_upper, arc_radius_error_upper, arc_radius_rounding_certified,
+        transition_error_upper, transition_rounding_certified, profile_error_upper, ideal_wall_error_upper: None,
     };
     Ok((loops, geometry))
 }
 
-// ---------------------------------------------------------------------------
-// Solid
-// ---------------------------------------------------------------------------
-
 pub(super) fn rotate2(c: &Curve, theta: f64) -> Curve {
     let (s, co) = theta.sin_cos();
     let mut r = c.clone();
-    for p in &mut r.control_points {
-        let (x, y) = (p[0], p[1]);
-        p[0] = co * x - s * y;
-        p[1] = s * x + co * y;
-    }
+    for p in &mut r.control_points { let (x, y) = (p[0], p[1]); p[0] = co * x - s * y; p[1] = s * x + co * y; }
     r
 }
 
 pub(super) fn lift(c: &Curve, z: f64) -> Curve {
     let mut r = c.clone();
-    for p in &mut r.control_points {
-        p.push(z);
-    }
+    for p in &mut r.control_points { p.push(z); }
     r
 }
 
@@ -790,78 +733,42 @@ pub(super) fn lift(c: &Curve, z: f64) -> Curve {
 /// `twist` radians over the height: ruled for zero twist, else quintic
 /// endpoint-Hermite spans with an ideal continuous bound at most SWEEP_FIT.
 pub(super) fn wall(
-    c: &Curve,
-    z0: f64,
-    z1: f64,
-    theta0: f64,
-    twist: f64,
-    loop_budget: f64,
-    nominal: Option<([f64; 2], [f64; 2])>,
+    c: &Curve, z0: f64, z1: f64, theta0: f64, twist: f64, loop_budget: f64, nominal: Option<([f64; 2], [f64; 2])>,
 ) -> Result<(Surface, f64, bool)> {
     let source = lift(c, z0);
-    let approximation =
-        nurbs_core::helical_sweep::approximate(&source, z1 - z0, theta0, twist, loop_budget)?;
+    let approximation = nurbs_core::helical_sweep::approximate(&source, z1 - z0, theta0, twist, loop_budget)?;
     if let Some((start, turn)) = nominal {
-        if let Ok(certificate) = nurbs_core::helical_sweep::certify_stored(
-            &source,
-            &approximation.surface,
-            [z1 - z0; 2],
-            start,
-            turn,
-        ) {
+        if let Ok(certificate) = nurbs_core::helical_sweep::certify_stored(&source, &approximation.surface, [z1 - z0; 2], start, turn) {
             if certificate.error_upper <= SWEEP_FIT {
                 return Ok((approximation.surface, certificate.error_upper, true));
             }
         }
     }
-    Ok((
-        approximation.surface,
-        approximation.real_arithmetic_error_estimate,
-        false,
-    ))
+    Ok((approximation.surface, approximation.real_arithmetic_error_estimate, false))
 }
 
 /// Iso-curve of a surface at u = 0 or u = 1 (the shared vertical edge).
 pub(super) fn column(surface: &Surface, last: bool) -> Curve {
-    let i = if last {
-        surface.control_points.len() - 1
-    } else {
-        0
-    };
+    let i = if last { surface.control_points.len() - 1 } else { 0 };
     Curve {
-        degree: surface.degree_v,
-        knots: surface.knots_v.clone(),
-        control_points: surface.control_points[i].clone(),
-        weights: surface.weights[i].clone(),
-        periodic: false,
+        degree: surface.degree_v, knots: surface.knots_v.clone(),
+        control_points: surface.control_points[i].clone(), weights: surface.weights[i].clone(), periodic: false,
     }
 }
 
 /// Planar cap over the bounding box of the outline curves at height `z`:
 /// the surface and the affine pcurve map.
 pub(super) fn cap(curves: &[&Curve], z: f64) -> (Surface, [f64; 4]) {
-    let mut lo = [f64::INFINITY; 2];
-    let mut hi = [f64::NEG_INFINITY; 2];
+    let (mut lo, mut hi) = ([f64::INFINITY; 2], [f64::NEG_INFINITY; 2]);
     for c in curves {
         for p in &c.control_points {
-            for k in 0..2 {
-                lo[k] = lo[k].min(p[k]);
-                hi[k] = hi[k].max(p[k]);
-            }
+            for k in 0..2 { lo[k] = lo[k].min(p[k]); hi[k] = hi[k].max(p[k]); }
         }
     }
     let surface = Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![lo[0], lo[1], z], vec![lo[0], hi[1], z]],
-            vec![vec![hi[0], lo[1], z], vec![hi[0], hi[1], z]],
-        ],
-        weights: vec![vec![1., 1.], vec![1., 1.]],
-        periodic_u: false,
-        periodic_v: false,
+        degree_u: 1, degree_v: 1, knots_u: vec![0., 0., 1., 1.], knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![vec![vec![lo[0], lo[1], z], vec![lo[0], hi[1], z]], vec![vec![hi[0], lo[1], z], vec![hi[0], hi[1], z]]],
+        weights: vec![vec![1., 1.], vec![1., 1.]], periodic_u: false, periodic_v: false,
     };
     (surface, [lo[0], lo[1], hi[0] - lo[0], hi[1] - lo[1]])
 }
@@ -875,12 +782,5 @@ pub(super) fn cap_pcurve(c: &Curve, map: [f64; 4]) -> Curve {
     p
 }
 
-pub(super) fn unit_line(a: [f64; 2], b: [f64; 2]) -> Curve {
-    line2(a, b)
-}
-
-/// Builds the gear solid. Returns the model and its geometry report.
-
-pub(super) fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
-    profile_with_report(spec)
-}
+pub(super) fn unit_line(a: [f64; 2], b: [f64; 2]) -> Curve { line2(a, b) }
+pub(super) fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> { profile_with_report(spec) }

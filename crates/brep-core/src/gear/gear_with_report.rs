@@ -75,7 +75,22 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
             // Vertical edges at every curve start of this layer.
             let mut vertical: Vec<usize> = Vec::with_capacity(n);
             let mut surfaces: Vec<Surface> = Vec::with_capacity(n);
+            let loop_max_radius = outline_loop
+                .iter()
+                .flat_map(|c| &c.control_points)
+                .map(|p| p[0].hypot(p[1]))
+                .fold(0., f64::max);
             for c in outline_loop {
+                let curve_radius = c
+                    .control_points
+                    .iter()
+                    .map(|p| p[0].hypot(p[1]))
+                    .fold(0., f64::max);
+                let loop_budget = if loop_max_radius > 0. && curve_radius > 0. {
+                    (SWEEP_FIT * (curve_radius / loop_max_radius)).min(SWEEP_FIT)
+                } else {
+                    SWEEP_FIT
+                };
                 let nominal = nominal_twist
                     .map(|total| -> Result<_> {
                         use nurbs_core::interval_eval::Interval as I;
@@ -92,7 +107,8 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
                         }
                     })
                     .transpose()?;
-                let (surface, dev, certified) = wall(c, z0, z1, theta0, twist, nominal)?;
+                let (surface, dev, certified) =
+                    wall(c, z0, z1, theta0, twist, loop_budget, nominal)?;
                 sweep_rounding_certified &= certified;
                 sweep_deviation = sweep_deviation.max(dev);
                 surfaces.push(surface);
@@ -114,26 +130,10 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
                 let bottom = level_edges[layer][loop_index][k];
                 let top = level_edges[layer + 1][loop_index][k];
                 let coedges = vec![
-                    Coedge::new(
-                        bottom,
-                        false,
-                        unit_line([0., 0.], [1., 0.]),
-                    ),
-                    Coedge::new(
-                        vertical[next],
-                        false,
-                        unit_line([1., 0.], [1., 1.]),
-                    ),
-                    Coedge::new(
-                        top,
-                        true,
-                        unit_line([1., 1.], [0., 1.]),
-                    ),
-                    Coedge::new(
-                        vertical[k],
-                        true,
-                        unit_line([0., 1.], [0., 0.]),
-                    ),
+                    Coedge::new(bottom, false, unit_line([0., 0.], [1., 0.])),
+                    Coedge::new(vertical[next], false, unit_line([1., 0.], [1., 1.])),
+                    Coedge::new(top, true, unit_line([1., 1.], [0., 1.])),
+                    Coedge::new(vertical[k], true, unit_line([0., 1.], [0., 0.])),
                 ];
                 loops_out.push(Loop { coedges });
                 faces.push(Face {
@@ -219,4 +219,3 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
 pub fn gear(spec: &GearSpec) -> Result<Model> {
     gear_with_report(spec).map(|(model, _)| model)
 }
-

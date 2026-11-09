@@ -668,156 +668,107 @@ fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
 }
 
 fn adaptive_edge_divisions(curve: &Curve, segments: usize, is_vertical_pair: bool) -> usize {
-    if is_vertical_pair {
-        return (segments / 2).max(2);
-    }
+    if is_vertical_pair { return (segments / 2).max(2); }
     let pts = &curve.control_points;
-    if pts.len() < 3 || pts[0].len() < 3 {
-        return (segments / 2).max(2);
-    }
+    if pts.len() < 3 || pts[0].len() < 3 { return (segments / 2).max(2); }
     let p0 = [pts[0][0], pts[0][1], pts[0][2]];
-    let pn = {
-        let last = pts.last().unwrap();
-        [last[0], last[1], last[2]]
-    };
-    let dx = pn[0] - p0[0];
-    let dy = pn[1] - p0[1];
-    let dz = pn[2] - p0[2];
+    let last = pts.last().unwrap();
+    let pn = [last[0], last[1], last[2]];
+    let [dx, dy, dz] = [pn[0] - p0[0], pn[1] - p0[1], pn[2] - p0[2]];
     let chord_sq = dx * dx + dy * dy + dz * dz;
     let chord = chord_sq.sqrt();
-    if chord <= 1e-9 {
-        return (segments / 2).max(2);
-    }
+    if chord <= 1e-9 { return (segments / 2).max(2); }
     let mut max_sagitta = 0_f64;
     for p in &pts[1..pts.len() - 1] {
-        let vx = p[0] - p0[0];
-        let vy = p[1] - p0[1];
-        let vz = p[2] - p0[2];
+        let [vx, vy, vz] = [p[0] - p0[0], p[1] - p0[1], p[2] - p0[2]];
         let t = ((vx * dx + vy * dy + vz * dz) / chord_sq).clamp(0., 1.);
-        let dist = (vx - t * dx).hypot(vy - t * dy).hypot(vz - t * dz);
-        max_sagitta = max_sagitta.max(dist);
+        max_sagitta = max_sagitta.max((vx - t * dx).hypot(vy - t * dy).hypot(vz - t * dz));
     }
-    // Rational circular arcs with middle weight w < 1 have control polygon height
-    // h = r * (1/w - 1), while actual arc sagitta is s = r * (1 - w) ≈ w * h.
     if curve.degree == 2 && curve.weights.len() == 3 && curve.weights[1] > 0. && curve.weights[1] < 1. {
         max_sagitta *= curve.weights[1];
     }
     let ratio = max_sagitta / chord;
-    if ratio < 0.018 {
-        (segments / 2).max(2)
-    } else if ratio < 0.055 {
-        ((segments * 3) / 4).max(3)
-    } else {
-        segments
-    }
+    if ratio < 0.018 { (segments / 2).max(2) } else if ratio < 0.055 { ((segments * 3) / 4).max(3) } else { segments }
 }
 
-fn rectangular_parallel_edges(model: &brep_core::Model, face: &brep_core::Face)
-    -> Result<Vec<[usize;2]>> {
-    let coedges=&model.loops[face.outer].coedges;
-    if coedges.len()!=4 || rectangular_trim_domain(model,face)?.is_none()
-        || coedges.iter().any(|c|model.edges[c.edge].degenerate) {return Ok(Vec::new());}
-    let mut horizontal=Vec::new(); let mut vertical=Vec::new();
-    for c in coedges {
-        let p=&c.pcurve.control_points;
-        if p[0][1]==p[1][1] {horizontal.push(c.edge);} else {vertical.push(c.edge);}
+fn rectangular_parallel_edges(model: &brep_core::Model, face: &brep_core::Face) -> Result<Vec<[usize; 2]>> {
+    let coedges = &model.loops[face.outer].coedges;
+    if coedges.len() != 4 || rectangular_trim_domain(model, face)?.is_none() || coedges.iter().any(|c| model.edges[c.edge].degenerate) {
+        return Ok(Vec::new());
     }
-    if horizontal.len()!=2 || vertical.len()!=2 {return Ok(Vec::new());}
-    Ok(vec![[horizontal[0],horizontal[1]],[vertical[0],vertical[1]]])
+    let (mut horizontal, mut vertical) = (Vec::new(), Vec::new());
+    for c in coedges {
+        let p = &c.pcurve.control_points;
+        if p[0][1] == p[1][1] { horizontal.push(c.edge); } else { vertical.push(c.edge); }
+    }
+    if horizontal.len() != 2 || vertical.len() != 2 { return Ok(Vec::new()); }
+    Ok(vec![[horizontal[0], horizontal[1]], [vertical[0], vertical[1]]])
 }
 
 fn exact_linear_ruling(surface: &Surface, coedge: &brep_core::Coedge, edge: &brep_core::Edge) -> bool {
-    let p=&coedge.pcurve;
-    let curve=&edge.curve;
-    if edge.degenerate || p.degree!=1 || p.control_points.len()!=2
-        || p.weights[0]!=p.weights[1] || curve.degree!=1
-        || curve.control_points.len()!=2 || curve.weights[0]!=curve.weights[1] {
+    let (p, curve) = (&coedge.pcurve, &edge.curve);
+    if edge.degenerate || p.degree != 1 || p.control_points.len() != 2 || p.weights[0] != p.weights[1]
+        || curve.degree != 1 || curve.control_points.len() != 2 || curve.weights[0] != curve.weights[1] {
         return false;
     }
-    let a=&p.control_points[0];let b=&p.control_points[1];
-    let u = a[1]==b[1] && a[0]!=b[0] && surface.degree_u==1
-        && !surface.periodic_u && surface.control_points.len()==2
-        && surface.knots_u.len()==4 && surface.knots_u[0]==surface.knots_u[1]
-        && surface.knots_u[2]==surface.knots_u[3]
-        && surface.weights[0]==surface.weights[1];
-    let v = a[0]==b[0] && a[1]!=b[1] && surface.degree_v==1
-        && !surface.periodic_v && surface.control_points.iter().all(|row|row.len()==2)
-        && surface.knots_v.len()==4 && surface.knots_v[0]==surface.knots_v[1]
-        && surface.knots_v[2]==surface.knots_v[3]
-        && surface.weights.iter().all(|row|row[0]==row[1]);
+    let (a, b) = (&p.control_points[0], &p.control_points[1]);
+    let u = a[1] == b[1] && a[0] != b[0] && surface.degree_u == 1 && !surface.periodic_u && surface.control_points.len() == 2
+        && surface.knots_u.len() == 4 && surface.knots_u[0] == surface.knots_u[1] && surface.knots_u[2] == surface.knots_u[3]
+        && surface.weights[0] == surface.weights[1];
+    let v = a[0] == b[0] && a[1] != b[1] && surface.degree_v == 1 && !surface.periodic_v && surface.control_points.iter().all(|row| row.len() == 2)
+        && surface.knots_v.len() == 4 && surface.knots_v[0] == surface.knots_v[1] && surface.knots_v[2] == surface.knots_v[3]
+        && surface.weights.iter().all(|row| row[0] == row[1]);
     u || v
 }
 
-fn repair_collinear_triangles(mesh: &mut FaceMesh, points: &[[f64;3]]) {
-    let normal = |a:usize,b:usize,c:usize| represented_triangle_cross(points[a],points[b],points[c]);
-    let Some(n)=mesh.triangles.iter().filter_map(|t|normal(t[0],t[1],t[2]))
-        .find(|n|*n!=[0;3]) else {return;};
-    let axis=(0..3).max_by_key(|&i|n[i].unsigned_abs()).unwrap();
-    let area=|a,b,c|normal(a,b,c).map(|n|n[axis].signum());
+fn repair_collinear_triangles(mesh: &mut FaceMesh, points: &[[f64; 3]]) {
+    let normal = |a: usize, b: usize, c: usize| represented_triangle_cross(points[a], points[b], points[c]);
+    let Some(n) = mesh.triangles.iter().filter_map(|t| normal(t[0], t[1], t[2])).find(|n| *n != [0; 3]) else { return; };
+    let axis = (0..3).max_by_key(|&i| n[i].unsigned_abs()).unwrap();
+    let area = |a, b, c| normal(a, b, c).map(|n| n[axis].signum());
     loop {
-        let mut replacement=None;
-        'search: for (i,t) in mesh.triangles.iter().enumerate() {
-            if normal(t[0],t[1],t[2])!=Some([0;3]) {continue;}
+        let mut replacement = None;
+        'search: for (i, t) in mesh.triangles.iter().enumerate() {
+            if normal(t[0], t[1], t[2]) != Some([0; 3]) { continue; }
             for k in 0..3 {
-                let [a,b,c]=[t[k],t[(k+1)%3],t[(k+2)%3]];
-                let [pa,pb,pc]=[points[a],points[b],points[c]];
-                let Some(j)=(0..3).find(|&j|pa[j]!=pb[j]) else {continue;};
-                if a==b || a==c || b==c || !(pa[j].min(pb[j])<pc[j] && pc[j]<pa[j].max(pb[j])) {continue;}
-                let neighbors:Vec<_>=mesh.triangles.iter().enumerate()
-                    .filter(|(_,q)|q.contains(&a)&&q.contains(&b)).collect();
-                if neighbors.len()!=2 {continue;}
-                let Some((j,q))=neighbors.into_iter().find(|(j,_)|*j!=i) else {continue;};
-                let Some(&d)=q.iter().find(|&&v|v!=a&&v!=b) else {continue;};
-                let forward=(0..3).any(|l|q[l]==a&&q[(l+1)%3]==b);
-                let (u,v)=if forward {(a,b)} else {(b,a)};
-                let Some(sign)=area(q[0],q[1],q[2]) else {continue;};
-                let first=[u,c,d];let second=[c,v,d];
-                if sign==0 || area(first[0],first[1],first[2])!=Some(sign)
-                    || area(second[0],second[1],second[2])!=Some(sign) {continue;}
-                replacement=Some((i,j,first,second));break 'search;
+                let [a, b, c] = [t[k], t[(k + 1) % 3], t[(k + 2) % 3]];
+                let [pa, pb, pc] = [points[a], points[b], points[c]];
+                let Some(j) = (0..3).find(|&j| pa[j] != pb[j]) else { continue; };
+                if a == b || a == c || b == c || !(pa[j].min(pb[j]) < pc[j] && pc[j] < pa[j].max(pb[j])) { continue; }
+                let neighbors: Vec<_> = mesh.triangles.iter().enumerate().filter(|(_, q)| q.contains(&a) && q.contains(&b)).collect();
+                if neighbors.len() != 2 { continue; }
+                let Some((j, q)) = neighbors.into_iter().find(|(j, _)| *j != i) else { continue; };
+                let Some(&d) = q.iter().find(|&&v| v != a && v != b) else { continue; };
+                let forward = (0..3).any(|l| q[l] == a && q[(l + 1) % 3] == b);
+                let (u, v) = if forward { (a, b) } else { (b, a) };
+                let Some(sign) = area(q[0], q[1], q[2]) else { continue; };
+                let (first, second) = ([u, c, d], [c, v, d]);
+                if sign == 0 || area(first[0], first[1], first[2]) != Some(sign) || area(second[0], second[1], second[2]) != Some(sign) { continue; }
+                replacement = Some((i, j, first, second));
+                break 'search;
             }
         }
-        let Some((i,j,first,second))=replacement else {return;};
-        mesh.triangles[i]=first;mesh.triangles[j]=second;
+        let Some((i, j, first, second)) = replacement else { return; };
+        mesh.triangles[i] = first;
+        mesh.triangles[j] = second;
     }
 }
 
 fn rectangular_trim_domain(model: &brep_core::Model, face: &brep_core::Face) -> Result<Option<[f64; 4]>> {
     let coedges = &model.loops[face.outer].coedges;
     let corners = model.loop_uv(face.outer, 1)?;
-    let min_u = corners
-        .iter()
-        .map(|point| point[0])
-        .fold(f64::INFINITY, f64::min);
-    let max_u = corners
-        .iter()
-        .map(|point| point[0])
-        .fold(f64::NEG_INFINITY, f64::max);
-    let min_v = corners
-        .iter()
-        .map(|point| point[1])
-        .fold(f64::INFINITY, f64::min);
-    let max_v = corners
-        .iter()
-        .map(|point| point[1])
-        .fold(f64::NEG_INFINITY, f64::max);
-    let rectangular = face.holes.is_empty()
-        && corners.len() >= 4
+    let min_u = corners.iter().map(|p| p[0]).fold(f64::INFINITY, f64::min);
+    let max_u = corners.iter().map(|p| p[0]).fold(f64::NEG_INFINITY, f64::max);
+    let min_v = corners.iter().map(|p| p[1]).fold(f64::INFINITY, f64::min);
+    let max_v = corners.iter().map(|p| p[1]).fold(f64::NEG_INFINITY, f64::max);
+    let rectangular = face.holes.is_empty() && corners.len() >= 4
         && coedges.iter().all(|c| {
-            c.pcurve.degree == 1
-                && c.pcurve.control_points.len() == 2
-                && c.pcurve.weights.iter().all(|w| *w == c.pcurve.weights[0])
-                && {
-                    let a = &c.pcurve.control_points[0];
-                    let b = &c.pcurve.control_points[1];
-                    (a[0] == b[0] || a[1] == b[1])
-                        && [a, b].iter().all(|p| {
-                            p[0] == min_u || p[0] == max_u || p[1] == min_v || p[1] == max_v
-                        })
-                }
+            c.pcurve.degree == 1 && c.pcurve.control_points.len() == 2 && c.pcurve.weights.iter().all(|w| *w == c.pcurve.weights[0]) && {
+                let (a, b) = (&c.pcurve.control_points[0], &c.pcurve.control_points[1]);
+                (a[0] == b[0] || a[1] == b[1]) && [a, b].iter().all(|p| p[0] == min_u || p[0] == max_u || p[1] == min_v || p[1] == max_v)
+            }
         })
-        && max_u > min_u
-        && max_v > min_v;
+        && max_u > min_u && max_v > min_v;
     Ok(rectangular.then_some([min_u, max_u, min_v, max_v]))
 }
 

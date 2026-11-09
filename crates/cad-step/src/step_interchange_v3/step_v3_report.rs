@@ -403,6 +403,10 @@ pub(super) fn call(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<(&st
                             | "CONVERSION_BASED_UNIT"
                             | "GLOBAL_UNIT_ASSIGNED_CONTEXT"
                             | "GEOMETRIC_REPRESENTATION_CONTEXT"
+                            | "GEOMETRIC_TOLERANCE"
+                            | "MEASURE_WITH_UNIT"
+                            | "TESSELLATED_GEOMETRIC_SET"
+                            | "REPRESENTATION"
                     )
                 {
                     return Ok((name, args));
@@ -415,7 +419,10 @@ pub(super) fn call(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<(&st
         _ => Err(refuse(format!("Reference #{id} is not an entity call"))),
     }
 }
-pub(super) fn components(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<Vec<(&str, &[Value])>> {
+pub(super) fn components(
+    entities: &BTreeMap<usize, Entity>,
+    id: usize,
+) -> Result<Vec<(&str, &[Value])>> {
     let entity = entities
         .get(&id)
         .ok_or_else(|| refuse(format!("Missing reference #{id}")))?;
@@ -497,7 +504,10 @@ pub(super) fn name(args: &[Value]) -> Option<&str> {
     }
 }
 
-pub(super) fn reachable(entities: &BTreeMap<usize, Entity>, roots: &[usize]) -> Result<BTreeSet<usize>> {
+pub(super) fn reachable(
+    entities: &BTreeMap<usize, Entity>,
+    roots: &[usize],
+) -> Result<BTreeSet<usize>> {
     pub(super) fn visit(
         id: usize,
         depth: usize,
@@ -573,7 +583,11 @@ pub(super) fn point(
     }
     Ok(p)
 }
-pub(super) fn direction(entities: &BTreeMap<usize, Entity>, id: usize, dim: usize) -> Result<Vec<f64>> {
+pub(super) fn direction(
+    entities: &BTreeMap<usize, Entity>,
+    id: usize,
+    dim: usize,
+) -> Result<Vec<f64>> {
     let (ty, args) = call(entities, id)?;
     if ty != "DIRECTION" || args.len() != 2 {
         return Err(refuse("Expected DIRECTION"));

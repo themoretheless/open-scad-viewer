@@ -40,6 +40,7 @@ export interface UseParameterPresetsReturn {
   undoParameterPreset: () => void
   removeParameterPreset: () => void
   updateCustomizer: (name: string, value: CustomizerValue) => void
+  updateCustomizerBatch: (changes: Record<string, CustomizerValue>) => void
 }
 
 export function useParameterPresets(options: UseParameterPresetsOptions): UseParameterPresetsReturn {

@@ -73,7 +73,12 @@ pub fn tweak_face(
     if angle_rad.abs() <= 1e-12 {
         return Err(error(TWEAK_INVALID, "Angle must be nonzero"));
     }
-    if axis.point.iter().chain(&axis.direction).any(|v| !v.is_finite()) {
+    if axis
+        .point
+        .iter()
+        .chain(&axis.direction)
+        .any(|v| !v.is_finite())
+    {
         return Err(error(TWEAK_INVALID, "Axis point/direction must be finite"));
     }
     let length = norm(axis.direction);
@@ -137,7 +142,14 @@ pub fn tweak_face(
     }
 
     let adjacency = edge_face_adjacency(source, &mut guard)?;
-    let driven = coplanar_component(source, face, plane, &BTreeSet::new(), &adjacency, &mut guard)?;
+    let driven = coplanar_component(
+        source,
+        face,
+        plane,
+        &BTreeSet::new(),
+        &adjacency,
+        &mut guard,
+    )?;
 
     // Pre-operation draft analysis: the angle limit is enforced BEFORE any
     // mutation attempt; the error carries the predicted maximum.
@@ -193,10 +205,8 @@ pub fn tweak_face(
                 let moved = match non_driven.len() {
                     0 => rotate_point(&axis, angle_rad, p),
                     2 => {
-                        let (n1, n2) = (
-                            polygons[non_driven[0]].plane,
-                            polygons[non_driven[1]].plane,
-                        );
+                        let (n1, n2) =
+                            (polygons[non_driven[0]].plane, polygons[non_driven[1]].plane);
                         let Some((lp, ld)) = intersect_planes(n1, n2, 1e-9) else {
                             return Err(error(
                                 TWEAK_UNSUPPORTED,
@@ -270,8 +280,12 @@ pub fn tweak_face(
             "Tweak consumes the whole body; refused instead of returning an empty solid",
         ));
     }
-    let mut staged = model_from_trimmed_polygons(kept, source.tolerance_mm)
-        .map_err(|e| Error::new(TWEAK_UNSUPPORTED, format!("Tweak rebuild failed: {}", e.message)))?;
+    let mut staged = model_from_trimmed_polygons(kept, source.tolerance_mm).map_err(|e| {
+        Error::new(
+            TWEAK_UNSUPPORTED,
+            format!("Tweak rebuild failed: {}", e.message),
+        )
+    })?;
     restore_unchanged_ids(&mut staged, source, &mut guard)?;
     staged.refresh_change_set(&[source]);
     staged.validate()?;
@@ -285,7 +299,8 @@ pub fn tweak_face(
     let mut moment = 0.;
     for &d in &driven {
         let n = polygons[d].plane.normal;
-        for ring in std::iter::once(&polygons[d].boundary.outer).chain(&polygons[d].boundary.holes) {
+        for ring in std::iter::once(&polygons[d].boundary.outer).chain(&polygons[d].boundary.holes)
+        {
             for i in 1..ring.len().saturating_sub(1) {
                 let (a, b, c) = (ring[0], ring[i], ring[i + 1]);
                 let signed_area = 0.5 * dot(cross(sub(b, a), sub(c, a)), n);

@@ -1,7 +1,7 @@
 //! serialization operations: to_value.
 use super::*;
 impl value_codec::Serialize for Constraint {
-fn to_value(&self) -> value_codec::Value {
+    fn to_value(&self) -> value_codec::Value {
         match self {
             Self::Fix { point, at } => {
                 let mut object = value_codec::Map::new();
@@ -136,12 +136,7 @@ fn to_value(&self) -> value_codec::Value {
                 object.insert("kind".into(), value_codec::Value::String("angle".into()));
                 value_codec::Value::Object(object)
             }
-            Self::PointToLineDistance {
-                point,
-                a,
-                b,
-                value,
-            } => {
+            Self::PointToLineDistance { point, a, b, value } => {
                 let mut object = value_codec::Map::new();
                 object.insert("point".into(), value_codec::Serialize::to_value(point));
                 object.insert("a".into(), value_codec::Serialize::to_value(a));

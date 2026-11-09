@@ -18,7 +18,10 @@ pub(super) fn import_step_direct(
     } else {
         text
     })?;
-    let representations: Vec<_> = if ap242_composition {
+    let mut auxiliary_selections = BTreeSet::new();
+    let representations: Vec<_> = if ap242_composition
+        && capability != STEP_INTERCHANGE_V10_CAPABILITY
+    {
         let mut selected = Vec::<usize>::new();
         for entity in entities.values() {
             if let Value::Call(name, args) = &entity.value
@@ -35,7 +38,10 @@ pub(super) fn import_step_direct(
                 "AP242 import requires SHAPE_DEFINITION_REPRESENTATION selection",
             ));
         }
-        let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
+        let allow_open_shells = matches!(
+            capability,
+            STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+        );
         for id in &selected {
             let (ty, _) = call(&entities, *id)?;
             if ty != "ADVANCED_BREP_SHAPE_REPRESENTATION"
@@ -45,6 +51,156 @@ pub(super) fn import_step_direct(
                 return Err(refuse(
                     "Selected representation is outside the admitted direct B-rep products",
                 ));
+            }
+        }
+        selected
+    } else if ap242_composition {
+        let mut selected = Vec::<usize>::new();
+        for entity in entities.values() {
+            if let Value::Call(name, args) = &entity.value
+                && name == "SHAPE_DEFINITION_REPRESENTATION"
+                && args.len() == 2
+            {
+                selected.push(one_ref(&args[1], "selected shape representation")?);
+            }
+        }
+        selected.sort_unstable();
+        selected.dedup();
+        if selected.is_empty() {
+            return Err(refuse(
+                "AP242 import requires SHAPE_DEFINITION_REPRESENTATION selection",
+            ));
+        }
+        // AP242 product shape selection can name construction/PMI representations
+        // beside the exact model. Select one exact root, never every declaration.
+        let exact = selected
+            .iter()
+            .copied()
+            .filter(|id| {
+                call(&entities, *id).is_ok_and(|(ty, _)| ty == "ADVANCED_BREP_SHAPE_REPRESENTATION")
+            })
+            .collect::<Vec<_>>();
+        let direct_exact = selected
+            .iter()
+            .copied()
+            .filter(|id| {
+                call(&entities, *id).is_ok_and(|(ty, args)| {
+                    ty == "SHAPE_REPRESENTATION"
+                        && args.get(1).is_some_and(|items| {
+                            list(items, "exact representation items").is_ok_and(|items| {
+                                items.iter().any(|item| {
+                                    one_ref(item, "exact representation item").is_ok_and(|item| {
+                                        call(&entities, item).is_ok_and(|(ty, _)| {
+                                            matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS")
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                })
+            })
+            .collect::<Vec<_>>();
+        let containers = selected
+            .iter()
+            .copied()
+            .filter(|id| !exact.contains(id) && !direct_exact.contains(id))
+            .filter(|id| call(&entities, *id).is_ok_and(|(ty, _)| ty == "SHAPE_REPRESENTATION"))
+            .filter(|id| {
+                entities.keys().any(|relationship| {
+                    relationship_components(&entities, *relationship).is_ok_and(|edge| {
+                        edge.is_some_and(|(from, to, operator)| {
+                            operator == 0
+                                && (from == *id || to == *id)
+                                && call(&entities, if from == *id { to } else { from })
+                                    .is_ok_and(|(ty, _)| ty == "ADVANCED_BREP_SHAPE_REPRESENTATION")
+                        })
+                    })
+                })
+            })
+            .collect::<Vec<_>>();
+        if !exact.is_empty() || !containers.is_empty() {
+            if containers.len() > 1
+                || containers.is_empty() && exact.len() != 1
+                || containers.len() == 1 && exact.len() > 1
+            {
+                return Err(refuse(
+                    "Ambiguous multiple exact B-rep representation roots",
+                ));
+            }
+            let mut root = containers
+                .first()
+                .or_else(|| exact.first())
+                .copied()
+                .unwrap();
+            if !containers.is_empty() {
+                if exact.iter().any(|candidate| {
+                    !entities.keys().any(|relationship| {
+                        relationship_components(&entities, *relationship).is_ok_and(|edge| {
+                            edge.is_some_and(|(from, to, operator)| {
+                                operator == 0
+                                    && (from == root && to == *candidate
+                                        || from == *candidate && to == root)
+                            })
+                        })
+                    })
+                }) {
+                    return Err(refuse(
+                        "Ambiguous multiple exact B-rep representation roots",
+                    ));
+                }
+                let incoming = entities
+                    .keys()
+                    .filter_map(|relationship| {
+                        relationship_components(&entities, *relationship)
+                            .ok()
+                            .flatten()
+                            .and_then(|(from, to, operator)| {
+                                (operator == 0
+                                    && to == root
+                                    && call(&entities, from).is_ok_and(|(ty, _)| {
+                                        ty == "ADVANCED_BREP_SHAPE_REPRESENTATION"
+                                    }))
+                                .then_some(from)
+                            })
+                    })
+                    .collect::<Vec<_>>();
+                if incoming.len() > 1 {
+                    return Err(refuse(
+                        "Ambiguous multiple exact B-rep representation roots",
+                    ));
+                }
+                if let Some(exact) = incoming.first() {
+                    auxiliary_selections.insert(root);
+                    root = *exact;
+                }
+            }
+            auxiliary_selections.extend(containers.iter().copied());
+            auxiliary_selections.extend(selected.iter().copied().filter(|id| *id != root));
+            selected = vec![root];
+        } else if !direct_exact.is_empty() {
+            if direct_exact.len() != 1 {
+                return Err(refuse(
+                    "Ambiguous multiple exact B-rep representation roots",
+                ));
+            }
+            auxiliary_selections
+                .extend(selected.iter().copied().filter(|id| *id != direct_exact[0]));
+            selected = direct_exact;
+        } else {
+            let allow_open_shells = matches!(
+                capability,
+                STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+            );
+            for id in &selected {
+                let (ty, _) = call(&entities, *id)?;
+                if ty != "ADVANCED_BREP_SHAPE_REPRESENTATION"
+                    && !(allow_open_shells && ty == "SHAPE_REPRESENTATION")
+                    && !(allow_open_shells && ty == "MANIFOLD_SURFACE_SHAPE_REPRESENTATION")
+                {
+                    return Err(refuse(
+                        "Selected representation is outside the admitted direct B-rep products",
+                    ));
+                }
             }
         }
         selected
@@ -58,7 +214,10 @@ pub(super) fn import_step_direct(
             })
             .collect()
     };
-    let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
+    let allow_open_shells = matches!(
+        capability,
+        STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+    );
     let all_bodies: Vec<_> = entities
         .keys()
         .filter_map(|id| {
@@ -82,7 +241,10 @@ pub(super) fn import_step_direct(
             &entities,
             &representations,
             allow_degenerate && capability != STEP_INTERCHANGE_V8_CAPABILITY,
-            capability == STEP_INTERCHANGE_V9_CAPABILITY,
+            matches!(
+                capability,
+                STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+            ),
             allow_open_shells,
         )?
     } else {
@@ -220,6 +382,7 @@ pub(super) fn import_step_direct(
         "FACE_OUTER_BOUND",
         "FACE_BOUND",
         "EDGE_LOOP",
+        "VERTEX_LOOP",
         "ORIENTED_EDGE",
         "EDGE_CURVE",
         "VERTEX_POINT",
@@ -250,11 +413,54 @@ pub(super) fn import_step_direct(
         "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT",
         "UNCERTAINTY_MEASURE_WITH_UNIT",
         "LENGTH_MEASURE_WITH_UNIT",
+        "PLANE_ANGLE_MEASURE_WITH_UNIT",
         "MEASURE_WITH_UNIT",
+        "DIMENSIONAL_EXPONENTS",
         "ITEM_DEFINED_TRANSFORMATION",
         "REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION",
         "CARTESIAN_TRANSFORMATION_OPERATOR_3D",
+        "GEOMETRIC_TOLERANCE",
+        "GEOMETRIC_TOLERANCE_WITH_DATUM_REFERENCE",
+        "POSITION_TOLERANCE",
+        "TESSELLATED_GEOMETRIC_SET",
     ];
+    loop {
+        let previous = auxiliary_selections.len();
+        for id in entities.keys() {
+            if let Some((from, to, 0)) = relationship_components(&entities, *id)?
+                && (representations.contains(&from) || auxiliary_selections.contains(&from))
+                && call(&entities, to)?.0 != "ADVANCED_BREP_SHAPE_REPRESENTATION"
+            {
+                auxiliary_selections.insert(to);
+            }
+        }
+        if auxiliary_selections.len() == previous {
+            break;
+        }
+    }
+    for rep in &representations {
+        let (_, args) = call(&entities, *rep)?;
+        if let Some(items) = args.get(1) {
+            for item in list(items, "selected representation items")? {
+                let item = one_ref(item, "selected representation item")?;
+                if matches!(
+                    call(&entities, item)?.0,
+                    "MAPPED_ITEM" | "GEOMETRIC_CURVE_SET"
+                ) {
+                    auxiliary_selections.insert(item);
+                }
+            }
+        }
+    }
+    let auxiliary_linked = if auxiliary_selections.is_empty() {
+        BTreeSet::new()
+    } else {
+        reachable(
+            &entities,
+            &auxiliary_selections.into_iter().collect::<Vec<_>>(),
+        )?
+    };
+    linked.retain(|id| !auxiliary_linked.contains(id));
     for id in &linked {
         if allow_degenerate
             && capability != STEP_INTERCHANGE_V8_CAPABILITY
@@ -276,6 +482,10 @@ pub(super) fn import_step_direct(
     let mut ignored = BTreeSet::new();
     for id in entities.keys() {
         if linked.contains(id) {
+            continue;
+        }
+        if auxiliary_linked.contains(id) {
+            ignored.insert(call(&entities, *id)?.0.to_string());
             continue;
         }
         if ap242_composition && relationship_components(&entities, *id)?.is_some() {
@@ -345,8 +555,12 @@ pub(super) fn import_step_direct(
                         STEP_INTERCHANGE_V7_CAPABILITY
                             | STEP_INTERCHANGE_V8_CAPABILITY
                             | STEP_INTERCHANGE_V9_CAPABILITY
+                            | STEP_INTERCHANGE_V10_CAPABILITY
                     ),
-                    interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
+                    interior_point_selectors: matches!(
+                        capability,
+                        STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+                    ),
                     allow_open_shells,
                 },
             )?;
@@ -371,8 +585,12 @@ pub(super) fn import_step_direct(
                     STEP_INTERCHANGE_V7_CAPABILITY
                         | STEP_INTERCHANGE_V8_CAPABILITY
                         | STEP_INTERCHANGE_V9_CAPABILITY
+                        | STEP_INTERCHANGE_V10_CAPABILITY
                 ),
-                interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
+                interior_point_selectors: matches!(
+                    capability,
+                    STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+                ),
                 allow_open_shells,
             },
         )?;
@@ -384,7 +602,10 @@ pub(super) fn import_step_direct(
     // Only repeated occurrences need new instance identities. A single STEP /9
     // product can restore the authored topology metadata just like earlier versions.
     let identity = if occurrence_count > 1
-        && (capability == STEP_INTERCHANGE_V9_CAPABILITY || allow_degenerate)
+        && (matches!(
+            capability,
+            STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+        ) || allow_degenerate)
     {
         crate::step_interchange::StepIdentityReport {
             preserved: false,
@@ -397,7 +618,7 @@ pub(super) fn import_step_direct(
         restore_identity(&entities, &identity_map, &mut model)?
     };
     model.validate()?;
-    let metadata_loss = if identity.preserved {
+    let mut metadata_loss = if identity.preserved {
         vec![]
     } else if allow_degenerate {
         vec![
@@ -413,6 +634,9 @@ pub(super) fn import_step_direct(
             "presentation_style".into(),
         ]
     };
+    if !auxiliary_linked.is_empty() {
+        metadata_loss.push("projection.non_exact_representations_retained_as_metadata".into());
+    }
     let mut certificate_notes = vec![
         "direct_part21_topology",
         "line_circle_ellipse_trimmed_curve",
@@ -430,10 +654,14 @@ pub(super) fn import_step_direct(
         STEP_INTERCHANGE_V7_CAPABILITY
             | STEP_INTERCHANGE_V8_CAPABILITY
             | STEP_INTERCHANGE_V9_CAPABILITY
+            | STEP_INTERCHANGE_V10_CAPABILITY
     ) {
         certificate_notes.push("whole_domain_rational_boundary_and_constant_pole_identity");
     }
-    if capability == STEP_INTERCHANGE_V9_CAPABILITY {
+    if matches!(
+        capability,
+        STEP_INTERCHANGE_V9_CAPABILITY | STEP_INTERCHANGE_V10_CAPABILITY
+    ) {
         certificate_notes.extend([
             "certified_trimmed_curve_point_inverse",
             "bounded_freeform_collapsed_boundary_ownership",
@@ -488,53 +716,47 @@ pub fn import_step_v7(text: &str) -> Result<(Model, FeatureCertificate, StepV3Re
 
 /// Qualified successor: `/7` remains rejected and immutable.
 pub fn import_step_v8(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report)> {
-    let (model, _, report) =
-        import_step_direct(text, true, true, true, STEP_INTERCHANGE_V8_CAPABILITY)?;
+    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V8_CAPABILITY)?;
     let certificate = certify_step_v8_topology(&model)?;
     Ok((model, certificate, report))
 }
 
 pub fn import_step_v9(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report)> {
-    let (model, _, report) =
-        import_step_direct(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
+    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
     let mut certificate = certify_step_v8_topology(&model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
     certificate.notes.extend([
-        "certified_interior_point_selectors",
-        "bounded_freeform_poles",
-        "general_affine_occurrences",
-        "retained_open_shell_products",
+        "certified_interior_point_selectors", "bounded_freeform_poles",
+        "general_affine_occurrences", "retained_open_shell_products",
     ]);
     Ok((model, certificate, report))
 }
 
 pub(super) fn step_v10_graph_identity(entities: &BTreeMap<usize, Entity>) -> Result<String> {
-    let mut nodes = entities
-        .keys()
-        .map(|id| entity_digest(entities, *id))
-        .collect::<Result<Vec<_>>>()?;
+    let mut nodes = entities.keys().map(|id| entity_digest(entities, *id)).collect::<Result<Vec<_>>>()?;
     nodes.sort();
     Ok(hash(&nodes.join("\n")))
 }
-
 /// Imports the editable B-rep projection while retaining the complete Part 21
 /// graph. Entity-number changes do not alter `graph_identity`.
 pub fn import_step_v10(text: &str) -> Result<(Model, StepV8Certificate, StepV10Document)> {
-    let (model, mut certificate, report) = import_step_v9(text)?;
+    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V10_CAPABILITY)?;
+    let mut certificate = certify_step_v8_topology(&model)?;
+    certificate.notes.extend([
+        "certified_interior_point_selectors", "bounded_freeform_poles",
+        "general_affine_occurrences", "retained_open_shell_products",
+    ]);
     let entities = parse(data_payload(text)?)?;
     let mut operator_identities = Vec::new();
     for id in entities.keys() {
-        if let Some((_, _, operator)) = relationship_components(&entities, *id)? {
+        if let Some((_, _, operator)) = relationship_components(&entities, *id)? && operator != 0 {
             operator_identities.push(format!("operator:{}", entity_digest(&entities, operator)?));
         }
     }
     operator_identities.sort();
     operator_identities.dedup();
     certificate.capability = STEP_INTERCHANGE_V10_CAPABILITY;
-    certificate.notes.extend([
-        "retained_affine_occurrence_graph",
-        "exact_graph_isomorphism_identity",
-    ]);
+    certificate.notes.extend(["retained_affine_occurrence_graph", "exact_graph_isomorphism_identity"]);
     let document = StepV10Document {
         source: text.to_string(),
         graph_identity: step_v10_graph_identity(&entities)?,
@@ -542,11 +764,10 @@ pub fn import_step_v10(text: &str) -> Result<(Model, StepV8Certificate, StepV10D
         occurrence_identities: report.occurrence_identities,
         product_hierarchy: report.product_hierarchy,
         operator_identities,
-        metadata_loss: Vec::new(),
+        metadata_loss: report.metadata_loss,
     };
     Ok((model, certificate, document))
 }
-
 /// Exports the authoritative graph byte-for-byte after revalidating its
 /// identifier-independent canonical identity.
 pub fn export_step_v10(document: &StepV10Document) -> Result<String> {
@@ -559,44 +780,21 @@ pub fn export_step_v10(document: &StepV10Document) -> Result<String> {
     }
     Ok(document.source.clone())
 }
-
 pub(crate) struct Writer {
     pub(super) next: usize,
     pub(crate) rows: BTreeMap<usize, String>,
 }
 impl Writer {
-    pub(crate) fn new() -> Self {
-        Self {
-            next: 1,
-            rows: BTreeMap::new(),
-        }
-    }
-    pub(super) fn reserve(&mut self) -> usize {
-        let id = self.next;
-        self.next += 1;
-        id
-    }
-    pub(super) fn set(&mut self, id: usize, body: String) {
-        self.rows.insert(id, body);
-    }
-    pub(crate) fn emit(&mut self, body: String) -> usize {
-        let id = self.reserve();
-        self.set(id, body);
-        id
-    }
-    pub(crate) fn point(&mut self, p: &[f64]) -> usize {
-        self.emit(format!("CARTESIAN_POINT('',({}))", floats(p)))
-    }
+    pub(crate) fn new() -> Self { Self { next: 1, rows: BTreeMap::new() } }
+    pub(super) fn reserve(&mut self) -> usize { let id = self.next; self.next += 1; id }
+    pub(super) fn set(&mut self, id: usize, body: String) { self.rows.insert(id, body); }
+    pub(crate) fn emit(&mut self, body: String) -> usize { let id = self.reserve(); self.set(id, body); id }
+    pub(crate) fn point(&mut self, p: &[f64]) -> usize { self.emit(format!("CARTESIAN_POINT('',({}))", floats(p))) }
 }
 pub(super) fn floats(v: &[f64]) -> String {
-    v.iter()
-        .map(|x| format!("{x:.17e}").replace('e', "E"))
-        .collect::<Vec<_>>()
-        .join(",")
+    v.iter().map(|x| format!("{x:.17e}").replace('e', "E")).collect::<Vec<_>>().join(",")
 }
 pub(super) fn enforce_output_limit(text: &str) -> Result<()> {
-    if text.len() > MAX_OUTPUT_BYTES {
-        return Err(refuse("STEP output exceeds 16 MiB"));
-    }
+    if text.len() > MAX_OUTPUT_BYTES { return Err(refuse("STEP output exceeds 16 MiB")); }
     Ok(())
 }

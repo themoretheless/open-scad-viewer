@@ -2,7 +2,37 @@ use super::*;
 /// Bounded regularized CSG over retained boundary geometry. Empty results have
 /// no placeholder topology. Unsupported curved intersections remain explicit.
 pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
-    boolean_impl(a, b, operation, true)
+    for operand in [a, b] {
+        if crate::boolean_robustness::classify_boolean_operand(operand)?
+            == crate::boolean_robustness::BooleanOperandKind::Sheet
+        {
+            return Err(Error::new(
+                "BREP_SHEET_BOOLEAN_REQUIRES_SEMANTICS",
+                "Open sheet operands require boolean_with_sheet_semantics; solid CSG is not implied",
+            ));
+        }
+    }
+    let result = boolean_impl(a, b, operation, true)?;
+    // Reuse the source-exact merge proof as a post-pass. It also compacts all
+    // edges/vertices orphaned by canceled seams. A merely unavailable optional
+    // simplification leaves the already-certified Boolean result unchanged.
+    let result = match super::seam_boolean::normalize(&result, 0) {
+        Ok((model, _)) => model,
+        Err(error) if super::seam_boolean::refusal(error.code) => result,
+        Err(error) => return Err(error),
+    };
+    cad_predicates::declare_brep_tolerance_contract(
+        cad_predicates::OperationBoundary::Boolean,
+        &[a.tolerance_mm, b.tolerance_mm],
+        result.tolerance_mm,
+    )
+    .map_err(|error| {
+        Error::new(
+            "BREP_TOLERANCE_CONTRACT_REFUSED",
+            format!("Boolean input/output tolerance hand-off failed: {error}"),
+        )
+    })?;
+    Ok(result)
 }
 pub(super) fn boolean_impl(
     a: &Model,
@@ -65,7 +95,9 @@ pub(super) fn boolean_impl(
                 {
                     return Ok(model);
                 }
-                if let Some(model)=crate::minkowski3d::curved::try_graph_order_boolean(a,b,operation)? {
+                if let Some(model) =
+                    crate::minkowski3d::curved::try_graph_order_boolean(a, b, operation)?
+                {
                     return Ok(model);
                 }
                 if let Some(model) =

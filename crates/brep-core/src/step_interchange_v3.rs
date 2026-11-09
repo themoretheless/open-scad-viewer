@@ -1035,6 +1035,38 @@ fn part21_views(text: &str) -> (String, String) {
         String::from_utf8_lossy(&structural).to_ascii_uppercase(),
     )
 }
+fn header_entity_offset(header: &str, name: &str) -> Option<usize> {
+    header.match_indices(name).find_map(|(offset, _)| {
+        if offset > 0 {
+            let previous = header.as_bytes()[offset - 1];
+            if previous.is_ascii_alphanumeric() || previous == b'_' {
+                return None;
+            }
+        }
+        let suffix = &header.as_bytes()[offset + name.len()..];
+        let parentheses = suffix.iter().position(|byte| !byte.is_ascii_whitespace())?;
+        (suffix[parentheses] == b'(').then_some(offset)
+    })
+}
+
+fn has_ap242_schema(schema: &str) -> bool {
+    [
+        "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING",
+        "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF",
+    ]
+    .iter()
+    .any(|name| {
+        schema.match_indices(&format!("'{name}'")).next().is_some()
+            || schema
+                .match_indices(&format!("'{name}"))
+                .any(|(offset, _)| {
+                    schema[offset + name.len() + 1..]
+                        .trim_start()
+                        .starts_with('{')
+                })
+    })
+}
+
 fn validate_exchange_structure(text: &str) -> Result<()> {
     let (upper, structural) = part21_views(text);
     for section in ["ISO-10303-21;", "HEADER;", "DATA;", "END-ISO-10303-21;"] {
@@ -1087,22 +1119,20 @@ fn validate_exchange_structure(text: &str) -> Result<()> {
         return Err(refuse("Part 21 sections are duplicated or out of order"));
     }
     let header_text = &structural[header..first_end];
-    if !header_text.contains("FILE_DESCRIPTION(")
-        || !header_text.contains("FILE_NAME(")
-        || !header_text.contains("FILE_SCHEMA(")
-    {
+    let description = header_entity_offset(header_text, "FILE_DESCRIPTION");
+    let name = header_entity_offset(header_text, "FILE_NAME");
+    let schema = header_entity_offset(header_text, "FILE_SCHEMA");
+    if description.is_none() || name.is_none() || schema.is_none() {
         return Err(refuse(
             "HEADER requires FILE_DESCRIPTION, FILE_NAME, and FILE_SCHEMA",
         ));
     }
-    let schema = header_text.find("FILE_SCHEMA(").unwrap() + header;
+    let schema = schema.unwrap() + header;
     let schema_end = structural[schema..first_end]
         .find(';')
         .map(|offset| schema + offset)
         .unwrap_or(first_end);
-    if !upper[schema..schema_end].contains("'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'")
-        && !upper[schema..schema_end].contains("'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF'")
-    {
+    if !has_ap242_schema(&upper[schema..schema_end]) {
         return Err(refuse(
             "Direct retained B-rep requires declared AP242 schema",
         ));
@@ -1556,7 +1586,7 @@ fn verify_correspondence(
         let error = (p[0] - sp[0]).hypot(p[1] - sp[1]).hypot(p[2] - sp[2]);
         if !error.is_finite() || error > 1e-5 {
             return Err(refuse(format!(
-                "Independent 3D curve↔pcurve correspondence failed ({error:.3e})"
+                "Independent 3D curve↔pcurve correspondence failed ({error:.3e}) at normalized parameter {t}"
             )));
         }
     }
@@ -1595,6 +1625,244 @@ fn curve_bounded_basis(
         one_ref(&args[1], "CURVE_BOUNDED_SURFACE basis")?,
         boundaries,
     )))
+}
+
+fn direct_circle_arc(
+    origin: &[f64],
+    x: &[f64],
+    y: &[f64],
+    radius: f64,
+    start: f64,
+    mut end: f64,
+) -> Result<Curve> {
+    if !radius.is_finite() || radius <= 0. {
+        return Err(refuse("AP242 direct CIRCLE radius must be positive"));
+    }
+    while end <= start {
+        end += std::f64::consts::TAU;
+    }
+    if end - start > std::f64::consts::TAU + 1e-10 {
+        return Err(refuse("AP242 direct CIRCLE sweep exceeds one revolution"));
+    }
+    let pieces = ((end - start) / std::f64::consts::FRAC_PI_2).ceil().max(1.) as usize;
+    let mut control_points = Vec::new();
+    let mut weights = Vec::new();
+    let mut knots = vec![0., 0., 0.];
+    for piece in 0..pieces {
+        let a = start + (end - start) * piece as f64 / pieces as f64;
+        let b = start + (end - start) * (piece + 1) as f64 / pieces as f64;
+        let middle = (a + b) / 2.;
+        let weight = ((b - a) / 2.).cos();
+        let point = |angle: f64, factor: f64| {
+            (0..3)
+                .map(|axis| {
+                    origin[axis] + factor * radius * (x[axis] * angle.cos() + y[axis] * angle.sin())
+                })
+                .collect::<Vec<_>>()
+        };
+        if piece == 0 {
+            control_points.push(point(a, 1.));
+            weights.push(1.);
+        }
+        control_points.push(point(middle, 1. / weight));
+        weights.push(weight);
+        control_points.push(point(b, 1.));
+        weights.push(1.);
+        if piece + 1 < pieces {
+            knots.extend([(piece + 1) as f64; 2]);
+        }
+    }
+    knots.extend([pieces as f64; 3]);
+    let curve = Curve {
+        degree: 2,
+        knots,
+        control_points,
+        weights,
+        periodic: false,
+    };
+    curve.validate()?;
+    Ok(curve)
+}
+
+/// Bound an AP242 direct LINE/CIRCLE exclusively by its authored edge vertices.
+/// The unbounded basis is never retained as an edge, and no length-based trim is
+/// invented. Point inversion and the circular branch selection are unique.
+fn direct_bounded_curve(
+    entities: &BTreeMap<usize, Entity>,
+    geometry: usize,
+    start: &[f64],
+    end: &[f64],
+    closed: bool,
+    same_sense: bool,
+    scale: f64,
+) -> Result<Curve> {
+    let parts = components(entities, geometry)?;
+    let mut direct_types = parts
+        .iter()
+        .filter_map(|(kind, _)| matches!(*kind, "LINE" | "CIRCLE").then_some(*kind));
+    let kind = direct_types
+        .next()
+        .ok_or_else(|| refuse("AP242 direct EDGE_CURVE geometry must be LINE or CIRCLE"))?;
+    if direct_types.next().is_some() {
+        return Err(refuse(
+            "AP242 direct EDGE_CURVE has ambiguous curve components",
+        ));
+    }
+    let mut basis = curve_v5(entities, geometry, 3, scale, true)?;
+    if !same_sense && kind == "LINE" {
+        basis = basis.reverse()?;
+    } else if !same_sense && closed {
+        basis = basis.reverse()?;
+    }
+    if kind == "CIRCLE" && closed {
+        return Ok(basis);
+    }
+    let parameter = |target: &[f64]| -> Result<f64> {
+        if kind == "CIRCLE" {
+            let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").unwrap();
+            let (origin, x, y) = axis2(
+                entities,
+                one_ref(&args[1], "direct CIRCLE placement")?,
+                3,
+                scale,
+            )?;
+            let radius = number(&args[2], "direct CIRCLE radius")? * scale;
+            if !radius.is_finite() || radius <= 0. {
+                return Err(refuse("AP242 direct CIRCLE radius must be positive"));
+            }
+            let z = [
+                x[1] * y[2] - x[2] * y[1],
+                x[2] * y[0] - x[0] * y[2],
+                x[0] * y[1] - x[1] * y[0],
+            ];
+            let relative = std::array::from_fn::<_, 3, _>(|axis| target[axis] - origin[axis]);
+            let dot = |axis: &[f64]| relative.iter().zip(axis).map(|(a, b)| a * b).sum::<f64>();
+            let u = dot(&x);
+            let v = dot(&y);
+            let residual = (u * u + v * v).sqrt() - radius;
+            if !residual.is_finite() || residual.abs() > 1e-7 || dot(&z).abs() > 1e-7 {
+                return Err(refuse(
+                    "AP242 direct CIRCLE vertex is not on the authored circle",
+                ));
+            }
+            let mut angle = v.atan2(u);
+            if !same_sense {
+                angle = -angle;
+            }
+            if angle < 0. {
+                angle += std::f64::consts::TAU;
+            }
+            return Ok(angle);
+        }
+        isolate_curve_point(&basis, target).map_err(|error| {
+            refuse(format!(
+                "AP242 direct EDGE_CURVE vertex is not uniquely on {kind}: {}",
+                error.message
+            ))
+        })
+    };
+    let start_parameter = parameter(start)?;
+    let end_parameter = parameter(end)?;
+    if kind == "LINE" {
+        if start_parameter >= end_parameter {
+            return Err(refuse(
+                "AP242 direct LINE has an empty or reversed vertex-bounded interval",
+            ));
+        }
+        return basis.trim(start_parameter, end_parameter);
+    }
+    let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").unwrap();
+    let (origin, x, mut y) = axis2(
+        entities,
+        one_ref(&args[1], "direct CIRCLE placement")?,
+        3,
+        scale,
+    )?;
+    if !same_sense {
+        y.iter_mut().for_each(|value| *value = -*value);
+    }
+    let radius = number(&args[2], "direct CIRCLE radius")? * scale;
+    direct_circle_arc(&origin, &x, &y, radius, start_parameter, end_parameter)
+}
+
+fn direct_project(c3: &Curve, surface: &Surface) -> Result<nurbs_core::curve_pullback::Report> {
+    nurbs_core::curve_pullback::project(
+        c3,
+        surface,
+        nurbs_core::curve_pullback::Limits {
+            tolerance: 1e-5,
+            max_segments: 256,
+            max_iterations: 32,
+            agreement_cells: 100_000,
+        },
+    )
+    .map_err(|error| {
+        refuse(format!(
+            "AP242 direct EDGE_CURVE surface pullback failed: {}",
+            error.message
+        ))
+    })
+}
+
+/// Seed a direct ruling from each authored quarter-turn chart. The trimmed
+/// chart only proposes UV coordinates in the original parameter system; the
+/// complete original-surface correspondence check below remains authoritative.
+fn direct_quarter_seed_chart(surface: &Surface, piece: usize) -> Option<Surface> {
+    if piece >= 4
+        || surface.degree_u != 2
+        || surface.control_points.len() != 9
+        || surface.knots_u.len() != 12
+        || surface.control_points[0] != surface.control_points[8]
+        || surface.weights[0] != surface.weights[8]
+    {
+        return None;
+    }
+    let start = surface.knots_u[2];
+    let end = surface.knots_u[9];
+    let span = (end - start) / 4.;
+    if !span.is_finite()
+        || span <= 0.
+        || (0..4).any(|piece| surface.knots_u[2 + piece * 2] != start + piece as f64 * span)
+    {
+        return None;
+    }
+    surface
+        .trim([
+            start + piece as f64 * span,
+            start + (piece + 1) as f64 * span,
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.knots_v.len() - surface.degree_v - 1],
+        ])
+        .ok()
+}
+
+pub fn direct_edge_pcurve(c3: &Curve, surface: &Surface, reversed: bool) -> Result<Curve> {
+    let mut projection = direct_project(c3, surface)?;
+    for piece in 0..4 {
+        if projection.within_tolerance {
+            break;
+        }
+        let Some(chart) = direct_quarter_seed_chart(surface, piece) else {
+            break;
+        };
+        let alternative = direct_project(c3, &chart)?;
+        if alternative.within_tolerance {
+            projection = alternative;
+        }
+    }
+    if !projection.within_tolerance {
+        return Err(refuse(
+            "AP242 direct EDGE_CURVE surface pullback was not certified",
+        ));
+    }
+    let mut pcurve = projection
+        .pcurve
+        .ok_or_else(|| refuse("AP242 direct EDGE_CURVE certified pullback has no pcurve"))?;
+    if reversed {
+        pcurve = pcurve.reverse()?;
+    }
+    verify_correspondence(c3, &pcurve, surface, reversed, false, false)?;
+    Ok(pcurve)
 }
 
 struct DirectBuilder<'a> {
@@ -1661,16 +1929,40 @@ impl<'a> DirectBuilder<'a> {
         let va = self.vertex(one_ref(&a[1], "EDGE_CURVE start")?)?;
         let vb = self.vertex(one_ref(&a[2], "EDGE_CURVE end")?)?;
         let geometry = one_ref(&a[3], "EDGE_CURVE geometry")?;
-        let (gty, ga) = call(self.entities, geometry)?;
-        if gty != "SURFACE_CURVE" && gty != "SEAM_CURVE" {
+        let direct = self.ap242_composition
+            && components(self.entities, geometry)?
+                .iter()
+                .any(|(kind, _)| matches!(*kind, "LINE" | "CIRCLE"));
+        let (gty, ga) = if direct {
+            ("", &[][..])
+        } else {
+            call(self.entities, geometry)?
+        };
+        if !direct && gty != "SURFACE_CURVE" && gty != "SEAM_CURVE" {
             return Err(refuse("EDGE_CURVE must use SURFACE_CURVE or SEAM_CURVE"));
         }
+        let (curve_3d, associations) = if direct {
+            (geometry, None)
+        } else {
         if ga.len() < 3 {
             return Err(refuse("SURFACE_CURVE argument count mismatch"));
         }
-        let curve_3d = one_ref(&ga[1], "SURFACE_CURVE 3D curve")?;
+            (one_ref(&ga[1], "SURFACE_CURVE 3D curve")?, Some(&ga[2]))
+        };
         self.curve_bounded_used.insert(curve_3d);
-        let mut c3 = if self.ap242_composition {
+        let start = self.vertices[va].point;
+        let end = self.vertices[vb].point;
+        let mut c3 = if direct {
+            direct_bounded_curve(
+                self.entities,
+                geometry,
+                &start,
+                &end,
+                va == vb,
+                same_sense,
+                self.scale,
+            )?
+        } else if self.ap242_composition {
             curve_v5(
                 self.entities,
                 curve_3d,
@@ -1679,15 +1971,13 @@ impl<'a> DirectBuilder<'a> {
                 self.interior_point_selectors,
             )?
         } else {
-            curve(
-                self.entities,
-                one_ref(&ga[1], "SURFACE_CURVE 3D curve")?,
-                3,
-                self.scale,
-            )?
+            curve(self.entities, curve_3d, 3, self.scale)?
         };
-        let mut matching = self.matching_pcurves(&ga[2], surface_id)?;
-        if !same_sense {
+        let mut matching = associations
+            .map(|value| self.matching_pcurves(value, surface_id))
+            .transpose()?
+            .unwrap_or_default();
+        if !direct && !same_sense {
             c3 = c3.reverse()?;
             for pc in &mut matching {
                 *pc = pc.reverse()?;
@@ -1722,8 +2012,10 @@ impl<'a> DirectBuilder<'a> {
         let require_exact = degenerate
             && self.interior_point_selectors
             && certify_periodic_surface(surface)?.is_none();
-        let pc = self
-            .select_pcurve(
+        let pc = if direct {
+            direct_edge_pcurve(&c3, surface, reversed)
+        } else {
+            self.select_pcurve(
                 id,
                 surface_id,
                 gty,
@@ -1734,6 +2026,7 @@ impl<'a> DirectBuilder<'a> {
                 degenerate,
                 require_exact,
             )
+        }
             .map_err(|e| {
                 refuse(format!(
                     "EDGE_CURVE #{id} on surface #{surface_id}: {}",
@@ -1809,7 +2102,9 @@ impl<'a> DirectBuilder<'a> {
         }
         let referenced_surface = one_ref(&a[2], "ADVANCED_FACE surface")?;
         let bounded = curve_bounded_basis(self.entities, referenced_surface)?;
-        let sid = bounded.as_ref().map_or(referenced_surface, |(basis, _)| *basis);
+        let sid = bounded
+            .as_ref()
+            .map_or(referenced_surface, |(basis, _)| *basis);
         self.curve_bounded_expected = bounded.map(|(_, boundaries)| boundaries);
         self.curve_bounded_used.clear();
         let mut surface = if self.ap242_composition {
@@ -1827,7 +2122,20 @@ impl<'a> DirectBuilder<'a> {
             if !matches!(bty, "FACE_OUTER_BOUND" | "FACE_BOUND") || ba.len() != 3 {
                 return Err(refuse("ADVANCED_FACE bound type is unsupported"));
             }
-            let loop_index = self.loop_(one_ref(&ba[1], "FACE_BOUND loop")?, sid, &surface)?;
+            let loop_id = one_ref(&ba[1], "FACE_BOUND loop")?;
+            if bty == "FACE_BOUND" && call(self.entities, loop_id)?.0 == "VERTEX_LOOP" {
+                let (_, la) = call(self.entities, loop_id)?;
+                if la.len() != 2 {
+                    return Err(refuse("Degenerate VERTEX_LOOP is malformed"));
+                }
+                let vertex = one_ref(&la[1], "VERTEX_LOOP vertex")?;
+                if call(self.entities, vertex)?.0 != "VERTEX_POINT" {
+                    return Err(refuse("Degenerate VERTEX_LOOP must reference VERTEX_POINT"));
+                }
+                // A point-only bound has no 2D area (typically a periodic-surface pole).
+                continue;
+            }
+            let loop_index = self.loop_(loop_id, sid, &surface)?;
             if !boolean(&ba[2], "FACE_BOUND orientation")? {
                 for c in &mut self.loops[loop_index].coedges {
                     c.reversed = !c.reversed;
@@ -1855,8 +2163,7 @@ impl<'a> DirectBuilder<'a> {
         let same_sense = boolean(&a[3], "ADVANCED_FACE same_sense")?;
         let self_authored = name(a).is_some_and(|name| name.starts_with("OSCAD_TOPO/3|"));
         let authored_chart_v1 = name(a).is_some_and(|name| {
-            name.strip_prefix("OSCAD_TOPO/3|")
-                .is_some_and(|payload| {
+            name.strip_prefix("OSCAD_TOPO/3|").is_some_and(|payload| {
                     let fields = payload.split('|').collect::<Vec<_>>();
                     fields.len() == 4
                         && fields[0] == "face"
@@ -1867,10 +2174,7 @@ impl<'a> DirectBuilder<'a> {
         // Unmarked self-authored V6 is the legacy canonical-mirrored encoding.
         let preserve_authored_chart = self.preserve_authored_charts && authored_chart_v1;
         let authored_mirror = self_authored && !preserve_authored_chart;
-        if !same_sense
-            && !preserve_authored_chart
-            && (self.ap242_composition || authored_mirror)
-        {
+        if !same_sense && !preserve_authored_chart && (self.ap242_composition || authored_mirror) {
             let sum = surface.knots_u[surface.degree_u]
                 + surface.knots_u[surface.knots_u.len() - surface.degree_u - 1];
             surface.control_points.reverse();
@@ -2286,6 +2590,21 @@ fn relationship_components(
     entities: &BTreeMap<usize, Entity>,
     id: usize,
 ) -> Result<Option<(usize, usize, usize)>> {
+    // AP242 also permits a plain representation relationship. It carries no
+    // placement operator and therefore means identity, not a missing transform.
+    if let Some(entity) = entities.get(&id)
+        && let Value::Call(name, args) = &entity.value
+        && name == "SHAPE_REPRESENTATION_RELATIONSHIP"
+    {
+        if args.len() != 4 {
+            return Err(refuse("Malformed SHAPE_REPRESENTATION_RELATIONSHIP"));
+        }
+        return Ok(Some((
+            one_ref(&args[2], "relationship source representation")?,
+            one_ref(&args[3], "relationship target representation")?,
+            0,
+        )));
+    }
     let parts = components(entities, id)?;
     let Some(base) = component(&parts, "REPRESENTATION_RELATIONSHIP") else {
         return Ok(None);
@@ -2423,11 +2742,26 @@ fn representation_occurrences(
             return Err(refuse("Shape representation argument count mismatch"));
         }
         if ty == "SHAPE_REPRESENTATION" {
-            if !outgoing.contains_key(&rep) {
+            let items = list(&args[1], "assembly placement items")?;
+            let has_direct_body = items.iter().any(|item| {
+                one_ref(item, "assembly item").is_ok_and(|item| {
+                    call(entities, item).is_ok_and(|(ty, _)| {
+                        matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS")
+                    })
+                })
+            });
+            if !outgoing.contains_key(&rep) && !has_direct_body {
                 return Err(refuse("Empty product assembly container"));
             }
-            for item in list(&args[1], "assembly placement items")? {
-                if call(entities, one_ref(item, "assembly item")?)?.0 != "AXIS2_PLACEMENT_3D" {
+            for item in items {
+                if !matches!(
+                    call(entities, one_ref(item, "assembly item")?)?.0,
+                    "AXIS2_PLACEMENT_3D"
+                        | "MANIFOLD_SOLID_BREP"
+                        | "BREP_WITH_VOIDS"
+                        | "MAPPED_ITEM"
+                        | "GEOMETRIC_CURVE_SET"
+                ) {
                     return Err(refuse("Unsupported geometry in product assembly container"));
                 }
             }
@@ -2458,14 +2792,37 @@ fn representation_occurrences(
             })
         }
         if let Some(edges) = outgoing.get(&rep) {
+            let exact_identity_edges = edges
+                .iter()
+                .filter(|(_, child, operator, _)| {
+                    *operator == 0
+                        && call(entities, *child)
+                            .is_ok_and(|(ty, _)| ty == "ADVANCED_BREP_SHAPE_REPRESENTATION")
+                })
+                .count();
+            if exact_identity_edges > 1 {
+                return Err(refuse(
+                    "Ambiguous multiple exact B-rep representation roots",
+                ));
+            }
             for (relationship, child, operator, product_occurrence) in edges {
-                let affine_complex = allow_affine
+                // Plain relationships can also connect PMI, wireframe and other
+                // non-exact views. They remain retained metadata, not B-rep occurrences.
+                if *operator == 0
+                    && call(entities, *child)?.0 != "ADVANCED_BREP_SHAPE_REPRESENTATION"
+                {
+                    continue;
+                }
+                let affine_complex = *operator != 0
+                    && allow_affine
                     && component(
                         &components(entities, *operator)?,
                         "CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM",
                     )
                     .is_some();
-                let edge_matrix = if affine_complex {
+                let edge_matrix = if *operator == 0 {
+                    matrix
+                } else if affine_complex {
                     cartesian_operator_affine(entities, *operator, scale, general_affine)?
                 } else {
                     let (operator_type, operator_args) = call(entities, *operator)?;
@@ -2522,6 +2879,44 @@ fn representation_occurrences(
         }
         active.remove(&rep);
         Ok(())
+    }
+    fn validate_identity_cycles(
+        rep: usize,
+        outgoing: &BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
+        active: &mut BTreeSet<usize>,
+        done: &mut BTreeSet<usize>,
+        depth: usize,
+    ) -> Result<()> {
+        if depth > 32 {
+            return Err(refuse(
+                "Identity representation relationship depth exceeds 32",
+            ));
+        }
+        if done.contains(&rep) {
+            return Ok(());
+        }
+        if !active.insert(rep) {
+            return Err(refuse(
+                "Cycle in identity representation relationship graph",
+            ));
+        }
+        if let Some(edges) = outgoing.get(&rep) {
+            for (_, child, _, _) in edges.iter().filter(|edge| edge.2 == 0) {
+                validate_identity_cycles(*child, outgoing, active, done, depth + 1)?;
+            }
+        }
+        active.remove(&rep);
+        done.insert(rep);
+        Ok(())
+    }
+    for rep in selected {
+        validate_identity_cycles(
+            *rep,
+            &outgoing,
+            &mut BTreeSet::new(),
+            &mut BTreeSet::new(),
+            0,
+        )?;
     }
     let identity = [
         [1., 0., 0., 0.],
@@ -2672,8 +3067,7 @@ fn restore_identity(
         }
         let mk =
             TopoKind::parse(fields[0]).ok_or_else(|| refuse("Unknown STEP /3 identity kind"))?;
-        if fields.len() == 4
-            && (mk != TopoKind::Face || fields[3] != STEP_V6_AUTHORED_CHART_MARKER)
+        if fields.len() == 4 && (mk != TopoKind::Face || fields[3] != STEP_V6_AUTHORED_CHART_MARKER)
         {
             return Err(refuse("Unknown STEP /3 identity metadata version"));
         }
@@ -2754,719 +3148,23 @@ fn restore_identity(
     })
 }
 
-const UNREACHABLE_ALLOWLIST: &[&str] = &[
-    "APPLICATION_CONTEXT",
-    "PRODUCT",
-    "PRODUCT_DEFINITION",
-    "PRODUCT_DEFINITION_FORMATION",
-    "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE",
-    "PRODUCT_RELATED_PRODUCT_CATEGORY",
-    "PRODUCT_CONTEXT",
-    "PRODUCT_DEFINITION_CONTEXT",
-    "PRODUCT_DEFINITION_SHAPE",
-    "SHAPE_DEFINITION_REPRESENTATION",
-    "ADVANCED_BREP_SHAPE_REPRESENTATION",
-    "MANIFOLD_SURFACE_SHAPE_REPRESENTATION",
-    "SHELL_BASED_SURFACE_MODEL",
-    "GEOMETRIC_REPRESENTATION_CONTEXT",
-    "GLOBAL_UNIT_ASSIGNED_CONTEXT",
-    "SI_UNIT",
-    "PRESENTATION_LAYER_ASSIGNMENT",
-    "STYLED_ITEM",
-    "COLOUR_RGB",
-    "SURFACE_STYLE_USAGE",
-    "SURFACE_SIDE_STYLE",
-    "SURFACE_STYLE_FILL_AREA",
-    "FILL_AREA_STYLE",
-    "FILL_AREA_STYLE_COLOUR",
-    "DRAUGHTING_PRE_DEFINED_COLOUR",
-    "PROPERTY_DEFINITION",
-    "PROPERTY_DEFINITION_REPRESENTATION",
-    "DESCRIPTIVE_REPRESENTATION_ITEM",
-    "MEASURE_REPRESENTATION_ITEM",
-    "REPRESENTATION",
-    "DERIVED_UNIT",
-    "DERIVED_UNIT_ELEMENT",
-    "DENSITY_UNIT",
-    "MASS_UNIT",
-    "LENGTH_UNIT",
-    "AREA_UNIT",
-    "VOLUME_UNIT",
-    "NAMED_UNIT",
-    "NAME_ATTRIBUTE",
-    "MATERIAL_DESIGNATION",
-    "APPLIED_NAME_ASSIGNMENT",
-    "APPLIED_DESCRIPTION_TEXT_ASSIGNMENT",
-    "PERSON",
-    "ORGANIZATION",
-    "PERSON_AND_ORGANIZATION",
-    "PERSON_AND_ORGANIZATION_ROLE",
-    "APPLIED_PERSON_AND_ORGANIZATION_ASSIGNMENT",
-    "DATE_AND_TIME",
-    "CALENDAR_DATE",
-    "LOCAL_TIME",
-    "COORDINATED_UNIVERSAL_TIME_OFFSET",
-    "DATE_TIME_ROLE",
-    "APPLIED_DATE_AND_TIME_ASSIGNMENT",
-    "APPROVAL",
-    "APPROVAL_STATUS",
-    "APPROVAL_ROLE",
-    "APPLIED_APPROVAL_ASSIGNMENT",
-    "SECURITY_CLASSIFICATION",
-    "SECURITY_CLASSIFICATION_LEVEL",
-    "APPLIED_SECURITY_CLASSIFICATION_ASSIGNMENT",
-    "EXTERNAL_CLASS_LIBRARY",
-    "ITEM_DEFINED_TRANSFORMATION",
-    "AXIS2_PLACEMENT_3D",
-    "CARTESIAN_POINT",
-    "DIRECTION",
-    "REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION",
-    "CARTESIAN_TRANSFORMATION_OPERATOR_3D",
-];
-
-fn import_step_direct_impl(
-    text: &str,
-    analytic_surfaces: bool,
-    ap242_composition: bool,
-    allow_degenerate: bool,
-    capability: &'static str,
-    include_semantic: bool,
-) -> Result<(Model, FeatureCertificate, StepV3Report, Option<StepSemanticMetadata>)> {
-    if !text.to_ascii_uppercase().contains("ISO-10303-21") {
-        return Err(refuse("Not an ISO-10303-21 exchange"));
-    }
-    if ap242_composition {
-        validate_exchange_structure(text)?;
-    }
-    let entities = parse(if ap242_composition {
-        data_payload(text)?
-    } else {
-        text
-    })?;
-    let representations: Vec<_> = if ap242_composition {
-        let mut selected = Vec::<usize>::new();
-        for entity in entities.values() {
-            if let Value::Call(name, args) = &entity.value
-                && name == "SHAPE_DEFINITION_REPRESENTATION"
-                && args.len() == 2
-            {
-                selected.push(one_ref(&args[1], "selected shape representation")?);
-            }
-        }
-        selected.sort_unstable();
-        selected.dedup();
-        if selected.is_empty() {
-            return Err(refuse(
-                "AP242 import requires SHAPE_DEFINITION_REPRESENTATION selection",
-            ));
-        }
-        let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
-        for id in &selected {
-            let (ty, _) = call(&entities, *id)?;
-            if ty != "ADVANCED_BREP_SHAPE_REPRESENTATION"
-                && !(allow_open_shells && ty == "SHAPE_REPRESENTATION")
-                && !(allow_open_shells && ty == "MANIFOLD_SURFACE_SHAPE_REPRESENTATION")
-            {
-                return Err(refuse(
-                    "Selected representation is outside the admitted direct B-rep products",
-                ));
-            }
-        }
-        selected
-    } else {
-        entities
-            .keys()
-            .filter_map(|id| {
-                call(&entities, *id)
-                    .ok()
-                    .and_then(|(ty, _)| (ty == "ADVANCED_BREP_SHAPE_REPRESENTATION").then_some(*id))
-            })
-            .collect()
-    };
-    let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
-    let all_bodies: Vec<_> = entities
-        .keys()
-        .filter_map(|id| {
-            call(&entities, *id).ok().and_then(|(ty, _)| {
-                (matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS")
-                    || allow_open_shells && ty == "SHELL_BASED_SURFACE_MODEL")
-                    .then_some(*id)
-            })
-        })
-        .collect();
-    let graph_roots = if representations.is_empty() {
-        all_bodies.clone()
-    } else {
-        representations.clone()
-    };
-    if graph_roots.is_empty() {
-        return Err(refuse("STEP /3 requires a manifold advanced B-rep root"));
-    }
-    let occurrences = if ap242_composition {
-        representation_occurrences(
-            &entities,
-            &representations,
-            allow_degenerate && capability != STEP_INTERCHANGE_V8_CAPABILITY,
-            capability == STEP_INTERCHANGE_V9_CAPABILITY,
-            allow_open_shells,
-        )?
-    } else {
-        Vec::new()
-    };
-    let occurrence_count = occurrences.len();
-    let mut definition_identities = Vec::new();
-    let mut occurrence_identities = Vec::new();
-    if allow_degenerate {
-        for occurrence in &occurrences {
-            let definition = format!(
-                "representation:{}",
-                entity_digest(&entities, occurrence.representation)?
-            );
-            if !definition_identities.contains(&definition) {
-                definition_identities.push(definition)
-            }
-            let path = occurrence
-                .path
-                .iter()
-                .map(|id| entity_digest(&entities, *id))
-                .collect::<Result<Vec<_>>>()?
-                .join("/");
-            let matrix = occurrence
-                .transform
-                .iter()
-                .flatten()
-                .map(|value| format!("{:016x}", value.to_bits()))
-                .collect::<String>();
-            occurrence_identities.push(format!("occurrence:{}", hash(&(path + &matrix))));
-        }
-    }
-    let product_hierarchy = if allow_degenerate {
-        entities
-            .keys()
-            .filter_map(|id| {
-                call(&entities, *id).ok().and_then(|(ty, args)| {
-                    if ty == "PRODUCT" && args.len() >= 3 {
-                        Some(format!(
-                            "product:#{}:{}:{}",
-                            id,
-                            string_value(&args[0], "product id").ok()?,
-                            string_value(&args[1], "product name").ok()?
-                        ))
-                    } else if matches!(
-                        ty,
-                        "PRODUCT_DEFINITION"
-                            | "PRODUCT_DEFINITION_FORMATION"
-                            | "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE"
-                    ) && args.len() >= 2
-                    {
-                        Some(format!(
-                            "{}:#{}:{}:{}",
-                            ty.to_ascii_lowercase(),
-                            id,
-                            string_value(&args[0], "product metadata id").ok()?,
-                            string_value(&args[1], "product metadata description").ok()?
-                        ))
-                    } else if ty == "PRODUCT_RELATED_PRODUCT_CATEGORY" && args.len() >= 3 {
-                        Some(format!(
-                            "product-category:#{}:{}",
-                            id,
-                            string_value(&args[0], "product category").ok()?
-                        ))
-                    } else if ty == "PROPERTY_DEFINITION" && args.len() >= 2 {
-                        Some(format!(
-                            "property-definition:#{}:{}",
-                            id,
-                            string_value(&args[0], "property name").ok()?
-                        ))
-                    } else if ty == "NEXT_ASSEMBLY_USAGE_OCCURRENCE" && args.len() >= 5 {
-                        Some(format!(
-                            "assembly-use:#{}:#{}:#{}",
-                            id,
-                            one_ref(&args[3], "relating product").ok()?,
-                            one_ref(&args[4], "related product").ok()?
-                        ))
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let external_references = if allow_degenerate {
-        entities
-            .keys()
-            .filter_map(|id| {
-                let (ty, args) = call(&entities, *id).ok()?;
-                if ty == "DOCUMENT_FILE" && !args.is_empty() {
-                    Some(format!(
-                        "#{}:{}",
-                        id,
-                        string_value(&args[0], "document URI").ok()?
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>()
-    } else {
-        Vec::new()
-    };
-    let mut linked = reachable(&entities, &graph_roots)?;
-    if ap242_composition {
-        if capability != STEP_INTERCHANGE_V9_CAPABILITY {
-            linked.clear();
-        }
-        for occurrence in &occurrences {
-            linked.extend(occurrence.linked.iter().copied())
-        }
-    }
-    let roots: Vec<_> = all_bodies
-        .into_iter()
-        .filter(|id| linked.contains(id))
-        .collect();
-    if roots.is_empty() {
-        return Err(refuse(
-            "Selected representation contains no manifold B-rep body",
-        ));
-    }
-    const REACHABLE_TYPES: &[&str] = &[
-        "SHAPE_REPRESENTATION",
-        "ADVANCED_BREP_SHAPE_REPRESENTATION",
-        "MANIFOLD_SURFACE_SHAPE_REPRESENTATION",
-        "MANIFOLD_SOLID_BREP",
-        "BREP_WITH_VOIDS",
-        "SHELL_BASED_SURFACE_MODEL",
-        "CLOSED_SHELL",
-        "OPEN_SHELL",
-        "ORIENTED_CLOSED_SHELL",
-        "ADVANCED_FACE",
-        "FACE_OUTER_BOUND",
-        "FACE_BOUND",
-        "EDGE_LOOP",
-        "ORIENTED_EDGE",
-        "EDGE_CURVE",
-        "VERTEX_POINT",
-        "CARTESIAN_POINT",
-        "DIRECTION",
-        "VECTOR",
-        "AXIS2_PLACEMENT_2D",
-        "AXIS2_PLACEMENT_3D",
-        "LINE",
-        "CIRCLE",
-        "ELLIPSE",
-        "TRIMMED_CURVE",
-        "B_SPLINE_CURVE_WITH_KNOTS",
-        "PCURVE",
-        "SURFACE_CURVE",
-        "SEAM_CURVE",
-        "DEFINITIONAL_REPRESENTATION",
-        "PLANE",
-        "CYLINDRICAL_SURFACE",
-        "CONICAL_SURFACE",
-        "SPHERICAL_SURFACE",
-        "TOROIDAL_SURFACE",
-        "B_SPLINE_SURFACE_WITH_KNOTS",
-        "CURVE_BOUNDED_SURFACE",
-        "GEOMETRIC_REPRESENTATION_CONTEXT",
-        "GLOBAL_UNIT_ASSIGNED_CONTEXT",
-        "SI_UNIT",
-        "CONVERSION_BASED_UNIT",
-        "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT",
-        "UNCERTAINTY_MEASURE_WITH_UNIT",
-        "LENGTH_MEASURE_WITH_UNIT",
-        "MEASURE_WITH_UNIT",
-        "ITEM_DEFINED_TRANSFORMATION",
-        "REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION",
-        "CARTESIAN_TRANSFORMATION_OPERATOR_3D",
-    ];
-    for id in &linked {
-        if allow_degenerate
-            && capability != STEP_INTERCHANGE_V8_CAPABILITY
-            && component(
-                &components(&entities, *id)?,
-                "CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM",
-            )
-            .is_some()
-        {
-            continue;
-        }
-        let (ty, _) = call(&entities, *id)?;
-        if !REACHABLE_TYPES.contains(&ty) && !matches!(ty, "COMPLEX") {
-            return Err(refuse(format!(
-                "Reachable entity {ty} is outside the direct finite graph subset"
-            )));
-        }
-    }
-    let mut ignored = BTreeSet::new();
-    for id in entities.keys() {
-        if linked.contains(id) {
-            continue;
-        }
-        if ap242_composition && relationship_components(&entities, *id)?.is_some() {
-            continue;
-        }
-        if allow_degenerate
-            && capability != STEP_INTERCHANGE_V8_CAPABILITY
-            && component(
-                &components(&entities, *id)?,
-                "CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM",
-            )
-            .is_some()
-        {
-            continue;
-        }
-        if matches!(entities[id].value, Value::List(_)) {
-            let parts = components(&entities, *id)?;
-            if parts.iter().all(|(ty, _)| UNREACHABLE_ALLOWLIST.contains(ty)) {
-                ignored.extend(parts.into_iter().map(|(ty, _)| ty.to_string()));
-                continue;
-            }
-        }
-        let (ty, _) = call(&entities, *id)?;
-        if allow_degenerate
-            && matches!(
-                ty,
-                "NEXT_ASSEMBLY_USAGE_OCCURRENCE" | "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION"
-            )
-        {
-            continue;
-        }
-        if allow_degenerate
-            && matches!(
-                ty,
-                "DOCUMENT_FILE"
-                    | "DOCUMENT"
-                    | "DOCUMENT_TYPE"
-                    | "DOCUMENT_REPRESENTATION_TYPE"
-                    | "EXTERNALLY_DEFINED_ITEM"
-                    | "EXTERNAL_SOURCE"
-                    | "APPLIED_EXTERNAL_IDENTIFICATION_ASSIGNMENT"
-            )
-        {
-            continue;
-        }
-        if UNREACHABLE_ALLOWLIST.contains(&ty) {
-            ignored.insert(ty.to_string());
-        } else {
-            return Err(refuse(format!(
-                "Unreachable entity {ty} is not presentation metadata allowlisted by /3"
-            )));
-        }
-    }
-    let (mut model, identity_map) = if ap242_composition {
-        if occurrences.is_empty() {
-            return Err(refuse(
-                "Selected placement graph contains no manifold B-rep occurrence",
-            ));
-        }
-        let mut aggregate = Model::empty(DEFAULT_STEP_TOLERANCE_MM)?;
-        let mut aggregate_tolerance = None::<f64>;
-        let mut aggregate_map = Vec::new();
-        for occurrence in occurrences {
-            let scale = length_scale(&entities, &occurrence.linked, false)?;
-            let tolerance_mm =
-                uncertainty_mm(&entities, &occurrence.linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
-            aggregate_tolerance =
-                Some(aggregate_tolerance.map_or(tolerance_mm, |current| current.min(tolerance_mm)));
-            let (mut component, map) = build_direct_roots(
-                &entities,
-                &occurrence.bodies,
-                scale,
-                DirectBuildOptions {
-                    analytic_surfaces,
-                    ap242_composition: true,
-                    allow_degenerate,
-                    whole_domain_proofs: matches!(
-                        capability,
-                        STEP_INTERCHANGE_V7_CAPABILITY
-                            | STEP_INTERCHANGE_V8_CAPABILITY
-                            | STEP_INTERCHANGE_V9_CAPABILITY
-                    ),
-                    interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
-                    allow_open_shells,
-                    preserve_authored_charts: capability == STEP_INTERCHANGE_V6_CAPABILITY,
-                },
-            )?;
-            component.tolerance_mm = tolerance_mm;
-            let component = crate::transform::affine(&component, occurrence.transform)?;
-            append_direct_model(&mut aggregate, component, &map, &mut aggregate_map);
-        }
-        aggregate.tolerance_mm = aggregate_tolerance.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
-        aggregate.rebuild_topology_ids();
-        (aggregate, aggregate_map)
-    } else {
-        let scale = length_scale(&entities, &linked, true)?;
-        let tolerance_mm = uncertainty_mm(&entities, &linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
-        let placement = reachable_transform(&entities, &linked, scale, false)?;
-        let (mut model, map) = build_direct_roots(
-            &entities,
-            &roots,
-            scale,
-            DirectBuildOptions {
-                analytic_surfaces,
-                ap242_composition: false,
-                allow_degenerate,
-                whole_domain_proofs: matches!(
-                    capability,
-                    STEP_INTERCHANGE_V7_CAPABILITY
-                        | STEP_INTERCHANGE_V8_CAPABILITY
-                        | STEP_INTERCHANGE_V9_CAPABILITY
-                ),
-                interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
-                allow_open_shells,
-                preserve_authored_charts: capability == STEP_INTERCHANGE_V6_CAPABILITY,
-            },
-        )?;
-        model.tolerance_mm = tolerance_mm;
-        if let Some(matrix) = placement {
-            model = crate::transform::affine(&model, matrix)?
-        }
-        (model, map)
-    };
-    // One occurrence can restore its original topology metadata. Repeated
-    // definitions require occurrence-specific identities to avoid collisions.
-    let identity = if occurrence_count > 1
-        && (capability == STEP_INTERCHANGE_V9_CAPABILITY || allow_degenerate)
-    {
-        crate::step_interchange::StepIdentityReport {
-            preserved: false,
-            source: "assembly-definition-plus-occurrence",
-            preserved_count: 0,
-            created_count: identity_map.len(),
-            lost_count: 0,
-        }
-    } else {
-        restore_identity(&entities, &identity_map, &mut model)?
-    };
-    model.validate()?;
-    let metadata_loss = if identity.preserved {
-        vec![]
-    } else if allow_degenerate {
-        vec![
-            "topology.occurrence_instance_ids_created".into(),
-            "presentation_style".into(),
-        ]
-    } else {
-        vec![
-            "representation_item.name".into(),
-            "product.id".into(),
-            "product.name".into(),
-            "product.description".into(),
-            "presentation_style".into(),
-        ]
-    };
-    let mut certificate_notes = vec![
-        "direct_part21_topology",
-        "line_circle_ellipse_trimmed_curve",
-        "plane_and_rational_multispan_bspline_surface",
-        "periodic_analytic_surfaces_typed_refused_parameterization",
-        "shared_topology_senses_holes",
-        "multi_body_multi_cavity",
-        "si_and_positive_conversion_units",
-        "reachable_rigid_placements_only",
-        "independent_curve_pcurve_check",
-        "bounded_reachable_graph",
-    ];
-    if matches!(
-        capability,
-        STEP_INTERCHANGE_V7_CAPABILITY
-            | STEP_INTERCHANGE_V8_CAPABILITY
-            | STEP_INTERCHANGE_V9_CAPABILITY
-    ) {
-        certificate_notes.push("whole_domain_rational_boundary_and_constant_pole_identity");
-    }
-    if capability == STEP_INTERCHANGE_V9_CAPABILITY {
-        certificate_notes.extend([
-            "certified_trimmed_curve_point_inverse",
-            "bounded_freeform_collapsed_boundary_ownership",
-            "invertible_general_affine_occurrences",
-            "open_shell_surface_products",
-        ]);
-    }
-    let semantic = include_semantic
-        .then(|| {
-            let xde = step_xde::parse(&entities, &identity_map)?;
-            let presentation = step_presentation::parse(
-                &entities,
-                &identity_map,
-                &xde.body_products,
-                xde.product_parents.clone(),
-            )?;
-            Ok::<StepSemanticMetadata, Error>(StepSemanticMetadata { presentation, xde })
-        })
-        .transpose()?;
-    if semantic.is_some() {
-        certificate_notes.extend(["ap214_face_body_product_presentation", "typed_xde_product_attributes"]);
-    }
-    Ok((
-        model,
-        FeatureCertificate {
-            capability,
-            complete: true,
-            notes: certificate_notes,
-        },
-        StepV3Report {
-            identity,
-            ignored_entities: ignored.into_iter().collect(),
-            metadata_loss,
-            instance_count: entities.len(),
-            reachable_count: linked.len(),
-            definition_identities,
-            occurrence_identities,
-            product_hierarchy,
-            external_references,
-        },
-        semantic,
-    ))
-}
-
-fn import_step_direct(
-    text: &str,
-    analytic_surfaces: bool,
-    ap242_composition: bool,
-    allow_degenerate: bool,
-    capability: &'static str,
-) -> Result<(Model, FeatureCertificate, StepV3Report)> {
-    let (model, certificate, report, _) = import_step_direct_impl(
-        text,
-        analytic_surfaces,
-        ap242_composition,
-        allow_degenerate,
-        capability,
-        false,
-    )?;
-    Ok((model, certificate, report))
-}
-
-pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
-    import_step_direct(text, false, false, false, STEP_INTERCHANGE_V3_CAPABILITY)
-}
-
-/// AP214 semantic route. Legacy `/3` remains permissive toward ignored metadata;
-/// this opt-in route instead returns typed unsupported-style records.
-pub fn import_step_v3_with_metadata(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report, StepSemanticMetadata)> {
-    let (model, certificate, report, semantic) =
-        import_step_direct_impl(text, false, false, false, STEP_INTERCHANGE_V3_CAPABILITY, true)?;
-    Ok((model, certificate, report, semantic.unwrap()))
-}
-
-pub fn import_step_v4(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
-    import_step_direct(text, true, false, false, STEP_INTERCHANGE_V4_CAPABILITY)
-}
-
-pub fn import_step_v5(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
-    import_step_direct(text, true, true, false, STEP_INTERCHANGE_V5_CAPABILITY)
-}
-
-pub fn import_step_v6(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
-    import_step_direct(text, true, true, true, STEP_INTERCHANGE_V6_CAPABILITY)
-}
-
-/// Append-only `/7` product route. The native direct graph subset is identical
-/// to `/6`; `/7` adds bundle composition, durable lifecycle, and independent
-/// semantic-conformance status in the product adapters. Keeping this entry
-/// point distinct prevents a future `/7` claim from rewriting `/6` evidence.
-pub fn import_step_v7(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
-    import_step_direct(text, true, true, true, STEP_INTERCHANGE_V7_CAPABILITY)
-}
-
-/// Qualified successor: `/7` remains rejected and immutable.
-pub fn import_step_v8(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report)> {
-    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V8_CAPABILITY)?;
-    let certificate = certify_step_v8_topology(&model)?;
-    Ok((model, certificate, report))
-}
-
-pub fn import_step_v9(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report)> {
-    let (model, _, report) = import_step_direct(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
-    let mut certificate = certify_step_v8_topology(&model)?;
-    certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
-    certificate.notes.extend([
-        "certified_interior_point_selectors",
-        "bounded_freeform_poles",
-        "general_affine_occurrences",
-        "retained_open_shell_products",
-    ]);
-    Ok((model, certificate, report))
-}
-
-pub fn import_step_v9_with_metadata(text: &str) -> Result<(Model, StepV8Certificate, StepV3Report, StepSemanticMetadata)> {
-    let (model, _, report, semantic) =
-        import_step_direct_impl(text, true, true, true, STEP_INTERCHANGE_V9_CAPABILITY, true)?;
-    let mut certificate = certify_step_v8_topology(&model)?;
-    certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
-    certificate.notes.extend([
-        "certified_interior_point_selectors",
-        "bounded_freeform_poles",
-        "general_affine_occurrences",
-        "retained_open_shell_products",
-        "ap214_face_body_product_presentation",
-        "typed_xde_product_attributes",
-    ]);
-    Ok((model, certificate, report, semantic.unwrap()))
-}
-
-fn step_v10_graph_identity(entities: &BTreeMap<usize, Entity>) -> Result<String> {
-    let mut nodes = entities
-        .keys()
-        .map(|id| entity_digest(entities, *id))
-        .collect::<Result<Vec<_>>>()?;
-    nodes.sort();
-    Ok(hash(&nodes.join("\n")))
-}
-
-/// Imports the editable B-rep projection while retaining the complete Part 21
-/// graph. Entity-number changes do not alter `graph_identity`.
-pub fn import_step_v10(text: &str) -> Result<(Model, StepV8Certificate, StepV10Document)> {
-    let (model, mut certificate, report) = import_step_v9(text)?;
-    let entities = parse(data_payload(text)?)?;
-    let mut operator_identities = Vec::new();
-    for id in entities.keys() {
-        if let Some((_, _, operator)) = relationship_components(&entities, *id)? {
-            operator_identities.push(format!("operator:{}", entity_digest(&entities, operator)?));
-        }
-    }
-    operator_identities.sort();
-    operator_identities.dedup();
-    certificate.capability = STEP_INTERCHANGE_V10_CAPABILITY;
-    certificate.notes.extend([
-        "retained_affine_occurrence_graph",
-        "exact_graph_isomorphism_identity",
-    ]);
-    let document = StepV10Document {
-        source: text.to_string(),
-        graph_identity: step_v10_graph_identity(&entities)?,
-        definition_identities: report.definition_identities,
-        occurrence_identities: report.occurrence_identities,
-        product_hierarchy: report.product_hierarchy,
-        operator_identities,
-        metadata_loss: Vec::new(),
-    };
-    Ok((model, certificate, document))
-}
-
-/// Exports the authoritative graph byte-for-byte after revalidating its
-/// identifier-independent canonical identity.
-pub fn export_step_v10(document: &StepV10Document) -> Result<String> {
-    if document.source.len() > MAX_OUTPUT_BYTES {
-        return Err(refuse("STEP /10 output exceeds 16 MiB"));
-    }
-    let entities = parse(data_payload(&document.source)?)?;
-    if step_v10_graph_identity(&entities)? != document.graph_identity {
-        return Err(refuse("STEP /10 retained graph identity mismatch"));
-    }
-    Ok(document.source.clone())
-}
-
+#[path = "step_interchange_v3/import_routes.rs"]
+mod import_routes;
+pub use import_routes::{
+    export_step_v10, import_step_v3, import_step_v3_with_metadata, import_step_v4,
+    import_step_v5, import_step_v6, import_step_v7, import_step_v8, import_step_v9,
+    import_step_v9_with_metadata, import_step_v10,
+};
 #[cfg(test)]
-#[path = "tests/step_interchange_v3.rs"]
-mod tests;
+use import_routes::import_step_direct;
+
 #[cfg(test)]
 #[path = "tests/step_semantic_metadata.rs"]
 mod semantic_metadata_tests;
+#[cfg(test)]
+#[path = "tests/step_interchange_v3.rs"]
+mod tests;
 
 #[path = "step_interchange_v3/point_inverse.rs"]
 mod point_inverse;
-use point_inverse::{isolate_curve_point};
+use point_inverse::isolate_curve_point;

@@ -220,9 +220,7 @@ pub(crate) fn import(v: Value) -> Result<Value> {
             .keys()
             .any(|key| !matches!(key.as_str(), "op" | "text"))
     {
-        return Err(input(
-            "AP242 LOD-0 import expects op and text only",
-        ));
+        return Err(input("AP242 LOD-0 import expects op and text only"));
     }
     let text: String = field(&v, "text")?;
     let imported = import_ap242_tessellated_lod0(&text)?;
@@ -279,6 +277,57 @@ pub(crate) fn import(v: Value) -> Result<Value> {
         "exactBrepEntityIds":imported.exact_brep_entity_ids,
         "diagnostics":diagnostics,
         "schemaDiagnostics":schema_diagnostics,
+    }))
+}
+
+/// Two-sided sampled surface estimate using the existing binary64 distance BVH.
+/// Vertices, edge midpoints and centroids are observations, not a Hausdorff bound.
+pub(crate) fn hausdorff_estimate(v: Value) -> Result<Value> {
+    let object = v
+        .as_object()
+        .ok_or_else(|| input("LOD-0 Hausdorff estimate expects exactMesh and lod0Mesh"))?;
+    if object
+        .keys()
+        .any(|key| !matches!(key.as_str(), "op" | "exactMesh" | "lod0Mesh"))
+    {
+        return Err(input(
+            "LOD-0 Hausdorff estimate expects exactMesh and lod0Mesh only",
+        ));
+    }
+    let decode = |name: &str| -> Result<(Vec<f64>, Vec<usize>)> {
+        let mesh = v
+            .get(name)
+            .ok_or_else(|| input(format!("Missing {name}")))?;
+        let positions: Vec<f64> = field(mesh, "positions")?;
+        let indices: Vec<u32> = field(mesh, "indices")?;
+        let indices = indices
+            .into_iter()
+            .map(|index| {
+                usize::try_from(index).map_err(|_| input("LOD-0 mesh index does not fit usize"))
+            })
+            .collect::<Result<Vec<usize>>>()?;
+        if positions.len() > 300_000 || indices.len() > 300_000 {
+            return Err(input(
+                "LOD-0 Hausdorff estimate exceeds the mesh component budget",
+            ));
+        }
+        Ok((positions, indices))
+    };
+    let (exact_positions, exact_indices) = decode("exactMesh")?;
+    let (lod_positions, lod_indices) = decode("lod0Mesh")?;
+    let exact = mesh_query::MeshView::new(&exact_positions, &exact_indices);
+    let lod = mesh_query::MeshView::new(&lod_positions, &lod_indices);
+    let report = mesh_query::hausdorff_distance_approx(&exact, &lod)?;
+    Ok(json!({
+        "method":"two-sided-bvh-sampled-hausdorff-estimate",
+        "samplePattern":"vertices-edge-midpoints-centroids",
+        "min":report.min_mm,
+        "max":report.max_mm,
+        "mean":report.mean_mm,
+        "rms":report.rms_mm,
+        "sampleCount":report.sample_count,
+        "certified":false,
+        "limitation":"Finite samples can miss surface deviation; this is neither a directed exact Hausdorff distance nor a certified two-sided bound. Distances use the input model unit."
     }))
 }
 
@@ -379,5 +428,31 @@ mod tests {
         .unwrap();
         assert_eq!(output["source"], json!(SOURCE));
         assert_eq!(output["requiresRetessellation"], json!(false));
+    }
+
+    #[test]
+    fn sampled_hausdorff_is_two_sided_bvh_and_explicitly_uncertified() {
+        let output = crate::dispatch(json!({
+            "op":"brep_nurbs_step_lod0_hausdorff_estimate",
+            "exactMesh":{"positions":[0.,0.,0.,1.,0.,0.,0.,1.,0.],"indices":[0,1,2]},
+            "lod0Mesh":{"positions":[0.,0.,0.25,1.,0.,0.25,0.,1.,0.25],"indices":[0,1,2]}
+        }))
+        .unwrap();
+        assert_eq!(
+            output["method"],
+            json!("two-sided-bvh-sampled-hausdorff-estimate")
+        );
+        assert_eq!(output["sampleCount"], json!(14));
+        assert_eq!(output["certified"], json!(false));
+        assert!((output["max"].as_f64().unwrap() - 0.25).abs() < 1e-12);
+        assert!(
+            crate::dispatch(json!({
+                "op":"brep_nurbs_step_lod0_hausdorff_estimate",
+                "exactMesh":{"positions":[0.,0.,0.,1.,0.,0.,0.,1.,0.],"indices":[0,1,2]},
+                "lod0Mesh":{"positions":[0.,0.,0.,1.,0.,0.,0.,1.,0.],"indices":[0,1,2]},
+                "extra":true
+            }))
+            .is_err()
+        );
     }
 }

@@ -36,8 +36,6 @@ impl<'de> value_codec::Deserialize<'de> for Circle {
     }
 }
 
-
-
 impl<'de> value_codec::Deserialize<'de> for Constraint {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
         let mut object = match value {
@@ -302,12 +300,7 @@ impl<'de> value_codec::Deserialize<'de> for Constraint {
                         .remove("value")
                         .ok_or_else(|| value_codec::error("Missing field value"))?,
                 )?;
-                Ok(Self::PointToLineDistance {
-                    point,
-                    a,
-                    b,
-                    value,
-                })
+                Ok(Self::PointToLineDistance { point, a, b, value })
             }
             "midpoint" => {
                 let point: usize = value_codec::Deserialize::from_value(
@@ -603,5 +596,5 @@ impl value_codec::Serialize for Solution {
     }
 }
 
-#[path="serialization/methods_Constraint_to_value.rs"]
+#[path = "serialization/methods_Constraint_to_value.rs"]
 mod methods_constraint_to_value;

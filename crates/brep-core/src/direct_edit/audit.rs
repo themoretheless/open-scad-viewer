@@ -34,6 +34,10 @@ pub struct DirectEditValidationReport {
     pub self_intersection_error: Option<String>,
     pub local_geometry_error: Option<String>,
     pub checked_face_pairs: usize,
+    /// Global validation/audit used when the bounded local intersection proof
+    /// is inconclusive. This is an explicit fallback, never a silent pass.
+    pub full_validation_fallback: bool,
+    pub full_audit: Option<SolidAuditCertificate>,
 }
 
 impl DirectEditValidationReport {
@@ -346,7 +350,21 @@ pub fn validate_direct_edit(
         self_intersection_error,
         local_geometry_error,
         checked_face_pairs,
+        full_validation_fallback: false,
+        full_audit: None,
     })
+}
+
+fn with_full_fallback_if_needed(
+    staged: &Model,
+    mut report: DirectEditValidationReport,
+) -> Result<DirectEditValidationReport> {
+    if report.publishable() && !report.self_intersection_proven {
+        staged.validate()?;
+        report.full_audit = Some(crate::solid_audit::audit_solid(staged)?);
+        report.full_validation_fallback = true;
+    }
+    Ok(report)
 }
 
 pub(super) fn validate_staged(
@@ -355,7 +373,8 @@ pub(super) fn validate_staged(
     seeds: &[usize],
     budget: &Budget,
 ) -> Result<DirectEditValidationReport> {
-    let report = validate_direct_edit(source, staged, seeds, budget)?;
+    let report =
+        with_full_fallback_if_needed(staged, validate_direct_edit(source, staged, seeds, budget)?)?;
     if !report.publishable() {
         return Err(error(
             DIRECT_EDIT_AUDIT_REFUSED,
@@ -373,6 +392,105 @@ pub(super) fn validate_staged(
         ));
     }
     Ok(report)
+}
+
+#[derive(Clone, Debug)]
+pub struct IncrementalRebuildReport {
+    pub model: Model,
+    pub dirty: DirtyRegion,
+    pub rebuilt_faces: usize,
+    pub reused_faces: usize,
+    pub validation: DirectEditValidationReport,
+}
+
+/// Complete an in-place direct edit without discarding unchanged topology.
+/// Structural rebuilds are outside this contract: they must retain their own
+/// persistent-ID reconciliation. Here every changed geometric entity must be
+/// covered by the conservative dirty closure, otherwise publication is refused.
+pub fn complete_incremental_rebuild(
+    source: &Model,
+    staged: Model,
+    seeds: &[usize],
+    budget: &Budget,
+) -> Result<IncrementalRebuildReport> {
+    let dirty = dirty_region_for_result(source, &staged, seeds, budget)?;
+    let same_shape = source.faces.len() == staged.faces.len()
+        && source.loops.len() == staged.loops.len()
+        && source.edges.len() == staged.edges.len()
+        && source.vertices.len() == staged.vertices.len()
+        && source.shells == staged.shells
+        && source.bodies == staged.bodies
+        && source.1 == staged.1;
+    if !same_shape {
+        return Err(error(
+            DIRTY_INVALID,
+            "Incremental rebuild requires identical topology arrays, shells, bodies and persistent IDs",
+        ));
+    }
+    let mut dirty_loops = BTreeSet::new();
+    let mut dirty_edges = BTreeSet::new();
+    let mut dirty_vertices = BTreeSet::new();
+    for &face in &dirty.faces {
+        for wire in std::iter::once(source.faces[face].outer)
+            .chain(source.faces[face].holes.iter().copied())
+        {
+            dirty_loops.insert(wire);
+            for coedge in &source.loops[wire].coedges {
+                dirty_edges.insert(coedge.edge);
+                dirty_vertices.extend(source.edges[coedge.edge].vertices);
+            }
+        }
+    }
+    for face in 0..source.faces.len() {
+        if !dirty.faces.contains(&face) && source.faces[face] != staged.faces[face] {
+            return Err(error(
+                DIRTY_INVALID,
+                format!("Face {face} changed outside the dirty closure"),
+            ));
+        }
+    }
+    for wire in 0..source.loops.len() {
+        if source.loops[wire] != staged.loops[wire] && !dirty_loops.contains(&wire) {
+            return Err(error(
+                DIRTY_INVALID,
+                format!("Loop {wire} changed outside the dirty closure"),
+            ));
+        }
+    }
+    for edge in 0..source.edges.len() {
+        if source.edges[edge] != staged.edges[edge] && !dirty_edges.contains(&edge) {
+            return Err(error(
+                DIRTY_INVALID,
+                format!("Edge {edge} changed outside the dirty closure"),
+            ));
+        }
+    }
+    for vertex in 0..source.vertices.len() {
+        if source.vertices[vertex] != staged.vertices[vertex] && !dirty_vertices.contains(&vertex) {
+            return Err(error(
+                DIRTY_INVALID,
+                format!("Vertex {vertex} changed outside the dirty closure"),
+            ));
+        }
+    }
+    let rebuilt_faces = rebuilt_faces_in_place(source, &staged);
+    let validation = with_full_fallback_if_needed(
+        &staged,
+        validate_direct_edit(source, &staged, seeds, budget)?,
+    )?;
+    if !validation.publishable() {
+        return Err(error(
+            DIRECT_EDIT_AUDIT_REFUSED,
+            "Incremental dirty-region validation failed",
+        ));
+    }
+    Ok(IncrementalRebuildReport {
+        model: staged,
+        dirty,
+        rebuilt_faces,
+        reused_faces: source.faces.len() - rebuilt_faces,
+        validation,
+    })
 }
 
 /// Stable rollback identity over geometry, topology, naming and change history.
@@ -440,8 +558,11 @@ impl DirectEditTransaction {
                 "Direct-edit transaction has no staged model",
             )
         })?;
-        let report = validate_direct_edit(&self.checkpoint, staged, seeds, budget)?;
-        let ok = report.ok();
+        let report = with_full_fallback_if_needed(
+            staged,
+            validate_direct_edit(&self.checkpoint, staged, seeds, budget)?,
+        )?;
+        let ok = report.publishable();
         self.validation = Some(report);
         if !ok {
             return Err(error(
@@ -469,7 +590,7 @@ impl DirectEditTransaction {
                 "Direct-edit commit requires validation",
             )
         })?;
-        if !validation.ok() {
+        if !validation.publishable() {
             return Err(error(
                 DIRECT_EDIT_AUDIT_REFUSED,
                 "Failed direct-edit validation cannot be committed",

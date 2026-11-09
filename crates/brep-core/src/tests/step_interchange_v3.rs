@@ -80,6 +80,127 @@ fn partial_holed_revolution_is_not_mistaken_for_a_periodic_band() {
     );
 }
 
+fn identity_relationship_fixture() -> String {
+    include_str!("../../../../tests/fixtures/step-v9/self-authored-ap242-cylinder.step")
+        .replace(
+            "#298=SHAPE_DEFINITION_REPRESENTATION(#297,#290);",
+            "#298=SHAPE_DEFINITION_REPRESENTATION(#297,#299);",
+        )
+        .replace(
+            "ENDSEC;\nEND-ISO",
+            "#299=SHAPE_REPRESENTATION('',(),#289);\n#300=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#290);\n#301=SHAPE_REPRESENTATION('PMI',(),#289);\n#302=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#301);\nENDSEC;\nEND-ISO",
+        )
+}
+
+#[test]
+fn identity_relationship_selects_one_exact_root_and_retains_pmi_metadata() {
+    let text = identity_relationship_fixture();
+    let (model, _, report) = import_step_v10(&text).unwrap();
+    assert_eq!(model.bodies.len(), 1);
+    assert!(
+        report
+            .metadata_loss
+            .iter()
+            .any(|item| item.contains("non_exact_representations"))
+    );
+
+    let multiple_children = text.replace(
+        "ENDSEC;\nEND-ISO",
+        "#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#286),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#303);\nENDSEC;\nEND-ISO",
+    );
+    assert!(
+        import_step_v10(&multiple_children)
+            .unwrap_err()
+            .message
+            .contains("Ambiguous multiple exact")
+    );
+
+    let body = text
+        .split_once("DATA;\n")
+        .unwrap()
+        .1
+        .split_once("#287=")
+        .unwrap()
+        .0;
+    let mut independent = String::new();
+    let mut remaining = body;
+    while let Some(hash) = remaining.find('#') {
+        independent.push_str(&remaining[..hash]);
+        remaining = &remaining[hash + 1..];
+        let digits = remaining.find(|c: char| !c.is_ascii_digit()).unwrap();
+        let id: usize = remaining[..digits].parse().unwrap();
+        independent.push_str(&format!("#{}", id + 1000));
+        remaining = &remaining[digits..];
+    }
+    independent.push_str(remaining);
+    let mut independent = independent.into_bytes();
+    for index in 0..independent.len().saturating_sub(3) {
+        if independent[index] == b'|'
+            && matches!(
+                independent[index + 1],
+                b'v' | b'e' | b'l' | b'f' | b's' | b'b'
+            )
+            && independent[index + 2] == b':'
+        {
+            let digit = (independent[index + 3] as char).to_digit(16).unwrap();
+            independent[index + 3] = char::from_digit(15 - digit, 16).unwrap() as u8;
+        }
+    }
+    let independent = String::from_utf8(independent).unwrap();
+    let multiple_roots = text.replace(
+        "ENDSEC;\nEND-ISO",
+        &format!("{independent}#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#1286),#289);\n#304=SHAPE_DEFINITION_REPRESENTATION(#297,#303);\nENDSEC;\nEND-ISO"),
+    );
+    let error = import_step_v10(&multiple_roots).unwrap_err();
+    assert!(
+        error.message.contains("Ambiguous multiple exact"),
+        "{error:?}"
+    );
+
+    let cycle = text.replace(
+        "ENDSEC;\nEND-ISO",
+        "#303=SHAPE_REPRESENTATION('PMI cycle',(),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#301,#303);\n#305=SHAPE_REPRESENTATION_RELATIONSHIP('','',#303,#301);\nENDSEC;\nEND-ISO",
+    );
+    assert!(
+        import_step_v10(&cycle)
+            .unwrap_err()
+            .message
+            .contains("Cycle in identity representation")
+    );
+}
+
+#[test]
+fn presentation_pmi_metadata_is_ignored_without_becoming_exact_geometry() {
+    let text = identity_relationship_fixture().replace(
+        "ENDSEC;\nEND-ISO",
+        "#303=SURFACE_STYLE_PARAMETER_LINE(#301,(U_DIRECTION_COUNT(2),V_DIRECTION_COUNT(2)));\n#304=SURFACE_STYLE_TRANSPARENT(0.5);\n#305=TESSELLATED_SHAPE_REPRESENTATION('auxiliary',(),#289);\n#306=CONCENTRICITY_TOLERANCE('','',#301,#301,(#301));\n#307=PRODUCT_DEFINITION_CONTEXT_ROLE('additional context','');\n#308=SYMMETRY_TOLERANCE('','',#301,#301,(#301));\n#309=ROUNDNESS_TOLERANCE('','',#301,#301,(#301));\n#310=CYLINDRICITY_TOLERANCE('','',#301,#301,(#301));\n#311=APPLIED_DOCUMENT_REFERENCE(#301,'');\n#312=TOTAL_RUNOUT_TOLERANCE('','',#301,#301,(#301));\n#313=OBJECT_ROLE('PMI');\n#314=LIMITS_AND_FITS('','',#301,#301);\n#315=DOCUMENT_PRODUCT_EQUIVALENCE('','',#301,#301);\n#316=ROLE_ASSOCIATION(#313,#301);\nENDSEC;\nEND-ISO",
+    );
+    let (model, _, report) =
+        import_step_direct(&text, true, true, true, STEP_INTERCHANGE_V10_CAPABILITY).unwrap();
+    assert_eq!(model.bodies.len(), 1);
+    for ty in [
+        "SURFACE_STYLE_PARAMETER_LINE",
+        "SURFACE_STYLE_TRANSPARENT",
+        "TESSELLATED_SHAPE_REPRESENTATION",
+        "CONCENTRICITY_TOLERANCE",
+        "PRODUCT_DEFINITION_CONTEXT_ROLE",
+        "SYMMETRY_TOLERANCE",
+        "ROUNDNESS_TOLERANCE",
+        "CYLINDRICITY_TOLERANCE",
+        "APPLIED_DOCUMENT_REFERENCE",
+        "TOTAL_RUNOUT_TOLERANCE",
+        "OBJECT_ROLE",
+        "LIMITS_AND_FITS",
+        "DOCUMENT_PRODUCT_EQUIVALENCE",
+        "ROLE_ASSOCIATION",
+    ] {
+        assert!(
+            report.ignored_entities.iter().any(|ignored| ignored == ty),
+            "missing {ty}"
+        );
+    }
+}
+
 #[test]
 fn product_assembly_frames_use_their_own_units() {
     let text = include_str!(
@@ -423,31 +544,31 @@ fn orphan_transform_does_not_move_direct_geometry() {
 #60005=AXIS2_PLACEMENT_3D('',#60001,#60002,#60003);
 #60006=ITEM_DEFINED_TRANSFORMATION('orphan','',#60004,#60005);
 ";
-        let with_orphan = text.replacen("ENDSEC;\nEND-ISO", &format!("{rows}ENDSEC;\nEND-ISO"), 1);
-        let (back, _, report) = import_step_v3(&with_orphan).unwrap();
-        assert_eq!(back.vertices[0].point, model.vertices[0].point);
-        assert!(
-            report
-                .ignored_entities
-                .contains(&"ITEM_DEFINED_TRANSFORMATION".into())
-        );
-    }
+    let with_orphan = text.replacen("ENDSEC;\nEND-ISO", &format!("{rows}ENDSEC;\nEND-ISO"), 1);
+    let (back, _, report) = import_step_v3(&with_orphan).unwrap();
+    assert_eq!(back.vertices[0].point, model.vertices[0].point);
+    assert!(
+        report
+            .ignored_entities
+            .contains(&"ITEM_DEFINED_TRANSFORMATION".into())
+    );
+}
 
-    #[test]
-    fn only_representation_reachable_rigid_transform_moves_geometry() {
-        let model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
-        let (text, _, _) = export_step_v3(&model).unwrap();
-        let entities = parse(&text).unwrap();
-        let body = entities
-            .iter()
-            .find_map(|(id, _)| {
-                call(&entities, *id)
-                    .ok()
-                    .and_then(|(ty, _)| (ty == "MANIFOLD_SOLID_BREP").then_some(*id))
-            })
-            .unwrap();
-        let rows = format!(
-            "\
+#[test]
+fn only_representation_reachable_rigid_transform_moves_geometry() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    let (text, _, _) = export_step_v3(&model).unwrap();
+    let entities = parse(&text).unwrap();
+    let body = entities
+        .iter()
+        .find_map(|(id, _)| {
+            call(&entities, *id)
+                .ok()
+                .and_then(|(ty, _)| (ty == "MANIFOLD_SOLID_BREP").then_some(*id))
+        })
+        .unwrap();
+    let rows = format!(
+        "\
 #60000=CARTESIAN_POINT('',(0.,0.,0.));
 #60001=CARTESIAN_POINT('',(9.,8.,7.));
 #60002=DIRECTION('',(0.,0.,1.));
@@ -568,6 +689,39 @@ fn v5_emits_selected_ap242_context_and_roundtrips() {
         .unwrap_err()
         .message
         .contains("AP242")
+    );
+    assert!(
+        import_step_v5(&text.replace(
+            "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING",
+            "AUTOMOTIVE_DESIGN { 2 1 10303 203 1 1 1 }"
+        ))
+        .unwrap_err()
+        .message
+        .contains("AP242")
+    );
+    let whitespace_header = text
+        .replace("FILE_DESCRIPTION(", "file_description \n\t(")
+        .replace("FILE_NAME(", "file_name \r\n (")
+        .replace("FILE_SCHEMA(", "file_schema \t (")
+        .replace(
+            "'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'",
+            "'ap242_managed_model_based_3d_engineering_mim_lf { 1 0 10303 442 1 1 4 }'",
+        );
+    assert_eq!(
+        import_step_v5(&whitespace_header).unwrap().0.bodies.len(),
+        1
+    );
+    let qualified_base_schema = text.replace(
+        "'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'",
+        "'Ap242_Managed_Model_Based_3d_Engineering { 1 0 10303 442 1 1 4 }'",
+    );
+    assert_eq!(
+        import_step_v5(&qualified_base_schema)
+            .unwrap()
+            .0
+            .bodies
+            .len(),
+        1
     );
     assert!(
         import_step_v5(&text.replacen("DATA;", "DATA;\nDATA;", 1))
@@ -883,66 +1037,66 @@ fn v5_orders_distinct_occurrence_transforms_and_refuses_cycle_or_ambiguity() {
 #60005=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#{body}),#{context});
 #60006=(REPRESENTATION_RELATIONSHIP('','',#{root},#60005)REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#60004)SHAPE_REPRESENTATION_RELATIONSHIP());
 ");
-        let placed = text.replacen("ENDSEC;\nEND-ISO", &format!("{rows}ENDSEC;\nEND-ISO"), 1);
-        let (back, _, _) = import_step_v5(&placed).unwrap();
-        assert_eq!(back.bodies.len(), 2);
-        let xs = back
-            .vertices
-            .iter()
-            .map(|vertex| vertex.point[0])
-            .collect::<Vec<_>>();
-        assert!(xs.iter().any(|x| *x < 2.));
-        assert!(xs.iter().any(|x| *x >= 10.));
+    let placed = text.replacen("ENDSEC;\nEND-ISO", &format!("{rows}ENDSEC;\nEND-ISO"), 1);
+    let (back, _, _) = import_step_v5(&placed).unwrap();
+    assert_eq!(back.bodies.len(), 2);
+    let xs = back
+        .vertices
+        .iter()
+        .map(|vertex| vertex.point[0])
+        .collect::<Vec<_>>();
+    assert!(xs.iter().any(|x| *x < 2.));
+    assert!(xs.iter().any(|x| *x >= 10.));
 
-        let cycle=placed.replacen("ENDSEC;\nEND-ISO",&format!(
+    let cycle=placed.replacen("ENDSEC;\nEND-ISO",&format!(
             "#60007=(REPRESENTATION_RELATIONSHIP('','',#60005,#{root})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#60004)SHAPE_REPRESENTATION_RELATIONSHIP());\nENDSEC;\nEND-ISO"),1);
-        assert!(
-            import_step_v5(&cycle)
-                .unwrap_err()
-                .message
-                .contains("Cycle")
-        );
-        let ambiguous=placed.replacen("ENDSEC;\nEND-ISO",&format!(
+    assert!(
+        import_step_v5(&cycle)
+            .unwrap_err()
+            .message
+            .contains("Cycle")
+    );
+    let ambiguous=placed.replacen("ENDSEC;\nEND-ISO",&format!(
             "#60007=(REPRESENTATION_RELATIONSHIP('','',#{root},#60005)REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#60004)SHAPE_REPRESENTATION_RELATIONSHIP());\nENDSEC;\nEND-ISO"),1);
-        assert!(
-            import_step_v5(&ambiguous)
-                .unwrap_err()
-                .message
-                .contains("Ambiguous")
-        );
-    }
+    assert!(
+        import_step_v5(&ambiguous)
+            .unwrap_err()
+            .message
+            .contains("Ambiguous")
+    );
+}
 
-    #[test]
-    fn v5_roundtrips_rational_analytic_bodies_and_sense_combinations() {
-        for model in [
-            crate::cylinder(2., 3.).unwrap(),
-            crate::frustum(3., 1., 4.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
-        ] {
-            let (text, _, _) = export_step_v5(&model).unwrap();
-            assert!(text.contains("RATIONAL_B_SPLINE_"));
-            let (back, _, _) = import_step_v5(&text).unwrap();
-            assert_eq!(back.bodies.len(), 1);
-            assert_eq!(back.faces.len(), model.faces.len());
-            back.validate().unwrap();
-        }
-        let model = crate::cylinder(2., 3.).unwrap();
+#[test]
+fn v5_roundtrips_rational_analytic_bodies_and_sense_combinations() {
+    for model in [
+        crate::cylinder(2., 3.).unwrap(),
+        crate::frustum(3., 1., 4.).unwrap(),
+        crate::torus(4., 1.).unwrap(),
+    ] {
         let (text, _, _) = export_step_v5(&model).unwrap();
-        let text = text
-            .lines()
-            .map(|line| {
-                if let Some(start) = line.find("'OSCAD_TOPO/3|") {
-                    let end = line[start + 1..].find('\'').unwrap() + start + 1;
-                    format!("{}''{}", &line[..start], &line[end + 1..])
-                } else {
-                    line.to_string()
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        assert!(text.contains("ORIENTED_EDGE('',*,*,#") && text.contains(",.F.);"));
-        assert!(text.contains("ADVANCED_FACE('',("));
+        assert!(text.contains("RATIONAL_B_SPLINE_"));
+        let (back, _, _) = import_step_v5(&text).unwrap();
+        assert_eq!(back.bodies.len(), 1);
+        assert_eq!(back.faces.len(), model.faces.len());
+        back.validate().unwrap();
     }
+    let model = crate::cylinder(2., 3.).unwrap();
+    let (text, _, _) = export_step_v5(&model).unwrap();
+    let text = text
+        .lines()
+        .map(|line| {
+            if let Some(start) = line.find("'OSCAD_TOPO/3|") {
+                let end = line[start + 1..].find('\'').unwrap() + start + 1;
+                format!("{}''{}", &line[..start], &line[end + 1..])
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("ORIENTED_EDGE('',*,*,#") && text.contains(",.F.);"));
+    assert!(text.contains("ADVANCED_FACE('',("));
+}
 
 fn authored_reversed_cuboid() -> Model {
     crate::transform::affine(
@@ -1001,7 +1155,12 @@ fn v6_versioned_authored_chart_roundtrips_exact_poles_pcurves_and_topology() {
 fn v6_unmarked_legacy_transitional_chart_restores_exact_original_model() {
     let model = authored_reversed_cuboid();
     let mut transitional = canonical_face_senses(&model).unwrap();
-    assert!(transitional.shells[0].faces.iter().all(|usage| !usage.reversed));
+    assert!(
+        transitional.shells[0]
+            .faces
+            .iter()
+            .all(|usage| !usage.reversed)
+    );
     for (target, source) in transitional.shells.iter_mut().zip(&model.shells) {
         for (target, source) in target.faces.iter_mut().zip(&source.faces) {
             target.reversed = source.reversed;
@@ -1047,364 +1206,365 @@ fn v6_authored_chart_marker_does_not_change_v5_v9_or_external_ap242() {
     let external_unmarked = external.replace(&format!("|{STEP_V6_AUTHORED_CHART_MARKER}"), "");
     let (external_unmarked_back, _, _) = import_step_v6(&external_unmarked).unwrap();
     assert_exact_chart_model(&external_back, &external_unmarked_back);
-    assert_eq!(external_back.0, canonical.0, "external AP242 canonical chart");
+    assert_eq!(
+        external_back.0, canonical.0,
+        "external AP242 canonical chart"
+    );
 }
 
-    #[test]
-    fn v6_roundtrips_certified_pole_boundaries() {
-        for model in [
-            crate::sphere(2.).unwrap(),
-            crate::frustum(2., 0., 3.).unwrap(),
-        ] {
-            let degenerate = model.edges.iter().filter(|edge| edge.degenerate).count();
-            if degenerate > 0 {
-                assert!(export_step_v5(&model).is_err())
-            }
-            let (text, certificate, _) = export_step_v6(&model).unwrap();
-            assert_eq!(certificate.capability, STEP_INTERCHANGE_V6_CAPABILITY);
-            let (back, _, _) = import_step_v6(&text).unwrap();
-            assert_eq!(
-                back.edges.iter().filter(|edge| edge.degenerate).count(),
-                if model.faces.len() == 8 {
-                    2
-                } else {
-                    degenerate
-                }
-            );
-            back.validate().unwrap();
+#[test]
+fn v6_roundtrips_certified_pole_boundaries() {
+    for model in [
+        crate::sphere(2.).unwrap(),
+        crate::frustum(2., 0., 3.).unwrap(),
+    ] {
+        let degenerate = model.edges.iter().filter(|edge| edge.degenerate).count();
+        if degenerate > 0 {
+            assert!(export_step_v5(&model).is_err())
         }
-        for model in [
-            crate::cylinder(2., 3.).unwrap(),
-            crate::frustum(2., 1., 3.).unwrap(),
-            crate::sphere(2.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
-        ] {
-            let (text, _, _) = export_step_v6(&model).unwrap();
-            assert!(text.contains("SEAM_CURVE("));
-            import_step_v6(&text).unwrap().0.validate().unwrap();
-        }
-        let mut void_model = Model::empty(1e-7).unwrap();
-        append(
-            &mut void_model,
-            freeform_cuboid_solid([0., 0., 0.], [10., 10., 10.]).unwrap(),
-        );
-        append(
-            &mut void_model,
-            freeform_cuboid_solid([2., 2., 2.], [4., 4., 4.]).unwrap(),
-        );
-        void_model.0.bodies = vec![Body {
-            outer_shell: 0,
-            inner_shells: vec![1],
-        }];
-        void_model.rebuild_topology_ids();
-        void_model.validate().unwrap();
-        let (void_text, _, _) = export_step_v6(&void_model).unwrap();
-        let same_oriented = void_text
-            .lines()
-            .map(|line| {
-                let line = if let Some(start) = line.find("'OSCAD_TOPO/3|") {
-                    let end = line[start + 1..].find('\'').unwrap() + start + 1;
-                    format!("{}''{}", &line[..start], &line[end + 1..])
-                } else {
-                    line.to_string()
-                };
-                if line.contains("ORIENTED_CLOSED_SHELL(") {
-                    line.replacen(",.F.)", ",.T.)", 1)
-                } else {
-                    line
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
+        let (text, certificate, _) = export_step_v6(&model).unwrap();
+        assert_eq!(certificate.capability, STEP_INTERCHANGE_V6_CAPABILITY);
+        let (back, _, _) = import_step_v6(&text).unwrap();
         assert_eq!(
-            import_step_v6(&same_oriented).unwrap().0.bodies[0]
-                .inner_shells
-                .len(),
-            1
+            back.edges.iter().filter(|edge| edge.degenerate).count(),
+            if model.faces.len() == 8 {
+                2
+            } else {
+                degenerate
+            }
         );
+        back.validate().unwrap();
     }
+    for model in [
+        crate::cylinder(2., 3.).unwrap(),
+        crate::frustum(2., 1., 3.).unwrap(),
+        crate::sphere(2.).unwrap(),
+        crate::torus(4., 1.).unwrap(),
+    ] {
+        let (text, _, _) = export_step_v6(&model).unwrap();
+        assert!(text.contains("SEAM_CURVE("));
+        import_step_v6(&text).unwrap().0.validate().unwrap();
+    }
+    let mut void_model = Model::empty(1e-7).unwrap();
+    append(
+        &mut void_model,
+        freeform_cuboid_solid([0., 0., 0.], [10., 10., 10.]).unwrap(),
+    );
+    append(
+        &mut void_model,
+        freeform_cuboid_solid([2., 2., 2.], [4., 4., 4.]).unwrap(),
+    );
+    void_model.0.bodies = vec![Body {
+        outer_shell: 0,
+        inner_shells: vec![1],
+    }];
+    void_model.rebuild_topology_ids();
+    void_model.validate().unwrap();
+    let (void_text, _, _) = export_step_v6(&void_model).unwrap();
+    let same_oriented = void_text
+        .lines()
+        .map(|line| {
+            let line = if let Some(start) = line.find("'OSCAD_TOPO/3|") {
+                let end = line[start + 1..].find('\'').unwrap() + start + 1;
+                format!("{}''{}", &line[..start], &line[end + 1..])
+            } else {
+                line.to_string()
+            };
+            if line.contains("ORIENTED_CLOSED_SHELL(") {
+                line.replacen(",.F.)", ",.T.)", 1)
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_eq!(
+        import_step_v6(&same_oriented).unwrap().0.bodies[0]
+            .inner_shells
+            .len(),
+        1
+    );
+}
 
-    #[test]
-    fn v7_requires_whole_domain_boundary_identities_for_periodic_carriers() {
-        for model in [
-            crate::cylinder(2., 3.).unwrap(),
-            crate::frustum(2., 1., 3.).unwrap(),
-            crate::sphere(2.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
-        ] {
-            let (text, _, _) = export_step_v7(&model).unwrap();
-            let (back, import_certificate, _) = import_step_v7(&text).unwrap();
-            assert!(
-                import_certificate
-                    .notes
-                    .contains(&"whole_domain_rational_boundary_and_constant_pole_identity")
-            );
-            back.validate().unwrap();
+#[test]
+fn v7_requires_whole_domain_boundary_identities_for_periodic_carriers() {
+    for model in [
+        crate::cylinder(2., 3.).unwrap(),
+        crate::frustum(2., 1., 3.).unwrap(),
+        crate::sphere(2.).unwrap(),
+        crate::torus(4., 1.).unwrap(),
+    ] {
+        let (text, _, _) = export_step_v7(&model).unwrap();
+        let (back, import_certificate, _) = import_step_v7(&text).unwrap();
+        assert!(
+            import_certificate
+                .notes
+                .contains(&"whole_domain_rational_boundary_and_constant_pole_identity")
+        );
+        back.validate().unwrap();
+    }
+}
+
+#[test]
+fn v8_carries_whole_domain_regularity_in_the_topology_certificate() {
+    let expected = [
+        (crate::cylinder(2., 3.).unwrap(), "cylinder", 0),
+        (crate::frustum(2., 1., 3.).unwrap(), "cone", 0),
+        (crate::frustum(2., 0., 3.).unwrap(), "cone", 1),
+        (crate::sphere(2.).unwrap(), "sphere", 2),
+        (crate::torus(4., 1.).unwrap(), "torus", 0),
+    ];
+    for (model, carrier, collapsed) in expected {
+        let (text, export_certificate, _) = export_step_v8(&model).unwrap();
+        let row = export_certificate
+            .regularity
+            .iter()
+            .find(|row| row.carrier == carrier)
+            .unwrap();
+        assert!(row.denominator_lower_bound > 0.);
+        assert_eq!(row.collapsed_boundaries.len(), collapsed);
+        assert!(row.lifted_periods[0] > 0.);
+        if carrier == "torus" {
+            assert!(row.lifted_periods[1] > 0.)
         }
-    }
-
-    #[test]
-    fn v8_carries_whole_domain_regularity_in_the_topology_certificate() {
-        let expected = [
-            (crate::cylinder(2., 3.).unwrap(), "cylinder", 0),
-            (crate::frustum(2., 1., 3.).unwrap(), "cone", 0),
-            (crate::frustum(2., 0., 3.).unwrap(), "cone", 1),
-            (crate::sphere(2.).unwrap(), "sphere", 2),
-            (crate::torus(4., 1.).unwrap(), "torus", 0),
-        ];
-        for (model, carrier, collapsed) in expected {
-            let (text, export_certificate, _) = export_step_v8(&model).unwrap();
-            let row = export_certificate
+        let (back, import_certificate, _) = import_step_v8(&text).unwrap();
+        assert_eq!(import_certificate.coupled_sense_cases, 128);
+        assert_eq!(
+            import_certificate
                 .regularity
                 .iter()
                 .find(|row| row.carrier == carrier)
-                .unwrap();
-            assert!(row.denominator_lower_bound > 0.);
-            assert_eq!(row.collapsed_boundaries.len(), collapsed);
-            assert!(row.lifted_periods[0] > 0.);
-            if carrier == "torus" {
-                assert!(row.lifted_periods[1] > 0.)
-            }
-            let (back, import_certificate, _) = import_step_v8(&text).unwrap();
-            assert_eq!(import_certificate.coupled_sense_cases, 128);
-            assert_eq!(
-                import_certificate
-                    .regularity
-                    .iter()
-                    .find(|row| row.carrier == carrier)
-                    .unwrap()
-                    .identity,
-                row.identity
-            );
-            back.validate().unwrap();
-        }
+                .unwrap()
+                .identity,
+            row.identity
+        );
+        back.validate().unwrap();
     }
+}
 
-    fn toggle_first_entity_boolean(text: &str, entity: &str) -> String {
-        let mut changed = false;
-        text.lines()
-            .map(|line| {
-                if !changed && line.contains(&format!("={entity}")) {
-                    changed = true;
-                    if line.contains(",.T.);") {
-                        line.replacen(",.T.);", ",.F.);", 1)
-                    } else {
-                        line.replacen(",.F.);", ",.T.);", 1)
-                    }
+fn toggle_first_entity_boolean(text: &str, entity: &str) -> String {
+    let mut changed = false;
+    text.lines()
+        .map(|line| {
+            if !changed && line.contains(&format!("={entity}")) {
+                changed = true;
+                if line.contains(",.T.);") {
+                    line.replacen(",.T.);", ",.F.);", 1)
                 } else {
-                    line.to_string()
+                    line.replacen(",.F.);", ",.T.);", 1)
                 }
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-    fn reverse_first_shell_members(text: &str) -> String {
-        let mut changed = false;
-        text.lines()
-            .map(|line| {
-                if changed || !line.contains("=CLOSED_SHELL") {
-                    return line.to_string();
-                }
-                let Some(open) = line.find(",(") else {
-                    return line.to_string();
-                };
-                let Some(close) = line[open + 2..].find("))").map(|index| index + open + 2) else {
-                    return line.to_string();
-                };
-                let mut members = line[open + 2..close].split(',').collect::<Vec<_>>();
-                members.reverse();
-                changed = true;
-                format!(
-                    "{}{}{}",
-                    &line[..open + 2],
-                    members.join(","),
-                    &line[close..]
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-    fn reverse_first_seam_pcurves(text: &str) -> String {
-        let mut changed = false;
-        text.lines()
-            .map(|line| {
-                if changed || !line.contains("=SEAM_CURVE") {
-                    return line.to_string();
-                }
-                let Some(open) = line.find(",(#") else {
-                    return line.to_string();
-                };
-                let Some(close) = line[open + 2..].find(')').map(|index| index + open + 2) else {
-                    return line.to_string();
-                };
-                let mut members = line[open + 2..close].split(',').collect::<Vec<_>>();
-                members.reverse();
-                changed = true;
-                format!(
-                    "{}{}{}",
-                    &line[..open + 2],
-                    members.join(","),
-                    &line[close..]
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-    fn topology_signature(
-        model: &Model,
-    ) -> (usize, usize, usize, usize, usize, usize, Vec<[u64; 3]>) {
-        let mut vertices = model
-            .vertices
-            .iter()
-            .map(|vertex| vertex.point.map(f64::to_bits))
-            .collect::<Vec<_>>();
-        vertices.sort();
-        (
-            model.vertices.len(),
-            model.edges.len(),
-            model.loops.len(),
-            model.faces.len(),
-            model.shells.len(),
-            model.bodies.len(),
-            vertices,
-        )
-    }
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+fn reverse_first_shell_members(text: &str) -> String {
+    let mut changed = false;
+    text.lines()
+        .map(|line| {
+            if changed || !line.contains("=CLOSED_SHELL") {
+                return line.to_string();
+            }
+            let Some(open) = line.find(",(") else {
+                return line.to_string();
+            };
+            let Some(close) = line[open + 2..].find("))").map(|index| index + open + 2) else {
+                return line.to_string();
+            };
+            let mut members = line[open + 2..close].split(',').collect::<Vec<_>>();
+            members.reverse();
+            changed = true;
+            format!(
+                "{}{}{}",
+                &line[..open + 2],
+                members.join(","),
+                &line[close..]
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+fn reverse_first_seam_pcurves(text: &str) -> String {
+    let mut changed = false;
+    text.lines()
+        .map(|line| {
+            if changed || !line.contains("=SEAM_CURVE") {
+                return line.to_string();
+            }
+            let Some(open) = line.find(",(#") else {
+                return line.to_string();
+            };
+            let Some(close) = line[open + 2..].find(')').map(|index| index + open + 2) else {
+                return line.to_string();
+            };
+            let mut members = line[open + 2..close].split(',').collect::<Vec<_>>();
+            members.reverse();
+            changed = true;
+            format!(
+                "{}{}{}",
+                &line[..open + 2],
+                members.join(","),
+                &line[close..]
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+fn topology_signature(model: &Model) -> (usize, usize, usize, usize, usize, usize, Vec<[u64; 3]>) {
+    let mut vertices = model
+        .vertices
+        .iter()
+        .map(|vertex| vertex.point.map(f64::to_bits))
+        .collect::<Vec<_>>();
+    vertices.sort();
+    (
+        model.vertices.len(),
+        model.edges.len(),
+        model.loops.len(),
+        model.faces.len(),
+        model.shells.len(),
+        model.bodies.len(),
+        vertices,
+    )
+}
 
-    #[test]
-    fn v8_exhausts_all_coupled_sense_masks_with_equivalence_or_refusal() {
-        let mut void_model = Model::empty(1e-7).unwrap();
-        append(
-            &mut void_model,
-            freeform_cuboid_solid([0., 0., 0.], [10., 10., 10.]).unwrap(),
-        );
-        append(
-            &mut void_model,
-            freeform_cuboid_solid([2., 2., 2.], [4., 4., 4.]).unwrap(),
-        );
-        void_model.0.bodies = vec![Body {
-            outer_shell: 0,
-            inner_shells: vec![1],
-        }];
-        void_model.rebuild_topology_ids();
-        void_model.validate().unwrap();
-        let fixtures = [
-            crate::sphere(2.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
-            void_model,
-        ];
-        let exported = fixtures
-            .iter()
-            .map(|model| export_step_v8(model).unwrap().0)
-            .collect::<Vec<_>>();
-        let baselines = exported
-            .iter()
-            .map(|text| topology_signature(&import_step_v8(text).unwrap().0))
-            .collect::<Vec<_>>();
-        let mut refusals = 0usize;
-        let mut equivalents = 0usize;
-        for mask in 0usize..128 {
-            for (fixture, text) in exported.iter().enumerate() {
-                let mut candidate = text.clone();
-                if mask & 1 != 0 {
-                    candidate = reverse_first_seam_pcurves(&candidate);
+#[test]
+fn v8_exhausts_all_coupled_sense_masks_with_equivalence_or_refusal() {
+    let mut void_model = Model::empty(1e-7).unwrap();
+    append(
+        &mut void_model,
+        freeform_cuboid_solid([0., 0., 0.], [10., 10., 10.]).unwrap(),
+    );
+    append(
+        &mut void_model,
+        freeform_cuboid_solid([2., 2., 2.], [4., 4., 4.]).unwrap(),
+    );
+    void_model.0.bodies = vec![Body {
+        outer_shell: 0,
+        inner_shells: vec![1],
+    }];
+    void_model.rebuild_topology_ids();
+    void_model.validate().unwrap();
+    let fixtures = [
+        crate::sphere(2.).unwrap(),
+        crate::torus(4., 1.).unwrap(),
+        void_model,
+    ];
+    let exported = fixtures
+        .iter()
+        .map(|model| export_step_v8(model).unwrap().0)
+        .collect::<Vec<_>>();
+    let baselines = exported
+        .iter()
+        .map(|text| topology_signature(&import_step_v8(text).unwrap().0))
+        .collect::<Vec<_>>();
+    let mut refusals = 0usize;
+    let mut equivalents = 0usize;
+    for mask in 0usize..128 {
+        for (fixture, text) in exported.iter().enumerate() {
+            let mut candidate = text.clone();
+            if mask & 1 != 0 {
+                candidate = reverse_first_seam_pcurves(&candidate);
+            }
+            if mask & 2 != 0 {
+                candidate = toggle_first_entity_boolean(&candidate, "EDGE_CURVE")
+            }
+            if mask & 4 != 0 {
+                candidate = toggle_first_entity_boolean(&candidate, "ORIENTED_EDGE")
+            }
+            if mask & 8 != 0 {
+                candidate = toggle_first_entity_boolean(&candidate, "FACE_OUTER_BOUND");
+            }
+            if mask & 16 != 0 {
+                candidate = toggle_first_entity_boolean(&candidate, "ADVANCED_FACE")
+            }
+            if mask & 32 != 0 {
+                candidate = reverse_first_shell_members(&candidate)
+            }
+            if mask & 64 != 0 {
+                candidate = toggle_first_entity_boolean(&candidate, "ORIENTED_CLOSED_SHELL");
+            }
+            match import_step_v8(&candidate) {
+                Ok((model, certificate, _)) => {
+                    assert!(certificate.complete);
+                    assert_eq!(topology_signature(&model), baselines[fixture]);
+                    equivalents += 1;
                 }
-                if mask & 2 != 0 {
-                    candidate = toggle_first_entity_boolean(&candidate, "EDGE_CURVE")
-                }
-                if mask & 4 != 0 {
-                    candidate = toggle_first_entity_boolean(&candidate, "ORIENTED_EDGE")
-                }
-                if mask & 8 != 0 {
-                    candidate = toggle_first_entity_boolean(&candidate, "FACE_OUTER_BOUND");
-                }
-                if mask & 16 != 0 {
-                    candidate = toggle_first_entity_boolean(&candidate, "ADVANCED_FACE")
-                }
-                if mask & 32 != 0 {
-                    candidate = reverse_first_shell_members(&candidate)
-                }
-                if mask & 64 != 0 {
-                    candidate = toggle_first_entity_boolean(&candidate, "ORIENTED_CLOSED_SHELL");
-                }
-                match import_step_v8(&candidate) {
-                    Ok((model, certificate, _)) => {
-                        assert!(certificate.complete);
-                        assert_eq!(topology_signature(&model), baselines[fixture]);
-                        equivalents += 1;
-                    }
-                    Err(_) => refusals += 1,
-                }
+                Err(_) => refusals += 1,
             }
         }
-        assert_eq!(equivalents + refusals, 128 * fixtures.len());
-        assert!(equivalents > 0 && refusals > 0);
-        println!(
-            "step-v8-sense-matrix cases={} equivalents={equivalents} refusals={refusals}",
-            128 * fixtures.len()
-        );
-        let same_sense = toggle_first_entity_boolean(&exported[0], "EDGE_CURVE");
-        assert!(
-            import_step_v8(&same_sense)
-                .unwrap_err()
-                .message
-                .contains("same_sense")
-        );
-        let wrong_void = toggle_first_entity_boolean(&exported[2], "ORIENTED_CLOSED_SHELL");
-        assert!(
-            import_step_v8(&wrong_void)
-                .unwrap_err()
-                .message
-                .contains("must oppose")
-        );
     }
+    assert_eq!(equivalents + refusals, 128 * fixtures.len());
+    assert!(equivalents > 0 && refusals > 0);
+    println!(
+        "step-v8-sense-matrix cases={} equivalents={equivalents} refusals={refusals}",
+        128 * fixtures.len()
+    );
+    let same_sense = toggle_first_entity_boolean(&exported[0], "EDGE_CURVE");
+    assert!(
+        import_step_v8(&same_sense)
+            .unwrap_err()
+            .message
+            .contains("same_sense")
+    );
+    let wrong_void = toggle_first_entity_boolean(&exported[2], "ORIENTED_CLOSED_SHELL");
+    assert!(
+        import_step_v8(&wrong_void)
+            .unwrap_err()
+            .message
+            .contains("must oppose")
+    );
+}
 
-    #[test]
-    fn v6_applies_nonuniform_occurrence_affine_and_refuses_singular() {
-        let model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
-        let (text, _, _) = export_step_v5(&model).unwrap();
-        let text = text
-            .lines()
-            .map(|line| {
-                if let Some(start) = line.find("'OSCAD_TOPO/3|") {
-                    let end = line[start + 1..].find('\'').unwrap() + start + 1;
-                    format!("{}''{}", &line[..start], &line[end + 1..])
-                } else {
-                    line.to_string()
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        let entities = parse(data_payload(&text).unwrap()).unwrap();
-        let root = entities
-            .iter()
-            .find_map(|(id, _)| {
-                call(&entities, *id)
-                    .ok()
-                    .and_then(|(ty, _)| (ty == "ADVANCED_BREP_SHAPE_REPRESENTATION").then_some(*id))
-            })
-            .unwrap();
-        let (_, root_args) = call(&entities, root).unwrap();
-        let body = list(&root_args[1], "items")
-            .unwrap()
-            .iter()
-            .find_map(|value| match value {
-                Value::Ref(id) => Some(*id),
-                _ => None,
-            })
-            .unwrap();
-        let context = one_ref(&root_args[2], "context").unwrap();
-        let product_definition = entities
-            .iter()
-            .find_map(|(id, _)| {
-                call(&entities, *id)
-                    .ok()
-                    .and_then(|(ty, _)| (ty == "PRODUCT_DEFINITION").then_some(*id))
-            })
-            .unwrap();
-        let (_, definition_args) = call(&entities, product_definition).unwrap();
-        let formation = one_ref(&definition_args[2], "formation").unwrap();
-        let definition_context = one_ref(&definition_args[3], "definition context").unwrap();
-        let rows=format!("\
+#[test]
+fn v6_applies_nonuniform_occurrence_affine_and_refuses_singular() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    let (text, _, _) = export_step_v5(&model).unwrap();
+    let text = text
+        .lines()
+        .map(|line| {
+            if let Some(start) = line.find("'OSCAD_TOPO/3|") {
+                let end = line[start + 1..].find('\'').unwrap() + start + 1;
+                format!("{}''{}", &line[..start], &line[end + 1..])
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let entities = parse(data_payload(&text).unwrap()).unwrap();
+    let root = entities
+        .iter()
+        .find_map(|(id, _)| {
+            call(&entities, *id)
+                .ok()
+                .and_then(|(ty, _)| (ty == "ADVANCED_BREP_SHAPE_REPRESENTATION").then_some(*id))
+        })
+        .unwrap();
+    let (_, root_args) = call(&entities, root).unwrap();
+    let body = list(&root_args[1], "items")
+        .unwrap()
+        .iter()
+        .find_map(|value| match value {
+            Value::Ref(id) => Some(*id),
+            _ => None,
+        })
+        .unwrap();
+    let context = one_ref(&root_args[2], "context").unwrap();
+    let product_definition = entities
+        .iter()
+        .find_map(|(id, _)| {
+            call(&entities, *id)
+                .ok()
+                .and_then(|(ty, _)| (ty == "PRODUCT_DEFINITION").then_some(*id))
+        })
+        .unwrap();
+    let (_, definition_args) = call(&entities, product_definition).unwrap();
+    let formation = one_ref(&definition_args[2], "formation").unwrap();
+    let definition_context = one_ref(&definition_args[3], "definition context").unwrap();
+    let rows=format!("\
 #61000=CARTESIAN_POINT('',(10.,20.,30.));
 #61001=DIRECTION('',(1.,0.,0.));
 #61002=DIRECTION('',(0.,1.,0.));
@@ -2204,7 +2364,6 @@ fn actual_ui_step_roundtrip_classifies_oriented_identity_bindings() {
     }
 }
 
-
 #[test]
 fn bspline_surface_five_forms_roundtrip_and_validate() {
     let points = "#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));#6=CARTESIAN_POINT('',(2.,0.,1.));#7=CARTESIAN_POINT('',(2.,1.,1.));";
@@ -2218,13 +2377,13 @@ fn bspline_surface_five_forms_roundtrip_and_validate() {
             "#1=(BOUNDED_SURFACE()B_SPLINE_SURFACE(2,1,{net},.UNSPECIFIED.,.F.,.F.,.F.){form}()RATIONAL_B_SPLINE_SURFACE({weights})SURFACE());{points}"
         )
     });
-    for (index, text) in std::iter::once(explicit)
-        .chain(implicit)
-        .enumerate()
-    {
+    for (index, text) in std::iter::once(explicit).chain(implicit).enumerate() {
         let entities = parse(&text).unwrap();
         let surface = surface_v5(&entities, 1, 1.).unwrap();
-        assert_eq!(surface.weights, vec![vec![1., 2.], vec![3., 4.], vec![5., 6.]]);
+        assert_eq!(
+            surface.weights,
+            vec![vec![1., 2.], vec![3., 4.], vec![5., 6.]]
+        );
         let expected_u: &[f64] = match index {
             0 | 2 | 3 => &[0., 0., 0., 1., 1., 1.],
             1 => &[0., 1., 2., 3., 4., 5.],
@@ -2269,7 +2428,6 @@ fn bspline_surface_refuses_bad_bezier_and_knot_budget() {
     );
 }
 
-
 #[test]
 fn curve_bounded_surface_requires_face_boundary_agreement() {
     let model = freeform_cuboid_solid([0., 0., 0.], [1., 2., 3.]).unwrap();
@@ -2286,27 +2444,15 @@ fn curve_bounded_surface_requires_face_boundary_agreement() {
     let mut boundaries = BTreeSet::new();
     for bound in list(&face_args[1], "test bounds").unwrap() {
         let (_, bound_args) = call(&entities, one_ref(bound, "test bound").unwrap()).unwrap();
-        let (_, loop_args) = call(
-            &entities,
-            one_ref(&bound_args[1], "test loop").unwrap(),
-        )
-        .unwrap();
+        let (_, loop_args) =
+            call(&entities, one_ref(&bound_args[1], "test loop").unwrap()).unwrap();
         for oriented in list(&loop_args[1], "test oriented edges").unwrap() {
-            let (_, oriented_args) = call(
-                &entities,
-                one_ref(oriented, "test oriented").unwrap(),
-            )
-            .unwrap();
-            let (_, edge_args) = call(
-                &entities,
-                one_ref(&oriented_args[3], "test edge").unwrap(),
-            )
-            .unwrap();
-            let (_, geometry_args) = call(
-                &entities,
-                one_ref(&edge_args[3], "test geometry").unwrap(),
-            )
-            .unwrap();
+            let (_, oriented_args) =
+                call(&entities, one_ref(oriented, "test oriented").unwrap()).unwrap();
+            let (_, edge_args) =
+                call(&entities, one_ref(&oriented_args[3], "test edge").unwrap()).unwrap();
+            let (_, geometry_args) =
+                call(&entities, one_ref(&edge_args[3], "test geometry").unwrap()).unwrap();
             boundaries.insert(one_ref(&geometry_args[1], "test 3D curve").unwrap());
         }
     }
@@ -2317,9 +2463,8 @@ fn curve_bounded_surface_requires_face_boundary_agreement() {
         .map(|id| format!("#{id}"))
         .collect::<Vec<_>>()
         .join(",");
-    let wrapper = format!(
-        "#{wrapper_id}=CURVE_BOUNDED_SURFACE('',#{surface_id},({boundary_refs}),.T.);\n"
-    );
+    let wrapper =
+        format!("#{wrapper_id}=CURVE_BOUNDED_SURFACE('',#{surface_id},({boundary_refs}),.T.);\n");
     let wrapped = text
         .lines()
         .map(|line| {
@@ -2343,14 +2488,192 @@ fn curve_bounded_surface_requires_face_boundary_agreement() {
         .map(|id| format!("#{id}"))
         .collect::<Vec<_>>()
         .join(",");
-    let mismatched = wrapped.replace(
-        &format!("({boundary_refs})"),
-        &format!("({reduced_refs})"),
-    );
+    let mismatched = wrapped.replace(&format!("({boundary_refs})"), &format!("({reduced_refs})"));
     assert!(
         import_step_v5(&mismatched)
             .unwrap_err()
             .message
             .contains("boundaries disagree")
+    );
+}
+
+fn ap242_direct_line_circle_fixture(model: &Model) -> String {
+    let (text, _, _) = export_step_v5(model).unwrap();
+    let payload = data_payload(&text).unwrap();
+    let mut entities = parse(payload).unwrap();
+    let direct_geometry = entities
+        .iter()
+        .filter_map(|(id, entity)| {
+            let Value::Call(name, args) = &entity.value else {
+                return None;
+            };
+            if name != "EDGE_CURVE" {
+                return None;
+            }
+            let Value::Ref(surface_curve) = args[3] else {
+                panic!("missing edge geometry")
+            };
+            let curve = match &entities[&surface_curve].value {
+                Value::Call(name, args)
+                    if matches!(name.as_str(), "SURFACE_CURVE" | "SEAM_CURVE") =>
+                {
+                    args[1].clone()
+                }
+                other => panic!("unexpected surface curve {other:?}"),
+            };
+            Some((
+                *id,
+                curve,
+                args[1].clone(),
+                args[2].clone(),
+                args[4].clone(),
+            ))
+        })
+        .collect::<Vec<_>>();
+    let converted = direct_geometry.len();
+    let mut next = entities.keys().max().unwrap() + 1;
+    for (id, curve, start_vertex, end_vertex, sense) in direct_geometry {
+        let point_id = |vertex: &Value| {
+            let Value::Ref(vertex) = vertex else {
+                unreachable!()
+            };
+            one_ref(&call(&entities, *vertex).unwrap().1[1], "vertex point").unwrap()
+        };
+        let (start_point, end_point) = if boolean(&sense, "sense").unwrap() {
+            (point_id(&start_vertex), point_id(&end_vertex))
+        } else {
+            (point_id(&end_vertex), point_id(&start_vertex))
+        };
+        let start = point(&entities, start_point, 3, 1.).unwrap();
+        let end = point(&entities, end_point, 3, 1.).unwrap();
+        let delta = std::array::from_fn::<_, 3, _>(|axis| end[axis] - start[axis]);
+        let length = delta.iter().map(|value| value * value).sum::<f64>().sqrt();
+        let direction = next;
+        let vector = next + 1;
+        next += 2;
+        entities.extend(
+            parse(&format!(
+                "#{direction}=DIRECTION('',({},{},{}));#{vector}=VECTOR('',#{direction},{});",
+                delta[0] / length,
+                delta[1] / length,
+                delta[2] / length,
+                length
+            ))
+            .unwrap(),
+        );
+        let Value::Ref(curve_id) = curve else {
+            unreachable!()
+        };
+        entities.get_mut(&curve_id).unwrap().value = Value::Call(
+            "LINE".into(),
+            vec![
+                Value::String(String::new()),
+                Value::Ref(start_point),
+                Value::Ref(vector),
+            ],
+        );
+        let Value::Call(_, args) = &mut entities.get_mut(&id).unwrap().value else {
+            unreachable!()
+        };
+        args[3] = Value::Ref(curve_id);
+    }
+    assert!(converted > 0);
+    entities.retain(|_, entity| !matches!(&entity.value, Value::Call(name, _)
+        if matches!(name.as_str(), "SURFACE_CURVE" | "SEAM_CURVE" | "PCURVE" | "DEFINITIONAL_REPRESENTATION")));
+    let header = text.split("DATA;").next().unwrap();
+    let body = entities
+        .iter()
+        .map(|(id, entity)| format!("#{id}={};", render_entity_value(&entity.value)))
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!("{header}DATA;\n{body}\nENDSEC;\nEND-ISO-10303-21;")
+        .replace("OSCAD_TOPO/3|", "EXTERNAL_STEP|")
+}
+
+#[test]
+fn v10_ap242_direct_line_circle_uses_vertices_and_certified_pullbacks() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let direct = ap242_direct_line_circle_fixture(&model);
+    let (back, certificate, _) = import_step_v10(&direct).unwrap();
+    back.validate().unwrap();
+    assert!(certificate.complete);
+    assert_eq!(topology_signature(&back), topology_signature(&model));
+
+    let entities = parse("#1=CARTESIAN_POINT('',(0,0,0));#2=DIRECTION('',(0,0,1));#3=DIRECTION('',(1,0,0));#4=AXIS2_PLACEMENT_3D('',#1,#2,#3);#5=CIRCLE('',#4,1);").unwrap();
+    let arc =
+        direct_bounded_curve(&entities, 5, &[1., 0., 0.], &[0., 1., 0.], false, true, 1.).unwrap();
+    let domain = arc.domain();
+    let middle = arc.evaluate((domain[0] + domain[1]) / 2.).unwrap().point;
+    assert!((middle[0] - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-12);
+    assert!((middle[1] - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-12);
+    let reverse =
+        direct_bounded_curve(&entities, 5, &[1., 0., 0.], &[0., 1., 0.], false, false, 1.).unwrap();
+    let reverse_domain = reverse.domain();
+    let reverse_middle = reverse
+        .evaluate((reverse_domain[0] + reverse_domain[1]) / 2.)
+        .unwrap()
+        .point;
+    assert!((reverse_middle[0] + std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-12);
+    assert!((reverse_middle[1] + std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-12);
+    let full =
+        direct_bounded_curve(&entities, 5, &[1., 0., 0.], &[1., 0., 0.], true, true, 1.).unwrap();
+    assert_eq!(full.control_points.len(), 9);
+    assert!(
+        direct_bounded_curve(&entities, 5, &[2., 0., 0.], &[0., 1., 0.], false, true, 1.).is_err()
+    );
+}
+
+#[test]
+fn ap242_direct_edges_refuse_off_curve_vertices_and_non_ap242_route() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let direct = ap242_direct_line_circle_fixture(&model);
+    assert!(import_step_v3(&direct).is_err());
+    let damaged = direct.replacen(
+        "(0.00000000000000000E0,0.00000000000000000E0,0.00000000000000000E0)",
+        "(99.0000000000000000E0,0.00000000000000000E0,0.00000000000000000E0)",
+        1,
+    );
+    assert!(
+        import_step_v10(&damaged)
+            .unwrap_err()
+            .message
+            .contains("not uniquely on LINE")
+    );
+}
+
+#[test]
+fn v10_ap242_direct_line_pullback_moves_closed_seam_seed() {
+    let entities = parse("#1=CARTESIAN_POINT('',(-160,45,0));#2=DIRECTION('',(0,0,-1));#3=DIRECTION('',(0.877582561890371,-0.479425538604207,0));#4=AXIS2_PLACEMENT_3D('',#1,#2,#3);#5=CYLINDRICAL_SURFACE('',#4,12.4999999999999);#6=CARTESIAN_POINT('',(-149.03021797637,39.0071807674475,-50));#7=CARTESIAN_POINT('',(-149.03021797637,39.0071807674475,0));#10=DIRECTION('',(0,0,1));#8=VECTOR('',#10,50);#9=LINE('',#6,#8);").unwrap();
+    let surface = analytic_surface(
+        &entities,
+        "CYLINDRICAL_SURFACE",
+        &match &entities[&5].value {
+            Value::Call(_, a) => a.clone(),
+            _ => unreachable!(),
+        },
+        1.,
+    )
+    .unwrap();
+    let c3 = direct_bounded_curve(
+        &entities,
+        9,
+        &point(&entities, 6, 3, 1.).unwrap(),
+        &point(&entities, 7, 3, 1.).unwrap(),
+        false,
+        true,
+        1.,
+    )
+    .unwrap();
+    let pcurve = direct_edge_pcurve(&c3, &surface, false).unwrap();
+    let midpoint = c3.evaluate(0.5).unwrap().point;
+    let uv = pcurve.evaluate(0.5).unwrap().point;
+    let lifted = surface.evaluate(uv[0], uv[1]).unwrap().point;
+    assert!(
+        midpoint
+            .iter()
+            .zip(lifted)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0., f64::max)
+            < 1e-7
     );
 }

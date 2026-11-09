@@ -6,7 +6,13 @@
  * Constructor analytic STEP stays in `cadAnalyticStep.ts`.
  * Faceted STEP stays in `cadStep.ts`.
  */
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust as callGeometryKernel } from './geometry/kernel'
+import { preflightStepInput } from './parserInputBudgets'
+
+function callGeometryRust<T>(operation: string, payload: Record<string, unknown>): T {
+  if (operation.includes('_import_') && typeof payload.text === 'string') preflightStepInput(payload.text)
+  return callGeometryKernel<T>(operation, payload)
+}
 import type { NurbsBrep } from './geometry/brep'
 import type {
   AnalyticStepCertificate,
@@ -401,3 +407,18 @@ export interface DirectStepLod0Import {
 /** Decode baked AP242 tessellation as display-only LOD-0; exact B-rep remains authoritative. */
 export const importDirectStepLod0=(text:string):DirectStepLod0Import=>
   callGeometryRust('brep_nurbs_import_step_lod0',{text})
+
+export interface StepLod0HausdorffEstimate {
+  method:'two-sided-bvh-sampled-hausdorff-estimate'
+  samplePattern:'vertices-edge-midpoints-centroids'
+  min:number
+  max:number
+  mean:number
+  rms:number
+  sampleCount:number
+  certified:false
+  limitation:string
+}
+/** Finite two-sided BVH observations in model units; never a certified Hausdorff bound. */
+export const estimateDirectStepLod0Hausdorff=(exactMesh:DirectStepLod0Shell['mesh'],lod0Mesh:DirectStepLod0Shell['mesh']):StepLod0HausdorffEstimate=>
+  callGeometryRust('brep_nurbs_step_lod0_hausdorff_estimate',{exactMesh,lod0Mesh})

@@ -28,6 +28,12 @@ pub use unresolved::{UnresolvedClassification, UnresolvedSurfaceIntersection};
 mod continuation;
 use continuation::continue_branch;
 pub use continuation::{ContinuedBranch, EndpointLocation};
+#[path = "ss_intersection/arbitration.rs"]
+mod arbitration;
+pub use arbitration::{
+    CertifiedSsiInterval, NearDegenerateSsiArbitration, NearDegenerateSsiLimits,
+    arbitrate_near_degenerate_branches, arbitrate_near_degenerate_branches_with_limits,
+};
 #[path = "ss_intersection/branches.rs"]
 mod branches;
 pub use branches::Summary as SurfaceIntersectionSummary;
@@ -45,32 +51,38 @@ pub use report::{
     CoverageProof, SurfaceSurfaceComponent, SurfaceSurfaceIntersection, TangencyBranch,
 };
 
-mod rectilinear;
 mod fiber;
 mod fiber_coverage;
-pub use fiber_coverage::{
-    QualifiedFiberTraceAtlas, qualify_fiber_trace_atlas,
-    FiberTraceBuildLimits, FiberTraceBuild, construct_fiber_trace,
-    FiberWorldTraceLimits, FiberWorldTraceResult, QualifiedFiberWorldTrace, qualify_fiber_world_trace,
-    FiberBridgeSpec, FiberSeparation, QualifiedFiberComponents, FiberComponentsResult, connect_mixed_fiber_cover,
-    FiberPointConnection,
-    ClosedFiberBranchLimits, OriginalClosedFiberBranch, OriginalClosedFiberTrim,
-    QualifiedClosedFiberBranches, assemble_closed_fiber_branches,
-    ClosedFiberCycleLimits,ClosedFiberRootPort,OrderedClosedFiberArc,OrderedClosedFiberCycle,order_closed_fiber_cycle,
-    ClosedFiberTraceLimits,ClosedFiberTraceSegment,QualifiedClosedFiberTrace,construct_closed_fiber_trace,
-    FiberTransitionResult, QualifiedFiberTransition, TransitionOrientation, qualify_fiber_transition,
-    DiscoveredFiberTransition, FiberTransitionDiscoveryLimits, FiberTransitionDiscoveryResult,
-    TransitionAttempt, discover_fiber_transition,
-    DiscoveredMixedFiberComponents, MixedComponentDiscoveryLimits, MixedComponentDiscoveryResult,
-    MixedTransitionSearch, connect_mixed_fiber_cover_automatic,
-    MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
-    cover_mixed_fiber_box, cover_mixed_fiber_surfaces, cover_graph_fiber_surfaces,
-    CoverageLimits, FiberAtlasCoverageResult, FiberCoverageKind, FiberCoverageNode,
-    FiberCoverageReport, FiberCoverageResult, FiberCoverageStatus, QualifiedFiberAtlasCoverage,
-    QualifiedFiberCoverage, cover_fiber_atlas_box, cover_fiber_atlas_surfaces,
-    cover_fiber_box, cover_fiber_surfaces,
+mod rectilinear;
+pub use fiber::{
+    FiberAxis, FiberContraction, FiberLimits, FiberOperator, FiberReport, FiberResult,
+    FiberSources, FiberStatus, QualifiedFiber, QualifiedQuotientCoverage, QualifiedQuotientFiber,
+    QuotientCoverageKind, QuotientCoverageNode, QuotientCoverageResult, QuotientDiscoveryLimits,
+    QuotientDiscoveryReport, QuotientDiscoveryResult, QuotientFiberResult,
+    cover_quotient_fiber_box, cover_quotient_fiber_surfaces, discover_quotient_fiber_surfaces,
 };
-pub use fiber::{QuotientDiscoveryLimits,QuotientDiscoveryReport,QuotientDiscoveryResult,discover_quotient_fiber_surfaces,QualifiedQuotientCoverage,QuotientCoverageResult,QuotientCoverageKind,QuotientCoverageNode,cover_quotient_fiber_box,cover_quotient_fiber_surfaces,QualifiedQuotientFiber,QuotientFiberResult,FiberOperator, FiberAxis, FiberLimits, FiberReport, FiberSources, FiberStatus, FiberResult, QualifiedFiber, FiberContraction};
+pub use fiber_coverage::{
+    ClosedFiberBranchLimits, ClosedFiberCycleLimits, ClosedFiberRootPort, ClosedFiberTraceLimits,
+    ClosedFiberTraceSegment, CoverageLimits, DiscoveredFiberTransition,
+    DiscoveredMixedFiberComponents, FiberAtlasCoverageResult, FiberBridgeSpec,
+    FiberComponentsResult, FiberCoverageKind, FiberCoverageNode, FiberCoverageReport,
+    FiberCoverageResult, FiberCoverageStatus, FiberPointConnection, FiberSeparation,
+    FiberTraceBuild, FiberTraceBuildLimits, FiberTransitionDiscoveryLimits,
+    FiberTransitionDiscoveryResult, FiberTransitionResult, FiberWorldTraceLimits,
+    FiberWorldTraceResult, MixedComponentDiscoveryLimits, MixedComponentDiscoveryResult,
+    MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, MixedTransitionSearch,
+    OrderedClosedFiberArc, OrderedClosedFiberCycle, OriginalClosedFiberBranch,
+    OriginalClosedFiberTrim, QualifiedClosedFiberBranches, QualifiedClosedFiberTrace,
+    QualifiedFiberAtlasCoverage, QualifiedFiberComponents, QualifiedFiberCoverage,
+    QualifiedFiberTraceAtlas, QualifiedFiberTransition, QualifiedFiberWorldTrace,
+    QualifiedMixedFiberCoverage, TransitionAttempt, TransitionOrientation,
+    assemble_closed_fiber_branches, connect_mixed_fiber_cover, connect_mixed_fiber_cover_automatic,
+    construct_closed_fiber_trace, construct_fiber_trace, cover_fiber_atlas_box,
+    cover_fiber_atlas_surfaces, cover_fiber_box, cover_fiber_surfaces, cover_graph_fiber_surfaces,
+    cover_mixed_fiber_box, cover_mixed_fiber_surfaces, discover_fiber_transition,
+    order_closed_fiber_cycle, qualify_fiber_trace_atlas, qualify_fiber_transition,
+    qualify_fiber_world_trace,
+};
 pub(crate) use rectilinear::rectangle_chart;
 pub use rectilinear::rectangular_trace_proposal;
 
@@ -211,31 +223,21 @@ fn ss_contact(
     st: [f64; 2],
     floor: f64,
 ) -> Result<ContactClass> {
-    let ja = first.evaluate(uv[0], uv[1])?;
-    let jb = second.evaluate(st[0], st[1])?;
-    let Some((dua, dva)) = ja.first_derivatives() else {
-        return Ok(ContactClass::PoleOrSingular);
-    };
-    let Some((dub, dvb)) = jb.first_derivatives() else {
-        return Ok(ContactClass::PoleOrSingular);
-    };
-    let na = cross3(dua, dva);
-    let nb = cross3(dub, dvb);
-    let la = norm3(na);
-    let lb = norm3(nb);
-    if !la.is_finite() || !lb.is_finite() || la <= floor || lb <= floor {
-        return Ok(ContactClass::PoleOrSingular);
-    }
-    let na = na.map(|x| x / la);
-    let nb = nb.map(|x| x / lb);
-    let sine = norm3(cross3(na, nb));
-    if sine > TRANSVERSE_SINE {
-        Ok(ContactClass::Transverse)
-    } else if sine <= floor {
-        Ok(ContactClass::EvenTangency)
-    } else {
-        Ok(ContactClass::OddTangency)
-    }
+    // A small normal cross product proves neither odd nor even material
+    // behavior. Without signed side intervals this remains higher-order and
+    // is reported unresolved by the terminal-cell admission below.
+    Ok(
+        crate::intersection::surface_contact_class::classify_surface_contact(
+            first,
+            uv,
+            second,
+            st,
+            floor,
+            TRANSVERSE_SINE,
+            None,
+        )?
+        .class,
+    )
 }
 
 fn refine_seed(
@@ -265,37 +267,34 @@ fn refine_seed(
             ja.point[1] - jb.point[1],
             ja.point[2] - jb.point[2],
         ];
-        // Underdetermined 3×4 system; fix the free parameter along n1×n2 later.
-        // Least-squares on the three spatial residuals w.r.t. (du,dv,ds) with dt from
-        // projecting onto the intersection tangent after a provisional Newton step.
-        let na = cross3(dua, dva);
-        let nb = cross3(dub, dvb);
-        let dir = cross3(na, nb);
-        let dn = norm3(dir);
+        // Underdetermined 3×4 least-squares system. Choose the best-conditioned
+        // independent triple instead of assuming (du,dv,ds) is independent;
+        // that assumption fails even for two perpendicular planes.
         let cols = [dua, dva, dub.map(|x| -x), dvb.map(|x| -x)];
-        // Prefer the three columns with largest column norms excluding one free.
-        let free = if dn > TRANSVERSE_SINE * norm3(na) * norm3(nb) {
-            // Keep all four via QR-ish normal equations on first three + constraint.
-            3usize
-        } else {
-            3
-        };
-        let use_cols = [0usize, 1, 2];
-        let _ = free;
+        let mut use_cols = [0_usize, 1, 2];
         let mut ata = [[0.; 3]; 3];
-        let mut atb = [0.; 3];
+        let mut det = 0_f64;
+        for omitted in 0..4 {
+            let candidate: Vec<usize> = (0..4).filter(|index| *index != omitted).collect();
+            let mut gram = [[0.; 3]; 3];
         for i in 0..3 {
             for j in 0..3 {
-                ata[i][j] = dot3(cols[use_cols[i]], cols[use_cols[j]]);
+                    gram[i][j] = dot3(cols[candidate[i]], cols[candidate[j]]);
+                }
             }
-            atb[i] = dot3(cols[use_cols[i]], r);
+            let candidate_det = gram[0][0] * (gram[1][1] * gram[2][2] - gram[1][2] * gram[2][1])
+                - gram[0][1] * (gram[1][0] * gram[2][2] - gram[1][2] * gram[2][0])
+                + gram[0][2] * (gram[1][0] * gram[2][1] - gram[1][1] * gram[2][0]);
+            if candidate_det.abs() > det.abs() {
+                det = candidate_det;
+                ata = gram;
+                use_cols = [candidate[0], candidate[1], candidate[2]];
+            }
         }
-        let det = ata[0][0] * (ata[1][1] * ata[2][2] - ata[1][2] * ata[2][1])
-            - ata[0][1] * (ata[1][0] * ata[2][2] - ata[1][2] * ata[2][0])
-            + ata[0][2] * (ata[1][0] * ata[2][1] - ata[1][1] * ata[2][0]);
         if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
             return Ok(None);
         }
+        let atb: [f64; 3] = std::array::from_fn(|i| dot3(cols[use_cols[i]], r));
         let mut delta = [0.; 3];
         for col in 0..3 {
             let mut m = ata;
@@ -307,27 +306,14 @@ fn refine_seed(
                 + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
             delta[col] = d / det;
         }
-        u -= delta[0];
-        v -= delta[1];
-        s -= delta[2];
-        // Adjust t by projecting residual onto remaining column.
-        let ja2 = first.evaluate(u, v)?;
-        let jb2 = second.evaluate(s, t)?;
-        let r2 = [
-            ja2.point[0] - jb2.point[0],
-            ja2.point[1] - jb2.point[1],
-            ja2.point[2] - jb2.point[2],
-        ];
-        let Some((_, _)) = ja2.first_derivatives() else {
-            return Ok(None);
-        };
-        let Some((_, dvb2)) = jb2.first_derivatives() else {
-            return Ok(None);
-        };
-        let denom = dot3(dvb2, dvb2);
-        if denom > 0. {
-            t += dot3(r2, dvb2) / denom;
+        let mut step = [0.; 4];
+        for i in 0..3 {
+            step[use_cols[i]] = delta[i];
         }
+        u -= step[0];
+        v -= step[1];
+        s -= step[2];
+        t -= step[3];
         if !(uv_box[0] <= u
             && u <= uv_box[1]
             && uv_box[2] <= v
@@ -387,8 +373,8 @@ pub fn intersect_surface_surface_report(
 
     // These proofs use original authored controls, not rounded subdivision
     // grids, fitted carriers or tolerance-based proximity.
-    if let Some((components, proof)) = rectilinear::reduce(first, second)
-        .or_else(|| rectilinear::graph_plane(first, second))
+    if let Some((components, proof)) =
+        rectilinear::reduce(first, second).or_else(|| rectilinear::graph_plane(first, second))
     {
         if proof == CoverageProof::Unproven {
             let a = surface_domain(first);
@@ -561,6 +547,23 @@ pub fn intersect_surface_surface_report(
                         });
                         continue;
                     }
+                    if contact != ContactClass::Transverse
+                        && !matches!(
+                            contact,
+                            ContactClass::EvenTangency | ContactClass::OddTangency
+                        )
+                    {
+                        unresolved.push(UnresolvedSurfaceIntersection {
+                            parameter_box: Some([
+                                uv[0], uv[1], uv[2], uv[3], st[0], st[1], st[2], st[3],
+                            ]),
+                            reason: UnresolvedReason::ConditioningBoundary,
+                            classification: Some(
+                                UnresolvedClassification::NearMissOrIllConditioned,
+                            ),
+                        });
+                        continue;
+                    }
                     if near_seed(&used_seeds, ruv, rst, floor) {
                         continue;
                     }
@@ -685,10 +688,7 @@ pub fn intersect_surface_surface_report(
         });
         components.truncate(MAX_BRANCHES);
     }
-
-    // Detect junctions: shared endpoints among distinct curve components.
     mark_junctions(&mut components, floor);
-
     Ok(SurfaceSurfaceIntersection {
         coverage_proof: CoverageProof::Unproven,
         topology_proven: false,

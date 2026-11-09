@@ -126,8 +126,7 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
     let mut work = grid.len();
     // Единый бюджетный guard (пункт 1065) поверх лимита ячеек: каждый раунд
     // измельчения — один тик; wall-clock страховка на путевых точках.
-    let mut guard = Budget::with_iterations(max_cells)?
-        .guard("surface-tessellation.refinement");
+    let mut guard = Budget::with_iterations(max_cells)?.guard("surface-tessellation.refinement");
     let reason = loop {
         guard.tick()?;
         guard.check()?;
@@ -215,7 +214,6 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
     require_finite_f64(out.error_upper, "tessellation error_upper")?;
     Ok(out)
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -350,6 +350,10 @@ pub(crate) fn call(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<(&st
                             | "CONVERSION_BASED_UNIT"
                             | "GLOBAL_UNIT_ASSIGNED_CONTEXT"
                             | "GEOMETRIC_REPRESENTATION_CONTEXT"
+                            | "GEOMETRIC_TOLERANCE"
+                            | "MEASURE_WITH_UNIT"
+                            | "TESSELLATED_GEOMETRIC_SET"
+                            | "REPRESENTATION"
                     )
                 {
                     return Ok((name, args));

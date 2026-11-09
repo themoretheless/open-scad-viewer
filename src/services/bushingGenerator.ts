@@ -1,253 +1,62 @@
-import { z } from 'zod/v4'
+import {
+  BUSHING_DEFAULTS,
+  bushingSchema,
+  computeBushingParameterSuggestions,
+  fdmRadialClearance,
+  standardMetricPitch,
+  validateBushingParameters,
+  type BushingOptions,
+  type BushingParameterSuggestion,
+} from './bushingGeneratorSuggestions'
 
-export const BUSHING_DEFAULTS = {
-  thread_mode: 0,
-  length: 20,
-  inner_diameter: 8,
-  inner_pitch: 1.25,
-  inner_starts: 1,
-  inner_left_handed: false,
-  inner_thread_depth: 0,
-  outer_diameter: 14,
-  outer_pitch: 1.5,
-  outer_starts: 1,
-  outer_left_handed: false,
-  outer_shape: 0,
-  wrench_flat_depth: 1.2,
-  knurl_count: 16,
-  knurl_depth: 0.5,
-  flange: true,
-  flange_diameter: 20,
-  flange_thickness: 3,
-  flange_shape: 0,
-  flange_holes: 0,
-  flange_hole_diameter: 3.2,
-  blind_bottom: 0,
-  chamfer: 0.8,
-  clearance: 0.2,
-  cross_hole_diameter: 0,
-  cross_hole_z: 0,
-  split_slot_width: 0,
-  segments: 36,
+export {
+  BUSHING_DEFAULTS,
+  computeBushingParameterSuggestions,
+  fdmRadialClearance,
+  standardMetricPitch,
+  type BushingOptions,
+  type BushingParameterSuggestion,
 }
 
-const schema = z.object({
-  thread_mode: z.number().int().min(0).max(2).default(0),
-  length: z.number().finite().min(2).max(200).default(20),
-  inner_diameter: z.number().finite().min(1.6).max(150).default(8),
-  inner_pitch: z.number().finite().min(0.25).max(10).default(1.25),
-  inner_starts: z.number().int().min(1).max(4).default(1),
-  inner_left_handed: z.boolean().default(false),
-  inner_thread_depth: z.number().finite().min(0).max(200).default(0),
-  outer_diameter: z.number().finite().min(3).max(200).default(14),
-  outer_pitch: z.number().finite().min(0.25).max(10).default(1.5),
-  outer_starts: z.number().int().min(1).max(4).default(1),
-  outer_left_handed: z.boolean().default(false),
-  outer_shape: z.number().int().min(0).max(4).default(0),
-  wrench_flat_depth: z.number().finite().min(0.2).max(30).default(1.2),
-  knurl_count: z.number().int().min(4).max(64).default(16),
-  knurl_depth: z.number().finite().min(0.1).max(5).default(0.5),
-  flange: z.boolean().default(true),
-  flange_diameter: z.number().finite().min(4).max(260).default(20),
-  flange_thickness: z.number().finite().min(0.8).max(80).default(3),
-  flange_shape: z.number().int().min(0).max(2).default(0),
-  flange_holes: z.number().int().min(0).max(12).default(0),
-  flange_hole_diameter: z.number().finite().min(1).max(30).default(3.2),
-  blind_bottom: z.number().finite().min(0).max(100).default(0),
-  chamfer: z.number().finite().min(0).max(10).default(0.8),
-  clearance: z.number().finite().min(0).max(1.5).default(0.2),
-  cross_hole_diameter: z.number().finite().min(0).max(80).default(0),
-  cross_hole_z: z.number().finite().min(0).max(200).default(0),
-  split_slot_width: z.number().finite().min(0).max(40).default(0),
-  segments: z.number().int().min(16).max(72).default(36),
-}).strict()
-
-export type BushingOptions = z.infer<typeof schema>
-
-export interface BushingParameterSuggestion {
-  title: string
-  description: string
-  changes: Record<string, number>
-}
-
-const ISO_PROFILE_FACTOR = (5 * Math.sqrt(3)) / 16 // ~0.541265877
-
-function standardMetricPitch(diameter: number): number {
-  if (diameter <= 2) return 0.4
-  if (diameter <= 2.6) return 0.45
-  if (diameter <= 3.2) return 0.5
-  if (diameter <= 4.2) return 0.7
-  if (diameter <= 5.2) return 0.8
-  if (diameter <= 6.5) return 1.0
-  if (diameter <= 9) return 1.25
-  if (diameter <= 11) return 1.5
-  if (diameter <= 13) return 1.75
-  if (diameter <= 17) return 2.0
-  if (diameter <= 23) return 2.5
-  if (diameter <= 28) return 3.0
-  return 3.5
-}
-
-function round2(v: number): number {
-  return Math.round(v * 100) / 100
-}
-
-export function computeBushingParameterSuggestions(
-  changedKey: string,
-  rawValues: Record<string, number | boolean | string>,
-): BushingParameterSuggestion[] {
-  const innerD = Number(rawValues.inner_diameter)
-  const outerD = Number(rawValues.outer_diameter)
-  const mode = Number(rawValues.thread_mode ?? 0)
-  const innerPitch = Number(rawValues.inner_pitch ?? 1.25)
-  const outerPitch = Number(rawValues.outer_pitch ?? 1.5)
-  const clearance = Number(rawValues.clearance ?? 0.2)
-  const flange = Boolean(rawValues.flange)
-  const flangeD = Number(rawValues.flange_diameter ?? 20)
-  if (!Number.isFinite(innerD) || !Number.isFinite(outerD)) return []
-
-  const suggestions: BushingParameterSuggestion[] = []
-  const hasInnerThread = mode === 0 || mode === 2
-  const hasOuterThread = mode === 1 || mode === 2
-
-  const rInnerMax = innerD / 2 + clearance / 2
-  const outerThreadDepth = hasOuterThread ? ISO_PROFILE_FACTOR * outerPitch + clearance / 2 : 0
-  const minSafeOuterD = round2(2 * (rInnerMax + outerThreadDepth + 2.0))
-
-  if (changedKey === 'inner_diameter' || outerD < minSafeOuterD) {
-    const recPitch = standardMetricPitch(innerD)
-    const targetOuterD = Math.max(outerD, minSafeOuterD)
-    const targetFlangeD = flange ? Math.max(flangeD, round2(targetOuterD + 6)) : flangeD
-    const changes: Record<string, number> = {}
-    if (targetOuterD !== outerD) changes.outer_diameter = targetOuterD
-    if (hasInnerThread && changedKey === 'inner_diameter' && Math.abs(innerPitch - recPitch) > 0.01) {
-      changes.inner_pitch = recPitch
-    }
-    if (flange && targetFlangeD !== flangeD) changes.flange_diameter = targetFlangeD
-    if (Object.keys(changes).length > 0) {
-      const summary = Object.entries(changes).map(([k, v]) => `${k} = ${v} мм`).join(', ')
-      suggestions.push({
-        title: `Подобрать сопряжённые размеры (${summary})`,
-        description: `Для внутреннего диаметра ${innerD} мм можно автоматически обновить наружный диаметр, шаг резьбы и буртик для сохранения прочной стенки:`,
-        changes,
-      })
-    }
-  }
-
-  if (changedKey === 'outer_diameter' && flange && flangeD <= outerD + 1) {
-    const nextFlange = round2(outerD + 6)
-    suggestions.push({
-      title: `Увеличить диаметр буртика (flange_diameter = ${nextFlange} мм)`,
-      description: `Буртик должен выступать за наружный диаметр втулки (${outerD} мм):`,
-      changes: { flange_diameter: nextFlange },
-    })
-  }
-
-  return suggestions
-}
-
-const ANGLES_24 = Array.from({ length: 24 }, (_, i) => i * 15)
-const ANGLES_48 = Array.from({ length: 48 }, (_, i) => i * 7.5)
+const ANGLES_16 = Array.from({ length: 16 }, (_, i) => i * 22.5)
 
 /**
- * Generates a parametric OpenSCAD (.scad) threaded bushing / sleeve / adapter
- * supporting internal threads, external threads, dual inner+outer reducer threads,
- * outer body shapes (round, hex, wrench flats, square, knurled), flange/collar with
- * mounting holes, blind bottom, cross-hole, and split collet slot.
+ * Generates a parametric OpenSCAD (.scad) threaded bushing / sleeve / tube
+ * supporting:
+ * - mode 0: internal thread bushing / nut / sleeve
+ * - mode 1: external thread hollow stud / fitting
+ * - mode 2: dual internal + external reducer bushing
+ * - mode 3: modular tube with bottom female ("мама") socket & top male ("папа") spigot,
+ *           with standard metric pitch and FDM clearance auto-scaled by radius.
  */
 export function generateBushing(input: unknown = BUSHING_DEFAULTS): string {
-  const p = schema.parse(input)
+  const p = bushingSchema.parse(input)
+  validateBushingParameters(p)
 
-  const hasInnerThread = p.thread_mode === 0 || p.thread_mode === 2
-  const hasOuterThread = p.thread_mode === 1 || p.thread_mode === 2
-
-  if (hasInnerThread && p.inner_diameter < 2 * p.inner_pitch) {
-    throw Error('Внутренний диаметр должен быть минимум вдвое больше шага внутренней резьбы / inner_diameter must be at least 2 * inner_pitch')
-  }
-  if (hasOuterThread && p.outer_diameter < 2 * p.outer_pitch) {
-    throw Error('Наружный диаметр должен быть минимум вдвое больше шага наружной резьбы / outer_diameter must be at least 2 * outer_pitch')
-  }
-
-  const rInnerMax = p.inner_diameter / 2 + p.clearance / 2
-  let rOuterMin = p.outer_diameter / 2
-  if (hasOuterThread) {
-    rOuterMin -= p.clearance / 2 + ISO_PROFILE_FACTOR * p.outer_pitch
-  } else if (p.outer_shape === 2) {
-    rOuterMin -= p.wrench_flat_depth
-  } else if (p.outer_shape === 4) {
-    rOuterMin -= p.knurl_depth
-  }
-
-  const minWall = rOuterMin - rInnerMax
-  if (minWall < 0.8) {
-    throw Error(
-      `Недостаточная остаточная толщина стенки втулки (${minWall.toFixed(2)} мм < 0.80 мм): увеличьте наружный диаметр или уменьшите внутренний диаметр / Insufficient minimum wall thickness (${minWall.toFixed(2)} mm < 0.80 mm): increase outer_diameter or reduce inner_diameter`,
-    )
-  }
-
-  if (p.blind_bottom > 0 && p.blind_bottom >= p.length - 1) {
-    throw Error('Толщина глухого дна должна оставлять минимум 1 мм глубины канала / blind_bottom must leave at least 1 mm of cavity depth')
-  }
-  if (p.inner_thread_depth > 0 && p.inner_thread_depth > p.length - p.blind_bottom) {
-    throw Error('Глубина внутренней резьбы превышает доступную длину канала / inner_thread_depth exceeds available cavity length')
-  }
-
-  if (p.flange) {
-    if (p.flange_thickness >= p.length - 0.5) {
-      throw Error('Толщина буртика должна быть меньше общей длины втулки / flange_thickness must be less than total bushing length')
-    }
-    if (p.flange_diameter <= p.outer_diameter + 0.4) {
-      throw Error('Диаметр буртика должен быть больше наружного диаметра втулки / flange_diameter must be greater than outer_diameter')
-    }
-    if (p.flange_holes > 0) {
-      const rimSpan = (p.flange_diameter - p.outer_diameter) / 2
-      if (p.flange_hole_diameter > rimSpan - 0.8) {
-        throw Error('Крепёжные отверстия не помещаются на поле буртика: увеличьте диаметр буртика или уменьшите диаметр отверстий / Flange holes do not fit on the flange rim: increase flange_diameter or reduce flange_hole_diameter')
-      }
-    }
-  }
-
-  if (p.cross_hole_diameter > 0) {
-    if (p.cross_hole_diameter >= p.length - 1 || p.cross_hole_diameter >= p.outer_diameter * 0.75) {
-      throw Error('Диаметр поперечного отверстия слишком велик для габаритов втулки / cross_hole_diameter is too large for the bushing dimensions')
-    }
-    const zCenter = p.cross_hole_z > 0 ? p.cross_hole_z : p.flange ? (p.length + p.flange_thickness) / 2 : p.length / 2
-    if (zCenter - p.cross_hole_diameter / 2 < 0.4 || zCenter + p.cross_hole_diameter / 2 > p.length - 0.4) {
-      throw Error('Поперечное отверстие выходит за торцы втулки: скорректируйте высоту или диаметр отверстия / Cross-hole extends beyond bushing ends: adjust cross_hole_z or cross_hole_diameter')
-    }
-  }
-
-  if (p.split_slot_width > 0 && p.split_slot_width >= p.inner_diameter * 0.85) {
-    throw Error('Ширина продольного разреза слишком велика относительно внутреннего отверстия / split_slot_width is too wide relative to inner_diameter')
-  }
-
-  const thExpr = (a: number) => {
-    const u = `((${a} * starts / 360) - floor(${a} * starts / 360))`
-    const w = `min(1, max(0, (1 - abs(2 * ${u} - 1) - 0.125) / 0.75))`
-    const r = `(r_min + (r_max - r_min) * ${w})`
-    return `[${r} * cos(${a}), ${r} * sin(${a})]`
-  }
   const knExpr = (a: number) => {
     const u = `((${a} * knurl_count / 360) - floor(${a} * knurl_count / 360))`
     const w = `(1 - abs(2 * ${u} - 1))`
     const r = `(d / 2 - k_depth + k_depth * ${w})`
     return `[${r} * cos(${a}), ${r} * sin(${a})]`
   }
-  const threadPolygonPoints = ANGLES_24.map(thExpr).join(', ')
-  const knurlPolygonPoints = ANGLES_48.map(knExpr).join(', ')
+  const knurlPolygonPoints = ANGLES_16.map(knExpr).join(', ')
 
-  return `// Parametric threaded bushing / sleeve / reducer adapter (mm).
-// thread_mode: 0 = internal thread, 1 = external thread + smooth bore, 2 = internal + external threads.
-// outer_shape: 0 = round, 1 = hex across flats, 2 = two wrench flats, 3 = square, 4 = knurled splines.
-// flange_shape: 0 = round, 1 = hex across flats, 2 = square.
-thread_mode = ${p.thread_mode}; // [0, 1, 2]
-length = ${p.length}; // [2:0.5:200]
-inner_diameter = ${p.inner_diameter}; // [1.6:0.2:150]
+  return `// Parametric threaded bushing / sleeve / modular tube (mm).
+// thread_mode: 0 = internal thread, 1 = external thread + smooth bore,
+//              2 = internal + external reducer, 3 = tube (bottom female "мама" + top male "папа").
+// auto_thread_std: automatically selects ISO pitch and FDM radial clearance from radius.
+// fdm_thread_angle: uses 45-degree print-safe flank overhang for support-free vertical FDM printing.
+thread_mode = ${p.thread_mode}; // [0, 1, 2, 3]
+auto_thread_std = ${p.auto_thread_std};
+fdm_thread_angle = ${p.fdm_thread_angle};
+length = ${p.length}; // [4:0.5:300]
+thread_section_length = ${p.thread_section_length}; // [2:0.5:120]
+inner_diameter = ${p.inner_diameter}; // [1.6:0.2:200]
 inner_pitch = ${p.inner_pitch}; // [0.25:0.05:10]
 inner_starts = ${p.inner_starts}; // [1:1:4]
 inner_left_handed = ${p.inner_left_handed};
 inner_thread_depth = ${p.inner_thread_depth}; // [0:0.5:200]
-outer_diameter = ${p.outer_diameter}; // [3:0.2:200]
+outer_diameter = ${p.outer_diameter}; // [3:0.2:250]
 outer_pitch = ${p.outer_pitch}; // [0.25:0.05:10]
 outer_starts = ${p.outer_starts}; // [1:1:4]
 outer_left_handed = ${p.outer_left_handed};
@@ -256,7 +65,7 @@ wrench_flat_depth = ${p.wrench_flat_depth}; // [0.2:0.1:30]
 knurl_count = ${p.knurl_count}; // [4:1:64]
 knurl_depth = ${p.knurl_depth}; // [0.1:0.05:5]
 flange = ${p.flange};
-flange_diameter = ${p.flange_diameter}; // [4:0.5:260]
+flange_diameter = ${p.flange_diameter}; // [4:0.5:300]
 flange_thickness = ${p.flange_thickness}; // [0.8:0.2:80]
 flange_shape = ${p.flange_shape}; // [0, 1, 2]
 flange_holes = ${p.flange_holes}; // [0:1:12]
@@ -270,23 +79,240 @@ split_slot_width = ${p.split_slot_width}; // [0:0.2:40]
 segments = ${p.segments}; // [16:4:72]
 
 $fn = segments;
-iso_depth_factor = 5 * sqrt(3) / 16;
+depth_factor = fdm_thread_angle ? 0.375 : (5 * sqrt(3) / 16);
+is_tube_mf = thread_mode == 3;
 has_inner_thread = thread_mode == 0 || thread_mode == 2;
 has_outer_thread = thread_mode == 1 || thread_mode == 2;
 
-r_in_major = inner_diameter / 2 + clearance / 2;
-r_in_minor = has_inner_thread ? max(0.3, r_in_major - iso_depth_factor * inner_pitch) : r_in_major;
+// Radius-dependent standard metric pitch and 3D-printing radial clearance
+d_mid = (inner_diameter + outer_diameter) / 2;
+wall_total = (outer_diameter - inner_diameter) / 2;
+std_pitch_in = (is_tube_mf ? d_mid : inner_diameter) <= 3.2 ? 0.5 : ((is_tube_mf ? d_mid : inner_diameter) <= 5.2 ? 0.8 : ((is_tube_mf ? d_mid : inner_diameter) <= 6.5 ? 1.0 : ((is_tube_mf ? d_mid : inner_diameter) <= 9 ? 1.25 : ((is_tube_mf ? d_mid : inner_diameter) <= 12 ? 1.5 : ((is_tube_mf ? d_mid : inner_diameter) <= 16 ? 1.75 : ((is_tube_mf ? d_mid : inner_diameter) <= 22 ? 2.0 : ((is_tube_mf ? d_mid : inner_diameter) <= 30 ? 2.5 : ((is_tube_mf ? d_mid : inner_diameter) <= 42 ? 3.0 : 3.5))))))));
+std_pitch_out = outer_diameter <= 5.2 ? 0.8 : (outer_diameter <= 6.5 ? 1.0 : (outer_diameter <= 9 ? 1.25 : (outer_diameter <= 12 ? 1.5 : (outer_diameter <= 16 ? 1.75 : (outer_diameter <= 22 ? 2.0 : (outer_diameter <= 30 ? 2.5 : (outer_diameter <= 42 ? 3.0 : 3.5)))))));
+max_safe_pitch = max(0.5, (wall_total - 1.5) / 0.6);
 
-r_out_major = max(r_in_major + 0.8, outer_diameter / 2 - (has_outer_thread ? clearance / 2 : 0));
-r_out_minor = has_outer_thread ? max(r_in_major + 0.6, r_out_major - iso_depth_factor * outer_pitch) : r_out_major;
+eff_in_pitch = auto_thread_std ? min(std_pitch_in, max_safe_pitch) : inner_pitch;
+eff_out_pitch = auto_thread_std ? min(std_pitch_out, max_safe_pitch) : outer_pitch;
+eff_clearance = auto_thread_std ? min(0.45, max(0.16, 0.14 + 0.005 * d_mid)) : clearance;
 
-eff_chamfer = min(chamfer, length * 0.22, (r_out_major - r_in_minor) * 0.45);
+r_bore = inner_diameter / 2;
+r_in_major = inner_diameter / 2 + eff_clearance / 2;
+r_in_minor = has_inner_thread ? max(0.3, r_in_major - depth_factor * eff_in_pitch) : (is_tube_mf ? r_bore : r_in_major);
+
+r_out_major = max(r_in_major + 0.8, outer_diameter / 2 - (has_outer_thread ? eff_clearance / 2 : 0));
+r_out_minor = has_outer_thread ? max(r_in_major + 0.6, r_out_major - depth_factor * eff_out_pitch) : r_out_major;
+
+r_body_bound = has_outer_thread ? r_out_major : (outer_shape == 1 ? outer_diameter / sqrt(3) + 0.15 : (outer_shape == 3 ? outer_diameter / sqrt(2) + 0.15 : (outer_shape == 4 ? outer_diameter / 2 + 0.15 : outer_diameter / 2)));
 flange_h = flange ? min(flange_thickness, length - 0.5) : 0;
 flange_d = flange ? max(flange_diameter, outer_diameter + 0.4) : outer_diameter;
+r_flange_bound = flange_shape == 1 ? flange_d / sqrt(3) + 0.15 : (flange_shape == 2 ? flange_d / sqrt(2) + 0.15 : flange_d / 2);
 
-// Single simple closed 2D polygon without central pinch vertex.
-module helical_profile_2d(r_min, r_max, starts) {
-  polygon([${threadPolygonPoints}]);
+// Equalized-wall joint thread geometry for thread_mode == 3 (bottom female "мама" + top male "папа")
+h_joint = depth_factor * eff_in_pitch;
+r_joint_nom = (r_bore + outer_diameter / 2 + h_joint) / 2;
+r_fem_major = r_joint_nom + eff_clearance / 2;
+r_fem_minor = max(r_bore + 0.1, r_fem_major - h_joint);
+r_male_major = r_joint_nom - eff_clearance / 2;
+r_male_minor = max(r_bore + 0.6, r_male_major - h_joint);
+
+sec_len = min(thread_section_length, length * 0.44);
+fem_len = sec_len + 0.4;
+male_len = sec_len;
+z_male_start = length - male_len;
+taper_h = max(0.4, r_fem_major - r_bore);
+
+eff_chamfer = min(chamfer, length * 0.22, (r_out_minor - r_in_major) * 0.45);
+fl_chamfer = min(eff_chamfer, flange_h * 0.3);
+
+z_bot = blind_bottom > 0 ? min(length - 1, blind_bottom) : 0;
+th_depth = inner_thread_depth > 0 ? min(length - z_bot, inner_thread_depth) : (length - z_bot);
+z_th_start = length - th_depth;
+has_3d_trims = (!has_outer_thread && outer_shape > 0) || (flange && flange_h > 0 && (flange_shape > 0 || flange_holes > 0)) || cross_hole_diameter > 0;
+
+// Cut ISO / 45-deg FDM thread profiles and chamfers in 2D before revolution to bound 3D Boolean work.
+module revolved_bushing_2d() {
+  difference() {
+    union() {
+      translate([r_in_minor, 0])
+        square([r_body_bound - r_in_minor, length]);
+      if (flange && flange_h > 0) {
+        translate([r_in_minor, 0])
+          square([r_flange_bound - r_in_minor, flange_h]);
+      }
+      if (blind_bottom > 0) {
+        square([r_in_minor + 0.1, z_bot]);
+      }
+    }
+
+    // Mode 3: Bottom Female ("мама") socket + 45-deg support-free conical transition + Top Male ("папа") spigot
+    if (is_tube_mf) {
+      max_mf_teeth = has_3d_trims ? 3 : 9;
+      // 1. Widen bottom bore to female minor radius with 45-deg self-supporting roof taper
+      polygon([
+        [r_bore - 0.1, z_bot - 0.1],
+        [r_fem_minor, z_bot - 0.1],
+        [r_fem_minor, fem_len],
+        [r_bore - 0.1, fem_len + (r_fem_minor - r_bore + 0.1)]
+      ]);
+
+      // 2. Bottom Female ("мама") internal thread grooves (bounded for 128-vertex revolve limit)
+      fem_step = max(eff_in_pitch, fem_len / max_mf_teeth);
+      n_fem = ceil(fem_len / fem_step) + 1;
+      fem_phase = (inner_left_handed ? 0.35 : 0.1) + (inner_starts - 1) * 0.12;
+      intersection() {
+        polygon([
+          [r_fem_minor - 0.05, z_bot],
+          [r_fem_major + 0.1, z_bot],
+          [r_fem_major + 0.1, fem_len],
+          [r_fem_minor - 0.05, fem_len + (r_fem_major - r_fem_minor + 0.15)]
+        ]);
+        union() {
+          for (i = [-1 : n_fem]) {
+            yc = z_bot + (i + fem_phase) * fem_step;
+            polygon([
+              [r_fem_minor - 0.05, yc - 0.375 * fem_step],
+              [r_fem_major, yc - 0.0625 * fem_step],
+              [r_fem_major, yc + 0.0625 * fem_step],
+              [r_fem_minor - 0.05, yc + 0.375 * fem_step]
+            ]);
+          }
+        }
+      }
+
+      // 3. Bottom Female entrance 45-deg lead-in countersink chamfer
+      if (blind_bottom <= 0) {
+        ch_fem = min(eff_chamfer, eff_in_pitch * 0.6);
+        polygon([
+          [r_bore - 0.1, -0.1],
+          [r_fem_major + ch_fem, -0.1],
+          [r_fem_minor - 0.1, ch_fem + (r_fem_major - r_fem_minor)]
+        ]);
+      }
+
+      // 4. Step down outer diameter at top for Male ("папа") spigot
+      translate([r_male_major, z_male_start])
+        square([r_body_bound - r_male_major + 0.5, male_len + 0.2]);
+
+      // 5. Top Male ("папа") external thread grooves (bounded for 128-vertex revolve limit)
+      male_step = max(eff_in_pitch, male_len / max_mf_teeth);
+      n_male = ceil(male_len / male_step) + 1;
+      male_phase = (inner_left_handed ? 0.35 : 0.1) + (inner_starts - 1) * 0.12;
+      intersection() {
+        translate([r_male_minor - 0.1, z_male_start])
+          square([r_male_major - r_male_minor + 0.2, male_len]);
+        union() {
+          for (j = [-1 : n_male]) {
+            yc = z_male_start + (j + male_phase) * male_step;
+            polygon([
+              [r_male_major + 0.05, yc - 0.375 * male_step],
+              [r_male_minor, yc - 0.0625 * male_step],
+              [r_male_minor, yc + 0.0625 * male_step],
+              [r_male_major + 0.05, yc + 0.375 * male_step]
+            ]);
+          }
+        }
+      }
+
+      // 6. Top Male tip 45-deg lead-in bevel chamfer
+      ch_male = min(eff_chamfer, eff_in_pitch * 0.6);
+      polygon([
+        [r_male_minor - ch_male * 0.3, length + 0.1],
+        [r_body_bound + 0.2, length + 0.1],
+        [r_body_bound + 0.2, length - (r_body_bound - r_male_minor + ch_male * 0.3)]
+      ]);
+    }
+
+    // Modes 0 & 2: Full/partial Internal thread grooves in 2D
+    if (has_inner_thread && th_depth > 0) {
+      max_in_teeth = has_3d_trims ? (has_outer_thread ? 3 : 6) : (has_outer_thread ? 9 : 18);
+      in_step = max(eff_in_pitch, th_depth / max_in_teeth);
+      n_in = ceil(th_depth / in_step) + 1;
+      in_phase = (inner_left_handed ? 0.35 : 0.1) + (inner_starts - 1) * 0.12;
+      intersection() {
+        translate([r_in_minor - 0.05, z_th_start])
+          square([r_in_major - r_in_minor + 0.2, th_depth]);
+        union() {
+          for (i = [-1 : n_in]) {
+            yc = z_th_start + (i + in_phase) * in_step;
+            polygon([
+              [r_in_minor - 0.05, yc - 0.375 * in_step],
+              [r_in_major, yc - 0.0625 * in_step],
+              [r_in_major, yc + 0.0625 * in_step],
+              [r_in_minor - 0.05, yc + 0.375 * in_step]
+            ]);
+          }
+        }
+      }
+    }
+
+    // Modes 1 & 2: External thread grooves in 2D
+    if (has_outer_thread && length > flange_h) {
+      out_span = length - flange_h;
+      max_out_teeth = has_3d_trims ? (has_inner_thread ? 3 : 6) : (has_inner_thread ? 9 : 18);
+      out_step = max(eff_out_pitch, out_span / max_out_teeth);
+      n_out = ceil(out_span / out_step) + 1;
+      out_phase = (outer_left_handed ? 0.35 : 0.1) + (outer_starts - 1) * 0.12;
+      intersection() {
+        translate([r_out_minor - 0.1, flange_h])
+          square([r_body_bound - r_out_minor + 0.2, out_span]);
+        union() {
+          for (j = [-1 : n_out]) {
+            yc = flange_h + (j + out_phase) * out_step;
+            polygon([
+              [r_body_bound + 0.05, yc - 0.375 * out_step],
+              [r_out_minor, yc - 0.0625 * out_step],
+              [r_out_minor, yc + 0.0625 * out_step],
+              [r_body_bound + 0.05, yc + 0.375 * out_step]
+            ]);
+          }
+        }
+      }
+    }
+
+    // Standard top/bottom chamfers for modes 0, 1, 2
+    if (!is_tube_mf && eff_chamfer > 0) {
+      polygon([
+        [r_in_minor - 0.1, length - eff_chamfer],
+        [r_in_major + eff_chamfer + 0.1, length + 0.1],
+        [r_in_minor - 0.1, length + 0.1]
+      ]);
+      if (blind_bottom <= 0) {
+        polygon([
+          [r_in_minor - 0.1, -0.1],
+          [r_in_major + eff_chamfer + 0.1, -0.1],
+          [r_in_minor - 0.1, eff_chamfer]
+        ]);
+      }
+      polygon([
+        [r_body_bound - eff_chamfer, length + 0.1],
+        [r_body_bound + 0.2, length + 0.1],
+        [r_body_bound + 0.2, length - eff_chamfer]
+      ]);
+    }
+
+    // Bottom outer bevel chamfer (when no flange)
+    if (eff_chamfer > 0 && (!flange || flange_h <= 0)) {
+      polygon([
+        [r_body_bound - eff_chamfer, -0.1],
+        [r_body_bound + 0.2, -0.1],
+        [r_body_bound + 0.2, eff_chamfer]
+      ]);
+    }
+
+    // Flange top and bottom bevel chamfers
+    if (flange && flange_h > 0 && fl_chamfer > 0) {
+      polygon([
+        [r_flange_bound - fl_chamfer, -0.1],
+        [r_flange_bound + 0.2, -0.1],
+        [r_flange_bound + 0.2, fl_chamfer]
+      ]);
+      polygon([
+        [r_flange_bound - fl_chamfer, flange_h + 0.05],
+        [r_flange_bound + 0.2, flange_h + 0.05],
+        [r_flange_bound + 0.2, flange_h - fl_chamfer]
+      ]);
+    }
+  }
 }
 
 module unthreaded_outer_2d(d, shape) {
@@ -318,113 +344,78 @@ module flange_2d(d, shape) {
   }
 }
 
-module body_chamfer_envelope(h, r_bound, ch_bot, ch_top) {
-  hull() {
-    if (ch_bot > 0) {
-      cylinder(h = 0.02, r = max(0.5, r_bound - ch_bot), $fn = segments);
-      translate([0, 0, ch_bot]) cylinder(h = 0.02, r = r_bound, $fn = segments);
-    } else {
-      cylinder(h = 0.02, r = r_bound, $fn = segments);
-    }
-    if (ch_top > 0) {
-      translate([0, 0, max(0.04, h - ch_top)]) cylinder(h = 0.02, r = r_bound, $fn = segments);
-      translate([0, 0, max(0.06, h - 0.02)]) cylinder(h = 0.02, r = max(0.5, r_bound - ch_top), $fn = segments);
-    } else {
-      translate([0, 0, max(0.04, h - 0.02)]) cylinder(h = 0.02, r = r_bound, $fn = segments);
+module exterior_trim_cutters() {
+  r_outer_box = max(r_body_bound, r_flange_bound) * 1.5;
+  trim_top_z = is_tube_mf ? z_male_start + 0.2 : length + 0.2;
+
+  if (!has_outer_thread && outer_shape > 0) {
+    z_start_trim = flange && flange_h > 0 ? flange_h + 0.05 : -0.2;
+    if (trim_top_z > z_start_trim) {
+      translate([0, 0, z_start_trim])
+        linear_extrude(height = trim_top_z - z_start_trim)
+          if (outer_shape == 2) {
+            flat_half = max(r_in_major + 0.6, outer_diameter / 2 - wrench_flat_depth);
+            union() {
+              translate([flat_half, -r_outer_box])
+                square([r_outer_box, 2 * r_outer_box]);
+              translate([-flat_half - r_outer_box, -r_outer_box])
+                square([r_outer_box, 2 * r_outer_box]);
+            }
+          } else {
+            difference() {
+              circle(r = r_outer_box, $fn = 12);
+              unthreaded_outer_2d(outer_diameter, outer_shape);
+            }
+          }
     }
   }
-}
 
-module outer_shaft() {
-  if (has_outer_thread) {
-    out_lead = outer_starts * outer_pitch;
-    out_dir = outer_left_handed ? 1 : -1;
-    out_slices = min(32, max(10, ceil(length / out_lead * 6)));
-    linear_extrude(height = length, twist = out_dir * 360 * length / out_lead, slices = out_slices)
-      helical_profile_2d(r_out_minor, r_out_major, outer_starts);
-  } else {
-    r_bound = outer_shape == 1 ? outer_diameter / sqrt(3) : (outer_shape == 3 ? outer_diameter / sqrt(2) : outer_diameter / 2);
-    if (eff_chamfer > 0 && outer_shape != 4) {
-      intersection() {
-        linear_extrude(height = length)
-          unthreaded_outer_2d(outer_diameter, outer_shape);
-        body_chamfer_envelope(length, r_bound, flange ? 0 : eff_chamfer, eff_chamfer);
-      }
-    } else {
-      linear_extrude(height = length)
-        unthreaded_outer_2d(outer_diameter, outer_shape);
-    }
-  }
-}
-
-module flange_collar() {
-  if (flange && flange_h > 0) {
-    linear_extrude(height = flange_h)
-      difference() {
-        flange_2d(flange_d, flange_shape);
-        if (flange_holes > 0) {
-          bolt_circle_r = (flange_d + outer_diameter) / 4;
-          for (k = [0 : flange_holes - 1]) {
-            ang = k * 360 / flange_holes;
-            translate([bolt_circle_r * cos(ang), bolt_circle_r * sin(ang)])
-              circle(d = flange_hole_diameter, $fn = max(12, floor(segments / 2)));
+  if (flange && flange_h > 0 && (flange_shape > 0 || flange_holes > 0)) {
+    translate([0, 0, -0.1])
+      linear_extrude(height = flange_h + 0.08)
+        union() {
+          if (flange_shape > 0) {
+            difference() {
+              circle(r = r_outer_box, $fn = 12);
+              flange_2d(flange_d, flange_shape);
+            }
+          }
+          if (flange_holes > 0) {
+            bolt_circle_r = (flange_d + outer_diameter) / 4;
+            for (k = [0 : flange_holes - 1]) {
+              ang = k * 360 / flange_holes;
+              translate([bolt_circle_r * cos(ang), bolt_circle_r * sin(ang)])
+                circle(d = flange_hole_diameter, $fn = 10);
+            }
           }
         }
-      }
-  }
-}
-
-module inner_cavity() {
-  z_bot = blind_bottom > 0 ? min(length - 1, blind_bottom) : -0.2;
-  cav_h = length + 0.4 - z_bot;
-  if (has_inner_thread) {
-    th_depth = inner_thread_depth > 0 ? min(length - max(0, z_bot), inner_thread_depth) : 0;
-    z_th_start = th_depth > 0 ? max(z_bot, length - th_depth) : z_bot;
-    th_h = length + 0.2 - z_th_start;
-    in_lead = inner_starts * inner_pitch;
-    in_dir = inner_left_handed ? 1 : -1;
-    in_slices = min(32, max(10, ceil(th_h / in_lead * 6)));
-    if (z_th_start > z_bot) {
-      translate([0, 0, z_bot])
-        cylinder(h = z_th_start - z_bot + 0.2, r = r_in_minor, $fn = max(16, floor(segments / 2)));
-    }
-    translate([0, 0, z_th_start])
-      linear_extrude(height = th_h, twist = in_dir * 360 * th_h / in_lead, slices = in_slices)
-        helical_profile_2d(r_in_minor, r_in_major, inner_starts);
-  } else {
-    translate([0, 0, z_bot])
-      cylinder(h = cav_h, r = r_in_minor, $fn = segments);
   }
 
-  // Top lead-in countersink chamfer
-  if (eff_chamfer > 0 && !has_inner_thread) {
-    translate([0, 0, length - eff_chamfer])
-      cylinder(h = eff_chamfer + 0.1, r1 = r_in_minor, r2 = r_in_major + eff_chamfer + 0.1, $fn = segments);
-  }
-}
-
-module secondary_cuts() {
-  span = max(outer_diameter, flange_d) * 1.6;
   if (cross_hole_diameter > 0) {
     z_c = cross_hole_z > 0 ? cross_hole_z : (flange ? (length + flange_h) / 2 : length / 2);
     translate([0, 0, z_c])
       rotate([0, 90, 0])
-        cylinder(h = span, d = cross_hole_diameter, center = true, $fn = max(12, floor(segments / 2)));
-  }
-  if (split_slot_width > 0) {
-    translate([0, -split_slot_width / 2, -0.2])
-      cube([span, split_slot_width, length + 0.4]);
+        cylinder(h = r_outer_box * 2.2, d = cross_hole_diameter, center = true, $fn = 10);
   }
 }
 
+has_3d_trims = (!has_outer_thread && outer_shape > 0) || (flange && flange_h > 0 && (flange_shape > 0 || flange_holes > 0)) || cross_hole_diameter > 0;
+rev_fn = cross_hole_diameter > 0 ? min(segments, 10) : (has_3d_trims ? min(segments, 10) : segments);
+slot_angle = split_slot_width > 0 ? min(120, max(4, 2 * asin(min(0.85, split_slot_width / (2 * r_in_major))))) : 0;
+sweep_angle = 360 - slot_angle;
+
 color([0.28, 0.56, 0.92])
-difference() {
-  union() {
-    outer_shaft();
-    flange_collar();
+if (has_3d_trims) {
+  difference() {
+    rotate([0, 0, slot_angle / 2])
+      rotate_extrude(angle = sweep_angle, $fn = rev_fn)
+        revolved_bushing_2d();
+    exterior_trim_cutters();
   }
-  inner_cavity();
-  secondary_cuts();
+} else {
+  rotate([0, 0, slot_angle / 2])
+    rotate_extrude(angle = sweep_angle, $fn = rev_fn)
+      revolved_bushing_2d();
 }
 `
 }

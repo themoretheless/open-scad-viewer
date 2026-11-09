@@ -48,15 +48,17 @@ fn end_tangents_reproduce_known_cubic() {
         .collect();
     let d0 = [1., 0., 0.];
     let d1 = [1., 2., 3.];
-    let curve =
-        interpolate_curve(&points, 3, Parameterization::Uniform, Some((d0, d1))).unwrap();
+    let curve = interpolate_curve(&points, 3, Parameterization::Uniform, Some((d0, d1))).unwrap();
     assert_eq!(curve.control_points.len(), n + 2);
     for k in 0..=20 {
         let u = k as f64 / 20.;
         let q = curve.evaluate(u).unwrap();
         for axis in 0..3 {
             let expected = [u, u * u, u * u * u][axis];
-            assert!((q.point[axis] - expected).abs() < 1e-9, "axis {axis} at u={u}");
+            assert!(
+                (q.point[axis] - expected).abs() < 1e-9,
+                "axis {axis} at u={u}"
+            );
         }
     }
     let start = curve.evaluate(0.).unwrap();
@@ -112,8 +114,9 @@ fn adaptive_fit_of_noisy_arc_converges_with_honest_deviation() {
         assert!(actual <= report.max_deviation);
         assert!(report.max_deviation - actual < 1e-12);
     }
-    assert!(fit_curve_adaptive(&points, 3, 0., Parameterization::ChordLength, None, false)
-        .is_err());
+    assert!(
+        fit_curve_adaptive(&points, 3, 0., Parameterization::ChordLength, None, false).is_err()
+    );
 }
 
 #[test]
@@ -168,9 +171,15 @@ fn heavily_downweighted_outlier_is_ignored() {
         false,
     )
     .unwrap();
-    let unweighted =
-        fit_curve_adaptive(&points, 3, tolerance, Parameterization::ChordLength, None, false)
-            .unwrap();
+    let unweighted = fit_curve_adaptive(
+        &points,
+        3,
+        tolerance,
+        Parameterization::ChordLength,
+        None,
+        false,
+    )
+    .unwrap();
     let u = parameters(&points, Parameterization::ChordLength);
     let inlier = |curve: &Curve| {
         u.iter()
@@ -363,4 +372,26 @@ fn clustered_sites_fail_schoenberg_whitney_in_interpolate_curve() {
     // Well-spread sites on the same degree pass the pre-check.
     let spread: Vec<[f64; 3]> = (0..6).map(|i| [i as f64 / 5., 0., 0.]).collect();
     assert!(interpolate_curve(&spread, 3, Parameterization::Uniform, None).is_ok());
+}
+
+#[test]
+fn condition_diagnostic_detects_clustered_collocation_rows() {
+    let degree = 3;
+    let knots = vec![0., 0., 0., 0., 0.5, 1., 1., 1., 1.];
+    let spread = [0., 0.2, 0.45, 0.7, 1.];
+    let good = collocation_condition(degree, &knots, &spread).unwrap();
+    assert!(good.condition_one_norm >= 1.);
+    assert!(good.relative_pivot > 0. && good.relative_pivot <= 1.);
+    assert!(!good.ill_conditioned);
+
+    let clustered = [0., 0.2, 0.200_000_000_001, 0.7, 1.];
+    let bad = collocation_condition(degree, &knots, &clustered).unwrap();
+    assert!(
+        bad.condition_one_norm > 1e6 * good.condition_one_norm,
+        "{bad:?}"
+    );
+    assert!(bad.ill_conditioned, "{bad:?}");
+    assert!(bad.relative_pivot < good.relative_pivot);
+    assert!(collocation_condition(degree, &knots, &[0., 0., 0., 1., 1.]).is_err());
+    assert!(collocation_condition(degree, &knots, &[0., f64::NAN, 0.5, 0.7, 1.]).is_err());
 }

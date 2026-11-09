@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BOX_DEFAULTS, generateBox } from '../services/boxGenerator'
-import { BUSHING_DEFAULTS, computeBushingParameterSuggestions, generateBushing } from '../services/bushingGenerator'
+import { BUSHING_DEFAULTS, computeBushingParameterSuggestions, fdmRadialClearance, generateBushing, standardMetricPitch } from '../services/bushingGenerator'
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe, type SpinnerParameterSuggestion } from '../services/spinnerGenerator'
 import { computed, nextTick, ref, watch } from 'svet'
 import { stringifyMeshJson } from '../services/meshJson'
@@ -9,18 +9,25 @@ import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEF
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()
 const dialog=ref<HTMLDialogElement|null>(null)
-const kind=ref<'gear'|'planetary_gears'|'thread'|'bushing'|'box'|'spinner'|'spinner_safe'>('box')
-const values=ref<Record<string,number|boolean>>({...BOX_DEFAULTS,print_optimized:false,hook_chamfer:false})
+const kind=ref<'gear'|'planetary_gears'|'thread'|'bushing'|'box'|'spinner'|'spinner_safe'>('bushing')
+const values=ref<Record<string,number|boolean>>({...BUSHING_DEFAULTS})
 const bendEnabled=ref(false)
 const bushingExtraKeys=new Set(['flange','flange_diameter','flange_thickness','flange_shape','flange_holes','flange_hole_diameter','cross_hole_diameter','cross_hole_z','split_slot_width'])
 const visibleValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>{
   if(kind.value==='bushing'){
     if(bushingExtraKeys.has(key))return false
-    const mode=Number(values.value.thread_mode??0)
-    const hasInner=mode===0||mode===2
+    const mode=Number(values.value.thread_mode??3)
+    const isTube=mode===3
+    const hasInner=mode===0||mode===2||isTube
     const hasOuter=mode===1||mode===2
-    if(['inner_pitch','inner_starts','inner_left_handed','inner_thread_depth'].includes(key))return hasInner
-    if(['outer_pitch','outer_starts','outer_left_handed'].includes(key))return hasOuter
+    const autoStd=Boolean(values.value.auto_thread_std)
+    if(key==='thread_section_length')return isTube
+    if(key==='inner_thread_depth')return mode===0||mode===2
+    if(key==='inner_pitch')return hasInner&&!autoStd
+    if(['inner_starts','inner_left_handed'].includes(key))return hasInner
+    if(key==='outer_pitch')return hasOuter&&!autoStd
+    if(['outer_starts','outer_left_handed'].includes(key))return hasOuter
+    if(key==='clearance')return !autoStd
     if(key==='outer_shape')return !hasOuter
     if(key==='wrench_flat_depth')return !hasOuter&&Number(values.value.outer_shape)===2
     if(['knurl_count','knurl_depth'].includes(key))return !hasOuter&&Number(values.value.outer_shape)===4
@@ -47,13 +54,39 @@ const bushingFlangeValues=computed(()=>Object.fromEntries(Object.entries(values.
 const bushingFeatureValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>['cross_hole_diameter','cross_hole_z','split_slot_width'].includes(key)&&(key!=='cross_hole_z'||Number(values.value.cross_hole_diameter)>0))))
 const error=ref('')
 const lastEditedKey=ref('')
+const ru=computed(()=>props.locale==='ru')
+const bushingAutoSummary=computed(()=>{
+  if(kind.value!=='bushing')return ''
+  const innerD=Number(values.value.inner_diameter||12)
+  const outerD=Number(values.value.outer_diameter||22)
+  const mode=Number(values.value.thread_mode??3)
+  const autoStd=Boolean(values.value.auto_thread_std)
+  const fdmAngle=Boolean(values.value.fdm_thread_angle)
+  const factor=fdmAngle?0.375:(5*Math.sqrt(3)/16)
+  const dMid=(innerD+outerD)/2
+  const wallTotal=(outerD-innerD)/2
+  const maxSafePitch=Math.max(0.5,(wallTotal-1.5)/0.6)
+  const pitch=autoStd?Math.round(Math.min(standardMetricPitch(mode===3?dMid:innerD),maxSafePitch)*100)/100:Number(values.value.inner_pitch||1.5)
+  const clr=autoStd?fdmRadialClearance(dMid):Number(values.value.clearance||0.22)
+  const depth=Math.round(factor*pitch*100)/100
+  if(mode===3){
+    const dJoint=Math.round((dMid+depth)*10)/10
+    const wallEach=Math.round(((wallTotal-depth-clr)/2)*100)/100
+    return ru.value
+      ?`Расчёт стыка «мама–папа» от радиуса: номинал резьбы M${dJoint}×${pitch} мм, глубина профиля ${depth} мм, радиальный FDM-зазор ${clr} мм, угол свеса ${fdmAngle?'45° (печать стоя без поддержек)':'60° ISO'}, остаточная стенка на обеих частях по ${wallEach} мм.`
+      :`Auto-computed female/male joint: nominal thread M${dJoint}×${pitch} mm, tooth depth ${depth} mm, radial FDM clearance ${clr} mm, flank overhang ${fdmAngle?'45° (support-free upright print)':'60° ISO'}, remaining wall ${wallEach} mm on both ends.`
+  }
+  return ru.value
+    ?`Параметры резьбы от радиуса: шаг ${pitch} мм, глубина зуба ${depth} мм, радиальный FDM-зазор ${clr} мм (${fdmAngle?'профиль 45° для 3D-печати':'профиль 60° ISO'}).`
+    :`Radius-adapted thread: pitch ${pitch} mm, tooth depth ${depth} mm, radial FDM clearance ${clr} mm (${fdmAngle?'45° FDM profile':'60° ISO profile'}).`
+})
 const spinnerSuggestions=computed<SpinnerParameterSuggestion[]>(()=>{
   if(kind.value==='bushing'){
     if(lastEditedKey.value){
       const direct=computeBushingParameterSuggestions(lastEditedKey.value,values.value)
       if(direct.length>0)return direct
     }
-    for(const candidate of ['inner_diameter','outer_diameter']){
+    for(const candidate of ['inner_diameter','outer_diameter','thread_mode']){
       const fallback=computeBushingParameterSuggestions(candidate,values.value)
       if(fallback.length>0)return fallback
     }
@@ -74,14 +107,13 @@ function applySpinnerSuggestion(suggestion:SpinnerParameterSuggestion){
   Object.assign(values.value,suggestion.changes)
 }
 const generated=ref<{source:string;document?:ReturnType<typeof compileRushGraph>['document']}|null>(null)
-const ru=computed(()=>props.locale==='ru')
 const names:Record<string,[string,string]>={
   bend_radius:['Радиус цилиндрической стены/трубы, мм','Cylinder / pipe radius, mm'],bend_reverse:['Вогнуть внутрь','Bend inward'],bend_segments:['Сегменты дуги','Arc segments'],
   corner_radius:['Скругление углов коробки, мм','Corner fillet radius, mm'],front_angle:['Наклон передней стенки, ° (+ наружу)','Front wall tilt, ° (+ outward)'],
   width:['Ширина, мм','Width, mm'],depth:['Глубина, мм','Depth, mm'],height:['Высота, мм','Height, mm'],floor:['Толщина дна, мм','Floor thickness, mm'],porous:['Открытые стенки','Open walls'],organic:['Органический каркас','Organic skeleton'],print_optimized:['Ячейки для печати дном вниз','Upright FDM cells'],overhang_angle:['Предельный свес от вертикали, °','Maximum overhang from vertical, °'],cell_size:['Средний радиус ячейки, мм','Average cell radius, mm'],cell_radius:['Скругление углов ячеек, мм','Cell corner radius, mm'],rib:['Перемычки стенок, мм','Wall rib width, mm'],stress_gradient:['Градиент сопромата (0 — равномерно, 1 — авто)','Structural gradient (0 = uniform, 1 = auto)'],mesh_density:['Плотность сетки (0.5–2, 1 — норма)','Mesh density scale (0.5–2, 1 = normal)'],floor_mesh:['Сетка на дне','Mesh floor'],floor_cell_size:['Средний радиус ячейки дна, мм','Average floor cell radius, mm'],floor_rib:['Перемычки дна, мм','Floor rib width, mm'],pattern_seed:['Вариант рисунка','Pattern seed'],hole_diameter:['Диаметр отверстий, мм','Hole diameter, mm'],hole_pitch:['Шаг отверстий, мм','Hole pitch, mm'],dividers:['Перегородки','Dividers'],drain:['Дренаж в дне','Drain holes'],hooks:['Крючки','Hooks'],hook_count:['Количество крючков','Hook count'],hook_width:['Ширина крючка, мм','Hook width, mm'],hook_thickness:['Толщина крючка, мм','Hook thickness, mm'],hook_spacing:['Между центрами, мм (0 — автоматически)','Center spacing, mm (0 = automatic)'],hook_gap:['Зазор под рейку, мм','Rail gap, mm'],hook_drop:['Длина зацепа, мм','Hook drop, mm'],hook_chamfer:['Косынка 45° под основанием крючка','45° root gusset under hook'],hook_mount:['Крепление крючков','Hook mounting'],hook_tolerance:['Монтажный зазор крючков, мм','Hook fit tolerance, mm'],
   teeth:['Число зубьев','Teeth'],module:['Модуль, мм','Module, mm'],pressure_angle:['Угол давления, °','Pressure angle, °'],thickness:['Толщина, мм','Thickness, mm'],bore:['Отверстие, мм','Bore diameter, mm'],backlash:['Боковой зазор на шестерню, мм','Backlash per gear, mm'],clearance:['Зазор, мм','Clearance, mm'],internal:['Внутренний вариант','Internal'],rim_width:['Толщина обода, мм','Rim width, mm'],flank_segments:['Сегменты боковой линии зуба','Flank segments'],sun_teeth:['Зубья солнечной шестерни','Sun teeth'],planet_teeth:['Зубья сателлита','Planet teeth'],planet_count:['Число сателлитов','Planets'],carrier_angle:['Поворот водила, °','Carrier angle, °'],diameter:['Диаметр резьбы, мм','Thread diameter, mm'],pitch:['Шаг резьбы, мм','Thread pitch, mm'],length:['Длина, мм','Length, mm'],wall:['Толщина стенки, мм','Wall thickness, mm'],starts:['Число заходов','Starts'],left_handed:['Левая резьба','Left handed'],segments_per_turn:['Сегменты на оборот','Segments per turn'],
   inner_radius:['Внутренний радиус венца, мм','Inner ring radius, mm'],outer_radius:['Наружный радиус обода, мм','Outer rim radius, mm'],inner_rim:['Толщина внутреннего бортика (солнца), мм','Inner sun rim thickness, mm'],outer_rim:['Толщина наружного бортика (кольца), мм','Outer ring rim thickness, mm'],hole:['Центральное отверстие, мм','Center hole diameter, mm'],gap:['Боковой зазор в зацеплении, мм','Tooth backlash gap, mm'],helix:['Угол наклона шеврона, °','Herringbone helix angle, °'],
-  thread_mode:['Конфигурация резьбы','Thread configuration'],inner_diameter:['Внутренний диаметр (резьба/канал), мм','Inner diameter (thread/bore), mm'],inner_pitch:['Шаг внутренней резьбы, мм','Inner thread pitch, mm'],inner_starts:['Заходы внутренней резьбы','Inner thread starts'],inner_left_handed:['Левая внутренняя резьба','Left-handed inner thread'],inner_thread_depth:['Глубина внутренней резьбы, мм (0 — вся длина)','Inner thread depth, mm (0 = full)'],outer_diameter:['Наружный диаметр / размер под ключ, мм','Outer diameter / across-flats, mm'],outer_pitch:['Шаг наружной резьбы, мм','Outer thread pitch, mm'],outer_starts:['Заходы наружной резьбы','Outer thread starts'],outer_left_handed:['Левая наружная резьба','Left-handed outer thread'],outer_shape:['Форма наружного корпуса','Outer body profile'],wrench_flat_depth:['Глубина лысок под ключ, мм','Wrench flat depth, mm'],knurl_count:['Число шлицев накатки','Knurl spline count'],knurl_depth:['Глубина шлицев накатки, мм','Knurl spline depth, mm'],flange:['Опорный буртик (фланец)','Flange / collar'],flange_diameter:['Диаметр буртика, мм','Flange diameter, mm'],flange_thickness:['Толщина буртика, мм','Flange thickness, mm'],flange_shape:['Форма буртика','Flange shape'],flange_holes:['Крепёжные отверстия в буртике','Flange mounting holes'],flange_hole_diameter:['Диаметр отверстий в буртике, мм','Flange hole diameter, mm'],blind_bottom:['Толщина глухого дна, мм (0 — сквозная)','Blind bottom thickness, mm (0 = through)'],chamfer:['Заходная фаска 45°, мм','45° lead-in chamfer, mm'],cross_hole_diameter:['Поперечное отверстие (шплинт/винт), мм','Cross-hole diameter, mm'],cross_hole_z:['Высота поперечного отверстия, мм (0 — по центру)','Cross-hole Z height, mm (0 = centered)'],split_slot_width:['Продольный разрез (цанга), мм (0 — нет)','Split collet slot width, mm (0 = none)'],segments:['Сегменты на оборот','Segments per turn'],
+  thread_mode:['Конфигурация втулки / трубки','Bushing / tube configuration'],auto_thread_std:['Авто-шаг по стандарту и зазор FDM от радиуса','Auto standard pitch & FDM clearance by radius'],fdm_thread_angle:['Профиль резьбы 45° для 3D-печати без поддержек','45° support-free FDM thread profile'],thread_section_length:['Длина резьбы «мама» / «папа», мм','Female / male thread length, mm'],inner_diameter:['Внутренний диаметр (проходной канал / резьба), мм','Inner diameter (bore / thread), mm'],inner_pitch:['Шаг внутренней резьбы, мм','Inner thread pitch, mm'],inner_starts:['Заходы резьбы','Thread starts'],inner_left_handed:['Левая резьба','Left-handed thread'],inner_thread_depth:['Глубина внутренней резьбы, мм (0 — вся длина)','Inner thread depth, mm (0 = full)'],outer_diameter:['Наружный диаметр трубки / под ключ, мм','Outer tube diameter / across-flats, mm'],outer_pitch:['Шаг наружной резьбы, мм','Outer thread pitch, mm'],outer_starts:['Заходы наружной резьбы','Outer thread starts'],outer_left_handed:['Левая наружная резьба','Left-handed outer thread'],outer_shape:['Форма наружного корпуса','Outer body profile'],wrench_flat_depth:['Глубина лысок под ключ, мм','Wrench flat depth, mm'],knurl_count:['Число шлицев накатки','Knurl spline count'],knurl_depth:['Глубина шлицев накатки, мм','Knurl spline depth, mm'],flange:['Опорный буртик (фланец)','Flange / collar'],flange_diameter:['Диаметр буртика, мм','Flange diameter, mm'],flange_thickness:['Толщина буртика, мм','Flange thickness, mm'],flange_shape:['Форма буртика','Flange shape'],flange_holes:['Крепёжные отверстия в буртике','Flange mounting holes'],flange_hole_diameter:['Диаметр отверстий в буртике, мм','Flange hole diameter, mm'],blind_bottom:['Толщина глухого дна, мм (0 — сквозная)','Blind bottom thickness, mm (0 = through)'],chamfer:['Заходная фаска 45°, мм','45° lead-in chamfer, mm'],cross_hole_diameter:['Поперечное отверстие (шплинт/винт), мм','Cross-hole diameter, mm'],cross_hole_z:['Высота поперечного отверстия, мм (0 — по центру)','Cross-hole Z height, mm (0 = centered)'],split_slot_width:['Продольный разрез (цанга), мм (0 — нет)','Split collet slot width, mm (0 = none)'],segments:['Сегменты окружности','Circle segments'],
 }
 watch(kind,()=>{bendEnabled.value=false;values.value={...(kind.value==='box'?{...BOX_DEFAULTS,print_optimized:false,hook_chamfer:false}:kind.value==='bushing'?{...BUSHING_DEFAULTS}:kind.value==='spinner'?SPINNER_DEFAULTS:kind.value==='spinner_safe'?SPINNER_SAFE_DEFAULTS:kind.value==='gear'?GEAR_DEFAULTS:kind.value==='thread'?THREAD_DEFAULTS:PLANETARY_DEFAULTS)};generated.value=null;error.value=''})
 watch(bendEnabled,enabled=>{if(kind.value==='box')values.value.bend_radius=enabled?Math.max(150,Number(values.value.bend_radius)||150):0})
@@ -119,15 +151,17 @@ function openEditor(save:boolean){
       <header><h2 id="mechanical-title">{{ru?'Генераторы деталей':'Part generators'}}</h2><button type="button" :aria-label="ru?'Закрыть':'Close'" @click="emit('close')">×</button></header>
       <form @submit.prevent="generate">
         <label class="kind-label">{{ru?'Что построить':'Part type'}}
-          <select v-model="kind" :aria-label="ru?'Что построить':'Part type'"><option value="box">{{ru?'Коробка / органайзер':'Box / organizer'}}</option><option value="bushing">{{ru?'Втулка с резьбой / футорка':'Threaded bushing / sleeve'}}</option><option value="spinner">{{ru?'Планетарный спиннер (вариант 1 — по радиусам)':'Planetary spinner (variant 1 — by radii)'}}</option><option value="spinner_safe">{{ru?'Планетарный спиннер (вариант 2 — по бортикам без ошибок)':'Planetary spinner (variant 2 — by rim walls, error-free)'}}</option><option value="gear">{{ru?'Шестерня':'Gear'}}</option><option value="planetary_gears">{{ru?'Планетарная передача':'Planetary gearset'}}</option><option value="thread">{{ru?'Резьба':'Thread'}}</option></select>
+          <select v-model="kind" :aria-label="ru?'Что построить':'Part type'"><option value="bushing">{{ru?'Втулка / трубка с резьбой (мама–папа, футорка)':'Threaded bushing / tube (female–male, reducer)'}}</option><option value="box">{{ru?'Коробка / органайзер':'Box / organizer'}}</option><option value="spinner">{{ru?'Планетарный спиннер (вариант 1 — по радиусам)':'Planetary spinner (variant 1 — by radii)'}}</option><option value="spinner_safe">{{ru?'Планетарный спиннер (вариант 2 — по бортикам без ошибок)':'Planetary spinner (variant 2 — by rim walls, error-free)'}}</option><option value="gear">{{ru?'Шестерня':'Gear'}}</option><option value="planetary_gears">{{ru?'Планетарная передача':'Planetary gearset'}}</option><option value="thread">{{ru?'Резьба':'Thread'}}</option></select>
         </label>
-        <p class="hint">{{kind==='box'?(ru?'Радиус изгиба гнёт всю коробку дугой; 0 оставляет её прямой. При изгибе ширина — длина дуги задней стенки, глубина — по радиусу. Радиус углов скругляет только углы; положительный наклон раскрывает перед наружу, задняя стенка остаётся вертикальной. В режиме FDM ячейки сходятся наклонными рёбрами без горизонтальных потолков; учитываются изгиб и наклон корпуса. Угол свеса измеряется от вертикали. Крючки с загнутым вниз концом требуют отдельной проверки поддержек. Толщина стенки задаёт глубину рёбер, толщина перемычки — их ширину. Крючки под рейку требуют проверки посадки; нагрузка не испытана.':'Bend radius curves the whole box; 0 keeps it straight. When bent, width is the rear-wall arc length and depth is radial. Corner radius only rounds corners; positive tilt opens the front outward while the back stays vertical. FDM cells close with sloped ribs, without horizontal ceilings, accounting for body bend and tilt. Overhang is measured from vertical. Downturned hooks require a separate support check. Wall thickness controls rib depth; rib width controls the material between cells. Rail hooks require a fit test; load capacity is untested.'):kind==='bushing'?(ru?'Универсальная резьбовая втулка, штуцер или переходная футорка (внутренняя, наружная или двойная резьба ISO 60°). Поддерживает круглый, шестигранный, квадратный и рифлёный корпус, лыски под ключ, опорный буртик с крепёжными отверстиями, глухое дно, поперечное отверстие под шплинт/стопор и продольный разрез под цангу.':'Universal threaded bushing, hollow stud or reducer sleeve (internal, external or dual ISO 60° threads). Supports round, hex, wrench-flat, square and knurled outer bodies, flange collar with mounting holes, blind bottom, cross-hole and split collet slot.'):kind==='spinner'?(ru?'Неразборный шевронный планетарный спиннер (вариант 1 — классические параметры inner_radius и outer_radius; при изменении inner_radius нужно пропорционально менять outer_radius и hole).':'Print-in-place herringbone planetary spinner (variant 1 — classic inner_radius and outer_radius parameters).'):kind==='spinner_safe'?(ru?'Вариант 2 (без конфликтов радиусов): вы задаёте диаметр отверстия (hole), толщину внутреннего бортика солнца (inner_rim) и толщину наружного бортика кольца (outer_rim). Все радиусы и модуль зубьев пересчитываются автоматически без ошибок тонких стенок.':'Variant 2 (conflict-free): set center hole diameter (hole), inner sun rim thickness (inner_rim) and outer ring rim thickness (outer_rim). Gear radii and module scale automatically without wall-thickness errors.'):kind==='planetary_gears'?(ru?'Солнце, сателлиты и неподвижный венец. Водило и оси нужно моделировать отдельно.':'Sun, planets and fixed ring. Model the carrier and shafts separately.'):kind==='thread'?(ru?'Наружный стержень или втулка с внутренней резьбой. Зазор подбирайте под свой принтер.':'Externally threaded rod or internally threaded sleeve. Adjust clearance for your printer.'):(ru?'Прямозубая эвольвентная шестерня или внутренний венец.':'Involute spur gear or internal ring.')}}</p>
+        <p class="hint">{{kind==='box'?(ru?'Радиус изгиба гнёт всю коробку дугой; 0 оставляет её прямой. При изгибе ширина — длина дуги задней стенки, глубина — по радиусу. Радиус углов скругляет только углы; положительный наклон раскрывает перед наружу, задняя стенка остаётся вертикальной. В режиме FDM ячейки сходятся наклонными рёбрами без горизонтальных потолков; учитываются изгиб и наклон корпуса. Угол свеса измеряется от вертикали. Крючки с загнутым вниз концом требуют отдельной проверки поддержек. Толщина стенки задаёт глубину рёбер, толщина перемычки — их ширину. Крючки под рейку требуют проверки посадки; нагрузка не испытана.':'Bend radius curves the whole box; 0 keeps it straight. When bent, width is the rear-wall arc length and depth is radial. Corner radius only rounds corners; positive tilt opens the front outward while the back stays vertical. FDM cells close with sloped ribs, without horizontal ceilings, accounting for body bend and tilt. Overhang is measured from vertical. Downturned hooks require a separate support check. Wall thickness controls rib depth; rib width controls the material between cells. Rail hooks require a fit test; load capacity is untested.'):kind==='bushing'?(ru?'Генератор резьбовых трубок и втулок для 3D-печати. В режиме «3 — Трубка: снизу мама, сверху папа» создаётся секционная скручиваемая трубка: снизу внутренняя резьба («мама») с конусным переходом 45° без поддержек, а сверху ответная наружная резьба («папа») того же номинала, чтобы две такие детали свинчивались друг в друга заподлицо. Шаг резьбы по стандарту ISO и радиальный FDM-зазор рассчитываются автоматически от радиуса.':'Threaded tube and bushing generator for 3D printing. Mode 3 ("Stackable tube: bottom female + top male") creates a modular tube with an internal female thread at the bottom (with a 45° support-free internal taper) and a matching external male thread at the top so multiple tubes screw together flush. Standard ISO pitch and radial FDM clearance scale automatically with radius.'):kind==='spinner'?(ru?'Неразборный шевронный планетарный спиннер (вариант 1 — классические параметры inner_radius и outer_radius; при изменении inner_radius нужно пропорционально менять outer_radius и hole).':'Print-in-place herringbone planetary spinner (variant 1 — classic inner_radius and outer_radius parameters).'):kind==='spinner_safe'?(ru?'Вариант 2 (без конфликтов радиусов): вы задаёте диаметр отверстия (hole), толщину внутреннего бортика солнца (inner_rim) и толщину наружного бортика кольца (outer_rim). Все радиусы и модуль зубьев пересчитываются автоматически без ошибок тонких стенок.':'Variant 2 (conflict-free): set center hole diameter (hole), inner sun rim thickness (inner_rim) and outer ring rim thickness (outer_rim). Gear radii and module scale automatically without wall-thickness errors.'):kind==='planetary_gears'?(ru?'Солнце, сателлиты и неподвижный венец. Водило и оси нужно моделировать отдельно.':'Sun, planets and fixed ring. Model the carrier and shafts separately.'):kind==='thread'?(ru?'Наружный стержень или втулка с внутренней резьбой. Зазор подбирайте под свой принтер.':'Externally threaded rod or internally threaded sleeve. Adjust clearance for your printer.'):(ru?'Прямозубая эвольвентная шестерня или внутренний венец.':'Involute spur gear or internal ring.')}}</p>
+        <p v-if="bushingAutoSummary" class="bushing-summary" role="status">{{bushingAutoSummary}}</p>
         <div class="fields"><label v-for="(value,key) in shapeValues" :key="key" :class="{check:typeof value==='boolean'}">
           <span>{{names[key]?.[ru?0:1]??key}}</span>
           <select v-if="key==='thread_mode'" v-model.number="values[key]" @change="lastEditedKey=String(key)">
+            <option :value="3">{{ru?'3 — Трубка: снизу мама (внутр.), сверху папа (наруж.)':'3 — Stackable tube: bottom female + top male'}}</option>
             <option :value="0">{{ru?'0 — Внутренняя резьба (резьбовая втулка / муфта)':'0 — Internal thread (threaded bushing / sleeve)'}}</option>
             <option :value="1">{{ru?'1 — Наружная резьба + гладкий канал (штуцер)':'1 — External thread + smooth bore (hollow stud)'}}</option>
-            <option :value="2">{{ru?'2 — Переходная футорка (внутренняя + наружная резьба)':'2 — Reducer adapter (internal + external threads)'}}</option>
+            <option :value="2">{{ru?'2 — Переходная футорка (внутренняя + наружная по всей длине)':'2 — Reducer adapter (full-length internal + external)'}}</option>
           </select>
           <select v-else-if="key==='outer_shape'" v-model.number="values[key]" @change="lastEditedKey=String(key)">
             <option :value="0">{{ru?'0 — Круглая гладкая':'0 — Round smooth'}}</option>
@@ -147,7 +181,7 @@ function openEditor(save:boolean){
         </div>
         <fieldset v-if="kind==='bushing'" class="hook-fields">
           <legend>{{ru?'Опорный буртик / фланец':'Flange / collar'}}</legend>
-          <p class="hint">{{ru?'Буртик располагается на нижнем торце (z = 0) для удобной печати без поддержек. Можно выбрать круглую, шестигранную или квадратную форму и добавить крепёжные отверстия по окружности.':'The flange sits on the bottom face (z = 0) for support-free printing. Choose a round, hex or square collar and optionally add bolt-circle mounting holes.'}}</p>
+          <p class="hint">{{ru?'Буртик располагается на нижнем торце (z = 0) для удобной печати без поддержек. Для стыкуемой заподлицо трубки «мама–папа» оставьте буртик выключенным.':'The flange sits on the bottom face (z = 0) for support-free printing. Leave disabled for flush stackable female–male tubes.'}}</p>
           <div class="fields"><label v-for="(value,key) in bushingFlangeValues" :key="key" :class="{check:typeof value==='boolean'}">
             <span>{{names[key]?.[ru?0:1]??key}}</span>
             <select v-if="key==='flange_shape'" v-model.number="values[key]" @change="lastEditedKey=String(key)">
@@ -221,6 +255,7 @@ function openEditor(save:boolean){
 <style scoped>
 .mechanical-dialog{box-sizing:border-box;width:min(650px,calc(100vw - 32px));max-height:90vh;overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:24px;box-shadow:0 18px 70px #0005}
 .hook-fields{margin:18px 0 0;border:1px solid var(--border);border-radius:8px;padding:12px}.hook-fields legend{font-weight:600;padding:0 6px}.hook-fields .fields{margin:12px 0 0}
+.bushing-summary{margin:10px 0 0;padding:10px 12px;border-radius:8px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border));background:color-mix(in srgb,var(--accent) 10%,transparent);font-size:12.5px;line-height:1.45}
 .spinner-suggestions{display:grid;gap:8px;margin:0 0 16px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));border-radius:8px;background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .spinner-suggestion-item{display:grid;gap:4px}
 .spinner-suggestion-desc{font-size:12px;opacity:.85}

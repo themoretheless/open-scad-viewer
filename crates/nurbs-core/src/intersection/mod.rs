@@ -35,6 +35,7 @@ pub mod self_surface;
 pub mod ss_intersection;
 /// Contact certificates for surface/surface sections (formerly `crate::surface_contact`).
 pub mod surface_contact;
+pub mod surface_contact_class;
 /// Conservative contact search over two surface domains (formerly `crate::surface_contact_search`).
 pub mod surface_contact_search;
 /// Adaptive octree isosurface extraction from SDFs: dual contouring with QEF,

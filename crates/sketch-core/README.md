@@ -31,8 +31,18 @@ The default `codec` feature provides existing value-codec implementations in a
 separate module. Use `default-features = false` to link the solver alone.
 
 Constraints include fixed/coincident points, horizontal/vertical lines, distance,
-parallel/perpendicular/equal-length segments, circle radius, point-on-circle and
-line/circle or circle/circle tangency. Admission bounds input to 24 points,
-12 circles and 96 constraints, with finite coordinates bounded by 1e6. Tolerance
+parallel/perpendicular/equal-length segments, symmetry, circle radius, point-on-circle
+and line/circle or circle/circle tangency. Admission bounds input to 512 points,
+256 circles and 2048 constraints, with finite coordinates bounded by 1e6. Tolerance
 is 1e-8..0.1; the damped least-squares solver takes at most 96 iterations.
 Status and residuals must be inspected: convergence is not globally certified.
+
+`plan_dr` adds local first-order rigid-cluster and redundancy/underconstraint reports.
+`solve_with_pipeline` exposes DR planning, bounded analytic seeding and the same global
+solver as separate stages. Equations are normalized by the sketch AABB diagonal while
+public residuals stay in model units. `suggest_constraints` only proposes constraints;
+it never applies them. Circular patterns use the existing equal-length constraints.
+
+`validate_profile` validates polygonal outer/hole loops before a host extrusion.
+`PersistentIds` and `RebuildMap` provide sidecar stable identities through explicit
+rebuild correspondence without changing `Sketch` literals or constraint serialization.

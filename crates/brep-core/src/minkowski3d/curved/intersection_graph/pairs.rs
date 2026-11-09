@@ -20,6 +20,34 @@ pub(super) fn construct(
             pieces: vec![],
         });
     }
+    // Coincident carriers are two-dimensional trim-region problems, not
+    // one-dimensional marching branches. Near coincidence likewise needs an
+    // interval/material arbitration proof before physical branch authorship.
+    use crate::boolean_robustness::CoincidentFaceClass;
+    match crate::boolean_robustness::preclassify_coincident_faces(
+        build.models[0],
+        faces[0],
+        build.models[1],
+        faces[1],
+    )? {
+        CoincidentFaceClass::IdenticalCarrier | CoincidentFaceClass::EquivalentNurbs(_) => {
+            return Err(fail(
+                "identical face carrier requires the certified same-surface UV trim Boolean",
+            ));
+        }
+        CoincidentFaceClass::CoincidentPlane { .. }
+        | CoincidentFaceClass::CoincidentCylinder { .. } => {
+            return Err(fail(
+                "coincident planar faces require a certified 2D trim-region Boolean",
+            ));
+        }
+        CoincidentFaceClass::NearCoincident => {
+            return Err(fail(
+                "near-coincident face pair requires interval arbitration before marching",
+            ));
+        }
+        CoincidentFaceClass::NonCoincident => {}
+    }
     let physical = physical::construct(build, faces)?;
     let events = if physical.native.branches().is_empty() {
         vec![]

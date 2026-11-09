@@ -13,8 +13,8 @@ mod bspline_quadric_identity;
 pub use bspline_quadric_identity::*;
 mod bezier_line_image;
 mod oriented_ray_fan;
-pub use oriented_ray_fan::{RayFanOutcome, RayFanDecision, oriented_ray_fan};
-pub use bezier_line_image::{LineImageOutcome, LineImageDecision, rational_bezier_axis_line_image};
+pub use bezier_line_image::{LineImageDecision, LineImageOutcome, rational_bezier_axis_line_image};
+pub use oriented_ray_fan::{RayFanDecision, RayFanOutcome, oriented_ray_fan};
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
 mod line_chart_identity;
@@ -33,8 +33,8 @@ mod bezier_identity;
 mod bezier_trim_join;
 pub use bezier_trim_join::rational_bezier_uv_trim_join_identity;
 mod bezier_restriction_identity;
-pub use bezier_restriction_identity::rational_bezier_restriction_identity;
 pub use bezier_identity::*;
+pub use bezier_restriction_identity::rational_bezier_restriction_identity;
 mod projective_strip_jets;
 pub use projective_strip_jets::*;
 mod curve_geometric_jets;
@@ -44,11 +44,14 @@ pub use bezier_strip_jets::*;
 mod bspline_internal_jets;
 pub use bspline_internal_jets::*;
 mod bspline_strip_jets;
-mod bspline_strip_spans;
-mod bspline_strip_nonlinear;
 mod bspline_strip_map;
-pub use bspline_strip_map::{rational_bspline_mapped_curve_identity,rational_bspline_mapped_curve_restriction_identity,rational_control_nets_constant_identity};
+mod bspline_strip_nonlinear;
+mod bspline_strip_spans;
 pub use bspline_strip_jets::*;
+pub use bspline_strip_map::{
+    rational_bspline_mapped_curve_identity, rational_bspline_mapped_curve_restriction_identity,
+    rational_control_nets_constant_identity,
+};
 mod bspline_trace_identity;
 pub use bspline_trace_identity::*;
 mod bspline_knot_jets;
@@ -58,6 +61,10 @@ pub use bspline_endpoint_jets::*;
 mod construction;
 mod construction3;
 mod context;
+mod operation_contract;
+pub use operation_contract::{
+    OperationBoundary, OperationToleranceContract, declare_brep_tolerance_contract,
+};
 mod recipe_codec3;
 pub use recipe_codec3::*;
 
@@ -126,12 +133,6 @@ trait Algebra: Sized + Clone {
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason>;
 }
 
-
-
-
-
-
-
 pub fn orient2d(
     ctx: &mut PredicateContext<'_>,
     a: [LeafRef; 2],
@@ -150,10 +151,18 @@ pub fn orient2d(
 /// callers must establish nondegeneracy separately.
 pub fn direction_dot3d(
     ctx: &mut PredicateContext<'_>,
-    a: [LeafRef; 3], b: [LeafRef; 3], c: [LeafRef; 3], d: [LeafRef; 3],
+    a: [LeafRef; 3],
+    b: [LeafRef; 3],
+    c: [LeafRef; 3],
+    d: [LeafRef; 3],
 ) -> Result<Decision, InputError> {
-    evaluate(ctx, Predicate::DirectionDot3,
-        &[a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],d[0],d[1],d[2]])
+    evaluate(
+        ctx,
+        Predicate::DirectionDot3,
+        &[
+            a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2], d[0], d[1], d[2],
+        ],
+    )
 }
 
 pub fn orient3d(
@@ -204,7 +213,12 @@ pub fn incircle2d(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Sign {
     };
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
-    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    let pair = |offset: usize| {
+        [
+            source.leaf(offset).unwrap(),
+            source.leaf(offset + 1).unwrap(),
+        ]
+    };
     match incircle2d_authored(&mut ctx, pair(0), pair(2), pair(4), pair(6)) {
         Ok(Decision {
             outcome: Outcome::Sign(sign),
@@ -213,10 +227,6 @@ pub fn incircle2d(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> Sign {
         _ => Sign::Zero,
     }
 }
-
-
-
-
 
 fn distance_references(
     ctx: &PredicateContext<'_>,
@@ -274,8 +284,6 @@ pub enum ModelClass {
     Indeterminate(Reason),
 }
 
-
-
 pub fn classify_residual(
     ctx: &mut PredicateContext<'_>,
     residual: Option<&ProvenResidual>,
@@ -306,7 +314,9 @@ pub fn classify_residual(
 mod tests;
 
 mod bspline_lift_point;
-pub use bspline_lift_point::{SplinePointLiftDecision, rational_bspline_curve_surface_point_identity};
+pub use bspline_lift_point::{
+    SplinePointLiftDecision, rational_bspline_curve_surface_point_identity,
+};
 mod bezier_point_identity;
 pub use bezier_point_identity::*;
 
@@ -324,7 +334,6 @@ pub use bilinear_graph_side::rational_bilinear_graph_side;
 
 mod planar_bezier_roots;
 pub use planar_bezier_roots::*;
-
 
 /// Authored 3D insphere predicate: positive when `e` lies strictly inside the
 /// sphere through `(a, b, c, d)` when `orient3d(a, b, c, d)` is positive,
@@ -347,8 +356,6 @@ pub fn insphere3d_authored(
     )
 }
 
-
-
 /// Fast 2D axis-aligned bounding-box rejection filter: returns `true` when closed
 /// boxes `[min_a, max_a]` and `[min_b, max_b]` do not overlap.
 #[inline]
@@ -367,10 +374,6 @@ pub fn aabb3_disjoint(min_a: [f64; 3], max_a: [f64; 3], min_b: [f64; 3], max_b: 
         || max_a[2] < min_b[2]
         || max_b[2] < min_a[2]
 }
-
-
-
-
 
 /// Exact 3D point-in-tetrahedron classification using adaptive `orient3d` predicates.
 /// Returns `Sign::Positive` when `p` is strictly inside tetrahedron `(a, b, c, d)`,
@@ -519,8 +522,16 @@ pub fn segment_triangle_intersect_3d_exact(
         return Sign::Negative;
     }
     let coplanar_pt_in_tri = |p: [f64; 3]| -> Sign {
-        let ab = [tri_b[0] - tri_a[0], tri_b[1] - tri_a[1], tri_b[2] - tri_a[2]];
-        let ac = [tri_c[0] - tri_a[0], tri_c[1] - tri_a[1], tri_c[2] - tri_a[2]];
+        let ab = [
+            tri_b[0] - tri_a[0],
+            tri_b[1] - tri_a[1],
+            tri_b[2] - tri_a[2],
+        ];
+        let ac = [
+            tri_c[0] - tri_a[0],
+            tri_c[1] - tri_a[1],
+            tri_c[2] - tri_a[2],
+        ];
         let nx = (ab[1] * ac[2] - ab[2] * ac[1]).abs();
         let ny = (ab[2] * ac[0] - ab[0] * ac[2]).abs();
         let nz = (ab[0] * ac[1] - ab[1] * ac[0]).abs();
@@ -539,8 +550,16 @@ pub fn segment_triangle_intersect_3d_exact(
         )
     };
     if oa == Sign::Zero && ob == Sign::Zero {
-        let ab = [tri_b[0] - tri_a[0], tri_b[1] - tri_a[1], tri_b[2] - tri_a[2]];
-        let ac = [tri_c[0] - tri_a[0], tri_c[1] - tri_a[1], tri_c[2] - tri_a[2]];
+        let ab = [
+            tri_b[0] - tri_a[0],
+            tri_b[1] - tri_a[1],
+            tri_b[2] - tri_a[2],
+        ];
+        let ac = [
+            tri_c[0] - tri_a[0],
+            tri_c[1] - tri_a[1],
+            tri_c[2] - tri_a[2],
+        ];
         let nx = (ab[1] * ac[2] - ab[2] * ac[1]).abs();
         let ny = (ab[2] * ac[0] - ab[0] * ac[2]).abs();
         let nz = (ab[0] * ac[1] - ab[1] * ac[0]).abs();
@@ -581,11 +600,9 @@ pub fn segment_triangle_intersect_3d_exact(
         };
     }
     // oa and ob have strictly opposite signs: segment straddles the triangle plane.
-    let (Some(s0), Some(s1), Some(s2)) = (
-        orient(0, 3, 6, 9),
-        orient(0, 3, 9, 12),
-        orient(0, 3, 12, 6),
-    ) else {
+    let (Some(s0), Some(s1), Some(s2)) =
+        (orient(0, 3, 6, 9), orient(0, 3, 9, 12), orient(0, 3, 12, 6))
+    else {
         return Sign::Negative;
     };
     // Because orient3d(tri_a, tri_b, tri_c, seg_a) = oa and orient3d(tri_a, tri_b, tri_c, seg_b) = ob = -oa,
@@ -698,7 +715,12 @@ pub fn barycentric_in_triangle_2d_exact(
         return (Sign::Zero, Sign::Zero, Sign::Zero);
     };
     let tolerance = ToleranceContext::default_valid();
-    let pair = |offset: usize| [source.leaf(offset).unwrap(), source.leaf(offset + 1).unwrap()];
+    let pair = |offset: usize| {
+        [
+            source.leaf(offset).unwrap(),
+            source.leaf(offset + 1).unwrap(),
+        ]
+    };
     let orient = |q0: usize, q1: usize, q2: usize| -> Sign {
         let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
         match orient2d(&mut ctx, pair(q0), pair(q1), pair(q2)) {
@@ -712,41 +734,47 @@ pub fn barycentric_in_triangle_2d_exact(
     (orient(2, 4, 6), orient(4, 0, 6), orient(0, 2, 6))
 }
 
-#[path="lib/algorithm_expression.rs"]
+#[path = "lib/algorithm_expression.rs"]
 mod algorithm_expression;
 use algorithm_expression::expression;
-#[path="lib/algorithm_exact_inputs.rs"]
+#[path = "lib/algorithm_exact_inputs.rs"]
 mod algorithm_exact_inputs;
 use algorithm_exact_inputs::exact_inputs;
-#[path="lib/algorithm_evaluate.rs"]
+#[path = "lib/algorithm_evaluate.rs"]
 mod algorithm_evaluate;
 use algorithm_evaluate::evaluate;
-#[path="lib/algorithm_coplanar3d.rs"]
+#[path = "lib/algorithm_coplanar3d.rs"]
 mod algorithm_coplanar3d;
 pub use algorithm_coplanar3d::coplanar3d;
-#[path="lib/algorithm_collinear3d.rs"]
+#[path = "lib/algorithm_collinear3d.rs"]
 mod algorithm_collinear3d;
 pub use algorithm_collinear3d::collinear3d;
-#[path="lib/algorithm_distance_enclosure.rs"]
+#[path = "lib/algorithm_distance_enclosure.rs"]
 mod algorithm_distance_enclosure;
 pub use algorithm_distance_enclosure::distance_enclosure;
-#[path="lib/algorithm_insphere3d.rs"]
+#[path = "lib/algorithm_insphere3d.rs"]
 mod algorithm_insphere3d;
 pub use algorithm_insphere3d::insphere3d;
-#[path="lib/algorithm_segment_intersects_segment_2d.rs"]
+#[path = "lib/algorithm_segment_intersects_segment_2d.rs"]
 mod algorithm_segment_intersects_segment_2d;
 pub use algorithm_segment_intersects_segment_2d::segment_intersects_segment_2d;
-#[path="lib/algorithm_point_in_triangle_2d.rs"]
+#[path = "lib/algorithm_point_in_triangle_2d.rs"]
 mod algorithm_point_in_triangle_2d;
 pub use algorithm_point_in_triangle_2d::point_in_triangle_2d;
 mod pole_quadratic_jet;
-pub use pole_quadratic_jet::{PoleQuadraticJet, PoleQuadraticJetDecision, rational_surface_pole_quadratic_jet, compare_pole_quadratic_jets};
+pub use pole_quadratic_jet::{
+    PoleQuadraticJet, PoleQuadraticJetDecision, compare_pole_quadratic_jets,
+    rational_surface_pole_quadratic_jet,
+};
 
 mod natural_meridian_g2;
 pub use natural_meridian_g2::{rational_natural_meridian_g1, rational_natural_meridian_g2};
 
 mod paired_graph_projection;
-pub use paired_graph_projection::{CurveGraphProjectionDecision, PairedGraphProjectionDecision, binary_curve_graph_projection, binary_paired_graph_projection};
+pub use paired_graph_projection::{
+    CurveGraphProjectionDecision, PairedGraphProjectionDecision, binary_curve_graph_projection,
+    binary_paired_graph_projection,
+};
 
 mod bezier_curvature_bound;
 pub use bezier_curvature_bound::*;
