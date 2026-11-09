@@ -3,6 +3,7 @@
 //! Does not depend on polygon-core, serialization, WASM or an executor.
 pub mod body_queries;
 pub mod bvh;
+pub mod bvh_codec;
 pub mod bvh_query;
 pub mod bvh_range;
 pub mod display;
