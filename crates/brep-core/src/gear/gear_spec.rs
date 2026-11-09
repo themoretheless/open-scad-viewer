@@ -103,6 +103,137 @@ pub(super) fn line2(a: [f64; 2], b: [f64; 2]) -> Curve {
     }
 }
 
+/// Smooth quadratic Bezier corner fillet between `p0` and `p2` with corner
+/// control point `p1`, tangent to both adjoining segments.
+pub(super) fn corner_fillet2(p0: [f64; 2], p1: [f64; 2], p2: [f64; 2]) -> Curve {
+    Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![p0.to_vec(), p1.to_vec(), p2.to_vec()],
+        weights: vec![1., 1., 1.],
+        periodic: false,
+    }
+}
+
+/// Smoothly rounds the outer tip corners of a quintic involute flank (`u = 1`
+/// for a rising flank, `u = 0` for a falling flank) so the flank transitions
+/// tangentially into the shortened tip arc `[center - tip_arc_half, center + tip_arc_half]`.
+pub(super) fn round_flank_tip_corner(
+    curve: &mut Curve,
+    high: f64,
+    center: f64,
+    tip_arc_half: f64,
+    is_rising: bool,
+) {
+    let n = curve.control_points.len();
+    if n < 6 {
+        return;
+    }
+    let tip_angle = if is_rising {
+        center - tip_arc_half
+    } else {
+        center + tip_arc_half
+    };
+    let end = polar(high, tip_angle);
+    // Tangent direction along the CCW tip circle at `tip_angle`
+    let tangent = [-tip_angle.sin(), tip_angle.cos()];
+    if is_rising {
+        let p_in = [curve.control_points[n - 3][0], curve.control_points[n - 3][1]];
+        let chord = (end[0] - p_in[0]).hypot(end[1] - p_in[1]);
+        let handle = (chord * 0.45).max(1e-6);
+        let p_prev = [
+            end[0] - handle * tangent[0],
+            end[1] - handle * tangent[1],
+        ];
+        curve.control_points[n - 1] = end.to_vec();
+        curve.control_points[n - 2] = p_prev.to_vec();
+        curve.control_points[n - 3] = [
+            0.5 * (p_in[0] + p_prev[0]),
+            0.5 * (p_in[1] + p_prev[1]),
+        ]
+        .to_vec();
+    } else {
+        let p_in = [curve.control_points[2][0], curve.control_points[2][1]];
+        let chord = (p_in[0] - end[0]).hypot(p_in[1] - end[1]);
+        let handle = (chord * 0.45).max(1e-6);
+        let p_next = [
+            end[0] + handle * tangent[0],
+            end[1] + handle * tangent[1],
+        ];
+        curve.control_points[0] = end.to_vec();
+        curve.control_points[1] = p_next.to_vec();
+        curve.control_points[2] = [
+            0.5 * (p_in[0] + p_next[0]),
+            0.5 * (p_in[1] + p_next[1]),
+        ]
+        .to_vec();
+    }
+}
+
+/// Smoothly rounds the inner corners of a quintic involute flank on an internal
+/// gear (`start == low`) so both the tip (`low`) and root (`high`) junctions
+/// transition smoothly into their circular arcs.
+pub(super) fn round_internal_flank_corners(
+    curve: &mut Curve,
+    low: f64,
+    high: f64,
+    center: f64,
+    low_arc_half: f64,
+    high_arc_half: f64,
+    is_rising: bool,
+) {
+    let n = curve.control_points.len();
+    if n < 6 {
+        return;
+    }
+    let sign = if is_rising { -1. } else { 1. };
+    let low_angle = center + sign * low_arc_half;
+    let high_angle = center + sign * high_arc_half;
+    let p_low = polar(low, low_angle);
+    let p_high = polar(high, high_angle);
+    let t_low = [-low_angle.sin(), low_angle.cos()];
+    let t_high = [-high_angle.sin(), high_angle.cos()];
+    if is_rising {
+        // u=0 is at `low` (after preceding low arc), u=1 is at `high` (before high arc)
+        let p2 = [curve.control_points[2][0], curve.control_points[2][1]];
+        let h0 = ((p2[0] - p_low[0]).hypot(p2[1] - p_low[1]) * 0.42).max(1e-6);
+        let p1 = [p_low[0] + h0 * t_low[0], p_low[1] + h0 * t_low[1]];
+        curve.control_points[0] = p_low.to_vec();
+        curve.control_points[1] = p1.to_vec();
+        curve.control_points[2] = [0.5 * (p1[0] + p2[0]), 0.5 * (p1[1] + p2[1])].to_vec();
+
+        let p_in = [curve.control_points[n - 3][0], curve.control_points[n - 3][1]];
+        let h1 = ((p_high[0] - p_in[0]).hypot(p_high[1] - p_in[1]) * 0.42).max(1e-6);
+        let p_prev = [p_high[0] - h1 * t_high[0], p_high[1] - h1 * t_high[1]];
+        curve.control_points[n - 1] = p_high.to_vec();
+        curve.control_points[n - 2] = p_prev.to_vec();
+        curve.control_points[n - 3] = [
+            0.5 * (p_in[0] + p_prev[0]),
+            0.5 * (p_in[1] + p_prev[1]),
+        ]
+        .to_vec();
+    } else {
+        // u=0 is at `high` (after high arc), u=1 is at `low` (before low arc)
+        let p2 = [curve.control_points[2][0], curve.control_points[2][1]];
+        let h0 = ((p2[0] - p_high[0]).hypot(p2[1] - p_high[1]) * 0.42).max(1e-6);
+        let p1 = [p_high[0] + h0 * t_high[0], p_high[1] + h0 * t_high[1]];
+        curve.control_points[0] = p_high.to_vec();
+        curve.control_points[1] = p1.to_vec();
+        curve.control_points[2] = [0.5 * (p1[0] + p2[0]), 0.5 * (p1[1] + p2[1])].to_vec();
+
+        let p_in = [curve.control_points[n - 3][0], curve.control_points[n - 3][1]];
+        let h1 = ((p_low[0] - p_in[0]).hypot(p_low[1] - p_in[1]) * 0.42).max(1e-6);
+        let p_prev = [p_low[0] - h1 * t_low[0], p_low[1] - h1 * t_low[1]];
+        curve.control_points[n - 1] = p_low.to_vec();
+        curve.control_points[n - 2] = p_prev.to_vec();
+        curve.control_points[n - 3] = [
+            0.5 * (p_in[0] + p_prev[0]),
+            0.5 * (p_in[1] + p_prev[1]),
+        ]
+        .to_vec();
+    }
+}
+
 /// Exact circular arc about the origin from `from` to `to` (sweep below a
 /// half turn, either sense).
 pub(super) fn arc2(r: f64, from: f64, to: f64) -> Result<Curve> {
@@ -340,8 +471,30 @@ pub fn profile_with_report(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeom
             "Gear tooth profile collapses or overlaps; change teeth, pressure angle, backlash or clearance",
         ));
     }
+    let round_corners = spec.backlash > 0.;
+    let root_fillet_angle = if !spec.internal && round_corners && start > low + 1e-12 {
+        let gap_half = (step / 2. - low_half).max(0.);
+        ((start - low) * 0.72 / low).min(gap_half * 0.44)
+    } else if spec.internal && round_corners {
+        let gap_half = (step / 2. - low_half).max(0.);
+        (0.18 * spec.module / low).min(gap_half * 0.35)
+    } else {
+        0.
+    };
+    let tip_fillet_angle = if round_corners {
+        (0.18 * spec.module / high).min(high_half * 0.35)
+    } else {
+        0.
+    };
     let t0 = ((start / base).powi(2) - 1.).max(0.).sqrt();
     let t1 = ((high / base).powi(2) - 1.).max(0.).sqrt();
+    let t0_flank = if !spec.internal && round_corners && start > low + 1e-12 {
+        let r_join = (start + 0.14 * spec.module).min(start + 0.25 * (high - start));
+        ((r_join / base).powi(2) - 1.).max(0.).sqrt()
+    } else {
+        t0
+    };
+    let flank_start_half = half(base * t0_flank.hypot(1.));
     let mut flank_deviation: f64 = 0.;
     let ideal = nurbs_core::involute::derive_gear_parameter_bounds(
         spec.module,
@@ -359,16 +512,10 @@ pub fn profile_with_report(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeom
     let mut tooth: Vec<Curve> = Vec::new();
     for i in 0..spec.teeth {
         let center = i as f64 * step + if spec.internal { step / 2. } else { 0. };
-        if start > low + 1e-12 {
-            tooth.push(line2(
-                polar(low, center - low_half),
-                polar(start, center - low_half),
-            ));
-        }
-        let (rising, d1) = involute(base, t0, t1, center, -1., &half)?;
-        let (falling, d2) = involute(base, t1, t0, center, 1., &half)?;
+        let (mut rising, d1) = involute(base, t0_flank, t1, center, -1., &half)?;
+        let (mut falling, d2) = involute(base, t1, t0_flank, center, 1., &half)?;
         flank_deviation = flank_deviation.max(d1).max(d2);
-        if spec.internal {
+        if spec.internal && !round_corners {
             // The hole reverses each flank a second time. Recheck the actual
             // saved reverse knots rather than assuming subtraction is exact.
             for (curve, from, to, sign) in [(&rising, t1, t0, -1.), (&falling, t0, t1, 1.)] {
@@ -390,7 +537,7 @@ pub fn profile_with_report(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeom
                 flank_deviation = flank_deviation.max(proof.error_upper);
             }
         }
-        if let Some(ideal) = &ideal {
+        if let Some(ideal) = (!round_corners).then_some(ideal.as_ref()).flatten() {
             use nurbs_core::interval_eval::Interval as I;
             let step = I::new(ideal.tooth_step[0], ideal.tooth_step[1])?;
             let nominal_center =
@@ -425,16 +572,74 @@ pub fn profile_with_report(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeom
                 }
             }
         }
+        if round_corners {
+            full_flank_certified = false;
+            if spec.internal && start <= low + 1e-12 {
+                let low_arc_half = low_half + root_fillet_angle;
+                let high_arc_half = (high_half - tip_fillet_angle).max(1e-5);
+                round_internal_flank_corners(
+                    &mut rising,
+                    low,
+                    high,
+                    center,
+                    low_arc_half,
+                    high_arc_half,
+                    true,
+                );
+                round_internal_flank_corners(
+                    &mut falling,
+                    low,
+                    high,
+                    center,
+                    low_arc_half,
+                    high_arc_half,
+                    false,
+                );
+            } else {
+                let tip_arc_half = (high_half - tip_fillet_angle).max(1e-5);
+                round_flank_tip_corner(&mut rising, high, center, tip_arc_half, true);
+                round_flank_tip_corner(&mut falling, high, center, tip_arc_half, false);
+            }
+        }
+        if start > low + 1e-12 {
+            if root_fillet_angle > 1e-9 {
+                let p0 = polar(low, center - low_half - root_fillet_angle);
+                let p1 = polar(low, center - flank_start_half);
+                let p2 = [rising.control_points[0][0], rising.control_points[0][1]];
+                tooth.push(corner_fillet2(p0, p1, p2));
+            } else {
+                tooth.push(line2(
+                    polar(low, center - low_half),
+                    polar(start, center - low_half),
+                ));
+            }
+        }
+        let falling_last = {
+            let last = falling.control_points.last().unwrap();
+            [last[0], last[1]]
+        };
         tooth.push(rising);
-        tooth.push(arc2(high, center - high_half, center + high_half)?);
+        let tip_arc_half = (high_half - tip_fillet_angle).max(1e-5);
+        tooth.push(arc2(high, center - tip_arc_half, center + tip_arc_half)?);
         tooth.push(falling);
         if start > low + 1e-12 {
-            tooth.push(line2(
-                polar(start, center + low_half),
-                polar(low, center + low_half),
-            ));
+            if root_fillet_angle > 1e-9 {
+                let p0 = falling_last;
+                let p1 = polar(low, center + flank_start_half);
+                let p2 = polar(low, center + low_half + root_fillet_angle);
+                tooth.push(corner_fillet2(p0, p1, p2));
+            } else {
+                tooth.push(line2(
+                    polar(start, center + low_half),
+                    polar(low, center + low_half),
+                ));
+            }
         }
-        tooth.push(arc2(low, center + low_half, center + step - low_half)?);
+        tooth.push(arc2(
+            low,
+            center + low_half + root_fillet_angle,
+            center + step - low_half - root_fillet_angle,
+        )?);
     }
     let mut loops = Vec::new();
     if spec.internal {
@@ -531,11 +736,12 @@ pub(super) fn wall(
     z1: f64,
     theta0: f64,
     twist: f64,
+    loop_budget: f64,
     nominal: Option<([f64; 2], [f64; 2])>,
 ) -> Result<(Surface, f64, bool)> {
     let source = lift(c, z0);
     let approximation =
-        nurbs_core::helical_sweep::approximate(&source, z1 - z0, theta0, twist, SWEEP_FIT)?;
+        nurbs_core::helical_sweep::approximate(&source, z1 - z0, theta0, twist, loop_budget)?;
     if let Some((start, turn)) = nominal {
         if let Ok(certificate) = nurbs_core::helical_sweep::certify_stored(
             &source,
@@ -616,4 +822,6 @@ pub(super) fn unit_line(a: [f64; 2], b: [f64; 2]) -> Curve {
 
 /// Builds the gear solid. Returns the model and its geometry report.
 
-pub(super) fn outline(spec:&GearSpec)->Result<(Vec<Vec<Curve>>,GearGeometry)> { profile_with_report(spec) }
+pub(super) fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
+    profile_with_report(spec)
+}

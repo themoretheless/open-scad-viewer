@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { BOX_DEFAULTS, generateBox } from '../services/boxGenerator'
+import { BUSHING_DEFAULTS, computeBushingParameterSuggestions, generateBushing } from '../services/bushingGenerator'
+import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe, type SpinnerParameterSuggestion } from '../services/spinnerGenerator'
 import { computed, nextTick, ref, watch } from 'svet'
 import { stringifyMeshJson } from '../services/meshJson'
 import { compileRushGraph } from '../services/rushGraphCompiler'
@@ -7,10 +9,23 @@ import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEF
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()
 const dialog=ref<HTMLDialogElement|null>(null)
-const kind=ref<'gear'|'planetary_gears'|'thread'|'box'>('box')
+const kind=ref<'gear'|'planetary_gears'|'thread'|'bushing'|'box'|'spinner'|'spinner_safe'>('box')
 const values=ref<Record<string,number|boolean>>({...BOX_DEFAULTS,print_optimized:false,hook_chamfer:false})
 const bendEnabled=ref(false)
+const bushingExtraKeys=new Set(['flange','flange_diameter','flange_thickness','flange_shape','flange_holes','flange_hole_diameter','cross_hole_diameter','cross_hole_z','split_slot_width'])
 const visibleValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>{
+  if(kind.value==='bushing'){
+    if(bushingExtraKeys.has(key))return false
+    const mode=Number(values.value.thread_mode??0)
+    const hasInner=mode===0||mode===2
+    const hasOuter=mode===1||mode===2
+    if(['inner_pitch','inner_starts','inner_left_handed','inner_thread_depth'].includes(key))return hasInner
+    if(['outer_pitch','outer_starts','outer_left_handed'].includes(key))return hasOuter
+    if(key==='outer_shape')return !hasOuter
+    if(key==='wrench_flat_depth')return !hasOuter&&Number(values.value.outer_shape)===2
+    if(['knurl_count','knurl_depth'].includes(key))return !hasOuter&&Number(values.value.outer_shape)===4
+    return true
+  }
   if(kind.value!=='box')return true
   if(['bend_radius','bend_reverse','bend_segments'].includes(key))return false
   if(key.startsWith('hook_'))return false
@@ -28,7 +43,36 @@ const shapeValues=computed(()=>Object.fromEntries(Object.entries(visibleValues.v
 const gridValues=computed(()=>Object.fromEntries(Object.entries(visibleValues.value).filter(([key])=>gridKeys.has(key))))
 const hookValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>key.startsWith('hook_')&&(key!=='hook_tolerance'||Number(values.value.hook_mount)>0))))
 const bendValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>['bend_radius','bend_reverse','bend_segments'].includes(key))))
+const bushingFlangeValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>['flange','flange_diameter','flange_thickness','flange_shape','flange_holes','flange_hole_diameter'].includes(key)&&(key==='flange'||Boolean(values.value.flange))&&(key!=='flange_hole_diameter'||Number(values.value.flange_holes)>0))))
+const bushingFeatureValues=computed(()=>Object.fromEntries(Object.entries(values.value).filter(([key])=>['cross_hole_diameter','cross_hole_z','split_slot_width'].includes(key)&&(key!=='cross_hole_z'||Number(values.value.cross_hole_diameter)>0))))
 const error=ref('')
+const lastEditedKey=ref('')
+const spinnerSuggestions=computed<SpinnerParameterSuggestion[]>(()=>{
+  if(kind.value==='bushing'){
+    if(lastEditedKey.value){
+      const direct=computeBushingParameterSuggestions(lastEditedKey.value,values.value)
+      if(direct.length>0)return direct
+    }
+    for(const candidate of ['inner_diameter','outer_diameter']){
+      const fallback=computeBushingParameterSuggestions(candidate,values.value)
+      if(fallback.length>0)return fallback
+    }
+    return []
+  }
+  if(kind.value!=='spinner'&&kind.value!=='spinner_safe')return []
+  if(lastEditedKey.value){
+    const direct=computeSpinnerParameterSuggestions(lastEditedKey.value,values.value)
+    if(direct.length>0)return direct
+  }
+  for(const candidate of ['inner_radius','hole','outer_radius','inner_rim','outer_rim']){
+    const fallback=computeSpinnerParameterSuggestions(candidate,values.value)
+    if(fallback.length>0)return fallback
+  }
+  return []
+})
+function applySpinnerSuggestion(suggestion:SpinnerParameterSuggestion){
+  Object.assign(values.value,suggestion.changes)
+}
 const generated=ref<{source:string;document?:ReturnType<typeof compileRushGraph>['document']}|null>(null)
 const ru=computed(()=>props.locale==='ru')
 const names:Record<string,[string,string]>={
@@ -36,8 +80,10 @@ const names:Record<string,[string,string]>={
   corner_radius:['Скругление углов коробки, мм','Corner fillet radius, mm'],front_angle:['Наклон передней стенки, ° (+ наружу)','Front wall tilt, ° (+ outward)'],
   width:['Ширина, мм','Width, mm'],depth:['Глубина, мм','Depth, mm'],height:['Высота, мм','Height, mm'],floor:['Толщина дна, мм','Floor thickness, mm'],porous:['Открытые стенки','Open walls'],organic:['Органический каркас','Organic skeleton'],print_optimized:['Ячейки для печати дном вниз','Upright FDM cells'],overhang_angle:['Предельный свес от вертикали, °','Maximum overhang from vertical, °'],cell_size:['Средний радиус ячейки, мм','Average cell radius, mm'],cell_radius:['Скругление углов ячеек, мм','Cell corner radius, mm'],rib:['Перемычки стенок, мм','Wall rib width, mm'],stress_gradient:['Градиент сопромата (0 — равномерно, 1 — авто)','Structural gradient (0 = uniform, 1 = auto)'],mesh_density:['Плотность сетки (0.5–2, 1 — норма)','Mesh density scale (0.5–2, 1 = normal)'],floor_mesh:['Сетка на дне','Mesh floor'],floor_cell_size:['Средний радиус ячейки дна, мм','Average floor cell radius, mm'],floor_rib:['Перемычки дна, мм','Floor rib width, mm'],pattern_seed:['Вариант рисунка','Pattern seed'],hole_diameter:['Диаметр отверстий, мм','Hole diameter, mm'],hole_pitch:['Шаг отверстий, мм','Hole pitch, mm'],dividers:['Перегородки','Dividers'],drain:['Дренаж в дне','Drain holes'],hooks:['Крючки','Hooks'],hook_count:['Количество крючков','Hook count'],hook_width:['Ширина крючка, мм','Hook width, mm'],hook_thickness:['Толщина крючка, мм','Hook thickness, mm'],hook_spacing:['Между центрами, мм (0 — автоматически)','Center spacing, mm (0 = automatic)'],hook_gap:['Зазор под рейку, мм','Rail gap, mm'],hook_drop:['Длина зацепа, мм','Hook drop, mm'],hook_chamfer:['Косынка 45° под основанием крючка','45° root gusset under hook'],hook_mount:['Крепление крючков','Hook mounting'],hook_tolerance:['Монтажный зазор крючков, мм','Hook fit tolerance, mm'],
   teeth:['Число зубьев','Teeth'],module:['Модуль, мм','Module, mm'],pressure_angle:['Угол давления, °','Pressure angle, °'],thickness:['Толщина, мм','Thickness, mm'],bore:['Отверстие, мм','Bore diameter, mm'],backlash:['Боковой зазор на шестерню, мм','Backlash per gear, mm'],clearance:['Зазор, мм','Clearance, mm'],internal:['Внутренний вариант','Internal'],rim_width:['Толщина обода, мм','Rim width, mm'],flank_segments:['Сегменты боковой линии зуба','Flank segments'],sun_teeth:['Зубья солнечной шестерни','Sun teeth'],planet_teeth:['Зубья сателлита','Planet teeth'],planet_count:['Число сателлитов','Planets'],carrier_angle:['Поворот водила, °','Carrier angle, °'],diameter:['Диаметр резьбы, мм','Thread diameter, mm'],pitch:['Шаг резьбы, мм','Thread pitch, mm'],length:['Длина, мм','Length, mm'],wall:['Толщина стенки, мм','Wall thickness, mm'],starts:['Число заходов','Starts'],left_handed:['Левая резьба','Left handed'],segments_per_turn:['Сегменты на оборот','Segments per turn'],
+  inner_radius:['Внутренний радиус венца, мм','Inner ring radius, mm'],outer_radius:['Наружный радиус обода, мм','Outer rim radius, mm'],inner_rim:['Толщина внутреннего бортика (солнца), мм','Inner sun rim thickness, mm'],outer_rim:['Толщина наружного бортика (кольца), мм','Outer ring rim thickness, mm'],hole:['Центральное отверстие, мм','Center hole diameter, mm'],gap:['Боковой зазор в зацеплении, мм','Tooth backlash gap, mm'],helix:['Угол наклона шеврона, °','Herringbone helix angle, °'],
+  thread_mode:['Конфигурация резьбы','Thread configuration'],inner_diameter:['Внутренний диаметр (резьба/канал), мм','Inner diameter (thread/bore), mm'],inner_pitch:['Шаг внутренней резьбы, мм','Inner thread pitch, mm'],inner_starts:['Заходы внутренней резьбы','Inner thread starts'],inner_left_handed:['Левая внутренняя резьба','Left-handed inner thread'],inner_thread_depth:['Глубина внутренней резьбы, мм (0 — вся длина)','Inner thread depth, mm (0 = full)'],outer_diameter:['Наружный диаметр / размер под ключ, мм','Outer diameter / across-flats, mm'],outer_pitch:['Шаг наружной резьбы, мм','Outer thread pitch, mm'],outer_starts:['Заходы наружной резьбы','Outer thread starts'],outer_left_handed:['Левая наружная резьба','Left-handed outer thread'],outer_shape:['Форма наружного корпуса','Outer body profile'],wrench_flat_depth:['Глубина лысок под ключ, мм','Wrench flat depth, mm'],knurl_count:['Число шлицев накатки','Knurl spline count'],knurl_depth:['Глубина шлицев накатки, мм','Knurl spline depth, mm'],flange:['Опорный буртик (фланец)','Flange / collar'],flange_diameter:['Диаметр буртика, мм','Flange diameter, mm'],flange_thickness:['Толщина буртика, мм','Flange thickness, mm'],flange_shape:['Форма буртика','Flange shape'],flange_holes:['Крепёжные отверстия в буртике','Flange mounting holes'],flange_hole_diameter:['Диаметр отверстий в буртике, мм','Flange hole diameter, mm'],blind_bottom:['Толщина глухого дна, мм (0 — сквозная)','Blind bottom thickness, mm (0 = through)'],chamfer:['Заходная фаска 45°, мм','45° lead-in chamfer, mm'],cross_hole_diameter:['Поперечное отверстие (шплинт/винт), мм','Cross-hole diameter, mm'],cross_hole_z:['Высота поперечного отверстия, мм (0 — по центру)','Cross-hole Z height, mm (0 = centered)'],split_slot_width:['Продольный разрез (цанга), мм (0 — нет)','Split collet slot width, mm (0 = none)'],segments:['Сегменты на оборот','Segments per turn'],
 }
-watch(kind,()=>{bendEnabled.value=false;values.value={...(kind.value==='box'?{...BOX_DEFAULTS,print_optimized:false,hook_chamfer:false}:kind.value==='gear'?GEAR_DEFAULTS:kind.value==='thread'?THREAD_DEFAULTS:PLANETARY_DEFAULTS)};generated.value=null;error.value=''})
+watch(kind,()=>{bendEnabled.value=false;values.value={...(kind.value==='box'?{...BOX_DEFAULTS,print_optimized:false,hook_chamfer:false}:kind.value==='bushing'?{...BUSHING_DEFAULTS}:kind.value==='spinner'?SPINNER_DEFAULTS:kind.value==='spinner_safe'?SPINNER_SAFE_DEFAULTS:kind.value==='gear'?GEAR_DEFAULTS:kind.value==='thread'?THREAD_DEFAULTS:PLANETARY_DEFAULTS)};generated.value=null;error.value=''})
 watch(bendEnabled,enabled=>{if(kind.value==='box')values.value.bend_radius=enabled?Math.max(150,Number(values.value.bend_radius)||150):0})
 watch(()=>values.value.internal,internal=>{if(kind.value==='gear'&&internal){values.value.bore=0;if(Number(values.value.teeth)<36)values.value.teeth=72}})
 watch(values,()=>{generated.value=null;error.value=''},{deep:true})
@@ -46,20 +92,25 @@ function generate(){
   error.value=''
   try {
     const boxPayload={...values.value,bend_radius:bendEnabled.value?values.value.bend_radius:0}
-    generated.value=kind.value==='box'?{source:generateBox(boxPayload)}:compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))
-    if(kind.value==='box')openEditor(false)
+    generated.value=kind.value==='box'?{source:generateBox(boxPayload)}:kind.value==='bushing'?{source:generateBushing(values.value)}:kind.value==='spinner'?{source:generateSpinner(values.value)}:kind.value==='spinner_safe'?{source:generateSpinnerSafe(values.value)}:compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))
+    if(kind.value==='box'||kind.value==='bushing'||kind.value==='spinner'||kind.value==='spinner_safe')openEditor(false)
   }
   catch(e){generated.value=null;error.value=e instanceof Error?e.message:String(e)}
 }
 function download(){
   if(!generated.value)return
-  const url=URL.createObjectURL(new Blob([kind.value==='box'?generated.value.source:stringifyMeshJson(generated.value.document, 2)],{type:kind.value==='box'?'text/plain':'application/json'}))
-  const a=document.createElement('a');a.href=url;a.download=`${kind.value}.${kind.value==='box'?'scad':'rush.json'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  const isSpinner=kind.value==='spinner'||kind.value==='spinner_safe'
+  const isScad=kind.value==='box'||kind.value==='bushing'
+  const isSource=isScad||isSpinner
+  const ext=isScad?'scad':isSpinner?'r':'rush.json'
+  const url=URL.createObjectURL(new Blob([isSource?generated.value.source:stringifyMeshJson(generated.value.document, 2)],{type:isSource?'text/plain':'application/json'}))
+  const a=document.createElement('a');a.href=url;a.download=`${isSpinner?'spinner':kind.value}.${ext}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function openEditor(save:boolean){
   if(!generated.value)return
   if(save)emit('downloadCurrent')
-  emit('generate',generated.value.source,`${kind.value}.scad`);emit('close')
+  const isSpinner=kind.value==='spinner'||kind.value==='spinner_safe'
+  emit('generate',generated.value.source,`${isSpinner?'spinner':kind.value}.${isSpinner?'r':'scad'}`);emit('close')
 }
 </script>
 <template>
@@ -68,14 +119,55 @@ function openEditor(save:boolean){
       <header><h2 id="mechanical-title">{{ru?'Генераторы деталей':'Part generators'}}</h2><button type="button" :aria-label="ru?'Закрыть':'Close'" @click="emit('close')">×</button></header>
       <form @submit.prevent="generate">
         <label class="kind-label">{{ru?'Что построить':'Part type'}}
-          <select v-model="kind" :aria-label="ru?'Что построить':'Part type'"><option value="box">{{ru?'Коробка / органайзер':'Box / organizer'}}</option><option value="gear">{{ru?'Шестерня':'Gear'}}</option><option value="planetary_gears">{{ru?'Планетарная передача':'Planetary gearset'}}</option><option value="thread">{{ru?'Резьба':'Thread'}}</option></select>
+          <select v-model="kind" :aria-label="ru?'Что построить':'Part type'"><option value="box">{{ru?'Коробка / органайзер':'Box / organizer'}}</option><option value="bushing">{{ru?'Втулка с резьбой / футорка':'Threaded bushing / sleeve'}}</option><option value="spinner">{{ru?'Планетарный спиннер (вариант 1 — по радиусам)':'Planetary spinner (variant 1 — by radii)'}}</option><option value="spinner_safe">{{ru?'Планетарный спиннер (вариант 2 — по бортикам без ошибок)':'Planetary spinner (variant 2 — by rim walls, error-free)'}}</option><option value="gear">{{ru?'Шестерня':'Gear'}}</option><option value="planetary_gears">{{ru?'Планетарная передача':'Planetary gearset'}}</option><option value="thread">{{ru?'Резьба':'Thread'}}</option></select>
         </label>
-        <p class="hint">{{kind==='box'?(ru?'Радиус изгиба гнёт всю коробку дугой; 0 оставляет её прямой. При изгибе ширина — длина дуги задней стенки, глубина — по радиусу. Радиус углов скругляет только углы; положительный наклон раскрывает перед наружу, задняя стенка остаётся вертикальной. В режиме FDM ячейки сходятся наклонными рёбрами без горизонтальных потолков; учитываются изгиб и наклон корпуса. Угол свеса измеряется от вертикали. Крючки с загнутым вниз концом требуют отдельной проверки поддержек. Толщина стенки задаёт глубину рёбер, толщина перемычки — их ширину. Крючки под рейку требуют проверки посадки; нагрузка не испытана.':'Bend radius curves the whole box; 0 keeps it straight. When bent, width is the rear-wall arc length and depth is radial. Corner radius only rounds corners; positive tilt opens the front outward while the back stays vertical. FDM cells close with sloped ribs, without horizontal ceilings, accounting for body bend and tilt. Overhang is measured from vertical. Downturned hooks require a separate support check. Wall thickness controls rib depth; rib width controls the material between cells. Rail hooks require a fit test; load capacity is untested.'):kind==='planetary_gears'?(ru?'Солнце, сателлиты и неподвижный венец. Водило и оси нужно моделировать отдельно.':'Sun, planets and fixed ring. Model the carrier and shafts separately.'):kind==='thread'?(ru?'Наружный стержень или втулка с внутренней резьбой. Зазор подбирайте под свой принтер.':'Externally threaded rod or internally threaded sleeve. Adjust clearance for your printer.'):(ru?'Прямозубая эвольвентная шестерня или внутренний венец.':'Involute spur gear or internal ring.')}}</p>
+        <p class="hint">{{kind==='box'?(ru?'Радиус изгиба гнёт всю коробку дугой; 0 оставляет её прямой. При изгибе ширина — длина дуги задней стенки, глубина — по радиусу. Радиус углов скругляет только углы; положительный наклон раскрывает перед наружу, задняя стенка остаётся вертикальной. В режиме FDM ячейки сходятся наклонными рёбрами без горизонтальных потолков; учитываются изгиб и наклон корпуса. Угол свеса измеряется от вертикали. Крючки с загнутым вниз концом требуют отдельной проверки поддержек. Толщина стенки задаёт глубину рёбер, толщина перемычки — их ширину. Крючки под рейку требуют проверки посадки; нагрузка не испытана.':'Bend radius curves the whole box; 0 keeps it straight. When bent, width is the rear-wall arc length and depth is radial. Corner radius only rounds corners; positive tilt opens the front outward while the back stays vertical. FDM cells close with sloped ribs, without horizontal ceilings, accounting for body bend and tilt. Overhang is measured from vertical. Downturned hooks require a separate support check. Wall thickness controls rib depth; rib width controls the material between cells. Rail hooks require a fit test; load capacity is untested.'):kind==='bushing'?(ru?'Универсальная резьбовая втулка, штуцер или переходная футорка (внутренняя, наружная или двойная резьба ISO 60°). Поддерживает круглый, шестигранный, квадратный и рифлёный корпус, лыски под ключ, опорный буртик с крепёжными отверстиями, глухое дно, поперечное отверстие под шплинт/стопор и продольный разрез под цангу.':'Universal threaded bushing, hollow stud or reducer sleeve (internal, external or dual ISO 60° threads). Supports round, hex, wrench-flat, square and knurled outer bodies, flange collar with mounting holes, blind bottom, cross-hole and split collet slot.'):kind==='spinner'?(ru?'Неразборный шевронный планетарный спиннер (вариант 1 — классические параметры inner_radius и outer_radius; при изменении inner_radius нужно пропорционально менять outer_radius и hole).':'Print-in-place herringbone planetary spinner (variant 1 — classic inner_radius and outer_radius parameters).'):kind==='spinner_safe'?(ru?'Вариант 2 (без конфликтов радиусов): вы задаёте диаметр отверстия (hole), толщину внутреннего бортика солнца (inner_rim) и толщину наружного бортика кольца (outer_rim). Все радиусы и модуль зубьев пересчитываются автоматически без ошибок тонких стенок.':'Variant 2 (conflict-free): set center hole diameter (hole), inner sun rim thickness (inner_rim) and outer ring rim thickness (outer_rim). Gear radii and module scale automatically without wall-thickness errors.'):kind==='planetary_gears'?(ru?'Солнце, сателлиты и неподвижный венец. Водило и оси нужно моделировать отдельно.':'Sun, planets and fixed ring. Model the carrier and shafts separately.'):kind==='thread'?(ru?'Наружный стержень или втулка с внутренней резьбой. Зазор подбирайте под свой принтер.':'Externally threaded rod or internally threaded sleeve. Adjust clearance for your printer.'):(ru?'Прямозубая эвольвентная шестерня или внутренний венец.':'Involute spur gear or internal ring.')}}</p>
         <div class="fields"><label v-for="(value,key) in shapeValues" :key="key" :class="{check:typeof value==='boolean'}">
           <span>{{names[key]?.[ru?0:1]??key}}</span>
-          <input v-if="typeof value==='boolean'" v-model="values[key]" type="checkbox">
-          <input v-else v-model.number="values[key]" type="number" step="any" required>
+          <select v-if="key==='thread_mode'" v-model.number="values[key]" @change="lastEditedKey=String(key)">
+            <option :value="0">{{ru?'0 — Внутренняя резьба (резьбовая втулка / муфта)':'0 — Internal thread (threaded bushing / sleeve)'}}</option>
+            <option :value="1">{{ru?'1 — Наружная резьба + гладкий канал (штуцер)':'1 — External thread + smooth bore (hollow stud)'}}</option>
+            <option :value="2">{{ru?'2 — Переходная футорка (внутренняя + наружная резьба)':'2 — Reducer adapter (internal + external threads)'}}</option>
+          </select>
+          <select v-else-if="key==='outer_shape'" v-model.number="values[key]" @change="lastEditedKey=String(key)">
+            <option :value="0">{{ru?'0 — Круглая гладкая':'0 — Round smooth'}}</option>
+            <option :value="1">{{ru?'1 — Шестигранник под ключ (Hex)':'1 — Hex across flats'}}</option>
+            <option :value="2">{{ru?'2 — Круглая с двумя лысками под ключ':'2 — Round with 2 wrench flats'}}</option>
+            <option :value="3">{{ru?'3 — Квадратная (4 грани)':'3 — Square across flats'}}</option>
+            <option :value="4">{{ru?'4 — Рифлёная / накатка (продольные шлицы)':'4 — Knurled / longitudinal splines'}}</option>
+          </select>
+          <input v-else-if="typeof value==='boolean'" v-model="values[key]" type="checkbox" @change="lastEditedKey=String(key)">
+          <input v-else v-model.number="values[key]" type="number" step="any" required @input="lastEditedKey=String(key)">
         </label></div>
+        <div v-if="spinnerSuggestions.length>0" class="spinner-suggestions" role="region" :aria-label="ru?'Предложения для пересчёта связанных параметров':'Suggested parameter recalculations'">
+          <div v-for="(suggestion,idx) in spinnerSuggestions" :key="idx" class="spinner-suggestion-item">
+            <span class="spinner-suggestion-desc">{{suggestion.description}}</span>
+            <button type="button" class="spinner-suggestion-btn" @click="applySpinnerSuggestion(suggestion)">{{suggestion.title}}</button>
+          </div>
+        </div>
+        <fieldset v-if="kind==='bushing'" class="hook-fields">
+          <legend>{{ru?'Опорный буртик / фланец':'Flange / collar'}}</legend>
+          <p class="hint">{{ru?'Буртик располагается на нижнем торце (z = 0) для удобной печати без поддержек. Можно выбрать круглую, шестигранную или квадратную форму и добавить крепёжные отверстия по окружности.':'The flange sits on the bottom face (z = 0) for support-free printing. Choose a round, hex or square collar and optionally add bolt-circle mounting holes.'}}</p>
+          <div class="fields"><label v-for="(value,key) in bushingFlangeValues" :key="key" :class="{check:typeof value==='boolean'}">
+            <span>{{names[key]?.[ru?0:1]??key}}</span>
+            <select v-if="key==='flange_shape'" v-model.number="values[key]" @change="lastEditedKey=String(key)">
+              <option :value="0">{{ru?'0 — Круглый буртик':'0 — Round flange'}}</option>
+              <option :value="1">{{ru?'1 — Шестигранный под ключ':'1 — Hex flange'}}</option>
+              <option :value="2">{{ru?'2 — Квадратный фланец':'2 — Square flange'}}</option>
+            </select>
+            <input v-else-if="typeof value==='boolean'" v-model="values[key]" type="checkbox" @change="lastEditedKey=String(key)">
+            <input v-else v-model.number="values[key]" type="number" step="any" required @input="lastEditedKey=String(key)">
+          </label></div>
+        </fieldset>
+        <fieldset v-if="kind==='bushing'" class="hook-fields">
+          <legend>{{ru?'Дополнительные конструктивные элементы':'Additional mechanical features'}}</legend>
+          <p class="hint">{{ru?'Поперечное отверстие подходит для шплинта, стопорного винта или воротка (0 — отключено). Продольный разрез превращает втулку в разжимную/цанговую (0 — сплошная).':'A cross-hole accommodates a cotter pin, set screw or tommy bar (0 = disabled). A longitudinal split slot creates a clamping/collet sleeve (0 = solid).'}}</p>
+          <div class="fields"><label v-for="(value,key) in bushingFeatureValues" :key="key" :class="{check:typeof value==='boolean'}">
+            <span>{{names[key]?.[ru?0:1]??key}}</span>
+            <input v-if="typeof value==='boolean'" v-model="values[key]" type="checkbox" @change="lastEditedKey=String(key)">
+            <input v-else v-model.number="values[key]" type="number" step="any" required @input="lastEditedKey=String(key)">
+          </label></div>
+        </fieldset>
         <fieldset v-if="kind==='box'" class="hook-fields grid-fields">
           <legend>{{ru?'Сетка стенок и дна':'Wall and floor mesh'}}</legend>
           <p class="hint">{{ru?'Органическая сотовая/Вороной-сетка с 3-лучевыми узлами: градиент сопромата регулирует утолщение перемычек стенок к основанию и перемычек дна к контуру (0 — одинаковая толщина, 1 — расчётный градиент, до 2 — усиленный), а плотность сетки масштабирует частоту ячеек.':'Organic Voronoi/honeycomb web with trivalent nodes: structural gradient controls rib thickening toward the wall base and floor perimeter (0 = uniform, 1 = standard moment grading, up to 2 = reinforced), while mesh density scales cell frequency.'}}</p>
@@ -121,7 +213,7 @@ function openEditor(save:boolean){
       </form>
       <section v-if="generated" class="generated" aria-live="polite">
         <p>{{ru?'Модель создана. Открытие заменит текущий текст в редакторе.':'Model generated. Opening it replaces the current editor text.'}}</p>
-        <div class="actions"><button type="button" @click="download">{{kind==='box'?(ru?'Скачать SCAD':'Download SCAD'):(ru?'Скачать RushGraph':'Download RushGraph')}}</button><button type="button" @click="openEditor(true)">{{ru?'Скачать текущую и открыть':'Save current and open'}}</button><button class="primary" type="button" @click="openEditor(false)">{{ru?'Открыть в редакторе':'Open in editor'}}</button></div>
+        <div class="actions"><button type="button" @click="download">{{(kind==='box'||kind==='bushing')?(ru?'Скачать SCAD':'Download SCAD'):(ru?'Скачать RushGraph':'Download RushGraph')}}</button><button type="button" @click="openEditor(true)">{{ru?'Скачать текущую и открыть':'Save current and open'}}</button><button class="primary" type="button" @click="openEditor(false)">{{ru?'Открыть в редакторе':'Open in editor'}}</button></div>
       </section>
     </dialog>
   </Teleport>
@@ -129,5 +221,9 @@ function openEditor(save:boolean){
 <style scoped>
 .mechanical-dialog{box-sizing:border-box;width:min(650px,calc(100vw - 32px));max-height:90vh;overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:24px;box-shadow:0 18px 70px #0005}
 .hook-fields{margin:18px 0 0;border:1px solid var(--border);border-radius:8px;padding:12px}.hook-fields legend{font-weight:600;padding:0 6px}.hook-fields .fields{margin:12px 0 0}
+.spinner-suggestions{display:grid;gap:8px;margin:0 0 16px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));border-radius:8px;background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.spinner-suggestion-item{display:grid;gap:4px}
+.spinner-suggestion-desc{font-size:12px;opacity:.85}
+.spinner-suggestion-btn{text-align:left;font-size:13px;font-weight:600;border-color:color-mix(in srgb,var(--accent) 55%,var(--border))}
 .mechanical-dialog::backdrop{background:#0008}header{display:flex;align-items:center;justify-content:space-between;gap:16px}h2{font-size:20px;margin:0 0 16px}button,select,input{font:inherit;color:inherit;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);padding:8px}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}header button{font-size:24px;border:0;background:none}.kind-label{display:grid;gap:6px}.hint{font-size:13px;line-height:1.5;opacity:.8}.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}.fields label{display:grid;gap:6px;font-size:13px}.fields input{width:100%;box-sizing:border-box}.fields .check{display:flex;align-items:center;justify-content:space-between}.check input{width:auto}.primary{background:var(--accent);color:var(--accent-contrast,#fff)}.error{color:#df6262;overflow-wrap:anywhere}.generated{border-top:1px solid var(--border);margin-top:20px;padding-top:12px}.generated p{font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:8px}@media(max-width:480px){.fields{grid-template-columns:1fr}.mechanical-dialog{padding:16px}}
 </style>

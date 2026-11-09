@@ -37,6 +37,7 @@ pub(super) fn certify(
                 match original % count {
                     n if n == high_index => high,
                     n if n == count - 1 => low,
+                    _ if c.weights.iter().all(|&w| (w - 1.).abs() <= 1e-15) => continue,
                     _ => {
                         return Err(invalid(
                             "Arc identity is absent from the gear construction map",

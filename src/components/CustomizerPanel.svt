@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, ref, watch } from 'svet'
 import { batch, signal, type Signal } from '../forma/svet'
 import type { CustomizerParameter, CustomizerValue } from '../services/scadCustomizer'
+import { computeBushingParameterSuggestions } from '../services/bushingGenerator'
+import { computeSpinnerParameterSuggestions, type SpinnerParameterSuggestion } from '../services/spinnerGenerator'
 
 const props = defineProps<{
   errors?: string[]
@@ -12,9 +14,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   change: [name: string, value: CustomizerValue]
+  batchChange: [changes: Record<string, CustomizerValue>]
 }>()
 
 const query = ref('')
+const lastChangedParam = ref('')
 
 // Svet O(1) per-parameter reactive signals for 60-120fps slider drags
 const paramSignals = new Map<string, Signal<CustomizerValue>>()
@@ -82,6 +86,7 @@ function isModified(parameter: CustomizerParameter): boolean {
 function resetParameter(parameter: CustomizerParameter) {
   const init = initialValues.get(parameter.name)
   if (init === undefined) return
+  lastChangedParam.value = parameter.name
   getParamSignal(parameter).set(init)
   emit('change', parameter.name, init)
 }
@@ -90,6 +95,7 @@ function emitNumber(name: string, event: Event) {
   const input = event.target as HTMLInputElement
   if (input.value.trim() === '' || !Number.isFinite(input.valueAsNumber)) return
   const next = input.valueAsNumber
+  lastChangedParam.value = name
   paramSignals.get(name)?.set(next)
   emit('change', name, next)
 }
@@ -97,8 +103,45 @@ function emitNumber(name: string, event: Event) {
 function optionValue(parameter: CustomizerParameter, event: Event): CustomizerValue {
   const index = Number((event.target as HTMLSelectElement).value)
   const next = parameter.options?.[index] ?? parameter.value
+  lastChangedParam.value = parameter.name
   paramSignals.get(parameter.name)?.set(next)
   return next
+}
+
+const parameterSuggestions = computed<SpinnerParameterSuggestion[]>(() => {
+  const map: Record<string, CustomizerValue> = {}
+  for (const param of props.parameters) {
+    map[param.name] = readParamValue(param)
+  }
+  const active = lastChangedParam.value
+  if ('inner_diameter' in map && 'outer_diameter' in map) {
+    if (active) {
+      const directBushing = computeBushingParameterSuggestions(active, map)
+      if (directBushing.length > 0) return directBushing
+    }
+    for (const candidate of ['inner_diameter', 'outer_diameter']) {
+      const fallbackBushing = computeBushingParameterSuggestions(candidate, map)
+      if (fallbackBushing.length > 0) return fallbackBushing
+    }
+  }
+  if (active) {
+    const direct = computeSpinnerParameterSuggestions(active, map)
+    if (direct.length > 0) return direct
+  }
+  for (const candidate of ['inner_radius', 'hole', 'outer_radius', 'inner_rim', 'outer_rim']) {
+    const fallback = computeSpinnerParameterSuggestions(candidate, map)
+    if (fallback.length > 0) return fallback
+  }
+  return []
+})
+
+function applySuggestion(suggestion: SpinnerParameterSuggestion) {
+  batch(() => {
+    for (const [name, value] of Object.entries(suggestion.changes)) {
+      paramSignals.get(name)?.set(value)
+    }
+  })
+  emit('batchChange', suggestion.changes)
 }
 </script>
 
@@ -119,6 +162,14 @@ function optionValue(parameter: CustomizerParameter, event: Event): CustomizerVa
       <button v-if="query" type="button" class="clear-btn" aria-label="Clear filter" @click="query = ''">×</button>
     </div>
     <p v-for="(error, index) in errors" :key="index" class="validation-error" role="alert">{{ error }}</p>
+    <div v-if="parameterSuggestions.length > 0" class="suggestions-box" role="region" aria-label="Предложения по пересчёту параметров">
+      <div v-for="(suggestion, idx) in parameterSuggestions" :key="idx" class="suggestion-card">
+        <p class="suggestion-desc">{{ suggestion.description }}</p>
+        <button type="button" class="suggestion-btn" @click="applySuggestion(suggestion)">
+          {{ suggestion.title }}
+        </button>
+      </div>
+    </div>
     <p v-if="parameters.length === 0" class="empty">{{ emptyLabel }}</p>
     <div v-for="parameter in filteredParameters" :key="parameter.name" class="parameter" :class="{ modified: isModified(parameter) }">
       <label :for="`customizer-${parameter.name}`">
@@ -191,6 +242,11 @@ function optionValue(parameter: CustomizerParameter, event: Event): CustomizerVa
 
 <style scoped>
 .validation-error { color: #ff8989; margin: 8px 10px; font-size: .75rem; }
+.suggestions-box { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.suggestion-card { display: flex; flex-direction: column; gap: 4px; }
+.suggestion-desc { margin: 0; font-size: .66rem; color: var(--text-dim); line-height: 1.35; }
+.suggestion-btn { text-align: left; padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)); border-radius: 5px; background: var(--surface-raised); color: var(--text); font-size: .68rem; font-weight: 600; cursor: pointer; line-height: 1.3; }
+.suggestion-btn:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface-raised)); border-color: var(--accent); }
 .customizer { min-width: 0; color: var(--text); }
 header { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 0 10px; border-bottom: 1px solid var(--border); font-size: .72rem; font-weight: 650; letter-spacing: .02em; }
 .count { min-width: 19px; padding: 1px 5px; border-radius: 999px; background: var(--hover); color: var(--text-dim); text-align: center; font-size: .62rem; }

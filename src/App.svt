@@ -35,6 +35,8 @@ import CustomizerPanel from './components/CustomizerPanel.svt'
 const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.svt'))
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.svt'))
 import { BOX_DEFAULTS, generateBox } from './services/boxGenerator'
+import { BUSHING_DEFAULTS, generateBushing } from './services/bushingGenerator'
+import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from './services/spinnerGenerator'
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument, DirectBody } from './services/directModeling'
 import { APP_STRINGS as L, type Language } from './i18n/appStrings'
@@ -638,6 +640,7 @@ const {
   undoParameterPreset,
   removeParameterPreset,
   updateCustomizer,
+  updateCustomizerBatch,
 } = useParameterPresets({
   code,
   editorRef,
@@ -646,6 +649,19 @@ const {
   customizerParameters,
   bumpWorkspaceEditGeneration,
   scheduleWorkspacePersistence,
+})
+
+const editorParameterSuggestions = computed(() => {
+  if (!customizerParameters.value.length) return []
+  const map: Record<string, string | number | boolean> = {}
+  for (const param of customizerParameters.value) {
+    map[param.name] = param.value
+  }
+  for (const candidate of ['inner_radius', 'hole', 'outer_radius', 'inner_rim', 'outer_rim']) {
+    const suggestions = computeSpinnerParameterSuggestions(candidate, map)
+    if (suggestions.length > 0) return suggestions
+  }
+  return []
 })
 
 const stale = computed(() => renderedSource.value !== '' && (renderedSource.value !== code.value || renderedQuality.value === 'preview'))
@@ -910,9 +926,19 @@ onMounted(async () => {
     error.value = t('workerError')
   }
   if (sourceViewportVisible.value) await initializeViewportRenderer()
-  if (new URLSearchParams(location.search).get('generator') === 'box') {
+  const generatorQuery = new URLSearchParams(location.search).get('generator')
+  const needsSpinnerSafeLoad = fileName.value === 'spinner.r' && (!code.value.includes('param inner_rim') || !code.value.includes('planet_backlash'))
+  if (generatorQuery === 'box' || generatorQuery === 'bushing' || generatorQuery === 'spinner' || generatorQuery === 'spinner_safe' || generatorQuery === 'spinner1' || generatorQuery === 'planetary_spinner' || needsSpinnerSafeLoad) {
     await resolveWorkspaceConflict(true)
-    await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: false }), 'box.scad')
+    if (generatorQuery === 'box') {
+      await loadMechanicalModel(generateBox({ ...BOX_DEFAULTS, print_optimized: false, hook_chamfer: false }), 'box.scad')
+    } else if (generatorQuery === 'bushing') {
+      await loadMechanicalModel(generateBushing(BUSHING_DEFAULTS), 'bushing.scad')
+    } else if (generatorQuery === 'spinner1') {
+      await loadMechanicalModel(generateSpinner(SPINNER_DEFAULTS), 'spinner.r')
+    } else {
+      await loadMechanicalModel(generateSpinnerSafe(SPINNER_SAFE_DEFAULTS), 'spinner.r')
+    }
     await resolveWorkspaceConflict(true)
   }
 })
@@ -1016,6 +1042,10 @@ async function loadExample(id: string) {
 async function loadMechanicalModel(source: string, name: string) {
   groupEdit.value = null
   editorOpen.value = true
+  if (name === 'spinner.r' || name === 'bushing.scad') {
+    dockOpen.value = true
+    dockTab.value = 'params'
+  }
   await loadEditorDocument(source, name)
   await doRender('full')
 }
@@ -1280,6 +1310,14 @@ function handleShellBinding(path: string, value: unknown) {
             :maxlength="100000"
           />
         </div>
+        <div v-if="editorParameterSuggestions.length" class="message warning" role="region" aria-label="Предложения по пересчёту параметров">
+          <div v-for="(suggestion, idx) in editorParameterSuggestions" :key="idx" style="display:flex;flex-direction:column;gap:5px;margin-bottom:4px">
+            <span>💡 {{ suggestion.description }}</span>
+            <button type="button" class="btn" style="align-self:flex-start;font-weight:600" @click="updateCustomizerBatch(suggestion.changes)">
+              {{ suggestion.title }}
+            </button>
+          </div>
+        </div>
         <div v-if="error" class="message error" role="alert" aria-live="assertive">
           {{ error }}
         </div>
@@ -1391,6 +1429,14 @@ function handleShellBinding(path: string, value: unknown) {
         </div>
         </div>
 
+        <div v-if="editorParameterSuggestions.length" class="message warning" role="region" aria-label="Предложения по пересчёту параметров">
+          <div v-for="(suggestion, idx) in editorParameterSuggestions" :key="idx" style="display:flex;flex-direction:column;gap:5px;margin-bottom:4px">
+            <span>💡 {{ suggestion.description }}</span>
+            <button type="button" class="btn" style="align-self:flex-start;font-weight:600" @click="updateCustomizerBatch(suggestion.changes)">
+              {{ suggestion.title }}
+            </button>
+          </div>
+        </div>
         <div v-if="error" class="message error" role="alert" aria-live="assertive">
           <button v-if="editorDiagnostic" type="button" class="diagnostic-link" @click="revealCurrentDiagnostic">
             {{ error }} · {{ editorDiagnostic.line }}:{{ editorDiagnostic.column }}
@@ -1689,6 +1735,7 @@ function handleShellBinding(path: string, value: unknown) {
               :title="t('parameters')"
               :empty-label="t('noParameters')"
               @change="updateCustomizer"
+              @batch-change="updateCustomizerBatch"
             />
           </div>
           </div>

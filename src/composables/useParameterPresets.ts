@@ -171,6 +171,34 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
     } else code.value = applied.source
   }
 
+  function updateCustomizerBatch(changes: Record<string, CustomizerValue>) {
+    const entries = Object.entries(changes)
+      .map(([name, value]) => {
+        const parameter = customizerParameters.value.find(candidate => candidate.name === name)
+        return parameter ? { parameter, encoded: encodeCustomizerValue(value) } : null
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .sort((a, b) => b.parameter.valueStart - a.parameter.valueStart)
+    if (entries.length === 0) return
+    let nextSource = code.value
+    for (const { parameter, encoded } of entries) {
+      nextSource = applySourceSplice(nextSource, {
+        from: parameter.valueStart,
+        to: parameter.valueEnd,
+        insert: encoded,
+        expected: nextSource.slice(parameter.valueStart, parameter.valueEnd),
+        origin: 'customizer',
+      }).source
+    }
+    const editor = editorRef.value
+    if (editor) {
+      editor.value = nextSource
+      code.value = editor.value
+    } else {
+      code.value = nextSource
+    }
+  }
+
   return {
     presetName,
     presetSelection,
@@ -187,5 +215,6 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
     undoParameterPreset,
     removeParameterPreset,
     updateCustomizer,
+    updateCustomizerBatch,
   }
 }

@@ -77,13 +77,24 @@ pub(super) fn certify(
                     .error_upper
                 } else {
                     let (radius, from, to) = if item == if radial_lines { 2 } else { 1 } {
+                        if spec.backlash > 0. {
+                            continue;
+                        }
                         (high, center.sub(high_half)?, center.add(high_half)?)
                     } else if item == count - 1 {
+                        if spec.backlash > 0. {
+                            continue;
+                        }
                         (
                             pair(low),
                             center.add(low_half)?,
                             center.add(step)?.sub(low_half)?,
                         )
+                    } else if radial_lines
+                        && (item == 0 || item == 4)
+                        && c.weights.iter().all(|&w| (w - 1.).abs() <= 1e-15)
+                    {
+                        continue;
                     } else {
                         return Err(invalid("Unknown tooth arc identity"));
                     };

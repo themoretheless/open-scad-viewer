@@ -303,8 +303,8 @@ impl EdgeSamplingRegistry {
         // parameter grid. Refine its shared schedule before allocating positions.
         cusp_sampling::refine(model,&mut schedule,&parallel_edges)?;
         let count = model.vertices.len() + schedule.iter().map(|n| n - 1).sum::<usize>();
-        if count > 60000 {
-            return Err(input("B-rep boundary sampling exceeds 60000 positions"));
+        if count > 240000 {
+            return Err(input("B-rep boundary sampling exceeds 240000 positions"));
         }
         let mut registry = Self {
             mesh: Mesh {
@@ -476,6 +476,7 @@ impl EdgeSamplingRegistry {
         face_ids: &mut Vec<usize>,
         model_tolerance_mm: f64,
         allow_preview_retriangulation: bool,
+        model_face_count: usize,
     ) -> Result<()> {
         let mut remap = Vec::with_capacity(built.uv.len());
         for (uv, shared) in built.uv.iter().zip(&built.shared) {
@@ -483,8 +484,8 @@ impl EdgeSamplingRegistry {
                 *position
             } else {
                 let index = self.mesh.positions.len() / 3;
-                if index >= 60000 {
-                    return Err(input("B-rep tessellation exceeds 60000 positions"));
+                if index >= 240000 {
+                    return Err(input("B-rep tessellation exceeds 240000 positions"));
                 }
                 self.mesh
                     .positions
@@ -513,7 +514,12 @@ impl EdgeSamplingRegistry {
             self.mesh.indices.extend(mapped);
             face_ids.push(use_.face);
         }
-        if face_ids.len() > 20000 {
+        let triangle_limit = if model_face_count > 32 {
+            80000
+        } else {
+            20000
+        };
+        if face_ids.len() > triangle_limit {
             return Err(input(format!(
                 "B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",
                 use_.face,

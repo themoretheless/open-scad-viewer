@@ -27,8 +27,8 @@ fn involute_flanks_follow_analytic_geometry_and_never_relax_remainder() {
                     let radius = base * t.hypot(1.);
                     let angle = 0.4 + sign * (0.18 - t + t.atan());
                     let point = curve.evaluate(s).unwrap().point;
-                    let distance = (point[0] - radius * angle.cos())
-                        .hypot(point[1] - radius * angle.sin());
+                    let distance =
+                        (point[0] - radius * angle.cos()).hypot(point[1] - radius * angle.sin());
                     assert!(distance <= bound + 1e-11, "{distance} > {bound}");
                 }
             }
@@ -126,6 +126,33 @@ fn few_teeth_planet_and_refusals() {
         ..GearSpec::default()
     });
     assert!(planet.is_ok(), "{:?}", planet.err());
+    let helical_planet = gear(&GearSpec {
+        module: 1.7020586804992703,
+        teeth: 4,
+        height: 10.,
+        pressure_angle_deg: 20.,
+        clearance: 0.11347057869995136,
+        backlash: 0.05,
+        helix_angle_deg: 35.,
+        herringbone: true,
+        ..GearSpec::default()
+    });
+    let small_helical_planet = gear(&GearSpec {
+        module: 0.6830357142857143,
+        teeth: 4,
+        height: 10.,
+        pressure_angle_deg: 20.,
+        clearance: 0.04553571428571429,
+        backlash: 0.05,
+        helix_angle_deg: 35.,
+        herringbone: true,
+        ..GearSpec::default()
+    });
+    assert!(
+        small_helical_planet.is_ok(),
+        "{:?}",
+        small_helical_planet.err()
+    );
     assert!(
         gear(&GearSpec {
             teeth: 2,
