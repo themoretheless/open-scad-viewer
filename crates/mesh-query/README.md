@@ -24,6 +24,9 @@ assert_eq!(distance, 2.);
   bounding box), `within_radius` and `nearest` (k nearest triangles), ordered by
   distance and then triangle ID. `refit` recomputes node boxes after vertices
   move, keeping the topology; it leaves the tree unchanged on error.
+- `bvh_codec`: versioned little-endian bytes for a built tree (`encode`,
+  `decode`). Decoding validates the structure; the tree stays tied to the vertex
+  and index buffers it was built from.
 - `scene_bvh`: binary64 object bounds, stable distance/id order.
 - `proximity`: binary64 mesh buffers. Nearest point and signed distance require
   buffers validated once by the caller; out-of-range indices may panic. Empty nearest-point queries return
@@ -59,7 +62,8 @@ the machine and hit/miss distribution; they are measurements, not guarantees.
   a distance only for a unit direction. Bounds are inclusive. `local_from_world`
   uses a column-major affine inverse. Exclusions use original triangle IDs.
 - Packed `MeshBvh` buffers are public for existing host adapters. Their layout is
-  an in-memory contract; persisted buffers should carry the producing version.
+  an in-memory contract; persist trees through `bvh_codec`, which carries a
+  format version.
 - `closest_point` uses binary64 geometry and a linear triangle scan, not the
   float32 picking BVH. Validate `MeshView` before using indexed proximity calls.
 - `QueryError` implements `std::error::Error`; malformed trees produce an error.
