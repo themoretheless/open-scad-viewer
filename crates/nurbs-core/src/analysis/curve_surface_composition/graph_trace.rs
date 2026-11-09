@@ -22,6 +22,7 @@ pub(crate) struct Pair {
     pub work: usize,
     pub max_work: usize,
 }
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(crate) fn curve_box(
     p: &Curve,
     range: [f64; 2],
@@ -301,6 +302,7 @@ impl Pair {
         }
         Ok(output.try_into().ok().unwrap())
     }
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub(crate) fn bound(
         &mut self,
         p: [&Curve; 2],
@@ -363,6 +365,7 @@ impl Pair {
             (local, Err(_)) => local,
         }
     }
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     fn compositions(
         &mut self,
         p: [&Curve; 2],

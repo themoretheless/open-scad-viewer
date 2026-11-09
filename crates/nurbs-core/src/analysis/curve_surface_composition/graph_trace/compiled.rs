@@ -41,6 +41,7 @@ fn same_curve(a: &Curve, b: &Curve) -> bool {
             .all(|(a, b)| same(a, b))
 }
 impl Cache {
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub(super) fn get(
         &self,
         p: [&Curve; 2],
@@ -86,6 +87,7 @@ impl Cache {
         }
         Ok(Some(result.try_into().ok().unwrap()))
     }
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub(super) fn store(
         &mut self,
         p: [&Curve; 2],

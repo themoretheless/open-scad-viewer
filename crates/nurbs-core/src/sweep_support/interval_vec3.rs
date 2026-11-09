@@ -35,6 +35,7 @@ pub(crate) fn div(a: Vec3, b: Interval) -> Result<Vec3> {
 
 /// Dot product accumulated from a zero interval; the zero addend widens the
 /// enclosure by one outward rounding step per component.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
     let mut out = Interval::point(0.);
     for k in 0..3 {

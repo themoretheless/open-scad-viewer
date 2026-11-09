@@ -10,7 +10,7 @@
     deref_patterns,
     yeet_expr
 )]
-#![allow(unused_features, dead_code, unused_imports)]
+#![allow(unused_features)]
 /// Task-oriented API views; existing flat module paths remain supported.
 pub mod domains;
 pub mod numerics;

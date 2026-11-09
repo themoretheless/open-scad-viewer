@@ -141,6 +141,7 @@ pub use radius_law::{RadiusLaw};
 
 /// Natural cubic spline scalar interpolation (Thomas solve, budgeted by the
 /// 64-point validation cap).
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 fn natural_cubic(points: &[(f64, f64)], t: f64) -> f64 {
     let n = points.len();
     let clamped = t.clamp(points[0].0, points[n - 1].0);

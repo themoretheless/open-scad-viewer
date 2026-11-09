@@ -19,11 +19,13 @@ pub(crate) fn nonempty_spans(knots: &[f64], degree: usize, count: usize) -> Vec<
 /// Natural parameter domain `[knots[degree], knots[count]]` of a basis with
 /// `count` control points. This is the represented interval regardless of
 /// clamping; clamping is a separate audit obligation.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(crate) fn natural_domain(knots: &[f64], degree: usize, count: usize) -> [f64; 2] {
     [knots[degree], knots[count]]
 }
 
 /// Natural parameter domains of both tensor axes, in `[u, v]` order.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
     [
         natural_domain(&s.knots_u, s.degree_u, s.control_points.len()),
@@ -32,6 +34,7 @@ pub(crate) fn surface_domains(s: &Surface) -> [[f64; 2]; 2] {
 }
 
 /// Nonempty curve spans as `(span index, [lo, hi])` pairs, in knot order.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(crate) fn curve_span_domains(c: &Curve) -> Vec<(usize, [f64; 2])> {
     nonempty_spans(&c.knots, c.degree, c.control_points.len())
         .into_iter()

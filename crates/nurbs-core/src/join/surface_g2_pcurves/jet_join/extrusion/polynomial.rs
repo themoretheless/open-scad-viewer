@@ -57,6 +57,7 @@ pub(super) fn elevate(mut h: Homogeneous, degree: usize) -> Result<Homogeneous> 
     }
     Ok(h)
 }
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn restrict(h: &Homogeneous, ends: [I; 2]) -> Result<Homogeneous> {
     let n = h[0].len() - 1;
     let mut out: Homogeneous = std::array::from_fn(|_| Vec::new());

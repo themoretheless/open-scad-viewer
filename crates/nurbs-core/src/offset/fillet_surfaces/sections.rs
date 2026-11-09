@@ -2,6 +2,7 @@ use crate::primitives;
 use super::*;
 
 /// Exact rational circular arc section from contact A to contact B.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn arc_section(sample: &SpineSample) -> Result<std::result::Result<Curve, FailureReason>> {
     let a_vec = sub(sample.contact_a, sample.center);
     let b_vec = sub(sample.contact_b, sample.center);
@@ -30,6 +31,7 @@ pub(super) fn arc_section(sample: &SpineSample) -> Result<std::result::Result<Cu
 
 /// Signed normal curvature of `surface` at `uv` in the unit direction `dir`
 /// (Meusnier; sign relative to the `S_u × S_v` normal).
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn normal_curvature(surface: &Surface, uv: [f64; 2], dir: [f64; 3]) -> Result<Option<f64>> {
     let e = surface.evaluate(uv[0], uv[1])?;
     let (Some(n), Some((su, sv)), Some((suu, suv, svv))) =
@@ -51,6 +53,7 @@ pub(super) fn normal_curvature(surface: &Surface, uv: [f64; 2], dir: [f64; 3]) -
 
 /// G2 quintic Bézier section: position, tangent and curvature vector matched
 /// to both support normal sections at the contacts.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn g2_section(m: &Marcher<'_>, sample: &SpineSample) -> Result<std::result::Result<Curve, FailureReason>> {
     let a_vec = sub(sample.contact_a, sample.center);
     let b_vec = sub(sample.contact_b, sample.center);
@@ -109,6 +112,7 @@ pub(super) fn g2_section(m: &Marcher<'_>, sample: &SpineSample) -> Result<std::r
 
 /// Skin the sections and estimate the inter-section deviation from the true
 /// pipe of radius `r(t)` around the spine.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn assemble(
     sections: Vec<Curve>,
     spine: &[SpineSample],
@@ -140,6 +144,7 @@ pub(super) fn assemble(
 }
 
 /// Shared tail: stations, section construction, skinning, report assembly.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn build_report(
     m: &Marcher<'_>,
     raw: &[RawPoint],
@@ -228,11 +233,13 @@ pub(super) fn build_report(
 }
 
 #[derive(Clone, Copy, PartialEq)]
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) enum SectionKind {
     Arc,
     G2,
 }
 
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn prepare<'a>(
     a: &'a Surface,
     b: &'a Surface,
@@ -244,6 +251,7 @@ pub(super) fn prepare<'a>(
     Ok((Marcher::new(a, b, sa, sb, options.tolerance), sa, sb))
 }
 
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn reachability_warnings(a: &Surface, b: &Surface, sa: f64, sb: f64, r_max: f64) -> Vec<String> {
     let mut warnings = Vec::new();
     if let Some(w) = reachability_warning("support A", a, r_max * sa) {

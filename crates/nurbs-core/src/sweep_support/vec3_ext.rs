@@ -6,11 +6,13 @@ use crate::{Result, check};
 
 /// Euclidean norm via `hypot` — no overflow for large components, unlike
 /// `math_core::norm`'s `dot(a, a).sqrt()`.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(crate) fn norm(v: [f64; 3]) -> f64 {
     v[0].hypot(v[1]).hypot(v[2])
 }
 
 /// Normalize, failing with `message` when the norm is zero or non-finite.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(crate) fn unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
     let n = norm(v);
     check(n.is_finite() && n > 0., message)?;

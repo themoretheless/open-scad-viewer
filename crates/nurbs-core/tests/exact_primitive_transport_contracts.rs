@@ -10,7 +10,7 @@ use nurbs_core::{
     surface::Surface,
 };
 use support::*;
-use value_codec::{Value, json};
+use value_codec::json;
 const UNIT: [[f64; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 #[test]
 fn ellipse_wire_matches_the_fresh_typed_native_report() {

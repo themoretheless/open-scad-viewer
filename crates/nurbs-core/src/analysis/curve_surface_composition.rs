@@ -226,6 +226,7 @@ pub(crate) fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Inte
         ],
     )
 }
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 fn surface_homogeneous_controls(s:&Surface,span:[usize;2])->Result<(Vec<Vec<[Interval;4]>>,[f64;2])> {
     surface_homogeneous_controls_with_origin(s,span,None)
 }

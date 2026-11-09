@@ -96,6 +96,7 @@ pub(super) fn patch_error(
     let section = section_interpolation(sweep, count, max_cells)?;
     patch_error_from_section(sweep, count, max_products, section)
 }
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
     shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
     patch_error_with_path_evidence(sweep,count,max_cells,max_products,shared_length,None)
@@ -657,6 +658,7 @@ use guided_interpolation_owned::guided_section_interpolation_mode_with_pose;
 #[path = "authored_error/arc_frame_owned.rs"]
 mod arc_frame_owned;
 use arc_frame_owned::original_frame_arc_length_section_interpolation_with_rmf_steps;
+#[cfg(test)]
 use arc_frame_owned::closed_frenet_position_seam;
 use arc_frame_owned::fixed_normal_arc_length_section_interpolation;
 

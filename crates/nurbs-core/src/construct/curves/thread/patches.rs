@@ -149,6 +149,7 @@ pub(super) struct Parameters {
     pub(super) root: f64,
     pub(super) lead: f64,
     pub(super) maximum_z: f64,
+    #[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
     pub(super) quarter_angle: f64,
 }
 pub(super) fn parameters(spec: Spec) -> Result<Parameters> {

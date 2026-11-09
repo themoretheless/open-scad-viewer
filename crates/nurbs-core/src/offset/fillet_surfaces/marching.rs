@@ -98,6 +98,7 @@ pub(super) fn find_seed(m: &Marcher<'_>, r: f64) -> Result<Option<[f64; 4]>> {
 }
 
 /// March one direction from the seed with a curvature-adaptive step.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn march_direction(
     m: &Marcher<'_>,
     seed: [f64; 4],
@@ -181,6 +182,7 @@ pub(super) fn march_direction(
 /// Full two-direction spine trace with a radius law evaluated on the
 /// normalized arc-length parameter of a previous pass (`law_length`), or a
 /// constant radius when `law` is None and `seed_r` is used.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn trace_spine(
     m: &Marcher<'_>,
     seed_r: f64,
@@ -213,6 +215,7 @@ pub(super) fn trace_spine(
 
 /// Re-polish each raw point with the radius of the final law at its measured
 /// normalized arc position (variable-radius second pass).
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn polish_with_law(
     m: &Marcher<'_>,
     points: &mut [RawPoint],
@@ -250,6 +253,7 @@ pub(super) fn polish_with_law(
 
 /// Resample the raw spine polyline into `n` arc-length-uniform stations and
 /// polish each at its own radius.
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn stations(
     m: &Marcher<'_>,
     points: &[RawPoint],

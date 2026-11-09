@@ -1,6 +1,6 @@
 //! Bind literal tensor coefficients to the product of freshly proved circles.
 use super::super::exact_frame::{cross, dot};
-use super::{PResult, Q, Refusal, Surface, Template, V_KNOTS, Work};
+use super::{PResult, Refusal, Surface, Template, V_KNOTS, Work};
 use num_traits::Zero;
 pub(super) fn verify(
     center: [f64; 3],

@@ -639,6 +639,7 @@ impl<'a> PreparedControlSurface<'a> {
     }
 }
 
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(crate) fn rectangle_control_query_prepared(
     cached_a: &mut PreparedControlSurface<'_>,
     cached_b: &mut PreparedControlSurface<'_>,

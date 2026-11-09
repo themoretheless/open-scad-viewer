@@ -5,6 +5,7 @@ use crate::{check, distance_bounds::Interval as I, Result};
 
 /// Each row encloses the Bernstein coefficients of one nodal basis function.
 /// Insufficient work refuses before allocating a coefficient basis.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(crate) fn basis(nodes: &[f64], max_work: usize) -> Result<(Option<Vec<Vec<I>>>, usize)> {
     basis_on(nodes, [0., 1.], max_work)
 }

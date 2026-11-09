@@ -279,6 +279,7 @@ impl Support {
     }
     /// Each derivative uses the same homogeneous pcurve denominator power.
     /// Thus rational source jet quotient formulas can cancel it algebraically.
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub(super) fn compose(
         &self,
         pc: &Curve,
@@ -288,6 +289,7 @@ impl Support {
     ) -> Result<Vec<Vec<Vec<I>>>> {
         self.compose_impl(pc, range, spans, w, false, false)
     }
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub(super) fn compose_graph(
         &self,
         pc: &Curve,
@@ -645,12 +647,13 @@ fn differentiate(jet: Jet, axis: usize, w: &mut Work) -> Result<Jet> {
         poles,
     })
 }
-use spline_extraction::{mix,blossom};
+use spline_extraction::blossom;
 
 /// Restrict an original clamped pcurve traversal to one original knot span,
 /// then express it in the surface knot cell. Spline extraction and traversal
 /// conversion use exact rational arithmetic, not rounded knot insertion.
 /// A range crossing knots refuses; callers must cover all original spans.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(super) fn pcurve(
     c: &Curve,
     range: [f64; 2],

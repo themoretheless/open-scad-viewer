@@ -81,6 +81,7 @@ pub(super) fn krawczyk_cc(
     }
 }
 
+#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
 pub(super) fn admit_coincidence(
     input: &CurveIntersectionBox<'_>,
     report: &mut CurveCurveReport,

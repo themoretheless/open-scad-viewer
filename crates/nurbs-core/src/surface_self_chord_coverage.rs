@@ -117,6 +117,7 @@ fn squared_norm(v: [I; 3]) -> Result<I> {
 }
 /// Original position boxes enclose every secant; original normal boxes enclose
 /// both endpoint normals. One endpoint strictly oblique excludes the whole pair.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 fn secant_exclusion(
     s: &Surface,
     pair: Pair,
