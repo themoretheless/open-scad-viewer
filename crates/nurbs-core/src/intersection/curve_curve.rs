@@ -573,6 +573,7 @@ pub fn intersect_curve_curve_bounded_report(
 /// Per-box fat-line clip round budget for the production entry point.
 const CLIP_ROUNDS_PER_BOX: usize = 16;
 
+#[cfg(test)]
 /// Test/diagnostic entry: `clip_budget == 0` disables the fat-line pre-filter
 /// so the unclipped subdivision path can be A/B compared against the fast one.
 pub(crate) fn intersect_curve_curve_report_with_clip(

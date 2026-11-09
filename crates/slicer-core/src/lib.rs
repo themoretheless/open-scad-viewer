@@ -4,15 +4,6 @@
 //! The host (CAD) sections a mesh and passes rings. This crate offsets walls,
 //! hatches infill, and can encode the plan through `gcode-core`. Coordinates
 //! are millimeters.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 
 use planar_geometry::{
     path::BezierPath,

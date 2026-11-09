@@ -3,7 +3,6 @@
 //! Split out of `geometry-bridge` so the geometry kernel ships without a language frontend: this crate
 //! only parses and compiles source into documents, and the host runs the geometry operations they name.
 #![feature(try_blocks, yeet_expr)]
-#![allow(unused_features)]
 pub mod abi;
 mod openscad;
 use value_codec::{Value, json};

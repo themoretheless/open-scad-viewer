@@ -1,8 +1,6 @@
 //! Browser shell for the language frontends: exports the linear-memory ABI as an import-free wasm32
 //! module. All logic lives in `languages-bridge`; this crate only adds the `extern "C"` surface the
 //! TypeScript host (`services/languages`) uses.
-#![feature(try_blocks, yeet_expr)]
-#![allow(unused_features)]
 
 #[unsafe(no_mangle)]
 pub extern "C" fn abi_alloc(len: usize) -> usize {

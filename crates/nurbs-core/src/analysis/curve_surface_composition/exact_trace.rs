@@ -277,6 +277,7 @@ impl Support {
             nets: std::cell::RefCell::new(Default::default()),
         })
     }
+    #[cfg(test)]
     /// Each derivative uses the same homogeneous pcurve denominator power.
     /// Thus rational source jet quotient formulas can cancel it algebraically.
     pub(super) fn compose(
@@ -288,6 +289,7 @@ impl Support {
     ) -> Result<Vec<Vec<Vec<I>>>> {
         self.compose_impl(pc, range, spans, w, false, false)
     }
+    #[cfg(test)]
     pub(super) fn compose_graph(
         &self,
         pc: &Curve,
@@ -645,8 +647,9 @@ fn differentiate(jet: Jet, axis: usize, w: &mut Work) -> Result<Jet> {
         poles,
     })
 }
-use spline_extraction::{mix,blossom};
+use spline_extraction::blossom;
 
+#[cfg(test)]
 /// Restrict an original clamped pcurve traversal to one original knot span,
 /// then express it in the surface knot cell. Spline extraction and traversal
 /// conversion use exact rational arithmetic, not rounded knot insertion.

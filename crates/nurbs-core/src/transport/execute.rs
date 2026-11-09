@@ -48,7 +48,3 @@ pub(super) fn encode_wall_audit(report: sweep_wall_audit::Report) -> Result<Valu
     }))
 }
 
-pub(super) fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
-    let curve=curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![value.to_vec();2],weights:vec![1.,1.],periodic:false};
-    curve.validate()?;Ok(curve)
-}

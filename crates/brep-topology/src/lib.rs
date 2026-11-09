@@ -1,14 +1,5 @@
 //! Geometry-independent indexed B-rep incidence shared by both kernels.
 //! C, S and P are application-owned edge, face and parameter-curve geometry.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 pub use math_core::{Error, Result};
 #[cfg(feature = "codec")]
 #[path = "serialization.rs"]

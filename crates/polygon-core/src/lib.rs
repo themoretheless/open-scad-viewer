@@ -7,15 +7,6 @@
 //! - [`appearance`] — paint / style (not shape)
 //!
 //! 2D paths/rings live in `planar-geometry`. Print planning lives in `slicer-core`.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 pub mod appearance;
 pub mod gradient_mesh;
 #[cfg(feature = "cuda")]

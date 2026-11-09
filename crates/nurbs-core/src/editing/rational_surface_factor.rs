@@ -12,7 +12,6 @@ use crate::{
     Result, check,
     surface::{Axis, Surface},
 };
-use num_rational::BigRational as Q;
 mod proof;
 type PResult<T> = std::result::Result<T, Refusal>;
 #[derive(Clone, Debug)]

@@ -3,15 +3,6 @@
 //! Passes run in a fixed order: simplify, seam, order/flip, combing, retract
 //! policy. Emit stays on the print-preview dialect: travel is `G0`, never a
 //! negative E.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 
 mod comb;
 mod from_gcode;

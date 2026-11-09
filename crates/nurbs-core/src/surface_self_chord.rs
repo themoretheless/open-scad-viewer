@@ -294,6 +294,7 @@ pub(crate) fn rational_pole_pair_exclusion(
     let r = rational_pole_pair_report(s, pair, differential, normals, sine, max_spans)?;
     Ok((r.excluded, r.spans))
 }
+#[cfg(test)]
 pub(crate) fn rational_pole_pair_report(
     s: &Surface,
     pair: [[[f64; 2]; 2]; 2],

@@ -2,15 +2,7 @@
 //! Own binary64 rational B-spline kernel. No C/C++ or geometry dependency.
 //! No polygon-core, WASM, browser or application dependency.
 //! CAD B-rep over these curves/surfaces lives in `brep-core`.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features, dead_code, unused_imports)]
+
 /// Task-oriented API views; existing flat module paths remain supported.
 pub mod domains;
 pub mod numerics;

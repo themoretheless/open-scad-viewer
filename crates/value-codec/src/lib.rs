@@ -1,13 +1,4 @@
 //! Repository-owned document values and bounded JSON/binary codecs.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 use std::{
     collections::BTreeMap,
     fmt,

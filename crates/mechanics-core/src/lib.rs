@@ -7,15 +7,6 @@
 //! Neither module is a print process or a material certificate. The host (CAD)
 //! sections a mesh; this crate never holds CAD handles. Coordinates are
 //! millimeters, force is newtons, stress is MPa (N/mm²).
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 
 pub const MAX_POINTS: usize = 16_384;
 

@@ -1,14 +1,5 @@
 //! Shared photogrammetry host ABI core, consumed by the `photogrammetry-wasm`
 //! shell, which adds the `extern "C"` export surface.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 mod response;
 mod session;
 use photogrammetry_core::{Result, error as input};

@@ -4,15 +4,7 @@
 //!
 //! Language compilation lives in `languages-bridge`; this crate executes
 //! typed geometry and has no language frontend dependency.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
+#![feature(try_blocks)]
 pub mod brep;
 mod miter_smoothness;
 mod polygon_station_body;

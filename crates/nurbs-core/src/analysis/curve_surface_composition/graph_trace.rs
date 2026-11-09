@@ -22,14 +22,6 @@ pub(crate) struct Pair {
     pub work: usize,
     pub max_work: usize,
 }
-pub(crate) fn curve_box(
-    p: &Curve,
-    range: [f64; 2],
-    used: &mut usize,
-    max: usize,
-) -> Result<[[f64; 2]; 2]> {
-    curve_box_oriented(p, range, used, max, false)
-}
 pub(crate) fn curve_box_oriented(
     p: &Curve,
     range: [f64; 2],
@@ -301,6 +293,7 @@ impl Pair {
         }
         Ok(output.try_into().ok().unwrap())
     }
+    #[cfg(test)]
     pub(crate) fn bound(
         &mut self,
         p: [&Curve; 2],
@@ -309,6 +302,7 @@ impl Pair {
     ) -> Result<CellBounds> {
         self.bound_adaptive(p, range, spans, None)
     }
+    #[cfg(test)]
     pub(crate) fn bound_adaptive(
         &mut self,
         p: [&Curve; 2],
@@ -363,6 +357,7 @@ impl Pair {
             (local, Err(_)) => local,
         }
     }
+    #[cfg(test)]
     fn compositions(
         &mut self,
         p: [&Curve; 2],

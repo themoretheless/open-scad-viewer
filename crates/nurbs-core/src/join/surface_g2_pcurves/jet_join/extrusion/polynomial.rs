@@ -57,24 +57,6 @@ pub(super) fn elevate(mut h: Homogeneous, degree: usize) -> Result<Homogeneous> 
     }
     Ok(h)
 }
-pub(super) fn restrict(h: &Homogeneous, ends: [I; 2]) -> Result<Homogeneous> {
-    let n = h[0].len() - 1;
-    let mut out: Homogeneous = std::array::from_fn(|_| Vec::new());
-    for k in 0..4 {
-        for i in 0..=n {
-            let mut c = h[k].clone();
-            for r in 0..n {
-                let t = ends[usize::from(r >= n - i)];
-                let a = I::point(1.).sub(t)?.intersect(0., 1.)?;
-                for j in 0..n - r {
-                    c[j] = c[j].mul(a)?.add(c[j + 1].mul(t)?)?;
-                }
-            }
-            out[k].push(c[0]);
-        }
-    }
-    Ok(out)
-}
 struct ExactJets {
     first: [Poly; 3],
     second: [Poly; 3],

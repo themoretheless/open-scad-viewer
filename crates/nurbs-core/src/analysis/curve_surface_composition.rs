@@ -226,9 +226,6 @@ pub(crate) fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Inte
         ],
     )
 }
-fn surface_homogeneous_controls(s:&Surface,span:[usize;2])->Result<(Vec<Vec<[Interval;4]>>,[f64;2])> {
-    surface_homogeneous_controls_with_origin(s,span,None)
-}
 fn surface_homogeneous_controls_with_origin(s: &Surface, span: [usize;2], origin:Option<[f64;3]>) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
     surface_homogeneous_controls_weighted(s,span,origin,|i,j|Ok(Interval::point(s.weights[i][j])))
 }

@@ -1,12 +1,15 @@
 //! Candidate rational boundary derivative fields for Cartesian tangent auditing.
 //! Extraction/composition rounds in binary64; these curves are not exact certificates.
+#[cfg(test)]
 use super::denominators::product;
+#[cfg(test)]
 use crate::{
     Result, check,
     curve::Curve,
     surface::{Axis, Surface},
 };
 
+#[cfg(test)]
 /// Rational quotient rule: dP/dv = (X_v W-X W_v)/W².
 /// Returns one Bezier curve per U span, with the authored U domain.
 pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {

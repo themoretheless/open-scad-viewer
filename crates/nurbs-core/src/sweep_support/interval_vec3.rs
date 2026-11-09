@@ -33,15 +33,6 @@ pub(crate) fn div(a: Vec3, b: Interval) -> Result<Vec3> {
     Ok([a[0].div(b)?, a[1].div(b)?, a[2].div(b)?])
 }
 
-/// Dot product accumulated from a zero interval; the zero addend widens the
-/// enclosure by one outward rounding step per component.
-pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
-    let mut out = Interval::point(0.);
-    for k in 0..3 {
-        out = out.add(a[k].mul(b[k])?)?;
-    }
-    Ok(out)
-}
 
 /// Dot product without the initial zero addend — a tighter enclosure than
 /// [`dot`], matching the former certificate-file formulation.

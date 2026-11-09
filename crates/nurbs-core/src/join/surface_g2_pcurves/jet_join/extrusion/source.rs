@@ -197,6 +197,7 @@ impl<'a> Source<'a> {
         }
         Ok(true)
     }
+    #[cfg(test)]
     /// Exact original product structure removes the stationary parameter from
     /// the projected trace before arithmetic. It is not an approximate iso
     /// extraction or a new source surface. Nonproducts keep the full lift.

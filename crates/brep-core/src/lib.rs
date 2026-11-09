@@ -1,14 +1,5 @@
 //! Indexed boundary topology over exact rational curve/surface definitions.
 //! Validation certifies combinatorial incidence, not geometric solid validity.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 mod exact_affine_source;
 mod rational_identity;
 #[cfg(feature = "codec")]

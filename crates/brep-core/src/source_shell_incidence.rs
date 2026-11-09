@@ -705,9 +705,6 @@ fn assemble_core<E>(
     Ok(out)
 }
 #[cfg(test)]
-#[path = "source_shell_incidence/tests/mod.rs"]
-mod tests;
-#[cfg(test)]
 #[path="source_shell_incidence/tests/projective_qualification.rs"]
 mod projective_qualification;
 

@@ -1,6 +1,8 @@
 //! Exact binary64 knot insertion. A rounded or out-of-range operation refuses
 //! the identity proof; floating decomposition alone never supplies identity.
+#[cfg(test)]
 use crate::curve::Curve;
+#[cfg(test)]
 fn dyadic(x: f64) -> Option<(i128, i32)> {
     if !x.is_finite() {
         return None;
@@ -26,6 +28,7 @@ fn dyadic(x: f64) -> Option<(i128, i32)> {
     }
     Some((m, e))
 }
+#[cfg(test)]
 fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
     if m == 0 {
         return (0, 0);
@@ -36,6 +39,7 @@ fn normalized(mut m: i128, mut e: i32) -> (i128, i32) {
     }
     (m, e)
 }
+#[cfg(test)]
 fn exact_add(a: f64, b: f64) -> Option<f64> {
     let (am, ae) = dyadic(a)?;
     let (bm, be) = dyadic(b)?;
@@ -57,12 +61,14 @@ fn exact_add(a: f64, b: f64) -> Option<f64> {
     let result = a + b;
     (dyadic(result)? == exact).then_some(result)
 }
+#[cfg(test)]
 fn exact_mul(a: f64, b: f64) -> Option<f64> {
     let (am, ae) = dyadic(a)?;
     let (bm, be) = dyadic(b)?;
     let result = a * b;
     (dyadic(result)? == normalized(am.checked_mul(bm)?, ae + be)).then_some(result)
 }
+#[cfg(test)]
 fn exact_div(a: f64, b: f64) -> Option<f64> {
     if b == 0. {
         return None;
@@ -72,6 +78,7 @@ fn exact_div(a: f64, b: f64) -> Option<f64> {
     let (bm, be) = dyadic(b)?;
     (normalized(rm.checked_mul(bm)?, re + be) == dyadic(a)?).then_some(result)
 }
+#[cfg(test)]
 pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
     c.validate().ok()?;
     let p = c.degree;
@@ -172,6 +179,7 @@ pub(crate) fn inspect(c: &Curve) -> Option<Vec<Curve>> {
     }
     Some(pieces)
 }
+#[cfg(test)]
 /// Endpoint clamping need not be representable as a global knot insertion.
 /// Compute each active span's Bernstein controls by exact blossom evaluation.
 /// Every operation must agree with its checked dyadic arithmetic identity.

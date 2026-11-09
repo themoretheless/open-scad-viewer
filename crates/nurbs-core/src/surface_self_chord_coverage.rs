@@ -115,6 +115,7 @@ fn squared_norm(v: [I; 3]) -> Result<I> {
     }
     I::new(sum.lo.max(0.), sum.hi)
 }
+#[cfg(test)]
 /// Original position boxes enclose every secant; original normal boxes enclose
 /// both endpoint normals. One endpoint strictly oblique excludes the whole pair.
 fn secant_exclusion(

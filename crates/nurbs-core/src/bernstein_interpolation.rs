@@ -3,6 +3,7 @@
 //! establish that an arbitrary expression is polynomial or issue admission.
 use crate::{check, distance_bounds::Interval as I, Result};
 
+#[cfg(test)]
 /// Each row encloses the Bernstein coefficients of one nodal basis function.
 /// Insufficient work refuses before allocating a coefficient basis.
 pub(crate) fn basis(nodes: &[f64], max_work: usize) -> Result<(Option<Vec<Vec<I>>>, usize)> {

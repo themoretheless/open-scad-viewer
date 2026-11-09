@@ -639,6 +639,7 @@ impl<'a> PreparedControlSurface<'a> {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn rectangle_control_query_prepared(
     cached_a: &mut PreparedControlSurface<'_>,
     cached_b: &mut PreparedControlSurface<'_>,

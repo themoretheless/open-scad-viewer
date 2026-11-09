@@ -139,50 +139,6 @@ pub use radius_law::{RadiusLaw};
 
 
 
-/// Natural cubic spline scalar interpolation (Thomas solve, budgeted by the
-/// 64-point validation cap).
-fn natural_cubic(points: &[(f64, f64)], t: f64) -> f64 {
-    let n = points.len();
-    let clamped = t.clamp(points[0].0, points[n - 1].0);
-    // Second derivatives m[i]; natural boundary m[0] = m[n-1] = 0. Thomas
-    // forward sweep over the interior rows of the tridiagonal system.
-    let mut m_stack = [0.; 64];
-    let mut cp_stack = [0.; 64];
-    let mut dp_stack = [0.; 64];
-    let mut m_heap;
-    let mut cp_heap;
-    let mut dp_heap;
-    let interior = n.saturating_sub(2);
-    let (m, cp, dp): (&mut [f64], &mut [f64], &mut [f64]) = if n <= 64 {
-        (&mut m_stack[..n], &mut cp_stack[..interior], &mut dp_stack[..interior])
-    } else {
-        m_heap = vec![0.; n];
-        cp_heap = vec![0.; interior];
-        dp_heap = vec![0.; interior];
-        (&mut m_heap, &mut cp_heap, &mut dp_heap)
-    };
-    for row in 0..interior {
-        let i = row + 1;
-        let h0 = points[i].0 - points[i - 1].0;
-        let h1 = points[i + 1].0 - points[i].0;
-        let rhs = 6. * ((points[i + 1].1 - points[i].1) / h1 - (points[i].1 - points[i - 1].1) / h0);
-        let denom = if row == 0 {
-            2. * (h0 + h1)
-        } else {
-            2. * (h0 + h1) - h0 * cp[row - 1]
-        };
-        cp[row] = h1 / denom;
-        dp[row] = (rhs - if row == 0 { 0. } else { h0 * dp[row - 1] }) / denom;
-    }
-    for row in (0..interior).rev() {
-        m[row + 1] = dp[row] - cp[row] * m[row + 2];
-    }
-    let i = (1..n).find(|&i| clamped <= points[i].0).unwrap_or(n - 1);
-    let h = points[i].0 - points[i - 1].0;
-    let a = (points[i].0 - clamped) / h;
-    let b = 1. - a;
-    a * points[i - 1].1 + b * points[i].1 + ((a.powi(3) - a) * m[i - 1] + (b.powi(3) - b) * m[i]) * h * h / 6.
-}
 
 /// Shared fillet options.
 #[derive(Clone, Copy, Debug)]

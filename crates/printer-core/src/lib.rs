@@ -3,15 +3,6 @@
 //! Public surface is [`PrinterBackend`] (Bambu / Moonraker / OctoPrint / PrusaLink /
 //! Creality / Snapmaker). Enable the `network` feature for live sockets; default builds stay
 //! offline with mocks.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 
 pub mod backend;
 pub mod bambu;

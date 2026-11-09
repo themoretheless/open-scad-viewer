@@ -3,6 +3,7 @@ use super::*;
 use cad_predicates::{
     AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
+#[cfg(test)]
 pub(super) fn certify(path: &Curve, cap: &Surface, spent: &mut u64, max: u64) -> Result<bool> {
     certify_frame(path, cap, None, spent, max)
 }
