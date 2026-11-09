@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto'
 import {describe,expect,it} from 'vitest'
 import {createBrepBox} from '../src/services/geometry/brep'
-import {exportDirectStepV6} from '../src/services/cadNurbsStep'
+import {exportDirectStepV9} from '../src/services/cadNurbsStep'
 import {importStepV6WithResolver,type StepExternalResolver} from '../src/services/cadStepExternalResolver'
 import {importStepForWorkbench} from '../src/services/cadStepRouting'
 
@@ -10,8 +10,8 @@ const reference=(text:string,uri:string)=>text.replace('ENDSEC;\nEND-ISO',`#6200
 
 describe('STEP /6 explicit external resolver',()=>{
   it('resolves allowlisted digest-bound documents without ambient IO',async()=>{
-    const child=exportDirectStepV6(createBrepBox([0,0,0],[1,1,1])).text
-    const root=reference(exportDirectStepV6(createBrepBox([2,0,0],[3,1,1])).text,'urn:part:child')
+    const child=exportDirectStepV9(createBrepBox([0,0,0],[1,1,1])).text
+    const root=reference(exportDirectStepV9(createBrepBox([2,0,0],[3,1,1])).text,'urn:part:child')
     const calls:string[]=[]
     const resolver:StepExternalResolver={resolve:async uri=>{calls.push(uri);return{text:child,sha256:sha(child)}}}
     const bundle=await importStepV6WithResolver(root,resolver,new AbortController().signal,{
@@ -29,7 +29,7 @@ describe('STEP /6 explicit external resolver',()=>{
   })
 
   it('typed-refuses untrusted, mismatched, cancelled, cyclic and over-depth references',async()=>{
-    const child=exportDirectStepV6(createBrepBox([0,0,0],[1,1,1])).text
+    const child=exportDirectStepV9(createBrepBox([0,0,0],[1,1,1])).text
     const root=reference(child,'urn:a')
     const resolver:StepExternalResolver={resolve:async uri=>({
       text:uri==='urn:a'?reference(child,'urn:b'):reference(child,'urn:a'),sha256:sha(uri==='urn:a'?reference(child,'urn:b'):reference(child,'urn:a')),
@@ -51,8 +51,8 @@ describe('STEP /6 explicit external resolver',()=>{
   })
 
   it('uses parsed references and enforces exact plus-one byte and document limits',async()=>{
-    const child=exportDirectStepV6(createBrepBox([0,0,0],[1,1,1])).text.replace('DATA;','DATA;/*é*/')
-    const root=reference(exportDirectStepV6(createBrepBox([2,0,0],[3,1,1])).text,'urn:part:child')
+    const child=exportDirectStepV9(createBrepBox([0,0,0],[1,1,1])).text.replace('DATA;','DATA;/*é*/')
+    const root=reference(exportDirectStepV9(createBrepBox([2,0,0],[3,1,1])).text,'urn:part:child')
       .replace('DATA;',"DATA;\n/* DOCUMENT_FILE('urn:comment') */")
     const resolver:StepExternalResolver={resolve:async()=>({text:child,sha256:sha(child)})}
     const rootBytes=new TextEncoder().encode(root).byteLength

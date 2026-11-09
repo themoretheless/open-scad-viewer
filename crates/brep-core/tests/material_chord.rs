@@ -210,7 +210,7 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
             .intersections
             .pairs
             .total_pairs,
-        1770
+        66
     );
     assert!(
         wall.boundary

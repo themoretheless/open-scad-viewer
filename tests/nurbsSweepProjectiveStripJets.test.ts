@@ -40,7 +40,7 @@ it('supports a common rational multispan basis, transposed axes and an affine mo
   controlPoints:s.controlPoints[0]!.map((_,j)=>s.controlPoints.map(row=>row[j]!)),weights:s.weights[0]!.map((_,j)=>s.weights.map(row=>row[j]!))})
  expect(inspectSweepProjectiveStripJets(transpose(a),transpose(b),'uMax','uMin',2,1,1000000).certified).toBe(true)
  const wrong=structuredClone(b);wrong.knotsU[4]=.25
- expect(inspectSweepProjectiveStripJets(a,wrong,'vMax','vMin',2,1,1000000)).toMatchObject({certified:false,work:0})
+ expect(inspectSweepProjectiveStripJets(a,wrong,'vMax','vMin',2,1,1000000)).toMatchObject({certified:false,certifiedOrder:null,exactIdentity:false,reason:'exact-bspline-jet-work-unresolved'})
 })
 
 it('requires every declared cyclic seam and shares exact work including closure',()=>{
