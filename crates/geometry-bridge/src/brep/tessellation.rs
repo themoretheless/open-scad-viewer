@@ -276,13 +276,35 @@ impl EdgeSamplingRegistry {
             // dropping both schedules would remove all interior refinement.
             let reduce_face_rulings = !pairs.is_empty()
                 && !(curved && face.surface.degree_u==1 && face.surface.degree_v==1);
+            // On multi-tooth helical/herringbone gears (> 32 faces), profile edges
+            // (`u`-direction, horizontal in the rectangular chart) carry strong
+            // involute and fillet curvature, whereas axial helical sweep edges
+            // (`v`-direction, vertical in the rectangular chart) have gentle curvature.
+            // Giving profile edges `2 * segments` divisions while keeping axial
+            // edges at `segments` doubles the tooth profile smoothness for the
+            // same triangle count as a minor axial increase.
+            let vertical_edges = if reduce_linear_rulings && model.faces.len() > 32 && pairs.len() == 2 {
+                Some(pairs[1])
+            } else {
+                None
+            };
+            let profile_segments = if vertical_edges.is_some() {
+                (segments * 2).min(32)
+            } else {
+                segments
+            };
             parallel_edges.extend(pairs);
             for &wire in std::iter::once(&face.outer).chain(&face.holes) {
                 for coedge in &model.loops[wire].coedges {
                     let edge=&model.edges[coedge.edge];
                     if (curved || edge.curve.degree > 1)
                         && !(reduce_face_rulings && exact_linear_ruling(&face.surface,coedge,edge)) {
-                        schedule[coedge.edge] = segments;
+                        let edge_segments = if vertical_edges.is_some_and(|v| v.contains(&coedge.edge)) {
+                            segments
+                        } else {
+                            profile_segments
+                        };
+                        schedule[coedge.edge] = schedule[coedge.edge].max(edge_segments);
                     }
                 }
             }
@@ -303,8 +325,8 @@ impl EdgeSamplingRegistry {
         // parameter grid. Refine its shared schedule before allocating positions.
         cusp_sampling::refine(model,&mut schedule,&parallel_edges)?;
         let count = model.vertices.len() + schedule.iter().map(|n| n - 1).sum::<usize>();
-        if count > 240000 {
-            return Err(input("B-rep boundary sampling exceeds 240000 positions"));
+        if count > 480000 {
+            return Err(input("B-rep boundary sampling exceeds 480000 positions"));
         }
         let mut registry = Self {
             mesh: Mesh {
@@ -484,8 +506,8 @@ impl EdgeSamplingRegistry {
                 *position
             } else {
                 let index = self.mesh.positions.len() / 3;
-                if index >= 240000 {
-                    return Err(input("B-rep tessellation exceeds 240000 positions"));
+                if index >= 480000 {
+                    return Err(input("B-rep tessellation exceeds 480000 positions"));
                 }
                 self.mesh
                     .positions
@@ -515,7 +537,7 @@ impl EdgeSamplingRegistry {
             face_ids.push(use_.face);
         }
         let triangle_limit = if model_face_count > 32 {
-            80000
+            160000
         } else {
             20000
         };

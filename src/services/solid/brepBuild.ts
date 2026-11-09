@@ -14,14 +14,14 @@ import type { DirectBody } from '../directModeling'
 import type { BrepNode } from './brepGraph'
 
 /** Display tessellation only; the stored body keeps its exact topology. */
-const DISPLAY_SEGMENTS = 8
+const DISPLAY_SEGMENTS = 12
 
 /**
  * The bridge refuses a display mesh above this many triangles. A face at `segments`
  * per edge costs about 2*segments^2 of them, so a body with many faces (a gear has
  * six per tooth) is drawn coarser rather than refused.
  */
-const TRIANGLE_BUDGET = 16000
+const TRIANGLE_BUDGET = 64000
 
 /** The NURBS document contract caps a graph at 128 nodes. */
 const MAX_NODES = 128
@@ -100,7 +100,7 @@ function displaySegments(nodes: readonly BrepNode[]): number {
     faces += brepGearFaceCount(gear)
   }
   let segments = DISPLAY_SEGMENTS
-  while (segments > 1 && 2 * faces * segments * segments > TRIANGLE_BUDGET) segments--
+  while (segments > 1 && 4 * faces * segments * segments > TRIANGLE_BUDGET) segments--
   return segments
 }
 

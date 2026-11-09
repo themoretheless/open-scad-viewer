@@ -138,33 +138,53 @@ pub(super) fn round_flank_tip_corner(
     // Tangent direction along the CCW tip circle at `tip_angle`
     let tangent = [-tip_angle.sin(), tip_angle.cos()];
     if is_rising {
-        let p_in = [curve.control_points[n - 3][0], curve.control_points[n - 3][1]];
+        let p_anchor = [curve.control_points[n - 5][0], curve.control_points[n - 5][1]];
+        let p_in = [curve.control_points[n - 4][0], curve.control_points[n - 4][1]];
         let chord = (end[0] - p_in[0]).hypot(end[1] - p_in[1]);
-        let handle = (chord * 0.45).max(1e-6);
-        let p_prev = [
+        let handle = (chord * 0.42).max(1e-6);
+        let p_prev1 = [
             end[0] - handle * tangent[0],
             end[1] - handle * tangent[1],
         ];
+        let p_prev2 = [
+            end[0] - 1.85 * handle * tangent[0],
+            end[1] - 1.85 * handle * tangent[1],
+        ];
         curve.control_points[n - 1] = end.to_vec();
-        curve.control_points[n - 2] = p_prev.to_vec();
+        curve.control_points[n - 2] = p_prev1.to_vec();
         curve.control_points[n - 3] = [
-            0.5 * (p_in[0] + p_prev[0]),
-            0.5 * (p_in[1] + p_prev[1]),
+            0.35 * p_in[0] + 0.65 * p_prev2[0],
+            0.35 * p_in[1] + 0.65 * p_prev2[1],
+        ]
+        .to_vec();
+        curve.control_points[n - 4] = [
+            0.45 * p_anchor[0] + 0.35 * p_in[0] + 0.20 * curve.control_points[n - 3][0],
+            0.45 * p_anchor[1] + 0.35 * p_in[1] + 0.20 * curve.control_points[n - 3][1],
         ]
         .to_vec();
     } else {
-        let p_in = [curve.control_points[2][0], curve.control_points[2][1]];
+        let p_anchor = [curve.control_points[4][0], curve.control_points[4][1]];
+        let p_in = [curve.control_points[3][0], curve.control_points[3][1]];
         let chord = (p_in[0] - end[0]).hypot(p_in[1] - end[1]);
-        let handle = (chord * 0.45).max(1e-6);
-        let p_next = [
+        let handle = (chord * 0.42).max(1e-6);
+        let p_next1 = [
             end[0] + handle * tangent[0],
             end[1] + handle * tangent[1],
         ];
+        let p_next2 = [
+            end[0] + 1.85 * handle * tangent[0],
+            end[1] + 1.85 * handle * tangent[1],
+        ];
         curve.control_points[0] = end.to_vec();
-        curve.control_points[1] = p_next.to_vec();
+        curve.control_points[1] = p_next1.to_vec();
         curve.control_points[2] = [
-            0.5 * (p_in[0] + p_next[0]),
-            0.5 * (p_in[1] + p_next[1]),
+            0.35 * p_in[0] + 0.65 * p_next2[0],
+            0.35 * p_in[1] + 0.65 * p_next2[1],
+        ]
+        .to_vec();
+        curve.control_points[3] = [
+            0.45 * p_anchor[0] + 0.35 * p_in[0] + 0.20 * curve.control_points[2][0],
+            0.45 * p_anchor[1] + 0.35 * p_in[1] + 0.20 * curve.control_points[2][1],
         ]
         .to_vec();
     }
