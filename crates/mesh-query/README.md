@@ -20,6 +20,10 @@ assert_eq!(distance, 2.);
 - `bvh_query`: borrows caller-owned buffers. Queries retain unnormalised ray
   parameters, affine transforms, inverse-transpose normals and triangle exclusions.
   Malformed cyclic trees return `QueryError::InvalidTree`.
+- `bvh_range`: box overlap (`overlap_aabb`, a broadphase answer by triangle
+  bounding box), `within_radius` and `nearest` (k nearest triangles), ordered by
+  distance and then triangle ID. `refit` recomputes node boxes after vertices
+  move, keeping the topology; it leaves the tree unchanged on error.
 - `scene_bvh`: binary64 object bounds, stable distance/id order.
 - `proximity`: binary64 mesh buffers. Nearest point and signed distance require
   buffers validated once by the caller; out-of-range indices may panic. Empty nearest-point queries return
@@ -48,8 +52,9 @@ the machine and hit/miss distribution; they are measurements, not guarantees.
 ## API contract for 0.1
 
 - `build_mesh_bvh` and `raycast` share the same immutable vertex/index buffers
-  and stride (at least three float32 components). Keep the buffers alive and
-  rebuild the tree after changing geometry. Triangle IDs are source indices.
+  and stride (at least three float32 components). Keep the buffers alive. After
+  moving vertices call `refit`, or rebuild when the deformation is large or the
+  index buffer changed. Triangle IDs are source indices.
 - `Query` rays need not be normalized. `Hit::t` uses ray parameter units; it is
   a distance only for a unit direction. Bounds are inclusive. `local_from_world`
   uses a column-major affine inverse. Exclusions use original triangle IDs.

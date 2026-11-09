@@ -4,6 +4,7 @@
 pub mod body_queries;
 pub mod bvh;
 pub mod bvh_query;
+pub mod bvh_range;
 pub mod display;
 pub mod distance_bvh;
 pub mod proximity;
@@ -11,6 +12,7 @@ pub mod scene_bvh;
 pub mod semantic_pick;
 pub use bvh::{MeshBvh, build_mesh_bvh, build_mesh_bvh_cooperative};
 pub use bvh_query::{Hit, Query, QueryError, raycast};
+pub use bvh_range::{Neighbor, RefitError, nearest, overlap_aabb, refit, within_radius};
 pub use math_core::{Error, Result};
 pub use mesh_topology::MeshView;
 pub use proximity::{

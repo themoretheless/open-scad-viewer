@@ -48,7 +48,7 @@ async fn yield_once() {
 /// sign follows JavaScript (-0 wins min, +0 wins max). Inputs here are always
 /// finite, so only the zero-sign rule is observable in the output bytes.
 #[inline(always)]
-fn js_min(a: f64, b: f64) -> f64 {
+pub(crate) fn js_min(a: f64, b: f64) -> f64 {
     if b < a || (b == a && b.is_sign_negative()) {
         b
     } else {
@@ -57,7 +57,7 @@ fn js_min(a: f64, b: f64) -> f64 {
 }
 
 #[inline(always)]
-fn js_max(a: f64, b: f64) -> f64 {
+pub(crate) fn js_max(a: f64, b: f64) -> f64 {
     if b > a || (b == a && b.is_sign_positive()) {
         b
     } else {
