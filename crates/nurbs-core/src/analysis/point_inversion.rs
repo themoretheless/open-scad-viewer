@@ -10,7 +10,9 @@
 //! 2. `orthogonality = |C'·(C-Q)|/(|C'| |C-Q|) <= epsilon2`.
 //!
 //! A zero-distance point is returned immediately because the cosine expression
-//! is undefined at 0/0. A domain endpoint is a valid constrained minimum only
+//! is undefined at 0/0. The same holds when the distance satisfies criterion 1
+//! and does not exceed the rounding error of the evaluated point and of the
+//! query coordinates: such a residual carries no direction. A domain endpoint is a valid constrained minimum only
 //! when the residual/tangent cone points outwards; the absolute cosine test is
 //! not imposed at such an endpoint. Failure to converge within the explicit
 //! budget is reported, not disguised as success.
@@ -169,7 +171,15 @@ pub fn invert_point(
         let mut c = criteria(&e, query)?;
         c.distance_satisfied = c.distance <= options.epsilon1;
         c.orthogonality_satisfied = c.orthogonality.is_some_and(|v| v <= options.epsilon2);
-        let (stop, converged) = if c.distance == 0. {
+        // Below the rounding error of the evaluated point and of the query
+        // coordinates the residual has no significant direction, so its
+        // cosine with the tangent is as undefined as at an exact zero.
+        let noise = (query.len() as f64).sqrt()
+            * (2. * e.rounding_bound
+                + f64::EPSILON * query.iter().map(|x| x.abs()).fold(0., f64::max));
+        let (stop, converged) = if c.distance == 0.
+            || (c.distance_satisfied && c.distance <= noise)
+        {
             (PointInversionStop::CoincidentPoint, true)
         } else if c.distance_satisfied && c.orthogonality_satisfied {
             (PointInversionStop::DistanceAndOrthogonality, true)
