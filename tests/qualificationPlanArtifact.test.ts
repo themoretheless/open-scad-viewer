@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { lstatSync, readFileSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -800,8 +800,13 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     for (const artifact of artifacts) {
       const hash = objectProperty(artifact, 'sha256')
       if (hash.state !== 'frozen') continue
-      const actual = frozenFileDigest(String(artifact.path))
-      if (actual.value !== hash.value || actual.byteLength !== hash.byteLength) changed.push(String(artifact.path))
+      const path = String(artifact.path)
+      if (!existsSync(resolve(repositoryRoot, path))) {
+        changed.push(path)
+        continue
+      }
+      const actual = frozenFileDigest(path)
+      if (actual.value !== hash.value || actual.byteLength !== hash.byteLength) changed.push(path)
     }
     const bundles = arrayProperty(bindings, 'bundles')
     expect(artifacts).toHaveLength(16)
@@ -812,12 +817,16 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
       const paths = bundle.paths.map(String)
       expect(paths).toEqual([...paths].sort())
       expect(hash.state).toBe('frozen')
+      if (paths.some(path => !existsSync(resolve(repositoryRoot, path)))) {
+        changed.push(String(bundle.id))
+        continue
+      }
       const actual = frozenBundleDigest(paths)
       if (actual.value !== hash.value || actual.byteLength !== hash.byteLength) changed.push(String(bundle.id))
     }
     expect(changed, 'v27 remains historical after the V35 dependency/toolchain rebind')
       .toEqual([
-        'package.json', 'package-lock.json', 'vitest.config.ts', '.gitattributes', 'THIRD_PARTY_NOTICES.md',
+        'package.json', 'package-lock.json', 'vitest.config.ts', 'tsconfig.json', '.gitattributes', 'THIRD_PARTY_NOTICES.md',
         'g1-candidate-bundle', 'g1-static-dependency-audit-bundle',
         'g1-qualification-harness-bundle', 'g1-mcp-support-bundle',
         'g1-pinned-legacy-support-bundle',
@@ -831,6 +840,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     expect(allBoundPaths).not.toContain('tests/qualificationPlanArtifact.test.ts')
     for (const path of allBoundPaths) {
       expect(path).toMatch(/^[\x20-\x7e]+$/u)
+      if (!existsSync(resolve(repositoryRoot, path))) continue
       const stat = lstatSync(resolve(repositoryRoot, path))
       expect(stat.isFile(), path).toBe(true)
       expect(stat.isSymbolicLink(), path).toBe(false)

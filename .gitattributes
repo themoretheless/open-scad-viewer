@@ -7,7 +7,7 @@
 *.mts text eol=lf
 *.r text eol=lf
 *.ts text eol=lf
-*.vue text eol=lf
+*.svt text eol=lf
 # Preserve exact terminal evidence as data, including original blank lines.
 docs/qualification/sweep-publication-native-owned-2026-10-04/logs/*.log -diff
 # Keep frozen source and harness bytes identical on Windows checkouts.

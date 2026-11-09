@@ -298,7 +298,7 @@ it('transports complete variable-radius annular certificates from the rebuilt WA
    const hull=r.pairs.findIndex(p=>(p.hullCells??0)>0)
    expect(hull).toBeGreaterThanOrEqual(0)
    for(const key of ['hullCells','sourceChartCells'] as const){
-    const forged=structuredClone(r);forged.pairs[hull][key]=forged.pairs[hull].cells+1
+    const forged=structuredClone(r);forged.pairs[hull][key]=(forged.pairs[hull][key]??0)+1
     expect(validSelfIntersection(e,forged)).toBe(false)
    }
    for(const patch of [{polarPMatrix:null},{contractionUpper:0.1},{spans:r.faces[5].result!.spans+1}]){
