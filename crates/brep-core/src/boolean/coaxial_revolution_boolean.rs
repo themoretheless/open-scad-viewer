@@ -4,103 +4,182 @@
 //! about the same axis, and its meridian section is the planar Boolean of the
 //! two sections. A cylinder's section in the (radius, axial) half-plane is a
 //! rectangle, a frustum's a trapezoid and a cone's a triangle; all of them
-//! are polygons with one side on the axis. The planar Boolean of polygons is
-//! a polygonal region, computed by `planar_geometry::curve_boolean` from the
-//! original line spans, and revolving it gives exact cylinder, cone and disk
-//! patches. Every result is audited by the caller's certificate.
+//! are polygons with one side on the axis. Their Boolean is computed exactly
+//! by `revolution_section`, and revolving it gives exact cylinder, cone and
+//! disk patches. Every result is audited by the caller's certificate.
 //!
-//! Axes must coincide within the recognition band. Spheres and tori have
-//! circular sections, which this polygonal Boolean does not carry; their
-//! pairs belong to the sphere-mate cells.
-use crate::intersections::{recognize_cone, recognize_cylinder};
+//! Axes must coincide within the recognition band. Tori (disk sections) and
+//! spheres (half disks) are included; the section Boolean of
+//! `revolution_section` keeps their arcs exact.
+use crate::intersections::sphere_sphere;
+use crate::intersections::{recognize_cone, recognize_cylinder, recognize_torus};
+use crate::revolution_section::{self, Op, Section};
 use crate::sphere_mate::{cross, dot, norm, sub, unsupported};
 use crate::{Model, revolve_region, transform};
-use nurbs_core::{Result, curve::Curve};
-use planar_geometry::curve::{BezPath, PathEl, Point};
-use planar_geometry::curve_boolean::{BinaryOp, FillRule, binary_op};
+use nurbs_core::Result;
 
-/// A solid of revolution recognized as a cylinder, frustum or cone: the axis
-/// through `bottom`, the radii at its two ends and its height along `axis`.
-struct Revolved {
-    bottom: [f64; 3],
-    axis: [f64; 3],
-    frame_x: [f64; 3],
-    r_bottom: f64,
-    r_top: f64,
-    height: f64,
-    error: f64,
+/// A canonical solid of revolution: its axis (when it has one) and enough to
+/// write its meridian section in any frame along that axis.
+enum Revolved {
+    /// Cylinder, frustum or cone: radii at the two ends of the axis segment.
+    Ruled {
+        bottom: [f64; 3],
+        axis: [f64; 3],
+        frame_x: [f64; 3],
+        r_bottom: f64,
+        r_top: f64,
+        height: f64,
+        error: f64,
+    },
+    Torus {
+        center: [f64; 3],
+        axis: [f64; 3],
+        frame_x: [f64; 3],
+        major: f64,
+        minor: f64,
+        error: f64,
+    },
+    /// A sphere has every axis through its centre.
+    Sphere {
+        center: [f64; 3],
+        radius: f64,
+        error: f64,
+    },
 }
 
-fn recognize(model: &Model) -> Result<Option<Revolved>> {
-    if let Some(c) = recognize_cylinder(model)? {
-        let bottom = std::array::from_fn(|k| c.center[k] - c.half_height * c.axis[k]);
-        return Ok(Some(Revolved {
-            bottom,
-            axis: c.axis,
-            frame_x: c.frame[0],
-            r_bottom: c.radius,
-            r_top: c.radius,
-            height: 2. * c.half_height,
-            error: c.error,
-        }));
+impl Revolved {
+    fn recognize(model: &Model) -> Result<Option<Self>> {
+        if let Some(c) = recognize_cylinder(model)? {
+            return Ok(Some(Self::Ruled {
+                bottom: std::array::from_fn(|k| c.center[k] - c.half_height * c.axis[k]),
+                axis: c.axis,
+                frame_x: c.frame[0],
+                r_bottom: c.radius,
+                r_top: c.radius,
+                height: 2. * c.half_height,
+                error: c.error,
+            }));
+        }
+        if let Some(c) = recognize_cone(model)? {
+            return Ok(Some(Self::Ruled {
+                bottom: c.bottom,
+                axis: c.axis,
+                frame_x: c.frame[0],
+                r_bottom: c.r_bottom,
+                r_top: c.r_top,
+                height: c.height,
+                error: c.error,
+            }));
+        }
+        if let Some(t) = recognize_torus(model)? {
+            return Ok(Some(Self::Torus {
+                center: t.center,
+                axis: t.axis,
+                frame_x: t.frame[0],
+                major: t.major,
+                minor: t.minor,
+                error: t.error,
+            }));
+        }
+        if let Some(s) = sphere_sphere::recognize(model)? {
+            return Ok(Some(Self::Sphere {
+                center: s.center,
+                radius: s.radius,
+                error: s.error,
+            }));
+        }
+        Ok(None)
     }
-    if let Some(c) = recognize_cone(model)? {
-        return Ok(Some(Revolved {
-            bottom: c.bottom,
-            axis: c.axis,
-            frame_x: c.frame[0],
-            r_bottom: c.r_bottom,
-            r_top: c.r_top,
-            height: c.height,
-            error: c.error,
-        }));
-    }
-    Ok(None)
-}
 
-/// Section polygon of `solid` in the (radius, axial) half-plane of the axis
-/// through `origin` along `axis`, counter-clockwise (material on the left).
-fn section(solid: &Revolved, origin: [f64; 3], axis: [f64; 3], snap: f64) -> Vec<[f64; 2]> {
-    let top: [f64; 3] = std::array::from_fn(|k| solid.bottom[k] + solid.height * solid.axis[k]);
-    let mut ends = [
-        (dot(sub(solid.bottom, origin), axis), solid.r_bottom),
-        (dot(sub(top, origin), axis), solid.r_top),
-    ];
-    if ends[0].0 > ends[1].0 {
-        ends.swap(0, 1);
+    /// (point on axis, unit axis, radial frame direction), unless a sphere.
+    fn axis(&self) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
+        match *self {
+            Self::Ruled {
+                bottom,
+                axis,
+                frame_x,
+                ..
+            } => Some((bottom, axis, frame_x)),
+            Self::Torus {
+                center,
+                axis,
+                frame_x,
+                ..
+            } => Some((center, axis, frame_x)),
+            Self::Sphere { .. } => None,
+        }
     }
-    let [(z0, r0), (z1, r1)] = ends;
-    let mut ring = vec![[0., z0]];
-    if r0 > snap {
-        ring.push([r0, z0]);
-    }
-    if r1 > snap {
-        ring.push([r1, z1]);
-    }
-    ring.push([0., z1]);
-    ring
-}
 
-fn path(ring: &[[f64; 2]]) -> BezPath {
-    let mut path = BezPath::new();
-    path.move_to(Point {
-        x: ring[0][0],
-        y: ring[0][1],
-    });
-    for p in &ring[1..] {
-        path.line_to(Point { x: p[0], y: p[1] });
+    fn anchor(&self) -> [f64; 3] {
+        match *self {
+            Self::Ruled { bottom, .. } => bottom,
+            Self::Torus { center, .. } | Self::Sphere { center, .. } => center,
+        }
     }
-    path.close_path();
-    path
-}
 
-fn line(a: [f64; 2], b: [f64; 2]) -> Curve {
-    Curve {
-        degree: 1,
-        knots: vec![0., 0., 1., 1.],
-        control_points: vec![a.to_vec(), b.to_vec()],
-        weights: vec![1., 1.],
-        periodic: false,
+    fn error(&self) -> f64 {
+        match *self {
+            Self::Ruled { error, .. } | Self::Torus { error, .. } | Self::Sphere { error, .. } => {
+                error
+            }
+        }
+    }
+
+    fn extent(&self) -> f64 {
+        match *self {
+            Self::Ruled {
+                r_bottom,
+                r_top,
+                height,
+                ..
+            } => r_bottom.max(r_top).max(height),
+            Self::Torus { major, minor, .. } => major + minor,
+            Self::Sphere { radius, .. } => radius,
+        }
+    }
+
+    /// Meridian section in the half-plane of the axis through `origin`.
+    fn section(&self, origin: [f64; 3], axis: [f64; 3], snap: f64) -> Section {
+        let z = |p: [f64; 3]| dot(sub(p, origin), axis);
+        match *self {
+            Self::Ruled {
+                bottom,
+                axis: own,
+                r_bottom,
+                r_top,
+                height,
+                ..
+            } => {
+                let top: [f64; 3] = std::array::from_fn(|k| bottom[k] + height * own[k]);
+                let mut ends = [(z(bottom), r_bottom), (z(top), r_top)];
+                if ends[0].0 > ends[1].0 {
+                    ends.swap(0, 1);
+                }
+                let [(z0, r0), (z1, r1)] = ends;
+                let mut ring = vec![[0., z0]];
+                if r0 > snap {
+                    ring.push([r0, z0]);
+                }
+                if r1 > snap {
+                    ring.push([r1, z1]);
+                }
+                ring.push([0., z1]);
+                Section::Polygon(ring)
+            }
+            Self::Torus {
+                center,
+                major,
+                minor,
+                ..
+            } => Section::Disk {
+                center: [major, z(center)],
+                radius: minor,
+            },
+            Self::Sphere { center, radius, .. } => Section::HalfDisk {
+                center_z: z(center),
+                radius,
+            },
+        }
     }
 }
 
@@ -110,98 +189,75 @@ pub(crate) enum Outcome {
     Empty,
 }
 
-/// Coaxial cylinder/frustum/cone Boolean. `Ok(None)` when an operand is not
-/// such a solid or the axes differ; refusals for unsupported sections.
+/// Coaxial Boolean of two canonical solids of revolution (cylinder, frustum,
+/// cone, torus, sphere; not two spheres). `Ok(None)` when an operand is not
+/// such a solid or the axes differ.
 pub(crate) fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Outcome>> {
     let op = match operation {
-        "union" => BinaryOp::Union,
-        "difference" => BinaryOp::Difference,
-        "intersection" => BinaryOp::Intersection,
+        "union" => Op::Union,
+        "difference" => Op::Difference,
+        "intersection" => Op::Intersection,
         _ => return Ok(None),
     };
-    let (Some(sa), Some(sb)) = (recognize(a)?, recognize(b)?) else {
+    let (Some(sa), Some(sb)) = (Revolved::recognize(a)?, Revolved::recognize(b)?) else {
         return Ok(None);
     };
-    let scale = sa.height.max(sb.height).max(sa.r_bottom.max(sa.r_top)).max(sb.r_bottom.max(sb.r_top))
-        + norm(sub(sa.bottom, sb.bottom))
-        + 1.;
-    let band = sa.error + sb.error + 1e-9 * scale;
-    // Coaxial: parallel axes and B's bottom on A's axis line.
-    let off = sub(sb.bottom, sa.bottom);
-    let along = dot(off, sa.axis);
-    let perp: [f64; 3] = std::array::from_fn(|k| off[k] - along * sa.axis[k]);
-    if norm(cross(sa.axis, sb.axis)) > band / scale || norm(perp) > band {
+    let Some((origin, axis, frame_x)) = sa.axis().or_else(|| sb.axis()) else {
         return Ok(None);
+    };
+    let scale = sa.extent().max(sb.extent()) + norm(sub(sa.anchor(), sb.anchor())) + 1.;
+    let band = sa.error() + sb.error() + 1e-9 * scale;
+    // Coaxial: every axis parallel to the reference and every anchor on it.
+    for solid in [&sa, &sb] {
+        if let Some((_, own, _)) = solid.axis()
+            && norm(cross(axis, own)) > band / scale
+        {
+            return Ok(None);
+        }
+        let off = sub(solid.anchor(), origin);
+        let along = dot(off, axis);
+        let perp: [f64; 3] = std::array::from_fn(|k| off[k] - along * axis[k]);
+        if norm(perp) > band {
+            return Ok(None);
+        }
     }
     let snap = band;
-    let ring_a = section(&sa, sa.bottom, sa.axis, snap);
-    let ring_b = section(&sb, sa.bottom, sa.axis, snap);
-    let contours = binary_op(
-        &path(&ring_a),
-        &path(&ring_b),
-        FillRule::NonZero,
-        FillRule::NonZero,
+    let loops = revolution_section::boolean(
+        &sa.section(origin, axis, snap),
+        &sb.section(origin, axis, snap),
         op,
         band.max(1e-12),
     )?;
-    let mut loops: Vec<Vec<Curve>> = Vec::new();
-    for contour in contours.contours() {
-        let mut points: Vec<[f64; 2]> = Vec::new();
-        for element in &contour.path {
-            match *element {
-                PathEl::MoveTo(p) | PathEl::LineTo(p) => {
-                    // Points within the band of the axis lie on it exactly.
-                    let x = if p.x.abs() <= snap { 0. } else { p.x };
-                    let q = [x, p.y];
-                    if points.last().is_none_or(|last| {
-                        (last[0] - q[0]).abs() > snap || (last[1] - q[1]).abs() > snap
-                    }) {
-                        points.push(q);
-                    }
-                }
-                PathEl::ClosePath => {}
-                _ => {
-                    return Err(unsupported(
-                        "Coaxial revolution Boolean: the section Boolean produced a curved span",
-                    ));
-                }
-            }
-        }
-        if points.len() > 1 {
-            let (first, last) = (points[0], points[points.len() - 1]);
-            if (first[0] - last[0]).abs() <= snap && (first[1] - last[1]).abs() <= snap {
-                points.pop();
-            }
-        }
-        if points.len() < 3 {
+    let mut curves = Vec::new();
+    for spans in &loops {
+        if revolution_section::area(spans).abs() <= band * scale {
             continue;
         }
-        if points.iter().any(|p| p[0] < 0.) {
+        let loop_curves = revolution_section::curves(spans, snap);
+        if loop_curves
+            .iter()
+            .flat_map(|c| &c.control_points)
+            .any(|p| p[0] < 0.)
+        {
             return Err(unsupported(
                 "Coaxial revolution Boolean: section crosses the axis",
             ));
         }
-        loops.push(
-            (0..points.len())
-                .map(|i| line(points[i], points[(i + 1) % points.len()]))
-                .collect(),
-        );
+        curves.push(loop_curves);
     }
-    if loops.is_empty() {
+    if curves.is_empty() {
         return Ok(Some(Outcome::Empty));
     }
-    let local = revolve_region(&loops, a.tolerance_mm.max(b.tolerance_mm))?;
-    // Local revolution axis is +z with radius along +x; place it on A's axis.
-    let x = sa.frame_x;
-    let y = cross(sa.axis, x);
-    let z = sa.axis;
-    let o = sa.bottom;
+    let local = revolve_region(&curves, a.tolerance_mm.max(b.tolerance_mm))?;
+    // Local revolution axis is +z with radius along +x; place it on the axis.
+    let x = frame_x;
+    let y = cross(axis, x);
     let placed = transform::affine(
         &local,
         [
-            [x[0], y[0], z[0], o[0]],
-            [x[1], y[1], z[1], o[1]],
-            [x[2], y[2], z[2], o[2]],
+            [x[0], y[0], axis[0], origin[0]],
+            [x[1], y[1], axis[1], origin[1]],
+            [x[2], y[2], axis[2], origin[2]],
             [0., 0., 0., 1.],
         ],
     )?;
@@ -314,6 +370,52 @@ mod tests {
         assert_eq!(bored.bodies.len(), 1);
         assert!(has_vertex_ring(&bored, 0.5, 0.) && has_vertex_ring(&bored, 0.5, 4.));
         bored.validate().unwrap();
+    }
+
+    /// Inclusion-exclusion of volumes: |A u B| + |A n B| = |A| + |B| and
+    /// |A - B| + |A n B| = |A|.
+    fn check_volumes(a: &Model, b: &Model) {
+        let measure = |outcome: Option<Outcome>| match outcome.unwrap() {
+            Outcome::Solid(model) => {
+                model.validate().unwrap();
+                volume(&model)
+            }
+            Outcome::Empty => 0.,
+        };
+        let (va, vb) = (volume(a), volume(b));
+        let union = measure(boolean(a, b, "union").unwrap());
+        let inter = measure(boolean(a, b, "intersection").unwrap());
+        let diff = measure(boolean(a, b, "difference").unwrap());
+        assert!(inter > 1e-3, "the pair should overlap");
+        assert!((union + inter - va - vb).abs() < 1e-3 * (va + vb), "{union} {inter} {va} {vb}");
+        assert!((diff + inter - va).abs() < 1e-3 * va, "{diff} {inter} {va}");
+    }
+
+    #[test]
+    fn tori_with_cylinders_cones_spheres_and_tori() {
+        let torus = crate::torus(3., 1.).unwrap();
+        let cylinder = shifted(&cylinder(2.5, 2.).unwrap(), [0., 0., -1.]);
+        let cone = shifted(&frustum(5., 0., 5.).unwrap(), [0., 0., -1.]);
+        let ball = crate::sphere(3.).unwrap();
+        let lifted = shifted(&torus, [0., 0., 1.]);
+        for other in [&cylinder, &cone, &ball, &lifted] {
+            check_volumes(&torus, other);
+            check_volumes(other, &torus);
+        }
+        // Torus volume by Pappus: 2 pi^2 R r^2.
+        let pappus = 2. * std::f64::consts::PI.powi(2) * 3.;
+        assert!((volume(&torus) - pappus).abs() < 1e-3);
+    }
+
+    #[test]
+    fn torus_inside_a_cylinder_leaves_a_cavity() {
+        let torus = crate::torus(3., 1.).unwrap();
+        let drum = shifted(&cylinder(5., 4.).unwrap(), [0., 0., -2.]);
+        let hollow = solid(boolean(&drum, &torus, "difference").unwrap());
+        assert_eq!(hollow.bodies.len(), 1);
+        assert_eq!(hollow.bodies[0].inner_shells.len(), 1);
+        let expected = volume(&drum) - volume(&torus);
+        assert!((volume(&hollow) - expected).abs() < 1e-3);
     }
 
     #[test]

@@ -5,6 +5,7 @@ pub(crate) mod box_sphere_boolean;
 pub mod close_topology;
 pub mod corner_close;
 pub(crate) mod coaxial_revolution_boolean;
+pub(crate) mod revolution_section;
 pub(crate) mod cone_sphere_boolean;
 pub(crate) mod cylinder_sphere_boolean;
 pub(crate) mod torus_sphere_boolean;

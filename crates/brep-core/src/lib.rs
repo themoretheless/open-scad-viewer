@@ -76,6 +76,7 @@ pub mod coverage_verifier {
     pub use nurbs_intersect::coverage_verifier::*;
 }
 use crate::boolean::coaxial_revolution_boolean;
+use crate::boolean::revolution_section;
 use crate::boolean::cone_sphere_boolean;
 use crate::boolean::cylinder_sphere_boolean;
 use crate::boolean::torus_sphere_boolean;

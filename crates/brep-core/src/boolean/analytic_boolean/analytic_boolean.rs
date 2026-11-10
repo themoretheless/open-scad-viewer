@@ -73,10 +73,21 @@ pub fn analytic_boolean(
     let revolved = |class| {
         matches!(
             class,
-            AnalyticClass::FiniteCylinder | AnalyticClass::Frustum | AnalyticClass::Cone
+            AnalyticClass::FiniteCylinder
+                | AnalyticClass::Frustum
+                | AnalyticClass::Cone
+                | AnalyticClass::Torus
+                | AnalyticClass::Sphere
         )
     };
-    if revolved(class_a) && revolved(class_b) && operation != "xor" {
+    // Sphere pairs and the axial cylinder/sphere cell keep their own routes.
+    let own_route = matches!(
+        (class_a, class_b),
+        (AnalyticClass::Sphere, AnalyticClass::Sphere)
+            | (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
+    );
+    if revolved(class_a) && revolved(class_b) && !own_route && operation != "xor" {
         match coaxial_revolution_boolean::boolean(a, b, operation)? {
             Some(coaxial_revolution_boolean::Outcome::Solid(result)) => {
                 let classification = classify_chart_events(

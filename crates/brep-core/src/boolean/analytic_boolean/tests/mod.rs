@@ -268,6 +268,20 @@ fn coaxial_cylinder_cone_pairs_are_certified_for_every_operation() {
 }
 
 #[test]
+fn coaxial_torus_pairs_are_certified_for_every_operation() {
+    let torus = crate::torus(3., 1.).unwrap();
+    let lifted = shifted(&torus, [0., 0., 1.]);
+    let drum = shifted(&crate::cylinder(2.5, 2.).unwrap(), [0., 0., -1.]);
+    for (a, b) in [(&torus, &lifted), (&torus, &drum), (&drum, &torus)] {
+        for operation in ["union", "difference", "intersection"] {
+            let (model, cert) = analytic_boolean(a, b, operation).unwrap();
+            assert!(cert.all_complete() && cert.solid_audit_ok, "{operation}");
+            model.validate().unwrap();
+        }
+    }
+}
+
+#[test]
 fn touching_or_overlapping_cones_and_tori_still_refuse() {
     let torus = crate::torus(4., 1.).unwrap();
     let cone = crate::frustum(2., 0., 4.).unwrap();
@@ -279,7 +293,10 @@ fn touching_or_overlapping_cones_and_tori_still_refuse() {
         (cone.clone(), shifted(&torus, [0., 0., 3.5])),
     ] {
         let error = analytic_boolean(&a, &b, "union").unwrap_err();
-        assert_eq!(error.code, "BREP_ANALYTIC_BOOLEAN_REFUSED");
+        // Either the analytic matrix or the solid audit refuses; nothing is
+        // guessed. (A coaxial cone inside a torus's hole gives two bodies
+        // whose boxes overlap, which the audit does not admit.)
+        assert!(error.code.ends_with("_REFUSED"), "{}", error.code);
     }
 }
 
