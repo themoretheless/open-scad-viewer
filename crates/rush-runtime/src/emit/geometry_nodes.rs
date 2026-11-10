@@ -1,7 +1,19 @@
 use super::*;
 impl<'a> Emitter<'a> {
     pub(super) fn emit_geometry_node(&mut self, cx: NativeEmitCtx<'a, '_>) -> Result<()> {
-        let NativeEmitCtx { item, key, op, nodes, scope, current, depth, expected, parent, allow_assembly, source_start } = cx;
+        let NativeEmitCtx {
+            item,
+            key,
+            op,
+            nodes,
+            scope,
+            current,
+            depth,
+            expected,
+            parent: _,
+            allow_assembly: _,
+            source_start,
+        } = cx;
         let fail = |code: &str, message: &str| Error::new(code, current, message);
         match op {
             "advanced_extrude" => {

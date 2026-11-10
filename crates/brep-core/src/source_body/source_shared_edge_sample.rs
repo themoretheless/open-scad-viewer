@@ -169,7 +169,6 @@ pub(crate) fn sample_interior<'a,E:Carrier>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::source_boundary_fragment::{Endpoint, Fragment};
     use nurbs_core::{curve::Curve, surface::Surface};
     #[test]

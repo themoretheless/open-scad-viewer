@@ -34,7 +34,6 @@ impl<'a> Evaluator<'a> {
         ))
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn match_pattern(
         &mut self,
         pattern: &'a Json,

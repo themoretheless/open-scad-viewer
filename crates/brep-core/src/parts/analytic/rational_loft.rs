@@ -1,7 +1,6 @@
 //! Retained rational section loft with authored incidence and audited cap trims.
 //! A closed manifold model is not a proof of global embedding/self-separation.
 use super::*;
-use nurbs_core::numerics::error_upper as error_bound;
 mod affine_stations;
 mod smooth_stations;
 pub use affine_stations::{

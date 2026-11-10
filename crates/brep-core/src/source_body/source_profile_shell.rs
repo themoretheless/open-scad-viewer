@@ -14,11 +14,7 @@ mod gap;
 pub use gap::{ExpressionFaceClearance, ExpressionGapReport};
 #[path = "source_profile_shell_segment.rs"]
 mod segment;
-pub use segment::{
-    ExpressionEndpointNormalReport, ExpressionLineReport, ExpressionMaterialInterval,
-    ExpressionMaterialLine, ExpressionMaterialLineQualification, ExpressionMaterialLineReport,
-    ExpressionSegmentCandidate, ExpressionSegmentReport, ExpressionTrimmedLineReport,
-};
+pub use segment::{ExpressionSegmentCandidate, ExpressionSegmentReport};
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
 pub use volume::{
@@ -263,8 +259,7 @@ pub use transition_contact::{TransitionPlaneContact, TransitionPlaneReport};
 #[path = "source_profile_shell_ruled_contact.rs"]
 mod ruled_contact;
 pub use ruled_contact::{
-    ProfileRuledContact, ProfileRuledContactReport, ProfileRuledImage, ProfileRuledImageReport,
-    TransitionRuledContact, TransitionRuledReport,
+    ProfileRuledContact, TransitionRuledContact, TransitionRuledReport,
 };
 
 #[path = "source_profile_shell_section_contact.rs"]
@@ -293,15 +288,15 @@ pub use coordinate_contact::{TransitionCoordinateContact, TransitionCoordinateRe
 
 #[path = "source_profile_shell_boundary_contact.rs"]
 mod profile_boundary_contact;
-pub use profile_boundary_contact::{ProfileBoundaryContact, ProfileBoundaryReport};
+pub use profile_boundary_contact::ProfileBoundaryContact;
 
 #[path = "source_profile_shell_paired_contact.rs"]
 mod profile_paired_contact;
-pub use profile_paired_contact::{ProfilePairedContact, ProfilePairedReport};
+pub use profile_paired_contact::ProfilePairedContact;
 
 #[path = "source_profile_shell_xy_plane_contact.rs"]
 mod xy_plane_contact;
-pub use xy_plane_contact::{TransitionXyPlaneContact, TransitionXyPlaneReport};
+pub use xy_plane_contact::TransitionXyPlaneContact;
 
 #[path = "source_profile_shell_display.rs"]
 mod display;

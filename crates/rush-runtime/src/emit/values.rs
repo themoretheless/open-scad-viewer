@@ -43,7 +43,6 @@ impl<'a> Emitter<'a> {
             .map(|(i, v)| self.value(v, scope, current, &format!("{field}/{i}"), dimension))
             .collect()
     }
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn geometry_vector(
         &mut self,
         expr: &'a Value,

@@ -1,7 +1,5 @@
 use super::*;
-use crate::TopologyIds;
 use brep_topology::{Body, Coedge, Edge, Face, FaceUse, Loop, Shell, Vertex};
-use poly::Poly;
 #[derive(Clone, Copy)]
 enum Carrier {
     Source(usize),

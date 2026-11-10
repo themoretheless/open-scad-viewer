@@ -472,7 +472,7 @@ impl FeatureGraph {
         feature: &str,
         new_position: usize,
     ) -> Result<(Vec<String>, usize)> {
-        let (reduced, previous) = self.reduced_order(feature)?;
+        let (reduced, _) = self.reduced_order(feature)?;
         let search = self.position_search(feature, &reduced)?;
         let mut candidate = reduced.clone();
         candidate.insert(new_position.min(candidate.len()), feature.into());

@@ -11,7 +11,6 @@ use value_codec::{Value, json};
 pub use mechanical_core::append_number;
 
 mod number;
-mod emitter;
 mod compile;
 #[cfg(test)]
 mod match_tests;
@@ -20,7 +19,6 @@ mod dynamic_vector_tests;
 #[cfg(test)]
 mod assertion_tests;
 pub use number::*;
-use emitter::*;
 pub use compile::*;
 
 mod values;

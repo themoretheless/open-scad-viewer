@@ -2,7 +2,7 @@
 //! material, embedding or whole-solid admission is inferred from this report.
 use crate::{Model, face_domain::FaceDomain};
 use nurbs_core::{
-    Error, Result, interval_eval::Interval as I, surface_shape_operator, trim_domain::Location,
+    Error, Result, surface_shape_operator, trim_domain::Location,
 };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decision {

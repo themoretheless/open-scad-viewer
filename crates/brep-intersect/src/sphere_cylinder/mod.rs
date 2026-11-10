@@ -25,7 +25,7 @@
 #[cfg(feature = "codec")]
 mod serialization;
 use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+    self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
     lift,
 };
 pub(crate) use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};

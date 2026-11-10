@@ -443,5 +443,4 @@ pub(super) mod tests;
 #[path = "periodic_chart_shores/shore_derivation.rs"]
 mod shore_derivation;
 use shore_derivation::derive;
-use shore_derivation::order;
 use shore_derivation::scalar;

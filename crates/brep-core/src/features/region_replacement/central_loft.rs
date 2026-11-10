@@ -359,7 +359,6 @@ mod poles;
 
 #[path = "central_loft/exterior.rs"]
 mod exterior;
-pub use exterior::{NetworkExteriorReport, NetworkSupportReport};
 
 #[path = "central_loft/sewing.rs"]
 mod sewing;

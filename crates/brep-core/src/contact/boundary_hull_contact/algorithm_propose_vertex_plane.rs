@@ -1,5 +1,4 @@
 //! boundary hull contact algorithm: propose_vertex_plane.
-use super::*;
 pub fn propose_vertex_plane(point: [f64; 3], poles: &[Vec<&Vec<f64>>; 2]) -> Option<[Vec<f64>; 2]> {
     let mut directions = Vec::new();
     for (face, ps) in poles.iter().enumerate() {

@@ -1,4 +1,5 @@
 //! Frozen contacts: preserves the original arithmetic and proof budgets.
+#[cfg(test)]
 use super::*;
 
 #[cfg(test)]

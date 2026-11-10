@@ -796,6 +796,8 @@ pub(super) mod region_brep;
 
 #[path = "atlas/curve_projection.rs"]
 mod curve_projection;
-use curve_projection::{curve_points, monotone, monotone_parameter, curve_pair, segment_seam};
+#[cfg(test)]
+use curve_projection::curve_points;
+use curve_projection::{monotone, monotone_parameter, curve_pair, segment_seam};
 
 pub(super) mod boolean;

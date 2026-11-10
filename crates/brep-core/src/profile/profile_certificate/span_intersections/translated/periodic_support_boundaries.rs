@@ -309,4 +309,3 @@ pub(in crate::profile::profile_certificate::span_intersections::translated) mod 
 mod support_plan;
 use support_plan::basis;
 use support_plan::plan;
-use support_plan::world_curve;

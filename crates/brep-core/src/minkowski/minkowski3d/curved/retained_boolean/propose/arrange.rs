@@ -226,7 +226,7 @@ pub(super) fn construct(
     let mut descendants = vec![Vec::new(); source.faces.len()];
     for original in 0..source.faces.len() {
         let mut halfedges = exact::uses(&p.model, original).cloned().collect::<Vec<_>>();
-        for (i, a) in graph
+        for (i, _) in graph
             .arcs
             .iter()
             .enumerate()
