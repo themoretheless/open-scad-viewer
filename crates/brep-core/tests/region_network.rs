@@ -112,9 +112,19 @@ fn prepared_corner_sectors_replace_atomically_and_share_the_saved_diagonal() {
     );
     // Preserve every outer rim and the diagonal, but change transverse jets.
     // Positional sewing alone must not publish the partially replaced network.
-    assert_eq!((chart.degree_u, chart.degree_v), (5, 5));
+    // The kink below is written for one polynomial Bezier patch of degree
+    // 5; the corner chart is a single patch of lower degree, so it is raised
+    // to degree 5 first, which leaves the surface unchanged.
     assert!(chart.weights.iter().flatten().all(|w| *w == 1.));
-    let mut kink = chart.clone();
+    let elevate = |c: &nurbs_core::curve::Curve| {
+        if c.degree < 5 { c.elevate(5) } else { Ok(c.clone()) }
+    };
+    let quintic = chart
+        .edit_axis(nurbs_core::surface::Axis::U, elevate).unwrap()
+        .edit_axis(nurbs_core::surface::Axis::V, elevate).unwrap();
+    assert_eq!((quintic.degree_u, quintic.degree_v), (5, 5));
+    assert_eq!((quintic.control_points.len(), quintic.control_points[0].len()), (6, 6));
+    let mut kink = quintic.clone();
     let choose = |n: usize, k: usize| {
         if k > n {
             return 0.;
