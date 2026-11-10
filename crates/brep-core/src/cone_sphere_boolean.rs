@@ -1,8 +1,7 @@
-//! Axial cone × sphere: the `Mate` of `sphere_mate` for the canonical
-//! frustum (two caps, four ruled quarter-arc side patches, rigid placement
-//! admitted) against a sphere centred on the cone axis. True cones with an
-//! apex are not admitted yet: their collapsed side boundaries do not
-//! assemble manifoldly in the engine.
+//! Axial cone × sphere: the `Mate` of `sphere_mate` for the canonical cone
+//! (a frustum with two caps, or a true cone with one cap and a shared apex;
+//! four ruled quarter-arc side patches, rigid placement admitted) against a
+//! sphere centred on the cone axis.
 //!
 //! On the axis every contact is an exact circle. A cap plane cuts the sphere
 //! in a circle concentric with the cap. The side, whose radius grows linearly
@@ -41,12 +40,7 @@ impl<'m> AxialCone<'m> {
         let Some(canon) = recognize_cone(model)? else {
             return Ok(None);
         };
-        // A true cone's side patches collapse to the shared apex vertex, which
-        // the sphere-mate assembly does not yet join manifoldly (it fails its
-        // own validation). Only two-cap frusta are admitted for now.
-        if canon.caps.iter().any(Option::is_none) {
-            return Ok(None);
-        }
+
         let mut quadrant_of = vec![usize::MAX; model.faces.len()];
         for (q, &face) in canon.sides.iter().enumerate() {
             quadrant_of[face] = q;
@@ -441,10 +435,28 @@ mod tests {
     }
 
     #[test]
-    fn true_cones_are_not_admitted_by_this_cell() {
+    fn true_cone_cap_contact_keeps_the_apex() {
+        // Apex cone r 4 at z = 0 to the apex at z = 8. A sphere of radius 1
+        // centred 0.5 below the base cuts only the base cap.
         let c = frustum(4., 0., 8.).unwrap();
         let s = placed_sphere(1., [0., 0., -0.5]);
-        assert!(boolean(&c, &s, "union").unwrap().is_none());
+        let [union, difference, intersection] = all_ops(&c, &s);
+        assert!((z_range(&union).1 - 8.).abs() < 1e-9, "the apex survives");
+        assert!((z_range(&union).0 + 1.5).abs() < 1e-9);
+        assert!(z_range(&difference).0.abs() < 1e-9);
+        assert!((z_range(&intersection).1 - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn true_cone_with_a_ball_around_its_middle() {
+        // Apex cone r 4 -> apex at z = 8 (slope -0.5); a sphere of radius 2.5
+        // at z = 4 crosses the side twice, away from the apex.
+        let c = frustum(4., 0., 8.).unwrap();
+        let s = placed_sphere(2.5, [0., 0., 4.]);
+        let [union, difference, intersection] = all_ops(&c, &s);
+        assert!((z_range(&union).1 - 8.).abs() < 1e-9, "the apex survives");
+        assert_eq!(difference.bodies.len(), 2);
+        assert!((z_range(&intersection).0 - 1.5).abs() < 1e-9);
     }
 
     #[test]

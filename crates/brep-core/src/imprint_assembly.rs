@@ -73,8 +73,15 @@ pub(crate) struct ChartVertices {
     pub(crate) uvs: Vec<[f64; 2]>,
 }
 impl ChartVertices {
+    /// One chart vertex per topology key and UV position. A key met at
+    /// distant UV positions is several chart vertices: a pole shared by a
+    /// collapsed boundary (a cone apex at both top corners of a side patch)
+    /// must not pinch the patch's UV boundary into one point.
     pub(crate) fn index(&mut self, key: VKey, uv: [f64; 2]) -> usize {
-        if let Some(i) = self.keys.iter().position(|k| *k == key) {
+        const SAME_UV: f64 = 1e-7;
+        if let Some(i) = self.keys.iter().zip(&self.uvs).position(|(k, p)| {
+            *k == key && (p[0] - uv[0]).abs() <= SAME_UV && (p[1] - uv[1]).abs() <= SAME_UV
+        }) {
             i
         } else {
             self.keys.push(key);
@@ -316,7 +323,9 @@ impl<'m> Assembler<'m> {
                 let v0 = self.vertex(VKey::Orig(o, src.vertices[0]));
                 let v1 = self.vertex(VKey::Orig(o, src.vertices[1]));
                 Edge {
-                    degenerate: false,
+                    // A collapsed boundary (a cone apex) stays collapsed; it
+                    // may be shared by every face meeting at the pole.
+                    degenerate: src.degenerate,
                     vertices: [v0, v1],
                     curve: src.curve.clone(),
                 }
