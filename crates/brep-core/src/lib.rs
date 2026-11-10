@@ -64,6 +64,7 @@ pub mod contact_trim;
 pub mod corner_close;
 pub mod coverage_verifier;
 mod coaxial_revolution_boolean;
+mod revolution_section;
 mod cone_sphere_boolean;
 mod cylinder_sphere_boolean;
 mod torus_sphere_boolean;
