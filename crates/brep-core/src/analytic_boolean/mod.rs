@@ -11,6 +11,7 @@ use crate::analytic_ss::{
 };
 use crate::box_sphere_boolean;
 use crate::coverage_verifier::verify_complete_report;
+use crate::coaxial_revolution_boolean;
 use crate::cone_sphere_boolean;
 use crate::cylinder_sphere_boolean;
 use crate::torus_sphere_boolean;
