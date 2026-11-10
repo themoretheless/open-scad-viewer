@@ -1,26 +1,72 @@
 use super::*;
 impl<'a> Emitter<'a> {
     pub(super) fn emit_geometry_node(&mut self, cx: NativeEmitCtx<'a, '_>) -> Result<()> {
+        match cx.op {
+            "advanced_extrude" | "cone" | "torus" | "linear_pattern" | "circular_pattern" => {
+                self.emit_pattern_or_sweep_primitive(cx)?;
+            }
+            "loft" | "sketch" => {
+                self.emit_loft_or_sketch(cx)?;
+            }
+            "rectangle" | "box" | "circle" | "sphere" | "cylinder" | "polygon" => {
+                self.emit_basic_primitive(cx)?;
+            }
+            "extrude" | "revolve" | "translate" | "rotate" | "scale" | "union"
+            | "intersection" | "difference" | "hull" => {
+                self.emit_transform_or_boolean(cx)?;
+            }
+            _ => unreachable!("selected native emitter family"),
+        }
+        self.record_assertion_snapshot(cx);
+        Ok(())
+    }
+
+    fn record_assertion_snapshot(&mut self, cx: NativeEmitCtx<'a, '_>) {
+        if !self.assertion_targets.contains(cx.key) {
+            return;
+        }
+        let snapshot_key = (cx.item as *const Value as usize, Rc::as_ptr(cx.scope) as usize);
+        if self.assertion_snapshots.contains_key(&snapshot_key) {
+            return;
+        }
+        let source = format!(
+            "$fn = {};\n{}",
+            self.segments,
+            self.lines[cx.source_start..].join("\n")
+        );
+        let source = if self.assertion_snapshot_bytes + source.len() <= 1_000_000 {
+            self.assertion_snapshot_bytes += source.len();
+            Some(source)
+        } else {
+            None
+        };
+        self.assertion_snapshots.insert(
+            snapshot_key,
+            AssertionSnapshot {
+                geometry_type: cx.expected,
+                _scope: cx.scope.clone(),
+                source,
+            },
+        );
+    }
+
+    fn emit_pattern_or_sweep_primitive(&mut self, cx: NativeEmitCtx<'a, '_>) -> Result<()> {
         let NativeEmitCtx {
             item,
-            key,
             op,
             nodes,
             scope,
             current,
             depth,
             expected,
-            parent: _,
-            allow_assembly: _,
-            source_start,
+            ..
         } = cx;
         let fail = |code: &str, message: &str| Error::new(code, current, message);
         match op {
             "advanced_extrude" => {
-                let height = self.value(&item["height"], scope, &current, "height", LENGTH)?;
-                let twist = self.value(&item["twist"], scope, &current, "twist", ANGLE)?;
-                let scale =
-                    self.vector(&item["top_scale"], scope, &current, "top_scale", SCALAR)?;
+                let height = self.value(&item["height"], scope, current, "height", LENGTH)?;
+                let twist = self.value(&item["twist"], scope, current, "twist", ANGLE)?;
+                let scale = self.vector(&item["top_scale"], scope, current, "top_scale", SCALAR)?;
                 if height <= 0. || scale.iter().any(|v| *v <= 0.) {
                     return Err(fail(
                         "invalid_dimension",
@@ -41,19 +87,14 @@ impl<'a> Emitter<'a> {
                     number(item["slices"].as_f64().unwrap()),
                     boolean(item, "center")
                 ));
-                self.child(item, nodes, scope, &current, depth, GeometryType::Profile)?;
+                self.child(item, nodes, scope, current, depth, GeometryType::Profile)?;
                 self.lines.push("}".into());
             }
             "cone" => {
-                let bottom = self.value(
-                    &item["radius_bottom"],
-                    scope,
-                    &current,
-                    "radius_bottom",
-                    LENGTH,
-                )?;
-                let top = self.value(&item["radius_top"], scope, &current, "radius_top", LENGTH)?;
-                let height = self.value(&item["height"], scope, &current, "height", LENGTH)?;
+                let bottom =
+                    self.value(&item["radius_bottom"], scope, current, "radius_bottom", LENGTH)?;
+                let top = self.value(&item["radius_top"], scope, current, "radius_top", LENGTH)?;
+                let height = self.value(&item["height"], scope, current, "height", LENGTH)?;
                 if bottom < 0. || top < 0. || bottom + top <= 0. || height <= 0. {
                     return Err(fail(
                         "invalid_dimension",
@@ -69,20 +110,10 @@ impl<'a> Emitter<'a> {
                 ));
             }
             "torus" => {
-                let major = self.value(
-                    &item["major_radius"],
-                    scope,
-                    &current,
-                    "major_radius",
-                    LENGTH,
-                )?;
-                let minor = self.value(
-                    &item["minor_radius"],
-                    scope,
-                    &current,
-                    "minor_radius",
-                    LENGTH,
-                )?;
+                let major =
+                    self.value(&item["major_radius"], scope, current, "major_radius", LENGTH)?;
+                let minor =
+                    self.value(&item["minor_radius"], scope, current, "minor_radius", LENGTH)?;
                 if minor <= 0. || major <= minor {
                     return Err(fail(
                         "invalid_dimension",
@@ -96,7 +127,7 @@ impl<'a> Emitter<'a> {
                 ));
             }
             "linear_pattern" | "circular_pattern" => {
-                let count = self.value(&item["count"], scope, &current, "count", SCALAR)?;
+                let count = self.value(&item["count"], scope, current, "count", SCALAR)?;
                 if count.fract() != 0. || !(1.0..=256.0).contains(&count) {
                     return Err(fail(
                         "invalid_count",
@@ -104,12 +135,12 @@ impl<'a> Emitter<'a> {
                     ));
                 }
                 let step = if op == "linear_pattern" {
-                    self.vector(&item["step"], scope, &current, "step", LENGTH)?
+                    self.vector(&item["step"], scope, current, "step", LENGTH)?
                 } else {
                     vec![
                         0.,
                         0.,
-                        self.value(&item["angle_step"], scope, &current, "angle_step", ANGLE)?,
+                        self.value(&item["angle_step"], scope, current, "angle_step", ANGLE)?,
                     ]
                 };
                 if expected == GeometryType::Profile && op == "linear_pattern" && step[2] != 0. {
@@ -150,6 +181,21 @@ impl<'a> Emitter<'a> {
                 }
                 self.lines.push("}".into());
             }
+            _ => unreachable!(),
+        }
+        Ok(())
+    }
+
+    fn emit_loft_or_sketch(&mut self, cx: NativeEmitCtx<'a, '_>) -> Result<()> {
+        let NativeEmitCtx {
+            item,
+            op,
+            scope,
+            current,
+            ..
+        } = cx;
+        let fail = |code: &str, message: &str| Error::new(code, current, message);
+        match op {
             "loft" => {
                 let count = array(&item["profile"]).len();
                 self.profile_work += count * count + count * array(&item["sections"]).len();
@@ -158,38 +204,22 @@ impl<'a> Emitter<'a> {
                 }
                 let mut profile = vec![];
                 for (i, p) in array(&item["profile"]).iter().enumerate() {
-                    let v = self.vector(p, scope, &current, &format!("profile/{i}"), LENGTH)?;
+                    let v = self.vector(p, scope, current, &format!("profile/{i}"), LENGTH)?;
                     profile.push([v[0], v[1]]);
                 }
                 let mut sections = vec![];
                 for (i, s) in array(&item["sections"]).iter().enumerate() {
-                    let scale = self.vector(
-                        &s["scale"],
-                        scope,
-                        &current,
-                        &format!("sections/{i}/scale"),
-                        SCALAR,
-                    )?;
-                    let offset = self.vector(
-                        &s["offset"],
-                        scope,
-                        &current,
-                        &format!("sections/{i}/offset"),
-                        LENGTH,
-                    )?;
+                    let scale =
+                        self.vector(&s["scale"], scope, current, &format!("sections/{i}/scale"), SCALAR)?;
+                    let offset =
+                        self.vector(&s["offset"], scope, current, &format!("sections/{i}/offset"), LENGTH)?;
                     sections.push(profiles::Section {
-                        z: self.value(
-                            &s["z"],
-                            scope,
-                            &current,
-                            &format!("sections/{i}/z"),
-                            LENGTH,
-                        )?,
+                        z: self.value(&s["z"], scope, current, &format!("sections/{i}/z"), LENGTH)?,
                         scale: [scale[0], scale[1]],
                         offset: [offset[0], offset[1]],
                     });
                 }
-                let mesh = profiles::loft(profile, &sections, &current)?;
+                let mesh = profiles::loft(profile, &sections, current)?;
                 self.lines.push(format!(
                     "polyhedron(points={},faces={});",
                     json_string(&mesh["points"]),
@@ -205,7 +235,7 @@ impl<'a> Emitter<'a> {
                 }
                 let mut points = vec![];
                 for (i, p) in array(&item["points"]).iter().enumerate() {
-                    points.push(json!({"id":p["id"],"position":self.vector(&p["position"],scope,&current,&format!("points/{i}/position"),LENGTH)?}));
+                    points.push(json!({"id":p["id"],"position":self.vector(&p["position"],scope,current,&format!("points/{i}/position"),LENGTH)?}));
                 }
                 let mut constraints = vec![];
                 for (i, c) in array(&item["constraints"]).iter().enumerate() {
@@ -215,7 +245,7 @@ impl<'a> Emitter<'a> {
                             constraint["at"] = json!(self.vector(
                                 &c["at"],
                                 scope,
-                                &current,
+                                current,
                                 &format!("constraints/{i}/at"),
                                 LENGTH
                             )?)
@@ -224,7 +254,7 @@ impl<'a> Emitter<'a> {
                             constraint["value"] = json!(self.value(
                                 &c["value"],
                                 scope,
-                                &current,
+                                current,
                                 &format!("constraints/{i}/value"),
                                 LENGTH
                             )?)
@@ -244,7 +274,7 @@ impl<'a> Emitter<'a> {
                         ));
                     }
                 }
-                let mut report = sketch::solve(&points, &constraints, &current)?;
+                let mut report = sketch::solve(&points, &constraints, current)?;
                 report["instance_path"] = json!(current);
                 self.sketch_solutions.push(report.clone());
                 let status = str_at(&report, "status");
@@ -266,15 +296,30 @@ impl<'a> Emitter<'a> {
                         ]
                     })
                     .collect();
-                profiles::validate(&polygon, &current)?;
+                profiles::validate(&polygon, current)?;
                 self.lines
                     .push(format!("polygon(points={});", json_string(&json!(polygon))));
             }
+            _ => unreachable!(),
+        }
+        Ok(())
+    }
+
+    fn emit_basic_primitive(&mut self, cx: NativeEmitCtx<'a, '_>) -> Result<()> {
+        let NativeEmitCtx {
+            item,
+            op,
+            scope,
+            current,
+            ..
+        } = cx;
+        let fail = |code: &str, message: &str| Error::new(code, current, message);
+        match op {
             "rectangle" | "box" => {
                 let size = self.geometry_vector(
                     &item["size"],
                     scope,
-                    &current,
+                    current,
                     "size",
                     LENGTH,
                     if op == "box" { 3 } else { 2 },
@@ -302,7 +347,7 @@ impl<'a> Emitter<'a> {
                 ));
             }
             "circle" | "sphere" | "cylinder" => {
-                let radius = self.value(&item["radius"], scope, &current, "radius", LENGTH)?;
+                let radius = self.value(&item["radius"], scope, current, "radius", LENGTH)?;
                 if radius <= 0. {
                     return Err(Error::new(
                         "invalid_dimension",
@@ -319,7 +364,7 @@ impl<'a> Emitter<'a> {
                     ));
                 }
                 if op == "cylinder" {
-                    let height = self.value(&item["height"], scope, &current, "height", LENGTH)?;
+                    let height = self.value(&item["height"], scope, current, "height", LENGTH)?;
                     if height <= 0. {
                         return Err(Error::new(
                             "invalid_dimension",
@@ -340,7 +385,7 @@ impl<'a> Emitter<'a> {
             "polygon" => {
                 let mut points = vec![];
                 for (i, p) in array(&item["points"]).iter().enumerate() {
-                    let v = self.vector(p, scope, &current, &format!("points/{i}"), LENGTH)?;
+                    let v = self.vector(p, scope, current, &format!("points/{i}"), LENGTH)?;
                     points.push([v[0], v[1]]);
                 }
                 self.profile_work += points.len() * points.len();
@@ -350,13 +395,31 @@ impl<'a> Emitter<'a> {
                         "Polygon validation work budget exceeded.",
                     ));
                 }
-                profiles::validate(&points, &current)?;
+                profiles::validate(&points, current)?;
                 self.lines
                     .push(format!("polygon(points={});", json_string(&json!(points))));
             }
+            _ => unreachable!(),
+        }
+        Ok(())
+    }
+
+    fn emit_transform_or_boolean(&mut self, cx: NativeEmitCtx<'a, '_>) -> Result<()> {
+        let NativeEmitCtx {
+            item,
+            op,
+            nodes,
+            scope,
+            current,
+            depth,
+            expected,
+            ..
+        } = cx;
+        let fail = |code: &str, message: &str| Error::new(code, current, message);
+        match op {
             "extrude" | "revolve" => {
                 if op == "extrude" {
-                    let height = self.value(&item["height"], scope, &current, "height", LENGTH)?;
+                    let height = self.value(&item["height"], scope, current, "height", LENGTH)?;
                     if height <= 0. {
                         return Err(fail(
                             "invalid_dimension",
@@ -369,7 +432,7 @@ impl<'a> Emitter<'a> {
                         boolean(item, "center")
                     ));
                 } else {
-                    let angle = self.value(&item["angle"], scope, &current, "angle", ANGLE)?;
+                    let angle = self.value(&item["angle"], scope, current, "angle", ANGLE)?;
                     if angle <= 0. || angle > 360. {
                         return Err(fail(
                             "invalid_angle",
@@ -379,14 +442,14 @@ impl<'a> Emitter<'a> {
                     self.lines
                         .push(format!("rotate_extrude(angle={}){{", number(angle)));
                 }
-                self.child(item, nodes, scope, &current, depth, GeometryType::Profile)?;
+                self.child(item, nodes, scope, current, depth, GeometryType::Profile)?;
                 self.lines.push("}".into());
             }
             "translate" | "rotate" | "scale" => {
                 let vector = self.geometry_vector(
                     &item["vector"],
                     scope,
-                    &current,
+                    current,
                     "vector",
                     if op == "rotate" {
                         ANGLE
@@ -416,7 +479,7 @@ impl<'a> Emitter<'a> {
                 }
                 self.lines
                     .push(format!("{op}({}){{", json_string(&json!(vector))));
-                self.child(item, nodes, scope, &current, depth, expected)?;
+                self.child(item, nodes, scope, current, depth, expected)?;
                 self.lines.push("}".into());
             }
             "union" | "intersection" | "difference" | "hull" => {
@@ -426,7 +489,7 @@ impl<'a> Emitter<'a> {
                         child,
                         nodes,
                         scope,
-                        &current,
+                        current,
                         depth + 1,
                         expected,
                         None,
@@ -435,31 +498,7 @@ impl<'a> Emitter<'a> {
                 }
                 self.lines.push("}".into());
             }
-            _ => unreachable!("selected native emitter family"),
-        }
-        if self.assertion_targets.contains(key) {
-            let snapshot_key = (item as *const Value as usize, Rc::as_ptr(scope) as usize);
-            if !self.assertion_snapshots.contains_key(&snapshot_key) {
-                let source = format!(
-                    "$fn = {};\n{}",
-                    self.segments,
-                    self.lines[source_start..].join("\n")
-                );
-                let source = if self.assertion_snapshot_bytes + source.len() <= 1_000_000 {
-                    self.assertion_snapshot_bytes += source.len();
-                    Some(source)
-                } else {
-                    None
-                };
-                self.assertion_snapshots.insert(
-                    snapshot_key,
-                    AssertionSnapshot {
-                        geometry_type: expected,
-                        _scope: scope.clone(),
-                        source,
-                    },
-                );
-            }
+            _ => unreachable!(),
         }
         Ok(())
     }

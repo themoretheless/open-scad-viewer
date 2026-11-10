@@ -2,6 +2,13 @@
 use super::*;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if let Some(res) = try_dispatch_distance_trim_and_probes(v, op) {
+        return Some(res);
+    }
+    try_dispatch_sculpt_coons_and_continuity(v, op)
+}
+
+fn try_dispatch_distance_trim_and_probes(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
         "surface_distance" => (|| {
             Ok(surface_distance::distance(
@@ -80,6 +87,13 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
                 field(v, "controls")?,
             )
         })(),
+        _ => return None,
+    };
+    Some(res)
+}
+
+fn try_dispatch_sculpt_coons_and_continuity(v: &Value, op: &str) -> Option<Result<Value>> {
+    let res = match op {
         "nurbs_deform_curve" => (|| {
             encode(edit::deform_curve(
                 &field(v, "curve")?,

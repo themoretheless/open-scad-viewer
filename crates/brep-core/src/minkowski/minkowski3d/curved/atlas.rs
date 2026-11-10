@@ -787,17 +787,12 @@ pub(super) fn nominal_report(m: &Model, depth: u8, input: &Input) -> Result<Repo
 #[cfg(feature = "codec")]
 #[path = "atlas/codec.rs"]
 mod codec;
-
 #[cfg(test)]
 #[path = "atlas/tests/tests_integration.rs"]
 mod tests;
-
 pub(super) mod region_brep;
-
 #[path = "atlas/curve_projection.rs"]
 mod curve_projection;
-#[cfg(test)]
-use curve_projection::curve_points;
+#[cfg(test)] use curve_projection::curve_points;
 use curve_projection::{monotone, monotone_parameter, curve_pair, segment_seam};
-
 pub(super) mod boolean;

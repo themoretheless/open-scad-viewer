@@ -2,6 +2,13 @@
 use super::*;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
+    if let Some(res) = try_dispatch_curve_and_surface_bounds(v, op) {
+        return Some(res);
+    }
+    try_dispatch_envelopes_and_contact_bands(v, op)
+}
+
+fn try_dispatch_curve_and_surface_bounds(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
         "curve_chain_diagnostics" => (|| {
             Ok(crate::curve_offset_diagnostics::inspect_curves(
@@ -94,6 +101,13 @@ pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
             }))
         })(),
         "surface_offset_contact_qualification" => handle_contact_qualification(v),
+        _ => return None,
+    };
+    Some(res)
+}
+
+fn try_dispatch_envelopes_and_contact_bands(v: &Value, op: &str) -> Option<Result<Value>> {
+    let res = match op {
         "surface_offset_envelope_fit" => (|| {
             let a: Surface = field(v, "a")?;
             let b: Surface = field(v, "b")?;

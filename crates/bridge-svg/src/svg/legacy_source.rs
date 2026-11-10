@@ -305,6 +305,59 @@ pub(super) fn admit_outline_font(bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
+fn check_images(
+    group: &usvg::Group,
+    depth: usize,
+    nodes: &mut usize,
+    pixels: &mut f64,
+    stroke_points: &mut usize,
+) -> Result<()> {
+    if depth > MAX_DEPTH {
+        return Err(limit("SVG image tree nesting exceeds 128 levels"));
+    }
+    for node in group.children() {
+        *nodes += 1;
+        if *nodes > 100_000 {
+            return Err(limit("SVG image tree exceeds 100000 nodes"));
+        }
+        match node {
+            Node::Group(g) => check_images(g, depth + 1, nodes, pixels, stroke_points)?,
+            Node::Image(i) => {
+                let size = i.size();
+                *pixels += size.width() as f64 * size.height() as f64;
+                if *pixels > 64. * 1024. * 1024. {
+                    return Err(limit("SVG images exceed 64 million total decoded pixels"));
+                }
+            }
+            Node::Path(path) if path.stroke().is_some_and(|s| s.is_non_scaling()) => {
+                let centerline = path
+                    .stroke_centerline()
+                    .ok_or_else(|| invalid("SVG non-scaling stroke transform is invalid"))?;
+                if let Some(intervals) = path.stroke().and_then(|s| s.dasharray()) {
+                    check_dash_budget(&centerline, intervals)?;
+                }
+                if let Some(outline) = path.stroke_outline(4.) {
+                    *stroke_points += outline.len();
+                    if *stroke_points > MAX_POINTS {
+                        return Err(limit(
+                            "SVG non-scaling stroke outline exceeds 500000 segments",
+                        ));
+                    }
+                }
+            }
+            _ => {}
+        }
+        let mut status = Ok(());
+        node.subroots(|subroot| {
+            if status.is_ok() {
+                status = check_images(subroot, depth + 1, nodes, pixels, stroke_points);
+            }
+        });
+        status?;
+    }
+    Ok(())
+}
+
 pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Result<usvg::Tree> {
     let document = preflight(source)?;
     let source_with_namespace;
@@ -423,58 +476,6 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
                 invalid("SVG non-scaling resource has an invalid transform")
             }
         })?;
-    fn check_images(
-        group: &usvg::Group,
-        depth: usize,
-        nodes: &mut usize,
-        pixels: &mut f64,
-        stroke_points: &mut usize,
-    ) -> Result<()> {
-        if depth > MAX_DEPTH {
-            return Err(limit("SVG image tree nesting exceeds 128 levels"));
-        }
-        for node in group.children() {
-            *nodes += 1;
-            if *nodes > 100_000 {
-                return Err(limit("SVG image tree exceeds 100000 nodes"));
-            }
-            match node {
-                Node::Group(g) => check_images(g, depth + 1, nodes, pixels, stroke_points)?,
-                Node::Image(i) => {
-                    let size = i.size();
-                    *pixels += size.width() as f64 * size.height() as f64;
-                    if *pixels > 64. * 1024. * 1024. {
-                        return Err(limit("SVG images exceed 64 million total decoded pixels"));
-                    }
-                }
-                Node::Path(path) if path.stroke().is_some_and(|s| s.is_non_scaling()) => {
-                    let centerline = path
-                        .stroke_centerline()
-                        .ok_or_else(|| invalid("SVG non-scaling stroke transform is invalid"))?;
-                    if let Some(intervals) = path.stroke().and_then(|s| s.dasharray()) {
-                        check_dash_budget(&centerline, intervals)?;
-                    }
-                    if let Some(outline) = path.stroke_outline(4.) {
-                        *stroke_points += outline.len();
-                        if *stroke_points > MAX_POINTS {
-                            return Err(limit(
-                                "SVG non-scaling stroke outline exceeds 500000 segments",
-                            ));
-                        }
-                    }
-                }
-                _ => {}
-            }
-            let mut status = Ok(());
-            node.subroots(|subroot| {
-                if status.is_ok() {
-                    status = check_images(subroot, depth + 1, nodes, pixels, stroke_points);
-                }
-            });
-            status?;
-        }
-        Ok(())
-    }
     check_images(tree.root(), 0, &mut 0, &mut 0., &mut 0)?;
     Ok(tree)
 }

@@ -44,39 +44,124 @@ impl Registry {
             .ok_or_else(|| input("Native handle space exhausted"))?;
         Ok(self.next.to_string())
     }
+    fn begin_session(&mut self, v: &Value, op: &str) -> Result<Value> {
+        let bytes: usize = field(v, "maxBytes")?;
+        let nodes: usize = field(v, "maxNodes")?;
+        if self.slots.len() >= MAX_SLOTS || bytes > MAX_RESERVED - self.reserved {
+            return Err(input("Native session registry budget exceeded"));
+        }
+        let state = if op == "graph-begin" {
+            match super::brep_graph::prepare(v) {
+                Ok(graph) => State::Graph(graph),
+                Err(failure) => return Ok(super::brep_graph::failure_report(failure)),
+            }
+        } else {
+            let mut session = Session::new(nodes, bytes)?;
+            if v.get("maxCharacters").is_some() {
+                session = session.with_character_limit(field(v, "maxCharacters")?)?;
+            }
+            State::Active(Active {
+                session,
+                leases: BTreeMap::new(),
+            })
+        };
+        let id = self.token()?;
+        self.slots.insert(
+            id.clone(),
+            Slot {
+                reserved: bytes,
+                state,
+            },
+        );
+        self.reserved += bytes;
+        Ok(json!({"session":id}))
+    }
+
+    fn dispatch_active(slot: &mut Slot, v: &Value, op: &str, result_id: Option<String>) -> Result<Value> {
+        let State::Active(active) = &mut slot.state else {
+            return Err(input("Native session is already committed"));
+        };
+        match op {
+            "evaluate" => {
+                let result = (|| {
+                    let node: Value = field(v, "node")?;
+                    let refs: Vec<String> = field(v, "inputs")?;
+                    if refs.len() > 512 {
+                        return Err(input("Native operand handle budget exceeded"));
+                    }
+                    let leases = refs
+                        .iter()
+                        .map(|key| {
+                            active
+                                .leases
+                                .get(key)
+                                .cloned()
+                                .ok_or_else(|| input("Foreign or unknown native result handle"))
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+                    let reduced = if v.get("inputNodeIndices").is_some() {
+                        Some(field::<Vec<usize>>(v, "inputNodeIndices")?)
+                    } else {
+                        None
+                    };
+                    active.session.evaluate_reduced(node, reduced, &leases)
+                })();
+                match result {
+                    Ok(lease) => {
+                        let key = result_id.ok_or_else(|| input("Missing result handle"))?;
+                        active.leases.insert(key.clone(), lease);
+                        Ok(json!({"lease":key}))
+                    }
+                    Err(error) => {
+                        active.session.abort();
+                        Err(error)
+                    }
+                }
+            }
+            "release" => {
+                let key: String = field(v, "lease")?;
+                active.session.release(
+                    active
+                        .leases
+                        .get(&key)
+                        .ok_or_else(|| input("Unknown native result handle"))?,
+                )?;
+                Ok(json!({"tag":"released"}))
+            }
+            "commit" => {
+                let keys: Vec<String> = field(v, "retained")?;
+                let leases = keys
+                    .iter()
+                    .map(|key| {
+                        active
+                            .leases
+                            .get(key)
+                            .cloned()
+                            .ok_or_else(|| input("Unknown retained native result handle"))
+                    })
+                    .collect::<Result<Vec<_>>>();
+                let leases = match leases {
+                    Ok(value) => value,
+                    Err(error) => {
+                        active.session.abort();
+                        return Err(error);
+                    }
+                };
+                let bundle = active.session.commit(&leases)?;
+                slot.state = State::Committed {
+                    bundle,
+                    leases: keys,
+                };
+                Ok(json!({"tag":"committed"}))
+            }
+            _ => Err(input("Unknown native session action")),
+        }
+    }
+
     fn dispatch(&mut self, v: Value) -> Result<Value> {
         let op: String = field(&v, "action")?;
         if op == "begin" || op == "graph-begin" {
-            let bytes: usize = field(&v, "maxBytes")?;
-            let nodes: usize = field(&v, "maxNodes")?;
-            if self.slots.len() >= MAX_SLOTS || bytes > MAX_RESERVED - self.reserved {
-                return Err(input("Native session registry budget exceeded"));
-            }
-            let state = if op == "graph-begin" {
-                match super::brep_graph::prepare(&v) {
-                    Ok(graph) => State::Graph(graph),
-                    Err(failure) => return Ok(super::brep_graph::failure_report(failure)),
-                }
-            } else {
-                let mut session = Session::new(nodes, bytes)?;
-                if v.get("maxCharacters").is_some() {
-                    session = session.with_character_limit(field(&v, "maxCharacters")?)?;
-                }
-                State::Active(Active {
-                    session,
-                    leases: BTreeMap::new(),
-                })
-            };
-            let id = self.token()?;
-            self.slots.insert(
-                id.clone(),
-                Slot {
-                    reserved: bytes,
-                    state,
-                },
-            );
-            self.reserved += bytes;
-            return Ok(json!({"session":id}));
+            return self.begin_session(&v, &op);
         }
         let id: String = field(&v, "session")?;
         if op == "dispose" {
@@ -161,83 +246,7 @@ impl Registry {
                 }
             };
         }
-        let State::Active(active) = &mut slot.state else {
-            return Err(input("Native session is already committed"));
-        };
-        match op.as_str() {
-            "evaluate" => {
-                let result =
-                    (|| {
-                        let node: Value = field(&v, "node")?;
-                        let refs: Vec<String> = field(&v, "inputs")?;
-                        if refs.len() > 512 {
-                            return Err(input("Native operand handle budget exceeded"));
-                        }
-                        let leases =
-                            refs.iter()
-                                .map(|key| {
-                                    active.leases.get(key).cloned().ok_or_else(|| {
-                                        input("Foreign or unknown native result handle")
-                                    })
-                                })
-                                .collect::<Result<Vec<_>>>()?;
-                        let reduced = if v.get("inputNodeIndices").is_some() {
-                            Some(field::<Vec<usize>>(&v, "inputNodeIndices")?)
-                        } else {
-                            None
-                        };
-                        active.session.evaluate_reduced(node, reduced, &leases)
-                    })();
-                match result {
-                    Ok(lease) => {
-                        let key = result_id.ok_or_else(|| input("Missing result handle"))?;
-                        active.leases.insert(key.clone(), lease);
-                        Ok(json!({"lease":key}))
-                    }
-                    Err(error) => {
-                        active.session.abort();
-                        Err(error)
-                    }
-                }
-            }
-            "release" => {
-                let key: String = field(&v, "lease")?;
-                active.session.release(
-                    active
-                        .leases
-                        .get(&key)
-                        .ok_or_else(|| input("Unknown native result handle"))?,
-                )?;
-                Ok(json!({"tag":"released"}))
-            }
-            "commit" => {
-                let keys: Vec<String> = field(&v, "retained")?;
-                let leases = keys
-                    .iter()
-                    .map(|key| {
-                        active
-                            .leases
-                            .get(key)
-                            .cloned()
-                            .ok_or_else(|| input("Unknown retained native result handle"))
-                    })
-                    .collect::<Result<Vec<_>>>();
-                let leases = match leases {
-                    Ok(value) => value,
-                    Err(error) => {
-                        active.session.abort();
-                        return Err(error);
-                    }
-                };
-                let bundle = active.session.commit(&leases)?;
-                slot.state = State::Committed {
-                    bundle,
-                    leases: keys,
-                };
-                Ok(json!({"tag":"committed"}))
-            }
-            _ => Err(input("Unknown native session action")),
-        }
+        Self::dispatch_active(slot, &v, &op, result_id)
     }
 }
 thread_local! { static REGISTRY:RefCell<Registry>=RefCell::new(Registry::default()); }

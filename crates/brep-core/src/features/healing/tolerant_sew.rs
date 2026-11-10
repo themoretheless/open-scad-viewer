@@ -117,29 +117,17 @@ pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<Cer
     })
 }
 
-fn sew_tolerant_inner(
-    model: &Model,
-    budget: SewingBudget,
-) -> Result<(HealingRun, Option<crate::ModelToleranceHandoff>)> {
-    crate::admit_operation_input(cad_predicates::OperationBoundary::Sewing, model.tolerance_mm)?;
-    // Endpoint-gap inputs are intentionally invalid solids; the existing defect
-    // audit and staged transaction validate the repaired output instead.
-    let input_mm = model.tolerance_mm;
-    if !budget.user_cap_mm.is_finite()
-        || budget.user_cap_mm <= 0.
-        || !budget.cumulative_cap_mm.is_finite()
-        || budget.cumulative_cap_mm <= 0.
-        || budget.max_candidates == 0
-        || budget.max_candidates > 4096
-    {
-        return Err(fail(
-            SEW_BUDGET_EXCEEDED,
-            "Sewing caps must be finite and positive; candidates must be in 1..4096",
-        ));
-    }
+struct StagedSewingCandidates {
+    operations: Vec<AutoRepairOperation>,
+    measured: Vec<f64>,
+    skipped_details: Vec<HealingStageSkip>,
+}
 
-    let initial = classify(model, budget.defects)?;
-    let candidates = crate::import_policy::supported_snaps(model, &initial)?;
+fn prepare_sewing_candidates(
+    model: &Model,
+    candidates: Vec<AutoRepairOperation>,
+    budget: SewingBudget,
+) -> Result<StagedSewingCandidates> {
     if candidates.len() > budget.max_candidates {
         return Err(fail(
             SEW_BUDGET_EXCEEDED,
@@ -150,7 +138,6 @@ fn sew_tolerant_inner(
             ),
         ));
     }
-
     let mut operations = Vec::with_capacity(candidates.len());
     let mut measured = Vec::with_capacity(candidates.len());
     let mut skipped_details = Vec::new();
@@ -199,6 +186,89 @@ fn sew_tolerant_inner(
         measured.push(actual);
         operations.push(AutoRepairOperation::SnapVertex { vertex, to });
     }
+    Ok(StagedSewingCandidates {
+        operations,
+        measured,
+        skipped_details,
+    })
+}
+
+fn finalize_sewing_stage_skips(
+    run: &HealingRun,
+    initial: &DefectReport,
+    operations: &[AutoRepairOperation],
+    measured: &[f64],
+    skipped_details: &mut Vec<HealingStageSkip>,
+) {
+    if run.report.status == HealingStatus::RolledBack {
+        let refusal = run.report.refusal_reasons.first().cloned();
+        let skipped_entities = skipped_details
+            .iter()
+            .map(|skip| skip.entity)
+            .collect::<BTreeSet<_>>();
+        for (operation, actual) in operations.iter().zip(measured) {
+            let Some(entity) = operation.target(&run.model) else {
+                continue;
+            };
+            if skipped_entities.contains(&entity) {
+                continue;
+            }
+            skipped_details.push(HealingStageSkip {
+                entity,
+                code: refusal
+                    .as_ref()
+                    .map(|reason| reason.code.clone())
+                    .unwrap_or_else(|| SEW_INCOMPLETE.into()),
+                message: "Authorized tolerant sewing rolled back without publication".into(),
+                measured_mm: Some(*actual),
+            });
+        }
+    } else if operations.is_empty() {
+        for defect in initial
+            .defects
+            .iter()
+            .filter(|defect| defect.kind == DefectKind::GapEdges)
+        {
+            if let Some(entity) = defect.entities.first() {
+                skipped_details.push(HealingStageSkip {
+                    entity: *entity,
+                    code: SEW_UNSUPPORTED.into(),
+                    message: "Gap has no unique authorized endpoint snap".into(),
+                    measured_mm: defect.measured,
+                });
+            }
+        }
+    }
+}
+
+fn sew_tolerant_inner(
+    model: &Model,
+    budget: SewingBudget,
+) -> Result<(HealingRun, Option<crate::ModelToleranceHandoff>)> {
+    crate::admit_operation_input(cad_predicates::OperationBoundary::Sewing, model.tolerance_mm)?;
+    // Endpoint-gap inputs are intentionally invalid solids; the existing defect
+    // audit and staged transaction validate the repaired output instead.
+    let input_mm = model.tolerance_mm;
+    if !budget.user_cap_mm.is_finite()
+        || budget.user_cap_mm <= 0.
+        || !budget.cumulative_cap_mm.is_finite()
+        || budget.cumulative_cap_mm <= 0.
+        || budget.max_candidates == 0
+        || budget.max_candidates > 4096
+    {
+        return Err(fail(
+            SEW_BUDGET_EXCEEDED,
+            "Sewing caps must be finite and positive; candidates must be in 1..4096",
+        ));
+    }
+
+    let initial = classify(model, budget.defects)?;
+    let candidates = crate::import_policy::supported_snaps(model, &initial)?;
+    let StagedSewingCandidates {
+        operations,
+        measured,
+        mut skipped_details,
+    } = prepare_sewing_candidates(model, candidates, budget)?;
 
     let mut run = auto_repair_tolerant(
         model,
@@ -237,45 +307,7 @@ fn sew_tolerant_inner(
         ));
     }
 
-    if run.report.status == HealingStatus::RolledBack {
-        let refusal = run.report.refusal_reasons.first().cloned();
-        let skipped_entities = skipped_details
-            .iter()
-            .map(|skip| skip.entity)
-            .collect::<BTreeSet<_>>();
-        for (operation, actual) in operations.iter().zip(&measured) {
-            let Some(entity) = operation.target(&run.model) else {
-                continue;
-            };
-            if skipped_entities.contains(&entity) {
-                continue;
-            }
-            skipped_details.push(HealingStageSkip {
-                entity,
-                code: refusal
-                    .as_ref()
-                    .map(|reason| reason.code.clone())
-                    .unwrap_or_else(|| SEW_INCOMPLETE.into()),
-                message: "Authorized tolerant sewing rolled back without publication".into(),
-                measured_mm: Some(*actual),
-            });
-        }
-    } else if operations.is_empty() {
-        for defect in initial
-            .defects
-            .iter()
-            .filter(|defect| defect.kind == DefectKind::GapEdges)
-        {
-            if let Some(entity) = defect.entities.first() {
-                skipped_details.push(HealingStageSkip {
-                    entity: *entity,
-                    code: SEW_UNSUPPORTED.into(),
-                    message: "Gap has no unique authorized endpoint snap".into(),
-                    measured_mm: defect.measured,
-                });
-            }
-        }
-    }
+    finalize_sewing_stage_skips(&run, &initial, &operations, &measured, &mut skipped_details);
 
     run.report.stages.push(HealingStageReport {
         stage: "tolerantSewing".into(),

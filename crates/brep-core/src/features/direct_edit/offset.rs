@@ -146,15 +146,23 @@ pub fn offset_face(
     offset_cylinder(source, face, offset_mm, options, &aag, &mut guard)
 }
 
-/// Radial offset of a cylindrical face, with concentric-pair handling.
-pub(super) fn offset_cylinder(
+struct CylinderOffsetPlan {
+    axis: Axis,
+    linear: f64,
+    auto_expanded: bool,
+    height: f64,
+    group_faces: BTreeSet<usize>,
+    plan: Vec<(f64, f64, Vec<usize>)>,
+}
+
+fn plan_cylinder_offset(
     model: &Model,
     face: usize,
     offset_mm: f64,
     options: OffsetOptions,
     aag: &crate::aag::Aag,
     guard: &mut BudgetGuard,
-) -> Result<OffsetFaceReport> {
+) -> Result<CylinderOffsetPlan> {
     let linear = model.tolerance_mm * 8.;
     let attrs = aag.nodes[face].attrs.as_ref().expect("checked above");
     let axis = attrs
@@ -203,11 +211,7 @@ pub(super) fn offset_cylinder(
             "Stepped coaxial walls (more than two radii) are outside offset-face/1",
         ));
     }
-    let partner = if groups.len() == 2 {
-        Some(1 - target)
-    } else {
-        None
-    };
+    let partner = (groups.len() == 2).then_some(1 - target);
     let auto_expanded = partner.is_some();
     if options.strict {
         if let Some(p) = partner {
@@ -256,8 +260,7 @@ pub(super) fn offset_cylinder(
         if !matches!(aag_edge.class, DihedralClass::Smooth | DihedralClass::Tangent) {
             continue;
         }
-        let inside = aag_edge.uses.iter().any(|u| group_faces.contains(&u.face));
-        if inside {
+        if aag_edge.uses.iter().any(|u| group_faces.contains(&u.face)) {
             if let Some(other) = aag_edge
                 .uses
                 .iter()
@@ -276,7 +279,7 @@ pub(super) fn offset_cylinder(
 
     // 4. Radii sanity: a wall pushed onto/past the axis is a topology
     //    mutation — refused, not sewn.
-    let mut plan: Vec<(f64, f64, Vec<usize>)> = Vec::new(); // (old, new, faces)
+    let mut plan: Vec<(f64, f64, Vec<usize>)> = Vec::new();
     for (old_r, faces) in &groups {
         let new_r = old_r + offset_mm;
         if !(new_r.is_finite() && new_r > linear) {
@@ -289,12 +292,25 @@ pub(super) fn offset_cylinder(
         }
         plan.push((*old_r, new_r, faces.clone()));
     }
+    Ok(CylinderOffsetPlan {
+        axis,
+        linear,
+        auto_expanded,
+        height,
+        group_faces,
+        plan,
+    })
+}
 
-    // 5. Staged mutation: surfaces scale radially, rim circles re-author at
-    //    the new radius, straight edges rebuild from moved endpoints, cap
-    //    pcurves re-map. Topology and ids are untouched.
-    let mut staged = model.clone();
-    for (old_r, new_r, faces) in &plan {
+fn stage_radial_group_mutations(
+    model: &Model,
+    staged: &mut Model,
+    axis: &Axis,
+    linear: f64,
+    plan: &[(f64, f64, Vec<usize>)],
+    guard: &mut BudgetGuard,
+) -> Result<()> {
+    for (old_r, new_r, faces) in plan {
         guard.tick()?;
         for &f in faces {
             for point in staged.faces[f].surface.control_points.iter_mut().flatten() {
@@ -304,7 +320,7 @@ pub(super) fn offset_cylinder(
                         format!("Face {f} has non-3D control points"),
                     ));
                 }
-                let scaled = radial_scale(&axis, *old_r, *new_r, [point[0], point[1], point[2]]);
+                let scaled = radial_scale(axis, *old_r, *new_r, [point[0], point[1], point[2]]);
                 point.copy_from_slice(&scaled);
             }
         }
@@ -323,18 +339,13 @@ pub(super) fn offset_cylinder(
         // the geometric radius test catches every point on the old circle.
         for (v, vertex) in model.vertices.iter().enumerate() {
             guard.tick()?;
-            if (radial_distance(&axis, vertex.point) - old_r).abs() <= linear {
+            if (radial_distance(axis, vertex.point) - old_r).abs() <= linear {
                 moved_vertices.insert(v);
             }
         }
         let moved: BTreeMap<usize, [f64; 3]> = moved_vertices
             .iter()
-            .map(|&v| {
-                (
-                    v,
-                    radial_scale(&axis, *old_r, *new_r, model.vertices[v].point),
-                )
-            })
+            .map(|&v| (v, radial_scale(axis, *old_r, *new_r, model.vertices[v].point)))
             .collect();
         for (&v, &point) in &moved {
             staged.vertices[v].point = point;
@@ -344,28 +355,17 @@ pub(super) fn offset_cylinder(
         // must live entirely on the old radius (a rim circle), else refuse.
         for (e, edge) in model.edges.iter().enumerate() {
             guard.tick()?;
-            let touched = edge.vertices.iter().any(|v| moved.contains_key(&v));
-            if !touched {
+            if !edge.vertices.iter().any(|v| moved.contains_key(v)) || edge.degenerate {
                 continue;
-            }
-            if edge.degenerate {
-                continue; // collapsed pole edges carry no extent
             }
             if edge.curve.degree == 1 {
                 let a = staged.vertices[edge.vertices[0]].point.to_vec();
                 let b = staged.vertices[edge.vertices[1]].point.to_vec();
                 staged.edges[e].curve = crate::line(a, b);
             } else {
-                // A rim circle of the group: the *curve* lies on the old
-                // radius (control points of a NURBS circle do not — they sit
-                // on the control polygon outside the arc, so sample the
-                // curve itself). Uniform radial scaling of the control net
-                // then re-authors the circle at the new radius exactly.
                 let curve_sampler = CurveSampler::new(&edge.curve)?;
                 let domain = curve_sampler.domain();
                 let mut all_on_radius = true;
-                // Interior samples only: periodic rim curves may exclude the
-                // seam endpoint from the active domain.
                 for i in 1..8 {
                     guard.tick()?;
                     let t = domain[0] + (domain[1] - domain[0]) * i as f64 / 8.;
@@ -374,7 +374,7 @@ pub(super) fn offset_cylinder(
                         break;
                     }
                     let point = curve_sampler.point3(t)?;
-                    if (radial_distance(&axis, point) - old_r).abs() > linear * 4. {
+                    if (radial_distance(axis, point) - old_r).abs() > linear * 4. {
                         all_on_radius = false;
                         break;
                     }
@@ -389,38 +389,40 @@ pub(super) fn offset_cylinder(
                 }
                 let mut curve = edge.curve.clone();
                 for p in &mut curve.control_points {
-                    let scaled =
-                        radial_scale(&axis, *old_r, *new_r, [p[0], p[1], p[2]]);
+                    let scaled = radial_scale(axis, *old_r, *new_r, [p[0], p[1], p[2]]);
                     p.copy_from_slice(&scaled);
                 }
                 staged.edges[e].curve = curve;
             }
         }
     }
+    Ok(())
+}
 
-    // 6. Cap re-trim: pcurves of changed edges on faces outside the groups
-    //    re-map onto the (unchanged) planar surfaces via the rigid plane
-    //    frame. Group faces keep their pcurves — radial scaling preserves
-    //    the angular parameterization.
+fn retrim_cap_faces(
+    model: &Model,
+    staged: &mut Model,
+    aag: &crate::aag::Aag,
+    offset_plan: &CylinderOffsetPlan,
+    changed_edges: &BTreeSet<usize>,
+    guard: &mut BudgetGuard,
+) -> Result<usize> {
+    let CylinderOffsetPlan {
+        axis,
+        linear,
+        group_faces,
+        plan,
+        ..
+    } = offset_plan;
+    let linear = *linear;
     let mut recomputed_pcurves = 0usize;
-    let mut changed_edges: BTreeSet<usize> = BTreeSet::new();
-    for (e, edge) in staged.edges.iter().enumerate() {
-        if edge.curve != model.edges[e].curve {
-            changed_edges.insert(e);
-        }
-    }
-    let recomputed_edges = changed_edges.len();
-    let factors: Vec<f64> = plan
-        .iter()
-        .map(|(old_r, new_r, _)| new_r / old_r)
-        .collect();
+    let factors: Vec<f64> = plan.iter().map(|(old_r, new_r, _)| new_r / old_r).collect();
     for f in 0..staged.faces.len() {
         guard.tick()?;
         if group_faces.contains(&f) {
             continue;
         }
         let source_face = &model.faces[f];
-        // Does the face use any changed edge?
         let uses_changed = std::iter::once(&source_face.outer)
             .chain(&source_face.holes)
             .any(|&ring| {
@@ -432,8 +434,7 @@ pub(super) fn offset_cylinder(
         if !uses_changed {
             continue;
         }
-        let attrs = aag.nodes[f].attrs.as_ref();
-        if attrs.map(|a| a.class) != Some(SurfaceClass::Plane) {
+        if aag.nodes[f].attrs.as_ref().map(|a| a.class) != Some(SurfaceClass::Plane) {
             return Err(error(
                 OFFSET_UNSUPPORTED,
                 format!(
@@ -442,8 +443,7 @@ pub(super) fn offset_cylinder(
             ));
         }
         let s = &staged.faces[f].surface;
-        if s.degree_u != 1 || s.degree_v != 1 || s.control_points.len() != 2 || s.control_points[0].len() != 2
-        {
+        if s.degree_u != 1 || s.degree_v != 1 || s.control_points.len() != 2 || s.control_points[0].len() != 2 {
             return Err(error(
                 OFFSET_UNSUPPORTED,
                 format!(
@@ -451,23 +451,14 @@ pub(super) fn offset_cylinder(
                 ),
             ));
         }
-        // The cap patch must grow with the rim: a rim circle is inscribed in
-        // the patch's UV square, so a larger radius would otherwise leave the
-        // surface domain. Every control point scales radially by the factor
-        // of the group whose rim it belongs to: points sitting on a group
-        // radius match exactly; corner points of the bounding square (beyond
-        // every rim) take the outermost rim's factor. Axial components are
-        // kept, so the patch stays planar and bilinear. Anything in between
-        // (a control net we cannot attribute) is refused.
         let face_groups: BTreeSet<usize> = std::iter::once(&source_face.outer)
             .chain(&source_face.holes)
             .flat_map(|&ring| staged.loops[ring].coedges.iter())
             .filter(|c| changed_edges.contains(&c.edge))
             .filter_map(|c| {
                 let v = model.edges[c.edge].vertices[0];
-                let d = radial_distance(&axis, model.vertices[v].point);
-                plan.iter()
-                    .position(|(old_r, _, _)| (d - old_r).abs() <= linear)
+                let d = radial_distance(axis, model.vertices[v].point);
+                plan.iter().position(|(old_r, _, _)| (d - old_r).abs() <= linear)
             })
             .collect();
         if face_groups.is_empty() {
@@ -485,10 +476,8 @@ pub(super) fn offset_cylinder(
                     format!("Cap face {f} has non-3D control points"),
                 ));
             }
-            let d = radial_distance(&axis, [p[0], p[1], p[2]]);
-            let on = face_groups
-                .iter()
-                .find(|&&g| (d - plan[g].0).abs() <= linear);
+            let d = radial_distance(axis, [p[0], p[1], p[2]]);
+            let on = face_groups.iter().find(|&&g| (d - plan[g].0).abs() <= linear);
             let factor = match on {
                 Some(&g) => factors[g],
                 None if d >= max_old => factors[outer_group],
@@ -501,22 +490,31 @@ pub(super) fn offset_cylinder(
                     ));
                 }
             };
-            let scaled = radial_scale(&axis, 1., factor, [p[0], p[1], p[2]]);
+            let scaled = radial_scale(axis, 1., factor, [p[0], p[1], p[2]]);
             p.copy_from_slice(&scaled);
         }
         let s = &staged.faces[f].surface;
-        let origin: [f64; 3] = {
-            let p = &s.control_points[0][0];
-            [p[0], p[1], p[2]]
-        };
-        let du = {
-            let p = &s.control_points[1][0];
-            sub([p[0], p[1], p[2]], origin)
-        };
-        let dv = {
-            let p = &s.control_points[0][1];
-            sub([p[0], p[1], p[2]], origin)
-        };
+        let origin = [
+            s.control_points[0][0][0],
+            s.control_points[0][0][1],
+            s.control_points[0][0][2],
+        ];
+        let du = sub(
+            [
+                s.control_points[1][0][0],
+                s.control_points[1][0][1],
+                s.control_points[1][0][2],
+            ],
+            origin,
+        );
+        let dv = sub(
+            [
+                s.control_points[0][1][0],
+                s.control_points[0][1][1],
+                s.control_points[0][1][2],
+            ],
+            origin,
+        );
         let (len_u, len_v) = (norm(du), norm(dv));
         if len_u <= linear || len_v <= linear {
             return Err(error(
@@ -524,8 +522,7 @@ pub(super) fn offset_cylinder(
                 format!("Cap face {f} has a degenerate UV frame"),
             ));
         }
-        let u = mul(du, 1. / len_u);
-        let v = mul(dv, 1. / len_v);
+        let (u, v) = (mul(du, 1. / len_u), mul(dv, 1. / len_v));
         for &ring in std::iter::once(&source_face.outer).chain(&source_face.holes) {
             for ci in 0..staged.loops[ring].coedges.len() {
                 let coedge = &staged.loops[ring].coedges[ci];
@@ -536,36 +533,66 @@ pub(super) fn offset_cylinder(
                 if coedge.reversed {
                     curve = curve.reverse()?;
                 }
-                let mapped = curve_to_uv(&curve, origin, u, v, len_u, len_v)?;
-                staged.loops[ring].coedges[ci].pcurve = mapped;
+                staged.loops[ring].coedges[ci].pcurve = curve_to_uv(&curve, origin, u, v, len_u, len_v)?;
                 recomputed_pcurves += 1;
             }
         }
     }
+    Ok(recomputed_pcurves)
+}
 
-    // 7. Contour: validate → audit → measure. Failure discards the clone.
+/// Radial offset of a cylindrical face, with concentric-pair handling.
+pub(super) fn offset_cylinder(
+    model: &Model,
+    face: usize,
+    offset_mm: f64,
+    options: OffsetOptions,
+    aag: &crate::aag::Aag,
+    guard: &mut BudgetGuard,
+) -> Result<OffsetFaceReport> {
+    let offset_plan = plan_cylinder_offset(model, face, offset_mm, options, aag, guard)?;
+    let mut staged = model.clone();
+    stage_radial_group_mutations(
+        model,
+        &mut staged,
+        &offset_plan.axis,
+        offset_plan.linear,
+        &offset_plan.plan,
+        guard,
+    )?;
+
+    let changed_edges: BTreeSet<usize> = staged
+        .edges
+        .iter()
+        .enumerate()
+        .filter_map(|(e, edge)| (edge.curve != model.edges[e].curve).then_some(e))
+        .collect();
+    let recomputed_edges = changed_edges.len();
+    let recomputed_pcurves =
+        retrim_cap_faces(model, &mut staged, aag, &offset_plan, &changed_edges, guard)?;
+
+    // Contour: validate → audit → measure. Failure discards the clone.
     staged.validate()?;
     let audit = crate::solid_audit::audit_solid(&staged)?;
     let volume_before = volume_of(model)?;
     let volume_after = volume_of(&staged)?;
-    // ΔV estimate: outer groups add, inner (void-enclosing) groups subtract.
-    // The bore wall is the group whose radius is smaller within a pair.
+    let CylinderOffsetPlan {
+        auto_expanded,
+        height,
+        group_faces,
+        plan,
+        ..
+    } = offset_plan;
     let mut estimate = 0.;
     for (old_r, new_r, _) in &plan {
         estimate += std::f64::consts::PI * height * (new_r * new_r - old_r * old_r);
     }
     if plan.len() == 2 {
-        // The pair formula above counts the bore growth as material gain;
-        // the inner wall encloses void, so its term flips sign.
-        let (old_r, new_r, _) = plan[0]; // ascending: smallest radius first
+        let (old_r, new_r, _) = plan[0];
         estimate -= 2. * std::f64::consts::PI * height * (new_r * new_r - old_r * old_r);
     }
-    let thickness = if plan.len() == 2 {
-        Some(plan[1].0 - plan[0].0)
-    } else {
-        None
-    };
-    let mut offset_faces: Vec<usize> = group_faces.iter().copied().collect();
+    let thickness = (plan.len() == 2).then(|| plan[1].0 - plan[0].0);
+    let mut offset_faces: Vec<usize> = group_faces.into_iter().collect();
     offset_faces.sort_unstable();
     guard.check()?;
     Ok(OffsetFaceReport {

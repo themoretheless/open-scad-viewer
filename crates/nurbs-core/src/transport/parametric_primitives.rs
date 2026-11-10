@@ -2,13 +2,19 @@
 use super::*;
 
 pub(super) fn try_dispatch(v: &Value, op: &str) -> Option<Result<Value>> {
-    if let Some(res) = try_dispatch_parametric_and_approximated(v, op) {
+    if let Some(res) = try_dispatch_affine_pipes_and_helicoids(v, op) {
         return Some(res);
     }
-    try_dispatch_splines_patches_and_primitives(v, op)
+    if let Some(res) = try_dispatch_spirals_and_helices(v, op) {
+        return Some(res);
+    }
+    if let Some(res) = try_dispatch_splines_and_section_repairs(v, op) {
+        return Some(res);
+    }
+    try_dispatch_polynomials_and_quadrics(v, op)
 }
 
-fn try_dispatch_parametric_and_approximated(v: &Value, op: &str) -> Option<Result<Value>> {
+fn try_dispatch_affine_pipes_and_helicoids(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
         "curve_affine" => field::<curve::Curve>(v, "curve")
             .and_then(|c| Ok(affine::curve(&c, &field(v, "matrix")?)?))
@@ -151,6 +157,13 @@ fn try_dispatch_parametric_and_approximated(v: &Value, op: &str) -> Option<Resul
                 field(v, "max_deviation")?,
             )?)
         })(),
+        _ => return None,
+    };
+    Some(res)
+}
+
+fn try_dispatch_spirals_and_helices(v: &Value, op: &str) -> Option<Result<Value>> {
+    let res = match op {
         "curve_catenary" => (|| {
             encode(catenary::approximate(
                 field(v, "center")?,
@@ -286,7 +299,7 @@ fn try_dispatch_parametric_and_approximated(v: &Value, op: &str) -> Option<Resul
     Some(res)
 }
 
-fn try_dispatch_splines_patches_and_primitives(v: &Value, op: &str) -> Option<Result<Value>> {
+fn try_dispatch_splines_and_section_repairs(v: &Value, op: &str) -> Option<Result<Value>> {
     let res = match op {
         "surface_boundary_fill" => (|| {
             encode(boundary_fill::fan(
@@ -429,22 +442,21 @@ fn try_dispatch_splines_patches_and_primitives(v: &Value, op: &str) -> Option<Re
                 "reason": r.reason
             }))
         })(),
+        _ => return None,
+    };
+    Some(res)
+}
+
+fn try_dispatch_polynomials_and_quadrics(v: &Value, op: &str) -> Option<Result<Value>> {
+    let res = match op {
         "curve_transition_polyline" => (|| {
             let closed = optional_field::<bool>(v, "closed")?.unwrap_or(false);
-            let f = if closed {
-                paths::closed_transition_polyline
-            } else {
-                paths::transition_polyline
-            };
+            let f = if closed { paths::closed_transition_polyline } else { paths::transition_polyline };
             encode(f(&field::<Vec<[f64; 3]>>(v, "points")?, field(v, "setback")?)?)
         })(),
         "curve_round_polyline" => (|| {
             let closed = optional_field::<bool>(v, "closed")?.unwrap_or(false);
-            let f = if closed {
-                paths::closed_round_polyline
-            } else {
-                paths::round_polyline
-            };
+            let f = if closed { paths::closed_round_polyline } else { paths::round_polyline };
             encode(f(&field::<Vec<[f64; 3]>>(v, "points")?, field(v, "radius")?)?)
         })(),
         "curve_compose" => (|| encode(paths::compose(&field::<Vec<curve::Curve>>(v, "curves")?)?))(),

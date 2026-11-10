@@ -201,6 +201,13 @@ fn handle_progressive_profile_body(v: &Value) -> Result<Value> {
         correction,
         rmf_policy,
     )?;
+    encode_progressive_profile_body(result, rmf_policy)
+}
+
+fn encode_progressive_profile_body(
+    result: brep_core::analytic::ProgressiveBodyEvidence,
+    rmf_policy: Option<(usize, usize, usize)>,
+) -> Result<Value> {
     let retained_caps = result.retained_caps.as_ref().map(|r| {
         json!({
             "exact": r.exact,

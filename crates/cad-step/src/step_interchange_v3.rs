@@ -13,8 +13,7 @@ pub(crate) use crate::step_v3_export::{
     STEP_V6_AUTHORED_CHART_MARKER, Writer, certify_periodic_surface,
     certify_step_v8_topology, emit_curve_source, emit_surface_source, refs_text,
 };
-#[cfg(test)]
-use crate::step_v3_export::canonical_face_senses;
+#[cfg(test)] use crate::step_v3_export::canonical_face_senses;
 pub use crate::step_v3_export::{
     export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
     export_step_v9, export_step_v9_with_metadata,
@@ -3157,8 +3156,7 @@ pub use import_routes::{
     import_step_v5, import_step_v6, import_step_v7, import_step_v8, import_step_v9,
     import_step_v9_with_metadata, import_step_v10,
 };
-#[cfg(test)]
-use import_routes::import_step_direct;
+#[cfg(test)] use import_routes::import_step_direct;
 
 #[cfg(test)]
 #[path = "tests/step_semantic_metadata.rs"]
@@ -3166,7 +3164,6 @@ mod semantic_metadata_tests;
 #[cfg(test)]
 #[path = "tests/step_interchange_v3.rs"]
 mod tests;
-
 #[path = "step_interchange_v3/point_inverse.rs"]
 mod point_inverse;
 use point_inverse::isolate_curve_point;
