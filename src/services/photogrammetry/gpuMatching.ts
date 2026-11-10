@@ -7,7 +7,7 @@
  * registration) runs in the kernel; this module only dispatches the matcher.
  */
 
-import { runGpuCompute } from '../webgpuCompute'
+import { runGpuCompute } from '../../render/webgpuCompute'
 
 /** Workgroup size baked into the kernel's MATCH_WGSL (the compute-core anchor). */
 const MATCH_WORKGROUP = 256

@@ -7,7 +7,7 @@ import {
   type WorkspaceDocumentSnapshot,
 } from '../services/workspaceDocument'
 import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from '../services/workspacePersistence'
-import type { WebGPURenderer } from '../services/webgpuRenderer'
+import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseWorkspacePersistenceLifecycleOptions {
   initialWorkspaceDurable: boolean

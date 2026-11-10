@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
-import { SCENE_UNIFORM_LAYOUT } from '../src/services/shaders'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
+import { SCENE_UNIFORM_LAYOUT } from '../src/render/shaders'
 
 /**
  * Renderer-level checks for the key-light contact shadow: buildPipelines

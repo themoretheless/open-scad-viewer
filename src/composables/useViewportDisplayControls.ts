@@ -19,11 +19,11 @@ import type {
   SelectionMode,
   ShadingModel,
   StandardView,
-} from '../services/rendererContracts'
-import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../services/rendererContracts'
+} from '../render/rendererContracts'
+import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../render/rendererContracts'
 import type { SceneController, SceneState } from '../services/sceneController'
 import type { ViewportController, ViewportState } from '../services/viewportController'
-import type { WebGPURenderer } from '../services/webgpuRenderer'
+import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseViewportDisplayControlsOptions {
   viewportController: ViewportController

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
-import { getShader, listShaders } from '../src/services/shaders'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
+import { getShader, listShaders } from '../src/render/shaders'
 
 /**
  * WebGPU draw validation the other renderer fakes skip: every group of the

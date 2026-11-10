@@ -1,19 +1,19 @@
-import { remapNativeFaceSelection } from './nativeFaceSelection'
+import { remapNativeFaceSelection } from '../services/nativeFaceSelection'
 /**
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
 import {
   type Aabb3, type Mat4, type Vec3,
-} from './math3d'
+} from '../services/math3d'
 import {
   CameraHistory,
   cameraStatesEqual,
   type CameraHistorySnapshot,
   type CameraState,
-} from './cameraHistory'
-import { NativePickingCache } from './nativePickingCache'
-import { warmGeometryKernel } from './geometry/kernel'
-import { clientRayInKernel, projectPointInKernel } from './geometry/viewport'
+} from '../services/cameraHistory'
+import { NativePickingCache } from '../services/nativePickingCache'
+import { warmGeometryKernel } from '../services/geometry/kernel'
+import { clientRayInKernel, projectPointInKernel } from '../services/geometry/viewport'
 import type { MeshData } from '../core/mesh'
 import {
   ISO_PITCH,
@@ -21,9 +21,9 @@ import {
   standardViewOrientation,
   type ProjectionMode,
   type StandardView,
-} from './viewportModel'
-export { projectAxesToScreen } from './viewportModel'
-export type { ProjectionMode, StandardView } from './viewportModel'
+} from '../services/viewportModel'
+export { projectAxesToScreen } from '../services/viewportModel'
+export type { ProjectionMode, StandardView } from '../services/viewportModel'
 import type {
   CameraChangeHandler,
   CameraHistoryChangeHandler,
@@ -55,32 +55,32 @@ import {
   computePanUpdate,
   computePinchUpdate,
   computeWheelDistance,
-} from './cameraGestures'
-export { computePinchUpdate } from './cameraGestures'
-export type { PinchCameraState, PinchPoint } from './cameraGestures'
+} from '../services/cameraGestures'
+export { computePinchUpdate } from '../services/cameraGestures'
+export type { PinchCameraState, PinchPoint } from '../services/cameraGestures'
 import {
   chooseDepthCandidate,
   type DepthCandidate,
   type DepthCycleState,
-} from './selectionCycling'
+} from '../services/selectionCycling'
 import {
   buildSceneAabbIndex,
   disposeSceneAabbIndex,
   type SceneAabbIndex,
-} from './sceneAabbIndex'
-import { TransparentSortBuffer } from './transparentOrdering'
-import { MeshDrawBundle } from './meshDrawBundle'
-import { ViewFrustum } from './viewFrustum'
-import { MeshInstances } from './meshInstances'
-import { computeOrbitCameraFrame } from './orbitCameraProjection'
+} from '../services/sceneAabbIndex'
+import { TransparentSortBuffer } from '../services/transparentOrdering'
+import { MeshDrawBundle } from '../services/meshDrawBundle'
+import { ViewFrustum } from '../services/viewFrustum'
+import { MeshInstances } from '../services/meshInstances'
+import { computeOrbitCameraFrame } from '../services/orbitCameraProjection'
 import {
   OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
 } from './shaders'
 import {
   PipelineFactory,
-} from './pipelineFactory'
-import { TextureResources } from './textureResources'
+} from '../services/pipelineFactory'
+import { TextureResources } from '../services/textureResources'
 import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'
 import { GpuPicker } from './gpuPicker'
@@ -91,7 +91,7 @@ import { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline
 export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
 import { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
 export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
-export { GeometryWorkerPool, detectHardwareConcurrency } from './geometryWorkerPool'
+export { GeometryWorkerPool, detectHardwareConcurrency } from '../services/geometryWorkerPool'
 import {
   CLICK_MOVE_THRESHOLD,
   DEFAULT_DISTANCE,
@@ -109,7 +109,7 @@ import {
   type GpuExecutionTopologyReport,
   type OverlaySlot,
   type WebGPUFrameDiagnostics,
-} from '../renderer/types'
+} from './types'
 export {
   getGpuExecutionTopologyReport,
   getGpuMemoryArchitectureProfile,
@@ -117,34 +117,34 @@ export {
   type GpuMemoryArchitecture,
   type GpuMemoryArchitectureProfile,
   type WebGPUFrameDiagnostics,
-} from '../renderer/types'
+} from './types'
 import {
   sameTypedArray,
   sortEdgeDraws,
   sortOpaqueDraws,
-} from '../renderer/drawSorting'
-export { sortEdgeDraws, sortOpaqueDraws } from '../renderer/drawSorting'
+} from './drawSorting'
+export { sortEdgeDraws, sortOpaqueDraws } from './drawSorting'
 import {
   pointForOverlay,
   rebuildMeasurementBufferData,
   rebuildSelectionOverlaySlots,
   rebuildSourceHighlightOverlaySlots,
   releaseOverlaySlot,
-} from '../renderer/overlayBuilder'
+} from './overlayBuilder'
 import {
   destroySceneMeshes,
   ensureMeshEdgeBuffer,
   rebuildEdgeBufferCacheMap,
   reconcileMeshStyles,
   stageSceneMeshes,
-} from '../renderer/meshBufferManager'
+} from './meshBufferManager'
 import {
   findHitCandidatesForRay,
-} from '../renderer/pickingController'
+} from './pickingController'
 import {
   advanceSceneGeometryAnimation,
   encodeAndSubmitFrame,
-} from '../renderer/framePassEncoder'
+} from './framePassEncoder'
 
 function clampDistanceValue(distance: number) {
   return clampGestureDistance(distance)

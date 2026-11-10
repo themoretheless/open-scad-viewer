@@ -1,11 +1,11 @@
 import type {PipelineFactory} from '../src/services/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 import {
   DEFAULT_ENV,
   ENV_PRESETS,
   getEnvPreset,
-} from '../src/services/rendererContracts'
+} from '../src/render/rendererContracts'
 
 /**
  * Renderer-level checks for the PBR environment-map (IBL) path: pipeline

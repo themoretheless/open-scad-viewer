@@ -1,5 +1,5 @@
-import { executeGcodePreviewAsync } from '../services/gcodePreviewRuntime'
-import { prepareGcodePreviewTransfer } from '../services/gcodePreviewWorkerTransport'
+import { executeGcodePreviewAsync } from '../fabrication/gcodePreviewRuntime'
+import { prepareGcodePreviewTransfer } from '../fabrication/gcodePreviewWorkerTransport'
 self.addEventListener('message', async event => {
   const format = event.data?.responseFormat
   const result = await executeGcodePreviewAsync(event.data)

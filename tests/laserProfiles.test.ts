@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest'
-import {LASER_MACHINE_PRESETS,LASER_MATERIAL_PRESETS,machineProfileFromPreset,presetPower} from '../src/services/laserProfiles'
+import {LASER_MACHINE_PRESETS,LASER_MATERIAL_PRESETS,machineProfileFromPreset,presetPower} from '../src/fabrication/laserProfiles'
 
 describe('laser CAM profiles',()=>{
   it('never carries live laser-mode confirmation across a machine preset',()=>{

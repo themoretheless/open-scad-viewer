@@ -8,7 +8,7 @@ import {
   type LaserPlan,
 } from '../src/services/geometry/laser'
 import type {PolygonMesh} from '../src/services/geometry/polygon'
-import {planLaserMeshSection} from '../src/services/laserSectionPlanning'
+import {planLaserMeshSection} from '../src/fabrication/laserSectionPlanning'
 
 function boxMesh():PolygonMesh {
   const corners=[[0,0,0],[10,0,0],[10,10,0],[0,10,0],[0,0,10],[10,0,10],[10,10,10],[0,10,10]]

@@ -1,12 +1,12 @@
 import type {PipelineFactory} from '../src/services/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 import {
   DEFAULT_MATCAP,
   MATCAP_PRESETS,
   MATERIAL_PRESETS,
   getMatcapPreset,
-} from '../src/services/rendererContracts'
+} from '../src/render/rendererContracts'
 
 /**
  * Renderer-level checks for the textured matcap path: pipeline setup creates

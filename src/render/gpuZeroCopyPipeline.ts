@@ -14,7 +14,7 @@ import {
   getGpuMemoryArchitectureProfile,
   type GpuMemoryArchitecture,
   type GpuMemoryArchitectureProfile,
-} from '../renderer/types'
+} from './types'
 
 export { getGpuMemoryArchitectureProfile, type GpuMemoryArchitecture, type GpuMemoryArchitectureProfile }
 

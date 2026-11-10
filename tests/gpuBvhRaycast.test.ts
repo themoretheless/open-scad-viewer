@@ -6,7 +6,7 @@ import {
   buildMarqueeRayBatch,
   BVH_RAYCAST_WGSL,
   type AabbItem,
-} from '../src/services/gpuBvhRaycast'
+} from '../src/render/gpuBvhRaycast'
 import {
   buildSceneAabbIndex,
   querySceneAabbIndex,

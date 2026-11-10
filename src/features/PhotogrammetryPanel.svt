@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {MAX_CALIBRATION_FILE_BYTES, parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationDocument} from '../services/photogrammetry/calibration'
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch} from 'svet'
-import {WebGPURenderer} from '../services/webgpuRenderer'
+import {WebGPURenderer} from '../render/webgpuRenderer'
 import {decodePhoto, PhotoCollection, PhotoInputError, validPhotoFocal, type ImportedPhoto} from '../services/photogrammetry/input'
 import {downloadPhoto, photoCanAppend, PhotoExportError, photoPly, photoScadSource} from '../services/photogrammetry/export'
 import {PhotoPreview, type PhotoPreviewMode} from '../services/photogrammetry/preview'

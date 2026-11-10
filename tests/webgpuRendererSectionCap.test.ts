@@ -1,6 +1,6 @@
 import type {PipelineFactory} from '../src/services/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 /**
  * Renderer-level check that the section-cap pass is issued exactly when the

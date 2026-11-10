@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {compactWgslLiterals} from './compact-wgsl.mjs'
-import {instancedObjectShader,immediateObjectShader} from '../src/services/shaders/variants'
+import {instancedObjectShader,immediateObjectShader} from '../src/render/shaders/variants'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const output=process.argv[2]??'/tmp/compact-wgsl'
 await mkdir(output,{recursive:true})

@@ -13,7 +13,7 @@ import {loadProjectStepModel,saveProjectStepModel} from '../services/cadStepInde
 import {cadDrawing,downloadCad} from '../services/cadDrawing'
 import {ref,computed,watch,onUnmounted,defineAsyncComponent} from 'svet'
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from '../services/rendererContracts'
+import type {PickHit} from '../render/rendererContracts'
 import {sceneBody,previewMeshes} from '../services/mainModeling'
 import {patchMainSource} from '../services/mainSourceEditing'
 import {computeCadOperation,computeCadInspection,cancelMainSolid} from '../services/mainSolidWorker'

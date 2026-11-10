@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ENV_MAP_FORMAT, SHADOW_MAP_SIZE, TextureResources } from '../src/services/textureResources'
 import { fillObjectUniform } from '../src/services/uniformFill'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 /**
  * Lifecycle checks for the renderer's texture resources: the shadow enable

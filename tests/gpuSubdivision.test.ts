@@ -5,7 +5,7 @@ import {
   referenceBrushSubdivision,
   runGpuBrushSubdivision,
   CATMULL_CLARK_WGSL,
-} from '../src/services/gpuSubdivision'
+} from '../src/render/gpuSubdivision'
 import type { SubdivisionCage } from '../src/services/geometry/subdivision'
 
 function createUnitCubeCage(): SubdivisionCage {

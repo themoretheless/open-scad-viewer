@@ -5,7 +5,7 @@ import {
   formatPrintReadiness,
   PrintReadinessError,
   type PrintReadinessErrorCode,
-} from '../src/services/printReadiness'
+} from '../src/fabrication/printReadiness'
 import type { SolidIntersectionOptions } from '../src/services/solidDiagnostics'
 
 const positions = Float64Array.from([

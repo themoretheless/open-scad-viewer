@@ -3,7 +3,7 @@ import {
   referenceFilterGcodeSegments,
   runGpuFilterGcodeSegments,
   GCODE_SEGMENTS_WGSL,
-} from '../src/services/gpuGcodePreview'
+} from '../src/render/gpuGcodePreview'
 
 describe('WebGPU Compute G-Code Toolpath Segment & Layer Filter', () => {
   const sampleMoveRows = new Float64Array([

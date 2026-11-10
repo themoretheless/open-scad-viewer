@@ -2,7 +2,7 @@ import {describe, expect, it, vi} from 'vitest'
 
 const calls = vi.hoisted(() => ({ rust: vi.fn(), gpu: vi.fn() }))
 vi.mock('../src/services/geometry/kernel', () => ({ callGeometryRust: calls.rust }))
-vi.mock('../src/services/webgpuCompute', () => ({ runGpuCompute: calls.gpu }))
+vi.mock('../src/render/webgpuCompute', () => ({ runGpuCompute: calls.gpu }))
 
 import { prepareSdfGpuBatch, primeSdfGpuBatch, tessellateSdfGpuAware, type SdfField, type SdfGrid } from '../src/services/geometry/sdf'
 import { runSdfSweepBatch, type SdfGpuBatchPayload } from '../src/services/sdfGpu'

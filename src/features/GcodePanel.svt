@@ -3,11 +3,11 @@ import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch } fr
 import type { MeshData } from '../core/mesh'
 import { GCODE_FLAVORS, type GcodeFlavor, type JobSettingsInput, type ToolpathSettingsInput } from '../services/geometry/polygon'
 import { downloadCad } from '../services/cadDrawing'
-import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../services/gcodePreviewGeometry'
-import { gcodePreviewMoveCount } from '../services/gcodePreviewTransport'
-import { GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../services/gcodePreviewProtocol'
-import { createGcodePreviewWorker } from '../services/gcodePreviewWorker'
-import { formatPrintReadinessError } from '../services/printReadiness'
+import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../fabrication/gcodePreviewGeometry'
+import { gcodePreviewMoveCount } from '../fabrication/gcodePreviewTransport'
+import { GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../fabrication/gcodePreviewProtocol'
+import { createGcodePreviewWorker } from '../fabrication/gcodePreviewWorker'
+import { formatPrintReadinessError } from '../fabrication/printReadiness'
 import {
   companionDiscover,
   companionHealth,
@@ -16,7 +16,7 @@ import {
   utf8ToBase64,
   type DiscoveredCompanionPrinter,
   type PrinterVendor,
-} from '../services/printerCompanion'
+} from '../fabrication/printerCompanion'
 
 const props = defineProps<{ meshes: MeshData[]; selection: number[]; source: string; ready: boolean; locale: string }>()
 const label = (ru: string, en: string) => props.locale === 'ru' ? ru : en

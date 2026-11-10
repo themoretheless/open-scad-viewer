@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest'
 import {mainOperation,mainSource,primitiveSource,previewMeshes,sceneFace,type MainParameters} from '../src/services/mainModeling'
 import {extrudeDirectSketch} from '../src/services/directModeling'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
-import type {PickHit} from '../src/services/rendererContracts'
+import type {PickHit} from '../src/render/rendererContracts'
 const box=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0')
 const meshes=()=>previewMeshes({version:1,sketches:[],bodies:[box]})
 const p:MainParameters={amount:2,x:0,y:0,z:0,axis:'z',edge:0,shape:'rectangle',width:2,height:2,cut:false}

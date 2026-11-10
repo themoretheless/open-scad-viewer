@@ -9,7 +9,7 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import type { TrussModel, TrussResponse, TrussVector } from './trussAnalysis'
+import type { TrussModel, TrussResponse, TrussVector } from '../services/trussAnalysis'
 
 export interface TrussPcgOptions {
   tolerance?: number

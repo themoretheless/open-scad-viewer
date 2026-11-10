@@ -5,7 +5,7 @@ import {
   solidMaterialRgb,
 } from '../src/services/solidMaterial'
 import { inspectMeshManifoldDiagnostics } from '../src/services/meshInspection'
-import { computeGcodeLayerSummary } from '../src/services/gcodePreviewGeometry'
+import { computeGcodeLayerSummary } from '../src/fabrication/gcodePreviewGeometry'
 import {
   exportCustomizerPresetsJson,
   importCustomizerPresetsJson,

@@ -63,7 +63,7 @@ export function prepareSdfGpuBatch(jobs:SdfGpuJob[]):{ids:(number|null)[],payloa
  const payload:import('../sdfGpu').SdfGpuBatchPayload={
   jobs:value.jobs.map((job,index)=>job?{...job as Record<string,unknown>,id:ids[index]!} as unknown as import('../sdfGpu').SdfGpuJobPayload:null),
   wgsl:value.wgsl,
-  ...(value.wgslVariants?{wgslVariants:value.wgslVariants as import('../webgpuFeatures').WgslVariant[]}:{}),
+  ...(value.wgslVariants?{wgslVariants:value.wgslVariants as import('../../render/webgpuFeatures').WgslVariant[]}:{}),
  }
  return{ids,payload}
 }
@@ -83,7 +83,7 @@ export const tessellateSdfGpuAware=(field:SdfField,grid:SdfGrid):PolygonBuild=>{
  return tessellateSdf(field,grid)
 }
 
-import type { MarchingOutput } from '../gpuMarchingCubes'
+import type { MarchingOutput } from '../../render/gpuMarchingCubes'
 
 /**
  * Extracts an isosurface mesh directly on the GPU from a sampled SDF scalar
@@ -96,7 +96,7 @@ export async function tessellateSdfMarchingCubesGpu(
 ): Promise<MarchingOutput | null> {
   if (grid.cells.length < 3 || grid.min.length < 3 || grid.max.length < 3) return null
   // Lazy: GPU passes import WGSL via ?raw, which only the Vite pipeline resolves.
-  const { runGpuMarchingIsosurface } = await import('../gpuMarchingCubes')
+  const { runGpuMarchingIsosurface } = await import('../../render/gpuMarchingCubes')
   return runGpuMarchingIsosurface(
     {
       cells: [grid.cells[0], grid.cells[1], grid.cells[2]],

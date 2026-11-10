@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
-import type {GcodePreviewDocument, GcodePreviewResponse} from '../src/services/gcodePreviewProtocol'
-import {decodeGcodePreviewResponse, prepareGcodePreviewTransfer} from '../src/services/gcodePreviewWorkerTransport'
+import type {GcodePreviewDocument, GcodePreviewResponse} from '../src/fabrication/gcodePreviewProtocol'
+import {decodeGcodePreviewResponse, prepareGcodePreviewTransfer} from '../src/fabrication/gcodePreviewWorkerTransport'
 
 const document = (): GcodePreviewDocument => ({
   gcode: '; file', dialect: 'test', native: false, generator: 'test', flavor: null,

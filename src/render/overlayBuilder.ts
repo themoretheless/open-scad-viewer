@@ -6,7 +6,7 @@ import {
   MAX_SOURCE_OVERLAY_TRIANGLES,
   pointOverlayPosition,
 } from '../services/meshSelectionOverlay'
-import type { PickHit, SelectionMode } from '../services/rendererContracts'
+import type { PickHit, SelectionMode } from './rendererContracts'
 import { MAX_OVERLAY_BUFFER_BYTES, type GMesh, type OverlaySlot } from './types'
 
 export function releaseOverlaySlot(slot: OverlaySlot): void {

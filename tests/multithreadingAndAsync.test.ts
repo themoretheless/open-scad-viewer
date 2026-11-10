@@ -4,12 +4,12 @@ import type { MainSolidPort } from '../src/services/mainSolidWorkerClient'
 import type { MainSolidRequest } from '../src/services/mainSolidProtocol'
 import type { TrussModel, TrussResponse } from '../src/services/trussAnalysis'
 import { forEachChunkedAsync, mapChunkedAsync, yieldToEventLoop } from '../src/services/cooperativeAsync'
-import { referenceMeshSlicer, referenceMeshSlicerAsync } from '../src/services/gpuSlicer'
-import { referenceFilterGcodeSegments, referenceFilterGcodeSegmentsAsync } from '../src/services/gpuGcodePreview'
-import { referenceImageContourTrace, referenceImageContourTraceAsync } from '../src/services/gpuImageTrace'
-import { referenceSemanticEdges, referenceSemanticEdgesAsync } from '../src/services/gpuSemanticEdges'
-import { buildFlatBvh, referenceBatchedBvhRaycast, referenceBatchedBvhRaycastAsync } from '../src/services/gpuBvhRaycast'
-import { referenceNurbsTessellate, referenceNurbsTessellateAsync } from '../src/services/gpuNurbsTessellate'
+import { referenceMeshSlicer, referenceMeshSlicerAsync } from '../src/render/gpuSlicer'
+import { referenceFilterGcodeSegments, referenceFilterGcodeSegmentsAsync } from '../src/render/gpuGcodePreview'
+import { referenceImageContourTrace, referenceImageContourTraceAsync } from '../src/render/gpuImageTrace'
+import { referenceSemanticEdges, referenceSemanticEdgesAsync } from '../src/render/gpuSemanticEdges'
+import { buildFlatBvh, referenceBatchedBvhRaycast, referenceBatchedBvhRaycastAsync } from '../src/render/gpuBvhRaycast'
+import { referenceNurbsTessellate, referenceNurbsTessellateAsync } from '../src/render/gpuNurbsTessellate'
 
 class MockSolidPort implements MainSolidPort {
   onmessage: MainSolidPort['onmessage'] = null

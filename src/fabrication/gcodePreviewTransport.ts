@@ -1,4 +1,4 @@
-import type {GcodePreviewMove,GcodePreviewResult} from './geometry/polygon'
+import type {GcodePreviewMove,GcodePreviewResult} from '../services/geometry/polygon'
 
 export type PackedGcodePreview = Omit<GcodePreviewResult,'moves'> & {moveRows:number[]}
 export const GCODE_MOVE_ROW_WIDTH = 7

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createPickMatrix, GpuPicker, type GpuPickerMesh } from '../src/services/gpuPicker'
-import { identityMat4 } from '../src/services/gpuCsgPreview'
+import { createPickMatrix, GpuPicker, type GpuPickerMesh } from '../src/render/gpuPicker'
+import { identityMat4 } from '../src/render/gpuCsgPreview'
 
 describe('gpuPicker Pick Matrix Math', () => {
   it('maps center of target pixel directly to NDC origin (0, 0)', () => {
@@ -216,7 +216,7 @@ describe('GpuPicker Hardware Picking Pass', () => {
   })
 
   it('integrates with WebGPURenderer.gpuPickAt safely', async () => {
-    const { WebGPURenderer } = await import('../src/services/webgpuRenderer')
+    const { WebGPURenderer } = await import('../src/render/webgpuRenderer')
     const renderer = new WebGPURenderer()
     const uninit = await renderer.gpuPickAt(100, 100)
     expect(uninit).toBeNull()

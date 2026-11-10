@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WebGPURenderer, type PickHit } from '../src/services/webgpuRenderer'
+import { WebGPURenderer, type PickHit } from '../src/render/webgpuRenderer'
 
 const hit = (meshIndex: number): PickHit => ({
   meshIndex,

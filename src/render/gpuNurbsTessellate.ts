@@ -9,7 +9,7 @@
 
 import { runGpuCompute } from './webgpuCompute'
 import { generateQuadIndices, referenceNurbsTessellate, referenceNurbsTessellateAsync, type GpuNurbsSurface, type GpuNurbsTessellationResult } from './gpuNurbsReference'
-import type { CooperativeAsyncOptions } from './cooperativeAsync'
+import type { CooperativeAsyncOptions } from '../services/cooperativeAsync'
 export * from './gpuNurbsReference'
 
 import NURBS_TESSELLATE_WGSL from '../../crates/compute-core/shaders/nurbs_tessellate.wgsl?raw'

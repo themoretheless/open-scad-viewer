@@ -1,7 +1,7 @@
 import {parseBondedSolidInput} from './bondedSolidProtocol'
 import type {CadOptions} from './cadWorkbench'
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from './rendererContracts'
+import type {PickHit} from '../render/rendererContracts'
 import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
 import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopologyOptions} from './trussAnalysis'

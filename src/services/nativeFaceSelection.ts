@@ -1,5 +1,5 @@
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from './rendererContracts'
+import type {PickHit} from '../render/rendererContracts'
 import {transformPoint,type Vec3} from './math3d'
 type FaceMesh=Pick<MeshData,'nativeGeometry'|'faceIdsAuthoritative'|'faceIds'|'vertices'|'indices'|'transform'|'provenance'>
 /** Re-anchor the selected native face on a new display tessellation.

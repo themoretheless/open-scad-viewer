@@ -1,6 +1,6 @@
-import type {PolygonMesh} from './geometry/polygon'
-import {planPolygonMeshToolpaths,sectionPolygonMesh} from './geometry/polygon'
-import type {LaserMachineProfile,LaserOperation,LaserPlan} from './geometry/laser'
+import type {PolygonMesh} from '../services/geometry/polygon'
+import {planPolygonMeshToolpaths,sectionPolygonMesh} from '../services/geometry/polygon'
+import type {LaserMachineProfile,LaserOperation,LaserPlan} from '../services/geometry/laser'
 
 export interface LaserProcessSettings {
   line:{output:boolean;speedMmMin:number;power:number;passes:number;airAssist:boolean;kerfMm:number;kerfMode:'center'|'part'|'cavity';pathOrder:'preserve'|'nearest'|'inner-first'|'inner-first-nearest'}

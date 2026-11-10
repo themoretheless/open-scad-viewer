@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { identity, lookAt, multiply, orthographic, perspective } from '../src/services/math3d'
 import { clientRayInKernel, projectPointInKernel, selectedCornerInKernel } from '../src/services/geometry/viewport'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 it('constructs perspective and orthographic center rays with WebGPU near depth', () => {
   for (const matrix of [perspective(Math.PI / 2, 2, 1, 10), orthographic(-2, 2, -1, 1, 1, 10)]) {

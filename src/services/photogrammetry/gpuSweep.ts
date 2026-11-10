@@ -6,8 +6,8 @@
  * in the kernel as usual; this module only dispatches the scoring shader.
  */
 
-import { runGpuCompute } from '../webgpuCompute'
-import type { WgslVariant } from '../webgpuFeatures'
+import { runGpuCompute } from '../../render/webgpuCompute'
+import type { WgslVariant } from '../../render/webgpuFeatures'
 
 export const SWEEP_LINEAR_INDEXING_VARIANT = 'photogrammetry-sweep-linear-indexing'
 

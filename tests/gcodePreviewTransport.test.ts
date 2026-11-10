@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {unpackGcodePreview,type PackedGcodePreview} from '../src/services/gcodePreviewTransport'
+import {unpackGcodePreview,type PackedGcodePreview} from '../src/fabrication/gcodePreviewTransport'
 
 const packed=(moveRows:number[]):PackedGcodePreview=>({moveRows,layers:1,extrusionMm:1,depositedVolumeMm3:2,bounds:null,travelDistanceMm:0,printDistanceMm:10,estimatedTimeS:1})
 it('preserves double precision, signed zero and metadata without retaining wire rows',()=>{

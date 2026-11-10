@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateIso286HoleBasisFit } from '../src/services/drawingSheets'
 import { computeMeshTriangleQualitySummary } from '../src/services/meshInspection'
-import { auditGcodePrintability } from '../src/services/gcodePreviewGeometry'
+import { auditGcodePrintability } from '../src/fabrication/gcodePreviewGeometry'
 import { evaluateMechanismMobility3d } from '../src/services/cadJoints'
 
 describe('Tier IV Wave 6 Improvements', () => {

@@ -6,7 +6,7 @@ import {
   requiredWebGpuFeaturesForWgsl,
   requiredWgslLanguageFeatures,
   selectSupportedWgslVariant,
-} from '../src/services/webgpuFeatures'
+} from '../src/render/webgpuFeatures'
 
 describe('WebGPU feature detection from WGSL', () => {
   afterEach(() => vi.unstubAllGlobals())

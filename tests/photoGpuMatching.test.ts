@@ -1,12 +1,12 @@
 import {describe, expect, it, vi} from 'vitest'
 import {parseMatchingPayload, runGpuMatching} from '../src/services/photogrammetry/gpuMatching'
-import type {GpuComputeJob} from '../src/services/webgpuCompute'
+import type {GpuComputeJob} from '../src/render/webgpuCompute'
 
-vi.mock('../src/services/webgpuCompute', () => ({
+vi.mock('../src/render/webgpuCompute', () => ({
   runGpuCompute: vi.fn(),
 }))
 
-import {runGpuCompute} from '../src/services/webgpuCompute'
+import {runGpuCompute} from '../src/render/webgpuCompute'
 
 /** Builds a minimal MAT1 blob matching the kernel's pack_payload layout. */
 function payload(): Uint8Array {

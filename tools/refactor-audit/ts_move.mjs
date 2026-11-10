@@ -31,9 +31,16 @@ for (const [from, to] of moves) {
 }
 const moved = p => newOf.get(p) ?? p
 
-function resolveSpec(fromFile, spec) {
+function resolveSpec(fromFile, rawSpec) {
+  const q = rawSpec.indexOf('?')
+  const spec = q < 0 ? rawSpec : rawSpec.slice(0, q)
+  const query = q < 0 ? '' : rawSpec.slice(q)
+  const r = resolvePath(fromFile, spec)
+  return r && {...r, query}
+}
+function resolvePath(fromFile, spec) {
   const base = posix.normalize(posix.join(posix.dirname(fromFile), spec))
-  if (fileSet.has(base)) return {target: base, kind: 'exact'}
+  if (fileSet.has(base) || (existsSync(join(root, base)) && statSync(join(root, base)).isFile())) return {target: base, kind: 'exact'}
   for (const e of EXTS) if (fileSet.has(base + e)) return {target: base + e, kind: 'ext', ext: e}
   for (const e of EXTS) if (fileSet.has(base + '/index' + e)) return {target: base + '/index' + e, kind: 'dir'}
   return null
@@ -44,9 +51,9 @@ function respec(newFrom, newTarget, r, original) {
   if (r.kind === 'dir') rel = posix.dirname(rel)
   if (!rel.startsWith('.')) rel = './' + rel
   if (original.endsWith('/') && !rel.endsWith('/')) rel += '/'
-  return rel
+  return rel + (r.query ?? '')
 }
-const SPEC = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\bexport\s*\*\s*from\s*|\brequire\s*\(\s*|\bvi\.mock\s*\(\s*|\bvi\.importActual\s*(?:<[^>]*>)?\s*\(\s*)(['"])(\.{1,2}\/[^'"]*)\2/g
+const SPEC = /(\bnew\s+URL\s*\(\s*|\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\bexport\s*\*\s*from\s*|\brequire\s*\(\s*|\bvi\.mock\s*\(\s*|\bvi\.importActual\s*(?:<[^>]*>)?\s*\(\s*)(['"])(\.{1,2}\/[^'"]*)\2/g
 let rewrites = 0
 const edits = new Map()
 for (const f of listed) {

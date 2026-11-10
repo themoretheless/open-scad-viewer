@@ -3,7 +3,7 @@ import {
   referenceImageContourTrace,
   runGpuImageContourTrace,
   IMAGE_CONTOUR_WGSL,
-} from '../src/services/gpuImageTrace'
+} from '../src/render/gpuImageTrace'
 
 function createCircleRgbaGrid(w: number, h: number, radiusPx: number): Uint8Array {
   const rgba = new Uint8Array(w * h * 4)

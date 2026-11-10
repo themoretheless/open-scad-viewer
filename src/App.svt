@@ -76,7 +76,7 @@ import { geometryExportEligibility } from './services/buildPromotionPolicy'
 import { MAX_WORKSPACE_SOURCE_LENGTH, updateWorkspaceDocument, type WorkspaceDocumentSnapshot } from './services/workspaceDocument'
 import type { BrowserWorkspacePersistence } from './services/workspacePersistence'
 import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
-import type { PickHit, SelectionMode, StandardView } from './services/rendererContracts'
+import type { PickHit, SelectionMode, StandardView } from './render/rendererContracts'
 import { blockColors, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, readCommandMru, type DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)

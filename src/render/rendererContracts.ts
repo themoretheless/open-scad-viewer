@@ -1,7 +1,7 @@
 import type { MeshSourceReference } from '../core/mesh'
-import type { CameraState } from './cameraHistory'
-import type { Vec3 } from './math3d'
-export type { ProjectionMode, StandardView } from './viewportModel'
+import type { CameraState } from '../services/cameraHistory'
+import type { Vec3 } from '../services/math3d'
+export type { ProjectionMode, StandardView } from '../services/viewportModel'
 
 export type DisplayMode = 'shaded' | 'edges' | 'xray'
 export type SelectionMode = 'object' | 'face' | 'point'

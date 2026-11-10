@@ -3,7 +3,7 @@ import type { MeshBvhHit } from '../services/meshBvh'
 import type { NativePickingCache } from '../services/nativePickingCache'
 import { selectedCornerInKernel } from '../services/geometry/viewport'
 import type { MeshProvenanceRun } from '../core/mesh'
-import type { PickHit, SelectionMode } from '../services/rendererContracts'
+import type { PickHit, SelectionMode } from './rendererContracts'
 import {
   normalizeDepthCandidates,
   type DepthCandidate,

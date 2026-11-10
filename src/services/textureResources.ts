@@ -11,7 +11,7 @@ import {
   DEFAULT_MATCAP,
   getEnvPreset,
   getMatcapPreset,
-} from './rendererContracts'
+} from '../render/rendererContracts'
 
 /** Environment maps hold sRGB-encoded bytes; see setEnvMap. */
 export const ENV_MAP_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb'

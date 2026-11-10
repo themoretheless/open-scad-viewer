@@ -2,14 +2,14 @@ import { createRenderer, h, nextTick, shallowReactive } from 'svet'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import GcodePanel from '../src/features/GcodePanel.svt'
 import type { MeshData } from '../src/core/mesh'
-import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../src/services/gcodePreviewProtocol'
-import { PrintReadinessError } from '../src/services/printReadiness'
+import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../src/fabrication/gcodePreviewProtocol'
+import { PrintReadinessError } from '../src/fabrication/printReadiness'
 
 const service = vi.hoisted(() => ({ run: vi.fn(), cancel: vi.fn(), dispose: vi.fn(), download: vi.fn(), draw: vi.fn(), health: vi.fn(), discover: vi.fn(), send: vi.fn() }))
-vi.mock('../src/services/gcodePreviewWorker', () => ({ createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }) }))
+vi.mock('../src/fabrication/gcodePreviewWorker', () => ({ createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }) }))
 vi.mock('../src/services/cadDrawing', () => ({ downloadCad: service.download }))
-vi.mock('../src/services/gcodePreviewGeometry', async importOriginal => ({ ...await importOriginal<object>(), drawGcodeLayer: service.draw }))
-vi.mock('../src/services/printerCompanion', () => ({
+vi.mock('../src/fabrication/gcodePreviewGeometry', async importOriginal => ({ ...await importOriginal<object>(), drawGcodeLayer: service.draw }))
+vi.mock('../src/fabrication/printerCompanion', () => ({
   PRINTER_COMPANION_DEFAULT_URL: 'http://127.0.0.1:17890',
   companionHealth: (...args: unknown[]) => service.health(...args),
   companionDiscover: (...args: unknown[]) => service.discover(...args),

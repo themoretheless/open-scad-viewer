@@ -15,8 +15,8 @@ import {
   GpuCsgPipelineManager,
   GpuCsgRenderer,
   type GpuCsgNode,
-} from '../src/services/gpuCsgPreview'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+} from '../src/render/gpuCsgPreview'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 import { compileOpenSCAD } from '../src/services/openscadCompiler'
 
 describe('gpuCsgPreview math and primitives', () => {

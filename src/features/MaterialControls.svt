@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ENV_PRESETS, MATCAP_PRESETS, MATERIAL_PRESETS, THEME_PRESETS, type ShadingModel } from '../services/rendererContracts'
+import { ENV_PRESETS, MATCAP_PRESETS, MATERIAL_PRESETS, THEME_PRESETS, type ShadingModel } from '../render/rendererContracts'
 
 const props = defineProps<{
   locale: string

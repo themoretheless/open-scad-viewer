@@ -14,8 +14,8 @@ import {
   immediateObjectShader,
   instancedObjectShader,
   supportsImmediateAddressSpace,
-} from './shaders'
-import type { ShaderDepthSpec, ShaderVariant, ShaderVertexLayout } from './shaders'
+} from '../render/shaders'
+import type { ShaderDepthSpec, ShaderVariant, ShaderVertexLayout } from '../render/shaders'
 
 /** Optional per-flavor overrides for the cached pipeline factory. */
 export interface PipelineFlavor {

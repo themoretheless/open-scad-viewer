@@ -26,7 +26,7 @@ import {
   instancedObjectShader,
   listShaders,
   sceneStruct,
-} from '../src/services/shaders'
+} from '../src/render/shaders'
 
 const OBJECT_SHADERS: Array<[string, string, 'V' | 'EdgeV']> = [
   ['mesh', MESH_WGSL, 'V'],

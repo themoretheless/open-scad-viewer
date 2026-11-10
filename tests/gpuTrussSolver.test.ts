@@ -4,7 +4,7 @@ import {
   runGpuTrussSolver,
   assembleTrussCsr,
   TRUSS_PCG_WGSL,
-} from '../src/services/gpuTrussSolver'
+} from '../src/render/gpuTrussSolver'
 import type { TrussModel } from '../src/services/trussAnalysis'
 
 describe('WebGPU Compute Truss / Space-Frame Jacobi-PCG Solver', () => {

@@ -17,7 +17,7 @@ import {xyPlane,type SketchPlane} from '../services/directSketchGeometry'
 import type {DirectBody,DirectDocument} from '../services/directModeling'
 import type {Ray3} from '../services/math3d'
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from '../services/rendererContracts'
+import type {PickHit} from '../render/rendererContracts'
 import type {PaletteCommand} from '../services/commandSearch'
 import {previewMeshes,primitiveSource,sceneFace,sceneBody,type MainOperation,type MainParameters} from '../services/mainModeling'
 const props=defineProps<{meshes:MeshData[];selected:number|null;hit:PickHit|null;source:string;ready:boolean;locale:string;canUndo:boolean;canRedo:boolean;selectedIndices:number[];project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;cameraRevision:number}>()

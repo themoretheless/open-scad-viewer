@@ -3,7 +3,7 @@ import * as geometryKernel from '../src/services/geometry/kernel'
 import {
   WebGPURenderer,
   type RendererLifecycleEvent,
-} from '../src/services/webgpuRenderer'
+} from '../src/render/webgpuRenderer'
 
 describe('WebGPURenderer lifecycle reporting', () => {
   afterEach(() => vi.unstubAllGlobals())

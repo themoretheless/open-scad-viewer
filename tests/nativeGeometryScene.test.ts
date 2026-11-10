@@ -4,7 +4,7 @@ import {isGeometryEvaluationResultPayload} from '../src/services/geometryWorkerP
 import {geometrySceneFromMeshes,meshesFromGeometryScene} from '../src/core/scene'
 import {assertNativeReferenceCurrent,nativeFaceReference,isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {remapNativeFaceSelection} from '../src/services/nativeFaceSelection'
-import type {PickHit} from '../src/services/rendererContracts'
+import type {PickHit} from '../src/render/rendererContracts'
 const surface={id:'patch',op:'surface',degree_u:1,degree_v:1,knots_u:[0,0,1,1],knots_v:[0,0,1,1],control_points:[[[0,0,0],[0,10,0]],[[10,0,0],[10,10,1.12345678912345]]],weights:[[1,1],[1,1]]}
 const document={language:'rush/nurbs-1',units:'mm',parameters:[],nodes:[surface],root:'patch'}
 const hit:PickHit={meshIndex:0,triangleIndex:0,faceId:0,point:[0,0,0],normal:[0,0,1],barycentric:[1,0,0],source:null,backside:false}

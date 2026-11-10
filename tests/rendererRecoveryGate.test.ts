@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RendererRecoveryGate } from '../src/services/rendererRecoveryGate'
+import { RendererRecoveryGate } from '../src/render/rendererRecoveryGate'
 
 describe('RendererRecoveryGate', () => {
   it('starts one recovery and coalesces losses into one follow-up', () => {

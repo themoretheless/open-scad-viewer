@@ -2,7 +2,7 @@ import {runGpuMatching} from '../services/photogrammetry/gpuMatching'
 import {runGpuSweep} from '../services/photogrammetry/gpuSweep'
 import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoReconstruction, type PhotoSurface} from '../services/photogrammetry/kernel'
 import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photogrammetry/workerProtocol'
-import {activeGpuMemoryArchitecture} from '../services/webgpuCompute'
+import {activeGpuMemoryArchitecture} from '../render/webgpuCompute'
 
 const scope = self as unknown as {postMessage: (event: PhotoWorkerEvent, transfer: Transferable[]) => void}
 const post = (event: PhotoWorkerEvent, transfer: Transferable[] = []) => scope.postMessage(event, transfer)

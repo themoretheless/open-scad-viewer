@@ -1,7 +1,7 @@
 import {Worker} from 'node:worker_threads'
 import {afterEach, expect, it, vi} from 'vitest'
-import {GcodePreviewWorker, type GcodeWorkerPort} from '../src/services/gcodePreviewWorker'
-import type {GcodePreviewRequest, GcodePreviewJob} from '../src/services/gcodePreviewProtocol'
+import {GcodePreviewWorker, type GcodeWorkerPort} from '../src/fabrication/gcodePreviewWorker'
+import type {GcodePreviewRequest, GcodePreviewJob} from '../src/fabrication/gcodePreviewProtocol'
 
 class NodePort implements GcodeWorkerPort {
   private listeners = new Map<EventListener, (value: unknown) => void>()

@@ -283,7 +283,7 @@ export function closestPointOnNurbsSurface(
   }
 }
 
-import { runGpuNurbsTessellate, type GpuNurbsTessellationResult } from './gpuNurbsTessellate'
+import { runGpuNurbsTessellate, type GpuNurbsTessellationResult } from '../render/gpuNurbsTessellate'
 
 /**
  * Evaluates and tessellates a tensor-product rational B-spline surface on the

@@ -7,9 +7,9 @@ import type {
   RenderTheme,
   SelectionMode,
   ShadingModel,
-} from '../../services/rendererContracts'
+} from '../rendererContracts'
 
-import { resolveMeshShaderId } from '../../services/rendererContracts'
+import { resolveMeshShaderId } from '../rendererContracts'
 
 import type { TransparentSortBuffer } from '../../services/transparentOrdering'
 
@@ -24,7 +24,7 @@ import { isTransparentAlpha } from '../../services/backendQuality'
 import {
   OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
-} from '../../services/shaders'
+} from '../shaders'
 
 import {
   DEEP_DEPTH,
@@ -37,18 +37,18 @@ import type { TextureResources } from '../../services/textureResources'
 
 import { fillSceneUniforms } from '../../services/uniformFill'
 
-import { GpuCsgRenderer, type GpuCsgTree } from '../../services/gpuCsgPreview'
+import { GpuCsgRenderer, type GpuCsgTree } from '../gpuCsgPreview'
 
-import type { GpuWboitRenderer } from '../../services/gpuWboit'
+import type { GpuWboitRenderer } from '../gpuWboit'
 
 import {
   NO_GHOST_MESHES,
   type Bounds,
   type GMesh,
   type OverlaySlot,
-} from '.././types'
+} from '../types'
 
-import { sortEdgeDraws, sortOpaqueDraws } from '.././drawSorting'
+import { sortEdgeDraws, sortOpaqueDraws } from '../drawSorting'
 import { EncodeFramePassContext, groupByShadingModel, setObjectStyleImmediate } from './groupByShadingModel'
 
 

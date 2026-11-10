@@ -4,7 +4,7 @@ import {
   companionHealth,
   companionSend,
   utf8ToBase64,
-} from '../src/services/printerCompanion'
+} from '../src/fabrication/printerCompanion'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 

@@ -9,8 +9,8 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import { dot3, cross3, normalizeVec3 } from './math3d'
-import { forEachChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
+import { dot3, cross3, normalizeVec3 } from '../services/math3d'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../services/cooperativeAsync'
 
 export interface SlicerOptions extends CooperativeAsyncOptions {
   /** Slicing plane normal vector (default: [0, 0, 1] for Z-slicing) */

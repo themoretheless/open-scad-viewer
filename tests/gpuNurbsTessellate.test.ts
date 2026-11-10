@@ -7,7 +7,7 @@ import {
   generateQuadIndices,
   NURBS_TESSELLATE_WGSL,
   type GpuNurbsSurface,
-} from '../src/services/gpuNurbsTessellate'
+} from '../src/render/gpuNurbsTessellate'
 
 describe('WebGPU Compute NURBS Surface Tessellation', () => {
   it('generates correct quad index topology and winding', () => {

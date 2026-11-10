@@ -2,7 +2,7 @@
 import {sceneSnapPoints} from '../services/mainSnapping'
 import {computed,ref} from 'svet'
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from '../services/rendererContracts'
+import type {PickHit} from '../render/rendererContracts'
 import {sceneBody,sceneFace,type MainOperation,type MainParameters} from '../services/mainModeling'
 import {cross3,unit3,type Vec3} from '../services/directSketchGeometry'
 const props=defineProps<{meshes:MeshData[];selected:number|null;selection:number[];hit:PickHit|null;operation:MainOperation|null;parameters:MainParameters;project:(p:readonly number[])=>[number,number]|null;revision:number;box:boolean}>()

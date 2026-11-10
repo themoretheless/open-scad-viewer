@@ -1,7 +1,7 @@
 import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
 import {encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
-import type {WgslVariant} from '../webgpuFeatures'
+import type {WgslVariant} from '../../render/webgpuFeatures'
 
 /** Geometry fields written by the Rust adapter as numeric triples decode into flat typed arrays. */
 const SURFACE_TRIPLES: BinaryTripleHints = {positions: 'f64', colors: 'u8', triangles: 'u32'}

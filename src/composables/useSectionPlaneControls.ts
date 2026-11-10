@@ -3,9 +3,9 @@ import type { SectionAxis } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
 import { clamp } from '../services/math3d'
 import { inspectMesh } from '../services/meshInspection'
-import type { PickHit } from '../services/rendererContracts'
+import type { PickHit } from '../render/rendererContracts'
 import type { SceneController, SceneState } from '../services/sceneController'
-import type { WebGPURenderer } from '../services/webgpuRenderer'
+import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseSectionPlaneControlsOptions {
   gpuOk: Ref<boolean>

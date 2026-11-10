@@ -252,7 +252,7 @@ export function inspectGcode(gcode: string): GcodeInspectResult {
   return {...result,preview:unpackGcodePreview(result.preview)}
 }
 
-import {unpackGcodePreview,type PackedGcodePreview} from '../gcodePreviewTransport'
+import {unpackGcodePreview,type PackedGcodePreview} from '../../fabrication/gcodePreviewTransport'
 
 export interface PolygonProfile {outer:number[][];holes?:number[][][]}
 export const extrudePolygonProfile=(profile:PolygonProfile,vector:number[]):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_extrude',{profile,vector}))

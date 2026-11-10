@@ -23,7 +23,7 @@ import { restoreExactFullRoundSnapshot } from '../src/services/exactFullRoundSna
 import { isGeometryEvaluationResultPayload } from '../src/services/geometryWorkerProtocol'
 import { geometrySceneFromMeshes, meshesFromGeometryScene } from '../src/core/scene'
 import { remapNativeFaceSelection } from '../src/services/nativeFaceSelection'
-import type { PickHit } from '../src/services/rendererContracts'
+import type { PickHit } from '../src/render/rendererContracts'
 import { nativeFaceReference, assertNativeReferenceCurrent } from '../src/core/nativeGeometry'
 const source = (height=6) => '// @language openscad-viewer/brep-1\nfull_round_exact([5,4,3]) cube([4,8,'+height+']);'
 const build = (segments:number,height=6) => buildBrepSemanticScene(lowerOpenSCADToSemanticProgram(source(height)),{quality:'preview',segments})

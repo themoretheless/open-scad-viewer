@@ -7,7 +7,7 @@ import {
   dispatchComputeToZeroCopyMesh,
   supportsOffscreenWebGpu,
   GpuBufferArena,
-} from '../src/services/gpuZeroCopyPipeline'
+} from '../src/render/gpuZeroCopyPipeline'
 
 function createMockGpuDevice() {
   const createdBuffers: Array<{ size: number; usage: number; destroyed: boolean }> = []

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 const gpuReadback=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/webgpuCompute',()=>({runGpuCompute:gpuReadback}))
+vi.mock('../src/render/webgpuCompute',()=>({runGpuCompute:gpuReadback}))
 import {
   buildMeshEdgeAdjacency,
   referenceSemanticEdges,
   runGpuSemanticEdges,
   SEMANTIC_EDGES_WGSL,
-} from '../src/services/gpuSemanticEdges'
+} from '../src/render/gpuSemanticEdges'
 
 describe('WebGPU Semantic & Crease Edges Detection', () => {
   it('correctly builds mesh edge adjacency', () => {

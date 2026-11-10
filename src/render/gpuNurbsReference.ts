@@ -1,5 +1,5 @@
 /** Deterministic CPU NURBS tessellation reference and shared grid helpers (WebGPU fallback). */
-import { forEachChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../services/cooperativeAsync'
 
 
 export interface GpuNurbsSurface {

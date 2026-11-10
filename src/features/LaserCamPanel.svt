@@ -3,9 +3,9 @@ import {computed,reactive,ref,shallowRef,watch} from 'svet'
 import type {MeshData} from '../core/mesh'
 import {downloadCad} from '../services/cadDrawing'
 import {emitLaserFrame,emitLaserGrbl,previewLaserFrame,previewLaserPlan,type LaserMachineProfile,type LaserPlan,type LaserPreviewOperation,type LaserProgram,type LaserSummary} from '../services/geometry/laser'
-import {gcodeMeshBounds} from '../services/gcodePreviewGeometry'
-import {planLaserMeshSection} from '../services/laserSectionPlanning'
-import {LASER_MACHINE_PRESETS,LASER_MATERIAL_PRESETS,machineProfileFromPreset,presetPower} from '../services/laserProfiles'
+import {gcodeMeshBounds} from '../fabrication/gcodePreviewGeometry'
+import {planLaserMeshSection} from '../fabrication/laserSectionPlanning'
+import {LASER_MACHINE_PRESETS,LASER_MATERIAL_PRESETS,machineProfileFromPreset,presetPower} from '../fabrication/laserProfiles'
 import {meshDataToPolygon} from '../services/solidBridge'
 
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string}>()

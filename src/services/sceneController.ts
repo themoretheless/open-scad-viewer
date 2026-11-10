@@ -1,5 +1,5 @@
 import type { MeshData } from '../core/mesh'
-import type { DistanceMeasurement } from './rendererContracts'
+import type { DistanceMeasurement } from '../render/rendererContracts'
 
 export type SectionAxis = 'x' | 'y' | 'z'
 

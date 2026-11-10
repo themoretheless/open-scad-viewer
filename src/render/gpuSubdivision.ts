@@ -9,11 +9,11 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import type { SubdivisionCage, SubdivisionRefined } from './geometry/subdivision'
-import type { GeometryBrush } from './geometryEditing'
+import type { SubdivisionCage, SubdivisionRefined } from '../services/geometry/subdivision'
+import type { GeometryBrush } from '../services/geometryEditing'
 
 import CATMULL_CLARK_WGSL from '../../crates/compute-core/shaders/catmull_clark.wgsl?raw'
-import { packUndirectedEdgeKey } from './math3d'
+import { packUndirectedEdgeKey } from '../services/math3d'
 export { CATMULL_CLARK_WGSL }
 import { referenceRefineSubdivision } from './gpuSubdivisionReference'
 export { referenceRefineSubdivision } from './gpuSubdivisionReference'

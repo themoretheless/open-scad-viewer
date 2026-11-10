@@ -1,5 +1,5 @@
 import type { GeometryPhaseTimings, GeometryQuality } from '../core/build'
-import type { SceneUploadMetrics } from './rendererContracts'
+import type { SceneUploadMetrics } from '../render/rendererContracts'
 
 export interface BuildPerformanceSample {
   token: number

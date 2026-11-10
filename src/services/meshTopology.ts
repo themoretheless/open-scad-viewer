@@ -126,7 +126,7 @@ export async function extractSemanticEdgesGpu(
       triangleIndices.length % 3 === 0 &&
       Number.isFinite(requestedCreaseAngle)
     ) {
-      const { runGpuSemanticEdges } = await import('./gpuSemanticEdges')
+      const { runGpuSemanticEdges } = await import('../render/gpuSemanticEdges')
       const gpuResult = await runGpuSemanticEdges(vertices, triangleIndices, {
         strideFloats: VERTEX_STRIDE,
         creaseAngleDegrees: clamp(requestedCreaseAngle, 0, 180),

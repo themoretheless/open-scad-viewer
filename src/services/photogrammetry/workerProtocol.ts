@@ -1,5 +1,5 @@
 import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from './kernel'
-import type {WebGpuMemoryArchitecture} from '../webgpuFeatures'
+import type {WebGpuMemoryArchitecture} from '../../render/webgpuFeatures'
 
 export interface PhotoWorkerRequest {
   /** Kernel module compiled once on the main thread; the Worker only instantiates it. */

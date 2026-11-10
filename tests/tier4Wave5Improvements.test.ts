@@ -11,14 +11,14 @@ import { describePublicErrorCode as describePublicErrorCodeFromPublicError } fro
 import {
   getGpuExecutionTopologyReport,
   getGpuMemoryArchitectureProfile,
-} from '../src/renderer/types'
+} from '../src/render/types'
 import {
   createAndUploadBufferByArchitecture,
   detectGpuMemoryArchitecture,
-} from '../src/services/gpuZeroCopyPipeline'
-import { sameTypedArray, sortEdgeDraws, sortOpaqueDraws } from '../src/renderer/drawSorting'
-import { isSectionClipped, selectionCandidateKey } from '../src/renderer/pickingController'
-import { groupByShadingModel } from '../src/renderer/framePassEncoder'
+} from '../src/render/gpuZeroCopyPipeline'
+import { sameTypedArray, sortEdgeDraws, sortOpaqueDraws } from '../src/render/drawSorting'
+import { isSectionClipped, selectionCandidateKey } from '../src/render/pickingController'
+import { groupByShadingModel } from '../src/render/framePassEncoder'
 import { deepEqual, identityValue, truthy, valueToString } from '../src/parser/astDiscovery'
 import { compatibilityString } from '../src/parser/expressionEvaluator'
 import { sha256, truncateWellFormed } from '../src/mcp/server/contracts'

@@ -8,8 +8,8 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import type { Ray3 } from './math3d'
-import { mapChunkedAsync, type CooperativeAsyncOptions } from './cooperativeAsync'
+import type { Ray3 } from '../services/math3d'
+import { mapChunkedAsync, type CooperativeAsyncOptions } from '../services/cooperativeAsync'
 
 export interface AabbItem {
   id: string

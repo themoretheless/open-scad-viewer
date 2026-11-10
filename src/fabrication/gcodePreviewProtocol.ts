@@ -1,6 +1,6 @@
 import type { MeshData } from '../core/mesh'
-import { fitsClonedBufferBudget } from './clonedBufferBudget'
-import { GCODE_FLAVORS, type GcodePreviewResult, type JobSettingsInput, type ToolpathSettingsInput } from './geometry/polygon'
+import { fitsClonedBufferBudget } from '../services/clonedBufferBudget'
+import { GCODE_FLAVORS, type GcodePreviewResult, type JobSettingsInput, type ToolpathSettingsInput } from '../services/geometry/polygon'
 import type { PrintReadinessErrorCode, PrintReadinessErrorDetails } from './printReadiness'
 
 export const GCODE_PREVIEW_MAX_BYTES = 4 * 1024 * 1024
@@ -11,7 +11,7 @@ export type GcodePreviewJob =
   | { kind: 'job'; mesh: GcodeSceneMesh; zMin: number; zMax: number; settings: JobSettingsInput }
   | { kind: 'parse'; gcode: string }
 export interface GcodePreviewDocument {
-  firmware?:import('./geometry/polygon').GcodeFirmwareState|null;
+  firmware?:import('../services/geometry/polygon').GcodeFirmwareState|null;
   gcode: string
   preview: GcodePreviewResult
   dialect: string

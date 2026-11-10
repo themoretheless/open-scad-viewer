@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { computePinchUpdate, projectAxesToScreen, WebGPURenderer } from '../src/services/webgpuRenderer'
+import { computePinchUpdate, projectAxesToScreen, WebGPURenderer } from '../src/render/webgpuRenderer'
 import { transformPoint, type Mat4, type Vec3 } from '../src/services/math3d'
 
 describe('WebGPURenderer close zoom', () => {

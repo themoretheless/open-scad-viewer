@@ -5,8 +5,8 @@ import {
   WBOIT_ACCUM_FORMAT,
   WBOIT_REVEAL_FORMAT,
   WBOIT_COMPOSITE_WGSL,
-} from '../src/services/gpuWboit'
-import { MESH_WGSL } from '../src/services/shaders'
+} from '../src/render/gpuWboit'
+import { MESH_WGSL } from '../src/render/shaders'
 
 function createFakeDevice() {
   const textures: any[] = []
@@ -248,7 +248,7 @@ describe('GpuWboitRenderer', () => {
   })
 
   it('integrates with WebGPURenderer transparencyMode and teardown', async () => {
-    const { WebGPURenderer } = await import('../src/services/webgpuRenderer')
+    const { WebGPURenderer } = await import('../src/render/webgpuRenderer')
     const { device } = createFakeDevice()
     const renderer = new WebGPURenderer()
 

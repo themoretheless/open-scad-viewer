@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { runGpuCompute } from '../src/services/webgpuCompute'
+import { runGpuCompute } from '../src/render/webgpuCompute'
 import {
   closestPointOnNurbsCurve,
   computeNurbsCurveBoundingBox,

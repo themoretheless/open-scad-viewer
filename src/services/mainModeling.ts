@@ -1,5 +1,5 @@
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from './rendererContracts'
+import type {PickHit} from '../render/rendererContracts'
 import {flattenGroupGeometry, sceneBody} from './meshFlatten'
 import {directBodiesScad, extrudeDirectSketch, type DirectDocument} from './directModeling'
 import {solidTopology, pushPullFace, bevelSolidEdge, shellSolid, splitSolid, transformSelection, facePlane} from './directSolidTools'

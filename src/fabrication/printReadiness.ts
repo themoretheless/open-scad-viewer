@@ -1,6 +1,6 @@
-import { checkManifoldInKernel, type KernelManifoldReport } from './geometry/manifoldAnalysis'
-import type { PolygonMesh } from './geometry/polygon'
-import { inspectSolidIntersections, type SolidIntersectionOptions } from './solidDiagnostics'
+import { checkManifoldInKernel, type KernelManifoldReport } from '../services/geometry/manifoldAnalysis'
+import type { PolygonMesh } from '../services/geometry/polygon'
+import { inspectSolidIntersections, type SolidIntersectionOptions } from '../services/solidDiagnostics'
 
 export const PRINT_READINESS_ERROR_CODES = [
   'PRINT_NOT_WATERTIGHT',

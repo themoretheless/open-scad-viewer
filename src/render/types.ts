@@ -3,7 +3,7 @@ import type { GeometryAssetId } from '../core/scene'
 import type { Aabb3, Mat4 } from '../services/math3d'
 import type { MeshBvh } from '../services/meshBvh'
 import type { FaceTriangleIndex } from '../services/meshSelectionOverlay'
-import type { MaterialDef, ShadingModel } from '../services/rendererContracts'
+import type { MaterialDef, ShadingModel } from './rendererContracts'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 

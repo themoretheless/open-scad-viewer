@@ -5,7 +5,7 @@ import {
   computeSliceArea,
   groupSegmentsByLayer,
   MESH_SLICER_WGSL,
-} from '../src/services/gpuSlicer'
+} from '../src/render/gpuSlicer'
 
 /** Helper: Creates a closed watertight box from [0,0,0] to [sx, sy, sz] with outward normals */
 function createBoxMesh(sx: number, sy: number, sz: number) {

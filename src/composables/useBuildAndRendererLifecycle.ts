@@ -19,12 +19,12 @@ import type {
   RendererLifecycleEvent,
   SelectionMode,
   ShadingModel,
-} from '../services/rendererContracts'
-import { RendererRecoveryGate } from '../services/rendererRecoveryGate'
+} from '../render/rendererContracts'
+import { RendererRecoveryGate } from '../render/rendererRecoveryGate'
 import type { SceneController } from '../services/sceneController'
 import { planScenePublication } from '../services/scenePublication'
 import type { ViewportController } from '../services/viewportController'
-import { WebGPURenderer } from '../services/webgpuRenderer'
+import { WebGPURenderer } from '../render/webgpuRenderer'
 import { buildSources } from '../appHelpers'
 import type { Language } from '../i18n/appStrings'
 

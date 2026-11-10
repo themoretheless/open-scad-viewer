@@ -1,6 +1,6 @@
 import type { Mat4 } from './math3d'
 import type { BundleMesh } from './meshDrawBundle'
-import { OBJECT_UNIFORM_LAYOUT, instancedObjectShader } from './shaders'
+import { OBJECT_UNIFORM_LAYOUT, instancedObjectShader } from '../render/shaders'
 
 export interface InstanceMesh extends BundleMesh {
   readonly transform: Mat4

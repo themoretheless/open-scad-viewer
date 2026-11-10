@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GcodePreviewWorker, type GcodeWorkerPort } from '../src/services/gcodePreviewWorker'
-import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest } from '../src/services/gcodePreviewProtocol'
-import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../src/services/gcodePreviewGeometry'
-import { executeGcodePreview, executeGcodePreviewAsync } from '../src/services/gcodePreviewRuntime'
-import { prepareGcodePreviewTransfer } from '../src/services/gcodePreviewWorkerTransport'
-import { PrintReadinessError } from '../src/services/printReadiness'
+import { GcodePreviewWorker, type GcodeWorkerPort } from '../src/fabrication/gcodePreviewWorker'
+import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest } from '../src/fabrication/gcodePreviewProtocol'
+import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../src/fabrication/gcodePreviewGeometry'
+import { executeGcodePreview, executeGcodePreviewAsync } from '../src/fabrication/gcodePreviewRuntime'
+import { prepareGcodePreviewTransfer } from '../src/fabrication/gcodePreviewWorkerTransport'
+import { PrintReadinessError } from '../src/fabrication/printReadiness'
 
 const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn(), warm: vi.fn(), printReady: vi.fn() }))
 vi.mock('../src/services/geometry/kernel', () => ({ warmGeometryKernel: geometry.warm }))
@@ -18,7 +18,7 @@ vi.mock('../src/services/geometry/polygon', () => ({
 vi.mock('../src/services/meshFlatten', () => ({
   flattenGroupGeometry: (...args: unknown[]) => geometry.flatten(...args),
 }))
-vi.mock('../src/services/printReadiness', async importOriginal => ({
+vi.mock('../src/fabrication/printReadiness', async importOriginal => ({
   ...await importOriginal<object>(),
   assertPrintReady: (...args: unknown[]) => geometry.printReady(...args),
 }))

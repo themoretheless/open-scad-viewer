@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'svet'
 import type { MeshData } from '../core/mesh'
-import type { PickHit } from '../services/rendererContracts'
+import type { PickHit } from '../render/rendererContracts'
 import { SVG_MAX_BYTES, SVG_MAX_FONTS, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES } from '../services/svgLimits'
 import { createSvgWorkerClient } from '../services/svgWorkerClient'
 import type { SvgGeometryResult } from '../services/svgWorkerProtocol'

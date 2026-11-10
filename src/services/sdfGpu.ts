@@ -5,8 +5,8 @@
  * boundary validation, marching tetrahedra) stays in the kernel on sdf_finish.
  * Dispatch plumbing lives in webgpuCompute.ts.
  */
-import { runGpuCompute } from './webgpuCompute'
-import type { WgslVariant } from './webgpuFeatures'
+import { runGpuCompute } from '../render/webgpuCompute'
+import type { WgslVariant } from '../render/webgpuFeatures'
 
 export interface SdfGpuPayload {
   id: number
