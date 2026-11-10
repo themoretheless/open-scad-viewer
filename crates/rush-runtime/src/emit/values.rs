@@ -85,15 +85,15 @@ impl<'a> Emitter<'a> {
         depth: usize,
         expected: GeometryType,
     ) -> Result<()> {
-        self.emit(
-            str_at(item, "input"),
+        self.emit(EmitRequest {
+            key: str_at(item, "input"),
             nodes,
             scope,
-            current,
-            depth + 1,
+            path: current,
+            depth: depth + 1,
             expected,
-            None,
-            false,
-        )
+            parent: None,
+            allow_assembly: false,
+        })
     }
 }

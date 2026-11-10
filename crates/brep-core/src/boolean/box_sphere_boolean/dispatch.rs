@@ -18,7 +18,7 @@ pub(crate) fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Mo
         _ => return Ok(None),
     };
     let band = shared_band(&cuboid, &sphere);
-    sphere_mate::run(a, b, mate_index, &cuboid, sphere, band, operation).map(Some)
+    sphere_mate::run([a, b], mate_index, &cuboid, sphere, band, operation).map(Some)
 }
 
 fn shared_band(cuboid: &CanonicalBox<'_>, sphere: &CanonicalSphere) -> f64 {

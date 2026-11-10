@@ -167,16 +167,16 @@ impl<'a> Emitter<'a> {
                         },
                         json_string(&json!(vector))
                     ));
-                    self.emit(
-                        str_at(item, "input"),
+                    self.emit(EmitRequest {
+                        key: str_at(item, "input"),
                         nodes,
                         scope,
-                        &format!("{current}[{i}]"),
-                        depth + 1,
+                        path: &format!("{current}[{i}]"),
+                        depth: depth + 1,
                         expected,
-                        None,
-                        false,
-                    )?;
+                        parent: None,
+                        allow_assembly: false,
+                    })?;
                     self.lines.push("}".into());
                 }
                 self.lines.push("}".into());
@@ -485,16 +485,16 @@ impl<'a> Emitter<'a> {
             "union" | "intersection" | "difference" | "hull" => {
                 self.lines.push(format!("{op}(){{"));
                 for child in children(item) {
-                    self.emit(
-                        child,
+                    self.emit(EmitRequest {
+                        key: child,
                         nodes,
                         scope,
-                        current,
-                        depth + 1,
+                        path: current,
+                        depth: depth + 1,
                         expected,
-                        None,
-                        false,
-                    )?;
+                        parent: None,
+                        allow_assembly: false,
+                    })?;
                 }
                 self.lines.push("}".into());
             }

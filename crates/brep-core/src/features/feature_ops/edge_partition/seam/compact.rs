@@ -190,17 +190,11 @@ pub fn compact_with_uv_tolerance(
         )?;
         work.cells += joined.visited();
         let (trim, transferred) = clocks::transfer(
-            source,
-            intermediate,
-            face,
-            w,
-            &cycle,
-            &world,
-            &joined,
-            backwards,
-            tol,
-            uv_tolerance,
-            limits,
+            clocks::WireTransfer {
+                source, intermediate, face, wire: w, cycle: &cycle,
+                world: &world, uv: &joined, reversed: backwards,
+                tolerance: tol, uv_tolerance, limits,
+            },
             &mut work,
         )?;
         relations.extend(transferred);

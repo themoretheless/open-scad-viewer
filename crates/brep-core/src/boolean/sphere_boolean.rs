@@ -61,7 +61,7 @@ pub(crate) fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Mo
                 pieces: Imprint::<SphereMate>::sphere_boundary_pieces(b),
                 circle: (*center, *radius, *normal),
             };
-            sphere_mate::run(a, b, 1, &mate, sa, band, operation).map(Some)
+            sphere_mate::run([a, b], 1, &mate, sa, band, operation).map(Some)
         }
         _ => Err(unsupported(
             "Sphere/sphere Boolean: unexpected multiple intersection components",

@@ -36,21 +36,33 @@ const GAUSS_W: [f64; 4] = [
     0.173_927_422_568_726_92,
 ];
 
+pub(super) struct TimoshenkoBeam {
+    pub e: f64,
+    pub g: f64,
+    pub a: f64,
+    pub iyy: f64,
+    pub izz: f64,
+    pub j: f64,
+    pub asy: Option<f64>,
+    pub asz: Option<f64>,
+    pub l: f64,
+}
+
 /// Local 12x12 Timoshenko stiffness, DOFs [u,v,w,rx,ry,rz] per node.
 /// Standard 3D frame element (Logan): θy couples to w with flipped signs
 /// because θy = −dw/dx while θz = +dv/dx.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn beam_stiffness(
-    e: f64,
-    g: f64,
-    a: f64,
-    iyy: f64,
-    izz: f64,
-    j: f64,
-    asy: Option<f64>,
-    asz: Option<f64>,
-    l: f64,
-) -> DMatrix<f64> {
+pub(super) fn beam_stiffness(beam: TimoshenkoBeam) -> DMatrix<f64> {
+    let TimoshenkoBeam {
+        e,
+        g,
+        a,
+        iyy,
+        izz,
+        j,
+        asy,
+        asz,
+        l,
+    } = beam;
     let mut k = DMatrix::<f64>::zeros(12, 12);
     let axial = e * a / l;
     k[(0, 0)] = axial;

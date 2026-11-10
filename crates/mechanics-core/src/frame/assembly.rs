@@ -66,17 +66,17 @@ pub(super) fn validate_structure(
         if !g.is_finite() || g <= 0. {
             return Err(numeric());
         }
-        let k_local = beam_stiffness(
+        let k_local = beam_stiffness(super::beam_kernel::TimoshenkoBeam {
             e,
             g,
-            member.area_mm2,
-            member.iyy_mm4,
-            member.izz_mm4,
-            member.j_mm4,
-            member.shear_area_y_mm2,
-            member.shear_area_z_mm2,
-            length,
-        );
+            a: member.area_mm2,
+            iyy: member.iyy_mm4,
+            izz: member.izz_mm4,
+            j: member.j_mm4,
+            asy: member.shear_area_y_mm2,
+            asz: member.shear_area_z_mm2,
+            l: length,
+        });
         if k_local.iter().any(|v| !v.is_finite()) {
             return Err(numeric());
         }

@@ -96,6 +96,12 @@ pub(crate) fn same_owned_boundary(a: &Curve, b: &Curve, reverse: bool) -> bool {
                 p == &b.control_points[j] && *w == b.weights[j]
             })
 }
+struct PreparedBoundaries<'a> {
+    boundaries: &'a [Vec<(Curve, Curve)>],
+    max_cells: usize,
+    cells: &'a mut usize,
+}
+
 /// Produce one combinatorially closed candidate. This does not certify G2,
 /// injectivity, absence of intersections, nesting, or material orientation.
 /// All source models and supplied surfaces remain immutable on every refusal.
@@ -106,9 +112,7 @@ pub fn assemble(
     max_work: u64,
     sources: &[&Model],
 ) -> Result<Assembly> {
-    assemble_impl(
-        surfaces, reversed, tolerance, max_work, sources, None, 0, &mut 0,
-    )
+    assemble_impl(surfaces, reversed, tolerance, max_work, sources, None)
 }
 /// Internal segmented-carrier path. Every prepared saved world/UV use gets a
 /// fresh continuous lift check; no endpoint-only join authorizes a seam.
@@ -127,28 +131,27 @@ pub(crate) fn assemble_prepared(
         tolerance,
         max_work,
         &[],
-        Some(boundaries),
-        max_cells,
-        cells,
+        Some(PreparedBoundaries {
+            boundaries,
+            max_cells,
+            cells,
+        }),
     )
 }
-#[allow(clippy::too_many_arguments)]
-fn assemble_impl(
+fn validate_patch_network_inputs(
     surfaces: &[Surface],
     reversed: &[bool],
     tolerance: f64,
     max_work: u64,
-    sources: &[&Model],
-    prepared: Option<&[Vec<(Curve, Curve)>]>,
-    max_cells: usize,
-    cells: &mut usize,
-) -> Result<Assembly> {
-    if let Some(boundaries) = prepared {
+    prepared: Option<&PreparedBoundaries<'_>>,
+) -> Result<()> {
+    if let Some(prep) = prepared {
+        let boundaries = prep.boundaries;
         if boundaries.len() != surfaces.len()
             || boundaries.iter().any(|v| v.len() < 4 || v.len() > 256)
             || boundaries.iter().map(Vec::len).sum::<usize>() > brep_topology::MAX_COEDGES
-            || !(1..=100000).contains(&max_cells)
-            || *cells > max_cells
+            || !(1..=100000).contains(&prep.max_cells)
+            || *prep.cells > prep.max_cells
         {
             return Err(refuse(
                 "BREP_PATCH_NETWORK_LIMITS",
@@ -182,6 +185,80 @@ fn assemble_impl(
             ));
         }
     }
+    Ok(())
+}
+
+fn verify_shell_manifold_and_connectivity(
+    vertex_count: usize,
+    face_count: usize,
+    edges: &[Edge],
+    uses: &[Vec<(usize, bool)>],
+) -> Result<()> {
+    if uses.iter().any(|u| u.len() != 2) {
+        return Err(refuse(
+            "BREP_PATCH_NETWORK_OPEN",
+            "Unpaired boundaries remain; source trims or end transitions are missing",
+        ));
+    }
+    // Edge-manifold incidence alone permits pinched vertices. Every vertex
+    // must have one cyclic face link; disjoint fans cannot share a solid vertex.
+    let mut vertex_edges = vec![Vec::new(); vertex_count];
+    for (edge, e) in edges.iter().enumerate() {
+        for &v in &e.vertices {
+            vertex_edges[v].push(edge);
+        }
+    }
+    for star in vertex_edges {
+        let mut link = BTreeMap::<usize, Vec<usize>>::new();
+        for edge in star {
+            let (a, b) = (uses[edge][0].0, uses[edge][1].0);
+            link.entry(a).or_default().push(b);
+            link.entry(b).or_default().push(a);
+        }
+        let mut fan = BTreeSet::new();
+        let mut pending = link.keys().next().copied().into_iter().collect::<Vec<_>>();
+        while let Some(face) = pending.pop() {
+            if fan.insert(face) {
+                pending.extend(link[&face].iter().copied());
+            }
+        }
+        if link.len() < 2 || link.values().any(|n| n.len() != 2) || fan.len() != link.len() {
+            return Err(refuse(
+                "BREP_PATCH_NETWORK_VERTEX_LINK",
+                "A vertex contains disconnected or nonmanifold face fans; separate bodies or complete the corner transitions",
+            ));
+        }
+    }
+    let mut neighbors = vec![Vec::new(); face_count];
+    for u in uses {
+        neighbors[u[0].0].push(u[1].0);
+        neighbors[u[1].0].push(u[0].0);
+    }
+    let mut visited = BTreeSet::new();
+    let mut pending = vec![0];
+    while let Some(f) = pending.pop() {
+        if visited.insert(f) {
+            pending.extend(neighbors[f].iter().copied());
+        }
+    }
+    if visited.len() != face_count {
+        return Err(refuse(
+            "BREP_PATCH_NETWORK_COMPONENTS",
+            "Expected one connected shell; multiple bodies and cavity shells require explicit ownership",
+        ));
+    }
+    Ok(())
+}
+
+fn assemble_impl(
+    surfaces: &[Surface],
+    reversed: &[bool],
+    tolerance: f64,
+    max_work: u64,
+    sources: &[&Model],
+    mut prepared: Option<PreparedBoundaries<'_>>,
+) -> Result<Assembly> {
+    validate_patch_network_inputs(surfaces, reversed, tolerance, max_work, prepared.as_ref())?;
     let mut vertices = Vec::<Vertex>::new();
     let mut vertex_map = BTreeMap::new();
     let mut edges = Vec::<Edge>::new();
@@ -194,13 +271,13 @@ fn assemble_impl(
     let mut proved = 0;
     for (face, surface) in surfaces.iter().enumerate() {
         let mut coedges = Vec::new();
-        let boundary_curves = if let Some(boundaries) = prepared {
-            boundaries[face].clone()
+        let boundary_curves = if let Some(prep) = &prepared {
+            prep.boundaries[face].clone()
         } else {
             (0..4).map(|side| boundary(surface, side)).collect()
         };
         for (curve, mut pcurve) in boundary_curves {
-            if prepared.is_some() {
+            if let Some(prep) = &mut prepared {
                 curve.validate()?;
                 pcurve.validate()?;
                 if curve.control_points[0].len() != 3 || pcurve.control_points[0].len() != 2 {
@@ -209,7 +286,15 @@ fn assemble_impl(
                         "Prepared world/UV boundary dimensions must be 3/2",
                     ));
                 }
-                if !prepared_lift(&curve, &pcurve, surface, false, tolerance, max_cells, cells)? {
+                if !prepared_lift(
+                    &curve,
+                    &pcurve,
+                    surface,
+                    false,
+                    tolerance,
+                    prep.max_cells,
+                    prep.cells,
+                )? {
                     return Err(refuse(
                         "BREP_PATCH_NETWORK_UNPROVEN",
                         "Prepared original face lift remains unproven",
@@ -259,11 +344,11 @@ fn assemble_impl(
                         surface,
                         reverse,
                         tolerance,
-                        max_work,
-                        &mut work,
-                        prepared.is_some(),
-                        max_cells,
-                        cells,
+                        CorrespondenceLedger {
+                            max_work,
+                            work: &mut work,
+                            prepared: prepared.as_mut(),
+                        },
                     )?
                 };
                 if equal {
@@ -311,59 +396,7 @@ fn assemble_impl(
             holes: vec![],
         });
     }
-    if uses.iter().any(|u| u.len() != 2) {
-        return Err(refuse(
-            "BREP_PATCH_NETWORK_OPEN",
-            "Unpaired boundaries remain; source trims or end transitions are missing",
-        ));
-    }
-    // Edge-manifold incidence alone permits pinched vertices. Every vertex
-    // must have one cyclic face link; disjoint fans cannot share a solid vertex.
-    let mut vertex_edges = vec![Vec::new(); vertices.len()];
-    for (edge, e) in edges.iter().enumerate() {
-        for &v in &e.vertices {
-            vertex_edges[v].push(edge);
-        }
-    }
-    for star in vertex_edges {
-        let mut link = BTreeMap::<usize, Vec<usize>>::new();
-        for edge in star {
-            let (a, b) = (uses[edge][0].0, uses[edge][1].0);
-            link.entry(a).or_default().push(b);
-            link.entry(b).or_default().push(a);
-        }
-        let mut fan = BTreeSet::new();
-        let mut pending = link.keys().next().copied().into_iter().collect::<Vec<_>>();
-        while let Some(face) = pending.pop() {
-            if fan.insert(face) {
-                pending.extend(link[&face].iter().copied());
-            }
-        }
-        if link.len() < 2 || link.values().any(|n| n.len() != 2) || fan.len() != link.len() {
-            return Err(refuse(
-                "BREP_PATCH_NETWORK_VERTEX_LINK",
-                "A vertex contains disconnected or nonmanifold face fans; separate bodies or complete the corner transitions",
-            ));
-        }
-    }
-    let mut neighbors = vec![Vec::new(); faces.len()];
-    for u in &uses {
-        neighbors[u[0].0].push(u[1].0);
-        neighbors[u[1].0].push(u[0].0);
-    }
-    let mut visited = BTreeSet::new();
-    let mut pending = vec![0];
-    while let Some(f) = pending.pop() {
-        if visited.insert(f) {
-            pending.extend(neighbors[f].iter().copied());
-        }
-    }
-    if visited.len() != faces.len() {
-        return Err(refuse(
-            "BREP_PATCH_NETWORK_COMPONENTS",
-            "Expected one connected shell; multiple bodies and cavity shells require explicit ownership",
-        ));
-    }
+    verify_shell_manifold_and_connectivity(vertices.len(), faces.len(), &edges, &uses)?;
     let shell_faces = (0..faces.len())
         .map(|face| FaceUse {
             face,
@@ -398,20 +431,27 @@ fn assemble_impl(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
+struct CorrespondenceLedger<'a, 'b> {
+    max_work: u64,
+    work: &'a mut u64,
+    prepared: Option<&'a mut PreparedBoundaries<'b>>,
+}
+
 fn compare_prepared(
     c: &Curve,
     p: &Curve,
     s: &Surface,
     reversed: bool,
     tolerance: f64,
-    max_work: u64,
-    work: &mut u64,
-    prepared: bool,
-    max_cells: usize,
-    cells: &mut usize,
+    ledger: CorrespondenceLedger<'_, '_>,
 ) -> Result<bool> {
-    let proof = if prepared && *work == max_work {
+    let CorrespondenceLedger {
+        max_work,
+        work,
+        prepared,
+    } = ledger;
+    let is_prepared = prepared.is_some();
+    let proof = if is_prepared && *work == max_work {
         None
     } else {
         curve_surface_agreement::verify_exact(c, p, s, reversed, max_work - *work)?
@@ -426,8 +466,8 @@ fn compare_prepared(
         *work += proof.work_used;
         match proof.outcome {
             cad_predicates::BezierIdentity::Equal => return Ok(true),
-            cad_predicates::BezierIdentity::Different if !prepared => return Ok(false),
-            _ if !prepared => {
+            cad_predicates::BezierIdentity::Different if !is_prepared => return Ok(false),
+            _ if !is_prepared => {
                 return Err(refuse(
                     "BREP_PATCH_NETWORK_UNPROVEN",
                     "Complete boundary equality remains unproved",
@@ -435,13 +475,14 @@ fn compare_prepared(
             }
             _ => {}
         }
-    } else if !prepared {
+    } else if !is_prepared {
         return Err(refuse(
             "BREP_PATCH_NETWORK_UNPROVEN",
             "Boundary correspondence is not supported by the exact prover",
         ));
     }
-    prepared_lift(c, p, s, reversed, tolerance, max_cells, cells)
+    let prep = prepared.expect("checked is_prepared above");
+    prepared_lift(c, p, s, reversed, tolerance, prep.max_cells, prep.cells)
 }
 mod clocks;
 pub(crate) use clocks::{needs_prepared, prepared_clock};

@@ -122,21 +122,37 @@ fn merge(
     }
     Ok(saved)
 }
-#[allow(clippy::too_many_arguments)]
+pub(super) struct WireTransfer<'a> {
+    pub source: &'a Model,
+    pub intermediate: &'a Model,
+    pub face: usize,
+    pub wire: usize,
+    pub cycle: &'a [CycleUse],
+    pub world: &'a Concatenation,
+    pub uv: &'a Concatenation,
+    pub reversed: bool,
+    pub tolerance: f64,
+    pub uv_tolerance: f64,
+    pub limits: Limits,
+}
+
 pub(super) fn transfer(
-    source: &Model,
-    intermediate: &Model,
-    face: usize,
-    wire: usize,
-    cycle: &[CycleUse],
-    world: &Concatenation,
-    uv: &Concatenation,
-    reversed: bool,
-    tolerance: f64,
-    uv_tolerance: f64,
-    limits: Limits,
+    req: WireTransfer<'_>,
     work: &mut Work,
 ) -> Result<(Option<CoedgeTrim>, Vec<Relation>)> {
+    let WireTransfer {
+        source,
+        intermediate,
+        face,
+        wire,
+        cycle,
+        world,
+        uv,
+        reversed,
+        tolerance,
+        uv_tolerance,
+        limits,
+    } = req;
     let surface = &intermediate.faces[face].surface;
     let mut records = Vec::new();
     for (slot, c) in intermediate.loops[wire].coedges.iter().enumerate() {

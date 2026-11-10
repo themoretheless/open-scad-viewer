@@ -203,16 +203,16 @@ impl<'a> Emitter<'a> {
                         path: component_path.clone(),
                         matrix: world,
                     };
-                    self.emit(
-                        &input,
+                    self.emit(EmitRequest {
+                        key: &input,
                         nodes,
                         scope,
-                        &component_path,
-                        depth + 1,
-                        GeometryType::Solid,
-                        Some(&child_parent),
-                        true,
-                    )?;
+                        path: &component_path,
+                        depth: depth + 1,
+                        expected: GeometryType::Solid,
+                        parent: Some(&child_parent),
+                        allow_assembly: true,
+                    })?;
                     if !is_assembly {
                         self.assembly_components[record_index]["source"] = json!(format!(
                             "$fn={};\nmultmatrix({}){{\n{}\n}}",
@@ -226,16 +226,16 @@ impl<'a> Emitter<'a> {
             }
             "assert" => {
                 self.eval.scoped_checks(item, scope, &current)?;
-                self.emit(
-                    str_at(item, "input"),
+                self.emit(EmitRequest {
+                    key: str_at(item, "input"),
                     nodes,
                     scope,
-                    &current,
-                    depth + 1,
+                    path: &current,
+                    depth: depth + 1,
                     expected,
                     parent,
                     allow_assembly,
-                )?;
+                })?;
             }
             "evaluate" => {
                 let shape =
@@ -251,16 +251,16 @@ impl<'a> Emitter<'a> {
                         return Err(fail("type_error", "Expected a geometry function."));
                     }
                     let body = self.bodies.get(function).unwrap().clone();
-                    self.emit(
-                        str_at(fn_value, "root"),
-                        &body,
-                        &bound_scope,
-                        &format!("{current}/value:{function}"),
-                        depth + 1,
+                    self.emit(EmitRequest {
+                        key: str_at(fn_value, "root"),
+                        nodes: &body,
+                        scope: &bound_scope,
+                        path: &format!("{current}/value:{function}"),
+                        depth: depth + 1,
                         expected,
-                        None,
-                        false,
-                    )?;
+                        parent: None,
+                        allow_assembly: false,
+                    })?;
                 } else {
                     return Err(fail("type_error", "Expected a geometry value."));
                 }
@@ -274,16 +274,16 @@ impl<'a> Emitter<'a> {
                 }
                 let id = str_at(bound.function, "id");
                 let body = self.bodies.get(id).unwrap().clone();
-                self.emit(
-                    str_at(bound.function, "root"),
-                    &body,
-                    &bound.scope,
-                    &format!("{current}/call:{id}"),
-                    depth + 1,
+                self.emit(EmitRequest {
+                    key: str_at(bound.function, "root"),
+                    nodes: &body,
+                    scope: &bound.scope,
+                    path: &format!("{current}/call:{id}"),
+                    depth: depth + 1,
                     expected,
-                    None,
-                    false,
-                )?;
+                    parent: None,
+                    allow_assembly: false,
+                })?;
             }
             "match" => {
                 let (arm, bound) = self.eval.select_match_arm(
@@ -293,43 +293,43 @@ impl<'a> Emitter<'a> {
                     &current,
                     0,
                 )?;
-                self.emit(
-                    str_at(&item["arms"][arm], "input"),
+                self.emit(EmitRequest {
+                    key: str_at(&item["arms"][arm], "input"),
                     nodes,
-                    &bound,
-                    &format!("{current}/arms/{arm}"),
-                    depth + 1,
+                    scope: &bound,
+                    path: &format!("{current}/arms/{arm}"),
+                    depth: depth + 1,
                     expected,
-                    None,
-                    false,
-                )?;
+                    parent: None,
+                    allow_assembly: false,
+                })?;
             }
             "if" => {
                 let condition =
                     self.value(&item["condition"], scope, &current, "condition", SCALAR)?;
-                self.emit(
-                    str_at(item, if condition != 0. { "then" } else { "else" }),
+                self.emit(EmitRequest {
+                    key: str_at(item, if condition != 0. { "then" } else { "else" }),
                     nodes,
                     scope,
-                    &current,
-                    depth + 1,
+                    path: &current,
+                    depth: depth + 1,
                     expected,
-                    None,
-                    false,
-                )?;
+                    parent: None,
+                    allow_assembly: false,
+                })?;
             }
             "group" => {
                 for child in children(item) {
-                    self.emit(
-                        child,
+                    self.emit(EmitRequest {
+                        key: child,
                         nodes,
                         scope,
-                        &current,
-                        depth + 1,
+                        path: &current,
+                        depth: depth + 1,
                         expected,
-                        None,
-                        false,
-                    )?;
+                        parent: None,
+                        allow_assembly: false,
+                    })?;
                 }
             }
             "collect" => {
@@ -343,16 +343,16 @@ impl<'a> Emitter<'a> {
                 for (i, v) in items.iter().enumerate() {
                     let mut local = (**scope).clone();
                     local.insert(str_at(item, "binding").into(), v.clone());
-                    self.emit(
-                        str_at(item, "input"),
+                    self.emit(EmitRequest {
+                        key: str_at(item, "input"),
                         nodes,
-                        &Rc::new(local),
-                        &format!("{current}[{i}]"),
-                        depth + 1,
+                        scope: &Rc::new(local),
+                        path: &format!("{current}[{i}]"),
+                        depth: depth + 1,
                         expected,
-                        None,
-                        false,
-                    )?;
+                        parent: None,
+                        allow_assembly: false,
+                    })?;
                 }
             }
             "map" => {
@@ -367,16 +367,16 @@ impl<'a> Emitter<'a> {
                 for i in 0..count as usize {
                     let mut local = (**scope).clone();
                     local.insert(str_at(item, "index").into(), RuntimeValue::from(i as f64));
-                    self.emit(
-                        str_at(item, "input"),
+                    self.emit(EmitRequest {
+                        key: str_at(item, "input"),
                         nodes,
-                        &Rc::new(local),
-                        &format!("{current}[{i}]"),
-                        depth + 1,
+                        scope: &Rc::new(local),
+                        path: &format!("{current}[{i}]"),
+                        depth: depth + 1,
                         expected,
-                        None,
-                        false,
-                    )?;
+                        parent: None,
+                        allow_assembly: false,
+                    })?;
                 }
                 self.lines.push("}".into());
             }

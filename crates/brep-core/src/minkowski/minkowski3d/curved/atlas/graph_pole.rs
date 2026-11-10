@@ -205,9 +205,8 @@ fn chart_axis(h: &sb::Net, axis: usize, work: &mut Work) -> Result<Option<Net>> 
             .iter()
             .map(|&(i, j)| product(&product(&xp[i], &yp[j], work)?, &wp[degree - i - j], work))
             .collect::<Result<Vec<_>>>()?;
-        if let Some(h) = rational_graph(
-            &terms, &z, &w, &indices, degree, &a, &e, &f, &direction, work,
-        )? {
+        let frame = PoleGraphFrame { a: &a, e: &e, f: &f, direction: &direction };
+        if let Some(h) = rational_graph(&terms, &z, &w, &indices, degree, frame, work)? {
             return Ok(Some(h));
         }
     }
@@ -232,19 +231,27 @@ fn polynomial(coefficients: &[Q], indices: &[(usize, usize)], degree: usize) -> 
         })
         .collect()
 }
-#[allow(clippy::too_many_arguments)]
+struct PoleGraphFrame<'a> {
+    a: &'a P,
+    e: &'a P,
+    f: &'a P,
+    direction: &'a P,
+}
 fn rational_graph(
     terms: &[Tensor],
     z: &Tensor,
     w: &Tensor,
     indices: &[(usize, usize)],
     degree: usize,
-    a: &P,
-    e: &P,
-    f: &P,
-    direction: &P,
+    frame: PoleGraphFrame<'_>,
     work: &mut Work,
 ) -> Result<Option<Net>> {
+    let PoleGraphFrame {
+        a,
+        e,
+        f,
+        direction,
+    } = frame;
     let nw = terms
         .iter()
         .map(|t| product(w, t, work))

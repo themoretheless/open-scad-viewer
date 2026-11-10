@@ -209,24 +209,37 @@ pub(super) fn lift_meridian(
     out
 }
 
+pub(super) struct TorusCircleSection {
+    pub center: [f64; 3],
+    pub radius: f64,
+    pub w1: [f64; 3],
+    pub w2: [f64; 3],
+    pub clip: EllipseClip,
+    pub uv_center: [f64; 2],
+    pub uv_w1: [f64; 2],
+    pub uv_w2: [f64; 2],
+}
+
 /// One resolved circle component family: full or clipped exact sweep, both
 /// UV lifts, and the sampled residual bound. `w1`/`w2` are the exact 3D
 /// circle basis vectors (length = radius); the circle parameter coincides
 /// with the torus revolution angle (parallel) or profile angle (meridian).
-#[allow(clippy::too_many_arguments)]
 pub(super) fn circle_components(
     torus: &CanonicalTorus,
     plane: &CanonicalPlane,
-    center: [f64; 3],
-    radius: f64,
-    w1: [f64; 3],
-    w2: [f64; 3],
-    clip: EllipseClip,
-    uv_center: [f64; 2],
-    uv_w1: [f64; 2],
-    uv_w2: [f64; 2],
+    section: TorusCircleSection,
     lift: &TorusLift<'_>,
 ) -> Result<Vec<PlaneTorusComponent>> {
+    let TorusCircleSection {
+        center,
+        radius,
+        w1,
+        w2,
+        clip,
+        uv_center,
+        uv_w1,
+        uv_w2,
+    } = section;
     let build = |start: f64, end: f64, full: bool| -> Result<PlaneTorusComponent> {
         let curve = if full {
             circle_curve(
@@ -367,17 +380,13 @@ pub fn intersect_plane_torus(
                 (EllipseClip::Full, true) => EllipseClip::Empty,
                 (clip, _) => clip.clone(),
             };
+            let section = TorusCircleSection {
+                center: circle_center, radius: rho, w1, w2, clip, uv_center, uv_w1, uv_w2,
+            };
             report.components.extend(circle_components(
                 &torus,
                 &plane,
-                circle_center,
-                rho,
-                w1,
-                w2,
-                clip,
-                uv_center,
-                uv_w1,
-                uv_w2,
+                section,
                 &|t: &CanonicalTorus, arcs: &[(f64, f64)]| lift_parallel(t, profile, arcs),
             )?);
         }
@@ -423,17 +432,13 @@ pub fn intersect_plane_torus(
             (EllipseClip::Full, true) => EllipseClip::Empty,
             (clip, _) => clip.clone(),
         };
+        let section = TorusCircleSection {
+            center: circle_center, radius: r, w1, w2, clip, uv_center, uv_w1, uv_w2,
+        };
         report.components.extend(circle_components(
             &torus,
             &plane,
-            circle_center,
-            r,
-            w1,
-            w2,
-            clip,
-            uv_center,
-            uv_w1,
-            uv_w2,
+            section,
             &|t: &CanonicalTorus, arcs: &[(f64, f64)]| lift_meridian(t, revolution, arcs),
         )?);
     }

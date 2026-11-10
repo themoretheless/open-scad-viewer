@@ -1,19 +1,17 @@
 use super::*;
 
 impl<'a> Emitter<'a> {
-    // Traversal carries distinct lexical, geometric and assembly contexts.
-    #[allow(clippy::too_many_arguments)]
-    pub(super) fn emit(
-        &mut self,
-        key: &str,
-        nodes: &Rc<Nodes<'a>>,
-        scope: &Scope<'a>,
-        path: &str,
-        depth: usize,
-        expected: GeometryType,
-        parent: Option<&Parent>,
-        allow_assembly: bool,
-    ) -> Result<()> {
+    pub(super) fn emit(&mut self, req: EmitRequest<'a, '_>) -> Result<()> {
+        let EmitRequest {
+            key,
+            nodes,
+            scope,
+            path,
+            depth,
+            expected,
+            parent,
+            allow_assembly,
+        } = req;
         self.expanded += 1;
         if self.expanded > 4096 || depth > 32 {
             return Err(Error::new(

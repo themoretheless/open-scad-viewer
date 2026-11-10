@@ -170,7 +170,17 @@ pub(super) fn construct(
                     })
                     .collect::<Vec<_>>();
                 let points = joint_samples(
-                    models, graph, arc, pair, piece, &ends, free, &nodes, &mut cache,
+                    models,
+                    graph,
+                    ArcSampleContext {
+                        arc,
+                        pair,
+                        piece,
+                        ends: &ends,
+                        free,
+                    },
+                    &nodes,
+                    &mut cache,
                 )?;
                 let attempt = (|| -> Result<ArcProposal> {
                     let p = if rational_fit {
@@ -219,18 +229,28 @@ pub(super) fn construct(
     Ok(proposals)
 }
 
-#[allow(clippy::too_many_arguments)]
+struct ArcSampleContext<'a> {
+    arc: &'a OriginalIntersectionArc,
+    pair: &'a OriginalFacePairGraph,
+    piece: &'a OriginalGraphPiece,
+    ends: &'a [[f64; 4]; 2],
+    free: usize,
+}
+
 fn joint_samples(
     models: [&Model; 2],
     graph: &QualifiedNurbsIntersectionGraph,
-    arc: &OriginalIntersectionArc,
-    pair: &OriginalFacePairGraph,
-    piece: &OriginalGraphPiece,
-    ends: &[[f64; 4]; 2],
-    free: usize,
+    ctx: ArcSampleContext<'_>,
     nodes: &[Q],
     cache: &mut BTreeMap<u64, Vec<Q>>,
 ) -> Result<Vec<Vec<Q>>> {
+    let ArcSampleContext {
+        arc,
+        pair,
+        piece,
+        ends,
+        free,
+    } = ctx;
     let mut requests = Vec::new();
     let mut missing = Vec::new();
     for node in nodes {

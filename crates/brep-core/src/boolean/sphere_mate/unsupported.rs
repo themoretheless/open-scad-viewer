@@ -259,18 +259,17 @@ pub(crate) struct Imprint<'m, M: Mate> {
     pub(super) arcs: Vec<Arc>,
 }
 
-/// Run the engine for `a op b`, where operand `mate_index` is the mate and
-/// the other operand the recognized sphere.
-#[allow(clippy::too_many_arguments)]
+/// Run the engine for `operands[0] op operands[1]`, where operand `mate_index`
+/// is the mate and the other operand the recognized sphere.
 pub(crate) fn run<M: Mate>(
-    a: &Model,
-    b: &Model,
+    operands: [&Model; 2],
     mate_index: usize,
     mate: &M,
     sphere: CanonicalSphere,
     band: f64,
     operation: &str,
 ) -> Result<Model> {
+    let [a, b] = operands;
     let tolerance = a.tolerance_mm.max(b.tolerance_mm);
     let mut imprint = Imprint::new(a, b, mate_index, mate, sphere, band, operation)?;
     if let Some(relation) = mate.network(&mut imprint)? {

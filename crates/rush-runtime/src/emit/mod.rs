@@ -25,6 +25,18 @@ mod values;
 mod dispatch;
 
 #[derive(Clone, Copy)]
+struct EmitRequest<'a, 'c> {
+    key: &'c str,
+    nodes: &'c Rc<Nodes<'a>>,
+    scope: &'c Scope<'a>,
+    path: &'c str,
+    depth: usize,
+    expected: GeometryType,
+    parent: Option<&'c Parent>,
+    allow_assembly: bool,
+}
+
+#[derive(Clone, Copy)]
 struct NativeEmitCtx<'a, 'c> {
     item: &'a Value, key: &'c str, op: &'c str,
     nodes: &'c Rc<Nodes<'a>>, scope: &'c Scope<'a>, current: &'c String,

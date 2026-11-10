@@ -323,7 +323,7 @@ fn star(
             return Err(fail("atlas vertex link branches"));
         }
     }
-    match star_projected(vertex, incident, patches, positions, &links, &n, work) {
+    match star_projected(incident, patches, positions, &links, &n, work) {
         Ok(count) => Ok(count),
         Err(first) => {
             // Area sums can lie exactly in a cap plane at a conical rim.
@@ -347,15 +347,11 @@ fn star(
                 }
             }
             let n: P = std::array::from_fn(|k| normals.iter().map(|p| p[k].clone()).sum());
-            if let Ok(count) =
-                star_projected(vertex, incident, patches, positions, &links, &n, work)
-            {
+            if let Ok(count) = star_projected(incident, patches, positions, &links, &n, work) {
                 return Ok(count);
             }
             for n in projection::directions(&normals, work)? {
-                if let Ok(count) =
-                    star_projected(vertex, incident, patches, positions, &links, &n, work)
-                {
+                if let Ok(count) = star_projected(incident, patches, positions, &links, &n, work) {
                     return Ok(count);
                 }
             }
@@ -363,9 +359,7 @@ fn star(
         }
     }
 }
-#[allow(clippy::too_many_arguments)]
 fn star_projected(
-    _vertex: u32,
     incident: &[usize],
     patches: &[Patch],
     positions: &[P],
@@ -377,9 +371,7 @@ fn star_projected(
         return Err(fail("rational atlas projection is degenerate"));
     }
     for i in incident {
-        if !regular(&patches[*i], &n, work)? {
-            #[cfg(test)]
-            eprintln!("atlas regularity unproved at vertex {_vertex}, patch {i}");
+        if !regular(&patches[*i], n, work)? {
             return Err(fail(
                 "rational atlas projected vertex disk regularity is unproved",
             ));
