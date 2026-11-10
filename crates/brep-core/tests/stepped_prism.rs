@@ -237,7 +237,9 @@ fn unresolved_slabs_and_nonprismatic_curves_refuse_without_changing_operands() {
     let near = cylinder(3., 1e-6, 3., 3.);
     let original = value_codec::to_string(&a).unwrap();
     let failure = boolean(&a, &near, "union").unwrap_err();
-    assert_eq!(failure.code, "BREP_UNSUPPORTED_OPERATION");
+    // The prismatic refusal survives inside the final unproved verdict
+    // after the remaining Boolean routes also refuse.
+    assert_eq!(failure.code, "BREP_NURBS_BOOLEAN_UNPROVED", "{}", failure.message);
     assert!(failure.message.contains("Z slab"));
     assert_eq!(original, value_codec::to_string(&a).unwrap());
     assert!(boolean(&a, &brep_core::frustum(3., 2., 4.).unwrap(), "union").is_err());
@@ -260,7 +262,9 @@ fn reversed_outer_inner_shell_roles_are_refused_on_reuse() {
     invalid.validate().unwrap(); // Combinatorial validation alone cannot infer shell roles.
     let before = value_codec::to_string(&invalid).unwrap();
     let error = boolean(&invalid, &cylinder(1., 0., 5., 2.), "difference").unwrap_err();
-    assert_eq!(error.code, "BREP_UNSUPPORTED_OPERATION");
+    // The prismatic refusal survives inside the final unproved verdict
+    // after the remaining Boolean routes also refuse.
+    assert_eq!(error.code, "BREP_NURBS_BOOLEAN_UNPROVED", "{}", error.message);
     assert!(error.message.contains("shell role"));
     assert_eq!(before, value_codec::to_string(&invalid).unwrap());
 }
